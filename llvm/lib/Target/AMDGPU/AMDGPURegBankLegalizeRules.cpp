@@ -683,7 +683,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
 
   addRulesForGOpcs({G_FSHR}, Standard)
-      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32, Sgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
   addRulesForGOpcs({G_BSWAP}, Standard)

@@ -488,6 +488,12 @@ public:
   /// profitable to inline the call.
   LLVM_ABI uint64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 
+  /// Returns the maximum length in bytes for which a memset with a
+  /// non-constant length, known to be bounded by that value, is preferably
+  /// expanded inline instead of calling the library. Zero disables the
+  /// expansion.
+  LLVM_ABI uint64_t getMaxBoundedMemSetInlineSize() const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.
@@ -672,6 +678,7 @@ public:
     unsigned ImmCost;
     unsigned SetupCost;
     unsigned ScaleCost;
+    unsigned NumPrePostIndex;
   };
 
   /// Parameters that control the generic loop unrolling transformation.
@@ -1151,6 +1158,11 @@ public:
   /// Calculates a VectorInstrContext from \p I.
   LLVM_ABI static VectorInstrContext
   getVectorInstrContextHint(const Instruction *I);
+
+  /// Calculates a VectorInstrContext from the values in \p VL at indices in
+  /// \p DemandedElts.
+  LLVM_ABI static VectorInstrContext
+  getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts);
 
   /// Calculates a VectorInstrContext for buildvector-like gather sequences.
   ///
@@ -2196,6 +2208,38 @@ public:
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;
+};
+
+/// Costs for each cost kind in a target cost table. Field order matches
+/// TargetCostKind, since table entries initialize these fields positionally.
+/// A cost of ~0U means the table provides no cost for that kind.
+struct CostKindCosts {
+  unsigned RecipThroughputCost = ~0U;
+  unsigned LatencyCost = ~0U;
+  unsigned CodeSizeCost = ~0U;
+  unsigned SizeAndLatencyCost = ~0U;
+
+  std::optional<unsigned>
+  operator[](TargetTransformInfo::TargetCostKind Kind) const {
+    unsigned Cost = ~0U;
+    switch (Kind) {
+    case TargetTransformInfo::TCK_RecipThroughput:
+      Cost = RecipThroughputCost;
+      break;
+    case TargetTransformInfo::TCK_Latency:
+      Cost = LatencyCost;
+      break;
+    case TargetTransformInfo::TCK_CodeSize:
+      Cost = CodeSizeCost;
+      break;
+    case TargetTransformInfo::TCK_SizeAndLatency:
+      Cost = SizeAndLatencyCost;
+      break;
+    }
+    if (Cost == ~0U)
+      return std::nullopt;
+    return Cost;
+  }
 };
 
 /// Analysis pass providing the \c TargetTransformInfo.

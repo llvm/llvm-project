@@ -3839,9 +3839,9 @@ a shared pointer emits the `.shared::cta` qualifier. The `.cg1` and `.cg2`
 variants generate `cta_group::1` and `cta_group::2` variants of the instruction
 respectively. The last argument to these intrinsics is a boolean flag indicating
 support for exclusive allocation. This flag argument must be a compile-time
-constant. When set, the `.exclusive` variant is emitted, which claims ownership
-of the allocation permit. No other allocation may exist at the same time as an
-exclusive allocation.
+constant and defaults to `0` (`false`) when omitted. When set, the `.exclusive`
+variant is emitted, which claims ownership of the allocation permit. No other
+allocation may exist at the same time as an exclusive allocation.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 
@@ -3864,9 +3864,9 @@ of columns to be de-allocated. The `.cg1` and `.cg2` variants generate
 `cta_group::1` and `cta_group::2` variants of the instruction respectively.
 The last argument to these intrinsics is a boolean flag indicating
 support for exclusive allocation. This flag argument must be a compile-time
-constant. When set, the `.exclusive` variant is emitted. Memory must
-be deallocated with `.exclusive` if and only if it was allocated with
-`.exclusive`.
+constant and defaults to `0` (`false`) when omitted. When set, the `.exclusive`
+variant is emitted. Memory must be deallocated with `.exclusive` if and only if
+it was allocated with `.exclusive`.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 

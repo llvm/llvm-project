@@ -38,10 +38,7 @@ class CallingConvEmitter {
   std::map<std::string, std::set<std::string>> DelegateToMap;
 
 public:
-  explicit CallingConvEmitter(const RecordKeeper &R) : Records(R), Target(R) {
-    for (const CodeGenRegister &Reg : Target.getRegBank().getRegisters())
-      RegistersByDefName.try_emplace(Reg.getName(), &Reg);
-  }
+  explicit CallingConvEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   void run(raw_ostream &O);
 
@@ -131,6 +128,13 @@ void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
 std::string CallingConvEmitter::getQualifiedRegisterName(const Init *I) {
   if (const auto *DI = dyn_cast<DefInit>(I))
     return getQualifiedName(DI->getDef());
+
+  // Registers named by strings may be synthesized by the register bank, so
+  // build it, but only when needed.
+  if (RegistersByDefName.empty()) {
+    for (const CodeGenRegister &Reg : Target.getRegBank().getRegisters())
+      RegistersByDefName.try_emplace(Reg.getName(), &Reg);
+  }
 
   const auto *SI = cast<StringInit>(I);
   if (const CodeGenRegister *CGR = RegistersByDefName.lookup(SI->getValue()))

@@ -1119,7 +1119,7 @@ def OpArbitraryFloatCastALTERA: Op<5841, (outs ID:$res), (ins TYPE:$type, ID:$sr
                   "$res = OpArbitraryFloatCastALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundignAccuracy">;
 def OpArbitraryFloatCastFromIntALTERA: Op<5842, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$res_mwidth, i32imm:$fromsign, i32imm:$subnormalmode, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
                   "$res = OpArbitraryFloatCastFromIntALTERA $type $src $res_mwidth $fromsign $subnormalmode $fproundingmode $roundignAccuracy">;
-def OpArbitraryFloatCastToIntALTERA: Op<5838, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$res_mwidth, i32imm:$tosign, i32imm:$subnormalmode, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
+def OpArbitraryFloatCastToIntALTERA: Op<5843, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$res_mwidth, i32imm:$tosign, i32imm:$subnormalmode, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
                   "$res = OpArbitraryFloatCastToIntALTERA $type $src $res_mwidth $tosign $subnormalmode $fproundingmode $roundignAccuracy">;
 
 // SPV_INTEL_2d_block_io
@@ -1148,7 +1148,7 @@ def OpPredicatedStoreINTEL: Op<6259, (outs), (ins ID:$ptr, ID:$object, ID:$predi
 //SPV_ALTERA_blocking_pipes
 def OpReadPipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
                    "OpReadPipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
-def OpWritePipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+def OpWritePipeBlockingALTERA :Op<5947, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
                    "OpWritePipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
 
 //SPV_ALTERA_arbitrary_precision_fixed_point

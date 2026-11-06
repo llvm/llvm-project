@@ -1150,7 +1150,7 @@ static bool unswitchAllTrivialConditions(const ScalarOptions &Opts, Loop &L,
           if (const auto *CB = dyn_cast<CallBase>(&I))
             if (CB->isConvergent())
               return true;
-          return I.mayHaveSideEffects();
+          return I.mayHaveSideEffects() && !I.isDroppable();
         }))
       return Changed;
 

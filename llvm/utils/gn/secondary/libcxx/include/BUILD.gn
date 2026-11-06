@@ -43,10 +43,6 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_LIBC_PICOLIBC=",
       "_LIBCPP_LIBC_NEWLIB=",
       "_LIBCPP_LIBC_LLVM_LIBC=",
-      "_LIBCPP_PSTL_BACKEND_LIBDISPATCH=",
-      "_LIBCPP_PSTL_BACKEND_SERIAL=",
-      "_LIBCPP_PSTL_BACKEND_STATPART=",
-      "_LIBCPP_PSTL_BACKEND_STD_THREAD=1",
     ]
     if (libcxx_abi_namespace != "") {
       abi_namespace = libcxx_abi_namespace

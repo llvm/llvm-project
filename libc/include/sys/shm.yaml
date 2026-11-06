@@ -24,4 +24,12 @@ types:
   - type_name: time_t
 enums: []
 objects: []
-functions: []
+functions:
+  - name: shmget
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: key_t
+      - type: size_t
+      - type: int

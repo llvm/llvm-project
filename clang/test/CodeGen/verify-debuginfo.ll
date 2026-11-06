@@ -1,6 +1,7 @@
 ; REQUIRES: x86-registered-target
 ; RUN: %clang_cc1 -triple i386-apple-darwin -disable-llvm-optzns -S %s -o - 2>&1 \
 ; RUN:   | FileCheck %s
+; RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-apple-darwin -disable-llvm-optzns -S %s -o - 2>&1   | FileCheck %s %}
 ; CHECK: invalid global variable ref
 ; CHECK: warning: ignoring invalid debug info in {{.*}}.ll
 

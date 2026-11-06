@@ -173,6 +173,21 @@ add_header_library(
 )
 
 add_header_library(
+  checked_ptr
+  HDRS
+    checked_ptr.h
+  DEPENDS
+    .alloc_checker
+    .libc_assert
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ctype_utils
   HDRS
     ctype_utils.h

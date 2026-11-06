@@ -7,7 +7,6 @@
 //==-----------------------------------------------------------------------===//
 
 #include "SIFrameLowering.h"
-#include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -1122,7 +1121,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
   };
 
   // Emit CFI rules for caller saved Arch VGPRs which are clobbered
-  unsigned NumArchVGPRs = ST.hasVGPRMSBs() ? 1024 : 256;
+  unsigned NumArchVGPRs = ST.getAddressableNumArchVGPRs();
   for_each(AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs),
            ProcessReg);
 

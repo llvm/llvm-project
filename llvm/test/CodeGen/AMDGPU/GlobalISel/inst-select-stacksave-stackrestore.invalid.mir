@@ -6,6 +6,7 @@
 name:            stackrestore_waveaddress_vgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body: |
   bb.0:
     %0:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32

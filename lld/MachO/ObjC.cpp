@@ -393,6 +393,15 @@ class ObjcCategoryMerger {
     const Symbol *baseClass = nullptr;
     int64_t baseClassAddend = 0;
 
+    void setBaseClass(const Symbol *sym, int64_t addend) {
+      assert(!baseClass && baseClassName.empty());
+      baseClass = sym;
+      baseClassAddend = addend;
+      StringRef name = sym->getName();
+      name.consume_front(objc::symbol_names::klass);
+      baseClassName = name.str();
+    }
+
     CategoryLayout &catLayout;
 
     // In case we generate new data, mark the new data as belonging to this file
@@ -815,19 +824,12 @@ bool ObjcCategoryMerger::parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
   if (!extInfo.baseClass) {
     auto [classSym, classAddend] = tryGetSymbolReferenceAtIsecOffset(
         catInfo.catBodyIsec, catLayout.klassOffset);
-    assert(extInfo.baseClassName.empty());
-    extInfo.baseClass = classSym;
-    extInfo.baseClassAddend = classAddend;
-    llvm::StringRef classPrefix(objc::symbol_names::klass);
-    if (classSym->getName().starts_with(classPrefix))
-      extInfo.baseClassName =
-          classSym->getName().substr(classPrefix.size()).str();
-    else
-      extInfo.baseClassName = classSym->getName().str();
+    extInfo.setBaseClass(classSym, classAddend);
   } else {
     [[maybe_unused]] auto [classSym, classAddend] =
         tryGetSymbolReferenceAtIsecOffset(catInfo.catBodyIsec,
                                           catLayout.klassOffset);
+    assert(!extInfo.baseClassName.empty());
     assert((extInfo.baseClass == classSym &&
             extInfo.baseClassAddend == classAddend) &&
            "Trying to parse category info into container with different base "
@@ -1396,8 +1398,7 @@ bool ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
 
   // Collect all the info from the categories
   ClassExtensionInfo extInfo(catLayout);
-  extInfo.baseClass = baseClass;
-  extInfo.baseClassAddend = baseClassAddend;
+  extInfo.setBaseClass(baseClass, baseClassAddend);
 
   for (auto &catInfo : categories)
     if (!parseCatInfoToExtInfo(catInfo, extInfo))

@@ -149,6 +149,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_EXT_shader_subgroup_partitioned``
+     - Adds subgroup reductions and scans that use a partition mask.
    * - ``SPV_INTEL_16bit_atomics``
      - Extends the SPV_EXT_shader_atomic_float_add and SPV_EXT_shader_atomic_float_min_max to support addition, minimum and maximum on 16-bit `bfloat16` floating-point numbers in memory.
    * - ``SPV_NV_shader_atomic_fp16_vector``

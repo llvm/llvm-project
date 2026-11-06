@@ -1161,7 +1161,7 @@ public:
         LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
-                 Query.Types[TypeIdx].getSizeInBits();
+                 Query.Types[TypeIdx].getScalarSizeInBits();
         },
         LegalizeMutations::changeElementSizeTo(TypeIdx, LargeTypeIdx));
   }
@@ -1173,7 +1173,7 @@ public:
         LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[NarrowTypeIdx].getScalarSizeInBits() <
-                 Query.Types[TypeIdx].getSizeInBits();
+                 Query.Types[TypeIdx].getScalarSizeInBits();
         },
         LegalizeMutations::changeElementSizeTo(TypeIdx, NarrowTypeIdx));
   }

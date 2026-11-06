@@ -72,6 +72,7 @@ add_libc_test(
     functional_test.cpp
   DEPENDS
     libc.src.__support.CPP.functional
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.type_traits
 )
 
@@ -174,6 +175,7 @@ add_libc_test(
     unique_ptr_test.cpp
   DEPENDS
     libc.hdr.signal_macros
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility
 )

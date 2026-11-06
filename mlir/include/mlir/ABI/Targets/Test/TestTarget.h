@@ -59,7 +59,7 @@ FunctionClassification classify(TypeRange argTypes, Type returnType,
 ///
 /// Per-arg/return dictionary keys:
 ///   kind: StringAttr.  One of "direct", "extend", "indirect",
-///         "ignore", "expand".
+///         "indirect_aliased", "ignore", "expand".
 ///
 /// For kind = "direct" (all optional):
 ///   coerced_type:  TypeAttr.  ABI-coerced type, if different from the
@@ -77,6 +77,9 @@ FunctionClassification classify(TypeRange argTypes, Type returnType,
 ///   byval:               BoolAttr.  Defaults to true.
 ///   indirect_addr_space: IntegerAttr.  Target address space of the
 ///                        pointer.  Defaults to 0.
+///
+/// For kind = "indirect_aliased": the same keys as "indirect" except byval,
+/// which it rejects.
 ///
 /// For kind = "ignore" / "expand": no extra keys.
 ///

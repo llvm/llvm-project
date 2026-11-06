@@ -55,6 +55,16 @@ TEST_F(LlvmLibcStrToFltTest, SimpleDecimalConversion32SpecificFailures) {
       0x0, 0, ERANGE);
 }
 
+TEST_F(LlvmLibcStrToFltTest, SimpleDecimalConversion32HugeExponents) {
+  // Decimal points beyond the valid input range of exp10_to_exp2 (646456636)
+  // must still be classified as out of range, and do so without looping.
+  simple_decimal_conversion_test("1e646456636", 0, 0xff, ERANGE);
+  simple_decimal_conversion_test("1e1000000000", 0, 0xff, ERANGE);
+  simple_decimal_conversion_test("16777217e2147483647", 0, 0xff, ERANGE);
+  simple_decimal_conversion_test("1e-646456636", 0, 0, ERANGE);
+  simple_decimal_conversion_test("1e-2147483647", 0, 0, ERANGE);
+}
+
 TEST(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {
   uint32_t float_output_mantissa = 0;
   uint32_t output_exp2 = 0;

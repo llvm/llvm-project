@@ -3906,7 +3906,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::UMUL_LOHI:               return LowerHvxMulLoHi(Op, DAG);
     case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);
     case ISD::SETCC: {
-      ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+      ISD::CondCode CC = Op.getOperandCondCode(2);
       if (CC == ISD::SETOEQ &&
           ty(Op.getOperand(0)).getScalarType().isFloatingPoint())
         return LowerHvxFpSetoeq(Op, DAG);

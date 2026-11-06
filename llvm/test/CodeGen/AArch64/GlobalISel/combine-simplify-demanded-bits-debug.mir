@@ -1,6 +1,6 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=aarch64 -run-pass=aarch64-postlegalizer-combiner -aarch64postlegalizercombiner-only-enable-rule=simplify_demanded_bits -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64 -run-pass=aarch64-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-postlegalizer-combiner -aarch64postlegalizercombiner-only-enable-rule=simplify_demanded_bits %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-postlegalizer-combiner %s -o - | FileCheck %s
 
 --- |
   target triple = "aarch64"

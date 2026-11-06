@@ -277,12 +277,14 @@ def fir_OpenMPSafeTempArrayCopyAttr : fir_Attr<"OpenMPSafeTempArrayCopy"> {
 def LocalitySpecTypeLocal : I32EnumAttrCase<"Local", 0, "local">;
 def LocalitySpecTypeLocalInit
     : I32EnumAttrCase<"LocalInit", 1, "local_init">;
+def LocalitySpecTypeShared : I32EnumAttrCase<"Shared", 2, "shared">;
 
 def LocalitySpecifierType : I32EnumAttr<
     "LocalitySpecifierType",
     "Type of a locality specifier", [
       LocalitySpecTypeLocal,
-      LocalitySpecTypeLocalInit
+      LocalitySpecTypeLocalInit,
+      LocalitySpecTypeShared
     ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::fir";

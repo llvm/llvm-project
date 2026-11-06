@@ -45,10 +45,8 @@ class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 class LoopVectorizeHints;
 class RecurrenceDescriptor;
-class LoopVersioning;
 class OptimizationRemarkEmitter;
 class TargetLibraryInfo;
-class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
 struct VectorizeOptions;
@@ -1036,9 +1034,13 @@ public:
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
 
   /// Create a check to \p Plan to see if the vector loop should be executed
-  /// based on its trip count.
+  /// based on its trip count. When \p TailFoldedEpilogue is true, the
+  /// tail-folded vector epilogue executes all iterations not executed by
+  /// the main vector loop, so the check never needs to branch to the scalar
+  /// loop.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
-                                ElementCount MinProfitableTripCount) const;
+                                ElementCount MinProfitableTripCount,
+                                bool TailFoldedEpilogue) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan. \p VF and \p UF are
   /// used to compute the thresholds of difference checks.
@@ -1063,6 +1065,10 @@ public:
       bool DisableRuntimeUnroll, bool UnrollVectorizedLoop);
 
 private:
+  /// Build VPlan for the forced epilogue VF. If vectorization and tail-folding
+  /// should be avoided up-front, no tail-folded plans are generated.
+  bool planForEpilogueTF();
+
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built. \p PlanCM is the cost model to use for decisions made while
@@ -1113,16 +1119,6 @@ private:
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
   bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;
 };
-
-/// A helper function that returns true if the given type is irregular. The
-/// type is irregular if its allocated size doesn't equal the store size of an
-/// element of the corresponding vector type.
-inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
-  // Determine if an array of N elements of type Ty is "bitcast compatible"
-  // with a <N x Ty> vector.
-  // This is only true if there is no padding between the array elements.
-  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
-}
 
 } // namespace llvm
 

@@ -261,6 +261,17 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
     Option<"dwarfDebugFlags", "dwarf-debug-flags",
            "std::string", /*default=*/"std::string{}",
            "Command-line flags to append to DWARF producer">,
+    Option<"nameTableKind", "name-table-kind",
+           "mlir::LLVM::DINameTableKind",
+           /*default=*/"mlir::LLVM::DINameTableKind::None",
+           "name table to emit",
+           [{::llvm::cl::values(
+            clEnumValN(mlir::LLVM::DINameTableKind::Default, "Default", "Emit the default name table"),
+            clEnumValN(mlir::LLVM::DINameTableKind::GNU, "GNU", "Emit GNU pubnames"),
+            clEnumValN(mlir::LLVM::DINameTableKind::None, "None", "Emit no name table"),
+            clEnumValN(mlir::LLVM::DINameTableKind::Apple, "Apple", "Emit Apple accelerator tables")
+          )}]
+           >,
     Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
            "Emit fake use for debug variables to extend their lifetime">,

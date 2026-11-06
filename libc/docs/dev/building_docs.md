@@ -62,9 +62,9 @@ The per-header implementation status pages under `docs/headers/` are
 **not** hand-written RST. They are generated at build time by
 `libc/utils/docgen/docgen.py`, which:
 
-1. Reads YAML function definitions from `libc/src/<header>/*.yaml`.
-2. Scans `libc/src/<header>/` for `.cpp` implementation files.
-3. Checks `libc/include/llvm-libc-macros/` for macro `#define` entries.
+1. Reads YAML function and macro definitions from `libc/utils/docgen/<header>.yaml`.
+2. Checks implementation status against platform `entrypoints.txt` files (excluding `TODO` stubs).
+3. Checks `libc/include/llvm-libc-macros/` and `libc/include/<header>.yaml` for macro definitions.
 4. Emits an RST `list-table` showing each symbol's implementation status,
    C standard section, and POSIX link.
 

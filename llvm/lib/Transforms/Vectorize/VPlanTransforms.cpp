@@ -283,6 +283,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
   bool CheckReads = SinkInfo.has_value();
+  ScopedNoAliasAAResult ScopedNoAlias(FirstBB->getPlan()->getContext());
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
     for (VPRecipeBase &R : *VPBB) {
@@ -299,17 +300,11 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
+      if (ScopedNoAlias.alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
   }
   return true;
-}
-
-/// Get the value type of a VPInstruction or VPReplicateRecipe load or store.
-static Type *getLoadStoreValueType(VPSingleDefRecipe *R) {
-  bool IsLoad = vputils::getOpcode(R) == Instruction::Load;
-  return (IsLoad ? R : R->getOperand(0))->getScalarType();
 }
 
 /// Collect either replicated Loads or Stores grouped by their address SCEV and
@@ -334,7 +329,7 @@ collectGroupedReplicateMemOps(
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
       VPValue *Addr = RepR.getOperand(IsLoad ? 0 : 1);
-      const Type *LoadStoreTy = getLoadStoreValueType(&RepR);
+      const Type *LoadStoreTy = vputils::getLoadStoreValueType(&RepR);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
         RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(&RepR);
@@ -2364,6 +2359,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return hash_combine(Result, RFlags->getPredicate());
     if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
       return hash_combine(Result, SIVSteps->getInductionOpcode());
+    if (auto *DIV = dyn_cast<VPDerivedIVRecipe>(Def))
+      return hash_combine(Result, DIV->getInductionKind(), DIV->getFPBinOp());
     // Fold in the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
     if (auto *Load = dyn_cast<VPWidenMemoryRecipe>(Def))
@@ -2394,6 +2391,12 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LSIV->getInductionOpcode() !=
           cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
+    if (auto *LDIV = dyn_cast<VPDerivedIVRecipe>(L)) {
+      auto *RDIV = cast<VPDerivedIVRecipe>(R);
+      if (LDIV->getInductionKind() != RDIV->getInductionKind() ||
+          LDIV->getFPBinOp() != RDIV->getFPBinOp())
+        return false;
+    }
     // Compare the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
@@ -4152,7 +4155,7 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
     if (Recipes.size() < 2)
       continue;
 
-    assert(all_equal(map_range(Recipes, getLoadStoreValueType)) &&
+    assert(all_equal(map_range(Recipes, vputils::getLoadStoreValueType)) &&
            "Expected all recipes in group to have the same load-store type");
 
     // Collect groups with the same or complementary masks.
@@ -4570,13 +4573,6 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
         IG->getAlign(), *LoadGroup, LoadGroup->getDebugLoc());
     NarrowedOps.insert(L);
     return L;
-  }
-
-  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
-    assert(RepR->isSingleScalar() && RepR->getOpcode() == Instruction::Load &&
-           "must be a single scalar load");
-    NarrowedOps.insert(RepR);
-    return RepR;
   }
 
   auto *WideLoad = cast<VPWidenLoadRecipe>(R);
@@ -6474,4 +6470,78 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       R.eraseFromParent();
     }
   }
+}
+
+bool VPlanTransforms::widenCompressingPatterns(VPlan &Plan,
+                                               VPRecipeBuilder &RecipeBuilder,
+                                               ScalarEvolution &SE) {
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  SmallDenseMap<PHINode *, SmallVector<VPInstruction *>> CondIndToMemOps;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(HeaderVPBB))) {
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
+      if (std::optional<CompressedPtrInfo> Info =
+              RecipeBuilder.getCompressedPtrInfo(&VPI))
+        CondIndToMemOps[Info->ConditionalInductionPHI].push_back(&VPI);
+    }
+  }
+
+  VPBuilder Builder;
+  for (auto &CondIndPhi :
+       make_isa_range<VPConditionalInductionPHIRecipe>(HeaderVPBB->phis())) {
+    // Obtain the mask for the conditional update from the VPBlendRecipe.
+    VPValue *Mask = nullptr;
+    auto *BlendR = cast<VPBlendRecipe>(CondIndPhi.getBackedgeValue());
+    assert(!BlendR->isNormalized() && "Expected to run before simpifyBlends");
+    for (unsigned ValIdx : seq(BlendR->getNumIncomingValues()))
+      if (VPValue *IncomingValue = BlendR->getIncomingValue(ValIdx);
+          IncomingValue != &CondIndPhi) {
+        Mask = BlendR->getMask(ValIdx);
+        break;
+      }
+    assert(Mask && "Expected mask for conditional induction update");
+
+    // Replace all "compressed" loads and stores with expandload and
+    // compressstore respectively.
+    for (VPInstruction *VPI : CondIndToMemOps[CondIndPhi.getPHINode()]) {
+      // Bail out if the mask for the memory op does not match the condition
+      // used to update the conditional induction.
+      if (VPI->getMask() != Mask)
+        return false;
+
+      Builder.setInsertPoint(VPI);
+      auto *CompressedMemOp =
+          Builder.insert(RecipeBuilder.widenCompressedLoadOrStore(VPI));
+
+      VPI->replaceAllUsesWith(CompressedMemOp);
+      VPI->eraseFromParent();
+    }
+
+    // Update the conditional induction to increment by the number of active
+    // lanes in the mask.
+    Type *UpdateType = CondIndPhi.getScalarType();
+    if (UpdateType->isPointerTy())
+      UpdateType = Plan.getDataLayout().getIndexType(UpdateType);
+
+    DebugLoc DL = CondIndPhi.getDebugLoc();
+    const SCEV *StepSCEV = CondIndPhi.getStepSCEV();
+
+    Builder.setInsertPoint(BlendR);
+    VPValue *HandledLanes =
+        Builder.createNaryOp(VPInstruction::NumActiveLanes, Mask, UpdateType,
+                             {}, DL, "handled.lanes");
+    VPValue *Step = VPSCEVExpander(Builder, SE, DL).expand(StepSCEV);
+    if (!isa<VPConstantInt>(Step))
+      Step = Builder.createFreeze(Step);
+
+    VPValue *Offset = Builder.createOverflowingOp(
+        Instruction::Mul, {Step, HandledLanes}, {false, false}, DL);
+    VPValue *Update =
+        CondIndPhi.getScalarType()->isPointerTy()
+            ? Builder.createPtrAdd(&CondIndPhi, Offset, DL, "conditional.step")
+            : Builder.createAdd(&CondIndPhi, Offset, DL, "conditional.step");
+    CondIndPhi.getBackedgeValue()->replaceAllUsesWith(Update);
+  }
+
+  return true;
 }

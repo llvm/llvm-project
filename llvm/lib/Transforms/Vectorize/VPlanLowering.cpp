@@ -572,6 +572,15 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      if (auto *CondIV = dyn_cast<VPConditionalInductionPHIRecipe>(&R)) {
+        VPPhi *CondIVPhi = Builder.createScalarPhi(
+            CondIV->getStartValue(), CondIV->getDebugLoc(), "conditional.iv");
+        CondIVPhi->addIncoming(CondIV->getBackedgeValue());
+        CondIV->replaceAllUsesWith(CondIVPhi);
+        CondIV->eraseFromParent();
+        continue;
+      }
+
       if (auto *DerivedIVR = dyn_cast<VPDerivedIVRecipe>(&R)) {
         expandVPDerivedIV(DerivedIVR);
         DerivedIVR->eraseFromParent();

@@ -36,26 +36,22 @@ void DroppedVariableStatsMIR::runAfterPass(StringRef PassID,
 void DroppedVariableStatsMIR::runOnMachineFunction(const MachineFunction *MF,
                                                    bool Before) {
   auto &DebugVariables = DebugVariablesStack.back()[&MF->getFunction()];
-  auto FuncName = MF->getName();
   MFunc = MF;
-  run(DebugVariables, FuncName, Before);
+  run(DebugVariables, Before);
 }
 
 void DroppedVariableStatsMIR::calculateDroppedVarStatsOnMachineFunction(
     const MachineFunction *MF, StringRef PassID, StringRef FuncOrModName) {
   MFunc = MF;
-  StringRef FuncName = MF->getName();
   const Function *Func = &MF->getFunction();
   DebugVariables &DbgVariables = DebugVariablesStack.back()[Func];
-  calculateDroppedStatsAndPrint(DbgVariables, FuncName, PassID, FuncOrModName,
+  calculateDroppedStatsAndPrint(DbgVariables, PassID, FuncOrModName,
                                 "MachineFunction", Func);
 }
 
-void DroppedVariableStatsMIR::visitEveryInstruction(
-    unsigned &DroppedCount, DenseMap<VarID, DILocation *> &InlinedAtsMap,
-    VarID Var) {
+void DroppedVariableStatsMIR::visitEveryInstruction(unsigned &DroppedCount,
+                                                    VarID Var) {
   unsigned PrevDroppedCount = DroppedCount;
-  const DIScope *DbgValScope = std::get<0>(Var);
   for (const auto &MBB : *MFunc) {
     for (const auto &MI : MBB) {
       if (!MI.isDebugInstr()) {
@@ -64,8 +60,7 @@ void DroppedVariableStatsMIR::visitEveryInstruction(
           continue;
 
         auto *Scope = DbgLoc->getScope();
-        if (updateDroppedCount(DbgLoc, Scope, DbgValScope, InlinedAtsMap, Var,
-                               DroppedCount))
+        if (updateDroppedCount(DbgLoc, Scope, Var, DroppedCount))
           break;
       }
     }
@@ -76,10 +71,7 @@ void DroppedVariableStatsMIR::visitEveryInstruction(
   }
 }
 
-void DroppedVariableStatsMIR::visitEveryDebugRecord(
-    DenseSet<VarID> &VarIDSet,
-    DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-    StringRef FuncName, bool Before) {
+void DroppedVariableStatsMIR::visitEveryDebugRecord(DenseSet<VarID> &VarIDSet) {
   for (const auto &MBB : *MFunc) {
     for (const auto &MI : MBB) {
       if (MI.isDebugValueLike()) {
@@ -87,8 +79,7 @@ void DroppedVariableStatsMIR::visitEveryDebugRecord(
         if (!DbgVar)
           continue;
         auto DbgLoc = MI.getDebugLoc();
-        populateVarIDSetAndInlinedMap(DbgVar, DbgLoc, VarIDSet, InlinedAtsMap,
-                                      FuncName, Before);
+        populateVarIDSet(DbgVar, DbgLoc, VarIDSet);
       }
     }
   }

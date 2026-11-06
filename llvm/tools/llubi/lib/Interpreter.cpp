@@ -23,7 +23,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
@@ -115,6 +114,9 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
     return true;
   });
   if (!MO)
+    return true;
+
+  if (MO->getState() == MemoryObjectState::Freed)
     return true;
 
   const APInt &PtrAddr = Ptr.address();
@@ -1124,7 +1126,12 @@ public:
   void returnFromCallee() {
     if (hasProgramExited())
       return;
+
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
+    if (CB.doesNotReturn() || (CurrentFrame->ResolvedCallee &&
+                               CurrentFrame->ResolvedCallee->doesNotReturn()))
+      reportImmediateUB() << "Return from a noreturn function/callsite.";
+
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
       // RetVal is the oracle's result; use it to complete the load.

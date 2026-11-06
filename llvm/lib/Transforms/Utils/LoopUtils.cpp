@@ -41,6 +41,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
@@ -2558,8 +2559,8 @@ bool llvm::collectCompressedPtrs(
 
       Type *AccessTy = getLoadStoreType(UserI);
 
-      // Disallow loads/stores of irregular types (like i4).
-      if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+      // Disallow loads/stores of scalable or irregular types (like i4).
+      if (AccessTy->isScalableTy() || hasIrregularType(AccessTy, DL))
         return false;
 
       Value *Ptr = getLoadStorePointerOperand(UserI);

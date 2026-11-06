@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=machine-scheduler %s -o - | FileCheck %s
-# RUN: %if asserts %{ llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=machine-scheduler -debug-only=machine-scheduler -filetype=null %s 2>&1 | FileCheck %s --check-prefix=DEBUG %}
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler %s -o - | FileCheck %s
+# RUN: %if asserts %{ llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -debug-only=machine-scheduler -filetype=null %s 2>&1 | FileCheck %s --check-prefix=DEBUG %}
 
 # The maximum pressure of a region is the maximum over its program points for
 # each register file. In both functions the peaks of two register classes are

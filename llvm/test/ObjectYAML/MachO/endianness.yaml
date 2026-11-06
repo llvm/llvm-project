@@ -1,9 +1,11 @@
-# RUN: yaml2obj -DENDIAN=false %s | obj2yaml | FileCheck %s
-# RUN: yaml2obj -DENDIAN=true %s | obj2yaml | FileCheck %s
+# RUN: yaml2obj -DENDIAN=false %s | obj2yaml | FileCheck -DENDIAN=false %s
+# RUN: yaml2obj -DENDIAN=true %s | obj2yaml | FileCheck -DENDIAN=true %s
 
 ## Check that yaml2obj writes all endian-sensitive Mach-O fields in object
-## endianness rather than host endianness.
+## endianness rather than host endianness, and that obj2yaml always writes
+## IsLittleEndian, so its output means the same object on every host.
 
+# CHECK: IsLittleEndian: [[ENDIAN]]
 # CHECK: FileHeader:
 # CHECK:   magic:           0xFEEDFACF
 # CHECK:   cputype:         0x1000012

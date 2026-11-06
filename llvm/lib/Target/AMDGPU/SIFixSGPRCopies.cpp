@@ -1249,6 +1249,7 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
 PreservedAnalyses
 SIFixSGPRCopiesPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   SIFixSGPRCopies Impl(&MDT);
   bool Changed = Impl.run(MF);

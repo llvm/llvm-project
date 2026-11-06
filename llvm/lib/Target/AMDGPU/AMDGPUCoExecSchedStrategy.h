@@ -112,7 +112,7 @@ private:
 public:
   HardwareUnitInfo() {}
 
-  unsigned size() { return AllSUs.size(); }
+  size_t size() { return AllSUs.size(); }
 
   unsigned getTotalCycles() { return TotalCycles; }
 
@@ -149,7 +149,7 @@ public:
 
   /// \returns the most recently scheduled SU for this HardwareUnit.
   SUnit *getLastScheduledSU() {
-    unsigned ScheduledCount = ScheduledSUs.size();
+    size_t ScheduledCount = ScheduledSUs.size();
     if (!ScheduledCount)
       return nullptr;
 

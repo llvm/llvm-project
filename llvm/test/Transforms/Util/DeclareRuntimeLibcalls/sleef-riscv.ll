@@ -125,9 +125,9 @@
 
 ; CHECK: declare <vscale x 4 x float> @Sleef_logfx_u10rvvm2(<vscale x 4 x float>) [[ATTRS]]
 
-; CHECK: declare <vscale x 2 x double> @Sleef_modfdx_rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG:#[0-9]+]]
+; CHECK: declare <vscale x 2 x double> @Sleef_modfdx_rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG:#[0-9]+]]
 
-; CHECK: declare <vscale x 4 x float> @Sleef_modffx_rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare <vscale x 4 x float> @Sleef_modffx_rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <vscale x 2 x double> @Sleef_nextafterdx_rvvm2(<vscale x 2 x double>, <vscale x 2 x double>) [[ATTRS]]
 
@@ -137,13 +137,13 @@
 
 ; CHECK: declare <vscale x 4 x float> @Sleef_powfx_u10rvvm2(<vscale x 4 x float>, <vscale x 4 x float>) [[ATTRS]]
 
-; CHECK: declare void @Sleef_sincosdx_u10rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @Sleef_sincosdx_u10rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @Sleef_sincosfx_u10rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @Sleef_sincosfx_u10rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @Sleef_sincospidx_u10rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @Sleef_sincospidx_u10rvvm2(<vscale x 2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @Sleef_sincospifx_u10rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @Sleef_sincospifx_u10rvvm2(<vscale x 4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <vscale x 2 x double> @Sleef_sindx_u10rvvm2(<vscale x 2 x double>) [[ATTRS]]
 

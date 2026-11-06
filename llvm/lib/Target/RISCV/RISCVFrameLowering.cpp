@@ -35,19 +35,12 @@
 
 using namespace llvm;
 
-static Align getABIStackAlignment(RISCVABI::ABI ABI) {
-  if (ABI == RISCVABI::ABI_ILP32E)
-    return Align(4);
-  if (ABI == RISCVABI::ABI_LP64E)
-    return Align(8);
-  return Align(16);
-}
-
 RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
-    : TargetFrameLowering(
-          StackGrowsDown, getABIStackAlignment(STI.getTargetABI()),
-          /*LocalAreaOffset=*/0,
-          /*TransientStackAlignment=*/getABIStackAlignment(STI.getTargetABI())),
+    : TargetFrameLowering(StackGrowsDown,
+                          RISCVABI::getStackAlignment(STI.getTargetABI()),
+                          /*LocalAreaOffset=*/0,
+                          /*TransientStackAlignment=*/
+                          RISCVABI::getStackAlignment(STI.getTargetABI())),
       STI(STI) {}
 
 // The register used to hold the frame pointer.

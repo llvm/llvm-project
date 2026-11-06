@@ -10,7 +10,6 @@
 //  opcodes in DirectX Intermediate Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILIntrinsicExpansion.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1417,8 +1416,8 @@ static bool expansionIntrinsics(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
-                                              ModuleAnalysisManager &) {
+PreservedAnalyses DXILIntrinsicExpansionPass::run(Module &M,
+                                                  ModuleAnalysisManager &) {
   if (expansionIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

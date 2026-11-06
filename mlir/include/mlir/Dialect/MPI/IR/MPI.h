@@ -8,10 +8,6 @@
 #ifndef MLIR_DIALECT_MPI_IR_MPI_H_
 #define MLIR_DIALECT_MPI_IR_MPI_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 //===----------------------------------------------------------------------===//

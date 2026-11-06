@@ -66,6 +66,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/WasmEHPrepare.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WasmEHInfo.h"
@@ -86,6 +87,7 @@ class WasmEHPrepareImpl {
   friend class WasmEHPrepare;
 
   Type *LPadContextTy = nullptr; // type of 'struct _Unwind_LandingPadContext'
+  const RTLIB::RuntimeLibcallsInfo *RTLCI = nullptr;
 
   Function *ThrowF = nullptr;       // wasm.throw() intrinsic
   Function *LPadIndexF = nullptr;   // wasm.landingpad.index() intrinsic
@@ -94,7 +96,7 @@ class WasmEHPrepareImpl {
   Function *CatchF = nullptr;       // wasm.catch() intrinsic
   Function *GetSelectorF = nullptr; // wasm.get.ehselector() intrinsic
   FunctionCallee PersonalityF = nullptr;
-  FunctionCallee GetWasmLPadContextF =
+  Function *GetWasmLPadContextF =
       nullptr; // _Unwind_GetWasmLPadContext() wrapper
 
   bool prepareThrows(Function &F);
@@ -103,7 +105,9 @@ class WasmEHPrepareImpl {
 
 public:
   WasmEHPrepareImpl() = default;
-  WasmEHPrepareImpl(Type *LPadContextTy_) : LPadContextTy(LPadContextTy_) {}
+  WasmEHPrepareImpl(Type *LPadContextTy_,
+                    const RTLIB::RuntimeLibcallsInfo &RTLCI_)
+      : LPadContextTy(LPadContextTy_), RTLCI(&RTLCI_) {}
   bool runOnFunction(Function &F);
 };
 
@@ -115,7 +119,15 @@ public:
 
   WasmEHPrepare() : FunctionPass(ID) {}
   bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override { return P.runOnFunction(F); }
+  bool runOnFunction(Function &F) override {
+    P.RTLCI =
+        &getAnalysis<RuntimeLibraryInfoWrapper>().getRTLCI(*F.getParent());
+    return P.runOnFunction(F);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<RuntimeLibraryInfoWrapper>();
+  }
 
   StringRef getPassName() const override {
     return "WebAssembly Exception handling preparation";
@@ -125,13 +137,22 @@ public:
 } // end anonymous namespace
 
 PreservedAnalyses WasmEHPreparePass::run(Function &F,
-                                         FunctionAnalysisManager &) {
+                                         FunctionAnalysisManager &FAM) {
   auto &Context = F.getContext();
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  const RTLIB::RuntimeLibcallsInfo *RTLCI =
+      MAMProxy.getCachedResult<RuntimeLibraryAnalysis>(*F.getParent());
+  if (!RTLCI) {
+    Context.emitError("'" + RuntimeLibraryAnalysis::name() +
+                      "' analysis required");
+    return PreservedAnalyses::all();
+  }
+
   auto *I32Ty = Type::getInt32Ty(Context);
   auto *PtrTy = PointerType::get(Context, 0);
   auto *LPadContextTy =
       StructType::get(I32Ty /*lpad_index*/, PtrTy /*lsda*/, I32Ty /*selector*/);
-  WasmEHPrepareImpl P(LPadContextTy);
+  WasmEHPrepareImpl P(LPadContextTy, *RTLCI);
   bool Changed = P.runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses ::all();
 }
@@ -139,6 +160,7 @@ PreservedAnalyses WasmEHPreparePass::run(Function &F,
 char WasmEHPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(WasmEHPrepare, DEBUG_TYPE,
                       "Prepare WebAssembly exceptions", false, false)
+INITIALIZE_PASS_DEPENDENCY(RuntimeLibraryInfoWrapper)
 INITIALIZE_PASS_END(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",
                     false, false)
 
@@ -232,6 +254,13 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   }
   assert(F.hasPersonalityFn() && "Personality function not found");
 
+  RTLIB::LibcallImpl GetWasmLPadContextImpl =
+      RTLIB::impl__Unwind_GetWasmLPadContext;
+  if (!RTLCI->isAvailable(GetWasmLPadContextImpl)) {
+    Ctx.emitError("no libcall available for wasm landing pad context");
+    return false;
+  }
+
   // wasm.landingpad.index() intrinsic, which is to specify landingpad index
   LPadIndexF =
       Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_landingpad_index);
@@ -257,9 +286,11 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   if (Function *F = dyn_cast<Function>(PersonalityF.getCallee()))
     F->setDoesNotThrow();
 
-  StringRef UnwindGetWasmLPadContextName =
-      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-          RTLIB::impl__Unwind_GetWasmLPadContext);
+  auto [UnwindGetWasmLPadContextType, UnwindGetWasmLPadContextAttrs] =
+      RTLCI->getFunctionTy(Ctx, M.getTargetTriple(), M.getDataLayout(),
+                           GetWasmLPadContextImpl);
+  assert(UnwindGetWasmLPadContextType &&
+         "missing signature for _Unwind_GetWasmLPadContext");
 
   // _Unwind_GetWasmLPadContext() wrapper function
   //
@@ -268,12 +299,14 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   // cannot, in general, access the `__wasm_lpad_context` directly here because,
   // when the cooperative multithreading feature is enabled, direct,
   // cross-library access to thread local variables is not supported.
-  auto *UnwindGetWasmLPadContextType =
-      FunctionType::get(PointerType::getUnqual(Ctx), {}, false);
-  GetWasmLPadContextF = M.getOrInsertFunction(UnwindGetWasmLPadContextName,
-                                              UnwindGetWasmLPadContextType);
-  if (Function *F = dyn_cast<Function>(GetWasmLPadContextF.getCallee()))
-    F->setDoesNotThrow();
+  GetWasmLPadContextF = cast<Function>(
+      M.getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+                                GetWasmLPadContextImpl),
+                            UnwindGetWasmLPadContextType,
+                            UnwindGetWasmLPadContextAttrs)
+          .getCallee());
+  GetWasmLPadContextF->setCallingConv(
+      RTLCI->getLibcallImplCallingConv(GetWasmLPadContextImpl));
 
   unsigned Index = 0;
   for (auto *BB : CatchPads) {
@@ -341,8 +374,9 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   }
   IRB.SetInsertPoint(CatchCI->getNextNode());
 
-  Instruction *LPadContext =
+  CallInst *LPadContext =
       IRB.CreateCall(GetWasmLPadContextF, {}, OperandBundleDef("funclet", FPI));
+  LPadContext->setCallingConv(GetWasmLPadContextF->getCallingConv());
 
   Value *LPadIndexField = LPadContext;
   Value *LSDAField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContext,

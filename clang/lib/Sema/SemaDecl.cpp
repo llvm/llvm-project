@@ -18954,6 +18954,12 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             // tag. We're going to create a new Decl for it.
           }
 
+          // Qualified lookup can find a tag in an inline namespace. Its
+          // redeclaration belongs to that namespace, which need not be the
+          // context named by the qualifier.
+          if (SS.isNotEmpty())
+            SearchDC = PrevTagDecl->getDeclContext();
+
           // Okay, we're going to make a redeclaration.  If this is some kind
           // of reference, make sure we build the redeclaration in the same DC
           // as the original, and ignore the current access specifier.

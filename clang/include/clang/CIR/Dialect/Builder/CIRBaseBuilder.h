@@ -1009,6 +1009,41 @@ public:
     return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs, fenv);
   }
 
+  /// Compares \p lhs and \p rhs element-wise.  Each result element is a
+  /// signed integer of the operand element's bit width.  That is not the
+  /// result an FP80 element needs, so an FP80 compare names its result type
+  /// with the overload below.
+  cir::VecFCmpOp createVecFCompare(mlir::Location loc, cir::FCmpOpKind kind,
+                                   mlir::Value lhs, mlir::Value rhs,
+                                   bool signaling = false) {
+    VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
+    mlir::Type elemTy = vecCast.getElementType();
+    assert(!(mlir::isa<cir::FPTypeInterface>(elemTy) &&
+             &mlir::cast<cir::FPTypeInterface>(elemTy).getFloatSemantics() ==
+                 &llvm::APFloat::x87DoubleExtended()) &&
+           "an FP80 vector compare must name its result type");
+    IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
+    auto resTy = cir::VectorType::get(integralTy, vecCast.getSize());
+    return cir::VecFCmpOp::create(*this, loc, resTy, kind, lhs, rhs, signaling,
+                                  getConstrainedFPAttr());
+  }
+
+  /// Compares \p lhs and \p rhs element-wise, producing \p resultTy, which
+  /// must be a vector of integers or bools with as many elements as \p lhs.
+  /// The result element width can then differ from the operand element's
+  /// bit width, as for FP80, whose result elements are 128 bits.
+  cir::VecFCmpOp createVecFCompare(mlir::Location loc, VectorType resultTy,
+                                   cir::FCmpOpKind kind, mlir::Value lhs,
+                                   mlir::Value rhs, bool signaling = false) {
+    assert(mlir::cast<VectorType>(lhs.getType()).getSize() ==
+               resultTy.getSize() &&
+           cir::isIntOrBoolType(resultTy.getElementType()) &&
+           "vector compare result must be an int or bool vector of the "
+           "operand length");
+    return cir::VecFCmpOp::create(*this, loc, resultTy, kind, lhs, rhs,
+                                  signaling, getConstrainedFPAttr());
+  }
+
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
     return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
   }

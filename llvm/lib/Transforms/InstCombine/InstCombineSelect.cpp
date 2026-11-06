@@ -3354,11 +3354,8 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   return nullptr;
 }
 
-/// Given that \p CondVal is known to be \p CondIsTrue, try to simplify \p SI.
-static Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI,
-                                                    Value *CondVal,
-                                                    bool CondIsTrue,
-                                                    const DataLayout &DL) {
+Value *InstCombinerImpl::simplifyNestedSelectsUsingImpliedCond(
+    SelectInst &SI, Value *CondVal, bool CondIsTrue) {
   Value *InnerCondVal = SI.getCondition();
   Value *InnerTrueVal = SI.getTrueValue();
   Value *InnerFalseVal = SI.getFalseValue();
@@ -3376,7 +3373,7 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
          "Op must be either i1 or vector of i1.");
   if (SI.getCondition()->getType() != Op->getType())
     return nullptr;
-  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
+  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd))
     return createSelectInstWithUnknownProfile(
         Op, IsAnd ? V : ConstantInt::getTrue(Op->getType()),
         IsAnd ? ConstantInt::getFalse(Op->getType()) : V);
@@ -5163,8 +5160,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (TrueSI->getCondition()->getType() == CondVal->getType()) {
       // Fold nested selects if the inner condition can be implied by the outer
       // condition.
-      if (Value *V = simplifyNestedSelectsUsingImpliedCond(
-              *TrueSI, CondVal, /*CondIsTrue=*/true, DL))
+      if (Value *V = simplifyNestedSelectsUsingImpliedCond(*TrueSI, CondVal,
+                                                           /*CondIsTrue=*/true))
         return replaceOperand(SI, 1, V);
 
       // We choose this as normal form to enable folding on the And and
@@ -5198,7 +5195,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // Fold nested selects if the inner condition can be implied by the outer
       // condition.
       if (Value *V = simplifyNestedSelectsUsingImpliedCond(
-              *FalseSI, CondVal, /*CondIsTrue=*/false, DL))
+              *FalseSI, CondVal, /*CondIsTrue=*/false))
         return replaceOperand(SI, 2, V);
 
       if (FalseSI->hasOneUse()) {

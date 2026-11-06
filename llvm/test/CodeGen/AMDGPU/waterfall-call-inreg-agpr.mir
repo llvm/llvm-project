@@ -48,7 +48,7 @@ body:             |
 
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     $sgpr16 = COPY %0
-    SI_CALL_ISEL killed %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    SI_CALL_ISEL %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     S_ENDPGM 0
 ...
@@ -84,7 +84,7 @@ body:             |
 
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     $sgpr16 = COPY %0
-    SI_CALL_ISEL killed %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
+    SI_CALL_ISEL %1, 0, csr_amdgpu_gfx90ainsts, implicit $sgpr16
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     S_ENDPGM 0
 ...

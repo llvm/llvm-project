@@ -11,3 +11,8 @@ entry:
 
 !0 = !{}
 !1 = !{i32 10}
+
+; CHECK-NEXT: operands must be a string or a tuple of strings
+define void @func_non_string() !annotation !1 {
+  ret void
+}

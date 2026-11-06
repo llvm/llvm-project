@@ -1965,4 +1965,58 @@ def LLVM_AnyMDAttr : AnyAttrOf<[
     "LLVM metadata attribute (md_string, md_const, md_global_value, md_null, "
     "md_addrspacecast, or md_node)">;
 
+//===----------------------------------------------------------------------===//
+// MemProfMIBAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_MemProfContextSizeAttr
+    : LLVM_Attr<"MemProfContextSize", "memprof_context_size"> {
+  let parameters = (ins
+    "uint64_t":$id,
+    "uint64_t":$size
+  );
+
+  let summary = "One full-context size record of a MemProf MemInfoBlock";
+
+  let description = [{
+    A `(context id, total size)` pair carried by a `!memprof` MemInfoBlock when
+    the profile was gathered with full context-size information.
+
+    Example:
+    ```mlir
+    #ctx = #llvm.memprof_context_size<id = 123456789, size = 4096>
+    ```
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LLVM_MemProfMIBAttr : LLVM_Attr<"MemProfMIB", "memprof_mib"> {
+  let parameters = (ins
+    "DenseI64ArrayAttr":$call_stack,
+    "StringAttr":$alloc_type,
+    OptionalArrayRefParameter<"MemProfContextSizeAttr">:$context_sizes
+  );
+
+  let summary = "One MemInfoBlock of LLVM dialect memprof metadata";
+
+  let description = [{
+    One MemInfoBlock of a `!memprof` node: the allocation call stack it was
+    profiled on, its allocation-type tag (`"cold"`, `"notcold"`, ...), and
+    optionally the per-context total sizes behind it. The tag is singular:
+    the LLVM verifier requires operand 1 to be the one MDString.
+
+    Example:
+    ```mlir
+    #mib = #llvm.memprof_mib<call_stack = [123456789], alloc_type = "cold">
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#memprof-metadata
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+}
+
 #endif // LLVMIR_ATTRDEFS

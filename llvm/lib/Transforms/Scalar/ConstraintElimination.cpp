@@ -404,6 +404,13 @@ public:
 
   bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B);
 
+  /// Returns the result of \p Solve. If it does not return a value, retries
+  /// after adding A == decompose(A) and B == decompose(B) to the system of \p
+  /// C, if needed, and removes them afterwards.
+  std::optional<bool>
+  tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
+                  function_ref<std::optional<bool>()> Solve);
+
   /// Returns true if \p V is known to be non-negative, either because the
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V);
@@ -1090,10 +1097,53 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   return std::nullopt;
 }
 
+static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
+                                     ConstraintInfo &Info,
+                                     const DataLayout &DL);
+
+std::optional<bool>
+ConstraintInfo::tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
+                                function_ref<std::optional<bool>()> Solve) {
+  if (std::optional<bool> Res = Solve())
+    return Res;
+  if (C.empty())
+    return std::nullopt;
+
+  auto &CS = getCS(C.IsSigned);
+  unsigned NumVars = getValue2Index(C.IsSigned).size();
+  unsigned NumPushed = 0;
+  for (Value *V : {A, B}) {
+    RowTy Row = getDecompositionLinkRow(V, C, *this, DL);
+    RowTy Negated = ConstraintSystem::negateOrEqual(Row);
+    if (Row.empty() || Negated.empty())
+      continue;
+    NumPushed += CS.addRow(Row, NumVars);
+    NumPushed += CS.addRow(Negated, NumVars);
+  }
+  if (NumPushed == 0)
+    return std::nullopt;
+#ifndef NDEBUG
+  unsigned NumRows = CS.size();
+#endif
+  std::optional<bool> Res = Solve();
+  assert(CS.size() == NumRows && "rows added while link rows are pushed");
+  while (NumPushed--)
+    CS.popLastConstraint();
+  return Res;
+}
+
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
   auto R = getConstraintForSolving(Pred, A, B);
-  return !R.empty() &&
-         getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
+  if (R.empty())
+    return false;
+  auto &CS = getCS(R.IsSigned);
+  return tryWithLinkRows(A, B, R,
+                         [&]() -> std::optional<bool> {
+                           if (CS.isConditionImpliedInSubSystem(R.Coefficients))
+                             return true;
+                           return std::nullopt;
+                         })
+      .value_or(false);
 }
 
 bool ConstraintInfo::isKnownNonNegative(Value *V) {
@@ -2027,33 +2077,10 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   // == decompose(B), if needed.
   auto TryWithLinkedDecomposition =
       [&](const ConstraintTy &C) -> std::optional<bool> {
-    if (C.empty())
-      return std::nullopt;
-
-    auto &CS = Info.getCS(C.IsSigned);
-    unsigned NumVars = Info.getValue2Index(C.IsSigned).size();
-    unsigned NumPushed = 0;
-    for (Value *V : {A, B}) {
-      RowTy Row =
-          getDecompositionLinkRow(V, C, Info, CheckInst->getDataLayout());
-      RowTy Negated = ConstraintSystem::negateOrEqual(Row);
-      if (Row.empty() || Negated.empty())
-        continue;
-      NumPushed += CS.addRow(Row, NumVars);
-      NumPushed += CS.addRow(Negated, NumVars);
-    }
-    if (NumPushed == 0)
-      return std::nullopt;
-
-    std::optional<bool> Res = TryWithConstraint(C);
-    while (NumPushed--)
-      CS.popLastConstraint();
-    return Res;
+    return Info.tryWithLinkRows(A, B, C, [&] { return TryWithConstraint(C); });
   };
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (auto ImpliedCondition = TryWithConstraint(R))
-    return ImpliedCondition;
   if (auto ImpliedCondition = TryWithLinkedDecomposition(R))
     return ImpliedCondition;
 
@@ -2080,8 +2107,6 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
     auto SR = Info.getConstraint(Pred, A, B, NewVariables,
                                  /*ForceSignedSystem=*/true);
     if (NewVariables.empty()) {
-      if (auto ImpliedCondition = TryWithConstraint(SR))
-        return ImpliedCondition;
       if (auto ImpliedCondition = TryWithLinkedDecomposition(SR))
         return ImpliedCondition;
     }

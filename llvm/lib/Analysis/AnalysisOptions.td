@@ -46,6 +46,8 @@ defm : BoolField<"print-bfi", "false",
   "Print the block frequency info">;
 defm : ValueField<"view-bfi-func-name", "StringRef", "",
   "The option to specify the name of the function whose CFG will be displayed">;
+defm : EnumField<"view-block-freq-propagation-dags", "GVDAGType", "", "none,fraction,integer,count", ["GVDAGType::None", "GVDAGType::Fraction", "GVDAGType::Integer", "GVDAGType::Count"],
+  "Pop up a window to show a dag displaying how block frequencies propagation through the CFG">;
 defm : ValueField<"view-hot-freq-percent", "unsigned", "10",
   "An integer in percent used to specify the hot blocks/edges to be displayed in red: a block or edge whose frequency is no less than the max frequency of the function multiplied by this percent">;
 defm : EnumField<"pgo-view-counts", "PGOViewCountsType", "",
@@ -113,6 +115,8 @@ defm : EnumField<"intrinsic-cost-strategy", "IntrinsicCostStrategy", "IntrinsicC
 // CtxProfAnalysis.cpp
 defm : OptionalBoolField<"ctx-profile-force-is-specialized",
   "Treat the given module as-if it were containing the post-thinlink module containing the root">;
+defm : EnumField<"ctx-profile-printer-level", "CtxProfPrintMode", "CtxProfPrintMode::YAML", "everything,yaml", ["CtxProfPrintMode::Everything", "CtxProfPrintMode::YAML"],
+  "Verbosity level of the contextual profile printer pass">;
 
 // DDG.cpp
 defm : BoolField<"ddg-pi-blocks", "true",
@@ -145,6 +149,8 @@ defm : ValueField<"big-basic-block-instruction-threshold", "unsigned", "500",
   "The minimum number of instructions a basic block should contain before being considered big">;
 defm : ValueField<"call-with-many-arguments-threshold", "unsigned", "4",
   "The minimum number of arguments a function call must have before it is considered having many arguments">;
+defm : BoolField<"enable-detailed-function-properties", "false",
+  "Whether or not to compute detailed function properties">;
 defm : ValueField<"medium-basic-block-instruction-threshold", "unsigned", "15",
   "The minimum number of instructions a basic block should contain before being considered medium-sized">;
 
@@ -173,6 +179,10 @@ defm : ValueField<"ir2vec-arg-weight", "float", "0.2f",
   "Weight for argument embeddings">;
 defm : EnumField<"ir2vec-kind", "IR2VecKind", "", "symbolic,flow-aware", ["IR2VecKind::Symbolic", "IR2VecKind::FlowAware"],
   "IR2Vec embedding kind">;
+
+// ImportedFunctionsInliningStatistics.cpp
+defm : EnumField<"inliner-function-import-stats", "InlinerFunctionImportStatsOpts", "", "basic,verbose", ["InlinerFunctionImportStatsOpts::Basic", "InlinerFunctionImportStatsOpts::Verbose"],
+  "Enable inliner stats for imported functions">;
 
 // IndirectCallPromotionAnalysis.cpp
 // Set the maximum number of targets to promote for a single indirect-call
@@ -272,6 +282,10 @@ defm : BoolField<"ipt-expensive-asserts", "false",
 // InteractiveModelRunner.cpp
 defm : BoolField<"interactive-model-runner-echo-reply", "false",
   "The InteractiveModelRunner will echo back to stderr the data received from the host (for debugging purposes)">;
+
+// LastRunTrackingAnalysis.cpp
+defm : BoolField<"enable-last-run-tracking", "true",
+  "Enable last run tracking">;
 
 // LazyValueInfo.cpp
 defm : BoolField<"lvi-per-pred-ranges", "false",
@@ -422,6 +436,12 @@ defm : BoolField<"scev-verify-ir", "false",
 defm : BoolField<"verify-scev-strict", "false",
   "Enable stricter verification with -verify-scev is passed">;
 
+// ScopedNoAliasAA.cpp
+// A handy option for disabling scoped no-alias functionality. The same effect
+// can also be achieved by stripping the associated metadata tags from IR, but
+// this option is sometimes more convenient.
+defm : BoolField<"enable-scoped-noalias", "true", "">;
+
 // StackSafetyAnalysis.cpp
 defm : ValueField<"stack-safety-max-iterations", "int", "20", "">;
 defm : BoolField<"stack-safety-print", "false", "">;
@@ -437,6 +457,12 @@ defm : BoolField<"memprof-annotate-string-literal-section-prefix", "true",
 defm : BoolField<"preserve-hot-data-section-prefix", "true",
   "If true, hot data section prefixes are preserved">;
 
+// TypeBasedAliasAnalysis.cpp
+// A handy option for disabling TBAA functionality. The same effect can also be
+// achieved by stripping the !tbaa tags from IR, but this option is sometimes
+// more convenient.
+defm : BoolField<"enable-tbaa", "true", "">;
+
 // VectorUtils.cpp
 // Maximum factor for an interleaved memory access.
 defm : ValueField<"max-interleave-group-factor", "unsigned", "8",
@@ -445,3 +471,6 @@ defm : ValueField<"max-interleave-group-factor", "unsigned", "8",
 // TODO: Remove the old spellings after 2027-04.
 def : AliasOf<"da-disable-delinearization-checks", "da-delinearization-checks=false">;
 def : AliasOf<"disable-gep-const-evaluation", "gep-const-evaluation=false">;
+
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-last-run-tracking", "enable-last-run-tracking=false">;

@@ -863,8 +863,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // The syntax only allows a single ref-qualifier prior to the decomposition
   // declarator. No other declarator chunks are permitted. Also check the type
   // specifier here.
-  if (DS.getTypeSpecType() != DeclSpec::TST_auto ||
-      D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
+  if (DS.getTypeSpecType() != DeclSpec::TST_auto || D.hasGroupingParens() ||
+      D.getNumTypeObjects() > 1 ||
       (D.getNumTypeObjects() == 1 &&
        D.getTypeObject(0).Kind != DeclaratorChunk::Reference)) {
     Diag(Decomp.getLSquareLoc(),
@@ -880,6 +880,17 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // shouldn't be called for such a type.
     if (R->isFunctionType())
       D.setInvalidType();
+
+    // Recover from an invalid 'auto *' structured binding by removing the
+    // pointer declarator. This allows type deduction to proceed and keeps
+    // the bindings usable in subsequent code.
+    if (D.getNumTypeObjects() == 1 &&
+        D.getTypeObject(0).Kind == DeclaratorChunk::Pointer &&
+        D.getTypeObject(0).Ptr.TypeQuals == 0) {
+      D.DropFirstTypeObject();
+      TInfo = GetTypeForDeclarator(D);
+      R = TInfo->getType();
+    }
   }
 
   // Constrained auto is prohibited by [decl.pre]p6, so check that here.
@@ -2257,6 +2268,16 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
                            SourceLocation &Cxx1yLoc, SourceLocation &Cxx2aLoc,
                            SourceLocation &Cxx2bLoc,
                            Sema::CheckConstexprKind Kind) {
+  auto CheckChildren = [&] {
+    for (Stmt *SubStmt : S->children()) {
+      if (SubStmt &&
+          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
+                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
+        return false;
+    }
+    return true;
+  };
+
   // - its function-body shall be [...] a compound-statement that contains only
   switch (S->getStmtClass()) {
   case Stmt::NullStmtClass:
@@ -2287,9 +2308,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     //   - using-directives,
     //   - typedef declarations and alias-declarations that do not define
     //     classes or enumerations,
-    if (!CheckConstexprDeclStmt(SemaRef, Dcl, DS, Cxx1yLoc, Kind))
-      return false;
-    return true;
+    return CheckConstexprDeclStmt(SemaRef, Dcl, DS, Cxx1yLoc, Kind);
   }
 
   case Stmt::ReturnStmtClass:
@@ -2311,19 +2330,11 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
         SemaRef, Dcl, cast<AttributedStmt>(S)->getSubStmt(), ReturnStmts,
         Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind);
 
-  case Stmt::CompoundStmtClass: {
+  case Stmt::CompoundStmtClass:
     // C++1y allows compound-statements.
     if (!Cxx1yLoc.isValid())
       Cxx1yLoc = S->getBeginLoc();
-
-    CompoundStmt *CompStmt = cast<CompoundStmt>(S);
-    for (auto *BodyIt : CompStmt->body()) {
-      if (!CheckConstexprFunctionStmt(SemaRef, Dcl, BodyIt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
-  }
+    return CheckChildren();
 
   case Stmt::IfStmtClass: {
     // C++1y allows if-statements.
@@ -2350,15 +2361,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     // because they don't make sense without variable mutation.
     if (!SemaRef.getLangOpts().CPlusPlus14)
       break;
-    if (!Cxx1yLoc.isValid())
-      Cxx1yLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children()) {
-      if (SubStmt &&
-          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
+    [[fallthrough]];
 
   case Stmt::SwitchStmtClass:
   case Stmt::CaseStmtClass:
@@ -2368,26 +2371,14 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     // mutation, we can reasonably allow them in C++11 as an extension.
     if (!Cxx1yLoc.isValid())
       Cxx1yLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children()) {
-      if (SubStmt &&
-          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
+    return CheckChildren();
 
   case Stmt::LabelStmtClass:
   case Stmt::GotoStmtClass:
   case Stmt::IndirectGotoStmtClass:
     if (Cxx2bLoc.isInvalid())
       Cxx2bLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children()) {
-      if (SubStmt &&
-          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
+    return CheckChildren();
 
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
@@ -2395,22 +2386,14 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
   case Stmt::CXXTryStmtClass:
     if (Cxx2aLoc.isInvalid())
       Cxx2aLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children()) {
-      if (SubStmt &&
-          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-        return false;
-    }
-    return true;
+    return CheckChildren();
 
   case Stmt::CXXCatchStmtClass:
     // Do not bother checking the language mode (already covered by the
     // try block check).
-    if (!CheckConstexprFunctionStmt(
-            SemaRef, Dcl, cast<CXXCatchStmt>(S)->getHandlerBlock(), ReturnStmts,
-            Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
-      return false;
-    return true;
+    return CheckConstexprFunctionStmt(
+        SemaRef, Dcl, cast<CXXCatchStmt>(S)->getHandlerBlock(), ReturnStmts,
+        Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind);
 
   default:
     if (!isa<Expr>(S))
@@ -12098,8 +12081,16 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
                                       &IsInline, PrevNS);
   }
 
+  // Namespace lookup can find a namespace in an inline namespace. An extension
+  // of that namespace retains its semantic parent, even when it is written in
+  // an enclosing namespace.
+  DeclContext *SemanticContext = CurContext;
+  if (PrevNS && !CurContext->getRedeclContext()->Equals(
+                    PrevNS->getDeclContext()->getRedeclContext()))
+    SemanticContext = PrevNS->getDeclContext();
   NamespaceDecl *Namespc = NamespaceDecl::Create(
-      Context, CurContext, IsInline, StartLoc, Loc, II, PrevNS, IsNested);
+      Context, SemanticContext, IsInline, StartLoc, Loc, II, PrevNS, IsNested);
+  Namespc->setLexicalDeclContext(CurContext);
   if (IsInvalid)
     Namespc->setInvalidDecl();
 

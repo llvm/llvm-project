@@ -1676,4 +1676,54 @@ unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
   return LoopAwareTripCount;
 }
 
+bool areTwoInsertFromSameBuildVector(
+    InsertElementInst *VU, InsertElementInst *V,
+    function_ref<Value *(InsertElementInst *)> GetBaseOperand) {
+  // Instructions must be from the same basic blocks.
+  if (VU->getParent() != V->getParent())
+    return false;
+  // Checks if 2 insertelements are from the same buildvector.
+  if (VU->getType() != V->getType())
+    return false;
+  // Multiple used inserts are separate nodes.
+  if (!VU->hasOneUse() && !V->hasOneUse())
+    return false;
+  auto *IE1 = VU;
+  auto *IE2 = V;
+  std::optional<unsigned> Idx1 = getElementIndex(IE1);
+  std::optional<unsigned> Idx2 = getElementIndex(IE2);
+  if (Idx1 == std::nullopt || Idx2 == std::nullopt)
+    return false;
+  // Go through the vector operand of insertelement instructions trying to find
+  // either VU as the original vector for IE2 or V as the original vector for
+  // IE1.
+  SmallBitVector ReusedIdx(VU->getType()->getElementCount().getKnownMinValue());
+  bool IsReusedIdx = false;
+  do {
+    if (IE2 == VU && !IE1)
+      return VU->hasOneUse();
+    if (IE1 == V && !IE2)
+      return V->hasOneUse();
+    if (IE1 && IE1 != V) {
+      unsigned Idx1 = getElementIndex(IE1).value_or(*Idx2);
+      IsReusedIdx |= ReusedIdx.test(Idx1);
+      ReusedIdx.set(Idx1);
+      if ((IE1 != VU && !IE1->hasOneUse()) || IsReusedIdx)
+        IE1 = nullptr;
+      else
+        IE1 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE1));
+    }
+    if (IE2 && IE2 != VU) {
+      unsigned Idx2 = getElementIndex(IE2).value_or(*Idx1);
+      IsReusedIdx |= ReusedIdx.test(Idx2);
+      ReusedIdx.set(Idx2);
+      if ((IE2 != V && !IE2->hasOneUse()) || IsReusedIdx)
+        IE2 = nullptr;
+      else
+        IE2 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE2));
+    }
+  } while (!IsReusedIdx && (IE1 || IE2));
+  return false;
+}
+
 } // namespace llvm::slpvectorizer

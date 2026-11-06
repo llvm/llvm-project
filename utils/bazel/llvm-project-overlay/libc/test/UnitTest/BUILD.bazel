@@ -55,6 +55,7 @@ libc_test_library(
         "//libc:__support_cpp_bitset",
         "//libc:__support_cpp_functional",
         "//libc:__support_cpp_limits",
+        "//libc:__support_cpp_nullptr_t",
         "//libc:__support_cpp_scope",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string",

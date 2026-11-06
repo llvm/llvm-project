@@ -30,6 +30,7 @@ class RecordKeeper;
 struct CodeGenIntrinsicContext {
   explicit CodeGenIntrinsicContext(const RecordKeeper &RC);
   std::vector<const Record *> DefaultProperties;
+  const Record *NoUnwindAttr;
 };
 
 struct CodeGenIntrinsic {
@@ -78,76 +79,28 @@ struct CodeGenIntrinsic {
   /// True if the intrinsic can throw.
   bool canThrow = false;
 
-  /// True if the intrinsic is marked as noduplicate.
-  bool isNoDuplicate = false;
-
-  /// True if the intrinsic is marked as nomerge.
-  bool isNoMerge = false;
-
-  /// True if the intrinsic is no-return.
-  bool isNoReturn = false;
-
-  /// True if the intrinsic is no-callback.
-  bool isNoCallback = false;
-
-  /// True if the intrinsic is no-sync.
-  bool isNoSync = false;
-
-  /// True if the intrinsic is no-free.
-  bool isNoFree = false;
-
-  /// True if the intrinsic is will-return.
-  bool isWillReturn = false;
-
-  /// True if the intrinsic is cold.
-  bool isCold = false;
-
-  /// True if the intrinsic is marked as convergent.
-  bool isConvergent = false;
-
   /// True if the intrinsic has side effects that aren't captured by any
   /// of the other flags.
   bool hasSideEffects = false;
 
-  // True if the intrinsic is marked as speculatable.
-  bool isSpeculatable = false;
-
-  // True if the intrinsic is marked as strictfp.
-  bool isStrictFP = false;
-
-  // True if the intrinsic is marked as IntrNoCreateUndefOrPoison.
-  bool isNoCreateUndefOrPoison = false;
-
   // True if the intrinsic is marked as IntrTriviallyScalarizable.
   bool isTriviallyScalarizable = false;
 
-  enum ArgAttrKind {
-    NoCapture,
-    NoAlias,
-    NoUndef,
-    NonNull,
-    Returned,
-    ReadOnly,
-    WriteOnly,
-    ReadNone,
-    ImmArg,
-    Alignment,
-    Dereferenceable,
-    Range,
-    NoFreeObj,
-  };
+  /// Function attribute records from Attributes.td, sorted by record ID.
+  SmallVector<const Record *, 8> FnAttributes;
 
   struct ArgAttribute {
-    ArgAttrKind Kind;
+    const Record *Attr;
     uint64_t Value;
     uint64_t Value2;
 
-    ArgAttribute(ArgAttrKind K, uint64_t V, uint64_t V2)
-        : Kind(K), Value(V), Value2(V2) {}
+    ArgAttribute(const Record *Attr, uint64_t V, uint64_t V2)
+        : Attr(Attr), Value(V), Value2(V2) {}
 
-    bool operator<(const ArgAttribute &Other) const {
-      return std::tie(Kind, Value, Value2) <
-             std::tie(Other.Kind, Other.Value, Other.Value2);
+    bool operator<(const ArgAttribute &Other) const;
+    bool operator==(const ArgAttribute &Other) const {
+      return std::tie(Attr, Value, Value2) ==
+             std::tie(Other.Attr, Other.Value, Other.Value2);
     }
   };
 
@@ -165,7 +118,7 @@ struct CodeGenIntrinsic {
   /// Range-set constraints for immediate arguments, indexed by argument number.
   SmallVector<ImmArgRangeSet> ImmArgRangeSets;
 
-  void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0,
+  void addArgAttribute(unsigned Idx, const Record *Attr, uint64_t V = 0,
                        uint64_t V2 = 0);
   void addImmArgRangeSet(unsigned ArgNo, ImmArgRangeSet::RangeList Ranges);
 
@@ -191,6 +144,10 @@ struct CodeGenIntrinsic {
   void addDefaultArgValue(unsigned ArgIdx, uint64_t Value);
 
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
+
+  bool hasFnAttribute(StringRef Name) const;
+
+  bool isConvergent() const { return hasFnAttribute("Convergent"); }
 
   /// Goes through all IntrProperties that have IsDefault value set and sets
   /// the property.
