@@ -45,9 +45,9 @@ AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
 
 AST_MATCHER(AutoType, isDecltypeAuto) { return Node.isDecltypeAuto(); }
 
-AST_MATCHER(MemberExpr, isQualifiedImplicitAccess) {
-  return Node.hasQualifier() && Node.isImplicitAccess();
-}
+AST_MATCHER(MemberExpr, isQualified) { return Node.hasQualifier(); }
+
+AST_MATCHER(MemberExpr, isImplicitAccess) { return Node.isImplicitAccess(); }
 
 // Skips the implicit casts, copies, temporaries, and conversion calls that
 // wrap an operand; they add no tokens, so they share the operand's range.
@@ -125,8 +125,8 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
             hasParent(exprWithCleanups(InDecltypeAutoContext))));
   // &S::value is a pointer-to-member; T::value may instantiate to one.
   const auto MemberAddressOperand = expr(anyOf(
-      memberExpr(isQualifiedImplicitAccess()), dependentScopeDeclRefExpr(),
-      declRefExpr(isInTemplateInstantiation())));
+      memberExpr(isQualified(), isImplicitAccess()),
+      dependentScopeDeclRefExpr(), declRefExpr(isInTemplateInstantiation())));
   const auto AddressOf = expr(
       anyOf(unaryOperator(hasOperatorName("&")),
             cxxOperatorCallExpr(hasOperatorName("&"), argumentCountIs(1))));
