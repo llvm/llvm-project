@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; RUN: llc -mtriple=hexagon -O2 -filetype=obj < %s -o /dev/null
 
-; The InitUndef pass replaces the undef input of an early-clobber inline asm
+; The InitUndef pass replaces the placeholder input of an early-clobber inline asm
 ; with an INIT_UNDEF pseudo. If the packetizer pulls that INIT_UNDEF into a
 ; bundle, HexagonAsmPrinter must not lower it to MC, or assertion builds fail
 ; in HexagonMCShuffler with "!getDesc(MCII, MI).isPseudo()".
@@ -38,7 +38,7 @@ entry:
   %a0 = load i32, ptr %p, align 4
   %g1 = getelementptr i32, ptr %p, i32 1
   %a1 = load i32, ptr %g1, align 4
-  %r = call i32 asm sideeffect "$0 = $1", "=&r,r"(i32 undef)
+  %r = call i32 asm sideeffect "$0 = $1", "=&r,r"(i32 poison)
   %s0 = add i32 %r, %a0
   %s1 = add i32 %s0, %a1
   ret i32 %s1
@@ -46,7 +46,7 @@ entry:
 
 define void @fred(ptr %A, double %L1, i16 %LGV, i1 %C1, ptr %G.1, i1 %C2) {
 entry:
-  %0 = call { i32, i32 } asm sideeffect " $0 = usr\0A $1 = $2\0A $0 = insert($1, #1, #16)\0Ausr = $0 \0A", "=&r,=&r,r"(i1 undef)
+  %0 = call { i32, i32 } asm sideeffect " $0 = usr\0A $1 = $2\0A $0 = insert($1, #1, #16)\0Ausr = $0 \0A", "=&r,=&r,r"(i1 poison)
   store i1 %C2, ptr %G.1, align 1
   ret void
 }

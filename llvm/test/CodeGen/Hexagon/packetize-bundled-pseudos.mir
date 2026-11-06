@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=hexagon -mcpu=hexagonv79 -start-before=hexagon-packetizer -filetype=obj -o /dev/null %s
 
 # finalizeBundle() can place pseudos that emit no code (INIT_UNDEF, created by
-# the InitUndef pass for an undef input of an early-clobber inline asm, and
+# the InitUndef pass for a placeholder input of an early-clobber inline asm, and
 # ARITH_FENCE) inside a packet when they sit between two of its instructions.
 # They must not be lowered to MC: HexagonMCShuffler asserts on pseudos.
 
