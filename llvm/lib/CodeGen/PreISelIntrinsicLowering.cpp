@@ -894,7 +894,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
           return false;
-        return lowerUnaryVectorIntrinsicAsLoop(M, CI);
+        return lowerVectorIntrinsicAsLoop(M, CI);
       });
       break;
     case Intrinsic::modf:
@@ -928,7 +928,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         if (TL->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC) !=
             RTLIB::Unsupported)
           return false;
-        return lowerUnaryVectorIntrinsicAsLoop(M, CI);
+        return lowerVectorIntrinsicAsLoop(M, CI);
       });
       break;
     case Intrinsic::ptrauth_sign:
