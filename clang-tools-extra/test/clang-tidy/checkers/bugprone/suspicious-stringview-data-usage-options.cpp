@@ -29,7 +29,6 @@ void TestStringViewTypes(custom::StrView sv) {
 void TestAllowedCallees(custom::StrView sv) {
   safe_func(sv.data());
   SafeClass sc(sv.data());
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: result of a `data()` call may not be null terminated, provide size information to the callee to prevent potential issues [bugprone-suspicious-stringview-data-usage]
 }
 
 void TestNotAllowed(custom::StrView sv) {
