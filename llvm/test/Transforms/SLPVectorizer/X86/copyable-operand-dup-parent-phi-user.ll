@@ -17,17 +17,16 @@ define void @k() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    br label %[[S:.*]]
 ; CHECK:       [[IF_END9]]:
-; CHECK-NEXT:    [[SUB10:%.*]] = fsub float 0.000000e+00, [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> <float -0.000000e+00, float poison, float poison, float 0.000000e+00>, float [[SUB10]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <4 x float> <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> <float 0.000000e+00, float 1.000000e+00, float -0.000000e+00, float 0.000000e+00>, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> <float 0.000000e+00, float poison, float poison, float -0.000000e+00>, <4 x i32> <i32 4, i32 1, i32 1, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> <float 0.000000e+00, float poison, float poison, float -0.000000e+00>, <4 x i32> <i32 4, i32 1, i32 1, i32 7>
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> <float 0.000000e+00, float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x float> [[TMP7]], i64 1
 ; CHECK-NEXT:    br label %[[S]]
 ; CHECK:       [[S]]:
 ; CHECK-NEXT:    [[L_2:%.*]] = phi float [ 0.000000e+00, %[[IF_END9]] ], [ 0.000000e+00, %[[T]] ]
-; CHECK-NEXT:    [[M_1:%.*]] = phi float [ [[SUB10]], %[[IF_END9]] ], [ 0.000000e+00, %[[T]] ]
+; CHECK-NEXT:    [[M_1:%.*]] = phi float [ [[TMP22]], %[[IF_END9]] ], [ 0.000000e+00, %[[T]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x float> [ [[TMP11]], %[[IF_END9]] ], [ [[TMP5]], %[[T]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP12]], i64 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float [[M_1]], i64 1

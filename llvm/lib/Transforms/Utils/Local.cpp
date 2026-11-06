@@ -327,6 +327,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         NewBr->setMetadata(LLVMContext::MD_prof,
                            MDBuilder(BB->getContext())
                                .createBranchWeights(CaseWeight, DefWeight));
+      } else {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewBr, DEBUG_TYPE);
       }
 
       // Update make.implicit metadata to the newly-created conditional branch.
@@ -419,12 +421,6 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   // general.
   if (I->isEHPad())
     return false;
-
-  if (const DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
-    if (DLI->getLabel())
-      return false;
-    return true;
-  }
 
   if (auto *CB = dyn_cast<CallBase>(I))
     if (isRemovableAlloc(CB, TLI))
@@ -1352,15 +1348,17 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
 
   if (BBKillable) {
+    // Clear the successor list of BB to match updates applying to DTU later.
+    // Run before replaceAllUsesWith() to not redundantly scan phi nodes in
+    // Succ for BB.
+    if (BB->hasTerminator())
+      BB->back().eraseFromParent();
+
     // Everything that jumped to BB now goes to Succ.
     BB->replaceAllUsesWith(Succ);
 
     if (!Succ->hasName())
       Succ->takeName(BB);
-
-    // Clear the successor list of BB to match updates applying to DTU later.
-    if (BB->hasTerminator())
-      BB->back().eraseFromParent();
 
     new UnreachableInst(BB->getContext(), BB);
     assert(succ_empty(BB) && "The successor list of BB isn't empty before "
@@ -1408,6 +1406,7 @@ EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB,
         continue;
       // A duplicate. Replace this PHI with the base PHI.
       ++NumPHICSEs;
+      PN->andIRFlags(DuplicatePN);
       DuplicatePN->replaceAllUsesWith(PN);
       ToRemove.insert(DuplicatePN);
       Changed = true;
@@ -1452,7 +1451,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     }
 
     static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
-      return LHS->isIdenticalTo(RHS);
+      return LHS->isIdenticalToWhenDefined(RHS);
     }
 
     static bool isEqual(PHINode *LHS, PHINode *RHS) {
@@ -1477,6 +1476,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     if (!Inserted.second) {
       // A duplicate. Replace this PHI with its duplicate.
       ++NumPHICSEs;
+      (*Inserted.first)->andIRFlags(PN);
       PN->replaceAllUsesWith(*Inserted.first);
       ToRemove.insert(PN);
       Changed = true;
@@ -1712,6 +1712,9 @@ void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
   DIExpr = dropInitialDeref(DIExpr);
   Value *DV = SI->getValueOperand();
 
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
+
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
   insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
@@ -1817,12 +1820,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *APN,
 bool llvm::LowerDbgDeclare(Function &F) {
   bool Changed = false;
   DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false);
-  SmallVector<DbgDeclareInst *, 4> Dbgs;
   SmallVector<DbgVariableRecord *> DVRs;
   for (auto &FI : F) {
     for (Instruction &BI : FI) {
-      if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
-        Dbgs.push_back(DDI);
       for (DbgVariableRecord &DVR : filterDbgVars(BI.getDbgRecordRange())) {
         if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
           DVRs.push_back(&DVR);
@@ -1830,7 +1830,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     }
   }
 
-  if (Dbgs.empty() && DVRs.empty())
+  if (DVRs.empty())
     return Changed;
 
   auto LowerOne = [&](DbgVariableRecord *DDI) {
@@ -3118,8 +3118,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   auto *JProf = J->getMetadata(LLVMContext::MD_prof);
   auto *KProf = K->getMetadata(LLVMContext::MD_prof);
   if (!AAOnly && (JProf || KProf)) {
-    K->setMetadata(LLVMContext::MD_prof,
-                   MDNode::getMergedProfMetadata(KProf, JProf, K, J));
+    // We do not need to merge metadata if we have select instructions and the
+    // one we're keeping (K) does not move (explicitly merging would drop the
+    // information in this case). Otherwise, explicitly handle the merging.
+    if (DoesKMove || (!isa<SelectInst>(J) || !isa<SelectInst>(K)) ||
+        ProfcheckDisableMetadataFixes)
+      K->setMetadata(LLVMContext::MD_prof,
+                     MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 }
 
@@ -3164,6 +3169,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_invariant_group:
+    case LLVMContext::MD_mmra:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;
@@ -3436,8 +3442,8 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
       dropDebugUsers(*I);
     // RemoveDIs: drop debug-info too as the following code does.
     I->dropDbgRecords();
-    if (I->isDebugOrPseudoInst()) {
-      // Remove DbgInfo and pseudo probe Intrinsics.
+    if (isa<PseudoProbeInst>(I)) {
+      // Remove pseudo probe Intrinsics.
       II = I->eraseFromParent();
       continue;
     }

@@ -8,7 +8,7 @@
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/PrintCallHelper.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -861,7 +861,7 @@ public:
   matchAndRewrite(vector::ReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = adaptor.getVector();
     Value acc = adaptor.getAcc();
@@ -1028,7 +1028,7 @@ public:
       ConversionPatternRewriter &rewriter) const override {
     auto reductionOp = cast<ReductionOp>(maskableOp.getOperation());
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = reductionOp.getVector();
     Value acc = reductionOp.getAcc();
