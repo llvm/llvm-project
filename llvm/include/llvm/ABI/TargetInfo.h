@@ -196,6 +196,10 @@ LLVM_ABI std::unique_ptr<TargetInfo>
 createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
                        bool Has64BitPointers, const X86ABICompatInfo &Compat);
 
+LLVM_ABI std::unique_ptr<TargetInfo>
+createWinX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
+                          const ABICompatInfo &Compat);
+
 enum class AArch64ABIKind {
   AAPCS = 0,
   DarwinPCS,
