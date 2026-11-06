@@ -963,6 +963,7 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
     }
     llvm_unreachable("should have been covered by switch above");
   };
+
   if (!StartOffset)
     return IsWideIVInc() ? WideIV : nullptr;
 

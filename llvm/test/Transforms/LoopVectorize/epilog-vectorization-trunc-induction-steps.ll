@@ -172,6 +172,7 @@ loop:
 exit:
   ret void
 }
+
 ; Preserve the difference from a nonzero original start, including when the
 ; main vector loop is bypassed. The offset must be applied before truncation.
 define void @trunc_iv_nonzero_start_minus_const_epilogue(ptr %dst, i64 %n) {
