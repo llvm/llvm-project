@@ -451,6 +451,17 @@ llvm.func @rocdl.iglp.opt() {
   llvm.return
 }
 
+llvm.func @rocdl.sched.bank(%val : f32, %ival : i32) -> f32 {
+  // CHECK-LABEL: rocdl.sched.bank
+  // strict (default): bank 2, strict true
+  // CHECK: call float @llvm.amdgcn.sched.bank.f32(float %{{.*}}, i32 2, i1 true)
+  %0 = rocdl.sched.bank %val, 2 : f32
+  // soft: bank 1, strict false
+  // CHECK: call i32 @llvm.amdgcn.sched.bank.i32(i32 %{{.*}}, i32 1, i1 false)
+  %1 = rocdl.sched.bank %ival, 1 soft : i32
+  llvm.return %0 : f32
+}
+
 llvm.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg2 : vector<32 x f32>, %arg3: i32,
                    %arg4 : vector<16 x f32>, %arg5 : vector<4xf32>,

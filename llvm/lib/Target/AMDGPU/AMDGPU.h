@@ -222,6 +222,9 @@ private:
 void initializeAMDGPUPrepareAGPRAllocLegacyPass(PassRegistry &);
 extern char &AMDGPUPrepareAGPRAllocLegacyID;
 
+void initializeAMDGPUSchedBankPass(PassRegistry &);
+extern char &AMDGPUSchedBankID;
+
 void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
 extern char &AMDGPUReserveWWMRegsLegacyID;
 
