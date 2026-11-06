@@ -30,7 +30,7 @@
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.module-supp"' not %run %t-norecover 2>&1 | FileCheck %s
 
 // Test case for max file length suppression file (256MiB).
-// RUN: %python -c "kDefaultFileMaxSize = 1 << 28; [print(f'vptr:{i:022}.cpp') for i in range(int(kDefaultFileMaxSize/32))]" > %t.maxlen-supp
+// RUN: %python -c "import sys; s = b'unsigned-integer-overflow:do_overflow\n#'; open(sys.argv[1], 'wb').write(s + b'a' * ((1 << 28) - len(s)))" %t.maxlen-supp
 // RUN: %env_ubsan_opts=suppressions='"%t.maxlen-supp"' %run %t
 
 #include <stdint.h>
