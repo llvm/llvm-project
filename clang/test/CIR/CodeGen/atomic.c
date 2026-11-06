@@ -342,8 +342,8 @@ void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired, in
   __c11_atomic_compare_exchange_strong(ptr, expected, desired,
                                        __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:    cir.if %[[FAILED]] {
+  // CIR-NEXT:    cir.if %[[SUCCESS]] {
+  // CIR-NEXT:    } else {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
   // CIR-NEXT:    cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
@@ -351,8 +351,9 @@ void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired, in
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -424,8 +425,8 @@ void c11_atomic_cmpxchg_weak(_Atomic(int) *ptr, int *expected, int desired, int 
   __c11_atomic_compare_exchange_weak(ptr, expected, desired,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:    cir.if %[[FAILED]] {
+  // CIR-NEXT:    cir.if %[[SUCCESS]] {
+  // CIR-NEXT:    } else {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
   // CIR-NEXT:    cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
@@ -433,8 +434,9 @@ void c11_atomic_cmpxchg_weak(_Atomic(int) *ptr, int *expected, int desired, int 
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -505,8 +507,8 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
 
   __atomic_compare_exchange(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:    cir.if %[[FAILED]] {
+  // CIR-NEXT:    cir.if %[[SUCCESS]] {
+  // CIR-NEXT:    } else {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
   // CIR-NEXT:    cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
@@ -514,8 +516,9 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -536,8 +539,8 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
 
   __atomic_compare_exchange(ptr, expected, desired, /*weak=*/1, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:    cir.if %[[FAILED]] {
+  // CIR-NEXT:    cir.if %[[SUCCESS]] {
+  // CIR-NEXT:    } else {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
   // CIR-NEXT:    cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
@@ -545,8 +548,9 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -686,8 +690,8 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
 
   __atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:    cir.if %[[FAILED]] {
+  // CIR-NEXT:    cir.if %[[SUCCESS]] {
+  // CIR-NEXT:    } else {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
   // CIR-NEXT:    cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
@@ -695,8 +699,9 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -717,8 +722,8 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
 
   __atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/1, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:    %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:    cir.if %[[FAILED]] {
+  // CIR-NEXT:    cir.if %[[SUCCESS]] {
+  // CIR-NEXT:    } else {
   // CIR-NEXT:      cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:    }
   // CIR-NEXT:    cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
@@ -726,8 +731,9 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -3624,15 +3630,15 @@ void atomic_cmpxchg_maybe_weak(int *ptr, int *expected, int *desired, int failur
   // CIR-NEXT:    %[[WEAK_CAST:.*]] = cir.cast int_to_bool %[[WEAK_LOAD]]
   // CIR-NEXT:    cir.if %[[WEAK_CAST]] {
   // CIR:           %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:      %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:      cir.if %[[FAILED]] {
+  // CIR-NEXT:      cir.if %[[SUCCESS]] {
+  // CIR-NEXT:      } else {
   // CIR-NEXT:        cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:      }
   // CIR-NEXT:      cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
   // CIR-NEXT:    } else {
   // CIR:           %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:      %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:      cir.if %[[FAILED]] {
+  // CIR-NEXT:      cir.if %[[SUCCESS]] {
+  // CIR-NEXT:      } else {
   // CIR-NEXT:        cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:      }
   // CIR-NEXT:      cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
@@ -3645,8 +3651,9 @@ void atomic_cmpxchg_maybe_weak(int *ptr, int *expected, int *desired, int failur
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -3658,8 +3665,9 @@ void atomic_cmpxchg_maybe_weak(int *ptr, int *expected, int *desired, int failur
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -3802,15 +3810,15 @@ void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failu
   // CIR-NEXT:    %[[WEAK_CAST:.*]] = cir.cast int_to_bool %[[WEAK_LOAD]]
   // CIR-NEXT:    cir.if %[[WEAK_CAST]] {
   // CIR:           %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:      %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:      cir.if %[[FAILED]] {
+  // CIR-NEXT:      cir.if %[[SUCCESS]] {
+  // CIR-NEXT:      } else {
   // CIR-NEXT:        cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:      }
   // CIR-NEXT:      cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
   // CIR-NEXT:    } else {
   // CIR:           %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR-NEXT:      %[[FAILED:.+]] = cir.not %[[SUCCESS]] : !cir.bool
-  // CIR-NEXT:      cir.if %[[FAILED]] {
+  // CIR-NEXT:      cir.if %[[SUCCESS]] {
+  // CIR-NEXT:      } else {
   // CIR-NEXT:        cir.store align(4) %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:      }
   // CIR-NEXT:      cir.store align(1) %[[SUCCESS]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
@@ -3823,8 +3831,9 @@ void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failu
   // LLVM:         %[[RESULT:.+]] = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
@@ -3836,8 +3845,9 @@ void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failu
   // LLVM:         %[[RESULT:.+]] = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
   // LLVM-NEXT:    %[[OLD:.+]] = extractvalue { i32, i1 } %[[RESULT]], 0
   // LLVM-NEXT:    %[[SUCCESS:.+]] = extractvalue { i32, i1 } %[[RESULT]], 1
-  // LLVM-NEXT:    %[[FAILED:.+]] = xor i1 %[[SUCCESS]], true
-  // LLVM-NEXT:    br i1 %[[FAILED]], label %[[LABEL_FAILED:.+]], label %[[LABEL_CONT:.+]]
+  // LLVM-NEXT:    br i1 %[[SUCCESS]], label %[[LABEL_SKIP:.+]], label %[[LABEL_FAILED:.+]]
+  // LLVM:       [[LABEL_SKIP]]:
+  // LLVM-NEXT:    br label %[[LABEL_CONT:.+]]
   // LLVM:       [[LABEL_FAILED]]:
   // LLVM-NEXT:    store i32 %[[OLD]], ptr %{{.+}}, align 4
   // LLVM-NEXT:    br label %[[LABEL_CONT]]
