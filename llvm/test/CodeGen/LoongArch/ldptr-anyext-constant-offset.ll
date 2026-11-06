@@ -14,38 +14,32 @@
 define i32 @anyext_2048(ptr %base) {
 ; LA64-O0-NOUAL-LABEL: anyext_2048:
 ; LA64-O0-NOUAL:       # %bb.0:
-; LA64-O0-NOUAL-NEXT:    ori $a1, $zero, 2048
-; LA64-O0-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a0, $a0, 2048
 ; LA64-O0-NOUAL-NEXT:    ret
 ;
 ; LA64-O0-UAL-LABEL: anyext_2048:
 ; LA64-O0-UAL:       # %bb.0:
-; LA64-O0-UAL-NEXT:    ori $a1, $zero, 2048
-; LA64-O0-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-UAL-NEXT:    ldptr.w $a0, $a0, 2048
 ; LA64-O0-UAL-NEXT:    ret
 ;
 ; LA64-O2-NOUAL-LABEL: anyext_2048:
 ; LA64-O2-NOUAL:       # %bb.0:
-; LA64-O2-NOUAL-NEXT:    ori $a1, $zero, 2048
-; LA64-O2-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-NOUAL-NEXT:    ldptr.w $a0, $a0, 2048
 ; LA64-O2-NOUAL-NEXT:    ret
 ;
 ; LA64-O2-UAL-LABEL: anyext_2048:
 ; LA64-O2-UAL:       # %bb.0:
-; LA64-O2-UAL-NEXT:    ori $a1, $zero, 2048
-; LA64-O2-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-UAL-NEXT:    ldptr.w $a0, $a0, 2048
 ; LA64-O2-UAL-NEXT:    ret
 ;
 ; LA64-O3-NOUAL-LABEL: anyext_2048:
 ; LA64-O3-NOUAL:       # %bb.0:
-; LA64-O3-NOUAL-NEXT:    ori $a1, $zero, 2048
-; LA64-O3-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-NOUAL-NEXT:    ldptr.w $a0, $a0, 2048
 ; LA64-O3-NOUAL-NEXT:    ret
 ;
 ; LA64-O3-UAL-LABEL: anyext_2048:
 ; LA64-O3-UAL:       # %bb.0:
-; LA64-O3-UAL-NEXT:    ori $a1, $zero, 2048
-; LA64-O3-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-UAL-NEXT:    ldptr.w $a0, $a0, 2048
 ; LA64-O3-UAL-NEXT:    ret
   %p = getelementptr i8, ptr %base, i64 2048
   %v = load volatile i32, ptr %p, align 4
@@ -55,44 +49,32 @@ define i32 @anyext_2048(ptr %base) {
 define i32 @anyext_7960(ptr %base) {
 ; LA64-O0-NOUAL-LABEL: anyext_7960:
 ; LA64-O0-NOUAL:       # %bb.0:
-; LA64-O0-NOUAL-NEXT:    lu12i.w $a1, 1
-; LA64-O0-NOUAL-NEXT:    ori $a1, $a1, 3864
-; LA64-O0-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a0, $a0, 7960
 ; LA64-O0-NOUAL-NEXT:    ret
 ;
 ; LA64-O0-UAL-LABEL: anyext_7960:
 ; LA64-O0-UAL:       # %bb.0:
-; LA64-O0-UAL-NEXT:    lu12i.w $a1, 1
-; LA64-O0-UAL-NEXT:    ori $a1, $a1, 3864
-; LA64-O0-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-UAL-NEXT:    ldptr.w $a0, $a0, 7960
 ; LA64-O0-UAL-NEXT:    ret
 ;
 ; LA64-O2-NOUAL-LABEL: anyext_7960:
 ; LA64-O2-NOUAL:       # %bb.0:
-; LA64-O2-NOUAL-NEXT:    lu12i.w $a1, 1
-; LA64-O2-NOUAL-NEXT:    ori $a1, $a1, 3864
-; LA64-O2-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-NOUAL-NEXT:    ldptr.w $a0, $a0, 7960
 ; LA64-O2-NOUAL-NEXT:    ret
 ;
 ; LA64-O2-UAL-LABEL: anyext_7960:
 ; LA64-O2-UAL:       # %bb.0:
-; LA64-O2-UAL-NEXT:    lu12i.w $a1, 1
-; LA64-O2-UAL-NEXT:    ori $a1, $a1, 3864
-; LA64-O2-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-UAL-NEXT:    ldptr.w $a0, $a0, 7960
 ; LA64-O2-UAL-NEXT:    ret
 ;
 ; LA64-O3-NOUAL-LABEL: anyext_7960:
 ; LA64-O3-NOUAL:       # %bb.0:
-; LA64-O3-NOUAL-NEXT:    lu12i.w $a1, 1
-; LA64-O3-NOUAL-NEXT:    ori $a1, $a1, 3864
-; LA64-O3-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-NOUAL-NEXT:    ldptr.w $a0, $a0, 7960
 ; LA64-O3-NOUAL-NEXT:    ret
 ;
 ; LA64-O3-UAL-LABEL: anyext_7960:
 ; LA64-O3-UAL:       # %bb.0:
-; LA64-O3-UAL-NEXT:    lu12i.w $a1, 1
-; LA64-O3-UAL-NEXT:    ori $a1, $a1, 3864
-; LA64-O3-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-UAL-NEXT:    ldptr.w $a0, $a0, 7960
 ; LA64-O3-UAL-NEXT:    ret
   %p = getelementptr i8, ptr %base, i64 7960
   %v = load volatile i32, ptr %p, align 4
@@ -102,44 +84,32 @@ define i32 @anyext_7960(ptr %base) {
 define i32 @anyext_negative(ptr %base) {
 ; LA64-O0-NOUAL-LABEL: anyext_negative:
 ; LA64-O0-NOUAL:       # %bb.0:
-; LA64-O0-NOUAL-NEXT:    lu12i.w $a1, -1
-; LA64-O0-NOUAL-NEXT:    ori $a1, $a1, 2044
-; LA64-O0-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a0, $a0, -2052
 ; LA64-O0-NOUAL-NEXT:    ret
 ;
 ; LA64-O0-UAL-LABEL: anyext_negative:
 ; LA64-O0-UAL:       # %bb.0:
-; LA64-O0-UAL-NEXT:    lu12i.w $a1, -1
-; LA64-O0-UAL-NEXT:    ori $a1, $a1, 2044
-; LA64-O0-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-UAL-NEXT:    ldptr.w $a0, $a0, -2052
 ; LA64-O0-UAL-NEXT:    ret
 ;
 ; LA64-O2-NOUAL-LABEL: anyext_negative:
 ; LA64-O2-NOUAL:       # %bb.0:
-; LA64-O2-NOUAL-NEXT:    lu12i.w $a1, -1
-; LA64-O2-NOUAL-NEXT:    ori $a1, $a1, 2044
-; LA64-O2-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-NOUAL-NEXT:    ldptr.w $a0, $a0, -2052
 ; LA64-O2-NOUAL-NEXT:    ret
 ;
 ; LA64-O2-UAL-LABEL: anyext_negative:
 ; LA64-O2-UAL:       # %bb.0:
-; LA64-O2-UAL-NEXT:    lu12i.w $a1, -1
-; LA64-O2-UAL-NEXT:    ori $a1, $a1, 2044
-; LA64-O2-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-UAL-NEXT:    ldptr.w $a0, $a0, -2052
 ; LA64-O2-UAL-NEXT:    ret
 ;
 ; LA64-O3-NOUAL-LABEL: anyext_negative:
 ; LA64-O3-NOUAL:       # %bb.0:
-; LA64-O3-NOUAL-NEXT:    lu12i.w $a1, -1
-; LA64-O3-NOUAL-NEXT:    ori $a1, $a1, 2044
-; LA64-O3-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-NOUAL-NEXT:    ldptr.w $a0, $a0, -2052
 ; LA64-O3-NOUAL-NEXT:    ret
 ;
 ; LA64-O3-UAL-LABEL: anyext_negative:
 ; LA64-O3-UAL:       # %bb.0:
-; LA64-O3-UAL-NEXT:    lu12i.w $a1, -1
-; LA64-O3-UAL-NEXT:    ori $a1, $a1, 2044
-; LA64-O3-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-UAL-NEXT:    ldptr.w $a0, $a0, -2052
 ; LA64-O3-UAL-NEXT:    ret
   %p = getelementptr i8, ptr %base, i64 -2052
   %v = load volatile i32, ptr %p, align 4
@@ -149,38 +119,32 @@ define i32 @anyext_negative(ptr %base) {
 define i32 @anyext_min(ptr %base) {
 ; LA64-O0-NOUAL-LABEL: anyext_min:
 ; LA64-O0-NOUAL:       # %bb.0:
-; LA64-O0-NOUAL-NEXT:    lu12i.w $a1, -8
-; LA64-O0-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a0, $a0, -32768
 ; LA64-O0-NOUAL-NEXT:    ret
 ;
 ; LA64-O0-UAL-LABEL: anyext_min:
 ; LA64-O0-UAL:       # %bb.0:
-; LA64-O0-UAL-NEXT:    lu12i.w $a1, -8
-; LA64-O0-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-UAL-NEXT:    ldptr.w $a0, $a0, -32768
 ; LA64-O0-UAL-NEXT:    ret
 ;
 ; LA64-O2-NOUAL-LABEL: anyext_min:
 ; LA64-O2-NOUAL:       # %bb.0:
-; LA64-O2-NOUAL-NEXT:    lu12i.w $a1, -8
-; LA64-O2-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-NOUAL-NEXT:    ldptr.w $a0, $a0, -32768
 ; LA64-O2-NOUAL-NEXT:    ret
 ;
 ; LA64-O2-UAL-LABEL: anyext_min:
 ; LA64-O2-UAL:       # %bb.0:
-; LA64-O2-UAL-NEXT:    lu12i.w $a1, -8
-; LA64-O2-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-UAL-NEXT:    ldptr.w $a0, $a0, -32768
 ; LA64-O2-UAL-NEXT:    ret
 ;
 ; LA64-O3-NOUAL-LABEL: anyext_min:
 ; LA64-O3-NOUAL:       # %bb.0:
-; LA64-O3-NOUAL-NEXT:    lu12i.w $a1, -8
-; LA64-O3-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-NOUAL-NEXT:    ldptr.w $a0, $a0, -32768
 ; LA64-O3-NOUAL-NEXT:    ret
 ;
 ; LA64-O3-UAL-LABEL: anyext_min:
 ; LA64-O3-UAL:       # %bb.0:
-; LA64-O3-UAL-NEXT:    lu12i.w $a1, -8
-; LA64-O3-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-UAL-NEXT:    ldptr.w $a0, $a0, -32768
 ; LA64-O3-UAL-NEXT:    ret
   %p = getelementptr i8, ptr %base, i64 -32768
   %v = load volatile i32, ptr %p, align 4
@@ -190,44 +154,32 @@ define i32 @anyext_min(ptr %base) {
 define i32 @anyext_max(ptr %base) {
 ; LA64-O0-NOUAL-LABEL: anyext_max:
 ; LA64-O0-NOUAL:       # %bb.0:
-; LA64-O0-NOUAL-NEXT:    lu12i.w $a1, 7
-; LA64-O0-NOUAL-NEXT:    ori $a1, $a1, 4092
-; LA64-O0-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a0, $a0, 32764
 ; LA64-O0-NOUAL-NEXT:    ret
 ;
 ; LA64-O0-UAL-LABEL: anyext_max:
 ; LA64-O0-UAL:       # %bb.0:
-; LA64-O0-UAL-NEXT:    lu12i.w $a1, 7
-; LA64-O0-UAL-NEXT:    ori $a1, $a1, 4092
-; LA64-O0-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O0-UAL-NEXT:    ldptr.w $a0, $a0, 32764
 ; LA64-O0-UAL-NEXT:    ret
 ;
 ; LA64-O2-NOUAL-LABEL: anyext_max:
 ; LA64-O2-NOUAL:       # %bb.0:
-; LA64-O2-NOUAL-NEXT:    lu12i.w $a1, 7
-; LA64-O2-NOUAL-NEXT:    ori $a1, $a1, 4092
-; LA64-O2-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-NOUAL-NEXT:    ldptr.w $a0, $a0, 32764
 ; LA64-O2-NOUAL-NEXT:    ret
 ;
 ; LA64-O2-UAL-LABEL: anyext_max:
 ; LA64-O2-UAL:       # %bb.0:
-; LA64-O2-UAL-NEXT:    lu12i.w $a1, 7
-; LA64-O2-UAL-NEXT:    ori $a1, $a1, 4092
-; LA64-O2-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O2-UAL-NEXT:    ldptr.w $a0, $a0, 32764
 ; LA64-O2-UAL-NEXT:    ret
 ;
 ; LA64-O3-NOUAL-LABEL: anyext_max:
 ; LA64-O3-NOUAL:       # %bb.0:
-; LA64-O3-NOUAL-NEXT:    lu12i.w $a1, 7
-; LA64-O3-NOUAL-NEXT:    ori $a1, $a1, 4092
-; LA64-O3-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-NOUAL-NEXT:    ldptr.w $a0, $a0, 32764
 ; LA64-O3-NOUAL-NEXT:    ret
 ;
 ; LA64-O3-UAL-LABEL: anyext_max:
 ; LA64-O3-UAL:       # %bb.0:
-; LA64-O3-UAL-NEXT:    lu12i.w $a1, 7
-; LA64-O3-UAL-NEXT:    ori $a1, $a1, 4092
-; LA64-O3-UAL-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-O3-UAL-NEXT:    ldptr.w $a0, $a0, 32764
 ; LA64-O3-UAL-NEXT:    ret
   %p = getelementptr i8, ptr %base, i64 32764
   %v = load volatile i32, ptr %p, align 4
@@ -510,15 +462,10 @@ define i32 @four_nearby_loads(ptr %base) {
 ; LA64-O0-NOUAL-LABEL: four_nearby_loads:
 ; LA64-O0-NOUAL:       # %bb.0:
 ; LA64-O0-NOUAL-NEXT:    move $a2, $a0
-; LA64-O0-NOUAL-NEXT:    lu12i.w $a4, 1
-; LA64-O0-NOUAL-NEXT:    ori $a0, $a4, 3864
-; LA64-O0-NOUAL-NEXT:    ldx.w $a0, $a2, $a0
-; LA64-O0-NOUAL-NEXT:    ori $a1, $a4, 3868
-; LA64-O0-NOUAL-NEXT:    ldx.w $a3, $a2, $a1
-; LA64-O0-NOUAL-NEXT:    ori $a1, $a4, 3872
-; LA64-O0-NOUAL-NEXT:    ldx.w $a1, $a2, $a1
-; LA64-O0-NOUAL-NEXT:    ori $a4, $a4, 3876
-; LA64-O0-NOUAL-NEXT:    ldx.w $a2, $a2, $a4
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a0, $a2, 7960
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a3, $a2, 7964
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a1, $a2, 7968
+; LA64-O0-NOUAL-NEXT:    ldptr.w $a2, $a2, 7972
 ; LA64-O0-NOUAL-NEXT:    add.d $a0, $a0, $a3
 ; LA64-O0-NOUAL-NEXT:    add.d $a1, $a1, $a2
 ; LA64-O0-NOUAL-NEXT:    add.d $a0, $a0, $a1
@@ -528,15 +475,10 @@ define i32 @four_nearby_loads(ptr %base) {
 ; LA64-O0-UAL-LABEL: four_nearby_loads:
 ; LA64-O0-UAL:       # %bb.0:
 ; LA64-O0-UAL-NEXT:    move $a2, $a0
-; LA64-O0-UAL-NEXT:    lu12i.w $a4, 1
-; LA64-O0-UAL-NEXT:    ori $a0, $a4, 3864
-; LA64-O0-UAL-NEXT:    ldx.w $a0, $a2, $a0
-; LA64-O0-UAL-NEXT:    ori $a1, $a4, 3868
-; LA64-O0-UAL-NEXT:    ldx.w $a3, $a2, $a1
-; LA64-O0-UAL-NEXT:    ori $a1, $a4, 3872
-; LA64-O0-UAL-NEXT:    ldx.w $a1, $a2, $a1
-; LA64-O0-UAL-NEXT:    ori $a4, $a4, 3876
-; LA64-O0-UAL-NEXT:    ldx.w $a2, $a2, $a4
+; LA64-O0-UAL-NEXT:    ldptr.w $a0, $a2, 7960
+; LA64-O0-UAL-NEXT:    ldptr.w $a3, $a2, 7964
+; LA64-O0-UAL-NEXT:    ldptr.w $a1, $a2, 7968
+; LA64-O0-UAL-NEXT:    ldptr.w $a2, $a2, 7972
 ; LA64-O0-UAL-NEXT:    add.d $a0, $a0, $a3
 ; LA64-O0-UAL-NEXT:    add.d $a1, $a1, $a2
 ; LA64-O0-UAL-NEXT:    add.d $a0, $a0, $a1
@@ -547,29 +489,24 @@ define i32 @four_nearby_loads(ptr %base) {
 ; LA64-O2-NOUAL:       # %bb.0:
 ; LA64-O2-NOUAL-NEXT:    lu12i.w $a1, 1
 ; LA64-O2-NOUAL-NEXT:    ori $a1, $a1, 3864
-; LA64-O2-NOUAL-NEXT:    add.d $a2, $a0, $a1
-; LA64-O2-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
-; LA64-O2-NOUAL-NEXT:    ld.w $a1, $a2, 4
-; LA64-O2-NOUAL-NEXT:    ld.w $a3, $a2, 8
-; LA64-O2-NOUAL-NEXT:    ld.w $a2, $a2, 12
-; LA64-O2-NOUAL-NEXT:    add.d $a0, $a0, $a1
-; LA64-O2-NOUAL-NEXT:    add.d $a1, $a3, $a2
+; LA64-O2-NOUAL-NEXT:    add.d $a1, $a0, $a1
+; LA64-O2-NOUAL-NEXT:    ldptr.w $a0, $a0, 7960
+; LA64-O2-NOUAL-NEXT:    ld.w $a2, $a1, 4
+; LA64-O2-NOUAL-NEXT:    ld.w $a3, $a1, 8
+; LA64-O2-NOUAL-NEXT:    ld.w $a1, $a1, 12
+; LA64-O2-NOUAL-NEXT:    add.d $a0, $a0, $a2
+; LA64-O2-NOUAL-NEXT:    add.d $a1, $a3, $a1
 ; LA64-O2-NOUAL-NEXT:    add.w $a0, $a0, $a1
 ; LA64-O2-NOUAL-NEXT:    ret
 ;
 ; LA64-O2-UAL-LABEL: four_nearby_loads:
 ; LA64-O2-UAL:       # %bb.0:
-; LA64-O2-UAL-NEXT:    lu12i.w $a1, 1
-; LA64-O2-UAL-NEXT:    ori $a2, $a1, 3864
-; LA64-O2-UAL-NEXT:    ldx.w $a2, $a0, $a2
-; LA64-O2-UAL-NEXT:    ori $a3, $a1, 3868
-; LA64-O2-UAL-NEXT:    ldx.w $a3, $a0, $a3
-; LA64-O2-UAL-NEXT:    ori $a4, $a1, 3872
-; LA64-O2-UAL-NEXT:    ldx.w $a4, $a0, $a4
-; LA64-O2-UAL-NEXT:    ori $a1, $a1, 3876
-; LA64-O2-UAL-NEXT:    ldx.w $a0, $a0, $a1
-; LA64-O2-UAL-NEXT:    add.d $a1, $a2, $a3
-; LA64-O2-UAL-NEXT:    add.d $a0, $a4, $a0
+; LA64-O2-UAL-NEXT:    ldptr.w $a1, $a0, 7960
+; LA64-O2-UAL-NEXT:    ldptr.w $a2, $a0, 7964
+; LA64-O2-UAL-NEXT:    ldptr.w $a3, $a0, 7968
+; LA64-O2-UAL-NEXT:    ldptr.w $a0, $a0, 7972
+; LA64-O2-UAL-NEXT:    add.d $a1, $a1, $a2
+; LA64-O2-UAL-NEXT:    add.d $a0, $a3, $a0
 ; LA64-O2-UAL-NEXT:    add.w $a0, $a1, $a0
 ; LA64-O2-UAL-NEXT:    ret
 ;
@@ -577,29 +514,24 @@ define i32 @four_nearby_loads(ptr %base) {
 ; LA64-O3-NOUAL:       # %bb.0:
 ; LA64-O3-NOUAL-NEXT:    lu12i.w $a1, 1
 ; LA64-O3-NOUAL-NEXT:    ori $a1, $a1, 3864
-; LA64-O3-NOUAL-NEXT:    add.d $a2, $a0, $a1
-; LA64-O3-NOUAL-NEXT:    ldx.w $a0, $a0, $a1
-; LA64-O3-NOUAL-NEXT:    ld.w $a1, $a2, 4
-; LA64-O3-NOUAL-NEXT:    ld.w $a3, $a2, 8
-; LA64-O3-NOUAL-NEXT:    ld.w $a2, $a2, 12
-; LA64-O3-NOUAL-NEXT:    add.d $a0, $a0, $a1
-; LA64-O3-NOUAL-NEXT:    add.d $a1, $a3, $a2
+; LA64-O3-NOUAL-NEXT:    add.d $a1, $a0, $a1
+; LA64-O3-NOUAL-NEXT:    ldptr.w $a0, $a0, 7960
+; LA64-O3-NOUAL-NEXT:    ld.w $a2, $a1, 4
+; LA64-O3-NOUAL-NEXT:    ld.w $a3, $a1, 8
+; LA64-O3-NOUAL-NEXT:    ld.w $a1, $a1, 12
+; LA64-O3-NOUAL-NEXT:    add.d $a0, $a0, $a2
+; LA64-O3-NOUAL-NEXT:    add.d $a1, $a3, $a1
 ; LA64-O3-NOUAL-NEXT:    add.w $a0, $a0, $a1
 ; LA64-O3-NOUAL-NEXT:    ret
 ;
 ; LA64-O3-UAL-LABEL: four_nearby_loads:
 ; LA64-O3-UAL:       # %bb.0:
-; LA64-O3-UAL-NEXT:    lu12i.w $a1, 1
-; LA64-O3-UAL-NEXT:    ori $a2, $a1, 3864
-; LA64-O3-UAL-NEXT:    ldx.w $a2, $a0, $a2
-; LA64-O3-UAL-NEXT:    ori $a3, $a1, 3868
-; LA64-O3-UAL-NEXT:    ldx.w $a3, $a0, $a3
-; LA64-O3-UAL-NEXT:    ori $a4, $a1, 3872
-; LA64-O3-UAL-NEXT:    ldx.w $a4, $a0, $a4
-; LA64-O3-UAL-NEXT:    ori $a1, $a1, 3876
-; LA64-O3-UAL-NEXT:    ldx.w $a0, $a0, $a1
-; LA64-O3-UAL-NEXT:    add.d $a1, $a2, $a3
-; LA64-O3-UAL-NEXT:    add.d $a0, $a4, $a0
+; LA64-O3-UAL-NEXT:    ldptr.w $a1, $a0, 7960
+; LA64-O3-UAL-NEXT:    ldptr.w $a2, $a0, 7964
+; LA64-O3-UAL-NEXT:    ldptr.w $a3, $a0, 7968
+; LA64-O3-UAL-NEXT:    ldptr.w $a0, $a0, 7972
+; LA64-O3-UAL-NEXT:    add.d $a1, $a1, $a2
+; LA64-O3-UAL-NEXT:    add.d $a0, $a3, $a0
 ; LA64-O3-UAL-NEXT:    add.w $a0, $a1, $a0
 ; LA64-O3-UAL-NEXT:    ret
   %p0 = getelementptr i8, ptr %base, i64 7960

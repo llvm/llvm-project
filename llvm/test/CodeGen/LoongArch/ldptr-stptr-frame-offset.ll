@@ -26,25 +26,18 @@ define i32 @anyext_frame_offset() "frame-pointer"="all" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 2032
 ; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s0, $sp, 2008 # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 1, -8
 ; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    .cfi_offset 23, -24
 ; CHECK-NEXT:    addi.d $fp, $sp, 2032
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, -1008
 ; CHECK-NEXT:    lu12i.w $a0, -1
-; CHECK-NEXT:    ori $a0, $a0, 1063
+; CHECK-NEXT:    ori $a0, $a0, 1071
 ; CHECK-NEXT:    add.d $a0, $fp, $a0
-; CHECK-NEXT:    lu12i.w $a1, -1
-; CHECK-NEXT:    ori $a1, $a1, 1063
-; CHECK-NEXT:    add.d $s0, $fp, $a1
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(use)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    ori $a0, $zero, 2048
-; CHECK-NEXT:    ldx.w $a0, $a0, $s0
+; CHECK-NEXT:    ld.w $a0, $fp, -977
 ; CHECK-NEXT:    addi.d $sp, $sp, 1008
-; CHECK-NEXT:    ld.d $s0, $sp, 2008 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $fp, $sp, 2016 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 2032
