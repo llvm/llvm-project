@@ -12,8 +12,8 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo(bfloat %src0,
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
-  %cvt.result = fptrunc float %result to bfloat
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc contract float %result to bfloat
   %vec.result = insertelement <2 x bfloat> undef, bfloat %cvt.result, i32 1
   ret <2 x bfloat> %vec.result
 }
@@ -39,8 +39,8 @@ define <2 x bfloat> @v_mad_mixhi_bf16_f16lo_bf16lo_bf16lo_poisonlo(half %src0, b
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
-  %cvt.result = fptrunc float %result to bfloat
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc contract float %result to bfloat
   %vec.result = insertelement <2 x bfloat> poison, bfloat %cvt.result, i32 1
   ret <2 x bfloat> %vec.result
 }
@@ -66,8 +66,8 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_constlo(bfloat %src0,
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
-  %cvt.result = fptrunc float %result to bfloat
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc contract float %result to bfloat
   %vec.result = insertelement <2 x bfloat> <bfloat 1.0, bfloat undef>, bfloat %cvt.result, i32 1
   ret <2 x bfloat> %vec.result
 }
@@ -92,8 +92,8 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_reglo(bfloat %src0, b
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
-  %cvt.result = fptrunc float %result to bfloat
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc contract float %result to bfloat
   %vec = insertelement <2 x bfloat> undef, bfloat %lo, i32 0
   %vec.result = insertelement <2 x bfloat> %vec, bfloat %cvt.result, i32 1
   ret <2 x bfloat> %vec.result
@@ -111,8 +111,8 @@ define i32 @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_intpack(bfloat %src0, bfloat %
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
-  %cvt.result = fptrunc float %result to bfloat
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc contract float %result to bfloat
   %bc = bitcast bfloat %cvt.result to i16
   %ext = zext i16 %bc to i32
   %shr = shl i32 %ext, 16
@@ -131,8 +131,8 @@ define i32 @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_intpack_sext(bfloat %src0, bfl
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
-  %cvt.result = fptrunc float %result to bfloat
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc contract float %result to bfloat
   %bc = bitcast bfloat %cvt.result to i16
   %ext = sext i16 %bc to i32
   %shr = shl i32 %ext, 16
@@ -162,10 +162,10 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_precvt(
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
   %max = call float @llvm.maxnum.f32(float %result, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
-  %cvt.result = fptrunc float %clamp to bfloat
+  %cvt.result = fptrunc contract float %clamp to bfloat
   %vec.result = insertelement <2 x bfloat> undef, bfloat %cvt.result, i32 1
   ret <2 x bfloat> %vec.result
 }
@@ -180,8 +180,8 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
-  %cvt.result = fptrunc float %result to bfloat
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc contract float %result to bfloat
   %max = call bfloat @llvm.maxnum.bf16(bfloat %cvt.result, bfloat 0.0)
   %clamp = call bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
   %vec.result = insertelement <2 x bfloat> undef, bfloat %clamp, i32 1
@@ -213,8 +213,8 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %src2.ext = fpext bfloat %src2 to float
-  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
-  %cvt.result = fptrunc float %result to bfloat
+  %result = tail call contract float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc contract float %result to bfloat
   store volatile bfloat %cvt.result, ptr addrspace(1) undef
   %max = call bfloat @llvm.maxnum.bf16(bfloat %cvt.result, bfloat 0.0)
   %clamp = call bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
@@ -240,8 +240,8 @@ define <2 x bfloat> @mixhi_fptrunc_fadd(float %a, float %b, bfloat %lo) #0 {
 ; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
-  %add = fadd float %a, %b
-  %trunc = fptrunc float %add to bfloat
+  %add = fadd contract float %a, %b
+  %trunc = fptrunc contract float %add to bfloat
   %vec = insertelement <2 x bfloat> poison, bfloat %lo, i32 0
   %vec.result = insertelement <2 x bfloat> %vec, bfloat %trunc, i32 1
   ret <2 x bfloat> %vec.result
@@ -269,8 +269,8 @@ define <2 x bfloat> @mixhi_fptrunc_fadd_f16_src(half %a, float %b, bfloat %lo) #
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
   %a.ext = fpext half %a to float
-  %add = fadd float %a.ext, %b
-  %trunc = fptrunc float %add to bfloat
+  %add = fadd contract float %a.ext, %b
+  %trunc = fptrunc contract float %add to bfloat
   %vec = insertelement <2 x bfloat> poison, bfloat %lo, i32 0
   %vec.result = insertelement <2 x bfloat> %vec, bfloat %trunc, i32 1
   ret <2 x bfloat> %vec.result
@@ -294,8 +294,8 @@ define <2 x bfloat> @mixhi_fptrunc_fsub(float %a, float %b, bfloat %lo) #0 {
 ; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 .entry:
-  %sub = fsub float %a, %b
-  %trunc = fptrunc float %sub to bfloat
+  %sub = fsub contract float %a, %b
+  %trunc = fptrunc contract float %sub to bfloat
   %vec = insertelement <2 x bfloat> poison, bfloat %lo, i32 0
   %vec.result = insertelement <2 x bfloat> %vec, bfloat %trunc, i32 1
   ret <2 x bfloat> %vec.result
