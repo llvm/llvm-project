@@ -1721,6 +1721,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
                              "hlsl.wave.prefix.sum");
   }
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_count_bits:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_product:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_sum:
   case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and:
@@ -1731,6 +1732,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *, 5> Args{ValueOp};
     for (unsigned I = 0; I != 4; ++I)
       Args.push_back(Builder.CreateExtractElement(Mask, I));
+    if (BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_count_bits)
+      return EmitIntrinsicCall(Intrinsic::dx_wave_multi_prefix_bit_count, Args,
+                               "hlsl.wave.multi.prefix.bit.count");
     if (BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_product) {
       Intrinsic::ID IID =
           E->getArg(0)->getType()->hasUnsignedIntegerRepresentation()
