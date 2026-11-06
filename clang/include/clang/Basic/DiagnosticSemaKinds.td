@@ -12881,8 +12881,6 @@ def err_omp_interchange_permutation_value_range : Error<
 def err_omp_interchange_permutation_value_repeated : Error<
   "index %0 must appear exactly once in the permutation clause">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
-def err_omp_instantiation_not_supported
-    : Error<"instantiation of '%0' not supported yet">;
 def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
 def err_omp_adjust_args_invalid_item : Error<
@@ -13624,6 +13622,10 @@ def err_sycl_external_invalid_main : Error<
   "%0 cannot be applied to the 'main' function">;
 def err_sycl_external_invalid_deleted_function : Error<
   "%0 cannot be applied to an explicitly deleted function">;
+def warn_sycl_external_ignored_variadic_function : Warning<
+  "%0 attribute ignored; a variadic function cannot be called from device "
+  "code">,
+  InGroup<IgnoredAttributes>;
 def warn_sycl_external_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">,
   InGroup<NonPortableSYCL>;
@@ -14515,6 +14517,8 @@ def warn_amdgpu_av_requires_atomic : Warning<
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "
             "in return type">;
+def err_amdgcn_prefetch_reserved_th
+    : Error<"cache policy uses the reserved th value 7">;
 
 def warn_amdgpu_s_wait_event_mask_no_effect_target :
   Warning<"event mask has no effect for target">,

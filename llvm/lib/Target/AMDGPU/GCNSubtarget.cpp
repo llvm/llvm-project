@@ -533,8 +533,8 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
 
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
+  unsigned Requested = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs));
 
   if (Requested != MaxNumSGPRs) {
     // Make sure requested value does not violate subtarget's specifications.
@@ -614,7 +614,8 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
 
-  unsigned Requested = F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max);
+  unsigned Requested = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max));
   if (Requested != Max && hasGFX90AInsts())
     Requested *= 2;
 
@@ -707,8 +708,8 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 static const MachineOperand *
 getVOP3PSourceModifierFromOpIdx(const MachineInstr &UseI, int UseOpIdx,
                                 const SIInstrInfo &InstrInfo) {
-  AMDGPU::OpName UseName =
-      AMDGPU::getOperandIdxName(UseI.getOpcode(), UseOpIdx);
+  AMDGPU::OpName UseName = AMDGPU::getOperandIdxName(
+      UseI.getOpcode(), static_cast<int16_t>(UseOpIdx));
   switch (UseName) {
   case AMDGPU::OpName::src0:
     return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src0_modifiers);
@@ -884,8 +885,8 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
   if (getCLOpts().nsa_threshold)
     return std::max(*getCLOpts().nsa_threshold, 2u);
 
-  int Value = MF.getFunction().getFnAttributeAsParsedInteger(
-      "amdgpu-nsa-threshold", -1);
+  int Value = static_cast<int>(MF.getFunction().getFnAttributeAsParsedInteger(
+      "amdgpu-nsa-threshold", -1));
   if (Value > 0)
     return std::max(Value, 2);
 
