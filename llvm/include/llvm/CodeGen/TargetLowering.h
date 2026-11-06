@@ -4409,10 +4409,7 @@ public:
                                           EVT RetVT, ArrayRef<SDValue> Ops,
                                           MakeLibCallOptions CallOptions,
                                           const SDLoc &dl,
-                                          SDValue Chain = SDValue()) const {
-    return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
-                       Chain);
-  }
+                                          SDValue Chain = SDValue()) const;
 
   /// Build a call argument list for \p FuncTy, taking the argument node values
   /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and

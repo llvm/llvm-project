@@ -10416,7 +10416,7 @@ SDValue SelectionDAG::getMemcpy(
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
-  RTLIB::LibcallImpl MemCpyImpl = TLI->getMemcpyImpl();
+  RTLIB::LibcallImpl MemCpyImpl = Libcalls->getMemcpyImpl();
 
   if (OverrideTailCall.has_value()) {
     IsTailCall = *OverrideTailCall;
