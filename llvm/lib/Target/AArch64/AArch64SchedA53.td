@@ -165,21 +165,24 @@ def A53WriteFMACQ : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
 }
 def A53ReadFPM   : SchedReadAdvance<0>;
 def A53ReadFPMA4 : SchedReadAdvance<4, [A53WriteFMAC, A53WriteFMACQ]>;
+// Divide and square root, measured on Cortex-A53: single precision 13 and 12
+// cycles, double precision 22, with the unit busy for all but the last 3. The
+// ASIMD forms take as long as the scalar ones.
 def A53WriteFDivSP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
-  let Latency = 18;
-  let ReleaseAtCycles = [14, 14];
+  let Latency = 13;
+  let ReleaseAtCycles = [10, 10];
 }
 def A53WriteFDivDP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
-  let Latency = 33;
-  let ReleaseAtCycles = [29, 29];
+  let Latency = 22;
+  let ReleaseAtCycles = [19, 19];
 }
 def A53WriteFSqrtSP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
-  let Latency = 17;
-  let ReleaseAtCycles = [13, 13];
+  let Latency = 12;
+  let ReleaseAtCycles = [9, 9];
 }
 def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
-  let Latency = 32;
-  let ReleaseAtCycles = [28, 28];
+  let Latency = 22;
+  let ReleaseAtCycles = [19, 19];
 }
 // Reciprocal / reciprocal-square-root Newton-Raphson step (FRECPS/FRSQRTS) and
 // estimate (FRECPE/FRSQRTE). Measured on Cortex-A53: the step is 8 cycles and
@@ -399,8 +402,10 @@ def : InstRW<[A53WriteFDivDP], (instregex "^FDIVv.*64$")>;
 // Match only the genuine square root (FSQRT*), not the reciprocal-square-root
 // step/estimate (FRSQRTS/FRSQRTE), which are handled below. Previously the
 // ".*SQRT.*" globs charged those the full square-root latency.
-def : InstRW<[A53WriteFSqrtSP], (instregex "^FSQRT.*32$")>;
-def : InstRW<[A53WriteFSqrtDP], (instregex "^FSQRT.*64$")>;
+def : InstRW<[A53WriteFSqrtSP], (instrs FSQRTSr)>;
+def : InstRW<[A53WriteFSqrtDP], (instrs FSQRTDr)>;
+def : InstRW<[A53WriteFSqrtSP], (instregex "^FSQRTv.*32$")>;
+def : InstRW<[A53WriteFSqrtDP], (instregex "^FSQRTv.*64$")>;
 
 // Reciprocal / rsqrt step and estimate (see the write classes above).
 def : InstRW<[A53WriteFRecpStep],
