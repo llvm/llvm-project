@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This file is shared between ARM64 and ARM64EC, but these functions are only
+// for ARM64EC when `-mlong-double-80` is in effect.
 #if __LDBL_MANT_DIG__ == 64
+
+long double __powixf2(long double, int);
 
 #define SRC_80
 #define DST_BFLOAT
-#include "../fp_trunc_impl.inc"
+#include "../fp_trunc_impl.inc" // __truncXfYf2__
 
 long double __arm64ec_addxf3(long double a, long double b) { return a + b; }
 
@@ -20,13 +24,13 @@ long double __arm64ec_mulxf3(long double a, long double b) { return a * b; }
 
 long double __arm64ec_divxf3(long double a, long double b) { return a / b; }
 
-long double __powixf2(long double, int);
-
 long double __arm64ec_powixf2(long double base, int exponent) {
   return __powixf2(base, exponent);
 }
 
-int __arm64ec_lexf2(long double a, long double b) { return __leXf2__(a, b); }
+int __arm64ec_lexf2(long double a, long double b) {
+  return a == b ? 0 : (a < b ? -1 : 1); // unordered => 1
+}
 
 COMPILER_RT_ALIAS(__arm64ec_lexf2, __arm64ec_eqxf2)
 
@@ -34,12 +38,14 @@ COMPILER_RT_ALIAS(__arm64ec_lexf2, __arm64ec_ltxf2)
 
 COMPILER_RT_ALIAS(__arm64ec_lexf2, __arm64ec_nexf2)
 
-int __arm64ec_gexf2(long double a, long double b) { return __geXf2__(a, b); }
+int __arm64ec_gexf2(long double a, long double b) {
+  return a == b ? 0 : (a > b ? 1 : -1); // unordered => -1
+}
 
 COMPILER_RT_ALIAS(__arm64ec_gexf2, __arm64ec_gtxf2)
 
 int __arm64ec_unordxf2(long double a, long double b) {
-  return __unordXf2__(a, b);
+  return a != a || b != b;
 }
 
 long double __arm64ec_extendhfxf2(_Float16 value) { return value; }
