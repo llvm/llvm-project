@@ -278,13 +278,13 @@ class TimeTraceReport(Report):
     skipped_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
 
     def _write_results_to_file(self, tests, elapsed, file):
-        # Find when first test started so we can make start times relative.
-        first_start_time = min([t.result.start for t in tests])
-        events = [
-            self._get_test_event(x, first_start_time)
-            for x in tests
-            if x.result.code not in self.skipped_codes
-        ]
+        events = []
+        tests = [t for t in tests if t.result.code not in self.skipped_codes]
+
+        if tests:
+            # Find when first test started so we can make start times relative.
+            first_start_time = min([t.result.start for t in tests])
+            events = [self._get_test_event(x, first_start_time) for x in tests]
 
         json_data = {"traceEvents": events}
 
