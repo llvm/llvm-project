@@ -189,7 +189,6 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
     const parser::OmpDirectiveSpecification &spec,
     const parser::DoConstruct &rootLoop, UnorderedSymbolSet &diagnosed) {
 
-  using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
   using VariableCategory = parser::OmpVariableCategory;
   VariableCategory::Value varCategory{};
   if (HasDefaultNone(spec, varCategory)) {
