@@ -181,10 +181,11 @@ define void @store_v3i32(ptr addrspace(13) inreg %p, <3 x i32> %x, <3 x i32> %y)
 ; GFX12-SDAG-NEXT:    v_add_nc_u32_e32 v1, v1, v4
 ; GFX12-SDAG-NEXT:    v_add_nc_u32_e32 v0, v0, v3
 ; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v2, v2
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: store_v3i32:
@@ -222,10 +223,11 @@ define void @store_v8f16(ptr addrspace(13) inreg %p, <8 x half> %x, <8 x half> %
 ; GFX12-SDAG-NEXT:    v_pk_add_f16 v1, v1, v5
 ; GFX12-SDAG-NEXT:    v_pk_add_f16 v0, v0, v4
 ; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v2, v2
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v3, v3
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -335,6 +337,27 @@ define i32 @load_i32_twice(ptr addrspace(13) inreg %p) {
   ret i32 %z
 }
 
+; Nothing but the memory they share keeps the load before the store.
+
+define i32 @load_then_store(ptr addrspace(13) inreg %p, i32 %v) {
+; GFX12-LABEL: load_then_store:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %x = load i32, ptr addrspace(13) %p
+  store i32 %v, ptr addrspace(13) %p
+  ret i32 %x
+}
+
 ; Null and poison pointers must produce valid code.
 
 define i32 @load_null() {
@@ -416,6 +439,25 @@ define void @store_poison(i32 %v) {
 ; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   store i32 %v, ptr addrspace(13) poison
+  ret void
+}
+
+; A stored value with an undefined lane must produce valid code.
+
+define void @store_v2i32_partly_poison(ptr addrspace(13) inreg %p, i32 %x) {
+; GFX12-LABEL: store_v2i32_partly_poison:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-NEXT:    v_movreld_b32_e32 v1, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %v = insertelement <2 x i32> poison, i32 %x, i32 0
+  store <2 x i32> %v, ptr addrspace(13) %p
   ret void
 }
 
@@ -940,8 +982,8 @@ define void @store_p7(ptr addrspace(13) inreg %p, ptr addrspace(7) %x) {
 ; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v4
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v5
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v2, v6
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v5
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v3, v7
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v4, v8
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
