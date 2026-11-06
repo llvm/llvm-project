@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -convert-index-to-llvm | FileCheck %s
-// RUN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=32 | FileCheck %s --check-prefix=INDEX32
-// RUN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=64 | FileCheck %s --check-prefix=INDEX64
+// RUN: mlir-opt %s -convert-index-to-llvm -split-input-file | FileCheck %s --check-prefixes=CHECK,DLTI32
+// RUN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=32 -split-input-file | FileCheck %s --check-prefix=INDEX32
+// RUN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=64 -split-input-file | FileCheck %s --check-prefix=INDEX64
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
@@ -194,4 +194,33 @@ func.func @index_constant() {
   // INDEX64: llvm.mlir.constant(3000000000 : i64) : i64
   %3 = index.constant 3000000000
   return
+}
+
+// -----
+
+// Without `dlti.dl_spec` the default index bitwidth (64) is preserved.
+
+// CHECK-LABEL: @index_dl_default
+func.func @index_dl_default(%a: index) -> index {
+  // CHECK: builtin.unrealized_conversion_cast %{{.*}} : index to i64
+  %0 = index.add %a, %a
+  return %0 : index
+}
+
+// -----
+
+// The index bitwidth is derived from `dlti.dl_spec` unless `index-bitwidth`
+// is set explicitly.
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+
+// DLTI32-LABEL: @index_dl_32bit
+// INDEX64-LABEL: @index_dl_32bit
+func.func @index_dl_32bit(%a: index) -> index {
+  // DLTI32: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+  // INDEX64: builtin.unrealized_conversion_cast %{{.*}} : index to i64
+  %0 = index.add %a, %a
+  return %0 : index
+}
+
 }

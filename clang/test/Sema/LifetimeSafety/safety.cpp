@@ -2091,6 +2091,230 @@ const std::string& test_return() {
 }
 } // namespace reference_type_decl_ref_expr
 
+namespace lifetime_extended_temporary {
+std::string make();
+std::vector<std::string> makeStrings();
+struct Pair { std::string first; int second; };
+Pair makePair();
+
+void escapes_extending_scope() {
+  std::string_view v;
+  {
+    const std::string &r = make(); // expected-warning {{temporary object does not live long enough}}
+    v = r;                         // expected-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object}}
+  }                                // expected-note {{temporary object is destroyed here}}
+  use(v);                          // expected-note {{later used here}}
+}
+
+void escapes_rvalue_ref() {
+  std::string_view v;
+  {
+    std::string &&r = make(); // expected-warning {{temporary object does not live long enough}}
+    v = r;                    // expected-note {{local variable 'r' aliases the storage of temporary object}}
+  }                           // expected-note {{temporary object is destroyed here}}
+  use(v);                     // expected-note {{later used here}}
+}
+
+void escapes_through_conditional(bool c) {
+  std::string live;
+  std::string_view v;
+  {
+    const auto &r =
+        c ? live : static_cast<const std::string &>(make()); // expected-warning {{temporary object does not live long enough}}
+    v = r;                                                   // expected-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object}}
+  }                                                          // expected-note {{temporary object is destroyed here}}
+  use(v);                                                    // expected-note {{later used here}}
+}
+
+void escapes_two_extended_temporaries(bool c) {
+  std::string_view v;
+  {
+    const auto &r = c ? static_cast<const std::string &>(make())  // expected-warning {{temporary object does not live long enough}}
+                      : static_cast<const std::string &>(make()); // expected-warning {{temporary object does not live long enough}}
+    v = r;                                                        // expected-note 2 {{result of call to 'operator basic_string_view' aliases the storage of temporary object}}
+  }                                                               // expected-note 2 {{temporary object is destroyed here}}
+  use(v);                                                         // expected-note 2 {{later used here}}
+}
+
+void escapes_across_iterations() {
+  std::string_view v = "init";
+  for (int i = 0; i < 3; ++i) {
+    use(v);                        // expected-note {{later used here}}
+    const std::string &r = make(); // expected-warning {{temporary object does not live long enough}}
+    v = r;                         // expected-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object}}
+  }                                // expected-note {{temporary object is destroyed here}}
+}
+
+void escapes_nested_extension() {
+  std::string_view v;
+  {
+    const Pair &p = Pair{make(), 0}; // expected-warning {{temporary object does not live long enough}}
+    v = p.first;                     // expected-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object}}
+  }                                  // expected-note {{temporary object is destroyed here}}
+  use(v);                            // expected-note {{later used here}}
+}
+
+std::string_view returned() {
+  const std::string &r = make(); // expected-warning {{stack memory associated with temporary object is returned}}
+  return r;                      // expected-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object}} \
+                                 // expected-note {{returned here}}
+}
+
+std::string_view returned_subobject() {
+  const std::string &r = makePair().first; // expected-warning {{stack memory associated with temporary object is returned}}
+  return r;                                // expected-note {{result of call to 'operator basic_string_view' aliases the storage of temporary object}} \
+                                           // expected-note {{returned here}}
+}
+
+const int *returned_scalar() {
+  const int &r = 42; // expected-warning {{stack memory associated with temporary object is returned}}
+  return &r;         // expected-note {{returned here}}
+}
+
+void used_within_extending_scope(bool c) {
+  const std::string &r = make();
+  use(r);
+  for (int i = 0; i < 3; ++i) {
+    const std::string &s = c ? make() : make();
+    std::string_view v = s;
+    use(v);
+  }
+  const Pair &p = Pair{make(), 0};
+  std::string_view first = p.first;
+  use(first);
+  const auto &[a, b] = makePair();
+  std::string_view va = a;
+  use(va);
+  for (const std::string &s : makeStrings()) {
+    std::string_view v = s;
+    use(v);
+  }
+}
+
+std::string_view static_extension() {
+  static const std::string &r = make();
+  return r;
+}
+
+thread_local const std::string &tl = make();
+std::string_view thread_local_extension() { return tl; }
+} // namespace lifetime_extended_temporary
+
+namespace default_argument_temporary {
+struct DerivedObj : MyObj {};
+View view(const MyObj &obj [[clang::lifetimebound]] = MyObj());
+View view_converted(const MyObj &obj [[clang::lifetimebound]] = 1);
+View view_of_base(const MyObj &obj [[clang::lifetimebound]] = DerivedObj());
+View view_cast(const MyObj &obj [[clang::lifetimebound]] = static_cast<const MyObj &>(MyObj()));
+View view_by_value(View v [[clang::lifetimebound]] = MyObj());
+View view_nested(View v [[clang::lifetimebound]] = view());
+template <typename T> View view_t(const T &obj [[clang::lifetimebound]] = T());
+struct S {
+  View get(const MyObj &obj [[clang::lifetimebound]] = MyObj());
+};
+struct [[gsl::Pointer()]] DefaultedView {
+  DefaultedView(const MyObj &obj [[clang::lifetimebound]] = MyObj());
+};
+
+void use_after_call() {
+  View v;
+  v = view(); // expected-warning {{temporary object does not live long enough}} \
+              // expected-note {{temporary object is destroyed here}} \
+              // expected-note {{result of call to 'view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);     // expected-note {{later used here}}
+}
+
+void implicit_conversion() {
+  View v;
+  v = view_converted(); // expected-warning {{temporary object does not live long enough}} \
+                        // expected-note {{temporary object is destroyed here}} \
+                        // expected-note {{result of call to 'view_converted' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);               // expected-note {{later used here}}
+}
+
+void derived_to_base() {
+  View v;
+  v = view_of_base(); // expected-warning {{temporary object does not live long enough}} \
+                      // expected-note {{temporary object is destroyed here}} \
+                      // expected-note {{result of call to 'view_of_base' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);             // expected-note {{later used here}}
+}
+
+void explicit_cast() {
+  View v;
+  v = view_cast(); // expected-warning {{temporary object does not live long enough}} \
+                   // expected-note {{temporary object is destroyed here}} \
+                   // expected-note {{result of call to 'view_cast' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);          // expected-note {{later used here}}
+}
+
+void each_call_reported() {
+  View a, b;
+  a = view(); // expected-warning {{temporary object does not live long enough}} \
+              // expected-note {{temporary object is destroyed here}} \
+              // expected-note {{result of call to 'view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  b = view(); // expected-warning {{temporary object does not live long enough}} \
+              // expected-note {{temporary object is destroyed here}} \
+              // expected-note {{result of call to 'view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(a, b);  // expected-note 2 {{later used here}}
+}
+
+void in_loop() {
+  View v;
+  for (int i = 0; i < 2; ++i) {
+    v = view(); // expected-warning {{temporary object does not live long enough}} \
+                // expected-note {{temporary object is destroyed here}} \
+                // expected-note {{result of call to 'view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+    use(v);     // expected-note {{later used here}}
+  }
+}
+
+void member_call(S &s) {
+  View v;
+  v = s.get(); // expected-warning {{temporary object does not live long enough}} \
+               // expected-note {{temporary object is destroyed here}} \
+               // expected-note {{result of call to 'get' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);      // expected-note {{later used here}}
+}
+
+void constructor() {
+  DefaultedView v; // expected-warning {{temporary object does not live long enough}} \
+                   // expected-note {{temporary object is destroyed here}}
+  use(v);          // expected-note {{later used here}}
+}
+
+void template_default() {
+  View v;
+  v = view_t<MyObj>(); // expected-warning {{temporary object does not live long enough}} \
+                       // expected-note {{temporary object is destroyed here}} \
+                       // expected-note {{result of call to 'view_t<MyObj>' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);              // expected-note {{later used here}}
+}
+
+View returned() {
+  return view(); // expected-warning {{stack memory associated with temporary object is returned}} \
+                 // expected-note {{returned here}}
+}
+
+void used_within_full_expression() {
+  use(view());
+  for (int i = 0; i < 2; ++i)
+    use(view());
+  MyObj obj;
+  View v = view(obj);
+  use(v);
+}
+
+void not_yet_modeled() {
+  View v;
+  // FIXME: These dangle, but the temporary is nested inside the default argument.
+  v = view_by_value();
+  use(v);
+  v = view_nested();
+  use(v);
+}
+} // namespace default_argument_temporary
+
 namespace field_access {
 
 struct S {

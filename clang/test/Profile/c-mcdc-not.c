@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -fcoverage-mcdc | FileCheck %s -check-prefix=MCDC
-// RUN: %clang_cc1 -triple %itanium_abi_triple %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping | FileCheck %s -check-prefix=NOMCDC
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -fcoverage-mcdc | FileCheck %s -check-prefix=MCDC
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping | FileCheck %s -check-prefix=NOMCDC
 
 int test(int a, int b, int c, int d, int e, int f) {
   return ((!a && b) || ((!c && d) || (e && !f)));

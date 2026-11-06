@@ -19,6 +19,7 @@
 #include "src/signal/sigaddset.h"
 #include "src/signal/sigemptyset.h"
 #include "src/signal/sigismember.h"
+#include "src/signal/signal.h"
 #include "src/signal/sigprocmask.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -47,6 +48,12 @@ TEST(LlvmLibcSigpendingTest, BlockAndRaise) {
   ASSERT_THAT(LIBC_NAMESPACE::sigpending(&pending), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::sigismember(&pending, SIGUSR1), 1);
 
-  // Restore the old signal mask.
+  // Ignore SIGUSR1 so that when sigprocmask() below restores the original
+  // mask and sends a pending SIGUSR1 signal it will not crash the process.
+  auto old_handler = LIBC_NAMESPACE::signal(SIGUSR1, SIG_IGN);
+  ASSERT_NE(old_handler, SIG_ERR);
+
+  // Restore the old signal mask and handler.
   ASSERT_EQ(LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &oldset, nullptr), 0);
+  ASSERT_NE(LIBC_NAMESPACE::signal(SIGUSR1, old_handler), SIG_ERR);
 }
