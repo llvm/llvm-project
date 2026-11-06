@@ -271,6 +271,7 @@ add_llvm_component_library(LLVMSupport
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp
+  SourceMgrDiagnosticVerifier.cpp
   SpecialCaseList.cpp
   Statistic.cpp
   StringExtras.cpp
@@ -290,6 +291,7 @@ add_llvm_component_library(LLVMSupport
   Twine.cpp
   Unicode.cpp
   UnicodeCaseFold.cpp
+  UnicodeCharSetsGenerated.cpp
   UnicodeNameToCodepoint.cpp
   UnicodeNameToCodepointGenerated.cpp
   VersionTuple.cpp

@@ -370,3 +370,15 @@ bool MultiplexExternalSemaSource::MaybeDiagnoseMissingCompleteType(
   }
   return false;
 }
+
+void MultiplexExternalSemaSource::StartedQualifiedLookup(
+    const DeclContext *DC) {
+  for (size_t I = 0, E = Sources.size(); I < E; ++I)
+    Sources[I]->StartedQualifiedLookup(DC);
+}
+
+void MultiplexExternalSemaSource::FinishedQualifiedLookup(
+    const DeclContext *DC) {
+  for (size_t I = 0, E = Sources.size(); I < E; ++I)
+    Sources[I]->FinishedQualifiedLookup(DC);
+}

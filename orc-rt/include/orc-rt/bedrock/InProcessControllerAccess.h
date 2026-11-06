@@ -14,7 +14,7 @@
 #ifndef ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H
 #define ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H
 
-#include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/bedrock/ControllerHandlerTag.h"
 #include "orc-rt-c/support/WrapperFunction.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/Error.h"
@@ -33,8 +33,8 @@ public:
   /// and InProcessControllerAccess without relying on anything but C ABI.
   /// Must be kept in-sync with the corresponding struct in InProcessEPC.
   struct Connection {
-    void (*Retain)(Connection *C) = nullptr;
-    void (*Release)(Connection *C) = nullptr;
+    void (*Retain)(Connection *C) noexcept = nullptr;
+    void (*Release)(Connection *C) noexcept = nullptr;
     void (*Disconnect)(Connection *C) = nullptr;
     int (*EnterMessageScope)(Connection *C) = nullptr;
     void (*LeaveMessageScope)(Connection *C) = nullptr;
@@ -42,7 +42,7 @@ public:
     /// Accessors to be set by the InProcessEPC instance.
     void *IPEPC = nullptr;
     void (*CallJITDispatch)(void *IPEPC, uint64_t CallId,
-                            orc_rt_ControllerHandlerTag T,
+                            orc_rt_ControllerHandlerTag *T,
                             orc_rt_WrapperFunctionBuffer ArgBytes) = nullptr;
     void (*ReturnWrapperResult)(void *IPEPC, uint64_t CallId,
                                 orc_rt_WrapperFunctionBuffer ResultBytes) =
@@ -94,7 +94,7 @@ public:
                                                BootstrapInfoAccess *BCA)>;
 
   /// Create an InProcessControllerAccess instance.
-  InProcessControllerAccess(Session &S, OnConnectFn OnConnect)
+  InProcessControllerAccess(Session &S, OnConnectFn OnConnect) noexcept
       : Session::ControllerAccess(S), OnConnect(std::move(OnConnect)) {}
 
   InProcessControllerAccess(const InProcessControllerAccess &) = delete;
@@ -110,7 +110,7 @@ public:
   void disconnect() override;
 
   void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag T,
+                      orc_rt_ControllerHandlerTag *T,
                       WrapperFunctionBuffer ArgBytes) override;
   void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
                          uint64_t CallId) override;

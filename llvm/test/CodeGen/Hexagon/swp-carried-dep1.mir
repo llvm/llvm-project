@@ -80,7 +80,7 @@ body:             |
     %12:intregs = COPY $r0
     %16:predregs = C2_cmpeqi %14, 2
     %15:intregs = A2_tfrsi 0
-    J2_jumpt killed %16, %bb.3, implicit-def dead $pc
+    J2_jumpt %16, %bb.3, implicit-def dead $pc
     J2_jump %bb.1, implicit-def dead $pc
 
   bb.1:
@@ -102,7 +102,7 @@ body:             |
     %18:intregs, %10:intregs = L2_loadrh_pi %3, 2 :: (load (s16) from %ir.lsr.iv7)
     %19:intregs = L2_loadrh_io %4, -8 :: (load (s16) from %ir.cgep10)
     %20:intregs = A2_addi %18, 10
-    S2_storerh_io %4, 0, killed %20 :: (store (s16) into %ir.lsr.iv24)
+    S2_storerh_io %4, 0, %20 :: (store (s16) into %ir.lsr.iv24)
     %7:intregs = M2_acci %19, %6, %18
     %9:intregs = A2_addi %4, 4
     ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0

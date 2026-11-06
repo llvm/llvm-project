@@ -12,7 +12,6 @@ from lldbsuite.test.lldbtest import *
 class TestThreadPlanCommands(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows
     def test_thread_plan_actions(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")

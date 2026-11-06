@@ -110,7 +110,7 @@ template <>
 LIBC_INLINE uint32_t
 compare_and_mask<__m256i, uint32_t>(const __m256i *block_ptr, char c) {
   __m256i b = _mm256_load_si256(block_ptr);
-  __m256i set = _mm256_set1_epi16(c);
+  __m256i set = _mm256_set1_epi8(c);
   __m256i cmp = _mm256_cmpeq_epi8(b, set);
   return _mm256_movemask_epi8(cmp);
 }

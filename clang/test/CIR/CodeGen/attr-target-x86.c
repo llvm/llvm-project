@@ -130,7 +130,7 @@ void usage(void){
 // recorded before the definition was seen does not survive.
 // CIR:      cir.func{{.*}} @f_use_before_def()
 // CIR-SAME: "cir.target-cpu" = "lakemont"
-// CIR-SAME: "cir.target-features" = "+cx8,+mmx", nothrow}
+// CIR-SAME: "cir.target-features" = "+cx8,+mmx", nothrow, optnone}
 __attribute__((target("arch=lakemont,mmx")))
 void f_use_before_def(void) {}
 

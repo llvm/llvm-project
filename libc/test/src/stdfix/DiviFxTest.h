@@ -151,7 +151,7 @@ public:
     }
   }
 
-  void testInvalidNumbers(DiviFxFunc func) {
+  void testInvalidNumbers([[maybe_unused]] DiviFxFunc func) {
 
     EXPECT_DEATH([func] { func(1, zero); }, WITH_SIGNAL(-1));
     if constexpr (has_integral) {

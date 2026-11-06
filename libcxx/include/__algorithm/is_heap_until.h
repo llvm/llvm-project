@@ -20,8 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _Iter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
-__is_heap_until(_Iter __first, _Iter __last, _Compare&& __comp) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter __is_heap_until(_Iter __first, _Iter __last, _Compare&& __comp) {
   auto __count = __last - __first;
 
   if (__count < 2)
@@ -53,13 +52,13 @@ __is_heap_until(_Iter __first, _Iter __last, _Compare&& __comp) {
 }
 
 template <class _RandomAccessIterator, class _Compare>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
 is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   return std::__is_heap_until(__first, __last, static_cast<__comp_ref_type<_Compare> >(__comp));
 }
 
 template <class _RandomAccessIterator>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
 is_heap_until(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   return std::__is_heap_until(__first, __last, __less<>());
 }

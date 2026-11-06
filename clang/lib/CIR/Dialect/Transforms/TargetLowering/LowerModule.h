@@ -21,7 +21,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 namespace cir {
@@ -40,17 +40,20 @@ public:
   ~LowerModule() = default;
 
   // The lowering-relevant LangOptions, populated by createLowerModule() from
-  // the module's #cir.lowering_lang_options attribute when present (so a
+  // the module's #cir.lowering_options attribute when present (so a
   // reloaded .cir lowers the same way without a live clang::LangOptions),
   // otherwise left at their defaults.
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
   clang::TargetCXXABI::Kind getCXXABIKind() const {
-    assert(!cir::MissingFeatures::lowerModuleLangOpts());
-    return target->getCXXABI().getKind();
+    return langOpts.CXXABI.value_or(target->getCXXABI().getKind());
   }
 
   CIRCXXABI &getCXXABI() const { return *abi; }
+
+  // FIXME remove this once all ABIs are supported.
+  bool hasCXXABI() const { return abi != nullptr; }
+
   const clang::TargetInfo &getTarget() const { return *target; }
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
 

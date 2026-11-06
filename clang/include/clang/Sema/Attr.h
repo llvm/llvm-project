@@ -60,11 +60,17 @@ inline bool hasFunctionProto(const Decl *D) {
 }
 
 /// getFunctionOrMethodNumParams - Return number of function or method
-/// parameters. It is an error to call this on a K&R function (use
-/// hasFunctionProto first).
-inline unsigned getFunctionOrMethodNumParams(const Decl *D) {
-  if (const FunctionType *FnTy = D->getFunctionType())
+/// parameters, optionally including the implicit object parameter of a C++
+/// method. It is an error to call this on a K&R function (use hasFunctionProto
+/// first).
+inline unsigned getFunctionOrMethodNumParams(const Decl *D,
+                                             bool IncludeThis = false) {
+  if (const FunctionType *FnTy = D->getFunctionType()) {
+    if (IncludeThis)
+      if (const auto *FD = dyn_cast<FunctionDecl>(D))
+        return FD->getNumParamsIncludingThis();
     return cast<FunctionProtoType>(FnTy)->getNumParams();
+  }
   if (const auto *BD = dyn_cast<BlockDecl>(D))
     return BD->getNumParams();
   return cast<ObjCMethodDecl>(D)->param_size();

@@ -10,7 +10,6 @@
 //  opcodes in DirectX Intermediate Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILIntrinsicExpansion.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -225,6 +224,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
+  case Intrinsic::dx_isfinite:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_sdot:
@@ -577,9 +577,8 @@ static Value *expandIsFPClass(CallInst *Orig) {
   Value *FBitCast = Builder.CreateBitCast(F, BitCastTy);
   switch (TCI->getZExtValue()) {
   case FPClassTest::fcNegZero: {
-    Value *NegZero =
-        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1),
-                         /*IsSigned=*/true);
+    Value *NegZero = ConstantInt::get(Builder.getIntNTy(BitWidth),
+                                      APInt::getSignMask(BitWidth));
     Value *RetVal;
     if (FNumElem) {
       Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);
@@ -1331,6 +1330,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_nclamp:
     Result = expandClampIntrinsic(Orig, IntrinsicId);
     break;
+  case Intrinsic::dx_isfinite:
+    Result = expand16BitIsFinite(Orig);
+    break;
   case Intrinsic::dx_isinf:
     Result = expand16BitIsInf(Orig);
     break;
@@ -1414,8 +1416,8 @@ static bool expansionIntrinsics(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
-                                              ModuleAnalysisManager &) {
+PreservedAnalyses DXILIntrinsicExpansionPass::run(Module &M,
+                                                  ModuleAnalysisManager &) {
   if (expansionIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

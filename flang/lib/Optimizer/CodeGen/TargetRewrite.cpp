@@ -429,6 +429,9 @@ public:
     llvm::SmallVector<mlir::Value> trailingOpers;
     llvm::SmallVector<mlir::Value> operands;
     unsigned passArgShift = 0;
+    // (original argument index, new operand index) of the arguments passed
+    // unchanged, whose attributes carry over to the new call.
+    llvm::SmallVector<std::pair<unsigned, unsigned>> keptArgs;
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>)
       operands = callOp.getKernelOperands();
     else
@@ -524,6 +527,7 @@ public:
               if (callOp.getPassArgPos() && *callOp.getPassArgPos() == index)
                 passArgShift = newOpers.size() - *callOp.getPassArgPos();
             }
+            keptArgs.emplace_back(index, newOpers.size());
             newInTyAndAttrs.push_back(
                 fir::CodeGenSpecifics::getTypeAndAttr(ty));
             newOpers.push_back(oper);
@@ -571,15 +575,29 @@ public:
                                       fir::CallOp::Properties{});
       }
       newCall.setFastmathAttr(callOp.getFastmathAttr());
+      newCall.setProcedureAttrsAttr(callOp.getProcedureAttrsAttr());
+      // Attributes of the arguments passed unchanged, by new argument index.
+      llvm::SmallVector<mlir::NamedAttrList> keptArgAttrs(
+          newInTyAndAttrs.size() - dropFront);
+      bool hasKeptArgAttrs = false;
+      if (mlir::ArrayAttr oldArgAttrs = callOp.getArgAttrsAttr())
+        for (auto [oldIdx, newOperIdx] : keptArgs) {
+          if (oldIdx >= oldArgAttrs.size())
+            continue;
+          auto dict = mlir::cast<mlir::DictionaryAttr>(oldArgAttrs[oldIdx]);
+          keptArgAttrs[newOperIdx - dropFront].append(dict.getValue());
+          hasKeptArgAttrs |= !dict.empty();
+        }
       // Always set ABI argument attributes on call operations, even when
       // direct, as required by
       // https://llvm.org/docs/LangRef.html#parameter-attributes.
-      if (hasAbiArgAttributes(newInTyAndAttrs)) {
+      if (hasAbiArgAttributes(newInTyAndAttrs) || hasKeptArgAttrs) {
         llvm::SmallVector<mlir::Attribute> argAttrsArray;
-        for (const auto &arg :
-             llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(newInTyAndAttrs)
-                 .drop_front(dropFront)) {
-          mlir::NamedAttrList argAttrs;
+        for (auto [argIdx, arg] :
+             llvm::enumerate(llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(
+                                 newInTyAndAttrs)
+                                 .drop_front(dropFront))) {
+          mlir::NamedAttrList &argAttrs = keptArgAttrs[argIdx];
           const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
           if (attr.isByVal()) {
             mlir::Type elemType =
@@ -600,6 +618,9 @@ public:
           argAttrsArray.emplace_back(
               argAttrs.getDictionary(rewriter->getContext()));
         }
+        // Trailing operands (e.g. character lengths) have no attributes.
+        argAttrsArray.append(trailingOpers.size(),
+                             rewriter->getDictionaryAttr({}));
         newCall.setArgAttrsAttr(rewriter->getArrayAttr(argAttrsArray));
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');

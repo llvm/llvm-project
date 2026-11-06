@@ -147,7 +147,6 @@ JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
 
 void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
                     unsigned OptLevel) {
-  PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
 
   LoopAnalysisManager LAM;
@@ -156,7 +155,7 @@ void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
   ModuleAnalysisManager MAM;
   ModulePassManager MPM;
 
-  PassBuilder PB(TM, PTO, PGOOpt, nullptr);
+  PassBuilder PB(M.getContext(), TM, std::nullopt, PGOOpt, nullptr);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 

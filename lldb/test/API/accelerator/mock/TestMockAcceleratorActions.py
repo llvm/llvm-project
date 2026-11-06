@@ -126,10 +126,36 @@ class MockAcceleratorActionsTestCase(TestBase):
                 break
         self.assertTrue(accelerator_target.IsValid())
 
+        # The native and accelerator targets are related through one target
+        # group and carry their respective roles.
+        self.expect(
+            "target groups list",
+            substrs=[
+                "group #0: CPU and accelerator targets",
+                "target #0: CPU",
+                "target #1: accelerator",
+            ],
+        )
+
         # The accelerator process must be successfully connected and stopped.
         accelerator_process = accelerator_target.GetProcess()
         self.assertTrue(accelerator_process.IsValid())
         self.assertState(accelerator_process.GetState(), lldb.eStateStopped)
+
+        # LLDB settings are advertised and served only on the accelerator
+        # connection.
+        self.dbg.SetSelectedTarget(accelerator_target)
+        self.expect("process plugin packet send qSupported", substrs=["lldb-settings+"])
+        self.expect(
+            "process plugin packet send jLLDBSettings",
+            substrs=[
+                '"dyld_plugin_name":"accelerator-gdb-remote"',
+                '"accelerator_plugin_name":"mock"',
+                '"send_dyld_packet_to_accelerator":true',
+            ],
+            ordered=False,
+        )
+        self.dbg.SetSelectedTarget(target)
 
         # Validate the registers (each value == 0x1000 + register index).
         accelerator_frame = accelerator_process.GetThreadAtIndex(0).GetFrameAtIndex(0)
@@ -192,6 +218,7 @@ class MockAcceleratorActionsTestCase(TestBase):
         self.assertEqual(
             self.dbg.GetNumTargets(), 1, "connection should fail; no accelerator target"
         )
+        self.expect("target groups list", substrs=["No target groups."])
 
         # The native process is unaffected: the remaining breakpoints still fire
         # and it runs to exit.
@@ -223,4 +250,11 @@ class MockAcceleratorActionsTestCase(TestBase):
         # remote-linux is a real platform but cannot handle a GPU triple.
         self.set_mock_env("LLDB_MOCK_ACCELERATOR_PLATFORM", "remote-linux")
         self.set_mock_env("LLDB_MOCK_ACCELERATOR_TRIPLE", "amdgcn-amd-amdhsa")
+        self.run_expecting_failed_connection()
+
+    @skipIfRemote
+    @add_test_categories(["llgs"])
+    def test_accelerator_connection_failure_removes_target_group(self):
+        """A connection failure after target creation removes the target group."""
+        self.set_mock_env("LLDB_MOCK_ACCELERATOR_CONNECT_URL", "connect://localhost:0")
         self.run_expecting_failed_connection()

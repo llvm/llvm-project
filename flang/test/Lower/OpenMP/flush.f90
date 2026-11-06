@@ -3,7 +3,7 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL:  func.func @_QPflush_standalone
-!CHECK-SAME: %[[ARG_A:.*]]: !fir.ref<i32> {fir.bindc_name = "a"}, %[[ARG_B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"}, %[[ARG_C:.*]]: !fir.ref<i32> {fir.bindc_name = "c"})
+!CHECK-SAME: %[[ARG_A:.*]]: !fir.ref<i32> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_inout>}, %[[ARG_B:.*]]: !fir.ref<i32> {fir.bindc_name = "b", fir.fortran_attrs = #fir.var_attrs<intent_inout>}, %[[ARG_C:.*]]: !fir.ref<i32> {fir.bindc_name = "c", fir.fortran_attrs = #fir.var_attrs<intent_inout>})
 subroutine flush_standalone(a, b, c)
     integer, intent(inout) :: a, b, c
 
@@ -18,7 +18,7 @@ subroutine flush_standalone(a, b, c)
 end subroutine flush_standalone
 
 !CHECK-LABEL: func.func @_QPflush_parallel
-!CHECK-SAME: %[[ARG_A:.*]]: !fir.ref<i32> {fir.bindc_name = "a"}, %[[ARG_B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"}, %[[ARG_C:.*]]: !fir.ref<i32> {fir.bindc_name = "c"})
+!CHECK-SAME: %[[ARG_A:.*]]: !fir.ref<i32> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_inout>}, %[[ARG_B:.*]]: !fir.ref<i32> {fir.bindc_name = "b", fir.fortran_attrs = #fir.var_attrs<intent_inout>}, %[[ARG_C:.*]]: !fir.ref<i32> {fir.bindc_name = "c", fir.fortran_attrs = #fir.var_attrs<intent_inout>})
 subroutine flush_parallel(a, b, c)
     integer, intent(inout) :: a, b, c
 !CHECK:    %[[A:.*]]:2 = hlfir.declare %[[ARG_A]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFflush_parallelEa") fortran_attrs<intent_inout> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)

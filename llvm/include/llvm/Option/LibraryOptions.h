@@ -15,15 +15,19 @@
 #ifndef LLVM_OPTION_LIBRARYOPTIONS_H
 #define LLVM_OPTION_LIBRARYOPTIONS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BoolOrDefault.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 namespace opt {
@@ -70,6 +74,44 @@ template <typename T> bool parseArgValue(StringRef S, std::optional<T> &V) {
   return true;
 }
 
+// The generated apply() passes Alloc, which only a list member uses.
+template <typename T>
+bool parseArgValue(StringRef S, T &V, BumpPtrAllocator &) {
+  return parseArgValue(S, V);
+}
+
+// An enum member is set by Parse, the generated value-to-enumerator mapping.
+template <typename T, typename F>
+bool parseArgValue(StringRef S, T &V, BumpPtrAllocator &, F Parse) {
+  return Parse(S, V);
+}
+
+// A list member appends the comma-separated values of each occurrence. Its
+// storage comes from Alloc, keeping the options struct trivially destructible.
+template <typename T, typename F>
+bool parseArgValue(StringRef S, ArrayRef<T> &List, BumpPtrAllocator &Alloc,
+                   F ParseElem) {
+  static_assert(std::is_trivially_copyable_v<T>);
+  SmallVector<T, 4> Elems(List.begin(), List.end());
+  for (StringRef Item : split(S, ',')) {
+    T Elem{};
+    if (!ParseElem(Item, Elem))
+      return false;
+    Elems.push_back(Elem);
+  }
+  T *Storage = Alloc.Allocate<T>(Elems.size());
+  llvm::copy(Elems, Storage);
+  List = ArrayRef(Storage, Elems.size());
+  return true;
+}
+
+template <typename T>
+bool parseArgValue(StringRef S, ArrayRef<T> &List, BumpPtrAllocator &Alloc) {
+  return parseArgValue(S, List, Alloc, [](StringRef Item, T &Elem) {
+    return parseArgValue(Item, Elem);
+  });
+}
+
 /// An OptTable with a public constructor, shared by every options struct.
 class LLVM_ABI LibraryOptTable : public OptTable {
 public:
@@ -77,22 +119,39 @@ public:
   ~LibraryOptTable() override;
 };
 
-/// Connects an options struct to cl::ParseCommandLineOptions.
+/// Connects options struct T to cl::parseCommandLineOptions and
+/// cl::LibraryOptionsContext.
 class LLVM_ABI LibraryOptionsParser final : public cl::LibraryOptions {
 public:
-  using ApplyFn = bool (*)(const Arg &);
-  using TableFn = const OptTable &(*)();
-  LibraryOptionsParser(TableFn Table, ApplyFn Apply, void (*Reset)())
-      : Table(Table), Apply(Apply), Reset(Reset) {}
+  template <typename T>
+  explicit LibraryOptionsParser(std::in_place_type_t<T>)
+      : LibraryOptions(T::PerContext), Table(T::optTable), Global(&T::Global),
+        Default(&T::Default),
+        Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
+          return static_cast<T *>(Opts)->apply(A, Alloc);
+        }),
+        Copy([](BumpPtrAllocator &Alloc) -> void * {
+          return new (Alloc) T(T::Default);
+        }),
+        Reset([] { T::Global = T(); }) {}
 
   void forEachOption(
       function_ref<void(StringRef, StringRef, StringRef)> Fn) const override;
-  Error parse(ArrayRef<const char *> Args, unsigned &Consumed) override;
+  Error parse(void *Opts, ArrayRef<const char *> Args, unsigned &Consumed,
+              BumpPtrAllocator &Alloc) override;
+  void *global() override { return Global; }
+  const void *getDefault() const override { return Default; }
+  void *copyDefault(BumpPtrAllocator &Alloc) const override {
+    return Copy(Alloc);
+  }
   void reset() override { Reset(); }
 
 private:
-  TableFn Table;
-  ApplyFn Apply;
+  const OptTable &(*Table)();
+  void *Global;
+  const void *Default;
+  bool (*Apply)(void *Opts, const Arg &A, BumpPtrAllocator &Alloc);
+  void *(*Copy)(BumpPtrAllocator &Alloc);
   void (*Reset)();
 };
 
@@ -100,9 +159,9 @@ private:
 /// defines one static instance in the file that includes the struct's
 /// definitions.
 template <typename T> class RegisterLibraryOptions {
-  LibraryOptionsParser Parser{T::optTable,
-                              [](const Arg &A) { return T::Global.apply(A); },
-                              [] { T::Global = T(); }};
+  static_assert(std::is_trivially_destructible_v<T>,
+                "an options struct must not need an exit-time destructor");
+  LibraryOptionsParser Parser{std::in_place_type<T>};
 
 public:
   RegisterLibraryOptions() { cl::addLibraryOptions(Parser); }

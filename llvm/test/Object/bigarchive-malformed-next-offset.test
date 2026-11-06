@@ -1,0 +1,55 @@
+## Test a big archive whose member header points at a next member outside the
+## file.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj obj.yaml -o 1.o
+# RUN: cp 1.o 2.o
+# RUN: llvm-ar q archive.a 1.o 2.o
+
+## Set the first member's NextOffset to 2^64-1. When this is added to the start
+## of the buffer, the value wraps to an offset within the archive, which could
+## pass naive out of bounds checks.
+# RUN: cp archive.a wrapped.a
+# RUN: %python set-next-offset.py wrapped.a 18446744073709551615
+# RUN: not llvm-ar t wrapped.a 2>&1 | FileCheck %s --check-prefix=WRAP
+
+## The same check rejects an offset one byte past the end of the file.
+# RUN: cp archive.a past-end.a
+# RUN: %python set-next-offset.py past-end.a +1
+# RUN: not llvm-ar t past-end.a 2>&1 | FileCheck %s --check-prefix=PAST-END
+
+## The archive is 0x3ca bytes. The wrapped offset is reported verbatim, and the
+## one-past-the-end offset is 0x3cb.
+# WRAP: error: truncated or malformed archive (offset to next archive member (0xffffffffffffffff) past the end of the archive (size 0x3ca) after member 1.o)
+# PAST-END: error: truncated or malformed archive (offset to next archive member (0x3cb) past the end of the archive (size 0x3ca) after member 1.o)
+
+#--- set-next-offset.py
+import sys
+
+## Overwrite the first member's NextOffset field in a big archive. A value of
+## the form "+N" means N bytes past the end of the file. The offset of the first
+## member is itself read from the fixed-length header, and the NextOffset field
+## sits 20 bytes into the member header.
+path, value = sys.argv[1], sys.argv[2]
+with open(path, "r+b") as f:
+    data = f.read()
+    offset = len(data) + int(value[1:]) if value.startswith("+") else int(value)
+    f.seek(int(data[68:88]) + 20)
+    f.write(b"%-20d" % offset)
+
+#--- obj.yaml
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+Symbols:
+  - Name:            export_protected_var
+    Section:         .data
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW

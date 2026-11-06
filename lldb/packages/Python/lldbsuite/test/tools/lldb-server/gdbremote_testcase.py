@@ -954,6 +954,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "MultiMemRead",
         "jMultiBreakpoint",
         "accelerator-plugins",
+        "lldb-settings",
         "ExpediteStack",
         "ExpediteRecentReads",
     ]

@@ -71,6 +71,16 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionModifierArrayAttr
+//===----------------------------------------------------------------------===//
+
+def ReductionModifierArrayAttr
+    : TypedArrayAttrBase<ReductionModifierAttr,
+                         "array of reduction modifiers"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
 // TaskDependArrayAttr
 //===----------------------------------------------------------------------===//
 

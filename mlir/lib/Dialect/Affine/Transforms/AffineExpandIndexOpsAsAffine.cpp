@@ -92,7 +92,7 @@ struct LowerDelinearizeIndexOps
 /// additions via affine.apply. For vector types, unrolls to per-element
 /// scalar affine.apply operations.
 struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();

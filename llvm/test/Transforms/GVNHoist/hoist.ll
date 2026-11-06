@@ -884,3 +884,76 @@ x:
   %r2 = load i8, ptr %word, align 1
   ret i8 %r2
 }
+
+; The hoisted mul replaces the extractvalue of smul.with.overflow, whose result
+; wraps on overflow, so the nsw flag on the mul must be dropped.
+define i32 @hoist_mul_with_overflow(i1 %c, i32 %x) {
+; CHECK-LABEL: @hoist_mul_with_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret i32 [[P]]
+; CHECK:       right:
+; CHECK-NEXT:    [[OV:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[X]], i32 [[X]])
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %p = mul nsw i32 %x, %x
+  ret i32 %p
+
+right:
+  %ov = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %x, i32 %x)
+  %r = extractvalue { i32, i1 } %ov, 0
+  ret i32 %r
+}
+
+define i32 @hoist_add_with_overflow(i1 %c, i32 %x, i32 %y) {
+; CHECK-LABEL: @hoist_add_with_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret i32 [[P]]
+; CHECK:       right:
+; CHECK-NEXT:    [[OV:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %p = add nuw nsw i32 %x, %y
+  ret i32 %p
+
+right:
+  %ov = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)
+  %r = extractvalue { i32, i1 } %ov, 0
+  ret i32 %r
+}
+
+; Both sides are plain binops: the common flags are kept.
+define i32 @hoist_mul_common_flags(i1 %c, i32 %x) {
+; CHECK-LABEL: @hoist_mul_common_flags(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = mul nsw i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret i32 [[P]]
+; CHECK:       right:
+; CHECK-NEXT:    ret i32 [[P]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %p = mul nsw nuw i32 %x, %x
+  ret i32 %p
+
+right:
+  %r = mul nsw i32 %x, %x
+  ret i32 %r
+}

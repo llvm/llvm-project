@@ -110,11 +110,11 @@ void* operator new(size_t size) { OPERATOR_NEW_BODY; }
 CXX_OPERATOR_ATTRIBUTE
 void* operator new[](size_t size) { OPERATOR_NEW_BODY_ARRAY; }
 CXX_OPERATOR_ATTRIBUTE
-void* operator new(size_t size, std::nothrow_t const&) {
+void* operator new(size_t size, std::nothrow_t const&) NOEXCEPT {
   OPERATOR_NEW_BODY_NOTHROW;
 }
 CXX_OPERATOR_ATTRIBUTE
-void* operator new[](size_t size, std::nothrow_t const&) {
+void* operator new[](size_t size, std::nothrow_t const&) NOEXCEPT {
   OPERATOR_NEW_BODY_ARRAY_NOTHROW;
 }
 CXX_OPERATOR_ATTRIBUTE
@@ -126,12 +126,13 @@ void* operator new[](size_t size, std::align_val_t align) {
   OPERATOR_NEW_BODY_ALIGN_ARRAY;
 }
 CXX_OPERATOR_ATTRIBUTE
-void* operator new(size_t size, std::align_val_t align, std::nothrow_t const&) {
+void* operator new(size_t size, std::align_val_t align,
+                   std::nothrow_t const&) NOEXCEPT {
   OPERATOR_NEW_BODY_ALIGN_NOTHROW;
 }
 CXX_OPERATOR_ATTRIBUTE
 void* operator new[](size_t size, std::align_val_t align,
-                     std::nothrow_t const&) {
+                     std::nothrow_t const&) NOEXCEPT {
   OPERATOR_NEW_BODY_ALIGN_ARRAY_NOTHROW;
 }
 
@@ -177,9 +178,11 @@ void operator delete(void* ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
 CXX_OPERATOR_ATTRIBUTE
 void operator delete[](void* ptr) NOEXCEPT { OPERATOR_DELETE_BODY_ARRAY; }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void* ptr, std::nothrow_t const&) { OPERATOR_DELETE_BODY; }
+void operator delete(void* ptr, std::nothrow_t const&) NOEXCEPT {
+  OPERATOR_DELETE_BODY;
+}
 CXX_OPERATOR_ATTRIBUTE
-void operator delete[](void* ptr, std::nothrow_t const&) {
+void operator delete[](void* ptr, std::nothrow_t const&) NOEXCEPT {
   OPERATOR_DELETE_BODY_ARRAY;
 }
 CXX_OPERATOR_ATTRIBUTE
@@ -199,12 +202,13 @@ void operator delete[](void* ptr, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN_ARRAY;
 }
 CXX_OPERATOR_ATTRIBUTE
-void operator delete(void* ptr, std::align_val_t align, std::nothrow_t const&) {
+void operator delete(void* ptr, std::align_val_t align,
+                     std::nothrow_t const&) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN;
 }
 CXX_OPERATOR_ATTRIBUTE
 void operator delete[](void* ptr, std::align_val_t align,
-                       std::nothrow_t const&) {
+                       std::nothrow_t const&) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN_ARRAY;
 }
 CXX_OPERATOR_ATTRIBUTE

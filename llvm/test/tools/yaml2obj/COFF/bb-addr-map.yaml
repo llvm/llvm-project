@@ -108,6 +108,17 @@
 # CHECK:        RawDataSize: 0x0{{$}}
 # CHECK-NEXT:   PointerToRawData: 0x0{{$}}
 
+## Case 12: Specify function GUID.
+# CHECK:        Number: 12{{$}}
+# CHECK-NEXT:   Name: .llvm_bb_addr_map
+# CHECK-NOT:    Section {
+# CHECK:        RawDataSize: 0x18{{$}}
+# CHECK-NOT:    Section {
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 06000188 77665544 33221120 00000000
+# CHECK-NEXT:     0010: 00000001 0F010203
+# CHECK-NEXT:   )
+
 --- !COFF
 header:
   Machine: IMAGE_FILE_MACHINE_AMD64
@@ -227,6 +238,21 @@ sections:
   - Name: .llvm_bb_addr_map
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Entries: []
+
+## 12) We can produce a .llvm_bb_addr_map section with function GUID.
+  - Name: .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version:  6
+        Feature:  0x100
+        FuncGUID: 0x1122334455667788
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+              - ID:            15
+                AddressOffset: 0x00000001
+                Size:          0x00000002
+                Metadata:      0x00000003
 symbols: []
 ...
 
@@ -305,7 +331,7 @@ symbols: []
 ## Check that an unsupported version warns and is encoded anyway.
 # RUN: yaml2obj --docnum=6 %s -o %t6 2>&1 | FileCheck %s --check-prefix=INVALID-VERSION
 
-# INVALID-VERSION: warning: unsupported BB address map version: 6; encoding using the most recent version
+# INVALID-VERSION: warning: unsupported BB address map version: 7; encoding using the most recent version
 
 --- !COFF
 header:
@@ -314,7 +340,7 @@ sections:
   - Name: .llvm_bb_addr_map
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA ]
     Entries:
-      - Version: 6
+      - Version: 7
         BBRanges:
           - BaseAddress: 0x0000000000000020
             BBEntries:

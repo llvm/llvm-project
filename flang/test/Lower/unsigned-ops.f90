@@ -5,7 +5,7 @@ unsigned function f01(u, v)
   f01 = u + v - 1u
 end
 
-!CHECK: func.func @_QPf01(%[[ARG0:.*]]: !fir.ref<ui32> {fir.bindc_name = "u", fir.read_only}, %[[ARG1:.*]]: !fir.ref<ui32> {fir.bindc_name = "v", fir.read_only}) -> ui32 {
+!CHECK: func.func @_QPf01(%[[ARG0:.*]]: !fir.ref<ui32> {fir.bindc_name = "u", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}, %[[ARG1:.*]]: !fir.ref<ui32> {fir.bindc_name = "v", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}) -> ui32 {
 !CHECK: %[[C1_I32:.*]] = arith.constant 1 : i32
 !CHECK: %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 !CHECK: %[[VAL_1:.*]] = fir.alloca ui32 <{bindc_name = "f01", uniq_name = "_QFf01Ef01"}>
@@ -30,7 +30,7 @@ unsigned function f02(u, v)
   f02 = u ** v - 1u
 end
 
-!CHECK: func.func @_QPf02(%[[ARG0:.*]]: !fir.ref<ui32> {fir.bindc_name = "u", fir.read_only}, %[[ARG1:.*]]: !fir.ref<ui32> {fir.bindc_name = "v", fir.read_only}) -> ui32 {
+!CHECK: func.func @_QPf02(%[[ARG0:.*]]: !fir.ref<ui32> {fir.bindc_name = "u", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}, %[[ARG1:.*]]: !fir.ref<ui32> {fir.bindc_name = "v", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}) -> ui32 {
 !CHECK: %[[C1_i32:.*]] = arith.constant 1 : i32
 !CHECK: %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 !CHECK: %[[VAL_1:.*]] = fir.alloca ui32 <{bindc_name = "f02", uniq_name = "_QFf02Ef02"}>

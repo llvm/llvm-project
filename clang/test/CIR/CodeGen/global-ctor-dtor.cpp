@@ -6,6 +6,10 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: %clang_cc1 -std=c++20 -triple spirv64-amd-amdhsa -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM-AS4
+// RUN: %clang_cc1 -std=c++20 -triple spirv64-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG-AS4
+// RUN: %clang_cc1 -std=c++20 -triple spirv64-intel -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM-AS9
+// RUN: %clang_cc1 -std=c++20 -triple spirv64-intel -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG-AS9
 
 extern int bar();
 void foo(void) __attribute__((constructor));
@@ -43,3 +47,15 @@ void foo4(void) {
 
 // OGCG: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_Z3foov, ptr null }, { i32, ptr, ptr } { i32 777, ptr @_Z4foo2v, ptr null }]
 // OGCG: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_Z4foo3v, ptr null }, { i32, ptr, ptr } { i32 789, ptr @_Z4foo4v, ptr null }]
+
+// LLVM-AS4: @llvm.global_ctors = appending global [2 x { i32, ptr addrspace(4), ptr addrspace(4) }] [{ i32, ptr addrspace(4), ptr addrspace(4) } { i32 65535, ptr addrspace(4) @_Z3foov, ptr addrspace(4) null }, { i32, ptr addrspace(4), ptr addrspace(4) } { i32 777, ptr addrspace(4) @_Z4foo2v, ptr addrspace(4) null }]
+// LLVM-AS4: @llvm.global_dtors = appending global [2 x { i32, ptr addrspace(4), ptr addrspace(4) }] [{ i32, ptr addrspace(4), ptr addrspace(4) } { i32 65535, ptr addrspace(4) @_Z4foo3v, ptr addrspace(4) null }, { i32, ptr addrspace(4), ptr addrspace(4) } { i32 789, ptr addrspace(4) @_Z4foo4v, ptr addrspace(4) null }]
+
+// OGCG-AS4: @llvm.global_ctors = appending addrspace(1) global [2 x { i32, ptr addrspace(4), ptr addrspace(4) }] [{ i32, ptr addrspace(4), ptr addrspace(4) } { i32 65535, ptr addrspace(4) @_Z3foov, ptr addrspace(4) null }, { i32, ptr addrspace(4), ptr addrspace(4) } { i32 777, ptr addrspace(4) @_Z4foo2v, ptr addrspace(4) null }]
+// OGCG-AS4: @llvm.global_dtors = appending addrspace(1) global [2 x { i32, ptr addrspace(4), ptr addrspace(4) }] [{ i32, ptr addrspace(4), ptr addrspace(4) } { i32 65535, ptr addrspace(4) @_Z4foo3v, ptr addrspace(4) null }, { i32, ptr addrspace(4), ptr addrspace(4) } { i32 789, ptr addrspace(4) @_Z4foo4v, ptr addrspace(4) null }]
+
+// LLVM-AS9: @llvm.global_ctors = appending global [2 x { i32, ptr addrspace(9), ptr addrspace(9) }] [{ i32, ptr addrspace(9), ptr addrspace(9) } { i32 65535, ptr addrspace(9) @_Z3foov, ptr addrspace(9) null }, { i32, ptr addrspace(9), ptr addrspace(9) } { i32 777, ptr addrspace(9) @_Z4foo2v, ptr addrspace(9) null }]
+// LLVM-AS9: @llvm.global_dtors = appending global [2 x { i32, ptr addrspace(9), ptr addrspace(9) }] [{ i32, ptr addrspace(9), ptr addrspace(9) } { i32 65535, ptr addrspace(9) @_Z4foo3v, ptr addrspace(9) null }, { i32, ptr addrspace(9), ptr addrspace(9) } { i32 789, ptr addrspace(9) @_Z4foo4v, ptr addrspace(9) null }]
+
+// OGCG-AS9: @llvm.global_ctors = appending addrspace(1) global [2 x { i32, ptr addrspace(9), ptr addrspace(9) }] [{ i32, ptr addrspace(9), ptr addrspace(9) } { i32 65535, ptr addrspace(9) @_Z3foov, ptr addrspace(9) null }, { i32, ptr addrspace(9), ptr addrspace(9) } { i32 777, ptr addrspace(9) @_Z4foo2v, ptr addrspace(9) null }]
+// OGCG-AS9: @llvm.global_dtors = appending addrspace(1) global [2 x { i32, ptr addrspace(9), ptr addrspace(9) }] [{ i32, ptr addrspace(9), ptr addrspace(9) } { i32 65535, ptr addrspace(9) @_Z4foo3v, ptr addrspace(9) null }, { i32, ptr addrspace(9), ptr addrspace(9) } { i32 789, ptr addrspace(9) @_Z4foo4v, ptr addrspace(9) null }]

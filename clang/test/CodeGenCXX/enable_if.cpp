@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -triple=x86_64-pc-linux-gnu | FileCheck %s %}
 
 // Test address-of overloading logic
 int test5(int);

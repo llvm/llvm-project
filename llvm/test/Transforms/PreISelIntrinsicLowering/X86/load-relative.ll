@@ -3,9 +3,11 @@
 
 ; CHECK: define ptr @foo32(ptr [[P:%.*]], i32 [[O:%.*]])
 define ptr @foo32(ptr %p, i32 %o) {
-  ; CHECK: [[OP:%.*]] = getelementptr i8, ptr [[P]], i32 [[O]]
+  ; CHECK: [[O_SEXT:%.*]] = sext i32 [[O]] to i64
+  ; CHECK: [[OP:%.*]] = getelementptr i8, ptr [[P]], i64 [[O_SEXT]]
   ; CHECK: [[OI32:%.*]] = load i32, ptr [[OP]], align 4
-  ; CHECK: [[R:%.*]] = getelementptr i8, ptr [[P]], i32 [[OI32]]
+  ; CHECK: [[OI32_SEXT:%.*]] = sext i32 [[OI32]] to i64
+  ; CHECK: [[R:%.*]] = getelementptr i8, ptr [[P]], i64 [[OI32_SEXT]]
   ; CHECK: ret ptr [[R]]
   %l = call ptr @llvm.load.relative.i32(ptr %p, i32 %o)
   ret ptr %l
@@ -15,7 +17,8 @@ define ptr @foo32(ptr %p, i32 %o) {
 define ptr @foo64(ptr %p, i64 %o) {
   ; CHECK: [[OP:%.*]] = getelementptr i8, ptr [[P]], i64 [[O]]
   ; CHECK: [[OI32:%.*]] = load i32, ptr [[OP]], align 4
-  ; CHECK: [[R:%.*]] = getelementptr i8, ptr [[P]], i32 [[OI32]]
+  ; CHECK: [[OI32_SEXT:%.*]] = sext i32 [[OI32]] to i64
+  ; CHECK: [[R:%.*]] = getelementptr i8, ptr [[P]], i64 [[OI32_SEXT]]
   ; CHECK: ret ptr [[R]]
   %l = call ptr @llvm.load.relative.i64(ptr %p, i64 %o)
   ret ptr %l

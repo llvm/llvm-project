@@ -38,6 +38,47 @@ bool hasImplicitAddressLocation(const DWARFDie &Die) {
          });
 }
 
+bool isStaticDataMember(const DWARFDie &Die) {
+  assert(Die.getTag() == dwarf::DW_TAG_member && "expected a DW_TAG_member");
+
+  if (!dwarf::toUnsigned(Die.find(dwarf::DW_AT_declaration), 0))
+    return false;
+
+  // A member that has a location occupies storage in the record regardless of
+  // how else it is marked, so it is the absence of a location that makes this a
+  // pure declaration. Zero is a valid offset, so only the attribute's presence
+  // matters, not its value.
+  return !Die.find(
+      {dwarf::DW_AT_data_member_location, dwarf::DW_AT_data_bit_offset});
+}
+
+bool isIdentifiedByChildren(dwarf::Tag Tag) {
+  switch (Tag) {
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_enumeration_type:
+  case dwarf::DW_TAG_interface_type:
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_union_type:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isIdentifyingChild(const DWARFDie &Die) {
+  // Units disagree on implicit member functions and on how static data
+  // members are spelled.
+  switch (Die.getTag()) {
+  case dwarf::DW_TAG_member:
+    return !isStaticDataMember(Die);
+  case dwarf::DW_TAG_enumerator:
+  case dwarf::DW_TAG_inheritance:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void buildStmtSeqOffsetToFirstRowIndex(
     const DWARFDebugLine::LineTable &LT,
     ArrayRef<uint64_t> SortedStmtSeqOffsets,

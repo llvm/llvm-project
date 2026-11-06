@@ -179,6 +179,75 @@ define void @test_mask_store_16xf16(<16 x i1> %mask, ptr %addr, <16 x half> %val
 }
 declare void @llvm.masked.store.v16f16.p0(<16 x half>, ptr, i32, <16 x i1>)
 
+; bf16 masked loads/stores shouldn't need avx512bf16.
+define <8 x bfloat> @test_mask_load_8xbf16(<8 x i1> %mask, ptr %addr, <8 x bfloat> %val) {
+; CHECK-LABEL: test_mask_load_8xbf16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
+; CHECK-NEXT:    vpmovw2m %xmm0, %k1
+; CHECK-NEXT:    vpblendmw (%rdi), %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %res = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr %addr, i32 4, <8 x i1>%mask, <8 x bfloat> %val)
+  ret <8 x bfloat> %res
+}
+
+define <16 x bfloat> @test_mask_load_16xbf16(<16 x i1> %mask, ptr %addr) {
+; CHECK-LABEL: test_mask_load_16xbf16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
+; CHECK-NEXT:    vpmovb2m %xmm0, %k1
+; CHECK-NEXT:    vmovdqu16 (%rdi), %ymm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %res = call <16 x bfloat> @llvm.masked.load.v16bf16.p0(ptr %addr, i32 4, <16 x i1>%mask, <16 x bfloat> zeroinitializer)
+  ret <16 x bfloat> %res
+}
+
+define <32 x bfloat> @test_mask_load_32xbf16(<32 x i1> %mask, ptr %addr, <32 x bfloat> %val) {
+; CHECK-LABEL: test_mask_load_32xbf16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovb2m %ymm0, %k1
+; CHECK-NEXT:    vpblendmw (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    retq
+  %res = call <32 x bfloat> @llvm.masked.load.v32bf16.p0(ptr %addr, i32 4, <32 x i1>%mask, <32 x bfloat> %val)
+  ret <32 x bfloat> %res
+}
+
+define void @test_mask_store_8xbf16(<8 x i1> %mask, ptr %addr, <8 x bfloat> %val) {
+; CHECK-LABEL: test_mask_store_8xbf16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
+; CHECK-NEXT:    vpmovw2m %xmm0, %k1
+; CHECK-NEXT:    vmovdqu16 %xmm1, (%rdi) {%k1}
+; CHECK-NEXT:    retq
+  call void @llvm.masked.store.v8bf16.p0(<8 x bfloat> %val, ptr %addr, i32 4, <8 x i1>%mask)
+  ret void
+}
+
+define void @test_mask_store_16xbf16(<16 x i1> %mask, ptr %addr, <16 x bfloat> %val) {
+; CHECK-LABEL: test_mask_store_16xbf16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
+; CHECK-NEXT:    vpmovb2m %xmm0, %k1
+; CHECK-NEXT:    vmovdqu16 %ymm1, (%rdi) {%k1}
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  call void @llvm.masked.store.v16bf16.p0(<16 x bfloat> %val, ptr %addr, i32 4, <16 x i1>%mask)
+  ret void
+}
+
+define void @test_mask_store_32xbf16(<32 x i1> %mask, ptr %addr, <32 x bfloat> %val) {
+; CHECK-LABEL: test_mask_store_32xbf16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovb2m %ymm0, %k1
+; CHECK-NEXT:    vmovdqu16 %zmm1, (%rdi) {%k1}
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  call void @llvm.masked.store.v32bf16.p0(<32 x bfloat> %val, ptr %addr, i32 4, <32 x i1>%mask)
+  ret void
+}
+
 ; PR198154
 define void @test_maskz_store_v192i8(ptr %p0, <192 x i1> %mask) nounwind {
 ; CHECK-LABEL: test_maskz_store_v192i8:

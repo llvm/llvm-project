@@ -3345,6 +3345,7 @@ define i1 @neg_byval_alloca_adjacent(ptr byval(i32) %a) {
 @A = global i32 0
 @B = global i32 0
 @A.alias = alias i32, ptr @A
+@A.weak.alias = weak alias i32, ptr @A
 
 define i1 @globals_inequal() {
 ; CHECK-LABEL: @globals_inequal(
@@ -3378,12 +3379,23 @@ define i1 @test_byval_global_inequal(ptr byval(i32) %a) {
 }
 
 
-define i1 @neg_global_alias() {
-; CHECK-LABEL: @neg_global_alias(
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr @A, @A.alias
-; CHECK-NEXT:    ret i1 [[RES]]
+; A non-interposable alias resolves to its aliasee, so the addresses are equal.
+define i1 @global_alias() {
+; CHECK-LABEL: @global_alias(
+; CHECK-NEXT:    ret i1 false
 ;
   %res = icmp ne ptr @A, @A.alias
+  ret i1 %res
+}
+
+
+; An interposable alias may be replaced at link time, so nothing is known.
+define i1 @neg_global_weak_alias() {
+; CHECK-LABEL: @neg_global_weak_alias(
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr @A, @A.weak.alias
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %res = icmp ne ptr @A, @A.weak.alias
   ret i1 %res
 }
 

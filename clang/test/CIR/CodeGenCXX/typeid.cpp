@@ -34,7 +34,7 @@ extern A &a;
 
 // CIR-AFTER: cir.global external @_ZN5Test14a_tiE = #cir.ptr<null> : !cir.ptr<!rec_std3A3Atype_info>
 
-// CIR-BEFORE: cir.global external @_ZN5Test14a_tiE = ctor : !cir.ptr<!rec_std3A3Atype_info> {
+// CIR-BEFORE: cir.global external @_ZN5Test14a_tiE = #cir.ptr<null> : !cir.ptr<!rec_std3A3Atype_info> ctor {
 // CIR-AFTER: cir.func{{.*}}@__cxx_global_var_init() {
 //
 // CIR-NEXT: %[[GET_GLOB_ATI:.*]] = cir.get_global @_ZN5Test14a_tiE : !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
@@ -99,6 +99,6 @@ const char *f(void *arg) {
   return 0;
 }
 
-// CIR: cir.func private dso_local @__cxa_bad_typeid() attributes {noreturn}
+// CIR: cir.func private dso_local @__cxa_bad_typeid(){{.*}} attributes {noreturn}
 
 }

@@ -34,7 +34,7 @@ namespace internal {
 template <typename T, printf_core::OverflowMode overflow_mode>
 LIBC_INLINE int strfromfloat_convert(printf_core::Writer<overflow_mode> *writer,
                                      const char *__restrict format, T fp) {
-  printf_core::FormatSection section = {};
+  printf_core::FormatSection<char> section = {};
   size_t cur_pos = 0;
 
   if (format[cur_pos] == '%') {

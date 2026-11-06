@@ -16,15 +16,17 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
+#include "src/__support/regex/regex_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, regfree, (regex_t * preg)) {
-  if (preg->__internal) {
-    char *ptr = static_cast<char *>(preg->__internal);
-    delete[] ptr;
-    preg->__internal = nullptr;
-  }
+  LIBC_CRASH_ON_NULLPTR(preg);
+  // TODO: Once RegexInternal is managed via cpp::unique_ptr, reset the smart
+  // pointer here instead of calling delete manually.
+  delete static_cast<regex::RegexInternal *>(preg->__internal);
+  preg->__internal = nullptr;
   preg->re_nsub = 0;
 }
 

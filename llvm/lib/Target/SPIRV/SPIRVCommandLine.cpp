@@ -95,6 +95,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_shader_draw_parameters",
      SPIRV::Extension::Extension::SPV_KHR_shader_draw_parameters},
     {"SPV_KHR_ray_tracing", SPIRV::Extension::Extension::SPV_KHR_ray_tracing},
+    {"SPV_KHR_storage_buffer_storage_class",
+     SPIRV::Extension::Extension::SPV_KHR_storage_buffer_storage_class},
     {"SPV_KHR_uniform_group_instructions",
      SPIRV::Extension::Extension::SPV_KHR_uniform_group_instructions},
     {"SPV_KHR_no_integer_wrap_decoration",
@@ -128,6 +130,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
     {"SPV_KHR_non_semantic_info",
      SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction},
     {"SPV_KHR_ray_query", SPIRV::Extension::Extension::SPV_KHR_ray_query},
     {"SPV_EXT_shader_image_int64",
      SPIRV::Extension::Extension::SPV_EXT_shader_image_int64},
@@ -139,6 +143,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_vulkan_memory_model},
     {"SPV_NV_shader_subgroup_partitioned",
      SPIRV::Extension::Extension::SPV_NV_shader_subgroup_partitioned},
+    {"SPV_EXT_shader_subgroup_partitioned",
+     SPIRV::Extension::Extension::SPV_EXT_shader_subgroup_partitioned},
     {"SPV_INTEL_long_composites",
      SPIRV::Extension::Extension::SPV_INTEL_long_composites},
     {"SPV_INTEL_fp_max_error",
@@ -178,7 +184,9 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_poison_freeze},
     {"SPV_KHR_untyped_pointers",
      SPIRV::Extension::Extension::SPV_KHR_untyped_pointers},
-    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector}};
+    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {

@@ -78,7 +78,7 @@ void LoopVersioning::versionLoop(
       Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
 
   IRBuilder<InstSimplifyFolder> Builder(
-      RuntimeCheckBB->getContext(),
+      *RuntimeCheckBB->getModule(),
       InstSimplifyFolder(RuntimeCheckBB->getDataLayout()));
   if (MemRuntimeCheck && SCEVRuntimeCheck) {
     Builder.SetInsertPoint(RuntimeCheckBB->getTerminator());

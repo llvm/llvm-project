@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -35,14 +34,11 @@ using namespace llvm;
 
 namespace llvm {
 
-static cl::opt<unsigned> ArcKillAddrMode("arc-kill-addr-mode", cl::init(0),
-                                         cl::ReallyHidden);
-
-#define DUMP_BEFORE() ((ArcKillAddrMode & 0x0001) != 0)
-#define DUMP_AFTER() ((ArcKillAddrMode & 0x0002) != 0)
-#define VIEW_BEFORE() ((ArcKillAddrMode & 0x0004) != 0)
-#define VIEW_AFTER() ((ArcKillAddrMode & 0x0008) != 0)
-#define KILL_PASS() ((ArcKillAddrMode & 0x0010) != 0)
+#define DUMP_BEFORE(Mode) (((Mode) & 0x0001) != 0)
+#define DUMP_AFTER(Mode) (((Mode) & 0x0002) != 0)
+#define VIEW_BEFORE(Mode) (((Mode) & 0x0004) != 0)
+#define VIEW_AFTER(Mode) (((Mode) & 0x0008) != 0)
+#define KILL_PASS(Mode) (((Mode) & 0x0010) != 0)
 
 FunctionPass *createARCOptAddrMode();
 } // end namespace llvm
@@ -488,17 +484,18 @@ bool ARCOptAddrMode::processBasicBlock(MachineBasicBlock &MBB) {
 }
 
 bool ARCOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()) || KILL_PASS())
+  AST = &MF.getSubtarget<ARCSubtarget>();
+  unsigned Mode = AST->getCLOpts().kill_addr_mode;
+  if (skipFunction(MF.getFunction()) || KILL_PASS(Mode))
     return false;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  if (DUMP_BEFORE())
+  if (DUMP_BEFORE(Mode))
     MF.dump();
 #endif
-  if (VIEW_BEFORE())
+  if (VIEW_BEFORE(Mode))
     MF.viewCFG();
 
-  AST = &MF.getSubtarget<ARCSubtarget>();
   AII = AST->getInstrInfo();
   MRI = &MF.getRegInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -508,10 +505,10 @@ bool ARCOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
     Changed |= processBasicBlock(MBB);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  if (DUMP_AFTER())
+  if (DUMP_AFTER(Mode))
     MF.dump();
 #endif
-  if (VIEW_AFTER())
+  if (VIEW_AFTER(Mode))
     MF.viewCFG();
   return Changed;
 }

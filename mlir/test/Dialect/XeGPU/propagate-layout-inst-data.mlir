@@ -772,3 +772,38 @@ func.func @shape_cast_split_fills_strided_inner_dim(%arg0: memref<16x1024xbf16>)
   return
 }
 }
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @shape_cast_insert_unit_dim_replicated_lanes(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 4, 4], lane_data = [1, 1, 1]>, dims = [1]>} dense<0.000000e+00> : vector<8x32xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 4, 4], lane_data = [1, 1, 1]>} : vector<8x32xf16> to vector<8x1x32xf16>
+func.func @shape_cast_insert_unit_dim_replicated_lanes() {
+  %cst = arith.constant dense<0.000000e+00> : vector<8x32xf16>
+  %0 = vector.shape_cast %cst : vector<8x32xf16> to vector<8x1x32xf16>
+  %1 = xegpu.convert_layout %0
+     <{target_layout = #xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 4, 4], lane_data = [1, 1, 1]>}>
+     : vector<8x1x32xf16>
+  return
+}
+}
+
+// -----
+// A [1, 64] i4 row is too short for a transformed block (64 rows for i4), so
+// the load stays a regular one with its own lane layout ([1, 16] / [1, 4])
+// even though the consumer asks for [1, 16] / [1, 1]; the conflict is left to a
+// convert_layout.
+gpu.module @test {
+  // CHECK-LABEL: load_nd_i4_row_stays_regular
+  // CHECK: xegpu.load_nd {{.*}} <{layout = #xegpu.layout<inst_data = [1, 64], lane_layout = [1, 16], lane_data = [1, 4]>}>
+  // CHECK-SAME: -> vector<1x64xi4>
+  // CHECK: arith.extui {{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
+  gpu.func @load_nd_i4_row_stays_regular(%src: memref<32x512xi4>, %dst: memref<32x512xi32>) kernel {
+    %t = xegpu.create_nd_tdesc %src : memref<32x512xi4> -> !xegpu.tensor_desc<1x64xi4>
+    %v = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<1x64xi4> -> vector<1x64xi4>
+    %e = arith.extui %v : vector<1x64xi4> to vector<1x64xi32>
+    %o = xegpu.create_nd_tdesc %dst : memref<32x512xi32> -> !xegpu.tensor_desc<1x64xi32>
+    xegpu.store_nd %e, %o[0, 0] <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<1x64xi32>, !xegpu.tensor_desc<1x64xi32>
+    gpu.return
+  }
+}

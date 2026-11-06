@@ -778,8 +778,9 @@ bool fir::acc::isValidSymbolUse(mlir::Operation *user,
   return false;
 }
 
-bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
-  if (mlir::acc::isValidValueUse(val, region))
+bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region,
+                               mlir::SymbolTableCollection *symbolTables) {
+  if (mlir::acc::isValidValueUse(val, region, symbolTables))
     return true;
 
   if (isFIRPassByValueScalar(val.getType()))

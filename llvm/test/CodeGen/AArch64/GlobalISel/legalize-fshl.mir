@@ -568,3 +568,75 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            fshl_v4i32_const_shift
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: fshl_v4i32_const_shift
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 29
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C1]](i32), [[C1]](i32), [[C1]](i32), [[C1]](i32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x i32>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<4 x i32>)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x i32>) = G_LSHR [[COPY1]], [[BUILD_VECTOR1]](<4 x i32>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<4 x i32>) = disjoint G_OR [[SHL]], [[LSHR]]
+    ; CHECK-NEXT: $q0 = COPY [[OR]](<4 x i32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i32>) = COPY $q1
+    %3:_(i32) = G_CONSTANT i32 3
+    %2:_(<4 x i32>) = G_BUILD_VECTOR %3(i32), %3(i32), %3(i32), %3(i32)
+    %4:_(<4 x i32>) = G_FSHL %0, %1, %2(<4 x i32>)
+    $q0 = COPY %4(<4 x i32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            fshl_v4i32_const_undef_shift
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: fshl_v4i32_const_undef_shift
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[DEF]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C1]](i32), [[C1]](i32), [[C1]](i32), [[C1]](i32)
+    ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(i32) = G_UDIV [[C]], [[C1]]
+    ; CHECK-NEXT: [[UDIV1:%[0-9]+]]:_(i32) = G_UDIV [[DEF]], [[C1]]
+    ; CHECK-NEXT: [[UDIV2:%[0-9]+]]:_(i32) = G_UDIV [[C]], [[C1]]
+    ; CHECK-NEXT: [[UDIV3:%[0-9]+]]:_(i32) = G_UDIV [[C]], [[C1]]
+    ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[UDIV]](i32), [[UDIV1]](i32), [[UDIV2]](i32), [[UDIV3]](i32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<4 x i32>) = G_MUL [[BUILD_VECTOR2]], [[BUILD_VECTOR1]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(<4 x i32>) = G_SUB [[BUILD_VECTOR]], [[MUL]]
+    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(<4 x i32>) = G_SUB [[BUILD_VECTOR1]], [[SUB]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x i32>) = G_SHL [[COPY]], [[SUB]](<4 x i32>)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x i32>) = G_LSHR [[COPY1]], [[SUB1]](<4 x i32>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<4 x i32>) = G_OR [[SHL]], [[LSHR]]
+    ; CHECK-NEXT: $q0 = COPY [[OR]](<4 x i32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i32>) = COPY $q1
+    %3:_(i32) = G_CONSTANT i32 3
+    %5:_(i32) = G_IMPLICIT_DEF
+    %2:_(<4 x i32>) = G_BUILD_VECTOR %3(i32), %5(i32), %3(i32), %3(i32)
+    %4:_(<4 x i32>) = G_FSHL %0, %1, %2(<4 x i32>)
+    $q0 = COPY %4(<4 x i32>)
+    RET_ReallyLR implicit $q0
+
+...

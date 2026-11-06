@@ -402,7 +402,7 @@ public:
       GlobalVariable *LookupTable) {
 
     LLVMContext &Ctx = M.getContext();
-    IRBuilder<> Builder(Ctx);
+    IRBuilder<> Builder(M);
     Type *I32 = Type::getInt32Ty(Ctx);
 
     for (size_t Index = 0; Index < ModuleScopeVariables.size(); Index++) {
@@ -517,7 +517,7 @@ public:
     // block to spare deduplicating it later.
     auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
     if (Inserted) {
-      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrAlloca();
       IRBuilder<> Builder(&*InsertAt);
 
       It->second = Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {});
@@ -556,7 +556,7 @@ public:
 
       // Annotate the kernels with their order in this vector
       LLVMContext &Ctx = M->getContext();
-      IRBuilder<> Builder(Ctx);
+      IRBuilder<> Builder(*M);
 
       if (OrderedKernels.size() > UINT32_MAX) {
         // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
@@ -855,7 +855,7 @@ public:
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS;
     if (!KernelsThatIndirectlyAllocateDynamicLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
+      IRBuilder<> Builder(M);
       Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
 
       std::vector<Constant *> newDynamicLDS;
@@ -1138,8 +1138,7 @@ public:
                                       KernelsThatIndirectlyAllocateDynamicLDS);
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-      LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
+      IRBuilder<> Builder(M);
 
       // The order must be consistent between lookup table and accesses to
       // lookup table
@@ -1467,8 +1466,6 @@ private:
     if (!MaxDepth || (A == 1 && !AliasScope))
       return;
 
-    ScopedNoAliasAAResult ScopedNoAlias;
-
     for (User *U : Ptr->users()) {
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
@@ -1498,8 +1495,8 @@ private:
           // these aliases set to preserve existing aliasing information.
 
           SmallPtrSet<const MDNode *, 16> ExistingDomains, LDSDomains;
-          ScopedNoAlias.collectScopedDomains(NA, ExistingDomains);
-          ScopedNoAlias.collectScopedDomains(NoAlias, LDSDomains);
+          ScopedNoAliasAAResult::collectScopedDomains(NA, ExistingDomains);
+          ScopedNoAliasAAResult::collectScopedDomains(NoAlias, LDSDomains);
           auto Intersection = set_intersection(ExistingDomains, LDSDomains);
           if (Intersection.empty()) {
             NA = NA ? MDNode::concatenate(NA, NoAlias) : NoAlias;

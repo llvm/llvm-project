@@ -46,7 +46,7 @@ const int *p6 = (const int[]){1, 2, 3};
 // LLVM: @p6 = global ptr @.compoundliteral.6, align 8
 
 char *p7 = (char[]){"hi"};
-// CIR: cir.global "private" internal @".compoundliteral.7" = #cir.const_array<"hi" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3> align(1)
+// CIR: cir.global "private" internal @".compoundliteral.7" = #cir.const_array<[#cir.int<104> : !s8i, #cir.int<105> : !s8i], trailing_zeros> : !cir.array<!s8i x 3> align(1)
 // CIR: cir.global external @p7 = #cir.global_view<@".compoundliteral.7"> : !cir.ptr<!s8i> align(8)
 // LLVM: @.compoundliteral.7 = internal global [3 x i8] c"hi\00", align 1
 // LLVM: @p7 = global ptr @.compoundliteral.7, align 8

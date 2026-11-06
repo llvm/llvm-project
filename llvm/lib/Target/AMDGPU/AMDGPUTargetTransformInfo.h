@@ -182,7 +182,7 @@ public:
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
 
-  bool isInlineAsmSourceOfDivergence(const CallInst *CI,
+  bool isInlineAsmSourceOfDivergence(const CallBase *CB,
                                      ArrayRef<unsigned> Indices = {}) const;
 
   using BaseT::getVectorInstrCost;

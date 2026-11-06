@@ -532,6 +532,8 @@ void SemaOpenACC::ActOnStartParseVar(OpenACCDirectiveKind DK,
 void SemaOpenACC::ActOnInvalidParseVar() {
   CacheInfo.ParsingCacheVarList = false;
   CacheInfo.IsInvalidCacheRef = false;
+  // This makes sure that we properly mark variables 'used' that are referenced.
+  SemaRef.CleanupVarDeclMarking();
 }
 
 ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
@@ -723,6 +725,9 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
 
 ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                  Expr *VarExpr) {
+  // This makes sure that we properly mark variables 'used' that are referenced.
+  SemaRef.CleanupVarDeclMarking();
+
   // This has unique enough restrictions that we should split it to a separate
   // function.
   if (DK == OpenACCDirectiveKind::Cache)
@@ -860,7 +865,8 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   QualType OriginalBaseTy = ArraySectionExpr::getBaseOriginalType(Base);
   QualType ResultTy;
   if (!Base->isTypeDependent()) {
-    if (OriginalBaseTy->isAnyPointerType()) {
+    // 'AnyPointerType' would be wrong here, because it includes ObjC types.
+    if (OriginalBaseTy->isPointerType()) {
       ResultTy = OriginalBaseTy->getPointeeType();
     } else if (OriginalBaseTy->isArrayType()) {
       ResultTy = OriginalBaseTy->getAsArrayTypeUnsafe()->getElementType();
@@ -2714,7 +2720,8 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
     // no-initializer.
     return nullptr;
   } else {
-    assert(Ty->isScalarType());
+    assert(Ty->isScalarType() && !Ty->isObjCObjectPointerType() &&
+           !Ty->isBlockPointerType() && !Ty->isFixedPointType());
 
     if (const auto *Cplx = Ty->getAs<ComplexType>()) {
       // we can get here in error cases, so make sure we generate something that

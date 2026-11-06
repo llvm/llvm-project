@@ -874,11 +874,15 @@ bool Decl::canBeWeakImported(bool &IsDefinition) const {
 }
 
 bool Decl::isWeakImported() const {
+  const Decl *MostRecentDecl = getMostRecentDecl();
+  if (!MostRecentDecl->hasAttrs())
+    return false;
+
   bool IsDefinition;
   if (!canBeWeakImported(IsDefinition))
     return false;
 
-  for (const auto *A : getMostRecentDecl()->attrs()) {
+  for (const auto *A : MostRecentDecl->attrs()) {
     if (isa<WeakImportAttr>(A))
       return true;
 
@@ -1035,20 +1039,20 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
 }
 
 void Decl::setAttrsImpl(const AttrVec &attrs, ASTContext &Ctx) {
-  assert(!HasAttrs && "Decl already contains attrs.");
+  assert(!Attrs && "Decl already contains attrs.");
 
-  AttrVec &AttrBlank = Ctx.getDeclAttrs(this);
-  assert(AttrBlank.empty() && "HasAttrs was wrong?");
-
-  AttrBlank = attrs;
-  HasAttrs = true;
+  Attrs = Ctx.allocateAttrVec();
+  *Attrs = attrs;
 }
 
 void Decl::dropAttrs() {
-  if (!HasAttrs) return;
+  if (!Attrs)
+    return;
 
-  HasAttrs = false;
-  getASTContext().eraseDeclAttrs(this);
+  // The vector itself belongs to the ASTContext's allocator and is destroyed
+  // when the context dies; only the pointer is dropped here.
+  Attrs->clear();
+  Attrs = nullptr;
 }
 
 void Decl::addAttr(Attr *A) {
@@ -1075,8 +1079,8 @@ void Decl::addAttr(Attr *A) {
 }
 
 const AttrVec &Decl::getAttrs() const {
-  assert(HasAttrs && "No attrs to get!");
-  return getASTContext().getDeclAttrs(this);
+  assert(Attrs && "No attrs to get!");
+  return *Attrs;
 }
 
 Decl *Decl::castFromDeclContext (const DeclContext *D) {
@@ -1315,7 +1319,6 @@ DeclContext::DeclContext(Decl::Kind K) {
   setNeedToReconcileExternalVisibleStorage(false);
   setHasLazyLocalLexicalLookups(false);
   setHasLazyExternalLexicalLookups(false);
-  setUseQualifiedLookup(false);
 }
 
 bool DeclContext::classof(const Decl *D) {

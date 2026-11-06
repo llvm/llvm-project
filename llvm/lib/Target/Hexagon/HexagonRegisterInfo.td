@@ -182,6 +182,9 @@ let Namespace = "Hexagon" in {
   def FRAMEKEY : Rc<17, "framekey", ["c17"]>, DwarfRegNum<[84]>;
   def PKTCOUNTLO : Rc<18, "pktcountlo", ["c18"]>, DwarfRegNum<[85]>;
   def PKTCOUNTHI : Rc<19, "pktcounthi", ["c19"]>, DwarfRegNum<[86]>;
+  // VFRAMELIMIT and VSP are only defined for v83+.
+  def VFRAMELIMIT : Rc<28, "vframelimit", ["c28"]>, DwarfRegNum<[95]>;
+  def VSP : Rc<29, "vsp", ["c29"]>, DwarfRegNum<[96]>;
   def UTIMERLO : Rc<30, "utimerlo", ["c30"]>, DwarfRegNum<[97]>;
   def UTIMERHI : Rc<31, "utimerhi", ["c31"]>, DwarfRegNum<[98]>;
 
@@ -200,8 +203,22 @@ let Namespace = "Hexagon" in {
     def C17_16 : Rcc<16, "c17:16", [FRAMELIMIT, FRAMEKEY]>, DwarfRegNum<[83]>;
     def PKTCOUNT : Rcc<18, "c19:18", [PKTCOUNTLO, PKTCOUNTHI], ["pktcount"]>,
                    DwarfRegNum<[85]>;
+    def C29_28 : Rcc<28, "c29:28", [VFRAMELIMIT, VSP]>, DwarfRegNum<[95]>;
     def UTIMER : Rcc<30, "c31:30", [UTIMERLO, UTIMERHI], ["utimer"]>,
                  DwarfRegNum<[97]>;
+  }
+
+  // CS/M register pairs.
+  class HexagonCircPairRegs<bits<1> num, string n,
+                          list<Register> subregs, list<string> alt = []>
+      : RegisterWithSubRegs<n, subregs> {
+    let AltNames = alt;
+    let HWEncoding{0-0} = num;
+  }
+
+  let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
+    def CS_M0 : HexagonCircPairRegs<0, "cs_m0", [CS0, M0]>;
+    def CS_M1 : HexagonCircPairRegs<1, "cs_m1", [CS1, M1]>;
   }
 
   foreach i = 0 -31 in {
@@ -564,12 +581,18 @@ let Size = 32 in def PredRegs
 let Size =
     32 in def ModRegs : RegisterClass<"Hexagon", [i32], 32, (add M0, M1)>;
 
+let Size = 32, CopyCost = -1 in
+def CSRegs : RegisterClass<"Hexagon", [i32], 32, (add CS0, CS1)>;
+
+let Size = 64, CopyCost = -1 in
+def CircRegs : RegisterClass<"Hexagon", [i64], 64, (add CS_M0, CS_M1)>;
+
 let Size = 32, isAllocatable = 0 in def CtrRegs
     : RegisterClass<"Hexagon", [i32], 32,
                     (add LC0, SA0, LC1, SA1, P3_0, C5, C8, PC, UGP, GP, CS0,
                         CS1, UPCYCLELO, UPCYCLEHI, FRAMELIMIT, FRAMEKEY,
-                        PKTCOUNTLO, PKTCOUNTHI, UTIMERLO, UTIMERHI, M0, M1,
-                        USR)>;
+                        PKTCOUNTLO, PKTCOUNTHI, UTIMERLO, UTIMERHI,
+                        VFRAMELIMIT, VSP, M0, M1, USR)>;
 
 let Size = 64 in def VectRegRev
     : RegisterClass<"Hexagon", [i64], 64, (add (sequence "WR%u", 0, 15))>;
@@ -580,7 +603,7 @@ let isAllocatable =
 let Size = 64, isAllocatable = 0 in def CtrRegs64
     : RegisterClass<"Hexagon", [i64], 64,
                     (add C1_0, C3_2, C5_4, C7_6, C9_8, C11_10, CS, UPCYCLE,
-                        C17_16, PKTCOUNT, UTIMER)>;
+                        C17_16, PKTCOUNT, C29_28, UTIMER)>;
 
 let Size = 32, isAllocatable = 0 in def GuestRegs
     : RegisterClass<"Hexagon", [i32], 32,

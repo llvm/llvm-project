@@ -1,0 +1,15 @@
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -passes='require<slot-indexes>,si-pre-emit-peephole,require<slot-indexes>' -debug-pass-manager -o /dev/null %s 2>&1 | FileCheck %s
+
+# CHECK: Running pass: SIPreEmitPeepholePass on unpack_invalidates_analyses
+# CHECK-NEXT: Invalidating analysis: SlotIndexesAnalysis on unpack_invalidates_analyses
+
+---
+name:            unpack_invalidates_analyses
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16BF16_1K_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr10_vgpr11 = nofpexcept V_PK_FMA_F32 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 8, $vgpr8_vgpr9, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...

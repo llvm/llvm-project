@@ -25,6 +25,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "clang/CIR/Dialect/Analysis/CIRAliasAnalysis.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
@@ -42,8 +43,10 @@ namespace cir {
 /// queries.  The DataLayout must outlive the rewrite context.
 class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
-  CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl)
-      : module(module), dl(dl), aliasAnalysis(module) {
+  CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl,
+                       bool enableNoundefAttrs)
+      : module(module), dl(dl), enableNoundefAttrs(enableNoundefAttrs),
+        cirDataLayout(module), aliasAnalysis(module) {
     cir::registerCIRAliasAnalyses(aliasAnalysis, module);
   }
 
@@ -114,6 +117,15 @@ public:
 private:
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
+
+  /// Whether extended and indirect arguments are marked llvm.noundef.  Set
+  /// from the enable_noundef_attrs field of the module's
+  /// #cir.lowering_options.
+  bool enableNoundefAttrs;
+
+  /// The CIR view of the module's data layout, which provides the store and
+  /// alloc sizes that \c dl does not.
+  cir::CIRDataLayout cirDataLayout;
 
   /// Alias analysis over the module with the CIR implementations registered.
   /// rewriteCallSite asks it whether a byval operand's storage is written

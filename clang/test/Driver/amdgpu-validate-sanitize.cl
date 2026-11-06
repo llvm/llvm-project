@@ -3,7 +3,7 @@
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck %s
 
-// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1250    \
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1250:xnack+ \
 // RUN:   -fsanitize=address \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck %s

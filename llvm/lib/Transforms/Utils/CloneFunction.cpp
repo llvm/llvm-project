@@ -32,6 +32,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -163,7 +164,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
         mapAtomInstance(DL.get(), VMap);
     }
 
-    if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
+    if (isa<CallInst>(I)) {
       hasCalls = true;
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_memprof);
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_callsite);
@@ -513,7 +514,11 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
   SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(), CIID,
                                                     OldInst.getType(), ArgTys);
-  return CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+  CallInst *NewCall =
+      CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+  if (isa<FPMathOperator>(NewCall))
+    NewCall->copyFastMathFlags(&OldInst);
+  return NewCall;
 }
 
 /// The specified block is found to be reachable, clone it and
@@ -609,7 +614,7 @@ void PruningFunctionCloner::CloneBlock(
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
-    if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
+    if (isa<CallInst>(II)) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_callsite);
@@ -690,7 +695,6 @@ void PruningFunctionCloner::CloneBlock(
     // If we didn't create a new terminator, clone DbgVariableRecords from the
     // old terminator onto the new terminator.
     Instruction *NewInst = NewBB->getTerminator();
-    assert(NewInst);
 
     CloneDbgRecordsToHere(NewInst, OldTI->getIterator());
   }

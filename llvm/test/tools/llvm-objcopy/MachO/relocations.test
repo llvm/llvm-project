@@ -14,6 +14,7 @@
 # CHECK-NEXT: 00000000 False quad   False  UNSIGND False     1 (__TEXT,__text)
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

@@ -64,8 +64,9 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (hasFP(MF))
-    BuildMI(MBB, MBBI, dl, TII.get(Mips::MoveR3216), Mips::S0)
-      .addReg(Mips::SP).setMIFlag(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, dl, TII.get(Mips::MoveR3216), Mips::R16)
+        .addReg(Mips::SP)
+        .setMIFlag(MachineInstr::FrameSetup);
 }
 
 void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,
@@ -82,7 +83,7 @@ void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (hasFP(MF))
     BuildMI(MBB, MBBI, dl, TII.get(Mips::Move32R16), Mips::SP)
-      .addReg(Mips::S0);
+        .addReg(Mips::R16);
 
   // Adjust stack.
   // assumes stacksize multiple of 8
@@ -144,11 +145,11 @@ void Mips16FrameLowering::determineCalleeSaves(MachineFunction &MF,
       *static_cast<const Mips16InstrInfo *>(STI.getInstrInfo());
   const MipsRegisterInfo &RI = TII.getRegisterInfo();
   const BitVector Reserved = RI.getReservedRegs(MF);
-  bool SaveS2 = Reserved[Mips::S2];
+  bool SaveS2 = Reserved[Mips::R18];
   if (SaveS2)
-    SavedRegs.set(Mips::S2);
+    SavedRegs.set(Mips::R18);
   if (hasFP(MF))
-    SavedRegs.set(Mips::S0);
+    SavedRegs.set(Mips::R16);
 }
 
 const MipsFrameLowering *

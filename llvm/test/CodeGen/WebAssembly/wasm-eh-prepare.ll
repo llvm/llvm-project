@@ -1,7 +1,7 @@
 ; RUN: opt < %s -win-eh-prepare -wasm-eh-prepare -S | FileCheck %s
 ; RUN: opt < %s -win-eh-prepare -wasm-eh-prepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
-; RUN: opt < %s -passes='win-eh-prepare,wasm-eh-prepare' -S | FileCheck %s
-; RUN: opt < %s -passes='win-eh-prepare,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
+; RUN: opt < %s -passes='require<runtime-libcall-info>,win-eh-prepare,wasm-eh-prepare' -S | FileCheck %s
+; RUN: opt < %s -passes='require<runtime-libcall-info>,win-eh-prepare,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
 ; RUN: llc < %s -exception-model=wasm -mattr=+exception-handling -stop-after=wasm-eh-prepare | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -275,6 +275,9 @@ declare void @_ZSt9terminatev()
 
 attributes #0 = { nounwind }
 attributes #1 = { noreturn }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"wasm"}
 
 ; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32 immarg)
 ; CHECK-DAG: declare ptr @llvm.wasm.lsda()

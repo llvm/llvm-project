@@ -222,14 +222,22 @@ def fmaximum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXIMUM>;
 def fminimum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINIMUM>;
 def fmax_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXNUM_IEEE>;
 def fmin_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINNUM_IEEE>;
+def fmaximumnum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXIMUMNUM>;
+def fminimumnum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINIMUMNUM>;
+
+def minmax_to_minmax3_combines : GICombineGroup<[
+  smax_to_minmax3, smin_to_minmax3, umax_to_minmax3, umin_to_minmax3,
+  fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3, fminimum_to_minmax3,
+  fmax_ieee_to_minmax3, fmin_ieee_to_minmax3, fmaximumnum_to_minmax3,
+  fminimumnum_to_minmax3
+]>;
 
 // (and/or i64:x, i64:y) -> i64:(merge (and/or lo_32(x), lo_32(y)), (and/or hi_32(x), hi_32(y)))
 // when either x or y is all ones in low or high parts
 class combine_binop_s64_with_s32_mask<Instruction opcode> : GICombineRule<
   (defs root:$dst),
   (match (opcode $dst, i64:$x, i64:$y):$dst,
-         [{ return Helper.matchConstantIs32BitMask(${x}.getReg()) ||
-                   Helper.matchConstantIs32BitMask(${y}.getReg()); }]),
+         [{ return Helper.matchBinopWith32BitMask(${x}.getReg(), ${y}.getReg()); }]),
   (apply (G_UNMERGE_VALUES i32:$x_lo, i32:$x_hi, $x),
          (G_UNMERGE_VALUES i32:$y_lo, i32:$y_hi, $y),
          (opcode i32:$lo, $x_lo, $y_lo),
@@ -347,7 +355,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
    sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32,
-   fold_carry_into_addsub_combines]> {
+   fold_carry_into_addsub_combines, simplify_demanded_bits]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -358,7 +366,6 @@ def AMDGPURegBankCombiner : GICombiner<
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
-   d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
-   umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
-   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
+   d16_load, minmax_to_minmax3_combines, redundant_sext_inreg,
+   redundant_zext_sext_inreg, redundant_aext_sext_inreg]> {
 }

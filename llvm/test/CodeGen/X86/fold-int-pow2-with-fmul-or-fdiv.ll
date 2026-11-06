@@ -1804,8 +1804,8 @@ define double @fmul_pow_shl_cnt_fail_knownbits_bad_exp(i64 %cnt) nounwind {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    andb $15, %dil
 ; CHECK-SKX-NEXT:    movl $1, %eax
-; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
+; CHECK-SKX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; CHECK-SKX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    retq
   %cnt_masked = and i64 %cnt, 15
@@ -1857,8 +1857,8 @@ define double @fdiv_pow_shl_cnt_fail_knownbits_bad_exp(i64 %cnt) nounwind {
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    andb $15, %dil
 ; CHECK-SKX-NEXT:    movl $1, %eax
-; CHECK-SKX-NEXT:    shlxq %rdi, %rax, %rax
-; CHECK-SKX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; CHECK-SKX-NEXT:    shlxl %edi, %eax, %eax
+; CHECK-SKX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; CHECK-SKX-NEXT:    vmovsd {{.*#+}} xmm1 = [5.4683415146672981E-304,0.0E+0]
 ; CHECK-SKX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
 ; CHECK-SKX-NEXT:    retq

@@ -21,8 +21,12 @@
 ; CHECK-SPIRV-DAG: %[[#ULONG:]] = OpTypeInt 64 0
 ; CHECK-SPIRV-DAG: %[[#ULONG_PTR:]] = OpTypePointer CrossWorkgroup %[[#ULONG]]
 
-;; 0x2 Workgroup
+;; 0x1 Device, 0x2 Workgroup
+; CHECK-SPIRV-DAG: %[[#DEVICE_SCOPE:]] = OpConstant %[[#UINT]] 1{{$}}
 ; CHECK-SPIRV-DAG: %[[#WORKGROUP_SCOPE:]] = OpConstant %[[#UINT]] 2{{$}}
+;; 0x210 SequentiallyConsistent | CrossWorkgroupMemory, 0x200 CrossWorkgroupMemory
+; CHECK-SPIRV-DAG: %[[#SEQCST_CWG:]] = OpConstant %[[#UINT]] 528{{$}}
+; CHECK-SPIRV-DAG: %[[#RELAXED_CWG:]] = OpConstant %[[#UINT]] 512{{$}}
 
 ;;
 ;; atomic_fetch_min/max + _explicit on i32 (signed): expect OpAtomicSMin / OpAtomicSMax
@@ -36,10 +40,10 @@
 ; CHECK-SPIRV:     %[[#FETCH_S:]] = OpFunction %[[#]]
 ; CHECK-SPIRV:     %[[#FS_PTR:]] = OpFunctionParameter %[[#UINT_PTR]]
 ; CHECK-SPIRV:     %[[#FS_VAL:]] = OpFunctionParameter %[[#UINT]]
-; CHECK-SPIRV:     %[[#]] = OpAtomicSMin %[[#UINT]] %[[#FS_PTR]] %[[#WORKGROUP_SCOPE]] %[[#]] %[[#FS_VAL]]
-; CHECK-SPIRV:     %[[#]] = OpAtomicSMax %[[#UINT]] %[[#FS_PTR]] %[[#WORKGROUP_SCOPE]] %[[#]] %[[#FS_VAL]]
-; CHECK-SPIRV:     %[[#]] = OpAtomicSMin %[[#UINT]] %[[#FS_PTR]] %[[#WORKGROUP_SCOPE]] %[[#]] %[[#FS_VAL]]
-; CHECK-SPIRV:     %[[#]] = OpAtomicSMax %[[#UINT]] %[[#FS_PTR]] %[[#WORKGROUP_SCOPE]] %[[#]] %[[#FS_VAL]]
+; CHECK-SPIRV:     %[[#]] = OpAtomicSMin %[[#UINT]] %[[#FS_PTR]] %[[#DEVICE_SCOPE]] %[[#SEQCST_CWG]] %[[#FS_VAL]]
+; CHECK-SPIRV:     %[[#]] = OpAtomicSMax %[[#UINT]] %[[#FS_PTR]] %[[#DEVICE_SCOPE]] %[[#SEQCST_CWG]] %[[#FS_VAL]]
+; CHECK-SPIRV:     %[[#]] = OpAtomicSMin %[[#UINT]] %[[#FS_PTR]] %[[#DEVICE_SCOPE]] %[[#RELAXED_CWG]] %[[#FS_VAL]]
+; CHECK-SPIRV:     %[[#]] = OpAtomicSMax %[[#UINT]] %[[#FS_PTR]] %[[#DEVICE_SCOPE]] %[[#RELAXED_CWG]] %[[#FS_VAL]]
 
 define dso_local spir_kernel void @test_atomic_fetch_min_max_signed(ptr addrspace(1) noundef %p, i32 noundef %val) local_unnamed_addr {
 entry:
@@ -62,10 +66,10 @@ entry:
 ; CHECK-SPIRV:     %[[#FETCH_U:]] = OpFunction %[[#]]
 ; CHECK-SPIRV:     %[[#FU_PTR:]] = OpFunctionParameter %[[#UINT_PTR]]
 ; CHECK-SPIRV:     %[[#FU_VAL:]] = OpFunctionParameter %[[#UINT]]
-; CHECK-SPIRV:     %[[#]] = OpAtomicUMin %[[#UINT]] %[[#FU_PTR]] %[[#WORKGROUP_SCOPE]] %[[#]] %[[#FU_VAL]]
-; CHECK-SPIRV:     %[[#]] = OpAtomicUMax %[[#UINT]] %[[#FU_PTR]] %[[#WORKGROUP_SCOPE]] %[[#]] %[[#FU_VAL]]
-; CHECK-SPIRV:     %[[#]] = OpAtomicUMin %[[#UINT]] %[[#FU_PTR]] %[[#WORKGROUP_SCOPE]] %[[#]] %[[#FU_VAL]]
-; CHECK-SPIRV:     %[[#]] = OpAtomicUMax %[[#UINT]] %[[#FU_PTR]] %[[#WORKGROUP_SCOPE]] %[[#]] %[[#FU_VAL]]
+; CHECK-SPIRV:     %[[#]] = OpAtomicUMin %[[#UINT]] %[[#FU_PTR]] %[[#DEVICE_SCOPE]] %[[#SEQCST_CWG]] %[[#FU_VAL]]
+; CHECK-SPIRV:     %[[#]] = OpAtomicUMax %[[#UINT]] %[[#FU_PTR]] %[[#DEVICE_SCOPE]] %[[#SEQCST_CWG]] %[[#FU_VAL]]
+; CHECK-SPIRV:     %[[#]] = OpAtomicUMin %[[#UINT]] %[[#FU_PTR]] %[[#DEVICE_SCOPE]] %[[#RELAXED_CWG]] %[[#FU_VAL]]
+; CHECK-SPIRV:     %[[#]] = OpAtomicUMax %[[#UINT]] %[[#FU_PTR]] %[[#DEVICE_SCOPE]] %[[#RELAXED_CWG]] %[[#FU_VAL]]
 
 define dso_local spir_kernel void @test_atomic_fetch_min_max_unsigned(ptr addrspace(1) noundef %p, i32 noundef %val) local_unnamed_addr {
 entry:

@@ -28,9 +28,9 @@ bb4:
 }
 
 ; CHECK:      movabsq $.LJTI0_0@GOTOFF, [[R1:%r[a-z]{2}]]
-; CHECK-NEXT: addq    [[R1]], [[R2:%r[a-z]{2}]]
-; CHECK-NEXT: addq    ([[R2]],[[R3:%r[a-z]{2}]],8), [[R2]]
-; CHECK-NEXT: jmpq    *[[R2]]
+; CHECK-NEXT: addq    [[R2:%r[a-z]{2}]], [[R1]]
+; CHECK-NEXT: addq    ([[R1]],[[R3:%r[a-z]{2}]],8), [[R1]]
+; CHECK-NEXT: jmpq    *[[R1]]
 
 ; CHECK: .LJTI0_0:
 ; CHECK-NEXT: .quad   .LBB0_2-.LJTI0_0

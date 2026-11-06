@@ -1,7 +1,7 @@
 add_libc_test(
   clone_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     clone_test.cpp
   DEPENDS

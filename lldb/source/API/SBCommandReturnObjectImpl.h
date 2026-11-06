@@ -24,7 +24,7 @@ public:
 
 private:
   CommandReturnObject *m_ptr;
-  bool m_owned = true;
+  bool m_owned;
 };
 } // namespace lldb_private
 

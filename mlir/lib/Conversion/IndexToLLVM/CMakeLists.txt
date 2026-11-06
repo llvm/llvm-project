@@ -11,6 +11,8 @@ add_mlir_conversion_library(MLIRIndexToLLVM
   Core
 
   LINK_LIBS PUBLIC
+  MLIRAnalysis
+  MLIRDataLayoutInterfaces
   MLIRIndexDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
