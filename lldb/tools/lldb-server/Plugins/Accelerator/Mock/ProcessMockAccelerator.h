@@ -19,9 +19,9 @@
 namespace lldb_private {
 namespace lldb_server {
 
-/// A minimal, always-stopped fake process that serves a GDB remote connection
-/// for the mock accelerator plugin, letting the client connect a second
-/// (accelerator) target without any real hardware.
+/// A minimal fake process that serves a GDB remote connection for the mock
+/// accelerator plugin, letting the client connect a second (accelerator)
+/// target without any real hardware.
 class ProcessMockAccelerator : public NativeProcessProtocol {
 public:
   class Manager : public NativeProcessProtocol::Manager {
@@ -58,6 +58,8 @@ public:
                          std::optional<uint64_t> native_memory_address,
                          std::optional<uint64_t> native_memory_size,
                          NativeDelegate &delegate);
+
+  void HandleNativeProcessExit(const WaitStatus &exit_status);
 
   Status Resume(const ResumeActionList &resume_actions) override;
   Status Halt() override;

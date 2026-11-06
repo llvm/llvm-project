@@ -162,6 +162,24 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
   return response;
 }
 
+ProcessMockAccelerator *
+LLDBServerMockAcceleratorPlugin::GetAcceleratorProcess() const {
+  if (!m_accelerator_gdb_server)
+    return nullptr;
+  return static_cast<ProcessMockAccelerator *>(
+      m_accelerator_gdb_server->GetCurrentProcess());
+}
+
+void LLDBServerMockAcceleratorPlugin::NativeProcessDidExit(
+    const WaitStatus &exit_status) {
+  // The notification can arrive on the native backend's delegate thread.
+  // Update the accelerator process on the mock server's loop.
+  m_mock_main_loop.AddPendingCallback([this, exit_status](MainLoopBase &) {
+    if (ProcessMockAccelerator *process = GetAcceleratorProcess())
+      process->HandleNativeProcessExit(exit_status);
+  });
+}
+
 std::optional<AcceleratorConnectionInfo>
 LLDBServerMockAcceleratorPlugin::CreateConnection() {
   Log *log = GetLog(GDBRLog::Plugin);

@@ -24,6 +24,8 @@ class TCPSocket;
 
 namespace lldb_server {
 
+class ProcessMockAccelerator;
+
 class LLDBServerMockAcceleratorPlugin : public LLDBServerAcceleratorPlugin {
 public:
   LLDBServerMockAcceleratorPlugin(GDBServer &native_gdb_server,
@@ -35,11 +37,14 @@ public:
   std::optional<AcceleratorActions> GetInitializeActions() override;
   llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
+  void NativeProcessDidExit(const WaitStatus &exit_status) override;
 
   std::optional<AcceleratorDynamicLoaderResponse> GetDynamicLoaderLibraryInfos(
       const AcceleratorDynamicLoaderArgs &args) override;
 
 private:
+  ProcessMockAccelerator *GetAcceleratorProcess() const;
+
   // Lazily bring up the mock accelerator GDB server and return its connection
   // info. Called on the connection breakpoint hit, so inferiors that never
   // connect create nothing.

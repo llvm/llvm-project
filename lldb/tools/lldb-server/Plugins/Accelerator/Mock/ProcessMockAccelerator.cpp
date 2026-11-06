@@ -50,8 +50,13 @@ ProcessMockAccelerator::ProcessMockAccelerator(
   UpdateThreads();
 }
 
+void ProcessMockAccelerator::HandleNativeProcessExit(
+    const WaitStatus &exit_status) {
+  SetExitStatus(exit_status, /*bNotifyStateChange=*/true);
+}
+
 Status ProcessMockAccelerator::Resume(const ResumeActionList &resume_actions) {
-  // Nothing actually runs; stay stopped.
+  SetState(eStateRunning, /*notify_delegates=*/true);
   return Status();
 }
 
