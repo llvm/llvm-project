@@ -294,3 +294,12 @@ define b32 @neg_bitinsert_bitextract_other_offset(b32 %x) {
   %r = bitinsert b32 %x, b8 %e, i32 16
   ret b32 %r
 }
+
+define <vscale x 4 x i8> @bitextract_scalable_vec_out_of_range(<vscale x 4 x b32> %x) {
+; CHECK-LABEL: define <vscale x 4 x i8> @bitextract_scalable_vec_out_of_range(
+; CHECK-SAME: <vscale x 4 x b32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <vscale x 4 x i8> poison
+;
+  %r = bitextract <vscale x 4 x i8>, <vscale x 4 x b32> %x, <vscale x 4 x i32> splat (i32 25)
+  ret <vscale x 4 x i8> %r
+}

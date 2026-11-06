@@ -5637,8 +5637,8 @@ static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
   // Accessing bits past the end of the value is poison.
   uint64_t Off;
   return match(Offset, m_ConstantInt(Off)) &&
-         Off + Q.DL.getTypeSizeInBits(Ty).getFixedValue() >
-             Q.DL.getTypeSizeInBits(SrcTy).getFixedValue();
+         Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
+             Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue();
 }
 
 /// Given operands for a BitInsertInst, see if we can fold the result.

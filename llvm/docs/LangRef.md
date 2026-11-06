@@ -11970,7 +11970,7 @@ Instructions for bit-range manipulation on {ref}`byte type <t_byte>` values.
 ##### Syntax:
 
 ```
-<result> = bitextract <ty>, <bty> <source>, i32 <offset>
+<result> = bitextract <ty>, <bty> <source>, <ity> <offset>
 ```
 
 ##### Overview:
@@ -11981,14 +11981,12 @@ The '`bitextract`' instruction reads a contiguous range of bits from a
 ##### Arguments:
 
 `<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
-<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
-and specifies the result type. The first operand, `source`, must be a value
-of {ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving the bit
-position at which the extraction begins within `source`.
-
-```{note}
-Vector types are not currently supported as the result type.
-```
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type, or a
+{ref}`vector <t_vector>` of those types, and specifies the result type. The
+first operand, `source`, must be a value of {ref}`byte type <t_byte>`, or a
+vector of byte type with the same number of elements as `ty`. The `offset`
+operand is an `i32`, or a vector of `i32` with the same number of elements as
+`ty`, giving the bit position at which the extraction begins within `source`.
 
 ##### Semantics:
 
@@ -11998,6 +11996,11 @@ Bit `0` is the least significant bit of `source`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 {ref}`poison value <poisonvalues>` is returned.
+
+If the arguments are vectors, each element of the result is extracted from
+the corresponding element of `source`, at the corresponding bit position in
+`offset`. In this case, `bitwidth(ty)` and `bitwidth(source)` refer to the
+element types, and an out-of-range offset only makes its own element poison.
 
 ##### Example:
 
@@ -12009,6 +12012,8 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 %result = bitextract i16, b64 %src, i32 16 ; Extract bits [16..31] of %src and return a 16-bit integer
 
 %result = bitextract float, b32 %src, i32 0 ; Extract bits [0..31] of %src and reinterpret them as a 32-bit float
+
+%result = bitextract <2 x i8>, <2 x b32> %src, <2 x i32> <i32 0, i32 24> ; Extract bits [0..7] of the first element and bits [24..31] of the second element of %src
 ```
 
 (i_bitinsert)=
@@ -12017,7 +12022,7 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 
 ##### Syntax:
 ```
-<result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
+<result> = bitinsert <bty> <base>, <ty> <val>, <ity> <offset>
 ```
 ##### Overview:
 
@@ -12028,16 +12033,13 @@ the result as a value of the same byte type.
 ##### Arguments:
 
 `<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
-<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
-and specifies the type of the value to insert. The first operand, `base`,
-must be a value of {ref}`byte type <t_byte>`. The second operand, `val`, must
-be a value of type `ty`. The `offset` operand is an `i32` giving the bit
-position at which the insertion begins within `base`.
-
-```{note}
-Vector types are not currently supported as the type of the value
-to insert.
-```
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type, or a
+{ref}`vector <t_vector>` of those types, and specifies the type of the value
+to insert. The first operand, `base`, must be a value of {ref}`byte type
+<t_byte>`, or a vector of byte type with the same number of elements as `ty`.
+The second operand, `val`, must be a value of type `ty`. The `offset` operand
+is an `i32`, or a vector of `i32` with the same number of elements as `ty`,
+giving the bit position at which the insertion begins within `base`.
 
 ##### Semantics:
 
@@ -12047,6 +12049,11 @@ Bit `0` is the least significant bit of `base`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 {ref}`poison value <poisonvalues>` is returned.
+
+If the arguments are vectors, each element of `val` is inserted into the
+corresponding element of `base`, at the corresponding bit position in
+`offset`. In this case, `bitwidth(ty)` and `bitwidth(base)` refer to the
+element types, and an out-of-range offset only makes its own element poison.
 
 ##### Example:
 
@@ -12058,6 +12065,8 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 %result = bitinsert b64 %x, i16 %y, i32 32 ; Inserts a 16-bit value into bits [32..47] of %x
 
 %result = bitinsert b32 %x, float %f, i32 0 ; Inserts the bit pattern of %f into bits [0..31] of %x, overwriting it entirely
+
+%result = bitinsert <2 x b32> %x, <2 x i8> %y, <2 x i32> <i32 0, i32 24> ; Inserts the first element of %y into bits [0..7] of the first element of %x, and the second element of %y into bits [24..31] of the second element of %x
 ```
 
 ### Vector Operations
