@@ -582,7 +582,9 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_counting_scope",
-            "values": {"c++26": 202506},  # P3149R11 async_scope - Creating scopes for non-sequential concurrency
+            "values": {
+                "c++26": 202506  # P3149R11 async_scope - Creating scopes for non-sequential concurrency
+            },  
             "headers": ["execution"],
             "unimplemented": True,
         },
