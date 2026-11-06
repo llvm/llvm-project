@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS_H
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS_H
 
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 #include <cstdint>

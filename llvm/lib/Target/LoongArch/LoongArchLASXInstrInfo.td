@@ -23,6 +23,7 @@ def loongarch_xvperm: SDNode<"LoongArchISD::XVPERM", SDT_LoongArchXVPERM>;
 def loongarch_xvreplve0: SDNode<"LoongArchISD::XVREPLVE0", SDT_LoongArchXVREPLVE0>;
 def loongarch_xvreplve0q: SDNode<"LoongArchISD::XVREPLVE0Q", SDT_LoongArchXVREPLVE0>;
 def loongarch_xvinsve0 : SDNode<"LoongArchISD::XVINSVE0", SDT_LoongArchV2RUimm>;
+def loongarch_xvpermiq : SDNode<"LoongArchISD::XVPERMIQ", SDT_LoongArchV2RUimm>;
 
 // Vector mask set by condition
 def loongarch_xvmskltz: SDNode<"LoongArchISD::XVMSKLTZ", SDT_LoongArchVMSKCOND>;
@@ -1714,18 +1715,6 @@ def PseudoXVREPLI_D : Pseudo<(outs LASX256:$xd), (ins simm10:$imm), [],
                              "xvrepli.d", "$xd, $imm">;
 }
 
-def PseudoXVBNZ_B : VecCond<loongarch_vall_nonzero, v32i8, LASX256>;
-def PseudoXVBNZ_H : VecCond<loongarch_vall_nonzero, v16i16, LASX256>;
-def PseudoXVBNZ_W : VecCond<loongarch_vall_nonzero, v8i32, LASX256>;
-def PseudoXVBNZ_D : VecCond<loongarch_vall_nonzero, v4i64, LASX256>;
-def PseudoXVBNZ : VecCond<loongarch_vany_nonzero, v32i8, LASX256>;
-
-def PseudoXVBZ_B : VecCond<loongarch_vall_zero, v32i8, LASX256>;
-def PseudoXVBZ_H : VecCond<loongarch_vall_zero, v16i16, LASX256>;
-def PseudoXVBZ_W : VecCond<loongarch_vall_zero, v8i32, LASX256>;
-def PseudoXVBZ_D : VecCond<loongarch_vall_zero, v4i64, LASX256>;
-def PseudoXVBZ : VecCond<loongarch_vany_zero, v32i8, LASX256>;
-
 let usesCustomInserter = 1, Constraints = "$xd = $dst" in {
 def PseudoXVINSGR2VR_B
   : Pseudo<(outs LASX256:$dst), (ins LASX256:$xd, GPR:$rj, uimm5:$imm)>;
@@ -2685,6 +2674,11 @@ def : Pat<(loongarch_xvpermi v4i64:$xj, immZExt8: $ui8),
 def : Pat<(loongarch_xvpermi v4f64:$xj, immZExt8: $ui8),
           (XVPERMI_D v4f64:$xj, immZExt8: $ui8)>;
 
+// XVPERMI_Q
+foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
+def : Pat<(loongarch_xvpermiq (vt LASX256:$xd), (vt LASX256:$xj), immZExt8:$ui8),
+          (XVPERMI_Q LASX256:$xd, LASX256:$xj, immZExt8:$ui8)>;
+
 // XVPERM_W
 def : Pat<(loongarch_xvperm v8i32:$xj, v8i32:$xk),
           (XVPERM_W v8i32:$xj, v8i32:$xk)>;
@@ -3423,29 +3417,41 @@ def : Pat<(int_loongarch_lasx_xvstelm_d v4i64:$xd, GPR:$rj, timm:$imm, timm:$idx
                     (to_valid_timm timm:$idx))>;
 
 
+} // Predicates = [HasExtLASX]
+
+let Predicates = [HasExtLASX, HasFastMOVCF2GR] in {
 // Whole-vector zero tests, see the LSX counterparts.
 foreach vt = [v32i8, v16i16, v8i32, v4i64] in {
-def : Pat<(GRLenVT (loongarch_vanynonzero (vt LASX256:$xj))),
-          (MOVCF2GR (XVSETNEZ_V LASX256:$xj))>;
-def : Pat<(GRLenVT (loongarch_vallzero (vt LASX256:$xj))),
-          (MOVCF2GR (XVSETEQZ_V LASX256:$xj))>;
-def : Pat<(loongarch_brcc (GRLenVT (loongarch_vanynonzero (vt LASX256:$xj))), 0,
-                          SETNE, bb:$imm21),
-          (BCNEZ (XVSETNEZ_V LASX256:$xj), bb:$imm21)>;
-def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LASX256:$xj))), 0,
-                          SETNE, bb:$imm21),
-          (BCNEZ (XVSETEQZ_V LASX256:$xj), bb:$imm21)>;
+defm : PatVecCond<loongarch_vanynonzero, XVSETNEZ_V, vt, LASX256>;
+defm : PatVecCond<loongarch_vallzero, XVSETEQZ_V, vt, LASX256>;
 }
 
-defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_B, v32i8, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_H, v16i16, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_W, v8i32, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_D, v4i64, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_B, v32i8, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_H, v16i16, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
-defm : PatVecCondBrCC<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
-defm : PatVecCondBrCC<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
+defm : PatVecCond<loongarch_vall_zero, XVSETANYEQZ_B, v32i8, LASX256>;
+defm : PatVecCond<loongarch_vall_zero, XVSETANYEQZ_H, v16i16, LASX256>;
+defm : PatVecCond<loongarch_vall_zero, XVSETANYEQZ_W, v8i32, LASX256>;
+defm : PatVecCond<loongarch_vall_zero, XVSETANYEQZ_D, v4i64, LASX256>;
+defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_B, v32i8, LASX256>;
+defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_H, v16i16, LASX256>;
+defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
+defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
+defm : PatVecCond<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
+defm : PatVecCond<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
+} // Predicates = [HasExtLASX, HasFastMOVCF2GR]
 
-} // Predicates = [HasExtLASX]
+let Predicates = [HasExtLASX, HasSlowMOVCF2GR] in {
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in {
+defm : PatVecCondViaFR<loongarch_vanynonzero, XVSETNEZ_V, vt, LASX256>;
+defm : PatVecCondViaFR<loongarch_vallzero, XVSETEQZ_V, vt, LASX256>;
+}
+
+defm : PatVecCondViaFR<loongarch_vall_zero, XVSETANYEQZ_B, v32i8, LASX256>;
+defm : PatVecCondViaFR<loongarch_vall_zero, XVSETANYEQZ_H, v16i16, LASX256>;
+defm : PatVecCondViaFR<loongarch_vall_zero, XVSETANYEQZ_W, v8i32, LASX256>;
+defm : PatVecCondViaFR<loongarch_vall_zero, XVSETANYEQZ_D, v4i64, LASX256>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, XVSETALLNEZ_B, v32i8, LASX256>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, XVSETALLNEZ_H, v16i16, LASX256>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
+defm : PatVecCondViaFR<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
+defm : PatVecCondViaFR<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
+} // Predicates = [HasExtLASX, HasSlowMOVCF2GR]

@@ -1120,6 +1120,49 @@ define <2 x i32> @test_select_cc(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x 
   ret <2 x i32> %r
 }
 
+define ptx_kernel void @test_bswap_v2i32(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; CHECK-NOI32X2-LABEL: test_bswap_v2i32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_bswap_v2i32_param_0];
+; CHECK-NOI32X2-NEXT:    ld.global.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_bswap_v2i32_param_1];
+; CHECK-NOI32X2-NEXT:    prmt.b32 %r3, %r2, 0, 0x123U;
+; CHECK-NOI32X2-NEXT:    prmt.b32 %r4, %r1, 0, 0x123U;
+; CHECK-NOI32X2-NEXT:    st.global.v2.b32 [%rd2], {%r4, %r3};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_bswap_v2i32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<8>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::entry.b64 %rd1, [test_bswap_v2i32_param_0];
+; CHECK-I32X2-NEXT:    ld.global.b64 %rd2, [%rd1];
+; CHECK-I32X2-NEXT:    mov.b64 {_, %r1}, %rd2;
+; CHECK-I32X2-NEXT:    cvt.u32.u64 %r2, %rd2;
+; CHECK-I32X2-NEXT:    ld.param::entry.b64 %rd3, [test_bswap_v2i32_param_1];
+; CHECK-I32X2-NEXT:    // implicit-def: %r4
+; CHECK-I32X2-NEXT:    prmt.b32 %r3, %r2, %r4, 0x123U;
+; CHECK-I32X2-NEXT:    cvt.u64.u32 %rd4, %r3;
+; CHECK-I32X2-NEXT:    // implicit-def: %r6
+; CHECK-I32X2-NEXT:    prmt.b32 %r5, %r1, %r6, 0x123U;
+; CHECK-I32X2-NEXT:    cvt.u64.u32 %rd5, %r5;
+; CHECK-I32X2-NEXT:    shl.b64 %rd6, %rd5, 32;
+; CHECK-I32X2-NEXT:    or.b64 %rd7, %rd4, %rd6;
+; CHECK-I32X2-NEXT:    st.global.b64 [%rd3], %rd7;
+; CHECK-I32X2-NEXT:    ret;
+  %v = load <2 x i32>, ptr addrspace(1) %in, align 8
+  %r = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %v)
+  store <2 x i32> %r, ptr addrspace(1) %out, align 8
+  ret void
+}
+declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)
+
 define <2 x i16> @test_trunc_2xi32_to_2xi16(<2 x i32> %a) #0 {
 ; CHECK-NOI32X2-LABEL: test_trunc_2xi32_to_2xi16(
 ; CHECK-NOI32X2:       {
