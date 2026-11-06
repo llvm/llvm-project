@@ -22,3 +22,84 @@ define i32 @sum_bytes_of_load(ptr %src) {
   %a3 = add nuw nsw i32 %a2, %b3
   ret i32 %a3
 }
+
+define i32 @pack_bytes_shared_load(ptr %p) {
+; CHECK-LABEL: define i32 @pack_bytes_shared_load(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[B3:%.*]] = load i8, ptr [[G3]], align 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[B3]], 0
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[PACK:.*]]
+; CHECK:       [[PACK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %g3 = getelementptr inbounds i8, ptr %p, i64 3
+  %b3 = load i8, ptr %g3, align 1
+  %c = icmp eq i8 %b3, 0
+  br i1 %c, label %exit, label %pack
+
+pack:
+  %g2 = getelementptr inbounds i8, ptr %p, i64 2
+  %b2 = load i8, ptr %g2, align 1
+  %g1 = getelementptr inbounds i8, ptr %p, i64 1
+  %b1 = load i8, ptr %g1, align 1
+  %b0 = load i8, ptr %p, align 1
+  %z3 = zext i8 %b3 to i32
+  %s3 = shl nuw i32 %z3, 24
+  %z2 = zext i8 %b2 to i32
+  %s2 = shl nuw nsw i32 %z2, 16
+  %o2 = or disjoint i32 %s2, %s3
+  %z1 = zext i8 %b1 to i32
+  %s1 = shl nuw nsw i32 %z1, 8
+  %o1 = or disjoint i32 %o2, %s1
+  %z0 = zext i8 %b0 to i32
+  %o0 = or disjoint i32 %o1, %z0
+  ret i32 %o0
+
+exit:
+  ret i32 0
+}
+
+define void @store_bytes_reversed(ptr %src, ptr %dst) {
+; CHECK-LABEL: define void @store_bytes_reversed(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[S24:%.*]] = lshr i32 [[V]], 24
+; CHECK-NEXT:    [[T3:%.*]] = trunc nuw i32 [[S24]] to i8
+; CHECK-NEXT:    store i8 [[T3]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[S16:%.*]] = lshr i32 [[V]], 16
+; CHECK-NEXT:    [[T2:%.*]] = trunc i32 [[S16]] to i8
+; CHECK-NEXT:    [[D1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
+; CHECK-NEXT:    store i8 [[T2]], ptr [[D1]], align 1
+; CHECK-NEXT:    [[S8:%.*]] = lshr i32 [[V]], 8
+; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[S8]] to i8
+; CHECK-NEXT:    [[D2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
+; CHECK-NEXT:    store i8 [[T1]], ptr [[D2]], align 1
+; CHECK-NEXT:    [[T0:%.*]] = trunc i32 [[V]] to i8
+; CHECK-NEXT:    [[D3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
+; CHECK-NEXT:    store i8 [[T0]], ptr [[D3]], align 1
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, ptr %src, align 4
+  %s24 = lshr i32 %v, 24
+  %t3 = trunc nuw i32 %s24 to i8
+  store i8 %t3, ptr %dst, align 1
+  %s16 = lshr i32 %v, 16
+  %t2 = trunc i32 %s16 to i8
+  %d1 = getelementptr inbounds i8, ptr %dst, i64 1
+  store i8 %t2, ptr %d1, align 1
+  %s8 = lshr i32 %v, 8
+  %t1 = trunc i32 %s8 to i8
+  %d2 = getelementptr inbounds i8, ptr %dst, i64 2
+  store i8 %t1, ptr %d2, align 1
+  %t0 = trunc i32 %v to i8
+  %d3 = getelementptr inbounds i8, ptr %dst, i64 3
+  store i8 %t0, ptr %d3, align 1
+  ret void
+}
