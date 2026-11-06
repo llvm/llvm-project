@@ -3140,15 +3140,7 @@ static SDValue ExtendLowAndHigh(SDValue Input, bool IsSext, EVT SrcVT,
   unsigned HighOp =
       IsSext ? WebAssemblyISD::EXTEND_HIGH_S : WebAssemblyISD::EXTEND_HIGH_U;
 
-  if (SrcVT == MVT::v8i16) {
-    assert(ResVT == MVT::v8i32);
-    // extend_low and extend_high,
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT,
-                       {
-                           DAG.getNode(LowOp, DL, MVT::v4i32, Input),
-                           DAG.getNode(HighOp, DL, MVT::v4i32, Input),
-                       });
-  } else if (SrcVT == MVT::v8i8) {
+  if (SrcVT == MVT::v8i8) {
     assert(ResVT == MVT::v8i32);
     // extend_low and then extend_low and extend_high.
     SDValue LowHalf =
@@ -3158,28 +3150,19 @@ static SDValue ExtendLowAndHigh(SDValue Input, bool IsSext, EVT SrcVT,
                            DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
                            DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
                        });
-  }
-
-  assert(ResVT == MVT::v16i32);
-  SDValue LowHalf;
-  SDValue HighHalf;
-
-  if (SrcVT == MVT::v16i8) {
-    LowHalf = DAG.getNode(LowOp, DL, MVT::v8i16, Input);
-    HighHalf = DAG.getNode(HighOp, DL, MVT::v8i16, Input);
   } else {
-    assert(SrcVT == MVT::v16i16);
-    LowHalf = extractSubVector(Input, 0, DAG, DL, 128);
-    HighHalf = extractSubVector(Input, 8, DAG, DL, 128);
+    assert(ResVT == MVT::v16i32);
+    assert(SrcVT == MVT::v16i8);
+    SDValue LowHalf = DAG.getNode(LowOp, DL, MVT::v8i16, Input);
+    SDValue HighHalf = DAG.getNode(HighOp, DL, MVT::v8i16, Input);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT,
+                       {
+                           DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
+                           DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
+                           DAG.getNode(LowOp, DL, MVT::v4i32, HighHalf),
+                           DAG.getNode(HighOp, DL, MVT::v4i32, HighHalf),
+                       });
   }
-
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT,
-                     {
-                         DAG.getNode(LowOp, DL, MVT::v4i32, LowHalf),
-                         DAG.getNode(HighOp, DL, MVT::v4i32, LowHalf),
-                         DAG.getNode(LowOp, DL, MVT::v4i32, HighHalf),
-                         DAG.getNode(HighOp, DL, MVT::v4i32, HighHalf),
-                     });
 }
 
 SDValue performVectorExtendCombine(SDNode *N,
@@ -3194,9 +3177,7 @@ SDValue performVectorExtendCombine(SDNode *N,
   SDLoc DL(N);
 
   if ((ResVT == MVT::v16i32 && SrcVT == MVT::v16i8) ||
-      (ResVT == MVT::v16i32 && SrcVT == MVT::v16i16) ||
-      (ResVT == MVT::v8i32 && SrcVT == MVT::v8i8) ||
-      (ResVT == MVT::v8i32 && SrcVT == MVT::v8i16)) {
+      (ResVT == MVT::v8i32 && SrcVT == MVT::v8i8)) {
     // Use a tree of extend low/high to split and extend the input in two
     // layers to avoid doing several shuffles and even more extends.
     return ExtendLowAndHigh(N->getOperand(0), IsSext, SrcVT, ResVT, DAG);
@@ -4114,11 +4095,8 @@ static SDValue performMinMaxF128Combine(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue performNarrowCombine(SDNode *N, SelectionDAG &DAG) {
-  auto IsExtend = [](SDValue Op) {
-    return Op.getOpcode() == WebAssemblyISD::EXTEND_LOW_U ||
-           Op.getOpcode() == WebAssemblyISD::EXTEND_HIGH_U;
-  };
-  if (IsExtend(N->getOperand(0)) && IsExtend(N->getOperand(1)) &&
+  if (N->getOperand(0).getOpcode() == WebAssemblyISD::EXTEND_LOW_U &&
+      N->getOperand(1).getOpcode() == WebAssemblyISD::EXTEND_HIGH_U &&
       N->getOperand(0)->getOperand(0) == N->getOperand(1)->getOperand(0))
     return N->getOperand(0)->getOperand(0);
   return SDValue();
