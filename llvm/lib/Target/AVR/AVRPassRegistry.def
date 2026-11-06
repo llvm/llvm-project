@@ -13,6 +13,13 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("avr-asm-printer-begin", AVRAsmPrinterBeginPass())
+MODULE_PASS("avr-asm-printer-end", AVRAsmPrinterEndPass())
+#undef MODULE_PASS
+
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
@@ -22,6 +29,7 @@ FUNCTION_PASS("avr-shift-expand", AVRShiftExpandPass())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("avr-asm-printer", AVRAsmPrinterPass())
 MACHINE_FUNCTION_PASS("avr-expand-pseudo", AVRExpandPseudoPass())
 MACHINE_FUNCTION_PASS("avr-frame-analyzer", AVRFrameAnalyzerPass())
 MACHINE_FUNCTION_PASS("avr-isel", AVRISelDAGToDAGPass(*this, getOptLevel()))
