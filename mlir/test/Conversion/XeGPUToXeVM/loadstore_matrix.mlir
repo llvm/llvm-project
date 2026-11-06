@@ -358,4 +358,33 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     gpu.return
   }
 
+  // On a column-major 16x2 tile memory runs down a column, so a vector<4x1xf32>
+  // payload is four consecutive elements and still moves in one access.
+  //CHECK-LABEL: load_matrix_col_major_contiguous_payload
+  gpu.func @load_matrix_col_major_contiguous_payload(%arg0: memref<128xi8, 3>) -> vector<4x1xf32> {
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<128xi8, 3> -> !xegpu.mem_desc<16x2xf32, #xegpu.mem_layout<stride = [1, 16]>>
+    //CHECK: llvm.load %{{.*}} : !llvm.ptr<3> -> vector<4xf32>
+    //CHECK-NOT: llvm.load
+    %1 = xegpu.load_matrix %0[%c4, %c1] : !xegpu.mem_desc<16x2xf32, #xegpu.mem_layout<stride = [1, 16]>>, index, index -> vector<4x1xf32>
+    //CHECK: gpu.return
+    gpu.return %1 : vector<4x1xf32>
+  }
+
+  // A vector<2x2xf32> payload of a column-major tile has its columns
+  // consecutive in memory but not in the row-major flattened vector, so each
+  // element gets its own access.
+  //CHECK-LABEL: store_matrix_col_major_strided_payload
+  gpu.func @store_matrix_col_major_strided_payload(%arg0: memref<128xi8, 3>, %arg1: vector<2x2xf32>) {
+    %c0 = arith.constant 0 : index
+    %c4 = arith.constant 4 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<128xi8, 3> -> !xegpu.mem_desc<16x2xf32, #xegpu.mem_layout<stride = [1, 16]>>
+    //CHECK-COUNT-4: llvm.store %{{.*}}, %{{.*}} : f32, !llvm.ptr<3>
+    //CHECK-NOT: llvm.store
+    xegpu.store_matrix %arg1, %0[%c4, %c0] : vector<2x2xf32>, !xegpu.mem_desc<16x2xf32, #xegpu.mem_layout<stride = [1, 16]>>, index, index
+    //CHECK: gpu.return
+    gpu.return
+  }
+
 }

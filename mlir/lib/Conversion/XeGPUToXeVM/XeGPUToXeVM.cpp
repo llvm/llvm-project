@@ -50,7 +50,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
 // TODO: Below are uArch dependent values, should move away from hardcoding
 static constexpr int32_t systolicDepth{8};
 static constexpr int32_t executionSize{16};
@@ -1026,10 +1025,20 @@ public:
 };
 
 /// Returns the shape of the largest piece of a matrix op payload that one LLVM
-/// access can move, as an access only moves consecutive elements. Memory runs
-/// along the dimension whose stride is 1, so on a row-major tile a [1, 4]
-/// payload is four neighbours and moves in one access, while [2, 1] is two
-/// elements a row apart and needs one access each.
+/// access can move, as an access only moves consecutive elements.
+/// Examples:
+///   mem_desc<16x2xf32>                       (stride [2, 1], row-major)
+///     payload [1, 2] -> [1, 2]   one access of 2 elements
+///     payload [2, 1] -> [1, 1]   2 accesses of 1 element
+///   mem_desc<16x2xf32, stride = [1, 16]>     (column-major)
+///     payload [4, 1] -> [4, 1]   one access of 4 elements
+///     payload [2, 2] -> [1, 1]   4 accesses of 1 element; each column is
+///                                consecutive in memory but not in the
+///                                row-major flattened vector
+///
+/// TODO: On a blocked layout memory is only consecutive inside a block, so a
+/// piece that crosses a block boundary along the stride-1 dim is not
+/// contiguous. Blocks are not taken into account yet.
 static SmallVector<int64_t>
 getContiguousPayloadShape(ArrayRef<int64_t> payloadShape, size_t numOffsets,
                           xegpu::MemDescType mdescTy) {
@@ -1047,6 +1056,8 @@ getContiguousPayloadShape(ArrayRef<int64_t> payloadShape, size_t numOffsets,
     }
   }
 
+  // A slice that runs along fastestDim is only consecutive in the vector if
+  // every dim to its right has size 1.
   bool spansFastestDim =
       llvm::all_of(llvm::seq<int64_t>(fastestDim + 1, rank),
                    [&](int64_t d) { return payloadShape[d] == 1; });
