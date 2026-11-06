@@ -5473,6 +5473,10 @@ private:
   /// should not be set directly.
   bool InMessageExpression;
 
+  /// While the parameters of a non-static member function are parsed, its
+  /// class, through whose 'this' an attribute on a parameter names a member.
+  CXXRecordDecl *ParamAttrThisRecord = nullptr;
+
   /// True if we are within an Objective-C container while parsing C-like decls.
   ///
   /// This is necessary because Sema thinks we have left the container

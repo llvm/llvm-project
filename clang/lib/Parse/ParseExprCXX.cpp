@@ -1232,6 +1232,9 @@ bool Parser::isLambdaSpecifier() {
 
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
+  // A lambda in the parameters of a member function does not have its 'this'.
+  llvm::SaveAndRestore<CXXRecordDecl *> ClearThisRecord(ParamAttrThisRecord,
+                                                        nullptr);
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
   if (getLangOpts().HLSL)
     Diag(LambdaBeginLoc, diag::ext_hlsl_lambda) << /*HLSL*/ 1;

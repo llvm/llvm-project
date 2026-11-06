@@ -8392,6 +8392,32 @@ void testDependent(int n) {
   callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (&)(int)>' requested here}}
 }
 
+// On a parameter of a non-static member function, a member names that of the
+// object the function is called on, as on the function itself.
+struct CallbackOwner {
+  Mutex mu;
+  void run(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+  void runAddr(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(&mu), int n) {
+    cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+};
+
+void CallbackOwner::run(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  mu.Lock();
+  cb(n);
+  mu.Unlock();
+}
+
+template <typename T> struct CallbackOwnerT {
+  Mutex mu;
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n) {
+    mu.Lock();
+    cb(n);
+    mu.Unlock();
+  }
+};
+template struct CallbackOwnerT<int>;
+
 // lock_returned on a function pointer or reference.
 struct Guarded {
   Mutex mu;

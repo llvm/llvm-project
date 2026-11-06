@@ -2572,6 +2572,18 @@ bool TemplateInstantiator::TransformFunctionTypeParams(
       }));
   if (Failed)
     return true;
+  // An attribute on a parameter of a non-static member function names a member
+  // through 'this', unqualified as in the parser, which has not yet seen the
+  // function's cv-qualifiers; see Parser::ParseAttributeArgsCommon.
+  CXXRecordDecl *ThisContext = nullptr;
+  const auto *It = llvm::find_if(Params, [](ParmVarDecl *P) { return P; });
+  if (!LateAttrs.empty() && It != Params.end())
+    if (auto *MD = dyn_cast<CXXMethodDecl>((*It)->getDeclContext());
+        MD && MD->isImplicitObjectMemberFunction() &&
+        !MD->getParent()->isLambda())
+      ThisContext = dyn_cast_or_null<CXXRecordDecl>(
+          SemaRef.FindInstantiatedDecl(Loc, MD->getParent(), TemplateArgs));
+  Sema::CXXThisScopeRAII ThisScope(SemaRef, ThisContext, Qualifiers());
   SemaRef.InstantiateLateAttrs(TemplateArgs, LateAttrs, Scope);
   return false;
 }
