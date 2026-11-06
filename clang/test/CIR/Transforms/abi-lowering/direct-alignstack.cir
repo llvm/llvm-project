@@ -17,14 +17,14 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
 } {
 
-  cir.func @takes(%arg0: !s32i)
+  cir.func @takes(%arg0: !s32i) requires_call_conv_lowering
       attributes { test_classify = #direct_align } {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @takes(%arg0: !s32i {llvm.alignstack = 8 : i64})
 
-  cir.func @caller(%arg0: !s32i)
+  cir.func @caller(%arg0: !s32i) requires_call_conv_lowering
       attributes { test_classify = #direct_align } {
     cir.call @takes(%arg0) : (!s32i) -> ()
     cir.return
