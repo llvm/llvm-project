@@ -277,6 +277,7 @@ struct MissingFeatures {
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }
+  static bool pointerFieldProtection() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }

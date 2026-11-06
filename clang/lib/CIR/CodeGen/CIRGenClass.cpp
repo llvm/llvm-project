@@ -62,7 +62,11 @@ public:
     if (cgf.getContext().getLangOpts().SanitizeAddressFieldPadding)
       return false;
     Qualifiers qual = f->getType().getQualifiers();
-    return !qual.hasVolatile() && !qual.hasObjCLifetime();
+    if (qual.hasVolatile() || qual.hasObjCLifetime())
+      return false;
+    assert(!cir::MissingFeatures::pointerAuthentication());
+    assert(!cir::MissingFeatures::pointerFieldProtection());
+    return true;
   }
 
   void addMemcpyableField(FieldDecl *f) {
