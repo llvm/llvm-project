@@ -32,6 +32,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
@@ -46,7 +47,7 @@ namespace dataflow {
 
 namespace {
 
-class SimpleBoolModel : public Environment::BoolModel {
+class SimpleBoolModel final : public Environment::BoolModel {
 public:
   SimpleBoolModel() : BoolModel(BoolModelKind::Simple) {}
 
@@ -73,29 +74,29 @@ public:
     if (HasContradiction)
       return;
 
-    // Retain `F` in `AssumedFormulas` only if it has not yet been reduced to a
-    // known truth value in `AtomToVal` (e.g., `A || B` or `A == B` where
-    // neither side is known yet).
-    //
-    // - Why save unresolved formulas: a compound formula (like
-    //   `EqVal => (LHS == RHS)` from a comparison expression) is often assumed
-    //   while its atoms are still unknown; when we later follow a branch that
-    //   fixes one of those atoms, the propagation loop below can reduce the
-    //   saved formula to concrete `AtomToVal` entries.
-    //
-    // - Skipping formulas that already evaluate to `true` avoids bloating
-    //   `AssumedFormulas` with single-atom and conjunctive assumptions that are
-    //   already fully represented by `AtomToVal` (though it also drops
-    //   disjunctive formulas that were reduced using a branch-local atom, such
-    //   as on the RHS of a short-circuit `&&` or `||`).
-    //   TODO: We may want to retain some disjunctive formulas, but would need
-    //   to profile and see how much it helps vs how much it costs.
-    if (std::optional<bool> Val = getLiteralValue(F)) {
+    if (std::optional<bool> Val = getLiteralValue(F); Val.has_value()) {
       if (!*Val) {
         HasContradiction = true;
         return;
       }
     } else {
+      // Retain `F` in `AssumedFormulas` only if it has not yet been reduced to
+      // a known truth value in `AtomToVal` (e.g., `A || B` or `A == B` where
+      // neither side is known yet).
+      //
+      // - Why save unresolved formulas: a compound formula (like
+      //   `EqVal => (LHS == RHS)` from a comparison expression) is often
+      //   assumed while its atoms are still unknown; when we later follow a
+      //   branch that fixes one of those atoms, the propagation loop below can
+      //   reduce the saved formula to concrete `AtomToVal` entries.
+      //
+      // - Skipping formulas that already evaluate to `true` avoids bloating
+      //   `AssumedFormulas` with single-atom and conjunctive assumptions that
+      //   are already fully represented by `AtomToVal` (though it also drops
+      //   disjunctive formulas that were reduced using a branch-local atom,
+      //   such as on the RHS of a short-circuit `&&` or `||`).
+      //   TODO: We may want to retain some disjunctive formulas, but would need
+      //   to profile and see how much it helps vs how much it costs.
       AssumedFormulas.insert(&F);
     }
 
@@ -115,7 +116,7 @@ public:
         assumeFormula(/*AssumedVal=*/true, *Pending);
         if (HasContradiction)
           return;
-        if (getLiteralValue(*Pending) == false) {
+        if (auto V = getLiteralValue(*Pending); V.has_value() && *V == false) {
           HasContradiction = true;
           return;
         }
@@ -213,12 +214,13 @@ public:
       return false;
     if (HasContradiction)
       return true;
-    if (AtomToVal.size() != OtherSimple.AtomToVal.size() ||
-        AssumedFormulas != OtherSimple.AssumedFormulas)
-      return false;
-    return llvm::all_of(AtomToVal, [&](const auto &Entry) {
-      return OtherSimple.getAtomValue(Entry.first) == Entry.second;
-    });
+    return AtomToVal == OtherSimple.AtomToVal &&
+           AssumedFormulas.size() == OtherSimple.AssumedFormulas.size() &&
+           // SetVector::operator== compares insertion order, so check set
+           // membership.
+           llvm::all_of(AssumedFormulas, [&](const Formula *F) {
+             return OtherSimple.AssumedFormulas.contains(F);
+           });
   }
 
   Atom getFlowConditionToken() const override {
@@ -230,7 +232,10 @@ public:
     OS << "SimpleBoolModel:\n";
     OS << "  HasContradiction: " << HasContradiction << "\n";
     OS << "  AtomToVal:\n";
-    for (auto [A, V] : AtomToVal)
+    SmallVector<std::pair<Atom, bool>> SortedAtomToVal(AtomToVal.begin(),
+                                                       AtomToVal.end());
+    llvm::sort(SortedAtomToVal, llvm::less_first());
+    for (auto [A, V] : SortedAtomToVal)
       OS << "    " << A << " = " << (V ? "true" : "false") << "\n";
     OS << "  AssumedFormulas:\n";
     for (const Formula *F : AssumedFormulas)
@@ -254,8 +259,8 @@ private:
     case Formula::Not: {
       ArrayRef<const Formula *> Operands = F.operands();
       assert(Operands.size() == 1);
-      if (std::optional<bool> Maybe = getLiteralValue(*Operands[0]))
-        return !*Maybe;
+      if (std::optional<bool> V = getLiteralValue(*Operands[0]); V.has_value())
+        return !*V;
       return std::nullopt;
     }
     case Formula::And: {
@@ -263,9 +268,10 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
-      if (std::optional<bool> Left = getLiteralValue(LHS))
+      if (std::optional<bool> Left = getLiteralValue(LHS); Left.has_value())
         return !*Left ? Left : getLiteralValue(RHS);
-      if (std::optional<bool> Right = getLiteralValue(RHS); Right == false)
+      if (std::optional<bool> Right = getLiteralValue(RHS);
+          Right.has_value() && *Right == false)
         return Right;
       return std::nullopt;
     }
@@ -274,9 +280,10 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
-      if (std::optional<bool> Left = getLiteralValue(LHS))
+      if (std::optional<bool> Left = getLiteralValue(LHS); Left.has_value())
         return *Left ? Left : getLiteralValue(RHS);
-      if (std::optional<bool> Right = getLiteralValue(RHS); Right == true)
+      if (std::optional<bool> Right = getLiteralValue(RHS);
+          Right.has_value() && *Right == true)
         return Right;
       return std::nullopt;
     }
@@ -285,9 +292,10 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
-      if (std::optional<bool> Left = getLiteralValue(LHS))
+      if (std::optional<bool> Left = getLiteralValue(LHS); Left.has_value())
         return !*Left ? true : getLiteralValue(RHS);
-      if (std::optional<bool> Right = getLiteralValue(RHS); Right == true)
+      if (std::optional<bool> Right = getLiteralValue(RHS);
+          Right.has_value() && *Right == true)
         return true;
       return std::nullopt;
     }
@@ -296,8 +304,16 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
+      // If the formula is of the form `A == A`, then we can simplify to
+      // true, without needing to know A is set to a literal value.
       if (&LHS == &RHS)
         return true;
+      // Similarly, if the formula is of the form `A == !A` (or !A == A),
+      // then we can simplify to false.
+      // We should consider lifting such simplification with identities into a
+      // a separate function (there are more cases, e.g., `A OR !A` is true),
+      // while keeping this function focused on cases where the operands are
+      // literal values.
       if ((LHS.kind() == Formula::Not && LHS.operands()[0] == &RHS) ||
           (RHS.kind() == Formula::Not && RHS.operands()[0] == &LHS))
         return false;
@@ -360,9 +376,9 @@ private:
         assumeFormula(true, LHS);
         assumeFormula(true, RHS);
       } else {
-        if (getLiteralValue(LHS) == true)
+        if (auto V = getLiteralValue(LHS); V.has_value() && *V == true)
           assumeFormula(false, RHS);
-        else if (getLiteralValue(RHS) == true)
+        else if (auto V = getLiteralValue(RHS); V.has_value() && *V == true)
           assumeFormula(false, LHS);
       }
       break;
@@ -381,9 +397,9 @@ private:
         assumeFormula(false, LHS);
         assumeFormula(false, RHS);
       } else {
-        if (getLiteralValue(LHS) == false)
+        if (auto V = getLiteralValue(LHS); V.has_value() && *V == false)
           assumeFormula(true, RHS);
-        else if (getLiteralValue(RHS) == false)
+        else if (auto V = getLiteralValue(RHS); V.has_value() && *V == false)
           assumeFormula(true, LHS);
       }
       break;
@@ -404,9 +420,9 @@ private:
         assumeFormula(true, LHS);
         assumeFormula(false, RHS);
       } else {
-        if (getLiteralValue(LHS) == true)
+        if (auto V = getLiteralValue(LHS); V.has_value() && *V == true)
           assumeFormula(true, RHS);
-        else if (getLiteralValue(RHS) == false)
+        else if (auto V = getLiteralValue(RHS); V.has_value() && *V == false)
           assumeFormula(false, LHS);
       }
       break;
@@ -419,9 +435,9 @@ private:
       assert(Operands.size() == 2);
       auto &LHS = *Operands[0];
       auto &RHS = *Operands[1];
-      if (auto V = getLiteralValue(LHS)) {
+      if (auto V = getLiteralValue(LHS); V.has_value()) {
         assumeFormula(AssumedVal == *V, RHS);
-      } else if (auto V = getLiteralValue(RHS)) {
+      } else if (auto V = getLiteralValue(RHS); V.has_value()) {
         assumeFormula(AssumedVal == *V, LHS);
       }
       break;
@@ -429,12 +445,12 @@ private:
     }
   }
 
-  llvm::MapVector<Atom, bool> AtomToVal;
+  llvm::DenseMap<Atom, bool> AtomToVal;
   llvm::SmallSetVector<const Formula *, 4> AssumedFormulas;
   bool HasContradiction = false;
 };
 
-class SatBoolModel : public Environment::BoolModel {
+class SatBoolModel final : public Environment::BoolModel {
 public:
   SatBoolModel(DataflowAnalysisContext &DACtx, Atom FlowConditionToken)
       : BoolModel(BoolModelKind::SAT), DACtx(DACtx),
@@ -1362,11 +1378,12 @@ LatticeEffect Environment::widen(const Environment &PrevEnv,
 
   LocToVal = widenKeyToValueMap(LocToVal, PrevEnv.LocToVal, *this, PrevEnv,
                                 Model, Effect);
+  if (BoolState->widen(*PrevEnv.BoolState) == LatticeEffect::Changed)
+    Effect = LatticeEffect::Changed;
   if (DeclToLoc.size() != PrevEnv.DeclToLoc.size() ||
       ExprToLoc.size() != PrevEnv.ExprToLoc.size() ||
       ExprToVal.size() != PrevEnv.ExprToVal.size() ||
-      LocToVal.size() != PrevEnv.LocToVal.size() ||
-      BoolState->widen(*PrevEnv.BoolState) == LatticeEffect::Changed)
+      LocToVal.size() != PrevEnv.LocToVal.size())
     Effect = LatticeEffect::Changed;
 
   return Effect;
