@@ -693,7 +693,8 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
     CalleeName = Callee->getName();
 
   if (FunctionSamples::ProfileIsCS)
-    return ContextTracker->getCalleeContextSamplesFor(Inst, CalleeName);
+    return ContextTracker->getCalleeContextSamplesFor(Inst, CalleeName,
+                                                      SymbolMap);
 
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (FS == nullptr)
@@ -1073,8 +1074,10 @@ void SampleProfileLoader::findExternalInlineCandidate(
 
     Function *Func = SymbolMap.lookup(CalleeSample->getFunction());
     // Add to the import list only when it's defined out of module.
-    if (!Func || Func->isDeclaration())
+    if (!Func)
       InlinedGUIDs.insert(CalleeSample->getGUID());
+    else if (Func->isDeclaration())
+      InlinedGUIDs.insert(Func->getGUID());
 
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
@@ -1082,8 +1085,10 @@ void SampleProfileLoader::findExternalInlineCandidate(
       for (const auto &TS : BS.second.getCallTargets())
         if (TS.second > Threshold) {
           const Function *Callee = SymbolMap.lookup(TS.first);
-          if (!Callee || Callee->isDeclaration())
+          if (!Callee)
             InlinedGUIDs.insert(TS.first.getHashCode());
+          else if (Callee->isDeclaration())
+            InlinedGUIDs.insert(Callee->getGUID());
         }
 
     // Import hot child context profile associted with callees. Note that this

@@ -1260,21 +1260,22 @@ public:
       uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
-    auto IsDeclaration = [](const Function *F) {
-      return !F || F->isDeclaration();
-    };
-    if (IsDeclaration(SymbolMap.lookup(getFunction()))) {
-      // Add to the import list only when it's defined out of module.
+    Function *IRFunc = SymbolMap.lookup(getFunction());
+    // Add to the import list only when it's defined out of module.
+    if (!IRFunc)
       S.insert(getGUID());
-    }
+    else if (IRFunc->isDeclaration())
+      S.insert(IRFunc->getGUID());
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : BodySamples)
       for (const auto &TS : BS.second.getCallTargets())
         if (TS.second > Threshold) {
           const Function *Callee = SymbolMap.lookup(TS.first);
-          if (IsDeclaration(Callee))
+          if (!Callee)
             S.insert(TS.first.getHashCode());
+          else if (Callee->isDeclaration())
+            S.insert(Callee->getGUID());
         }
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
