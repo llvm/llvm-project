@@ -328,7 +328,7 @@ def merge(paper: PaperInfo, gh: PaperInfo) -> PaperInfo:
         logging.info(f"We found a CSV row and a Github issue with different statuses:\nrow: {paper}\nGithub issue: {gh}")
         result = copy.deepcopy(paper)
 
-#If we didn't take the Github issue in full, make sure to update the notes, the link and anything else.
+# If we didn't take the Github issue in full, make sure to update the notes, the link and anything else.
     if not took_gh_in_full:
         result.github_issue = gh.github_issue
         result.notes = gh.notes
@@ -350,21 +350,21 @@ def link_github_issue(issue: str, meeting_voted: Optional[str], status: Optional
     """
     Link an existing Github issue to the libc++ Conformance project.
     """
-#Figure out the URL of the issue
+    # Figure out the URL of the issue
     url = subprocess.check_output(['gh', 'issue', 'view', issue, '--json', 'url', '--jq', '.url']).decode().strip()
 
-#Add the issue to the Conformance project
+    # Add the issue to the Conformance project
     cli = ['gh', 'project', 'item-add', LIBCXX_CONFORMANCE_PROJECT, '--owner', 'llvm', '--url', url, '--format', 'json', '--jq', '.id']
     id = subprocess.check_output(cli).decode().strip()
 
-#Adjust the 'Meeting Voted' field of the item
+    # Adjust the 'Meeting Voted' field of the item
     if meeting_voted is not None:
         cli = ['gh', 'project', 'item-edit', '--id', id,
                                 '--project-id', LIBCXX_CONFORMANCE_PROJECT_ID,
                                 '--field-id', LIBCXX_CONFORMANCE_MEETING_VOTED_ID, '--text', meeting_voted]
         subprocess.check_call(cli, stdout=subprocess.DEVNULL)
 
-#Adjust the 'Status' field of the item
+    # Adjust the 'Status' field of the item
     if status is not None:
         option_id = status.to_project_single_select_option()
         cli = ['gh', 'project', 'item-edit', '--id', id,
@@ -385,19 +385,19 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
     """
     results = [rows[0]] # Start with the header
     for row in rows[1:]: # Skip the header
-#If the row contains empty entries, this is a "separator row" between meetings.
-#Preserve it as - is.
+        # If the row contains empty entries, this is a "separator row" between meetings.
+        # Preserve it as-is.
         if row[0] == "":
             results.append(row)
             continue
 
         paper = PaperInfo.from_csv_row(row)
 
-#Find any Github issues tracking this paper.Each row must have one and exactly one Github
-#issue tracking it, which we validate below.
+        # Find any Github issues tracking this paper. Each row must have one and exactly one Github
+        # issue tracking it, which we validate below.
         tracking = [gh for gh in from_github if paper.paper_number == gh.paper_number]
 
-#If there's more than one tracking issue, something is weird.
+        # If there's more than one tracking issue, something is weird.
         if len(tracking) > 1:
             logging.warning(f"Found a row with more than one tracking issue: {row}")
             for t in tracking:
@@ -405,7 +405,7 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
             results.append(row)
             continue
 
-#Validate the Github issue associated to the CSV row, if any
+        # Validate the Github issue associated to the CSV row, if any
         if paper.github_issue is not None:
             if len(tracking) == 0:
                 logging.warning(f"Found row claiming to have a tracking issue, but failed to find a tracking issue on Github: {row}")
@@ -416,7 +416,7 @@ def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
                 results.append(row)
                 continue
 
-#If there is no tracking issue for that row, log that we're missing an issue.
+        # If there is no tracking issue for that row, log that we're missing an issue.
         if len(tracking) == 0:
             logging.warning(f"Can't find any Github issue for CSV row: {row}")
             results.append(row)
@@ -528,7 +528,7 @@ def github_create(csvfiles, load_github_from, labels):
         for file in csvfiles:
             csv = load_csv(file)
             for row in csv[1:]: # Skip the header
-#If the row contains empty entries, this is a "separator row" between meetings.
+                # If the row contains empty entries, this is a "separator row" between meetings.
                 if row[0] == "":
                     continue
                 yield row
@@ -538,11 +538,11 @@ def github_create(csvfiles, load_github_from, labels):
     for row in all_csv_rows():
         paper = PaperInfo.from_csv_row(row)
 
-#Only consider creating a Github issue for papers that are not already tracked.
+        # Only consider creating a Github issue for papers that are not already tracked.
         if project.tracks(paper.paper_number):
             continue
 
-#If the row pretends to be tracked by a Github issue but we can't find it, something is weird.
+        # If the row pretends to be tracked by a Github issue but we can't find it, something is weird.
         if paper.github_issue is not None:
             logging.warning(f"Found row claiming to have a tracking issue, but failed to find a tracking issue on Github: {row}")
             continue
@@ -647,10 +647,10 @@ def csv_create(issues, output, load_github_from):
 
     rows = []
     for issue in issues:
-#Figure out the issue number
+        # Figure out the issue number
         number = subprocess.check_output(['gh', 'issue', 'view', issue, '--json', 'number', '--jq', '.number']).decode().strip()
 
-#Find the PaperInfo corresponding to that issue.If there is none, the issue provided by the user is invalid.
+        # Find the PaperInfo corresponding to that issue. If there is none, the issue provided by the user is invalid.
         for paper in project.papers():
             if paper.github_issue == number:
                 rows.append(paper.for_printing())
