@@ -1,0 +1,140 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -start-before=machine-scheduler -verify-machineinstrs -o - %s | FileCheck %s
+
+# Pre-scheduler MIR for the reduced occupancy regression. Scheduling a pending
+# MFMA for resource demand can lengthen live ranges enough to require four
+# AGPRs in addition to 64 VGPRs, reducing occupancy from 8 to 7. The clobber
+# constrains physical VGPR allocation; it is not a scheduling-region boundary.
+
+# CHECK-LABEL: avoid_unified_vgpr_occupancy_cliff:
+# CHECK:      ; NumVgprs: 64{{$}}
+# CHECK-NEXT: ; NumAgprs: 0{{$}}
+# CHECK-NEXT: ; TotalNumVgprs: 64{{$}}
+# CHECK-NEXT: ; ScratchSize: 0{{$}}
+# CHECK:      ; Occupancy: 8{{$}}
+
+--- |
+  define amdgpu_kernel void @avoid_unified_vgpr_occupancy_cliff(<8 x bfloat> %matrix0, <8 x bfloat> %matrix1, <8 x bfloat> %matrix2) {
+  entry:
+    br label %loop
+  loop:
+    br i1 false, label %DummyReturnBlock, label %loop
+  DummyReturnBlock:
+    ret void
+  }
+...
+---
+name:            avoid_unified_vgpr_occupancy_cliff
+alignment:       4
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+liveins:
+  - { reg: '$sgpr4_sgpr5', virtual-reg: '%14' }
+frameInfo:
+  maxAlignment:    1
+  framePointerPolicy: none
+machineFunctionInfo:
+  explicitKernArgSize: 48
+  maxKernArgAlign: 16
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  argumentInfo:
+    dispatchPtr:     { reg: '$sgpr0_sgpr1' }
+    queuePtr:        { reg: '$sgpr2_sgpr3' }
+    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    dispatchID:      { reg: '$sgpr6_sgpr7' }
+    workGroupIDX:    { reg: '$sgpr8' }
+    workGroupIDY:    { reg: '$sgpr9' }
+    workGroupIDZ:    { reg: '$sgpr10' }
+    workItemIDX:     { reg: '$vgpr0', mask: 1023 }
+    workItemIDY:     { reg: '$vgpr0', mask: 1047552 }
+    workItemIDZ:     { reg: '$vgpr0', mask: 1072693248 }
+  occupancy:       8
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+  dynamicVGPRBlockSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $sgpr4_sgpr5
+
+    %14:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    early-clobber %134:sgpr_256 = S_LOAD_DWORDX8_IMM_ec %14(p4), 0, 0 :: (dereferenceable invariant load (s256) from unknown-address, align 16, addrspace 4)
+    %2:sgpr_128 = S_LOAD_DWORDX4_IMM %14(p4), 32, 0 :: (dereferenceable invariant load (s128) from unknown-address + 32, addrspace 4)
+    undef %32.sub2:vreg_192_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %24.sub0:sgpr_128 = S_MOV_B32 0
+    %24.sub1:sgpr_128 = COPY %24.sub0
+    %24.sub2:sgpr_128 = COPY %24.sub0
+    %24.sub3:sgpr_128 = COPY %24.sub0
+    %26:av_128_align2 = COPY %24
+    %30:av_128_align2 = COPY %134.sub0_sub1_sub2_sub3
+    %35:av_128_align2 = COPY %134.sub4_sub5_sub6_sub7
+    %41:av_128_align2 = COPY %2
+    undef %46.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %46.sub2:vreg_128_align2 = V_MOV_B32_e32 1065369472, implicit $exec
+    %46.sub1:vreg_128_align2 = COPY %46.sub0
+    %46.sub3:vreg_128_align2 = COPY %46.sub2
+    undef %50.sub0:av_128_align2 = COPY %46.sub2
+    %50.sub1:av_128_align2 = COPY %46.sub2
+    %50.sub2:av_128_align2 = COPY %46.sub2
+    %50.sub3:av_128_align2 = COPY %46.sub2
+    %125:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %32.sub3:vreg_192_align2 = COPY %32.sub2
+    undef %85.sub0:vreg_128_align2 = COPY %32.sub2
+    %32.sub0:vreg_192_align2 = COPY %32.sub2
+    undef %33.sub0:vreg_128_align2 = COPY %32.sub2
+
+  bb.1.loop:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    %32.sub4:vreg_192_align2 = COPY %32.sub2
+    %32.sub5:vreg_192_align2 = COPY %32.sub2
+    %25:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %32.sub2_sub3_sub4_sub5, 0, 0, 0, implicit $mode, implicit $exec
+    %32.sub3:vreg_192_align2 = COPY %85.sub0
+    %32.sub4:vreg_192_align2 = COPY %32.sub2
+    %32.sub5:vreg_192_align2 = COPY %32.sub2
+    %29:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %30, %26, %32.sub2_sub3_sub4_sub5, 0, 0, 0, implicit $mode, implicit $exec
+    %32.sub1:vreg_192_align2 = COPY %32.sub2
+    %32.sub3:vreg_192_align2 = COPY %32.sub2
+    %33.sub1:vreg_128_align2 = COPY %32.sub2
+    %33.sub2:vreg_128_align2 = COPY %32.sub2
+    %33.sub3:vreg_128_align2 = COPY %32.sub2
+    %34:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %35, %26, %33, 0, 0, 0, implicit $mode, implicit $exec
+    %37:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %25, 0, 0, 0, implicit $mode, implicit $exec
+    %40:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %41, %26, %29, 0, 0, 0, implicit $mode, implicit $exec
+    %45:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %46, %26, %32.sub0_sub1_sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
+    %49:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %50, %26, %45, 0, 0, 0, implicit $mode, implicit $exec
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, clobber, implicit-def dead early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    %52:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %37, 0, 0, 0, implicit $mode, implicit $exec
+    %55:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %52, 0, 0, 0, implicit $mode, implicit $exec
+    %58:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %55, 0, 0, 0, implicit $mode, implicit $exec
+    %61:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %58, 0, 0, 0, implicit $mode, implicit $exec
+    %64:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %61, 0, 0, 0, implicit $mode, implicit $exec
+    %67:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %64, 0, 0, 0, implicit $mode, implicit $exec
+    %70:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %40, 0, 0, 0, implicit $mode, implicit $exec
+    %73:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %70, 0, 0, 0, implicit $mode, implicit $exec
+    %76:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %73, 0, 0, 0, implicit $mode, implicit $exec
+    %79:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %76, 0, 0, 0, implicit $mode, implicit $exec
+    %82:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %79, 0, 0, 0, implicit $mode, implicit $exec
+    %85:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %82, 0, 0, 0, implicit $mode, implicit $exec
+    %88:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %49, 0, 0, 0, implicit $mode, implicit $exec
+    %91:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %88, 0, 0, 0, implicit $mode, implicit $exec
+    %94:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %91, 0, 0, 0, implicit $mode, implicit $exec
+    %97:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %94, 0, 0, 0, implicit $mode, implicit $exec
+    %100:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %97, 0, 0, 0, implicit $mode, implicit $exec
+    %103:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %100, 0, 0, 0, implicit $mode, implicit $exec
+    %106:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %34, 0, 0, 0, implicit $mode, implicit $exec
+    %109:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %106, 0, 0, 0, implicit $mode, implicit $exec
+    %112:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %109, 0, 0, 0, implicit $mode, implicit $exec
+    %115:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %112, 0, 0, 0, implicit $mode, implicit $exec
+    %118:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %115, 0, 0, 0, implicit $mode, implicit $exec
+    %33:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %26, %26, %118, 0, 0, 0, implicit $mode, implicit $exec
+    $vcc = COPY %125
+    %32.sub3:vreg_192_align2 = COPY %67.sub0
+    %32.sub0:vreg_192_align2 = COPY %103.sub0
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_BRANCH %bb.2
+
+  bb.2.DummyReturnBlock:
+    S_ENDPGM 0
+...
