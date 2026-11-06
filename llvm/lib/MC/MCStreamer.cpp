@@ -242,7 +242,8 @@ void MCStreamer::emitCFINonHintPAuthFrame() {
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        unsigned Column, unsigned Flags,
                                        unsigned Isa, unsigned Discriminator,
-                                       StringRef FileName, StringRef Comment) {
+                                       StringRef FileName, StringRef Comment,
+                                       StringRef LocOpcode) {
   getContext().setCurrentDwarfLoc(FileNo, Line, Column, Flags, Isa,
                                   Discriminator);
 }
