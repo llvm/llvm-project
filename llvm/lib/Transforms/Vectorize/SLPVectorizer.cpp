@@ -19100,6 +19100,20 @@ InstructionCost BoUpSLP::getSpillCost() {
                    [&](Instruction *I) { return L->isLoopInvariant(I); }))
           if (!IsCoveredByMatchingVectorEntry(Op, L))
             AddCosts(Op, GetSpillScale(Parent));
+        // Vectorized parts of the gather node are combined at the user
+        // position and are live across the calls in between.
+        for (const auto &[Idx, _] : Op->CombinedEntriesWithIndices) {
+          const TreeEntry *SubTE = VectorizableTree[Idx].get();
+          if (SubTE->isGather() || TransformedToGatherNodes.contains(SubTE) ||
+              ScalarOrPseudoEntries.contains(SubTE))
+            continue;
+          LiveEntries.push_back(SubTE);
+          Instruction *SubLastInst = EntriesToLastInstruction.at(SubTE);
+          Budget = 0;
+          if (SubLastInst->getParent() == Parent &&
+              !CheckForNonVecCallsInSameBlock(SubLastInst, LastInst))
+            AddCosts(SubTE, GetSpillScale(Parent));
+        }
         continue;
       }
       BasicBlock *Pred = nullptr;
