@@ -9,8 +9,20 @@
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/IR/CFG.h" // for successors found by ADL in GenericCycleImpl.h
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+// Always verify cycle info if expensive checking is enabled.
+#ifdef EXPENSIVE_CHECKS
+bool llvm::VerifyCycleInfo = true;
+#else
+bool llvm::VerifyCycleInfo = false;
+#endif
+static cl::opt<bool, true>
+    VerifyCycleInfoX("verify-cycle-info", cl::location(VerifyCycleInfo),
+                     cl::Hidden,
+                     cl::desc("Verify cycle info (time consuming)"));
 
 namespace llvm {
 class Module;
@@ -83,6 +95,11 @@ bool CycleInfoWrapperPass::runOnFunction(Function &Func) {
 void CycleInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   OS << "CycleInfo for function: " << F->getName() << "\n";
   CI.print(OS);
+}
+
+void CycleInfoWrapperPass::verifyAnalysis() const {
+  if (VerifyCycleInfo)
+    CI.verify();
 }
 
 void CycleInfoWrapperPass::releaseMemory() {

@@ -39,6 +39,10 @@ class LLVM_ABI MachineDominanceFrontierWrapperPass
 private:
   MachineDominanceFrontier MDF;
 
+  // TODO: This is to make the computation lazy and is unnecessary after the
+  // switch to new pass manager.
+  const MachineDominatorTree *PendingMDT = nullptr;
+
 public:
   MachineDominanceFrontierWrapperPass();
 
@@ -55,7 +59,7 @@ public:
 
   void releaseMemory() override;
 
-  MachineDominanceFrontier &getMDF() { return MDF; }
+  MachineDominanceFrontier &getMDF();
 };
 
 class MachineDominanceFrontierAnalysis

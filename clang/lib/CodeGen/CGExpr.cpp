@@ -4880,7 +4880,7 @@ static bool hasBPFPreserveStaticOffset(const Expr *E) {
 // Wraps Addr with a call to llvm.preserve.static.offset intrinsic.
 static Address wrapWithBPFPreserveStaticOffset(CodeGenFunction &CGF,
                                                Address &Addr) {
-  if (!CGF.getTarget().getTriple().isBPF())
+  if (!CGF.getTarget().getTriple().isBPF() || CGF.IsInPreserveFieldInfo)
     return Addr;
 
   llvm::Function *Fn =
@@ -4902,7 +4902,11 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
   //    p[1].a
   // p[1] will generate a DeclRefExpr and p[1].a is a MemberExpr.
   // p->b[5] is a MemberExpr example.
-  const Expr *E = ArrayBase->IgnoreImpCasts();
+  const Expr *E = ArrayBase->IgnoreParenImpCasts();
+  // In p->b[1][2], the base of [2] is the subscript p->b[1]. Step through
+  // subscripts to the member p->b.
+  while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    E = ASE->getBase()->IgnoreParenImpCasts();
   if (const auto *ME = dyn_cast<MemberExpr>(E))
     return ME->getMemberDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
 
@@ -6723,6 +6727,8 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
         Clone = llvm::Function::Create(Fn->getFunctionType(),
                                        llvm::GlobalValue::InternalLinkage,
                                        Fn->getAddressSpace(), FDInlineName, M);
+        Clone->setCallingConv(Fn->getCallingConv());
+        Clone->setAttributes(Fn->getAttributes());
         Clone->addFnAttr(llvm::Attribute::AlwaysInline);
       }
       return CGCallee::forDirect(Clone, GD);

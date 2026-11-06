@@ -2107,7 +2107,6 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   // TODO: When sanitizer support is implemented, we'll need to
   // get the address space from `newPtr`.
-  assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::sanitizers());
 
   ASTContext &ctx = cgm.getASTContext();
@@ -2120,9 +2119,8 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
   mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
-  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
-      cgf.getBuilder().createBitcast(newPtr.getPointer(), u8PtrTy);
+      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8Ty);
 
   // Compute an offset to the cookie.
   CharUnits cookieOffset = cookieSize - sizeSize;
@@ -2287,8 +2285,10 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
-  cir::PointerType i8PtrTy = builder.getUInt8PtrTy();
-  mlir::Value v = builder.createBitcast(initialPtr.getPointer(), i8PtrTy);
+  cir::PointerType ui8DefaultASPtrTy = builder.getUInt8PtrTy();
+  mlir::Value v =
+      builder.createPtrBitcast(initialPtr.getPointer(), builder.getUInt8Ty());
+  auto i8PtrTy = mlir::cast<cir::PointerType>(v.getType());
 
   // In a base-to-derived cast, the non-virtual adjustment is applied first.
   if (nonVirtualAdjustment && !isReturnAdjustment) {
@@ -2301,11 +2301,11 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
   if (virtualAdjustment) {
     mlir::Value vtablePtr = cgf.getVTablePtr(
         loc, Address(v, clang::CharUnits::One()), unadjustedClass);
-    vtablePtr = builder.createBitcast(vtablePtr, i8PtrTy);
+    vtablePtr = builder.createBitcast(vtablePtr, ui8DefaultASPtrTy);
 
     mlir::Value offset;
     mlir::Value offsetPtr =
-        cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
+        cir::PtrStrideOp::create(builder, loc, ui8DefaultASPtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());
