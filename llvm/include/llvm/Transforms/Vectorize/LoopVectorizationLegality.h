@@ -130,8 +130,7 @@ public:
   /// Mark the loop L as already vectorized by setting the width to 1.
   LLVM_ABI void setAlreadyVectorized();
 
-  LLVM_ABI bool allowVectorization(Function *F, Loop *L,
-                                   bool VectorizeOnlyWhenForced) const;
+  LLVM_ABI bool allowVectorization(Loop *L, bool VectorizeOnlyWhenForced) const;
 
   /// Dumps all the hint information.
   LLVM_ABI void emitRemarkWithHints() const;
