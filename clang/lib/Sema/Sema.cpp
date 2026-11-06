@@ -396,6 +396,11 @@ void Sema::Initialize() {
   // will not be able to merge any duplicate __va_list_tag decls correctly.
   VAListTagName = PP.getIdentifierInfo("__va_list_tag");
 
+  // Seed the '#pragma clang section' state from -fclang-{bss,data}-section=.
+  // A '#pragma clang section' in the source still takes precedence from its
+  // point of appearance onwards.
+  InitClangSectionsFromLangOpts();
+
   if (!TUScope)
     return;
 

@@ -2231,6 +2231,12 @@ public:
                                PragmaClangSectionKind SecKind,
                                StringRef SecName);
 
+  /// Seed the '#pragma clang section' state from the command-line options
+  /// -fclang-bss-section= and -fclang-data-section=. Called once before
+  /// parsing, so that a '#pragma clang section' in the source still overrides
+  /// the command line from its point of appearance onwards.
+  void InitClangSectionsFromLangOpts();
+
   /// ActOnPragmaOptionsAlign - Called on well formed \#pragma options align.
   void ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
                                SourceLocation PragmaLoc);
