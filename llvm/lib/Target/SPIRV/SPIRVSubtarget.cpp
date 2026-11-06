@@ -34,10 +34,6 @@ using namespace llvm;
 #define OPTIONS_STRUCT_DEFS
 #include "SPIRVOptions.inc"
 
-static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
-    Extensions("spirv-ext",
-               cl::desc("Specify list of enabled SPIR-V extensions"));
-
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
   return Target.empty() || Target >= VerToCompareTo;
@@ -91,6 +87,11 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   else
     Env = Unknown;
 
+  ExtensionSet Extensions;
+  if (Error E = SPIRVExtensionsParser::parse(CLOpts.ext, Extensions,
+                                             DisabledExtensions))
+    reportFatalUsageError(std::move(E));
+
   // Set the default extensions based on the target triple.
   if (TargetTriple.getVendor() == Triple::Intel) {
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
@@ -98,7 +99,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
         SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
   }
   if (TargetTriple.getVendor() == Triple::AMD)
-    Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
+    Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple,
+                                                           DisabledExtensions);
 
   // The order of initialization is important.
   initAvailableExtensions(Extensions);
@@ -244,7 +246,8 @@ void SPIRVSubtarget::initAvailableExtensions(
     const ExtensionSet &AllowedExtIds) {
   AvailableExtensions.clear();
   const ExtensionSet &ValidExtensions =
-      SPIRVExtensionsParser::getValidExtensions(TargetTriple);
+      SPIRVExtensionsParser::getValidExtensions(TargetTriple,
+                                                DisabledExtensions);
 
   for (const auto &Ext : AllowedExtIds) {
     if (ValidExtensions.count(Ext))

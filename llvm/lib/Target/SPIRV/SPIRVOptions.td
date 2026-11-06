@@ -46,6 +46,8 @@ defm : BoolField<"spirv-enable-remove-unused-resources", "true",
   "Enable spirv-remove-unused-resources pass">;
 
 // SPIRVSubtarget.cpp
+defm : ValueField<"spirv-ext", "StringRef", "",
+  "Specify list of enabled SPIR-V extensions">;
 defm : BoolField<"spirv-translator-compatibility-mode", "false",
   "SPIR-V Translator compatibility mode">;
 

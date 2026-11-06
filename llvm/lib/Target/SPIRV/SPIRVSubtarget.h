@@ -54,6 +54,7 @@ private:
   VersionTuple SPIRVVersion;
   VersionTuple OpenCLVersion;
 
+  ExtensionSet DisabledExtensions;
   SmallSet<SPIRV::Extension::Extension, 4> AvailableExtensions;
   SmallSet<SPIRV::InstructionSet::InstructionSet, 4> AvailableExtInstSets;
   std::unique_ptr<SPIRVGlobalRegistry> GR;
