@@ -14672,11 +14672,9 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       // than C int, truncation matches the constant folding behavior.
       EVT DeclaredVT = Node->getValueType(ResNo);
       if (DeclaredVT.getSizeInBits() < ParamVT.getSizeInBits())
-        LoadResult =
-            DAG.getNode(ISD::TRUNCATE, DL, DeclaredVT, LoadResult);
+        LoadResult = DAG.getNode(ISD::TRUNCATE, DL, DeclaredVT, LoadResult);
       else
-        LoadResult =
-            DAG.getNode(ISD::SIGN_EXTEND, DL, DeclaredVT, LoadResult);
+        LoadResult = DAG.getNode(ISD::SIGN_EXTEND, DL, DeclaredVT, LoadResult);
     }
 
     Results.push_back(LoadResult);
