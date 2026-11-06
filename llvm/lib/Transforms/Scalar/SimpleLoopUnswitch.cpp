@@ -244,8 +244,8 @@ static bool areLoopExitPHIsTrivial(const Loop &L, const BasicBlock &ExitingBB,
 /// exits on the "false" case.
 static void buildPartialUnswitchConditionalBranch(
     const ScalarOptions &Opts, BasicBlock &BB, ArrayRef<Value *> Invariants,
-    bool Direction, BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc,
-    const Instruction *I, AssumptionCache *AC, const DominatorTree &DT,
+    ArrayRef<bool> InvariantsGuaranteedNotPoison, bool Direction,
+    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc,
     const CondBrInst &ComputeProfFrom) {
 
   SmallVector<uint32_t> BranchWeights;
@@ -272,9 +272,11 @@ static void buildPartialUnswitchConditionalBranch(
   IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
 
   SmallVector<Value *> FrozenInvariants;
-  for (Value *Inv : Invariants) {
-    if (Opts.freeze_loop_unswitch_cond &&
-        !isGuaranteedNotToBeUndefOrPoison(Inv, AC, I, &DT))
+  assert(!Opts.freeze_loop_unswitch_cond ||
+         Invariants.size() == InvariantsGuaranteedNotPoison.size());
+  for (size_t I = 0; I < Invariants.size(); ++I) {
+    Value *Inv = Invariants[I];
+    if (Opts.freeze_loop_unswitch_cond && !InvariantsGuaranteedNotPoison[I])
       Inv = IRB.CreateFreeze(Inv, Inv->getName() + ".fr");
     FrozenInvariants.push_back(Inv);
   }
@@ -661,6 +663,13 @@ static bool unswitchTrivialBranch(const ScalarOptions &Opts, Loop &L,
   // the conditional branch. We will change the preheader to have a conditional
   // branch on LoopCond.
   BasicBlock *OldPH = L.getLoopPreheader();
+  SmallVector<bool, 4> InvariantsGuaranteedNotPoison;
+  if (Opts.freeze_loop_unswitch_cond && !FullUnswitch) {
+    Instruction *PreheaderTerm = OldPH->getTerminator();
+    for (Value *Inv : Invariants)
+      InvariantsGuaranteedNotPoison.push_back(
+          isGuaranteedNotToBeUndefOrPoison(Inv, nullptr, PreheaderTerm, &DT));
+  }
   BasicBlock *NewPH = SplitEdge(OldPH, L.getHeader(), &DT, &LI, MSSAU);
 
   // Now that we have a place to insert the conditional branch, create a place
@@ -714,8 +723,8 @@ static bool unswitchTrivialBranch(const ScalarOptions &Opts, Loop &L,
              "Must have an `and` of `i1`s or `select i1 X, Y, false`s for the"
              " condition!");
     buildPartialUnswitchConditionalBranch(
-        Opts, *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
-        OldPH->getTerminatorOrNull(), nullptr, DT, BI);
+        Opts, *OldPH, Invariants, InvariantsGuaranteedNotPoison, ExitDirection,
+        *UnswitchedBB, *NewPH, BI);
   }
 
   // Update the dominator tree with the added edge.
@@ -2084,6 +2093,16 @@ static void unswitchNontrivialInvariants(
   // between the unswitched versions, and we will have a new preheader for the
   // original loop.
   BasicBlock *SplitBB = L.getLoopPreheader();
+  SmallVector<bool, 4> InvariantsGuaranteedNotPoison;
+  // Query poison safety at the preheader terminator before splitting/cloning.
+  // Branch conditions inside the loop cannot be used as context because the
+  // loop might exit before executing them.
+  if (Opts.freeze_loop_unswitch_cond && !FullUnswitch && !PartiallyInvariant) {
+    Instruction *PreheaderTerm = SplitBB->getTerminator();
+    for (Value *Inv : Invariants)
+      InvariantsGuaranteedNotPoison.push_back(
+          isGuaranteedNotToBeUndefOrPoison(Inv, &AC, PreheaderTerm, &DT));
+  }
   BasicBlock *LoopPH = SplitEdge(SplitBB, L.getHeader(), &DT, &LI, MSSAU);
 
   // Keep track of the dominator tree updates needed.
@@ -2244,8 +2263,8 @@ static void unswitchNontrivialInvariants(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU, *BI);
     else {
       buildPartialUnswitchConditionalBranch(Opts, *SplitBB, Invariants,
-                                            Direction, *ClonedPH, *LoopPH, BI,
-                                            &AC, DT, *BI);
+                                            InvariantsGuaranteedNotPoison,
+                                            Direction, *ClonedPH, *LoopPH, *BI);
     }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
