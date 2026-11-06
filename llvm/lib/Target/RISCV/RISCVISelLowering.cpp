@@ -13882,6 +13882,16 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_vfmv_v_f:
     return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::riscv_vslideup:
+  case Intrinsic::riscv_vslideup_mask: {
+    bool Masked = IntNo == Intrinsic::riscv_vslideup_mask;
+    MVT VT = Op.getSimpleValueType();
+    SDValue VL = Op.getOperand(Masked ? 5 : 4);
+    SDValue Mask = Masked ? Op.getOperand(4) : getAllOnesMask(VT, VL, DL, DAG);
+    return getVSlideup(DAG, Subtarget, DL, VT, Op.getOperand(1),
+                       Op.getOperand(2), Op.getOperand(3), Mask, VL,
+                       Op.getConstantOperandVal(Masked ? 6 : 5));
+  }
   case Intrinsic::riscv_vmv_s_x: {
     SDValue Scalar = Op.getOperand(2);
 
