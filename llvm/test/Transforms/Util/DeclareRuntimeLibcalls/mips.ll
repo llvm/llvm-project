@@ -5,7 +5,9 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=mips-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=MIPS32 %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=mips64-unknown-linux-gnuabi64 < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=MIPS64 %s
 
-; MIPS32: declare void @_Unwind_Resume(ptr)
+; MIPS32: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; MIPS32-NEXT: @__stack_chk_guard = external global ptr
+; MIPS32-NEXT: declare void @_Unwind_Resume(ptr)
 ; MIPS32-NEXT: declare double @__adddf3(double, double)
 ; MIPS32-NEXT: declare float @__addsf3(float, float)
 ; MIPS32-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -246,9 +248,7 @@
 ; MIPS32-NEXT: declare double @__powidf2(double, i32 signext)
 ; MIPS32-NEXT: declare float @__powisf2(float, i32 signext)
 ; MIPS32-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
-; MIPS32-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; MIPS32-NEXT: declare void @__stack_chk_fail()
-; MIPS32-NEXT: declare void @__stack_chk_guard(...)
 ; MIPS32-NEXT: declare double @__subdf3(double, double)
 ; MIPS32-NEXT: declare float @__subsf3(float, float)
 ; MIPS32-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -453,7 +453,9 @@
 ; MIPS32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; MIPS32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; MIPS64: declare void @_Unwind_Resume(ptr)
+; MIPS64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; MIPS64-NEXT: @__stack_chk_guard = external global ptr
+; MIPS64-NEXT: declare void @_Unwind_Resume(ptr)
 ; MIPS64-NEXT: declare double @__adddf3(double, double)
 ; MIPS64-NEXT: declare float @__addsf3(float, float)
 ; MIPS64-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -670,9 +672,7 @@
 ; MIPS64-NEXT: declare float @__powisf2(float, i32 signext)
 ; MIPS64-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; MIPS64-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; MIPS64-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; MIPS64-NEXT: declare void @__stack_chk_fail()
-; MIPS64-NEXT: declare void @__stack_chk_guard(...)
 ; MIPS64-NEXT: declare double @__subdf3(double, double)
 ; MIPS64-NEXT: declare float @__subsf3(float, float)
 ; MIPS64-NEXT: declare fp128 @__subtf3(fp128, fp128)

@@ -1,14 +1,14 @@
 ; RUN: split-file %s %t
-; RUN: not llvm-as < %s %t/outer_left_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=OUTER-LEFT
-; RUN: not llvm-as < %s %t/inner_left_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=INNER-LEFT
-; RUN: not llvm-as < %s %t/inner_right_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=INNER-RIGHT
-; RUN: not llvm-as < %s %t/outer_right_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=OUTER-RIGHT
-; RUN: not llvm-as < %s %t/integer.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=INTEGER
-; RUN: not llvm-as < %s %t/lower_equal_upper.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOWER-EQUAL-UPPER
-; RUN: not llvm-as < %s %t/inner_comma.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=INNER-COMMA
-; RUN: not llvm-as < %s %t/outer_comma.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=OUTER-COMMA
-; RUN: not llvm-as < %s %t/empty1.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=EMPTY1
-; RUN: not llvm-as < %s %t/empty2.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=EMPTY2
+; RUN: not llvm-as < %s %t/outer_left_parenthesis.ll -disable-output 2>&1 | FileCheck %s --check-prefix=OUTER-LEFT
+; RUN: not llvm-as < %s %t/inner_left_parenthesis.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INNER-LEFT
+; RUN: not llvm-as < %s %t/inner_right_parenthesis.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INNER-RIGHT
+; RUN: not llvm-as < %s %t/outer_right_parenthesis.ll -disable-output 2>&1 | FileCheck %s --check-prefix=OUTER-RIGHT
+; RUN: not llvm-as < %s %t/integer.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INTEGER
+; RUN: not llvm-as < %s %t/lower_equal_upper.ll -disable-output 2>&1 | FileCheck %s --check-prefix=LOWER-EQUAL-UPPER
+; RUN: not llvm-as < %s %t/inner_comma.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INNER-COMMA
+; RUN: not llvm-as < %s %t/outer_comma.ll -disable-output 2>&1 | FileCheck %s --check-prefix=OUTER-COMMA
+; RUN: not llvm-as < %s %t/empty1.ll -disable-output 2>&1 | FileCheck %s --check-prefix=EMPTY1
+; RUN: not llvm-as < %s %t/empty2.ll -disable-output 2>&1 | FileCheck %s --check-prefix=EMPTY2
 
 ;--- outer_left_parenthesis.ll
 ; OUTER-LEFT: expected '('

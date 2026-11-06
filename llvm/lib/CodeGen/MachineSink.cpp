@@ -153,7 +153,6 @@ class MachineSinking {
   // will be split.
   SetVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> ToSplit;
 
-  DenseSet<Register> RegsToClearKillFlags;
 
   using AllSuccsCache =
       SmallDenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
@@ -936,11 +935,6 @@ bool MachineSinking::run(MachineFunction &MF) {
 
   HasStoreCache.clear();
   StoreInstrCache.clear();
-
-  // Now clear any kill flags for recorded registers.
-  for (auto I : RegsToClearKillFlags)
-    MRI->clearKillFlags(I);
-  RegsToClearKillFlags.clear();
 
   releaseMemory();
   return EverMadeChange;
@@ -1808,12 +1802,6 @@ bool MachineSinking::aggressivelySinkIntoCycle(
       SunkInstrs.insert({MapEntry, NewMI});
     }
 
-    // Conservatively clear any kill flags on uses of sunk instruction
-    for (MachineOperand &MO : NewMI->all_uses()) {
-      assert(MO.isReg() && MO.isUse());
-      RegsToClearKillFlags.insert(MO.getReg());
-    }
-
     // The instruction is moved from its basic block, so do not retain the
     // debug information.
     assert(!NewMI->isDebugInstr() && "Should not sink debug inst");
@@ -1980,14 +1968,6 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     SalvageUnsunkDebugUsersOfCopy(MI, SuccToSinkTo);
 
   performSink(MI, *SuccToSinkTo, InsertPos, DbgUsersToSink);
-
-  // Conservatively, clear any kill flags, since it's possible that they are no
-  // longer correct.
-  // Note that we have to clear the kill flags for any register this instruction
-  // uses as we may sink over another instruction which currently kills the
-  // used registers.
-  for (MachineOperand &MO : MI.all_uses())
-    RegsToClearKillFlags.insert(MO.getReg()); // Remember to clear kill flags.
 
   return true;
 }

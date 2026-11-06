@@ -6,7 +6,8 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=powerpc64-ibm-aix < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=AIX64 %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=powerpc64-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=LINUX %s
 
-; AIX32: declare void @_Unwind_Resume(ptr)
+; AIX32: @__ssp_canary_word = external global ptr
+; AIX32-NEXT: declare void @_Unwind_Resume(ptr)
 ; AIX32-NEXT: declare void @___bzero(ptr, i32)
 ; AIX32-NEXT: declare ptr @___memccpy(ptr, ptr, i32, i32)
 ; AIX32-NEXT: declare i32 @___memcmp(ptr, ptr, i32)
@@ -256,7 +257,6 @@
 ; AIX32-NEXT: declare float @__powisf2(float, i32)
 ; AIX32-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32)
 ; AIX32-NEXT: declare double @__powl_finite(double, double)
-; AIX32-NEXT: declare void @__ssp_canary_word(...)
 ; AIX32-NEXT: declare void @__stack_chk_fail()
 ; AIX32-NEXT: declare double @__subdf3(double, double)
 ; AIX32-NEXT: declare fp128 @__subkf3(fp128, fp128)
@@ -558,7 +558,8 @@
 ; AIX32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; AIX32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; AIX64: declare void @_Unwind_Resume(ptr)
+; AIX64: @__ssp_canary_word = external global ptr
+; AIX64-NEXT: declare void @_Unwind_Resume(ptr)
 ; AIX64-NEXT: declare void @___bzero64(ptr, i64)
 ; AIX64-NEXT: declare ptr @___memccpy64(ptr, ptr, i32 signext, i64)
 ; AIX64-NEXT: declare signext i32 @___memcmp64(ptr, ptr, i64)
@@ -812,7 +813,6 @@
 ; AIX64-NEXT: declare float @__powisf2(float, i32 signext)
 ; AIX64-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext)
 ; AIX64-NEXT: declare double @__powl_finite(double, double)
-; AIX64-NEXT: declare void @__ssp_canary_word(...)
 ; AIX64-NEXT: declare void @__stack_chk_fail()
 ; AIX64-NEXT: declare double @__subdf3(double, double)
 ; AIX64-NEXT: declare fp128 @__subkf3(fp128, fp128)
@@ -1114,7 +1114,8 @@
 ; AIX64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; AIX64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; LINUX: declare void @_Unwind_Resume(ptr)
+; LINUX: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare fp128 @__addkf3(fp128, fp128)
 ; LINUX-NEXT: declare float @__addsf3(float, float)
@@ -1360,7 +1361,6 @@
 ; LINUX-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext)
 ; LINUX-NEXT: declare ppc_fp128 @__powl_finite(ppc_fp128, ppc_fp128)
 ; LINUX-NEXT: declare void @__stack_chk_fail()
-; LINUX-NEXT: declare void @__stack_chk_guard(...)
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare fp128 @__subkf3(fp128, fp128)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
