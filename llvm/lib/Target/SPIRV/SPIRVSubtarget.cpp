@@ -20,6 +20,7 @@
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
 
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -30,10 +31,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "SPIRVGenSubtargetInfo.inc"
 
-static cl::opt<bool>
-    SPVTranslatorCompat("translator-compatibility-mode",
-                        cl::desc("SPIR-V Translator compatibility mode"),
-                        cl::init(false));
+#define OPTIONS_STRUCT_DEFS
+#include "SPIRVOptions.inc"
 
 static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
     Extensions("spirv-ext",
@@ -48,6 +47,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
+      CLOpts(TM.getCLOpts()),
       PointerSize(TT.getArch() == Triple::spirv32 ? 32 : 64),
       InstrInfo(initSubtargetDependencies(CPU, FS)), FrameLowering(*this),
       TLInfo(TM, *this), TargetTriple(TT) {
@@ -153,7 +153,8 @@ bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
 // If the SPIR-V version is >= 1.4 we can call OpPtrEqual and OpPtrNotEqual.
 // In SPIR-V Translator compatibility mode this feature is not available.
 bool SPIRVSubtarget::canDirectlyComparePointers() const {
-  return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
+  return !CLOpts.translator_compatibility_mode &&
+         isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
 }
 
 void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
