@@ -41,6 +41,7 @@ function(set_arm64ec_dll_dependencies target)
 
   target_sources("${target}" PRIVATE ${ARM64_OBJS})
   target_link_options("${target}" PRIVATE /machine:arm64x "/def:${arm64ReproDir}/${target}.def" "/defArm64Native:${def}")
+  set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "${arm64ReproDir}/${target}.def")
 endfunction()
 
 # Replace the /def flag with /defArm64Native and add the arm64ec /def file.

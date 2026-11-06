@@ -370,6 +370,10 @@ if(WIN32)
     set(LIBOMP_IMP_LIB_TARGET ompimp)
     # Create the auxiliary def file without ordinals to use for building the import library to import by name
     set(LIBOMPIMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.imp.def)
+    # Generate this file independently of ompimp: the Arm64EC build adds a
+    # copy target that depends on it.
+    add_custom_target(libompimp-needed-def-file DEPENDS ${LIBOMPIMP_GENERATED_DEF_FILE})
+    set_target_properties(libompimp-needed-def-file PROPERTIES FOLDER "OpenMP/Resources")
     add_custom_command(
       OUTPUT  ${LIBOMPIMP_GENERATED_DEF_FILE}
       COMMAND ${Python3_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.py ${LIBOMP_GDFLAGS}
@@ -407,17 +411,18 @@ if(WIN32)
       COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBOMPIMP_OUTPUT_DIRECTORY}"
       COMMAND ${CMAKE_AR} /nologo ${LIBOMPIMP_FLAGS}
         "$<TARGET_PROPERTY:${LIBOMP_IMP_LIB_TARGET},STATIC_LIBRARY_OPTIONS>" "/OUT:${LIBOMPIMP_OUTPUT_FILE}"
-      DEPENDS "$<TARGET_PROPERTY:${LIBOMP_IMP_LIB_TARGET},LINK_DEPENDS>"
+      DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}"
+        "$<TARGET_PROPERTY:${LIBOMP_IMP_LIB_TARGET},LINK_DEPENDS>"
       COMMAND_EXPAND_LISTS
       VERBATIM
     )
     add_custom_target(${LIBOMP_IMP_LIB_TARGET} DEPENDS "${LIBOMPIMP_OUTPUT_FILE}")
-    # Keep options and dependencies on the target so Arm64X can extend them.
+    # Keep options and additional dependencies on the target for Arm64X.
     set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES
       FOLDER "OpenMP/Libraries"
       ARCHIVE_OUTPUT_DIRECTORY "${LIBOMPIMP_OUTPUT_DIRECTORY}"
-      STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}"
-      LINK_DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
+      STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
+    add_dependencies(${LIBOMP_IMP_LIB_TARGET} libompimp-needed-def-file)
     add_dependencies(omp ${LIBOMP_IMP_LIB_TARGET})
   endif()
 endif()
