@@ -282,7 +282,8 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  if (!isSafeToUnrollAndJam(L, SE, DT, DI, *LI)) {
+  if (!isSafeToUnrollAndJam(L, SE, DT, DI, *LI,
+                            Opts.allow_unj_safe_intrinsics)) {
     LLVM_DEBUG(dbgs() << "  Disabled due to not being safe.\n");
     return LoopUnrollResult::Unmodified;
   }

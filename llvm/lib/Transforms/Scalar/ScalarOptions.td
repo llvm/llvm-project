@@ -373,6 +373,8 @@ defm : BoolField<"stress-ivchain", "false",
   "Stress test LSR IV chains">;
 
 // LoopUnrollAndJamPass.cpp
+defm : BoolField<"allow-unj-safe-intrinsics", "true",
+  "Allow unroll-and-jam of loops containing side-effect-free intrinsics (lifetime markers, assume, ...)">;
 defm : OptionalBoolField<"allow-unroll-and-jam",
   "Allows loops to be unroll-and-jammed">;
 defm : ValueField<"pragma-unroll-and-jam-threshold", "unsigned", "1024",
