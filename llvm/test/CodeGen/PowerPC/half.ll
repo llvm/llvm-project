@@ -688,22 +688,23 @@ define i64 @test_fptoui_i64(ptr %p) nounwind {
 ; BE-NEXT:    nop
 ; BE-NEXT:    addis r3, r2, .LCPI13_0@toc@ha
 ; BE-NEXT:    lfs f0, .LCPI13_0@toc@l(r3)
-; BE-NEXT:    fsubs f2, f1, f0
 ; BE-NEXT:    fcmpu cr0, f1, f0
-; BE-NEXT:    fctidz f2, f2
-; BE-NEXT:    stfd f2, 120(r1)
-; BE-NEXT:    fctidz f2, f1
-; BE-NEXT:    stfd f2, 112(r1)
-; BE-NEXT:    blt cr0, .LBB13_2
+; BE-NEXT:    bc 4, lt, .LBB13_2
 ; BE-NEXT:  # %bb.1:
-; BE-NEXT:    ld r3, 120(r1)
-; BE-NEXT:    li r4, 1
-; BE-NEXT:    rldic r4, r4, 63, 0
-; BE-NEXT:    xor r3, r3, r4
-; BE-NEXT:    b .LBB13_3
+; BE-NEXT:    addis r3, r2, .LCPI13_1@toc@ha
+; BE-NEXT:    lfs f0, .LCPI13_1@toc@l(r3)
 ; BE-NEXT:  .LBB13_2:
-; BE-NEXT:    ld r3, 112(r1)
-; BE-NEXT:  .LBB13_3:
+; BE-NEXT:    fsubs f0, f1, f0
+; BE-NEXT:    li r3, 0
+; BE-NEXT:    fctidz f0, f0
+; BE-NEXT:    stfd f0, 120(r1)
+; BE-NEXT:    bc 12, lt, .LBB13_4
+; BE-NEXT:  # %bb.3:
+; BE-NEXT:    li r3, 1
+; BE-NEXT:  .LBB13_4:
+; BE-NEXT:    ld r4, 120(r1)
+; BE-NEXT:    sldi r3, r3, 63
+; BE-NEXT:    xor r3, r4, r3
 ; BE-NEXT:    addi r1, r1, 128
 ; BE-NEXT:    ld r0, 16(r1)
 ; BE-NEXT:    mtlr r0
