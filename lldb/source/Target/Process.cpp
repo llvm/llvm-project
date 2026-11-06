@@ -2859,7 +2859,7 @@ Process::GetHeaderBytesCacheKey(const FileSpec &file_spec, const UUID &uuid,
         base_addr == LLDB_INVALID_ADDRESS)
       return {};
     if (header_addr >= base_addr && header_addr - base_addr < *size)
-      return llvm::formatv("{0}-file-{1}-sc-{2}-headerbytes",
+      return llvm::formatv("{0}-{1}-sharedcache-{2}-headerbytes",
                            file_spec.GetFilename(), uuid.GetAsString(),
                            shared_cache_uuid.GetAsString());
   }
