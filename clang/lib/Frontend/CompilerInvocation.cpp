@@ -4335,6 +4335,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     else
       Opts.LongDoubleSize = 0;
   }
+  if (Opts.HLSL)
+    Opts.setDefaultFPContractMode(Opts.FastMath ? LangOptions::FPM_Fast
+                                                : LangOptions::FPM_On);
+
   if (Opts.FastRelaxedMath || Opts.CLUnsafeMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
 
