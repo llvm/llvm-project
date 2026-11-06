@@ -1852,7 +1852,7 @@ ProcessGDBRemote::IndexThreadInfos(StructuredData::ObjectSP json_sp) {
       StructuredData::Dictionary *thread_dict =
           array->GetItemAtIndex(i)->GetAsDictionary();
       lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
-      // Keep a thread's first entry, which a search of the array would find.
+      // If a reply lists a thread more than once, use its first entry.
       if (thread_dict && thread_dict->GetValueForKeyAsInteger("tid", tid))
         thread_infos->thread_dicts.try_emplace(tid, thread_dict);
     }
