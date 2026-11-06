@@ -1224,6 +1224,50 @@ define <2 x i32> @test_trunc_2xi64(<2 x i64> %a) #0 {
   ret <2 x i32> %r
 }
 
+define void @test_trunc_store_v2i1(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; CHECK-NOI32X2-LABEL: test_trunc_store_v2i1(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_store_v2i1_param_0];
+; CHECK-NOI32X2-NEXT:    ld.global.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_trunc_store_v2i1_param_1];
+; CHECK-NOI32X2-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-NOI32X2-NEXT:    shl.b16 %rs2, %rs1, 1;
+; CHECK-NOI32X2-NEXT:    cvt.u16.u32 %rs3, %r1;
+; CHECK-NOI32X2-NEXT:    and.b16 %rs4, %rs3, 1;
+; CHECK-NOI32X2-NEXT:    or.b16 %rs5, %rs4, %rs2;
+; CHECK-NOI32X2-NEXT:    and.b16 %rs6, %rs5, 3;
+; CHECK-NOI32X2-NEXT:    st.global.b8 [%rd2], %rs6;
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_trunc_store_v2i1(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<7>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_trunc_store_v2i1_param_0];
+; CHECK-I32X2-NEXT:    ld.global.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd2, [test_trunc_store_v2i1_param_1];
+; CHECK-I32X2-NEXT:    cvt.u16.u32 %rs1, %r2;
+; CHECK-I32X2-NEXT:    shl.b16 %rs2, %rs1, 1;
+; CHECK-I32X2-NEXT:    cvt.u16.u32 %rs3, %r1;
+; CHECK-I32X2-NEXT:    and.b16 %rs4, %rs3, 1;
+; CHECK-I32X2-NEXT:    or.b16 %rs5, %rs4, %rs2;
+; CHECK-I32X2-NEXT:    and.b16 %rs6, %rs5, 3;
+; CHECK-I32X2-NEXT:    st.global.b8 [%rd2], %rs6;
+; CHECK-I32X2-NEXT:    ret;
+  %v = load <2 x i32>, ptr addrspace(1) %in, align 8
+  %r = trunc <2 x i32> %v to <2 x i1>
+  store <2 x i1> %r, ptr addrspace(1) %out, align 1
+  ret void
+}
+
 define <2 x i32> @test_zext_2xi16_to_2xi32(<2 x i16> %a) #0 {
 ; CHECK-NOI32X2-LABEL: test_zext_2xi16_to_2xi32(
 ; CHECK-NOI32X2:       {

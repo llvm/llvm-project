@@ -294,15 +294,33 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   }
 
   const string_view bad_patterns[] = {
-      "a+",      "a?",    "a{1}",  "{",     "(",     ")",     "[[:<:]]",
-      "[[:>:]]", "|",     R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)",
-      R"(\6)",   R"(\7)", R"(\8)", R"(\9)", R"(\b)", R"(\B)", R"(\<)",
-      R"(\>)",   R"(\A)", R"(\Z)", R"(\`)", R"(\')"};
+      // Unimplemented quantifiers.
+      "a{1}", "{",
+      // Unimplemented word boundaries.
+      "[[:<:]]", "[[:>:]]",
+      // Unimplemented backreferences.
+      R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)",
+      R"(\9)",
+      // Unimplemented boundary assertions.
+      R"(\b)", R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)", R"(\')"};
   for (string_view bad : bad_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
     EXPECT_EQ(err.error(), REG_BADPAT);
   }
+
+  ErrorOr<ExprId> empty_pipe = parse_ere("|", REG_EXTENDED, pool);
+  ASSERT_FALSE(empty_pipe.has_value());
+  EXPECT_EQ(empty_pipe.error(), REG_BADPAT);
+
+  ErrorOr<ExprId> unclosed_paren = parse_ere("(", REG_EXTENDED, pool);
+  ASSERT_FALSE(unclosed_paren.has_value());
+  EXPECT_EQ(unclosed_paren.error(), REG_EPAREN);
+
+  ErrorOr<ExprId> literal_close = parse_ere(")", REG_EXTENDED, pool);
+  ASSERT_TRUE(literal_close.has_value());
+  EXPECT_EQ(match(pool, *literal_close, ")"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *literal_close, "x"), MatchResult::NoMatch);
 }
 
 TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
@@ -460,4 +478,67 @@ TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
   ErrorOr<ExprId> concat_exhausted = parse_ere("ba", REG_EXTENDED, pool);
   ASSERT_FALSE(concat_exhausted.has_value());
   EXPECT_EQ(concat_exhausted.error(), REG_ESPACE);
+}
+
+TEST(LlvmLibcRegexMatcherTest, AlternationAndGroupingStabilization) {
+  ExprPool pool;
+  ErrorOr<ExprId> ere =
+      parse_ere("(wee|week)(knights|night)", REG_EXTENDED, pool);
+  ASSERT_TRUE(ere.has_value());
+  EXPECT_EQ(match(pool, *ere, "weeknights"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weenight"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weeknight"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weeknightsxyz"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weeks"), MatchResult::NoMatch);
+
+  // Derivative state pool stabilizes after warming up on matches.
+  size_t warm_nodes = pool.size();
+  EXPECT_EQ(match(pool, *ere, "weeknights"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *ere, "weenight"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
+
+  // Parentheses control precedence without adding Group wrapper nodes,
+  // preserving hash-consing deduplication.
+  ErrorOr<ExprId> lit_a = parse_ere("a", REG_EXTENDED, pool);
+  ErrorOr<ExprId> grouped_a = parse_ere("((a))", REG_EXTENDED, pool);
+  ASSERT_TRUE(lit_a.has_value());
+  ASSERT_TRUE(grouped_a.has_value());
+  EXPECT_EQ(*grouped_a, *lit_a);
+
+  ErrorOr<ExprId> ab = parse_ere("a|b", REG_EXTENDED, pool);
+  ErrorOr<ExprId> grouped_ab = parse_ere("(a|b)|(b|a)", REG_EXTENDED, pool);
+  ASSERT_TRUE(ab.has_value());
+  ASSERT_TRUE(grouped_ab.has_value());
+  EXPECT_EQ(*grouped_ab, *ab);
+
+  // Right-to-left alternation folding interns only the 2 base nodes, 4 literal
+  // nodes, and 3 Alt spine nodes (9 total) with zero orphaned Alt nodes.
+  ExprPool alt_pool;
+  ErrorOr<ExprId> multi_alt = parse_ere("a|b|c|d", REG_EXTENDED, alt_pool);
+  ASSERT_TRUE(multi_alt.has_value());
+  EXPECT_EQ(alt_pool.size(), size_t(9));
+}
+
+TEST(LlvmLibcRegexMatcherTest, PlusAndQuestionDesugaringAndStabilization) {
+  ExprPool pool;
+  // r+ desugars to Concat(r, Star(r)) and r? desugars to Alt(EmptyStr, r),
+  // interning to identical ExprId handles.
+  ErrorOr<ExprId> plus_a = parse_ere("a+", REG_EXTENDED, pool);
+  ErrorOr<ExprId> concat_star_a = parse_ere("aa*", REG_EXTENDED, pool);
+  ASSERT_TRUE(plus_a.has_value());
+  ASSERT_TRUE(concat_star_a.has_value());
+  EXPECT_EQ(*plus_a, *concat_star_a);
+
+  ErrorOr<ExprId> qmark_a = parse_ere("a?", REG_EXTENDED, pool);
+  ErrorOr<ExprId> alt_empty_a = parse_ere("()|a", REG_EXTENDED, pool);
+  ASSERT_TRUE(qmark_a.has_value());
+  ASSERT_TRUE(alt_empty_a.has_value());
+  EXPECT_EQ(*qmark_a, *alt_empty_a);
+
+  ErrorOr<ExprId> ere = parse_ere("a+b?c", REG_EXTENDED, pool);
+  ASSERT_TRUE(ere.has_value());
+  EXPECT_EQ(match(pool, *ere, "aaabc"), MatchResult::Match);
+  size_t warm_nodes = pool.size();
+  EXPECT_EQ(match(pool, *ere, "aaabc"), MatchResult::Match);
+  EXPECT_EQ(pool.size(), warm_nodes);
 }
