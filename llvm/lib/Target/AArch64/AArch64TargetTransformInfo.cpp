@@ -242,11 +242,10 @@ bool AArch64TTIImpl::hasPossibleIncompatibleOps(const Function *F,
       // Inlining operations on fixed-length vectors when the streaming
       // mode does not match is rejected because performance may be impacted.
       // This decision should eventually be moved to the cost-model.
-      if (!AssumeVScaleIsEquivalent && !IsAlwaysInline &&
-          (isa<FixedVectorType>(I.getType()) ||
-           any_of(I.operand_values(), [](const Value *V) {
-             return isa<FixedVectorType>(V->getType());
-           })))
+      if (!IsAlwaysInline && (isa<FixedVectorType>(I.getType()) ||
+                              any_of(I.operand_values(), [](const Value *V) {
+                                return isa<FixedVectorType>(V->getType());
+                              })))
         return true;
 
       // If the operation is invalid in the current mode, it should not be
