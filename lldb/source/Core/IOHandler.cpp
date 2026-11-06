@@ -341,6 +341,9 @@ static std::optional<std::string> SplitLineEOF(std::string &line_buffer) {
 bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
+    if (m_input_sp == m_debugger.GetInputFileSP())
+      m_debugger.GetCommandInterpreter().BroadcastEvent(
+          CommandInterpreter::eBroadcastBitReadyForInput);
     return m_editline_up->GetLine(line, interrupted);
   }
 #endif
@@ -371,6 +374,10 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
     SetIsDone(true);
     return false;
   }
+
+  if (!got_line && m_input_sp == m_debugger.GetInputFileSP())
+    m_debugger.GetCommandInterpreter().BroadcastEvent(
+        CommandInterpreter::eBroadcastBitReadyForInput);
 
   FILE *in = m_input_sp ? m_input_sp->GetStream() : nullptr;
   char buffer[256];
