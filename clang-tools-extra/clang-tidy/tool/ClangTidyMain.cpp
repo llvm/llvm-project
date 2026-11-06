@@ -312,7 +312,7 @@ code with clang-apply-replacements.
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> SarifExport("sarif-export", desc(R"(
+static cl::opt<std::string> SarifExport("experimental-sarif-export", desc(R"(
 File in which to store diagnostics in SARIF format.
 Use '-' to write to stdout instead of the
 usual diagnostic output.
@@ -645,7 +645,8 @@ int clangTidyMain(int argc, const char **argv) {
 
   if (!SarifExport.empty() && SarifExport == ExportFixes &&
       !llvm::sys::fs::equivalent(SarifExport, ExportFixes)) {
-    llvm::errs() << "Error: --sarif-export and --export-fixes cannot write to "
+    llvm::errs() << "Error: --experimental-sarif-export and --export-fixes "
+                    "cannot write to "
                     "the same output '"
                  << SarifExport << "'.\n";
     return 1;

@@ -1,5 +1,5 @@
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t-input.cpp
-// RUN: clang-tidy %t-input.cpp -checks='-*,clang-analyzer-*' -sarif-export=%t.sarif > %t.msg 2>&1
+// RUN: clang-tidy %t-input.cpp -checks='-*,clang-analyzer-*' --experimental-sarif-export=%t.sarif > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s -implicit-check-not='{{warning|error|note}}:'
 // RUN: FileCheck -input-file=%t.sarif -check-prefix=CHECK-SARIF %s
 #define DEREF(p) (*(p))

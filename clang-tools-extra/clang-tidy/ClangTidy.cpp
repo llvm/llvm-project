@@ -127,8 +127,7 @@ public:
                                llvm::sys::Process::StandardOutHasColors())
                                ? ShowColorsKind::On
                                : ShowColorsKind::Off);
-    if (DiagPrinter)
-      DiagPrinter->BeginSourceFile(LangOpts);
+    DiagPrinter->BeginSourceFile(LangOpts);
     if (DiagOpts.showColors(llvm::sys::Process::StandardOutHasColors()) &&
         !llvm::sys::Process::StandardOutIsDisplayed())
       llvm::sys::Process::UseANSIEscapeCodes(true);

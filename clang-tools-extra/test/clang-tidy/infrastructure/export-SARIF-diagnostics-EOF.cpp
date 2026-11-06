@@ -1,5 +1,5 @@
 // RUN: echo -n 'int main() { return 0; }' > %t-input.cpp
-// RUN: clang-tidy %t-input.cpp -checks='-*,clang-diagnostic-newline-eof' --allow-no-checks -sarif-export=%t.sarif -- -Wnewline-eof > %t.msg 2>&1
+// RUN: clang-tidy %t-input.cpp -checks='-*,clang-diagnostic-newline-eof' --allow-no-checks --experimental-sarif-export=%t.sarif -- -Wnewline-eof > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s -implicit-check-not='{{warning|error|note}}:'
 // RUN: FileCheck -input-file=%t.sarif -check-prefix=CHECK-SARIF %s
 

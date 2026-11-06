@@ -1,5 +1,5 @@
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t-input.cpp
-// RUN: not clang-tidy %t-input.cpp -checks='-*,clang-diagnostic-*,google-explicit-constructor' -sarif-export=%t.sarif -- -fake-command > %t.msg 2>&1
+// RUN: not clang-tidy %t-input.cpp -checks='-*,clang-diagnostic-*,google-explicit-constructor' --experimental-sarif-export=%t.sarif -- -fake-command > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s -implicit-check-not='{{warning|error|note}}:'
 // RUN: FileCheck -input-file=%t.sarif -check-prefix=CHECK-SARIF %s
 class A { A(int) {} };

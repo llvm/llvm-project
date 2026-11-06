@@ -184,15 +184,15 @@ An overview of all the command-line options:
     --experimental-custom-checks     - Enable experimental clang-query based
                                        custom checks.
                                        see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
+    --experimental-sarif-export=<filename> - File in which to store diagnostics in SARIF format.
+                                       Use '-' to write to stdout instead of the usual
+                                       diagnostic output.
     --explain-config                 - For each enabled check explains, where it is
                                        enabled, i.e. in clang-tidy binary, command
                                        line or a specific configuration file.
     --export-fixes=<filename>        - YAML file to store suggested fixes in. The
                                        stored fixes can be applied to the input source
                                        code with clang-apply-replacements.
-    --sarif-export=<filename>        - File in which to store diagnostics in SARIF format.
-                                       Use '-' to write to stdout instead of the usual
-                                       diagnostic output.
     --extra-arg=<string>             - Additional argument to append to the compiler command line
     --extra-arg-before=<string>      - Additional argument to prepend to the compiler command line
     --fix                            - Apply suggested fixes. Without -fix-errors

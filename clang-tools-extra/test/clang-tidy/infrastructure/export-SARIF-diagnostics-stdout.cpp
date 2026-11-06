@@ -1,5 +1,5 @@
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t-input.cpp
-// RUN: not clang-tidy %t-input.cpp -checks='-*,google-explicit-constructor,clang-diagnostic-missing-prototypes,clang-diagnostic-zero-length-array' --warnings-as-errors='clang-diagnostic-missing-prototypes,google-explicit-constructor' -sarif-export - -- -Wmissing-prototypes -Wzero-length-array 2>/dev/null | FileCheck %s
+// RUN: not clang-tidy %t-input.cpp -checks='-*,google-explicit-constructor,clang-diagnostic-missing-prototypes,clang-diagnostic-zero-length-array' --warnings-as-errors='clang-diagnostic-missing-prototypes,google-explicit-constructor' --experimental-sarif-export=- -- -Wmissing-prototypes -Wzero-length-array 2>/dev/null | FileCheck %s
 #define X(n) void n ## n() {}
 X(f)
 int a[-1];

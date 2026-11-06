@@ -332,8 +332,7 @@ class SarifResult {
   std::string HostedViewerURI;
   llvm::SmallDenseMap<StringRef, std::string, 4> PartialFingerprints;
   llvm::SmallVector<CharSourceRange, 8> Locations;
-  llvm::SmallVector<std::pair<CharSourceRange, std::string>, 8>
-      RelatedLocations;
+  llvm::SmallVector<std::pair<CharSourceRange, std::string>> RelatedLocations;
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
   llvm::StringMap<std::string> Properties;
