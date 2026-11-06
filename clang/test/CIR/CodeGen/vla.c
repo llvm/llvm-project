@@ -254,8 +254,6 @@ void f3(unsigned len) {
 // LLVM:   %[[CMP:.*]] = icmp ult i32 %[[NEXT]], %[[LEN2]]
 // LLVM:   br i1 %[[CMP]], label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]
 // LLVM: [[WHILE_BODY]]:
-// LLVM:   br label %[[WHILE_BODY2:.*]]
-// LLVM: [[WHILE_BODY2]]:
 // LLVM:   %[[I_LEN:.*]] = load i32, ptr %[[I]]
 // LLVM:   %[[I_LEN_SIZE_T2:.*]] = zext i32 %[[I_LEN]] to i64
 // LLVM:   %[[STACK_PTR2:.*]] = call ptr @llvm.stacksave.p0()
@@ -267,8 +265,6 @@ void f3(unsigned len) {
 // LLVM: [[WHILE_BODY_END]]:
 // LLVM:   br label %[[WHILE_COND]]
 // LLVM: [[WHILE_END]]:
-// LLVM:   br label %[[F3_END:.*]]
-// LLVM: [[F3_END]]:
 // LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
 // LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
 
@@ -544,8 +540,6 @@ void complex_vla_cast(int n) {
 // LLVM: [[CLEANUP_BODY]]:
 // LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]], align 8
 // LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
-// LLVM:   br label %[[CLEANUP_END:.*]]
-// LLVM: [[CLEANUP_END]]:
 // LLVM:   br label %[[DONE:.*]]
 // LLVM: [[DONE]]:
 // LLVM:   ret void
