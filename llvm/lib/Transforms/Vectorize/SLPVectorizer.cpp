@@ -2378,10 +2378,6 @@ private:
   collectGatherUserOps(const TreeEntry &E,
                        SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const;
 
-  /// Returns true if the target folds the splat gather \p TE into all its
-  /// users, so that no broadcast is emitted.
-  bool isSplatFolded(const TreeEntry &TE) const;
-
   /// \returns the fadd/fsub user of the single-use fmul \p I, which the
   /// backend fuses with \p I into an fmuladd in the scalar code, and the cost
   /// of that fmuladd, or {nullptr, invalid cost}. If \p InTree is set, the
@@ -13688,23 +13684,6 @@ bool BoUpSLP::collectGatherUserOps(
   return !UserOps.empty();
 }
 
-bool BoUpSLP::isSplatFolded(const TreeEntry &TE) const {
-  // A splat with undef lanes needs a freeze, see processBuildVector().
-  if (allConstant(TE.Scalars) || !isSplat(TE.Scalars) ||
-      any_of(TE.Scalars, [](Value *V) {
-        return isa<UndefValue>(V) && !isa<PoisonValue>(V);
-      }))
-    return false;
-  SmallVector<int> Mask(
-      TE.Scalars.size(),
-      TE.findLaneForValue(*find_if_not(TE.Scalars, IsaPred<PoisonValue>)));
-  return TTI->getBuildVectorContextHint(
-             Mask, TE.Scalars,
-             [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
-               return collectGatherUserOps(TE, UserOps);
-             }) == TTI::VectorInstrContext::SplatOpFolded;
-}
-
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
@@ -13872,7 +13851,11 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
                   .first->second;
           VecScale = std::max(VecScale, Scale);
         }
-      } else if (!isSplatFolded(TE)) {
+      } else if (!TTI->isSplatFolded(
+                     TE.Scalars,
+                     [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
+                       return collectGatherUserOps(TE, UserOps);
+                     })) {
         // A splat is a single broadcast. In loops, its per-lane count, scaled
         // by the trip count, rejects the profitable trees.
         if ((HasFusedAlt || HasTreeLoop) && isSplat(TE.Scalars))
