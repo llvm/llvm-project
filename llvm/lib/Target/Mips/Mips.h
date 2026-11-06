@@ -99,8 +99,32 @@ public:
 };
 
 FunctionPass *createMipsOptimizePICCallLegacyPass();
-FunctionPass *createMipsDelaySlotFillerPass();
-FunctionPass *createMipsBranchExpansion();
+
+class MipsDelaySlotFillerPass
+    : public RequiredPassInfoMixin<MipsDelaySlotFillerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+FunctionPass *createMipsDelaySlotFillerLegacyPass();
+
+class MipsBranchExpansionPass
+    : public RequiredPassInfoMixin<MipsBranchExpansionPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+FunctionPass *createMipsBranchExpansionLegacyPass();
 FunctionPass *createMipsConstantIslandPass();
 
 class MicroMipsSizeReducePass
@@ -138,9 +162,9 @@ createMipsInstructionSelector(const MipsTargetMachine &, const MipsSubtarget &,
 
 void initializeMicroMipsSizeReduceLegacyPass(PassRegistry &);
 void initializeMipsAsmPrinterPass(PassRegistry &);
-void initializeMipsBranchExpansionPass(PassRegistry &);
+void initializeMipsBranchExpansionLegacyPass(PassRegistry &);
 void initializeMipsDAGToDAGISelLegacyPass(PassRegistry &);
-void initializeMipsDelaySlotFillerPass(PassRegistry &);
+void initializeMipsDelaySlotFillerLegacyPass(PassRegistry &);
 void initializeMipsMulMulBugFixLegacyPass(PassRegistry &);
 void initializeMipsPostLegalizerCombinerPass(PassRegistry &);
 void initializeMipsPreLegalizerCombinerPass(PassRegistry &);
