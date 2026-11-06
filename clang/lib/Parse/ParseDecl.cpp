@@ -523,6 +523,12 @@ unsigned Parser::ParseAttributeArgsCommon(
   if (ChangeKWThisToIdent && Tok.is(tok::kw_this))
     Tok.setKind(tok::identifier);
 
+  // On a parameter of a non-static member function, an unevaluated argument
+  // names a member through 'this', as on the function itself.
+  Sema::CXXThisScopeRAII ThisScope(
+      Actions, ParamAttrThisRecord, Qualifiers(),
+      attributeParsedArgsUnevaluated(*AttrName, Form.getSyntax(), ScopeName));
+
   ArgsVector ArgExprs;
   if (Tok.is(tok::identifier)) {
     // If this attribute wants an 'identifier' argument, make it so.
@@ -7401,6 +7407,37 @@ void Parser::InitCXXThisScopeForDeclaratorIfRelevant(
                     IsCXX11MemberFunction);
 }
 
+/// The class of the function declared by D, if it is a non-static member
+/// function, or null.
+static CXXRecordDecl *getParamAttrThisRecord(Sema &Actions, Declarator &D) {
+  auto *RD = dyn_cast<CXXRecordDecl>(Actions.CurContext);
+  if (!RD || D.getDeclSpec().isFriendSpecified())
+    return nullptr;
+  // Not isStaticMember(): until the function chunk is added, it reads a member
+  // function template as a variable template, which is static.
+  if (D.getContext() == DeclaratorContext::Member) {
+    const UnqualifiedId &Name = D.getName();
+    bool IsStatic =
+        D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+        (Name.getKind() == UnqualifiedIdKind::IK_OperatorFunctionId &&
+         CXXMethodDecl::isStaticOverloadedOperator(
+             Name.OperatorFunctionId.Operator));
+    return IsStatic ? nullptr : RD;
+  }
+  // An out-of-line definition does not say whether it is static, so require
+  // every member of that name to be a non-static function.
+  if (!D.getCXXScopeSpec().isSet())
+    return nullptr;
+  DeclContextLookupResult R =
+      RD->lookup(Actions.GetNameForDeclarator(D).getName());
+  if (R.empty() || !llvm::all_of(R, [](const NamedDecl *ND) {
+        const auto *MD = dyn_cast_or_null<CXXMethodDecl>(ND->getAsFunction());
+        return MD && MD->isImplicitObjectMemberFunction();
+      }))
+    return nullptr;
+  return RD;
+}
+
 void Parser::ParseFunctionDeclarator(Declarator &D,
                                      ParsedAttributes &FirstArgAttrs,
                                      BalancedDelimiterTracker &Tracker,
@@ -7456,9 +7493,17 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     MaybeParseCXX11Attributes(FnAttrs);
     ProhibitAttributes(FnAttrs);
   } else {
-    if (Tok.isNot(tok::r_paren))
+    if (Tok.isNot(tok::r_paren)) {
+      // A nested prototype, such as a callback's, keeps the enclosing one's
+      // class. A function with an explicit object parameter, which comes
+      // first, has no 'this'.
+      CXXRecordDecl *ThisRecord = ParamAttrThisRecord;
+      if (D.isFunctionDeclaratorAFunctionDeclaration())
+        ThisRecord =
+            Tok.is(tok::kw_this) ? nullptr : getParamAttrThisRecord(Actions, D);
+      llvm::SaveAndRestore SaveThisRecord(ParamAttrThisRecord, ThisRecord);
       ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc);
-    else if (RequiresArg)
+    } else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
     // OpenCL disallows functions without a prototype, but it doesn't enforce
