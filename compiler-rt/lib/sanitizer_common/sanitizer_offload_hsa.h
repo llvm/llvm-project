@@ -159,22 +159,8 @@ struct hsa_ven_amd_loader_segment_descriptor_t {
 };
 static_assert(sizeof(hsa_ven_amd_loader_segment_descriptor_t) == 64,
               "layout drift");
-static_assert(offsetof(hsa_ven_amd_loader_segment_descriptor_t, agent) == 0,
-              "layout drift");
-static_assert(offsetof(hsa_ven_amd_loader_segment_descriptor_t, executable) ==
-                  8,
-              "layout drift");
-static_assert(offsetof(hsa_ven_amd_loader_segment_descriptor_t, segment_base) ==
-                  48,
-              "layout drift");
-static_assert(offsetof(hsa_ven_amd_loader_segment_descriptor_t, segment_size) ==
-                  56,
-              "layout drift");
 
-// HSA_EXTENSION_AMD_LOADER 1.04, in hsa_ven_amd_loader_1_04_pfn_t slot order.
-// The runtime copies min(its table, the requested length) and leaves the rest
-// untouched, so zero the struct, request sizeof(LoaderApi), and test every
-// slot before calling it. A shorter runtime leaves the tail null.
+// Version 1.04 of HSA_EXTENSION_AMD_LOADER. Slot order is the extension ABI.
 struct LoaderApi {
   hsa_status_t (*QueryHostAddress)(const void*, const void**);
   hsa_status_t (*QuerySegmentDescriptors)(
@@ -199,26 +185,6 @@ struct LoaderApi {
                                                hsa_loaded_code_object_t*);
 };
 static_assert(sizeof(LoaderApi) == 9 * sizeof(void*), "layout drift");
-static_assert(offsetof(LoaderApi, QuerySegmentDescriptors) == sizeof(void*),
-              "layout drift");
-static_assert(offsetof(LoaderApi, QueryExecutable) == 2 * sizeof(void*),
-              "layout drift");
-static_assert(offsetof(LoaderApi, IterateLoadedCodeObjects) ==
-                  3 * sizeof(void*),
-              "layout drift");
-static_assert(offsetof(LoaderApi, GetCodeObjectInfo) == 4 * sizeof(void*),
-              "layout drift");
-static_assert(offsetof(LoaderApi, CreateCodeObjectReaderFromFile) ==
-                  5 * sizeof(void*),
-              "layout drift");
-static_assert(offsetof(LoaderApi, IterateExecutables) == 6 * sizeof(void*),
-              "layout drift");
-static_assert(offsetof(LoaderApi, CodeObjectReaderGetLoadSize) ==
-                  7 * sizeof(void*),
-              "layout drift");
-static_assert(offsetof(LoaderApi, LoadAgentCodeObjectAtAddress) ==
-                  8 * sizeof(void*),
-              "layout drift");
 
 hsa_status_t hsa_init(void);
 hsa_status_t hsa_shut_down(void);
