@@ -45,15 +45,16 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
 // RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-ALL -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-FILTER -input-file=%t.html.filtered.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
 
+// HTML-ALL: <pre>{{.*}}showTemplateInstantiations.cpp</pre></div><tr><td><pre>Line</pre></td><td><pre>Count</pre></td><td><pre>Source</pre></td></tr>
 // HTML-ALL: <td class='line-number'><a name='L4' href='#L4'><pre>4</pre></a></td><td class='skipped-line'></td><td class='code'><pre>// before
 // HTML-FILTER-NOT: <td class='line-number'><a name='L4' href='#L4'><pre>4</pre></a></td><td class='skipped-line'></td><td class='code'><pre>// before
 // HTML-ALL: <td class='line-number'><a name='L6' href='#L6'><pre>6</pre></a></td><td class='skipped-line'></td><td class='code'><pre>template&lt;typename T&gt;
 
-// HTML-ALL: <div class='source-name-title'><pre>_Z4funcIiEiT_</pre></div>
+// HTML-ALL: <div class='source-name-title'><pre>_Z4funcIiEiT_</pre></div><tr><td><pre>Line</pre></td><td><pre>Count</pre></td><td><pre>Source</pre></td></tr>
 // HTML-FILTER-NOT: <div class='source-name-title'><pre>_Z4funcIiEiT_</pre></div><table>
 // HTML-ALL: <td class='line-number'><a name='L7' href='#L7'><pre>7</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>int func(T x) {
 
-// HTML-SHARED: <div class='source-name-title'><pre>_Z4funcIbEiT_</pre></div>
+// HTML-SHARED: <div class='source-name-title'><pre>_Z4funcIbEiT_</pre></div><tr><td><pre>Line</pre></td><td><pre>Count</pre></td><td><pre>Source</pre></td></tr>
 // HTML-SHARED: <td class='line-number'><a name='L7' href='#L7'><pre>7</pre></a></td><td class='covered-line'><pre>1</pre></td><td class='code'><pre>int func(T x) {
 
 // RUN: FileCheck -check-prefix=HTML-JUMP -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
