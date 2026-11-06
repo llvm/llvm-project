@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Testing/fp-testing.h"
+#include "flang/Common/fp-control.h"
 #include "llvm/Support/Errno.h"
 #include <cstdio>
 #include <cstdlib>
@@ -18,10 +19,13 @@ using Fortran::common::RealFlag;
 using Fortran::common::RoundingMode;
 
 ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
+    FLANG_FENV_ACCESS_ON
 #if __x86_64__ || _M_X64
-    bool treatSubnormalOperandsAsZero, bool flushSubnormalResultsToZero
+    bool treatSubnormalOperandsAsZero,
+    bool flushSubnormalResultsToZero
 #else
-    bool, bool
+    bool,
+    bool
 #endif
 ) {
   errno = 0;
@@ -65,6 +69,7 @@ ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
 }
 
 ScopedHostFloatingPointEnvironment::~ScopedHostFloatingPointEnvironment() {
+  FLANG_FENV_ACCESS_ON
   errno = 0;
   if (fesetenv(&originalFenv_) != 0) {
     std::fprintf(
@@ -77,10 +82,12 @@ ScopedHostFloatingPointEnvironment::~ScopedHostFloatingPointEnvironment() {
 }
 
 void ScopedHostFloatingPointEnvironment::ClearFlags() const {
+  FLANG_FENV_ACCESS_ON
   feclearexcept(FE_ALL_EXCEPT);
 }
 
 RealFlags ScopedHostFloatingPointEnvironment::CurrentFlags() {
+  FLANG_FENV_ACCESS_ON
   int exceptions = fetestexcept(FE_ALL_EXCEPT);
   RealFlags flags;
   if (exceptions & FE_INVALID) {
@@ -102,6 +109,7 @@ RealFlags ScopedHostFloatingPointEnvironment::CurrentFlags() {
 }
 
 void ScopedHostFloatingPointEnvironment::SetRounding(Rounding rounding) {
+  FLANG_FENV_ACCESS_ON
   switch (rounding.mode) {
   case RoundingMode::TiesToEven:
     fesetround(FE_TONEAREST);
