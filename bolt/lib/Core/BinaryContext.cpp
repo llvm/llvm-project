@@ -613,7 +613,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
   // a section, it could be an absolute address too.
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   if (Section && Section->isText()) {
-    if (BF.containsAddress(Address, /*UseMaxSize=*/isAArch64())) {
+    if (BF.containsAddress(Address, false)) {
       if (Address != BF.getAddress()) {
         // The address could potentially escape. Mark it as another entry
         // point into the function.
