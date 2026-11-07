@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffixed-point %s -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point %s -verify
 // expected-no-diagnostics
 
 constexpr _Accum a[2] = {};

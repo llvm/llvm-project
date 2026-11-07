@@ -583,4 +583,7 @@ def warn_dyndbg_unable_to_create_target : Warning<
 
 def err_dyndbg_no_instrumentation : Error<
     "'-fdynamic-debugging' unsupported with instrumentation (PGO/code coverage)">;
+
+def err_fixed_point_unsupported_cxx_abi : Error<
+    "'-ffixed-point' is not supported for the Microsoft C++ ABI">;
 }
