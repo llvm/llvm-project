@@ -32,6 +32,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -176,6 +177,9 @@ public:
   /// Perform same function as equivalently named function in DAGCombiner. Since
   /// we expand some divisions here, we need to perform this before obscuring.
   bool foldBinOpIntoSelect(BinaryOperator &I) const;
+
+  /// Fold select (X == 0 || Y == 0), +0.0, X * Y into fmul_legacy(X, Y).
+  bool foldSelectToFMulLegacy(SelectInst &I) const;
 
   bool divHasSpecialOptimization(BinaryOperator &I,
                                  Value *Num, Value *Den) const;
@@ -1578,10 +1582,67 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
   return false;
 }
 
+// select (X == 0 || Y == 0), +0.0, (X * Y) -> fmul_legacy(X, Y)
+bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) const {
+  if (!I.getType()->isFloatTy())
+    return false;
+
+  // Inverted form: select (X != 0 && Y != 0), X * Y, +0.0.
+  bool Inverted = match(I.getFalseValue(), m_PosZeroFP());
+  if (!Inverted && !match(I.getTrueValue(), m_PosZeroFP()))
+    return false;
+
+  Value *Mul = Inverted ? I.getTrueValue() : I.getFalseValue();
+  Value *X, *Y;
+  if (!match(Mul, m_OneUse(m_FMul(m_Value(X), m_Value(Y)))))
+    return false;
+
+  FCmpInst::Predicate ZeroCmpPred =
+      Inverted ? FCmpInst::FCMP_UNE : FCmpInst::FCMP_OEQ;
+  Value *A, *B;
+  auto ZeroCmpA = m_SpecificFCmp(ZeroCmpPred, m_Value(A), m_AnyZeroFP());
+  auto ZeroCmpB = m_SpecificFCmp(ZeroCmpPred, m_Value(B), m_AnyZeroFP());
+  Value *Cond = I.getCondition();
+  if (Inverted ? !match(Cond, m_And(ZeroCmpA, ZeroCmpB))
+               : !match(Cond, m_Or(ZeroCmpA, ZeroCmpB))) {
+    if (!match(Cond, ZeroCmpA))
+      return false;
+    B = A;
+  }
+
+  Value *SA = InstCombiner::stripSignOnlyFPOps(A);
+  Value *SB = InstCombiner::stripSignOnlyFPOps(B);
+  Value *SX = InstCombiner::stripSignOnlyFPOps(X);
+  Value *SY = InstCombiner::stripSignOnlyFPOps(Y);
+  if (!((SA == SX && SB == SY) || (SA == SY && SB == SX)))
+    return false;
+
+  // A stripped nnan/ninf op could create poison that the select hides.
+  if (!impliesPoison(X, SX) || !impliesPoison(Y, SY))
+    return false;
+
+  // The select may hide NaN, Inf or a signed zero from the fmul.
+  FastMathFlags FMF = cast<Instruction>(Mul)->getFastMathFlags();
+  FMF.setNoNaNs(false);
+  FMF.setNoInfs(false);
+  FMF.setNoSignedZeros(I.hasNoSignedZeros());
+
+  IRBuilder<> Builder(&I);
+  Value *LegacyMul =
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_fmul_legacy, {X, Y}, FMF);
+  LegacyMul->takeName(&I);
+  I.replaceAllUsesWith(LegacyMul);
+  DeadVals.push_back(&I);
+  return true;
+}
+
 bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
   FPMathOperator *FPOp = dyn_cast<FPMathOperator>(&I);
   if (!FPOp)
     return false;
+
+  if (foldSelectToFMulLegacy(I))
+    return true;
 
   Value *X;
   Value *Fract = nullptr;
