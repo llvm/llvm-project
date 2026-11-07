@@ -5,13 +5,21 @@ define <3 x i64> @shuffle(i1 %dec1, i1 %dec0, <3 x i64> %b) {
 ; CHECK-LABEL: shuffle:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    tst r1, #1
-; CHECK-NEXT:    moveq r1, #0
-; CHECK-NEXT:    vmoveq d16, r1, r1
-; CHECK-NEXT:    vldrne d16, [sp]
+; CHECK-NEXT:    beq .LBB0_3
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:    vldr d16, [sp]
 ; CHECK-NEXT:    tst r2, #1
-; CHECK-NEXT:    moveq r1, #0
-; CHECK-NEXT:    vmoveq d18, r1, r1
-; CHECK-NEXT:    vldrne d18, [sp, #8]
+; CHECK-NEXT:    bne .LBB0_4
+; CHECK-NEXT:  .LBB0_2: @ %select.false2
+; CHECK-NEXT:    vmov.i32 d18, #0x0
+; CHECK-NEXT:    b .LBB0_5
+; CHECK-NEXT:  .LBB0_3: @ %select.false
+; CHECK-NEXT:    vmov.i32 d16, #0x0
+; CHECK-NEXT:    tst r2, #1
+; CHECK-NEXT:    beq .LBB0_2
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    vldr d18, [sp, #8]
+; CHECK-NEXT:  .LBB0_5: @ %select.end1
 ; CHECK-NEXT:    vorr d17, d18, d18
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0:128]
 ; CHECK-NEXT:    bx lr
