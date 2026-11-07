@@ -335,6 +335,43 @@ exit:
   ret void
 }
 
+; The metadata missing in the predecessor load is dropped from the wide load.
+define void @metadata_missing_in_predecessor(ptr noalias %dst, ptr noalias %src, i1 %c) {
+; CHECK-LABEL: define void @metadata_missing_in_predecessor(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC]], align 4, !tbaa [[INT_TBAA3:![0-9]+]], !invariant.load [[META5:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l0 = load i32, ptr %src, align 4, !invariant.load !6
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %src1 = getelementptr inbounds i32, ptr %src, i64 1
+  %l1 = load i32, ptr %src1, align 4, !tbaa !0, !invariant.load !6
+  %src2 = getelementptr inbounds i32, ptr %src, i64 2
+  %l2 = load i32, ptr %src2, align 4, !tbaa !0, !invariant.load !6
+  %src3 = getelementptr inbounds i32, ptr %src, i64 3
+  %l3 = load i32, ptr %src3, align 4, !tbaa !0, !invariant.load !6
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  %dst2 = getelementptr inbounds i32, ptr %dst, i64 2
+  %dst3 = getelementptr inbounds i32, ptr %dst, i64 3
+  store i32 %l0, ptr %dst, align 4
+  store i32 %l1, ptr %dst1, align 4
+  store i32 %l2, ptr %dst2, align 4
+  store i32 %l3, ptr %dst3, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
 ; The strided operands are gathered from the single wide load, which covers
 ; the predecessor load too.
 define void @gathered_loads(ptr noalias %dst, ptr noalias %src, i1 %c) {
@@ -536,8 +573,12 @@ exit:
 !3 = !{!5, !5, i64 0}
 !4 = !{!"Simple C++ TBAA"}
 !5 = !{!"float", !2, i64 0}
+!6 = !{}
 ;.
 ; CHECK: [[CHAR_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"omnipotent char", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"Simple C++ TBAA"}
+; CHECK: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+; CHECK: [[META4]] = !{!"int", [[META1]], i64 0}
+; CHECK: [[META5]] = !{}
 ;.
