@@ -16240,6 +16240,224 @@ define <8 x i16> @mgather_baseidx_and_v8i16_v8i16(ptr %base, <8 x i16> %idxs, <8
   ret <8 x i16> %v
 }
 
+; Byte-table lookup patterns from security-rijndael encrypt/decrypt.
+; Each byte index is scaled by four and fits in a 16-bit gather index.
+
+define <4 x i32> @rijndael_gather_and(ptr %table, <4 x i32> %state) {
+; RV32-LABEL: rijndael_gather_and:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vand.vx v8, v8, a1
+; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsll.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vluxei16.v v8, (a0), v9
+; RV32-NEXT:    ret
+;
+; RV64V-LABEL: rijndael_gather_and:
+; RV64V:       # %bb.0:
+; RV64V-NEXT:    li a1, 255
+; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64V-NEXT:    vand.vx v8, v8, a1
+; RV64V-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64V-NEXT:    vnsrl.wi v8, v8, 0
+; RV64V-NEXT:    vsll.vi v9, v8, 2
+; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64V-NEXT:    vluxei16.v v8, (a0), v9
+; RV64V-NEXT:    ret
+;
+; RV64ZVE32F-LABEL: rijndael_gather_and:
+; RV64ZVE32F:       # %bb.0:
+; RV64ZVE32F-NEXT:    li a1, 255
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vand.vx v8, v8, a1
+; RV64ZVE32F-NEXT:    vmv.x.s a1, v8
+; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 1
+; RV64ZVE32F-NEXT:    vmv.x.s a2, v9
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 2
+; RV64ZVE32F-NEXT:    vmv.x.s a3, v9
+; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 3
+; RV64ZVE32F-NEXT:    zext.b a1, a1
+; RV64ZVE32F-NEXT:    vmv.x.s a4, v8
+; RV64ZVE32F-NEXT:    slli a1, a1, 2
+; RV64ZVE32F-NEXT:    add a1, a0, a1
+; RV64ZVE32F-NEXT:    lw a1, 0(a1)
+; RV64ZVE32F-NEXT:    zext.b a2, a2
+; RV64ZVE32F-NEXT:    slli a2, a2, 2
+; RV64ZVE32F-NEXT:    add a2, a0, a2
+; RV64ZVE32F-NEXT:    lw a2, 0(a2)
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
+; RV64ZVE32F-NEXT:    zext.b a1, a3
+; RV64ZVE32F-NEXT:    slli a1, a1, 2
+; RV64ZVE32F-NEXT:    add a1, a0, a1
+; RV64ZVE32F-NEXT:    lw a1, 0(a1)
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVE32F-NEXT:    zext.b a2, a4
+; RV64ZVE32F-NEXT:    slli a2, a2, 2
+; RV64ZVE32F-NEXT:    add a0, a0, a2
+; RV64ZVE32F-NEXT:    lw a0, 0(a0)
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; RV64ZVE32F-NEXT:    ret
+  %byte = and <4 x i32> %state, splat (i32 255)
+  %idx = zext nneg <4 x i32> %byte to <4 x i64>
+  %ptrs = getelementptr inbounds nuw [4 x i8], ptr %table, <4 x i64> %idx
+  %value = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(
+      <4 x ptr> %ptrs, i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+  ret <4 x i32> %value
+}
+
+define <4 x i32> @rijndael_gather_and_shuffle(ptr %table, <4 x i32> %state) {
+; RV32-LABEL: rijndael_gather_and_shuffle:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 255
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vand.vx v8, v8, a1
+; RV32-NEXT:    vslidedown.vi v9, v8, 2
+; RV32-NEXT:    vslideup.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v9, 0
+; RV32-NEXT:    vsll.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vluxei16.v v8, (a0), v9
+; RV32-NEXT:    ret
+;
+; RV64V-LABEL: rijndael_gather_and_shuffle:
+; RV64V:       # %bb.0:
+; RV64V-NEXT:    li a1, 255
+; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64V-NEXT:    vand.vx v8, v8, a1
+; RV64V-NEXT:    vslidedown.vi v9, v8, 2
+; RV64V-NEXT:    vslideup.vi v9, v8, 2
+; RV64V-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64V-NEXT:    vnsrl.wi v8, v9, 0
+; RV64V-NEXT:    vsll.vi v9, v8, 2
+; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64V-NEXT:    vluxei16.v v8, (a0), v9
+; RV64V-NEXT:    ret
+;
+; RV64ZVE32F-LABEL: rijndael_gather_and_shuffle:
+; RV64ZVE32F:       # %bb.0:
+; RV64ZVE32F-NEXT:    li a1, 255
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vand.vx v8, v8, a1
+; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 2
+; RV64ZVE32F-NEXT:    vslideup.vi v9, v8, 2
+; RV64ZVE32F-NEXT:    vmv.x.s a1, v9
+; RV64ZVE32F-NEXT:    vslidedown.vi v8, v9, 1
+; RV64ZVE32F-NEXT:    vmv.x.s a2, v8
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vslidedown.vi v8, v9, 2
+; RV64ZVE32F-NEXT:    vmv.x.s a3, v8
+; RV64ZVE32F-NEXT:    vslidedown.vi v8, v9, 3
+; RV64ZVE32F-NEXT:    zext.b a1, a1
+; RV64ZVE32F-NEXT:    vmv.x.s a4, v8
+; RV64ZVE32F-NEXT:    slli a1, a1, 2
+; RV64ZVE32F-NEXT:    add a1, a0, a1
+; RV64ZVE32F-NEXT:    lw a1, 0(a1)
+; RV64ZVE32F-NEXT:    zext.b a2, a2
+; RV64ZVE32F-NEXT:    slli a2, a2, 2
+; RV64ZVE32F-NEXT:    add a2, a0, a2
+; RV64ZVE32F-NEXT:    lw a2, 0(a2)
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
+; RV64ZVE32F-NEXT:    zext.b a1, a3
+; RV64ZVE32F-NEXT:    slli a1, a1, 2
+; RV64ZVE32F-NEXT:    add a1, a0, a1
+; RV64ZVE32F-NEXT:    lw a1, 0(a1)
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVE32F-NEXT:    zext.b a2, a4
+; RV64ZVE32F-NEXT:    slli a2, a2, 2
+; RV64ZVE32F-NEXT:    add a0, a0, a2
+; RV64ZVE32F-NEXT:    lw a0, 0(a0)
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; RV64ZVE32F-NEXT:    ret
+  %byte = and <4 x i32> %state, splat (i32 255)
+  %shuffled = shufflevector <4 x i32> %byte, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+  %idx = zext nneg <4 x i32> %shuffled to <4 x i64>
+  %ptrs = getelementptr inbounds nuw [4 x i8], ptr %table, <4 x i64> %idx
+  %value = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(
+      <4 x ptr> %ptrs, i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+  ret <4 x i32> %value
+}
+
+define <4 x i32> @rijndael_gather_lshr_shuffle(ptr %table, <4 x i32> %state) {
+; RV32-LABEL: rijndael_gather_lshr_shuffle:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsrl.vi v8, v8, 24
+; RV32-NEXT:    vslidedown.vi v9, v8, 3
+; RV32-NEXT:    vslideup.vi v9, v8, 1
+; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v9, 0
+; RV32-NEXT:    vsll.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vluxei16.v v8, (a0), v9
+; RV32-NEXT:    ret
+;
+; RV64V-LABEL: rijndael_gather_lshr_shuffle:
+; RV64V:       # %bb.0:
+; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64V-NEXT:    vsrl.vi v8, v8, 24
+; RV64V-NEXT:    vslidedown.vi v9, v8, 3
+; RV64V-NEXT:    vslideup.vi v9, v8, 1
+; RV64V-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64V-NEXT:    vnsrl.wi v8, v9, 0
+; RV64V-NEXT:    vsll.vi v9, v8, 2
+; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64V-NEXT:    vluxei16.v v8, (a0), v9
+; RV64V-NEXT:    ret
+;
+; RV64ZVE32F-LABEL: rijndael_gather_lshr_shuffle:
+; RV64ZVE32F:       # %bb.0:
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsrl.vi v8, v8, 24
+; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 3
+; RV64ZVE32F-NEXT:    vslideup.vi v9, v8, 1
+; RV64ZVE32F-NEXT:    vmv.x.s a1, v9
+; RV64ZVE32F-NEXT:    vslidedown.vi v8, v9, 1
+; RV64ZVE32F-NEXT:    vmv.x.s a2, v8
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vslidedown.vi v8, v9, 2
+; RV64ZVE32F-NEXT:    vmv.x.s a3, v8
+; RV64ZVE32F-NEXT:    vslidedown.vi v8, v9, 3
+; RV64ZVE32F-NEXT:    zext.b a1, a1
+; RV64ZVE32F-NEXT:    vmv.x.s a4, v8
+; RV64ZVE32F-NEXT:    slli a1, a1, 2
+; RV64ZVE32F-NEXT:    add a1, a0, a1
+; RV64ZVE32F-NEXT:    lw a1, 0(a1)
+; RV64ZVE32F-NEXT:    zext.b a2, a2
+; RV64ZVE32F-NEXT:    slli a2, a2, 2
+; RV64ZVE32F-NEXT:    add a2, a0, a2
+; RV64ZVE32F-NEXT:    lw a2, 0(a2)
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
+; RV64ZVE32F-NEXT:    zext.b a1, a3
+; RV64ZVE32F-NEXT:    slli a1, a1, 2
+; RV64ZVE32F-NEXT:    add a1, a0, a1
+; RV64ZVE32F-NEXT:    lw a1, 0(a1)
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVE32F-NEXT:    zext.b a2, a4
+; RV64ZVE32F-NEXT:    slli a2, a2, 2
+; RV64ZVE32F-NEXT:    add a0, a0, a2
+; RV64ZVE32F-NEXT:    lw a0, 0(a0)
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; RV64ZVE32F-NEXT:    ret
+  %byte = lshr <4 x i32> %state, splat (i32 24)
+  %shuffled = shufflevector <4 x i32> %byte, <4 x i32> poison, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  %idx = zext nneg <4 x i32> %shuffled to <4 x i64>
+  %ptrs = getelementptr inbounds nuw [4 x i8], ptr %table, <4 x i64> %idx
+  %value = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(
+      <4 x ptr> %ptrs, i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+  ret <4 x i32> %value
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; RV32V-ZVFH: {{.*}}
 ; RV32V-ZVFHMIN: {{.*}}
