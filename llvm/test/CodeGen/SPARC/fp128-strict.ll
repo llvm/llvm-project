@@ -792,18 +792,10 @@ define fp128 @uitofp_i32_f128(i32 %a) nounwind strictfp {
 ; HARD-LABEL: uitofp_i32_f128:
 ; HARD:       ! %bb.0:
 ; HARD-NEXT:    add %sp, -144, %sp
-; HARD-NEXT:    add %sp, 2183, %o1
-; HARD-NEXT:    or %o1, 4, %o1
-; HARD-NEXT:    st %o0, [%o1]
-; HARD-NEXT:    sethi 1100800, %o0
-; HARD-NEXT:    st %o0, [%sp+2183]
+; HARD-NEXT:    srl %o0, 0, %o0
+; HARD-NEXT:    stx %o0, [%sp+2183]
 ; HARD-NEXT:    ldd [%sp+2183], %f0
-; HARD-NEXT:    sethi %h44(.LCPI13_0), %o0
-; HARD-NEXT:    add %o0, %m44(.LCPI13_0), %o0
-; HARD-NEXT:    sllx %o0, 12, %o0
-; HARD-NEXT:    ldd [%o0+%l44(.LCPI13_0)], %f2
-; HARD-NEXT:    fsubd %f0, %f2, %f0
-; HARD-NEXT:    fdtoq %f0, %f0
+; HARD-NEXT:    fxtoq %f0, %f0
 ; HARD-NEXT:    retl
 ; HARD-NEXT:    add %sp, 144, %sp
   %r = call fp128 @llvm.experimental.constrained.uitofp.f128.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
