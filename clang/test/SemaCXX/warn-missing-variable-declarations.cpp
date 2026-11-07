@@ -83,3 +83,8 @@ template<> int var_template<int[5]>; // expected-warning {{no previous extern de
 // the linkage from the template! We should not warn here.
 template<> int static_var_template<int[5]>; // expected-warning {{no previous extern declaration}}
 // expected-note@-1{{declare 'static' if the variable is not intended to be used outside of this translation unit}}
+
+namespace deduced {
+  auto lambda_a = []{}; // no-warning
+  auto _lambda_b = []{}; // no-warning
+}
