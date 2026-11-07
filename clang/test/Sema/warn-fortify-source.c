@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS
+// RUN: %clang_cc1 -triple x86_64-w64-windows-gnu %s -verify -DUSE_BUILTINS
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify
-// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS
+// RUN: %clang_cc1 -xc++ -triple x86_64-w64-windows-gnu %s -verify -DUSE_BUILTINS
 
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-w64-windows-gnu %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -xc++ -triple x86_64-w64-windows-gnu %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
 
-typedef unsigned long size_t;
+typedef __SIZE_TYPE__ size_t;
 typedef long ssize_t;
 typedef unsigned int socklen_t;
 struct sockaddr;
@@ -33,14 +33,24 @@ extern int vsprintf(char *str, const char *format, __builtin_va_list ap);
 #define memcpy(x,y,z) __builtin_memcpy(x,y,z)
 #define sprintf(x, ...) __builtin_sprintf(x, __VA_ARGS__)
 #define vsprintf(x, y, z) __builtin_vsprintf(x, y, z)
-// Also test the Windows winsock2.h signature where len is a signed int.
-int recv(int, char *, int, int);
-int recvfrom(int, char *, int, int, struct sockaddr *, int *);
+// Also test the Windows winsock2.h signature where SOCKET is UINT_PTR (size_t)
+// and len/fromlen use int.
+int recv(size_t, char *, int, int);
+int recvfrom(size_t, char *, int, int, struct sockaddr *, int *);
 typedef unsigned int nfds_t;
 #else
 void *memcpy(void *dst, const void *src, size_t c);
 ssize_t recv(int, void *, size_t, int);
+#ifndef __cplusplus
+struct sockaddr_in;
+typedef union {
+  struct sockaddr_in *__sockaddr_in__;
+  struct sockaddr *__sockaddr__;
+} __SOCKADDR_ARG __attribute__((__transparent_union__));
+ssize_t recvfrom(int, void *, size_t, int, __SOCKADDR_ARG, socklen_t *);
+#else
 ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
+#endif
 typedef unsigned long nfds_t;
 #endif
 int poll(struct pollfd *, nfds_t, int);

@@ -22,6 +22,7 @@
 //  f -> float
 //  d -> double
 //  z -> size_t
+//  Sz -> ssize_t
 //  w -> wchar_t
 //  F -> constant CFString
 //  G -> id
@@ -44,6 +45,9 @@
 //  SJ -> sigjmp_buf
 //  K -> ucontext_t
 //  p -> pid_t
+//  u -> struct, followed by the byte length of the tag name and the tag name.
+//  t -> typedef, followed by the byte length of the name and the name.
+//  | -> separates the default prototype from the Windows prototype.
 //  . -> "...".  This may only occur at the end of the function list.
 //
 // Types may be prefixed with the following modifiers:
