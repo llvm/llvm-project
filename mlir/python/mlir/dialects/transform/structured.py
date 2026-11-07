@@ -770,6 +770,7 @@ class VectorizeChildrenAndApplyPatternsOp(VectorizeChildrenAndApplyPatternsOp):
         vectorize_padding: bool = False,
         flatten_1d_depthwise_conv: bool = False,
         fold_type_extensions_into_contract: bool = False,
+        allow_fast_math_flag_loss: bool = True,
         loc=None,
         ip=None,
     ):
@@ -783,6 +784,7 @@ class VectorizeChildrenAndApplyPatternsOp(VectorizeChildrenAndApplyPatternsOp):
             vectorize_nd_extract=vectorize_nd_extract,
             vectorize_padding=vectorize_padding,
             fold_type_extensions_into_contract=fold_type_extensions_into_contract,
+            allow_fast_math_flag_loss=allow_fast_math_flag_loss,
             loc=loc,
             ip=ip,
         )
