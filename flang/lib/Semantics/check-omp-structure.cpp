@@ -807,9 +807,9 @@ void OmpStructureChecker::CheckPolymorphicMapObjects(
   llvm::SmallPtrSet<const Symbol *, 8> diagnosed;
   for (const parser::OmpObject &object : objects.v) {
     llvm::SmallVector<const Symbol *, 2> candidates;
-    if (const Symbol * symbol{GetObjectSymbol(object, /*ultimate=*/true)})
+    if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)})
       candidates.push_back(symbol);
-    if (const Symbol * symbol{GetBaseObjectSymbol(object)})
+    if (const Symbol *symbol{GetBaseObjectSymbol(object)})
       candidates.push_back(symbol);
 
     for (const Symbol *symbol : candidates) {
