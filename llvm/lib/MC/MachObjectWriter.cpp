@@ -45,7 +45,6 @@ void MachObjectWriter::reset() {
   IndirectSymBase.clear();
   IndirectSymbols.clear();
   DataRegions.clear();
-  SectionAddress.clear();
   SectionDataOffset.clear();
   SectionOrder.clear();
   StringTable.clear();
@@ -122,6 +121,15 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S) const {
 
   return getSectionAddress(S.getFragment()->getParent()) +
          Asm->getSymbolOffset(S);
+}
+
+uint64_t MachObjectWriter::getSectionAddress(const MCSection *Sec) const {
+  // A relocated reference into a DWARF section has to hold an offset into
+  // that section, so every __DWARF section starts at address 0.
+  if (getContext().getAsmInfo().doesDwarfUseRelocationsAcrossSections() &&
+      static_cast<const MCSectionMachO *>(Sec)->getSegmentName() == "__DWARF")
+    return 0;
+  return SectionDataOffset.lookup(Sec);
 }
 
 uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
@@ -713,26 +721,6 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
     // following one. This is for 'gas' compatibility, it shouldn't
     /// strictly be necessary.
     StartOffset += getPaddingSize(Asm, Sec);
-  }
-
-  if (!getContext().getAsmInfo().doesDwarfUseRelocationsAcrossSections()) {
-    for (const MCSection *Sec : SectionOrder)
-      SectionAddress[Sec] = SectionDataOffset[Sec];
-    return;
-  }
-
-  // A relocated reference into a DWARF section has to hold an offset into
-  // that section, so every __DWARF section starts at address 0.
-  uint64_t StartAddress = 0;
-  for (const MCSection *Sec : SectionOrder) {
-    if (static_cast<const MCSectionMachO *>(Sec)->getSegmentName() ==
-        "__DWARF") {
-      SectionAddress[Sec] = 0;
-      continue;
-    }
-    StartAddress = alignTo(StartAddress, Sec->getAlign());
-    SectionAddress[Sec] = StartAddress;
-    StartAddress += Asm.getSectionAddressSize(*Sec);
   }
 }
 
