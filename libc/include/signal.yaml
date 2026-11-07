@@ -146,6 +146,13 @@ functions:
     return_type: int
     arguments:
       - type: const sigset_t *
+  - name: sigwait
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const sigset_t *__restrict
+      - type: int *__restrict
   - name: pthread_sigmask
     standards:
       - posix
