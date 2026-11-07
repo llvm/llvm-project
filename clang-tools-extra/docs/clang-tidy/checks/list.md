@@ -142,6 +142,7 @@ readability/*
 | {doc}`bugprone-raw-memory-call-on-non-trivial-type <bugprone/raw-memory-call-on-non-trivial-type>` |  |
 | {doc}`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>` | Yes |
 | {doc}`bugprone-reserved-identifier <bugprone/reserved-identifier>` | Yes |
+| {doc}`bugprone-rethrow-caught-exception <bugprone/rethrow-caught-exception>` | Yes |
 | {doc}`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>` |  |
 | {doc}`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>` | Yes |
 | {doc}`bugprone-signal-handler <bugprone/signal-handler>` |  |
