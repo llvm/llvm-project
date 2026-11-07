@@ -3,8 +3,8 @@
 
 ; Based on the debuginfo-tests/sret.cpp code.
 
-; CHECK-DWO: DW_AT_GNU_dwo_id (0x7087af8f422b4f7c)
-; CHECK-DWO: DW_AT_GNU_dwo_id (0x7087af8f422b4f7c)
+; CHECK-DWO: DW_AT_GNU_dwo_id (0xe908b169a271b924)
+; CHECK-DWO: DW_AT_GNU_dwo_id (0xe908b169a271b924)
 
 ; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,FASTISEL %s
 ; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,SDAG %s
@@ -12,10 +12,8 @@
 
 ; CHECK: _ZN1B9AInstanceEv
 ; CHECK: DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location (0x00000000
-; FASTISEL-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-32, DW_OP_deref
-; FASTISEL-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0
-; FASTISEL-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-32, DW_OP_deref)
+; FASTISEL-NEXT:   DW_AT_location (DW_OP_fbreg -32, DW_OP_deref)
+; SDAG-NEXT:   DW_AT_location (0x00000000
 ; SDAG-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0
 ; SDAG-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-32, DW_OP_deref)
 ; CHECK-NEXT:   DW_AT_name {{.*}}"a"
