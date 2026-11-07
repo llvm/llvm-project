@@ -137,6 +137,194 @@ define amdgpu_cs void @with_calls_no_inline_const() #0 {
   ret void
 }
 
+define amdgpu_cs void @with_chain_call() #0 {
+; CHECK-TRUE16-LABEL: with_chain_call:
+; CHECK-TRUE16:       ; %bb.0:
+; CHECK-TRUE16-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; CHECK-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 13
+; CHECK-TRUE16-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-TRUE16-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-TRUE16-NEXT:    s_mov_b32 s3, chain_callee@abs32@hi
+; CHECK-TRUE16-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s2, chain_callee@abs32@lo
+; CHECK-TRUE16-NEXT:    s_mov_b32 s0, 0
+; CHECK-TRUE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s32, s33
+; CHECK-TRUE16-NEXT:    s_mov_b32 exec_lo, -1
+; CHECK-TRUE16-NEXT:    s_setpc_b64 s[2:3]
+;
+; CHECK-FAKE16-LABEL: with_chain_call:
+; CHECK-FAKE16:       ; %bb.0:
+; CHECK-FAKE16-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; CHECK-FAKE16-NEXT:    v_mov_b32_e32 v0, 13
+; CHECK-FAKE16-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-FAKE16-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-FAKE16-NEXT:    s_mov_b32 s3, chain_callee@abs32@hi
+; CHECK-FAKE16-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s2, chain_callee@abs32@lo
+; CHECK-FAKE16-NEXT:    s_mov_b32 s0, 0
+; CHECK-FAKE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s32, s33
+; CHECK-FAKE16-NEXT:    s_mov_b32 exec_lo, -1
+; CHECK-FAKE16-NEXT:    s_setpc_b64 s[2:3]
+  %local = alloca i32, addrspace(5)
+  store volatile i8 13, ptr addrspace(5) %local
+  call void(ptr, i32, i32, i32, i32, ...) @llvm.amdgcn.cs.chain(ptr @chain_callee, i32 -1, i32 inreg 0, i32 0, i32 0)
+  unreachable
+}
+
+define amdgpu_cs void @with_chain_call_dyn_local(i32 %count) #0 {
+; CHECK-TRUE16-LABEL: with_chain_call_dyn_local:
+; CHECK-TRUE16:       ; %bb.0:
+; CHECK-TRUE16-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; CHECK-TRUE16-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; CHECK-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-TRUE16-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-TRUE16-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-TRUE16-NEXT:    s_cselect_b32 s32, 0x1d0, 16
+; CHECK-TRUE16-NEXT:    v_and_b32_e32 v0, -16, v0
+; CHECK-TRUE16-NEXT:    s_or_saveexec_b32 s0, -1
+; CHECK-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s0
+; CHECK-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-TRUE16-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; CHECK-TRUE16-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf
+; CHECK-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-TRUE16-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf
+; CHECK-TRUE16-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
+; CHECK-TRUE16-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
+; CHECK-TRUE16-NEXT:    s_wait_dscnt 0x0
+; CHECK-TRUE16-NEXT:    v_max_u32_e32 v1, v1, v2
+; CHECK-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-TRUE16-NEXT:    v_readlane_b32 s1, v1, 31
+; CHECK-TRUE16-NEXT:    s_mov_b32 exec_lo, s0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s0, s32
+; CHECK-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 13
+; CHECK-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; CHECK-TRUE16-NEXT:    v_add_nc_u32_e64 v3, s0, s1
+; CHECK-TRUE16-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s3, chain_callee@abs32@hi
+; CHECK-TRUE16-NEXT:    s_mov_b32 s2, chain_callee@abs32@lo
+; CHECK-TRUE16-NEXT:    scratch_store_b8 off, v0, s0 scope:SCOPE_SYS
+; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s0, 0
+; CHECK-TRUE16-NEXT:    v_readfirstlane_b32 s32, v3
+; CHECK-TRUE16-NEXT:    s_mov_b32 s32, s33
+; CHECK-TRUE16-NEXT:    s_mov_b32 exec_lo, -1
+; CHECK-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; CHECK-TRUE16-NEXT:    s_setpc_b64 s[2:3]
+;
+; CHECK-FAKE16-LABEL: with_chain_call_dyn_local:
+; CHECK-FAKE16:       ; %bb.0:
+; CHECK-FAKE16-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; CHECK-FAKE16-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; CHECK-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-FAKE16-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-FAKE16-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-FAKE16-NEXT:    s_cselect_b32 s32, 0x1d0, 16
+; CHECK-FAKE16-NEXT:    v_and_b32_e32 v0, -16, v0
+; CHECK-FAKE16-NEXT:    s_or_saveexec_b32 s0, -1
+; CHECK-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; CHECK-FAKE16-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s0
+; CHECK-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-FAKE16-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; CHECK-FAKE16-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:2 row_mask:0xf bank_mask:0xf
+; CHECK-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-FAKE16-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:4 row_mask:0xf bank_mask:0xf
+; CHECK-FAKE16-NEXT:    v_max_u32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
+; CHECK-FAKE16-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
+; CHECK-FAKE16-NEXT:    s_wait_dscnt 0x0
+; CHECK-FAKE16-NEXT:    v_max_u32_e32 v1, v1, v2
+; CHECK-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-FAKE16-NEXT:    v_readlane_b32 s1, v1, 31
+; CHECK-FAKE16-NEXT:    s_mov_b32 exec_lo, s0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s0, s32
+; CHECK-FAKE16-NEXT:    v_dual_mov_b32 v3, 13 :: v_dual_mov_b32 v8, 0
+; CHECK-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; CHECK-FAKE16-NEXT:    v_add_nc_u32_e64 v0, s0, s1
+; CHECK-FAKE16-NEXT:    s_mov_b32 s3, chain_callee@abs32@hi
+; CHECK-FAKE16-NEXT:    s_mov_b32 s2, chain_callee@abs32@lo
+; CHECK-FAKE16-NEXT:    scratch_store_b8 off, v3, s0 scope:SCOPE_SYS
+; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s0, 0
+; CHECK-FAKE16-NEXT:    v_readfirstlane_b32 s32, v0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s32, s33
+; CHECK-FAKE16-NEXT:    s_mov_b32 exec_lo, -1
+; CHECK-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; CHECK-FAKE16-NEXT:    s_setpc_b64 s[2:3]
+  %local = alloca i32, i32 %count, addrspace(5)
+  store volatile i8 13, ptr addrspace(5) %local
+  call void(ptr, i32, i32, i32, i32, ...) @llvm.amdgcn.cs.chain(ptr @chain_callee, i32 -1, i32 inreg 0, i32 0, i32 0)
+  unreachable
+}
+
+; No local frame - SP doesn't need to be adjusted.
+define amdgpu_cs void @with_chain_call_no_local() #0 {
+; CHECK-LABEL: with_chain_call_no_local:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; CHECK-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_mov_b32 s3, chain_callee@abs32@hi
+; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-NEXT:    s_mov_b32 s2, chain_callee@abs32@lo
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
+; CHECK-NEXT:    s_mov_b32 exec_lo, -1
+; CHECK-NEXT:    s_setpc_b64 s[2:3]
+  call void(ptr, i32, i32, i32, i32, ...) @llvm.amdgcn.cs.chain(ptr @chain_callee, i32 -1, i32 inreg 0, i32 0, i32 0)
+  unreachable
+}
+
+; Same, for the dynamic VGPR variant of the chain pseudo.
+define amdgpu_cs void @with_chain_call_dvgpr() #0 {
+; CHECK-TRUE16-LABEL: with_chain_call_dvgpr:
+; CHECK-TRUE16:       ; %bb.0:
+; CHECK-TRUE16-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; CHECK-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 13
+; CHECK-TRUE16-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-TRUE16-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-TRUE16-NEXT:    s_mov_b32 s3, retry_vgpr_alloc@abs32@hi
+; CHECK-TRUE16-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s2, retry_vgpr_alloc@abs32@lo
+; CHECK-TRUE16-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; CHECK-TRUE16-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; CHECK-TRUE16-NEXT:    s_mov_b32 s0, 0
+; CHECK-TRUE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-TRUE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-TRUE16-NEXT:    s_mov_b32 s32, s33
+; CHECK-TRUE16-NEXT:    s_alloc_vgpr 64
+; CHECK-TRUE16-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[2:3]
+; CHECK-TRUE16-NEXT:    s_cselect_b32 exec_lo, -1, -1
+; CHECK-TRUE16-NEXT:    s_setpc_b64 s[4:5]
+;
+; CHECK-FAKE16-LABEL: with_chain_call_dvgpr:
+; CHECK-FAKE16:       ; %bb.0:
+; CHECK-FAKE16-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; CHECK-FAKE16-NEXT:    v_mov_b32_e32 v0, 13
+; CHECK-FAKE16-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-FAKE16-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-FAKE16-NEXT:    s_mov_b32 s3, retry_vgpr_alloc@abs32@hi
+; CHECK-FAKE16-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s2, retry_vgpr_alloc@abs32@lo
+; CHECK-FAKE16-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; CHECK-FAKE16-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; CHECK-FAKE16-NEXT:    s_mov_b32 s0, 0
+; CHECK-FAKE16-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-FAKE16-NEXT:    s_wait_storecnt 0x0
+; CHECK-FAKE16-NEXT:    s_mov_b32 s32, s33
+; CHECK-FAKE16-NEXT:    s_alloc_vgpr 64
+; CHECK-FAKE16-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[2:3]
+; CHECK-FAKE16-NEXT:    s_cselect_b32 exec_lo, -1, -1
+; CHECK-FAKE16-NEXT:    s_setpc_b64 s[4:5]
+  %local = alloca i32, addrspace(5)
+  store volatile i8 13, ptr addrspace(5) %local
+  call void(ptr, i32, i32, i32, i32, ...) @llvm.amdgcn.cs.chain(ptr @chain_callee, i32 -1, i32 inreg 0, i32 0, i32 1, i32 inreg 64, i32 inreg -1, ptr @retry_vgpr_alloc)
+  unreachable
+}
+
 define amdgpu_cs void @with_spills() #0 {
 ; CHECK-LABEL: with_spills:
 ; CHECK:       ; %bb.0:
@@ -364,6 +552,34 @@ define void @default() #0 {
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  ret void
+}
+
+; Chain callees have to be defined in this file, otherwise we hit an unrelated
+; crash while emitting PAL metadata for a call to a declared-only function.
+define amdgpu_cs_chain void @chain_callee(i32 inreg) #0 {
+; CHECK-LABEL: chain_callee:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_bvhcnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_alloc_vgpr 0
+; CHECK-NEXT:    s_endpgm
+  ret void
+}
+
+define amdgpu_cs_chain_preserve void @retry_vgpr_alloc(i32 inreg) #0 {
+; CHECK-LABEL: retry_vgpr_alloc:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_bvhcnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_alloc_vgpr 0
+; CHECK-NEXT:    s_endpgm
   ret void
 }
 
