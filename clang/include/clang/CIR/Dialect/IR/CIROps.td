@@ -4414,6 +4414,9 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     // Inline information
     cir.func no_inline @some_method(...)
+
+    // The address of the function is not taken.
+    cir.func dso_local unnamed_addr @_ZN1SC2Ev(...)
     
     // Builtin function
     cir.func builtin @__builtin_coro_end(!cir.ptr<!s8i>, !cir.bool) -> !cir.bool
@@ -4440,6 +4443,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     UnitAttr:$no_proto,
     UnitAttr:$requires_call_conv_lowering,
     UnitAttr:$dso_local,
+    UnitAttr:$unnamed_addr,
     DefaultValuedAttr<
       CIR_GlobalLinkageKindAttr,
       "cir::GlobalLinkageKind::ExternalLinkage"

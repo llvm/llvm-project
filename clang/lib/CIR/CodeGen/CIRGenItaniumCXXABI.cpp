@@ -357,7 +357,11 @@ static void emitConstructorDestructorAlias(CIRGenModule &cgm,
   auto aliasee = cast<cir::FuncOp>(cgm.getAddrOfGlobal(targetDecl));
 
   // Populate actual alias.
-  cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+  cir::FuncOp alias =
+      cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+
+  // Alias constructors and destructors are always unnamed_addr.
+  alias.setUnnamedAddr(true);
 }
 
 void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {

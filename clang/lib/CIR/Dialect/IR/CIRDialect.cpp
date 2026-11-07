@@ -2953,6 +2953,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       getPreferredAlignmentAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+  mlir::StringAttr unnamedAddrNameAttr = getUnnamedAddrAttrName(state.name);
   mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
@@ -3036,6 +3037,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (parser.parseOptionalKeyword(dsoLocalNameAttr).succeeded())
     state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalKeyword(unnamedAddrNameAttr).succeeded())
+    state.addAttribute(unnamedAddrNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
   if (parser.parseSymbolName(nameAttr, getSymNameAttrName(state.name),
@@ -3350,6 +3354,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (getDsoLocal())
     p << " dso_local";
+
+  if (getUnnamedAddr())
+    p << " unnamed_addr";
 
   p << ' ';
   p.printSymbolName(getSymName());
