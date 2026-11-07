@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // <random>
 
 // template<class UIntType, size_t w, size_t s, size_t r>
@@ -49,7 +47,7 @@ test2()
 }
 
 void
-test_lwg3809() 
+test_lwg3809()
 {
     typedef std::subtract_with_carry_engine<
         std::uint16_t, 16, 5, 12> E;
@@ -80,7 +78,7 @@ test_lwg3809()
 }
 
 void
-test_lwg4014() 
+test_lwg4014()
 {
     typedef std::ranlux48_base E;
 
