@@ -28,7 +28,6 @@ class LibraryOptions;
 class LLVM_ABI LibraryOptionsContext {
 public:
   // Replaces the library options with Other's by replaying its arguments.
-  // Indexing libraries registered since the last parse is not thread-safe.
   void assign(const LibraryOptionsContext &Other);
 
   // Parses the option of L that Args[0] spells, keeping the other values.
@@ -37,6 +36,9 @@ public:
 
   // The arguments assigned so far.
   ArrayRef<const char *> args() const { return SavedArgs; }
+
+  // The library that parsed each argument in args().
+  ArrayRef<LibraryOptions *> argLibraries() const { return SavedLibraries; }
 
   // T's values, or T::Default if none of its options is parsed.
   template <typename T> const T &get() const {
@@ -53,6 +55,7 @@ public:
 private:
   DenseMap<const void *, void *> Values;
   SmallVector<const char *, 0> SavedArgs;
+  SmallVector<LibraryOptions *, 0> SavedLibraries;
   BumpPtrAllocator Alloc;
 };
 

@@ -1558,7 +1558,8 @@ int main(int Argc, char **Argv) {
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
     NewArgv.push_back(Arg->getValue());
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              NewArgv);
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
