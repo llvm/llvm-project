@@ -346,6 +346,7 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; LA64-NEXT:    ori $a0, $a0, 2576
 ; LA64-NEXT:    sub.d $sp, $sp, $a0
 ; LA64-NEXT:    .cfi_def_cfa_offset 1000000016
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    ori $a0, $zero, 3
 ; LA64-NEXT:    st.b $a0, $sp, 9
 ; LA64-NEXT:    ld.b $a0, $sp, 9
@@ -371,6 +372,7 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; LA32-NEXT:    ori $a0, $a0, 2576
 ; LA32-NEXT:    sub.w $sp, $sp, $a0
 ; LA32-NEXT:    .cfi_def_cfa_offset 1000000016
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    ori $a0, $zero, 3
 ; LA32-NEXT:    st.b $a0, $sp, 9
 ; LA32-NEXT:    ld.b $a0, $sp, 9
@@ -393,6 +395,7 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -896
 ; LA64-NEXT:    .cfi_def_cfa_offset 896
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    st.d $ra, $sp, 888 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 880 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
@@ -415,6 +418,7 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -832
 ; LA32-NEXT:    .cfi_def_cfa_offset 832
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    st.w $ra, $sp, 828 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 824 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
@@ -447,6 +451,7 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -2032
 ; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
@@ -459,7 +464,9 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; LA64-NEXT:    sub.d $sp, $sp, $a1
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 10, 0
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    slli.d $a0, $a0, 2
 ; LA64-NEXT:    ori $a1, $zero, 2048
 ; LA64-NEXT:    add.d $a1, $sp, $a1
@@ -481,6 +488,7 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -2032
 ; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 2024 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
@@ -493,7 +501,9 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; LA32-NEXT:    sub.w $sp, $sp, $a1
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 10, 0
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    slli.w $a0, $a0, 2
 ; LA32-NEXT:    ori $a1, $zero, 2048
 ; LA32-NEXT:    add.w $a1, $sp, $a1
@@ -527,6 +537,7 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -2032
 ; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
@@ -535,6 +546,7 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    addi.d $sp, $sp, -2048
 ; LA64-NEXT:    addi.d $sp, $sp, -1040
+; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 9, 0
 ; LA64-NEXT:    slli.d $a0, $a0, 2
 ; LA64-NEXT:    addi.d $a1, $sp, 1024
@@ -555,6 +567,7 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -2032
 ; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 2024 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
@@ -563,6 +576,7 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    addi.w $sp, $sp, -2048
 ; LA32-NEXT:    addi.w $sp, $sp, -1040
+; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 9, 0
 ; LA32-NEXT:    slli.w $a0, $a0, 2
 ; LA32-NEXT:    addi.w $a1, $sp, 1024
@@ -612,7 +626,15 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -2048
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $zero, $sp, 0
-; LA64-NEXT:    bstrins.d $sp, $zero, 14, 0
+; LA64-NEXT:    move $t1, $sp
+; LA64-NEXT:    bstrins.d $t1, $zero, 14, 0
+; LA64-NEXT:    lu12i.w $t2, 1
+; LA64-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $t2
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bltu $t1, $sp, .LBB11_3
+; LA64-NEXT:  # %bb.4:
+; LA64-NEXT:    move $sp, $t1
 ; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    slli.d $a1, $a1, 2
 ; LA64-NEXT:    lu12i.w $a2, 8
@@ -626,11 +648,11 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 10, 0
 ; LA64-NEXT:    lu12i.w $a1, 1
-; LA64-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB11_5: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    sub.d $sp, $sp, $a1
 ; LA64-NEXT:    st.d $zero, $sp, 0
-; LA64-NEXT:    bltu $a0, $sp, .LBB11_3
-; LA64-NEXT:  # %bb.4:
+; LA64-NEXT:    bltu $a0, $sp, .LBB11_5
+; LA64-NEXT:  # %bb.6:
 ; LA64-NEXT:    move $sp, $a0
 ; LA64-NEXT:    ld.b $zero, $a0, 0
 ; LA64-NEXT:    lu12i.w $a0, 16
@@ -668,7 +690,15 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; LA32-NEXT:    addi.w $sp, $sp, -2048
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $zero, $sp, 0
-; LA32-NEXT:    bstrins.w $sp, $zero, 14, 0
+; LA32-NEXT:    move $t1, $sp
+; LA32-NEXT:    bstrins.w $t1, $zero, 14, 0
+; LA32-NEXT:    lu12i.w $t2, 1
+; LA32-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $t2
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bltu $t1, $sp, .LBB11_3
+; LA32-NEXT:  # %bb.4:
+; LA32-NEXT:    move $sp, $t1
 ; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    slli.w $a1, $a1, 2
 ; LA32-NEXT:    lu12i.w $a2, 8
@@ -683,11 +713,11 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; LA32-NEXT:    addi.w $a1, $zero, -2048
 ; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    lu12i.w $a1, 1
-; LA32-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB11_5: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    sub.w $sp, $sp, $a1
 ; LA32-NEXT:    st.w $zero, $sp, 0
-; LA32-NEXT:    bltu $a0, $sp, .LBB11_3
-; LA32-NEXT:  # %bb.4:
+; LA32-NEXT:    bltu $a0, $sp, .LBB11_5
+; LA32-NEXT:  # %bb.6:
 ; LA32-NEXT:    move $sp, $a0
 ; LA32-NEXT:    ld.b $zero, $a0, 0
 ; LA32-NEXT:    lu12i.w $a0, 16
@@ -706,6 +736,808 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
   %1 = zext i32 %vla_size to i64
   %vla = alloca i8, i64 %1, align 2048
   %2 = load volatile i8, ptr %vla, align 2048
+  ret void
+}
+
+declare void @g(ptr)
+
+; A frame of 1 KiB may be left unprobed at a call.
+define void @f12() #0 {
+; LA64-LABEL: f12:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -1024
+; LA64-NEXT:    .cfi_def_cfa_offset 1024
+; LA64-NEXT:    st.d $ra, $sp, 1016 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    addi.d $a0, $sp, 8
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    ld.d $ra, $sp, 1016 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 1024
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f12:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -1024
+; LA32-NEXT:    .cfi_def_cfa_offset 1024
+; LA32-NEXT:    st.w $ra, $sp, 1020 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    addi.w $a0, $sp, 12
+; LA32-NEXT:    bl g
+; LA32-NEXT:    ld.w $ra, $sp, 1020 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 1024
+; LA32-NEXT:    ret
+  %buf = alloca [1008 x i8], align 1
+  call void @g(ptr %buf)
+  ret void
+}
+
+; A frame over 1 KiB: probe the new SP before a call.
+define void @f13() #0 {
+; LA64-LABEL: f13:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -1040
+; LA64-NEXT:    .cfi_def_cfa_offset 1040
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 1032 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    addi.d $a0, $sp, 8
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    ld.d $ra, $sp, 1032 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 1040
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f13:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -1040
+; LA32-NEXT:    .cfi_def_cfa_offset 1040
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 1036 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    addi.w $a0, $sp, 12
+; LA32-NEXT:    bl g
+; LA32-NEXT:    ld.w $ra, $sp, 1036 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 1040
+; LA32-NEXT:    ret
+  %buf = alloca [1024 x i8], align 1
+  call void @g(ptr %buf)
+  ret void
+}
+
+; Residual over 1 KiB after the unrolled probes: probe it before a call.
+define void @f14() #0 {
+; LA64-LABEL: f14:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -2032
+; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    lu12i.w $a0, 1
+; LA64-NEXT:    sub.d $sp, $sp, $a0
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    .cfi_def_cfa_offset 6128
+; LA64-NEXT:    addi.d $sp, $sp, -2048
+; LA64-NEXT:    addi.d $sp, $sp, -1840
+; LA64-NEXT:    .cfi_def_cfa_offset 10016
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    addi.d $a0, $sp, 8
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    lu12i.w $a0, 1
+; LA64-NEXT:    ori $a0, $a0, 3888
+; LA64-NEXT:    add.d $sp, $sp, $a0
+; LA64-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 2032
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f14:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -2032
+; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    lu12i.w $a0, 1
+; LA32-NEXT:    sub.w $sp, $sp, $a0
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    .cfi_def_cfa_offset 6128
+; LA32-NEXT:    addi.w $sp, $sp, -2048
+; LA32-NEXT:    addi.w $sp, $sp, -1840
+; LA32-NEXT:    .cfi_def_cfa_offset 10016
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    addi.w $a0, $sp, 12
+; LA32-NEXT:    bl g
+; LA32-NEXT:    lu12i.w $a0, 1
+; LA32-NEXT:    ori $a0, $a0, 3888
+; LA32-NEXT:    add.w $sp, $sp, $a0
+; LA32-NEXT:    ld.w $ra, $sp, 2028 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 2032
+; LA32-NEXT:    ret
+  %buf = alloca [10000 x i8], align 1
+  call void @g(ptr %buf)
+  ret void
+}
+
+; Residual over 1 KiB after the probe loop: probe it before a call.
+define void @f15() #0 {
+; LA64-LABEL: f15:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -2032
+; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    lu12i.w $a0, 9
+; LA64-NEXT:    sub.d $t1, $sp, $a0
+; LA64-NEXT:    .cfi_def_cfa 13, 38896
+; LA64-NEXT:    lu12i.w $t2, 1
+; LA64-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $t2
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bne $sp, $t1, .LBB15_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    .cfi_def_cfa_register 3
+; LA64-NEXT:    addi.d $sp, $sp, -1120
+; LA64-NEXT:    .cfi_def_cfa_offset 40016
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    addi.d $a0, $sp, 8
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    lu12i.w $a0, 9
+; LA64-NEXT:    ori $a0, $a0, 1120
+; LA64-NEXT:    add.d $sp, $sp, $a0
+; LA64-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 2032
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f15:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -2032
+; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    lu12i.w $a0, 9
+; LA32-NEXT:    sub.w $t1, $sp, $a0
+; LA32-NEXT:    .cfi_def_cfa 13, 38896
+; LA32-NEXT:    lu12i.w $t2, 1
+; LA32-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $t2
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bne $sp, $t1, .LBB15_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    .cfi_def_cfa_register 3
+; LA32-NEXT:    addi.w $sp, $sp, -1120
+; LA32-NEXT:    .cfi_def_cfa_offset 40016
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    addi.w $a0, $sp, 12
+; LA32-NEXT:    bl g
+; LA32-NEXT:    lu12i.w $a0, 9
+; LA32-NEXT:    ori $a0, $a0, 1120
+; LA32-NEXT:    add.w $sp, $sp, $a0
+; LA32-NEXT:    ld.w $ra, $sp, 2028 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 2032
+; LA32-NEXT:    ret
+  %buf = alloca [40000 x i8], align 1
+  call void @g(ptr %buf)
+  ret void
+}
+
+; The realignment may move SP by more than the probe size.
+define void @f16() #0 {
+; LA64-LABEL: f16:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -2032
+; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    .cfi_offset 22, -16
+; LA64-NEXT:    addi.d $fp, $sp, 2032
+; LA64-NEXT:    .cfi_def_cfa 22, 0
+; LA64-NEXT:    lu12i.w $a0, 1
+; LA64-NEXT:    sub.d $sp, $sp, $a0
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    sub.d $sp, $sp, $a0
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    sub.d $sp, $sp, $a0
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    addi.d $sp, $sp, -2048
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    move $t1, $sp
+; LA64-NEXT:    bstrins.d $t1, $zero, 12, 0
+; LA64-NEXT:    lu12i.w $t2, 1
+; LA64-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $t2
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bltu $t1, $sp, .LBB16_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    move $sp, $t1
+; LA64-NEXT:    lu12i.w $a0, 2
+; LA64-NEXT:    add.d $a0, $sp, $a0
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    lu12i.w $a0, 4
+; LA64-NEXT:    sub.d $sp, $fp, $a0
+; LA64-NEXT:    lu12i.w $a0, 3
+; LA64-NEXT:    ori $a0, $a0, 2064
+; LA64-NEXT:    add.d $sp, $sp, $a0
+; LA64-NEXT:    ld.d $fp, $sp, 2016 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 2032
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f16:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -2032
+; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 2024 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    .cfi_offset 22, -8
+; LA32-NEXT:    addi.w $fp, $sp, 2032
+; LA32-NEXT:    .cfi_def_cfa 22, 0
+; LA32-NEXT:    lu12i.w $a0, 1
+; LA32-NEXT:    sub.w $sp, $sp, $a0
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    sub.w $sp, $sp, $a0
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    sub.w $sp, $sp, $a0
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    addi.w $sp, $sp, -2048
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    move $t1, $sp
+; LA32-NEXT:    bstrins.w $t1, $zero, 12, 0
+; LA32-NEXT:    lu12i.w $t2, 1
+; LA32-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $t2
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bltu $t1, $sp, .LBB16_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    move $sp, $t1
+; LA32-NEXT:    lu12i.w $a0, 2
+; LA32-NEXT:    add.w $a0, $sp, $a0
+; LA32-NEXT:    bl g
+; LA32-NEXT:    lu12i.w $a0, 4
+; LA32-NEXT:    sub.w $sp, $fp, $a0
+; LA32-NEXT:    lu12i.w $a0, 3
+; LA32-NEXT:    ori $a0, $a0, 2064
+; LA32-NEXT:    add.w $sp, $sp, $a0
+; LA32-NEXT:    ld.w $fp, $sp, 2024 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 2028 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 2032
+; LA32-NEXT:    ret
+  %a = alloca i8, align 8192
+  call void @g(ptr %a)
+  ret void
+}
+
+define void @f17() #0 {
+; LA64-LABEL: f17:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -2032
+; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    .cfi_offset 22, -16
+; LA64-NEXT:    addi.d $fp, $sp, 2032
+; LA64-NEXT:    .cfi_def_cfa 22, 0
+; LA64-NEXT:    lu12i.w $a0, 31
+; LA64-NEXT:    sub.d $t1, $sp, $a0
+; LA64-NEXT:    lu12i.w $t2, 1
+; LA64-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $t2
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bne $sp, $t1, .LBB17_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    addi.d $sp, $sp, -2048
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    move $t1, $sp
+; LA64-NEXT:    bstrins.d $t1, $zero, 15, 0
+; LA64-NEXT:    lu12i.w $t2, 1
+; LA64-NEXT:  .LBB17_3: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $t2
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bltu $t1, $sp, .LBB17_3
+; LA64-NEXT:  # %bb.4:
+; LA64-NEXT:    move $sp, $t1
+; LA64-NEXT:    lu12i.w $a0, 16
+; LA64-NEXT:    add.d $a0, $sp, $a0
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    lu12i.w $a0, 32
+; LA64-NEXT:    sub.d $sp, $fp, $a0
+; LA64-NEXT:    lu12i.w $a0, 31
+; LA64-NEXT:    ori $a0, $a0, 2064
+; LA64-NEXT:    add.d $sp, $sp, $a0
+; LA64-NEXT:    ld.d $fp, $sp, 2016 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 2032
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f17:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -2032
+; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 2024 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    .cfi_offset 22, -8
+; LA32-NEXT:    addi.w $fp, $sp, 2032
+; LA32-NEXT:    .cfi_def_cfa 22, 0
+; LA32-NEXT:    lu12i.w $a0, 31
+; LA32-NEXT:    sub.w $t1, $sp, $a0
+; LA32-NEXT:    lu12i.w $t2, 1
+; LA32-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $t2
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bne $sp, $t1, .LBB17_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    addi.w $sp, $sp, -2048
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    move $t1, $sp
+; LA32-NEXT:    bstrins.w $t1, $zero, 15, 0
+; LA32-NEXT:    lu12i.w $t2, 1
+; LA32-NEXT:  .LBB17_3: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $t2
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bltu $t1, $sp, .LBB17_3
+; LA32-NEXT:  # %bb.4:
+; LA32-NEXT:    move $sp, $t1
+; LA32-NEXT:    lu12i.w $a0, 16
+; LA32-NEXT:    add.w $a0, $sp, $a0
+; LA32-NEXT:    bl g
+; LA32-NEXT:    lu12i.w $a0, 32
+; LA32-NEXT:    sub.w $sp, $fp, $a0
+; LA32-NEXT:    lu12i.w $a0, 31
+; LA32-NEXT:    ori $a0, $a0, 2064
+; LA32-NEXT:    add.w $sp, $sp, $a0
+; LA32-NEXT:    ld.w $fp, $sp, 2024 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 2028 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 2032
+; LA32-NEXT:    ret
+  %a = alloca i8, align 65536
+  call void @g(ptr %a)
+  ret void
+}
+
+declare void @k([150 x i64])
+
+; Call frame over 1 KiB in a function without a reserved call frame.
+define void @f18(i64 %n) #0 {
+; LA64-LABEL: f18:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    .cfi_def_cfa_offset 16
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    .cfi_offset 22, -16
+; LA64-NEXT:    addi.d $fp, $sp, 16
+; LA64-NEXT:    .cfi_def_cfa 22, 0
+; LA64-NEXT:    addi.d $a0, $a0, 15
+; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
+; LA64-NEXT:    sub.d $a0, $sp, $a0
+; LA64-NEXT:    lu12i.w $a1, 1
+; LA64-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $a1
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bltu $a0, $sp, .LBB18_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    move $sp, $a0
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    addi.d $sp, $sp, -1136
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    pcaddu18i $ra, %call36(k)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    addi.d $sp, $sp, 1136
+; LA64-NEXT:    addi.d $sp, $fp, -16
+; LA64-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f18:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    .cfi_def_cfa_offset 16
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    .cfi_offset 22, -8
+; LA32-NEXT:    addi.w $fp, $sp, 16
+; LA32-NEXT:    .cfi_def_cfa 22, 0
+; LA32-NEXT:    addi.w $a0, $a0, 15
+; LA32-NEXT:    addi.w $a1, $zero, -16
+; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $sp, $a0
+; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $a1
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bltu $a0, $sp, .LBB18_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    move $sp, $a0
+; LA32-NEXT:    bl g
+; LA32-NEXT:    addi.w $sp, $sp, -1168
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bl k
+; LA32-NEXT:    addi.w $sp, $sp, 1168
+; LA32-NEXT:    addi.w $sp, $fp, -16
+; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    ret
+  %vla = alloca i8, i64 %n, align 16
+  call void @g(ptr %vla)
+  call void @k([150 x i64] poison)
+  ret void
+}
+
+declare void @sink(i32)
+
+; The probe loop must not clobber arguments: preserve_none passes the 18th and
+; 19th in $t1 and $t2.
+define preserve_nonecc void @f19(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15, i32 %a16, i32 %a17, i32 %a18, i32 %a19) #0 {
+; LA64-LABEL: f19:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -2032
+; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    lu12i.w $a0, 9
+; LA64-NEXT:    sub.d $a0, $sp, $a0
+; LA64-NEXT:    .cfi_def_cfa 4, 38896
+; LA64-NEXT:    lu12i.w $a1, 1
+; LA64-NEXT:  .LBB19_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $a1
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bne $sp, $a0, .LBB19_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    .cfi_def_cfa_register 3
+; LA64-NEXT:    addi.d $sp, $sp, -1120
+; LA64-NEXT:    .cfi_def_cfa_offset 40016
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    move $s0, $t2
+; LA64-NEXT:    move $s1, $t1
+; LA64-NEXT:    addi.d $a0, $sp, 8
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    move $a0, $s1
+; LA64-NEXT:    pcaddu18i $ra, %call36(sink)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    move $a0, $s0
+; LA64-NEXT:    pcaddu18i $ra, %call36(sink)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    lu12i.w $a0, 9
+; LA64-NEXT:    ori $a0, $a0, 1120
+; LA64-NEXT:    add.d $sp, $sp, $a0
+; LA64-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 2032
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f19:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -2032
+; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    lu12i.w $a0, 9
+; LA32-NEXT:    sub.w $a0, $sp, $a0
+; LA32-NEXT:    .cfi_def_cfa 4, 38896
+; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:  .LBB19_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $a1
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bne $sp, $a0, .LBB19_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    .cfi_def_cfa_register 3
+; LA32-NEXT:    addi.w $sp, $sp, -1120
+; LA32-NEXT:    .cfi_def_cfa_offset 40016
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    move $s0, $t2
+; LA32-NEXT:    move $s1, $t1
+; LA32-NEXT:    addi.w $a0, $sp, 12
+; LA32-NEXT:    bl g
+; LA32-NEXT:    move $a0, $s1
+; LA32-NEXT:    bl sink
+; LA32-NEXT:    move $a0, $s0
+; LA32-NEXT:    bl sink
+; LA32-NEXT:    lu12i.w $a0, 9
+; LA32-NEXT:    ori $a0, $a0, 1120
+; LA32-NEXT:    add.w $sp, $sp, $a0
+; LA32-NEXT:    ld.w $ra, $sp, 2028 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 2032
+; LA32-NEXT:    ret
+  %buf = alloca [40000 x i8], align 1
+  call void @g(ptr %buf)
+  call void @sink(i32 %a18)
+  call void @sink(i32 %a19)
+  ret void
+}
+
+; The same for the realignment loop.
+define preserve_nonecc void @f20(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15, i32 %a16, i32 %a17, i32 %a18, i32 %a19) #0 {
+; LA64-LABEL: f20:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -2032
+; LA64-NEXT:    .cfi_def_cfa_offset 2032
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    .cfi_offset 22, -16
+; LA64-NEXT:    addi.d $fp, $sp, 2032
+; LA64-NEXT:    .cfi_def_cfa 22, 0
+; LA64-NEXT:    lu12i.w $a0, 1
+; LA64-NEXT:    sub.d $sp, $sp, $a0
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    sub.d $sp, $sp, $a0
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    sub.d $sp, $sp, $a0
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    addi.d $sp, $sp, -2048
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    move $a0, $sp
+; LA64-NEXT:    bstrins.d $a0, $zero, 12, 0
+; LA64-NEXT:    lu12i.w $a1, 1
+; LA64-NEXT:  .LBB20_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $a1
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bltu $a0, $sp, .LBB20_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    move $sp, $a0
+; LA64-NEXT:    move $s0, $t2
+; LA64-NEXT:    move $s1, $t1
+; LA64-NEXT:    lu12i.w $a0, 2
+; LA64-NEXT:    add.d $a0, $sp, $a0
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    move $a0, $s1
+; LA64-NEXT:    pcaddu18i $ra, %call36(sink)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    move $a0, $s0
+; LA64-NEXT:    pcaddu18i $ra, %call36(sink)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    lu12i.w $a0, 4
+; LA64-NEXT:    sub.d $sp, $fp, $a0
+; LA64-NEXT:    lu12i.w $a0, 3
+; LA64-NEXT:    ori $a0, $a0, 2064
+; LA64-NEXT:    add.d $sp, $sp, $a0
+; LA64-NEXT:    ld.d $fp, $sp, 2016 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 2032
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f20:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -2032
+; LA32-NEXT:    .cfi_def_cfa_offset 2032
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 2028 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 2024 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    .cfi_offset 22, -8
+; LA32-NEXT:    addi.w $fp, $sp, 2032
+; LA32-NEXT:    .cfi_def_cfa 22, 0
+; LA32-NEXT:    lu12i.w $a0, 1
+; LA32-NEXT:    sub.w $sp, $sp, $a0
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    sub.w $sp, $sp, $a0
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    sub.w $sp, $sp, $a0
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    addi.w $sp, $sp, -2048
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    move $a0, $sp
+; LA32-NEXT:    bstrins.w $a0, $zero, 12, 0
+; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:  .LBB20_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $a1
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bltu $a0, $sp, .LBB20_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    move $sp, $a0
+; LA32-NEXT:    move $s0, $t2
+; LA32-NEXT:    move $s1, $t1
+; LA32-NEXT:    lu12i.w $a0, 2
+; LA32-NEXT:    add.w $a0, $sp, $a0
+; LA32-NEXT:    bl g
+; LA32-NEXT:    move $a0, $s1
+; LA32-NEXT:    bl sink
+; LA32-NEXT:    move $a0, $s0
+; LA32-NEXT:    bl sink
+; LA32-NEXT:    lu12i.w $a0, 4
+; LA32-NEXT:    sub.w $sp, $fp, $a0
+; LA32-NEXT:    lu12i.w $a0, 3
+; LA32-NEXT:    ori $a0, $a0, 2064
+; LA32-NEXT:    add.w $sp, $sp, $a0
+; LA32-NEXT:    ld.w $fp, $sp, 2024 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 2028 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 2032
+; LA32-NEXT:    ret
+  %a = alloca i8, align 8192
+  call void @g(ptr %a)
+  call void @sink(i32 %a18)
+  call void @sink(i32 %a19)
+  ret void
+}
+
+declare void @k1024([136 x i64])
+declare void @k5136([650 x i64])
+
+; A call frame of 1 KiB may be left unprobed.
+define void @f21(i64 %n) #0 {
+; LA64-LABEL: f21:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    .cfi_def_cfa_offset 16
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    .cfi_offset 22, -16
+; LA64-NEXT:    addi.d $fp, $sp, 16
+; LA64-NEXT:    .cfi_def_cfa 22, 0
+; LA64-NEXT:    addi.d $a0, $a0, 15
+; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
+; LA64-NEXT:    sub.d $a0, $sp, $a0
+; LA64-NEXT:    lu12i.w $a1, 1
+; LA64-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $a1
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bltu $a0, $sp, .LBB21_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    move $sp, $a0
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    addi.d $sp, $sp, -1024
+; LA64-NEXT:    pcaddu18i $ra, %call36(k1024)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    addi.d $sp, $sp, 1024
+; LA64-NEXT:    addi.d $sp, $fp, -16
+; LA64-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f21:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    .cfi_def_cfa_offset 16
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    .cfi_offset 22, -8
+; LA32-NEXT:    addi.w $fp, $sp, 16
+; LA32-NEXT:    .cfi_def_cfa 22, 0
+; LA32-NEXT:    addi.w $a0, $a0, 15
+; LA32-NEXT:    addi.w $a1, $zero, -16
+; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $sp, $a0
+; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $a1
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bltu $a0, $sp, .LBB21_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    move $sp, $a0
+; LA32-NEXT:    bl g
+; LA32-NEXT:    addi.w $sp, $sp, -1056
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bl k1024
+; LA32-NEXT:    addi.w $sp, $sp, 1056
+; LA32-NEXT:    addi.w $sp, $fp, -16
+; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    ret
+  %vla = alloca i8, i64 %n, align 16
+  call void @g(ptr %vla)
+  call void @k1024([136 x i64] poison)
+  ret void
+}
+
+; A call frame over the probe size: probe it, and its residual over 1 KiB.
+define void @f22(i64 %n) #0 {
+; LA64-LABEL: f22:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $sp, $sp, -16
+; LA64-NEXT:    .cfi_def_cfa_offset 16
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
+; LA64-NEXT:    .cfi_offset 1, -8
+; LA64-NEXT:    .cfi_offset 22, -16
+; LA64-NEXT:    addi.d $fp, $sp, 16
+; LA64-NEXT:    .cfi_def_cfa 22, 0
+; LA64-NEXT:    addi.d $a0, $a0, 15
+; LA64-NEXT:    bstrins.d $a0, $zero, 3, 0
+; LA64-NEXT:    sub.d $a0, $sp, $a0
+; LA64-NEXT:    lu12i.w $a1, 1
+; LA64-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:    sub.d $sp, $sp, $a1
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    bltu $a0, $sp, .LBB22_1
+; LA64-NEXT:  # %bb.2:
+; LA64-NEXT:    move $sp, $a0
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    lu12i.w $a0, 1
+; LA64-NEXT:    sub.d $sp, $sp, $a0
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    addi.d $sp, $sp, -1040
+; LA64-NEXT:    st.d $zero, $sp, 0
+; LA64-NEXT:    pcaddu18i $ra, %call36(k5136)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    lu12i.w $a0, 1
+; LA64-NEXT:    ori $a0, $a0, 1040
+; LA64-NEXT:    add.d $sp, $sp, $a0
+; LA64-NEXT:    addi.d $sp, $fp, -16
+; LA64-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 16
+; LA64-NEXT:    ret
+;
+; LA32-LABEL: f22:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $sp, $sp, -16
+; LA32-NEXT:    .cfi_def_cfa_offset 16
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
+; LA32-NEXT:    .cfi_offset 1, -4
+; LA32-NEXT:    .cfi_offset 22, -8
+; LA32-NEXT:    addi.w $fp, $sp, 16
+; LA32-NEXT:    .cfi_def_cfa 22, 0
+; LA32-NEXT:    addi.w $a0, $a0, 15
+; LA32-NEXT:    addi.w $a1, $zero, -16
+; LA32-NEXT:    and $a0, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $sp, $a0
+; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    sub.w $sp, $sp, $a1
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bltu $a0, $sp, .LBB22_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    move $sp, $a0
+; LA32-NEXT:    bl g
+; LA32-NEXT:    lu12i.w $a0, 1
+; LA32-NEXT:    sub.w $sp, $sp, $a0
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    addi.w $sp, $sp, -1072
+; LA32-NEXT:    st.w $zero, $sp, 0
+; LA32-NEXT:    bl k5136
+; LA32-NEXT:    lu12i.w $a0, 1
+; LA32-NEXT:    ori $a0, $a0, 1072
+; LA32-NEXT:    add.w $sp, $sp, $a0
+; LA32-NEXT:    addi.w $sp, $fp, -16
+; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    ret
+  %vla = alloca i8, i64 %n, align 16
+  call void @g(ptr %vla)
+  call void @k5136([650 x i64] poison)
   ret void
 }
 
