@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "symbol_prefix_regex": "^__llvm_libc[0-9A-Za-z_]*::",
+  "regex_aliases": {
+    "soft_double_helpers": "__aeabi_(dadd|dsub|drsub|dmul|ddiv|dneg|dcmp[a-z]+|cdcmp[a-z]+|cdrcmp[a-z]+|f2d|d2f|i2d|ui2d|l2d|ul2d|d2iz|d2uiz|d2lz|d2ulz)|__(add|sub|mul|div|neg)df3|__extendsfdf2|__truncdfsf2|__float(un)?(si|di|ti)df|__fix(uns)?df(si|di|ti)|__(eq|ne|lt|le|gt|ge|un|cmp)df2"
+  },
+  "rules": [
+    {
+      "id": "skip-accurate-no-multiprecision",
+      "comment": "With LIBC_MATH_SKIP_ACCURATE_PASS, functions must not contain the multi-precision helpers used by the accurate pass. The exceptions are correctly rounded basic operations (fused multiply-add and narrowing arithmetic) that use DyadicFloat as their main algorithm rather than as an accurate pass. f128 and long double variants inherently need wide arithmetic.",
+      "when_flags": ["LIBC_MATH_SKIP_ACCURATE_PASS"],
+      "exclude_variants": ["f128", "long_double"],
+      "exceptions": ["bf16fma", "bf16mul", "daddl", "ddivl", "dfmal", "dmull", "dsqrtl", "dsubl", "f16fma", "f16mul", "ffma", "fma", "fmul"],
+      "forbid_defined_regex": ["DyadicFloat<(128|192|256)u?l?>", "BigInt<", "_f128\\(", "_f256\\(", "accurate"]
+    },
+    {
+      "id": "small-tables-max-object",
+      "comment": "With LIBC_MATH_SMALL_TABLES, no named data object may exceed 512 bytes. The exceptions are ceilings for the current tables; lower or remove them as tables shrink.",
+      "when_flags": ["LIBC_MATH_SMALL_TABLES"],
+      "max_named_data_object_bytes": 512,
+      "max_named_data_object_exceptions": {
+        "atan": {"bytes": 1040, "note": "atan_internal::ATAN_I; a smaller table is pending"},
+        "atan2": {"bytes": 1040, "note": "atan_internal::ATAN_I; a smaller table is pending"},
+        "atan2f128": 1560,
+        "atan2f16": 1224,
+        "atan2l": 1560,
+        "cbrtbf16": 896,
+        "cbrtf": 896,
+        "cos": 2048,
+        "erff": 2048,
+        "exp": {"bytes": 1536, "note": "EXP2_MID1/EXP2_MID2; smaller tables are pending"},
+        "exp10": {"bytes": 1536, "note": "EXP2_MID1/EXP2_MID2; smaller tables are pending"},
+        "expm1": 1536,
+        "expm1f": 1560,
+        "lgammaf": 2048,
+        "log": 2048,
+        "log10": 2048,
+        "log10f": {"bytes": 1024, "note": "128-entry log tables; smaller tables are pending"},
+        "log1p": 2064,
+        "log2": {"bytes": 2048, "note": "log2_internal::LOG_R1; smaller tables are pending"},
+        "log2f": {"bytes": 1024, "note": "128-entry log tables; smaller tables are pending"},
+        "logf": {"bytes": 1024, "note": "128-entry log tables; smaller tables are pending"},
+        "pow": {"bytes": 2048, "note": "pow_internal::LOG2_R_DD; smaller tables are pending"},
+        "sin": 2048,
+        "sincos": 2048,
+        "tan": 2048
+      }
+    },
+    {
+      "id": "no-writable-data",
+      "comment": "Math functions must not have writable data. The only exceptions are the static volatile variables that the functions in fputil::generic (FPUtil/rounding_mode.h) use to probe the rounding mode, which are not used with LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY (see no-writable-data-round-nearest).",
+      "max_writable_data_bytes": 0,
+      "allow_writable_sections": ["^\\.data\\._ZZN[0-9]+__llvm_libc[0-9A-Za-z_]*6fputil7generic[0-9]+(quick_get_round|fenv_is_round_(up|down|to_nearest|to_zero))EvE1x$"]
+    },
+    {
+      "id": "no-writable-data-round-nearest",
+      "when_flags": ["LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY"],
+      "max_writable_data_bytes": 0
+    },
+    {
+      "id": "float-comp-no-soft-double",
+      "comment": "With LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT, these single precision functions must not call double precision soft-float helpers on targets without a hardware double precision FPU.",
+      "when_flags": ["LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT"],
+      "when_macros": ["__arm__ || __riscv", "!__ARM_FP&0x8", "!__riscv_flen&64"],
+      "functions": ["logf", "log2f", "log10f", "expf", "exp2f", "exp10f", "atanf", "powf"],
+      "forbid_undefined": ["@soft_double_helpers"],
+      "known_exceptions": {
+        "logf": {"symbols": ["@soft_double_helpers"], "note": "a float-only implementation is pending"},
+        "log2f": {"symbols": ["@soft_double_helpers"], "note": "a float-only implementation is pending"},
+        "log10f": {"symbols": ["@soft_double_helpers"], "note": "a float-only implementation is pending"}
+      }
+    }
+  ]
+}
