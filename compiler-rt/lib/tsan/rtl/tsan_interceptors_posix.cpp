@@ -13,9 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdarg.h>
-#if defined(__APPLE__)
-#  include <dlfcn.h>
-#endif
 
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
@@ -41,6 +38,10 @@
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
 #include "tsan_suppressions.h"
+
+#if SANITIZER_APPLE
+#  include <dlfcn.h>
+#endif
 
 using namespace __tsan;
 
