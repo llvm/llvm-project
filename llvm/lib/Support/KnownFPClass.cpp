@@ -495,7 +495,7 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
 
 // Handle known sign bit and NaN cases for fadd and fsub. Invalid for fma.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
-                              const KnownFPClass &KnownRHS) {
+                              const KnownFPClass &KnownRHS, RoundingMode RM) {
   KnownFPClass Known;
 
   Known.propagateNonSNaN(KnownLHS, KnownRHS);
@@ -527,9 +527,13 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
       Known.knownNot(fcZero | fcNegSubnormal);
   }
 
-  // (fadd x, +0.0) is guaranteed to return +0.0, not -0.0.
-  if (KnownLHS.isKnownNever(fcNegZero) || KnownRHS.isKnownNever(fcNegZero))
-    Known.knownNot(fcNegZero);
+  // TODO: Refine signed zeroes for other rounding modes once fadd/fsub take a
+  // rounding mode parameter.
+  if (RM == RoundingMode::NearestTiesToEven) {
+    // (fadd x, +0.0) is guaranteed to return +0.0, not -0.0.
+    if (KnownLHS.isKnownNever(fcNegZero) || KnownRHS.isKnownNever(fcNegZero))
+      Known.knownNot(fcNegZero);
+  }
 
   return Known;
 }
@@ -540,7 +544,8 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
   KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
 
-  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS);
+  KnownFPClass Known =
+      fadd_impl(KnownLHS, KnownRHS, RoundingMode::NearestTiesToEven);
 
   return applyOutputDenormalMode(Known, Mode);
 }
@@ -549,7 +554,8 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
                                      DenormalMode Mode) {
   KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
 
-  KnownFPClass Known = fadd_impl(KnownSrc, KnownSrc);
+  KnownFPClass Known =
+      fadd_impl(KnownSrc, KnownSrc, RoundingMode::NearestTiesToEven);
 
   if (KnownSrc.isKnownNever(fcPosSubnormal))
     Known.knownNot(fcPosSubnormal);
@@ -573,7 +579,8 @@ KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS_,
   // flushed.
   KnownRHS.fneg();
 
-  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS);
+  KnownFPClass Known =
+      fadd_impl(KnownLHS, KnownRHS, RoundingMode::NearestTiesToEven);
 
   return applyOutputDenormalMode(Known, Mode);
 }
