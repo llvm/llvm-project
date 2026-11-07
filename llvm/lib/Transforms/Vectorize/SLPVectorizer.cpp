@@ -31164,8 +31164,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     }
   }
 
+  // The lanes of a buildvector are scalars even if the vector is revectorized.
   Type *ScalarTy =
-      getValueType(VL[0], Opts->slp_revec, /*LookThroughCmp=*/true);
+      getValueType(VL[0], Opts->slp_revec && !isa<InsertElementInst>(I0),
+                   /*LookThroughCmp=*/true);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   // The buildvector, not filling the whole registers, is vectorized as a whole,

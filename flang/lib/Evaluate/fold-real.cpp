@@ -529,9 +529,9 @@ Expr<Type<TypeCategory::Real>> FoldOperation(
   using Result = Type<TypeCategory::Real>;
   if (auto array{ApplyElementwise(context, x,
           std::function<Expr<Result>(Expr<Operand> &&)>{
-              [=](Expr<Operand> &&operand) {
+              [isImaginaryPart{x.isImaginaryPart}](Expr<Operand> &&operand) {
                 return Expr<Result>{
-                    ComplexComponent{x.isImaginaryPart, std::move(operand)}};
+                    ComplexComponent{isImaginaryPart, std::move(operand)}};
               }})}) {
     return *array;
   }

@@ -243,26 +243,27 @@ static bool isCoercionWiderThanMemory(mlir::Type origTy, mlir::Type coercedTy,
 /// slot is dropped), Extend (needs llvm.signext / llvm.zeroext), Indirect or
 /// IndirectAliased (needs the pointer attributes), Expand (changes the argument
 /// count), or a coerced Direct, which may be flattened or may lose
-/// llvm.noundef.
+/// llvm.noundef, or that has a stack-slot alignment, which needs
+/// llvm.alignstack.
 static bool needsArgAttrUpdate(const FunctionClassification &fc) {
   return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
     return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
            ac.kind == ArgKind::Indirect ||
            ac.kind == ArgKind::IndirectAliased || ac.kind == ArgKind::Expand ||
-           (ac.kind == ArgKind::Direct && ac.coercedType);
+           (ac.kind == ArgKind::Direct && (ac.coercedType || ac.directAlign));
   });
 }
 
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
 /// llvm.signext / llvm.zeroext on Extend args, adds the pointer attributes
-/// in place of llvm.nofpclass for Indirect and IndirectAliased args,
-/// drops llvm.noundef from a coerced Direct arg that passes undefined bits,
-/// gives each field of a Direct+canFlatten argument the argument's attributes,
-/// and gives each field of an Expand argument an empty dict.  When
-/// \p enableNoundefAttrs is set, Extend, Indirect and IndirectAliased args are
-/// also marked llvm.noundef.  Direct and Extend slots keep their other
-/// existing attributes.  \p origArgTypes provides the pre-rewrite type for
-/// each arg slot.
+/// for Indirect and IndirectAliased args in place of llvm.nofpclass, drops
+/// llvm.noundef from a coerced Direct arg that passes undefined bits,
+/// adds llvm.alignstack on a Direct arg with a stack-slot alignment, gives each
+/// field of a Direct+canFlatten argument the argument's attributes, and gives
+/// each field of an Expand argument an empty dict.  When \p enableNoundefAttrs
+/// is set, Extend, Indirect and IndirectAliased args are also marked
+/// llvm.noundef.  Direct and Extend slots keep their other existing attributes.
+/// \p origArgTypes provides the pre-rewrite type for each arg slot.
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
@@ -282,6 +283,12 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx, mlir::ModuleOp module,
         isCoercionWiderThanMemory(origArgTypes[oldIdx], ac.coercedType, dl)) {
       mlir::NamedAttrList attrs(existing);
       attrs.erase(mlir::LLVM::LLVMDialect::getNoUndefAttrName());
+      existing = attrs.getDictionary(ctx);
+    }
+    if (ac.kind == ArgKind::Direct && ac.directAlign) {
+      mlir::NamedAttrList attrs(existing);
+      attrs.set(mlir::LLVM::LLVMDialect::getStackAlignmentAttrName(),
+                builder.getI64IntegerAttr(ac.directAlign->value()));
       existing = attrs.getDictionary(ctx);
     }
     if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {

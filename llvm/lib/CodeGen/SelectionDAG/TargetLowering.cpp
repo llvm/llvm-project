@@ -222,6 +222,13 @@ TargetLowering::getArgListForFunctionType(FunctionType *FuncTy,
   return Args;
 }
 
+std::pair<SDValue, SDValue> TargetLowering::makeLibCall(
+    SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT, ArrayRef<SDValue> Ops,
+    MakeLibCallOptions CallOptions, const SDLoc &dl, SDValue Chain) const {
+  return makeLibCall(DAG, DAG.getLibcalls().getLibcallImpl(LC), RetVT, Ops,
+                     CallOptions, dl, Chain);
+}
+
 /// Generate a libcall taking the given operands as arguments and returning a
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
@@ -277,8 +284,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::LibcallImpl LibcallImpl,
 
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(getLibcallImplCallingConv(LibcallImpl), RetTy, OrigRetTy,
-                    Callee, std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl),
+                    RetTy, OrigRetTy, Callee, std::move(Args))
       .setNoReturn(CallOptions.DoesNotReturn)
       .setDiscardResult(!CallOptions.IsReturnValueUsed)
       .setIsPostTypeLegalization(CallOptions.IsPostTypeLegalization)
@@ -8941,7 +8948,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   // UDIVREM can lower it instead.
   bool CanDecomposeUREMWithoutMulHi =
       Opcode == ISD::UREM &&
-      getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
+      DAG.getLibcalls().getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
           RTLIB::Unsupported &&
       isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT);
   if (!CanDecomposeUREMWithoutMulHi &&
@@ -13107,7 +13114,7 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
   else if (WideVT == MVT::i128)
     LC = RTLIB::MUL_I128;
 
-  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
+  RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LibcallImpl == RTLIB::Unsupported) {
     forceExpandMultiply(DAG, dl, Signed, Lo, Hi, LHS, RHS);
     return;

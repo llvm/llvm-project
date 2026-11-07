@@ -10,9 +10,9 @@
 //
 // Lookup semantics belong to the controller, so these tests only check that
 // lookupInJITDylib carries its arguments to the controller and the results
-// back intact, and that it rejects a result that doesn't match the lookup set.
-// The controller-side handler records what it receives and returns a canned
-// result.
+// back intact, that it rejects a result that doesn't match the lookup set, and
+// that both lookup and transport errors reach the caller. The controller-side
+// handler records what it receives and returns a canned result.
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,8 +35,8 @@ namespace {
 // kept in sync with the tag definition in LookupInJITDylibSPS.cpp.
 extern "C" orc_rt_ControllerHandlerTag orc_rt_tag_sps_lookupSymbolsInJITDylib;
 
-using LookupJITDylibSPSSig = SPSSymbolLookupResult(SPSExecutorAddr,
-                                                   SPSSymbolLookupSet);
+using LookupJITDylibSPSSig =
+    SPSExpected<SPSSymbolLookupResult>(SPSExecutorAddr, SPSSymbolLookupSet);
 
 // Controller-side state for a single lookup. Tests pass its address as the
 // JITDylib key, which lets the (capture-less) handler reach it.
@@ -53,8 +53,8 @@ static void recordingLookup(orc_rt_SessionRef S,
                             uint64_t CallId) {
   SPSWrapperFunction<LookupJITDylibSPSSig>::handle(
       S, ArgBytes, Return, CallId,
-      [](move_only_function<void(SymbolLookupResult)> OnComplete, void *Key,
-         const SymbolLookupSet &LS) {
+      [](move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
+         void *Key, const SymbolLookupSet &LS) {
         auto &CS = *static_cast<ControllerState *>(Key);
         CS.Called = true;
         CS.Received = LS;
@@ -62,15 +62,30 @@ static void recordingLookup(orc_rt_SessionRef S,
       });
 }
 
-// Fails the call with an out-of-band error.
-static void failingLookup(orc_rt_SessionRef S,
+// Reports that the lookup itself failed, as the controller would for (e.g.) a
+// missing required symbol.
+static void lookupFailure(orc_rt_SessionRef S,
                           orc_rt_WrapperFunctionBuffer ArgBytes,
                           orc_rt_WrapperFunctionReturn Return,
                           uint64_t CallId) {
+  SPSWrapperFunction<LookupJITDylibSPSSig>::handle(
+      S, ArgBytes, Return, CallId,
+      [](move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
+         void *Key, const SymbolLookupSet &LS) {
+        OnComplete(make_error<StringError>("lookup failed"));
+      });
+}
+
+// Fails the call with an out-of-band error, as for a transport failure.
+static void transportFailure(orc_rt_SessionRef S,
+                             orc_rt_WrapperFunctionBuffer ArgBytes,
+                             orc_rt_WrapperFunctionReturn Return,
+                             uint64_t CallId) {
   WrapperFunctionBuffer Args(ArgBytes); // Take ownership; unused.
-  Return(S,
-         WrapperFunctionBuffer::createOutOfBandError("lookup failed").release(),
-         CallId);
+  Return(
+      S,
+      WrapperFunctionBuffer::createOutOfBandError("transport failed").release(),
+      CallId);
 }
 
 // Route the lookup tag to Handler, then run lookupInJITDylib with CS as the
@@ -148,11 +163,20 @@ TEST(LookupInJITDylibSPSTest, ResultSizeMismatchFails) {
           "lookupInJITDylib: expected 2 results from controller, got 1"));
 }
 
-TEST(LookupInJITDylibSPSTest, ControllerErrorPropagates) {
+TEST(LookupInJITDylibSPSTest, LookupErrorPropagates) {
+  // An error from the controller's lookup is reported to the caller.
   ControllerState CS;
-  EXPECT_THAT_EXPECTED(runLookup(failingLookup, CS,
+  EXPECT_THAT_EXPECTED(runLookup(lookupFailure, CS,
                                  {{"foo", SymbolLookupFlags::RequiredSymbol}}),
                        FailedWithMessage("lookup failed"));
+}
+
+TEST(LookupInJITDylibSPSTest, TransportErrorPropagates) {
+  // A failure to call the controller is reported to the caller.
+  ControllerState CS;
+  EXPECT_THAT_EXPECTED(runLookup(transportFailure, CS,
+                                 {{"foo", SymbolLookupFlags::RequiredSymbol}}),
+                       FailedWithMessage("transport failed"));
 }
 
 } // namespace

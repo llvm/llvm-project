@@ -253,6 +253,15 @@ public:
   bool useHVXV83Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V83;
   }
+  bool hasV85Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V85;
+  }
+  bool hasV85OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V85;
+  }
+  bool useHVXV85Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V85;
+  }
 
   bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
