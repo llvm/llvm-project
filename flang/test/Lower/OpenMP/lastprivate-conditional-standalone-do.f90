@@ -28,7 +28,7 @@ end subroutine
 ! CHECK-NOT:     fir.address_of(@_lp_cond_global
 
 ! -- No nesting guard emitted (this is not orphaned) -------------------------
-! CHECK-NOT:     fir.call @omp_get_level_
+! CHECK-NOT:     fir.call @omp_get_level
 
 ! -- omp.parallel with the struct as reduction --------------------------------
 ! CHECK:         omp.parallel
