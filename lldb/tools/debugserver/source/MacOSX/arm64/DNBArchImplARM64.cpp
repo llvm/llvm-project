@@ -787,6 +787,27 @@ bool DNBArchMachARM64::NotifyException(MachException::Data &exc) {
       // addr to return the starting address as seen from the debugger side.
       uint32_t hw_index = GetHardwareWatchpointHit(addr);
 
+      // No enabled watchpoint covers the accessed address, but one that was
+      // disabled before the thread resumed does. This is likely caused by
+      // the hardware still having the old debug state. We pretend the hit
+      // never happened as the watchpoint was supposed to be disabled.
+      // We limit the retries to avoid infinite loops in case another bug
+      // causes this to occur deterministically.
+      const uint32_t max_stale_watchpoint_hits = 64;
+      if (hw_index == INVALID_NUB_HW_INDEX &&
+          m_stale_watchpoint_hits < max_stale_watchpoint_hits &&
+          IsDisabledWatchpointHit(exc.exc_data[1])) {
+        ++m_stale_watchpoint_hits;
+        m_resume_after_stale_watchpoint = true;
+        DNBLogThreadedIf(LOG_WATCHPOINTS,
+                         "DNBArchMachARM64::NotifyException "
+                         "watchpoint hit on address 0x%llx of a disabled "
+                         "watchpoint, resuming the thread (attempt %u)",
+                         (uint64_t)exc.exc_data[1], m_stale_watchpoint_hits);
+        return true;
+      }
+      m_stale_watchpoint_hits = 0;
+
       // One logical watchpoint was split into two watchpoint locations because
       // it was too big.  If the watchpoint exception is indicating the 2nd half
       // of the two-parter, find the address of the 1st half and report that --
@@ -821,6 +842,7 @@ bool DNBArchMachARM64::NotifyException(MachException::Data &exc) {
     }
     break;
   }
+  m_stale_watchpoint_hits = 0;
   return false;
 }
 
@@ -828,6 +850,7 @@ bool DNBArchMachARM64::ThreadDidStop() {
   bool success = true;
 
   m_state.InvalidateAllRegisterStates();
+  m_resume_after_stale_watchpoint = false;
 
   if (m_watchpoint_resume_single_step_enabled) {
     // Great!  We now disable the hardware single step as well as re-enable the
@@ -864,6 +887,12 @@ bool DNBArchMachARM64::ThreadDidStop() {
     }
   }
   return success;
+}
+
+bool DNBArchMachARM64::StepNotComplete() {
+  // Resume threads that stopped on a stale watchpoint hit, see
+  // NotifyException.
+  return m_resume_after_stale_watchpoint;
 }
 
 // Set the single step bit in the processor status register.
@@ -1543,6 +1572,30 @@ uint32_t DNBArchMachARM64::GetHardwareWatchpointHit(nub_addr_t &addr) {
     }
   }
   return INVALID_NUB_HW_INDEX;
+}
+
+// Return true if addr is covered by a watchpoint register that is set up but
+// currently disabled.
+bool DNBArchMachARM64::IsDisabledWatchpointHit(nub_addr_t addr) {
+  if (GetDBGState(false) != KERN_SUCCESS)
+    return false;
+  const DBG &debug_state = m_state.dbg;
+  const uint32_t num = NumSupportedHardwareWatchpoints();
+  for (uint32_t i = 0; i < num; ++i) {
+    if (IsWatchpointEnabled(debug_state, i))
+      continue;
+    nub_addr_t wp_addr = GetWatchAddress(debug_state, i);
+    uint32_t bas_bits = bits(debug_state.__wcr[i], 12, 5);
+    uint32_t mask = bits(debug_state.__wcr[i], 28, 24);
+    if (mask != 0) {
+      if (bits(wp_addr, 48, mask) == bits(addr, 48, mask))
+        return true;
+    } else if (bas_bits != 0 && bits(wp_addr, 48, 3) == bits(addr, 48, 3) &&
+               (bas_bits & (1 << bits(addr, 2, 0)))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 nub_addr_t DNBArchMachARM64::GetWatchpointAddressByIndex(uint32_t hw_index) {
