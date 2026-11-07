@@ -1442,8 +1442,20 @@ void CodeGenRegBank::addToMaps(CodeGenRegisterClass *RC) {
 
   // Duplicate classes are rejected by insert().
   // That's OK, we only care about the properties handled by CGRC::Key.
-  CodeGenRegisterClass::Key K(*RC, /*IgnoreArtificialMembers=*/true);
-  Key2RC.try_emplace(K, RC);
+  Key2RC.try_emplace(
+      RCKey{getNonArtificialEnumValues(RC->getMembers()), RC->RSI}, RC);
+}
+
+std::vector<unsigned> CodeGenRegBank::getNonArtificialEnumValues(
+    const CodeGenRegister::Vec &Members) {
+  std::vector<unsigned> Regs;
+  Regs.reserve(Members.size());
+  for (const CodeGenRegister *Reg : Members) {
+    if (!Reg->Artificial)
+      Regs.push_back(Reg->EnumValue);
+  }
+
+  return Regs;
 }
 
 // Create a synthetic sub-class if it is missing.
@@ -1452,13 +1464,14 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
                                     const CodeGenRegister::Vec *Members,
                                     StringRef Name) {
   // Synthetic sub-class has the same size and alignment as RC.
-  CodeGenRegisterClass::Key K(Members, RC->RSI,
-                              /*IgnoreArtificialMembers=*/true);
-  RCKeyMap::const_iterator FoundI = Key2RC.find(K);
+  std::vector<unsigned> Regs = getNonArtificialEnumValues(*Members);
+  RCKeyMap::const_iterator FoundI = Key2RC.find(RCKeyRef{Regs, &RC->RSI});
   if (FoundI != Key2RC.end())
     return {FoundI->second, false};
 
   // Sub-class doesn't exist, create a new one.
+  CodeGenRegisterClass::Key K(Members, RC->RSI,
+                              /*IgnoreArtificialMembers=*/true);
   RegClasses.emplace_back(*this, Name, K);
   setCreationIndex(RegClasses.back());
   RegClassNames.insert(Name);
