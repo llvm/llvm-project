@@ -1,6 +1,6 @@
 ; This bug was caused by two CPR's existing for the same global variable, 
 ; colliding in the Module level CPR map.
-; RUN: llvm-as %s -o /dev/null
+; RUN: llvm-as %s -disable-output
 ; RUN: verify-uselistorder %s
 
 define void @test() {
