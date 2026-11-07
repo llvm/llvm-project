@@ -1558,23 +1558,22 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
-// Lower one DO control (lower, upper, or step).
-//
-// An implicit acc.loop is a DO inside a compute construct with no `!$acc loop`.
-// A non-integer control is a Fortran extension; convert it to the induction
-// variable's integer type, matching non-OpenACC lowering. An integer control,
-// of any kind, is already a legal acc.loop operand and is left unchanged.
-// An explicit `!$acc loop` keeps every control expression's own type.
-// OpenACC requires those bounds to be integer.
+// Lower one DO control (lower, upper, or step). Integer controls, of any
+// kind, are already legal acc.loop operands and are left unchanged. A
+// non-integer control is a Fortran extension used by an implicit acc.loop;
+// convert it to the induction variable's integer type. An explicit !$acc loop
+// with a non-integer bound is rejected in semantics and must not reach here.
 static mlir::Value genACCLoopControlValue(
     Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
     mlir::Location loc, Fortran::lower::StatementContext &stmtCtx,
     const Fortran::lower::SomeExpr &expr,
     const Fortran::semantics::Symbol &ivSym, bool hasDirective) {
   mlir::Value value = fir::getBase(converter.genExprValue(expr, stmtCtx));
-  if (hasDirective || mlir::isa<mlir::IntegerType>(value.getType()) ||
+  if (mlir::isa<mlir::IntegerType>(value.getType()) ||
       value.getType().isIndex())
     return value;
+  assert(!hasDirective &&
+         "non-integer OpenACC loop bound should have been rejected");
   return builder.createConvert(loc, getTypeFromIvTypeSize(builder, ivSym),
                                value);
 }
@@ -2204,9 +2203,21 @@ void AccDataMap::remapDataOperandSymbols(
     mlir::Value hostInput = hostDeclare.getMemref();
     mlir::Type hostType = hostInput.getType();
     mlir::Type computeType = value.getType();
+    auto hostBoxType = llvm::dyn_cast<fir::BaseBoxType>(hostType);
+    auto computeBoxType = llvm::dyn_cast<fir::BaseBoxType>(computeType);
     if (hostType == computeType) {
       mapper.map(hostInput, value);
-    } else if (llvm::isa<fir::BaseBoxType>(computeType)) {
+    } else if (hostBoxType && computeBoxType &&
+               hostBoxType.getBoxTypeWithNewAttr(
+                   fir::BaseBoxType::Attribute::None) ==
+                   computeBoxType.getBoxTypeWithNewAttr(
+                       fir::BaseBoxType::Attribute::None)) {
+      // The host declare input may describe an allocatable or pointer while
+      // the declared variable does not (e.g. a SELECT TYPE associate name with
+      // an allocatable or pointer selector). hlfir.declare drops that from its
+      // results, so the data operation result can be declared directly.
+      mapper.map(hostInput, value);
+    } else if (computeBoxType) {
       assert(!llvm::isa<fir::BaseBoxType>(hostType) &&
              "box type mismatch between compute region variable and "
              "hlfir.declare input unexpected");

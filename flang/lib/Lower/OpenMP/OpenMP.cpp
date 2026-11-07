@@ -4362,7 +4362,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // where the record type contains an allocatable.
             if (!isPointer &&
                 (hasDefaultMapper ||
-                 (requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
+                 (requiresImplicitDefaultDeclareMapper(
+                     converter, firOpBuilder, *typeSpec,
+                     enableImplicitDefaultMapperAllocatableMembers)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -4372,7 +4374,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                       [&](std::string &mapperIdName,
                           llvm::StringRef memberName) {
                         defaultMangler(converter, mapperIdName, memberName);
-                      });
+                      },
+                      enableImplicitDefaultMapperAllocatableMembers);
               } else {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
@@ -6068,7 +6071,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     return;
 
   for (const parser::OmpClause &clause : assumesConstruct.v.Clauses().v) {
-    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u))
+    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u) &&
+        !std::holds_alternative<parser::OmpClause::Absent>(clause.u))
       TODO(converter.genLocation(clause.source),
            "assumption clauses on the assumes directive");
   }
