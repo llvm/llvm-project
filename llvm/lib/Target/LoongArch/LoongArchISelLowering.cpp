@@ -6247,6 +6247,11 @@ void LoongArchTargetLowering::ReplaceNodeResults(
 
     EVT DstVT = N->getValueType(0);
     SDValue Src = N->getOperand(0);
+    // The operand may not be type-legalized yet: results are split before
+    // operands are promoted, e.g. <8 x i2> here.  Leave such nodes to the
+    // generic type legalizer.
+    if (!Src.getValueType().isSimple())
+      return;
     MVT SrcVT = Src.getSimpleValueType();
 
     unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
