@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_INCLUDE_LLVM_LIBC_MACROS_ANNEX_K_MACROS_H
-#define LLVM_LIBC_INCLUDE_LLVM_LIBC_MACROS_ANNEX_K_MACROS_H
+// This header intentionally has no include guard so that defining
+// __STDC_WANT_LIB_EXT1__ after including another header can enable Annex K.
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) ||              \
     (defined(__cplusplus) && __cplusplus >= 201703L)
@@ -18,10 +18,11 @@
 
 #if defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ == 1
 
+#ifndef LIBC_HAS_ANNEX_K
 #define LIBC_HAS_ANNEX_K
+#endif
 
 #endif // defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ == 1
 
 #endif // (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) ||
        // (defined(__cplusplus) && __cplusplus >= 201703L)
-#endif // LLVM_LIBC_INCLUDE_LLVM_LIBC_MACROS_ANNEX_K_MACROS_H
