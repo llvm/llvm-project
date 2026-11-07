@@ -2,7 +2,6 @@
 // RUN: mlir-opt %s \
 // RUN:   --convert-linalg-to-affine-loops \
 // RUN:   --affine-loop-tile="tile-sizes=16,16,16" \
-// RUN:   --enable-loopinterchange \
 // RUN:   --affine-super-vectorize="virtual-vector-size=4" \
 // RUN:   --canonicalize \
 // RUN:   | FileCheck %s --check-prefix=MATMUL

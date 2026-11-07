@@ -226,10 +226,7 @@ void lto::DTLTO::buildCommonRemoteCompilerOptions() {
     Ops.push_back("-ffunction-sections");
   if (C.Options.DataSections)
     Ops.push_back("-fdata-sections");
-  // Match what an in-process backend resolves from C.LibraryOptions.
-  cl::LibraryOptionsContext NoLibraryOptions;
-  if (*C.PTO.resolve(C.LibraryOptions ? *C.LibraryOptions : NoLibraryOptions)
-           .LoopInterchange)
+  if (C.PTO.LoopInterchange)
     Ops.push_back("-floop-interchange");
 
   if (C.RelocModel == Reloc::PIC_)
