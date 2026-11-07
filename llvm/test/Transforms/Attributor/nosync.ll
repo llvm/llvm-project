@@ -339,13 +339,13 @@ declare void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 ; It is odd to add nocapture but a result of the llvm.memcpy nocapture.
 ;
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@memcpy_volatile
 ; TUNIT-SAME: (ptr nofree writeonly captures(none) [[PTR1:%.*]], ptr nofree readonly captures(none) [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
 ; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly captures(none) [[PTR1]], ptr nofree readonly captures(none) [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR23:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 4
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@memcpy_volatile
 ; CGSCC-SAME: (ptr nofree writeonly captures(none) [[PTR1:%.*]], ptr nofree readonly captures(none) [[PTR2:%.*]]) #[[ATTR14:[0-9]+]] {
 ; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nofree writeonly captures(none) [[PTR1]], ptr nofree readonly captures(none) [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR24:[0-9]+]]
@@ -482,7 +482,7 @@ define void @nosync_convergent_callee_test() {
 ; TUNIT: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind }
 ; TUNIT: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR13:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR14]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR14]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; TUNIT: attributes #[[ATTR15]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR16:[0-9]+]] = { convergent memory(none) }
 ; TUNIT: attributes #[[ATTR17]] = { memory(none) }
@@ -510,7 +510,7 @@ define void @nosync_convergent_callee_test() {
 ; CGSCC: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind }
 ; CGSCC: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR13:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR14]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR14]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR15]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR16:[0-9]+]] = { convergent memory(none) }
 ; CGSCC: attributes #[[ATTR17]] = { memory(none) }
