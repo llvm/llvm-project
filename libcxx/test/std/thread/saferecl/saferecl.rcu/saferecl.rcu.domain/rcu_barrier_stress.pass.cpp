@@ -12,6 +12,9 @@
 // XFAIL: !has-128-bit-atomics
 // REQUIRES: std-at-least-c++26
 
+// https://github.com/llvm/llvm-project/issues/52942
+// UNSUPPORTED: tsan
+
 // void rcu_barrier(rcu_domain& dom = rcu_default_domain()) noexcept;
 
 #include <atomic>
