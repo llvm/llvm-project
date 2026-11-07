@@ -20,4 +20,8 @@
 
 #endif // LIBC_FULL_BUILD
 
+#ifndef POSIX_CLOSE_RESTART
+#define POSIX_CLOSE_RESTART 0
+#endif
+
 #endif // LLVM_LIBC_HDR_UNISTD_MACROS_H

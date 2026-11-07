@@ -544,6 +544,13 @@ functions:
     arguments:
       - type: int *
       - type: int
+  - name: posix_close
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
   - name: pread
     standards:
       - posix
