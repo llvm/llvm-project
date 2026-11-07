@@ -953,11 +953,39 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
-  // MSVC STL paths are added from AddClangSystemIncludeArgs during normal
-  // compilation to preserve clang-cl header search order.
-  if (DriverArgs.hasArg(options::OPT_print_cxx_stdlib_include_dirs) &&
-      !DriverArgs.hasArg(options::OPT_stdlib_EQ))
-    AddMSVCStdlibIncludeArgs(DriverArgs, CC1Args);
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc, options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx: {
+    SmallString<128> P(getDriver().Dir);
+    llvm::sys::path::append(P, "..", "include");
+
+    std::string Version = detectLibcxxVersion(P);
+    if (Version.empty())
+      return;
+
+    // First add the per-target include path if it exists.
+    SmallString<128> TargetDir(P);
+    llvm::sys::path::append(TargetDir, getTripleString(), "c++", Version);
+    if (getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+
+    // Second add the generic one.
+    SmallString<128> Dir(P);
+    llvm::sys::path::append(Dir, "c++", Version);
+    addSystemInclude(DriverArgs, CC1Args, Dir);
+    break;
+  }
+
+  default:
+    // MSVC STL paths are added from AddClangSystemIncludeArgs during normal
+    // compilation to preserve clang-cl header search order.
+    if (DriverArgs.hasArg(options::OPT_print_cxx_stdlib_include_dirs) &&
+        !DriverArgs.hasArg(options::OPT_stdlib_EQ))
+      AddMSVCStdlibIncludeArgs(DriverArgs, CC1Args);
+    break;
+  }
 }
 
 StringRef MSVCToolChain::GetCXXStdlibName(const ArgList &DriverArgs) const {
