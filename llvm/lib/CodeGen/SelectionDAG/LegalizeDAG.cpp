@@ -1081,8 +1081,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
                               : Opc == ISD::STRICT_FSETCCS ? 1
                                                            : 0;
     MVT OpVT = Node->getOperand(CompareOperand).getSimpleValueType();
-    ISD::CondCode CCCode =
-        cast<CondCodeSDNode>(Node->getOperand(CCOperand))->get();
+    ISD::CondCode CCCode = Node->getOperandCondCode(CCOperand);
     Action = TLI.getCondCodeAction(CCCode, OpVT);
     if (Action == TargetLowering::Legal) {
       if (Node->getOpcode() == ISD::SELECT_CC)
@@ -4272,9 +4271,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp2 = Node->getOperand(1);
     Tmp3 = Node->getOperand(2);
     if (Tmp1.getOpcode() == ISD::SETCC) {
-      Tmp1 = DAG.getSelectCC(
-          dl, Tmp1.getOperand(0), Tmp1.getOperand(1), Tmp2, Tmp3,
-          cast<CondCodeSDNode>(Tmp1.getOperand(2))->get(), Node->getFlags());
+      Tmp1 =
+          DAG.getSelectCC(dl, Tmp1.getOperand(0), Tmp1.getOperand(1), Tmp2,
+                          Tmp3, Tmp1.getOperandCondCode(2), Node->getFlags());
     } else {
       Tmp1 =
           DAG.getSelectCC(dl, Tmp1, DAG.getConstant(0, dl, Tmp1.getValueType()),
@@ -5698,7 +5697,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::STRICT_FSETCCS: {
     unsigned ExtOp = ISD::FP_EXTEND;
     if (NVT.isInteger()) {
-      ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
+      ISD::CondCode CCCode = Node->getOperandCondCode(2);
       if (isSignedIntSetCC(CCCode) ||
           TLI.isSExtCheaperThanZExt(Node->getOperand(0).getValueType(), NVT))
         ExtOp = ISD::SIGN_EXTEND;
@@ -5729,8 +5728,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::BR_CC: {
     unsigned ExtOp = ISD::FP_EXTEND;
     if (NVT.isInteger()) {
-      ISD::CondCode CCCode =
-        cast<CondCodeSDNode>(Node->getOperand(1))->get();
+      ISD::CondCode CCCode = Node->getOperandCondCode(1);
       ExtOp = isSignedIntSetCC(CCCode) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
     }
     Tmp1 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(2));

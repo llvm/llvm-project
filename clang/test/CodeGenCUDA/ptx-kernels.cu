@@ -3,6 +3,7 @@
 // REQUIRES: nvptx-registered-target
 //
 // RUN: %clang_cc1 %s -triple nvptx-unknown-unknown -fcuda-is-device -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple nvptx-unknown-unknown -fcuda-is-device -emit-llvm -o - | FileCheck %s %}
 
 #include "Inputs/cuda.h"
 
