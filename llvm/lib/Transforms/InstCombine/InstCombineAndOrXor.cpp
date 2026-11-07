@@ -16,6 +16,7 @@
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -1334,6 +1335,33 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
                              SubstituteCmp);
 }
 
+/// Return (V, CR) for a range check idiom V in CR.
+static std::optional<std::pair<Value *, ConstantRange>>
+matchExactRangeCheck(CmpPredicate Pred, Value *LHS, Value *RHS) {
+  const APInt *C;
+  if (!match(RHS, m_APInt(C)))
+    return std::nullopt;
+
+  Value *X;
+  // Match (x & NegPow2) ==/!= C
+  const APInt *Mask;
+  if (ICmpInst::isEquality(Pred) &&
+      match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
+      C->countr_zero() >= Mask->countr_zero()) {
+    ConstantRange CR(*C, *C - *Mask);
+    if (Pred == ICmpInst::ICMP_NE)
+      CR = CR.inverse();
+    return std::make_pair(X, CR);
+  }
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
+  // Match (add X, C1) pred C
+  // TODO: investigate whether we should apply the one-use check on m_AddLike.
+  const APInt *C1;
+  if (match(LHS, m_AddLike(m_Value(X), m_APInt(C1))))
+    return std::make_pair(X, CR.subtract(*C1));
+  return std::make_pair(LHS, CR);
+}
+
 /// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
 /// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
 /// into a single comparison using range-based reasoning.
@@ -1341,39 +1369,11 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
 Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(
     CmpPredicate PredL, Value *LHS0, Value *LHS1, bool LHSOneUse,
     CmpPredicate PredR, Value *RHS0, Value *RHS1, bool RHSOneUse, bool IsAnd) {
-  // Return (V, CR) for a range check idiom V in CR.
-  auto MatchExactRangeCheck =
-      [](CmpPredicate Pred, Value *LHS,
-         Value *RHS) -> std::optional<std::pair<Value *, ConstantRange>> {
-    const APInt *C;
-    if (!match(RHS, m_APInt(C)))
-      return std::nullopt;
-
-    Value *X;
-    // Match (x & NegPow2) ==/!= C
-    const APInt *Mask;
-    if (ICmpInst::isEquality(Pred) &&
-        match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
-        C->countr_zero() >= Mask->countr_zero()) {
-      ConstantRange CR(*C, *C - *Mask);
-      if (Pred == ICmpInst::ICMP_NE)
-        CR = CR.inverse();
-      return std::make_pair(X, CR);
-    }
-    ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
-    // Match (add X, C1) pred C
-    // TODO: investigate whether we should apply the one-use check on m_AddLike.
-    const APInt *C1;
-    if (match(LHS, m_AddLike(m_Value(X), m_APInt(C1))))
-      return std::make_pair(X, CR.subtract(*C1));
-    return std::make_pair(LHS, CR);
-  };
-
-  auto RC1 = MatchExactRangeCheck(PredL, LHS0, LHS1);
+  auto RC1 = matchExactRangeCheck(PredL, LHS0, LHS1);
   if (!RC1)
     return nullptr;
 
-  auto RC2 = MatchExactRangeCheck(PredR, RHS0, RHS1);
+  auto RC2 = matchExactRangeCheck(PredR, RHS0, RHS1);
   if (!RC2)
     return nullptr;
 
@@ -1418,6 +1418,74 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(
   if (Offset != 0)
     NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
   return Builder.CreateICmp(NewPred, NewV, ConstantInt::get(Ty, NewC));
+}
+
+/// Fold (range check on X) & ((X & Mask) == C).
+///
+/// The masked equality fixes some bits of X, which bounds X to a (possibly
+/// loose) constant range. If intersecting that range with the exact range of
+/// the other compare leaves at most one candidate, the 'and' folds to 'false'
+/// or 'icmp eq X, Candidate'. The candidate is re-checked against both
+/// original predicates, so the loose range is only used to find it.
+///
+/// This only uses X, so it is also correct for logical and (poison-safe).
+static Value *foldAndOfRangeAndMaskedEq(
+    CmpPredicate PredL, Value *LHS0, Value *LHS1,
+    CmpPredicate PredR, Value *RHS0, Value *RHS1,
+    Instruction &I, InstCombiner::BuilderTy &Builder) {
+  for (int Swap = 0; Swap != 2; ++Swap) {
+    CmpPredicate RangePred = Swap ? PredR : PredL;
+    Value *RangeLHS = Swap ? RHS0 : LHS0;
+    Value *RangeRHS = Swap ? RHS1 : LHS1;
+
+    CmpPredicate MaskPred = Swap ? PredL : PredR;
+    Value *MaskLHS = Swap ? LHS0 : RHS0;
+    Value *MaskRHS = Swap ? LHS1 : RHS1;
+
+    // Masked compare: (X & Mask) == MaskedC
+    if (MaskPred.dropSameSign() != ICmpInst::ICMP_EQ)
+      continue;
+
+    Value *X;
+    const APInt *Mask, *MaskedC;
+    if (!match(MaskRHS, m_APInt(MaskedC)))
+      continue;
+    if (!match(MaskLHS, m_c_And(m_Value(X), m_APInt(Mask))))
+      continue;
+    if (!MaskedC->isSubsetOf(*Mask))
+      continue;
+
+    // Range compare on X
+    auto RC = matchExactRangeCheck(RangePred, RangeLHS, RangeRHS);
+    if (!RC)
+      continue;
+
+    auto &[RangeX, CR] = *RC;
+    if (RangeX != X)
+      continue;
+
+    // Loose set of X implied by the masked equality.
+    KnownBits Known(Mask->getBitWidth());
+    Known.One = *MaskedC;
+    Known.Zero = *Mask & ~*MaskedC;
+    ConstantRange Loose =
+        ConstantRange::fromKnownBits(Known, /*IsSigned=*/false)
+            .intersectWith(
+                ConstantRange::fromKnownBits(Known, /*IsSigned=*/true));
+
+    ConstantRange Cand = CR.intersectWith(Loose);
+    Type *ResTy = CmpInst::makeCmpResultType(X->getType());
+    if (Cand.isEmptySet())
+      return ConstantInt::getFalse(ResTy);
+
+    if (const APInt *V = Cand.getSingleElement()) {
+      if (!CR.contains(*V) || (*V & *Mask) != *MaskedC)
+        return ConstantInt::getFalse(ResTy);
+      return Builder.CreateICmpEQ(X, ConstantInt::get(X->getType(), *V));
+    }
+  }
+
+  return nullptr;
 }
 
 /// Matches canonical form of isnan, fcmp ord x, 0
@@ -3644,8 +3712,17 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     return Builder.createIsFPClass(X, IsAnd ? FPClassTest::fcNormal
                                             : ~FPClassTest::fcNormal);
 
-  return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHS1, LHSOneUse, PredR, RHS0,
-                                     RHS1, RHSOneUse, IsAnd);
+  if (Value *V = foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHS1, LHSOneUse,
+                                            PredR, RHS0, RHS1, RHSOneUse,
+                                            IsAnd))
+    return V;
+
+  if (IsAnd)
+    if (Value *V = foldAndOfRangeAndMaskedEq(PredL, LHS0, LHS1, PredR, RHS0,
+                                            RHS1, I, Builder))
+      return V;
+
+  return nullptr;
 }
 
 /// If IsLogical is true, then the and/or is in select form and the transform
