@@ -58,7 +58,6 @@ class CGBlockInfo;
 /// backend.
 class CGDebugInfo {
   friend class ApplyDebugLocation;
-  friend class SaveAndRestoreLocation;
   friend class ApplyAtomGroup;
 
   CodeGenModule &CGM;
@@ -84,7 +83,6 @@ class CGDebugInfo {
   llvm::DIType *OCLEventDITy = nullptr;
   llvm::DIType *OCLClkEventDITy = nullptr;
   llvm::DIType *OCLQueueDITy = nullptr;
-  llvm::DIType *OCLNDRangeDITy = nullptr;
   llvm::DIType *OCLReserveIDDITy = nullptr;
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   llvm::DIType *Id##Ty = nullptr;
@@ -97,9 +95,6 @@ class CGDebugInfo {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/HLSLIntangibleTypes.def"
-#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
-  llvm::DIType *SingletonId = nullptr;
-#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/SPIRVTypes.def"
 
