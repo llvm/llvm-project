@@ -37,6 +37,7 @@
 #include "mlir/Dialect/Arith/Extensions/AllExtensions.h"
 #include "mlir/Dialect/ArmNeon/TransformOps/ArmNeonVectorTransformOps.h"
 #include "mlir/Dialect/ArmSVE/TransformOps/ArmSVEVectorTransformOps.h"
+#include "mlir/Dialect/ArmSVE/Transforms/Transforms.h"
 #include "mlir/Dialect/Bufferization/Extensions/AllExtensions.h"
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h"
 #include "mlir/Dialect/DLTI/TransformOps/DLTITransformOps.h"
@@ -104,6 +105,7 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   gpu::registerConvertGpuToLLVMInterface(registry);
   NVVM::registerConvertGpuToNVVMInterface(registry);
   vector::registerConvertVectorToLLVMInterface(registry);
+  registerConvertArmSVEToLLVMInterface(registry);
   registerConvertX86ToLLVMInterface(registry);
 
   // Register all transform dialect extensions.
