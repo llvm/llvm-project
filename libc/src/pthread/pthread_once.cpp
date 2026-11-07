@@ -15,6 +15,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// pthread_once_t is an int; the flag is the same four bytes viewed as the
+// futex word call_once uses.
+static_assert(sizeof(pthread_once_t) == sizeof(CallOnceFlag) &&
+                  alignof(pthread_once_t) >= alignof(CallOnceFlag),
+              "pthread_once_t must be able to hold a CallOnceFlag");
+
 LLVM_LIBC_FUNCTION(int, pthread_once,
                    (pthread_once_t * flag, __pthread_once_func_t func)) {
   return callonce(reinterpret_cast<CallOnceFlag *>(flag), func);

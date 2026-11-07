@@ -153,7 +153,7 @@ add_header(pthread_mutex_t HDR pthread_mutex_t.h DEPENDS .__futex_word .__mutex_
 add_header(pthread_mutexattr_t HDR pthread_mutexattr_t.h)
 add_header(pthread_barrier_t HDR pthread_barrier_t.h DEPENDS .__barrier_type)
 add_header(pthread_barrierattr_t HDR pthread_barrierattr_t.h)
-add_header(pthread_once_t HDR pthread_once_t.h DEPENDS .__futex_word)
+add_header(pthread_once_t HDR pthread_once_t.h)
 add_header(pthread_rwlock_t HDR pthread_rwlock_t.h DEPENDS .__futex_word .pid_t)
 add_header(pthread_rwlockattr_t HDR pthread_rwlockattr_t.h)
 add_header(pthread_spinlock_t HDR pthread_spinlock_t.h DEPENDS .pid_t)
