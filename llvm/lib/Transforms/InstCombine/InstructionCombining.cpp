@@ -1379,6 +1379,46 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
   return true;
 }
 
+static void distributeBinOpOverSelect(InstCombinerImpl &IC,
+                                      Instruction::BinaryOps Opcode,
+                                      SelectInst *Sel, Value *Other,
+                                      bool SelIsLHS, FastMathFlags FMF,
+                                      const SimplifyQuery &SQ, Value *&True,
+                                      Value *&False) {
+  // If V is a select whose condition is implied by Cond, try to resolve it to
+  // the appropriate arm for this value of Cond.
+  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+                                           bool CondIsTrue) -> Value * {
+    auto *InnerSI = dyn_cast<SelectInst>(V);
+    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
+      return V;
+
+    if (Value *Arm = IC.simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond,
+                                                              CondIsTrue))
+      return Arm;
+    return V;
+  };
+
+  Value *Cond = Sel->getCondition();
+  Value *TVal = Sel->getTrueValue(), *FVal = Sel->getFalseValue();
+  Value *OtherT = SimplifySelectWithImpliedCond(Other, Cond, true);
+  Value *OtherF = SimplifySelectWithImpliedCond(Other, Cond, false);
+  auto [LHSTrueArm, RHSTrueArm] =
+      SelIsLHS ? std::pair(TVal, OtherT) : std::pair(OtherT, TVal);
+  auto [LHSFalseArm, RHSFalseArm] =
+      SelIsLHS ? std::pair(FVal, OtherF) : std::pair(OtherF, FVal);
+  True = simplifyBinOp(Opcode, LHSTrueArm, RHSTrueArm, FMF, SQ);
+  False = simplifyBinOp(Opcode, LHSFalseArm, RHSFalseArm, FMF, SQ);
+
+  if (!Other->hasOneUse())
+    return;
+
+  if (True && !False && OtherT != Other)
+    False = IC.Builder.CreateBinOp(Opcode, LHSFalseArm, RHSFalseArm);
+  else if (False && !True && OtherF != Other)
+    True = IC.Builder.CreateBinOp(Opcode, LHSTrueArm, RHSTrueArm);
+}
+
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {
@@ -1401,20 +1441,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   Value *Cond, *True = nullptr, *False = nullptr;
-
-  // If V is a select whose condition is implied by Cond, try to resolve it to
-  // the appropriate arm for this value of Cond.
-  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
-                                           bool CondIsTrue) -> Value * {
-    auto *InnerSI = dyn_cast<SelectInst>(V);
-    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
-      return V;
-
-    if (Value *Arm =
-            simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond, CondIsTrue))
-      return Arm;
-    return V;
-  };
 
   // Special-case for add/negate combination. Replace the zero in the negation
   // with the trailing add operand:
@@ -1448,24 +1474,23 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       else if (True && !False)
         False = Builder.CreateBinOp(Opcode, C, F);
     }
-  } else if (LHSIsSelect && LHS->hasOneUse()) {
-    // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
-    Cond = A;
-    Value *TrueRHS = SimplifySelectWithImpliedCond(RHS, Cond, true);
-    Value *FalseRHS = SimplifySelectWithImpliedCond(RHS, Cond, false);
-    True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
-    False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
-    if (Value *NewSel = foldAddNegate(B, C, RHS))
-      return NewSel;
-  } else if (RHSIsSelect && RHS->hasOneUse()) {
-    // X op (D ? E : F) -> D ? (X op E) : (X op F)
-    Cond = D;
-    Value *TrueLHS = SimplifySelectWithImpliedCond(LHS, Cond, true);
-    Value *FalseLHS = SimplifySelectWithImpliedCond(LHS, Cond, false);
-    True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
-    False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
-    if (Value *NewSel = foldAddNegate(E, F, LHS))
-      return NewSel;
+  } else {
+    // Prefer distributing over the LHS select.
+    if (LHSIsSelect && LHS->hasOneUse()) {
+      Cond = A;
+      distributeBinOpOverSelect(*this, Opcode, SI, RHS, /*SelIsLHS=*/true, FMF,
+                                Q, True, False);
+      if (Value *NewSel = foldAddNegate(B, C, RHS))
+        return NewSel;
+    }
+    if ((!True || !False) && RHSIsSelect && RHS->hasOneUse()) {
+      SI = cast<SelectInst>(RHS);
+      Cond = D;
+      distributeBinOpOverSelect(*this, Opcode, SI, LHS, /*SelIsLHS=*/false, FMF,
+                                Q, True, False);
+      if (Value *NewSel = foldAddNegate(E, F, LHS))
+        return NewSel;
+    }
   }
 
   if (!True || !False)
