@@ -109,5 +109,99 @@ define <4 x i32> @vec_across_call() nounwind {
   ret <4 x i32> %w
 }
 
+; Both calls must receive the same value.
+define void @other_block(<2 x i32> %v) nounwind {
+; CHECK-LABEL: other_block:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s0, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
+; CHECK-NEXT:    scratch_store_b32 off, v41, s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b32 exec_lo, s1
+; CHECK-NEXT:    v_writelane_b32 v41, s0, 17
+; CHECK-NEXT:    s_add_i32 s32, s32, 16
+; CHECK-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_writelane_b32 v41, s34, 0
+; CHECK-NEXT:    v_writelane_b32 v41, s35, 1
+; CHECK-NEXT:    v_writelane_b32 v41, s36, 2
+; CHECK-NEXT:    v_writelane_b32 v41, s37, 3
+; CHECK-NEXT:    v_writelane_b32 v41, s38, 4
+; CHECK-NEXT:    v_writelane_b32 v41, s39, 5
+; CHECK-NEXT:    v_writelane_b32 v41, s48, 6
+; CHECK-NEXT:    v_writelane_b32 v41, s49, 7
+; CHECK-NEXT:    v_writelane_b32 v41, s50, 8
+; CHECK-NEXT:    v_writelane_b32 v41, s51, 9
+; CHECK-NEXT:    v_writelane_b32 v41, s52, 10
+; CHECK-NEXT:    v_writelane_b32 v41, s53, 11
+; CHECK-NEXT:    v_writelane_b32 v41, s54, 12
+; CHECK-NEXT:    v_writelane_b32 v41, s55, 13
+; CHECK-NEXT:    v_writelane_b32 v41, s64, 14
+; CHECK-NEXT:    v_writelane_b32 v41, s30, 15
+; CHECK-NEXT:    v_writelane_b32 v41, s31, 16
+; CHECK-NEXT:    s_getpc_b64 s[0:1]
+; CHECK-NEXT:    s_add_u32 s0, s0, use@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s1, s1, use@gotpcrel32@hi+12
+; CHECK-NEXT:    ; freeze: $sgpr64
+; CHECK-NEXT:    v_mov_b32_e32 v0, s64
+; CHECK-NEXT:    s_load_b64 s[54:55], s[0:1], 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v40, v31
+; CHECK-NEXT:    s_mov_b32 s53, s15
+; CHECK-NEXT:    s_mov_b32 s52, s14
+; CHECK-NEXT:    s_mov_b32 s51, s13
+; CHECK-NEXT:    s_mov_b32 s50, s12
+; CHECK-NEXT:    s_mov_b64 s[48:49], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[4:5]
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
+; CHECK-NEXT:    v_dual_mov_b32 v31, v40 :: v_dual_mov_b32 v0, s64
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[34:35]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[48:49]
+; CHECK-NEXT:    s_mov_b32 s12, s50
+; CHECK-NEXT:    s_mov_b32 s13, s51
+; CHECK-NEXT:    s_mov_b32 s14, s52
+; CHECK-NEXT:    s_mov_b32 s15, s53
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
+; CHECK-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s30, v41, 15
+; CHECK-NEXT:    v_readlane_b32 s31, v41, 16
+; CHECK-NEXT:    v_readlane_b32 s64, v41, 14
+; CHECK-NEXT:    v_readlane_b32 s55, v41, 13
+; CHECK-NEXT:    v_readlane_b32 s54, v41, 12
+; CHECK-NEXT:    v_readlane_b32 s53, v41, 11
+; CHECK-NEXT:    v_readlane_b32 s52, v41, 10
+; CHECK-NEXT:    v_readlane_b32 s51, v41, 9
+; CHECK-NEXT:    v_readlane_b32 s50, v41, 8
+; CHECK-NEXT:    v_readlane_b32 s49, v41, 7
+; CHECK-NEXT:    v_readlane_b32 s48, v41, 6
+; CHECK-NEXT:    v_readlane_b32 s39, v41, 5
+; CHECK-NEXT:    v_readlane_b32 s38, v41, 4
+; CHECK-NEXT:    v_readlane_b32 s37, v41, 3
+; CHECK-NEXT:    v_readlane_b32 s36, v41, 2
+; CHECK-NEXT:    v_readlane_b32 s35, v41, 1
+; CHECK-NEXT:    v_readlane_b32 s34, v41, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
+; CHECK-NEXT:    v_readlane_b32 s0, v41, 17
+; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
+; CHECK-NEXT:    scratch_load_b32 v41, off, s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b32 exec_lo, s1
+; CHECK-NEXT:    s_mov_b32 s33, s0
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %u = extractelement <2 x i32> %v, i32 5
+  br label %next
+
+next:
+  %f = freeze i32 %u
+  call void @use(i32 %f)
+  call void @use(i32 %f)
+  ret void
+}
+
 declare void @use(i32)
 declare void @usev(<4 x i32>)
