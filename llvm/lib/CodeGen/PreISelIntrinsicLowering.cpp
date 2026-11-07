@@ -95,6 +95,8 @@ struct PreISelIntrinsicLowering {
                                                const TargetTransformInfo &TTI);
   bool tryExpandBoundedMemSet(MemSetInst *Memset,
                               const TargetTransformInfo &TTI) const;
+  bool tryExpandBoundedMemSetPattern(MemSetPatternInst *MemSet,
+                                     const TargetTransformInfo &TTI) const;
   bool
   expandMemIntrinsicUses(Function &F,
                          DenseMap<Constant *, GlobalVariable *> &CMap) const;
@@ -343,6 +345,53 @@ bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
   return true;
 }
 
+// Expand a memset.pattern whose count is not constant but is known to be small,
+// which is faster than calling the library.
+bool PreISelIntrinsicLowering::tryExpandBoundedMemSetPattern(
+    MemSetPatternInst *MemSet, const TargetTransformInfo &TTI) const {
+  // This pass runs even at -O0, so skip if e.g. llc -O0 is used.
+  if (!TM || TM->getOptLevel() == CodeGenOptLevel::None)
+    return false;
+
+  Value *Count = MemSet->getLength();
+  Function *F = MemSet->getFunction();
+  if (isa<Constant>(Count) || MemSet->isVolatile() || F->hasOptNone() ||
+      F->hasMinSize())
+    return false;
+
+  // The threshold is always in bytes, also for memset.pattern.
+  uint64_t Threshold = BoundedMemSetInlineSizeOpt.getNumOccurrences()
+                           ? BoundedMemSetInlineSizeOpt
+                           : TTI.getMaxBoundedMemSetInlineSize();
+  if (!Threshold)
+    return false;
+
+  const DataLayout &DL = MemSet->getDataLayout();
+  uint64_t PatternSize = DL.getTypeAllocSize(MemSet->getValue()->getType());
+  uint64_t MaxCount = Threshold / PatternSize;
+
+  // Bounds from (1) assumptions, e.g. __builtin_assume(count <= 8)
+  // and (2) known bits and ranges on instructions themselves, and...
+  SimplifyQuery SQ(DL, MemSet);
+  SQ.AC = &LookupAC(*F);
+  KnownBits Known = computeKnownBits(Count, SQ);
+  ConstantRange CR = computeConstantRangeIncludingKnownBits(
+      {Count, Known}, /*ForSigned=*/false, SQ);
+
+  // ... (3) range attr on the memset.pattern.
+  Attribute RangeAttr = MemSet->getParamAttr(
+      MemSet->getLengthUse().getOperandNo(), Attribute::Range);
+  if (RangeAttr.isValid())
+    CR = CR.intersectWith(RangeAttr.getRange());
+
+  if (CR.isEmptySet() || CR.getUnsignedMax().ugt(MaxCount))
+    return false;
+
+  expandBoundedMemSetPattern(MemSet, CR.getUnsignedMin().getZExtValue(),
+                             CR.getUnsignedMax().getZExtValue(), Known);
+  return true;
+}
+
 // Return a value appropriate for use with the memset_pattern16 libcall, if
 // possible and if we know how. (Adapted from equivalent helper in
 // LoopIdiomRecognize).
@@ -496,6 +545,11 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
       Function *ParentFunc = Memset->getFunction();
+      if (tryExpandBoundedMemSetPattern(Memset, LookupTTI(*ParentFunc))) {
+        Changed = true;
+        Memset->eraseFromParent();
+        break;
+      }
       const TargetLibraryInfo &TLI = LookupTLI(*ParentFunc);
       Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
       if (!PatternValue) {
