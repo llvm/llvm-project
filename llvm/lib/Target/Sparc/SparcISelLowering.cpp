@@ -2885,6 +2885,65 @@ static SDValue LowerSTRICT_FSETCC(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues({Res, Chain}, dl);
 }
 
+// If this is a br_cc on the result of a constrained FP compare that was
+// lowered into a STRICT_CMPFCC*/SELECT_FCC pair, set Chain and Glue so that
+// the branch can test the FP condition codes directly instead of
+// materializing the result and comparing it against zero.
+//
+// The compare is glued to the branch, so nothing may be scheduled between
+// them, and the branch's chain must come straight from the compare. That is
+// the case if the compare's output chain feeds only the branch. If it instead
+// reaches the branch through a token factor used only by the branch, emit a
+// new compare chained after the token factor's other operands and branch on
+// that. Those operands were not ordered with respect to the compare, and the
+// original compare and its select become dead.
+static bool LookThroughStrictSetCC(SDValue &Chain, SDValue LHS, SDValue RHS,
+                                   ISD::CondCode CC, unsigned &SPCC,
+                                   SDValue &Glue, const SDLoc &DL,
+                                   SelectionDAG &DAG) {
+  if (CC != ISD::SETNE || !isNullConstant(RHS) ||
+      LHS.getOpcode() != SPISD::SELECT_FCC || !LHS.hasOneUse() ||
+      !isOneConstant(LHS.getOperand(0)) || !isNullConstant(LHS.getOperand(1)))
+    return false;
+
+  SDNode *Cmp = LHS.getOperand(3).getNode();
+  switch (Cmp->getOpcode()) {
+  case SPISD::STRICT_CMPFCC:
+  case SPISD::STRICT_CMPFCCS:
+  case SPISD::STRICT_CMPFCC_V9:
+  case SPISD::STRICT_CMPFCCS_V9:
+    break;
+  default:
+    return false;
+  }
+
+  SDValue CmpChain(Cmp, 0);
+  if (!CmpChain.hasOneUse())
+    return false;
+
+  if (Chain == CmpChain) {
+    Glue = SDValue(Cmp, 1);
+  } else if (Chain.getOpcode() == ISD::TokenFactor && Chain.hasOneUse() &&
+             is_contained(Chain->op_values(), CmpChain)) {
+    SmallVector<SDValue, 8> Ops;
+    for (SDValue Op : Chain->op_values())
+      if (Op != CmpChain)
+        Ops.push_back(Op);
+    Ops.push_back(Cmp->getOperand(0));
+    SDValue InChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Ops);
+    SDValue NewCmp =
+        DAG.getNode(Cmp->getOpcode(), DL, Cmp->getVTList(),
+                    {InChain, Cmp->getOperand(1), Cmp->getOperand(2)});
+    Chain = NewCmp.getValue(0);
+    Glue = NewCmp.getValue(1);
+  } else {
+    return false;
+  }
+
+  SPCC = LHS.getConstantOperandVal(2);
+  return true;
+}
+
 static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
                           const SparcTargetLowering &TLI, bool hasHardQuad,
                           bool isV9, bool is64Bit) {
@@ -2896,10 +2955,30 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
   unsigned Opc, SPCC = ~0U;
 
+  // A brcond on the result of a lowered setcc is expanded into
+  // br_cc (and X, 1), 0, setne. When X is a SELECT_[IF]CC of 1 and 0 the and
+  // is a no-op, so look through it.
+  if (CC == ISD::SETNE && isNullConstant(RHS) && LHS.getOpcode() == ISD::AND &&
+      isOneConstant(LHS.getOperand(1)) && LHS.hasOneUse()) {
+    SDValue Sel = LHS.getOperand(0);
+    if ((Sel.getOpcode() == SPISD::SELECT_ICC ||
+         Sel.getOpcode() == SPISD::SELECT_XCC ||
+         Sel.getOpcode() == SPISD::SELECT_FCC) &&
+        isOneConstant(Sel.getOperand(0)) && isNullConstant(Sel.getOperand(1)))
+      LHS = Sel;
+  }
+
   // If this is a br_cc of a "setcc", and if the setcc got lowered into
   // an CMP[IF]CC/SELECT_[IF]CC pair, find the original compared values.
   LookThroughSetCC(LHS, RHS, CC, SPCC);
   assert(LHS.getValueType() == RHS.getValueType());
+
+  // Likewise for a constrained FP compare, branch on the FP condition codes.
+  SDValue StrictCmpFlag;
+  if (LookThroughStrictSetCC(Chain, LHS, RHS, CC, SPCC, StrictCmpFlag, dl, DAG))
+    return DAG.getNode(isV9 ? SPISD::BRFCC_V9 : SPISD::BRFCC, dl, MVT::Other,
+                       Chain, Dest, DAG.getConstant(SPCC, dl, MVT::i32),
+                       StrictCmpFlag);
 
   // Get the condition flag.
   SDValue CompareFlag;
