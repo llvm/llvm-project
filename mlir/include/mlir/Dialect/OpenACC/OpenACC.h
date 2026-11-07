@@ -15,12 +15,10 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUBase.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"

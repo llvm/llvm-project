@@ -57,6 +57,10 @@ class GlobalISelMatchTableExecutorEmitter {
   /// opcodes.
   void emitMatchTable(raw_ostream &OS, const gi::MatchTable &Table);
 
+  /// Emits the getLLTForHwMode function which returns the type for an index
+  /// used by the *ByHwMode opcodes.
+  void emitLLTForHwModeFn(raw_ostream &OS);
+
   /// Helper function to emit `test` functions for the executor. This emits both
   /// an enum to reference predicates in the MatchTable, and a function to
   /// switch over the enum & execute the predicate's C++ code.
