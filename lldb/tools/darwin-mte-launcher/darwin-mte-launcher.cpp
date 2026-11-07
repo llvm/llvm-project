@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
+#include <csignal>
 #include <dlfcn.h>
 #include <spawn.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <vector>
 
 using namespace llvm;
@@ -79,6 +82,18 @@ int main(int argc, const char *argv[], const char *envp[]) {
   if (waitpid(pid, &status, 0) == -1) {
     WithColor::error() << "waitpid failed\n";
     return EXIT_FAILURE;
+  }
+
+  // Die from the same signal so callers can tell the program crashed. The
+  // program already had its chance to report the crash, so don't report
+  // another one for the launcher. Crash reporting is only disabled here,
+  // after the program exited, because the program would inherit it.
+  if (WIFSIGNALED(status)) {
+    sys::PrintStackTraceOnErrorSignal(argv[0], /*DisableCrashReporting=*/true);
+    signal(WTERMSIG(status), SIG_DFL);
+    raise(WTERMSIG(status));
+    // raise() returns if the signal is blocked.
+    abort();
   }
 
   return WEXITSTATUS(status);
