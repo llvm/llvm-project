@@ -1,0 +1,20 @@
+# UNSUPPORTED: system-windows
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory \
+# RUN:   --target=armv7-unknown-none-eabi -fPIC --sysroot= 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-TEXTREL
+# CHECK-TEXTREL: pic-textrel
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -print-multi-directory \
+# RUN:   --target=armv7-unknown-none-eabi -fPIC -mno-pic-data-is-text-relative --sysroot= 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-GOT
+# CHECK-GOT: pic-got
+
+---
+MultilibVersion: 1.0
+Variants:
+- Dir: pic-textrel
+  Flags: [--target=armv7-unknown-none-eabi, -fPIC, -mpic-data-is-text-relative]
+- Dir: pic-got
+  Flags: [--target=armv7-unknown-none-eabi, -fPIC, -mno-pic-data-is-text-relative]
+...

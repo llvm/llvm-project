@@ -3043,7 +3043,46 @@ bool ARMFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
 }
 
 Register ARMFastISel::ARMLowerPICELF(const GlobalValue *GV, MVT VT) {
-  bool UseGOT_PREL = !GV->isDSOLocal();
+  if (Subtarget->useStaticBaseForPicData(GV)) {
+    LLVMContext *Context = &MF->getFunction().getContext();
+    ARMConstantPoolValue *CPV = ARMConstantPoolConstant::Create(GV, ARMCP::GOT);
+
+    Align ConstAlign =
+        MF->getDataLayout().getPrefTypeAlign(PointerType::get(*Context, 0));
+    unsigned Idx = MF->getConstantPool()->getConstantPoolIndex(CPV, ConstAlign);
+    MachineMemOperand *CPMMO =
+        MF->getMachineMemOperand(MachinePointerInfo::getConstantPool(*MF),
+                                 MachineMemOperand::MOLoad, 4, Align(4));
+
+    Register OffsetReg =
+        MF->getRegInfo().createVirtualRegister(&ARM::rGPRRegClass);
+    unsigned Opc = isThumb2 ? ARM::t2LDRpci : ARM::LDRcp;
+    MachineInstrBuilder MIB =
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), OffsetReg)
+            .addConstantPoolIndex(Idx)
+            .addMemOperand(CPMMO);
+    if (Opc == ARM::LDRcp)
+      MIB.addImm(0);
+    MIB.add(predOps(ARMCC::AL));
+
+    Register SBReg = MF->addLiveIn(ARM::R9, &ARM::GPRRegClass);
+    Register GOTEntry = createResultReg(&ARM::GPRRegClass);
+    Opc = isThumb2 ? ARM::t2ADDrr : ARM::ADDrr;
+    AddOptionalDefs(
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), GOTEntry)
+            .addReg(SBReg)
+            .addReg(OffsetReg));
+
+    Register DestReg = createResultReg(TLI.getRegClassFor(VT));
+    Opc = isThumb2 ? ARM::t2LDRi12 : ARM::LDRi12;
+    MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), DestReg)
+              .addReg(GOTEntry)
+              .addImm(0);
+    AddOptionalDefs(MIB);
+    return DestReg;
+  }
+
+  bool UseGOT_PREL = Subtarget->isGVInGOT(GV);
   LLVMContext *Context = &MF->getFunction().getContext();
   unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
   unsigned PCAdj = Subtarget->isThumb() ? 4 : 8;

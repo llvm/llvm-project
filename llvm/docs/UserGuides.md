@@ -57,6 +57,7 @@ AddingConstrainedIntrinsics
 HowToBuildWindowsItaniumPrograms
 HowToCrossCompileBuiltinsOnArm
 BigEndianNEON
+ARMNoPICDataIsTextRelative
 AArch64SME
 CompileCudaWithLLVM
 NVPTXUsage

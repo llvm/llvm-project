@@ -375,7 +375,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasNEONForFP = true;
 
   const ARM::ArchKind Arch = ARM::parseArch(TargetTriple.getArchName());
-  if (isRWPI() ||
+  if (isRWPI() || isPicDataStaticBase() ||
       (isTargetIOS() &&
        (Arch == ARM::ArchKind::ARMV6K || Arch == ARM::ArchKind::ARMV6) &&
        TargetTriple.isOSVersionLT(3, 0)))
@@ -471,12 +471,25 @@ bool ARMSubtarget::isRWPI() const {
          TM.getRelocationModel() == Reloc::ROPI_RWPI;
 }
 
+bool ARMSubtarget::isPicDataStaticBase() const {
+  return isTargetELF() && TM.isPositionIndependent() &&
+         !TM.Options.PicDataIsTextRelative;
+}
+
+bool ARMSubtarget::useStaticBaseForPicData(const GlobalValue *GV) const {
+  return isPicDataStaticBase() && !GV->getValueType()->isFunctionTy();
+}
+
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   return TM.isGVIndirectSymbol(GV);
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
+  if (!isTargetELF() || !TM.isPositionIndependent())
+    return false;
+  if (!GV->isDSOLocal())
+    return true;
+  return useStaticBaseForPicData(GV);
 }
 
 bool ARMSubtarget::enableMachineScheduler() const {
