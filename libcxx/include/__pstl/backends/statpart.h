@@ -11,6 +11,7 @@
 
 #include <__pstl/backends/statpart/any_of.h>
 #include <__pstl/backends/statpart/basis.h>
+#include <__pstl/backends/statpart/decoupled_lookback.h>
 #include <__pstl/backends/statpart/fill.h>
 #include <__pstl/backends/statpart/find_end.h>
 #include <__pstl/backends/statpart/find_if.h>
@@ -26,6 +27,7 @@
 #include <__pstl/backends/statpart/stable_sort.h>
 #include <__pstl/backends/statpart/swap_ranges.h>
 #include <__pstl/backends/statpart/transform.h>
+#include <__pstl/backends/statpart/transform_inclusive_scan.h>
 #include <__pstl/backends/statpart/transform_reduce.h>
 #include <__pstl/backends/statpart/uninitialized_copy.h>
 #include <__pstl/backends/statpart/uninitialized_move.h>

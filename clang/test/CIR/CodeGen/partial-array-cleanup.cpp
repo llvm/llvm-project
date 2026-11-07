@@ -290,7 +290,7 @@ void test_variable_size_partial_array_cleanup(int n) {
 // LLVM:     [[CTOR_LOOP_COND:.*]]:
 // LLVM:       %[[COND_CUR:.*]] = load ptr, ptr %[[CTOR_ITER]]
 // LLVM:       %[[CTOR_DONE:.*]] = icmp ne ptr %[[COND_CUR]], %[[END]]
-// LLVM:       br i1 %[[CTOR_DONE]], label %[[CTOR_BODY]], label %[[CTOR_EXIT:.*]]
+// LLVM:       br i1 %[[CTOR_DONE]], label %[[CTOR_BODY]], label %[[CTOR_JOIN:.*]]
 //
 //            --- ctor loop body ---
 // LLVM:     [[CTOR_BODY]]:
@@ -302,9 +302,6 @@ void test_variable_size_partial_array_cleanup(int n) {
 // LLVM:       %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CUR]], i64 1
 // LLVM:       store ptr %[[NEXT]], ptr %[[CTOR_ITER]]
 // LLVM:       br label %[[CTOR_LOOP_COND]]
-//
-// LLVM:     [[CTOR_EXIT]]:
-// LLVM:       br label %[[CTOR_JOIN:.*]]
 //
 //            --- landing pad + cleanup guard ---
 // LLVM:     [[LPAD]]:
@@ -1390,7 +1387,7 @@ void test_partial_cleanup_covers_init_only() {
 // LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}})
 // LLVM:           to label %[[CONT2:.*]] unwind label %[[INIT_LPAD]]
 // LLVM:       [[CONT2]]:
-// LLVM:         br label %[[AFTER_INIT:.*]]
+// LLVM:         br label %[[SIDE:.*]]
 // LLVM-NOT:     @_Z11side_effectv()
 // LLVM:       [[INIT_LPAD]]:
 // LLVM:         landingpad { ptr, i32 }
@@ -1398,8 +1395,6 @@ void test_partial_cleanup_covers_init_only() {
 // LLVM:         icmp ne ptr %{{.*}}, %{{.*}}
 // LLVM:         call void @_ZN3AggD1Ev(ptr {{.*}})
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[AFTER_INIT]]:
-// LLVM:         br label %[[SIDE:.*]]
 // LLVM:       [[SIDE]]:
 // LLVM:         invoke void @_Z11side_effectv()
 // LLVM:           to label %{{.*}} unwind label %[[FULL_LPAD:.*]]

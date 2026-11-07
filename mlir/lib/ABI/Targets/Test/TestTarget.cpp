@@ -125,8 +125,8 @@ namespace {
 /// set causes a parse error (no silent ignore).  Updated when new
 /// optional keys are added to the schema.
 constexpr StringRef knownArgKeys[] = {
-    "kind",           "coerced_type", "sign_extend",         "can_flatten",
-    "indirect_align", "byval",        "indirect_addr_space",
+    "kind",         "coerced_type",   "sign_extend", "can_flatten",
+    "direct_align", "indirect_align", "byval",       "indirect_addr_space",
 };
 
 bool isKnownArgKey(StringRef key) {
@@ -151,7 +151,8 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
       emitError() << "unknown key '" << na.getName().getValue()
                   << "' in classification dictionary; allowed keys are "
                   << "kind, coerced_type, sign_extend, can_flatten, "
-                  << "indirect_align, byval, indirect_addr_space";
+                  << "direct_align, indirect_align, byval, "
+                  << "indirect_addr_space";
       return std::nullopt;
     }
 
@@ -161,7 +162,16 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     Type coerced;
     if (auto t = argDict.getAs<TypeAttr>("coerced_type"))
       coerced = t.getValue();
-    auto c = ArgClassification::getDirect(coerced, /*offset=*/0);
+    llvm::MaybeAlign align;
+    if (auto da = argDict.getAs<IntegerAttr>("direct_align")) {
+      if (da.getInt() <= 0 || !llvm::isPowerOf2_64(da.getInt())) {
+        emitError() << "'direct_align' must be a positive power of 2; got "
+                    << da.getInt();
+        return std::nullopt;
+      }
+      align = llvm::Align(da.getInt());
+    }
+    auto c = ArgClassification::getDirect(coerced, /*offset=*/0, align);
     if (auto cf = argDict.getAs<BoolAttr>("can_flatten"))
       c.canFlatten = cf.getValue();
     return c;

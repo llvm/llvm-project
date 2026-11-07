@@ -3432,6 +3432,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/NVPTX/NVPTXGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":NVPTXOptionsTableGen",
+        ],
     },
     {
         "name": "PowerPC",
@@ -4241,6 +4244,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/MSP430/MSP430Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/MSP430/MSP430Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "NVPTXOptionsTableGen",
+    strip_include_prefix = "lib/Target/NVPTX",
+    tbl_outs = {"lib/Target/NVPTX/NVPTXOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/NVPTX/NVPTXOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
