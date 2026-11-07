@@ -143,6 +143,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_vulkan_memory_model},
     {"SPV_NV_shader_subgroup_partitioned",
      SPIRV::Extension::Extension::SPV_NV_shader_subgroup_partitioned},
+    {"SPV_EXT_shader_subgroup_partitioned",
+     SPIRV::Extension::Extension::SPV_EXT_shader_subgroup_partitioned},
     {"SPV_INTEL_long_composites",
      SPIRV::Extension::Extension::SPV_INTEL_long_composites},
     {"SPV_INTEL_fp_max_error",
@@ -182,7 +184,9 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_poison_freeze},
     {"SPV_KHR_untyped_pointers",
      SPIRV::Extension::Extension::SPV_KHR_untyped_pointers},
-    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector}};
+    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {

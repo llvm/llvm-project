@@ -9,22 +9,23 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
 
-#include "FPBits.h"
-#include "NearestIntegerOperations.h"
-#include "NormalFloat.h"
-#include "cast.h"
-#include "dyadic_float.h"
-#include "rounding_mode.h"
-
 #include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "hdr/math_macros.h"
-#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "src/__support/FPUtil/NormalFloat.h"
+#include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/types.h"
+#include "src/__support/sign.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
@@ -172,36 +173,12 @@ ldexp(T x, U exp) {
   // Make sure that we can safely cast exp to int when not returning early.
   static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
 
-  if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
-    Sign sign = bits.sign();
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-    int rounding_mode = quick_get_round();
-
-    if ((sign == Sign::POS && rounding_mode == FE_DOWNWARD) ||
-        (sign == Sign::NEG && rounding_mode == FE_UPWARD) ||
-        (rounding_mode == FE_TOWARDZERO))
-      return FPBits<T>::max_normal(sign).get_val();
-#endif
-
-    set_errno_if_required(ERANGE);
-    raise_except_if_required(FE_OVERFLOW);
-    return FPBits<T>::inf(sign).get_val();
-  }
+  if (LIBC_UNLIKELY(exp > EXP_LIMIT))
+    return set_overflow<T>(bits.sign());
 
   // Similarly on the negative side we return zero early if |exp| is too small.
-  if (LIBC_UNLIKELY(exp < -EXP_LIMIT)) {
-    Sign sign = bits.sign();
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-    int rounding_mode = quick_get_round();
-    if ((sign == Sign::POS && rounding_mode == FE_UPWARD) ||
-        (sign == Sign::NEG && rounding_mode == FE_DOWNWARD))
-      return FPBits<T>::min_subnormal(sign).get_val();
-#endif
-
-    set_errno_if_required(ERANGE);
-    raise_except_if_required(FE_UNDERFLOW);
-    return FPBits<T>::zero(sign).get_val();
-  }
+  if (LIBC_UNLIKELY(exp < -EXP_LIMIT))
+    return set_underflow<T>(bits.sign());
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
@@ -242,9 +219,9 @@ LIBC_INLINE constexpr T nextafter(T from, U to) {
   }
 
   if (from_bits.is_subnormal())
-    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+    raise_underflow_except_if_required<T>();
   else if (from_bits.is_inf())
-    raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+    raise_overflow_except_if_required<T>();
 
   return from_bits.get_val();
 }
@@ -277,8 +254,8 @@ LIBC_INLINE constexpr T nextupdown(T x) {
 } // namespace LIBC_NAMESPACE_DECL
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
-#include "x86_64/NextAfterLongDouble.h"
-#include "x86_64/NextUpDownLongDouble.h"
+#include "src/__support/FPUtil/x86_64/NextAfterLongDouble.h"
+#include "src/__support/FPUtil/x86_64/NextUpDownLongDouble.h"
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
