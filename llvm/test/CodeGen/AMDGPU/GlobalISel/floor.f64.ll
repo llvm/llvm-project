@@ -201,19 +201,11 @@ define amdgpu_ps <2 x float> @s_floor_f64(double inreg %x) {
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    v_add_f64 v[0:1], s[2:3], -v[0:1]
-; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX78-LABEL: s_floor_f64:
 ; GFX78:       ; %bb.0:
 ; GFX78-NEXT:    v_floor_f64_e32 v[0:1], s[2:3]
-; GFX78-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX78-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX78-NEXT:    v_mov_b32_e32 v0, s0
-; GFX78-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX78-NEXT:    ; return to shader part epilog
   %result = call double @llvm.floor.f64(double %x)
   %cast = bitcast double %result to <2 x float>
@@ -235,19 +227,11 @@ define amdgpu_ps <2 x float> @s_floor_f64_fneg(double inreg %x) {
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    v_add_f64 v[0:1], -s[2:3], -v[0:1]
-; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX78-LABEL: s_floor_f64_fneg:
 ; GFX78:       ; %bb.0:
 ; GFX78-NEXT:    v_floor_f64_e64 v[0:1], -s[2:3]
-; GFX78-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX78-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX78-NEXT:    v_mov_b32_e32 v0, s0
-; GFX78-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX78-NEXT:    ; return to shader part epilog
   %neg.x = fneg double %x
   %result = call double @llvm.floor.f64(double %neg.x)
@@ -270,19 +254,11 @@ define amdgpu_ps <2 x float> @s_floor_f64_fabs(double inreg %x) {
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    v_add_f64 v[0:1], |s[2:3]|, -v[0:1]
-; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX78-LABEL: s_floor_f64_fabs:
 ; GFX78:       ; %bb.0:
 ; GFX78-NEXT:    v_floor_f64_e64 v[0:1], |s[2:3]|
-; GFX78-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX78-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX78-NEXT:    v_mov_b32_e32 v0, s0
-; GFX78-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX78-NEXT:    ; return to shader part epilog
   %abs.x = call double @llvm.fabs.f64(double %x)
   %result = call double @llvm.floor.f64(double %abs.x)
@@ -305,19 +281,11 @@ define amdgpu_ps <2 x float> @s_floor_f64_fneg_fabs(double inreg %x) {
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    v_add_f64 v[0:1], -|s[2:3]|, -v[0:1]
-; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX78-LABEL: s_floor_f64_fneg_fabs:
 ; GFX78:       ; %bb.0:
 ; GFX78-NEXT:    v_floor_f64_e64 v[0:1], -|s[2:3]|
-; GFX78-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX78-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX78-NEXT:    v_mov_b32_e32 v0, s0
-; GFX78-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX78-NEXT:    ; return to shader part epilog
   %abs.x = call double @llvm.fabs.f64(double %x)
   %neg.abs.x = fneg double %abs.x
