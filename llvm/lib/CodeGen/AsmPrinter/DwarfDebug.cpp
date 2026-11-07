@@ -919,6 +919,16 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   }
 }
 
+/// Return the instruction after which the return address of call \p MI is:
+/// the last instruction in its delay slot if it has one, otherwise \p MI.
+/// The AsmPrinter begins each instruction in a delay slot separately, so the
+/// label after the call itself would be inside the delay slot.
+static const MachineInstr *getReturnAddressInstr(const MachineInstr *MI) {
+  if (!MI->hasDelaySlot(MachineInstr::IgnoreBundle) || !MI->isBundledWithSucc())
+    return MI;
+  return &*std::prev(getBundleEnd(MI->getIterator()));
+}
+
 void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                             DwarfCompileUnit &CU, DIE &ScopeDIE,
                                             const MachineFunction &MF) {
@@ -1050,9 +1060,10 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // the call graph which could lead to some target function. For tail
       // calls, no return PC information is needed, unless tuning for GDB in
       // DWARF4 mode in which case we fake a return PC for compatibility.
-      const MCSymbol *PCAddr = (!IsTail || CU.useGNUAnalogForDwarf5Feature())
-                                   ? getLabelAfterInsn(TopLevelCallMI)
-                                   : nullptr;
+      const MCSymbol *PCAddr =
+          (!IsTail || CU.useGNUAnalogForDwarf5Feature())
+              ? getLabelAfterInsn(getReturnAddressInstr(TopLevelCallMI))
+              : nullptr;
 
       // For tail calls, it's necessary to record the address of the branch
       // instruction so that the debugger can show where the tail call occurred.
@@ -2178,7 +2189,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     // For non-tail calls, we need the return address for the call for
     // DW_AT_call_return_pc. Under GDB tuning, this information is needed for
     // tail calls as well.
-    requestLabelAfterInsn(MI);
+    requestLabelAfterInsn(getReturnAddressInstr(MI));
   }
 
   DebugHandlerBase::beginInstruction(MI);
