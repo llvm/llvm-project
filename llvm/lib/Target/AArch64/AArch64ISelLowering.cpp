@@ -21304,9 +21304,70 @@ static SDValue performBICiCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performShiftBeforeAndFold(SDValue Op0, SDValue Op1,
+                                         SelectionDAG &DAG) {
+  if (Op0.getOpcode() != ISD::AND || !Op0.hasOneUse() ||
+      isa<ConstantSDNode>(Op1) || Op1.getOpcode() == ISD::SRL ||
+      Op1.getOpcode() == ISD::SRA || Op1.getOpcode() == ISD::SHL)
+    return SDValue();
+  EVT VT = Op0.getValueType();
+  SDValue LHS = Op0.getOperand(0);
+  SDValue RHS = Op0.getOperand(1);
+  if (!isa<ConstantSDNode>(RHS))
+    return SDValue();
+  if (!LHS.hasOneUse() ||
+      (LHS.getOpcode() != ISD::SRL && LHS.getOpcode() != ISD::SHL))
+    return SDValue();
+
+  if (LHS.getOpcode() == ISD::SRL) {
+    if (!isa<ConstantSDNode>(LHS.getOperand(1)))
+      return SDValue();
+    if (!AArch64_AM::isLogicalImmediate(Op0.getConstantOperandAPInt(1)
+                                            .shl(LHS.getConstantOperandVal(1))
+                                            .getZExtValue(),
+                                        VT.getSizeInBits()))
+      return SDValue();
+  } else if (LHS.getOpcode() == ISD::SHL) {
+    if (!isa<ConstantSDNode>(LHS.getOperand(1)))
+      return SDValue();
+    if (!AArch64_AM::isLogicalImmediate(Op0.getConstantOperandAPInt(1)
+                                            .lshr(LHS.getConstantOperandVal(1))
+                                            .getZExtValue(),
+                                        VT.getSizeInBits()))
+      return SDValue();
+  } else
+    return SDValue();
+
+  // Rule out BFM
+  if (Op0.getConstantOperandAPInt(1).isShiftedMask())
+    return SDValue();
+
+  SDLoc DL(Op0);
+  SDValue C = DAG.getNode(LHS.getOpcode() == ISD::SRL ? ISD::SHL : ISD::SRL, DL,
+                          VT, RHS, LHS.getOperand(1));
+  SDValue And = DAG.getNode(ISD::AND, DL, VT, LHS.getOperand(0), C);
+  return DAG.getNode(LHS.getOpcode(), DL, VT, And, LHS.getOperand(1));
+}
+
+static SDValue performFoldShiftBeforeAnd(SDNode *N, SelectionDAG &DAG) {
+  if (SDValue R =
+          performShiftBeforeAndFold(N->getOperand(0), N->getOperand(1), DAG))
+    return DAG.getNode(N->getOpcode(), N, N->getValueType(0), R,
+                       N->getOperand(1));
+  if (SDValue R =
+          performShiftBeforeAndFold(N->getOperand(1), N->getOperand(0), DAG))
+    return DAG.getNode(N->getOpcode(), N, N->getValueType(0), R,
+                       N->getOperand(0));
+  return SDValue();
+}
+
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
+  if (DCI.isAfterLegalizeDAG())
+    if (SDValue R = performFoldShiftBeforeAnd(N, DAG))
+      return R;
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -22371,6 +22432,10 @@ static SDValue performORCombine(SDNode *N,
 
   if (SDValue R = performANDORDUPNOTCombine(N, DAG))
     return R;
+
+  if (DCI.isAfterLegalizeDAG())
+    if (SDValue R = performFoldShiftBeforeAnd(N, DAG))
+      return R;
 
   return SDValue();
 }
@@ -32060,7 +32125,8 @@ static SDValue performSHLCombine(SDNode *N,
 
   SDValue C1 = Op0->getOperand(1);
   SDValue C2 = N->getOperand(1);
-  if (!isa<ConstantSDNode>(C1) || !isa<ConstantSDNode>(C2))
+  if (!isa<ConstantSDNode>(C1) || !isa<ConstantSDNode>(C2) ||
+      !cast<ConstantSDNode>(C1)->getAPIntValue().isShiftedMask())
     return SDValue();
 
   // Might be folded into shifted op, do not lower.

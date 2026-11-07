@@ -1095,3 +1095,128 @@ define i64 @test_i64_18446744065119617024_mask_shl_1(i64 %a0) {
   %t1 = shl i64 %t0, 1
   ret i64 %t1
 }
+
+
+define i1 @scan(i64 %l) {
+; CHECK-LABEL: scan:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #434041037028460038 // =0x606060606060606
+; CHECK-NEXT:    and x9, x0, #0xf0f0f0f0f0f0f0f0
+; CHECK-NEXT:    add x8, x0, x8
+; CHECK-NEXT:    and x8, x8, #0xf0f0f0f0f0f0f0f0
+; CHECK-NEXT:    orr x8, x9, x8, lsr #4
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+entry:
+  %and = and i64 %l, -1085102592571150096
+  %add = add i64 %l, 434041037028460038
+  %and1 = lshr i64 %add, 4
+  %shr = and i64 %and1, 1085102592571150095
+  %or = or disjoint i64 %shr, %and
+  %cmp = icmp eq i64 %or, 3689348814741910323
+  ret i1 %cmp
+}
+
+define i1 @scan_or(i64 %l, i64 %y) {
+; CHECK-LABEL: scan_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x0, #0xf0f0f0f0f0f0f0f0
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    orr x8, x1, x8, lsr #4
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+entry:
+  %and1 = lshr i64 %l, 4
+  %shr = and i64 %and1, 1085102592571150095
+  %or = or  i64 %shr, %y
+  %cmp = icmp eq i64 %or, 3689348814741910323
+  ret i1 %cmp
+}
+
+define i1 @scan_xor(i64 %l, i64 %y) {
+; CHECK-LABEL: scan_xor:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x0, #0xf0f0f0f0f0f0f0f0
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    eor x8, x1, x8, lsr #4
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+entry:
+  %and1 = lshr i64 %l, 4
+  %shr = and i64 %and1, 1085102592571150095
+  %or = xor i64 %shr, %y
+  %cmp = icmp eq i64 %or, 3689348814741910323
+  ret i1 %cmp
+}
+
+define i1 @scan_and(i64 %l, i64 %y) {
+; CHECK-LABEL: scan_and:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x9, x1, x0, lsr #4
+; CHECK-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    and x9, x9, #0xf0f0f0f0f0f0f0f
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+entry:
+  %and1 = lshr i64 %l, 4
+  %shr = and i64 %and1, 1085102592571150095
+  %or = and i64 %shr, %y
+  %cmp = icmp eq i64 %or, 3689348814741910323
+  ret i1 %cmp
+}
+
+define i1 @scan_orshl(i64 %l, i64 %y) {
+; CHECK-LABEL: scan_orshl:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x0, #0x1e1e1e1e1e1e1e1e
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    orr x8, x1, x8, lsl #3
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+entry:
+  %and1 = shl i64 %l, 3
+  %shr = and i64 %and1, u0xf0f0f0f0f0f0f0f0
+  %or = or i64 %shr, %y
+  %cmp = icmp eq i64 %or, 3689348814741910323
+  ret i1 %cmp
+}
+
+define i1 @scan_xorshl(i64 %l, i64 %y) {
+; CHECK-LABEL: scan_xorshl:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x8, x0, #0x1e1e1e1e1e1e1e1e
+; CHECK-NEXT:    mov x9, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    eor x8, x1, x8, lsl #3
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+entry:
+  %and1 = shl i64 %l, 3
+  %shr = and i64 %and1, u0xf0f0f0f0f0f0f0f0
+  %or = xor i64 %shr, %y
+  %cmp = icmp eq i64 %or, 3689348814741910323
+  ret i1 %cmp
+}
+
+define i1 @scan_andshl(i64 %l, i64 %y) {
+; CHECK-LABEL: scan_andshl:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and x9, x1, x0, lsl #3
+; CHECK-NEXT:    mov x8, #3689348814741910323 // =0x3333333333333333
+; CHECK-NEXT:    and x9, x9, #0xf0f0f0f0f0f0f0f0
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+entry:
+  %and1 = shl i64 %l, 3
+  %shr = and i64 %and1, u0xf0f0f0f0f0f0f0f0
+  %or = and i64 %shr, %y
+  %cmp = icmp eq i64 %or, 3689348814741910323
+  ret i1 %cmp
+}
