@@ -170,6 +170,26 @@ void DIEAbbrevSet::Emit(const AsmPrinter *AP, MCSection *Section) const {
 
 DIE *DIE::getParent() const { return dyn_cast_if_present<DIE *>(Owner); }
 
+void DIE::removeChild(DIE &Child) {
+  assert(Child.getParent() == this && "Not a child of this DIE");
+  [[maybe_unused]] bool Removed = Children.deleteNode(Child);
+  assert(Removed && "Child is missing from the list of children");
+  Child.Owner = nullptr;
+}
+
+void DIE::takeChildren(DIE &Other, bool AtFront) {
+  for (DIE &Child : Other.children())
+    Child.Owner = this;
+  if (!AtFront) {
+    Children.takeNodes(Other.Children);
+    return;
+  }
+  IntrusiveBackList<DIE> Moved;
+  Moved.takeNodes(Other.Children);
+  Moved.takeNodes(Children);
+  Children.takeNodes(Moved);
+}
+
 DIEAbbrev DIE::generateAbbrev() const {
   DIEAbbrev Abbrev(Tag, hasChildren());
   for (const DIEValue &V : values())

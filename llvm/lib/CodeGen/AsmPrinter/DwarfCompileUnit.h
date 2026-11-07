@@ -17,6 +17,7 @@
 #include "DwarfUnit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -82,6 +83,16 @@ class DwarfCompileUnit final : public DwarfUnit {
   // List of abstract local scopes (either DISubprogram or DILexicalBlock).
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
   SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
+
+  // Local scopes (either DISubprogram or DILexicalBlock) used as a context of
+  // DIEs before it was known whether their subprograms have abstract DIEs,
+  // mapped to the pending DIEs holding those DIEs until
+  // resolvePendingLocalScopeDIEs() moves them to the final scope DIEs.
+  MapVector<const DILocalScope *, DIE *> PendingLocalScopeDIEs;
+
+  // Parent of the pending DIEs. It is the first child of the unit DIE until
+  // resolvePendingLocalScopeDIEs() removes it.
+  DIE *PendingLocalScopesDIE = nullptr;
 
   // List of inlined lexical block scopes that belong to subprograms within this
   // CU.
@@ -178,6 +189,19 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// Create new DIE for abstract subprogram.
   DIE &createAbstractSubprogramDIE(const DISubprogram *SP, DIE *ContextDIE,
                                    DwarfCompileUnit *ContextCU);
+
+  /// Get the DIE to be used as a parent of DIEs of entities local to \p Scope,
+  /// which must not be a DILexicalBlockFile.
+  ///
+  /// The DIE belongs to the abstract tree if the subprogram of \p Scope has an
+  /// abstract DIE, and to the concrete tree otherwise. Until all functions are
+  /// processed, this may be a pending DIE, see
+  /// resolvePendingLocalScopeDIEs(). If there is no DIE for \p Scope in the
+  /// tree, the DIE of the closest enclosing scope is returned.
+  DIE *getOrCreateLocalScopeDIE(const DILocalScope *Scope);
+
+  /// Get or create the pending DIE of \p Scope.
+  DIE &getOrCreatePendingLocalScopeDIE(const DILocalScope *Scope);
 
   /// Add a location exprloc to \p DIE with attribute \p Attribute at
   /// for \p Location modified by raw DIExpression \p Expr.
@@ -297,10 +321,11 @@ public:
   /// This instance of 'getOrCreateContextDIE()' can handle DILocalScope.
   DIE *getOrCreateContextDIE(const DIScope *Ty) override;
 
-  /// Get DW_TAG_lexical_block for the given DILexicalBlock if available,
-  /// or the most close parent DIE, if no correspoding DW_TAG_lexical_block
-  /// exists.
-  DIE *getLocalContextDIE(const DILexicalBlock *LB);
+  /// Move DIEs of function-local entities from pending DIEs to the DIEs of
+  /// their scopes in abstract or concrete trees. Must be called after all
+  /// functions are processed, when it is known which subprograms have
+  /// abstract DIEs.
+  void resolvePendingLocalScopeDIEs();
 
   DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, const Function *F,
                                 bool Minimal = false) override;

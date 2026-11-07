@@ -956,6 +956,15 @@ public:
     return Children.front();
   }
 
+  /// Remove \p Child from the children of this DIE. Takes constant time if
+  /// \p Child is the first child, and linear time otherwise.
+  LLVM_ABI void removeChild(DIE &Child);
+
+  /// Move all children of \p Other to this DIE, preserving their order.
+  /// If \p AtFront is true, the moved children are placed before the existing
+  /// children of this DIE, otherwise after them.
+  LLVM_ABI void takeChildren(DIE &Other, bool AtFront = false);
+
   /// Find a value in the DIE with the attribute given.
   ///
   /// Returns a default-constructed DIEValue (where \a DIEValue::getType()
