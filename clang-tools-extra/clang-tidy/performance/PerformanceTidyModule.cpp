@@ -15,6 +15,7 @@
 #include "ImplicitConversionInLoopCheck.h"
 #include "InefficientAlgorithmCheck.h"
 #include "InefficientStringConcatenationCheck.h"
+#include "InefficientSubstrCheck.h"
 #include "InefficientVectorOperationCheck.h"
 #include "MoveConstArgCheck.h"
 #include "MoveConstructorInitCheck.h"
@@ -52,6 +53,8 @@ public:
         "performance-inefficient-algorithm");
     CheckFactories.registerCheck<InefficientStringConcatenationCheck>(
         "performance-inefficient-string-concatenation");
+    CheckFactories.registerCheck<InefficientSubstrCheck>(
+        "performance-inefficient-substr");
     CheckFactories.registerCheck<InefficientVectorOperationCheck>(
         "performance-inefficient-vector-operation");
     CheckFactories.registerCheck<MoveConstArgCheck>(
