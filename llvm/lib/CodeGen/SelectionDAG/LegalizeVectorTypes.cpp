@@ -3183,8 +3183,8 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOpWithTwoResults(SDNode *N,
 
   // The caller records Lo and Hi as the split of result ResNo, which may be
   // the second result (e.g. the exponent of FFREXP).
-  Lo = SDValue(LoNode, ResNo);
-  Hi = SDValue(HiNode, ResNo);
+  Lo = Lo.getValue(ResNo);
+  Hi = Hi.getValue(ResNo);
 
   // Replace the other vector result not being explicitly split here.
   unsigned OtherNo = 1 - ResNo;
