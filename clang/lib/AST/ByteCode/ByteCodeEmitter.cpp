@@ -229,7 +229,7 @@ bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {
 bool ByteCodeEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   const Expr *Arg = E->getArg(0);
   PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
-  if (!this->emitBCP(getOffset(EndLabel), T, E))
+  if (!this->emitBCP(getOffset(EndLabel), T, Arg->getType()->isRecordType(), E))
     return false;
   if (!this->visit(Arg))
     return false;

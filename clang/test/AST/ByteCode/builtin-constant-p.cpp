@@ -159,3 +159,51 @@ namespace Inactive {
   }
 
 }
+
+namespace Record {
+  struct S {
+    int n;
+  };
+
+  S NonConstexprGlobal{1};
+  constexpr S ConstexprGlobal{2};
+
+  static_assert(!__builtin_constant_p(NonConstexprGlobal));
+  static_assert(__builtin_constant_p(ConstexprGlobal));
+  static_assert(!__builtin_constant_p(&ConstexprGlobal));
+
+  constexpr bool Uninitialized() {
+    S s;
+    return __builtin_constant_p(s);
+  }
+  static_assert(!Uninitialized());
+
+  struct NonTrivial {
+    int n;
+    constexpr NonTrivial(int n) : n(n) {}
+    constexpr NonTrivial(const NonTrivial &other) : n(other.n) {}
+  };
+
+  constexpr NonTrivial NonTrivialValue{3};
+  static_assert(__builtin_constant_p(NonTrivialValue));
+
+  constexpr int NonTrivialIf(NonTrivial V) {
+    if (__builtin_constant_p(V))
+      return V.n;
+    return 0;
+  }
+  static_assert(NonTrivialIf(NonTrivialValue) == 3);
+}
+
+namespace Union {
+  union U {
+    int n;
+    char c;
+  };
+
+  U NonConstexprGlobal{1};
+  constexpr U ConstexprGlobal{2};
+
+  static_assert(!__builtin_constant_p(NonConstexprGlobal));
+  static_assert(__builtin_constant_p(ConstexprGlobal));
+}
