@@ -549,7 +549,7 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
-      Known.knownNot(fcZero | fcPosSubnormal);
+      Known.knownNot(fcPosSubnormal);
   }
   if (KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal) &&
       KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)) {
@@ -558,7 +558,20 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
-      Known.knownNot(fcZero | fcNegSubnormal);
+      Known.knownNot(fcNegSubnormal);
+  }
+
+  // x + y is zero if x and y are both zeros, or if x == -y (cancellation).
+  if (KnownLHS.isKnownNever(fcZero) || KnownRHS.isKnownNever(fcZero)) {
+    if ((KnownLHS.isKnownNever(fcPosNormal) ||
+         KnownRHS.isKnownNever(fcNegNormal)) &&
+        (KnownRHS.isKnownNever(fcPosNormal) ||
+         KnownLHS.isKnownNever(fcNegNormal)) &&
+        (KnownLHS.isKnownNever(fcPosSubnormal) ||
+         KnownRHS.isKnownNever(fcNegSubnormal)) &&
+        (KnownRHS.isKnownNever(fcPosSubnormal) ||
+         KnownLHS.isKnownNever(fcNegSubnormal)))
+      Known.knownNot(fcZero);
   }
 
   switch (RM) {

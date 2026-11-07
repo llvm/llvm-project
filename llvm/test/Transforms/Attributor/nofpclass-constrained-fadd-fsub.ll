@@ -180,9 +180,9 @@ define float @fadd_rtn__nsub__pnorm__ftz_daz(float nofpclass(nan inf zero psub n
 }
 
 define float @fadd_rtn__nsub__pnorm__ftpz_dapz(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) #3 strictfp {
-; CHECK-LABEL: define nofpclass(nan inf) float @fadd_rtn__nsub__pnorm__ftpz_dapz(
+; CHECK-LABEL: define nofpclass(nan inf nzero) float @fadd_rtn__nsub__pnorm__ftpz_dapz(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan inf) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero psub norm) [[LHS]], float nofpclass(nan inf zero sub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan inf nzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero psub norm) [[LHS]], float nofpclass(nan inf zero sub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -958,9 +958,9 @@ define float @fsub_rtp__nnorm__pnorm(float nofpclass(nan inf zero sub pnorm) %lh
 }
 
 define float @fadd_rna__norm__sub(float nofpclass(nan inf zero sub) %lhs, float nofpclass(nan inf zero norm) %rhs) #0 strictfp {
-; CHECK-LABEL: define nofpclass(nan nzero) float @fadd_rna__norm__sub(
+; CHECK-LABEL: define nofpclass(nan zero) float @fadd_rna__norm__sub(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[LHS:%.*]], float nofpclass(nan inf zero norm) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan nzero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero sub) [[LHS]], float nofpclass(nan inf zero norm) [[RHS]], metadata !"round.tonearestaway", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FADD:%.*]] = call nofpclass(nan zero) float @llvm.experimental.constrained.fadd.f32(float nofpclass(nan inf zero sub) [[LHS]], float nofpclass(nan inf zero norm) [[RHS]], metadata !"round.tonearestaway", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FADD]]
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %lhs, float %rhs, metadata !"round.tonearestaway", metadata !"fpexcept.strict")
@@ -968,9 +968,9 @@ define float @fadd_rna__norm__sub(float nofpclass(nan inf zero sub) %lhs, float 
 }
 
 define float @fsub_rna__sub__norm(float nofpclass(nan inf zero norm) %lhs, float nofpclass(nan inf zero sub) %rhs) #0 strictfp {
-; CHECK-LABEL: define nofpclass(nan nzero) float @fsub_rna__sub__norm(
+; CHECK-LABEL: define nofpclass(nan zero) float @fsub_rna__sub__norm(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[LHS:%.*]], float nofpclass(nan inf zero sub) [[RHS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan nzero) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf zero norm) [[LHS]], float nofpclass(nan inf zero sub) [[RHS]], metadata !"round.tonearestaway", metadata !"fpexcept.strict") #[[ATTR8]]
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(nan zero) float @llvm.experimental.constrained.fsub.f32(float nofpclass(nan inf zero norm) [[LHS]], float nofpclass(nan inf zero sub) [[RHS]], metadata !"round.tonearestaway", metadata !"fpexcept.strict") #[[ATTR8]]
 ; CHECK-NEXT:    ret float [[FSUB]]
 ;
   %fsub = call float @llvm.experimental.constrained.fsub.f32(float %lhs, float %rhs, metadata !"round.tonearestaway", metadata !"fpexcept.strict")
