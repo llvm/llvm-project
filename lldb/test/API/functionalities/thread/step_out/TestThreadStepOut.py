@@ -11,16 +11,17 @@ from lldbsuite.test import lldbutil
 
 @requireThreadSupport
 class ThreadStepOutTestCase(TestBase):
-    @skipIfWindows  # This test will hang on windows llvm.org/pr21753
-    @expectedFailureAll(oslist=["windows"])
     @expectedFailureNetBSD
     def test_step_single_thread(self):
         """Test thread step out on one thread via command interpreter."""
         self.build()
         self.step_out_test(self.step_out_single_thread_with_cmd)
 
-    @skipIfWindows  # This test will hang on windows llvm.org/pr21753
-    @expectedFailureAll(oslist=["windows"])
+    # The in-process Windows plugin (ProcessWindows) reports one thread's
+    # exception per stop. When both threads trap together, the other thread's
+    # event only arrives after the next resume, so the step-out ends on that
+    # thread's trace or with no stop reason, differently from run to run.
+    @skipIfWindowsAndNoLLDBServer
     @expectedFailureAll(
         oslist=["watchos"], archs=["armv7k"], bugnumber="rdar://problem/34674488"
     )  # stop reason is trace when it should be step-out
@@ -30,8 +31,8 @@ class ThreadStepOutTestCase(TestBase):
         self.build()
         self.step_out_test(self.step_out_all_threads_with_cmd)
 
-    @skipIfWindows  # This test will hang on windows llvm.org/pr21753
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24681")
+    # Same in-process Windows limitation as test_step_all_threads.
+    @skipIfWindowsAndNoLLDBServer
     @expectedFailureNetBSD
     def test_python(self):
         """Test thread step out on one thread via Python API (dwarf)."""
