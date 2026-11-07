@@ -875,10 +875,12 @@ public:
   }
 
   /// Returns true if the instructions in this block requires predication
-  /// for any reason, e.g. because tail folding now requires a predicate
-  /// or because the block in the original loop was predicated.
+  /// for any reason, e.g. because tail folding now requires a predicate,
+  /// because memory accesses are masked due to an uncountable exit with side
+  /// effects, or because the block in the original loop was predicated.
   bool blockNeedsPredicationForAnyReason(BasicBlock *BB) const {
-    return foldTailByMasking() || Legal->blockNeedsPredication(BB);
+    return foldTailByMasking() || Legal->hasUncountableExitWithSideEffects() ||
+           Legal->blockNeedsPredication(BB);
   }
 
   /// Returns true if VP intrinsics with explicit vector length support should
@@ -5159,11 +5161,8 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   // for later use by the cost model.
   Config.computeMinimalBitwidths();
 
-  // Invalidate interleave groups if all blocks of loop will be predicated, or
-  // all memory accesses will be masked due to uncountable exits with side
-  // effects.
-  if ((CM->blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) ||
-       Legal->hasUncountableExitWithSideEffects()) &&
+  // Invalidate interleave groups if all blocks of loop will be predicated.
+  if (CM->blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&
       !useMaskedInterleavedAccesses(Opts, TTI)) {
     LLVM_DEBUG(dbgs() << "LV: Invalidate all interleaved groups due to "
                          "predication which requires masked-interleaved "
