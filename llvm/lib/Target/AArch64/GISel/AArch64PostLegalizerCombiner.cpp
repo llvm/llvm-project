@@ -572,6 +572,10 @@ bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   if (!Ty.isVector())
     return false;
+  // Leave shifts by zero to the identity combines, which remove them.
+  if (isBuildVectorAllZeros(*MRI.getVRegDef(MI.getOperand(2).getReg()), MRI,
+                            /*AllowUndef=*/true))
+    return false;
   // Leave shifts by a valid immediate to vashr_vlshr_imm.
   int64_t Cnt;
   return !AArch64GISelUtils::isVShiftRImm(MI.getOperand(2).getReg(), MRI, Ty,
