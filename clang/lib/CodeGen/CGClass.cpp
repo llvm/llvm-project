@@ -1212,6 +1212,9 @@ public:
 void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
                                        CXXCtorType CtorType,
                                        FunctionArgList &Args) {
+  // Checks in the initializers trap; the body's overflow handler is not yet
+  // in scope.
+  OverflowHandlerScope NoHandler(LocalOverflowHandlers, nullptr);
   if (CD->isDelegatingConstructor())
     return EmitDelegatingCXXConstructorCall(CD, Args);
 

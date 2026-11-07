@@ -622,6 +622,12 @@ public:
         continue;
       unsigned BlockID = Block->getBlockID();
       const Stmt *Term = Block->getTerminatorStmt();
+      // An overflow branch is taken by the checked operation that ends the
+      // block.
+      bool IsOverflowBranch = Block->getTerminator().isOverflowBranch();
+      if (IsOverflowBranch && !Block->empty())
+        if (std::optional<CFGStmt> Last = Block->back().getAs<CFGStmt>())
+          Term = Last->getStmt();
       if (SuccsVisited[BlockID] && SuccsVisited[BlockID] < Block->succ_size() &&
           Term) {
         // This block inevitably leads to the use. If we have an edge from here
@@ -648,6 +654,7 @@ public:
               UninitUse::Branch Branch;
               Branch.Terminator = Term;
               Branch.Output = I - Block->succ_begin();
+              Branch.IsOverflowBranch = IsOverflowBranch;
               Use.addUninitBranch(Branch);
             }
           }
