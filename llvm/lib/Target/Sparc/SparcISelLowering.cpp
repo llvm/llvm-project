@@ -2789,7 +2789,18 @@ static SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   // Otherwise, Convert the int value to FP in an FP register.
-  SDValue Tmp = DAG.getNode(ISD::BITCAST, dl, floatVT, Src);
+  SDValue Tmp;
+  auto *LD = dyn_cast<LoadSDNode>(Src);
+  if (LD && Src.hasOneUse() && ISD::isNormalLoad(LD) && LD->isSimple()) {
+    // Load the integer directly into an FP register instead of moving it
+    // there from an integer register through the stack.
+    LD->getMemOperand()->clearRanges();
+    Tmp = DAG.getLoad(floatVT, dl, LD->getChain(), LD->getBasePtr(),
+                      LD->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), Tmp.getValue(1));
+  } else {
+    Tmp = DAG.getNode(ISD::BITCAST, dl, floatVT, Src);
+  }
   if (IsStrict) {
     unsigned Opc = OpVT == MVT::i32 ? SPISD::STRICT_ITOF : SPISD::STRICT_XTOF;
     return DAG.getNode(Opc, dl, {Op.getValueType(), MVT::Other},

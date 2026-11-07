@@ -11990,10 +11990,17 @@ static void scanAssociativeOperands(
         ReassocScalars.push_back(V);
     // A peeled subtract negates its second operand column.
     const bool Negated = Columns[Idx].Negated;
+    const bool SubNegated = IsSub(ColS.getOpcode()) != Negated;
+    // The identity of a copyable lane is combined with the total of the
+    // column it lands in, so it follows the sign of that column rather than
+    // the opcode of the peeled column.
+    if (Negated && RootFamily == Instruction::FAdd)
+      for (auto [V, Op] : zip(Column, SubOperands.back()))
+        if (ColS.isCopyableElement(V))
+          Op = getReassocIdentity(RootFamily, Op->getType(), SubNegated);
     Columns[Idx].Col = std::move(SubOperands.front());
-    Columns.insert(
-        std::next(Columns.begin(), Idx + 1),
-        {std::move(SubOperands.back()), IsSub(ColS.getOpcode()) != Negated});
+    Columns.insert(std::next(Columns.begin(), Idx + 1),
+                   {std::move(SubOperands.back()), SubNegated});
     // Do not advance Idx: re-examine the column that was just placed here.
   }
   Operands.clear();
@@ -17720,7 +17727,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         const unsigned CombineOpcode = getReassocCombineOpcode(E->getOpcode());
         for (unsigned Idx : seq<unsigned>(2, E->getNumOperands())) {
           if (all_of(E->getOperand(Idx), [&](Value *V) {
-                return isBinOpIdentityConstant(V, CombineOpcode);
+                return isBinOpIdentityConstant(V, CombineOpcode,
+                                               E->isReassocNegatedOp(Idx));
               }))
             continue;
           // The first operand is the running fold, a computed value with no
@@ -24876,13 +24884,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         SmallVector<SmallVector<Value *>> ScalarOps;
         SmallVector<SmallVector<Value *>> NegScalarOps;
         for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
+          const bool Negated = E->isReassocNegatedOp(Idx);
           // Identity-only columns combine to a no-op; skip them rather than
           // emitting a real binop against an identity vector.
           if (all_of(E->getOperand(Idx), [&](Value *V) {
-                return isBinOpIdentityConstant(V, CombineOpcode);
+                return isBinOpIdentityConstant(V, CombineOpcode, Negated);
               }))
             continue;
-          const bool Negated = E->isReassocNegatedOp(Idx);
           (Negated ? NegOps : Ops)
               .push_back(GetCastOperand(
                   Idx, FreezePlaceholders(vectorizeOperand(E, Idx), Idx)));
