@@ -48,10 +48,8 @@ int main(int argc, char** argv) {
         ->Arg(1 << 26) // 67'108'864
         ->UseRealTime();
   };
-#if defined(TEST_PSTL_ENABLE_SEQ_BASELINES)
   bm("std::find(std::execution::seq, vector<double>) (bail 25%)", std::execution::seq, true);
   bm("std::find(std::execution::seq, vector<double>) (process all)", std::execution::seq, false);
-#endif
   bm("std::find(std::execution::par, vector<double>) (bail 25%)", std::execution::par, true);
   bm("std::find(std::execution::par, vector<double>) (process all)", std::execution::par, false);
 
