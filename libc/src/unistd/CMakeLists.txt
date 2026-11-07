@@ -407,6 +407,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  posix_close
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.posix_close
+)
+
+add_entrypoint_object(
   pread
   ALIAS
   DEPENDS
