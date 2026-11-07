@@ -300,6 +300,117 @@ body:             |
     S_ENDPGM 0
 ...
 
+# Two pairs need the same value. The second pair reads the register written by
+# the move for the first pair, so only one move is needed.
+---
+name:            same_value_reuses_register
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: same_value_reuses_register
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr0 = S_MOV_B32 100
+    ; CHECK-NEXT: $vgpr4, $vgpr5 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr0, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: $vgpr6, $vgpr7 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr0, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr4 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr5 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    $vgpr6 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr7 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
+# The register is overwritten between the pairs, so the second pair needs its
+# own move.
+---
+name:            same_value_clobbered_between
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: same_value_clobbered_between
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr0 = S_MOV_B32 100
+    ; CHECK-NEXT: $vgpr4, $vgpr5 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr0, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: $sgpr0 = S_MOV_B32 7
+    ; CHECK-NEXT: S_NOP 0, implicit killed $sgpr0
+    ; CHECK-NEXT: $sgpr0 = S_MOV_B32 100
+    ; CHECK-NEXT: $vgpr6, $vgpr7 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr0, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr4 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr5 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    $sgpr0 = S_MOV_B32 7
+    S_NOP 0, implicit killed $sgpr0
+    $vgpr6 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr7 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
+# An existing move of the value is reused. Its live range is extended to the
+# pair, so the kill flag on the earlier use is cleared.
+---
+name:            reuse_existing_move
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: reuse_existing_move
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr3 = S_MOV_B32 100
+    ; CHECK-NEXT: S_NOP 0, implicit $sgpr3
+    ; CHECK-NEXT: $vgpr4, $vgpr5 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr3, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $sgpr3 = S_MOV_B32 100
+    S_NOP 0, implicit killed $sgpr3
+    $vgpr4 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr5 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
+# An existing move with a dead result is reused, so it is no longer dead.
+---
+name:            reuse_existing_dead_move
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: reuse_existing_dead_move
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr3 = S_MOV_B32 100
+    ; CHECK-NEXT: $vgpr4, $vgpr5 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr3, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    dead $sgpr3 = S_MOV_B32 100
+    $vgpr4 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr5 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
+# The existing move writes the same 32 bits, written as a negative value.
+---
+name:            reuse_existing_move_same_bits
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: reuse_existing_move_same_bits
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr3 = S_MOV_B32 -2048
+    ; CHECK-NEXT: S_NOP 0, implicit $sgpr3
+    ; CHECK-NEXT: $vgpr4, $vgpr5 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr3, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $sgpr3 = S_MOV_B32 -2048
+    S_NOP 0, implicit $sgpr3
+    $vgpr4 = V_SUB_U32_e32 4294965248, $vgpr1, implicit $mode, implicit $exec
+    $vgpr5 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
 # Program order is Y then X. The move still goes before the Y instruction,
 # while the VOPD operands and destinations use encoding order.
 ---
