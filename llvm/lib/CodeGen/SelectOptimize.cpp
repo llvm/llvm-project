@@ -163,8 +163,8 @@ public:
       if (auto *Sel = dyn_cast<SelectInst>(I))
         return Sel->getTrueValue();
       // Or(zext) case - The true value is Or(X), so return nullptr as the value
-      // does not yet exist.
-      if (isa<BinaryOperator>(I))
+      // does not yet exist. Same for GEP(X, zext).
+      if (isa<BinaryOperator>(I) || isa<GetElementPtrInst>(I))
         return nullptr;
 
       llvm_unreachable("Unhandled case in getTrueValue");
@@ -181,8 +181,8 @@ public:
       // We are on the branch where the condition is zero, which means BinOp
       // does not perform any computation, and we can simply return the operand
       // that is not related to the condition
-      if (auto *BO = dyn_cast<BinaryOperator>(I))
-        return BO->getOperand(1 - CondIdx);
+      if (isa<BinaryOperator>(I) || isa<GetElementPtrInst>(I))
+        return I->getOperand(1 - CondIdx);
 
       llvm_unreachable("Unhandled case in getFalseValue");
     }
@@ -206,10 +206,15 @@ public:
       // select-like instructions on the branch where the actual computation is
       // happening. In that case the cost is equal to the cost of computation +
       // cost of non-dependant on condition operand
-      InstructionCost Cost = TTI->getArithmeticInstrCost(
-          getI()->getOpcode(), I->getType(), TargetTransformInfo::TCK_Latency,
-          {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-          {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
+      InstructionCost Cost =
+          isa<GetElementPtrInst>(I)
+              ? TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency)
+              : TTI->getArithmeticInstrCost(
+                    getI()->getOpcode(), I->getType(),
+                    TargetTransformInfo::TCK_Latency,
+                    {TargetTransformInfo::OK_AnyValue,
+                     TargetTransformInfo::OP_None},
+                    {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
       auto TotalCost = Scaled64::get(Cost.getValue());
       if (auto *OpI = dyn_cast<Instruction>(I->getOperand(1 - CondIdx))) {
         auto It = InstCostMap.find(OpI);
@@ -497,21 +502,23 @@ static Value *getTrueOrFalseValue(
     return V;
   }
 
-  auto *BO = cast<BinaryOperator>(SI.getI());
+  auto *BO = SI.getI();
   assert((BO->getOpcode() == Instruction::Add ||
           BO->getOpcode() == Instruction::Or ||
-          BO->getOpcode() == Instruction::Sub) &&
-         "Only currently handling Add, Or and Sub binary operators.");
+          BO->getOpcode() == Instruction::Sub ||
+          BO->getOpcode() == Instruction::GetElementPtr) &&
+         "Only currently handling Add, Or, Sub and GEP.");
 
   auto *CBO = BO->clone();
   auto CondIdx = SI.getConditionOpIndex();
   auto *AuxI = cast<Instruction>(CBO->getOperand(CondIdx));
+  Type *CondOpTy = AuxI->getType();
   if (isa<ZExtInst>(AuxI) || isa<LShrOperator>(AuxI)) {
-    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), 1));
+    CBO->setOperand(CondIdx, ConstantInt::get(CondOpTy, 1));
   } else {
     assert((isa<AShrOperator>(AuxI) || isa<SExtInst>(AuxI)) &&
            "Unexpected opcode");
-    CBO->setOperand(CondIdx, ConstantInt::getAllOnesValue(CBO->getType()));
+    CBO->setOperand(CondIdx, ConstantInt::getAllOnesValue(CondOpTy));
   }
 
   unsigned OtherIdx = 1 - CondIdx;
@@ -851,6 +858,23 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
         }
       }
       return SelectInfo.end();
+    }
+
+    // A GEP(Y, ZExt(C)) with a single index, where C is an i1 condition, can
+    // also be treated like a select, with condition C and values GEP(Y, 1)
+    // and Y (GEP(Y, -1) and Y for SExt).
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+      if (GEP->getNumIndices() != 1)
+        return SelectInfo.end();
+      Value *Idx = GEP->getOperand(1);
+      if (Idx->getType()->isIntegerTy(1) || !Idx->hasOneUse())
+        return SelectInfo.end();
+      auto It = SelectInfo.find(Idx);
+      if (It == SelectInfo.end() || !It->second.IsAuxiliary)
+        return SelectInfo.end();
+      return SelectInfo
+          .insert({I, {It->second.Cond, false, It->second.IsInverted, 1}})
+          .first;
     }
 
     // An BinOp(Aux(X), Y) can also be treated like a select, with condition X
