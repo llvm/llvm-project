@@ -1,0 +1,76 @@
+# REQUIRES: x86
+
+# Two identical ANY .drectve candidates in one object share ObjFile::directives.
+# Discarding the duplicate must not clear the prevailing candidate's options.
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: lld-link /dll /noentry /nodefaultlib %t.obj /out:%t.dll
+# RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s
+
+# CHECK: Name: exported
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: C3
+  - Name: .drectve
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: 202F6578706F72743A6578706F72746564
+  - Name: .drectve
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: 202F6578706F72743A6578706F72746564
+symbols:
+  - Name: .drectve
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 17
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 2322545713
+      Number: 2
+      Selection: IMAGE_COMDAT_SELECT_ANY
+  - Name: directive_group
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: .drectve
+    Value: 0
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 17
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 2322545713
+      Number: 3
+      Selection: IMAGE_COMDAT_SELECT_ANY
+  - Name: directive_group
+    Value: 0
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: exported
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...

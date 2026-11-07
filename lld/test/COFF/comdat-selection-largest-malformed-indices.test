@@ -1,0 +1,174 @@
+# REQUIRES: aarch64, x86
+#
+# Malformed indices that participate in COMDAT/weak-external bookkeeping must
+# be diagnosed before vector indexing or use of an auxiliary record as Symbol.
+#
+# RUN: split-file %s %t.dir
+# RUN: yaml2obj %t.dir/assoc-oob.yaml -o %t.assoc-oob.obj
+# RUN: yaml2obj %t.dir/weak-oob.yaml -o %t.weak-oob.obj
+# RUN: yaml2obj %t.dir/weak-aux.yaml -o %t.weak-aux.obj
+# RUN: yaml2obj %t.dir/weak-antidep-aux.yaml -o %t.weak-antidep-aux.obj
+#
+# RUN: not lld-link /dll /noentry /nodefaultlib %t.assoc-oob.obj \
+# RUN:   /out:%t.assoc-oob.dll 2>&1 | FileCheck %s --check-prefix=ASSOC
+# RUN: not lld-link /dll /noentry /nodefaultlib /include:bad_weak \
+# RUN:   %t.weak-oob.obj /out:%t.weak-oob.dll 2> %t.weak-oob.err
+# RUN: FileCheck %s --check-prefix=WEAK-OOB < %t.weak-oob.err
+# RUN: not lld-link /dll /noentry /nodefaultlib %t.weak-aux.obj \
+# RUN:   /out:%t.weak-aux.dll 2>&1 | FileCheck %s --check-prefix=WEAK-AUX
+# RUN: not lld-link /dll /noentry /nodefaultlib %t.weak-antidep-aux.obj \
+# RUN:   /out:%t.weak-antidep-aux.dll 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=WEAK-ANTIDEP-AUX
+#
+# ASSOC: error: {{.*}}: associative comdat .text$assoc (sec 1)
+# ASSOC-SAME: has invalid reference to section index 99
+# ASSOC-NOT: PLEASE submit a bug report
+# WEAK-OOB: error: {{.*}}: weak external has invalid target symbol index 65535
+# WEAK-OOB-NOT: PLEASE submit a bug report
+# WEAK-AUX: error: {{.*}}: weak external has invalid target symbol index 1
+# WEAK-AUX-NOT: PLEASE submit a bug report
+# WEAK-ANTIDEP-AUX: error: {{.*}}: weak external has invalid target symbol
+# WEAK-ANTIDEP-AUX-SAME: index 1
+# WEAK-ANTIDEP-AUX-NOT: PLEASE submit a bug report
+#
+#--- assoc-oob.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: '.text$assoc'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: 'C3'
+symbols:
+  - Name: '.text$assoc'
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 99
+      Selection: IMAGE_COMDAT_SELECT_ASSOCIATIVE
+...
+#
+#--- weak-oob.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '00000000'
+    Relocations:
+      - VirtualAddress: 0
+        SymbolName: bad_weak
+        Type: IMAGE_REL_AMD64_ADDR32
+symbols:
+  # Keep a normal definition before the malformed weak external, matching the
+  # layout produced for real COFF weak aliases. This also makes the object
+  # independently useful even before bad_weak is resolved.
+  - Name: fallback
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: bad_weak
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass: IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex: 65535
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY
+...
+#
+#--- weak-aux.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: '.text$largest'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: 'C3'
+symbols:
+  # raw 0; its section-definition auxiliary record is raw 1
+  - Name: '.text$largest'
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 1
+      Selection: IMAGE_COMDAT_SELECT_LARGEST
+  - Name: leader
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: bad_weak
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex: 1
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_ALIAS
+...
+#
+#--- weak-antidep-aux.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_ARM64EC
+  Characteristics: [ ]
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 4
+    SectionData: 'C0035FD6'
+symbols:
+  # raw 0; its section-definition auxiliary record is raw 1
+  - Name: .text
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 0
+  - Name: bad_weak
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass: IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex: 1
+      Characteristics: IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY
+...

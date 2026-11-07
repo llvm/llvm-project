@@ -1,0 +1,160 @@
+# REQUIRES: x86
+#
+# Freeze symbol-table ordering semantics around reference attribution. The
+# normal path eagerly references an undefined symbol as it is read. Objects
+# containing ANY/LARGEST defer reference attribution until section provenance
+# is known, so a later definition in the same object can satisfy that entry
+# without extracting an otherwise-unused archive member.
+#
+# RUN: split-file %s %t.dir
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/provider.s -o %t.provider.obj
+# RUN: llvm-lib -machine:amd64 -out:%t.provider.lib %t.provider.obj
+# RUN: yaml2obj %t.dir/undefined-defined.yaml -o %t.ud.obj
+# RUN: yaml2obj %t.dir/defined-undefined.yaml -o %t.du.obj
+# RUN: sed 's/COMDAT_SELECTION/IMAGE_COMDAT_SELECT_SAME_SIZE/' \
+# RUN:   %t.dir/comdat-undefined-defined.yaml | yaml2obj -o %t.same-size.obj
+# RUN: sed 's/COMDAT_SELECTION/IMAGE_COMDAT_SELECT_LARGEST/' \
+# RUN:   %t.dir/comdat-undefined-defined.yaml | yaml2obj -o %t.largest.obj
+#
+# Undefined-before-defined on the normal path schedules the lazy archive
+# extraction immediately. Archive extraction is monotonic, so the marker from
+# that member remains visible even though foo is defined later in the object.
+# RUN: lld-link /dll /noentry /nodefaultlib /force:multiple /opt:noref \
+# RUN:   %t.provider.lib %t.ud.obj /out:%t.ud.dll
+# RUN: llvm-objdump -s %t.ud.dll | FileCheck %s --check-prefix=EXTRACTED
+#
+# Definition-before-undefined does not request the archive member.
+# RUN: lld-link /dll /noentry /nodefaultlib /force:multiple /opt:noref \
+# RUN:   %t.provider.lib %t.du.obj /out:%t.du.dll
+# RUN: llvm-objdump -s %t.du.dll | FileCheck %s --check-prefix=NOT-EXTRACTED
+#
+# SAME_SIZE is not a replaceable group for reference-provenance tracking, so
+# it retains the normal eager path.
+# RUN: lld-link /dll /noentry /nodefaultlib /force:multiple /opt:noref \
+# RUN:   %t.provider.lib %t.same-size.obj /out:%t.same-size.dll
+# RUN: llvm-objdump -s %t.same-size.dll | FileCheck %s --check-prefix=EXTRACTED
+#
+# An unrelated LARGEST group activates section-provenance tracking. The later
+# same-object definition satisfies foo before deferred reference attribution is
+# published; the archive member must therefore remain unextracted.
+# RUN: lld-link /dll /noentry /nodefaultlib /force:multiple /opt:noref \
+# RUN:   %t.provider.lib %t.largest.obj /out:%t.largest.dll
+# RUN: llvm-objdump -s %t.largest.dll | \
+# RUN:   FileCheck %s --check-prefix=NOT-EXTRACTED
+#
+# EXTRACTED: Contents of section .rdata:
+# EXTRACTED: ddccbbaa
+# NOT-EXTRACTED-NOT: ddccbbaa
+#
+#--- provider.s
+        .section .rdata$provider, "dr"
+        .globl foo
+foo:
+        .long 0x13572468
+
+        .globl archive_marker
+archive_marker:
+        .long 0xaabbccdd
+#
+#--- undefined-defined.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: 'C3'
+symbols:
+  - Name: foo
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: foo
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...
+#
+#--- defined-undefined.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: 'C3'
+symbols:
+  - Name: foo
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: foo
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...
+#
+#--- comdat-undefined-defined.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: 'C3'
+  - Name: '.rdata$unrelated'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '01020304'
+symbols:
+  - Name: foo
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: '.rdata$unrelated'
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 2
+      Selection: COMDAT_SELECTION
+  - Name: unrelated_leader
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: foo
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...
