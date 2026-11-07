@@ -1,0 +1,72 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{
+  "capabilities":{"textDocument":{"semanticTokens":{"dynamicRegistration":true}}},
+  "initializationOptions":{"fallbackFlags":["-std=c23"]}
+}}
+# CHECK:           "label",
+# CHECK-NEXT:      "keyword",
+# CHECK-NEXT:      "comment"
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.c",
+  "languageId":"c",
+  "text":"#define P 1\nint data[] = {\n#embed \"foo.c\" prefix(P,) suffix(,P)\n};\nint after;"
+}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/semanticTokens/full","params":{
+  "textDocument":{"uri":"test:///foo.c"}
+}}
+# CHECK:       "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "data": [
+#                  P macro definition.
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      8,
+# CHECK-NEXT:      1,
+# CHECK-NEXT:      19,
+# CHECK-NEXT:      131073,
+#                  data declaration.
+# CHECK-NEXT:      1,
+# CHECK-NEXT:      4,
+# CHECK-NEXT:      4,
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      131075,
+#                  # in embed directive.
+# CHECK-NEXT:      1,
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      1,
+# CHECK-NEXT:      24,
+# CHECK-NEXT:      0,
+#                  embed directive keyword.
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      1,
+# CHECK-NEXT:      5,
+# CHECK-NEXT:      24,
+# CHECK-NEXT:      0,
+#                  P in prefix().
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      21,
+# CHECK-NEXT:      1,
+# CHECK-NEXT:      19,
+# CHECK-NEXT:      131072,
+#                  P in suffix().
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      12,
+# CHECK-NEXT:      1,
+# CHECK-NEXT:      19,
+# CHECK-NEXT:      131072,
+#                  after declaration.
+# CHECK-NEXT:      2,
+# CHECK-NEXT:      4,
+# CHECK-NEXT:      5,
+# CHECK-NEXT:      0,
+# CHECK-NEXT:      131075
+# CHECK-NEXT:    ],
+# CHECK-NEXT:    "resultId": "1"
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":2,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

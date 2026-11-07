@@ -42,6 +42,8 @@ struct MainFileMacros {
   // reference to an undefined macro. Store them separately, e.g. for semantic
   // highlighting.
   std::vector<MacroOccurrence> UnknownMacros;
+  // Ranges of the `#` and `embed` tokens in active #embed directives.
+  std::vector<Range> EmbedDirectiveTokens;
   // Ranges skipped by the preprocessor due to being inactive.
   std::vector<Range> SkippedRanges;
 };
@@ -80,6 +82,10 @@ public:
 
   void Defined(const Token &MacroName, const MacroDefinition &MD,
                SourceRange Range) override;
+
+  void EmbedDirective(SourceLocation HashLoc, StringRef FileName, bool IsAngled,
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &Params) override;
 
   void SourceRangeSkipped(SourceRange R, SourceLocation EndifLoc) override;
 
