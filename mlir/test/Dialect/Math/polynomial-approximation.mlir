@@ -112,7 +112,7 @@ func.func @erf_scalar(%arg0: f32) -> f32 {
 // CHECK-DAG:     %[[cst_24:.*]] = arith.constant -4.000000e+00 : f32
 // CHECK-DAG:     %[[cst_25:.*]] = arith.constant -2.000000e+00 : f32
 // CHECK-DAG:     %[[cst_26:.*]] = arith.constant 2.000000e+00 : f32
-// CHECK-DAG:     %[[cst_27:.*]] = arith.constant 0x7F800000 : f32
+// CHECK-DAG:     %[[cst_27:.*]] = arith.constant 3.40282347E+38 : f32
 // CHECK-DAG:     %[[cst_28:.*]] = arith.constant 10.0546875 : f32
 // CHECK:         %[[val_2:.*]] = math.absf %[[val_arg0]] : f32
 // CHECK-NEXT:    %[[val_3:.*]] = arith.addf %[[val_2]], %[[cst_26]] : f32
@@ -172,7 +172,7 @@ func.func @erf_scalar(%arg0: f32) -> f32 {
 // CHECK-NEXT:    %[[val_57:.*]] = arith.mulf %[[val_27]], %[[val_54]] : f32
 // CHECK-NEXT:    %[[val_58:.*]] = arith.mulf %[[val_57]], %[[val_56]] : f32
 // CHECK-NEXT:    %[[val_59:.*]] = math.fma %[[val_27]], %[[val_54]], %[[val_58]] : f32
-// CHECK-NEXT:    %[[val_60:.*]] = arith.cmpf olt, %[[val_2]], %[[cst_27]] : f32
+// CHECK-NEXT:    %[[val_60:.*]] = arith.cmpf ole, %[[val_2]], %[[cst_27]] : f32
 // CHECK-NEXT:    %[[val_61:.*]] = arith.xori %[[val_60]], %[[cst_true]] : i1
 // CHECK-NEXT:    %[[val_62:.*]] = arith.addf %[[val_arg0]], %[[val_arg0]] : f32
 // CHECK-NEXT:    %[[val_63:.*]] = arith.select %[[val_61]], %[[val_62]], %[[val_59]] : f32
@@ -187,6 +187,19 @@ func.func @erf_scalar(%arg0: f32) -> f32 {
 func.func @erfc_scalar(%arg0: f32) -> f32 {
   %0 = math.erfc %arg0 : f32
   return %0 : f32
+}
+
+// CHECK-LABEL: func @erfc_vector(
+// CHECK-SAME:    %[[ARG:.*]]: vector<4xf32>) -> vector<4xf32> {
+// CHECK-DAG:     %[[MAX:.*]] = arith.constant dense<3.40282347E+38> : vector<4xf32>
+// CHECK:         %[[ABS:.*]] = math.absf %[[ARG]] : vector<4xf32>
+// CHECK-NOT:     0x7F800000
+// CHECK:         arith.cmpf ole, %[[ABS]], %[[MAX]] : vector<4xf32>
+// CHECK-NOT:     math.erfc
+// CHECK:         return
+func.func @erfc_vector(%arg0: vector<4xf32>) -> vector<4xf32> {
+  %0 = math.erfc %arg0 : vector<4xf32>
+  return %0 : vector<4xf32>
 }
 
 // CHECK-LABEL:   func @erf_vector(
