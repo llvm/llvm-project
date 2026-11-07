@@ -1,6 +1,5 @@
 // Test C++ -gmodules debug info in the PCMs with local submodule visibility.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
-// REQUIRES: asserts
+// REQUIRES: asserts, object-wrapped-module
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 \
 // RUN:   -fmodules-local-submodule-visibility %s \

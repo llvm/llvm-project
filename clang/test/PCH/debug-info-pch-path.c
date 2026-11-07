@@ -1,6 +1,4 @@
-// Unsupported on AIX & z/OS because we don't support the requisite "__clangast"
-// section in XCOFF/GOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
+// REQUIRES: object-wrapped-module
 
 // RUN: rm -rf %t
 // RUN: mkdir %t
