@@ -59,7 +59,6 @@ static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
 HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
                                     const SIInstrInfo &TII) {
   switch (Inst.getOpcode()) {
-  // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
   case AMDGPU::GLOBAL_INV:
   case AMDGPU::BUFFER_INV:
     return HWEvents::VMEM_INV_ACCESS; // tracked using loadcnt/vmcnt, but
@@ -117,8 +116,12 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (TII.isFLAT(Inst)) {
-    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()))
-      return getSimplifiedVMEMEventsFor(Inst, TII);
+    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
+      HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
+      if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
+        E |= HWEvents::VMEM_GROUP;
+      return E;
+    }
 
     assert(Inst.mayLoadOrStore());
     HWEvents E = HWEvents::NONE;

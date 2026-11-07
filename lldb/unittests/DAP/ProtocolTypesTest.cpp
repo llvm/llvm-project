@@ -1374,7 +1374,7 @@ TEST(ProtocolTypesTest, StackFrame) {
     "line": 0,
     "column": 0,
     "moduleId": "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F",
-    "compileUnitId": 7
+    "$__lldb_compileUnitId": 7
   })");
 
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
