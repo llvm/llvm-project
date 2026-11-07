@@ -498,19 +498,32 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, bool IsFMA) {
   KnownFPClass Known;
 
-  if (KnownLHS.cannotBeOrderedLessThanZero() &&
-      KnownRHS.cannotBeOrderedLessThanZero()) {
-    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+  // Rule out infinity.
+  if (KnownLHS.isKnownNever(fcPosInf) && KnownRHS.isKnownNever(fcPosInf) &&
+      (KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal) ||
+       KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)))
+    Known.knownNot(fcPosInf);
+  if (KnownLHS.isKnownNever(fcNegInf) && KnownRHS.isKnownNever(fcNegInf) &&
+      (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal) ||
+       KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal)))
+    Known.knownNot(fcNegInf);
+
+  // Rule out finite.
+  // The only reason this is valid for fma is because fmul will never report a
+  // result where normal is ruled out but overflow is possible (different from
+  // exact infinity).
+  if (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal) &&
+      KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal)) {
+    Known.knownNot(fcNegSubnormal | fcNegNormal);
 
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
       Known.knownNot(fcZero | fcPosSubnormal);
   }
-
-  if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
-      KnownRHS.cannotBeOrderedGreaterThanZero()) {
-    Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+  if (KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal) &&
+      KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)) {
+    Known.knownNot(fcPosSubnormal | fcPosNormal);
 
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
