@@ -48,6 +48,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 
+#include <mutex>
+
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::object;
@@ -327,7 +329,8 @@ struct Symbol {
   bool UsedInRegularObj;
 };
 
-Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
+Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args, size_t Task,
+                             size_t MaxTasks) {
   SmallVector<StringRef, 1> SearchPaths;
   if (Arg *A = Args.getLastArg(OPT_cuda_path_EQ))
     SearchPaths.push_back(Args.MakeArgString(A->getValue() + Twine("/bin")));
@@ -342,8 +345,11 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
     return createStringError(
         "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
 
-  auto TempFileOrErr = createTempFile(
-      Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "cubin");
+  std::string Prefix =
+      sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")).str();
+  if (MaxTasks > 1)
+    Prefix += "." + std::to_string(Task);
+  auto TempFileOrErr = createTempFile(Args, Prefix, "cubin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -684,6 +690,7 @@ getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
     // Run the LTO job to compile the bitcode.
     size_t MaxTasks = LTOBackend.getMaxTasks();
     SmallVector<StringRef> LTOFiles(MaxTasks);
+    std::mutex TempFilesMutex;
     auto AddStream =
         [&](size_t Task,
             const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
@@ -692,8 +699,12 @@ getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
       if (Args.hasArg(OPT_lto_emit_asm))
         TempFile = Args.getLastArgValue(OPT_o, "a.out");
       else {
-        auto TempFileOrErr = createTempFile(
-            Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "s");
+        std::lock_guard<std::mutex> Lock(TempFilesMutex);
+        std::string Prefix =
+            sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")).str();
+        if (MaxTasks > 1)
+          Prefix += "." + std::to_string(Task);
+        auto TempFileOrErr = createTempFile(Args, Prefix, "s");
         if (!TempFileOrErr)
           reportError(TempFileOrErr.takeError());
         TempFile = Args.MakeArgString(*TempFileOrErr);
@@ -710,8 +721,10 @@ getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
     if (Args.hasArg(OPT_lto_emit_llvm) || Args.hasArg(OPT_lto_emit_asm))
       return Files;
 
-    for (StringRef LTOFile : LTOFiles) {
-      auto FileOrErr = runPTXAs(LTOFile, Args);
+    for (auto [Task, LTOFile] : enumerate(LTOFiles)) {
+      if (LTOFile.empty())
+        continue;
+      auto FileOrErr = runPTXAs(LTOFile, Args, Task, MaxTasks);
       if (!FileOrErr)
         return FileOrErr.takeError();
       Files.emplace_back(*FileOrErr);
