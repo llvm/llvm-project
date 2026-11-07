@@ -1025,6 +1025,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   bool LoadSampleProfile = HasSampleProfile && !(Opts.flattened_profile_used &&
                                                  isThinLTOPostLink(Phase));
 
+  // Older ThinLTO producers may not have separated retcon entries from their
+  // pre-split bodies. Establish that boundary before backend IPO, including
+  // the early indirect call promotion below.
+  if (isThinLTOPostLink(Phase))
+    MPM.addPass(CoroEarlyPass(/*RetconOnly=*/true));
+
   // During the ThinLTO backend phase we perform early indirect call promotion
   // here, before globalopt. Otherwise imported available_externally functions
   // look unreferenced and are removed. If we are going to load the sample
@@ -1963,6 +1969,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     return MPM;
   }
+
+  // Older producers may not have separated retcon entries from their pre-split
+  // bodies. Establish that boundary before profile-guided inlining and IPO.
+  MPM.addPass(CoroEarlyPass(/*RetconOnly=*/true));
 
   if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
     // Load sample profile before running the LTO optimization pipeline.
