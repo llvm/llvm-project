@@ -217,7 +217,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) ir<-9223372036854775808>, vp<[[VP11:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>

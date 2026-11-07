@@ -539,7 +539,7 @@ define i64 @find_iv_reduction(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[CLAMPED_HEADER_MASK]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP12]] = select <4 x i1> [[TMP17]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[NUM_ACTIVE_LANES]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

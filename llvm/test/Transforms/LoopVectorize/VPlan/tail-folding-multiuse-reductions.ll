@@ -20,7 +20,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = HEADER-MASK
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min> = phi (smin) ir<%start>, vp<[[VP6:%[0-9]+]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.loc> = phi (find-iv) ir<poison>, vp<[[VP7:%[0-9]+]]>
 ; CHECK-NEXT:    Successor(s): vector.body.split

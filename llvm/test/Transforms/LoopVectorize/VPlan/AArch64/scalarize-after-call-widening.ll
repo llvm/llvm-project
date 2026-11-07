@@ -16,7 +16,7 @@ define void @uniform_arg(ptr noalias %src, ptr noalias %dst, i64 %a, i64 %b) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.src>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP4]]>
@@ -58,7 +58,7 @@ define void @linear_arg(ptr noalias %dst) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK-NEXT:      CLONE ir<%iv.mul> = mul ir<%iv>, ir<3>
 ; CHECK-NEXT:      WIDEN-CALL ir<%call> = call @foo_linear(ir<%iv.mul>) (using library function: foo_linear_vec)
 ; CHECK-NEXT:      CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, ir<%iv>

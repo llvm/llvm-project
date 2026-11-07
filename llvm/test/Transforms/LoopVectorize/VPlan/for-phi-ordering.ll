@@ -20,7 +20,7 @@ define i32 @test(i32 %limit, i1 %guard, i32 %divisor) {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
