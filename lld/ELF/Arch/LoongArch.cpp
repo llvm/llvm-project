@@ -1290,6 +1290,11 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 
   std::fill_n(aux.relocTypes.get(), relocs.size(), R_LARCH_NONE);
   aux.writes.clear();
+  // Offset of the `lu12i.w` of the last TLS LE sequence whose address
+  // producing instructions were removed.  The relocation consuming the address
+  // must be relaxed as well, otherwise it keeps reading a register that is no
+  // longer initialized.
+  uint64_t tlsLeRelaxedAt = UINT64_MAX;
   for (auto [i, r] : llvm::enumerate(relocs)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
@@ -1344,10 +1349,23 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
       break;
     case R_LARCH_TLS_LE_HI20_R:
     case R_LARCH_TLS_LE_ADD_R:
-    case R_LARCH_TLS_LE_LO12_R:
-      if (relaxable(relocs, i))
-        relaxTlsLe(ctx, sec, i, loc, r, remove);
+    case R_LARCH_TLS_LE_LO12_R: {
+      // R_LARCH_RELAX is paired with a relocation at the same offset but is
+      // not required to follow it, so the marker of the consumer can show up
+      // before the relocation instead of after it.  Relax the consumer
+      // whenever the instructions producing the address have been removed, so
+      // that the sequence is never left half relaxed.
+      bool relaxConsumer = r.type == R_LARCH_TLS_LE_LO12_R &&
+                           tlsLeRelaxedAt != UINT64_MAX &&
+                           r.offset == tlsLeRelaxedAt + 8;
+      if (!relaxable(relocs, i) && !relaxConsumer)
+        break;
+      relaxTlsLe(ctx, sec, i, loc, r, remove);
+      if (remove == 4)
+        tlsLeRelaxedAt =
+            r.type == R_LARCH_TLS_LE_ADD_R ? r.offset - 4 : r.offset;
       break;
+    }
     case R_LARCH_TLS_IE_PC_HI20:
       if (relaxable(relocs, i) && r.expr == R_TPREL &&
           isUInt<12>(r.sym->getVA(ctx, r.addend)))
