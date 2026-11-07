@@ -86,14 +86,14 @@ protected:
         UnnamedAddrVal(unsigned(UnnamedAddr::None)),
         DllStorageClass(DefaultStorageClass), ThreadLocal(NotThreadLocal),
         HasLLVMReservedName(false), IsDSOLocal(false), HasPartition(false),
-        HasSanitizerMetadata(false) {
+        HasSanitizerMetadata(false), MayHaveConstantUsers(false) {
     setLinkage(Linkage);
     setName(Name);
   }
 
   Type *ValueType;
 
-  static const unsigned GlobalValueSubClassDataBits = 15;
+  static const unsigned GlobalValueSubClassDataBits = 14;
 
   // All bitfields use unsigned as the underlying type so that MSVC will pack
   // them.
@@ -124,8 +124,16 @@ protected:
   unsigned HasSanitizerMetadata : 1;
 
 private:
+  /// True if a constant that can be destroyed when it becomes unused (any
+  /// constant with operands other than a GlobalValue) may use this global.
+  /// Set when such a constant takes this global as an operand, and cleared by
+  /// removeDeadConstantUsers once it finds no such users. While it is false,
+  /// removeDeadConstantUsers does not need to walk the use list, which for a
+  /// function is mostly call sites.
+  unsigned MayHaveConstantUsers : 1;
+
   // Give subclasses access to what otherwise would be wasted padding.
-  // (15 + 4 + 2 + 2 + 2 + 3 + 1 + 1 + 1 + 1) == 32.
+  // (14 + 4 + 2 + 2 + 2 + 3 + 1 + 1 + 1 + 1 + 1) == 32.
   unsigned SubClassData : GlobalValueSubClassDataBits;
 
   friend class Constant;
@@ -359,6 +367,14 @@ public:
   };
 
   bool hasSanitizerMetadata() const { return HasSanitizerMetadata; }
+
+  /// Return true if a constant other than a GlobalValue may use this global,
+  /// that is, if removeDeadConstantUsers may have something to remove.
+  bool mayHaveConstantUsers() const { return MayHaveConstantUsers; }
+
+  /// Record that a constant other than a GlobalValue now uses this global.
+  void setMayHaveConstantUsers() { MayHaveConstantUsers = true; }
+
   LLVM_ABI const SanitizerMetadata &getSanitizerMetadata() const;
   // Note: Not byref as it's a POD and otherwise it's too easy to call
   // G.setSanitizerMetadata(G2.getSanitizerMetadata()), and the argument becomes
