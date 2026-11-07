@@ -475,37 +475,60 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
             " src1=" + Twine((*V >> 2) & 3) + " src2=" + Twine((*V >> 4) & 3));
     }
 
-    MCInst TmpInst;
-    MCInstLowering.lower(MI, TmpInst);
-    EmitToStreamer(*OutStreamer, TmpInst);
+    SmallVector<MCInst, 4> Insts;
+    const auto AddMove = [&](MCRegister Dst, MCOperand Src) {
+      MCInst &Move = Insts.emplace_back();
+      Move.setOpcode(STI.getInstrInfo()->pseudoToMCOpcode(AMDGPU::S_MOV_B32));
+      Move.addOperand(MCOperand::createReg(Dst));
+      Move.addOperand(Src);
+    };
 
-    if (DumpCodeInstEmitter) {
-      // Disassemble instruction/operands to text
-      DisasmLines.resize(DisasmLines.size() + 1);
-      std::string &DisasmLine = DisasmLines.back();
-      raw_string_ostream DisasmStream(DisasmLine);
+    bool IsReplay = Opc == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay;
+    MCRegister SavedExec;
+    if (IsReplay) {
+      SavedExec = AMDGPU::getMCReg(
+          MF->getInfo<SIMachineFunctionInfo>()->getSGPRForEXECCopy(), STI);
+      assert(SavedExec &&
+             "missing EXEC copy SGPR for async barrier workaround");
+      AddMove(SavedExec, MCOperand::createReg(AMDGPU::EXEC_LO));
+      AddMove(AMDGPU::EXEC_LO, MCOperand::createImm(0));
+    }
 
-      AMDGPUInstPrinter InstPrinter(TM.getMCAsmInfo(), *STI.getInstrInfo(),
-                                    *STI.getRegisterInfo());
-      InstPrinter.printInst(&TmpInst, 0, StringRef(), STI, DisasmStream);
+    MCInstLowering.lower(MI, Insts.emplace_back());
+    if (IsReplay)
+      AddMove(AMDGPU::EXEC_LO, MCOperand::createReg(SavedExec));
 
-      // Disassemble instruction/operands to hex representation.
-      SmallVector<MCFixup, 4> Fixups;
-      SmallVector<char, 16> CodeBytes;
+    for (const MCInst &Inst : Insts) {
+      EmitToStreamer(*OutStreamer, Inst);
 
-      DumpCodeInstEmitter->encodeInstruction(
-          TmpInst, CodeBytes, Fixups, MF->getSubtarget<MCSubtargetInfo>());
-      HexLines.resize(HexLines.size() + 1);
-      std::string &HexLine = HexLines.back();
-      raw_string_ostream HexStream(HexLine);
+      if (DumpCodeInstEmitter) {
+        // Disassemble instruction/operands to text
+        DisasmLines.resize(DisasmLines.size() + 1);
+        std::string &DisasmLine = DisasmLines.back();
+        raw_string_ostream DisasmStream(DisasmLine);
 
-      for (size_t i = 0; i < CodeBytes.size(); i += 4) {
-        unsigned int CodeDWord =
-            support::endian::read32le(CodeBytes.data() + i);
-        HexStream << format("%s%08X", (i > 0 ? " " : ""), CodeDWord);
+        AMDGPUInstPrinter InstPrinter(TM.getMCAsmInfo(), *STI.getInstrInfo(),
+                                      *STI.getRegisterInfo());
+        InstPrinter.printInst(&Inst, 0, StringRef(), STI, DisasmStream);
+
+        // Disassemble instruction/operands to hex representation.
+        SmallVector<MCFixup, 4> Fixups;
+        SmallVector<char, 16> CodeBytes;
+
+        DumpCodeInstEmitter->encodeInstruction(
+            Inst, CodeBytes, Fixups, MF->getSubtarget<MCSubtargetInfo>());
+        HexLines.resize(HexLines.size() + 1);
+        std::string &HexLine = HexLines.back();
+        raw_string_ostream HexStream(HexLine);
+
+        for (size_t i = 0; i < CodeBytes.size(); i += 4) {
+          unsigned int CodeDWord =
+              support::endian::read32le(CodeBytes.data() + i);
+          HexStream << format("%s%08X", (i > 0 ? " " : ""), CodeDWord);
+        }
+
+        DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLine.size());
       }
-
-      DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLine.size());
     }
   }
 }

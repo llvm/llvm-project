@@ -7,19 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Insert the async barrier arrival replay workaround on affected targets
-/// unless XNACK is explicitly disabled. For example, insert the following
-/// sequence after an arrival (s7 illustrates the reserved EXEC-copy SGPR):
-///
-///   ds_atomic_async_barrier_arrive_b64 v2
-///   s_mov_b32 s7, exec_lo
-///   s_mov_b32 exec_lo, 0
-///   global_load_async_to_lds_b8 v0, v[0:1], off
-///   s_mov_b32 exec_lo, s7
-///
-/// Save and restore the active lane mask around the EXEC-zero dummy load.
-/// Run after scheduling to keep the inserted sequence after its arrival,
-/// and before wait-count analysis so it accounts for the added async load.
+/// Add a counted replay pseudo after affected async barrier arrivals. MC
+/// emission saves EXEC, clears it for the dummy load, and restores it.
+/// Run after scheduling to keep the pseudo after its arrival, and before
+/// wait-count analysis so it accounts for the added async load.
 //
 //===----------------------------------------------------------------------===//
 
@@ -53,26 +44,24 @@ static bool insertAsyncBarrierArriveWorkaround(MachineFunction &MF) {
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const Register SavedExec = MFI->getSGPRForEXECCopy();
-  if (!SavedExec)
-    report_fatal_error("missing EXEC copy SGPR for async barrier workaround");
+  if (!SavedExec) {
+    reportFatalUsageError(
+        "missing EXEC copy SGPR for async barrier workaround");
+  }
 
   const SIInstrInfo &TII = *ST.getInstrInfo();
   for (MachineInstr *MI : AsyncBarrierArrivals) {
     MachineBasicBlock &MBB = *MI->getParent();
     const DebugLoc &DL = MI->getDebugLoc();
     auto InsertPt = std::next(MI->getIterator());
-    BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::S_MOV_B32), SavedExec)
-        .addReg(AMDGPU::EXEC_LO);
-    BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
-        .addImm(0);
     // Leave explicit S_WAIT_ASYNCCNT thresholds unchanged.
-    BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8))
+    BuildMI(MBB, InsertPt, DL,
+            TII.get(AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay))
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addReg(AMDGPU::VGPR0_VGPR1, RegState::Undef)
         .addImm(0)
-        .addImm(0);
-    BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::S_MOV_B32), AMDGPU::EXEC_LO)
-        .addReg(SavedExec);
+        .addImm(0)
+        .addReg(SavedExec, RegState::ImplicitDefine);
   }
   return true;
 }
