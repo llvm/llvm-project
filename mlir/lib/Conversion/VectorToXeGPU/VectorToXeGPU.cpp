@@ -40,7 +40,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
 // Return true if value represents a zero constant.
 static bool isZeroConstant(Value val) {
   auto constant = val.getDefiningOp<arith::ConstantOp>();
@@ -1321,29 +1320,23 @@ struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
 // inserts the new dims where they finally belong, followed by a broadcast that
 // stretches them in place.
 //
-// vector.broadcast only ever prepends dims, so laying a lower-rank value out
-// along the *outer* dims of the result takes a transpose. That transpose is
-// real data movement, and the value feeding it carries a layout of its own --
-// one whose lane and inst mapping is the transpose of what every consumer
-// wants, which the XeGPU layout propagation then has to reconcile. Stretching
-// in-place unit dims costs neither: shape_cast leaves the register layout
-// alone, and the broadcast grows dims that already sit in their final
-// position.
+// This lets layout propagation give %v the slice dim of the row reduction
+// that typically produces it (dims = [1] below, not [0]):
+//   #row = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+//   #col = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1],
+//                        order = [0, 1]>
 //
 // Before:
-//   %b = vector.broadcast %v : vector<16xf32> to vector<64x16xf32>
-//   %t = vector.transpose %b, [1, 0] : vector<64x16xf32> to vector<16x64xf32>
+//   // %v : #xegpu.slice<#col, dims = [0]>
+//   %b = vector.broadcast %v : vector<16xf32> to vector<64x16xf32>  // #col
+//   %t = vector.transpose %b, [1, 0]
+//          : vector<64x16xf32> to vector<16x64xf32>                // #row
 //
 // After:
-//   %c = vector.shape_cast %v : vector<16xf32> to vector<16x1xf32>
-//   %t = vector.broadcast %c : vector<16x1xf32> to vector<16x64xf32>
-//
-// This complements the upstream `FoldTransposeBroadcast` canonicalization,
-// which drops the transpose only when the result is reachable by broadcasting
-// the source directly. It is not, here: broadcast duplicates over leading dims
-// and stretches only where the source holds a unit dim, so vector<16xf32> can
-// never become vector<16x64xf32> on its own. The shape_cast supplies the unit
-// dim that makes it reachable.
+//   // %v : #xegpu.slice<#row, dims = [1]>
+//   %c = vector.shape_cast %v : vector<16xf32> to vector<16x1xf32>  // #row
+//   %t = vector.broadcast %c
+//          : vector<16x1xf32> to vector<16x64xf32>                 // #row
 struct TransposedBroadcastToStretch
     : public OpRewritePattern<vector::TransposeOp> {
   using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
@@ -1354,11 +1347,11 @@ struct TransposedBroadcastToStretch
     if (!bcast)
       return rewriter.notifyMatchFailure(op, "not transposing a broadcast");
 
-    // A scalar source has no dims to keep in place; broadcasting it straight to
-    // the transposed shape is a separate (and simpler) rewrite.
+    // Scalar sources are left to FoldTransposeBroadcast.
     auto srcTy = dyn_cast<VectorType>(bcast.getSourceType());
     if (!srcTy || srcTy.getRank() < 1)
-      return rewriter.notifyMatchFailure(op, "broadcast source is not a vector");
+      return rewriter.notifyMatchFailure(op,
+                                         "broadcast source is not a vector");
 
     VectorType bcastTy = bcast.getResultVectorType();
     if (srcTy.isScalable() || bcastTy.isScalable())
@@ -1369,16 +1362,13 @@ struct TransposedBroadcastToStretch
     if (numNewDims < 1)
       return rewriter.notifyMatchFailure(op, "broadcast adds no dims");
 
-    // Only a pure prepend. A dim the broadcast stretched in place cannot be
-    // re-created by a shape_cast, because the source does not hold a unit dim
-    // there to stretch a second time.
+    // Only a pure prepend; no source dim may be stretched.
     if (srcTy.getShape() != bcastTy.getShape().take_back(srcRank))
-      return rewriter.notifyMatchFailure(op, "broadcast stretches a source dim");
+      return rewriter.notifyMatchFailure(op,
+                                         "broadcast stretches a source dim");
 
-    // The permutation has to move the source's dims to the front in order and
-    // leave the prepended ones trailing in order. Under any other permutation
-    // the source's own dims get shuffled too, which is real data movement that
-    // this rewrite cannot remove.
+    // Source dims must move to the front and new dims to the back, both in
+    // order.
     ArrayRef<int64_t> perm = op.getPermutation();
     for (int64_t i = 0; i < srcRank; ++i)
       if (perm[i] != numNewDims + i)
@@ -1389,8 +1379,7 @@ struct TransposedBroadcastToStretch
         return rewriter.notifyMatchFailure(
             op, "broadcast dims do not stay trailing in order");
 
-    // The source shape with the broadcast dims re-inserted as unit dims, now
-    // on the inside, where the transpose was putting them.
+    // Source shape followed by one unit dim per new dim.
     SmallVector<int64_t> castShape(srcTy.getShape());
     castShape.append(numNewDims, 1);
     auto castTy = VectorType::get(castShape, srcTy.getElementType());
@@ -1405,11 +1394,8 @@ struct TransposedBroadcastToStretch
   }
 };
 
-// Normalize vector IR into the shapes the conversion patterns below and the
-// XeGPU layouts downstream of them are expressed in: un-flatten gather/scatter
-// operands that were flattened to 1-D, and turn transposed broadcasts into
-// in-place stretches. Neither rewrite invents a shape; both only undo a
-// framing that hides the shape of the data being moved.
+// Preprocess vector ops before conversion: un-flatten gather/scatter operands
+// and rewrite transposed broadcasts.
 static LogicalResult preprocessVectorOps(Operation *root) {
   MLIRContext *ctx = root->getContext();
   RewritePatternSet patterns(ctx);
@@ -1500,8 +1486,7 @@ struct ConvertVectorToXeGPUPass
     // load_matrix/store_matrix lowerings have well-typed memref operands.
     promoteAllocasToSLM(getOperation());
 
-    // Normalize vector shapes, so that the conversion below sees the shapes
-    // the XeGPU layouts are expressed in.
+    // Preprocess vector ops before conversion.
     if (failed(preprocessVectorOps(getOperation())))
       return signalPassFailure();
 
@@ -1512,7 +1497,6 @@ struct ConvertVectorToXeGPUPass
       return signalPassFailure();
   }
 };
-
 } // namespace
 
 void mlir::populateVectorToXeGPUConversionPatterns(
