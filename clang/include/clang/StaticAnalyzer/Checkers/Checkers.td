@@ -553,6 +553,11 @@ def ErrnoChecker : Checker<"Errno">,
   ]>,
   Documentation<HasDocumentation>;
 
+def FsetposChecker: Checker<"fsetpos">,
+  HelpText<"Check for 'fsetpos' calls that do not take a 'pos' argument"
+           " returned from 'fgetpos'">,
+  Documentation<HasDocumentation>;
+
 def MallocChecker: Checker<"Malloc">,
   HelpText<"Check for memory leaks, double free, and use-after-free problems. "
            "Traces memory managed by malloc()/free().">,
