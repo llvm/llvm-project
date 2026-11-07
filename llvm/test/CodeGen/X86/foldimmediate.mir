@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt %s -o - | FileCheck %s
 --- |
   define void @foldImmediate() { ret void }
+  define void @foldImmediateZero() { ret void }
 ...
 ---
 # Check that immediates can be folded into ALU instructions.
@@ -140,4 +141,50 @@ body: |
     NOOP implicit $eflags
     CMP64rr %7, %8, implicit-def $eflags
     NOOP implicit $eflags
+...
+---
+# A 32-bit ALU instruction zeroes the upper 32 bits on x86-64, which
+# SUBREG_TO_REG relies on, so folding a zero operand must not produce a COPY.
+name: foldImmediateZero
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi
+
+    ; CHECK-LABEL: name: foldImmediateZero
+    ; CHECK: liveins: $rdi
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]].sub_32bit
+    ; CHECK-NEXT: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: [[MOV32rr:%[0-9]+]]:gr32 = MOV32rr [[COPY1]]
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32rr]], %subreg.sub_32bit
+    ; CHECK-NEXT: NOOP implicit [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: [[MOV32rr1:%[0-9]+]]:gr32 = MOV32rr [[COPY1]]
+    ; CHECK-NEXT: NOOP implicit [[MOV32rr1]]
+    ; CHECK-NEXT: [[MOV32rr2:%[0-9]+]]:gr32 = MOV32rr [[COPY1]]
+    ; CHECK-NEXT: NOOP implicit [[MOV32rr2]]
+    ; CHECK-NEXT: [[MOV32rr3:%[0-9]+]]:gr32 = MOV32rr [[COPY1]]
+    ; CHECK-NEXT: NOOP implicit [[MOV32rr3]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY]]
+    ; CHECK-NEXT: NOOP implicit [[COPY2]]
+    %0:gr64 = COPY $rdi
+    %1:gr32 = COPY %0.sub_32bit
+    %2:gr32 = MOV32r0 implicit-def dead $eflags
+    %3:gr32 = ADD32rr %2, %1, implicit-def dead $eflags
+    %4:gr64 = SUBREG_TO_REG %3, %subreg.sub_32bit
+    NOOP implicit %4
+
+    %5:gr32 = SUB32rr %1, %2, implicit-def dead $eflags
+    NOOP implicit %5
+
+    %6:gr32 = OR32rr %2, %1, implicit-def dead $eflags
+    NOOP implicit %6
+
+    %7:gr32 = XOR32rr %2, %1, implicit-def dead $eflags
+    NOOP implicit %7
+
+    %8:gr64 = SUBREG_TO_REG %2, %subreg.sub_32bit
+    %9:gr64 = ADD64rr %0, %8, implicit-def dead $eflags
+    NOOP implicit %9
 ...
