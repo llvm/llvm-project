@@ -568,7 +568,8 @@ define i32 @recompose_srem_eq(i32 %x, i32 %y) {
 ; CHECK-LABEL: @recompose_srem_eq(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[Y]]
-; CHECK-NEXT:    [[IS_MULTIPLE:%.*]] = icmp eq i32 [[X]], [[MUL]]
+; CHECK-NEXT:    [[IS_MULTIPLE_RECOMPOSED:%.*]] = srem i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[IS_MULTIPLE:%.*]] = icmp eq i32 [[IS_MULTIPLE_RECOMPOSED]], 0
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[IS_MULTIPLE]] to i32
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[DIV]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -587,7 +588,8 @@ define i32 @recompose_urem_ne_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @recompose_urem_ne_commuted(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[Y]], [[DIV]]
-; CHECK-NEXT:    [[IS_NOT_MULTIPLE:%.*]] = icmp ne i32 [[MUL]], [[X]]
+; CHECK-NEXT:    [[IS_NOT_MULTIPLE_RECOMPOSED:%.*]] = urem i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[IS_NOT_MULTIPLE:%.*]] = icmp ne i32 [[IS_NOT_MULTIPLE_RECOMPOSED]], 0
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[IS_NOT_MULTIPLE]] to i32
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[DIV]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -624,11 +626,12 @@ define i1 @recompose_hoist_srem_eq(i32 %x, i32 %y) {
 ; CHECK-LABEL: @recompose_hoist_srem_eq(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[IS_MULTIPLE_RECOMPOSED:%.*]] = srem i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DIV]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[Y]]
-; CHECK-NEXT:    [[IS_MULTIPLE:%.*]] = icmp eq i32 [[X]], [[MUL]]
+; CHECK-NEXT:    [[IS_MULTIPLE:%.*]] = icmp eq i32 [[IS_MULTIPLE_RECOMPOSED]], 0
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ [[IS_MULTIPLE]], [[IF_THEN]] ], [ false, [[ENTRY:%.*]] ]
