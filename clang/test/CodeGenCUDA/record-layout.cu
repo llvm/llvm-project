@@ -166,7 +166,7 @@ void test_J() {
 // HOST:  %this.addr = alloca ptr, align 8
 // HOST:  store ptr %this, ptr %this.addr, align 8
 // HOST:  %this1 = load ptr, ptr %this.addr, align 8
-// HOST:  %call = call noundef ptr @"??0I@@QEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %this1) #5
+// HOST:  %call = call noundef ptr @"??0I@@QEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %this1) #6
 // HOST:  store ptr @"??_7J@@6B@", ptr %this1, align 8
 // HOST:  ret ptr %this1
 

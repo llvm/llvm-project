@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -fmodule-local-hints -o %t/on.ll %t/main.cpp
+// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -o %t/on.ll %t/main.cpp
 // RUN: FileCheck %s --check-prefix=INL < %t/on.ll
 // RUN: FileCheck %s --check-prefix=TMPL < %t/on.ll
 // RUN: FileCheck %s --check-prefix=LAMBDA < %t/on.ll
@@ -8,12 +8,12 @@
 // RUN: FileCheck %s --check-prefix=PLAIN < %t/on.ll
 // RUN: FileCheck %s --check-prefix=HDR < %t/on.ll
 // RUN: FileCheck %s --check-prefix=HDRTMPL < %t/on.ll
-// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -o - %t/main.cpp | FileCheck %s --check-prefix=OFF
+// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -fno-module-local-hints -o - %t/main.cpp | FileCheck %s --check-prefix=OFF
 
 // Preprocessed source: the line markers (as emitted by -E) still attribute
 // hdr.h's code to hdr.h, so the result must be the same.
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -E -o %t/main.ii %t/main.cpp
-// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -fmodule-local-hints -x c++-cpp-output -o %t/pp.ll %t/main.ii
+// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -x c++-cpp-output -o %t/pp.ll %t/main.ii
 // RUN: FileCheck %s --check-prefix=INL < %t/pp.ll
 // RUN: FileCheck %s --check-prefix=TMPL < %t/pp.ll
 // RUN: FileCheck %s --check-prefix=LAMBDA < %t/pp.ll
