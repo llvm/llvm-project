@@ -20,9 +20,9 @@ define void @caller_i128_in_regs() {
 ; LP64E-NEXT:    sd ra, 0(sp) # 8-byte Folded Spill
 ; LP64E-NEXT:    .cfi_offset ra, -8
 ; LP64E-NEXT:    li a0, 1
-; LP64E-NEXT:    li a2, 2
-; LP64E-NEXT:    li a4, 3
-; LP64E-NEXT:    li a3, 0
+; LP64E-NEXT:    li a1, 2
+; LP64E-NEXT:    li a3, 3
+; LP64E-NEXT:    li a2, 0
 ; LP64E-NEXT:    call va_i128
 ; LP64E-NEXT:    ld ra, 0(sp) # 8-byte Folded Reload
 ; LP64E-NEXT:    .cfi_restore ra
@@ -41,9 +41,9 @@ define void @caller_i128_in_regs() {
 ; LP64E-WITHFP-NEXT:    addi s0, sp, 16
 ; LP64E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; LP64E-WITHFP-NEXT:    li a0, 1
-; LP64E-WITHFP-NEXT:    li a2, 2
-; LP64E-WITHFP-NEXT:    li a4, 3
-; LP64E-WITHFP-NEXT:    li a3, 0
+; LP64E-WITHFP-NEXT:    li a1, 2
+; LP64E-WITHFP-NEXT:    li a3, 3
+; LP64E-WITHFP-NEXT:    li a2, 0
 ; LP64E-WITHFP-NEXT:    call va_i128
 ; LP64E-WITHFP-NEXT:    .cfi_def_cfa sp, 16
 ; LP64E-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -62,65 +62,52 @@ entry:
 define void @caller_i128_split_stack() {
 ; LP64E-LABEL: caller_i128_split_stack:
 ; LP64E:       # %bb.0: # %entry
-; LP64E-NEXT:    addi sp, sp, -48
-; LP64E-NEXT:    .cfi_def_cfa_offset 48
-; LP64E-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; LP64E-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    addi sp, sp, -24
+; LP64E-NEXT:    .cfi_def_cfa_offset 24
+; LP64E-NEXT:    sd ra, 16(sp) # 8-byte Folded Spill
 ; LP64E-NEXT:    .cfi_offset ra, -8
-; LP64E-NEXT:    .cfi_offset s0, -16
-; LP64E-NEXT:    addi s0, sp, 48
-; LP64E-NEXT:    .cfi_def_cfa s0, 0
-; LP64E-NEXT:    andi sp, sp, -16
-; LP64E-NEXT:    li a5, 7
-; LP64E-NEXT:    li a6, 6
+; LP64E-NEXT:    li a6, 7
 ; LP64E-NEXT:    li a0, 1
 ; LP64E-NEXT:    li a1, 2
 ; LP64E-NEXT:    li a2, 3
 ; LP64E-NEXT:    li a3, 4
 ; LP64E-NEXT:    li a4, 5
-; LP64E-NEXT:    sd a6, 0(sp)
-; LP64E-NEXT:    sd zero, 8(sp)
-; LP64E-NEXT:    sd a5, 16(sp)
+; LP64E-NEXT:    li a5, 6
+; LP64E-NEXT:    sd zero, 0(sp)
+; LP64E-NEXT:    sd a6, 8(sp)
 ; LP64E-NEXT:    call va_i128
-; LP64E-NEXT:    addi sp, s0, -48
-; LP64E-NEXT:    .cfi_def_cfa sp, 48
-; LP64E-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; LP64E-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
 ; LP64E-NEXT:    .cfi_restore ra
-; LP64E-NEXT:    .cfi_restore s0
-; LP64E-NEXT:    addi sp, sp, 48
+; LP64E-NEXT:    addi sp, sp, 24
 ; LP64E-NEXT:    .cfi_def_cfa_offset 0
 ; LP64E-NEXT:    ret
 ;
 ; LP64E-WITHFP-LABEL: caller_i128_split_stack:
 ; LP64E-WITHFP:       # %bb.0: # %entry
-; LP64E-WITHFP-NEXT:    addi sp, sp, -48
-; LP64E-WITHFP-NEXT:    .cfi_def_cfa_offset 48
-; LP64E-WITHFP-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; LP64E-WITHFP-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; LP64E-WITHFP-NEXT:    addi sp, sp, -32
+; LP64E-WITHFP-NEXT:    .cfi_def_cfa_offset 32
+; LP64E-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; LP64E-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; LP64E-WITHFP-NEXT:    .cfi_offset ra, -8
 ; LP64E-WITHFP-NEXT:    .cfi_offset s0, -16
-; LP64E-WITHFP-NEXT:    addi s0, sp, 48
+; LP64E-WITHFP-NEXT:    addi s0, sp, 32
 ; LP64E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; LP64E-WITHFP-NEXT:    andi sp, sp, -16
-; LP64E-WITHFP-NEXT:    li a5, 7
-; LP64E-WITHFP-NEXT:    li a6, 6
+; LP64E-WITHFP-NEXT:    li a6, 7
 ; LP64E-WITHFP-NEXT:    li a0, 1
 ; LP64E-WITHFP-NEXT:    li a1, 2
 ; LP64E-WITHFP-NEXT:    li a2, 3
 ; LP64E-WITHFP-NEXT:    li a3, 4
 ; LP64E-WITHFP-NEXT:    li a4, 5
-; LP64E-WITHFP-NEXT:    sd a6, 0(sp)
-; LP64E-WITHFP-NEXT:    sd zero, 8(sp)
-; LP64E-WITHFP-NEXT:    sd a5, 16(sp)
+; LP64E-WITHFP-NEXT:    li a5, 6
+; LP64E-WITHFP-NEXT:    sd zero, 0(sp)
+; LP64E-WITHFP-NEXT:    sd a6, 8(sp)
 ; LP64E-WITHFP-NEXT:    call va_i128
-; LP64E-WITHFP-NEXT:    addi sp, s0, -48
-; LP64E-WITHFP-NEXT:    .cfi_def_cfa sp, 48
-; LP64E-WITHFP-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; LP64E-WITHFP-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; LP64E-WITHFP-NEXT:    .cfi_def_cfa sp, 32
+; LP64E-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; LP64E-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    .cfi_restore ra
 ; LP64E-WITHFP-NEXT:    .cfi_restore s0
-; LP64E-WITHFP-NEXT:    addi sp, sp, 48
+; LP64E-WITHFP-NEXT:    addi sp, sp, 32
 ; LP64E-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; LP64E-WITHFP-NEXT:    ret
 entry:
@@ -132,15 +119,10 @@ entry:
 define void @caller_i128_on_stack() {
 ; LP64E-LABEL: caller_i128_on_stack:
 ; LP64E:       # %bb.0: # %entry
-; LP64E-NEXT:    addi sp, sp, -48
-; LP64E-NEXT:    .cfi_def_cfa_offset 48
-; LP64E-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; LP64E-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    addi sp, sp, -32
+; LP64E-NEXT:    .cfi_def_cfa_offset 32
+; LP64E-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; LP64E-NEXT:    .cfi_offset ra, -8
-; LP64E-NEXT:    .cfi_offset s0, -16
-; LP64E-NEXT:    addi s0, sp, 48
-; LP64E-NEXT:    .cfi_def_cfa s0, 0
-; LP64E-NEXT:    andi sp, sp, -16
 ; LP64E-NEXT:    li a6, 8
 ; LP64E-NEXT:    li a7, 7
 ; LP64E-NEXT:    li a0, 1
@@ -150,30 +132,25 @@ define void @caller_i128_on_stack() {
 ; LP64E-NEXT:    li a4, 5
 ; LP64E-NEXT:    li a5, 6
 ; LP64E-NEXT:    sd a7, 0(sp)
-; LP64E-NEXT:    sd a6, 16(sp)
-; LP64E-NEXT:    sd zero, 24(sp)
+; LP64E-NEXT:    sd a6, 8(sp)
+; LP64E-NEXT:    sd zero, 16(sp)
 ; LP64E-NEXT:    call va_i128
-; LP64E-NEXT:    addi sp, s0, -48
-; LP64E-NEXT:    .cfi_def_cfa sp, 48
-; LP64E-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; LP64E-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; LP64E-NEXT:    .cfi_restore ra
-; LP64E-NEXT:    .cfi_restore s0
-; LP64E-NEXT:    addi sp, sp, 48
+; LP64E-NEXT:    addi sp, sp, 32
 ; LP64E-NEXT:    .cfi_def_cfa_offset 0
 ; LP64E-NEXT:    ret
 ;
 ; LP64E-WITHFP-LABEL: caller_i128_on_stack:
 ; LP64E-WITHFP:       # %bb.0: # %entry
-; LP64E-WITHFP-NEXT:    addi sp, sp, -48
-; LP64E-WITHFP-NEXT:    .cfi_def_cfa_offset 48
-; LP64E-WITHFP-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; LP64E-WITHFP-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; LP64E-WITHFP-NEXT:    addi sp, sp, -40
+; LP64E-WITHFP-NEXT:    .cfi_def_cfa_offset 40
+; LP64E-WITHFP-NEXT:    sd ra, 32(sp) # 8-byte Folded Spill
+; LP64E-WITHFP-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
 ; LP64E-WITHFP-NEXT:    .cfi_offset ra, -8
 ; LP64E-WITHFP-NEXT:    .cfi_offset s0, -16
-; LP64E-WITHFP-NEXT:    addi s0, sp, 48
+; LP64E-WITHFP-NEXT:    addi s0, sp, 40
 ; LP64E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; LP64E-WITHFP-NEXT:    andi sp, sp, -16
 ; LP64E-WITHFP-NEXT:    li a6, 8
 ; LP64E-WITHFP-NEXT:    li a7, 7
 ; LP64E-WITHFP-NEXT:    li a0, 1
@@ -183,16 +160,15 @@ define void @caller_i128_on_stack() {
 ; LP64E-WITHFP-NEXT:    li a4, 5
 ; LP64E-WITHFP-NEXT:    li a5, 6
 ; LP64E-WITHFP-NEXT:    sd a7, 0(sp)
-; LP64E-WITHFP-NEXT:    sd a6, 16(sp)
-; LP64E-WITHFP-NEXT:    sd zero, 24(sp)
+; LP64E-WITHFP-NEXT:    sd a6, 8(sp)
+; LP64E-WITHFP-NEXT:    sd zero, 16(sp)
 ; LP64E-WITHFP-NEXT:    call va_i128
-; LP64E-WITHFP-NEXT:    addi sp, s0, -48
-; LP64E-WITHFP-NEXT:    .cfi_def_cfa sp, 48
-; LP64E-WITHFP-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; LP64E-WITHFP-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; LP64E-WITHFP-NEXT:    .cfi_def_cfa sp, 40
+; LP64E-WITHFP-NEXT:    ld ra, 32(sp) # 8-byte Folded Reload
+; LP64E-WITHFP-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    .cfi_restore ra
 ; LP64E-WITHFP-NEXT:    .cfi_restore s0
-; LP64E-WITHFP-NEXT:    addi sp, sp, 48
+; LP64E-WITHFP-NEXT:    addi sp, sp, 40
 ; LP64E-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; LP64E-WITHFP-NEXT:    ret
 entry:
