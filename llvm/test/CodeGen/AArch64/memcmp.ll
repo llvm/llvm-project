@@ -960,17 +960,13 @@ define i1 @length16_gt(ptr %x, ptr %y) nounwind {
 define i1 @length16_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length16_eq_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #12592 // =0x3130
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    movk x8, #13106, lsl #16
-; CHECK-NEXT:    movk x8, #13620, lsl #32
-; CHECK-NEXT:    movk x8, #14134, lsl #48
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    mov x8, #14648 // =0x3938
-; CHECK-NEXT:    movk x8, #12592, lsl #16
-; CHECK-NEXT:    movk x8, #13106, lsl #32
-; CHECK-NEXT:    movk x8, #13620, lsl #48
-; CHECK-NEXT:    ccmp x10, x8, #0, eq
+; CHECK-NEXT:    adrp x8, .LCPI51_0
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI51_0]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 16) nounwind
@@ -1017,13 +1013,16 @@ define i32 @length24(ptr %X, ptr %Y) nounwind {
 define i1 @length24_eq(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: length24_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldr x12, [x0, #16]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldr x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x12, x13, #0, eq
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ldr d2, [x0, #16]
+; CHECK-NEXT:    ldr d3, [x1, #16]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    eor v1.8b, v2.8b, v3.8b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 24) nounwind
@@ -1110,23 +1109,18 @@ define i1 @length24_gt(ptr %x, ptr %y) nounwind {
 define i1 @length24_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length24_eq_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #12592 // =0x3130
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    movk x8, #13106, lsl #16
-; CHECK-NEXT:    ldr x11, [x0, #16]
-; CHECK-NEXT:    movk x8, #13620, lsl #32
-; CHECK-NEXT:    movk x8, #14134, lsl #48
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    mov x8, #14648 // =0x3938
-; CHECK-NEXT:    movk x8, #12592, lsl #16
-; CHECK-NEXT:    movk x8, #13106, lsl #32
-; CHECK-NEXT:    movk x8, #13620, lsl #48
-; CHECK-NEXT:    ccmp x10, x8, #0, eq
-; CHECK-NEXT:    mov x8, #14134 // =0x3736
-; CHECK-NEXT:    movk x8, #14648, lsl #16
-; CHECK-NEXT:    movk x8, #12592, lsl #32
-; CHECK-NEXT:    movk x8, #13106, lsl #48
-; CHECK-NEXT:    ccmp x11, x8, #0, eq
+; CHECK-NEXT:    adrp x8, .LCPI56_0
+; CHECK-NEXT:    adrp x9, .LCPI56_1
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI56_0]
+; CHECK-NEXT:    ldr d2, [x0, #16]
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI56_1]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 24) nounwind
@@ -1179,16 +1173,16 @@ define i32 @length31(ptr %X, ptr %Y) nounwind {
 define i1 @length31_eq(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: length31_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldr x12, [x0, #16]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldr x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ldur x8, [x0, #23]
-; CHECK-NEXT:    ldur x9, [x1, #23]
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x12, x13, #0, eq
-; CHECK-NEXT:    ccmp x8, x9, #0, eq
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ldur q2, [x0, #15]
+; CHECK-NEXT:    ldur q3, [x1, #15]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 31) nounwind
@@ -1289,16 +1283,16 @@ define i1 @length31_gt(ptr %x, ptr %y) nounwind {
 define i1 @length31_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"="128" {
 ; CHECK-LABEL: length31_eq_prefer128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldr x12, [x0, #16]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldr x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ldur x8, [x0, #23]
-; CHECK-NEXT:    ldur x9, [x1, #23]
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x12, x13, #0, eq
-; CHECK-NEXT:    ccmp x8, x9, #0, eq
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ldur q2, [x0, #15]
+; CHECK-NEXT:    ldur q3, [x1, #15]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 31) nounwind
@@ -1309,29 +1303,18 @@ define i1 @length31_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 define i1 @length31_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length31_eq_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #12592 // =0x3130
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    movk x8, #13106, lsl #16
-; CHECK-NEXT:    ldr x11, [x0, #16]
-; CHECK-NEXT:    movk x8, #13620, lsl #32
-; CHECK-NEXT:    movk x8, #14134, lsl #48
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    mov x8, #14648 // =0x3938
-; CHECK-NEXT:    ldur x9, [x0, #23]
-; CHECK-NEXT:    movk x8, #12592, lsl #16
-; CHECK-NEXT:    movk x8, #13106, lsl #32
-; CHECK-NEXT:    movk x8, #13620, lsl #48
-; CHECK-NEXT:    ccmp x10, x8, #0, eq
-; CHECK-NEXT:    mov x8, #14134 // =0x3736
-; CHECK-NEXT:    movk x8, #14648, lsl #16
-; CHECK-NEXT:    movk x8, #12592, lsl #32
-; CHECK-NEXT:    movk x8, #13106, lsl #48
-; CHECK-NEXT:    ccmp x11, x8, #0, eq
-; CHECK-NEXT:    mov x8, #13363 // =0x3433
-; CHECK-NEXT:    movk x8, #13877, lsl #16
-; CHECK-NEXT:    movk x8, #14391, lsl #32
-; CHECK-NEXT:    movk x8, #12345, lsl #48
-; CHECK-NEXT:    ccmp x9, x8, #0, eq
+; CHECK-NEXT:    adrp x8, .LCPI62_0
+; CHECK-NEXT:    adrp x9, .LCPI62_1
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI62_0]
+; CHECK-NEXT:    ldur q2, [x0, #15]
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI62_1]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 31) nounwind
@@ -1385,14 +1368,14 @@ define i32 @length32(ptr %X, ptr %Y) nounwind {
 define i1 @length32_eq(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: length32_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldp x12, x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ldp x8, x9, [x0, #16]
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x8, x12, #0, eq
-; CHECK-NEXT:    ccmp x9, x13, #0, eq
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 32) nounwind
@@ -1493,14 +1476,14 @@ define i1 @length32_gt(ptr %x, ptr %y) nounwind {
 define i1 @length32_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"="128" {
 ; CHECK-LABEL: length32_eq_prefer128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldp x12, x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ldp x8, x9, [x0, #16]
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x8, x12, #0, eq
-; CHECK-NEXT:    ccmp x9, x13, #0, eq
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 32) nounwind
@@ -1511,28 +1494,17 @@ define i1 @length32_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 define i1 @length32_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length32_eq_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #12592 // =0x3130
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    movk x8, #13106, lsl #16
-; CHECK-NEXT:    movk x8, #13620, lsl #32
-; CHECK-NEXT:    movk x8, #14134, lsl #48
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    mov x8, #14648 // =0x3938
-; CHECK-NEXT:    movk x8, #12592, lsl #16
-; CHECK-NEXT:    ldp x9, x11, [x0, #16]
-; CHECK-NEXT:    movk x8, #13106, lsl #32
-; CHECK-NEXT:    movk x8, #13620, lsl #48
-; CHECK-NEXT:    ccmp x10, x8, #0, eq
-; CHECK-NEXT:    mov x8, #14134 // =0x3736
-; CHECK-NEXT:    movk x8, #14648, lsl #16
-; CHECK-NEXT:    movk x8, #12592, lsl #32
-; CHECK-NEXT:    movk x8, #13106, lsl #48
-; CHECK-NEXT:    ccmp x9, x8, #0, eq
-; CHECK-NEXT:    mov x8, #13620 // =0x3534
-; CHECK-NEXT:    movk x8, #14134, lsl #16
-; CHECK-NEXT:    movk x8, #14648, lsl #32
-; CHECK-NEXT:    movk x8, #12592, lsl #48
-; CHECK-NEXT:    ccmp x11, x8, #0, eq
+; CHECK-NEXT:    adrp x8, .LCPI68_0
+; CHECK-NEXT:    adrp x9, .LCPI68_1
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI68_0]
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI68_1]
+; CHECK-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 32) nounwind
@@ -1599,18 +1571,18 @@ define i32 @length48(ptr %X, ptr %Y) nounwind {
 define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: length48_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldp x12, x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ldp x8, x9, [x0, #16]
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x8, x12, #0, eq
-; CHECK-NEXT:    ldp x8, x11, [x0, #32]
-; CHECK-NEXT:    ldp x10, x12, [x1, #32]
-; CHECK-NEXT:    ccmp x9, x13, #0, eq
-; CHECK-NEXT:    ccmp x8, x10, #0, eq
-; CHECK-NEXT:    ccmp x11, x12, #0, eq
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    ldr q2, [x0, #32]
+; CHECK-NEXT:    ldr q3, [x1, #32]
+; CHECK-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 48) nounwind
@@ -1739,18 +1711,18 @@ define i1 @length48_gt(ptr %x, ptr %y) nounwind {
 define i1 @length48_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"="128" {
 ; CHECK-LABEL: length48_eq_prefer128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldp x12, x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ldp x8, x9, [x0, #16]
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x8, x12, #0, eq
-; CHECK-NEXT:    ldp x8, x11, [x0, #32]
-; CHECK-NEXT:    ldp x10, x12, [x1, #32]
-; CHECK-NEXT:    ccmp x9, x13, #0, eq
-; CHECK-NEXT:    ccmp x8, x10, #0, eq
-; CHECK-NEXT:    ccmp x11, x12, #0, eq
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    ldr q2, [x0, #32]
+; CHECK-NEXT:    ldr q3, [x1, #32]
+; CHECK-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 48) nounwind
@@ -1761,35 +1733,22 @@ define i1 @length48_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 define i1 @length48_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length48_eq_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #12592 // =0x3130
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    movk x8, #13106, lsl #16
-; CHECK-NEXT:    ldp x11, x12, [x0, #16]
-; CHECK-NEXT:    movk x8, #13620, lsl #32
-; CHECK-NEXT:    movk x8, #14134, lsl #48
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    mov x9, #14648 // =0x3938
-; CHECK-NEXT:    movk x9, #12592, lsl #16
-; CHECK-NEXT:    movk x9, #13106, lsl #32
-; CHECK-NEXT:    movk x9, #13620, lsl #48
-; CHECK-NEXT:    ccmp x10, x9, #0, eq
-; CHECK-NEXT:    mov x9, #14134 // =0x3736
-; CHECK-NEXT:    movk x9, #14648, lsl #16
-; CHECK-NEXT:    movk x9, #12592, lsl #32
-; CHECK-NEXT:    movk x9, #13106, lsl #48
-; CHECK-NEXT:    ccmp x11, x9, #0, eq
-; CHECK-NEXT:    mov x9, #13620 // =0x3534
-; CHECK-NEXT:    movk x9, #14134, lsl #16
-; CHECK-NEXT:    ldp x10, x11, [x0, #32]
-; CHECK-NEXT:    movk x9, #14648, lsl #32
-; CHECK-NEXT:    movk x9, #12592, lsl #48
-; CHECK-NEXT:    ccmp x12, x9, #0, eq
-; CHECK-NEXT:    mov x9, #13106 // =0x3332
-; CHECK-NEXT:    movk x9, #13620, lsl #16
-; CHECK-NEXT:    movk x9, #14134, lsl #32
-; CHECK-NEXT:    movk x9, #14648, lsl #48
-; CHECK-NEXT:    ccmp x10, x9, #0, eq
-; CHECK-NEXT:    ccmp x11, x8, #0, eq
+; CHECK-NEXT:    adrp x8, .LCPI74_0
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI74_0]
+; CHECK-NEXT:    adrp x8, .LCPI74_1
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI74_1]
+; CHECK-NEXT:    adrp x8, .LCPI74_2
+; CHECK-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ldr q2, [x0, #32]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI74_2]
+; CHECK-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 48) nounwind
@@ -1870,24 +1829,22 @@ define i32 @length63(ptr %X, ptr %Y) nounwind {
 define i1 @length63_eq(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: length63_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldp x12, x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ldp x8, x9, [x0, #16]
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x8, x12, #0, eq
-; CHECK-NEXT:    ldp x8, x11, [x0, #32]
-; CHECK-NEXT:    ldp x10, x12, [x1, #32]
-; CHECK-NEXT:    ccmp x9, x13, #0, eq
-; CHECK-NEXT:    ldr x9, [x0, #48]
-; CHECK-NEXT:    ldr x13, [x1, #48]
-; CHECK-NEXT:    ccmp x8, x10, #0, eq
-; CHECK-NEXT:    ldur x8, [x0, #55]
-; CHECK-NEXT:    ldur x10, [x1, #55]
-; CHECK-NEXT:    ccmp x11, x12, #0, eq
-; CHECK-NEXT:    ccmp x9, x13, #0, eq
-; CHECK-NEXT:    ccmp x8, x10, #0, eq
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr q4, [x0, #32]
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    ldr q5, [x1, #32]
+; CHECK-NEXT:    ldur q6, [x0, #47]
+; CHECK-NEXT:    ldur q7, [x1, #47]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    eor v2.16b, v4.16b, v5.16b
+; CHECK-NEXT:    eor v3.16b, v6.16b, v7.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 63) nounwind
@@ -2044,43 +2001,27 @@ define i1 @length63_gt(ptr %x, ptr %y) nounwind {
 define i1 @length63_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length63_eq_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #12592 // =0x3130
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    movk x8, #13106, lsl #16
-; CHECK-NEXT:    ldp x11, x12, [x0, #16]
-; CHECK-NEXT:    movk x8, #13620, lsl #32
-; CHECK-NEXT:    movk x8, #14134, lsl #48
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    mov x9, #14648 // =0x3938
-; CHECK-NEXT:    movk x9, #12592, lsl #16
-; CHECK-NEXT:    movk x9, #13106, lsl #32
-; CHECK-NEXT:    movk x9, #13620, lsl #48
-; CHECK-NEXT:    ccmp x10, x9, #0, eq
-; CHECK-NEXT:    mov x10, #14134 // =0x3736
-; CHECK-NEXT:    movk x10, #14648, lsl #16
-; CHECK-NEXT:    movk x10, #12592, lsl #32
-; CHECK-NEXT:    movk x10, #13106, lsl #48
-; CHECK-NEXT:    ccmp x11, x10, #0, eq
-; CHECK-NEXT:    mov x10, #13620 // =0x3534
-; CHECK-NEXT:    movk x10, #14134, lsl #16
-; CHECK-NEXT:    ldp x11, x13, [x0, #32]
-; CHECK-NEXT:    movk x10, #14648, lsl #32
-; CHECK-NEXT:    movk x10, #12592, lsl #48
-; CHECK-NEXT:    ccmp x12, x10, #0, eq
-; CHECK-NEXT:    mov x10, #13106 // =0x3332
-; CHECK-NEXT:    ldr x12, [x0, #48]
-; CHECK-NEXT:    movk x10, #13620, lsl #16
-; CHECK-NEXT:    movk x10, #14134, lsl #32
-; CHECK-NEXT:    movk x10, #14648, lsl #48
-; CHECK-NEXT:    ccmp x11, x10, #0, eq
-; CHECK-NEXT:    ldur x10, [x0, #55]
-; CHECK-NEXT:    ccmp x13, x8, #0, eq
-; CHECK-NEXT:    mov x8, #13877 // =0x3635
-; CHECK-NEXT:    movk x8, #14391, lsl #16
-; CHECK-NEXT:    ccmp x12, x9, #0, eq
-; CHECK-NEXT:    movk x8, #12345, lsl #32
-; CHECK-NEXT:    movk x8, #12849, lsl #48
-; CHECK-NEXT:    ccmp x10, x8, #0, eq
+; CHECK-NEXT:    adrp x8, .LCPI79_0
+; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI79_0]
+; CHECK-NEXT:    adrp x8, .LCPI79_1
+; CHECK-NEXT:    ldr q5, [x0, #32]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI79_1]
+; CHECK-NEXT:    adrp x8, .LCPI79_2
+; CHECK-NEXT:    ldur q6, [x0, #47]
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI79_2]
+; CHECK-NEXT:    adrp x8, .LCPI79_3
+; CHECK-NEXT:    eor v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI79_3]
+; CHECK-NEXT:    eor v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    eor v2.16b, v5.16b, v4.16b
+; CHECK-NEXT:    eor v3.16b, v6.16b, v7.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 63) nounwind
@@ -2161,22 +2102,20 @@ define i32 @length64(ptr %X, ptr %Y) nounwind {
 define i1 @length64_eq(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: length64_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x11, [x1]
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    ldp x12, x13, [x1, #16]
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    ldp x8, x9, [x0, #16]
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
-; CHECK-NEXT:    ccmp x8, x12, #0, eq
-; CHECK-NEXT:    ldp x8, x11, [x0, #32]
-; CHECK-NEXT:    ldp x10, x12, [x1, #32]
-; CHECK-NEXT:    ccmp x9, x13, #0, eq
-; CHECK-NEXT:    ldp x9, x13, [x1, #48]
-; CHECK-NEXT:    ccmp x8, x10, #0, eq
-; CHECK-NEXT:    ldp x8, x10, [x0, #48]
-; CHECK-NEXT:    ccmp x11, x12, #0, eq
-; CHECK-NEXT:    ccmp x8, x9, #0, eq
-; CHECK-NEXT:    ccmp x10, x13, #0, eq
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-NEXT:    ldp q6, q7, [x1, #32]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    eor v2.16b, v4.16b, v6.16b
+; CHECK-NEXT:    eor v3.16b, v5.16b, v7.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 64) nounwind
@@ -2333,38 +2272,26 @@ define i1 @length64_gt(ptr %x, ptr %y) nounwind {
 define i1 @length64_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length64_eq_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #12592 // =0x3130
-; CHECK-NEXT:    ldp x9, x10, [x0]
-; CHECK-NEXT:    movk x8, #13106, lsl #16
-; CHECK-NEXT:    ldp x11, x12, [x0, #16]
-; CHECK-NEXT:    movk x8, #13620, lsl #32
-; CHECK-NEXT:    ldp x13, x14, [x0, #32]
-; CHECK-NEXT:    movk x8, #14134, lsl #48
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    mov x9, #14648 // =0x3938
-; CHECK-NEXT:    movk x9, #12592, lsl #16
-; CHECK-NEXT:    movk x9, #13106, lsl #32
-; CHECK-NEXT:    movk x9, #13620, lsl #48
-; CHECK-NEXT:    ccmp x10, x9, #0, eq
-; CHECK-NEXT:    mov x10, #14134 // =0x3736
-; CHECK-NEXT:    movk x10, #14648, lsl #16
-; CHECK-NEXT:    movk x10, #12592, lsl #32
-; CHECK-NEXT:    movk x10, #13106, lsl #48
-; CHECK-NEXT:    ccmp x11, x10, #0, eq
-; CHECK-NEXT:    mov x11, #13620 // =0x3534
-; CHECK-NEXT:    movk x11, #14134, lsl #16
-; CHECK-NEXT:    movk x11, #14648, lsl #32
-; CHECK-NEXT:    movk x11, #12592, lsl #48
-; CHECK-NEXT:    ccmp x12, x11, #0, eq
-; CHECK-NEXT:    mov x11, #13106 // =0x3332
-; CHECK-NEXT:    movk x11, #13620, lsl #16
-; CHECK-NEXT:    movk x11, #14134, lsl #32
-; CHECK-NEXT:    movk x11, #14648, lsl #48
-; CHECK-NEXT:    ccmp x13, x11, #0, eq
-; CHECK-NEXT:    ldp x11, x12, [x0, #48]
-; CHECK-NEXT:    ccmp x14, x8, #0, eq
-; CHECK-NEXT:    ccmp x11, x9, #0, eq
-; CHECK-NEXT:    ccmp x12, x10, #0, eq
+; CHECK-NEXT:    adrp x8, .LCPI84_0
+; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI84_0]
+; CHECK-NEXT:    adrp x8, .LCPI84_1
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI84_1]
+; CHECK-NEXT:    adrp x8, .LCPI84_2
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI84_2]
+; CHECK-NEXT:    adrp x8, .LCPI84_3
+; CHECK-NEXT:    eor v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ldp q5, q6, [x0, #32]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI84_3]
+; CHECK-NEXT:    eor v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    eor v2.16b, v5.16b, v4.16b
+; CHECK-NEXT:    eor v3.16b, v6.16b, v7.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 64) nounwind
