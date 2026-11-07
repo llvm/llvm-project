@@ -3285,6 +3285,9 @@ public:
 
   /// Return true if truncating the specific node Val to type VT2 is free.
   virtual bool isTruncateFree(SDValue Val, EVT VT2) const {
+    if (ISD::isExtOpcode(Val.getOpcode()) &&
+        Val.getOperand(0).getValueType() == VT2)
+      return true;
     // Fallback to type matching.
     return isTruncateFree(Val.getValueType(), VT2);
   }
