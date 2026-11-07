@@ -16,6 +16,7 @@
 #include "hdr/sys_shm_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "src/sys/shm/shmat.h"
+#include "src/sys/shm/shmctl.h"
 #include "src/sys/shm/shmdt.h"
 #include "src/sys/shm/shmget.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -45,7 +46,7 @@ TEST_F(LlvmLibcShmDtTest, DetachSegment) {
   // Detaching an already detached address must fail with EINVAL.
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(addr), Fails(EINVAL));
 
-  // TODO: Remove the segment with shmctl once shmctl is implemented.
+  EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShmDtTest, InvalidAddrReturnsEinval) {

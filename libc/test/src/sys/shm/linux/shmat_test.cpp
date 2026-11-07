@@ -17,6 +17,7 @@
 #include "hdr/sys_shm_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "src/sys/shm/shmat.h"
+#include "src/sys/shm/shmctl.h"
 #include "src/sys/shm/shmdt.h"
 #include "src/sys/shm/shmget.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -52,7 +53,7 @@ TEST_F(LlvmLibcShmAtTest, AttachReadWriteAndReadOnly) {
 
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(rw_addr), Succeeds(0));
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(ro_addr), Succeeds(0));
-  // TODO: Remove the segment with shmctl once shmctl is implemented.
+  EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
@@ -72,7 +73,7 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
               Fails(EINVAL, SHM_FAILED));
 
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(addr), Succeeds(0));
-  // TODO: Remove the segment with shmctl once shmctl is implemented.
+  EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
@@ -95,7 +96,7 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
   EXPECT_EQ(rounded_addr, addr);
 
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(rounded_addr), Succeeds(0));
-  // TODO: Remove the segment with shmctl once shmctl is implemented.
+  EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShmAtTest, InvalidShmidReturnsEinval) {
