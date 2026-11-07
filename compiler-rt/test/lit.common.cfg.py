@@ -763,6 +763,12 @@ if config.target_os == "Linux" and not config.android:
     except:
         pass
 
+    if not emulator and config.compiler_id == "Clang" and config.sysroot:
+        config.target_cflags += (
+            f" -Wno-unused-command-line-argument --dyld-prefix={config.sysroot}"
+            rf" -Wl,--disable-new-dtags -Wl,-rpath,{config.sysroot}/\$LIB:{config.sysroot}/usr/\$LIB"
+        )
+
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):
     config.available_features.add("has_sancovcc")
