@@ -11,6 +11,10 @@
 
 #if defined(__APPLE__)
 #  include <dispatch/dispatch.h>
+#else
+#  include "std_thread_sched.h"
+#  include <__mutex/once_flag.h>
+#  include <__utility/no_destroy.h>
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -21,10 +25,10 @@ void __apply(size_t chunk_count, void* context, void (*func)(void* context, size
 #if defined(__APPLE__)
   ::dispatch_apply_f(chunk_count, DISPATCH_APPLY_AUTO, context, func);
 #else
-  // Currently there's no parallelism provider on non-Apple platforms.
-  // A basic task scheduler based on a thread pool will be added later to perform the application in parallel.
-  for (size_t i = 0; i < chunk_count; ++i)
-    func(context, i);
+  static constinit std::once_flag once;
+  static constinit std::__no_destroy<Sched> sched{std::__uninitialized_tag{}};
+  std::call_once(once, []() { sched.__emplace(); });
+  sched.__get().apply(chunk_count, context, func);
 #endif
 }
 
