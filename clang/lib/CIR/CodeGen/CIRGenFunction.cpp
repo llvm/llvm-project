@@ -1250,8 +1250,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   case Expr::ConstantExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ConstantExpr");
-    return LValue();
+    return emitLValue(cast<ConstantExpr>(e)->getSubExpr());
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
