@@ -20,6 +20,8 @@
 // RUN:     FileCheck %s --check-prefix=SILENT
 // RUN: not %clang -cc1as -hell --version 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=CC1AS-DID-YOU-MEAN
+// RUN: not %clang -cc1as -mllvm -helium 2>&1 | \
+// RUN:     FileCheck %s --check-prefix=CC1AS-MLLVM
 // RUN: not %clang -cc1asphalt -help 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=UNKNOWN-INTEGRATED
 
@@ -59,6 +61,8 @@
 // SILENT-NOT: warning:
 // CC1AS-DID-YOU-MEAN: error: unknown argument '-hell'; did you mean '-help'?
 // CC1AS-DID-YOU-MEAN: error: unknown argument '--version'; did you mean '-version'?
+// CC1AS-MLLVM: clang (LLVM option parsing): Unknown command line argument '-helium'
+// CC1AS-MLLVM: error: invalid argument in '-mllvm'
 // UNKNOWN-INTEGRATED: error: unknown integrated tool '-cc1asphalt'. Valid tools include '-cc1', '-cc1as' and '-cc1gen-reproducer'.
 
 // RUN: %clang -S %s -o %t.s  -Wunknown-to-clang-option 2>&1 | FileCheck --check-prefix=IGNORED %s
