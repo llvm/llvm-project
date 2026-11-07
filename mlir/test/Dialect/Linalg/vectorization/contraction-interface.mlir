@@ -700,3 +700,42 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Direct contraction vectorization ignores this unused extract. Its source
+// does not need to be flattened, even when the element count overflows.
+func.func @matmul_with_unused_overflowing_extract(
+    %a: tensor<2x2xf32>, %b: tensor<2x2xf32>, %out: tensor<2x2xf32>,
+    %src: tensor<3037000500x3037000500xf32>) -> tensor<2x2xf32> {
+  %c0 = arith.constant 0 : index
+  %result = "linalg.matmul"(%a, %b, %out) <{
+    indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                     affine_map<(m, n, k) -> (k, n)>,
+                     affine_map<(m, n, k) -> (m, n)>],
+    operandSegmentSizes = array<i32: 2, 1>
+  }> ({
+  ^bb0(%lhs: f32, %rhs: f32, %acc: f32):
+    %unused = tensor.extract %src[%c0, %c0]
+      : tensor<3037000500x3037000500xf32>
+    %product = arith.mulf %lhs, %rhs : f32
+    %sum = arith.addf %acc, %product : f32
+    linalg.yield %sum : f32
+  }) : (tensor<2x2xf32>, tensor<2x2xf32>, tensor<2x2xf32>) -> tensor<2x2xf32>
+  return %result : tensor<2x2xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_with_unused_overflowing_extract(
+// CHECK: %[[RESULT:.*]] = vector.contract
+// CHECK: %[[OUT:.*]] = vector.transfer_write %[[RESULT]],
+// CHECK: return %[[OUT]] : tensor<2x2xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %target = transform.structured.match ops{["linalg.matmul"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %target vectorize_nd_extract create_named_contraction
+      : !transform.any_op
+    transform.yield
+  }
+}
