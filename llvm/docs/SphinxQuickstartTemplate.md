@@ -121,6 +121,53 @@ is sufficient.
 See {ref}`the stable section <stable-section-label>`.
 ```
 
+### Links to other LLVM projects
+
+Do not link to another LLVM subproject's documentation with an absolute URL
+such as `https://clang.llvm.org/docs/ThinLTO.html`. The Sphinx build cannot
+check it, and it always points at the tip-of-tree site, even in a release or
+downstream build of the documentation. Use an `inv:` link instead. It is
+resolved through [intersphinx](https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html)
+against the other project's published inventory (`objects.inv`), and the build
+warns if the target does not exist:
+
+```md
+[ThinLTO](inv:clang:std:doc#ThinLTO)
+[the fmin/fmax family](inv:llvm:std:label#i_fminmax_family)
+[`-fsave-optimization-record`](inv:clang:std:cmdoption#-f[no-]save-optimization-record)
+```
+
+The link target has the form `inv:<project>:<domain>:<type>#<target>`:
+
+* `<project>` is the key in the project's `intersphinx_mapping`, such as `llvm`,
+  `clang`, `lld`, or `libcxx`. Projects take these from
+  `LLVM_INTERSPHINX_MAPPING` in `utils/docs/llvm_sphinx/__init__.py`.
+* `<domain>` is the Sphinx domain. Documents, labels, and command-line options
+  all live in the standard domain, `std`.
+* `<type>` is the kind of object. Use `doc` for a whole document, `label` for an
+  explicit label, and `cmdoption` for a command-line option.
+* `<target>` is the name within that type. For `doc`, it is the document name
+  relative to the other project's source root, without an extension (for example
+  `BoundsSafety/BoundsSafetyAdoptionGuide`). Labels are stored in lowercase.
+
+If the link text is empty, as in `[](inv:clang:std:doc#ThinLTO)`, the title from
+the inventory is used. Prefer writing the text explicitly so the source reads
+naturally. In reStructuredText, use the equivalent role,
+``:external+clang:doc:`ThinLTO```.
+
+To find the type and target name for a page or label, list the project's
+inventory:
+
+```sh
+python -m sphinx.ext.intersphinx https://clang.llvm.org/docs/objects.inv
+```
+
+Keep an ordinary absolute URL for a document that is mainly read on GitHub, such
+as a top-level `Maintainers.md`, because `inv:` links only resolve in the Sphinx
+build. A project must set `intersphinx_mapping` in its `conf.py`, for example
+`intersphinx_mapping = LLVM_INTERSPHINX_MAPPING.copy()`, before it can use these
+links.
+
 ## Lists
 
 Markdown allows you to create ordered lists...
