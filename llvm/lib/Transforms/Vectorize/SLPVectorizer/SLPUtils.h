@@ -44,6 +44,7 @@ class LoadInst;
 class Loop;
 class PHINode;
 class ScalarEvolution;
+class SelectInst;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -359,6 +360,10 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
 Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
                                       const DataLayout &DL);
 
+/// Returns the select instruction picking between the candidate base pointers
+/// of the blended loads \p VL.
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL);
+
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.
 /// \p IsGEPLane tells which lanes of \p VL are matching GEPs, whose index is
@@ -546,6 +551,11 @@ const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL);
 /// \p LoopAwareTripCount. Returns 1 when the budget is 0.
 unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
                           unsigned LoopAwareTripCount);
+
+/// Check if two insertelement instructions are from the same buildvector.
+bool areTwoInsertFromSameBuildVector(
+    InsertElementInst *VU, InsertElementInst *V,
+    function_ref<Value *(InsertElementInst *)> GetBaseOperand);
 
 } // namespace llvm::slpvectorizer
 

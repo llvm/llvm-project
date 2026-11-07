@@ -7314,12 +7314,17 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
                         : EmitLValue(Arg).emitRawPointer(*this);
     }
 
-    // Enable underlying preserve_*_access_index() generation.
+    // Enable underlying preserve_*_access_index() generation. Field info
+    // never dereferences the field, so skip preserve_static_offset markers:
+    // the backend would replace the access indices under them with plain GEPs.
     bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
+    bool OldIsInPreserveFieldInfo = IsInPreserveFieldInfo;
     IsInPreservedAIRegion = true;
+    IsInPreserveFieldInfo = true;
     Value *FieldAddr = IsBitField ? EmitLValue(Arg).getRawBitFieldPointer(*this)
                                   : EmitLValue(Arg).emitRawPointer(*this);
     IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+    IsInPreserveFieldInfo = OldIsInPreserveFieldInfo;
 
     ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
     Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());

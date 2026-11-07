@@ -29,6 +29,7 @@
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/CallingConv.h"
 
 #include <memory>
 #include <optional>
@@ -135,18 +136,20 @@ protected:
 
 private:
   /// Classify a signature returning \p retCIR and taking \p inputs, whose
-  /// first \p required entries are declared parameters.
+  /// first \p required entries are declared parameters, under \p callConv.
   std::optional<mlir::abi::FunctionClassification>
   classifySignature(mlir::Type retCIR, mlir::TypeRange inputs,
                     llvm::abi::RequiredArgs required,
                     const llvm::abi::TargetInfo &targetInfo,
+                    llvm::CallingConv::ID callConv,
                     llvm::function_ref<mlir::InFlightDiagnostic()> emitError);
 
   /// Classify \p call, which passes more operands than \p calleeTy declares,
   /// from the call's operands.
   std::optional<mlir::abi::FunctionClassification>
   classifyVariadicCall(cir::CIRCallOpInterface call, cir::FuncType calleeTy,
-                       const llvm::abi::TargetInfo &targetInfo);
+                       const llvm::abi::TargetInfo &targetInfo,
+                       llvm::CallingConv::ID callConv);
 };
 
 /// The MLIR test ABI target's classifier, whose predictable rules approximate
@@ -165,29 +168,13 @@ std::unique_ptr<CIRABIClassifier>
 createX86_64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp,
                           const ABIClassifierOptions &options);
 
-//===----------------------------------------------------------------------===//
-// Classification helpers defined in CallConvLoweringPass.cpp
-//===----------------------------------------------------------------------===//
+/// The AMDGPU classifier.
+std::unique_ptr<CIRABIClassifier>
+createAMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
 
-/// Record on \p fc whether \p returnType is CIR's void.
-std::optional<mlir::abi::FunctionClassification>
-withReturnVoidness(std::optional<mlir::abi::FunctionClassification> fc,
-                   mlir::Type returnType);
-
-/// Classify \p func with the test target, or from the attribute named
-/// \p classificationAttrName when that is non-empty.
-std::optional<mlir::abi::FunctionClassification>
-classifyFunction(cir::FuncOp func, const mlir::DataLayout &dl,
-                 cir::CallConvTarget target,
-                 llvm::StringRef classificationAttrName);
-
-/// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
-llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy);
-
-/// The AVX level to classify \p func at: \p base, raised if the function's own
-/// recorded feature list enables a wider vector.
-llvm::abi::X86AVXABILevel funcAvxLevel(cir::FuncOp func,
-                                       llvm::abi::X86AVXABILevel base);
+/// Map a CIR calling convention to the llvm::CallingConv the ABI classifier
+/// uses.  Conventions the classifier does not distinguish fall back to C.
+llvm::CallingConv::ID convertCallingConv(cir::CallingConv cc);
 
 } // namespace cir
 

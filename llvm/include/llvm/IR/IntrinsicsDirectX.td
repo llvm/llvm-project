@@ -13,13 +13,16 @@
 let TargetPrefix = "dx" in {
 
   def int_dx_thread_id
-      : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+      : Intrinsic<[llvm_i32_ty], [llvm_i32_ty /*Index*/],
+                  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<0>>]>;
 
   def int_dx_group_id
-      : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+      : Intrinsic<[llvm_i32_ty], [llvm_i32_ty /*Index*/],
+                  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<0>>]>;
 
   def int_dx_thread_id_in_group
-      : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrWillReturn]>;
+      : Intrinsic<[llvm_i32_ty], [llvm_i32_ty /*Index*/],
+                  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<0>>]>;
 
   def int_dx_flattened_thread_id_in_group
       : Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrWillReturn]>;
@@ -87,9 +90,11 @@ let TargetPrefix = "dx" in {
   //       use one coordinate per texture dimension. Unused coordinates are
   //       poison.
   def int_dx_resource_atomic_binop
-      : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_any_ty, llvm_i32_ty,
-                                              llvm_i32_ty, llvm_i32_ty,
-                                              llvm_i32_ty, LLVMMatchType<0>]>;
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_any_ty, llvm_i32_ty /*AtomicBinOpCode*/,
+                               llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               LLVMMatchType<0>],
+                              [ImmArg<ArgIndex<1>>]>;
 
   // Atomic compare-exchange on a UAV resource element. Emitted by
   // DXILResourceAccess from a `cmpxchg` on a `dx.resource.getpointer` result,
@@ -123,8 +128,10 @@ let TargetPrefix = "dx" in {
                               [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
 
   def int_dx_resource_updatecounter
-      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
-                              [IntrInaccessibleMemOrArgMemOnly]>;
+      : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                              [llvm_any_ty, llvm_i8_ty /*Increment*/],
+                              [IntrInaccessibleMemOrArgMemOnly,
+                               ImmArg<ArgIndex<1>>]>;
 
   def int_dx_resource_getdimensions_x
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty], [IntrReadMem]>;
@@ -223,14 +230,15 @@ let TargetPrefix = "dx" in {
   def int_dx_resource_gather
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty,
-                               llvm_i32_ty, llvm_any_ty],
-                              [IntrReadMem]>;
+                               llvm_i32_ty /*Component*/, llvm_any_ty],
+                              [IntrReadMem, ImmArg<ArgIndex<3>>]>;
 
   def int_dx_resource_gather_cmp
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty,
-                               llvm_float_ty, llvm_i32_ty, llvm_any_ty],
-                              [IntrReadMem]>;
+                               llvm_float_ty, llvm_i32_ty /*Component*/,
+                               llvm_any_ty],
+                              [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   // Cast between target extension handle types and dxil-style opaque handles
   def int_dx_resource_casthandle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
@@ -465,6 +473,56 @@ let TargetPrefix = "dx" in {
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
 
+  // Scalar mask words preserve the lane mask during vector scalarization.
+  def int_dx_wave_multi_prefix_bit_and
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_bit_or
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_bit_xor
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_product
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_uproduct
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_sum
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_usum
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
   def int_dx_wave_prefix_usum
       : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>],
                               [IntrConvergent, IntrNoMem,
@@ -566,10 +624,16 @@ let TargetPrefix = "dx" in {
       : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
 
   def int_dx_barrier_by_memory_type
-      : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent]>;
+      : DefaultAttrsIntrinsic<[],
+                              [llvm_i32_ty /*MemoryTypeFlags*/,
+                               llvm_i32_ty /*SemanticFlags*/],
+                              [IntrConvergent, ImmArg<ArgIndex<0>>,
+                               ImmArg<ArgIndex<1>>]>;
 
   def int_dx_barrier_by_memory_handle
-      : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty], [IntrConvergent]>;
+      : DefaultAttrsIntrinsic<[],
+                              [llvm_any_ty, llvm_i32_ty /*SemanticFlags*/],
+                              [IntrConvergent, ImmArg<ArgIndex<1>>]>;
 
   def int_dx_load_input
       : DefaultAttrsIntrinsic<[llvm_any_ty],
@@ -577,12 +641,26 @@ let TargetPrefix = "dx" in {
                                llvm_i32_ty /*RowIndex*/,
                                llvm_i8_ty /*ColIndex*/,
                                llvm_i32_ty /*GsVertexOrPrimIndex*/],
-                              [IntrConvergent]>;
+                              [IntrConvergent, ImmArg<ArgIndex<0>>,
+                               ImmArg<ArgIndex<2>>]>;
 
   def int_dx_store_output
       : DefaultAttrsIntrinsic<[],
                               [llvm_i32_ty /*SigElementId*/,
                                llvm_i32_ty /*RowIndex*/,
                                llvm_i8_ty /*ColIndex*/, llvm_any_ty /*Value*/],
-                              [IntrConvergent]>;
+                              [IntrConvergent, ImmArg<ArgIndex<0>>,
+                               ImmArg<ArgIndex<2>>]>;
+
+  def int_dx_start_vertex_location
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_start_instance_location
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_sample_index
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_view_id
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 }

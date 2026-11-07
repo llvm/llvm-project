@@ -149,7 +149,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 
   initializeAtSpecifiers(MachOAtSpecifiers);
   UseAtForSpecifier = false;
@@ -226,9 +225,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
 
   SupportsDebugInformation = true;
 
-  // Exceptions handling
-  ExceptionsType = ExceptionHandling::DwarfCFI;
-
   HasIdentDirective = true;
 
   initializeAtSpecifiers(ELFAtSpecifiers);
@@ -267,7 +263,6 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
   CodePointerSize = 8;
 
   CommentString = "//";
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
   initializeAtSpecifiers(COFFAtSpecifiers);
@@ -297,7 +292,6 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
   CodePointerSize = 8;
 
   CommentString = "//";
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
   initializeAtSpecifiers(COFFAtSpecifiers);

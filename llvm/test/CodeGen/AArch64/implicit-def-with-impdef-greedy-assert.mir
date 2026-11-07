@@ -30,7 +30,7 @@ body:             |
   ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:gpr32 = IMPLICIT_DEF
   ; CHECK-NEXT:   dead [[DEF10:%[0-9]+]]:gpr64 = IMPLICIT_DEF
   ; CHECK-NEXT:   undef [[DEF11:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def dead %11
-  ; CHECK-NEXT:   STRXui [[DEF11]], %stack.0, 0 :: (store (s64) into %stack.0)
+  ; CHECK-NEXT:   KILL [[DEF11]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -88,7 +88,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.10(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[DEF12:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF
-  ; CHECK-NEXT:   STRXui [[DEF12]], %stack.0, 0 :: (store (s64) into %stack.0)
+  ; CHECK-NEXT:   KILL [[DEF12]]
   ; CHECK-NEXT:   TBZW [[DEF3]], 0, %bb.1
   ; CHECK-NEXT:   B %bb.10
   ; CHECK-NEXT: {{  $}}
