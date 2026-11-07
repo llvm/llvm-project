@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-missing-std-forward %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11 %s cppcoreguidelines-missing-std-forward %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++14-or-later -check-suffixes=,CXX14 %s cppcoreguidelines-missing-std-forward %t -- -- -fno-delayed-template-parsing
 
 #include <utility>
 
@@ -279,3 +280,109 @@ template<typename F>
 void unused_argument3(F&& _) {}
 
 } // namespace unused_arguments
+
+#if __cplusplus >= 201402L
+
+namespace generic_lambdas {
+
+void forwards_parameter() {
+  auto lambda = [](auto &&x) {
+    (void)std::forward<decltype(x)>(x);
+  };
+}
+
+void does_not_forward_parameter() {
+  auto lambda = [](auto &&x) {
+    // CHECK-MESSAGES-CXX14: :[[@LINE-1]]:27: warning: forwarding reference parameter 'x' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+    (void)x;
+  };
+}
+
+void forwards_parameter_by_reference_capture() {
+  auto lambda = [](auto &&x) {
+    [&x]() {
+      (void)std::forward<decltype(x)>(x);
+    }();
+  };
+}
+
+void does_not_forward_parameter_by_value_capture() {
+  auto lambda = [](auto &&x) {
+    // CHECK-MESSAGES-CXX14: :[[@LINE-1]]:27: warning: forwarding reference parameter 'x' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+    [x]() {
+      (void)std::forward<decltype(x)>(x);
+    }();
+  };
+}
+
+template <typename T>
+void forwards_parameter_in_template() {
+  auto lambda = [](auto &&x) {
+    (void)std::forward<decltype(x)>(x);
+  };
+}
+
+void forwards_only_one_parameter() {
+  auto lambda = [](auto &&x, auto &&y) {
+    // CHECK-MESSAGES-CXX14: :[[@LINE-1]]:37: warning: forwarding reference parameter 'y' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+    (void)std::forward<decltype(x)>(x);
+    (void)y;
+  };
+}
+
+void forwards_only_inner_lambda_parameter() {
+  auto outer = [](auto &&x) {
+    // CHECK-MESSAGES-CXX14: :[[@LINE-1]]:26: warning: forwarding reference parameter 'x' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+    (void)x;
+    auto inner = [](auto &&x) {
+      (void)std::forward<decltype(x)>(x);
+    };
+  };
+}
+
+// decltype examines a type; it does not execute the forwarding expression.
+void does_not_forward_in_decltype() {
+  auto lambda = [](auto &&x) {
+    // CHECK-MESSAGES-CXX14: :[[@LINE-1]]:27: warning: forwarding reference parameter 'x' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+    using ForwardedType = decltype(std::forward<decltype(x)>(x));
+  };
+}
+
+// sizeof does not execute this forwarding expression either.
+void does_not_forward_in_sizeof() {
+  auto lambda = [](auto &&x) {
+    // CHECK-MESSAGES-CXX14: :[[@LINE-1]]:27: warning: forwarding reference parameter 'x' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+    (void)sizeof(std::forward<decltype(x)>(x));
+  };
+}
+
+// Instantiating the lambda for lvalues and rvalues must not introduce warnings.
+void forwards_instantiated_parameter() {
+  auto lambda = [](auto &&x) {
+    (void)std::forward<decltype(x)>(x);
+  };
+
+  int value = 0;
+  lambda(value);
+  lambda(0);
+}
+
+// const auto&& is not a forwarding reference.
+void const_rvalue_reference_parameter() {
+  auto lambda = [](const auto &&x) {
+    (void)x;
+  };
+}
+
+template <typename T>
+void forwards_outer_and_inner_parameters(T &&x) {
+  auto inner = [](auto &&y) {
+    (void)std::forward<decltype(y)>(y);
+  };
+
+  (void)std::forward<T>(x);
+}
+
+} // namespace generic_lambdas
+
+#endif // __cplusplus >= 201402L
