@@ -1,137 +1,147 @@
 # Xqcics - Qualcomm uC Conditional Select Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+xqcics < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-xqcics < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
+# RUN: llvm-mc --verify=plus -triple riscv32 -mattr=+xqcics < %s
+# RUN: llvm-mc --verify=minus -triple riscv32 -mattr=-xqcics < %s
 
-# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:14 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selecteqi 9, 15, x4, x3
 
-# CHECK-PLUS: :[[@LINE+2]]:24: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:24 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selecteqi x9, 15, x4
 
-# CHECK-PLUS: :[[@LINE+1]]:18: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:18 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selecteqi x9, 16, x4, x3
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)}}
 qc.selecteqi x9, 15, x4, x3
 
 
-# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:14 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectieq 8, x4, x3, 12
 
-# CHECK-PLUS: :[[@LINE+2]]:24: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:24 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectieq x8, x4, x3
 
-# CHECK-PLUS: :[[@LINE+1]]:26: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:26 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectieq x8, x4, x3, 17
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)}}
 qc.selectieq x8, x4, x3, 12
 
 
-# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:15 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectieqi 9, 11, x3, 12
 
-# CHECK-PLUS: :[[@LINE+2]]:25: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:25 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectieqi x9, 11, x3
 
-# CHECK-PLUS: :[[@LINE+1]]:19: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:19 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectieqi x9, 16, x3, 12
 
-# CHECK-PLUS: :[[@LINE+1]]:27: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:27 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectieqi x9, 11, x3, 18
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)}}
 qc.selectieqi x9, 11, x3, 12
 
 
-# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:15 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectiieq 9, x3, 11, 12
 
-# CHECK-PLUS: :[[@LINE+2]]:25: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:25 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectiieq x9, x3, 11
 
-# CHECK-PLUS: :[[@LINE+1]]:23: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:23 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectiieq x9, x3, 16, 12
 
-# CHECK-PLUS: :[[@LINE+1]]:27: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:27 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectiieq x9, x3, 11, 17
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)}}
 qc.selectiieq x9, x3, 11, 12
 
 
-# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:15 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectiine 8, x3, 10, 11
 
-# CHECK-PLUS: :[[@LINE+2]]:25: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:25 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectiine x8, x3, 10
 
-# CHECK-PLUS: :[[@LINE+1]]:23: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:23 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectiine x8, x3, 16, 11
 
-# CHECK-PLUS: :[[@LINE+1]]:27: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:27 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectiine x8, x3, 12, 18
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)}}
 qc.selectiine x8, x3, 10, 11
 
 
-# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:14 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectine 8, x3, x4, 11
 
-# CHECK-PLUS: :[[@LINE+2]]:24: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:24 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectine x8, x3, x4
 
-# CHECK-PLUS: :[[@LINE+1]]:26: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:26 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectine x8, x3, x4, 16
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)}}
 qc.selectine x8, x3, x4, 11
 
 
-# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:15 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectinei 8, 11, x3, 12
 
-# CHECK-PLUS: :[[@LINE+2]]:25: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:25 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectinei x8, 11, x3
 
-# CHECK-PLUS: :[[@LINE+1]]:19: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:19 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectinei x8, 16, x3, 12
 
-# CHECK-PLUS: :[[@LINE+1]]:27: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:27 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectinei x8, 11, x3, 18
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)}}
 qc.selectinei x8, 11, x3, 12
 
 
-# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:14 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectnei 8, 11, x3, x5
 
-# CHECK-PLUS: :[[@LINE+2]]:24: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:24 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.selectnei x8, 11, x3
 
-# CHECK-PLUS: :[[@LINE+1]]:18: error: immediate must be an integer in the range [-16, 15]
+# plus-error@+2:18 {{immediate must be an integer in the range [-16, 15]}}
+# minus-error@+1 {{invalid instruction}}
 qc.selectnei x8, 16, x3, x5
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqcics' (Qualcomm uC Conditional Select Extension)}}
 qc.selectnei x8, 11, x3, x5
 

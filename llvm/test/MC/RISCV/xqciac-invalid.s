@@ -1,49 +1,50 @@
 # Xqciac - Qualcomm uC Load-Store Address Calculation Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+xqciac < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-xqciac < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
+# RUN: llvm-mc --verify=plus -triple riscv32 -mattr=+xqciac < %s
+# RUN: llvm-mc --verify=minus -triple riscv32 -mattr=-xqciac < %s
 
-# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR from x8 to x15
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:14 {{register must be a GPR from x8 to x15}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.c.muliadd x5, x10, 4
 
-# CHECK-PLUS: :[[@LINE+2]]:17: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:17 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.c.muliadd x15
 
-# CHECK-PLUS: :[[@LINE+1]]:24: error: immediate must be an integer in the range [0, 31]
+# plus-error@+2:24 {{immediate must be an integer in the range [0, 31]}}
+# minus-error@+1 {{invalid instruction}}
 qc.c.muliadd x10, x15, 32
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)}}
 qc.c.muliadd x10, x15, 20
 
 
-# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
+# plus-error@+2:12 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)}}
 qc.muliadd x0, x10, 1048577
 
-# CHECK-PLUS: :[[@LINE+2]]:15: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:15 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.muliadd x10
 
-# CHECK-PLUS: :[[@LINE+1]]:22: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+# plus-error@+2:22 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
+# minus-error@+1 {{invalid instruction}}
 qc.muliadd x10, x15, 8589934592
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)}}
 qc.muliadd x10, x15, 577
 
 
-# CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
+# plus-error@+2:11 {{register must be a GPR excluding zero (x0)}}
+# minus-error@+1:1 {{instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)}}
 qc.shladd 0, x10, 1048577
 
-# CHECK-PLUS: :[[@LINE+2]]:14: error: too few operands for instruction
-# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
+# plus-error@+2:14 {{too few operands for instruction}}
+# minus-error@+1:1 {{invalid instruction}}
 qc.shladd x10
 
-# CHECK-PLUS: :[[@LINE+1]]:26: error: immediate must be an integer in the range [4, 31]
+# plus-error@+2:26 {{immediate must be an integer in the range [4, 31]}}
+# minus-error@+1 {{invalid instruction}}
 qc.shladd x10, x15, x11, 2
 
-# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
+# minus-error@+1:1 {{instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)}}
 qc.shladd x10, x15, x11, 5
