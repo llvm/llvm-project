@@ -48,6 +48,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -13160,6 +13161,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
   }
 
   Diag(Culprit->getExprLoc(), DiagID) << Culprit->getSourceRange();
+  BPF().notePreserveAIEnumerator(Culprit);
   return true;
 }
 

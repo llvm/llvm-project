@@ -2067,3 +2067,6 @@ def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
 def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
 
 def DynamicDebugging : DiagGroup<"dynamic-debugging">;
+
+def BPFPreserveAccessIndexEnumerator
+    : DiagGroup<"bpf-preserve-access-index-enumerator">;

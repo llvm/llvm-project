@@ -92,6 +92,9 @@ int ab;
 #if __BPF_CPU_VERSION__ < 5 && defined(__BPF_FEATURE_HMUL)
 #error HMUL requires CPU v5 or later
 #endif
+#ifdef __BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX
+int ac;
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -168,6 +171,12 @@ int ab;
 // CPU_V5: int z;
 
 // CPU_V5: int ab;
+
+// CPU_V1: int ac;
+// CPU_V2: int ac;
+// CPU_V3: int ac;
+// CPU_V4: int ac;
+// CPU_V5: int ac;
 
 // CPU_GENERIC: int g;
 
