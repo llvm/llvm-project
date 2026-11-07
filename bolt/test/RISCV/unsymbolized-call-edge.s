@@ -19,6 +19,15 @@
 // RUN: ld.lld --no-relax --emit-relocs -e backward_target -o %t.32 %t.32.o
 // RUN: llvm-bolt --print-cfg --print-only=odd_call -o %t.32.bolt %t.32 \
 // RUN:     | FileCheck --check-prefix=RV32 %s
+// RUN: llvm-bolt %t --skip-funcs=backward_tail --skip-funcs=odd_call -o %t.scan.bolt
+// RUN: llvm-objdump -d %t.scan.bolt | FileCheck %s --check-prefix=PATCH
+
+// PATCH-LABEL: <backward_tail>:
+// PATCH-NEXT:  {{.*}} auipc t1,
+// PATCH-NEXT:  {{.*}} jr {{.*}}(t1) <backward_target>
+// PATCH-LABEL: <odd_call>:
+// PATCH-NEXT:  {{.*}} auipc ra,
+// PATCH-NEXT:  {{.*}} jalr {{.*}}(ra) <forward_target>
 
 // BOLT-LABEL: Binary Function "backward_tail" after building cfg {
 // BOLT:       auipc t1, backward_target
