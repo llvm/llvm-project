@@ -4422,12 +4422,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMPTargetDebug = 1;
   }
 
-  if (Opts.OpenMPIsTargetDevice) {
-    if (Args.hasArg(OPT_fopenmp_assume_teams_oversubscription))
-      Opts.OpenMPTeamSubscription = true;
-    if (Args.hasArg(OPT_fopenmp_assume_threads_oversubscription))
-      Opts.OpenMPThreadSubscription = true;
-  }
+  if (Args.hasArg(OPT_fopenmp_assume_teams_oversubscription))
+    Opts.OpenMPTeamSubscription = true;
+  if (Args.hasArg(OPT_fopenmp_assume_threads_oversubscription))
+    Opts.OpenMPThreadSubscription = true;
 
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_offload_targets_EQ)) {
