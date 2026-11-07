@@ -24,6 +24,9 @@ using namespace llvm;
 using namespace llvm::support::endian;
 using namespace llvm::sys::fs;
 
+static constexpr char MSFZMagic[] = "Microsoft MSFZ Container\r\n\x1a"
+                                    "ALD\0\0";
+
 template <size_t N>
 static bool startswith(StringRef Magic, const char (&S)[N]) {
   return Magic.starts_with(StringRef(S, N - 1));
@@ -237,6 +240,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
         return file_magic::pecoff_executable;
     }
     if (Magic.starts_with("Microsoft C/C++ MSF 7.00\r\n"))
+      return file_magic::pdb;
+    if (Magic.starts_with(StringRef(MSFZMagic, sizeof(MSFZMagic) - 1)))
       return file_magic::pdb;
     if (startswith(Magic, "MDMP"))
       return file_magic::minidump;

@@ -1,0 +1,69 @@
+# REQUIRES: zstd
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil yaml2pdb %s --msfz --pdb=%t.pdz
+# RUN: llvm-pdbutil dump --summary %t.pdz | FileCheck %s --check-prefix=SUMMARY
+# RUN: llvm-pdbutil dump --types --publics --symbols --string-table %t.pdz | FileCheck %s
+# RUN: llvm-pdbutil dump --types --publics --symbols --string-table %t.pdb > %t.msf.txt
+# RUN: llvm-pdbutil dump --types --publics --symbols --string-table %t.pdz > %t.msfz.txt
+# RUN: diff %t.msf.txt %t.msfz.txt
+# RUN: llvm-pdbutil yaml2pdb %s --msfz --pdb=%t.again.pdz
+# RUN: cmp %t.pdz %t.again.pdz
+# RUN: llvm-pdbutil yaml2pdb %S/dxcontainer.test --msfz --pdb=%t.dxcontainer.pdz
+# RUN: llvm-pdbutil dump --streams --dxcontainer %t.dxcontainer.pdz | FileCheck %S/dxcontainer.test --check-prefix=CHECK-DUMP
+
+# SUMMARY: Container: MSFZ
+# CHECK: String Table
+# CHECK: 1 | 'hello.cpp'
+# CHECK: Types (TPI Stream)
+# CHECK: Showing 2 records
+# CHECK-NEXT: 0x1000 | LF_ARGLIST [size = 12]
+# CHECK-NEXT: 0x0074 (int): `int`
+# CHECK-NEXT: 0x1001 | LF_PROCEDURE [size = 16]
+# CHECK-NEXT: return type = 0x0074 (int), # args = 1, param list = 0x1000
+# CHECK-NEXT: calling conv = cdecl, options = None
+# CHECK: Public Symbols
+# CHECK: 0 | S_PUB32 [size = 28] `msfz_function`
+# CHECK-NEXT: flags = function, addr = 0001:0016
+# CHECK: Symbols
+# CHECK: Mod 0000 | `hello.obj`:
+# CHECK-NEXT: 4 | S_OBJNAME [size = 20] sig=0, `hello.obj`
+
+---
+StringTable:
+  - hello.cpp
+DbiStream:
+  VerHeader: V70
+  Age: 1
+  MachineType: Amd64
+  Modules:
+    - Module: hello.obj
+      ObjFile: hello.obj
+      Modi:
+        Signature: 4
+        Records:
+          - Kind: S_OBJNAME
+            ObjNameSym:
+              Signature: 0
+              ObjectName: hello.obj
+TpiStream:
+  Version: VC80
+  Records:
+    - Kind: LF_ARGLIST
+      ArgList:
+        ArgIndices: [116]
+    - Kind: LF_PROCEDURE
+      Procedure:
+        ReturnType: 116
+        CallConv: NearC
+        Options: [None]
+        ParameterCount: 1
+        ArgumentList: 4096
+PublicsStream:
+  Records:
+    - Kind: S_PUB32
+      PublicSym32:
+        Flags: [Function]
+        Offset: 16
+        Segment: 1
+        Name: msfz_function
+...

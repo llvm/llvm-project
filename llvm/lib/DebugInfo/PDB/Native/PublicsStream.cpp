@@ -37,8 +37,11 @@ using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-PublicsStream::PublicsStream(std::unique_ptr<MappedBlockStream> Stream)
+PublicsStream::PublicsStream(std::unique_ptr<BinaryStream> Stream)
     : Stream(std::move(Stream)) {}
+
+PublicsStream::PublicsStream(std::unique_ptr<MappedBlockStream> Stream)
+    : PublicsStream(std::unique_ptr<BinaryStream>(std::move(Stream))) {}
 
 PublicsStream::~PublicsStream() = default;
 
