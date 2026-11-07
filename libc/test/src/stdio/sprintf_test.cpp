@@ -4002,4 +4002,13 @@ TEST(LlvmLibcSprintfTest, WideCharStringConversion) {
   EXPECT_EQ(written, 6);
   ASSERT_STREQ_LEN(written, buff, "   (nu");
 }
+
 #endif // !LIBC_COPT_PRINTF_DISABLE_WIDE && !LIBC_TARGET_ARCH_IS_GPU
+
+TEST(LlvmLibcSprintfTest, GroupingFlagIsAccepted) {
+  char buff[64];
+  // The C locale has no grouping, so the flag changes nothing there.
+  int written = LIBC_NAMESPACE::sprintf(buff, "%'d|%'lu", 1234567, 238472938ul);
+  EXPECT_EQ(written, 17);
+  ASSERT_STREQ_LEN(written, buff, "1234567|238472938");
+}
