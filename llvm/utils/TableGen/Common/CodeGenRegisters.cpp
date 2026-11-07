@@ -2618,6 +2618,22 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
   std::vector<const CodeGenRegister *> SubRegs;
   BitVector TopoSigs(getNumTopoSigs());
 
+  // Members with the same TopoSig have sub-registers with the same TopoSigs,
+  // so only look at one member per TopoSig. For each, record the TopoSigs of
+  // its sub-registers, indexed by sub-register index EnumValue.
+  SmallVector<std::vector<unsigned>, 2> RepSubTopoSigs;
+  {
+    SmallDenseSet<unsigned, 2> SeenTopoSigs;
+    for (const CodeGenRegister *Super : RC->getMembers()) {
+      if (Super->Artificial || !SeenTopoSigs.insert(Super->getTopoSig()).second)
+        continue;
+      std::vector<unsigned> &Sigs =
+          RepSubTopoSigs.emplace_back(SubRegIndices.size() + 1, ~0u);
+      for (auto [Idx, Sub] : Super->getSubRegs())
+        Sigs[Idx->EnumValue] = Sub->getTopoSig();
+    }
+  }
+
   // Iterate subregister indices in topological order to visit larger indices
   // first. This allows us to skip the smaller indices in many cases because
   // their inferred super-register classes are implied.
@@ -2631,19 +2647,13 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     if (ImpliedSubRegIndices.contains(SubIdx))
       continue;
 
-    // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
-    // that the list may contain entries with the same Sub but different Supers.
-    SubRegs.clear();
     TopoSigs.reset();
-    unsigned Hint = 0;
-    for (const CodeGenRegister *Super : RC->getMembers()) {
-      if (Super->Artificial)
-        continue;
-      const CodeGenRegister *Sub = Super->getSubReg(SubIdx, Hint);
-      assert(Sub && "Missing sub-register");
-      SubRegs.push_back(Sub);
-      TopoSigs.set(Sub->getTopoSig());
+    for (const std::vector<unsigned> &Sigs : RepSubTopoSigs) {
+      assert(Sigs[SubIdx->EnumValue] != ~0u && "Missing sub-register");
+      TopoSigs.set(Sigs[SubIdx->EnumValue]);
     }
+
+    SubRegs.clear();
 
     // Iterate over sub-register class candidates.  Ignore classes created by
     // this loop. They will never be useful.
@@ -2658,6 +2668,21 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // Topological shortcut: SubRC members have the wrong shape.
       if (!TopoSigs.anyCommon(SubRC.getRegsWithSuperRegsTopoSigs()))
         continue;
+      // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
+      // that the list may contain entries with the same Sub but different
+      // Supers. Only build it once there is a candidate, since most indices
+      // have none.
+      if (SubRegs.empty()) {
+        unsigned Hint = 0;
+        for (const CodeGenRegister *Super : RC->getMembers()) {
+          if (Super->Artificial)
+            continue;
+          const CodeGenRegister *Sub = Super->getSubReg(SubIdx, Hint);
+          assert(Sub && "Missing sub-register");
+          SubRegs.push_back(Sub);
+        }
+      }
+
       // Compute the subset of RC that maps into SubRC.
       CodeGenRegister::Vec SubSetVec;
       auto IsNotArtificial = [](const CodeGenRegister *R) {
