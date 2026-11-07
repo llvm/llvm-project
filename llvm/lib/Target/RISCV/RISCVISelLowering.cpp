@@ -12463,6 +12463,12 @@ static unsigned getRVPScalarOpcode(unsigned IntNo) {
     return ISD::AVGSUBFLOORS;
   case Intrinsic::riscv_asubu_u32:
     return ISD::AVGSUBFLOORU;
+  case Intrinsic::riscv_mseq:
+    return RISCVISD::MSEQ;
+  case Intrinsic::riscv_mslt:
+    return RISCVISD::MSLT;
+  case Intrinsic::riscv_msltu:
+    return RISCVISD::MSLTU;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
   case Intrinsic::riscv_mulhru_u32:
@@ -13450,6 +13456,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_aaddu_u32:
   case Intrinsic::riscv_asub_i32:
   case Intrinsic::riscv_asubu_u32:
+  case Intrinsic::riscv_mseq:
+  case Intrinsic::riscv_mslt:
+  case Intrinsic::riscv_msltu:
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
@@ -18503,6 +18512,21 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       }
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_mseq:
+    case Intrinsic::riscv_mslt:
+    case Intrinsic::riscv_msltu: {
+      // RV64 uses the packed .w instruction on the low word.
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+      unsigned Opc = getRVPScalarOpcode(IntNo);
+      SDValue LHS =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue RHS =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, LHS, RHS);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
     case Intrinsic::riscv_aadd_i32:
