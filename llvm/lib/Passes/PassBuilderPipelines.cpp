@@ -1245,6 +1245,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   FunctionPassManager &FPM,
                                   ThinOrFullLTOPhase LTOPhase) {
+  // Run UnrollAndJam before the vectorizers. A vectorized inner loop is split
+  // into a vector and a remainder loop, which UnrollAndJam can't handle. We do
+  // it in a separate LPM to ensure it happens before unroll.
+  if (Opts.enable_unroll_and_jam && PTO.LoopUnrolling)
+    FPM.addPass(createFunctionToLoopPassAdaptor(
+        LoopUnrollAndJamPass(static_cast<int>(Level))));
+
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
@@ -1262,10 +1269,6 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // FIXME: It would be really good to use a loop-integrated instruction
     // combiner for cleanup here so that the unrolling and LICM can be pipelined
     // across the loop nests.
-    // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
-    if (Opts.enable_unroll_and_jam && PTO.LoopUnrolling)
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          LoopUnrollAndJamPass(static_cast<int>(Level))));
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
         static_cast<int>(Level), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
         *PTO.ForgetAllSCEVInLoopUnroll)));
@@ -1362,11 +1365,6 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // FIXME: It would be really good to use a loop-integrated instruction
     // combiner for cleanup here so that the unrolling and LICM can be pipelined
     // across the loop nests.
-    // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
-    if (Opts.enable_unroll_and_jam && PTO.LoopUnrolling) {
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          LoopUnrollAndJamPass(static_cast<int>(Level))));
-    }
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
         static_cast<int>(Level), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
         *PTO.ForgetAllSCEVInLoopUnroll)));
