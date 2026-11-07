@@ -412,17 +412,11 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_chunk
-#      error "__cpp_lib_ranges_chunk should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_chunk != 202202L
-#      error "__cpp_lib_ranges_chunk should have the value 202202L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_chunk
-#      error "__cpp_lib_ranges_chunk should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_chunk
+#    error "__cpp_lib_ranges_chunk should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_chunk != 202202L
+#    error "__cpp_lib_ranges_chunk should have the value 202202L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_ranges_chunk_by
@@ -584,17 +578,11 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_chunk
-#      error "__cpp_lib_ranges_chunk should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_chunk != 202202L
-#      error "__cpp_lib_ranges_chunk should have the value 202202L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_chunk
-#      error "__cpp_lib_ranges_chunk should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_chunk
+#    error "__cpp_lib_ranges_chunk should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_chunk != 202202L
+#    error "__cpp_lib_ranges_chunk should have the value 202202L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_chunk_by
@@ -771,17 +759,11 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_chunk
-#      error "__cpp_lib_ranges_chunk should be defined in c++29"
-#    endif
-#    if __cpp_lib_ranges_chunk != 202202L
-#      error "__cpp_lib_ranges_chunk should have the value 202202L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_chunk
-#      error "__cpp_lib_ranges_chunk should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_chunk
+#    error "__cpp_lib_ranges_chunk should be defined in c++29"
+#  endif
+#  if __cpp_lib_ranges_chunk != 202202L
+#    error "__cpp_lib_ranges_chunk should have the value 202202L in c++29"
 #  endif
 
 #  ifndef __cpp_lib_ranges_chunk_by
