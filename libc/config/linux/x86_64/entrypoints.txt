@@ -388,6 +388,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.sendfile.sendfile
 
     # sys/shm.h entrypoints
+    libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmdt
     libc.src.sys.shm.shmget
 
     # sys/socket.h entrypoints
@@ -1357,6 +1359,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.diviulr
     libc.src.stdfix.diviuk
     libc.src.stdfix.diviulk
+    libc.src.stdfix.mulir
+    libc.src.stdfix.mulilr
+    libc.src.stdfix.mulik
+    libc.src.stdfix.mulilk
+    libc.src.stdfix.muliur
+    libc.src.stdfix.muliulr
+    libc.src.stdfix.muliuk
+    libc.src.stdfix.muliulk
   )
 endif()
 

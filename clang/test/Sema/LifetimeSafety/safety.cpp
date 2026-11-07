@@ -2200,6 +2200,121 @@ thread_local const std::string &tl = make();
 std::string_view thread_local_extension() { return tl; }
 } // namespace lifetime_extended_temporary
 
+namespace default_argument_temporary {
+struct DerivedObj : MyObj {};
+View view(const MyObj &obj [[clang::lifetimebound]] = MyObj());
+View view_converted(const MyObj &obj [[clang::lifetimebound]] = 1);
+View view_of_base(const MyObj &obj [[clang::lifetimebound]] = DerivedObj());
+View view_cast(const MyObj &obj [[clang::lifetimebound]] = static_cast<const MyObj &>(MyObj()));
+View view_by_value(View v [[clang::lifetimebound]] = MyObj());
+View view_nested(View v [[clang::lifetimebound]] = view());
+template <typename T> View view_t(const T &obj [[clang::lifetimebound]] = T());
+struct S {
+  View get(const MyObj &obj [[clang::lifetimebound]] = MyObj());
+};
+struct [[gsl::Pointer()]] DefaultedView {
+  DefaultedView(const MyObj &obj [[clang::lifetimebound]] = MyObj());
+};
+
+void use_after_call() {
+  View v;
+  v = view(); // expected-warning {{temporary object does not live long enough}} \
+              // expected-note {{temporary object is destroyed here}} \
+              // expected-note {{result of call to 'view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);     // expected-note {{later used here}}
+}
+
+void implicit_conversion() {
+  View v;
+  v = view_converted(); // expected-warning {{temporary object does not live long enough}} \
+                        // expected-note {{temporary object is destroyed here}} \
+                        // expected-note {{result of call to 'view_converted' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);               // expected-note {{later used here}}
+}
+
+void derived_to_base() {
+  View v;
+  v = view_of_base(); // expected-warning {{temporary object does not live long enough}} \
+                      // expected-note {{temporary object is destroyed here}} \
+                      // expected-note {{result of call to 'view_of_base' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);             // expected-note {{later used here}}
+}
+
+void explicit_cast() {
+  View v;
+  v = view_cast(); // expected-warning {{temporary object does not live long enough}} \
+                   // expected-note {{temporary object is destroyed here}} \
+                   // expected-note {{result of call to 'view_cast' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);          // expected-note {{later used here}}
+}
+
+void each_call_reported() {
+  View a, b;
+  a = view(); // expected-warning {{temporary object does not live long enough}} \
+              // expected-note {{temporary object is destroyed here}} \
+              // expected-note {{result of call to 'view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  b = view(); // expected-warning {{temporary object does not live long enough}} \
+              // expected-note {{temporary object is destroyed here}} \
+              // expected-note {{result of call to 'view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(a, b);  // expected-note 2 {{later used here}}
+}
+
+void in_loop() {
+  View v;
+  for (int i = 0; i < 2; ++i) {
+    v = view(); // expected-warning {{temporary object does not live long enough}} \
+                // expected-note {{temporary object is destroyed here}} \
+                // expected-note {{result of call to 'view' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+    use(v);     // expected-note {{later used here}}
+  }
+}
+
+void member_call(S &s) {
+  View v;
+  v = s.get(); // expected-warning {{temporary object does not live long enough}} \
+               // expected-note {{temporary object is destroyed here}} \
+               // expected-note {{result of call to 'get' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);      // expected-note {{later used here}}
+}
+
+void constructor() {
+  DefaultedView v; // expected-warning {{temporary object does not live long enough}} \
+                   // expected-note {{temporary object is destroyed here}}
+  use(v);          // expected-note {{later used here}}
+}
+
+void template_default() {
+  View v;
+  v = view_t<MyObj>(); // expected-warning {{temporary object does not live long enough}} \
+                       // expected-note {{temporary object is destroyed here}} \
+                       // expected-note {{result of call to 'view_t<MyObj>' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+  use(v);              // expected-note {{later used here}}
+}
+
+View returned() {
+  return view(); // expected-warning {{stack memory associated with temporary object is returned}} \
+                 // expected-note {{returned here}}
+}
+
+void used_within_full_expression() {
+  use(view());
+  for (int i = 0; i < 2; ++i)
+    use(view());
+  MyObj obj;
+  View v = view(obj);
+  use(v);
+}
+
+void not_yet_modeled() {
+  View v;
+  // FIXME: These dangle, but the temporary is nested inside the default argument.
+  v = view_by_value();
+  use(v);
+  v = view_nested();
+  use(v);
+}
+} // namespace default_argument_temporary
+
 namespace field_access {
 
 struct S {
@@ -3525,6 +3640,241 @@ void allocate_void_ptr() {
 }
 
 } // namespace new_allocation
+
+namespace allocating_freeing_functions {
+
+// Allocating/freeing functions are annotated with the ownership attributes:
+//   * ownership_returns: the result is a fresh allocation with a new loan.
+//   * ownership_takes:   the annotated arguments are freed, invalidating their
+//                        origins.
+// Plain malloc/free-style builtins are modeled the same way without any
+// attributes.
+
+__attribute__((ownership_returns(malloc))) int *myalloc(void);
+__attribute__((ownership_takes(malloc, 1))) void myfree(int *p);
+__attribute__((ownership_takes(malloc, 1, 2))) void myfree2(int *a, int *b);
+__attribute__((ownership_takes(malloc, 3))) void myfree3(int *a, int *b, int *c);
+__attribute__((ownership_returns(malloc), ownership_takes(malloc, 1))) int *
+myrealloc(int *p);
+
+int *g_owned_ptr;
+
+void ownership_returns_basic_uaf() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  *p = 1;             // expected-note {{later used here}}
+}
+
+void ownership_returns_free_no_use() {
+  int *p = myalloc();
+  myfree(p);
+}
+
+void ownership_returns_free_stack() {
+  int local = 42;
+  int *p = &local; // expected-warning {{local variable 'local' does not live long enough}}
+  myfree(&local);  // expected-note {{local variable 'local' is freed here}}
+  use(*p);         // expected-note {{later used here}}
+}
+
+void ownership_returns_global_alias_uaf() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  g_owned_ptr = p;    // expected-note {{local variable 'p' aliases the storage of object allocated by 'myalloc'}}
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  *g_owned_ptr = 1;   // expected-note {{later used here}}
+  g_owned_ptr = nullptr;
+}
+
+void ownership_returns_heap_escape_ok() {
+  int *p = myalloc();
+  g_owned_ptr = p;
+  myfree(p);
+  g_owned_ptr = nullptr;
+}
+
+void ownership_returns_free_param(int *p) { // expected-warning {{parameter 'p' does not live long enough}}
+  myfree(p);                                // expected-note {{parameter 'p' is freed here}}
+  *p = 1;                                   // expected-note {{later used here}}
+}
+
+void ownership_returns_multi_arg_free() {
+  int *a = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  int *b = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  myfree2(a, b);      // expected-note 2 {{object allocated by 'myalloc' is freed here}}
+  *a = 1;             // expected-note {{later used here}}
+  *b = 1;             // expected-note {{later used here}}
+}
+
+void ownership_returns_third_arg_free() {
+  int *a = myalloc();
+  int *b = myalloc();
+  int *c = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  myfree3(a, b, c);   // expected-note {{object allocated by 'myalloc' is freed here}}
+  *a = 1;
+  *b = 1;
+  *c = 1; // expected-note {{later used here}}
+  myfree(a);
+  myfree(b);
+}
+
+void ownership_returns_realloc() {
+  int *p = myalloc();
+  p = myrealloc(p); // expected-warning {{object allocated by 'myrealloc' does not live long enough}}
+  *p = 1;
+  myfree(p);        // expected-note {{object allocated by 'myrealloc' is freed here}}
+  *p = 1;           // expected-note {{later used here}}
+}
+
+void ownership_returns_free_then_reassign() {
+  int *p = myalloc();
+  myfree(p);
+  p = myalloc();
+  *p = 1;
+  myfree(p);
+}
+
+void ownership_returns_conditional_free(int k) {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  if (k)
+    myfree(p);        // expected-note {{object allocated by 'myalloc' is freed here}}
+  else
+    myfree(p);
+  *p = 1;             // expected-note {{later used here}}
+}
+
+void ownership_returns_double_free() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  myfree(p);          // expected-note {{later used here}}
+}
+
+struct OwnershipAllocator {
+  __attribute__((ownership_returns(malloc))) int *alloc(void);
+  // The index accounts for the implicit 'this' parameter, so 2 is the first
+  // explicit parameter.
+  __attribute__((ownership_takes(malloc, 2))) void dealloc(int *p);
+  __attribute__((ownership_returns(malloc), ownership_takes(malloc, 2))) int *
+  realloc2(int *p);
+};
+
+void ownership_returns_member_allocator() {
+  OwnershipAllocator a;
+  int *p = a.alloc(); // expected-warning {{object allocated by 'alloc' does not live long enough}}
+  a.dealloc(p);       // expected-note {{object allocated by 'alloc' is freed here}}
+  *p = 1;             // expected-note {{later used here}}
+}
+
+void ownership_returns_member_realloc() {
+  OwnershipAllocator a;
+  int *p = a.alloc();
+  p = a.realloc2(p); // expected-warning {{object allocated by 'realloc2' does not live long enough}}
+  *p = 1;
+  a.dealloc(p);      // expected-note {{object allocated by 'realloc2' is freed here}}
+  *p = 1;            // expected-note {{later used here}}
+}
+
+struct OwnershipTaker {
+  OwnershipTaker(int *p) __attribute__((ownership_takes(malloc, 2)));
+  OwnershipTaker(int *kept, int *freed)
+      __attribute__((ownership_takes(malloc, 3)));
+};
+
+void ownership_takes_constructor() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  OwnershipTaker{p};  // expected-note {{object allocated by 'myalloc' is freed here}}
+  *p = 1;             // expected-note {{later used here}}
+}
+
+void ownership_takes_constructor_second_arg() {
+  int *kept = myalloc();
+  int *freed = myalloc();        // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  OwnershipTaker{kept, freed};   // expected-note {{object allocated by 'myalloc' is freed here}}
+  *kept = 1;
+  *freed = 1;                   // expected-note {{later used here}}
+  myfree(kept);
+}
+
+struct UserDefinedNewDeleteOps {
+  int x;
+  static void *operator new(std::size_t)
+      __attribute__((ownership_returns(malloc)));
+  static void operator delete(void *)
+      __attribute__((ownership_takes(malloc, 1)));
+  // Inverse case: a placement `new` (returns memory) annotated to take/free
+  // its placement argument.
+  static void *operator new(std::size_t, void *p)
+      __attribute__((ownership_takes(malloc, 2)));
+};
+
+void user_defined_new_delete_use_after_free() {
+  UserDefinedNewDeleteOps *p = new UserDefinedNewDeleteOps; // expected-warning {{allocated object does not live long enough}}
+  delete p;                                                 // expected-note {{allocated object is freed here}}
+  p->x = 1;                                                 // expected-note {{later used here}}
+}
+
+void user_defined_new_delete_explicit_call_use_after_free() {
+  UserDefinedNewDeleteOps *p = new UserDefinedNewDeleteOps; // expected-warning {{allocated object does not live long enough}}
+  UserDefinedNewDeleteOps::operator delete(p);              // expected-note {{allocated object is freed here}}
+  p->x = 1;                                                 // expected-note {{later used here}}
+}
+
+void user_defined_new_delete_explicit_allocator_use_after_free() {
+  auto *p = static_cast<UserDefinedNewDeleteOps *>(
+      UserDefinedNewDeleteOps::operator new(sizeof(UserDefinedNewDeleteOps))); // expected-warning {{object allocated by 'operator new' does not live long enough}}
+  UserDefinedNewDeleteOps::operator delete(p);                                 // expected-note {{object allocated by 'operator new' is freed here}}
+  p->x = 1;                                                                    // expected-note {{later used here}}
+}
+
+void user_defined_new_delete_placement_explicit_call_use_after_free() {
+  int local = 42;
+  int *p = &local;                                                           // expected-warning {{local variable 'local' does not live long enough}}
+  UserDefinedNewDeleteOps::operator new(sizeof(UserDefinedNewDeleteOps), p); // expected-note {{local variable 'local' is freed here}}
+  *p = 1;                                                                    // expected-note {{later used here}}
+}
+
+void user_defined_new_delete_placement_expr_inert() {
+  char buf[sizeof(UserDefinedNewDeleteOps)];
+  // FIXME: Honor ownership_takes on placement new to diagnose the
+  // use-after-free below.
+  auto *p = new (buf) UserDefinedNewDeleteOps;
+  p->x = 1;
+}
+
+void user_defined_new_delete_free_then_reassign() {
+  auto *p = static_cast<UserDefinedNewDeleteOps *>(
+      UserDefinedNewDeleteOps::operator new(sizeof(UserDefinedNewDeleteOps)));
+  UserDefinedNewDeleteOps::operator delete(p);
+  p = new UserDefinedNewDeleteOps;
+  delete p;
+}
+
+void builtin_malloc_free_uaf() {
+  int *p = (int *)malloc(sizeof(int)); // expected-warning {{object allocated by 'malloc' does not live long enough}}
+  free(p);                             // expected-note {{object allocated by 'malloc' is freed here}}
+  *p = 1;                              // expected-note {{later used here}}
+}
+
+void builtin_malloc_prefixed_uaf() {
+  int *p = (int *)__builtin_malloc(sizeof(int)); // expected-warning {{object allocated by '__builtin_malloc' does not live long enough}}
+  __builtin_free(p);                             // expected-note {{object allocated by '__builtin_malloc' is freed here}}
+  *p = 1;                                        // expected-note {{later used here}}
+}
+
+void builtin_calloc_free_uaf() {
+  int *p = (int *)calloc(1, sizeof(int)); // expected-warning {{object allocated by 'calloc' does not live long enough}}
+  free(p);                                // expected-note {{object allocated by 'calloc' is freed here}}
+  *p = 1;                                 // expected-note {{later used here}}
+}
+
+void builtin_realloc() {
+  int *p = (int *)malloc(sizeof(int));
+  p = (int *)realloc(p, sizeof(int) * 2); // expected-warning {{object allocated by 'realloc' does not live long enough}}
+  *p = 1;
+  free(p); // expected-note {{object allocated by 'realloc' is freed here}}
+  *p = 1;  // expected-note {{later used here}}
+}
+
+} // namespace allocating_freeing_functions
 
 namespace placement_new {
 

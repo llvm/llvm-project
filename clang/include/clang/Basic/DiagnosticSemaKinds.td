@@ -1275,6 +1275,8 @@ def err_pragma_alloc_text_c_linkage: Error<
   "'#pragma alloc_text' is applicable only to functions with C linkage">;
 def err_pragma_alloc_text_not_function: Error<
   "'#pragma alloc_text' is applicable only to functions">;
+def err_pragma_init_seg_bad_func_type: Error<
+  "'#pragma init_seg' function %0 must have type 'int (*)(void (__cdecl *)(void))'">;
 
 def warn_pragma_unused_undeclared_var : Warning<
   "undeclared variable %0 used as an argument for '#pragma unused'">,
@@ -14517,6 +14519,8 @@ def warn_amdgpu_av_requires_atomic : Warning<
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "
             "in return type">;
+def err_amdgcn_prefetch_reserved_th
+    : Error<"cache policy uses the reserved th value 7">;
 
 def warn_amdgpu_s_wait_event_mask_no_effect_target :
   Warning<"event mask has no effect for target">,
