@@ -33,6 +33,7 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   KernelPR.SIMDWidth = KP.maxSubgroupSize;
   KernelPR.Width = KP.maxSubgroupSize;
   KernelPR.NumKernelArgs = KP.numKernelArgs;
+  KernelPR.LocalMemSize = KP.localMemSize;
 
   if (KP.pNext)
     KernelPR.Width = KPrefGRPSize.preferredMultiple;
@@ -58,6 +59,10 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   CALL_ZE_RET_ERROR(zeKernelCreate, Module, &KernelDesc, &zeKernel);
   if (auto Err = readKernelProperties(Program))
     return Err;
+
+  // When checking that dynamic SLM arguments fit, the driver counts static
+  // SLM in 1 KiB units
+  StaticBlockMemSize = alignTo(getProperties().LocalMemSize, 1024);
 
   return Plugin::success();
 }
@@ -130,10 +135,6 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              KernelLaunchArgsTy &LaunchArgs,
                              AsyncInfoWrapperTy &AsyncInfoWrapper,
                              GenericProfilerTy *ProfilerPtr) const {
-  if (DynBlockMemSize > 0)
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "dynamic shared memory is unsupported in L0 plugin");
-
   auto &L0Device = L0DeviceTy::makeL0Device(GenericDevice);
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
   assert(AsyncInfo && "AsyncInfo must be provided for L0 kernel launch");
@@ -189,14 +190,23 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                       << " groups (max: " << MaxCooperativeGroupCount << ")";
   }
 
-  // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
-  // folds group-size, per-argument set, and launch into a single call.
-  if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs)
+  // Kernels accessing dynamic shared memory take it as a trailing `__local`
+  // argument, which is not part of the launch arguments and is appended here.
+  // The SPIR-V backend gives one to every kernel of a module accessing such
+  // memory, so it is set even if no memory is requested. Kernels without it
+  // cannot access the memory, so a request for them is ignored.
+  if (KernelPR.NumKernelArgs == LaunchArgs.NumArgs + 1) {
+    KEnv.HasDynSharedMemoryArg = true;
+  } else if (KernelPR.NumKernelArgs == LaunchArgs.NumArgs) {
+    KEnv.DynSharedMemorySize = 0;
+  } else {
     return Plugin::error(
         ErrorCode::INVALID_ARGUMENT,
-        "Number of arguments (%u) does not match the number of arguments "
-        "expected by the kernel (%u)",
+        "number of arguments (%u) does not match the number of arguments "
+        "expected by the kernel (%u), not counting a trailing `__local` "
+        "argument for the dynamic shared memory",
         LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
+  }
 
   assert(Queue->getUserCtx() && "Queue must belong to a plugin context");
   if (auto Err = setIndirectFlags(L0Device, *Queue->getUserCtx(), KEnv))

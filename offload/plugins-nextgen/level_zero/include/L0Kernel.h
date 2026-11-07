@@ -32,6 +32,7 @@ struct KernelPropertiesTy {
   uint32_t SIMDWidth = 0;
   uint32_t MaxThreadGroupSize = 0;
   uint32_t NumKernelArgs = 0;
+  uint32_t LocalMemSize = 0;
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =
       std::numeric_limits<decltype(IndirectAccessFlags)>::max();
   std::mutex Mtx;
@@ -44,12 +45,19 @@ struct L0LaunchEnvTy {
   bool IsCooperative = false;
   void **ArgPtrs = nullptr;
   int64_t *ArgSizes = nullptr;
+  uint32_t NumArgs = 0;
+  /// Size of the dynamic shared memory, passed as a trailing `__local`
+  /// argument if the kernel takes one.
+  size_t DynSharedMemorySize = 0;
+  bool HasDynSharedMemoryArg = false;
   std::unique_lock<std::mutex> Lock;
 
   L0LaunchEnvTy(KernelPropertiesTy &KernelPR,
                 const KernelLaunchArgsTy &LaunchArgs)
       : KernelPR(KernelPR), IsCooperative(LaunchArgs.Flags.Cooperative),
         ArgPtrs(LaunchArgs.Args), ArgSizes(LaunchArgs.ArgSizes),
+        NumArgs(LaunchArgs.NumArgs),
+        DynSharedMemorySize(LaunchArgs.DynCGroupMem),
         Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
