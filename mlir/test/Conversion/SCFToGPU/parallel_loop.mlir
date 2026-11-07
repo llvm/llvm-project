@@ -734,3 +734,26 @@ func.func @parallel_loop_unsigned(%arg0 : index, %arg1 : index, %arg2 : index,
   } { mapping = [#gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>] }
   return
 }
+
+// -----
+
+// Loop-variant upper bound through arith.muli. Cannot be mapped (used to crash).
+
+func.func @parallel_loop_loop_variant_muli_bound() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  scf.parallel (%i) = (%c0) to (%c4) step (%c1) {
+    %ub = arith.muli %i, %c4 : index
+    scf.parallel (%j) = (%c0) to (%ub) step (%c1) {
+      scf.reduce
+    } {mapping = [#gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+    scf.reduce
+  } {mapping = [#gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+  return
+}
+
+// CHECK-LABEL: @parallel_loop_loop_variant_muli_bound
+// CHECK-NOT: gpu.launch
+// CHECK: scf.parallel
+// CHECK: scf.parallel
