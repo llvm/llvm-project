@@ -859,8 +859,26 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
   assert(NonLocalPointerDepEpoch > 0 &&
          "NonLocalPointerDepVisitedEpoch overflow");
   NonLocalPointerDepVisited.resize(FromBB->getParent()->getMaxBlockNumber());
-  if (getNonLocalPointerDepFromBB(QueryInst, Address, Loc, isLoad, FromBB,
-                                  Result, true))
+  // Defer the queries for PHI translated pointers to the loop below rather than
+  // recursing into them to avoid stack overflow.
+  SmallVector<DeferredNonLocalPointerDep, 8> Deferred;
+  bool Succeeded =
+      getNonLocalPointerDepFromBB(QueryInst, Address, Loc, isLoad, FromBB,
+                                  Result, Deferred, /* SkipFirstBlock */ true);
+  while (Succeeded && !Deferred.empty()) {
+    DeferredNonLocalPointerDep D = Deferred.pop_back_val();
+    // Fails here means the cached result conflicted with the Visited list.
+    // Conservatively assume it is unknown.
+    if (!getNonLocalPointerDepFromBB(QueryInst, D.Pointer, D.Loc, isLoad, D.BB,
+                                     Result, Deferred)) {
+      Result.push_back(NonLocalDepResult(D.BB, MemDepResult::getUnknown(),
+                                         D.Pointer.getAddr()));
+      NonLocalPointerDeps[D.ParentKey].Pair = BBSkipFirstBlockPair();
+    }
+    // Give up on the whole query if it produced too many results.
+    Succeeded = Result.size() <= NumResultsLimit;
+  }
+  if (Succeeded)
     return;
   Result.clear();
   Result.push_back(NonLocalDepResult(FromBB, MemDepResult::getUnknown(),
@@ -1029,7 +1047,8 @@ MemoryDependenceResults::lookupNonLocalPointerDepVisited(BasicBlock *BB) const {
 bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     Instruction *QueryInst, const PHITransAddr &Pointer,
     const MemoryLocation &Loc, bool isLoad, BasicBlock *StartBB,
-    SmallVectorImpl<NonLocalDepResult> &Result, bool SkipFirstBlock,
+    SmallVectorImpl<NonLocalDepResult> &Result,
+    SmallVectorImpl<DeferredNonLocalPointerDep> &Deferred, bool SkipFirstBlock,
     bool IsIncomplete) {
   // Look up the cached info for Pointer.
   ValueIsLoadPair CacheKey(Pointer.getAddr(), isLoad);
@@ -1090,7 +1109,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       if (Loc.AATags)
         return getNonLocalPointerDepFromBB(
             QueryInst, Pointer, Loc.getWithoutAATags(), isLoad, StartBB, Result,
-            SkipFirstBlock, IsIncomplete);
+            Deferred, SkipFirstBlock, IsIncomplete);
     }
   }
 
@@ -1350,15 +1369,12 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // FIXME: it is entirely possible that PHI translating will end up with
       // the same value.  Consider PHI translating something like:
       // X = phi [x, bb1], [y, bb2].  PHI translating for bb1 doesn't *need*
-      // to recurse here, pedantically speaking.
+      // to query here again, pedantically speaking.
 
       // If getNonLocalPointerDepFromBB fails here, that means the cached
       // result conflicted with the Visited list; we have to conservatively
       // assume it is unknown, but this also does not block PRE of the load.
-      if (!CanTranslate ||
-          !getNonLocalPointerDepFromBB(QueryInst, PredPointer,
-                                       Loc.getWithNewPtr(PredPtrVal), isLoad,
-                                       Pred, Result)) {
+      if (!CanTranslate) {
         // Add the entry to the Result list.
         NonLocalDepResult Entry(Pred, MemDepResult::getUnknown(), PredPtrVal);
         Result.push_back(Entry);
@@ -1372,6 +1388,9 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
         NLPI.Pair = BBSkipFirstBlockPair();
         continue;
       }
+
+      Deferred.push_back(
+          {Pred, PredPointer, Loc.getWithNewPtr(PredPtrVal), CacheKey});
     }
 
     // Refresh the CacheInfo/Cache pointer so that it isn't invalidated.
