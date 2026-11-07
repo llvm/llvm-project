@@ -1692,13 +1692,28 @@ private:
 
     CoroIdInst *CoroId = Shape.getSwitchCoroId();
     if (CoroAllocInst *CA = CoroId->getCoroAlloc()) {
-      // If there is a CoroAlloc and it returns false (meaning we elide the
-      // allocation, use CleanupFn instead of DestroyFn).
-      DestroyOrCleanupFn = Builder.CreateSelect(CA, DestroyFn, CleanupFn);
-      applyProfMetadataIfEnabled(DestroyOrCleanupFn, [&](Instruction *Inst) {
-        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
-                                                    CoroId->getFunction());
-      });
+      // A false result skips allocation and uses CleanupFn instead of
+      // DestroyFn.
+      CondBrInst *AllocBr = nullptr;
+      if (!ProfcheckDisableMetadataFixes) {
+        for (User *U : CA->users()) {
+          auto *Br = dyn_cast<CondBrInst>(U);
+          if (Br && hasBranchWeightMD(*Br)) {
+            AllocBr = Br;
+            break;
+          }
+        }
+      }
+      // Reuse the coro.alloc branch's weights, since the select tests the same
+      // condition.
+      DestroyOrCleanupFn =
+          Builder.CreateSelect(CA, DestroyFn, CleanupFn, "", AllocBr);
+      if (!AllocBr) {
+        applyProfMetadataIfEnabled(DestroyOrCleanupFn, [&](Instruction *Inst) {
+          setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                      CoroId->getFunction());
+        });
+      }
     }
 
     // Destroy function pointer
