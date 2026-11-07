@@ -164,6 +164,33 @@ builtin.module {
 
 // -----
 
+// vector.transfer_write masked by vector.mask: not converted.
+builtin.module {
+  // CHECK-LABEL: @write_masked_by_vector_mask(
+  func.func @write_masked_by_vector_mask(%a: memref<1024x1024xf32>, %sz: index) {
+    %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %c0 = arith.constant 0 : index
+    %cst_0 = arith.constant 0.000000e+00 : f32
+    // CHECK-NOT: nvgpu.device_async_copy
+    //     CHECK: vector.mask
+    //     CHECK:   vector.transfer_write
+    %1 = vector.transfer_read %a[%c0, %c0], %cst_0 {in_bounds = [true]} : memref<1024x1024xf32>, vector<4xf32>
+    %mask = vector.create_mask %sz : vector<4xi1>
+    vector.mask %mask { vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = [true]} : vector<4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>> } : vector<4xi1>
+    return
+  }
+
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%variant_op: !transform.any_op {transform.readonly}) {
+      %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+      transform.nvgpu.create_async_groups %top_level_func : (!transform.any_op) -> (!transform.any_op)
+      transform.yield
+    }
+  }
+}
+
+// -----
+
 // 2D vector.transfer_read with a mask.
 builtin.module {
   // CHECK-LABEL: @read_2d_with_mask(
