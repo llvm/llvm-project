@@ -293,13 +293,23 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
   // turn copied again we visit the first one first. This ensures we can find
   // viable locations for testing the original EFLAGS that dominate all the
   // uses across complex CFGs.
+  //
+  // Copies in blocks unreachable from the entry are collected afterwards. They
+  // still have to be lowered: at -O0 nothing removes those blocks before
+  // register allocation, which cannot copy EFLAGS.
   SmallSetVector<MachineInstr *, 4> Copies;
-  ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
-  for (MachineBasicBlock *MBB : RPOT)
-    for (MachineInstr &MI : *MBB)
+  auto CollectCopies = [&](MachineBasicBlock &MBB) {
+    for (MachineInstr &MI : MBB)
       if (MI.getOpcode() == TargetOpcode::COPY &&
           MI.getOperand(0).getReg() == X86::EFLAGS)
         Copies.insert(&MI);
+  };
+  ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
+  for (MachineBasicBlock *MBB : RPOT)
+    CollectCopies(*MBB);
+  for (MachineBasicBlock &MBB : MF)
+    if (!MDT->isReachableFromEntry(&MBB))
+      CollectCopies(MBB);
 
   // Try to elminate the copys by transform the instructions between copy and
   // copydef to the NF (no flags update) variants, e.g.
@@ -453,7 +463,8 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
     // This is essentially a search for a *candidate* reaching definition
     // location. We don't need to ever find the actual reaching definition here,
     // but we want to walk up the dominator tree to find the highest point which
-    // would be viable for such a definition.
+    // would be viable for such a definition. Blocks unreachable from the entry
+    // have no place in the dominator tree, so we don't hoist out of them.
     auto HasEFLAGSClobber = [&](MachineBasicBlock::iterator Begin,
                                 MachineBasicBlock::iterator End) {
       // Scan backwards as we expect these to be relatively short and often find
@@ -489,7 +500,8 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
       // No clobber found along a path from the begin to end.
       return false;
     };
-    while (TestMBB->isLiveIn(X86::EFLAGS) && !TestMBB->pred_empty() &&
+    while (MDT->isReachableFromEntry(TestMBB) &&
+           TestMBB->isLiveIn(X86::EFLAGS) && !TestMBB->pred_empty() &&
            !HasEFLAGSClobber(TestMBB->begin(), TestPos)) {
       // Find the nearest common dominator of the predecessors, as
       // that will be the best candidate to hoist into.
@@ -658,6 +670,10 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
           // Because it is theoretically possible that some earlier MI pass or
           // other lowering transformation could induce this to happen, we do
           // a hard check even in non-debug builds here.
+          //
+          // A block unreachable from the entry is dominated by every block, so
+          // its uses are always rewritten, even if the condition register
+          // isn't defined along every path into it. That block never executes.
           if (SuccMBB == TestMBB || !MDT->dominates(TestMBB, SuccMBB)) {
             LLVM_DEBUG({
               dbgs()
@@ -701,9 +717,8 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
   }
 
 #ifndef NDEBUG
-  // Check reachable blocks for unlowered EFLAGS copies.
-  for (MachineBasicBlock *MBB : depth_first(&MF))
-    for (MachineInstr &MI : *MBB)
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : MBB)
       if (MI.getOpcode() == TargetOpcode::COPY &&
           (MI.getOperand(0).getReg() == X86::EFLAGS ||
            MI.getOperand(1).getReg() == X86::EFLAGS)) {
