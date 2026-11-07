@@ -3110,6 +3110,37 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+void AArch64TargetLowering::computeKnownBitsForTargetInstr(
+    GISelValueTracking &Analysis, Register R, KnownBits &Known,
+    const APInt &DemandedElts, const MachineRegisterInfo &MRI,
+    unsigned Depth) const {
+  const MachineInstr *MI = MRI.getVRegDef(R);
+  if (!MI)
+    return;
+
+  switch (MI->getOpcode()) {
+  case AArch64::G_VASHR:
+  case AArch64::G_VLSHR: {
+    unsigned BitWidth = MRI.getType(R).getScalarSizeInBits();
+    uint64_t Shift = MI->getOperand(2).getImm();
+    // Unlike the IR shifts KnownBits models, a shift by the full element width
+    // is legal here: ushr gives zero, which KnownBits::lshr also returns, and
+    // sshr fills every bit with the sign bit, the same as a shift by
+    // BitWidth - 1.
+    if (MI->getOpcode() == AArch64::G_VASHR)
+      Shift = std::min<uint64_t>(Shift, BitWidth - 1);
+    KnownBits SrcKnown(BitWidth);
+    Analysis.computeKnownBitsImpl(MI->getOperand(1).getReg(), SrcKnown,
+                                  DemandedElts, Depth + 1);
+    KnownBits ShiftKnown = KnownBits::makeConstant(APInt(BitWidth, Shift));
+    Known = MI->getOpcode() == AArch64::G_VASHR
+                ? KnownBits::ashr(SrcKnown, ShiftKnown)
+                : KnownBits::lshr(SrcKnown, ShiftKnown);
+    break;
+  }
+  }
+}
+
 unsigned AArch64TargetLowering::computeNumSignBitsForTargetInstr(
     GISelValueTracking &Analysis, Register R, const APInt &DemandedElts,
     const MachineRegisterInfo &MRI, unsigned Depth) const {
