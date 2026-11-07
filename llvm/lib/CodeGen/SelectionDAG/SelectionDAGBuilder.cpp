@@ -6439,13 +6439,8 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
     getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
     return;
   case ISD::BUILD_PAIR:
-    // The registers become DW_OP_LLVM_fragments at increasing offsets, and
-    // a fragment offset counts from the variable's lowest-addressed byte.
-    // BUILD_PAIR's operands are (low half, high half) regardless of byte
-    // order, so on a big-endian target the high half comes first.
-    // (Arguments split into register parts go through RegsForValue, whose
-    // parts are already in memory order; this path is taken by targets
-    // that keep the wide type legal and build it from two registers.)
+    // Fragment offsets count from the lowest-addressed byte, so on
+    // big-endian targets the high half (operand 1) comes first.
     if (DL.isBigEndian()) {
       getUnderlyingArgRegs(Regs, N.getOperand(1), DL);
       getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
