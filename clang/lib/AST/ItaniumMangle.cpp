@@ -1114,9 +1114,33 @@ void CXXNameMangler::mangleNameWithAbiTags(
 }
 
 void CXXNameMangler::mangleModuleName(const NamedDecl *ND) {
-  if (ND->isExternallyVisible())
+  if (ND->isExternallyVisible()) {
     if (Module *M = ND->getOwningModuleForLinkage())
       mangleModuleNamePrefix(M->getPrimaryModuleInterfaceName());
+    return;
+  }
+
+  // Include the owning named module unit in the mangled name of an
+  // internal-linkage function from a global module fragment. Definitions from
+  // multiple imported module units can otherwise collide when emitted into
+  // one translation unit.
+  const auto *FD = dyn_cast<FunctionDecl>(ND);
+  if (!FD || FD->getFormalLinkage() != Linkage::Internal ||
+      !FD->isFromGlobalModule())
+    return;
+
+  Module *M = FD->getOwningModule();
+  if (!M || !M->isNamedModule())
+    return;
+
+  if (!M->isModulePartition()) {
+    mangleModuleNamePrefix(M->Name);
+    return;
+  }
+
+  auto [Primary, Partition] = StringRef(M->Name).split(':');
+  mangleModuleNamePrefix(Primary);
+  mangleModuleNamePrefix(Partition, /*IsPartition=*/true);
 }
 
 // <module-name> ::= <module-subname>
