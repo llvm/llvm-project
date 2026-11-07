@@ -2,6 +2,7 @@
 
 int(&&intu_rvref)[] {1,2,3,4};
 // CHECK: VarDecl 0x[[GLOB_ADDR:[0-9a-f]+]] {{.*}} intu_rvref 'int (&&)[4]' listinit
+// CHECK-NEXT: value: LValue Base=MaterializeTemporaryExpr
 // CHECK-NEXT: ExprWithCleanups {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue extended by Var 0x[[GLOB_ADDR]] 'intu_rvref' 'int (&&)[4]'
 // CHECK-NEXT: InitListExpr {{.*}} 'int[4]'
@@ -10,6 +11,7 @@ int(&&intu_rvref)[] {1,2,3,4};
 void static_const() {
   static const int(&&intu_rvref)[] {1,2,3,4};
   // CHECK: VarDecl 0x[[STATIC_ADDR:[0-9a-f]+]] {{.*}} intu_rvref 'const int (&&)[4]' static listinit
+  // CHECK-NEXT: value: LValue Base=MaterializeTemporaryExpr
   // CHECK-NEXT: ExprWithCleanups {{.*}} 'const int[4]' xvalue
   // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'const int[4]' xvalue extended by Var 0x[[STATIC_ADDR]] 'intu_rvref' 'const int (&&)[4]'
   // CHECK-NEXT: InitListExpr {{.*}} 'const int[4]'
