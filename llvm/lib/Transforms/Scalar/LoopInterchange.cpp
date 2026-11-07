@@ -549,14 +549,31 @@ class CacheCostManager {
   /// loop-nest, as determined by the cache cost analysis.
   DenseMap<const Loop *, unsigned> CostMap;
 
+  /// Maps each position in the loop nest (0 being the outermost) to the loop
+  /// whose induction variables are currently placed there, which is the key
+  /// into CostMap.
+  SmallVector<const Loop *, 8> LoopsInCurrentOrder;
+
   void computeIfUnitinialized();
 
 public:
-  CacheCostManager(Loop *OutermostLoop, LoopStandardAnalysisResults *AR,
+  CacheCostManager(ArrayRef<Loop *> LoopList, LoopStandardAnalysisResults *AR,
                    DependenceInfo *DI)
-      : OutermostLoop(OutermostLoop), AR(AR), DI(DI) {}
+      : OutermostLoop(LoopList.front()), AR(AR), DI(DI),
+        LoopsInCurrentOrder(LoopList.begin(), LoopList.end()) {}
   CacheCost *getCacheCost();
   const DenseMap<const Loop *, unsigned> &getCostMap();
+
+  /// Return the loop of the original loop nest that is currently placed at
+  /// \p Position.
+  const Loop *getOriginalLoopAt(unsigned Position) const {
+    return LoopsInCurrentOrder[Position];
+  }
+
+  /// Record that the loops at \p Position0 and \p Position1 are interchanged.
+  void swapPositions(unsigned Position0, unsigned Position1) {
+    std::swap(LoopsInCurrentOrder[Position0], LoopsInCurrentOrder[Position1]);
+  }
 };
 
 /// LoopInterchangeProfitability checks if it is profitable to interchange the
@@ -576,6 +593,7 @@ public:
 private:
   int getInstrOrderCost();
   std::optional<bool> isProfitablePerLoopCacheAnalysis(
+      const Loop *OrigInnerLoop, const Loop *OrigOuterLoop,
       const DenseMap<const Loop *, unsigned> &CostMap, CacheCost *CC);
   std::optional<bool> isProfitablePerInstrOrderCost();
   std::optional<bool> isProfitableForVectorization(unsigned InnerLoopId,
@@ -753,7 +771,7 @@ struct LoopInterchange {
     }
 
     unsigned SelecLoopId = selectLoopForInterchange(LoopList);
-    CacheCostManager CCM(LoopList[0], AR, DI);
+    CacheCostManager CCM(LoopList, AR, DI);
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
     // the innermost loop, move it outwards to the best possible position
@@ -819,6 +837,7 @@ struct LoopInterchange {
 
     // Loops interchanged, update LoopList accordingly.
     std::swap(LoopList[OuterLoopId], LoopList[InnerLoopId]);
+    CCM.swapPositions(OuterLoopId, InnerLoopId);
     // Update the DependencyMatrix
     interChangeDependencies(DependencyMatrix, InnerLoopId, OuterLoopId);
 
@@ -1892,18 +1911,19 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
 
 std::optional<bool>
 LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
+    const Loop *OrigInnerLoop, const Loop *OrigOuterLoop,
     const DenseMap<const Loop *, unsigned> &CostMap, CacheCost *CC) {
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
-  auto InnerLoopIt = CostMap.find(InnerLoop);
+  auto InnerLoopIt = CostMap.find(OrigInnerLoop);
   if (InnerLoopIt == CostMap.end())
     return std::nullopt;
-  auto OuterLoopIt = CostMap.find(OuterLoop);
+  auto OuterLoopIt = CostMap.find(OrigOuterLoop);
   if (OuterLoopIt == CostMap.end())
     return std::nullopt;
 
-  if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
+  if (CC->getLoopCost(*OrigOuterLoop) == CC->getLoopCost(*OrigInnerLoop))
     return std::nullopt;
   unsigned InnerIndex = InnerLoopIt->second;
   unsigned OuterIndex = OuterLoopIt->second;
@@ -2019,7 +2039,9 @@ bool LoopInterchangeProfitability::isProfitable(
     case LoopInterchangeRule::PerLoopCacheAnalysis: {
       CacheCost *CC = CCM.getCacheCost();
       const DenseMap<const Loop *, unsigned> &CostMap = CCM.getCostMap();
-      shouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
+      shouldInterchange = isProfitablePerLoopCacheAnalysis(
+          CCM.getOriginalLoopAt(InnerLoopId),
+          CCM.getOriginalLoopAt(OuterLoopId), CostMap, CC);
       break;
     }
     case LoopInterchangeRule::PerInstrOrderCost:
