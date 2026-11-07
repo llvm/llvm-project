@@ -50,11 +50,13 @@ define i128 @test2(i128 %x) nounwind {
 ; X86-NEXT:    testl %ebx, %ebx
 ; X86-NEXT:    jne .LBB1_1
 ; X86-NEXT:  # %bb.2: # %_udiv-special-cases
+; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:    bsrl %esi, %edi
 ; X86-NEXT:    xorl $31, %edi
 ; X86-NEXT:    orl $32, %edi
 ; X86-NEXT:    jmp .LBB1_3
 ; X86-NEXT:  .LBB1_1:
+; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:    bsrl %ebx, %edi
 ; X86-NEXT:    xorl $31, %edi
 ; X86-NEXT:  .LBB1_3: # %_udiv-special-cases
@@ -369,11 +371,13 @@ define i128 @test3(i128 %x) nounwind {
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    jne .LBB2_1
 ; X86-NEXT:  # %bb.2: # %_udiv-special-cases
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    bsrl %edi, %ebx
 ; X86-NEXT:    xorl $31, %ebx
 ; X86-NEXT:    orl $32, %ebx
 ; X86-NEXT:    jmp .LBB2_3
 ; X86-NEXT:  .LBB2_1:
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    bsrl %eax, %ebx
 ; X86-NEXT:    xorl $31, %ebx
 ; X86-NEXT:  .LBB2_3: # %_udiv-special-cases
