@@ -161,9 +161,8 @@ False:
 
 define i64 @pow2_64_br(i64 %x) {
 ; CHECK-LABEL: @pow2_64_br(
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       True:
 ; CHECK-NEXT:    ret i64 1
 ; CHECK:       False:
