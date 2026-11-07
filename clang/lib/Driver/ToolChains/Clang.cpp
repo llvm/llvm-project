@@ -1154,6 +1154,30 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   // Add C++ include arguments, if needed.
   if (types::isCXX(Inputs[0].getType())) {
+
+    /*
+     * Installs the directory for clang's C++ headers first to
+     * account for compatibility with libstdc++ when using meta header.
+     * When we use clang and link libstdc++ as the standard library,
+     * the meta header in libstdc++ only provides declarations
+     * of the metafunctions, and clang decided to pursue
+     * having builtins instead.
+     *
+     * With the clang's C++ headers installed first in the list of search paths,
+     * when linking libstdc++ and using the meta header, clang will find its own
+     * header first and ignore the one from libstdc++. Whether any new clang's
+     * C++ header will be in this directory as well will be a topic for
+     * discussion, no conrete plan has been made on this yet.
+     */
+
+    // Do nothing if either -nostdinc or -nobuiltininc is passed.
+    if (!Args.hasArg(options::OPT_nostdinc, options::OPT_nobuiltininc)) {
+      SmallString<128> ResourceDirInclude(D.ResourceDir);
+      llvm::sys::path::append(ResourceDirInclude, "include", "cxx");
+      CmdArgs.push_back("-internal-isystem");
+      CmdArgs.push_back(Args.MakeArgString(ResourceDirInclude));
+    }
+
     bool HasStdlibxxIsystem = Args.hasArg(options::OPT_stdlibxx_isystem);
     forAllAssociatedToolChains(
         C, JA, getToolChain(),

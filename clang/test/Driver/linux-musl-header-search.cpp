@@ -32,6 +32,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NOSTDLIBINC %s
 
 // CHECK-NOSTDLIBINC: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-NOSTDLIBINC: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include{{/|\\\\}}cxx"
 // CHECK-NOSTDLIBINC-NOT: "-internal-externc-isystem"
 // CHECK-NOSTDLIBINC-NOT: "-internal-isystem"
 // CHECK-NOSTDLIBINC: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"

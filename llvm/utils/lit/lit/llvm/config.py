@@ -752,6 +752,7 @@ class LLVMConfig:
         if self.config.clang:
             self.config.available_features.add("clang")
             builtin_include_dir = self.get_clang_builtin_include_dir(self.config.clang)
+            builtin_cxx_headers = builtin_include_dir + "/cxx"
             tool_substitutions = [
                 ToolSubst(
                     "%clang", command=self.config.clang, extra_args=additional_flags
@@ -768,6 +769,8 @@ class LLVMConfig:
                     command=self.config.clang,
                     extra_args=[
                         "-cc1",
+                        "-internal-isystem",
+                        builtin_cxx_headers,
                         "-internal-isystem",
                         builtin_include_dir,
                         "-nostdsysteminc",
