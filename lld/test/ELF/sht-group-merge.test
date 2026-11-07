@@ -1,0 +1,48 @@
+# REQUIRES: x86
+## Remap the group signature and member indices even when the group has merge
+## flags. The two identical constants in the member section should coalesce.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t.ro
+# RUN: llvm-readelf -Sgs %t.ro | FileCheck %s --check-prefixes=CHECK,PLAIN
+
+# RUN: yaml2obj %s -DFLAGS="[SHF_MERGE, SHF_STRINGS]" -o %t.o
+# RUN: ld.lld -r %t.o -o %t.ro
+# RUN: llvm-readelf -Sgs %t.ro | FileCheck %s --check-prefixes=CHECK,STRINGS
+
+# PLAIN:      .group GROUP {{.*}} 000008 04    [[#SYMTAB:]] [[#SIG:]]
+# STRINGS:    .group GROUP {{.*}} 000008 04 MS [[#SYMTAB:]] [[#SIG:]]
+# CHECK:      [ [[#MEMBER:]]] .rodata.cst4 PROGBITS {{.*}} 000004 04 AMG
+# CHECK:      [ [[#SYMTAB]]] .symtab SYMTAB
+# CHECK:      [[#SIG]]: {{.*}} GLOBAL DEFAULT [[#MEMBER]] sig
+# CHECK:      COMDAT group section {{.*}} `.group' [sig] contains 1 sections:
+# CHECK-NEXT: [Index] Name
+# CHECK-NEXT: [ [[#MEMBER]]] .rodata.cst4
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+## Put .symtab first so both sh_link and the member section index change.
+  - Name: .symtab
+    Type: SHT_SYMTAB
+  - Name:    .group
+    Type:    SHT_GROUP
+    Flags:   [[FLAGS=<none>]]
+    Link:    .symtab
+    Info:    sig
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .rodata.cst4
+  - Name:    .rodata.cst4
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_MERGE, SHF_GROUP ]
+    EntSize: 4
+    Content: "1122334411223344"
+Symbols:
+  - Name:    sig
+    Section: .rodata.cst4
+    Binding: STB_GLOBAL

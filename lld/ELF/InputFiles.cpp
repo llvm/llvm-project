@@ -766,6 +766,10 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
 
 template <class ELFT>
 bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
+  // Keep the original group section so copyShtGroup can remap its members.
+  if (sec.sh_type == SHT_GROUP)
+    return false;
+
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
   // be bigger.
