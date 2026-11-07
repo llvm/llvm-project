@@ -5,7 +5,10 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-linux-gnueabi -exception-model=sjlj < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=SJLJ %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-linux-gnueabi -exception-model=dwarf < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=DWARF %s
 
-; SJLJ: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
+; SJLJ: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; SJLJ-NEXT: @__stack_chk_guard = external global ptr
+; SJLJ-NEXT: declare arm_aapcscc i32 @_Unwind_SjLj_RaiseException(ptr)
+; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Resume(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Unregister(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc double @__adddf3(double, double)
@@ -45,21 +48,21 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_i2d(i32)
 ; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_i2f(i32)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_idiv(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_idivmod(i32 signext, i32 signext) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_idivmod(i32, i32) [[DIVMOD_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_l2d(i64)
 ; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_l2f(i64)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_lasr(i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_ldivmod(i64 signext, i64 signext) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_ldivmod(i64, i64) [[DIVMOD_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_llsl(i64, i32)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_llsr(i64, i32)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_lmul(i64, i64)
 ; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_ui2d(i32)
 ; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_ui2f(i32)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_uidiv(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_uidivmod(i32 zeroext, i32 zeroext) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_uidivmod(i32, i32) [[DIVMOD_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_ul2d(i64)
 ; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_ul2f(i64)
-; SJLJ-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_uldivmod(i64 zeroext, i64 zeroext) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_uldivmod(i64, i64) [[DIVMOD_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_uread4(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_uread8(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_uwrite4(i32, ptr)
@@ -128,6 +131,9 @@
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzdi2(i64)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzsi2(i32)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzti2(i128)
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzdi2(i64)
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzsi2(i32)
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzti2(i128)
 ; SJLJ-NEXT: declare arm_aapcscc void @__cxa_end_cleanup()
 ; SJLJ-NEXT: declare arm_aapcscc double @__divdf3(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64)
@@ -268,9 +274,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
 ; SJLJ-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__safestack_unsafe_stack_ptr(...)
 ; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_fail()
-; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_guard(...)
 ; SJLJ-NEXT: declare arm_aapcscc double @__subdf3(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc float @__subsf3(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128)
@@ -475,7 +479,10 @@
 ; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; DWARF: declare arm_aapcscc void @_Unwind_Resume(ptr)
+; DWARF: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; DWARF-NEXT: @__stack_chk_guard = external global ptr
+; DWARF-NEXT: declare arm_aapcscc i32 @_Unwind_RaiseException(ptr)
+; DWARF-NEXT: declare arm_aapcscc void @_Unwind_Resume(ptr)
 ; DWARF-NEXT: declare arm_aapcscc double @__adddf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @__addsf3(float, float)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128)
@@ -513,21 +520,21 @@
 ; DWARF-NEXT: declare arm_aapcscc double @__aeabi_i2d(i32)
 ; DWARF-NEXT: declare arm_aapcscc float @__aeabi_i2f(i32)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_idiv(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_idivmod(i32 signext, i32 signext) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_idivmod(i32, i32) [[DIVMOD_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc double @__aeabi_l2d(i64)
 ; DWARF-NEXT: declare arm_aapcscc float @__aeabi_l2f(i64)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_lasr(i64, i32)
-; DWARF-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_ldivmod(i64 signext, i64 signext) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_ldivmod(i64, i64) [[DIVMOD_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_llsl(i64, i32)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_llsr(i64, i32)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_lmul(i64, i64)
 ; DWARF-NEXT: declare arm_aapcscc double @__aeabi_ui2d(i32)
 ; DWARF-NEXT: declare arm_aapcscc float @__aeabi_ui2f(i32)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_uidiv(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_uidivmod(i32 zeroext, i32 zeroext) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_uidivmod(i32, i32) [[DIVMOD_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc double @__aeabi_ul2d(i64)
 ; DWARF-NEXT: declare arm_aapcscc float @__aeabi_ul2f(i64)
-; DWARF-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_uldivmod(i64 zeroext, i64 zeroext) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_uldivmod(i64, i64) [[DIVMOD_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_uread4(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_uread8(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_uwrite4(i32, ptr)
@@ -596,6 +603,9 @@
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzdi2(i64)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzsi2(i32)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzti2(i128)
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzdi2(i64)
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzsi2(i32)
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzti2(i128)
 ; DWARF-NEXT: declare arm_aapcscc void @__cxa_end_cleanup()
 ; DWARF-NEXT: declare arm_aapcscc double @__divdf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64)
@@ -736,9 +746,7 @@
 ; DWARF-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
 ; DWARF-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__safestack_unsafe_stack_ptr(...)
 ; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_fail()
-; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_guard(...)
 ; DWARF-NEXT: declare arm_aapcscc double @__subdf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @__subsf3(float, float)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128)

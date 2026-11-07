@@ -132,7 +132,7 @@ convertCharacter(StringRef Char, const llvm::TextEncodingConverter &Converter) {
   std::error_code EC = Converter.convert(Char, ResultCharConv);
   if (EC)
     return EC;
-  else if (ResultCharConv.size() > 1)
+  if (ResultCharConv.size() > 1)
     return std::error_code(E2BIG, std::generic_category());
   return ResultCharConv[0];
 }
@@ -440,7 +440,7 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
     if (Kind == 'N') {
       assert(*I == '{');
       ++I;
-      auto Delim = std::find(I, Input.end(), '}');
+      const auto *Delim = std::find(I, Input.end(), '}');
       assert(Delim != Input.end());
       StringRef Name(I, std::distance(I, Delim));
       std::optional<llvm::sys::unicode::LooseMatchingResult> Res =

@@ -19,7 +19,7 @@
 
 using namespace llvm;
 
-static llvm::opt::RegisterLibraryOptions<llvm::AnalysisOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::AnalysisOptions)
 
 const AnalysisOptions &llvm::getAnalysisOptions(const Module &M) {
   return getAnalysisOptions(M.getContext());

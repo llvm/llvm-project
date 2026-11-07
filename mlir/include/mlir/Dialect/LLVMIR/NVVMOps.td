@@ -4853,6 +4853,43 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
   }];
 }
 
+def NVVM_PrefetchValidAddrOp :
+  NVVM_Op<"prefetch.valid_addr", [NVVMRequiresSM<90>]> {
+  let summary = "Prefetch from a valid global address into the selected cache";
+  let description = [{
+    Prefetches data from the address given by `addr` into the cache selected by
+    `cacheLevel`. Currently, only L1 is supported and the operation requests a
+    prefetch of at least 32 bytes.
+
+    The operand must be a global or generic pointer. A generic address must
+    refer to the global state space. At least one byte at `addr` must be valid
+    and accessible for this access; otherwise, behavior is undefined and the
+    instruction may fault.
+
+    Examples:
+    ```mlir
+    nvvm.prefetch.valid_addr level = L1, %global_ptr : !llvm.ptr<1>
+    nvvm.prefetch.valid_addr level = L1, %generic_ptr : !llvm.ptr
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-prefetch-prefetchu)
+  }];
+
+  let arguments = (ins
+    ConfinedAttr<PrefetchCacheLevelAttr,
+      [EnumAttrIsOneOf<PrefetchCacheLevelAttr,
+                      [PrefetchCacheLevelL1]>]>:$cacheLevel,
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerGlobal]>:$addr);
+  let assemblyFormat =
+    "`level` `=` enum($cacheLevel) `,` $addr attr-dict `:` type($addr)";
+
+  let llvmBuilder = [{
+    createIntrinsicCall(builder,
+                        llvm::Intrinsic::nvvm_prefetch_L1_32B_valid_addr,
+                        builder.getVoidTy(), {$addr});
+  }];
+}
+
 def NVVM_CpAsyncBulkPrefetchOp : NVVM_VoidIntrinsicOp<"cp.async.bulk.prefetch"> {
   let summary = "Async bulk prefetch from global memory to L2 cache";
   let description = [{
@@ -7445,6 +7482,35 @@ def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
     // sub(a, b) = add(a, -b)
     llvm::Value *rhs = builder.CreateFNeg($rhs);
     NVVM::AddFOp::lowerAddFToLLVMIR($lhs, rhs, op.getRes(), $rnd, $sat, $ftz,
+                                    moduleTranslation, builder);
+  }];
+}
+
+def NVVM_MulFOp : NVVM_FloatBinaryOp<"mulf", [Commutative]> {
+  let summary = [{
+    Performs floating point multiplication of the given arguments `lhs` and `rhs`
+  }];
+  let description = [{
+    The `nvvm.mulf` operation performs floating point multiplication of two 
+    floating point operands of the same type.
+
+    The rounding mode is specified by the `rnd` attribute, saturation mode by 
+    the `sat` attribute, and flush-to-zero by the `ftz` attribute.
+
+    For more information, see PTX ISA:
+    - [floating point multiplication](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-mul)
+    - [half-precision floating point multiplication](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-mul)
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static void lowerMulFToLLVMIR(
+        llvm::Value *lhs, llvm::Value *rhs, Value res,
+        NVVM::FPRoundingMode rnd, NVVM::SaturationMode sat, bool ftz,
+        LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  let llvmBuilder = [{
+    NVVM::MulFOp::lowerMulFToLLVMIR($lhs, $rhs, op.getRes(), $rnd, $sat, $ftz,
                                     moduleTranslation, builder);
   }];
 }

@@ -1031,6 +1031,10 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
     addAvailableCaps(EnabledCapabilities);
   }
 
+  // EXT and NV use the same capability.
+  if (ST.canUseExtension(Extension::SPV_EXT_shader_subgroup_partitioned))
+    addAvailableCaps({Capability::GroupNonUniformPartitionedNV});
+
   if (!ST.isShader()) {
     initAvailableCapabilitiesForOpenCL(ST);
     return;
@@ -1997,6 +2001,12 @@ void addInstrRequirements(const MachineInstr &MI,
     case SPIRV::GroupOperation::PartitionedReduceNV:
     case SPIRV::GroupOperation::PartitionedInclusiveScanNV:
     case SPIRV::GroupOperation::PartitionedExclusiveScanNV:
+      if (ST.canUseExtension(
+              SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned))
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned);
+      else
+        Reqs.addExtension(SPIRV::Extension::SPV_NV_shader_subgroup_partitioned);
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformPartitionedNV);
       break;
     }

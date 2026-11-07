@@ -353,6 +353,12 @@ feature_test_macros = [
             "headers": ["algorithm", "utility"],
         },
         {
+            "name": "__cpp_lib_constexpr_atomic",
+            "values": {"c++20": 202411},
+            "headers": ["atomic"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_constexpr_bitset",
             "values": {"c++23": 202207},
             "headers": ["bitset"],
@@ -374,9 +380,31 @@ feature_test_macros = [
             "headers": ["complex"],
         },
         {
+            "name": "__cpp_lib_constexpr_deque",
+            "values": {"c++26": 202502},
+            "headers": ["deque"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_constexpr_dynamic_alloc",
             "values": {"c++20": 201907},
             "headers": ["memory"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_exceptions",
+            "values": {
+                "c++26": 202411  # P3068R6 Allowing exception throwing in constant-evaluation
+                # "c++26": 202502  # P3378R2: constexpr exception types
+            },
+            "headers": [
+                "exception",
+                "expected",
+                "format",
+                "optional",
+                "stdexcept",
+                "variant",
+            ],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_constexpr_flat_map",
@@ -397,6 +425,12 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_functional",
             "values": {"c++20": 201907},
             "headers": ["functional"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_inplace_vector",
+            "values": {"c++26": 202502},
+            "headers": ["inplace_vector"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_constexpr_iterator",
@@ -434,11 +468,18 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_queue",
             "values": {"c++26": 202502},
             "headers": ["queue"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_constexpr_set",
             "values": {"c++26": 202502},
             "headers": ["set"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_stack",
+            "values": {"c++26": 202502},
+            "headers": ["stack"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_constexpr_string",
@@ -459,6 +500,18 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_typeinfo",
             "values": {"c++23": 202106},
             "headers": ["typeinfo"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_unordered_map",
+            "values": {"c++26": 202502},
+            "headers": ["unordered_map"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_constexpr_unordered_set",
+            "values": {"c++26": 202502},
+            "headers": ["unordered_set"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_constexpr_utility",
@@ -493,6 +546,12 @@ feature_test_macros = [
                 "unordered_set",
                 "vector",
             ],
+        },
+        {
+            "name": "__cpp_lib_contracts",
+            "values": {"c++26": 202502},
+            "headers": ["contracts"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_copyable_function",
@@ -740,6 +799,120 @@ feature_test_macros = [
             "headers": ["unordered_map", "unordered_set"],
         },
         {
+            "name": "__cpp_lib_hardened_array",
+            "values": {"c++26": 202502},
+            "headers": ["array"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_basic_stacktrace",
+            "values": {"c++26": 202506},
+            "headers": ["stacktrace"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_basic_string",
+            "values": {"c++26": 202502},
+            "headers": ["string"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_basic_string_view",
+            "values": {"c++26": 202502},
+            "headers": ["string_view"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_bitset",
+            "values": {"c++26": 202502},
+            "headers": ["bitset"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_common_iterator",
+            "values": {"c++26": 202506},
+            "headers": ["iterator"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_counted_iterator",
+            "values": {"c++26": 202506},
+            "headers": ["iterator"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_deque",
+            "values": {"c++26": 202502},
+            "headers": ["deque"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_expected",
+            "values": {"c++26": 202502},
+            "headers": ["expected"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_forward_list",
+            "values": {"c++26": 202502},
+            "headers": ["forward_list"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_inplace_vector",
+            "values": {"c++26": 202502},
+            "headers": ["inplace_vector"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_list",
+            "values": {"c++26": 202502},
+            "headers": ["list"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_mdspan",
+            "values": {"c++26": 202502},
+            "headers": ["mdspan"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_optional",
+            "values": {"c++26": 202502},
+            "headers": ["optional"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_shared_ptr_array",
+            "values": {"c++26": 202506},
+            "headers": ["memory"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_span",
+            "values": {"c++26": 202502},
+            "headers": ["span"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_valarray",
+            "values": {"c++26": 202502},
+            "headers": ["valarray"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_vector",
+            "values": {"c++26": 202502},
+            "headers": ["vector"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_hardened_view_interface",
+            "values": {"c++26": 202506},
+            "headers": ["ranges"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_hardware_interference_size",
             "values": {"c++17": 201703},
             "headers": ["new"],
@@ -759,6 +932,12 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_hive",
+            "values": {"c++26": 202502},
+            "headers": ["hive"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_hypot",
             "values": {"c++17": 201603},
             "headers": ["cmath"],
@@ -767,6 +946,12 @@ feature_test_macros = [
             "name": "__cpp_lib_incomplete_container_elements",
             "values": {"c++17": 201505},
             "headers": ["forward_list", "list", "vector"],
+        },
+        {
+            "name": "__cpp_lib_indirect",
+            "values": {"c++26": 202502},
+            "headers": ["memory"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_initializer_list",
@@ -925,6 +1110,8 @@ feature_test_macros = [
             "name": "__cpp_lib_linalg",
             "values": {
                 "c++26": 202311  # P1673 A free function linear algebra interface based on the BLAS
+                # "c++26": 202411  # P3222R0 Fix C++26 by adding transposed special cases for P2642 layouts
+                # "c++26": 202411  # P3050R2 Fix C++26 by optimizing linalg::conjugated for noncomplex value types
             },
             "headers": ["linalg"],
             "unimplemented": True,
@@ -1098,6 +1285,12 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_polymorphic",
+            "values": {"c++26": 202502},
+            "headers": ["memory"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_polymorphic_allocator",
             "values": {"c++20": 201902},
             "headers": ["memory_resource"],
@@ -1143,9 +1336,21 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_ranges_as_input",
+            "values": {"c++23": 202502},
+            "headers": ["ranges"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_ranges_as_rvalue",
             "values": {"c++23": 202207},
             "headers": ["ranges"],
+        },
+        {
+            "name": "__cpp_lib_ranges_cache_latest",
+            "values": {"c++23": 202411},
+            "headers": ["ranges"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_chunk",
@@ -1202,6 +1407,12 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_repeat",
             "values": {"c++23": 202207},
             "headers": ["ranges"],
+        },
+        {
+            "name": "__cpp_lib_ranges_reserve_hint",
+            "values": {"c++26": 202502},
+            "headers": ["ranges"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_slide",

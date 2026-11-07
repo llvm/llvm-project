@@ -726,3 +726,55 @@ func.func @independent_allocation(%n: index, %cond: i1) {
   memref.dealloc %independent : memref<8xi32>
   return
 }
+
+// -----
+
+// Non-identity strides and offsets are skipped. An explicit identity layout
+// remains eligible.
+// CHECK-LABEL: func.func @unsupported_layouts(
+// CHECK-NEXT: %[[A:.*]] = memref.alloc() : memref<4xf32, strided<[2]>>
+// CHECK-NEXT: %[[B:.*]] = memref.alloc()[%{{.*}}] : memref<4xf32, strided<[?]>>
+// CHECK-NEXT: %[[C:.*]] = memref.alloc() : memref<4xf32, strided<[1], offset: 1>>
+// CHECK-NEXT: memref.dealloc %[[A]] : memref<4xf32, strided<[2]>>
+// CHECK-NEXT: memref.dealloc %[[B]] : memref<4xf32, strided<[?]>>
+// CHECK-NEXT: memref.dealloc %[[C]] : memref<4xf32, strided<[1], offset: 1>>
+// CHECK-NEXT: %[[ARENA:.*]] = memref.alloc() alignment = 1 : memref<16xi8>
+// CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C0]]][] : memref<16xi8> to memref<4xf32, strided<[1]>>
+// CHECK-NEXT: return
+func.func @unsupported_layouts(%stride: index) {
+  %a = memref.alloc() : memref<4xf32, strided<[2]>>
+  %b = memref.alloc()[%stride] : memref<4xf32, strided<[?]>>
+  %c = memref.alloc() : memref<4xf32, strided<[1], offset: 1>>
+  memref.dealloc %a : memref<4xf32, strided<[2]>>
+  memref.dealloc %b : memref<4xf32, strided<[?]>>
+  memref.dealloc %c : memref<4xf32, strided<[1], offset: 1>>
+  %supported = memref.alloc() : memref<4xf32, strided<[1]>>
+  memref.dealloc %supported : memref<4xf32, strided<[1]>>
+  return
+}
+
+// -----
+
+// Preserve shared deallocs when one allocation has an unsupported layout.
+// CHECK-LABEL: func.func @shared_unsupported_layout(
+// CHECK-NEXT: %[[A:.*]] = memref.alloc() : memref<4xf32>
+// CHECK-NEXT: %[[B:.*]] = memref.alloc() : memref<4xf32, strided<[2]>>
+// CHECK-NEXT: %[[AC:.*]] = memref.cast %[[A]] : memref<4xf32> to memref<4xf32, strided<[?], offset: ?>>
+// CHECK-NEXT: %[[BC:.*]] = memref.cast %[[B]] : memref<4xf32, strided<[2]>> to memref<4xf32, strided<[?], offset: ?>>
+// CHECK-NEXT: %[[S0:.*]] = arith.select %{{.*}}, %[[AC]], %[[BC]] : memref<4xf32, strided<[?], offset: ?>>
+// CHECK-NEXT: %[[S1:.*]] = arith.select %{{.*}}, %[[BC]], %[[AC]] : memref<4xf32, strided<[?], offset: ?>>
+// CHECK-NEXT: memref.dealloc %[[S0]] : memref<4xf32, strided<[?], offset: ?>>
+// CHECK-NEXT: memref.dealloc %[[S1]] : memref<4xf32, strided<[?], offset: ?>>
+// CHECK-NEXT: return
+func.func @shared_unsupported_layout(%cond: i1) {
+  %a = memref.alloc() : memref<4xf32>
+  %b = memref.alloc() : memref<4xf32, strided<[2]>>
+  %ac = memref.cast %a : memref<4xf32> to memref<4xf32, strided<[?], offset: ?>>
+  %bc = memref.cast %b : memref<4xf32, strided<[2]>> to memref<4xf32, strided<[?], offset: ?>>
+  %s0 = arith.select %cond, %ac, %bc : memref<4xf32, strided<[?], offset: ?>>
+  %s1 = arith.select %cond, %bc, %ac : memref<4xf32, strided<[?], offset: ?>>
+  memref.dealloc %s0 : memref<4xf32, strided<[?], offset: ?>>
+  memref.dealloc %s1 : memref<4xf32, strided<[?], offset: ?>>
+  return
+}
