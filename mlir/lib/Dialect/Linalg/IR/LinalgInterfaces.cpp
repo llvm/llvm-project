@@ -225,6 +225,45 @@ linalg::isaTransposeOpInterface(GenericOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// ReduceOpInterface implementation
+//===----------------------------------------------------------------------===//
+std::optional<SmallVector<int64_t>>
+linalg::isaReductionOpInterface(GenericOp op) {
+  // Unary reduce: single input, single output.
+  if (!op.isSingleInputOutput())
+    return std::nullopt;
+
+  // It must reduce along at least one dimension.
+  if (op.getNumReductionLoops() == 0)
+    return std::nullopt;
+
+  auto mapRange = op.getIndexingMapsArray();
+  if (mapRange.size() != 2)
+    return std::nullopt;
+
+  // The input must be read with an identity indexing map.
+  AffineMap inputMap = mapRange.front();
+  if (!inputMap.isIdentity())
+    return std::nullopt;
+
+  // The reduction dimensions are the loops carrying a reduction iterator.
+  SmallVector<int64_t> reductionDims;
+  for (auto [idx, iter] : llvm::enumerate(op.getIteratorTypesArray()))
+    if (iter == utils::IteratorType::reduction)
+      reductionDims.push_back(idx);
+
+  // The output must be the identity map with the reduction dimensions dropped,
+  // matching the semantics of linalg.reduce.
+  AffineMap expectedOutputMap =
+      AffineMap::getMultiDimIdentityMap(inputMap.getNumDims(), op.getContext())
+          .dropResults(reductionDims);
+  if (mapRange.back() != expectedOutputMap)
+    return std::nullopt;
+
+  return reductionDims;
+}
+
+//===----------------------------------------------------------------------===//
 // Elementwise Single Unary/Binary-OpInterface implementation
 //===----------------------------------------------------------------------===//
 

@@ -840,6 +840,11 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     dimensions in the set `dims` (with `I`, `J`, and `K` treated as _sets_ of
     dim identifiers).
 
+    The elementwise operation is a multiplication and the reduction operation is
+    a summation over the reduction dimensions. The exact operations will depend
+    on the types involved (`int`, `float`, `bool`). No other operations are
+    supported.
+
     The iteration space consists of all dimensions in `I`, `J` and `H`, i.e. the
     domain of each of the `affine_map`s. Like for einsums, the iteration type of
     each dim is inferred and is either:
@@ -882,9 +887,6 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
     Numeric casting is performed on the operands to the inner multiplication,
     promoting/truncating them to the same data type as the accumulator/output.
-
-    TODO: Allow control over the combining/accumulating op and possibly the
-          multiplication op.
   }];
 
   let arguments = (ins
@@ -1251,6 +1253,9 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
 
     The iteration type of each dim is inferred.
 
+    The elementwise operation is a multiplication and the reduction operation is
+    a summation over the reduction dimensions. No other operations are supported.
+
     The input operands `A`, `B`, and `C` follow the standard contraction semantics
     together with broadcasting and transposition rules.
     See `linalg.contract` for further details.
@@ -1310,9 +1315,6 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
     ```
 
     Numeric casting promotes inputs and scales to the accumulator/output type.
-
-    TODO: Allow control over the combining/accumulating op and possibly the
-          multiplication op.
   }];
 
   let arguments = (ins
