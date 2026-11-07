@@ -1306,8 +1306,10 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   }
 
   // The visibility of a template is stored in the templated decl.
-  if (const auto *TD = dyn_cast<TemplateDecl>(ND))
-    return getVisibilityOf(TD->getTemplatedDecl(), kind);
+  if (const auto *TD = dyn_cast<TemplateDecl>(ND)) {
+    if (const NamedDecl *Templated = TD->getTemplatedDecl())
+      return getVisibilityOf(Templated, kind);
+  }
 
   return std::nullopt;
 }
