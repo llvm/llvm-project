@@ -640,13 +640,168 @@ define float @fabs_sqrt_nsz(float %a) {
   ret float %fabs
 }
 
-; The fabs can be eliminated because we're nsz and nnan.
+; TODO: The fabs could be eliminated because the sqrt is nsz and nnan, but the
+; nsz of the source is no longer folded into its known fpclass.
 define float @fabs_sqrt_nnan_nsz(float %a) {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]])
-; CHECK-NEXT:    ret float [[SQRT]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
 ;
   %sqrt = call nnan nsz float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan_nsz__no_pzero(float nofpclass(pzero) %a) {
+; CHECK-LABEL: @fabs_sqrt_nnan_nsz__no_pzero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %sqrt = call nnan nsz float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan_nsz__no_nzero(float nofpclass(nzero) %a) {
+; CHECK-LABEL: @fabs_sqrt_nnan_nsz__no_nzero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %sqrt = call nnan nsz float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+; The input denormal mode decides the sign of the zero a flushed subnormal
+; produces, and so whether the fabs can be eliminated. sqrt never returns a
+; subnormal, so the output denormal mode does not matter. The nnan is needed
+; because sqrt of a negative subnormal is a nan absent flushing. That makes the
+; nnan a false promise in the ieee nsub and sub rows, so those two only fold by
+; way of poison.
+
+define float @fabs_sqrt_nnan__psub__ieee_ieee(float nofpclass(nan inf zero nsub norm) %a) #0 {
+; CHECK-LABEL: @fabs_sqrt_nnan__psub__ieee_ieee(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__nsub__ieee_ieee(float nofpclass(nan inf zero psub norm) %a) #0 {
+; CHECK-LABEL: @fabs_sqrt_nnan__nsub__ieee_ieee(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__sub__ieee_ieee(float nofpclass(nan inf zero norm) %a) #0 {
+; CHECK-LABEL: @fabs_sqrt_nnan__sub__ieee_ieee(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__psub__ieee_daz(float nofpclass(nan inf zero nsub norm) %a) #1 {
+; CHECK-LABEL: @fabs_sqrt_nnan__psub__ieee_daz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__nsub__ieee_daz(float nofpclass(nan inf zero psub norm) %a) #1 {
+; CHECK-LABEL: @fabs_sqrt_nnan__nsub__ieee_daz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__sub__ieee_daz(float nofpclass(nan inf zero norm) %a) #1 {
+; CHECK-LABEL: @fabs_sqrt_nnan__sub__ieee_daz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__psub__ieee_dapz(float nofpclass(nan inf zero nsub norm) %a) #2 {
+; CHECK-LABEL: @fabs_sqrt_nnan__psub__ieee_dapz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__nsub__ieee_dapz(float nofpclass(nan inf zero psub norm) %a) #2 {
+; CHECK-LABEL: @fabs_sqrt_nnan__nsub__ieee_dapz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__sub__ieee_dapz(float nofpclass(nan inf zero norm) %a) #2 {
+; CHECK-LABEL: @fabs_sqrt_nnan__sub__ieee_dapz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__psub__ieee_dynamic(float nofpclass(nan inf zero nsub norm) %a) #3 {
+; CHECK-LABEL: @fabs_sqrt_nnan__psub__ieee_dynamic(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__nsub__ieee_dynamic(float nofpclass(nan inf zero psub norm) %a) #3 {
+; CHECK-LABEL: @fabs_sqrt_nnan__nsub__ieee_dynamic(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan__sub__ieee_dynamic(float nofpclass(nan inf zero norm) %a) #3 {
+; CHECK-LABEL: @fabs_sqrt_nnan__sub__ieee_dynamic(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %a)
   %fabs = call float @llvm.fabs.f32(float %sqrt)
   ret float %fabs
 }
@@ -1059,9 +1214,39 @@ define i1 @copysign_known_positive_maybe_neg0(float %unknown, float %sign) {
   ret i1 %cmp
 }
 
+; TODO: The sqrt is nsz, so the sign of a zero result could be ignored here.
 define i1 @copysign_known_positive(float %unknown, float %sign) {
 ; CHECK-LABEL: @copysign_known_positive(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan ninf nsz float @llvm.sqrt.f32(float [[SIGN:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[UNKNOWN:%.*]], float [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call ninf nnan nsz float @llvm.sqrt.f32(float %sign)
+  %copysign = call float @llvm.copysign.f32(float %unknown, float %sqrt)
+  %cmp = fcmp nnan oge float %copysign, 0.0
+  ret i1 %cmp
+}
+
+define i1 @copysign_known_positive__no_pzero(float %unknown, float nofpclass(pzero) %sign) {
+; CHECK-LABEL: @copysign_known_positive__no_pzero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan ninf nsz float @llvm.sqrt.f32(float [[SIGN:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[UNKNOWN:%.*]], float [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call ninf nnan nsz float @llvm.sqrt.f32(float %sign)
+  %copysign = call float @llvm.copysign.f32(float %unknown, float %sqrt)
+  %cmp = fcmp nnan oge float %copysign, 0.0
+  ret i1 %cmp
+}
+
+define i1 @copysign_known_positive__no_nzero(float %unknown, float nofpclass(nzero) %sign) {
+; CHECK-LABEL: @copysign_known_positive__no_nzero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan ninf nsz float @llvm.sqrt.f32(float [[SIGN:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[UNKNOWN:%.*]], float [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oge float [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sqrt = call ninf nnan nsz float @llvm.sqrt.f32(float %sign)
   %copysign = call float @llvm.copysign.f32(float %unknown, float %sqrt)
@@ -1299,3 +1484,8 @@ define <2 x float> @fabs_fmul_nan_vector(<2 x float> %x) {
   %abs2 = call <2 x float> @llvm.fabs.v2f32(<2 x float> %mul)
   ret <2 x float> %abs2
 }
+
+attributes #0 = { denormal_fpenv(ieee|ieee) }
+attributes #1 = { denormal_fpenv(ieee|preservesign) }
+attributes #2 = { denormal_fpenv(ieee|positivezero) }
+attributes #3 = { denormal_fpenv(ieee|dynamic) }

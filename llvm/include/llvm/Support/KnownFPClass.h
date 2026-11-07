@@ -508,8 +508,8 @@ public:
                                               DenormalMode Mode);
 
   /// Propagate known class for sqrt
-  LLVM_ABI static KnownFPClass
-  sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass sqrt(const KnownFPClass &Src, DenormalMode Mode,
+                                    bool MayBeNSZ);
 
   /// Propagate known class for log/log2/log10
   ///

@@ -2415,8 +2415,9 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
       "  ret float %A\n"
       "}\n");
 
+  // nsz does not make a -0.0 result poison, so it is ignored and does not
+  // refine the known class of the result.
   const FPClassTest SqrtMask = fcPosInf | fcPosNormal | fcZero | fcNan;
-  const FPClassTest NszSqrtMask = fcPosInf | fcPosNormal | fcPosZero | fcNan;
 
   {
     KnownFPClass UseInstrInfo =
@@ -2436,7 +2437,7 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     KnownFPClass UseInstrInfoNSZ =
         computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
-    EXPECT_EQ(NszSqrtMask, UseInstrInfoNSZ.getKnownFPClasses());
+    EXPECT_EQ(SqrtMask, UseInstrInfoNSZ.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.getSignBit());
 
     KnownFPClass NoUseInstrInfoNSZ =
@@ -2466,7 +2467,7 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     KnownFPClass UseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
-    EXPECT_EQ(fcPosInf | fcPosNormal | fcPosZero | fcQNan,
+    EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
               UseInstrInfoNSZNoNan.getKnownFPClasses());
     EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.getSignBit());
 
