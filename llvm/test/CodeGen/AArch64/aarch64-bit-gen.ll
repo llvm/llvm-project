@@ -207,17 +207,18 @@ define <4 x i32> @test_bit_sink_operand(<4 x i32> %src, <4 x i32> %dst, <4 x i32
 ; CHECK-SD-NEXT:  .LBB11_1: // %do.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    bit v1.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    add x10, sp, #16
-; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    bfi x10, x9, #2, #2
-; CHECK-SD-NEXT:    bfi x11, x9, #2, #2
+; CHECK-SD-NEXT:    mov w10, w9
+; CHECK-SD-NEXT:    add x11, sp, #16
+; CHECK-SD-NEXT:    bfi x11, x10, #2, #2
+; CHECK-SD-NEXT:    mov x12, sp
 ; CHECK-SD-NEXT:    add w9, w9, #1
+; CHECK-SD-NEXT:    bfi x12, x10, #2, #2
 ; CHECK-SD-NEXT:    cmp w9, #5
 ; CHECK-SD-NEXT:    str q1, [sp, #16]
-; CHECK-SD-NEXT:    str w0, [x10]
+; CHECK-SD-NEXT:    str w0, [x11]
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16]
 ; CHECK-SD-NEXT:    str q0, [sp]
-; CHECK-SD-NEXT:    str w8, [x11]
+; CHECK-SD-NEXT:    str w8, [x12]
 ; CHECK-SD-NEXT:    ldr q0, [sp]
 ; CHECK-SD-NEXT:    b.ne .LBB11_1
 ; CHECK-SD-NEXT:  // %bb.2: // %do.end
