@@ -1553,6 +1553,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   loop. `depth(k)` selects how many outermost loops to combine (default 2).
 - Fixed a crash when the statement of an OpenMP `atomic` directive contains an
   invalid expression, such as `0--;`. (#GH107979)
+- Fixed a crash on a task reduction of an array whose `declare reduction` has
+  no `initializer` clause. (#GH141228)
 - Canonicalize intra-tiles in loop tiling. `#pragma omp tile` still emits a
   min-bounded inner loop, which vectorizes well. When a parent directive such as
   `for collapse(n)` needs a constant per-tile trip count, Clang rereads a
