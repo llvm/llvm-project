@@ -50,6 +50,56 @@ std::unique_ptr<MCContext> createMCContext(const MCAsmInfo &AsmInfo) {
                                      false);
 }
 
+TEST(MachineInstrTest, HasImplicitDefWithMetadata) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  auto *MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  MI->addOperand(*MF, MachineOperand::CreateMetadata(MDNode::get(Ctx, {})));
+  MI->addOperand(*MF, MachineOperand::CreateReg(Register::index2VirtReg(0),
+                                                /*isDef=*/false,
+                                                /*isImp=*/true));
+  EXPECT_FALSE(MI->hasImplicitDef());
+
+  MI->addOperand(*MF, MachineOperand::CreateReg(Register::index2VirtReg(1),
+                                                /*isDef=*/true,
+                                                /*isImp=*/true));
+  EXPECT_TRUE(MI->hasImplicitDef());
+}
+
+TEST(MachineInstrTest, CommuteWithMetadataAndImplicitDef) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  struct {
+    MCInstrDesc MCID;
+    MCOperandInfo OpInfo[3];
+  } Table = {{0, 3, 1, 0, 0, 0, 0, 0, 0, 1ULL << MCID::Commutable, 0},
+             {{0, 0, MCOI::OPERAND_REGISTER, 0},
+              {0, 0, MCOI::OPERAND_REGISTER, MCOI_TIED_TO(0)},
+              {0, 0, MCOI::OPERAND_REGISTER, 0}}};
+  Register Reg0 = Register::index2VirtReg(0);
+  Register Reg1 = Register::index2VirtReg(1);
+  auto *MI = MF->CreateMachineInstr(Table.MCID, DebugLoc());
+  MI->addOperand(*MF, MachineOperand::CreateReg(Reg0, /*isDef=*/true));
+  MI->addOperand(*MF, MachineOperand::CreateReg(Reg0, /*isDef=*/false));
+  MI->addOperand(*MF, MachineOperand::CreateReg(Reg1, /*isDef=*/false));
+  auto *Metadata = MDNode::get(Ctx, {});
+  MI->addOperand(*MF, MachineOperand::CreateMetadata(Metadata));
+  MI->addOperand(*MF, MachineOperand::CreateReg(Reg0, /*isDef=*/true,
+                                                /*isImp=*/true));
+
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  auto *Commuted = TII->commuteInstruction(*MI, /*NewMI=*/false, 1, 2);
+  ASSERT_EQ(Commuted, MI);
+  EXPECT_EQ(MI->getOperand(0).getReg(), Reg1);
+  EXPECT_EQ(MI->getOperand(1).getReg(), Reg1);
+  EXPECT_EQ(MI->getOperand(2).getReg(), Reg0);
+  EXPECT_EQ(MI->getOperand(3).getMetadata(), Metadata);
+  EXPECT_EQ(MI->getOperand(4).getReg(), Reg1);
+}
+
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly
 // for various combinations of IgnoreDefs, and also that it is symmetrical.
 TEST(IsIdenticalToTest, DifferentDefs) {
