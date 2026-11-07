@@ -62,8 +62,13 @@ MCOPT(bool, X86Sse2Avx)
 MCOPT(bool, DisableIntegratedAS)
 MCOPT(RelocSectionSymType, RelocSectionSym)
 MCOPT(bool, LargeEHEncoding)
-MCSTROPT(ABIName)
 MCSTROPT(AsSecureLogFile)
+
+static cl::opt<std::string> *ABINameView;
+StringRef llvm::mc::getABIName(const cl::LibraryOptionsContext &) {
+  assert(ABINameView && "RegisterMCTargetOptionsFlags not created.");
+  return *ABINameView;
+}
 
 llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
 #define MCBINDOPT(NAME)                                                        \
@@ -212,7 +217,8 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
 #undef MCBINDOPT
 }
 
-MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
+MCTargetOptions
+llvm::mc::getMCTargetOptions(const cl::LibraryOptionsContext &C) {
   MCTargetOptions Options;
   Options.MCRelaxAll = getRelaxAll();
   Options.MCIncrementalLinkerCompatible = getIncrementalLinkerCompatible();
@@ -220,7 +226,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.Dwarf64 = getDwarf64();
   Options.DwarfVersion = getDwarfVersion();
   Options.ShowMCInst = getShowMCInst();
-  Options.ABIName = getABIName();
+  Options.ABIName = getABIName(C);
   Options.MCFatalWarnings = getFatalWarnings();
   Options.MCNoWarn = getNoWarn();
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();

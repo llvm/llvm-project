@@ -717,7 +717,7 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
-      RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
+      RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
                          TM.getTargetTriple().getDefaultFloatABI(),
                          TM.getTargetTriple().getDefaultLongDoubleFormat(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
@@ -1055,19 +1055,6 @@ EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
   assert(ShiftVT.getSizeInBits() >= Log2_32_Ceil(LHSTy.getSizeInBits()) &&
          "ShiftVT is still too small!");
   return ShiftVT;
-}
-
-bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
-  assert(isTypeLegal(VT));
-  switch (Op) {
-  default:
-    return false;
-  case ISD::SDIV:
-  case ISD::UDIV:
-  case ISD::SREM:
-  case ISD::UREM:
-    return true;
-  }
 }
 
 bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,

@@ -38,6 +38,10 @@ class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
+namespace AMDGPU {
+enum class AsyncStages : uint32_t;
+} // namespace AMDGPU
+
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
 
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
@@ -63,6 +67,13 @@ struct V2PhysSCopyInfo {
 /// never written to by other threads.
 static const MachineMemOperand::Flags MOThreadPrivate =
     MachineMemOperand::MOTargetFlag4;
+
+/// Use two MMO flags to encode the 2-bit cache fill size field for GFX13+
+static const MachineMemOperand::Flags MOCFSB0 =
+    MachineMemOperand::MOTargetFlag5;
+
+static const MachineMemOperand::Flags MOCFSB1 =
+    MachineMemOperand::MOTargetFlag6;
 
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
@@ -868,6 +879,24 @@ public:
            Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   }
 
+  bool isNonAsyncLdsDmaWrite(const MachineInstr &MI) const {
+    return mayWriteLDSThroughDMA(MI) && !isAsync(MI);
+  }
+
+  /// \returns true if \p MI creates an async operation.
+  bool isAsync(const MachineInstr &MI) const {
+    if (!isLDSDMA(MI))
+      return false;
+    if (usesASYNC_CNT(MI) || usesTENSOR_CNT(MI))
+      return true;
+    const MachineOperand *Async = getNamedOperand(MI, AMDGPU::OpName::IsAsync);
+    return Async && (Async->getImm());
+  }
+
+  /// \returns the asyncmark stage that the async operation initiated by \p MI
+  /// belongs to, or no stage if \p MI does not initiate an async operation.
+  AMDGPU::AsyncStages getAsyncStage(const MachineInstr &MI) const;
+
   static bool isSBarrierSCCWrite(unsigned Opcode) {
     return Opcode == AMDGPU::S_BARRIER_LEAVE ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
@@ -1568,13 +1597,6 @@ public:
   isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
                                    const MachineInstr &MI, unsigned SrcN,
                                    const MachineOperand *MO = nullptr) const;
-
-  /// Check if \p MI has legal GFX950 v_pk_fma op_sel.
-  bool isLegalPkFMAF32OpSel(const MachineInstr &MI) const;
-
-  /// Decompose a GFX950 v_pk_fma_f32 with invalid op_sel into two independent
-  /// scalar V_FMA_F32_e64 instructions, replacing \p MI.
-  void decomposePkFMAF32(MachineInstr &MI, MachineRegisterInfo &MRI) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.

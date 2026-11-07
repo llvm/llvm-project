@@ -25,6 +25,10 @@ enum class RelocSectionSymType;
 enum class EmitDwarfUnwindType;
 class StringRef;
 
+namespace cl {
+class LibraryOptionsContext;
+}
+
 namespace mc {
 
 LLVM_ABI bool getRelaxAll();
@@ -70,7 +74,7 @@ LLVM_ABI RelocSectionSymType getRelocSectionSym();
 
 LLVM_ABI bool getLargeEHEncoding();
 
-LLVM_ABI StringRef getABIName();
+LLVM_ABI StringRef getABIName(const cl::LibraryOptionsContext &C);
 
 LLVM_ABI StringRef getAsSecureLogFile();
 
@@ -80,7 +84,7 @@ struct RegisterMCTargetOptionsFlags {
   LLVM_ABI RegisterMCTargetOptionsFlags();
 };
 
-LLVM_ABI MCTargetOptions InitMCTargetOptionsFromFlags();
+LLVM_ABI MCTargetOptions getMCTargetOptions(const cl::LibraryOptionsContext &C);
 
 } // namespace mc
 

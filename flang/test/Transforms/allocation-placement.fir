@@ -63,6 +63,30 @@ func.func @big_temp_alloca() {
   return
 }
 
+// A requested alignment survives heap-to-stack ...
+// CHECK-LABEL: func.func @small_temp_aligned
+// CHECK: fir.alloca !fir.array<10xi32> <{alignment = 64 : i64}>
+// CHECK-NOT: fir.allocmem
+func.func @small_temp_aligned() {
+  %0 = fir.allocmem !fir.array<10xi32> {alignment = 64 : i64}
+  %c0 = arith.constant 0 : index
+  %v = arith.constant 0 : i32
+  %r = fir.convert %0 : (!fir.heap<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
+  %e = fir.coordinate_of %r, %c0 : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+  fir.store %v to %e : !fir.ref<i32>
+  fir.freemem %0 : !fir.heap<!fir.array<10xi32>>
+  return
+}
+
+// ... and stack-to-heap.
+// CHECK-LABEL: func.func @big_temp_alloca_aligned
+// CHECK: fir.allocmem !fir.array<100xi32> <{alignment = 64 : i64
+// CHECK: fir.freemem
+func.func @big_temp_alloca_aligned() {
+  %0 = fir.alloca !fir.array<100xi32> {alignment = 64 : i64}
+  return
+}
+
 // Runtime-sized user variable (automatic array) -> heap.
 // CHECK-LABEL: func.func @dyn_user
 // CHECK: fir.allocmem !fir.array<?xi32>
@@ -78,6 +102,63 @@ func.func @dyn_user(%n: index) {
 func.func @dyn_temp(%n: index) {
   %0 = fir.allocmem !fir.array<?xi32>, %n
   fir.freemem %0 : !fir.heap<!fir.array<?xi32>>
+  return
+}
+
+// Small constant-length scalar character temporary (as created by the
+// inlining of TRIM) -> stack, like a small constant-size array.
+// CHECK-LABEL: func.func @small_char_temp
+// CHECK: fir.alloca !fir.char<1,8>
+// CHECK-NOT: fir.allocmem
+func.func @small_char_temp() {
+  %0 = fir.allocmem !fir.char<1,8>
+  %c0 = arith.constant 0 : index
+  %v = arith.constant 32 : i8
+  %r = fir.convert %0 : (!fir.heap<!fir.char<1,8>>) -> !fir.ref<!fir.array<8xi8>>
+  %e = fir.coordinate_of %r, %c0 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
+  fir.store %v to %e : !fir.ref<i8>
+  fir.freemem %0 : !fir.heap<!fir.char<1,8>>
+  return
+}
+
+// Big constant-length scalar character temporary -> stays on the heap.
+// CHECK-LABEL: func.func @big_char_temp
+// CHECK: fir.allocmem !fir.char<1,100>
+// CHECK: fir.freemem
+func.func @big_char_temp() {
+  %0 = fir.allocmem !fir.char<1,100>
+  fir.freemem %0 : !fir.heap<!fir.char<1,100>>
+  return
+}
+
+// The size accounts for the character kind: 20 characters of kind 4 are 80
+// bytes, above the 64-byte threshold -> stays on the heap.
+// CHECK-LABEL: func.func @big_char4_temp
+// CHECK: fir.allocmem !fir.char<4,20>
+// CHECK: fir.freemem
+func.func @big_char4_temp() {
+  %0 = fir.allocmem !fir.char<4,20>
+  fir.freemem %0 : !fir.heap<!fir.char<4,20>>
+  return
+}
+
+// Runtime-length scalar character temporary -> stays on the heap.
+// CHECK-LABEL: func.func @dyn_char_temp
+// CHECK: fir.allocmem !fir.char<1,?>
+// CHECK: fir.freemem
+func.func @dyn_char_temp(%len: index) {
+  %0 = fir.allocmem !fir.char<1,?>(%len : index)
+  fir.freemem %0 : !fir.heap<!fir.char<1,?>>
+  return
+}
+
+// Small scalar character stack temporary -> left alone; only arrays and
+// heap-allocated characters are placed.
+// CHECK-LABEL: func.func @char_temp_alloca
+// CHECK: fir.alloca !fir.char<1,100>
+// CHECK-NOT: fir.allocmem
+func.func @char_temp_alloca() {
+  %0 = fir.alloca !fir.char<1,100>
   return
 }
 
