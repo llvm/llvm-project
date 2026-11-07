@@ -10342,9 +10342,12 @@ class InstructionsCompatibilityAnalysis {
   /// lanes are inserted into it. A single-index scalar GEP is supported: the
   /// copyable lanes are modeled as zero-index GEPs of the lane values
   /// themselves. A scalar zext is supported: the copyable lanes are constants
-  /// modeled as zexts of truncated constants.
+  /// modeled as zexts of truncated constants. A freeze is supported: the
+  /// copyable lanes are modeled as freezes of the lane values, which refine
+  /// them.
   static bool isSupportedMainOp(Instruction *I) {
-    return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I) ||
+    return isSupportedOpcode(I->getOpcode()) ||
+           isa<MinMaxIntrinsic, FreezeInst>(I) ||
            RecurrenceDescriptor::isFMulAddIntrinsic(I) ||
            (isa<ExtractElementInst>(I) && isVectorLikeInstWithConstOps(I) &&
             isa<FixedVectorType>(I->getOperand(0)->getType())) ||
@@ -10587,6 +10590,9 @@ class InstructionsCompatibilityAnalysis {
     if (MainOpcode == Instruction::ZExt)
       return {ConstantExpr::getTrunc(cast<Constant>(V),
                                      cast<CastInst>(MainOp)->getSrcTy())};
+    // freeze(V) refines V.
+    if (MainOpcode == Instruction::Freeze)
+      return {V};
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
     Type *Ty = V->getType();
     if (PoisonPlaceholder &&
@@ -11264,11 +11270,12 @@ public:
           Candidates.emplace_back(V1, (I1 || I2) ? V2 : V1);
         };
     if (VL.size() == 2) {
-      // The operand-pairing heuristic below does not apply to calls, GEPs
-      // and casts; defer to the full tree cost computation instead of
+      // The operand-pairing heuristic below does not apply to calls, GEPs,
+      // casts and freezes; defer to the full tree cost computation instead of
       // pre-rejecting here.
       if (MainOpcode == Instruction::Call ||
-          MainOpcode == Instruction::GetElementPtr || isa<CastInst>(MainOp))
+          MainOpcode == Instruction::GetElementPtr ||
+          isa<CastInst, FreezeInst>(MainOp))
         return S;
       // Check if the operands allow better vectorization.
       SmallVector<std::pair<Value *, Value *>, 4> Candidates1, Candidates2;
@@ -11322,10 +11329,10 @@ public:
         return OrigS;
       return S;
     }
-    // Casts are the only 1-operand and fma/fmuladd are the only 3-operand
-    // copyables.
+    // Casts and freezes are the only 1-operand and fma/fmuladd are the only
+    // 3-operand copyables.
     assert((Operands.size() == 2 ||
-            (Operands.size() == 1 && isa<CastInst>(MainOp)) ||
+            (Operands.size() == 1 && isa<CastInst, FreezeInst>(MainOp)) ||
             (Operands.size() == 3 && isFMAOrFMulAdd(MainOp))) &&
            "Unexpected number of operands!");
     if (CopyableNum < VL.size() / 2)
@@ -11390,7 +11397,7 @@ public:
       return OrigS;
     // Check the operand holding the copyable values.
     if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
-      if (Operands.size() == 2)
+      if (!isFMAOrFMulAdd(MainOp))
         return OrigS;
       // Retry with the copyable modeled as the first multiplicand.
       S.setCopyableOpIdx(0);
