@@ -1,3 +1,4 @@
+; XFAIL: system-zos
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json

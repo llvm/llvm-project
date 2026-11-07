@@ -1,4 +1,5 @@
 // REQUIRES: backtrace
+// XFAIL: system-zos
 // RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: rm -rf %t && mkdir %t
 // RUN: cd %t

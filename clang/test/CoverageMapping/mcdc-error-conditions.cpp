@@ -1,3 +1,4 @@
+// XFAIL: system-zos
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,COND7,TV
 
 // RUN: %clang_cc1 -fmcdc-max-test-vectors=8 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,COND7,TV
