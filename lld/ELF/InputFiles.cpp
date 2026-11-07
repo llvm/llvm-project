@@ -1053,8 +1053,9 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
       return void(err(place) << "program property is too short");
     uint32_t type = read32<ELFT::Endianness>(desc.data());
     uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
+    uint64_t paddedSize = alignTo(uint64_t(size), ELFT::Is64Bits ? 8 : 4);
     desc = desc.slice(8);
-    if (desc.size() < size)
+    if (desc.size() < paddedSize)
       return void(err(place) << "program property is too short");
 
     if (type == featureAndType) {
@@ -1083,8 +1084,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
           support::endian::read64<ELFT::Endianness>(&desc[8])};
     }
 
-    // Padding is present in the note descriptor, if necessary.
-    desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
+    desc = desc.slice(paddedSize);
   }
 }
 // Read the following info from the .note.gnu.property section and write it to

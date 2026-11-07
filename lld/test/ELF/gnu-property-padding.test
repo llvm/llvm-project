@@ -1,0 +1,40 @@
+## The four-byte AArch64 BTI property needs four padding bytes inside the
+## descriptor, even when the enclosing note is padded.
+# RUN: yaml2obj %s -DDESC=000000C0040000000100000000 -o %t.o
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SHORT
+# RUN: yaml2obj %s -DDESC=000000C0040000000100000000000000 -o %t.o
+# RUN: ld.lld -r %t.o -o %t.ro
+# RUN: llvm-readelf -n %t.ro | FileCheck %s --check-prefix=BTI
+# BTI: Properties: aarch64 feature: BTI
+
+## An x86-64 IBT property with no padding is also truncated.
+# RUN: yaml2obj %s -DMACHINE=X86_64 -DDESC=020000C00400000001000000 -o %t.o
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SHORT
+# SHORT: error: {{.*}}.o:(.note.gnu.property+0x10): program property is too short
+
+## On i386 the same IBT property needs no padding. Diagnose the next property,
+## whose single byte of data must be padded to four bytes.
+# RUN: yaml2obj %s -DBITS=32 -DMACHINE=386 -DALIGN=4 \
+# RUN:   -DDESC=020000C00400000001000000000000E001000000AB -o %t.o
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SECOND
+# SECOND: error: {{.*}}.o:(.note.gnu.property+0x1c): program property is too short
+
+## Rounding a pr_datasz of UINT32_MAX up to the next boundary takes 33 bits.
+# RUN: yaml2obj %s -DDESC=000000E0FFFFFFFF -o %t.o
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=SHORT
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS=64]]
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_[[MACHINE=AARCH64]]
+Sections:
+  - Name:         .note.gnu.property
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: [[ALIGN=8]]
+    Notes:
+      - Name: GNU
+        Type: NT_GNU_PROPERTY_TYPE_0
+        Desc: '[[DESC]]'
