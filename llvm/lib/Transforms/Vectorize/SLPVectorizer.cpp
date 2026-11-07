@@ -23952,6 +23952,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     }
   };
   if (!ExtractShuffles.empty() || !GatherShuffles.empty()) {
+    const bool HasUndefScalars = any_of(E->Scalars, [](Value *V) {
+      return isa<UndefValue>(V) && !isa<PoisonValue>(V);
+    });
+    auto IsNotPoisonedVector = [&](Value *Vec) {
+      return !HasUndefScalars || isGuaranteedNotToBePoison(Vec, AC);
+    };
     bool IsNonPoisoned = true;
     bool IsUsedInExpr = true;
     Value *Vec1 = nullptr;
@@ -23988,11 +23994,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
       if (Vec2) {
         IsUsedInExpr = false;
-        IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1, AC) &&
-                         isGuaranteedNotToBePoison(Vec2, AC);
+        IsNonPoisoned &= IsNotPoisonedVector(Vec1) && IsNotPoisonedVector(Vec2);
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
-        bool IsNotPoisonedVec = isGuaranteedNotToBePoison(Vec1, AC);
+        bool IsNotPoisonedVec = IsNotPoisonedVector(Vec1);
         IsUsedInExpr &= FindReusedSplat(
             ExtractMask,
             cast<FixedVectorType>(Vec1->getType())->getNumElements(), 0,
@@ -24027,7 +24032,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         if (TEs.size() == 1) {
           bool IsNotPoisonedVec =
               TEs.front()->VectorizedValue
-                  ? isGuaranteedNotToBePoison(TEs.front()->VectorizedValue, AC)
+                  ? IsNotPoisonedVector(TEs.front()->VectorizedValue)
                   : true;
           IsUsedInExpr &=
               FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I,
@@ -24039,8 +24044,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
           ShuffleBuilder.add(*TEs.front(), *TEs.back(), VecMask);
           if (TEs.front()->VectorizedValue && TEs.back()->VectorizedValue)
             IsNonPoisoned &=
-                isGuaranteedNotToBePoison(TEs.front()->VectorizedValue, AC) &&
-                isGuaranteedNotToBePoison(TEs.back()->VectorizedValue, AC);
+                IsNotPoisonedVector(TEs.front()->VectorizedValue) &&
+                IsNotPoisonedVector(TEs.back()->VectorizedValue);
         }
       }
     }
