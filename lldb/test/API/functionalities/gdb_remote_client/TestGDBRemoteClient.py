@@ -289,6 +289,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         class MyResponder(MockGDBServerResponder):
             def __init__(self, *args, **kwargs):
                 self.started = False
+                self.halt_reason_queries = 0
                 return super().__init__(*args, **kwargs)
 
             def qC(self):
@@ -310,6 +311,10 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
                 self.started = True
                 return "T13"
 
+            def haltReason(self):
+                self.halt_reason_queries += 1
+                return "S02"
+
             def A(self, packet):
                 return "E28"
 
@@ -322,6 +327,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateConnected]
         )
+        self.server.responder.halt_reason_queries = 0
 
         process = target.Launch(
             lldb.SBListener(),
@@ -337,6 +343,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         )  # error
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
+        self.assertEqual(self.server.responder.halt_reason_queries, 0)
 
         self.assertPacketLogReceived(
             ["vRun;%s;61726731;61726732;61726733" % (exe_hex,)]
