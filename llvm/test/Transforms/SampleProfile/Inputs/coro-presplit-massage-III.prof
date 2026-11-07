@@ -1,0 +1,18 @@
+_Z9coro_loopv.resume:30000:518
+ 0: 503
+ 0.6: 0
+ 2.3: 0
+ 4: 513
+ 4.3: 513
+ 5: 503
+ 6.1: 5030
+ 7: 5030
+ 8.3: 503
+ 10: 0
+ 10.3: 0
+ 2.3: _Z17sync_await_resumeP9awaitable:0
+  1: 0
+ 4: _Z9coro_loopv.__await_suspend_wrapper__async_loop:22000
+  1: 513
+ 10: _Z9coro_loopv.__await_suspend_wrapper__sync2:0
+  1: 0

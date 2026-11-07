@@ -748,6 +748,11 @@ public:
   /// Don't read profile without context if the flag is set.
   void setSkipFlatProf(bool Skip) { SkipFlatProf = Skip; }
 
+  /// When reading the samplePGO profiles of a pre-split coroutine function,
+  /// also read the profiles of the .resume function and the await-suspend
+  /// wrappers.
+  void setReadCoroutineProfiles(bool Read) { ReadCoroutineProfiles = Read; }
+
   /// Return whether any name in the profile contains ".__uniq." suffix.
   virtual bool hasUniqSuffix() { return false; }
 
@@ -867,6 +872,10 @@ protected:
   /// If SkipFlatProf is true, skip functions marked with !Flat in text mode or
   /// sections with SecFlagFlat flag in ExtBinary mode.
   bool SkipFlatProf = false;
+
+  /// Whether to read the profiles of the post-CoroSplit functions and the
+  /// await-suspend wrappers of the pre-split coroutines functions.
+  bool ReadCoroutineProfiles = false;
 };
 
 class LLVM_ABI SampleProfileReaderText : public SampleProfileReader {
