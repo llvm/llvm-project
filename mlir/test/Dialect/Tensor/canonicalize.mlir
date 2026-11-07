@@ -3298,3 +3298,30 @@ func.func @splat_dynamic_size_mixed(%v: f32, %m: index) -> tensor<?x?xf32> {
   %0 = tensor.splat %v[%m, %c4] : tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @nested_concats(
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<2xi32>,
+// CHECK-SAME:      %[[ARG1:.*]]: tensor<3xi32>,
+// CHECK-SAME:      %[[ARG2:.*]]: tensor<5xi32>) -> tensor<10xi32> {
+// CHECK:           %[[CONCAT:.*]] = tensor.concat dim(0) %[[ARG0]], %[[ARG1]], %[[ARG2]] : (tensor<2xi32>, tensor<3xi32>, tensor<5xi32>) -> tensor<10xi32>
+// CHECK:           return %[[CONCAT]] : tensor<10xi32>
+// CHECK:         }
+func.func @nested_concats(%arg0: tensor<2xi32>, %arg1: tensor<3xi32>, %arg2: tensor<5xi32>) -> tensor<10xi32> {
+  %0 = tensor.concat dim(0) %arg0, %arg1 : (tensor<2xi32>, tensor<3xi32>) -> tensor<5xi32>
+  %1 = tensor.concat dim(0) %0, %arg2 : (tensor<5xi32>, tensor<5xi32>) -> tensor<10xi32>
+  return %1 : tensor<10xi32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @nested_concats_different_dims(
+// CHECK:           tensor.concat dim(1)
+// CHECK:           tensor.concat dim(0)
+// CHECK:         }
+func.func @nested_concats_different_dims(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2xf32>) -> tensor<4x4xf32> {
+  %0 = tensor.concat dim(1) %arg0, %arg1 : (tensor<2x2xf32>, tensor<2x2xf32>) -> tensor<2x4xf32>
+  %1 = tensor.concat dim(0) %0, %0 : (tensor<2x4xf32>, tensor<2x4xf32>) -> tensor<4x4xf32>
+  return %1 : tensor<4x4xf32>
+}
