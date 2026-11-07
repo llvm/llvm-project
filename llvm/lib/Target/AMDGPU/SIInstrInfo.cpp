@@ -9009,7 +9009,10 @@ void SIInstrInfo::moveToVALUImpl(
         return;
       } else if (RI.getMatchingSuperRegClass(SrcRegRC, NewDstRC,
                                              AMDGPU::lo16)) {
-        Inst.getOperand(1).setSubReg(AMDGPU::lo16);
+        MachineOperand &SrcOp = Inst.getOperand(1);
+        unsigned SubReg = SrcOp.getSubReg();
+        if (!SubReg || RI.getSubRegIdxSize(SubReg) > 16)
+          SrcOp.setSubReg(RI.composeSubRegIndices(SubReg, AMDGPU::lo16));
         Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
         MRI.replaceRegWith(DstReg, NewDstReg);
         addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
