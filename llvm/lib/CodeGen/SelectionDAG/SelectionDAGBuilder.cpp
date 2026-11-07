@@ -345,6 +345,51 @@ static void ensureMatchedVecRegParts(unsigned NumRegs, unsigned NumParts,
       " RegisterVT, " + PartVT.getString() + " PartVT");
 }
 
+namespace {
+struct VectorTypeBreakdown {
+  EVT IntermediateVT;
+  unsigned NumIntermediates;
+  MVT RegisterVT;
+  unsigned NumRegs;
+
+  VectorTypeBreakdown(SelectionDAG &DAG, EVT ValueVT,
+                      std::optional<CallingConv::ID> CallConv = std::nullopt) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (CallConv) {
+      NumRegs = TLI.getVectorTypeBreakdownForCallingConv(
+          *DAG.getContext(), *CallConv, ValueVT, IntermediateVT,
+          NumIntermediates, RegisterVT);
+    } else {
+      NumRegs =
+          TLI.getVectorTypeBreakdown(*DAG.getContext(), ValueVT, IntermediateVT,
+                                     NumIntermediates, RegisterVT);
+    }
+  }
+
+  EVT getVectorType(LLVMContext &Context) const {
+    ElementCount EltCount =
+        IntermediateVT.isVector()
+            ? IntermediateVT.getVectorElementCount() * NumIntermediates
+            : ElementCount::getFixed(NumIntermediates);
+    return EVT::getVectorVT(Context, IntermediateVT.getScalarType(), EltCount);
+  }
+};
+} // namespace
+
+// Use a legal intermediate vector only if its bit width matches the ABI type.
+// E.g. promote <4 x i63> to <4 x i64>, then bitcast to <8 x i32>.
+static EVT getBitcastCompatibleLegalBreakdown(SelectionDAG &DAG, EVT ValueVT,
+                                              EVT ABIVectorVT) {
+  if (ValueVT.isScalableVector())
+    return ABIVectorVT;
+
+  EVT LegalVectorVT =
+      VectorTypeBreakdown(DAG, ValueVT).getVectorType(*DAG.getContext());
+  return LegalVectorVT.getSizeInBits() == ABIVectorVT.getSizeInBits()
+             ? LegalVectorVT
+             : ABIVectorVT;
+}
+
 /// getCopyFromPartsVector - Create a value that contains the specified legal
 /// parts combined into the value they represent.  If the parts combine to a
 /// type larger than ValueVT then AssertOp can be used to specify whether the
@@ -357,27 +402,14 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       std::optional<CallingConv::ID> CallConv) {
   assert(ValueVT.isVector() && "Not a vector value");
   assert(NumParts > 0 && "No parts to assemble!");
-  const bool IsABIRegCopy = CallConv.has_value();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Val = Parts[0];
 
   // Handle a multi-element vector.
   if (NumParts > 1) {
-    EVT IntermediateVT;
-    MVT RegisterVT;
-    unsigned NumIntermediates;
-    unsigned NumRegs;
-
-    if (IsABIRegCopy) {
-      NumRegs = TLI.getVectorTypeBreakdownForCallingConv(
-          *DAG.getContext(), *CallConv, ValueVT, IntermediateVT,
-          NumIntermediates, RegisterVT);
-    } else {
-      NumRegs =
-          TLI.getVectorTypeBreakdown(*DAG.getContext(), ValueVT, IntermediateVT,
-                                     NumIntermediates, RegisterVT);
-    }
+    auto [IntermediateVT, NumIntermediates, RegisterVT, NumRegs] =
+        VectorTypeBreakdown(DAG, ValueVT, CallConv);
 
     ensureMatchedVecRegParts(NumRegs, NumParts, RegisterVT, PartVT);
     assert(RegisterVT.getSizeInBits() ==
@@ -768,33 +800,19 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   }
 
   // Handle a multi-element vector.
-  EVT IntermediateVT;
-  MVT RegisterVT;
-  unsigned NumIntermediates;
-  unsigned NumRegs;
-  if (IsABIRegCopy) {
-    NumRegs = TLI.getVectorTypeBreakdownForCallingConv(
-        *DAG.getContext(), *CallConv, ValueVT, IntermediateVT, NumIntermediates,
-        RegisterVT);
-  } else {
-    NumRegs =
-        TLI.getVectorTypeBreakdown(*DAG.getContext(), ValueVT, IntermediateVT,
-                                   NumIntermediates, RegisterVT);
-  }
+  VectorTypeBreakdown Breakdown(DAG, ValueVT, CallConv);
+  const auto &[IntermediateVT, NumIntermediates, RegisterVT, NumRegs] =
+      Breakdown;
 
   ensureMatchedVecRegParts(NumRegs, NumParts, RegisterVT, PartVT);
   assert(IntermediateVT.isScalableVector() == ValueVT.isScalableVector() &&
          "Mixing scalable and fixed vectors when copying in parts");
 
-  std::optional<ElementCount> DestEltCnt;
-
-  if (IntermediateVT.isVector())
-    DestEltCnt = IntermediateVT.getVectorElementCount() * NumIntermediates;
-  else
-    DestEltCnt = ElementCount::getFixed(NumIntermediates);
-
-  EVT BuiltVectorTy = EVT::getVectorVT(
-      *DAG.getContext(), IntermediateVT.getScalarType(), *DestEltCnt);
+  EVT ABIBuiltVectorTy = Breakdown.getVectorType(*DAG.getContext());
+  EVT BuiltVectorTy = ABIBuiltVectorTy;
+  if (IsABIRegCopy)
+    BuiltVectorTy =
+        getBitcastCompatibleLegalBreakdown(DAG, ValueVT, ABIBuiltVectorTy);
 
   if (ValueVT == BuiltVectorTy) {
     // Nothing to do.
@@ -817,6 +835,9 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   }
 
   assert(Val.getValueType() == BuiltVectorTy && "Unexpected vector value type");
+
+  if (BuiltVectorTy != ABIBuiltVectorTy)
+    Val = DAG.getNode(ISD::BITCAST, DL, ABIBuiltVectorTy, Val);
 
   // Split the vector into intermediate operands.
   SmallVector<SDValue, 8> Ops(NumIntermediates);
