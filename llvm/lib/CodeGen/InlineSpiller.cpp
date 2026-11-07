@@ -214,7 +214,8 @@ private:
   bool isRegToSpill(Register Reg) { return is_contained(RegsToSpill, Reg); }
 
   bool isSibling(Register Reg);
-  bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
+  bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI,
+                          LaneBitmask KeepLanes);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
 
   void markValueUsed(LiveInterval *, VNInfo *);
@@ -256,6 +257,20 @@ llvm::createInlineSpiller(const InlineSpiller::RequiredAnalyses &Analyses,
 //
 // This minimizes register pressure and maximizes the store-to-load distance for
 // spill slots which can be important in tight loops.
+
+/// Return the lanes of \p LI that are live at \p Idx. A lane without a
+/// subrange is not live.
+static LaneBitmask getLiveLanesAt(const LiveInterval &LI, SlotIndex Idx,
+                                  const MachineRegisterInfo &MRI) {
+  if (!LI.hasSubRanges())
+    return LI.liveAt(Idx) ? MRI.getMaxLaneMaskForVReg(LI.reg())
+                          : LaneBitmask::getNone();
+  LaneBitmask Lanes;
+  for (const LiveInterval::SubRange &SR : LI.subranges())
+    if (SR.liveAt(Idx))
+      Lanes |= SR.LaneMask;
+  return Lanes;
+}
 
 /// isFullCopyOf - If MI is a COPY to or from Reg, return the other register,
 /// otherwise return 0.
@@ -439,7 +454,8 @@ bool InlineSpiller::isSibling(Register Reg) {
 /// This hoist only helps when the copy kills its source.
 ///
 bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
-                                       MachineInstr &CopyMI) {
+                                       MachineInstr &CopyMI,
+                                       LaneBitmask KeepLanes) {
   SlotIndex Idx = LIS.getInstructionIndex(CopyMI);
 #ifndef NDEBUG
   VNInfo *VNI = SpillLI.getVNInfoAt(Idx.getRegSlot());
@@ -452,6 +468,12 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   LiveQueryResult SrcQ = SrcLI.Query(Idx);
   MachineBasicBlock *DefMBB = LIS.getMBBFromIndex(SrcVNI->def);
   if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
+    return false;
+
+  // The store below writes every lane of SrcReg. The lanes of the slot in
+  // KeepLanes must be preserved, so SrcReg has to hold them where it is
+  // stored.
+  if ((KeepLanes & ~getLiveLanesAt(SrcLI, SrcVNI->def, MRI)).any())
     return false;
 
   MachineBasicBlock *MBB = DefMBB;
@@ -1351,6 +1373,27 @@ void InlineSpiller::spillAroundUses(Register Reg) {
 
     // Check for a sibling copy.
     Register SibReg = isCopyOfBundle(MI, Reg, TII);
+
+    // A split copy can define only some lanes of a sibling, e.g.
+    //   undef %new.sub2_sub3 = COPY %sib.sub2_sub3
+    // The other lanes of %new are undefined, but the slot is shared by all
+    // siblings. If the original value is still live in those lanes, the slot
+    // holds them for a later reload, and a full-width store of %new would
+    // overwrite them. Reload the slot first so that the store after the copy
+    // writes those lanes back unchanged.
+    LaneBitmask KeepLanes;
+    if (SibReg && isSibling(SibReg) && RI.Writes && !RI.Reads &&
+        StackInt->liveAt(Idx.getBaseIndex())) {
+      for (const auto &[DefMI, OpIdx] : Ops) {
+        const MachineOperand &MO = DefMI->getOperand(OpIdx);
+        if (MO.isDef() && !MO.isDead() && MO.getSubReg() && MO.isUndef())
+          KeepLanes |= MRI.getMaxLaneMaskForVReg(Reg) &
+                       ~TRI.getSubRegIndexLaneMask(MO.getSubReg());
+      }
+      KeepLanes &= getLiveLanesAt(LIS.getInterval(Original), Idx, MRI);
+    }
+    bool PartialSplitDef = KeepLanes.any();
+
     if (SibReg && isSibling(SibReg)) {
       // This may actually be a copy between snippets.
       if (isRegToSpill(SibReg)) {
@@ -1359,7 +1402,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
         continue;
       }
       if (RI.Writes) {
-        if (hoistSpillInsideBB(OldLI, MI)) {
+        if (hoistSpillInsideBB(OldLI, MI, KeepLanes)) {
           // This COPY is now dead, the value is already in the stack slot.
           MI.getOperand(0).setIsDead();
           DeadDefs.push_back(&MI);
@@ -1374,7 +1417,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     }
 
     // Attempt to fold memory ops.
-    if (foldMemoryOperand(Ops))
+    if (!PartialSplitDef && foldMemoryOperand(Ops))
       continue;
 
     // Create a new virtual register for spill/fill.
@@ -1383,12 +1426,23 @@ void InlineSpiller::spillAroundUses(Register Reg) {
 
     if (RI.Reads)
       insertReload(NewVReg, Idx, &MI);
+    else if (PartialSplitDef) {
+      insertReload(NewVReg, Idx, &MI);
+      // Keep the slot live from the reload to the copy.
+      SlotIndex ReloadIdx =
+          LIS.getInstructionIndex(*std::prev(MI.getIterator())).getRegSlot();
+      StackInt->addSegment(LiveInterval::Segment(ReloadIdx, Idx.getBaseIndex(),
+                                                 StackInt->getValNumInfo(0)));
+    }
 
     // Rewrite instruction operands.
     bool hasLiveDef = false;
     for (const auto &OpPair : Ops) {
       MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
       MO.setReg(NewVReg);
+      // The def now updates the reloaded value instead of starting a new one.
+      if (PartialSplitDef && MO.isDef())
+        MO.setIsUndef(false);
       if (MO.isDef() && !MO.isDead())
         hasLiveDef = true;
     }
