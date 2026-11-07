@@ -926,6 +926,88 @@ let Predicates = [HasSVE_or_SME] in {
   defm : SVEMergingAndNotPats<nxv8i16, nxv8i1, BIC_ZPmZ_H>;
   defm : SVEMergingAndNotPats<nxv4i32, nxv4i1, BIC_ZPmZ_S>;
   defm : SVEMergingAndNotPats<nxv2i64, nxv2i1, BIC_ZPmZ_D>;
+
+  multiclass SVEMergingAndXorPats<ValueType VT, ValueType PT, Instruction PredBic> {
+    // Inactive lanes in EOR may be replaced by a & ~b in the result.
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (SVEEorU (PT srcvalue), VT:$a, VT:$b)))),
+              (PredBic $pg, $a, $b)>;
+
+    // Matching predicate ensures that active lanes in AND can be replaced by a & ~b.
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (SVEEorM PT:$pg, VT:$a, VT:$b)))),
+          (PredBic $pg, $a, $b)>;
+
+    // Similar to above, matching predicate ensures that inactive lanes in EOR are don't
+    // care for final result. Rests are equivalent to a & ~b.
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (SVEEorZ PT:$pg, VT:$a, VT:$b)))),
+          (PredBic $pg, $a, $b)>;
+
+    // All active lanes in EOR ensures that all active lanes in AND are equivalent to a & ~b.
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (SVEEorM (PT (SVEAllActive)), VT:$a, VT:$b)))),
+          (PredBic $pg, $a, $b)>;
+
+    // Similar to the preceding pattern but for _z form of EOR.
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (SVEEorZ (PT (SVEAllActive)), VT:$a, VT:$b)))),
+          (PredBic $pg, $a, $b)>;
+
+    // Normal LLVM XOR.
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a, (xor VT:$a, VT:$b))),
+          (PredBic $pg, $a, $b)>;
+
+    // There is no active lane in AND. So, unpredicated BIC could be used.
+    def : Pat<(VT (int_aarch64_sve_and (PT (SVEAllActive)), VT:$a,
+                    (VT (SVEEorZ (PT (SVEAllActive)), VT:$a, VT:$b)))),
+          (BIC_ZZZ $a, $b)>;
+  }
+  defm : SVEMergingAndXorPats<nxv16i8, nxv16i1, BIC_ZPmZ_B>;
+  defm : SVEMergingAndXorPats<nxv8i16, nxv8i1, BIC_ZPmZ_H>;
+  defm : SVEMergingAndXorPats<nxv4i32, nxv4i1, BIC_ZPmZ_S>;
+  defm : SVEMergingAndXorPats<nxv2i64, nxv2i1, BIC_ZPmZ_D>;
+
+  multiclass SVEMergingXorAndPats<ValueType VT, ValueType PT, Instruction PredBic> {
+    // Inactive lanes in AND may be replaced by a & b in the result.
+    def : Pat<(VT (int_aarch64_sve_eor PT:$pg, VT:$a,
+                    (VT (SVEAndU (PT srcvalue), VT:$a, VT:$b)))),
+              (PredBic $pg, $a, $b)>;
+
+    // Matching predicate ensures that active lanes in EOR can be replaced by a & ~b.
+    def : Pat<(VT (int_aarch64_sve_eor PT:$pg, VT:$a,
+                    (VT (SVEAndM PT:$pg, VT:$a, VT:$b)))),
+          (PredBic $pg, $a, $b)>;
+
+    // Similar to above, matching predicate ensures that inactive lanes in AND are don't
+    // care for final result. Rests are equivalent to a & ~b.
+    def : Pat<(VT (int_aarch64_sve_eor PT:$pg, VT:$a,
+                    (VT (SVEAndZ PT:$pg, VT:$a, VT:$b)))),
+          (PredBic $pg, $a, $b)>;
+
+    // All active lanes in AND ensures that all active lanes in EOR are equivalent to a & ~b.
+    def : Pat<(VT (int_aarch64_sve_eor PT:$pg, VT:$a,
+                    (VT (SVEAndM (PT (SVEAllActive)), VT:$a, VT:$b)))),
+          (PredBic $pg, $a, $b)>;
+
+    // Similarly, for _z form of AND.
+    def : Pat<(VT (int_aarch64_sve_eor PT:$pg, VT:$a,
+                    (VT (SVEAndZ (PT (SVEAllActive)), VT:$a, VT:$b)))),
+          (PredBic $pg, $a, $b)>;
+
+    // Normal LLVM AND.
+    def : Pat<(VT (int_aarch64_sve_eor PT:$pg, VT:$a, (and VT:$a, VT:$b))),
+              (PredBic $pg, $a, $b)>;
+
+    // With both predicates all-active, no inactive lanes need preserving.
+    def : Pat<(VT (int_aarch64_sve_eor (PT (SVEAllActive)), VT:$a,
+                    (VT (SVEAndZ (PT (SVEAllActive)), VT:$a, VT:$b)))),
+          (BIC_ZZZ $a, $b)>;
+  }
+  defm : SVEMergingXorAndPats<nxv16i8, nxv16i1, BIC_ZPmZ_B>;
+  defm : SVEMergingXorAndPats<nxv8i16, nxv8i1, BIC_ZPmZ_H>;
+  defm : SVEMergingXorAndPats<nxv4i32, nxv4i1, BIC_ZPmZ_S>;
+  defm : SVEMergingXorAndPats<nxv2i64, nxv2i1, BIC_ZPmZ_D>;
 } // End HasSVE_or_SME
 
 let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
