@@ -263,6 +263,9 @@ public:
       return hasNoDomainDelay() || NoDomainDelayShuffle;
   }
 
+  // Avoid creating SSE4A instructions on AVX2 targets to prevent VEX stalls.
+  bool useSSE4A() const { return hasSSE4A() && (hasXOP() || !hasAVX2()); }
+
   // If there are no 512-bit vectors and we prefer not to use 512-bit registers,
   // disable them in the legalizer.
   bool useAVX512Regs() const {
