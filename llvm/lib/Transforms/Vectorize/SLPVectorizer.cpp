@@ -31799,13 +31799,14 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
              ++Depth) {
           SmallVector<Value *> Users;
           for (Value *Lane : Lanes) {
-            auto *It = find_if(VL.drop_front(*FirstSkipped), [&](Value *V) {
-              auto *I = dyn_cast<Instruction>(V);
-              return I && !R.isDeleted(I) && !Tried.contains(I) &&
-                     !is_contained(Users, I) &&
-                     is_contained(I->operand_values(), Lane);
+            auto Candidates =
+                make_isa_range<Instruction>(VL.drop_front(*FirstSkipped));
+            auto It = find_if(Candidates, [&](Instruction *UserI) {
+              return !R.isDeleted(UserI) && !Tried.contains(UserI) &&
+                     !is_contained(Users, UserI) &&
+                     is_contained(UserI->operand_values(), Lane);
             });
-            if (It != VL.end())
+            if (It != Candidates.end())
               Users.push_back(*It);
           }
           if (Users.size() < MinVF)
