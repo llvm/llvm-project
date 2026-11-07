@@ -11,7 +11,6 @@
 #include "file_actions.h"
 
 #include "hdr/errno_macros.h"
-#include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
@@ -35,17 +34,10 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_destroy,
   while (act != nullptr) {
     auto *temp = act;
     act = act->next;
-    switch (temp->type) {
-    case BaseSpawnFileAction::OPEN:
-      delete reinterpret_cast<SpawnFileOpenAction *>(temp);
-      break;
-    case BaseSpawnFileAction::CLOSE:
-      delete reinterpret_cast<SpawnFileCloseAction *>(temp);
-      break;
-    case BaseSpawnFileAction::DUP2:
-      delete reinterpret_cast<SpawnFileDup2Action *>(temp);
-      break;
-    }
+    // A delete expression would need a virtual destructor, but the actions are
+    // trivially destructible (add_action checks that), so we can just free the
+    // memory.
+    BaseSpawnFileAction::operator delete(temp);
   }
 
   return 0;

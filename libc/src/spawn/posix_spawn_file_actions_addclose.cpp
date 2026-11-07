@@ -10,8 +10,7 @@
 
 #include "file_actions.h"
 #include "hdr/errno_macros.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/alloc-checker.h"
+#include "src/__support/checked_ptr.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
@@ -26,11 +25,10 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_addclose,
   if (fd < 0)
     return EBADF;
 
-  AllocChecker ac;
-  auto *act = new (ac) SpawnFileCloseAction(fd);
-  if (!ac)
+  auto act = make_unique<SpawnFileCloseAction>(fd);
+  if (!act)
     return ENOMEM;
-  BaseSpawnFileAction::add_action(actions, act);
+  BaseSpawnFileAction::add_action(actions, act.take_unique());
 
   return 0;
 }
