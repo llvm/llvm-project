@@ -1,3 +1,3 @@
-C_SOURCES = main.c
+C_SOURCES = main.c load-commands.c
 
 include Makefile.rules

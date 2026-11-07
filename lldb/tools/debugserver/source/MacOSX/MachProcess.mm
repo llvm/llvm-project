@@ -32,7 +32,9 @@
 #include <uuid/uuid.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <limits>
 #include <map>
 #include <unordered_set>
 
@@ -670,16 +672,42 @@ MachProcess::DeploymentInfo
 MachProcess::GetDeploymentInfo(const struct load_command &lc,
                                uint64_t load_command_address,
                                bool is_executable) {
+  size_t command_size = 0;
+  switch (lc.cmd & ~LC_REQ_DYLD) {
+  case LC_VERSION_MIN_IPHONEOS:
+  case LC_VERSION_MIN_MACOSX:
+  case LC_VERSION_MIN_TVOS:
+  case LC_VERSION_MIN_WATCHOS:
+    command_size = sizeof(struct version_min_command);
+    break;
+#if defined(LC_BUILD_VERSION)
+  case LC_BUILD_VERSION:
+    command_size = sizeof(struct build_version_command);
+    break;
+#endif
+  }
+  std::array<uint8_t, sizeof(struct segment_command_64)> command_data;
+  const uint8_t *data = nullptr;
+  if (command_size && ReadMemory(load_command_address, command_size,
+                                 command_data.data()) == command_size)
+    data = command_data.data();
+  return GetDeploymentInfo(lc, data, is_executable);
+}
+
+MachProcess::DeploymentInfo
+MachProcess::GetDeploymentInfo(const struct load_command &lc,
+                               const uint8_t *command_data,
+                               bool is_executable) {
   DeploymentInfo info;
   uint32_t cmd = lc.cmd & ~LC_REQ_DYLD;
 
   // Handle the older LC_VERSION load commands, which don't
   // distinguish between simulator and real hardware.
   auto handle_version_min = [&](char platform) {
-    struct version_min_command vers_cmd;
-    if (ReadMemory(load_command_address, sizeof(struct version_min_command),
-                   &vers_cmd) != sizeof(struct version_min_command))
+    if (!command_data)
       return;
+    struct version_min_command vers_cmd;
+    memcpy(&vers_cmd, command_data, sizeof(vers_cmd));
     info.platform = platform;
     info.major_version = vers_cmd.version >> 16;
     info.minor_version = (vers_cmd.version >> 8) & 0xffu;
@@ -723,10 +751,10 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
     break;
 #if defined(LC_BUILD_VERSION)
   case LC_BUILD_VERSION: {
-    struct build_version_command build_vers;
-    if (ReadMemory(load_command_address, sizeof(struct build_version_command),
-                   &build_vers) != sizeof(struct build_version_command))
+    if (!command_data)
       break;
+    struct build_version_command build_vers;
+    memcpy(&build_vers, command_data, sizeof(build_vers));
     info.platform = build_vers.platform;
     info.major_version = build_vers.minos >> 16;
     info.minor_version = (build_vers.minos >> 8) & 0xffu;
@@ -814,6 +842,10 @@ bool MachProcess::GetMachOInformationFromMemory(
     uint32_t dyld_platform, nub_addr_t mach_o_header_addr, int wordsize,
     struct mach_o_information &inf) {
   uint64_t load_cmds_p;
+  const size_t header_size = wordsize == 4 ? sizeof(struct mach_header)
+                                           : sizeof(struct mach_header_64);
+  if (mach_o_header_addr > std::numeric_limits<nub_addr_t>::max() - header_size)
+    return false;
 
   if (wordsize == 4) {
     struct mach_header header;
@@ -853,18 +885,75 @@ bool MachProcess::GetMachOInformationFromMemory(
     inf.mach_header.sizeofcmds = header.sizeofcmds;
     inf.mach_header.flags = header.flags;
   }
+  const uint64_t load_cmds_size = inf.mach_header.sizeofcmds;
+  if (inf.mach_header.ncmds > load_cmds_size / sizeof(struct load_command) ||
+      load_cmds_p > std::numeric_limits<nub_addr_t>::max() - load_cmds_size)
+    return false;
+  const nub_addr_t load_cmds_end = load_cmds_p + load_cmds_size;
+
+  // Cache only a bounded part of this image's load commands. A large valid
+  // region needs more refills, rather than an allocation based on sizeofcmds.
+  std::array<uint8_t, 16 * 1024> cache;
+  nub_addr_t cache_address = load_cmds_p;
+  size_t cache_size = 0;
+  auto read_command = [&](nub_addr_t address, size_t size, void *destination) {
+    if (address > load_cmds_end || size > load_cmds_end - address)
+      return false;
+    if (address < cache_address || address - cache_address > cache_size ||
+        size > cache_size - (address - cache_address)) {
+      cache_address = address;
+      const size_t requested =
+          std::min<uint64_t>(cache.size(), load_cmds_end - address);
+      cache_size = ReadMemory(address, requested, cache.data());
+      if (cache_size < size) {
+        // An unknown command's payload need not be readable. If a bulk read
+        // crosses unreadable memory, still try the exact required prefix.
+        return ReadMemory(address, size, destination) == size;
+      }
+    }
+    memcpy(destination, cache.data() + (address - cache_address), size);
+    return true;
+  };
+
   for (uint32_t j = 0; j < inf.mach_header.ncmds; j++) {
     struct load_command lc;
-    if (ReadMemory(load_cmds_p, sizeof(struct load_command), &lc) !=
-        sizeof(struct load_command)) {
+    if (!read_command(load_cmds_p, sizeof(lc), &lc))
       return false;
-    }
-    if (lc.cmd == LC_SEGMENT) {
-      struct segment_command seg;
-      if (ReadMemory(load_cmds_p, sizeof(struct segment_command), &seg) !=
-          sizeof(struct segment_command)) {
-        return false;
+    if (lc.cmdsize < sizeof(lc) || lc.cmdsize > load_cmds_end - load_cmds_p)
+      return false;
+
+    size_t command_size = sizeof(lc);
+    if (lc.cmd == LC_SEGMENT)
+      command_size = sizeof(struct segment_command);
+    else if (lc.cmd == LC_SEGMENT_64)
+      command_size = sizeof(struct segment_command_64);
+    else if (lc.cmd == LC_UUID)
+      command_size = sizeof(struct uuid_command);
+    else {
+      switch (lc.cmd & ~LC_REQ_DYLD) {
+      case LC_VERSION_MIN_IPHONEOS:
+      case LC_VERSION_MIN_MACOSX:
+      case LC_VERSION_MIN_TVOS:
+      case LC_VERSION_MIN_WATCHOS:
+        command_size = sizeof(struct version_min_command);
+        break;
+#if defined(LC_BUILD_VERSION)
+      case LC_BUILD_VERSION:
+        command_size = sizeof(struct build_version_command);
+        break;
+#endif
       }
+    }
+    if (command_size > lc.cmdsize)
+      return false;
+    std::array<uint8_t, sizeof(struct segment_command_64)> command_data;
+    const bool have_command_data =
+        read_command(load_cmds_p, command_size, command_data.data());
+    if (lc.cmd == LC_SEGMENT) {
+      if (!have_command_data)
+        return false;
+      struct segment_command seg;
+      memcpy(&seg, command_data.data(), sizeof(seg));
       struct mach_o_segment this_seg;
       char name[17];
       ::memset(name, 0, sizeof(name));
@@ -883,11 +972,10 @@ bool MachProcess::GetMachOInformationFromMemory(
         m_task.TaskWillExecProcessesSuspended();
     }
     if (lc.cmd == LC_SEGMENT_64) {
-      struct segment_command_64 seg;
-      if (ReadMemory(load_cmds_p, sizeof(struct segment_command_64), &seg) !=
-          sizeof(struct segment_command_64)) {
+      if (!have_command_data)
         return false;
-      }
+      struct segment_command_64 seg;
+      memcpy(&seg, command_data.data(), sizeof(seg));
       struct mach_o_segment this_seg;
       char name[17];
       ::memset(name, 0, sizeof(name));
@@ -905,14 +993,14 @@ bool MachProcess::GetMachOInformationFromMemory(
       if (this_seg.name == "ExecExtraSuspend")
         m_task.TaskWillExecProcessesSuspended();
     }
-    if (lc.cmd == LC_UUID) {
+    if (lc.cmd == LC_UUID && have_command_data) {
       struct uuid_command uuidcmd;
-      if (ReadMemory(load_cmds_p, sizeof(struct uuid_command), &uuidcmd) ==
-          sizeof(struct uuid_command))
-        uuid_copy(inf.uuid, uuidcmd.uuid);
+      memcpy(&uuidcmd, command_data.data(), sizeof(uuidcmd));
+      uuid_copy(inf.uuid, uuidcmd.uuid);
     }
     if (DeploymentInfo deployment_info = GetDeploymentInfo(
-            lc, load_cmds_p, inf.mach_header.filetype == MH_EXECUTE)) {
+            lc, have_command_data ? command_data.data() : nullptr,
+            inf.mach_header.filetype == MH_EXECUTE)) {
       std::optional<std::string> lc_platform =
           GetPlatformString(deployment_info.platform);
       if (dyld_platform != PLATFORM_MACCATALYST &&
