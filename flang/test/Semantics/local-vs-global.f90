@@ -47,6 +47,7 @@ end
 program test
   external justfine ! OK to name a BLOCK DATA if not called
   !WARNING: The global entity 'module_before_1' corresponding to the local procedure 'module_before_1' is not a callable subprogram [-Wexternal-name-conflict]
+  !PORTABILITY: Global name 'module_before_1' conflicts with a module [-Wbenign-name-clash]
   external module_before_1
   !WARNING: The global entity 'block_data_before_1' corresponding to the local procedure 'block_data_before_1' is not a callable subprogram [-Wexternal-name-conflict]
   external block_data_before_1
@@ -57,6 +58,7 @@ program test
   external explicit_func_before_1
   external implicit_func_before_1
   !WARNING: The global entity 'module_after_1' corresponding to the local procedure 'module_after_1' is not a callable subprogram [-Wexternal-name-conflict]
+  !PORTABILITY: Global name 'module_after_1' conflicts with a module [-Wbenign-name-clash]
   external module_after_1
   !WARNING: The global entity 'block_data_after_1' corresponding to the local procedure 'block_data_after_1' is not a callable subprogram [-Wexternal-name-conflict]
   external block_data_after_1
