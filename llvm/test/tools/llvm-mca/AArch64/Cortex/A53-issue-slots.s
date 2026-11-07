@@ -136,12 +136,12 @@ fmul s23, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      401
+# CHECK-NEXT: Total Cycles:      104
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: uOps Per Cycle:    1.92
+# CHECK-NEXT: IPC:               1.92
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [3] Code Region - fmulidx-fmulidx
@@ -172,24 +172,24 @@ fmul s23, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      401
+# CHECK-NEXT: Total Cycles:      104
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: uOps Per Cycle:    1.92
+# CHECK-NEXT: IPC:               1.92
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [6] Code Region - fcmp-fadd-fadd
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
-# CHECK-NEXT: Total Cycles:      501
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.60
-# CHECK-NEXT: IPC:               0.60
+# CHECK-NEXT: uOps Per Cycle:    1.47
+# CHECK-NEXT: IPC:               1.47
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      [7] Code Region - fmulidx-fadd-fadd
@@ -244,12 +244,12 @@ fmul s23, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      401
+# CHECK-NEXT: Total Cycles:      203
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      [12] Code Region - fmulidxq-fadd
@@ -280,10 +280,10 @@ fmul s23, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      900
-# CHECK-NEXT: Total Cycles:      1304
+# CHECK-NEXT: Total Cycles:      998
 # CHECK-NEXT: Total uOps:        900
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.69
-# CHECK-NEXT: IPC:               0.69
+# CHECK-NEXT: uOps Per Cycle:    0.90
+# CHECK-NEXT: IPC:               0.90
 # CHECK-NEXT: Block RThroughput: 10.0
