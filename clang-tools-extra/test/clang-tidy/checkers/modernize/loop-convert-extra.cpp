@@ -1073,6 +1073,39 @@ void f() {
 
 } // namespace InitLists
 
+namespace NonTrivialIteratorDtor {
+
+void f(NonTrivialDtorContainer<int> &C, NonTrivialDtorContainer<int> &D) {
+  for (NonTrivialDtorContainer<int>::iterator It = C.begin(); It != C.end(); ++It)
+    (void)*It;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (int & It : C)
+  // CHECK-FIXES-NEXT: (void)It;
+
+  for (NonTrivialDtorContainer<int>::iterator It = C.begin(); It != (C.end()); ++It)
+    (void)*It;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (int & It : C)
+  // CHECK-FIXES-NEXT: (void)It;
+
+  for (NonTrivialDtorContainer<int>::iterator It = C.begin(); C.end() != It; ++It)
+    (void)*It;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (int & It : C)
+  // CHECK-FIXES-NEXT: (void)It;
+
+  for (NonTrivialDtorContainer<int>::iterator It = C.begin(), E = C.end(); It != E; ++It)
+    (void)*It;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (int & It : C)
+  // CHECK-FIXES-NEXT: (void)It;
+
+  for (NonTrivialDtorContainer<int>::iterator It = C.begin(); It != D.end(); ++It)
+    (void)*It;
+}
+
+} // namespace NonTrivialIteratorDtor
+
 void bug28341() {
   char v[5];
   for(int i = 0; i < 5; ++i) {
