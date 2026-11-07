@@ -265,6 +265,10 @@ def pmerge_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned in
 let Features = "experimental-p,64bit" in
 def rev16_64 : RISCVBuiltin<"uint64_t(uint64_t)">;
 
+// Scalar Merge
+def merge_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
+def merge_u64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t, uint64_t)">;
+
 // Scalar Averaging Addition and Subtraction
 def aadd_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def aaddu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;

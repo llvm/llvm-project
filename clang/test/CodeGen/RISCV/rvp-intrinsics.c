@@ -252,6 +252,60 @@ uint64_t test_wzip16p_64_constant(void) {
   return __riscv_wzip16p_64(0x87654321, 0xfedcba98);
 }
 
+/* Scalar Merge */
+
+// RV32-LABEL: define dso_local i32 @test_merge_i32(
+// RV32-SAME: i32 noundef [[RS1:%.*]], i32 noundef [[RS2:%.*]], i32 noundef [[RD:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.merge.i32(i32 [[RS1]], i32 [[RS2]], i32 [[RD]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_merge_i32(
+// RV64-SAME: i32 noundef signext [[RS1:%.*]], i32 noundef signext [[RS2:%.*]], i32 noundef signext [[RD:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.merge.i32(i32 [[RS1]], i32 [[RS2]], i32 [[RD]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_merge_i32(int32_t rs1, int32_t rs2, uint32_t rd) {
+  return __riscv_merge_i32(rs1, rs2, rd);
+}
+
+// RV32-LABEL: define dso_local i32 @test_merge_u32(
+// RV32-SAME: i32 noundef [[RS1:%.*]], i32 noundef [[RS2:%.*]], i32 noundef [[RD:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.merge.i32(i32 [[RS1]], i32 [[RS2]], i32 [[RD]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_merge_u32(
+// RV64-SAME: i32 noundef signext [[RS1:%.*]], i32 noundef signext [[RS2:%.*]], i32 noundef signext [[RD:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.merge.i32(i32 [[RS1]], i32 [[RS2]], i32 [[RD]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t test_merge_u32(uint32_t rs1, uint32_t rs2, uint32_t rd) {
+  return __riscv_merge_u32(rs1, rs2, rd);
+}
+
+// RV64-LABEL: define dso_local i64 @test_merge_i64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]], i64 noundef [[RD:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.merge.i64(i64 [[RS1]], i64 [[RS2]], i64 [[RD]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int64_t test_merge_i64(int64_t rs1, int64_t rs2, uint64_t rd) {
+  return __riscv_merge_i64(rs1, rs2, rd);
+}
+
+// RV64-LABEL: define dso_local i64 @test_merge_u64(
+// RV64-SAME: i64 noundef [[RS1:%.*]], i64 noundef [[RS2:%.*]], i64 noundef [[RD:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.merge.i64(i64 [[RS1]], i64 [[RS2]], i64 [[RD]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t test_merge_u64(uint64_t rs1, uint64_t rs2, uint64_t rd) {
+  return __riscv_merge_u64(rs1, rs2, rd);
+}
+
 /* Scalar Saturating Addition and Subtraction */
 
 // RV32-LABEL: define dso_local i32 @test_sadd_i32(

@@ -6567,3 +6567,86 @@ int32x2_t test_pslidedownx_i32x2(int32x2_t rd, int32x2_t rs1, unsigned rs2) {
 uint32x2_t test_pslidedownx_u32x2(uint32x2_t rd, uint32x2_t rs1, unsigned rs2) {
   return __riscv_pslidedownx_u32x2(rd, rs1, rs2);
 }
+
+// CHECK-LABEL: test_merge_merge_u32:
+// CHECK:        merge{{[[:space:]]}}
+uint32_t test_merge_merge_u32(uint32_t rd, uint32_t rs1, uint32_t rs2) {
+  return __riscv_merge_u32(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_mvm_u32:
+// CHECK:        mvm{{[[:space:]]}}
+uint32_t test_merge_mvm_u32(uint32_t rs1, uint32_t rd, uint32_t rs2) {
+  return __riscv_merge_u32(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_mvmn_u32:
+// CHECK:        mvmn{{[[:space:]]}}
+uint32_t test_merge_mvmn_u32(uint32_t rs2, uint32_t rs1, uint32_t rd) {
+  return __riscv_merge_u32(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_merge_i32:
+// CHECK:        merge{{[[:space:]]}}
+int32_t test_merge_merge_i32(uint32_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_merge_i32(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_mvm_i32:
+// CHECK:        mvm{{[[:space:]]}}
+int32_t test_merge_mvm_i32(int32_t rs1, uint32_t rd, int32_t rs2) {
+  return __riscv_merge_i32(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_mvmn_i32:
+// CHECK:        mvmn{{[[:space:]]}}
+int32_t test_merge_mvmn_i32(int32_t rs2, int32_t rs1, uint32_t rd) {
+  return __riscv_merge_i32(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_merge_u64:
+// RV32:        merge{{[[:space:]]}}
+// RV32-NEXT:   merge{{[[:space:]]}}
+// RV64:        merge{{[[:space:]]}}
+uint64_t test_merge_merge_u64(uint64_t rd, uint64_t rs1, uint64_t rs2) {
+  return __riscv_merge_u64(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_mvm_u64:
+// RV32:        mvm{{[[:space:]]}}
+// RV32-NEXT:   mvm{{[[:space:]]}}
+// RV64:        mvm{{[[:space:]]}}
+uint64_t test_merge_mvm_u64(uint64_t rs1, uint64_t rd, uint64_t rs2) {
+  return __riscv_merge_u64(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_mvmn_u64:
+// RV32:        mvmn{{[[:space:]]}}
+// RV32-NEXT:   mvmn{{[[:space:]]}}
+// RV64:        mvmn{{[[:space:]]}}
+uint64_t test_merge_mvmn_u64(uint64_t rs2, uint64_t rs1, uint64_t rd) {
+  return __riscv_merge_u64(rs1, rs2, rd);
+}
+// CHECK-LABEL: test_merge_merge_i64:
+// RV32:        merge{{[[:space:]]}}
+// RV32-NEXT    merge{{[[:space:]]}}
+// RV64:        merge{{[[:space:]]}}
+int64_t test_merge_merge_i64(uint64_t rd, int64_t rs1, int64_t rs2) {
+  return __riscv_merge_i64(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_mvm_i64:
+// RV32:        mvm{{[[:space:]]}}
+// RV32-NEXT:   mvm{{[[:space:]]}}
+// RV64:        mvm{{[[:space:]]}}
+int64_t test_merge_mvm_i64(int64_t rs1, uint64_t rd, int64_t rs2) {
+  return __riscv_merge_i64(rs1, rs2, rd);
+}
+
+// CHECK-LABEL: test_merge_mvmn_i64:
+// RV32:        mvmn{{[[:space:]]}}
+// RV32-NEXT:   mvmn{{[[:space:]]}}
+// RV64:        mvmn{{[[:space:]]}}
+int64_t test_merge_mvmn_i64(int64_t rs2, int64_t rs1, uint64_t rd) {
+  return __riscv_merge_i64(rs1, rs2, rd);
+}

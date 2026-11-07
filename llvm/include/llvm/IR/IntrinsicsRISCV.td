@@ -2154,6 +2154,13 @@ class RVPBinaryIntrinsic
                             [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pmerge : RVPTernaryIntrinsic;
 
+  // Scalar Merge. Operands are (rs1, rs2, rd).
+  def int_riscv_merge
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+
   // Reverse the order of the 16-bit halfwords of a 64-bit value (RV64 only).
   def int_riscv_rev16_64 : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
                                               [IntrNoMem, IntrSpeculatable]>;
