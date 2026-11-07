@@ -897,6 +897,15 @@ static bool isSafePointerArithmetic(const Expr *Ptr, const Expr *OffsetExpr,
   return OffsetVal.isNonNegative() && OffsetVal.getLimitedValue() < limit;
 }
 
+// A literal zero offset leaves the pointer unchanged. Like the literal-only
+// `p[0]` exemption in `ArraySubscriptGadget`, other constant expressions that
+// evaluate to zero are not exempt: pointer arithmetic is often the only sign
+// that a pointer points to a buffer.
+static bool isLiteralZeroOffset(const Expr *OffsetExpr) {
+  const auto *Lit = dyn_cast<IntegerLiteral>(OffsetExpr->IgnoreParens());
+  return Lit && Lit->getValue().isZero();
+}
+
 // Constant fold a conditional expression 'cond ? A : B' to
 // - 'A', if 'cond' has constant true value;
 // - 'B', if 'cond' has constant false value.
@@ -1818,6 +1827,7 @@ public:
 ///  \code
 ///  ptr + n | n + ptr | ptr - n | ptr += n | ptr -= n
 ///  \endcode
+/// where `n` is not a literal zero.
 class PointerArithmeticGadget : public WarningGadget {
   static constexpr const char *const PointerArithmeticTag = "ptrAdd";
   static constexpr const char *const PointerArithmeticPointerTag = "ptrAddPtr";
@@ -1862,7 +1872,7 @@ public:
       OffsetExpr = LHS;
     }
 
-    if (!Ptr || !OffsetExpr)
+    if (!Ptr || !OffsetExpr || isLiteralZeroOffset(OffsetExpr))
       return false;
 
     // If -Wno-unsafe-buffer-usage-in-static-sized-array is used, suppress
@@ -1897,7 +1907,6 @@ public:
     return {Ptr->IgnoreParenImpCasts()};
   }
 
-  // FIXME: pointer adding zero should be fine
   // FIXME: this gadge will need a fix-it
 };
 
