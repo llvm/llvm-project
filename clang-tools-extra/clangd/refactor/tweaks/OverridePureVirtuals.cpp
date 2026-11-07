@@ -35,8 +35,10 @@
 //    - Each generated stub includes the `override` keyword, a `// TODO:`
 //      comment, and a `static_assert(false, ...)` to force a compile-time
 //      error if the method remains unimplemented.
-//    - The base method's signature is adjusted (e.g., `virtual` and `= 0`
-//      are removed for the override).
+//    - The base method's signature is adjusted for the override (e.g.,
+//      `virtual` and `= 0` are removed, and all nested name specifiers
+//      that do not enclose the derived class are added to the types of
+//      parameters and return value).
 //
 // 4. Code Action Provided:
 //    - A single code action titled "Override pure virtual methods" is offered.
@@ -91,41 +93,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-
-// This function removes the "virtual" and the "= 0" at the end;
-// e.g.:
-//   "virtual void foo(int var = 0) = 0"  // input.
-//   "void foo(int var = 0)"              // output.
-std::string removePureVirtualSyntax(const std::string &MethodDecl,
-                                    const LangOptions &LangOpts) {
-  assert(!MethodDecl.empty());
-
-  TokenStream TS = lex(MethodDecl, LangOpts);
-
-  std::string DeclString;
-  for (const clangd::Token &Tk : TS.tokens()) {
-    if (Tk.Kind == clang::tok::raw_identifier && Tk.text() == "virtual")
-      continue;
-
-    // If the ending two tokens are "= 0", we break here and we already have the
-    // method's string without the pure virtual syntax.
-    const auto &Next = Tk.next();
-    if (Next.next().Kind == tok::eof && Tk.Kind == clang::tok::equal &&
-        Next.text() == "0")
-      break;
-
-    DeclString += Tk.text();
-    if (Tk.Kind != tok::l_paren && Next.Kind != tok::comma &&
-        Next.Kind != tok::r_paren && Next.Kind != tok::l_paren &&
-        Tk.Kind != tok::coloncolon && Next.Kind != tok::coloncolon)
-      DeclString += ' ';
-  }
-  // Trim the last whitespace.
-  if (DeclString.back() == ' ')
-    DeclString.pop_back();
-
-  return DeclString;
-}
 
 class OverridePureVirtuals final : public Tweak {
 public:
@@ -264,30 +231,109 @@ void OverridePureVirtuals::collectMissingPureVirtuals() {
   }
 }
 
-std::string generateOverrideString(const CXXMethodDecl *Method,
-                                   const LangOptions &LangOpts) {
+std::string generateOverrideString(const clang::CXXRecordDecl *CurrentDeclDef,
+                                   const CXXMethodDecl *Method) {
   std::string MethodDecl;
   auto OS = llvm::raw_string_ostream(MethodDecl);
-  Method->print(OS);
+
+  // Create policy that prints all nested name specifiers that do not enclose
+  // the class to be modified.
+  PrintingPolicy PP = Method->getASTContext().getPrintingPolicy();
+  PP.FullyQualifiedName = true;
+
+  class PrintCB : public PrintingCallbacks {
+  public:
+    PrintCB(const DeclContext *CurContext) : CurContext(CurContext) {}
+    virtual ~PrintCB() {}
+    bool isScopeVisible(const DeclContext *DC) const override {
+      return DC->Encloses(CurContext);
+    }
+
+  private:
+    const DeclContext *CurContext;
+  };
+
+  PrintCB PCB(CurrentDeclDef);
+  PP.Callbacks = &PCB;
+
+  // Get function prototype
+  QualType Ty = Method->getType();
+  const FunctionProtoType *FT = Ty->getAs<FunctionProtoType>();
+
+  // Relevant specifiers
+  if (Method->isInlineSpecified())
+    OS << "inline ";
+  if (Method->isConstexprSpecified())
+    OS << "constexpr ";
+  if (Method->isConsteval())
+    OS << "consteval ";
+
+  // Return type
+  if (FT->hasTrailingReturn())
+    OS << "auto ";
+  else {
+    FT->getReturnType().print(OS, PP);
+    OS << " ";
+  }
+
+  // Unqualified method name
+  OS << Method->getNameAsString();
+
+  // Parameter list
+  OS << "(";
+  for (unsigned i = 0; i < Method->getNumParams(); ++i) {
+    if (i > 0)
+      OS << ", ";
+    Method->getParamDecl(i)->print(OS, PP);
+  }
+  OS << ")";
+
+  // CV Qualifiers
+  if (FT->isConst())
+    OS << " const";
+  if (FT->isVolatile())
+    OS << " volatile";
+
+  // Reference Qualifiers
+  switch (FT->getRefQualifier()) {
+  case RQ_None:
+    break;
+  case RQ_LValue:
+    OS << " &";
+    break;
+  case RQ_RValue:
+    OS << " &&";
+    break;
+  }
+
+  // Exception specifier
+  if (isNoexceptExceptionSpec(FT->getExceptionSpecType()))
+    OS << " noexcept";
+
+  // Trailing return type
+  if (FT->hasTrailingReturn()) {
+    OS << " -> ";
+    FT->getReturnType().print(OS, PP);
+  }
 
   return llvm::formatv(
              "\n  {0} override {{\n"
              "    // TODO: Implement this pure virtual method.\n"
              "    static_assert(false, \"Method `{1}` is not implemented.\");\n"
              "  }",
-             removePureVirtualSyntax(MethodDecl, LangOpts), Method->getName())
+             MethodDecl, Method->getNameAsString())
       .str();
 }
 
 // Free function to generate the string for a group of method overrides.
 std::string generateOverridesStringForGroup(
-    llvm::SmallVector<const CXXMethodDecl *> Methods,
-    const LangOptions &LangOpts) {
+    const clang::CXXRecordDecl *CurrentDeclDef,
+    llvm::SmallVector<const CXXMethodDecl *> Methods) {
   llvm::SmallVector<std::string> MethodsString;
   MethodsString.reserve(Methods.size());
 
   for (const CXXMethodDecl *Method : Methods) {
-    MethodsString.emplace_back(generateOverrideString(Method, LangOpts));
+    MethodsString.emplace_back(generateOverrideString(CurrentDeclDef, Method));
   }
 
   return llvm::join(MethodsString, "\n") + '\n';
@@ -302,7 +348,6 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
   assert(!MissingMethodsByAccess.empty());
 
   const auto &SM = Sel.AST->getSourceManager();
-  const auto &LangOpts = Sel.AST->getLangOpts();
 
   tooling::Replacements EditReplacements;
   // Stores text for new access specifier sections that are not already present
@@ -316,7 +361,7 @@ Expected<Tweak::Effect> OverridePureVirtuals::apply(const Selection &Sel) {
     assert(!Methods.empty());
 
     std::string MethodsGroupString =
-        generateOverridesStringForGroup(Methods, LangOpts);
+        generateOverridesStringForGroup(CurrentDeclDef, Methods);
 
     auto *ExistingSpecLocIter = AccessSpecifierLocations.find(AS);
     bool ASExists = ExistingSpecLocIter != AccessSpecifierLocations.end();
