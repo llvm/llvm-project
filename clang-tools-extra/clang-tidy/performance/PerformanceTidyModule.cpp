@@ -12,6 +12,7 @@
 #include "EnumSizeCheck.h"
 #include "ExpensiveValueOrCheck.h"
 #include "ForRangeCopyCheck.h"
+#include "FunctionPointerEqualityCheck.h"
 #include "ImplicitConversionInLoopCheck.h"
 #include "InefficientAlgorithmCheck.h"
 #include "InefficientStringConcatenationCheck.h"
@@ -46,6 +47,8 @@ public:
         "performance-faster-string-find");
     CheckFactories.registerCheck<ForRangeCopyCheck>(
         "performance-for-range-copy");
+    CheckFactories.registerCheck<FunctionPointerEqualityCheck>(
+        "performance-function-pointer-equality");
     CheckFactories.registerCheck<ImplicitConversionInLoopCheck>(
         "performance-implicit-conversion-in-loop");
     CheckFactories.registerCheck<InefficientAlgorithmCheck>(

@@ -168,6 +168,13 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`performance-function-pointer-equality
+  <clang-tidy/checks/performance/function-pointer-equality>` check.
+
+  Detects equality comparisons between function pointers and containers keyed
+  by function pointers, which can behave unpredictably and unsoundly when
+  aggressive Identical Code Folding (`--icf=all`) is enabled.
+
 - New {doc}`portability-avoid-pragma-comment
   <clang-tidy/checks/portability/avoid-pragma-comment>` check.
 
