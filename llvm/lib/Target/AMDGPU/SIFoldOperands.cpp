@@ -250,7 +250,6 @@ public:
   struct ANDMaskResult {
     int64_t Mask;
     Register Reg;
-    unsigned RegIdx;
   };
 
   std::optional<ANDMaskResult> getANDMaskRegOperand(MachineInstr &AndMI) const;
@@ -1888,7 +1887,7 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   return true;
 }
 
-// Extract mask, register, and register operand index from an AND instruction.
+// Extract mask and register from an AND instruction.
 // Immediate can be in operand 1 or 2.
 std::optional<SIFoldOperandsImpl::ANDMaskResult>
 SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
@@ -1900,11 +1899,11 @@ SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
   std::optional<int64_t> MaskImm =
       TII->getImmOrMaterializedImm(*MRI, AndMI.getOperand(1));
   if (MaskImm && AndMI.getOperand(2).isReg())
-    return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg()};
 
   MaskImm = TII->getImmOrMaterializedImm(*MRI, AndMI.getOperand(2));
   if (MaskImm && AndMI.getOperand(1).isReg())
-    return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg()};
 
   return std::nullopt;
 }
