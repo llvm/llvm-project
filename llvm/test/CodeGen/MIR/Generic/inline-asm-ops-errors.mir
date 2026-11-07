@@ -1,0 +1,31 @@
+# RUN: split-file %s %t
+
+;--- missing-colon.mir
+# RUN: not llc -run-pass=none -filetype=null %t/missing-colon.mir 2>&1 | FileCheck %t/missing-colon.mir --check-prefix=MISSING-COLON
+---
+name: foo
+body: |
+  bb.0:
+    ; MISSING-COLON: [[@LINE+1]]:42: expected ':' after 'ops'
+    INLINEASM &"", attdialect, mem:m ops 5
+...
+
+;--- missing-count.mir
+# RUN: not llc -run-pass=none -filetype=null %t/missing-count.mir 2>&1 | FileCheck %t/missing-count.mir --check-prefix=MISSING-COUNT
+---
+name: foo
+body: |
+  bb.0:
+    ; MISSING-COUNT: [[@LINE+1]]:42: expected an operand count after 'ops:'
+    INLINEASM &"", attdialect, mem:m ops:five
+...
+
+;--- too-large.mir
+# RUN: not llc -run-pass=none -filetype=null %t/too-large.mir 2>&1 | FileCheck %t/too-large.mir --check-prefix=TOO-LARGE
+---
+name: foo
+body: |
+  bb.0:
+    ; TOO-LARGE: [[@LINE+1]]:42: invalid inline asm operand count
+    INLINEASM &"", attdialect, mem:m ops:8192
+...
