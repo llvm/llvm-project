@@ -158,7 +158,7 @@ Expected<Tweak::Effect> ExpandDeducedType::apply(const Selection &Inputs) {
   // Replacing these requires examining the declarator, we don't support it yet.
   std::string PrettyDeclarator = printType(
       *DeducedType, Inputs.ASTSelection.commonAncestor()->getDeclContext(),
-      "DECLARATOR_ID");
+      "DECLARATOR_ID", /*FullyQualify=*/true);
   llvm::StringRef PrettyTypeName = PrettyDeclarator;
   if (!PrettyTypeName.consume_back("DECLARATOR_ID"))
     return error("Could not expand type that isn't a simple string");
