@@ -781,8 +781,8 @@ start:
 }
 
 define <8 x i16> @large_vector(<8 x i16> %0) {
-; CHECK-LABEL:    .def	$ientry_thunk$cdecl$m16$m16;
-; CHECK:          .section	.wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$m16
+; CHECK-LABEL:    .def	$ientry_thunk$cdecl$m16$m16a16;
+; CHECK:          .section	.wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$m16a16
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     stp	q6, q7, [sp, #-192]!            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_px	q6, 192
@@ -885,5 +885,5 @@ start:
 ; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m$m
 ; CHECK-NEXT:     .word	1
 ; CHECK-NEXT:     .symidx	"#large_vector"
-; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m16$m16
+; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m16$m16a16
 ; CHECK-NEXT:     .word	1
