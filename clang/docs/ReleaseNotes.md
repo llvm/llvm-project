@@ -785,8 +785,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   Safe Buffers warning enabled.
 
 - Fixed the `no-` prefix being dropped when diagnosing an unknown
-  `-Wno-error=` or `-Wno-fatal-errors=` warning option. Clang now reports the
-  option as it was written on the command line instead of its positive form.
+  `-Wno-error=` or `-Wno-fatal-errors=` warning option. Clang now preserves
+  the no- prefix in the diagnostic and spelling suggestion.
   (#GH227392)
 
 ### Improvements to Clang's time-trace
