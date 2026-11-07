@@ -30,6 +30,7 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1126,7 +1127,8 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {"lld", opt.data()};
-  if (cl::parseCommandLineOptions(config->libraryOptions, argv, "", &os))
+  if (cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
 }
