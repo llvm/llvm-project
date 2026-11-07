@@ -289,12 +289,12 @@ define <3 x bfloat> @v_mad_mix_v3f32_clamp_postcvt(<3 x bfloat> %src0, <3 x bflo
 ; GFX1250-REAL16:       ; %bb.0:
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-REAL16-NEXT:    v_fma_mixlo_bf16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
-; GFX1250-REAL16-NEXT:    v_fma_mixhi_bf16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX1250-REAL16-NEXT:    v_fma_mixlo_bf16 v3, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-REAL16-NEXT:    v_pk_max_num_bf16 v1, v1, v1 clamp
-; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v0, v3
+; GFX1250-REAL16-NEXT:    v_fma_mixlo_bf16 v3, v1, v3, v5 op_sel_hi:[1,1,1]
+; GFX1250-REAL16-NEXT:    v_fma_mixhi_bf16 v1, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX1250-REAL16-NEXT:    v_fma_mixlo_bf16 v1, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-REAL16-NEXT:    v_pk_max_num_bf16 v2, v3, v3 clamp
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v2
 ; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext <3 x bfloat> %src0 to <3 x float>
   %src1.ext = fpext <3 x bfloat> %src1 to <3 x float>
