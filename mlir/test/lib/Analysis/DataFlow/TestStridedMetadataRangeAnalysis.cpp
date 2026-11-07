@@ -10,7 +10,9 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Analysis/DataFlow/StridedMetadataRangeAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -64,10 +66,13 @@ struct TestStridedMetadataRangeAnalysisPass
     Operation *op = getOperation();
 
     DataFlowSolver solver;
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
-    solver.load<IntegerRangeAnalysis>();
-    solver.load<StridedMetadataRangeAnalysis>();
+    const auto &layouts = getAnalysis<DataLayoutAnalysis>();
+    loadBaselineAnalyses(solver);
+    auto getIndexBitwidth = [&layouts](Operation *op) {
+      return getIndexBitwidthForRangeInference(layouts.getAtOrAbove(op));
+    };
+    solver.load<IntegerRangeAnalysis>(getIndexBitwidth);
+    solver.load<StridedMetadataRangeAnalysis>(getIndexBitwidth);
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 

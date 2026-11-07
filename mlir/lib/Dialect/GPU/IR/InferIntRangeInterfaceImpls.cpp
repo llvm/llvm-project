@@ -23,10 +23,17 @@ static constexpr uint64_t kMaxClusterDim = 16;
 // Maximum subgroups are no larger than 128.
 static constexpr uint64_t kMaxSubgroupSize = 128;
 
-static ConstantIntRanges getIndexRange(uint64_t umin, uint64_t umax) {
-  unsigned width = IndexType::kInternalStorageBitWidth;
-  return ConstantIntRanges::fromUnsigned(APInt(width, umin),
-                                         APInt(width, umax));
+static ConstantIntRanges getIndexRange(std::optional<unsigned> indexBitwidth,
+                                       uint64_t umin, uint64_t umax) {
+  if (!indexBitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
+  unsigned width = *indexBitwidth;
+  // GPU index intrinsics truncate hardware dimensions to the runtime width.
+  unsigned sourceWidth = std::numeric_limits<uint64_t>::digits;
+  auto range = ConstantIntRanges::fromUnsigned(
+      APInt(std::max(width, sourceWidth), umin),
+      APInt(std::max(width, sourceWidth), umax));
+  return width < sourceWidth ? intrange::truncRange(range, width) : range;
 }
 
 static uint64_t zext(uint32_t arg) { return static_cast<uint64_t>(arg); }
@@ -135,35 +142,39 @@ mlir::gpu::getKnownDimensionSizeAround(Operation *op, DimensionKind kind,
 }
 
 void ClusterDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                     std::optional<unsigned> indexBitwidth,
                                      SetIntRangeFn setResultRange) {
   uint64_t max = kMaxDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(1, max));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 1, max));
 }
 
-void ClusterDimBlocksOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
-                                           SetIntRangeFn setResultRange) {
+void ClusterDimBlocksOp::inferResultRanges(
+    ArrayRef<ConstantIntRanges>, std::optional<unsigned> indexBitwidth,
+    SetIntRangeFn setResultRange) {
   if (auto known = getKnownDimensionSizeAround(*this, DimensionKind::Cluster,
                                                getDimension()))
-    return setResultRange(getResult(),
-                          getIndexRange(zext(*known), zext(*known)));
+    return setResultRange(
+        getResult(), getIndexRange(indexBitwidth, zext(*known), zext(*known)));
 
   uint64_t max = kMaxClusterDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(1, max));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 1, max));
 }
 
 void ClusterIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                    std::optional<unsigned> indexBitwidth,
                                     SetIntRangeFn setResultRange) {
   uint64_t max = kMaxDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(0, max - 1ULL));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 0, max - 1ULL));
 }
 
 void ClusterBlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                         std::optional<unsigned> indexBitwidth,
                                          SetIntRangeFn setResultRange) {
   uint64_t max = kMaxClusterDim;
   if (auto known = getKnownDimensionSizeAround(*this, DimensionKind::Cluster,
@@ -171,24 +182,27 @@ void ClusterBlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
     max = zext(*known);
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(0, max - 1ULL));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 0, max - 1ULL));
 }
 
 void BlockDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                   std::optional<unsigned> indexBitwidth,
                                    SetIntRangeFn setResultRange) {
   std::optional<uint32_t> knownVal =
       getKnownDimensionSizeAround(*this, DimensionKind::Block, getDimension());
   if (knownVal)
-    return setResultRange(getResult(),
-                          getIndexRange(zext(*knownVal), zext(*knownVal)));
+    return setResultRange(
+        getResult(),
+        getIndexRange(indexBitwidth, zext(*knownVal), zext(*knownVal)));
 
   uint64_t max = kMaxDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(1, max));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 1, max));
 }
 
 void BlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                  std::optional<unsigned> indexBitwidth,
                                   SetIntRangeFn setResultRange) {
   uint64_t max = kMaxDim;
   if (auto fromContext = getKnownDimensionSizeAround(*this, DimensionKind::Grid,
@@ -196,23 +210,26 @@ void BlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
     max = zext(*fromContext);
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(0, max - 1ULL));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 0, max - 1ULL));
 }
 
 void GridDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                  std::optional<unsigned> indexBitwidth,
                                   SetIntRangeFn setResultRange) {
   std::optional<uint32_t> knownVal =
       getKnownDimensionSizeAround(*this, DimensionKind::Grid, getDimension());
   if (knownVal)
-    return setResultRange(getResult(),
-                          getIndexRange(zext(*knownVal), zext(*knownVal)));
+    return setResultRange(
+        getResult(),
+        getIndexRange(indexBitwidth, zext(*knownVal), zext(*knownVal)));
   uint64_t max = kMaxDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(1, max));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 1, max));
 }
 
 void ThreadIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                   std::optional<unsigned> indexBitwidth,
                                    SetIntRangeFn setResultRange) {
   uint64_t max = kMaxDim;
   if (auto fromContext = getKnownDimensionSizeAround(
@@ -220,30 +237,34 @@ void ThreadIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
     max = zext(*fromContext);
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(0, max - 1ULL));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 0, max - 1ULL));
 }
 
 void LaneIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                 std::optional<unsigned> indexBitwidth,
                                  SetIntRangeFn setResultRange) {
   uint64_t max = kMaxSubgroupSize;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(0, max - 1ULL));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 0, max - 1ULL));
 }
 
 void SubgroupIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                     std::optional<unsigned> indexBitwidth,
                                      SetIntRangeFn setResultRange) {
   uint64_t max = kMaxDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(0, max - 1ULL));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 0, max - 1ULL));
 }
 
 void GlobalIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                   std::optional<unsigned> indexBitwidth,
                                    SetIntRangeFn setResultRange) {
   if (auto specified = getUpperBound())
-    return setResultRange(getResult(),
-                          getIndexRange(0, specified->getZExtValue() - 1ULL));
+    return setResultRange(
+        getResult(),
+        getIndexRange(indexBitwidth, 0, specified->getZExtValue() - 1ULL));
 
   uint64_t blockDimMax = zext(
       getKnownDimensionSizeAround(*this, DimensionKind::Block, getDimension())
@@ -251,37 +272,47 @@ void GlobalIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
   uint64_t gridDimMax = zext(
       getKnownDimensionSizeAround(*this, DimensionKind::Grid, getDimension())
           .value_or(kMaxDim));
-  setResultRange(getResult(),
-                 getIndexRange(0, (blockDimMax * gridDimMax) - 1ULL));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 0,
+                                            (blockDimMax * gridDimMax) - 1ULL));
 }
 
 void NumSubgroupsOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                       std::optional<unsigned> indexBitwidth,
                                        SetIntRangeFn setResultRange) {
   uint64_t max = kMaxDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(1, max));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 1, max));
 }
 
 void SubgroupSizeOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                       std::optional<unsigned> indexBitwidth,
                                        SetIntRangeFn setResultRange) {
   uint64_t max = kMaxSubgroupSize;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
-  setResultRange(getResult(), getIndexRange(1, max));
+  setResultRange(getResult(), getIndexRange(indexBitwidth, 1, max));
 }
 
 void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                 std::optional<unsigned> indexBitwidth,
                                  SetIntRangeFn setResultRange) {
   auto setRange = [&](const ConstantIntRanges &argRange, Value dimResult,
                       Value idxResult) {
-    if (argRange.umin().getBitWidth() != IndexType::kInternalStorageBitWidth)
+    if (!indexBitwidth) {
+      auto maxRange =
+          ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
+      setResultRange(dimResult, maxRange);
+      setResultRange(idxResult, maxRange);
+      return;
+    }
+    if (argRange.umin().getBitWidth() != *indexBitwidth)
       return;
     ConstantIntRanges dimRange =
-        argRange.intersection(getIndexRange(1, kMaxDim));
+        argRange.intersection(getIndexRange(indexBitwidth, 1, kMaxDim));
     setResultRange(dimResult, dimRange);
     ConstantIntRanges idxRange =
-        getIndexRange(0, dimRange.umax().getZExtValue() - 1);
+        getIndexRange(indexBitwidth, 0, dimRange.umax().getZExtValue() - 1);
     setResultRange(idxResult, idxRange);
   };
 

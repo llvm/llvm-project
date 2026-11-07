@@ -181,6 +181,13 @@ public:
   /// Returns the layout of the closest parent operation carrying layout info.
   static DataLayout closest(Operation *op);
 
+  /// Returns the combined layout specification for this scope, or a null
+  /// attribute if no specification is available.
+  DataLayoutSpecInterface getSpec() const {
+    checkValid();
+    return originalLayout;
+  }
+
   /// Returns the size of the given type in the current scope.
   llvm::TypeSize getTypeSize(Type t) const;
 

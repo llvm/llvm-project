@@ -2446,7 +2446,8 @@ gpu::YieldOp WarpExecuteOnLane0Op::getTerminator() {
 //===----------------------------------------------------------------------===//
 
 void gpu::SubgroupBroadcastOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
+    ArrayRef<ConstantIntRanges> argRanges,
+    std::optional<unsigned> indexBitwidth, SetIntRangeFn setResultRange) {
   setResultRange(getResult(), argRanges.front());
 }
 

@@ -17,6 +17,7 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -55,8 +56,9 @@ static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
   auto *oldState = solver.lookupState<IntegerValueRangeLattice>(oldVal);
   if (!oldState)
     return;
-  (void)solver.getOrCreateState<IntegerValueRangeLattice>(newVal)->join(
-      *oldState);
+  auto *newState = solver.getOrCreateState<IntegerValueRangeLattice>(newVal);
+  newState->setIndexBitwidth(oldState->getIndexBitwidth());
+  (void)newState->join(*oldState);
 }
 
 namespace mlir::dataflow {
@@ -77,7 +79,14 @@ LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
 
   // Bail out if the inferred APInt bitwidth does not match the storage width
   // of the IR type; IntegerAttr::get would assert otherwise.
-  unsigned storageWidth = ConstantIntRanges::getStorageBitwidth(type);
+  unsigned storageWidth =
+      ConstantIntRanges::getBitwidth(type, IndexType::kInternalStorageBitWidth);
+  if (getElementTypeOrSelf(type).isIndex()) {
+    if (maybeConstValue->getBitWidth() > storageWidth &&
+        !maybeConstValue->isSignedIntN(storageWidth))
+      return failure();
+    maybeConstValue = maybeConstValue->sextOrTrunc(storageWidth);
+  }
   if (storageWidth != 0 && maybeConstValue->getBitWidth() != storageWidth)
     return failure();
 
@@ -155,8 +164,11 @@ struct MaterializeKnownConstantValues : public RewritePattern {
       std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, v);
       if (!maybeConstValue.has_value() || v.use_empty())
         return false;
-      unsigned storageWidth =
-          ConstantIntRanges::getStorageBitwidth(v.getType());
+      unsigned storageWidth = ConstantIntRanges::getBitwidth(
+          v.getType(), IndexType::kInternalStorageBitWidth);
+      if (getElementTypeOrSelf(v.getType()).isIndex())
+        return maybeConstValue->getBitWidth() <= storageWidth ||
+               maybeConstValue->isSignedIntN(storageWidth);
       return storageWidth == 0 ||
              maybeConstValue->getBitWidth() == storageWidth;
     };
@@ -210,16 +222,12 @@ struct DeleteTrivialRem : public OpRewritePattern<RemOp> {
                                 PatternRewriter &rewriter) const override {
     Value lhs = op.getOperand(0);
     Value rhs = op.getOperand(1);
-    // TODO: Support index types once integer range inference can use the target
-    // index bitwidth, e.g. from DLTI.
-    if (isa<IndexType>(getElementTypeOrSelf(lhs.getType())))
+    auto maybeModulus = getMaybeConstantValue(solver, rhs);
+    if (!maybeModulus)
       return failure();
-    APInt modulus;
+    const APInt &modulus = *maybeModulus;
     bool isUnsigned = isa<RemUIOp>(op);
-    // Any nonzero bit pattern is a valid unsigned modulus. Keep the existing
-    // positive-modulus restriction for signed remainder.
-    if (!matchPattern(rhs, m_ConstantInt(&modulus)) || modulus.isZero() ||
-        (!isUnsigned && modulus.isNegative()))
+    if (modulus.isZero() || (!isUnsigned && modulus.isNegative()))
       return failure();
     auto *maybeLhsRange = solver.lookupState<IntegerValueRangeLattice>(lhs);
     if (!maybeLhsRange || maybeLhsRange->getValue().isUninitialized())
@@ -525,12 +533,13 @@ private:
 };
 
 /// Fold index_cast(index_cast(%arg: i8, index), i8) -> %arg
-/// This pattern assumes all passed `targetBitwidths` are not wider than index
-/// type.
+/// The intermediate index type must be at least as wide as the integer type.
 template <typename CastOp>
 struct FoldIndexCastChain final : OpRewritePattern<CastOp> {
-  FoldIndexCastChain(MLIRContext *context, ArrayRef<unsigned> target)
-      : OpRewritePattern<CastOp>(context), targetBitwidths(target) {}
+  FoldIndexCastChain(MLIRContext *context, DataFlowSolver &solver,
+                     ArrayRef<unsigned> target)
+      : OpRewritePattern<CastOp>(context), solver(solver),
+        targetBitwidths(target) {}
 
   LogicalResult matchAndRewrite(CastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -549,11 +558,18 @@ struct FoldIndexCastChain final : OpRewritePattern<CastOp> {
     if (!intType || !llvm::is_contained(targetBitwidths, intType.getWidth()))
       return failure();
 
+    auto *state =
+        solver.lookupState<IntegerValueRangeLattice>(srcOp.getResult());
+    if (!state || !state->getIndexBitwidth() ||
+        *state->getIndexBitwidth() < intType.getWidth())
+      return failure();
+
     rewriter.replaceOp(op, src);
     return success();
   }
 
 private:
+  DataFlowSolver &solver;
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
@@ -746,8 +762,11 @@ struct IntRangeOptimizationsPass final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
+    const auto &layouts = getAnalysis<DataLayoutAnalysis>();
     loadBaselineAnalyses(solver);
-    solver.load<IntegerRangeAnalysis>();
+    solver.load<IntegerRangeAnalysis>([&layouts](Operation *op) {
+      return getIndexBitwidthForRangeInference(layouts.getAtOrAbove(op));
+    });
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
@@ -781,8 +800,11 @@ struct IntRangeNarrowingPass final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
+    const auto &layouts = getAnalysis<DataLayoutAnalysis>();
     loadBaselineAnalyses(solver);
-    solver.load<IntegerRangeAnalysis>();
+    solver.load<IntegerRangeAnalysis>([&layouts](Operation *op) {
+      return getIndexBitwidthForRangeInference(layouts.getAtOrAbove(op));
+    });
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
@@ -793,8 +815,10 @@ struct IntRangeNarrowingPass final
     populateControlFlowValuesNarrowingPatterns(patterns, solver,
                                                bitwidthsSupported);
 
-    // We specifically need bottom-up traversal as cmpi pattern needs range
-    // data, attached to its original argument values.
+    // TODO: Index folders must use the runtime index width. They can currently
+    // remove lossy casts when the runtime width differs from the attribute
+    // width. We specifically need bottom-up traversal as cmpi pattern needs
+    // range data, attached to its original argument values.
     if (failed(applyPatternsGreedily(
             op, std::move(patterns),
             GreedyRewriteConfig().setUseTopDownTraversal(false).setListener(
@@ -816,8 +840,8 @@ void mlir::arith::populateIntRangeNarrowingPatterns(
   patterns.add<NarrowElementwise, NarrowCmpI>(patterns.getContext(), solver,
                                               bitwidthsSupported);
   patterns.add<FoldIndexCastChain<arith::IndexCastUIOp>,
-               FoldIndexCastChain<arith::IndexCastOp>>(patterns.getContext(),
-                                                       bitwidthsSupported);
+               FoldIndexCastChain<arith::IndexCastOp>>(
+      patterns.getContext(), solver, bitwidthsSupported);
 }
 
 void mlir::arith::populateControlFlowValuesNarrowingPatterns(

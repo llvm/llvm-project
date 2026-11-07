@@ -3,6 +3,7 @@
 // CHECK-LABEL: func @add_min_max
 // CHECK: %[[c3:.*]] = arith.constant 3 : index
 // CHECK: return %[[c3]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @add_min_max(%a: index, %b: index) -> index {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
@@ -1089,4 +1090,5 @@ func.func @signed_rem_small_dividend(%a: i32, %b: i32) -> i1 {
   %rem = arith.remsi %lhs, %b : i32
   %bounded = arith.cmpi ule, %rem, %seven : i32
   return %bounded : i1
+}
 }

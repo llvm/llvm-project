@@ -46,10 +46,18 @@ namespace dataflow {
 class IntegerValueRangeLattice : public Lattice<IntegerValueRange> {
 public:
   using Lattice::Lattice;
-  // The override below would otherwise hide the inherited
-  // `join(const ValueT &)` overload that callers (e.g. transfer functions)
-  // rely on for direct-value joins.
-  using Lattice::join;
+  /// Set the runtime index width. It must agree with any stored bounds.
+  /// Without a known width, only an exact zero range is retained for index
+  /// values.
+  void setIndexBitwidth(std::optional<unsigned> width) {
+    indexBitwidth = width;
+  }
+  std::optional<unsigned> getIndexBitwidth() const { return indexBitwidth; }
+
+  ChangeResult join(const IntegerValueRange &rhs);
+
+  /// Return the maximal range for the anchor at its runtime width.
+  IntegerValueRange getMaxRange() const;
 
   ChangeResult join(const AbstractSparseLattice &rhs) override;
 
@@ -57,23 +65,30 @@ private:
   /// Per-state merge-site change counter. Drives the widening budget in
   /// `join`.
   unsigned mergeChangeCount = 0;
+  std::optional<unsigned> indexBitwidth;
 };
 
 /// Integer range analysis determines the integer value range of SSA values
 /// using operations that define `InferIntRangeInterface` and also sets the
 /// range of iteration indices of loops with known bounds.
-///
-/// This analysis depends on DeadCodeAnalysis, and will be a silent no-op
-/// if DeadCodeAnalysis is not loaded in the same solver context.
 class IntegerRangeAnalysis
     : public SparseForwardDataFlowAnalysis<IntegerValueRangeLattice> {
 public:
-  using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
+  /// The callback returns the runtime index width at an operation, or
+  /// std::nullopt if no width is known. Without a callback, index bounds are
+  /// conservative.
+  /// A single analysis run can cover multiple data-layout scopes. The width
+  /// can differ between scopes or be specified only in an inner scope, so
+  /// callers must supply the width for each operation.
+  using IndexBitwidthFn = std::function<std::optional<unsigned>(Operation *)>;
+  IntegerRangeAnalysis(DataFlowSolver &solver,
+                       IndexBitwidthFn getIndexBitwidth = {})
+      : SparseForwardDataFlowAnalysis(solver),
+        getIndexBitwidth(std::move(getIndexBitwidth)) {}
 
   /// At an entry point, we cannot reason about integer value ranges.
   void setToEntryState(IntegerValueRangeLattice *lattice) override {
-    propagateIfChanged(lattice, lattice->join(IntegerValueRange::getMaxRange(
-                                    lattice->getAnchor())));
+    propagateIfChanged(lattice, lattice->join(lattice->getMaxRange()));
   }
 
   /// Visit an operation. Invoke the transfer function on each operation that
@@ -92,6 +107,15 @@ public:
       Operation *op, const RegionSuccessor &successor,
       ValueRange nonSuccessorInputs,
       ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices) override;
+
+protected:
+  IntegerValueRangeLattice *getLatticeElement(Value value) override;
+
+private:
+  std::optional<unsigned> getWidth(Operation *op) const {
+    return getIndexBitwidth ? getIndexBitwidth(op) : std::nullopt;
+  }
+  IndexBitwidthFn getIndexBitwidth;
 };
 
 /// Succeeds if an op can be converted to its unsigned equivalent without
@@ -102,8 +126,6 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Operation *op);
 /// Succeeds when a value is statically non-negative in that it has a lower
 /// bound on its value (if it is treated as signed) and that bound is
 /// non-negative.
-/// Note, the results of this query may not be accurate for `index` if you plan
-/// to use a non-64-bit index.
 LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v);
 
 LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,

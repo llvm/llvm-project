@@ -939,9 +939,10 @@ Speculation::Speculatability DimOp::getSpeculatability() {
 }
 
 void DimOp::inferResultRangesFromOptional(ArrayRef<IntegerValueRange> argRanges,
+                                          std::optional<unsigned> indexBitwidth,
                                           SetIntLatticeFn setResultRange) {
-  setResultRange(getResult(),
-                 intrange::inferShapedDimOpInterface(*this, argRanges[1]));
+  setResultRange(getResult(), intrange::inferShapedDimOpInterface(
+                                  *this, argRanges[1], indexBitwidth));
 }
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {

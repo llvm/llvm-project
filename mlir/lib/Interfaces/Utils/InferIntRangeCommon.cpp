@@ -14,6 +14,7 @@
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
 
@@ -81,45 +82,6 @@ static ConstantIntRanges minMaxBy(ConstArithFn op, ArrayRef<APInt> lhs,
 // Ext, trunc, index op handling
 //===----------------------------------------------------------------------===//
 
-ConstantIntRanges
-mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
-                             ArrayRef<ConstantIntRanges> argRanges,
-                             intrange::CmpMode mode) {
-  ConstantIntRanges sixtyFour = inferFn(argRanges);
-  SmallVector<ConstantIntRanges, 2> truncated;
-  llvm::transform(argRanges, std::back_inserter(truncated),
-                  [](const ConstantIntRanges &range) {
-                    return truncRange(range, /*destWidth=*/indexMinWidth);
-                  });
-  ConstantIntRanges thirtyTwo = inferFn(truncated);
-  ConstantIntRanges thirtyTwoAsSixtyFour =
-      extRange(thirtyTwo, /*destWidth=*/indexMaxWidth);
-  ConstantIntRanges sixtyFourAsThirtyTwo =
-      truncRange(sixtyFour, /*destWidth=*/indexMinWidth);
-
-  LLVM_DEBUG(llvm::dbgs() << "Index handling: 64-bit result = " << sixtyFour
-                          << " 32-bit = " << thirtyTwo << "\n");
-  bool truncEqual = false;
-  switch (mode) {
-  case intrange::CmpMode::Both:
-    truncEqual = (thirtyTwo == sixtyFourAsThirtyTwo);
-    break;
-  case intrange::CmpMode::Signed:
-    truncEqual = (thirtyTwo.smin() == sixtyFourAsThirtyTwo.smin() &&
-                  thirtyTwo.smax() == sixtyFourAsThirtyTwo.smax());
-    break;
-  case intrange::CmpMode::Unsigned:
-    truncEqual = (thirtyTwo.umin() == sixtyFourAsThirtyTwo.umin() &&
-                  thirtyTwo.umax() == sixtyFourAsThirtyTwo.umax());
-    break;
-  }
-  if (truncEqual)
-    // Returing the 64-bit result preserves more information.
-    return sixtyFour;
-  ConstantIntRanges merged = sixtyFour.rangeUnion(thirtyTwoAsSixtyFour);
-  return merged;
-}
-
 ConstantIntRanges mlir::intrange::extRange(const ConstantIntRanges &range,
                                            unsigned int destWidth) {
   APInt umin = range.umin().zext(destWidth);
@@ -184,8 +146,41 @@ ConstantIntRanges mlir::intrange::truncRange(const ConstantIntRanges &range,
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
+mlir::intrange::inferConstant(const APInt &value,
+                              std::optional<unsigned> bitwidth) {
+  if (!bitwidth && !value.isZero())
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
+  return ConstantIntRanges::constant(value.sextOrTrunc(
+      bitwidth.value_or(IndexType::kInternalStorageBitWidth)));
+}
+
+IntegerValueRange mlir::intrange::inferIndexCast(
+    const IntegerValueRange &range, std::optional<unsigned> srcWidth,
+    std::optional<unsigned> destWidth, bool isSigned) {
+  if (!range.isUninitialized()) {
+    if (auto constant = range.getValue().getConstantValue();
+        constant && constant->isZero())
+      return inferConstant(*constant, destWidth);
+  }
+  if (!srcWidth || !destWidth)
+    return ConstantIntRanges::maxRange(
+        destWidth.value_or(IndexType::kInternalStorageBitWidth));
+  if (range.isUninitialized())
+    return IntegerValueRange();
+  if (*srcWidth < *destWidth)
+    return isSigned ? extSIRange(range.getValue(), *destWidth)
+                    : extUIRange(range.getValue(), *destWidth);
+  if (*srcWidth > *destWidth)
+    return truncRange(range.getValue(), *destWidth);
+  return range;
+}
+
+ConstantIntRanges
 mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
+                         std::optional<unsigned> bitwidth,
                          OverflowFlags ovfFlags) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn uadd = [=](const APInt &a,
@@ -218,7 +213,10 @@ mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
 
 ConstantIntRanges
 mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
+                         std::optional<unsigned> bitwidth,
                          OverflowFlags ovfFlags) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn usub = [=](const APInt &a,
@@ -250,7 +248,10 @@ mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
 
 ConstantIntRanges
 mlir::intrange::inferMul(ArrayRef<ConstantIntRanges> argRanges,
+                         std::optional<unsigned> bitwidth,
                          OverflowFlags ovfFlags) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn umul = [=](const APInt &a,
@@ -312,14 +313,20 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
 }
 
 ConstantIntRanges
-mlir::intrange::inferDivU(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferDivU(ArrayRef<ConstantIntRanges> argRanges,
+                          std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   return inferDivURange(argRanges[0], argRanges[1],
                         [](const APInt &lhs, const APInt &rhs,
                            const APInt &result) { return result; });
 }
 
 ConstantIntRanges
-mlir::intrange::inferCeilDivU(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferCeilDivU(ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto ceilDivUIFix = [](const APInt &lhs, const APInt &rhs,
@@ -376,14 +383,20 @@ static ConstantIntRanges inferDivSRange(const ConstantIntRanges &lhs,
 }
 
 ConstantIntRanges
-mlir::intrange::inferDivS(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferDivS(ArrayRef<ConstantIntRanges> argRanges,
+                          std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   return inferDivSRange(argRanges[0], argRanges[1],
                         [](const APInt &lhs, const APInt &rhs,
                            const APInt &result) { return result; });
 }
 
 ConstantIntRanges
-mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto ceilDivSIFix = [](const APInt &lhs, const APInt &rhs,
@@ -423,7 +436,10 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
 }
 
 ConstantIntRanges
-mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges,
+                               std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto floorDivSIFix = [](const APInt &lhs, const APInt &rhs,
@@ -444,7 +460,10 @@ mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges) {
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges,
+                          std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax(), &rhsMin = rhs.smin(),
               &rhsMax = rhs.smax();
@@ -481,7 +500,10 @@ mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges,
+                          std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   const APInt &rhsMin = rhs.umin(), &rhsMax = rhs.umax();
 
@@ -617,7 +639,10 @@ mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
 
 ConstantIntRanges
 mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges,
+                         std::optional<unsigned> bitwidth,
                          OverflowFlags ovfFlags) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   const APInt &rhsUMin = rhs.umin(), &rhsUMax = rhs.umax();
 
@@ -650,7 +675,10 @@ mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges,
 }
 
 ConstantIntRanges
-mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges,
+                          std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto ashr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
@@ -662,7 +690,10 @@ mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
 }
 
 ConstantIntRanges
-mlir::intrange::inferShrU(ArrayRef<ConstantIntRanges> argRanges) {
+mlir::intrange::inferShrU(ArrayRef<ConstantIntRanges> argRanges,
+                          std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   auto lshr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
@@ -742,6 +773,21 @@ static bool isStaticallyTrue(intrange::CmpPredicate pred,
   return false;
 }
 
+IntegerValueRange
+mlir::intrange::inferCmp(CmpPredicate pred,
+                         ArrayRef<IntegerValueRange> argRanges,
+                         std::optional<unsigned> bitwidth) {
+  if (!bitwidth)
+    return ConstantIntRanges::maxRange(1);
+  if (argRanges[0].isUninitialized() || argRanges[1].isUninitialized())
+    return IntegerValueRange();
+  auto truthValue =
+      evaluatePred(pred, argRanges[0].getValue(), argRanges[1].getValue());
+  if (!truthValue)
+    return ConstantIntRanges::maxRange(1);
+  return ConstantIntRanges::constant(APInt(1, *truthValue));
+}
+
 std::optional<bool> mlir::intrange::evaluatePred(CmpPredicate pred,
                                                  const ConstantIntRanges &lhs,
                                                  const ConstantIntRanges &rhs) {
@@ -756,25 +802,33 @@ std::optional<bool> mlir::intrange::evaluatePred(CmpPredicate pred,
 // Shaped type dimension accessors / ShapedDimOpInterface
 //===----------------------------------------------------------------------===//
 
-ConstantIntRanges
-mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
-                                          const IntegerValueRange &maybeDim) {
-  unsigned width =
-      ConstantIntRanges::getStorageBitwidth(op->getResult(0).getType());
+ConstantIntRanges mlir::intrange::inferShapedDimOpInterface(
+    ShapedDimOpInterface op, const IntegerValueRange &maybeDim,
+    std::optional<unsigned> indexBitwidth) {
+  unsigned width = ConstantIntRanges::getBitwidth(
+      op->getResult(0).getType(),
+      indexBitwidth.value_or(IndexType::kInternalStorageBitWidth));
   APInt zero = APInt::getZero(width);
   APInt typeMax = APInt::getSignedMaxValue(width);
 
+  auto dynamicRange = indexBitwidth
+                          ? ConstantIntRanges::fromSigned(zero, typeMax)
+                          : ConstantIntRanges::maxRange(width);
   auto shapedTy = cast<ShapedType>(op.getShapedValue().getType());
   if (!shapedTy.hasRank())
-    return ConstantIntRanges::fromSigned(zero, typeMax);
+    return dynamicRange;
 
   int64_t rank = shapedTy.getRank();
   int64_t minDim = 0;
   int64_t maxDim = rank - 1;
   if (!maybeDim.isUninitialized()) {
     const ConstantIntRanges &dim = maybeDim.getValue();
-    minDim = std::max(minDim, dim.smin().getSExtValue());
-    maxDim = std::min(maxDim, dim.smax().getSExtValue());
+    if (dim.smin().sgt(maxDim) || dim.smax().slt(minDim))
+      return dynamicRange;
+    if (dim.smin().sgt(minDim))
+      minDim = dim.smin().getSExtValue();
+    if (dim.smax().slt(maxDim))
+      maxDim = dim.smax().getSExtValue();
   }
 
   std::optional<ConstantIntRanges> result;
@@ -788,11 +842,11 @@ mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
     int64_t length = shapedTy.getDimSize(i);
 
     if (ShapedType::isDynamic(length))
-      joinResult(ConstantIntRanges::fromSigned(zero, typeMax));
+      joinResult(dynamicRange);
     else
-      joinResult(ConstantIntRanges::constant(APInt(width, length)));
+      joinResult(inferConstant(APInt(width, length), indexBitwidth));
   }
-  return result.value_or(ConstantIntRanges::fromSigned(zero, typeMax));
+  return result.value_or(dynamicRange);
 }
 
 //===----------------------------------------------------------------------===//
@@ -811,11 +865,14 @@ static ConstantIntRanges clampToPositive(const ConstantIntRanges &val) {
 ConstantIntRanges
 mlir::intrange::inferAffineExpr(AffineExpr expr,
                                 ArrayRef<ConstantIntRanges> dimRanges,
-                                ArrayRef<ConstantIntRanges> symbolRanges) {
+                                ArrayRef<ConstantIntRanges> symbolRanges,
+                                std::optional<unsigned> indexBitwidth) {
+  if (!indexBitwidth && !isa<AffineDimExpr, AffineSymbolExpr>(expr))
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
   switch (expr.getKind()) {
   case AffineExprKind::Constant: {
     auto constExpr = cast<AffineConstantExpr>(expr);
-    APInt value(indexMaxWidth, constExpr.getValue(), /*isSigned=*/true);
+    APInt value(*indexBitwidth, constExpr.getValue(), /*isSigned=*/true);
     return ConstantIntRanges::constant(value);
   }
   case AffineExprKind::DimId: {
@@ -832,30 +889,30 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
   }
   case AffineExprKind::Add: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
-    ConstantIntRanges lhs =
-        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
-    ConstantIntRanges rhs =
-        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    ConstantIntRanges lhs = inferAffineExpr(binExpr.getLHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
+    ConstantIntRanges rhs = inferAffineExpr(binExpr.getRHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
     std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
                                                  std::move(rhs)};
-    return inferAdd(operands, OverflowFlags::Nsw);
+    return inferAdd(operands, indexBitwidth, OverflowFlags::Nsw);
   }
   case AffineExprKind::Mul: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
-    ConstantIntRanges lhs =
-        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
-    ConstantIntRanges rhs =
-        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    ConstantIntRanges lhs = inferAffineExpr(binExpr.getLHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
+    ConstantIntRanges rhs = inferAffineExpr(binExpr.getRHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
     std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
                                                  std::move(rhs)};
-    return inferMul(operands, OverflowFlags::Nsw);
+    return inferMul(operands, indexBitwidth, OverflowFlags::Nsw);
   }
   case AffineExprKind::Mod: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
-    ConstantIntRanges lhs =
-        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
-    ConstantIntRanges rhs =
-        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    ConstantIntRanges lhs = inferAffineExpr(binExpr.getLHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
+    ConstantIntRanges rhs = inferAffineExpr(binExpr.getRHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
     // Affine mod is Euclidean modulo: result is always in [0, rhs-1].
     // This assumes RHS is positive (enforced by affine expr semantics).
     const APInt &lhsMin = lhs.smin();
@@ -865,7 +922,7 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
     unsigned width = rhsMin.getBitWidth();
 
     // Guard against division by zero.
-    if (rhsMax.isZero())
+    if (!rhsMax.isStrictlyPositive())
       return ConstantIntRanges::maxRange(width);
 
     // For Euclidean mod, result is in [0, max(rhs)-1].
@@ -900,29 +957,33 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
   }
   case AffineExprKind::FloorDiv: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
-    ConstantIntRanges lhs =
-        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
-    ConstantIntRanges rhs =
-        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    ConstantIntRanges lhs = inferAffineExpr(binExpr.getLHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
+    ConstantIntRanges rhs = inferAffineExpr(binExpr.getRHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
     // Affine floordiv requires strictly positive divisor (> 0).
     // Clamp divisor lower bound to 1 for tighter range inference.
+    if (!rhs.smax().isStrictlyPositive())
+      return ConstantIntRanges::maxRange(*indexBitwidth);
     ConstantIntRanges clampedRhs = clampToPositive(rhs);
     std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
                                                  std::move(clampedRhs)};
-    return inferFloorDivS(operands);
+    return inferFloorDivS(operands, indexBitwidth);
   }
   case AffineExprKind::CeilDiv: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
-    ConstantIntRanges lhs =
-        inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
-    ConstantIntRanges rhs =
-        inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
+    ConstantIntRanges lhs = inferAffineExpr(binExpr.getLHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
+    ConstantIntRanges rhs = inferAffineExpr(binExpr.getRHS(), dimRanges,
+                                            symbolRanges, indexBitwidth);
     // Affine ceildiv requires strictly positive divisor (> 0).
     // Clamp divisor lower bound to 1 for tighter range inference.
+    if (!rhs.smax().isStrictlyPositive())
+      return ConstantIntRanges::maxRange(*indexBitwidth);
     ConstantIntRanges clampedRhs = clampToPositive(rhs);
     std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
                                                  std::move(clampedRhs)};
-    return inferCeilDivS(operands);
+    return inferCeilDivS(operands, indexBitwidth);
   }
   }
   llvm_unreachable("unknown affine expression kind");

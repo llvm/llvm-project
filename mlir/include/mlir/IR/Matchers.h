@@ -105,9 +105,11 @@ struct constant_op_binder {
 /// `InferIntRangeInterface` interface, and binds the inferred range.
 struct infer_int_range_op_binder {
   IntegerValueRange *bind_value;
+  std::optional<unsigned> indexBitwidth;
 
-  explicit infer_int_range_op_binder(IntegerValueRange *bind_value)
-      : bind_value(bind_value) {}
+  explicit infer_int_range_op_binder(IntegerValueRange *bind_value,
+                                     std::optional<unsigned> indexBitwidth)
+      : bind_value(bind_value), indexBitwidth(indexBitwidth) {}
 
   bool match(Operation *op) {
     auto inferIntRangeOp = dyn_cast<InferIntRangeInterface>(op);
@@ -116,7 +118,11 @@ struct infer_int_range_op_binder {
 
     // Set the range of all integer operands to the maximal range.
     SmallVector<IntegerValueRange> argRanges =
-        llvm::map_to_vector(op->getOperands(), IntegerValueRange::getMaxRange);
+        llvm::map_to_vector(op->getOperands(), [&](Value value) {
+          return IntegerValueRange::getMaxRange(
+              value,
+              indexBitwidth.value_or(IndexType::kInternalStorageBitWidth));
+        });
 
     // Infer the result result range if possible.
     bool matched = false;
@@ -129,7 +135,8 @@ struct infer_int_range_op_binder {
       *bind_value = argRanges;
       matched = true;
     };
-    inferIntRangeOp.inferResultRangesFromOptional(argRanges, setResultRanges);
+    inferIntRangeOp.inferResultRangesFromOptional(argRanges, indexBitwidth,
+                                                  setResultRanges);
     return matched;
   }
 };
@@ -257,23 +264,33 @@ struct constant_int_predicate_matcher {
 /// splat integer value or a constant integer range that fulfills a predicate.
 struct constant_int_range_predicate_matcher {
   bool (*predicate)(const ConstantIntRanges &);
+  std::optional<unsigned> indexBitwidth;
 
   bool match(Attribute attr) {
     APInt value;
-    return constant_int_value_binder(&value).match(attr) &&
-           predicate(ConstantIntRanges::constant(value));
+    if (!constant_int_value_binder(&value).match(attr))
+      return false;
+    Type type = cast<TypedAttr>(attr).getType();
+    if (auto shaped = dyn_cast<ShapedType>(type))
+      type = shaped.getElementType();
+    if (type.isIndex()) {
+      if (!indexBitwidth)
+        return false;
+      value = value.sextOrTrunc(*indexBitwidth);
+    }
+    return predicate(ConstantIntRanges::constant(value));
   }
 
   bool match(Operation *op) {
     // Try to match a constant integer value first.
-    APInt value;
-    if (constant_int_value_binder(&value).match(op))
-      return predicate(ConstantIntRanges::constant(value));
+    Attribute attr;
+    if (constant_op_binder<Attribute>(&attr).match(op))
+      return match(attr);
 
     // Otherwise, try to match an operation that implements the
     // `InferIntRangeInterface` interface.
     IntegerValueRange range;
-    return infer_int_range_op_binder(&range).match(op) &&
+    return infer_int_range_op_binder(&range, indexBitwidth).match(op) &&
            predicate(range.getValue());
   }
 };
@@ -451,27 +468,36 @@ inline detail::constant_int_predicate_matcher m_NonZero() {
 
 /// Matches a constant scalar / vector splat / tensor splat integer or a
 /// unsigned integer range that does not contain zero. Note that this matcher
-/// interprets the target value as an unsigned integer.
-inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutZeroU() {
-  return {[](const ConstantIntRanges &range) { return range.umin().ugt(0); }};
+/// interprets the target value as an unsigned integer. Index values require
+/// an explicit runtime width.
+inline detail::constant_int_range_predicate_matcher
+m_IntRangeWithoutZeroU(std::optional<unsigned> indexBitwidth = std::nullopt) {
+  return {[](const ConstantIntRanges &range) { return range.umin().ugt(0); },
+          indexBitwidth};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer or a
 /// signed integer range that does not contain zero. Note that this matcher
-/// interprets the target value as a signed integer.
-inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutZeroS() {
+/// interprets the target value as a signed integer. Index values require
+/// an explicit runtime width.
+inline detail::constant_int_range_predicate_matcher
+m_IntRangeWithoutZeroS(std::optional<unsigned> indexBitwidth = std::nullopt) {
   return {[](const ConstantIntRanges &range) {
-    return range.smin().sgt(0) || range.smax().slt(0);
-  }};
+            return range.smin().sgt(0) || range.smax().slt(0);
+          },
+          indexBitwidth};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer or a
 /// signed integer range that does not contain minus one. Note
-/// that this matcher interprets the target value as a signed integer.
-inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutNegOneS() {
+/// that this matcher interprets the target value as a signed integer. Index
+/// values require an explicit runtime width.
+inline detail::constant_int_range_predicate_matcher
+m_IntRangeWithoutNegOneS(std::optional<unsigned> indexBitwidth = std::nullopt) {
   return {[](const ConstantIntRanges &range) {
-    return range.smin().sgt(-1) || range.smax().slt(-1);
-  }};
+            return range.smin().sgt(-1) || range.smax().slt(-1);
+          },
+          indexBitwidth};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer one.

@@ -18,6 +18,13 @@
 #include <optional>
 
 namespace mlir {
+class DataLayout;
+
+/// Return the runtime index width for range inference. Return std::nullopt
+/// if the combined layout has no index entry.
+std::optional<unsigned>
+getIndexBitwidthForRangeInference(const DataLayout &layout);
+
 /// A set of arbitrary-precision integers representing bounds on a given integer
 /// value. These bounds are inclusive on both ends, so
 /// bounds of [4, 5] mean 4 <= x <= 5. Separate bounds are tracked for
@@ -53,9 +60,13 @@ public:
 
   /// Return the bitwidth that should be used for integer ranges describing
   /// `type`. For concrete integer types, this is their bitwidth, for `index`,
-  /// this is the internal storage bitwidth of `index` attributes, and for
+  /// this is `indexBitwidth`, and for
   /// non-integer types this is 0.
-  static unsigned getStorageBitwidth(Type type);
+  static unsigned getBitwidth(Type type, unsigned indexBitwidth);
+
+  /// Return the integer width, or the supplied optional index width.
+  static std::optional<unsigned>
+  getBitwidth(Type type, std::optional<unsigned> indexBitwidth);
 
   /// Create a `ConstantIntRanges` with the maximum bounds for the width
   /// `bitwidth`, that is - [0, uint_max(width)]/[sint_min(width),
@@ -111,7 +122,7 @@ public:
   /// Create a maximal range ([0, uint_max(t)] / [int_min(t), int_max(t)])
   /// range that is used to mark the value as unable to be analyzed further,
   /// where `t` is the type of `value`.
-  static IntegerValueRange getMaxRange(Value value);
+  static IntegerValueRange getMaxRange(Value value, unsigned indexBitwidth);
 
   /// Create an integer value range lattice value.
   IntegerValueRange(ConstantIntRanges value) : value(std::move(value)) {}
@@ -180,17 +191,17 @@ SmallVector<IntegerValueRange> getIntValueRanges(ArrayRef<OpFoldResult> values,
 class InferIntRangeInterface;
 
 namespace intrange::detail {
-/// Default implementation of `inferResultRanges` which dispatches to the
-/// `inferResultRangesFromOptional`.
+/// Default optional-width inference for initialized operand ranges.
 void defaultInferResultRanges(InferIntRangeInterface interface,
-                              ArrayRef<IntegerValueRange> argRanges,
-                              SetIntLatticeFn setResultRanges);
+                              ArrayRef<ConstantIntRanges> argRanges,
+                              std::optional<unsigned> indexBitwidth,
+                              SetIntRangeFn setResultRanges);
 
-/// Default implementation of `inferResultRangesFromOptional` which dispatches
-/// to the `inferResultRanges`.
+/// Default optional-width inference for operand range lattices.
 void defaultInferResultRangesFromOptional(InferIntRangeInterface interface,
-                                          ArrayRef<ConstantIntRanges> argRanges,
-                                          SetIntRangeFn setResultRanges);
+                                          ArrayRef<IntegerValueRange> argRanges,
+                                          std::optional<unsigned> indexBitwidth,
+                                          SetIntLatticeFn setResultRanges);
 } // end namespace intrange::detail
 } // end namespace mlir
 

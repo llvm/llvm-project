@@ -1,6 +1,7 @@
 // RUN: mlir-opt -int-range-optimizations -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @launch_func
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @launch_func(%arg0 : index) {
   %0 = test.with_bounds <
     umin = 3 : index, umax = 5 : index,
@@ -51,10 +52,11 @@ func.func @launch_func(%arg0 : index) {
   func.return
 }
 
+}
 // -----
 
 // CHECK-LABEL: func @kernel
-module attributes {gpu.container_module} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>, gpu.container_module} {
   gpu.module @gpu_module {
     llvm.func @kernel() attributes {gpu.kernel} {
 
@@ -135,7 +137,7 @@ module attributes {gpu.container_module} {
 // -----
 
 // CHECK-LABEL: func @annotated_kernel
-module attributes {gpu.container_module} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>, gpu.container_module} {
   gpu.module @gpu_module {
     gpu.func @annotated_kernel() kernel
       attributes {known_block_size = array<i32: 8, 12, 16>,
@@ -218,7 +220,7 @@ module attributes {gpu.container_module} {
 // -----
 
 // CHECK-LABEL: func @annotated_kernel
-module {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
   func.func @annotated_kernel()
     attributes {gpu.known_block_size = array<i32: 8, 12, 16>,
         gpu.known_grid_size = array<i32: 20, 24, 28>} {
@@ -252,7 +254,7 @@ module {
 // -----
 
 // CHECK-LABEL: func @local_bounds_kernel
-module attributes {gpu.container_module} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>, gpu.container_module} {
   gpu.module @gpu_module {
     gpu.func @local_bounds_kernel() kernel {
 
@@ -333,6 +335,7 @@ module attributes {gpu.container_module} {
 // -----
 
 // CHECK-LABEL: func @broadcast
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @broadcast(%idx: i32) {
   %0 = test.with_bounds < umin = 0 : index, umax = 10 : index, smin = 0 : index, smax = 10 : index > : index
   %1 = gpu.subgroup_broadcast %0, first_active_lane : index
@@ -344,4 +347,5 @@ func.func @broadcast(%idx: i32) {
   %4 = test.reflect_bounds %1 : index
   %5 = test.reflect_bounds %2 : index
   return
+}
 }

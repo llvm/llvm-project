@@ -1,12 +1,12 @@
 // RUN: mlir-opt -int-range-optimizations -canonicalize %s | FileCheck %s
 
 // Most operations are covered by the `arith` tests, which use the same code
-// Here, we add a few tests to ensure the "index can be 32- or 64-bit" handling
-// code is operating as expected.
+// These tests check arithmetic at a specified 32-bit index width.
 
 // CHECK-LABEL: func @add_same_for_both
 // CHECK: %[[true:.*]] = index.bool.constant true
 // CHECK: return %[[true]]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
 func.func @add_same_for_both(%arg0 : index) -> i1 {
   %c1 = index.constant 1
   %calmostBig = index.constant 0xfffffffe
@@ -63,4 +63,5 @@ func.func @add_big(%arg0 : index) -> i1 {
   %2 = index.add %1, %c1
   %3 = index.cmp uge(%1, %cmin)
   func.return %3 : i1
+}
 }
