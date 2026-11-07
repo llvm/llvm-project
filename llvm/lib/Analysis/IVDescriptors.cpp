@@ -718,6 +718,14 @@ bool RecurrenceDescriptor::AddReductionVar(
         continue;
       }
 
+      // An any-of select can't use a phi of the chain as its condition: the
+      // vectorizer replaces the chain, so the condition would become poison.
+      // Reject it here, since the check below accepts an any-of select that
+      // uses the chain more than once.
+      if (IsAPhi && isAnyOfRecurrenceKind(Kind) &&
+          match(UI, m_Select(m_Specific(Cur), m_Value(), m_Value())))
+        return false;
+
       // Process instructions only once (termination). Each reduction cycle
       // value must only be used once, except by phi nodes and conditional
       // reductions which are represented as a cmp followed by a select.
@@ -865,6 +873,9 @@ bool RecurrenceDescriptor::AddReductionVar(
 //     %cmp = icmp sgt i32 %5, 3
 //     %spec.select = select i1 %cmp, i32 3, i32 %r
 //     ...
+// The condition doesn't have to be a compare; an and of two compares works
+// too. It can't be the reduction phi or another phi in the chain, since the
+// vectorizer replaces those.
 // In general we can support vectorization of loops where 'r' flips between
 // any two non-constants, provided they are loop invariant. The only thing
 // we actually care about at the end of the loop is whether or not any lane
@@ -882,7 +893,7 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  if (!match(I, m_Select(m_Cmp(), m_Value(), m_Value())))
+  if (!match(I, m_Select(m_Value(), m_Value(), m_Value())))
     return InstDesc(false, I);
 
   SelectInst *SI = cast<SelectInst>(I);
@@ -896,8 +907,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
     return InstDesc(false, I);
 
   // We are looking for selects of the form:
-  //   select(cmp(), phi, loop_invariant) or
-  //   select(cmp(), loop_invariant, phi)
+  //   select(cond, phi, loop_invariant) or
+  //   select(cond, loop_invariant, phi)
   if (!Loop->isLoopInvariant(NonPhi))
     return InstDesc(false, I);
 
