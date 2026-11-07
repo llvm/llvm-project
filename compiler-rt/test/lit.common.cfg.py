@@ -763,60 +763,11 @@ if config.target_os == "Linux" and not config.android:
     except:
         pass
 
-    if (
-        not emulator
-        and config.compiler_id == "Clang"
-        and "--sysroot=" in config.target_cflags
-    ):
-        cmd = subprocess.Popen(
-            [
-                config.clang.strip(),
-                f"--target={config.target_triple}",
-                *shlex.split(config.target_cflags),
-                "-###",
-                "-xc",
-                "-",
-            ],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            env={"LANG": "C"},
+    if not emulator and config.compiler_id == "Clang" and config.sysroot:
+        config.target_cflags += (
+            f" -Wno-unused-command-line-argument --dyld-prefix={config.sysroot}"
+            rf" -Wl,--disable-new-dtags -Wl,-rpath,{config.sysroot}/\$LIB:{config.sysroot}/usr/\$LIB"
         )
-        _, serr = cmd.communicate()
-        sysroot = None
-        ld_so = None
-        lib_dirs = []
-        for line in serr.decode().splitlines():
-            if "-dynamic-linker" not in line:
-                continue
-            tokens = shlex.split(line)
-            for i, tok in enumerate(tokens):
-                if tok.startswith("--sysroot="):
-                    sysroot = os.path.normpath(tok.split("=", 1)[1])
-                elif tok == "-dynamic-linker" and i + 1 < len(tokens):
-                    ld_so = tokens[i + 1]
-                elif tok.startswith("-L") and len(tok) > 2:
-                    lib_dirs.append(tok[2:])
-                elif tok == "-L" and i + 1 < len(tokens):
-                    lib_dirs.append(tokens[i + 1])
-        if sysroot and ld_so:
-            dyn_linker = os.path.normpath(sysroot + "/" + ld_so.lstrip("/"))
-            rpaths = []
-            for d in lib_dirs:
-                norm = os.path.normpath(d)
-                if (
-                    norm.startswith(sysroot + "/")
-                    and os.path.isdir(norm)
-                    and norm not in rpaths
-                ):
-                    rpaths.append(norm)
-            if os.path.exists(dyn_linker) and rpaths:
-                config.target_cflags += (
-                    " -Wno-unused-command-line-argument"
-                    f" --dyld-prefix={sysroot}"
-                    " -Wl,--disable-new-dtags"
-                    f" -Wl,-rpath,{':'.join(rpaths)}"
-                )
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):
