@@ -862,3 +862,39 @@ entry:
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %p, ptr addrspace(3) @lds, i32 0, i32 0), !amdgpu.cfs !{i32 3}
   ret void
 }
+
+define amdgpu_kernel void @global_atomic_load_acquire_cfs_64B(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; GFX13-LABEL: global_atomic_load_acquire_cfs_64B:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    global_load_b32 v1, v0, s[0:1] scope:SCOPE_DEV cfs:CFS_64B
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    global_inv scope:SCOPE_DEV
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX13-NEXT:    s_endpgm
+entry:
+  %val = load atomic i32, ptr addrspace(1) %in syncscope("agent") acquire, align 4, !amdgpu.cfs !{i32 2}
+  store i32 %val, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @global_atomic_load_seq_cst_cfs_64B(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; GFX13-LABEL: global_atomic_load_seq_cst_cfs_64B:
+; GFX13:       ; %bb.0: ; %entry
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    global_load_b32 v1, v0, s[0:1] scope:SCOPE_DEV cfs:CFS_64B
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    global_inv scope:SCOPE_DEV
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX13-NEXT:    s_endpgm
+entry:
+  %val = load atomic i32, ptr addrspace(1) %in syncscope("agent") seq_cst, align 4, !amdgpu.cfs !{i32 2}
+  store i32 %val, ptr addrspace(1) %out, align 4
+  ret void
+}
