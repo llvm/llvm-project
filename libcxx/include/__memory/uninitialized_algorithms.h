@@ -344,10 +344,7 @@ __uninitialized_relocate(_ContiguousIterator __first, _ContiguousIterator __last
   static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
   using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
 
-  // TODO: Accept non-trivially relocatable types
-  static_assert(__is_trivially_relocatable_v<_ValueType>);
-
-  if (__libcpp_is_constant_evaluated()) {
+  if (__libcpp_is_constant_evaluated() || !std::__is_trivially_relocatable_v<_ValueType>) {
     auto __iter = __first;
     while (__iter != __last) {
       std::__construct_at(std::__to_address(__result), std::move(*__iter));
