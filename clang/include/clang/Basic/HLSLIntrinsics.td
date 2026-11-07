@@ -741,6 +741,7 @@ def hlsl_distance : HLSLBuiltin<"distance"> {
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1185,6 +1186,7 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1343,6 +1345,7 @@ Normalize is based on the following formula: x / length(x).
   let ParamNames = ["x"];
   let Body = "return x / length(x);";
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
