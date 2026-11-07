@@ -470,6 +470,27 @@ TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentNeg) {
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fdebug-pass-manager"))));
 }
 
+TEST_F(CommandLineTest, PCHBaseDirIsCwdNotPresent) {
+  const char *Args[] = {""};
+
+  ASSERT_FALSE(Invocation.getHeaderSearchOpts().PCHBaseDirIsCwd);
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_FALSE(Invocation.getHeaderSearchOpts().PCHBaseDirIsCwd);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fpch-base-dir-is-cwd"))));
+}
+
+TEST_F(CommandLineTest, PCHBaseDirIsCwdPresent) {
+  const char *Args[] = {"-fpch-base-dir-is-cwd"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+  ASSERT_TRUE(Invocation.getHeaderSearchOpts().PCHBaseDirIsCwd);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, ContainsN(StrEq("-fpch-base-dir-is-cwd"), 1));
+}
+
 TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
   const char *Args[] = {"-fmodules-strict-context-hash"};
 
