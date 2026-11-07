@@ -313,6 +313,9 @@ defm : BoolField<"enable-last-run-tracking", "true",
 // LazyValueInfo.cpp
 defm : BoolField<"lvi-per-pred-ranges", "false",
   "Enable tracking of ranges for a value in a block for each block predecessor">;
+// TODO: Increase limit?
+defm : ValueField<"lvi-max-uses-to-inspect", "unsigned", "3",
+  "Maximum length of the one-use chain followed from a use to find select or phi conditions that constrain the value">;
 
 // LoopAccessAnalysis.cpp
 // This enables versioning on the strides of symbolically striding memory
