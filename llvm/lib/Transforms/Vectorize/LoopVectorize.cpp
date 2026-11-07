@@ -3920,40 +3920,26 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     InstructionCost ScalarCost =
         VF.getFixedValue() * getInstructionCost(I, ElementCount::getFixed(1));
 
-    // Compute the scalarization overhead of needed insertelement instructions
-    // and phi nodes.
-    if (isScalarWithPredication(I, VF) && !I->getType()->isVoidTy()) {
-      Type *WideTy = toVectorizedTy(I->getType(), VF);
-      for (Type *VectorTy : getContainedTypes(WideTy)) {
-        ScalarCost += TTI.getScalarizationOverhead(
-            cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
-            /*Insert=*/true,
-            /*Extract=*/false, Config.CostKind);
-      }
-      ScalarCost += VF.getFixedValue() *
-                    TTI.getCFInstrCost(Instruction::PHI, Config.CostKind);
+    // Compute the scalarization overhead of the needed inserts/extracts.
+    if (isScalarWithPredication(I, VF)) {
+      ScalarCost += getScalarizationOverhead(I, VF);
+
+      // If this is an insert, additionally estimate cost of the PHI.
+      if (!I->getType()->isVoidTy() &&
+          (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore()))
+        ScalarCost += VF.getFixedValue() *
+                      TTI.getCFInstrCost(Instruction::PHI, Config.CostKind);
     }
 
-    // Compute the scalarization overhead of needed extractelement
-    // instructions. For each of the instruction's operands, if the operand can
-    // be scalarized, add it to the worklist; otherwise, account for the
-    // overhead.
-    for (Use &U : I->operands())
-      if (auto *J = dyn_cast<Instruction>(U.get())) {
+    // Add the Instruction's operands that can be scalarized to the worklist.
+    for (Value *V : I->operands()) {
+      if (auto *J = dyn_cast<Instruction>(V)) {
         assert(canVectorizeTy(J->getType()) &&
                "Instruction has non-scalar type");
         if (CanBeScalarized(J))
           Worklist.push_back(J);
-        else if (needsExtract(J, VF)) {
-          Type *WideTy = toVectorizedTy(J->getType(), VF);
-          for (Type *VectorTy : getContainedTypes(WideTy)) {
-            ScalarCost += TTI.getScalarizationOverhead(
-                cast<VectorType>(VectorTy),
-                APInt::getAllOnes(VF.getFixedValue()), /*Insert*/ false,
-                /*Extract*/ true, Config.CostKind);
-          }
-        }
       }
+    }
 
     // Scale the total scalar cost by block probability.
     ScalarCost /= getPredBlockCostDivisor(Config.CostKind, I->getParent());
