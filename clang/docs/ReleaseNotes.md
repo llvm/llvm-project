@@ -530,6 +530,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `s->dst.len`, and is reported as `dst->Scratch::lock` when no enclosing
   object is reachable.
 
+- The thread safety analysis now notices more modifications of local variables:
+  increments and decrements, assignments through a conditional operator or comma
+  such as `(c ? p : q) = r`, passing a variable by pointer or non-const
+  reference to an indirect call, a functor, a lambda, a variadic function or a
+  constructor, and inline assembly outputs. The value such a variable had before
+  the modification is no longer used to interpret the result of a
+  `try_acquire_capability` function that has been stored in it or, with
+  `-Wthread-safety-beta`, to name a capability accessed through it.
+
 ### Improvements to Clang's diagnostics
 
 - Errors for invalid element types during instantiation of an `ext_vector_type`
