@@ -171,7 +171,8 @@ ErrorOr<ExprId> parse_alt(cpp::string_view &rem, int cflags, ExprPool &pool,
                           size_t depth, size_t &re_nsub,
                           ParsedAtomStack &stack);
 
-// Parses a single ERE atom and an optional trailing '*' quantifier.
+// Parses a single ERE atom and an optional trailing '*', '+', or '?'
+// quantifier.
 ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
                                       ExprPool &pool, size_t depth,
                                       size_t &re_nsub, ParsedAtomStack &stack) {
@@ -235,9 +236,9 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     atom = pool.make_anchor(ANCHOR_EOL);
     can_repeat = false;
     break;
-  // Valid postfix '*' is consumed after a repeatable atom below; reaching a
-  // quantifier at the start of an atom means it has no preceding repeatable
-  // atom (e.g. "*a", "^*", or doubled "a**").
+  // Valid postfix '*', '+', or '?' is consumed after a repeatable atom below;
+  // reaching a quantifier at the start of an atom means it has no preceding
+  // repeatable atom (e.g. "*a", "^*", or doubled "a**").
   case '*':
   case '+':
   case '?':
@@ -279,7 +280,18 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     rem.remove_prefix(1);
     return pool.make_star(*atom);
   }
-  if (rem.starts_with('+') || rem.starts_with('?') || rem.starts_with('{'))
+  if (rem.starts_with('+')) {
+    rem.remove_prefix(1);
+    ErrorOr<ExprId> star = pool.make_star(*atom);
+    if (!star.has_value())
+      return star;
+    return pool.make_concat(*atom, *star);
+  }
+  if (rem.starts_with('?')) {
+    rem.remove_prefix(1);
+    return pool.make_alt(EMPTY_STR_ID, *atom);
+  }
+  if (rem.starts_with('{'))
     return Error(REG_BADPAT);
   return atom;
 }

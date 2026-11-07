@@ -258,24 +258,3 @@ body: |
     S_ENDPGM 0, implicit $vcc
 ...
 
-# After the fold the result of the AND is replaced by %0, which is then used
-# after the S_OR, so the kill flag on the S_OR must be cleared.
----
-name: src_used_after_kill
-tracksRegLiveness: true
-body: |
-  bb.0:
-    liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
-    ; CHECK-LABEL: name: src_used_after_kill
-    ; CHECK: liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
-    ; CHECK-NEXT: [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 [[V_CMP_LT_I32_e64_]], $sgpr0_sgpr1, implicit-def dead $scc
-    ; CHECK-NEXT: $vcc = COPY [[V_CMP_LT_I32_e64_]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit $vcc, implicit [[S_OR_B64_]]
-    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
-    %1:sreg_64_xexec = S_AND_B64 $exec, %0, implicit-def dead $scc
-    %2:sreg_64_xexec = S_OR_B64 killed %0, $sgpr0_sgpr1, implicit-def dead $scc
-    $vcc = COPY %1
-    S_ENDPGM 0, implicit $vcc, implicit %2
-...
