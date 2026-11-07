@@ -1653,24 +1653,54 @@ TEST(Hover, AccessSpecifierByLanguage) {
   } Cases[] = {
       {R"cpp(
         struct Waldo {
-          int [[loca^tion]];
+          int loca^tion;
         };
       )cpp",
        "-xc", ""},
       {R"cpp(
         struct Waldo {
-          int [[loca^tion]];
+          int loca^tion;
         };
       )cpp",
        "-xc++", "public"},
       {R"cpp(
         struct Waldo {
           struct {
-            int [[loca^tion]];
+            int loca^tion;
           } inner;
         };
       )cpp",
        "-xc", ""},
+      {R"cpp(
+        struct Waldo {
+          int loca^tion;
+        };
+      )cpp",
+       "-xobjective-c", ""},
+      {R"cpp(
+        struct Waldo {
+          int loca^tion;
+        };
+      )cpp",
+       "-xobjective-c++", "public"},
+      // Hover currently does not retrieve ivar access specifiers in either
+      // Objective-C or Objective-C++, so no label is expected.
+      {R"cpp(
+        @interface Waldo {
+        @public
+          int loca^tion;
+        }
+        @end
+      )cpp",
+       "-xobjective-c", ""},
+      {R"cpp(
+        @interface Waldo {
+        @public
+          int loca^tion;
+        }
+        @end
+      )cpp",
+       "-xobjective-c++", ""},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
