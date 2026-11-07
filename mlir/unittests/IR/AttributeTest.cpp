@@ -590,4 +590,24 @@ TEST(IntegerAttrDeathTest, WrongBitWidthForIndexType) {
 }
 #endif // NDEBUG
 
+//===----------------------------------------------------------------------===//
+// Builder::getZeroAttr and Builder::getOneAttr
+//===----------------------------------------------------------------------===//
+
+TEST(GetZeroOneAttrTest, NestedShapedElementType) {
+  MLIRContext context;
+  Builder builder(&context);
+  IntegerType i8 = builder.getI8Type();
+
+  RankedTensorType tensorTy = RankedTensorType::get({2}, i8);
+  EXPECT_TRUE(builder.getZeroAttr(tensorTy));
+  EXPECT_TRUE(builder.getOneAttr(tensorTy));
+
+  // A vector element type does not implement DenseElementTypeInterface, so
+  // it has no DenseElementsAttr form; expect null.
+  VectorType vecTy = VectorType::get({4}, i8);
+  RankedTensorType nestedTy = RankedTensorType::get({2}, vecTy);
+  EXPECT_FALSE(builder.getZeroAttr(nestedTy));
+  EXPECT_FALSE(builder.getOneAttr(nestedTy));
+}
 } // namespace
