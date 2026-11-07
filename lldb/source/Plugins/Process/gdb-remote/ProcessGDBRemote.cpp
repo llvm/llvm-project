@@ -1692,10 +1692,11 @@ size_t ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(
 bool ProcessGDBRemote::UpdateThreadIDList() {
   std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
 
-  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (threads_info_sp) {
     // If we have the JSON threads info, we can get the thread list from that
-    StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
+    StructuredData::Array *thread_infos =
+        threads_info_sp->json_sp->GetAsArray();
     if (thread_infos && thread_infos->GetSize() > 0) {
       m_thread_ids.clear();
       m_thread_pcs.clear();
@@ -1839,42 +1840,47 @@ std::optional<size_t> ProcessGDBRemote::FindThreadIDIndex(lldb::tid_t tid) {
   return it->second;
 }
 
-bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
-    ThreadGDBRemote *thread, const StructuredData::ObjectSP &thread_infos_sp) {
-  // See if we got thread stop infos for all threads via the "jThreadsInfo"
-  // packet
-  if (thread_infos_sp) {
-    StructuredData::Array *thread_infos = thread_infos_sp->GetAsArray();
-    if (thread_infos) {
-      lldb::tid_t tid;
-      const size_t n = thread_infos->GetSize();
-      for (size_t i = 0; i < n; ++i) {
-        StructuredData::Dictionary *thread_dict =
-            thread_infos->GetItemAtIndex(i)->GetAsDictionary();
-        if (thread_dict) {
-          if (thread_dict->GetValueForKeyAsInteger<lldb::tid_t>(
-                  "tid", tid, LLDB_INVALID_THREAD_ID)) {
-            if (tid == thread->GetID())
-              return (bool)SetThreadStopInfo(thread_dict,
-                                             thread->shared_from_this());
-          }
-        }
-      }
+ProcessGDBRemote::ThreadInfosSP
+ProcessGDBRemote::IndexThreadInfos(StructuredData::ObjectSP json_sp) {
+  if (!json_sp)
+    return nullptr;
+  auto thread_infos = std::make_shared<ThreadInfos>();
+  if (StructuredData::Array *array = json_sp->GetAsArray()) {
+    const size_t n = array->GetSize();
+    thread_infos->thread_dicts.reserve(n);
+    for (size_t i = 0; i < n; ++i) {
+      StructuredData::Dictionary *thread_dict =
+          array->GetItemAtIndex(i)->GetAsDictionary();
+      lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+      // If a reply lists a thread more than once, use its first entry.
+      if (thread_dict && thread_dict->GetValueForKeyAsInteger("tid", tid))
+        thread_infos->thread_dicts.try_emplace(tid, thread_dict);
     }
   }
-  return false;
+  thread_infos->json_sp = std::move(json_sp);
+  return thread_infos;
+}
+
+bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
+    ThreadGDBRemote *thread, const ThreadInfosSP &thread_infos_sp) {
+  if (!thread_infos_sp)
+    return false;
+  auto it = thread_infos_sp->thread_dicts.find(thread->GetID());
+  if (it == thread_infos_sp->thread_dicts.end())
+    return false;
+  return SetThreadStopInfo(it->second, thread->shared_from_this()) != nullptr;
 }
 
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
   // packet (we're at a public stop).
-  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (GetThreadStopInfoFromJSON(thread, threads_info_sp))
     return true;
 
   // See if the stop-reply packet (T05 etc) included a `jstopinfo` key
   // with a mach exception description for any thread that has a stop reason.
-  StructuredData::ObjectSP stop_info_sp = *m_jstopinfo.Lock();
+  ThreadInfosSP stop_info_sp = *m_jstopinfo.Lock();
   if (stop_info_sp) {
     // Any thread not described in `jstopinfo` has no stop reason.
     // If a no-stop-reason thread is stopped at a breakpoint site (but
@@ -2537,7 +2543,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         // This JSON contains thread IDs and thread stop info for all threads.
         // It doesn't contain expedited registers, memory or queue info.
-        *m_jstopinfo.Lock() = StructuredData::ParseJSON(json);
+        *m_jstopinfo.Lock() = IndexThreadInfos(StructuredData::ParseJSON(json));
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
         // Now convert the HEX bytes into a string value
@@ -2930,7 +2936,7 @@ void ProcessGDBRemote::WillPublicStop() {
   // memory will help stack backtracing be much faster. Expediting registers
   // will make sure we don't have to read the thread registers for GPRs.
   StructuredData::ObjectSP threads_info_sp = m_gdb_comm.GetThreadsInfo();
-  *m_jthreadsinfo.Lock() = threads_info_sp;
+  *m_jthreadsinfo.Lock() = IndexThreadInfos(threads_info_sp);
 
   if (threads_info_sp) {
     // Now set the stop info for each thread and also expedite any registers
