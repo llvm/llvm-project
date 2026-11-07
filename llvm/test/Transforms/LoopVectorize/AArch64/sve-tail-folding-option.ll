@@ -917,31 +917,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-NOTF-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-NOTF-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-NOTF-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-NOTF-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC1]])
-; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
-; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
-; CHECK-NOTF-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
+; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
+; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-NOTF-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-NOTF-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-NOTF-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-NOTF-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-NOTF-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-NOTF-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-NOTF-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP17]], align 4
+; CHECK-NOTF-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-NOTF-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-NOTF-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-NOTF-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP16]], align 4
 ; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NOTF-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NOTF-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NOTF-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NOTF-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-NOTF:       [[MIDDLE_BLOCK]]:
 ; CHECK-NOTF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
@@ -961,31 +961,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-TF-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-TF-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-TF-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-TF-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-TF-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-TF-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-TF-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-TF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-TF-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-TF-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-TF-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-TF-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-TF-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-TF-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-TF-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-TF-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC1]])
-; CHECK-TF-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
-; CHECK-TF-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
-; CHECK-TF-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-TF-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-TF-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
+; CHECK-TF-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
+; CHECK-TF-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-TF-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-TF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-TF-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-TF-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-TF-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-TF-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP17]], align 4
+; CHECK-TF-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-TF-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP16]], align 4
 ; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TF-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-TF-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-TF-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TF-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
@@ -1005,31 +1005,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-SIMPLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-SIMPLE:       [[VECTOR_BODY]]:
 ; CHECK-TF-SIMPLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-SIMPLE-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-TF-SIMPLE-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-TF-SIMPLE-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-TF-SIMPLE-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-TF-SIMPLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-TF-SIMPLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-TF-SIMPLE-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-TF-SIMPLE-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-TF-SIMPLE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-SIMPLE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-TF-SIMPLE-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-TF-SIMPLE-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-TF-SIMPLE-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-TF-SIMPLE-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-TF-SIMPLE-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-TF-SIMPLE-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-TF-SIMPLE-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-TF-SIMPLE-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-TF-SIMPLE-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-TF-SIMPLE-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC1]])
-; CHECK-TF-SIMPLE-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
-; CHECK-TF-SIMPLE-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
-; CHECK-TF-SIMPLE-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-TF-SIMPLE-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-TF-SIMPLE-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
+; CHECK-TF-SIMPLE-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
+; CHECK-TF-SIMPLE-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-TF-SIMPLE-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-TF-SIMPLE-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-TF-SIMPLE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-TF-SIMPLE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-SIMPLE-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-TF-SIMPLE-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-SIMPLE-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP17]], align 4
+; CHECK-TF-SIMPLE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-SIMPLE-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-TF-SIMPLE-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-SIMPLE-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP16]], align 4
 ; CHECK-TF-SIMPLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-SIMPLE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TF-SIMPLE-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-TF-SIMPLE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-TF-SIMPLE-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-TF-SIMPLE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-SIMPLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TF-SIMPLE-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
@@ -1052,31 +1052,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-DEFAULT:       [[VECTOR_BODY]]:
 ; CHECK-TF-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-TF-DEFAULT-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-TF-DEFAULT-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-TF-DEFAULT-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-TF-DEFAULT-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-TF-DEFAULT-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-TF-DEFAULT-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-TF-DEFAULT-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-TF-DEFAULT-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-TF-DEFAULT-NEXT:    [[WIDE_VEC2:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-TF-DEFAULT-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-TF-DEFAULT-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[WIDE_VEC2:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-TF-DEFAULT-NEXT:    [[STRIDED_VEC3:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC2]])
-; CHECK-TF-DEFAULT-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC3]], 0
-; CHECK-TF-DEFAULT-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC3]], 1
-; CHECK-TF-DEFAULT-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-TF-DEFAULT-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-TF-DEFAULT-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC3]], 0
+; CHECK-TF-DEFAULT-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC3]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-TF-DEFAULT-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-TF-DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-TF-DEFAULT-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-DEFAULT-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-TF-DEFAULT-NEXT:    [[INTERLEAVED_VEC4:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-DEFAULT-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC4]], ptr [[TMP17]], align 4
+; CHECK-TF-DEFAULT-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-DEFAULT-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-TF-DEFAULT-NEXT:    [[INTERLEAVED_VEC4:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-DEFAULT-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC4]], ptr [[TMP16]], align 4
 ; CHECK-TF-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TF-DEFAULT-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-TF-DEFAULT-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-TF-DEFAULT-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-TF-DEFAULT:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TF-DEFAULT-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
@@ -1085,28 +1085,27 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-DEFAULT-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6:![0-9]+]]
 ; CHECK-TF-DEFAULT:       [[VEC_EPILOG_PH]]:
 ; CHECK-TF-DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP19:%.*]] = and i64 [[N]], 3
-; CHECK-TF-DEFAULT-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[TMP19]]
+; CHECK-TF-DEFAULT-NEXT:    [[TMP18:%.*]] = and i64 [[N]], 3
+; CHECK-TF-DEFAULT-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[TMP18]]
 ; CHECK-TF-DEFAULT-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-TF-DEFAULT:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-TF-DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP20:%.*]] = shl nuw nsw i64 [[INDEX6]], 1
-; CHECK-TF-DEFAULT-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP20]]
-; CHECK-TF-DEFAULT-NEXT:    [[WIDE_VEC7:%.*]] = load <8 x float>, ptr [[TMP21]], align 4
-; CHECK-TF-DEFAULT-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <8 x float> [[WIDE_VEC7]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-TF-DEFAULT-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <8 x float> [[WIDE_VEC7]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-TF-DEFAULT-NEXT:    [[TMP22:%.*]] = shl nuw nsw i64 [[INDEX6]], 2
-; CHECK-TF-DEFAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP22]]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP24:%.*]] = shufflevector <4 x float> [[STRIDED_VEC8]], <4 x float> [[STRIDED_VEC9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-TF-DEFAULT-NEXT:    [[TMP25:%.*]] = shufflevector <8 x float> [[TMP24]], <8 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-TF-DEFAULT-NEXT:    [[INTERLEAVED_VEC10:%.*]] = shufflevector <16 x float> [[TMP25]], <16 x float> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-TF-DEFAULT-NEXT:    store <16 x float> [[INTERLEAVED_VEC10]], ptr [[TMP23]], align 4
-; CHECK-TF-DEFAULT-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX6]], 4
-; CHECK-TF-DEFAULT-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC5]]
-; CHECK-TF-DEFAULT-NEXT:    br i1 [[TMP26]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-TF-DEFAULT-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-TF-DEFAULT-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[INDEX6]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP19]]
+; CHECK-TF-DEFAULT-NEXT:    [[WIDE_VEC7:%.*]] = load <8 x float>, ptr [[TMP20]], align 4
+; CHECK-TF-DEFAULT-NEXT:    [[STRIDED_VEC8:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC7]])
+; CHECK-TF-DEFAULT-NEXT:    [[TMP21:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC8]], 0
+; CHECK-TF-DEFAULT-NEXT:    [[TMP22:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC8]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[TMP23:%.*]] = shl nuw nsw i64 [[INDEX6]], 2
+; CHECK-TF-DEFAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP23]]
+; CHECK-TF-DEFAULT-NEXT:    [[INTERLEAVED_VEC9:%.*]] = call <16 x float> @llvm.vector.interleave4.v16f32(<4 x float> [[TMP21]], <4 x float> [[TMP22]], <4 x float> splat (float 3.000000e+00), <4 x float> splat (float 4.000000e+00))
+; CHECK-TF-DEFAULT-NEXT:    store <16 x float> [[INTERLEAVED_VEC9]], ptr [[TMP24]], align 4
+; CHECK-TF-DEFAULT-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX6]], 4
+; CHECK-TF-DEFAULT-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC5]]
+; CHECK-TF-DEFAULT-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-TF-DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-TF-DEFAULT-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
-; CHECK-TF-DEFAULT-NEXT:    br i1 [[CMP_N12]], [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-TF-DEFAULT-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
+; CHECK-TF-DEFAULT-NEXT:    br i1 [[CMP_N11]], [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-TF-DEFAULT:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; CHECK-TF-NORED-LABEL: define void @interleave(
@@ -1123,31 +1122,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NORED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NORED:       [[VECTOR_BODY]]:
 ; CHECK-TF-NORED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NORED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-TF-NORED-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-TF-NORED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-TF-NORED-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-TF-NORED-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-TF-NORED-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-TF-NORED-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-TF-NORED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-TF-NORED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-TF-NORED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-NORED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-TF-NORED-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-TF-NORED-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-TF-NORED-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-TF-NORED-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-TF-NORED-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-TF-NORED-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-TF-NORED-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-TF-NORED-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-TF-NORED-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-TF-NORED-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC1]])
-; CHECK-TF-NORED-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
-; CHECK-TF-NORED-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
-; CHECK-TF-NORED-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-TF-NORED-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-TF-NORED-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
+; CHECK-TF-NORED-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
+; CHECK-TF-NORED-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-TF-NORED-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-TF-NORED-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-TF-NORED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-TF-NORED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-TF-NORED-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-NORED-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-TF-NORED-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-NORED-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP17]], align 4
+; CHECK-TF-NORED-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-NORED-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-TF-NORED-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-NORED-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP16]], align 4
 ; CHECK-TF-NORED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-NORED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TF-NORED-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-TF-NORED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-TF-NORED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-TF-NORED:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NORED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TF-NORED-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
@@ -1167,31 +1166,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NOREC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NOREC:       [[VECTOR_BODY]]:
 ; CHECK-TF-NOREC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NOREC-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-TF-NOREC-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-TF-NOREC-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-TF-NOREC-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-TF-NOREC-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-TF-NOREC-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-TF-NOREC-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-TF-NOREC-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-TF-NOREC-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-TF-NOREC-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-NOREC-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-TF-NOREC-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-TF-NOREC-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-TF-NOREC-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-TF-NOREC-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-TF-NOREC-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-TF-NOREC-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-TF-NOREC-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-TF-NOREC-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-TF-NOREC-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-TF-NOREC-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC1]])
-; CHECK-TF-NOREC-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
-; CHECK-TF-NOREC-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
-; CHECK-TF-NOREC-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-TF-NOREC-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-TF-NOREC-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
+; CHECK-TF-NOREC-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
+; CHECK-TF-NOREC-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-TF-NOREC-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-TF-NOREC-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-TF-NOREC-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-TF-NOREC-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-TF-NOREC-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-NOREC-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-TF-NOREC-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-NOREC-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP17]], align 4
+; CHECK-TF-NOREC-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-NOREC-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-TF-NOREC-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-NOREC-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP16]], align 4
 ; CHECK-TF-NOREC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-NOREC-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TF-NOREC-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-TF-NOREC-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-TF-NOREC-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-TF-NOREC:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NOREC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TF-NOREC-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
@@ -1211,31 +1210,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NOREV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NOREV:       [[VECTOR_BODY]]:
 ; CHECK-TF-NOREV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NOREV-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-TF-NOREV-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-TF-NOREV-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-TF-NOREV-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-TF-NOREV-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-TF-NOREV-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-TF-NOREV-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-TF-NOREV-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-TF-NOREV-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-TF-NOREV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-NOREV-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-TF-NOREV-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-TF-NOREV-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-TF-NOREV-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-TF-NOREV-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-TF-NOREV-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-TF-NOREV-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-TF-NOREV-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-TF-NOREV-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-TF-NOREV-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-TF-NOREV-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC1]])
-; CHECK-TF-NOREV-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
-; CHECK-TF-NOREV-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
-; CHECK-TF-NOREV-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-TF-NOREV-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-TF-NOREV-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
+; CHECK-TF-NOREV-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
+; CHECK-TF-NOREV-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-TF-NOREV-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-TF-NOREV-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-TF-NOREV-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-TF-NOREV-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-TF-NOREV-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-NOREV-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-TF-NOREV-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-NOREV-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP17]], align 4
+; CHECK-TF-NOREV-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-NOREV-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-TF-NOREV-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-NOREV-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP16]], align 4
 ; CHECK-TF-NOREV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-NOREV-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TF-NOREV-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-TF-NOREV-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-TF-NOREV-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-TF-NOREV:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NOREV-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TF-NOREV-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
@@ -1255,31 +1254,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-ONLYRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-ONLYRED:       [[VECTOR_BODY]]:
 ; CHECK-TF-ONLYRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-TF-ONLYRED-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-TF-ONLYRED-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-TF-ONLYRED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-TF-ONLYRED-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-TF-ONLYRED-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-TF-ONLYRED-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-TF-ONLYRED-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-TF-ONLYRED-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-TF-ONLYRED-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-TF-ONLYRED-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-TF-ONLYRED-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-TF-ONLYRED-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC1]])
-; CHECK-TF-ONLYRED-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
-; CHECK-TF-ONLYRED-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
-; CHECK-TF-ONLYRED-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-TF-ONLYRED-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-TF-ONLYRED-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 0
+; CHECK-TF-ONLYRED-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC2]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-TF-ONLYRED-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-TF-ONLYRED-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-TF-ONLYRED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-TF-ONLYRED-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-ONLYRED-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-TF-ONLYRED-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-TF-ONLYRED-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP17]], align 4
+; CHECK-TF-ONLYRED-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-ONLYRED-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-TF-ONLYRED-NEXT:    [[INTERLEAVED_VEC3:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-TF-ONLYRED-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC3]], ptr [[TMP16]], align 4
 ; CHECK-TF-ONLYRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-TF-ONLYRED-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-TF-ONLYRED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-TF-ONLYRED:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-ONLYRED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-TF-ONLYRED-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
@@ -1302,31 +1301,31 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEOVERSE-V1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NEOVERSE-V1:       [[VECTOR_BODY]]:
 ; CHECK-NEOVERSE-V1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
+; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 8 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEOVERSE-V1-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC]])
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
-; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_VEC2:%.*]] = load <vscale x 8 x float>, ptr [[TMP9]], align 4
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 0
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_VEC2:%.*]] = load <vscale x 8 x float>, ptr [[TMP8]], align 4
 ; CHECK-NEOVERSE-V1-NEXT:    [[STRIDED_VEC3:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[WIDE_VEC2]])
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC3]], 0
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC3]], 1
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[INDEX]], 2
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP5]], 2
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC3]], 0
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[STRIDED_VEC3]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP4]], 2
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP13]]
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP14]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP15]]
-; CHECK-NEOVERSE-V1-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP10]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-NEOVERSE-V1-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 4
-; CHECK-NEOVERSE-V1-NEXT:    [[INTERLEAVED_VEC4:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP12]], <vscale x 4 x float> [[TMP13]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
-; CHECK-NEOVERSE-V1-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC4]], ptr [[TMP17]], align 4
+; CHECK-NEOVERSE-V1-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-NEOVERSE-V1-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC]], ptr [[TMP15]], align 4
+; CHECK-NEOVERSE-V1-NEXT:    [[INTERLEAVED_VEC4:%.*]] = call <vscale x 16 x float> @llvm.vector.interleave4.nxv16f32(<vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> splat (float 4.000000e+00))
+; CHECK-NEOVERSE-V1-NEXT:    store <vscale x 16 x float> [[INTERLEAVED_VEC4]], ptr [[TMP16]], align 4
 ; CHECK-NEOVERSE-V1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEOVERSE-V1-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEOVERSE-V1-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-NEOVERSE-V1:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEOVERSE-V1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEOVERSE-V1-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
@@ -1335,28 +1334,27 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEOVERSE-V1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF8:![0-9]+]]
 ; CHECK-NEOVERSE-V1:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEOVERSE-V1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP19:%.*]] = and i64 [[N]], 3
-; CHECK-NEOVERSE-V1-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[TMP19]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP18:%.*]] = and i64 [[N]], 3
+; CHECK-NEOVERSE-V1-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[TMP18]]
 ; CHECK-NEOVERSE-V1-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-NEOVERSE-V1:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEOVERSE-V1-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP20:%.*]] = shl nuw nsw i64 [[INDEX6]], 1
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP20]]
-; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_VEC7:%.*]] = load <8 x float>, ptr [[TMP21]], align 4
-; CHECK-NEOVERSE-V1-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <8 x float> [[WIDE_VEC7]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEOVERSE-V1-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <8 x float> [[WIDE_VEC7]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP22:%.*]] = shl nuw nsw i64 [[INDEX6]], 2
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP22]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP24:%.*]] = shufflevector <4 x float> [[STRIDED_VEC8]], <4 x float> [[STRIDED_VEC9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP25:%.*]] = shufflevector <8 x float> [[TMP24]], <8 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEOVERSE-V1-NEXT:    [[INTERLEAVED_VEC10:%.*]] = shufflevector <16 x float> [[TMP25]], <16 x float> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEOVERSE-V1-NEXT:    store <16 x float> [[INTERLEAVED_VEC10]], ptr [[TMP23]], align 4
-; CHECK-NEOVERSE-V1-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX6]], 4
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC5]]
-; CHECK-NEOVERSE-V1-NEXT:    br i1 [[TMP26]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEOVERSE-V1-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[INDEX6]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP19]]
+; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_VEC7:%.*]] = load <8 x float>, ptr [[TMP20]], align 4
+; CHECK-NEOVERSE-V1-NEXT:    [[STRIDED_VEC8:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC7]])
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP21:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC8]], 0
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP22:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC8]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP23:%.*]] = shl nuw nsw i64 [[INDEX6]], 2
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP23]]
+; CHECK-NEOVERSE-V1-NEXT:    [[INTERLEAVED_VEC9:%.*]] = call <16 x float> @llvm.vector.interleave4.v16f32(<4 x float> [[TMP21]], <4 x float> [[TMP22]], <4 x float> splat (float 3.000000e+00), <4 x float> splat (float 4.000000e+00))
+; CHECK-NEOVERSE-V1-NEXT:    store <16 x float> [[INTERLEAVED_VEC9]], ptr [[TMP24]], align 4
+; CHECK-NEOVERSE-V1-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX6]], 4
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC5]]
+; CHECK-NEOVERSE-V1-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-NEOVERSE-V1:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEOVERSE-V1-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
-; CHECK-NEOVERSE-V1-NEXT:    br i1 [[CMP_N12]], [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEOVERSE-V1-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
+; CHECK-NEOVERSE-V1-NEXT:    br i1 [[CMP_N11]], [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-NEOVERSE-V1:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:
