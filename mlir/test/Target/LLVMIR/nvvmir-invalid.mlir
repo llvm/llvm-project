@@ -197,7 +197,7 @@ llvm.func @nvvm_cvt_float_to_f8x2_pzo_not_supported_ue8m0(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_f16x2_to_f8x2_invalid_type(%src : vector<2xf16>) {
-  // expected-error @below {{Only 'f8E4M3FN' and 'f8E5M2' types are supported for conversions from f16x2 to f8x2.}}
+  // expected-error @below {{Only 'f8E5M3FNU', 'f8E4M3FN', and 'f8E5M2' types are supported for conversions from f16x2 to f8x2.}}
   %res = nvvm.convert.f16x2.to.f8x2 %src : vector<2xf16> -> i16 (f8E8M0FNU)
   llvm.return
 }
@@ -221,7 +221,7 @@ llvm.func @nvvm_cvt_f32x2_to_f4x2_invalid_type(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_f8x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E4M3FN type or f8E5M2 type}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E4M3FN type or f8E5M2 type or f8E5M3FNU type}}
   %res = nvvm.convert.f8x2.to.f16x2 %src : vector<2xi8> (f8E4M3) -> vector<2xf16>
   llvm.return
 }
@@ -229,7 +229,7 @@ llvm.func @nvvm_cvt_f8x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
 // -----
 
 llvm.func @nvvm_cvt_f8x2_to_bf16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E8M0FNU type or f8E4M3FN type or f8E5M2 type}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E8M0FNU type or f8E4M3FN type or f8E5M2 type or f8E5M3FNU type}}
   %res = nvvm.convert.f8x2.to.bf16x2 %src : vector<2xi8> (f8E4M3) -> vector<2xbf16>
   llvm.return
 }
