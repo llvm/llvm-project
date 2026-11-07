@@ -174,6 +174,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
+* Removed `mc::RegisterMCTargetOptionsFlags`.
+  A tool that created it now passes `mc::getToolOptions()`, or `codegen::getToolOptions()` with `codegen::RegisterCodeGenFlags`, to `cl::parseCommandLineOptions`.
+
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
 

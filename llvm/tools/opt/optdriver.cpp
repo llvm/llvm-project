@@ -455,7 +455,8 @@ optMain(int argc, char **argv,
 
   LLVMContext Context;
   cl::parseCommandLineOptions(
-      Context.getLibraryOptions(), ArrayRef(argv, argc),
+      Context.getLibraryOptions(), codegen::getToolOptions(),
+      ArrayRef(argv, argc),
       "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
   SmallVector<PassPluginLibraryInfo, 0> Extensions;
