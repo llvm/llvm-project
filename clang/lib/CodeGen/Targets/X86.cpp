@@ -1234,6 +1234,11 @@ static void addX86InterruptAttrs(const FunctionDecl *FD, llvm::GlobalValue *GV,
 
   const auto *PtrTy = FD->getParamDecl(0)->getType()->castAs<PointerType>();
   llvm::Type *ByValTy = CGM.getTypes().ConvertType(PtrTy->getPointeeType());
+  // byval needs a sized type, but the frame's type may be unsized, e.g. an
+  // incomplete struct ("struct interrupt_frame;" in GCC's documentation). The
+  // backend locates the frame itself, so use i8 as for "void *".
+  if (!ByValTy->isSized())
+    ByValTy = CGM.Int8Ty;
   llvm::Attribute NewAttr = llvm::Attribute::getWithByValType(
     Fn->getContext(), ByValTy);
   Fn->addParamAttr(0, NewAttr);
