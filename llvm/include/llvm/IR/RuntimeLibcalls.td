@@ -4637,9 +4637,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_hypotdx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def Sleef_hypotfx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def Sleef_ilogbdx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV2F64>;
-  def Sleef_ilogbfx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV4F32>;
   def Sleef_ldexpdx_rvvm2 : RuntimeLibcallImpl<LDEXP_NXV2F64>;
-  def Sleef_ldexpfx_rvvm2 : RuntimeLibcallImpl<LDEXP_NXV4F32>;
   def Sleef_lgammadx_u10rvvm2 : RuntimeLibcallImpl<LGAMMA_NXV2F64>;
   def Sleef_lgammafx_u10rvvm2 : RuntimeLibcallImpl<LGAMMA_NXV4F32>;
   def Sleef_log10dx_u10rvvm2 : RuntimeLibcallImpl<LOG10_NXV2F64>;
