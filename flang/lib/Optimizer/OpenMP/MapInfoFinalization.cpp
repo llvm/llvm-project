@@ -435,8 +435,13 @@ class MapInfoFinalizationPass
 
     llvm::SmallVector<mlir::Value> bounds(parentOp.getBounds().begin(),
                                           parentOp.getBounds().end());
-    if (shouldMapPolymorphicDescriptorWithRuntimeElementSize(
-            descriptor, supportsPolymorphicMap)) {
+    // Do not combine a runtime byte extent with a mapper for the declared
+    // type. The mapper body interprets the mapped extent in units of the
+    // declared type, so using a larger dynamic-type byte extent for a
+    // polymorphic entity can make the runtime invoke the declared-type mapper
+    // on derived extension storage as if it were another declared object.
+    if (!mapperId && shouldMapPolymorphicDescriptorWithRuntimeElementSize(
+                         descriptor, supportsPolymorphicMap)) {
       bounds = genRuntimeSizedBaseAddrBounds(mapInfoOpLoc, descriptor,
                                              parentOp.getBounds(), builder);
       underlyingBaseAddrType = builder.getI8Type();
