@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=numerical | FileCheck -check-prefix=NSAN %s
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=numerical | FileCheck -check-prefix=NSAN %s
 // RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=numerical -fsanitize-ignorelist=%t | FileCheck -check-prefix=BL %s
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-apple-darwin -emit-llvm -o - %s -fsanitize=numerical -fsanitize-ignorelist=%t | FileCheck -check-prefix=BL %s
 
 // WITHOUT:  NoNSAN3{{.*}}) [[NOATTR:#[0-9]+]]
 // BL:  NoNSAN3{{.*}}) [[NOATTR:#[0-9]+]]

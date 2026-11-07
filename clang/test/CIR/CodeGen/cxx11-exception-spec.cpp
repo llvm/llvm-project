@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -verify -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -verify -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -fno-module-local-hints -std=c++11 -triple x86_64-linux-gnu -fexceptions -fcxx-exceptions -verify -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 // Without exceptions every definition is nounwind, whatever its exception

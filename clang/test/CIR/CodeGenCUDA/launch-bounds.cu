@@ -8,7 +8,7 @@
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.cir.ll
 // RUN: FileCheck --check-prefix=LLVM %s --input-file=%t.cir.ll
 
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -x cuda \
+// RUN: %clang_cc1 -fno-module-local-hints -triple nvptx-unknown-unknown -x cuda \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ogcg.ll
 // RUN: FileCheck --check-prefix=LLVM %s --input-file=%t.ogcg.ll
 
@@ -22,7 +22,7 @@
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.max.cir.ll
 // RUN: FileCheck --check-prefix=LLVM_MAX_BLOCKS %s --input-file=%t.max.cir.ll
 
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -x cuda \
+// RUN: %clang_cc1 -fno-module-local-hints -triple nvptx-unknown-unknown -x cuda \
 // RUN:            -target-cpu sm_90 -DUSE_MAX_BLOCKS \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.max.ogcg.ll
 // RUN: FileCheck --check-prefix=LLVM_MAX_BLOCKS %s --input-file=%t.max.ogcg.ll

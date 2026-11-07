@@ -3,16 +3,16 @@ int DefinedInDifferentFile(int *a);
 // RUN: echo "struct S { S(){} ~S(){} };" >> %t.extra-source.cpp
 // RUN: echo "S glob_array[5];" >> %t.extra-source.cpp
 
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin -disable-O0-optnone -emit-llvm -o - %s -include %t.extra-source.cpp | FileCheck -check-prefix=WITHOUT %s
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin -disable-O0-optnone -emit-llvm -o - %s -include %t.extra-source.cpp -fsanitize=address | FileCheck -check-prefix=ASAN %s
+// RUN: %clang_cc1 -fno-module-local-hints -std=c++11 -triple x86_64-apple-darwin -disable-O0-optnone -emit-llvm -o - %s -include %t.extra-source.cpp | FileCheck -check-prefix=WITHOUT %s
+// RUN: %clang_cc1 -fno-module-local-hints -std=c++11 -triple x86_64-apple-darwin -disable-O0-optnone -emit-llvm -o - %s -include %t.extra-source.cpp -fsanitize=address | FileCheck -check-prefix=ASAN %s
 
 // RUN: echo "fun:*IgnorelistedFunction*" > %t.func.ignorelist
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin -disable-O0-optnone -emit-llvm -o - %s -include %t.extra-source.cpp -fsanitize=address -fsanitize-ignorelist=%t.func.ignorelist | FileCheck -check-prefix=BLFUNC %s
+// RUN: %clang_cc1 -fno-module-local-hints -std=c++11 -triple x86_64-apple-darwin -disable-O0-optnone -emit-llvm -o - %s -include %t.extra-source.cpp -fsanitize=address -fsanitize-ignorelist=%t.func.ignorelist | FileCheck -check-prefix=BLFUNC %s
 
 // The ignorelist file uses regexps, so escape backslashes, which are common in
 // Windows paths.
 // RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t.file.ignorelist
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin -disable-O0-optnone -emit-llvm -o - %s -include %t.extra-source.cpp -fsanitize=address -fsanitize-ignorelist=%t.file.ignorelist | FileCheck -check-prefix=BLFILE %s
+// RUN: %clang_cc1 -fno-module-local-hints -std=c++11 -triple x86_64-apple-darwin -disable-O0-optnone -emit-llvm -o - %s -include %t.extra-source.cpp -fsanitize=address -fsanitize-ignorelist=%t.file.ignorelist | FileCheck -check-prefix=BLFILE %s
 
 // The sanitize_address attribute should be attached to functions
 // when AddressSanitizer is enabled, unless no_sanitize_address attribute

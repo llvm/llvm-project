@@ -28,10 +28,10 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis  -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s -Wno-openmp-mapping
 // RUN: %clang_cc1 -no-enable-noundef-analysis  -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - -Wno-openmp-mapping | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DARRAY  -verify -Wno-vla -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK17
+// RUN: %clang_cc1 -fno-module-local-hints -no-enable-noundef-analysis -DARRAY  -verify -Wno-vla -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK17
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DARRAY  -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s -Wno-openmp-mapping
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DARRAY  -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK17
-// RUN: %clang_cc1 -no-enable-noundef-analysis -DARRAY  -verify -Wno-vla -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK19
+// RUN: %clang_cc1 -fno-module-local-hints -no-enable-noundef-analysis -DARRAY  -verify -Wno-vla -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK19
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DARRAY  -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s -Wno-openmp-mapping
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DARRAY  -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -include-pch %t -verify -Wno-vla %s -emit-llvm -o - -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK19
 

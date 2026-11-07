@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple nvptx-unknown-unknown -fcuda-is-device -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fno-module-local-hints %s -triple nvptx-unknown-unknown -fcuda-is-device -emit-llvm -o - | FileCheck %s
 // RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple nvptx-unknown-unknown -fcuda-is-device -emit-llvm -o - | FileCheck %s %}
-// RUN: %clang_cc1 %s -triple nvptx-unknown-unknown -target-cpu sm_90 -DUSE_MAX_BLOCKS -fcuda-is-device -emit-llvm -o - | FileCheck -check-prefix=CHECK_MAX_BLOCKS %s
+// RUN: %clang_cc1 -fno-module-local-hints %s -triple nvptx-unknown-unknown -target-cpu sm_90 -DUSE_MAX_BLOCKS -fcuda-is-device -emit-llvm -o - | FileCheck -check-prefix=CHECK_MAX_BLOCKS %s
 // RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple nvptx-unknown-unknown -target-cpu sm_90 -DUSE_MAX_BLOCKS -fcuda-is-device -emit-llvm -o - | FileCheck -check-prefix=CHECK_MAX_BLOCKS %s %}
 
 #include "Inputs/cuda.h"

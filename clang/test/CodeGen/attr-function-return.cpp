@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - \
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-linux-gnu %s -emit-llvm -o - \
 // RUN:   -Werror=unknown-attributes \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-NOM
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - \
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-linux-gnu %s -emit-llvm -o - \
 // RUN:   -Werror=unknown-attributes -mfunction-return=keep \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-KEEP
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - \
+// RUN: %clang_cc1 -fno-module-local-hints -triple x86_64-linux-gnu %s -emit-llvm -o - \
 // RUN:   -Werror=unknown-attributes -mfunction-return=thunk-extern \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-EXTERN
 
