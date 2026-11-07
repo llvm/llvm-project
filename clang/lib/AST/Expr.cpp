@@ -3451,7 +3451,8 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
         *Culprit = this;
       return false;
     }
-    return CLE->getInitializer()->isConstantInitializer(Ctx, false, Culprit);
+    return CLE->getInitializer()->isConstantInitializer(Ctx, /*ForRef=*/false,
+                                                        Culprit);
   }
   case DesignatedInitUpdateExprClass: {
     const DesignatedInitUpdateExpr *DIUE = cast<DesignatedInitUpdateExpr>(this);

@@ -1099,7 +1099,8 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
 
   auto GV = new llvm::GlobalVariable(
       CGM.getModule(), C->getType(),
-      E->getType().isConstantStorage(CGM.getContext(), true, false),
+      E->getType().isConstantStorage(CGM.getContext(), /*ExcludeCtor=*/true,
+                                     /*ExcludeDtor=*/false),
       llvm::GlobalValue::InternalLinkage, C, ".compoundliteral", nullptr,
       E->hasThreadStorage() ? CGM.GetDefaultLLVMTLSModel()
                             : llvm::GlobalVariable::NotThreadLocal,
