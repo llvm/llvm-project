@@ -20,6 +20,6 @@ void operator delete(void *p) noexcept {
 // CIR: cir.func {{.*}}@_ZdlPv{{.*}} attributes {{.*}}nobuiltin{{.*}} {
 
 // LLVM: define dso_local noundef nonnull ptr @_Znwm(i64 noundef %{{.*}}) #[[OGCG_NEW_ATTRS:[0-9]+]]
-// LLVM: define dso_local void @_ZdlPv(ptr noundef %{{.*}}) #[[OGCG_DEL_ATTRS:[0-9]+]]
+// LLVM: define dso_local void @_ZdlPv(ptr {{(allocptr )?}}noundef %{{.*}}) #[[OGCG_DEL_ATTRS:[0-9]+]]
 // LLVM: attributes #[[OGCG_NEW_ATTRS]] = { {{.*}}nobuiltin{{.*}} }
 // LLVM: attributes #[[OGCG_DEL_ATTRS]] = { {{.*}}nobuiltin{{.*}} }
