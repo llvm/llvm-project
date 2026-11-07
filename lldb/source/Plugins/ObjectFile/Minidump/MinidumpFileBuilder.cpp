@@ -27,7 +27,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Minidump.h"

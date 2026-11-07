@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterTypeDetector_arm64.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 
 #include <functional>
 

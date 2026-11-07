@@ -23,7 +23,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #define DEFINE_REG_NAME(reg_num) ConstString(#reg_num).GetCString()

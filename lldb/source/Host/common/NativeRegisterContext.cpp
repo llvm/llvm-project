@@ -8,7 +8,7 @@
 
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"

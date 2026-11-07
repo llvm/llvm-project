@@ -1,12 +1,17 @@
-//===-- RegisterValue.cpp -------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Byte-order conversion, parsing, and storage for owned register values.
+///
+//===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -269,7 +274,8 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
   return error;
 }
 
-// Helper function for RegisterValue::SetValueFromString()
+/// Parse the textual byte-vector notation without interpreting it as a scalar.
+/// The caller applies the register width and byte-order policy afterward.
 static bool ParseVectorEncoding(const RegisterInfo *reg_info,
                                 llvm::StringRef vector_str,
                                 const uint32_t byte_size,

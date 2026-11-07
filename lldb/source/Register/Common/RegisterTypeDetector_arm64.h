@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_REGISTER_COMMON_REGISTERTYPEDETECTOR_ARM64_H
 
 #include "lldb/Utility/RegisterInfo.h"
-#include "lldb/Utility/RegisterType.h"
+#include "lldb/Register/RegisterType.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 

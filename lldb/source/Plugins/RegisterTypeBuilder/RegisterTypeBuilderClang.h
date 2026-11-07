@@ -12,7 +12,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 
 namespace lldb_private {
 class RegisterTypeBuilderClang : public RegisterTypeBuilder {

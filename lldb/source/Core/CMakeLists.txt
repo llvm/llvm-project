@@ -80,6 +80,7 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
     lldbExpression
     lldbHost
     lldbInterpreter
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

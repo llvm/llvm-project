@@ -14,7 +14,7 @@
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "Register/Common/RegisterTypeDetector_arm64.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <memory>
 

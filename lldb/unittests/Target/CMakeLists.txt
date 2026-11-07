@@ -45,6 +45,7 @@ add_lldb_unittest(TargetTests
       lldbPluginSymbolFileDWARF
       lldbPluginSymbolFileSymtab
       lldbPluginTypeSystemClang
+      lldbRegister
       lldbTarget
       lldbSymbol
       lldbUtility

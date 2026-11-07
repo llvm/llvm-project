@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-private-types.h"
 #include "gtest/gtest.h"

@@ -11,6 +11,7 @@ add_lldb_library(lldbPluginProcessFreeBSD
     Support
   LINK_LIBS
     lldbHost
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

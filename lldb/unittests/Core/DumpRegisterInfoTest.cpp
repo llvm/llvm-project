@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DumpRegisterInfo.h"
-#include "lldb/Utility/RegisterType.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterType.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
 

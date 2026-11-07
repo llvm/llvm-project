@@ -13,7 +13,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules.

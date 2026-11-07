@@ -10,7 +10,7 @@
 
 #include "RegisterTypeBuilderClang.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Utility/RegisterType.h"
+#include "lldb/Register/RegisterType.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorHandling.h"

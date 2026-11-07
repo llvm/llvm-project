@@ -11,7 +11,7 @@
 #include "NativeRegisterContextAIX_ppc64.h"
 #include "NativeThreadAIX.h"
 #include "Register/Common/RegisterInfo_ppc64.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 using namespace lldb;
 using namespace lldb_private;

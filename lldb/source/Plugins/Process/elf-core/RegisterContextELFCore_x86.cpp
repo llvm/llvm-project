@@ -9,7 +9,7 @@
 #include "RegisterContextELFCore_x86.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 using namespace lldb_private;
 

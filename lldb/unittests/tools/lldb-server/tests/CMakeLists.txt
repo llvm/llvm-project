@@ -11,6 +11,7 @@ add_lldb_unittest(LLDBServerTests
     lldbCore
     lldbHostHelpers
     lldbInterpreter
+    lldbRegister
     lldbTarget
     lldbPluginPlatformLinux
     lldbPluginProcessGDBRemote

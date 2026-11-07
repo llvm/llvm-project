@@ -6,6 +6,7 @@ add_lldb_library(lldbServerPluginMockAccelerator
 
   LINK_LIBS
     lldbHost
+    lldbRegister
     lldbUtility
 )
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/RegisterType.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterType.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

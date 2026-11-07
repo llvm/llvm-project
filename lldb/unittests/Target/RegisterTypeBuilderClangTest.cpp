@@ -17,8 +17,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegisterInfo.h"
-#include "lldb/Utility/RegisterType.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterType.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 #include "gtest/gtest.h"
 
 #include <mutex>

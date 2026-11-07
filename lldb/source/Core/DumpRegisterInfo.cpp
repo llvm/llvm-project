@@ -8,8 +8,8 @@
 
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Utility/RegisterType.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterType.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/Support/Casting.h"

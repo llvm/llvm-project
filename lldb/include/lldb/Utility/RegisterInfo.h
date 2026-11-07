@@ -9,14 +9,16 @@
 #ifndef LLDB_UTILITY_REGISTERINFO_H
 #define LLDB_UTILITY_REGISTERINFO_H
 
-#include "lldb/Utility/RegisterType.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/ADT/ArrayRef.h"
 
 #include <cstdint>
+#include <type_traits>
 
 namespace lldb_private {
+
+class RegisterType;
 
 /// Every register is described in detail including its name, alternate name
 /// (optional), encoding, size in bytes and the default display format.

@@ -12,7 +12,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/UnwindAssembly.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/lldb-private.h"
 
 class UnwindAssemblyInstEmulation : public lldb_private::UnwindAssembly {

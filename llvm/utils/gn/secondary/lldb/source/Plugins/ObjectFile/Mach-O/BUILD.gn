@@ -5,6 +5,7 @@ static_library("Mach-O") {
     "//lldb/source/Core",
     "//lldb/source/Host",
     "//lldb/source/Plugins/Register/Darwin",
+    "//lldb/source/Register",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",

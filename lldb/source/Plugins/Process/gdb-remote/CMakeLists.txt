@@ -47,6 +47,7 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     lldbDataFormatters
     lldbHost
     lldbInterpreter
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

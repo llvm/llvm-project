@@ -13,7 +13,7 @@
 #include "Register/Common/RegisterInfoDynamic_riscv32.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <memory>

@@ -9,7 +9,7 @@
 #include "RegisterContextELFCore_arm.h"
 
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <memory>
 

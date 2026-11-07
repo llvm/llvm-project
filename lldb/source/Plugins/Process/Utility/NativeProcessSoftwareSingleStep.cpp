@@ -10,7 +10,7 @@
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <unordered_map>
 

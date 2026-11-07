@@ -25,6 +25,7 @@ add_lldb_unittest(ExpressionTests
     lldbPluginPlatformLinux
     lldbPluginExpressionParserClang
     lldbPluginTypeSystemClang
+    lldbRegister
     lldbUtility
     lldbUtilityHelpers
     lldbSymbolHelpers

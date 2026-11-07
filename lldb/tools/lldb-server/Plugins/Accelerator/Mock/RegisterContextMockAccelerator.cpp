@@ -9,7 +9,7 @@
 #include "RegisterContextMockAccelerator.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 using namespace lldb;
 using namespace lldb_private;

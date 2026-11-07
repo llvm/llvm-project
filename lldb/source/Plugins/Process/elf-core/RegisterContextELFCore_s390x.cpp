@@ -10,7 +10,7 @@
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <memory>
 
