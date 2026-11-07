@@ -19,7 +19,8 @@ define i64 @smax_i32_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[VEC_PHI1]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP11]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[VEC_PHI1]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -96,7 +97,8 @@ define i64 @smax_i64_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i64> [[VEC_PHI1]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP11]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[VEC_PHI1]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -173,7 +175,8 @@ define i64 @smin_i32_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[VEC_PHI1]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP11]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[VEC_PHI1]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -250,7 +253,8 @@ define i64 @smin_i64_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i64> [[VEC_PHI1]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP1]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11:%.*]] = freeze <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP11]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[VEC_PHI1]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)

@@ -412,7 +412,7 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP5]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[TMP12]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i64> [[VEC_IND]], <vscale x 4 x i64> [[VEC_PHI3]]
+; SVE-NEXT:    [[TMP12]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i64> [[VEC_IND]], <vscale x 4 x i64> [[VEC_PHI3]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
