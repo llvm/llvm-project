@@ -54,10 +54,10 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA64-JT-NEXT:    ori $a2, $zero, 3
 ; LA64-JT-NEXT:    bltu $a2, $a3, .LBB0_6
 ; LA64-JT-NEXT:  # %bb.1: # %entry
-; LA64-JT-NEXT:    slli.d $a3, $a3, 3
 ; LA64-JT-NEXT:    pcalau12i $a4, %pc_hi20(.LJTI0_0)
 ; LA64-JT-NEXT:    addi.d $a4, $a4, %pc_lo12(.LJTI0_0)
-; LA64-JT-NEXT:    ldx.d $a3, $a4, $a3
+; LA64-JT-NEXT:    alsl.d $a3, $a3, $a4, 3
+; LA64-JT-NEXT:    ld.d $a3, $a3, 0
 ; LA64-JT-NEXT:  .Ljrtb_0:
 ; LA64-JT-NEXT:    jr $a3
 ; LA64-JT-NEXT:  .LBB0_2: # %bb1
@@ -74,10 +74,10 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA64-JT-NEXT:    addi.d $a3, $a0, -5
 ; LA64-JT-NEXT:    bltu $a2, $a3, .LBB0_9
 ; LA64-JT-NEXT:  # %bb.7: # %exit
-; LA64-JT-NEXT:    slli.d $a3, $a3, 3
 ; LA64-JT-NEXT:    pcalau12i $a4, %pc_hi20(.LJTI0_1)
 ; LA64-JT-NEXT:    addi.d $a4, $a4, %pc_lo12(.LJTI0_1)
-; LA64-JT-NEXT:    ldx.d $a3, $a4, $a3
+; LA64-JT-NEXT:    alsl.d $a3, $a3, $a4, 3
+; LA64-JT-NEXT:    ld.d $a3, $a3, 0
 ; LA64-JT-NEXT:  .Ljrtb_1:
 ; LA64-JT-NEXT:    jr $a3
 ; LA64-JT-NEXT:  .LBB0_8: # %bb4

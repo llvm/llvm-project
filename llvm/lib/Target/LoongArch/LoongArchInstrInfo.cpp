@@ -16,11 +16,13 @@
 #include "LoongArchRegisterInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -417,8 +419,7 @@ static int getJumpTableIndexFromReg(const MachineRegisterInfo &MRI,
   return -1;
 }
 
-// LA32 do not support register offset load instrunctions (LDX),
-// so add another layer to get jump table address.
+// Follow the address computation of an immediate-offset jump-table load.
 static int getJumpTableIndexFromLoadAddr(const MachineRegisterInfo &MRI,
                                          Register Reg) {
   if (!Reg.isVirtual())
@@ -430,6 +431,7 @@ static int getJumpTableIndexFromLoadAddr(const MachineRegisterInfo &MRI,
   int JTI;
   switch (MI->getOpcode()) {
   case LoongArch::ADD_W:
+  case LoongArch::ADD_D:
     JTI = getJumpTableIndexFromReg(MRI, MI->getOperand(1).getReg());
     if (JTI >= 0)
       return JTI;
@@ -438,7 +440,8 @@ static int getJumpTableIndexFromLoadAddr(const MachineRegisterInfo &MRI,
       return JTI;
     break;
   case LoongArch::ALSL_W:
-    // For la32s, address could only stores in register $rk.
+  case LoongArch::ALSL_D:
+    // ALSL takes the unshifted base address as its second register operand.
     return getJumpTableIndexFromReg(MRI, MI->getOperand(2).getReg());
   }
 
@@ -471,6 +474,7 @@ int LoongArchInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
   int JTI;
   switch (Def->getOpcode()) {
   case LoongArch::LD_W:
+  case LoongArch::LD_D:
     if (!isJumpTableLoad(*Def))
       return -1;
 
@@ -1192,10 +1196,78 @@ LoongArchInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   return ArrayRef(TargetFlags);
 }
 
+static unsigned getUnindexedMemOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return 0;
+  case LoongArch::LDX_B:
+    return LoongArch::LD_B;
+  case LoongArch::LDX_BU:
+    return LoongArch::LD_BU;
+  case LoongArch::LDX_H:
+    return LoongArch::LD_H;
+  case LoongArch::LDX_HU:
+    return LoongArch::LD_HU;
+  case LoongArch::LDX_W:
+    return LoongArch::LD_W;
+  case LoongArch::LDX_WU:
+    return LoongArch::LD_WU;
+  case LoongArch::LDX_D:
+    return LoongArch::LD_D;
+  case LoongArch::STX_B:
+    return LoongArch::ST_B;
+  case LoongArch::STX_H:
+    return LoongArch::ST_H;
+  case LoongArch::STX_W:
+    return LoongArch::ST_W;
+  case LoongArch::STX_D:
+    return LoongArch::ST_D;
+  }
+}
+
 bool LoongArchInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
                                              Register Reg,
                                              const MachineInstr &AddrI,
                                              ExtAddrMode &AM) const {
+  if (AddrI.getOpcode() == LoongArch::SLLI_D) {
+    if (!STI.is64Bit() || !getUnindexedMemOpcode(MemI.getOpcode()) ||
+        AddrI.getParent() != MemI.getParent() || AddrI.isBundled() ||
+        MemI.isBundled())
+      return false;
+
+    const MachineRegisterInfo &MRI = MemI.getMF()->getRegInfo();
+    const MachineOperand &ShiftDef = AddrI.getOperand(0);
+    const MachineOperand &Index = AddrI.getOperand(1);
+    const MachineOperand &Shift = AddrI.getOperand(2);
+    const MachineOperand &Base = MemI.getOperand(1);
+    const MachineOperand &Offset = MemI.getOperand(2);
+    auto IsFullVReg = [](const MachineOperand &MO) {
+      return MO.isReg() && MO.getReg().isVirtual() && !MO.getSubReg() &&
+             !MO.isUndef();
+    };
+
+    // Machine sinking runs after LICM. Leave hoisted shifts in their block and
+    // retain shared shifts instead of duplicating their computation. Requiring
+    // a direct use also excludes COPY chains with multiple memory users.
+    if (!Reg.isVirtual() || ShiftDef.getReg() != Reg || ShiftDef.getSubReg() ||
+        !MRI.hasOneNonDBGUse(Reg) || !IsFullVReg(Index) || !IsFullVReg(Base) ||
+        !IsFullVReg(Offset) || !Shift.isImm())
+      return false;
+
+    // Only fold the rk (offset) operand: the indexed memory instructions have
+    // different base and offset operand latencies.
+    int64_t ShiftAmount = Shift.getImm();
+    if (Offset.getReg() != Reg || ShiftAmount < 1 || ShiftAmount > 4)
+      return false;
+
+    AM.BaseReg = Base.getReg();
+    AM.ScaledReg = Index.getReg();
+    AM.Scale = int64_t(1) << ShiftAmount;
+    AM.Displacement = 0;
+    AM.Form = ExtAddrMode::Formula::Basic;
+    return true;
+  }
+
   enum MemIOffsetType {
     Imm14Shift2,
     Imm12,
@@ -1309,6 +1381,31 @@ LoongArchInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
                                      const ExtAddrMode &AM) const {
   const DebugLoc &DL = MemI.getDebugLoc();
   MachineBasicBlock &MBB = *MemI.getParent();
+
+  if (AM.Scale) {
+    unsigned Opcode = getUnindexedMemOpcode(MemI.getOpcode());
+    assert(Opcode && AM.Form == ExtAddrMode::Formula::Basic && AM.ScaledReg &&
+           AM.Scale >= 2 && AM.Scale <= 16 && isPowerOf2_64(AM.Scale) &&
+           AM.Displacement == 0 && "Unsupported shifted address");
+
+    MachineFunction &MF = *MemI.getMF();
+    Register AddrReg =
+        MF.getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+    BuildMI(MBB, MemI, DL, get(LoongArch::ALSL_D), AddrReg)
+        .addReg(AM.ScaledReg)
+        .addReg(AM.BaseReg)
+        .addImm(Log2_64(AM.Scale));
+
+    // Keep the value operand, implicit operands, flags and memory references.
+    MachineInstr *New = MF.CloneMachineInstr(&MemI);
+    New->setDesc(get(Opcode));
+    New->getOperand(1).setReg(AddrReg);
+    New->getOperand(1).setIsKill(false);
+    New->getOperand(2).ChangeToImmediate(0);
+    MBB.insert(MemI.getIterator(), New);
+    MF.substituteDebugValuesForInst(MemI, *New, /*MaxOperand=*/1);
+    return New;
+  }
 
   assert(AM.ScaledReg == 0 && AM.Scale == 0 &&
          "Addressing mode not supported for folding");

@@ -9,8 +9,8 @@
 define i64 @scaled_zext_i8_load(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_zext_i8_load:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 1
-; LA64-NEXT:    ldx.bu $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    ld.bu $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_zext_i8_load:
@@ -36,8 +36,8 @@ define i64 @scaled_zext_i8_load(ptr %base, i64 %idx) nounwind {
 define i64 @scaled_sext_i8_load(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_sext_i8_load:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 1
-; LA64-NEXT:    ldx.b $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    ld.b $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_sext_i8_load:
@@ -63,8 +63,8 @@ define i64 @scaled_sext_i8_load(ptr %base, i64 %idx) nounwind {
 define i64 @scaled_zext_i16_load(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_zext_i16_load:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 1
-; LA64-NEXT:    ldx.hu $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    ld.hu $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_zext_i16_load:
@@ -90,8 +90,8 @@ define i64 @scaled_zext_i16_load(ptr %base, i64 %idx) nounwind {
 define i64 @scaled_sext_i16_load(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_sext_i16_load:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 1
-; LA64-NEXT:    ldx.h $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    ld.h $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_sext_i16_load:
@@ -117,8 +117,8 @@ define i64 @scaled_sext_i16_load(ptr %base, i64 %idx) nounwind {
 define i64 @scaled_zext_i32_load(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_zext_i32_load:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 2
-; LA64-NEXT:    ldx.wu $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    ld.wu $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_zext_i32_load:
@@ -144,8 +144,8 @@ define i64 @scaled_zext_i32_load(ptr %base, i64 %idx) nounwind {
 define i64 @scaled_sext_i32_load(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_sext_i32_load:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 2
-; LA64-NEXT:    ldx.w $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    ld.w $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_sext_i32_load:
@@ -171,8 +171,8 @@ define i64 @scaled_sext_i32_load(ptr %base, i64 %idx) nounwind {
 define i64 @scaled_i64_load(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_i64_load:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 3
-; LA64-NEXT:    ldx.d $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 3
+; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_i64_load:
@@ -197,8 +197,8 @@ define i64 @scaled_i64_load(ptr %base, i64 %idx) nounwind {
 define void @scaled_i8_store(ptr %base, i64 %idx, i8 %value) nounwind {
 ; LA64-LABEL: scaled_i8_store:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 1
-; LA64-NEXT:    stx.b $a2, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    st.b $a2, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_i8_store:
@@ -222,8 +222,8 @@ define void @scaled_i8_store(ptr %base, i64 %idx, i8 %value) nounwind {
 define void @scaled_i16_store(ptr %base, i64 %idx, i16 %value) nounwind {
 ; LA64-LABEL: scaled_i16_store:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 1
-; LA64-NEXT:    stx.h $a2, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    st.h $a2, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_i16_store:
@@ -247,8 +247,8 @@ define void @scaled_i16_store(ptr %base, i64 %idx, i16 %value) nounwind {
 define void @scaled_i32_store(ptr %base, i64 %idx, i32 %value) nounwind {
 ; LA64-LABEL: scaled_i32_store:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 2
-; LA64-NEXT:    stx.w $a2, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    st.w $a2, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_i32_store:
@@ -272,8 +272,8 @@ define void @scaled_i32_store(ptr %base, i64 %idx, i32 %value) nounwind {
 define void @scaled_i64_store(ptr %base, i64 %idx, i64 %value) nounwind {
 ; LA64-LABEL: scaled_i64_store:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 3
-; LA64-NEXT:    stx.d $a2, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 3
+; LA64-NEXT:    st.d $a2, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_i64_store:
@@ -298,8 +298,8 @@ define void @scaled_i64_store(ptr %base, i64 %idx, i64 %value) nounwind {
 define i64 @scaled_shift4_load(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_shift4_load:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 4
-; LA64-NEXT:    ldx.d $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 4
+; LA64-NEXT:    ld.d $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_shift4_load:
@@ -324,8 +324,8 @@ define i64 @scaled_shift4_load(ptr %base, i64 %idx) nounwind {
 define i64 @scaled_gep_i32_zext(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_gep_i32_zext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 2
-; LA64-NEXT:    ldx.wu $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    ld.wu $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_gep_i32_zext:
@@ -383,8 +383,8 @@ define i64 @scaled_commuted_add_i64(ptr %base, i64 %idx) nounwind {
 define i64 @scaled_volatile_zext_i32(ptr %base, i64 %idx) nounwind {
 ; LA64-LABEL: scaled_volatile_zext_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 2
-; LA64-NEXT:    ldx.wu $a0, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    ld.wu $a0, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_volatile_zext_i32:
@@ -410,8 +410,8 @@ define i64 @scaled_volatile_zext_i32(ptr %base, i64 %idx) nounwind {
 define void @scaled_volatile_i32_store(ptr %base, i64 %idx, i32 %value) nounwind {
 ; LA64-LABEL: scaled_volatile_i32_store:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a1, 2
-; LA64-NEXT:    stx.w $a2, $a0, $a1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    st.w $a2, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA64-O0-LABEL: scaled_volatile_i32_store:

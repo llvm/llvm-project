@@ -16,9 +16,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $r5
-    ; CHECK-NEXT: [[SLLI_D:%[0-9]+]]:gpr = SLLI_D [[COPY1]], 3
-    ; CHECK-NEXT: [[LDX_D:%[0-9]+]]:gpr = LDX_D [[COPY]], [[SLLI_D]] :: (volatile load (s64), align 16)
-    ; CHECK-NEXT: $r4 = COPY [[LDX_D]]
+    ; CHECK-NEXT: [[ALSL_D:%[0-9]+]]:gpr = ALSL_D [[COPY1]], [[COPY]], 3
+    ; CHECK-NEXT: [[LD_D:%[0-9]+]]:gpr = LD_D [[ALSL_D]], 0 :: (volatile load (s64), align 16)
+    ; CHECK-NEXT: $r4 = COPY [[LD_D]]
     ; CHECK-NEXT: PseudoRET implicit $r4
     %0:gpr = COPY $r4
     %1:gpr = COPY $r5
@@ -40,8 +40,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $r5
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $r6
-    ; CHECK-NEXT: [[SLLI_D:%[0-9]+]]:gpr = SLLI_D [[COPY1]], 2
-    ; CHECK-NEXT: STX_W [[COPY2]], [[COPY]], [[SLLI_D]] :: (volatile store (s32), align 16)
+    ; CHECK-NEXT: [[ALSL_D:%[0-9]+]]:gpr = ALSL_D [[COPY1]], [[COPY]], 2
+    ; CHECK-NEXT: ST_W [[COPY2]], [[ALSL_D]], 0 :: (volatile store (s32), align 16)
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $r4
     %1:gpr = COPY $r5
@@ -62,10 +62,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $r5
-    ; CHECK-NEXT: [[SLLI_D:%[0-9]+]]:gpr = SLLI_D [[COPY1]], 1
-    ; CHECK-NEXT: STX_B [[COPY1]], [[COPY]], [[SLLI_D]] :: (store (s8))
-    ; CHECK-NEXT: [[SLLI_D1:%[0-9]+]]:gpr = SLLI_D [[COPY1]], 4
-    ; CHECK-NEXT: STX_B [[COPY1]], [[COPY]], [[SLLI_D1]] :: (store (s8))
+    ; CHECK-NEXT: [[ALSL_D:%[0-9]+]]:gpr = ALSL_D [[COPY1]], [[COPY]], 1
+    ; CHECK-NEXT: ST_B [[COPY1]], [[ALSL_D]], 0 :: (store (s8))
+    ; CHECK-NEXT: [[ALSL_D1:%[0-9]+]]:gpr = ALSL_D [[COPY1]], [[COPY]], 4
+    ; CHECK-NEXT: ST_B [[COPY1]], [[ALSL_D1]], 0 :: (store (s8))
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $r4
     %1:gpr = COPY $r5
