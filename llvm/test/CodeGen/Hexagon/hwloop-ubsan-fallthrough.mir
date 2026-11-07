@@ -1,0 +1,102 @@
+# RUN: llc -mtriple=hexagon -run-pass=hwloops %s -o - | FileCheck %s
+
+# This loop has two exiting blocks: bb.1.loop (the real, data-dependent exit
+# to bb.4.done) and bb.2.body, the loop latch (an UBSan pointer-overflow
+# check that exits to the trap in bb.3). MachineLoop::findLoopControlBlock()
+# selects the latch (bb.2.body) as the loop-control block because the latch
+# is itself exiting, so the pass must recognize that the latch's exit target
+# is an unreachable sink and must not treat the overflow check as the
+# loop's trip count.
+#
+# The latch's branch to the trap is reached purely by layout fallthrough
+# (no paired explicit J2_jump to %bb.3), so TII::analyzeBranch() cannot
+# report the trap as TB or FB.
+
+# CHECK-NOT: ENDLOOP0
+# CHECK-NOT: J2_loop0
+# CHECK: J2_jumpf
+
+--- |
+  define i32 @strlen(ptr %str) {
+  entry:
+    %0 = ptrtoint ptr %str to i32
+    %1 = xor i32 %0, -1
+    br label %loop
+
+  loop:
+    %lsr.iv = phi ptr [ %cgep, %body ], [ %str, %entry ]
+    %len = phi i32 [ 0, %entry ], [ %inc, %body ]
+    %ch = load i8, ptr %lsr.iv, align 1
+    %end = icmp eq i8 %ch, 0
+    br i1 %end, label %done, label %body
+
+  body:
+    call void asm sideeffect "", ""()
+    %inc = add i32 %len, 1
+    %overflow = icmp ugt i32 %inc, %1
+    %cgep = getelementptr i8, ptr %lsr.iv, i32 1
+    br i1 %overflow, label %trap, label %loop
+
+  trap:
+    call void @llvm.ubsantrap(i8 19)
+    unreachable
+
+  done:
+    ret i32 %len
+  }
+
+  declare void @llvm.ubsantrap(i8 immarg)
+...
+---
+name:            strlen
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+  - { id: 4, class: intregs }
+  - { id: 5, class: intregs }
+  - { id: 6, class: intregs }
+  - { id: 7, class: intregs }
+  - { id: 8, class: predregs }
+  - { id: 9, class: predregs }
+liveins:
+  - { reg: '$r0', virtual-reg: '%5' }
+body: |
+  bb.0.entry:
+    successors: %bb.1
+    liveins: $r0
+
+    %5:intregs = COPY $r0
+    %0:intregs = A2_subri -1, %5
+    %6:intregs = A2_tfrsi 0
+
+  bb.1.loop:
+    successors: %bb.4, %bb.2
+
+    %1:intregs = PHI %5, %bb.0, %4, %bb.2
+    %2:intregs = PHI %6, %bb.0, %3, %bb.2
+    %7:intregs = L2_loadrb_io %1, 0
+    %8:predregs = C2_cmpeqi killed %7, 0
+    J2_jumpt killed %8, %bb.4, implicit-def dead $pc
+    J2_jump %bb.2, implicit-def dead $pc
+
+  bb.2.body:
+    successors: %bb.1, %bb.3
+
+    INLINEASM &"", 1 /* sideeffect attdialect */
+    %3:intregs = A2_addi %2, 1
+    %9:predregs = C2_cmpgtu %3, %0
+    %4:intregs = A2_addi %1, 1
+    J2_jumpf %9, %bb.1, implicit-def dead $pc
+
+  bb.3.trap:
+    successors:
+
+    PS_crash
+
+  bb.4.done:
+    $r0 = COPY %2
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
