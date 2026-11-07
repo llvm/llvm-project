@@ -1245,51 +1245,97 @@ protected:
         }
       } else {
         ProcessInstanceInfoList proc_infos;
+        const ProcessInstanceInfo &match_proc_info =
+            m_options.match_info.GetProcessInfo();
         const uint32_t matches =
             platform_sp->FindProcesses(m_options.match_info, proc_infos);
-        const char *match_desc = nullptr;
-        llvm::StringRef match_name =
-            m_options.match_info.GetProcessInfo().GetName();
+        const char *name_match_desc = nullptr;
+        llvm::StringRef match_name = match_proc_info.GetName();
         if (!match_name.empty()) {
           switch (m_options.match_info.GetNameMatchType()) {
           case NameMatch::Ignore:
             break;
           case NameMatch::Equals:
-            match_desc = "matched";
+            name_match_desc = "matched";
             break;
           case NameMatch::Contains:
-            match_desc = "contained";
+            name_match_desc = "contained";
             break;
           case NameMatch::StartsWith:
-            match_desc = "started with";
+            name_match_desc = "started with";
             break;
           case NameMatch::EndsWith:
-            match_desc = "ended with";
+            name_match_desc = "ended with";
             break;
           case NameMatch::RegularExpression:
-            match_desc = "matched the regular expression";
+            name_match_desc = "matched the regular expression";
             break;
           }
         }
 
+        std::string optional_match_desc_str;
+        llvm::raw_string_ostream optional_match_desc(optional_match_desc_str);
+        std::string delimiter;
+        if (match_proc_info.GetArchitecture().IsValid()) {
+          optional_match_desc
+              << "architecture \""
+              << match_proc_info.GetArchitecture().GetTriple().getTriple()
+              << "\"";
+          delimiter = ", ";
+        }
+        if (match_proc_info.ParentProcessIDIsValid()) {
+          optional_match_desc << delimiter << "parent process ID \""
+                              << match_proc_info.GetParentProcessID() << "\"";
+          delimiter = ", ";
+        }
+        if (match_proc_info.UserIDIsValid()) {
+          optional_match_desc << delimiter << "user ID \""
+                              << match_proc_info.GetUserID() << "\"";
+          delimiter = ", ";
+        }
+        if (match_proc_info.EffectiveUserIDIsValid()) {
+          optional_match_desc << delimiter << "effective user ID \""
+                              << match_proc_info.GetEffectiveUserID() << "\"";
+          delimiter = ", ";
+        }
+        if (match_proc_info.GroupIDIsValid()) {
+          optional_match_desc << delimiter << "group ID \""
+                              << match_proc_info.GetGroupID() << "\"";
+          delimiter = ", ";
+        }
+        if (match_proc_info.EffectiveGroupIDIsValid()) {
+          optional_match_desc << delimiter << "effective group ID \""
+                              << match_proc_info.GetEffectiveGroupID() << "\"";
+          delimiter = ", ";
+        }
+
         if (matches == 0) {
-          if (match_desc)
+          if (name_match_desc)
             result.AppendErrorWithFormatv(
                 "no processes were found that {0} \"{1}\" on the \"{2}\" "
                 "platform\n",
-                match_desc, match_name, platform_sp->GetName());
+                name_match_desc, match_name, platform_sp->GetName());
           else
             result.AppendErrorWithFormatv(
                 "no processes were found on the \"{0}\" platform\n",
                 platform_sp->GetName());
+          Stream &strm = result.GetErrorStream();
+          optional_match_desc.flush();
+          if (!optional_match_desc_str.empty())
+            strm << llvm::formatv(" for {0}", optional_match_desc_str);
+          strm.PutChar('\n');
         } else {
           result.AppendMessageWithFormatv(
               "{0} matching process{1} found on \"{2}\"", matches,
               matches > 1 ? "es were" : " was", platform_sp->GetName());
           Stream &strm = result.GetOutputStream();
-          if (match_desc)
-            strm << llvm::formatv(" whose name {0} \"{1}\"", match_desc,
+          if (name_match_desc)
+            strm << llvm::formatv(" whose name {0} \"{1}\"", name_match_desc,
                                   match_name);
+          optional_match_desc.flush();
+          if (!optional_match_desc_str.empty())
+            strm << llvm::formatv(" for {0}", optional_match_desc_str);
+
           strm.PutChar('\n');
           ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                m_options.verbose);

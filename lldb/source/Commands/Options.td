@@ -1153,6 +1153,7 @@ let Command = "platform process list" in {
       : Option<"pid", "p">,
         Group<1>,
         Arg<"Pid">,
+        Required,
         Desc<"List the process info for a specific process ID.">;
   def platform_process_list_name
       : Option<"name", "n">,
@@ -1189,49 +1190,49 @@ let Command = "platform process list" in {
              "expression.">;
   def platform_process_list_parent
       : Option<"parent", "P">,
-        GroupRange<2, 6>,
+        GroupRange<2, 7>,
         Arg<"Pid">,
         Desc<"Find processes that have a matching parent process ID.">;
   def platform_process_list_uid
       : Option<"uid", "u">,
-        GroupRange<2, 6>,
+        GroupRange<2, 7>,
         Arg<"UnsignedInteger">,
         Validator<"&posix_validator">,
         Desc<"Find processes that have a matching user ID.">;
   def platform_process_list_euid
       : Option<"euid", "U">,
-        GroupRange<2, 6>,
+        GroupRange<2, 7>,
         Arg<"UnsignedInteger">,
         Validator<"&posix_validator">,
         Desc<"Find processes that have a matching effective user ID.">;
   def platform_process_list_gid
       : Option<"gid", "g">,
-        GroupRange<2, 6>,
+        GroupRange<2, 7>,
         Arg<"UnsignedInteger">,
         Validator<"&posix_validator">,
         Desc<"Find processes that have a matching group ID.">;
   def platform_process_list_egid
       : Option<"egid", "G">,
-        GroupRange<2, 6>,
+        GroupRange<2, 7>,
         Arg<"UnsignedInteger">,
         Validator<"&posix_validator">,
         Desc<"Find processes that have a matching effective group ID.">;
   def platform_process_list_arch
       : Option<"arch", "a">,
-        GroupRange<2, 6>,
+        GroupRange<2, 7>,
         Arg<"Architecture">,
         Desc<"Find processes that have a matching architecture.">;
   def platform_process_list_show_args
       : Option<"show-args", "A">,
-        GroupRange<1, 6>,
+        GroupRange<1, 7>,
         Desc<"Show process arguments instead of the process executable "
              "basename.">;
   def platform_process_list_all_users
       : Option<"all-users", "x">,
-        GroupRange<1, 6>,
+        GroupRange<1, 7>,
         Desc<"Show processes matching all user IDs.">;
   def platform_process_list_verbose : Option<"verbose", "v">,
-                                      GroupRange<1, 6>,
+                                      GroupRange<1, 7>,
                                       Desc<"Enable verbose output.">;
 }
 
