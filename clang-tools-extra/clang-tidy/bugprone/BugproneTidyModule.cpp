@@ -24,6 +24,7 @@
 #include "CopyConstructorInitCheck.h"
 #include "CopyConstructorMutatesArgumentCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
+#include "CustomErrnoDeclarationCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DefaultOperatorNewOnOveralignedTypeCheck.h"
 #include "DerivedMethodShadowingBaseMethodCheck.h"
@@ -144,6 +145,8 @@ public:
         "bugprone-capturing-this-in-member-variable");
     CheckFactories.registerCheck<CastingThroughVoidCheck>(
         "bugprone-casting-through-void");
+    CheckFactories.registerCheck<CustomErrnoDeclarationCheck>(
+        "bugprone-custom-errno-declaration");
     CheckFactories.registerCheck<ChainedComparisonCheck>(
         "bugprone-chained-comparison");
     CheckFactories.registerCheck<CommandProcessorCheck>(
