@@ -2615,4 +2615,78 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
 #endif
   });
 }
+TEST_F(ScalarEvolutionsTest, FoldLoopInvariantIntoAddRecNoWrapFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i64 %outer, i64 %li_uncond, ptr %q1, ptr %q2, ptr %p) {
+      entry:
+        %outer_clamped = and i64 %outer, 1
+        %li = mul nuw nsw i64 %outer_clamped, 88
+        br label %loop
+
+      loop:
+        %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+        %iv1 = add nuw nsw i64 %iv, 1
+        %uncond_sum = add nuw i64 %iv1, %li_uncond
+        %uncond_gep = getelementptr i64, ptr %p, i64 %uncond_sum
+        %v0 = load i64, ptr %uncond_gep, align 8
+        %cond = icmp eq i64 %iv, 0
+        br i1 %cond, label %latch, label %guarded
+
+      guarded:
+        %iv.dec = add nsw i64 %iv, -1
+        %nli1 = load i64, ptr %q1, align 8
+        %add1 = add nuw nsw i64 %iv.dec, %nli1
+        %nli2 = load i64, ptr %q2, align 8
+        %add2 = add nuw nsw i64 %nli2, %li
+        %guarded_sum = add nuw nsw i64 %add2, %add1
+        %guarded_gep = getelementptr inbounds nuw i64, ptr %p, i64 %guarded_sum
+        %v1 = load i64, ptr %guarded_gep, align 8
+        br label %latch
+
+      latch:
+        %iv.next = add nuw nsw i64 %iv, 1
+        %exitcond = icmp eq i64 %iv.next, 88
+        br i1 %exitcond, label %exit, label %loop
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    // 1. In %guarded (%iv >= 1), %guarded_sum folds the loop-invariant %li into
+    // the recurrence %iv.dec ({-1,+,1}<nsw><%loop>), while non-loop-invariant
+    // operands %nli1 and %nli2 remain outside the recurrence (Ops.size() > 1).
+    // Because %nli1 and %nli2 are what constrained %guarded_sum's nuw flag to
+    // the guarded block, ExprFlags (<nuw>) must not be propagated to the folded
+    // recurrence start (-1 + %li), which unsigned-wraps when %li == 88. Range
+    // analysis still proves <nsw>.
+    auto *GuardedSum =
+        cast<SCEVAddExpr>(SE.getSCEV(getInstructionByName(F, "guarded_sum")));
+    const SCEVAddRecExpr *GuardedAR = nullptr;
+    for (const SCEV *Op : GuardedSum->operands()) {
+      if (auto *AR = dyn_cast<SCEVAddRecExpr>(Op)) {
+        GuardedAR = AR;
+        break;
+      }
+    }
+    ASSERT_NE(GuardedAR, nullptr);
+    auto *GuardedStart = cast<SCEVAddExpr>(GuardedAR->getStart());
+    EXPECT_FALSE(GuardedStart->hasNoUnsignedWrap());
+    EXPECT_TRUE(GuardedStart->hasNoSignedWrap());
+
+    // 2. Conversely, for %uncond_sum in the loop header where no other
+    // non-loop-invariant operands remain (Ops.size() == 1), ExprFlags (<nuw>)
+    // is preserved on the folded recurrence start (1 + %li_uncond)<nuw>.
+    auto *UncondAR =
+        cast<SCEVAddRecExpr>(SE.getSCEV(getInstructionByName(F, "uncond_sum")));
+    auto *UncondStart = cast<SCEVAddExpr>(UncondAR->getStart());
+    EXPECT_TRUE(UncondStart->hasNoUnsignedWrap());
+  });
+}
 }  // end namespace llvm
