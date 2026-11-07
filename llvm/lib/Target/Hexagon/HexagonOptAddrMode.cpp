@@ -692,7 +692,6 @@ bool HexagonOptAddrMode::updateAddBases(MachineInstr *CurrentMI,
   CurrentMIBaseOp.setImplicit(FirstReachedDef.isImplicit());
   CurrentMIImmOp.setImm(NewOffset);
   ProcessedAddiInsts.insert(CurrentMI);
-  MRI->clearKillFlags(FirstDefRegister);
   return true;
 }
 
@@ -785,7 +784,6 @@ bool HexagonOptAddrMode::updateAddUses(MachineInstr *AddMI,
   BaseOp.setIsUndef(AddRegOp.isUndef());
   BaseOp.setImplicit(AddRegOp.isImplicit());
   OffsetOp.setImm(ImmOp.getImm() + OffsetOp.getImm());
-  MRI->clearKillFlags(NewReg);
 
   return true;
 }
