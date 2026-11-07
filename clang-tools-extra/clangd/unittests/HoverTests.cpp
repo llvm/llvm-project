@@ -1645,6 +1645,50 @@ TEST(Hover, DefinitionLanuage) {
   }
 }
 
+TEST(Hover, AccessSpecifierByLanguage) {
+  struct {
+    const char *const Code;
+    const std::string ClangLanguageFlag;
+    const char *const ExpectedAccessSpecifier;
+  } Cases[] = {
+      {R"cpp(
+        struct Waldo {
+          int [[loca^tion]];
+        };
+      )cpp",
+       "-xc", ""},
+      {R"cpp(
+        struct Waldo {
+          int [[loca^tion]];
+        };
+      )cpp",
+       "-xc++", "public"},
+      {R"cpp(
+        struct Waldo {
+          struct {
+            int [[loca^tion]];
+          } inner;
+        };
+      )cpp",
+       "-xc", ""},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    SCOPED_TRACE(Case.ClangLanguageFlag);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    if (!Case.ClangLanguageFlag.empty())
+      TU.ExtraArgs.push_back(Case.ClangLanguageFlag);
+    auto AST = TU.build();
+
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+
+    EXPECT_EQ(H->AccessSpecifier, Case.ExpectedAccessSpecifier);
+  }
+}
+
 TEST(Hover, CallPassType) {
   const llvm::StringRef CodePrefix = R"cpp(
 class Base {};
