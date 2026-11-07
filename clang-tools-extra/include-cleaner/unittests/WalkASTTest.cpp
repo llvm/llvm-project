@@ -502,6 +502,21 @@ TEST(WalkAST, Operator) {
   testWalk(
       "struct string {int operator+(string); }; using $implicit^foo = string;",
       "int k = foo() ^+ string();");
+  // Inherited member operators are attributed to the derived type, like other
+  // inherited members.
+  testWalk("struct Base { int operator+(Base); }; "
+           "struct $implicit^Derived : Base {};",
+           "int k = Derived() ^+ Derived();");
+  testWalk(R"cpp(
+      template <typename T> struct PtrBase { T *operator->(); T &operator*(); };
+      template <typename T> struct $implicit^Ptr : PtrBase<T> {};
+      struct Foo { int a; };)cpp",
+           "void test(Ptr<Foo> &V) { V^->a; }");
+  testWalk(R"cpp(
+      template <typename T> struct PtrBase { T *operator->(); T &operator*(); };
+      template <typename T> struct $implicit^Ptr : PtrBase<T> {};
+      struct Foo { int a; };)cpp",
+           "void test(Ptr<Foo> &V) { (^*V).a; }");
 }
 
 TEST(WalkAST, VarDecls) {
