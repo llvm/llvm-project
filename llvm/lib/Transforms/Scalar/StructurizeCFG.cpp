@@ -414,6 +414,13 @@ bool StructurizeCFG::isHoistableInstruction(Instruction *I, BasicBlock *BB,
   if (CostVal != 0)
     return false;
 
+  // Do not hoist a value that simplification already knows is poison.
+  SimplifyQuery Q(Func->getDataLayout());
+  Q.DT = DT;
+  Q.CanUseUndef = false;
+  if (isa_and_nonnull<PoisonValue>(simplifyInstruction(I, Q)))
+    return false;
+
   // Check if all operands are available at the hoisting destination.
   for (auto &Op : I->operands()) {
     if (auto *OpI = dyn_cast<Instruction>(Op)) {
@@ -447,10 +454,9 @@ void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
 
   if (!ElseSucc || !CommonDominator)
     return;
-  // Only hoist in a simple if-else: ThenBB must branch directly to ElseSucc
-  // and ElseSucc must have exactly 2 predecessors (ThenBB and ElseBB).
-  // simplifyHoistedPhis assumes this exact shape; with additional predecessors
-  // the hoisted value leaks into unrelated control-flow paths.
+  // Both arms must branch directly to the same two-predecessor merge.
+  // Additional merge predecessors can make the hoisted value reach unrelated
+  // paths when simplifyHoistedPhis replaces an incoming value.
   if (ThenBB->getSingleSuccessor() != ElseSucc ||
       !ElseSucc->hasNPredecessors(2))
     return;
@@ -932,41 +938,78 @@ void StructurizeCFG::setPhiValues() {
   AffectedPhis.append(InsertedPhis.begin(), InsertedPhis.end());
 }
 
-/// Updates PHI nodes after hoisted zero cost instructions by replacing poison
-/// entries on Flow nodes with the appropriate hoisted values
+/// Repair poison inputs in generated Flow PHIs before replacing a merge arm
+/// with the value carried by those PHIs.
 void StructurizeCFG::simplifyHoistedPhis() {
+  // Remember the operand slots that contain poison before any repair. Two
+  // merge results may share Flow PHIs but need different hoisted values.
+  SmallPtrSet<Use *, 16> OriginallyPoisonInputs;
+  for (BasicBlock *FlowBB : FlowSet) {
+    for (PHINode &FlowPhi : FlowBB->phis()) {
+      for (Use &IncomingUse : FlowPhi.incoming_values()) {
+        if (isa<PoisonValue>(IncomingUse.get()))
+          OriginallyPoisonInputs.insert(&IncomingUse);
+      }
+    }
+  }
+
   for (WeakVH VH : AffectedPhis) {
     PHINode *Phi = dyn_cast_or_null<PHINode>(VH);
     if (!Phi || Phi->getNumIncomingValues() != 2)
       continue;
 
-    for (int i = 0; i < 2; i++) {
-      Value *V = Phi->getIncomingValue(i);
-      auto BBIt = HoistedValues.find(V);
+    for (unsigned I = 0; I != 2; ++I) {
+      Value *HoistedValue = Phi->getIncomingValue(I);
+      auto HoistedIt = HoistedValues.find(HoistedValue);
 
-      if (BBIt == HoistedValues.end())
+      if (HoistedIt == HoistedValues.end())
+        continue;
+      BasicBlock *HoistBB = HoistedIt->second;
+
+      auto *ReplacementPhi = dyn_cast<PHINode>(Phi->getIncomingValue(!I));
+      // Restrict this repair to generated Flow PHIs.
+      if (!ReplacementPhi || !FlowSet.contains(ReplacementPhi->getParent()))
         continue;
 
-      Value *OtherV = Phi->getIncomingValue(!i);
-      PHINode *OtherPhi = dyn_cast<PHINode>(OtherV);
-      if (!OtherPhi)
+      // Start only when the replacement PHI has a direct poison input.
+      if (none_of(ReplacementPhi->incoming_values(), IsaPred<PoisonValue>))
         continue;
 
-      int PoisonValBBIdx = -1;
-      for (size_t i = 0; i < OtherPhi->getNumIncomingValues(); i++) {
-        if (!isa<PoisonValue>(OtherPhi->getIncomingValue(i)))
-          continue;
-        PoisonValBBIdx = i;
-        break;
+      // Incoming PHIs can themselves have poison inputs. Follow those PHIs
+      // and replace poison only on edges where HoistedValue is available.
+      SmallVector<PHINode *, 8> PendingPhis; // PHIs still to inspect.
+      SmallPtrSet<PHINode *, 8> VisitedPhis;
+      SmallVector<Use *, 8>
+          InputsToCheck; // Operand slots to verify after repair.
+      PendingPhis.push_back(ReplacementPhi);
+      while (!PendingPhis.empty()) {
+        PHINode *FlowPhi = PendingPhis.pop_back_val();
+        // Shared PHIs and cycles can reach the same PHI more than once.
+        if (!VisitedPhis.insert(FlowPhi).second)
+          continue; // Already seen.
+        for (Use &IncomingUse : FlowPhi->incoming_values()) {
+          Value *IncomingValue = IncomingUse.get();
+          // Include originally poisoned slots even if an earlier result has
+          // already filled them. They must now hold this result's value.
+          if (OriginallyPoisonInputs.contains(&IncomingUse))
+            InputsToCheck.push_back(&IncomingUse);
+          if (isa<PoisonValue>(IncomingValue)) {
+            if (DT->dominates(HoistBB, FlowPhi->getIncomingBlock(IncomingUse)))
+              IncomingUse.set(HoistedValue);
+          } else if (auto *IncomingPhi = dyn_cast<PHINode>(IncomingValue)) {
+            if (FlowSet.contains(IncomingPhi->getParent()))
+              PendingPhis.push_back(IncomingPhi);
+          }
+        }
       }
-      if (PoisonValBBIdx == -1 ||
-          !DT->dominates(BBIt->second,
-                         OtherPhi->getIncomingBlock(PoisonValBBIdx)))
-        continue;
-
-      OtherPhi->setIncomingValue(PoisonValBBIdx, V);
-      if (DT->dominates(OtherV, Phi))
-        Phi->setIncomingValue(i, OtherV);
+      // Replace the merge arm only if every originally poisoned input in
+      // this chain now holds its hoisted value.
+      if (all_of(InputsToCheck,
+                 [HoistedValue](Use *Incoming) {
+                   return Incoming->get() == HoistedValue;
+                 }) &&
+          DT->dominates(ReplacementPhi, Phi))
+        Phi->setIncomingValue(I, ReplacementPhi);
     }
   }
 }
