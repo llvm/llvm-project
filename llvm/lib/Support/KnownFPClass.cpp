@@ -541,25 +541,34 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
       Known.knownNot(fcNegInf);
   }
 
-  // Rule out finite.
-  if (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal) &&
-      KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal)) {
-    Known.knownNot(fcNegSubnormal | fcNegNormal);
-
-    // This can't underflow if one of the operands is known normal.
-    if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
-        KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
-      Known.knownNot(fcPosSubnormal);
-  }
+  // Rule out normal.
   if (KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal) &&
-      KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)) {
-    Known.knownNot(fcPosSubnormal | fcPosNormal);
+      KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal))
+    Known.knownNot(fcPosNormal);
+  if (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal) &&
+      KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal))
+    Known.knownNot(fcNegNormal);
 
-    // This can't underflow if one of the operands is known normal.
-    if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
-        KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
-      Known.knownNot(fcNegSubnormal);
-  }
+  // psub + (zero | sub) and pnorm + (nsub | nnorm) may produce psub.
+  if ((KnownLHS.isKnownNever(fcPosSubnormal) ||
+       KnownRHS.isKnownNever(fcZero | fcSubnormal)) &&
+      (KnownRHS.isKnownNever(fcPosSubnormal) ||
+       KnownLHS.isKnownNever(fcZero | fcSubnormal)) &&
+      (KnownLHS.isKnownNever(fcPosNormal) ||
+       KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal)) &&
+      (KnownRHS.isKnownNever(fcPosNormal) ||
+       KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal)))
+    Known.knownNot(fcPosSubnormal);
+  // nsub + (zero | sub) and nnorm + (psub | pnorm) may produce nsub.
+  if ((KnownLHS.isKnownNever(fcNegSubnormal) ||
+       KnownRHS.isKnownNever(fcZero | fcSubnormal)) &&
+      (KnownRHS.isKnownNever(fcNegSubnormal) ||
+       KnownLHS.isKnownNever(fcZero | fcSubnormal)) &&
+      (KnownLHS.isKnownNever(fcNegNormal) ||
+       KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)) &&
+      (KnownRHS.isKnownNever(fcNegNormal) ||
+       KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal)))
+    Known.knownNot(fcNegSubnormal);
 
   // x + y is zero if x and y are both zeros, or if x == -y (cancellation).
   if (KnownLHS.isKnownNever(fcZero) || KnownRHS.isKnownNever(fcZero)) {
