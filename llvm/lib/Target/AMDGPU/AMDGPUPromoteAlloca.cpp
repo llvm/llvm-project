@@ -33,6 +33,7 @@
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
@@ -72,6 +73,15 @@ static cl::opt<unsigned> PromoteAllocaToVectorMaxRegs(
     cl::desc(
         "Maximum vector size (in 32b registers) to use when promoting alloca"),
     cl::init(32));
+
+// A divergent dynamic index into a promoted vector compiles into a chain of
+// `cmp`/`cndmask` instructions, which gets very long for larger vectors. Allow
+// only smaller vectors in that case.
+static cl::opt<unsigned> PromoteAllocaToVectorDivergentMaxRegs(
+    "amdgpu-promote-alloca-to-vector-divergent-max-regs",
+    cl::desc("Maximum vector size (in 32b registers) to use when promoting "
+             "alloca with a divergent index"),
+    cl::init(8));
 
 // Use up to 1/4 of available register budget for vectorization.
 // FIXME: Increase the limit for whole function budgets? Perhaps x2?
@@ -129,6 +139,7 @@ class AMDGPUPromoteAllocaImpl {
 private:
   const TargetMachine &TM;
   LoopInfo &LI;
+  function_ref<const UniformityInfo *()> GetUI;
   Module &Mod;
   const DataLayout &DL;
 
@@ -138,6 +149,7 @@ private:
   unsigned MaxVGPRs;
   unsigned VGPRBudgetRatio;
   unsigned MaxVectorRegs;
+  unsigned DivergentMaxVectorRegs;
 
   bool IsAMDGCN = false;
   bool IsAMDHSA = false;
@@ -172,8 +184,9 @@ private:
   void setFunctionLimits(const Function &F);
 
 public:
-  AMDGPUPromoteAllocaImpl(TargetMachine &TM, Module &M, LoopInfo &LI)
-      : TM(TM), LI(LI), Mod(M), DL(M.getDataLayout()) {
+  AMDGPUPromoteAllocaImpl(TargetMachine &TM, Module &M, LoopInfo &LI,
+                          function_ref<const UniformityInfo *()> GetUI)
+      : TM(TM), LI(LI), GetUI(GetUI), Mod(M), DL(M.getDataLayout()) {
     const Triple &TT = M.getTargetTriple();
     IsAMDGCN = TT.isAMDGCN();
     IsAMDHSA = TT.getOS() == Triple::AMDHSA;
@@ -195,7 +208,11 @@ public:
     if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>())
       return AMDGPUPromoteAllocaImpl(
                  TPC->getTM<TargetMachine>(), *F.getParent(),
-                 getAnalysis<LoopInfoWrapperPass>().getLoopInfo())
+                 getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
+                 [&]() {
+                   return &getAnalysis<UniformityInfoWrapperPass>()
+                               .getUniformityInfo();
+                 })
           .run(F, /*PromoteToLDS*/ true);
     return false;
   }
@@ -205,6 +222,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -242,6 +260,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUPromoteAlloca, DEBUG_TYPE,
 // estimation of LDS available
 INITIALIZE_PASS_DEPENDENCY(AMDGPULowerModuleLDSLegacy)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPromoteAlloca, DEBUG_TYPE,
                     "AMDGPU promote alloca to vector or LDS", false, false)
 
@@ -250,8 +269,9 @@ char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
 PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*PromoteToLDS=*/true);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI, [&]() {
+                   return &AM.getResult<UniformityInfoAnalysis>(F);
+                 }).run(F, /*PromoteToLDS=*/true);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -263,8 +283,9 @@ PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
 PreservedAnalyses
 AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*PromoteToLDS=*/false);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI, [&]() {
+                   return &AM.getResult<UniformityInfoAnalysis>(F);
+                 }).run(F, /*PromoteToLDS=*/false);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -360,6 +381,11 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
       IsAMDGCN ? PromoteAllocaToVectorMaxRegs : R600MaxVectorRegs);
   if (PromoteAllocaToVectorMaxRegs.getNumOccurrences())
     MaxVectorRegs = PromoteAllocaToVectorMaxRegs;
+  DivergentMaxVectorRegs = F.getFnAttributeAsParsedInteger(
+      "amdgpu-promote-alloca-to-vector-divergent-max-regs",
+      PromoteAllocaToVectorDivergentMaxRegs);
+  if (PromoteAllocaToVectorDivergentMaxRegs.getNumOccurrences())
+    DivergentMaxVectorRegs = PromoteAllocaToVectorDivergentMaxRegs;
   VGPRBudgetRatio = F.getFnAttributeAsParsedInteger(
       "amdgpu-promote-alloca-to-vector-vgpr-ratio",
       PromoteAllocaToVectorVGPRRatio);
@@ -1058,6 +1084,13 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       auto Index = computeGEPToVectorIndex(GEP, AA.Alloca, VecEltTy, DL);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
+
+      const bool ShouldRejectDivergentIdx =
+          divideCeil(DL.getTypeSizeInBits(AA.Vector.Ty).getFixedValue(), 32) >
+          DivergentMaxVectorRegs;
+      if (ShouldRejectDivergentIdx && Index->VarIndex &&
+          GetUI()->isDivergentAtDef(Index->VarIndex))
+        return RejectUser(Inst, "divergent dynamic index into a large vector");
 
       AA.Vector.GEPVectorIdx[GEP] = std::move(Index.value());
       AA.Vector.UsersToRemove.push_back(Inst);
