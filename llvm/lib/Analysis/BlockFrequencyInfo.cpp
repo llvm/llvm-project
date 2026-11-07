@@ -194,9 +194,6 @@ void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB,
 static uint64_t scaleFrequency(uint64_t BBFreq, uint64_t NewFreq,
                                uint64_t OldFreq) {
   assert(OldFreq != 0 && "Divide by zero?");
-  // Unsigned division is an expensive operation in the general case. If this
-  // ends up being a hot spot, one of the options proposed in
-  // https://reviews.llvm.org/D28535#650071 could be used to avoid this.
   // clang-cl defines __SIZEOF_INT128__, but MSVC's runtime does not provide
   // the 128-bit division helper (__udivti3).
 #if defined(__SIZEOF_INT128__) && !defined(_MSC_VER)
