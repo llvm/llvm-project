@@ -358,6 +358,10 @@ def A53WriteIVecQ_3 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
 // write latency: ADD -> ADD is 2 cycles, ADD -> FADD is 3.
 def A53ReadLate  : SchedReadAdvance<1>;
 def A53ReadEarly : SchedReadAdvance<0>;
+// The accumulator of the 4-cycle accumulating ops (absolute-difference and
+// pairwise accumulate, rounding shift-accumulate) is added in at the end: a
+// chain through the accumulator alone recurs every 2 cycles.
+def A53ReadAcc2  : SchedReadAdvance<2>;
 
 // Register transfers between a GPR and an FP/SIMD register (FMOV). Their
 // latency depends on the consumer, not on the direction:
@@ -618,7 +622,7 @@ def : InstRW<[A53WriteIVecD_2],
                  "^(FCM(EQ|GE|GT)|FACG[ET])(v2f32|v4f16|v1i32|v1i64)(rz)?$",
                  "^FCM(EQ|GE|GT|LE|LT)(v2i32|v4i16)rz$",
                  "^FCM(LE|LT)v1i(16|32|64)rz$", "^FCM(EQ|GE|GT)v1i16rz$",
-                 "^(EXT|BIF|BIT|BSL)v8i8$",
+                 "^EXTv8i8$",
                  "^REV(16|32|64)v(2i32|4i16|8i8)$",
                  "^(DUP|INS)v.*(8|16|32|64)(gpr|lane)$",
                  "^TB[LX]v8i8.*$",
@@ -627,23 +631,28 @@ def : InstRW<[A53WriteIVecQ_2],
       (instregex "^CM(EQ|GE|GT|HI|HS|LE|LT)v(2i64|4i32|8i16|16i8)(rz)?$",
                  "^(FCM(EQ|GE|GT)|FACG[ET])(v4f32|v2f64|v8f16)(rz)?$",
                  "^FCM(EQ|GE|GT|LE|LT)(v4i32|v2i64|v8i16)rz$",
-                 "^(EXT|BIF|BIT|BSL)v16i8$",
+                 "^EXTv16i8$",
                  "^REV(16|32|64)v(4i32|8i16|16i8)$",
                  "^TB[LX]v16i8.*$",
                  "^(ZIP|TRN|UZP)[12]v(2i64|4i32|8i16|16i8)$")>;
 // Absolute-difference accumulate, pairwise accumulate and the rounding
-// add/subtract-narrow take four cycles from their source operands. (A chain
-// through the tied accumulator alone recurs faster, but that is a forwarding
-// path, not the latency, and is not modelled here.)
-def : InstRW<[A53WriteVecD_4],
+// add/subtract-narrow take four cycles from their source operands. The
+// accumulator (the tied destination, i.e. the first read) is read late, see
+// A53ReadAcc2.
+def : InstRW<[A53WriteVecD_4, A53ReadAcc2],
       (instregex "^[SU]ABAv(2i32|4i16|8i8)$",
                  "^[SU]ADALPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$")>;
-def : InstRW<[A53WriteVecQ_4],
+def : InstRW<[A53WriteVecQ_4, A53ReadAcc2],
       (instregex "^[SU]ABAv(16i8|4i32|8i16)$", "^[SU]ABALv",
-                 "^[SU]ADALPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$",
-                 "^R(ADD|SUB)HNv")>;
+                 "^[SU]ADALPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$")>;
+def : InstRW<[A53WriteVecQ_4], (instregex "^R(ADD|SUB)HNv")>;
 def : InstRW<[A53WriteFSel], (instregex "^FCSEL[HSD]rrr$")>;
 def : InstRW<[A53WriteFMov, A53ReadLate], (instregex "^FMOV[HSD]r$")>;
+// Bit select reads the tied destination early and the two data operands late.
+def : InstRW<[A53WriteIVecD_2, A53ReadEarly, A53ReadLate, A53ReadLate],
+      (instregex "^(BIF|BIT|BSL)v8i8$")>;
+def : InstRW<[A53WriteIVecQ_2, A53ReadEarly, A53ReadLate, A53ReadLate],
+      (instregex "^(BIF|BIT|BSL)v16i8$")>;
 
 // CLS takes a cycle more than the plain compares. CMTST reads its operands
 // late: 4 cycles to an early reader, 3 to a late one such as another CMTST.
@@ -677,36 +686,46 @@ def : InstRW<[A53WriteIVecQ_3], (instregex "^(ADD|SUB)HNv.*$")>;
 // two cycles. The rounding variants and the shift-accumulates are three, and
 // the saturating shifts, the saturating narrows and the rounding
 // shift-accumulates are four. Narrowing and widening forms read or write 128
-// bits and so use the Q-form occupancy.
+// bits and so use the Q-form occupancy. The insert and shift-accumulate forms
+// read their tied destination late: one cycle late for SLI/SRI/[SU]SRA (a
+// chain through it costs 1 and 2 cycles), two for [SU]RSRA (2 cycles).
 def : InstRW<[A53WriteIVecD_2],
-      (instregex "^(SHL|SLI|SRI)(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
+      (instregex "^SHL(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
                  "^[SU]SHR(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
                  "^[SU]SHLv(1i64|8i8|4i16|2i32)$")>;
 def : InstRW<[A53WriteIVecQ_2],
-      (instregex "^(SHL|SLI|SRI)v(16i8|8i16|4i32|2i64)_shift$",
+      (instregex "^SHLv(16i8|8i16|4i32|2i64)_shift$",
                  "^[SU]SHRv(16i8|8i16|4i32|2i64)_shift$",
                  "^[SU]SHLv(16i8|8i16|4i32|2i64)$",
                  "^SHRNv.*_shift$", "^[SU]SHLLv.*_shift$")>;
 def : InstRW<[A53WriteIVecD_3],
       (instregex "^[SU]RSHR(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
-                 "^[SU]RSHLv(1i64|8i8|4i16|2i32)$",
-                 "^[SU]SRA(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+                 "^[SU]RSHLv(1i64|8i8|4i16|2i32)$")>;
 def : InstRW<[A53WriteIVecQ_3],
       (instregex "^[SU]RSHRv(16i8|8i16|4i32|2i64)_shift$",
                  "^[SU]RSHLv(16i8|8i16|4i32|2i64)$",
-                 "^[SU]SRAv(16i8|8i16|4i32|2i64)_shift$",
                  "^RSHRNv.*_shift$")>;
 def : InstRW<[A53WriteVecD_4],
       (instregex "^[SU]QSHLU?(b|h|s|d)$",
                  "^[SU]QR?SHL(b|h|s|d|v1i8|v1i16|v1i32|v1i64)$",
                  "^[SU]QSHLU?(v8i8|v4i16|v2i32)_shift$",
-                 "^[SU]QR?SHLv(8i8|4i16|2i32)$",
-                 "^[SU]RSRA(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+                 "^[SU]QR?SHLv(8i8|4i16|2i32)$")>;
 def : InstRW<[A53WriteVecQ_4],
       (instregex "^[SU]QSHLU?v(16i8|8i16|4i32|2i64)_shift$",
                  "^[SU]QR?SHLv(16i8|8i16|4i32|2i64)$",
-                 "^[SU]RSRAv(16i8|8i16|4i32|2i64)_shift$",
                  "^([SU]QR?SHRN|SQR?SHRUN)[bhsd]?v?.*_shift$")>;
+def : InstRW<[A53WriteIVecD_2, A53ReadLate, A53ReadEarly],
+      (instregex "^(SLI|SRI)(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+def : InstRW<[A53WriteIVecQ_2, A53ReadLate, A53ReadEarly],
+      (instregex "^(SLI|SRI)v(16i8|8i16|4i32|2i64)_shift$")>;
+def : InstRW<[A53WriteIVecD_3, A53ReadLate, A53ReadEarly],
+      (instregex "^[SU]SRA(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+def : InstRW<[A53WriteIVecQ_3, A53ReadLate, A53ReadEarly],
+      (instregex "^[SU]SRAv(16i8|8i16|4i32|2i64)_shift$")>;
+def : InstRW<[A53WriteVecD_4, A53ReadAcc2, A53ReadEarly],
+      (instregex "^[SU]RSRA(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+def : InstRW<[A53WriteVecQ_4, A53ReadAcc2, A53ReadEarly],
+      (instregex "^[SU]RSRAv(16i8|8i16|4i32|2i64)_shift$")>;
 
 // Integer ASIMD arithmetic (see the write classes above). Accumulate, widening
 // and reduction-narrowing ops are intentionally left on the default here: their
