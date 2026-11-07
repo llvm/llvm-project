@@ -186,7 +186,8 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>` check by adding the
-  {option}`IgnoredParameterNames` option to skip parameters by name.
+  {option}`IgnoreMacros`, {option}`IgnoredParameterNames`,
+  {option}`NullPtrMacros` and {option}`BoolLiteralMacros` options.
 
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
