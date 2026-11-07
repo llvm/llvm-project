@@ -119,25 +119,26 @@ define i32 @test3(i1 %cmp) nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    jmp .LBB2_4
+; CHECK-NEXT:    jmp .LBB2_5
 ; CHECK-NEXT:  .LBB2_3: # %false
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .short %eax
 ; CHECK-NEXT:    .short %edx
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:  .LBB2_4: # %asm.fallthrough
+; CHECK-NEXT:  .LBB2_5: # %asm.fallthrough
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB2_5: # Inline asm indirect target
+; CHECK-NEXT:  .LBB2_6: # Inline asm indirect target
 ; CHECK-NEXT:    # %true.indirect_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB2_6: # Inline asm indirect target
+; CHECK-NEXT:  .LBB2_7: # Inline asm indirect target
 ; CHECK-NEXT:    # %false.indirect_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    jmp .LBB2_4
+; CHECK-NEXT:    jmp .LBB2_5
 entry:
   br i1 %cmp, label %true, label %false
 
