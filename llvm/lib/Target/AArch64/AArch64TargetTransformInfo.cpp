@@ -5207,6 +5207,37 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       return 0;
   }
 
+  // The scalar folds below save an instruction but not its latency.
+  if ((CostKind == TTI::TCK_RecipThroughput || CostKind == TTI::TCK_CodeSize) &&
+      CtxI && CtxI->getOpcode() == Opcode && Ty->isIntegerTy() &&
+      Ty->getScalarSizeInBits() <= 64) {
+    // An And with a low bit mask of a logical right shift by a constant
+    // becomes a bitfield extract.
+    if (match(CtxI, m_And(m_OneUse(m_LShr(m_Value(), m_ConstantInt())),
+                          m_LowBitMask())))
+      return 0;
+
+    // A shift by a constant is folded into the shifted register operand of its
+    // add, sub or logic user. Narrow right shifts need an extend first. Only
+    // the second operand is folded if both operands are such shifts.
+    auto IsFoldableShift = [](const Value *V) {
+      return match(V, m_OneUse(m_Shift(m_Value(), m_ConstantInt())));
+    };
+    if (IsFoldableShift(CtxI) &&
+        (Opcode == Instruction::Shl || Ty->getScalarSizeInBits() >= 32)) {
+      const auto *U = cast<Instruction>(CtxI->user_back());
+      Value *Other;
+      bool IsShiftedOperand =
+          match(U, m_Sub(m_Value(Other), m_Specific(CtxI))) ||
+          ((U->getOpcode() == Instruction::Add || U->isBitwiseLogicOp()) &&
+           match(U, m_c_BinOp(m_Specific(CtxI), m_Value(Other))) &&
+           (U->getOperand(1) == CtxI || !IsFoldableShift(Other)));
+      if (IsShiftedOperand && U->getParent() == CtxI->getParent() &&
+          !isa<Constant>(Other))
+        return 0;
+    }
+  }
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
