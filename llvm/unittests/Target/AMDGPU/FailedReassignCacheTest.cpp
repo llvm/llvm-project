@@ -33,8 +33,8 @@ public:
 
   struct Fixture;
 
-  void runWithFixture(unsigned MaxFreedRegs,
-                      function_ref<void(Fixture &)> Body);
+  void runWithFixture(unsigned MaxFreedRegs, function_ref<void(Fixture &)> Body,
+                      const char *InputMIR = MIR);
 
   /// Leave only the first \p NumKeep members of VGPR_32 allocatable.
   static void limitVGPROrder(MachineFunction &MF, unsigned NumKeep) {
@@ -147,9 +147,10 @@ body:             |
 )MIR";
 };
 
-void FailedReassignCacheTest::runWithFixture(
-    unsigned MaxFreedRegs, function_ref<void(Fixture &)> Body) {
-  ASSERT_TRUE(parseMIR(MIR));
+void FailedReassignCacheTest::runWithFixture(unsigned MaxFreedRegs,
+                                             function_ref<void(Fixture &)> Body,
+                                             const char *InputMIR) {
+  ASSERT_TRUE(parseMIR(InputMIR));
   MachineFunction &MF = getMF("cache_test");
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   VirtRegMap &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
@@ -418,6 +419,150 @@ TEST_F(FailedReassignCacheTest, ClearEmptiesEntriesAndBuckets) {
     F.Cache.clear();
     EXPECT_TRUE(F.Cache.empty());
     EXPECT_EQ(F.Cache.reuse(F.LI(0), F.vgpr(0)), reassign::Reuse::Miss);
+  });
+}
+
+// Each remaining VReg_64 destination is blocked by a VGPR_32 assignment.
+// Freeing VGPR2 must therefore discover VGPR2_VGPR3 through the alias walk,
+// even though the freed register itself is not in the interval's class.
+TEST_F(FailedReassignCacheTest, RecheckTupleAfterConstituentUnassign) {
+  const char *TupleMIR = R"MIR(
+---
+name: cache_test
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %0, implicit %1, implicit %2, implicit %3
+    S_ENDPGM 0
+...
+)MIR";
+  runWithFixture(
+      64,
+      [&](Fixture &F) {
+        F.installListener();
+        const LiveInterval &LI = F.LI(0);
+        MCRegister FromReg(AMDGPU::VGPR0_VGPR1);
+        F.Matrix.assign(LI, FromReg);
+        F.assign(1, 2);
+        F.assign(2, 4);
+        F.assign(3, 6);
+        for (MCPhysReg Reg : F.RCI.getOrder(&AMDGPU::VReg_64RegClass))
+          if (Reg != FromReg)
+            ASSERT_EQ(F.Matrix.checkInterference(LI, Reg),
+                      LiveRegMatrix::IK_VirtReg);
+        F.Cache.remember(LI, /*HintOnly=*/false);
+
+        F.unassign(1);
+        ASSERT_EQ(F.Cache.freedRegs(LI.reg().id()).size(), 1u);
+        EXPECT_EQ(F.Matrix.checkInterference(LI, AMDGPU::VGPR2_VGPR3),
+                  LiveRegMatrix::IK_Free);
+        EXPECT_EQ(F.Cache.reuse(LI, FromReg), reassign::Reuse::RecheckTrue);
+        EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
+      },
+      TupleMIR);
+}
+
+// A tuple remains unavailable while its other constituent is occupied.
+// The second free must be recorded after RecheckFalse clears the first free.
+TEST_F(FailedReassignCacheTest, RecheckTupleRequiresEveryConstituentFree) {
+  const char *TupleMIR = R"MIR(
+---
+name: cache_test
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vgpr_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4
+    S_ENDPGM 0
+...
+)MIR";
+  runWithFixture(
+      64,
+      [&](Fixture &F) {
+        F.installListener();
+        const LiveInterval &LI = F.LI(0);
+        MCRegister FromReg(AMDGPU::VGPR0_VGPR1);
+        F.Matrix.assign(LI, FromReg);
+        F.assign(1, 2);
+        F.assign(2, 3);
+        F.assign(3, 4);
+        F.assign(4, 6);
+        for (MCPhysReg Reg : F.RCI.getOrder(&AMDGPU::VReg_64RegClass))
+          if (Reg != FromReg)
+            ASSERT_EQ(F.Matrix.checkInterference(LI, Reg),
+                      LiveRegMatrix::IK_VirtReg);
+        F.Cache.remember(LI, /*HintOnly=*/false);
+
+        F.unassign(1);
+        EXPECT_EQ(F.Matrix.checkInterference(LI, AMDGPU::VGPR2_VGPR3),
+                  LiveRegMatrix::IK_VirtReg);
+        EXPECT_EQ(F.Cache.reuse(LI, FromReg), reassign::Reuse::RecheckFalse);
+        EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
+        EXPECT_EQ(F.Cache.reuse(LI, FromReg), reassign::Reuse::HitFalse);
+
+        F.unassign(2);
+        EXPECT_EQ(F.Matrix.checkInterference(LI, AMDGPU::VGPR2_VGPR3),
+                  LiveRegMatrix::IK_Free);
+        EXPECT_EQ(F.Cache.reuse(LI, FromReg), reassign::Reuse::RecheckTrue);
+        EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
+      },
+      TupleMIR);
+}
+
+// Removing an interior overlap can make reassignment possible without
+// changing any fingerprint field. The interval's own unassign notification
+// must erase its failure before it is edited and assigned again.
+TEST_F(FailedReassignCacheTest, InteriorEditAfterUnassignDropsFailure) {
+  runWithFixture(64, [&](Fixture &F) {
+    F.installListener();
+    LiveInterval &LI = F.LIS.getInterval(F.LI(0).reg());
+    LiveInterval &Blocker = F.LIS.getInterval(F.LI(1).reg());
+    SlotIndex Begin = LI.beginIndex();
+    SlotIndex End = LI.endIndex();
+    SlotIndex OldInteriorEnd = F.LI(2).beginIndex();
+    SlotIndex NewInteriorEnd = Blocker.beginIndex();
+    SlotIndex SecondBegin = F.LI(4).beginIndex();
+    VNInfo *Value = LI.segments.front().valno;
+    VNInfo *BlockerValue = Blocker.segments.front().valno;
+    LI.segments.clear();
+    LI.addSegment(LiveRange::Segment(Begin, OldInteriorEnd, Value));
+    LI.addSegment(LiveRange::Segment(SecondBegin, End, Value));
+    Blocker.segments.clear();
+    Blocker.addSegment(
+        LiveRange::Segment(NewInteriorEnd, OldInteriorEnd, BlockerValue));
+    F.assign(0, 0);
+    F.assign(1, 1);
+    for (unsigned I = 2; I < NumKeepVGPRs; ++I)
+      F.assign(I, I);
+    ASSERT_TRUE(LI.overlaps(Blocker));
+    F.Cache.remember(LI, /*HintOnly=*/false);
+
+    F.unassign(0);
+    EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
+    LI.segments.front().end = NewInteriorEnd;
+    ASSERT_EQ(LI.segments.size(), 2u);
+    EXPECT_EQ(LI.beginIndex(), Begin);
+    EXPECT_EQ(LI.endIndex(), End);
+    EXPECT_FALSE(LI.overlaps(Blocker));
+    F.assign(0, 0);
+
+    // A full query now finds VGPR1 free. Reusing the pre-edit failure would
+    // incorrectly return HitFalse despite the unchanged outer bounds/count.
+    EXPECT_EQ(F.Matrix.checkInterference(LI, F.vgpr(1)),
+              LiveRegMatrix::IK_Free);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
   });
 }
 
