@@ -400,3 +400,20 @@ as follows:
 | ----------------- | -------- | -------- | -------- | ------------- | ------------------- |
 | address diversity | reserved | key      | reserved | discriminator | reserved for addend |
 ```
+
+#### ELF-Specific IR Module flags
+
+The following module flags control aspects of code-generation for
+pointer authentication on ELF platforms.
+
+* `ptrauth-elf-got` is a flag that determines if the GOT is
+  signed. Code pointers in the GOT are signed with the global
+  instruction key (`ASIA`). Data pointers are signed with the global
+  data key (`ASDA`).
+* `ptrauth-init-fini` is a flag that determines if the pointers in
+  `.init_array` and `.fini_array` are signed with the global
+  instruction key (`ASIA`).
+* `ptrauth-init-fini-address-discrimination` is a flag used in
+  combination with `ptrauth-init-fini`, it determines whether address
+  diversity is used in the discriminator for the pointers in the
+  `.init_array` and `.fini_array`.
