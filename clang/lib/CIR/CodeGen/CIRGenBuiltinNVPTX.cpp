@@ -15,7 +15,12 @@
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+
+#include <algorithm>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -146,6 +151,270 @@ static mlir::Value makeScopedAtomicXchg(CIRGenFunction &cgf,
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val,
       cir::MemOrder::Relaxed, scope, /*is_volatile=*/false);
   return xchg.getResult();
+}
+
+// Mirrors the WMMA load mappings in classic CodeGen.
+struct NVPTXMmaLdstInfo {
+  unsigned NumResults; // Number of elements to load/store
+  // Intrinsic IDs for row/col variants. 0 if particular layout is unsupported.
+  unsigned IID_col;
+  unsigned IID_row;
+};
+
+#define MMA_INTR(geom_op_type, layout)                                         \
+  llvm::Intrinsic::nvvm_wmma_##geom_op_type##_##layout##_stride
+#define MMA_LDST(n, geom_op_type)                                              \
+  {n, MMA_INTR(geom_op_type, col), MMA_INTR(geom_op_type, row)}
+
+static NVPTXMmaLdstInfo getNVPTXMmaLdstInfo(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  // FP MMA loads
+  case NVPTX::BI__hmma_m16n16k16_ld_a:
+    return MMA_LDST(8, m16n16k16_load_a_f16);
+  case NVPTX::BI__hmma_m16n16k16_ld_b:
+    return MMA_LDST(8, m16n16k16_load_b_f16);
+  case NVPTX::BI__hmma_m16n16k16_ld_c_f16:
+    return MMA_LDST(4, m16n16k16_load_c_f16);
+  case NVPTX::BI__hmma_m16n16k16_ld_c_f32:
+    return MMA_LDST(8, m16n16k16_load_c_f32);
+  case NVPTX::BI__hmma_m32n8k16_ld_a:
+    return MMA_LDST(8, m32n8k16_load_a_f16);
+  case NVPTX::BI__hmma_m32n8k16_ld_b:
+    return MMA_LDST(8, m32n8k16_load_b_f16);
+  case NVPTX::BI__hmma_m32n8k16_ld_c_f16:
+    return MMA_LDST(4, m32n8k16_load_c_f16);
+  case NVPTX::BI__hmma_m32n8k16_ld_c_f32:
+    return MMA_LDST(8, m32n8k16_load_c_f32);
+  case NVPTX::BI__hmma_m8n32k16_ld_a:
+    return MMA_LDST(8, m8n32k16_load_a_f16);
+  case NVPTX::BI__hmma_m8n32k16_ld_b:
+    return MMA_LDST(8, m8n32k16_load_b_f16);
+  case NVPTX::BI__hmma_m8n32k16_ld_c_f16:
+    return MMA_LDST(4, m8n32k16_load_c_f16);
+  case NVPTX::BI__hmma_m8n32k16_ld_c_f32:
+    return MMA_LDST(8, m8n32k16_load_c_f32);
+
+  // Integer MMA loads
+  case NVPTX::BI__imma_m16n16k16_ld_a_s8:
+    return MMA_LDST(2, m16n16k16_load_a_s8);
+  case NVPTX::BI__imma_m16n16k16_ld_a_u8:
+    return MMA_LDST(2, m16n16k16_load_a_u8);
+  case NVPTX::BI__imma_m16n16k16_ld_b_s8:
+    return MMA_LDST(2, m16n16k16_load_b_s8);
+  case NVPTX::BI__imma_m16n16k16_ld_b_u8:
+    return MMA_LDST(2, m16n16k16_load_b_u8);
+  case NVPTX::BI__imma_m16n16k16_ld_c:
+    return MMA_LDST(8, m16n16k16_load_c_s32);
+  case NVPTX::BI__imma_m32n8k16_ld_a_s8:
+    return MMA_LDST(4, m32n8k16_load_a_s8);
+  case NVPTX::BI__imma_m32n8k16_ld_a_u8:
+    return MMA_LDST(4, m32n8k16_load_a_u8);
+  case NVPTX::BI__imma_m32n8k16_ld_b_s8:
+    return MMA_LDST(1, m32n8k16_load_b_s8);
+  case NVPTX::BI__imma_m32n8k16_ld_b_u8:
+    return MMA_LDST(1, m32n8k16_load_b_u8);
+  case NVPTX::BI__imma_m32n8k16_ld_c:
+    return MMA_LDST(8, m32n8k16_load_c_s32);
+  case NVPTX::BI__imma_m8n32k16_ld_a_s8:
+    return MMA_LDST(1, m8n32k16_load_a_s8);
+  case NVPTX::BI__imma_m8n32k16_ld_a_u8:
+    return MMA_LDST(1, m8n32k16_load_a_u8);
+  case NVPTX::BI__imma_m8n32k16_ld_b_s8:
+    return MMA_LDST(4, m8n32k16_load_b_s8);
+  case NVPTX::BI__imma_m8n32k16_ld_b_u8:
+    return MMA_LDST(4, m8n32k16_load_b_u8);
+  case NVPTX::BI__imma_m8n32k16_ld_c:
+    return MMA_LDST(8, m8n32k16_load_c_s32);
+
+  // Sub-integer MMA loads.
+  // Only row/col layout is supported by A/B fragments.
+  case NVPTX::BI__imma_m8n8k32_ld_a_s4:
+    return {1, 0, MMA_INTR(m8n8k32_load_a_s4, row)};
+  case NVPTX::BI__imma_m8n8k32_ld_a_u4:
+    return {1, 0, MMA_INTR(m8n8k32_load_a_u4, row)};
+  case NVPTX::BI__imma_m8n8k32_ld_b_s4:
+    return {1, MMA_INTR(m8n8k32_load_b_s4, col), 0};
+  case NVPTX::BI__imma_m8n8k32_ld_b_u4:
+    return {1, MMA_INTR(m8n8k32_load_b_u4, col), 0};
+  case NVPTX::BI__imma_m8n8k32_ld_c:
+    return MMA_LDST(2, m8n8k32_load_c_s32);
+  case NVPTX::BI__bmma_m8n8k128_ld_a_b1:
+    return {1, 0, MMA_INTR(m8n8k128_load_a_b1, row)};
+  case NVPTX::BI__bmma_m8n8k128_ld_b_b1:
+    return {1, MMA_INTR(m8n8k128_load_b_b1, col), 0};
+  case NVPTX::BI__bmma_m8n8k128_ld_c:
+    return MMA_LDST(2, m8n8k128_load_c_s32);
+
+  // Double MMA loads
+  case NVPTX::BI__dmma_m8n8k4_ld_a:
+    return MMA_LDST(1, m8n8k4_load_a_f64);
+  case NVPTX::BI__dmma_m8n8k4_ld_b:
+    return MMA_LDST(1, m8n8k4_load_b_f64);
+  case NVPTX::BI__dmma_m8n8k4_ld_c:
+    return MMA_LDST(2, m8n8k4_load_c_f64);
+
+  // Alternate float MMA loads
+  case NVPTX::BI__mma_bf16_m16n16k16_ld_a:
+    return MMA_LDST(4, m16n16k16_load_a_bf16);
+  case NVPTX::BI__mma_bf16_m16n16k16_ld_b:
+    return MMA_LDST(4, m16n16k16_load_b_bf16);
+  case NVPTX::BI__mma_bf16_m8n32k16_ld_a:
+    return MMA_LDST(2, m8n32k16_load_a_bf16);
+  case NVPTX::BI__mma_bf16_m8n32k16_ld_b:
+    return MMA_LDST(8, m8n32k16_load_b_bf16);
+  case NVPTX::BI__mma_bf16_m32n8k16_ld_a:
+    return MMA_LDST(8, m32n8k16_load_a_bf16);
+  case NVPTX::BI__mma_bf16_m32n8k16_ld_b:
+    return MMA_LDST(2, m32n8k16_load_b_bf16);
+  case NVPTX::BI__mma_tf32_m16n16k8_ld_a:
+    return MMA_LDST(4, m16n16k8_load_a_tf32);
+  case NVPTX::BI__mma_tf32_m16n16k8_ld_b:
+    return MMA_LDST(4, m16n16k8_load_b_tf32);
+  case NVPTX::BI__mma_tf32_m16n16k8_ld_c:
+    return MMA_LDST(8, m16n16k8_load_c_f32);
+
+  default:
+    llvm_unreachable("Unknown WMMA load builtin");
+  }
+}
+#undef MMA_LDST
+#undef MMA_INTR
+
+// FP16 WMMA fragments are stored in i32 slots, but their intrinsic register
+// representation is <2 x half>. FP32 fragments use float in both
+// representations.
+static mlir::Type getWMMARegisterType(mlir::Type storageType) {
+  if (mlir::isa<cir::SingleType>(storageType))
+    return storageType;
+  return cir::VectorType::getFixed(cir::FP16Type::get(storageType.getContext()),
+                                   2);
+}
+
+static cir::StructType getWMMAResultType(CIRGenBuilderTy &builder,
+                                         mlir::Type registerType,
+                                         unsigned numRegisters) {
+  llvm::SmallVector<mlir::Type, 8> members(numRegisters, registerType);
+  return builder.getAnonRecordTy(members, /*packed=*/false,
+                                 cir::RecordType::getAllDataKinds(members));
+}
+
+static void loadWMMAFragment(CIRGenBuilderTy &builder, mlir::Location loc,
+                             Address src, unsigned numRegisters,
+                             llvm::SmallVectorImpl<mlir::Value> &values) {
+  mlir::Type registerType = getWMMARegisterType(src.getElementType());
+  // Every slot is four bytes, even when the fragment contains packed halves.
+  CharUnits alignment =
+      std::min(src.getAlignment(), CharUnits::fromQuantity(4));
+  for (unsigned i = 0; i < numRegisters; ++i) {
+    mlir::Value ptr = builder.createPtrStride(loc, src.emitRawPointer(),
+                                              builder.getSInt32(i, loc));
+    mlir::Value value =
+        builder.createAlignedLoad(loc, src.getElementType(), ptr, alignment);
+    values.push_back(builder.createBitcast(loc, value, registerType));
+  }
+}
+
+static void storeWMMAFragment(CIRGenBuilderTy &builder, mlir::Location loc,
+                              mlir::Value result, Address dst,
+                              unsigned numRegisters) {
+  CharUnits alignment =
+      std::min(dst.getAlignment(), CharUnits::fromQuantity(4));
+  for (unsigned i = 0; i < numRegisters; ++i) {
+    mlir::Value value = result;
+    if (numRegisters != 1)
+      value = cir::ExtractMemberOp::create(builder, loc, result, i);
+    value = builder.createBitcast(loc, value, dst.getElementType());
+    mlir::Value ptr = builder.createPtrStride(loc, dst.emitRawPointer(),
+                                              builder.getSInt32(i, loc));
+    builder.createStore(loc, value, Address(ptr, alignment));
+  }
+}
+
+static std::optional<mlir::Value>
+emitWMMALoad(CIRGenFunction &cgf, const CallExpr *expr, unsigned builtinId) {
+  auto &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  Address dst = cgf.emitPointerWithAlignment(expr->getArg(0));
+  mlir::Value src = cgf.emitScalarExpr(expr->getArg(1));
+  mlir::Value ldm = cgf.emitScalarExpr(expr->getArg(2));
+  auto isColMajor = expr->getArg(3)->getIntegerConstantExpr(cgf.getContext());
+  if (!isColMajor)
+    return std::nullopt;
+
+  NVPTXMmaLdstInfo info = getNVPTXMmaLdstInfo(builtinId);
+  unsigned intrinsicId = *isColMajor != 0 ? info.IID_col : info.IID_row;
+  if (!intrinsicId)
+    return std::nullopt;
+
+  cir::FuncType intrinsicType =
+      cgf.getIntrinsicType(intrinsicId, {src.getType()});
+  llvm::StringRef name =
+      llvm::Intrinsic::getBaseName(intrinsicId).drop_front(5);
+  mlir::Value result = builder.emitIntrinsicCallOp(
+      loc, name, intrinsicType.getReturnType(), mlir::ValueRange{src, ldm});
+  storeWMMAFragment(builder, loc, result, dst, info.NumResults);
+  return mlir::Value{};
+}
+
+static std::optional<mlir::Value> emitWMMAStore(CIRGenFunction &cgf,
+                                                const CallExpr *expr) {
+  auto &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Value dst = cgf.emitScalarExpr(expr->getArg(0));
+  Address src = cgf.emitPointerWithAlignment(expr->getArg(1));
+  mlir::Value ldm = cgf.emitScalarExpr(expr->getArg(2));
+  auto isColMajor = expr->getArg(3)->getIntegerConstantExpr(cgf.getContext());
+  if (!isColMajor)
+    return std::nullopt;
+
+  bool isFloat = mlir::isa<cir::SingleType>(src.getElementType());
+  std::string name = (llvm::Twine("nvvm.wmma.m16n16k16.store.d.") +
+                      (*isColMajor != 0 ? "col.stride." : "row.stride.") +
+                      (isFloat ? "f32" : "f16"))
+                         .str();
+  llvm::SmallVector<mlir::Value, 10> values{dst};
+  loadWMMAFragment(builder, loc, src, isFloat ? 8 : 4, values);
+  values.push_back(ldm);
+  cir::LLVMIntrinsicCallOp::create(builder, loc, builder.getStringAttr(name),
+                                   /*resType=*/mlir::Type{}, values);
+  return mlir::Value{};
+}
+
+static std::optional<mlir::Value> emitWMMAMma(CIRGenFunction &cgf,
+                                              const CallExpr *expr) {
+  auto &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  Address dst = cgf.emitPointerWithAlignment(expr->getArg(0));
+  Address srcA = cgf.emitPointerWithAlignment(expr->getArg(1));
+  Address srcB = cgf.emitPointerWithAlignment(expr->getArg(2));
+  Address srcC = cgf.emitPointerWithAlignment(expr->getArg(3));
+  auto layout = expr->getArg(4)->getIntegerConstantExpr(cgf.getContext());
+  auto satf = expr->getArg(5)->getIntegerConstantExpr(cgf.getContext());
+  if (!layout || layout->getSExtValue() < 0 || layout->getSExtValue() > 3 ||
+      !satf)
+    return std::nullopt;
+
+  bool isFloatC = mlir::isa<cir::SingleType>(srcC.getElementType());
+  bool isFloatD = mlir::isa<cir::SingleType>(dst.getElementType());
+  const char *layouts[] = {"row.row", "row.col", "col.row", "col.col"};
+  std::string name =
+      (llvm::Twine("nvvm.wmma.m16n16k16.mma.") +
+       layouts[layout->getSExtValue()] + (isFloatD ? ".f32" : ".f16") +
+       (isFloatC ? ".f32" : ".f16") + (*satf != 0 ? ".satfinite" : ""))
+          .str();
+
+  // Read every input before writing D, since the fragments may alias.
+  llvm::SmallVector<mlir::Value, 24> values;
+  loadWMMAFragment(builder, loc, srcA, 8, values);
+  loadWMMAFragment(builder, loc, srcB, 8, values);
+  loadWMMAFragment(builder, loc, srcC, isFloatC ? 8 : 4, values);
+  unsigned numResults = isFloatD ? 8 : 4;
+  mlir::Type resultType = getWMMAResultType(
+      builder, getWMMARegisterType(dst.getElementType()), numResults);
+  mlir::Value result =
+      builder.emitIntrinsicCallOp(loc, name, resultType, values);
+  storeWMMAFragment(builder, loc, result, dst, numResults);
+  return mlir::Value{};
 }
 
 std::optional<mlir::Value>
@@ -430,7 +699,7 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                  std::string("unimplemented NVPTX builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
-  // FP MMA loads
+  // WMMA fragment loads.
   case NVPTX::BI__hmma_m16n16k16_ld_a:
   case NVPTX::BI__hmma_m16n16k16_ld_b:
   case NVPTX::BI__hmma_m16n16k16_ld_c_f16:
@@ -443,10 +712,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__hmma_m8n32k16_ld_b:
   case NVPTX::BI__hmma_m8n32k16_ld_c_f16:
   case NVPTX::BI__hmma_m8n32k16_ld_c_f32:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__imma_m16n16k16_ld_a_s8:
   case NVPTX::BI__imma_m16n16k16_ld_a_u8:
   case NVPTX::BI__imma_m16n16k16_ld_b_s8:
@@ -462,10 +727,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__imma_m8n32k16_ld_b_s8:
   case NVPTX::BI__imma_m8n32k16_ld_b_u8:
   case NVPTX::BI__imma_m8n32k16_ld_c:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__imma_m8n8k32_ld_a_s4:
   case NVPTX::BI__imma_m8n8k32_ld_a_u4:
   case NVPTX::BI__imma_m8n8k32_ld_b_s4:
@@ -474,17 +735,9 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__bmma_m8n8k128_ld_a_b1:
   case NVPTX::BI__bmma_m8n8k128_ld_b_b1:
   case NVPTX::BI__bmma_m8n8k128_ld_c:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__dmma_m8n8k4_ld_a:
   case NVPTX::BI__dmma_m8n8k4_ld_b:
   case NVPTX::BI__dmma_m8n8k4_ld_c:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__mma_bf16_m16n16k16_ld_a:
   case NVPTX::BI__mma_bf16_m16n16k16_ld_b:
   case NVPTX::BI__mma_bf16_m8n32k16_ld_a:
@@ -494,12 +747,10 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__mma_tf32_m16n16k8_ld_a:
   case NVPTX::BI__mma_tf32_m16n16k8_ld_b:
   case NVPTX::BI__mma_tf32_m16n16k8_ld_c:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitWMMALoad(*this, expr, builtinId);
   case NVPTX::BI__hmma_m16n16k16_st_c_f16:
   case NVPTX::BI__hmma_m16n16k16_st_c_f32:
+    return emitWMMAStore(*this, expr);
   case NVPTX::BI__hmma_m32n8k16_st_c_f16:
   case NVPTX::BI__hmma_m32n8k16_st_c_f32:
   case NVPTX::BI__hmma_m8n32k16_st_c_f16:
@@ -521,6 +772,7 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__hmma_m16n16k16_mma_f32f16:
   case NVPTX::BI__hmma_m16n16k16_mma_f32f32:
   case NVPTX::BI__hmma_m16n16k16_mma_f16f32:
+    return emitWMMAMma(*this, expr);
   case NVPTX::BI__hmma_m32n8k16_mma_f16f16:
   case NVPTX::BI__hmma_m32n8k16_mma_f32f16:
   case NVPTX::BI__hmma_m32n8k16_mma_f32f32:
