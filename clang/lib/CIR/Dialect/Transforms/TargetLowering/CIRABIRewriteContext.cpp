@@ -256,7 +256,7 @@ static bool needsArgAttrUpdate(const FunctionClassification &fc) {
 
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
 /// llvm.signext / llvm.zeroext on Extend args, adds the pointer attributes
-/// for Indirect and IndirectAlias args in place of llvm.nofpclass, drops
+/// for Indirect and IndirectAliased args in place of llvm.nofpclass, drops
 /// llvm.noundef from a coerced Direct arg that passes undefined bits,
 /// adds llvm.alignstack on a Direct arg with a stack-slot alignment, gives each
 /// field of a Direct+canFlatten argument the argument's attributes, and gives
