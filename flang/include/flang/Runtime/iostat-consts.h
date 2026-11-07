@@ -88,6 +88,7 @@ enum Iostat {
   IostatOpenNewExtant,
   IostatParentAsynchronous,
   IostatChildAsynchronous,
+  IostatEnumerationInputOutOfRange,
 };
 
 } // namespace Fortran::runtime::io

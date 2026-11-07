@@ -601,11 +601,6 @@ end program
 * When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
   rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
   stern warning.
-* In formatted I/O, an item of enumeration type may correspond to a `G`
-  edit descriptor, which is processed like an `I` edit descriptor (the
-  value written or read is the ordinal position).  F2023 12.6.3 permits
-  only the `I`, `B`, `O`, and `Z` edit descriptors for enumeration type
-  items.  No diagnostic is issued.
 
 ### `SIMPLE` classification of extensions
 
