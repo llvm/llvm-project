@@ -382,6 +382,7 @@ class TargetAPITestCase(TestBase):
             False,
             error,
         )
+        self.assertSuccess(error)
         process.Continue()
         # self.runCmd("process status")
         if lldb.remote_platform:
