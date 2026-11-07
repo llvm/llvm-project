@@ -495,6 +495,12 @@ let TargetPrefix = "dx" in {
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
 
+  def int_dx_wave_multi_prefix_bit_count
+      : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                              [llvm_i1_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem]>;
+
   def int_dx_wave_multi_prefix_product
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,

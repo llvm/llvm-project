@@ -4012,6 +4012,18 @@ static bool CheckWavePrefix(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckWaveMultiPrefixMask(Sema *S, CallExpr *TheCall) {
+  QualType MaskTy = TheCall->getArg(1)->getType();
+  QualType UInt4Ty = S->Context.getExtVectorType(S->Context.UnsignedIntTy, 4);
+  if (S->Context.hasSameUnqualifiedType(MaskTy, UInt4Ty))
+    return false;
+
+  S->Diag(TheCall->getArg(1)->getBeginLoc(),
+          diag::err_typecheck_convert_incompatible)
+      << MaskTy << UInt4Ty << 1 << 0 << 0;
+  return true;
+}
+
 static bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() == 3);
   Expr *Arg1 = TheCall->getArg(1);
@@ -5302,8 +5314,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
-    if (SemaRef.checkArgCount(TheCall, 1))
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_count_bits: {
+    bool IsMultiPrefix =
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_count_bits;
+    if (SemaRef.checkArgCount(TheCall, IsMultiPrefix ? 2 : 1))
       return true;
 
     QualType ArgType = TheCall->getArg(0)->getType();
@@ -5320,6 +5335,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                    diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
           << ArgType << 0;
       return true;
+    }
+
+    if (IsMultiPrefix) {
+      if (CheckWaveMultiPrefixMask(&SemaRef, TheCall))
+        return true;
+
+      // Alias validation uses calls with an invalid source location.
+      if (TheCall->getBeginLoc().isValid() &&
+          !getASTContext().getTargetInfo().getTriple().isDXIL()) {
+        SemaRef.Diag(TheCall->getBeginLoc(),
+                     diag::err_builtin_target_unsupported)
+            << TheCall->getSourceRange();
+        return true;
+      }
     }
 
     break;
@@ -5404,15 +5433,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     }
 
-    QualType MaskTy = TheCall->getArg(1)->getType();
-    QualType UInt4Ty =
-        getASTContext().getExtVectorType(getASTContext().UnsignedIntTy, 4);
-    if (!getASTContext().hasSameUnqualifiedType(MaskTy, UInt4Ty)) {
-      SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << MaskTy << UInt4Ty << 1 << 0 << 0;
+    if (CheckWaveMultiPrefixMask(&SemaRef, TheCall))
       return true;
-    }
 
     TheCall->setType(ValueTy);
     break;
