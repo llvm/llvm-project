@@ -2366,7 +2366,6 @@ libc_support_library(
     ] + select({
         ":full_build": [
             ":__support_integer_to_string",
-            ":__support_osutil_exit_hdrs",
             ":__support_osutil_io",
         ],
         "//conditions:default": [],
@@ -17270,6 +17269,20 @@ libc_support_library(
     deps = [
         ":__support_osutil_io",
         ":hdr_stdint_proxy",
+        ":stdlib_abort_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__assert_fail",
+    srcs = ["src/assert/generic/__assert_fail.cpp"],
+    hdrs = ["src/assert/__assert_fail.h"],
+    full_build_only = True,
+    deps = [
+        ":__support_cpp_atomic",
+        ":__support_libc_assert",
+        ":__support_macros_config",
+        ":__support_osutil_io",
         ":stdlib_abort_utils",
     ],
 )

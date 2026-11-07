@@ -66,6 +66,7 @@ def libc_test(
             # The compiler may emit references to symbols it expects to exist,
             # like `memset`. These dependencies hermetically provide them.
             "//libc/test/UnitTest:HermeticTestUtils",
+            "//libc:__assert_fail",
             "//libc:__stack_chk_fail",  # Needed if -fstack-protector is set.
         ],
         "//conditions:default": [],

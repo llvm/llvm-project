@@ -7,6 +7,7 @@ add_entrypoint_object(
     ../assert.h
   DEPENDS
     libc.include.assert
+    libc.src.__support.CPP.atomic
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.abort_utils
 )

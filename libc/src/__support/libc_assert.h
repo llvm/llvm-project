@@ -17,7 +17,6 @@
 #include "src/__support/macros/properties/os.h"
 
 #ifdef LIBC_FULL_BUILD
-#include "src/__support/OSUtil/exit.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/integer_to_string.h"
 #endif
@@ -44,19 +43,18 @@
   } while (false)
 #endif // LIBC_TARGET_OS_IS_LINUX
 #else
-// FIXME: Calling abort on assertion is actually required by standards like LSB.
-// Calling exit also confuses the debugger as exiting will not trigger
-// debugger's stop-on-signal behavior by default. Currently, adding abort will
-// result in cyclic dependency.
+namespace LIBC_NAMESPACE_DECL {
+// Forward declaration of __assert_fail to decouple assertion failure
+// handling and abort from internal header dependencies.
+[[noreturn]] void __assert_fail(const char *assertion, const char *file,
+                                unsigned line, const char *function);
+} // namespace LIBC_NAMESPACE_DECL
+
 #define LIBC_REQUIRE(COND, MSG)                                                \
   do {                                                                         \
-    if (LIBC_UNLIKELY(!(COND))) {                                              \
-      LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" LLVM_LIBC_STRINGIFY(        \
-          __LINE__) ": Assertion failed: '" MSG "' in function: '");           \
-      LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
-      LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
-      LIBC_NAMESPACE::internal::exit(0xFF);                                    \
-    }                                                                          \
+    if (LIBC_UNLIKELY(!(COND)))                                                \
+      LIBC_NAMESPACE::__assert_fail(MSG, __FILE__, __LINE__,                   \
+                                    __PRETTY_FUNCTION__);                      \
   } while (false)
 #endif // LIBC_FULL_BUILD
 

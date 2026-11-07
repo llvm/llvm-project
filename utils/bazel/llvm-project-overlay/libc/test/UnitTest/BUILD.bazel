@@ -124,6 +124,7 @@ libc_test_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//libc:__assert_fail",
         "//libc:__support_common",
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
