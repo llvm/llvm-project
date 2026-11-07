@@ -61,14 +61,12 @@ void *memalign_large_constant_test(size_t n) {
 // CHECK: declare ptr @realloc
 
 // CHECK-LABEL: @aligned_alloc_variable_test
-// CHECK:      %[[ALLOCATED:.*]] = call ptr @aligned_alloc({{i32|i64}} noundef %[[ALIGN:.*]], {{i32|i64}} noundef %[[NBYTES:.*]])
-// CHECK-NEXT: call void @llvm.assume(i1 true) [ "align"(ptr %[[ALLOCATED]], {{i32|i64}} %[[ALIGN]]) ]
+// CHECK:      %[[ALLOCATED:.*]] = call ptr @aligned_alloc({{i32|i64}} allocalign noundef %[[ALIGN:.*]], {{i32|i64}} noundef %[[NBYTES:.*]])
 
 // CHECK: declare ptr @aligned_alloc
 
 // CHECK-LABEL: @memalign_variable_test
-// CHECK:      %[[ALLOCATED:.*]] = call ptr @memalign({{i32|i64}} noundef %[[ALIGN:.*]], {{i32|i64}} noundef %[[NBYTES:.*]])
-// CHECK-NEXT: call void @llvm.assume(i1 true) [ "align"(ptr %[[ALLOCATED]], {{i32|i64}} %[[ALIGN]]) ]
+// CHECK:      %[[ALLOCATED:.*]] = call ptr @memalign({{i32|i64}} allocalign noundef %[[ALIGN:.*]], {{i32|i64}} noundef %[[NBYTES:.*]])
 
 // CHECK-LABEL: @aligned_alloc_constant_test
 // CHECK: call align 8 ptr @aligned_alloc
