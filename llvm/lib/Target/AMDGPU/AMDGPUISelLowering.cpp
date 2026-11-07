@@ -4249,6 +4249,21 @@ SDValue AMDGPUTargetLowering::performAssertSZExtCombine(SDNode *N,
   return SDValue();
 }
 
+// Packed FP8/BF8 conversions (llvm.amdgcn.cvt.pk.{fp8,bf8}.f32 and
+// llvm.amdgcn.cvt.pk.fp8.f32.e5m3) write one 16-bit half of their result and
+// keep the other half from their tied destination input (vdst_in, the
+// intrinsic's old operand).
+// Operands: intrinsic ID, src0, src1, vdst_in, word select.
+static constexpr unsigned CvtPkF8VDstInIdx = 3;
+static constexpr unsigned CvtPkF8WordSelIdx = 4;
+
+/// Return the bits of the result that are kept from vdst_in.
+static APInt getCvtPkF8VDstInBits(const SDNode *N) {
+  return N->getConstantOperandVal(CvtPkF8WordSelIdx)
+             ? APInt::getLowBitsSet(32, 16)
+             : APInt::getHighBitsSet(32, 16);
+}
+
 SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   SDNode *N, DAGCombinerInfo &DCI) const {
   unsigned IID = N->getConstantOperandVal(0);
@@ -4258,6 +4273,23 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_mulhi_i24:
   case Intrinsic::amdgcn_mulhi_u24:
     return simplifyMul24(N, DCI);
+  case Intrinsic::amdgcn_cvt_pk_fp8_f32:
+  case Intrinsic::amdgcn_cvt_pk_bf8_f32:
+  case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
+    // Only the half kept in the result is read from vdst_in.
+    SDValue VDstIn = N->getOperand(CvtPkF8VDstInIdx);
+    APInt Demanded = getCvtPkF8VDstInBits(N);
+    if (SDValue NewVDstIn =
+            SimplifyMultipleUseDemandedBits(VDstIn, Demanded, DCI.DAG)) {
+      SmallVector<SDValue, 5> Ops(N->ops());
+      Ops[CvtPkF8VDstInIdx] = NewVDstIn;
+      return DCI.DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(),
+                             Ops, N->getFlags());
+    }
+    if (SimplifyDemandedBits(VDstIn, Demanded, DCI))
+      return SDValue(N, 0);
+    return SDValue();
+  }
   case Intrinsic::amdgcn_fract:
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
@@ -5827,6 +5859,31 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
   switch (Op.getOpcode()) {
   case ISD::INTRINSIC_WO_CHAIN: {
     switch (Op.getConstantOperandVal(0)) {
+    case Intrinsic::amdgcn_cvt_pk_fp8_f32:
+    case Intrinsic::amdgcn_cvt_pk_bf8_f32:
+    case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
+      // vdst_in is only observed through the half kept in the result.
+      SDValue VDstIn = Op.getOperand(CvtPkF8VDstInIdx);
+      APInt VDstInDemandedBits =
+          OriginalDemandedBits & getCvtPkF8VDstInBits(Op.getNode());
+
+      // No demanded bit comes from vdst_in, so it is not needed.
+      if (VDstInDemandedBits.isZero()) {
+        if (VDstIn.isUndef())
+          return false;
+        SmallVector<SDValue, 5> Ops(Op->op_values());
+        Ops[CvtPkF8VDstInIdx] = TLO.DAG.getPOISON(MVT::i32);
+        return TLO.CombineTo(Op,
+                             TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op),
+                                             MVT::i32, Ops, Op->getFlags()));
+      }
+
+      // Some demanded bits come from vdst_in: simplify vdst_in for those bits.
+      KnownBits KnownVDstIn;
+      return SimplifyDemandedBits(VDstIn, VDstInDemandedBits,
+                                  OriginalDemandedElts, KnownVDstIn, TLO,
+                                  Depth + 1);
+    }
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
     case Intrinsic::amdgcn_wwm: {
