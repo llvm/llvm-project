@@ -450,6 +450,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[6], tok::identifier, TT_Unknown); // Not TT_StartOfName
+
+  Tokens = annotate("void foo() {\n"
+                    "  [](W<void(Args&& ...)> f) {};\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::ampamp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
