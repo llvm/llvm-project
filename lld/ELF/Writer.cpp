@@ -2036,8 +2036,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       ctx.in.symTab->maybeAddSttFile();
   }
 
+  if (ctx.in.mipsStubs)
+    ctx.in.mipsStubs->addSymbols();
   if (ctx.in.mipsGot)
     ctx.in.mipsGot->build();
+  finalizeSynthetic(ctx, ctx.in.mipsStubs.get());
 
   removeUnusedSyntheticSections(ctx);
   ctx.script->diagnoseOrphanHandling();

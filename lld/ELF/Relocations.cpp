@@ -1181,6 +1181,8 @@ void RelocScan::scanEhSection(EhInputSection &s) {
     if (sym->isUndefined() &&
         maybeReportUndefined(cast<Undefined>(*sym), offset))
       continue;
+    if (ctx.in.mipsStubs)
+      ctx.in.mipsStubs->exclude(*sym);
     process(r.expr, r.type, offset, *sym, r.addend);
   }
 }

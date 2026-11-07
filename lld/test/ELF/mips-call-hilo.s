@@ -18,6 +18,9 @@
 
 # GOT: There are no relocations in this file.
 
+# GOT: Symbol table '.dynsym'
+# GOT: {{.*}}: [[BAR:[0-9a-f]+]] 0 FUNC GLOBAL DEFAULT UND bar
+
 # GOT: Symbol table '.symtab'
 # GOT: {{.*}}:  [[LOC1:[0-9a-f]+]]  {{.*}} loc1
 # GOT: {{.*}}:  [[LOC2:[0-9a-f]+]]  {{.*}} loc2
@@ -37,7 +40,7 @@
 # GOT-EMPTY:
 # GOT-NEXT:  Global entries:
 # GOT-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
-# GOT-NEXT:   {{.*}} -32736(gp) 00000000 00000000 NOTYPE  UND bar
+# GOT-NEXT:   {{.*}} -32736(gp) [[BAR]] [[BAR]] FUNC  UND bar
 
   .text
   .global foo
