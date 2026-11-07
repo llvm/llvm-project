@@ -2790,33 +2790,11 @@ void CodeGenFunction::emitAlignmentAssumption(llvm::Value *PtrValue,
   if (OffsetValue && OffsetValue->getType() != IntPtrTy)
     OffsetValue =
         Builder.CreateIntCast(OffsetValue, IntPtrTy, true, "casted.offset");
-  llvm::Value *TheCheck = nullptr;
-  if (SanOpts.has(SanitizerKind::Alignment)) {
-    llvm::Value *PtrIntValue =
-        Builder.CreatePtrToInt(PtrValue, IntPtrTy, "ptrint");
-
-    if (OffsetValue) {
-      bool IsOffsetZero = false;
-      if (const auto *CI = dyn_cast<llvm::ConstantInt>(OffsetValue))
-        IsOffsetZero = CI->isZero();
-
-      if (!IsOffsetZero)
-        PtrIntValue = Builder.CreateSub(PtrIntValue, OffsetValue, "offsetptr");
-    }
-
-    llvm::Value *Zero = llvm::ConstantInt::get(IntPtrTy, 0);
-    llvm::Value *Mask =
-        Builder.CreateSub(Alignment, llvm::ConstantInt::get(IntPtrTy, 1));
-    llvm::Value *MaskedPtr = Builder.CreateAnd(PtrIntValue, Mask, "maskedptr");
-    TheCheck = Builder.CreateICmpEQ(MaskedPtr, Zero, "maskcond");
-  }
-  llvm::Instruction *Assumption = Builder.CreateAlignmentAssumption(
-      CGM.getDataLayout(), PtrValue, Alignment, OffsetValue);
-
-  if (!SanOpts.has(SanitizerKind::Alignment))
-    return;
-  emitAlignmentAssumptionCheck(PtrValue, Ty, Loc, AssumptionLoc, Alignment,
-                               OffsetValue, TheCheck, Assumption);
+  if (SanOpts.has(SanitizerKind::Alignment))
+    emitAlignmentAssumptionCheck(PtrValue, Ty, Loc, AssumptionLoc, Alignment,
+                                 OffsetValue);
+  Builder.CreateAlignmentAssumption(CGM.getDataLayout(), PtrValue, Alignment,
+                                    OffsetValue);
 }
 
 void CodeGenFunction::emitAlignmentAssumption(llvm::Value *PtrValue,
@@ -3313,56 +3291,61 @@ void CodeGenFunction::EmitX86MultiVersionResolver(
 
 // Loc - where the diagnostic will point, where in the source code this
 //  alignment has failed.
-// SecondaryLoc - if present (will be present if sufficiently different from
+// AssumptionLoc - if present (will be present if sufficiently different from
 //  Loc), the diagnostic will additionally point a "Note:" to this location.
 //  It should be the location where the __attribute__((assume_aligned))
 //  was written e.g.
-void CodeGenFunction::emitAlignmentAssumptionCheck(
-    llvm::Value *Ptr, QualType Ty, SourceLocation Loc,
-    SourceLocation SecondaryLoc, llvm::Value *Alignment,
-    llvm::Value *OffsetValue, llvm::Value *TheCheck,
-    llvm::Instruction *Assumption) {
-  assert(isa_and_nonnull<llvm::CallInst>(Assumption) &&
-         cast<llvm::CallInst>(Assumption)->getCalledOperand() ==
-             llvm::Intrinsic::getOrInsertDeclaration(Builder.getModule(),
-                                                     llvm::Intrinsic::assume) &&
-         "Assumption should be a call to llvm.assume().");
-  assert(&(Builder.GetInsertBlock()->back()) == Assumption &&
-         "Assumption should be the last instruction of the basic block, "
-         "since the basic block is still being generated.");
-
+void CodeGenFunction::emitAlignmentAssumptionCheck(llvm::Value *Ptr,
+                                                   QualType Ty,
+                                                   SourceLocation Loc,
+                                                   SourceLocation AssumptionLoc,
+                                                   llvm::Value *Alignment,
+                                                   llvm::Value *OffsetValue) {
   if (!SanOpts.has(SanitizerKind::Alignment))
     return;
+
+  if (Alignment->getType() != IntPtrTy)
+    Alignment =
+        Builder.CreateIntCast(Alignment, IntPtrTy, false, "casted.align");
+  if (OffsetValue && OffsetValue->getType() != IntPtrTy)
+    OffsetValue =
+        Builder.CreateIntCast(OffsetValue, IntPtrTy, true, "casted.offset");
+
+  llvm::Value *PtrIntValue = Builder.CreatePtrToInt(Ptr, IntPtrTy, "ptrint");
+
+  if (OffsetValue) {
+    bool IsOffsetZero = false;
+    if (const auto *CI = dyn_cast<llvm::ConstantInt>(OffsetValue))
+      IsOffsetZero = CI->isZero();
+
+    if (!IsOffsetZero)
+      PtrIntValue = Builder.CreateSub(PtrIntValue, OffsetValue, "offsetptr");
+  }
+
+  llvm::Value *Zero = llvm::ConstantInt::get(IntPtrTy, 0);
+  llvm::Value *Mask =
+      Builder.CreateSub(Alignment, llvm::ConstantInt::get(IntPtrTy, 1));
+  llvm::Value *MaskedPtr = Builder.CreateAnd(PtrIntValue, Mask, "maskedptr");
+  llvm::Value *TheCheck = Builder.CreateICmpEQ(MaskedPtr, Zero, "maskcond");
 
   // Don't check pointers to volatile data. The behavior here is implementation-
   // defined.
   if (Ty->getPointeeType().isVolatileQualified())
     return;
 
-  // We need to temorairly remove the assumption so we can insert the
-  // sanitizer check before it, else the check will be dropped by optimizations.
-  Assumption->removeFromParent();
+  auto CheckOrdinal = SanitizerKind::SO_Alignment;
+  auto CheckHandler = SanitizerHandler::AlignmentAssumption;
+  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
 
-  {
-    auto CheckOrdinal = SanitizerKind::SO_Alignment;
-    auto CheckHandler = SanitizerHandler::AlignmentAssumption;
-    SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
+  if (!OffsetValue)
+    OffsetValue = Builder.getInt1(false); // no offset.
 
-    if (!OffsetValue)
-      OffsetValue = Builder.getInt1(false); // no offset.
-
-    llvm::Constant *StaticData[] = {EmitCheckSourceLocation(Loc),
-                                    EmitCheckSourceLocation(SecondaryLoc),
-                                    EmitCheckTypeDescriptor(Ty)};
-    llvm::Value *DynamicData[] = {Ptr, Alignment, OffsetValue};
-    EmitCheck({std::make_pair(TheCheck, CheckOrdinal)}, CheckHandler,
-              StaticData, DynamicData);
-  }
-
-  // We are now in the (new, empty) "cont" basic block.
-  // Reintroduce the assumption.
-  Builder.Insert(Assumption);
-  // FIXME: Assumption still has it's original basic block as it's Parent.
+  llvm::Constant *StaticData[] = {EmitCheckSourceLocation(Loc),
+                                  EmitCheckSourceLocation(AssumptionLoc),
+                                  EmitCheckTypeDescriptor(Ty)};
+  llvm::Value *DynamicData[] = {Ptr, Alignment, OffsetValue};
+  EmitCheck({std::make_pair(TheCheck, CheckOrdinal)}, CheckHandler, StaticData,
+            DynamicData);
 }
 
 llvm::DebugLoc CodeGenFunction::SourceLocToDebugLoc(SourceLocation Location) {
