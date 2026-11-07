@@ -327,7 +327,7 @@ ExprDependence clang::computeDependence(CXXThisExpr *E) {
   // Note: The standard does not mention this case explicitly, but we need
   // to do this so we can mark NSDM accesses as dependent.
   if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
-    D |= ExprDependence::Type;
+    D |= ExprDependence::TypeValueInstantiation;
 
   assert(!(D & ExprDependence::UnexpandedPack));
   return D;
@@ -544,7 +544,7 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
   //    - an identifier associated by name lookup with an entity captured by
   //    copy ([expr.prim.lambda.capture])
   if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
-    Deps |= ExprDependence::Type;
+    Deps |= ExprDependence::TypeValueInstantiation;
 
   //    - a conversion-function-id that specifies a dependent type
   if (Decl->getDeclName().getNameKind() ==
