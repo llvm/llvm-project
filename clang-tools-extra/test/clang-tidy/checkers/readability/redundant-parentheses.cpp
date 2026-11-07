@@ -150,6 +150,60 @@ void memberExpr() {
   }
 }
 
+struct Addr { bool *operator&(); };
+struct ConstAddr { bool *operator&() const; };
+struct ByValueAddr { ~ByValueAddr(); };
+bool *operator&(ByValueAddr);
+struct Conv { operator ByValueAddr() const; };
+struct StaticX { static bool x; };
+
+struct MemberAddress : Foo {
+  static bool s;
+  Addr a;
+  ConstAddr c;
+  ByValueAddr v;
+  Conv o;
+  void addressOf(MemberAddress &m) {
+    &(Foo::x);
+    &((Foo::x));
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &(Foo::x);
+    &(x);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &x;
+    &(this->Foo::x);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &this->Foo::x;
+    &(m.Foo::x);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &m.Foo::x;
+    &(MemberAddress::s);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &MemberAddress::s;
+    &(MemberAddress::a);
+    &(MemberAddress::c);
+    &(MemberAddress::v);
+    &(MemberAddress::o);
+    &(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &a;
+    &ByValueAddr((MemberAddress::o));
+    // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &ByValueAddr(MemberAddress::o);
+  }
+};
+
+template <class T> struct DependentMemberAddress : T {
+  void addressOf() {
+    &(T::x);
+    &((T::x));
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &(T::x);
+  }
+};
+template struct DependentMemberAddress<Foo>;
+template struct DependentMemberAddress<StaticX>;
+
 void call(bool (&func)(), Foo f) {
   if ((func())) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]

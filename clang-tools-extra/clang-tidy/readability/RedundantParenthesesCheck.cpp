@@ -10,6 +10,7 @@
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -43,6 +44,28 @@ AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
 }
 
 AST_MATCHER(AutoType, isDecltypeAuto) { return Node.isDecltypeAuto(); }
+
+AST_MATCHER(MemberExpr, isQualified) { return Node.hasQualifier(); }
+
+AST_MATCHER(MemberExpr, isImplicitAccess) { return Node.isImplicitAccess(); }
+
+// Skips the implicit casts, copies, temporaries, and conversion calls that
+// wrap an operand; they add no tokens, so they share the operand's range.
+AST_MATCHER_P(Expr, hasParentIgnoringImplicit,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  const SourceRange Range = Node.getSourceRange();
+  const Expr *E = &Node;
+  while (true) {
+    const DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
+    if (Parents.size() != 1)
+      return false;
+    E = Parents[0].get<Expr>();
+    if (!E)
+      return false;
+    if (E->getSourceRange() != Range)
+      return InnerMatcher.matches(*E, Finder, Builder);
+  }
+}
 
 } // namespace
 
@@ -100,6 +123,16 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
       subExpr(ignoringParens(DecltypeOperand)),
       anyOf(hasParent(typeLoc(loc(decltypeType()))), InDecltypeAutoContext,
             hasParent(exprWithCleanups(InDecltypeAutoContext))));
+  // &S::value is a pointer-to-member; T::value may instantiate to one.
+  const auto MemberAddressOperand = expr(anyOf(
+      memberExpr(isQualified(), isImplicitAccess()),
+      dependentScopeDeclRefExpr(), declRefExpr(isInTemplateInstantiation())));
+  const auto AddressOf = expr(
+      anyOf(unaryOperator(hasOperatorName("&")),
+            cxxOperatorCallExpr(hasOperatorName("&"), argumentCountIs(1))));
+  const auto IsMemberAddressOperand =
+      allOf(subExpr(ignoringParens(MemberAddressOperand)),
+            hasParentIgnoringImplicit(AddressOf));
   Finder->addMatcher(
       parenExpr(subExpr(anyOf(
                     parenExpr(), ConstantExpr,
@@ -116,7 +149,9 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                              // typeof(...) parentheses are required syntax.
                              hasParent(typeLoc(isTypeOfExprTypeLoc())),
                              // decltype((x)) differs from decltype(x).
-                             IsDecltypeOperand)))
+                             IsDecltypeOperand,
+                             // &(S::value) differs from &S::value.
+                             IsMemberAddressOperand)))
           .bind("dup"),
       this);
 }
