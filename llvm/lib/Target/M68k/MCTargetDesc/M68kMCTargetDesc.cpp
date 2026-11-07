@@ -20,6 +20,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MachineLocation.h"
@@ -107,6 +108,10 @@ static MCInstPrinter *createM68kMCInstPrinter(const Triple &T,
   return new M68kInstPrinter(MAI, MII, MRI);
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new MCTargetStreamer(S);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTargetMC() {
   Target &T = getTheM68kTarget();
 
@@ -133,4 +138,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTargetMC() {
 
   // Register the asm backend.
   TargetRegistry::RegisterMCAsmBackend(T, createM68kAsmBackend);
+
+  TargetRegistry::RegisterNullTargetStreamer(T, createNullTargetStreamer);
 }

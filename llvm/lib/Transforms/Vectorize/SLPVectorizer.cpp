@@ -10335,7 +10335,7 @@ class InstructionsCompatibilityAnalysis {
   }
 
   /// Checks if \p I can be the main op for copyable analysis: a supported
-  /// binary operator, fmuladd, or an integer min/max intrinsic, the only
+  /// binary operator, fma/fmuladd, or an integer min/max intrinsic, the only
   /// call with a well-defined idempotent value (FP min/max lacks one because of
   /// NaNs). An extractelement with constant index from a fixed vector is also
   /// supported: the matching lanes reuse the source vector and the copyable
@@ -10347,8 +10347,7 @@ class InstructionsCompatibilityAnalysis {
   /// them.
   static bool isSupportedMainOp(Instruction *I) {
     return isSupportedOpcode(I->getOpcode()) ||
-           isa<MinMaxIntrinsic, FreezeInst>(I) ||
-           RecurrenceDescriptor::isFMulAddIntrinsic(I) ||
+           isa<MinMaxIntrinsic, FreezeInst>(I) || isFMAOrFMulAdd(I) ||
            (isa<ExtractElementInst>(I) && isVectorLikeInstWithConstOps(I) &&
             isa<FixedVectorType>(I->getOperand(0)->getType())) ||
            (isa<GetElementPtrInst>(I) && I->getNumOperands() == 2 &&
@@ -10425,22 +10424,27 @@ class InstructionsCompatibilityAnalysis {
             return Operands.contains(I);
           }))
         continue;
-      // On a tie, keep the outer binary op as MainOp rather than replacing it
-      // with an inner op that appears as its direct operand. For example, in
-      // (2.0f * A) + B the fadd and fmul each appear once in VL; without this
-      // check the fmul could win and prevent vectorization of the fadd pair.
+      // On a tie, keep the outer binary op or freeze as MainOp rather than
+      // replacing it with an inner op that appears as its direct operand. For
+      // example, in (2.0f * A) + B the fadd and fmul each appear once in VL;
+      // without this check the fmul could win and prevent vectorization of the
+      // fadd pair.
       if (P.second.size() == BestOpcodeNum) {
         auto *I = P.second.front();
-        if (auto *MainBO = dyn_cast<BinaryOperator>(MainOp)) {
-          auto *MainBOOp0 = dyn_cast<Instruction>(MainBO->getOperand(0));
-          auto *MainBOOp1 = dyn_cast<Instruction>(MainBO->getOperand(1));
-          if (MainBOOp0 && MainBOOp0->getOpcode() == I->getOpcode() &&
-              MainBOOp0->getParent() == I->getParent())
-            continue;
-          if (MainBOOp1 && MainBOOp1->getOpcode() == I->getOpcode() &&
-              MainBOOp1->getParent() == I->getParent())
-            continue;
-        }
+        auto HasOperandLike = [](Instruction *Outer, Instruction *Inner) {
+          return any_of(Outer->operands(), [&](Value *Op) {
+            auto *OpI = dyn_cast<Instruction>(Op);
+            return OpI && OpI->getOpcode() == Inner->getOpcode() &&
+                   OpI->getParent() == Inner->getParent();
+          });
+        };
+        if (isa<BinaryOperator, FreezeInst>(MainOp) &&
+            HasOperandLike(MainOp, I))
+          continue;
+        // A freeze replaces another op only as its outer op, so the choice
+        // does not depend on the order of the lanes.
+        if (isa<FreezeInst>(I) && !HasOperandLike(I, MainOp))
+          continue;
         // Keep fmuladd over fmul/fadd on a tie only when every copyable is
         // an absorbed fmul/fadd.
         if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp) &&
@@ -10448,11 +10452,10 @@ class InstructionsCompatibilityAnalysis {
              I->getOpcode() == Instruction::FAdd) &&
             AbsorbCopyableFMulOrFAdds)
           continue;
-        // Same check when fmuladd replaces fmul/fadd on a tie.
+        // Same check when fma/fmuladd replaces fmul/fadd on a tie.
         if ((MainOp->getOpcode() == Instruction::FMul ||
              MainOp->getOpcode() == Instruction::FAdd) &&
-            RecurrenceDescriptor::isFMulAddIntrinsic(I) &&
-            !AbsorbCopyableFMulOrFAdds)
+            isFMAOrFMulAdd(I) && !AbsorbCopyableFMulOrFAdds)
           continue;
       }
       UsedOutside = PUsedOutside;
@@ -11246,6 +11249,17 @@ public:
       InstructionsState OpS = Analysis.buildInstructionsState(Ops, R);
       if (!OpS || (OpS.getOpcode() == Instruction::PHI && !allSameBlock(Ops)))
         return false;
+      // Loads have a valid state even if gathered; a freeze of gathered loads
+      // only freezes the copyable lanes needlessly.
+      if (MainOpcode == Instruction::Freeze &&
+          OpS.getOpcode() == Instruction::Load) {
+        BoUpSLP::OrdersType Order;
+        SmallVector<Value *> PointerOps;
+        BoUpSLP::StridedPtrInfo SPtrInfo;
+        if (R.canVectorizeLoads(Ops, OpS.getMainOp(), Order, PointerOps,
+                                SPtrInfo) == BoUpSLP::LoadsState::Gather)
+          return false;
+      }
       unsigned CopyableNum =
           count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
       return CopyableNum <= VL.size() / 2;
@@ -11254,7 +11268,10 @@ public:
     // matching lanes and the values of the copyable lanes. It is profitable
     // only if that base vector is cheap (a splat, constants or vectorizable),
     // otherwise it is a gather not cheaper than the gather of the pointers.
-    if (MainOpcode == Instruction::GetElementPtr &&
+    // The same applies to a copyable freeze node: the freeze of a gathered
+    // operand only freezes the copyable lanes needlessly.
+    if ((MainOpcode == Instruction::GetElementPtr ||
+         MainOpcode == Instruction::Freeze) &&
         !CheckOperand(Operands.front()))
       return OrigS;
     auto BuildCandidates =
@@ -24037,7 +24054,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     ArrayRef<Value *> Scalars = VL.empty() ? E->Scalars : VL;
     SmallSetVector<Value *, 4> UniqueInsts;
     for (Instruction *I : make_isa_range<Instruction>(Scalars)) {
-      if (E->hasCopyableElements() && E->isCopyableElement(I))
+      // The wide load also reads the memory of the copyable loads.
+      if (E->hasCopyableElements() && E->isCopyableElement(I) &&
+          E->getOpcode() != Instruction::Load)
         continue;
       UniqueInsts.insert(I);
     }
@@ -25254,9 +25273,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                   E->State == TreeEntry::BlendedLoadVectorize || HasUndefLanes)
                      ? NewLI
                      : PropagateIRFlags(NewLI);
-      // The wide load also reads the memory of the copyable loads.
-      if (E->hasCopyableElements() && !HasUndefLanes)
-        V = ::propagateMetadata(NewLI, E->Scalars);
 
       if (StridedLoadTy != VecTy)
         V = createWidenedStridedCast(Builder, V, VecTy, *DL);
