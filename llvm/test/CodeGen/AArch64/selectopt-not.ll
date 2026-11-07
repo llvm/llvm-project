@@ -780,3 +780,108 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
   %.lcssa3641.lcssa = phi i32 [ 0, %3 ], [ %77, %.preheader35 ]
   ret i32 %.lcssa3641.lcssa
 }
+
+; An i1-typed BinOp must not be treated as a select-like when one of its
+; operands is a `not`/`xor` auxiliary, as getTrueOrFalseValue() cannot
+; materialize it.
+define void @not_xor_add_not_selectlike(i32 %n, i1 %c, i1 %v, i32 %a, i32 %b) {
+; CHECK-LABEL: @not_xor_add_not_selectlike(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[OUTER]] ], [ [[J_NEXT:%.*]], [[INNER]] ]
+; CHECK-NEXT:    [[J_NEXT]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[IC:%.*]] = icmp slt i32 [[J_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[IC]], label [[INNER]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[NC:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[SH:%.*]] = lshr i1 [[V:%.*]], false
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C]], i32 [[A:%.*]], i32 [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i1 [[NC]], [[SH]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[OC:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[OC]], label [[OUTER]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  br label %inner
+
+inner:
+  %j = phi i32 [ 0, %outer ], [ %j.next, %inner ]
+  %j.next = add i32 %j, 1
+  %ic = icmp slt i32 %j.next, %n
+  br i1 %ic, label %inner, label %latch
+
+latch:
+  %nc = xor i1 %c, true
+  %sh = lshr i1 %v, 0
+  %s0 = select i1 %c, i32 %a, i32 %b
+  %add = add i1 %nc, %sh
+  %s2 = select i1 %c, i32 %a, i32 %b
+  %i.next = add i32 %i, 1
+  %oc = icmp slt i32 %i.next, %n
+  br i1 %oc, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+define void @not_xor_sub_not_selectlike(i32 %n, i1 %c, i1 %v, i32 %a, i32 %b) {
+; CHECK-LABEL: @not_xor_sub_not_selectlike(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[OUTER]] ], [ [[J_NEXT:%.*]], [[INNER]] ]
+; CHECK-NEXT:    [[J_NEXT]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[IC:%.*]] = icmp slt i32 [[J_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[IC]], label [[INNER]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[NC:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    [[SH:%.*]] = lshr i1 [[V:%.*]], false
+; CHECK-NEXT:    [[SUB:%.*]] = sub i1 [[SH]], [[NC]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C]], i32 [[A:%.*]], i32 [[B:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[OC:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[OC]], label [[OUTER]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  br label %inner
+
+inner:
+  %j = phi i32 [ 0, %outer ], [ %j.next, %inner ]
+  %j.next = add i32 %j, 1
+  %ic = icmp slt i32 %j.next, %n
+  br i1 %ic, label %inner, label %latch
+
+latch:
+  %nc = xor i1 %c, true
+  %sh = lshr i1 %v, 0
+  %sub = sub i1 %sh, %nc
+  %s0 = select i1 %c, i32 %a, i32 %b
+  %s2 = select i1 %c, i32 %a, i32 %b
+  %i.next = add i32 %i, 1
+  %oc = icmp slt i32 %i.next, %n
+  br i1 %oc, label %outer, label %exit
+
+exit:
+  ret void
+}
