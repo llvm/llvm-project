@@ -153,7 +153,7 @@ public:
     propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
   }
 
-  using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
+  using FunctionSetType = decltype(GlobalIsUsedByFun)::mapped_type;
   const FunctionSetType &
   getTransitiveUserFunctions(const GlobalVariable &GV) const {
     auto It = GlobalIsUsedByFun.find(&GV);
