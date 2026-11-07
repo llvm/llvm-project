@@ -1109,6 +1109,10 @@ private:
   ModuleMapResult parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                      bool ImplicitlyDiscovered,
                                      bool IsFramework);
+
+  ModuleMapResult parseModuleMapFileImpl(DirectoryEntryRef Dir, bool IsSystem,
+                                         bool ImplicitlyDiscovered,
+                                         bool IsFramework, bool Load);
 };
 
 /// Apply the header search options to get given HeaderSearch object.

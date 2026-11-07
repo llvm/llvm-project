@@ -459,6 +459,12 @@ static Value *MakeIdp2a(unsigned IntrinsicID, bool IsHi, const CallExpr *E,
 
 } // namespace
 
+static llvm::SyncScope::ID getDeviceSyncScope(CodeGenFunction &CGF) {
+  return CGF.getLLVMContext().getOrInsertSyncScopeID(
+      *llvm::getAtomicScopeIRString(CGF.getTarget().getTriple(),
+                                    llvm::AtomicScope::Device));
+}
+
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                              const CallExpr *E) {
   switch (BuiltinID) {
@@ -470,65 +476,79 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
         E->getType()->hasSignedIntegerRepresentation() ? Intrinsic::smulh
                                                        : Intrinsic::umulh,
         EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)));
+
+  // Unscoped __nvvm_atom_*_gen_* builtins (CUDA's atomicAdd() etc.) have device
+  // scope, but LLVM's default sync scope is system, so request device
+  // explicitly.
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Add, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_sub_gen_i:
   case NVPTX::BI__nvvm_atom_sub_gen_l:
   case NVPTX::BI__nvvm_atom_sub_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Sub, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_and_gen_i:
   case NVPTX::BI__nvvm_atom_and_gen_l:
   case NVPTX::BI__nvvm_atom_and_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::And, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_or_gen_i:
   case NVPTX::BI__nvvm_atom_or_gen_l:
   case NVPTX::BI__nvvm_atom_or_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Or, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_xor_gen_i:
   case NVPTX::BI__nvvm_atom_xor_gen_l:
   case NVPTX::BI__nvvm_atom_xor_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xor, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_xchg_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xchg, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_max_gen_i:
   case NVPTX::BI__nvvm_atom_max_gen_l:
   case NVPTX::BI__nvvm_atom_max_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Max, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_max_gen_ui:
   case NVPTX::BI__nvvm_atom_max_gen_ul:
   case NVPTX::BI__nvvm_atom_max_gen_ull:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMax, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_min_gen_i:
   case NVPTX::BI__nvvm_atom_min_gen_l:
   case NVPTX::BI__nvvm_atom_min_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Min, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_min_gen_ui:
   case NVPTX::BI__nvvm_atom_min_gen_ul:
   case NVPTX::BI__nvvm_atom_min_gen_ull:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMin, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_cas_gen_us:
   case NVPTX::BI__nvvm_atom_cas_gen_i:
@@ -536,9 +556,9 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_cas_gen_ll:
     // __nvvm_atom_cas_gen_* should return the old value rather than the
     // success flag.
-    return MakeAtomicCmpXchgValue(*this, E, /*ReturnBool=*/false,
-                                  AtomicOrdering::Monotonic,
-                                  AtomicOrdering::Monotonic);
+    return MakeAtomicCmpXchgValue(
+        *this, E, /*ReturnBool=*/false, AtomicOrdering::Monotonic,
+        AtomicOrdering::Monotonic, getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d: {
@@ -546,7 +566,8 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     Value *Val = EmitScalarExpr(E->getArg(1));
 
     llvm::AtomicRMWInst *RMW = Builder.CreateAtomicRMW(
-        llvm::AtomicRMWInst::FAdd, DestAddr, Val, AtomicOrdering::Monotonic);
+        llvm::AtomicRMWInst::FAdd, DestAddr, Val, AtomicOrdering::Monotonic,
+        getDeviceSyncScope(*this));
 
     // CUDA's atomicAdd() is defined in terms of the native atom.add
     // instruction, whose denormal behavior is fixed by the hardware and need
@@ -558,11 +579,13 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
 
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UIncWrap, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_dec_gen_ui:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UDecWrap, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_ldg_c:
   case NVPTX::BI__nvvm_ldg_sc:
