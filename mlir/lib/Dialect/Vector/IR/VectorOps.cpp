@@ -5213,6 +5213,10 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
   DataLayout dataLayout = DataLayout::closest(op);
   if (auto vectorElementType = llvm::dyn_cast<VectorType>(elementType)) {
     // Memref or tensor has vector element type.
+    if (vectorElementType.getElementType() != vectorType.getElementType())
+      return op->emitOpError(
+          "requires source and vector element types to match");
+
     unsigned sourceVecSize =
         dataLayout.getTypeSizeInBits(vectorElementType.getElementType()) *
         vectorElementType.getShape().back();
@@ -5239,6 +5243,10 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
       return op->emitOpError("does not support masks with vector element type");
   } else {
     // Memref or tensor has scalar element type.
+    if (elementType != vectorType.getElementType())
+      return op->emitOpError(
+          "requires source and vector element types to match");
+
     unsigned minorSize =
         vectorType.getRank() == 0 ? 1 : vectorType.getShape().back();
     unsigned resultVecSize =

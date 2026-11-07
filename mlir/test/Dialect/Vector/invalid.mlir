@@ -512,6 +512,28 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 
 // -----
 
+func.func @test_vector.transfer_read_element_type_mismatch(
+    %arg0: memref<8xi32>, %pad: i32) -> vector<4xi64> {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{requires source and vector element types to match}}
+  %0 = vector.transfer_read %arg0[%c0], %pad {in_bounds = [true]} :
+    memref<8xi32>, vector<4xi64>
+  return %0 : vector<4xi64>
+}
+
+// -----
+
+func.func @test_vector.transfer_write_element_type_mismatch(
+    %arg0: memref<8xi32>, %value: vector<4xi64>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{requires source and vector element types to match}}
+  vector.transfer_write %value, %arg0[%c0] {in_bounds = [true]} :
+    vector<4xi64>, memref<8xi32>
+  return
+}
+
+// -----
+
 func.func @test_vector.transfer_read(%arg0: memref<?xindex>) -> vector<3x4xindex> {
   %c3 = arith.constant 3 : index
   // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
