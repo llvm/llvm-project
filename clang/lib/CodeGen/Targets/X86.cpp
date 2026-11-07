@@ -471,6 +471,14 @@ static bool shouldExtendReturnType(const ABIInfo &Info, QualType RetTy) {
   return Info.isPromotableIntegerTypeForABI(RetTy);
 }
 
+static CodeGenOptions::SmallIntABICompatKind
+getEffectiveSmallIntABICompat(const CodeGenOptions &Opts,
+                              const llvm::Triple &T) {
+  if (T.isOSDarwin() || T.isPS())
+    return CodeGenOptions::SmallIntABICompatKind::Clang;
+  return Opts.getSmallIntABICompat();
+}
+
 ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State) const {
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
@@ -993,9 +1001,26 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
   bool InReg = shouldPrimitiveUseInReg(Ty, State);
 
   if (isPromotableIntegerTypeForABI(Ty)) {
-    if (InReg)
-      return ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty));
-    return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+    switch (getEffectiveSmallIntABICompat(getCodeGenOpts(),
+                                          getTarget().getTriple())) {
+    case CodeGenOptions::SmallIntABICompatKind::Platform:
+      if (Ty->isBooleanType()) {
+        // Bool should be extended to 8-bits. We can't express this right now,
+        // so use conservative extension.
+        return InReg
+                   ? ABIArgInfo::getConservativeExtendInReg(Ty,
+                                                            CGT.ConvertType(Ty))
+                   : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+      }
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Clang:
+      return InReg ? ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty))
+                   : ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+    case CodeGenOptions::SmallIntABICompatKind::Both:
+      return InReg ? ABIArgInfo::getConservativeExtendInReg(Ty,
+                                                            CGT.ConvertType(Ty))
+                   : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+    }
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
@@ -2996,10 +3021,23 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
       // Treat an enum type as its underlying type.
       if (const auto *ED = Ty->getAsEnumDecl())
         Ty = ED->getIntegerType();
-
       if (Ty->isIntegralOrEnumerationType() &&
-          isPromotableIntegerTypeForABI(Ty))
-        return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+          isPromotableIntegerTypeForABI(Ty)) {
+        switch (getEffectiveSmallIntABICompat(getCodeGenOpts(),
+                                              getTarget().getTriple())) {
+        case CodeGenOptions::SmallIntABICompatKind::Platform:
+          if (Ty->isBooleanType()) {
+            // Bool should be extended to 8-bits. We can't express this right
+            // now, so use conservative extension.
+            return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+          }
+          break;
+        case CodeGenOptions::SmallIntABICompatKind::Clang:
+          return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+        case CodeGenOptions::SmallIntABICompatKind::Both:
+          return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
+        }
+      }
     }
 
     if (ResType->isIntegerTy(128)) {

@@ -215,7 +215,7 @@ void stmt_expr_return(bool cond) {
 // CIR:           cir.yield
 // CIR:         }
 
-// LLVM-LABEL: define dso_local void @_Z16stmt_expr_returnb(i1 noundef zeroext %{{[^,)]+}}) {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM-LABEL: define dso_local void @_Z16stmt_expr_returnb(i1 noundef %{{[^,)]+}}) {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[LAM5:.*]] = alloca %[[LAM_TY_5:[^,]*]]
 // LLVM:   %[[ACTIVE_ALLOCA:.*]] = alloca i8
 // LLVM:   %[[FA5:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 0
@@ -268,7 +268,7 @@ void stmt_expr_return(bool cond) {
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA5_D]])
 // LLVM:   ret void
 
-// OGCG-LABEL: define dso_local void @_Z16stmt_expr_returnb(i1 noundef zeroext %cond){{.*}} personality ptr @__gxx_personality_v0
+// OGCG-LABEL: define dso_local void @_Z16stmt_expr_returnb(i1 noundef %cond){{.*}} personality ptr @__gxx_personality_v0
 // OGCG:   %[[LAM5:.*]] = alloca %[[LAM_TY_5:.*]], align 4
 // OGCG:   %[[FA5:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 0
 // OGCG:   call void @_ZN1SC1Ei(ptr {{.*}} %[[FA5]], i32 {{.*}} 0)

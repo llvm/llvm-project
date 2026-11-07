@@ -9,7 +9,7 @@ namespace test0 {
 
   typedef A elt;
 
-  // CHECK:    define{{.*}} ptr @_ZN5test04testEs(i16 noundef signext
+  // CHECK:    define{{.*}} ptr @_ZN5test04testEs(i16 noundef
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 4)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -31,7 +31,7 @@ namespace test1 {
 
   typedef A elt[100];
 
-  // CHECK:    define{{.*}} ptr @_ZN5test14testEs(i16 noundef signext
+  // CHECK:    define{{.*}} ptr @_ZN5test14testEs(i16 noundef
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 400)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -55,7 +55,7 @@ namespace test2 {
 
   typedef A elt[100];
 
-  // CHECK:    define{{.*}} ptr @_ZN5test24testEs(i16 noundef signext
+  // CHECK:    define{{.*}} ptr @_ZN5test24testEs(i16 noundef
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 400)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -81,7 +81,7 @@ namespace test4 {
 
   typedef A elt;
 
-  // CHECK:    define{{.*}} ptr @_ZN5test44testEs(i16 noundef signext
+  // CHECK:    define{{.*}} ptr @_ZN5test44testEs(i16 noundef
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
   // CHECK-NEXT: call noalias noundef nonnull ptr @_Znaj(i32 noundef [[N]])
   // CHECK:      getelementptr inbounds {{.*}}, i32 [[N]]
@@ -116,7 +116,7 @@ namespace test6 {
 
   typedef A elt;
 
-  // CHECK:    define{{.*}} ptr @_ZN5test64testEt(i16 noundef zeroext
+  // CHECK:    define{{.*}} ptr @_ZN5test64testEt(i16 noundef
   // CHECK:      [[N:%.*]] = zext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 4)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -138,7 +138,7 @@ namespace test7 {
 
   typedef A elt[100];
 
-  // CHECK:    define{{.*}} ptr @_ZN5test74testEt(i16 noundef zeroext
+  // CHECK:    define{{.*}} ptr @_ZN5test74testEt(i16 noundef
   // CHECK:      [[N:%.*]] = zext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 400)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1

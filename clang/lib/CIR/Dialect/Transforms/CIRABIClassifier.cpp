@@ -647,12 +647,14 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   // there is no offset to honor here.
   if (info.isExtend()) {
     if (isa_and_present<cir::BoolType>(origTy))
-      return ArgClassification::getExtend(nullptr, info.isSignExt());
+      return ArgClassification::getExtend(nullptr, info.isSignExt(),
+                                          info.isConservative());
     assert((!origTy || isa<cir::IntType, cir::RecordType>(origTy)) &&
            "Extend is only expected for integers, bool, and transparent "
            "unions");
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
-    return ArgClassification::getExtend(extendedTy, info.isSignExt());
+    return ArgClassification::getExtend(extendedTy, info.isSignExt(),
+                                        info.isConservative());
   }
   // The rewriter has no address space for the Indirect pointer yet.
   if (info.isIndirect() && info.getIndirectAddrSpace() != 0)
