@@ -24,9 +24,11 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <concepts>
 #include <functional>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
@@ -265,8 +267,45 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
+template <class T>
+std::vector<bool> zero_signs(const std::vector<T>& v) {
+  std::vector<bool> signs;
+  for (T x : v)
+    if (x == T(0))
+      signs.push_back(std::signbit(x));
+  return signs;
+}
+
+// -0.0 and +0.0 are equivalent, so the sort must preserve their relative order. The size is chosen so that the
+// radix sort is used for float and double.
+template <class T>
+void test_floating_signed_zeros() {
+  std::vector<T> orig(2048);
+  for (std::size_t i = 0; i != orig.size(); ++i)
+    orig[i] = i % 3 == 0 ? T(-0.0) : static_cast<T>(static_cast<int>(i % 5) - 2);
+  const auto expected_signs = zero_signs(orig);
+
+  {
+    auto in   = orig;
+    auto last = std::ranges::stable_sort(in.begin(), in.end());
+    assert(std::ranges::is_sorted(in));
+    assert(zero_signs(in) == expected_signs);
+    assert(last == in.end());
+  }
+
+  {
+    auto in   = orig;
+    auto last = std::ranges::stable_sort(in);
+    assert(std::ranges::is_sorted(in));
+    assert(zero_signs(in) == expected_signs);
+    assert(last == in.end());
+  }
+}
+
 int main(int, char**) {
   test();
+  test_floating_signed_zeros<float>();
+  test_floating_signed_zeros<double>();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
