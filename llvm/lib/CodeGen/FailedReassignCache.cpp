@@ -21,7 +21,7 @@
 
 using namespace llvm;
 
-namespace llvm::reassign {
+namespace llvm {
 
 Cache::Cache(LiveIntervals &LIS, LiveRegMatrix &Matrix,
              MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
@@ -66,8 +66,9 @@ void Cache::forEachBucket(SlotIndex Begin, SlotIndex End,
                           function_ref<void(unsigned)> Fn) const {
   if (!Begin.isValid() || !End.isValid() || Begin >= End)
     return;
-  // SlotIndex::getIndex() is private. The function's zero index is 0, so
-  // distance from it is the same integer.
+
+  // Find all buckets corresponding to the Begin and End slot
+  // indexes and apply Fn.
   SlotIndex Zero = LIS.getSlotIndexes()->getZeroIndex();
   int BeginDist = Zero.distance(Begin);
   int EndDist = Zero.distance(End);

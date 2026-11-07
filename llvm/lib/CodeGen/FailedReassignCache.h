@@ -6,16 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A failed canReassign(Intf) means every other allocatable physical register
-// interferes with Intf. Assignments cannot create a new free register, so the
-// failure stays valid until an unassign frees one across Intf's live range.
-// Entries are indexed by slot-index buckets so an unassign updates only the
-// intervals that overlap the freed range. The unassigned interval's own entry
-// is dropped so the next query recomputes the result. Interior segment bounds
-// are not part of the fingerprint. renumberIndexes() and packIndexes() rewrite
-// the numbers behind existing SlotIndex handles without changing equality,
-// which makes the bucket keys stale. The cache drops every entry when that
-// happens rather than trying to rebuild the index.
+// Remembers, per live interval, that no other allocatable physical register
+// was free for it, so repeated queries can skip the full search. An entry
+// stays valid until an unassign frees a physical register across the
+// interval's live range. The cache then records that register on the entry,
+// so the next query only checks the registers that were freed.
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,8 +33,6 @@ class LiveRegMatrix;
 class MachineRegisterInfo;
 class RegisterClassInfo;
 
-namespace reassign {
-
 /// Result of consulting the failed-reassign cache for one canReassign query.
 enum class Reuse {
   Miss,         ///< No usable entry. Run the full search.
@@ -51,6 +44,9 @@ enum class Reuse {
 class Cache {
 public:
   static const unsigned BucketShift = 12;
+
+  /// Default cap on freed physregs recorded for one entry. Past this the
+  /// entry is saturated and the next query runs the full search.
   static const unsigned DefaultMaxFreedRegs = 64;
 
   Cache(LiveIntervals &LIS, LiveRegMatrix &Matrix, MachineRegisterInfo &MRI,
@@ -134,6 +130,8 @@ private:
   /// Drop every entry when slot indexes have been renumbered since the last
   /// insert. Bucket keys are distances, so they would miss freed ranges.
   void dropIfRenumbered();
+  /// Call \p Fn with each bucket overlapped by the half-open range
+  /// [\p Begin, \p End). An invalid or empty range calls nothing.
   void forEachBucket(SlotIndex Begin, SlotIndex End,
                      function_ref<void(unsigned)> Fn) const;
   void addToBuckets(unsigned VirtReg, const Entry &E);
@@ -141,8 +139,6 @@ private:
   bool inOrder(const LiveInterval &LI, MCRegister Reg);
   bool isFree(const LiveInterval &LI, MCRegister Reg) const;
 };
-
-} // namespace reassign
 } // namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_FAILEDREASSIGNCACHE_H

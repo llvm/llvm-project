@@ -329,8 +329,7 @@ class raw_ostream;
     // For legacy pass manager.
     SlotIndexes() = default;
 
-    /// Bumped by renumberIndexes() and packIndexes(). Those rewrite the
-    /// integers behind existing SlotIndex handles without changing equality.
+    // Counts the number of times slot indices have been rewritten.
     unsigned IndexEpoch = 0;
 
     LLVM_ABI void clear();
@@ -673,8 +672,7 @@ class raw_ostream;
     /// Renumber all indexes using the default instruction distance.
     LLVM_ABI void packIndexes();
 
-    /// Epoch of the numeric index assignment. SlotIndex equality is unchanged
-    /// across bumps; distances and any keys derived from them are not.
+    /// Return the number of times SlotIndexes was rewritten.
     unsigned getIndexEpoch() const { return IndexEpoch; }
 
     /// Erase index list entries left behind by deleted instructions, then
