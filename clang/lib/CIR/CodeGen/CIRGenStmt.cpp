@@ -1058,20 +1058,129 @@ cir::LoopHintAttr CIRGenFunction::getLoopHints(ArrayRef<const Attr *> attrs,
       convertStateToBool(loopAttrs.DistributeEnable),
       convertFlag(loopAttrs.PipelineDisabled),
       loopAttrs.PipelineInitiationInterval, convertFlag(loopAttrs.LICMDisabled),
-      convertFlag(loopAttrs.IsParallel), loopAttrs.CodeAlign);
+      convertFlag(loopAttrs.IsParallel), loopAttrs.CodeAlign,
+      /*vectorized=*/mlir::UnitAttr(), /*unroll_and_jam_inner=*/nullptr);
 
   if (hints.isEmpty())
     return {};
   return hints;
 }
 
-static void setLoopHints(cir::LoopOpInterface loopOp,
-                         cir::LoopHintAttr loopHints) {
-  if (!loopHints)
+// The hints of a loop that is unrolled and jammed by the loop around it are
+// split in the ones for before and for after the jam. Mirrors the split in
+// classic codegen's LoopInfo::finish().
+static cir::LoopHintAttr getHintsBeforeJam(cir::LoopHintAttr hints) {
+  // Unrolling happens before the jam only if it is full, or disabled.
+  std::optional<cir::LoopUnrollMode> unroll = hints.getUnroll();
+  if (unroll == cir::LoopUnrollMode::Enable)
+    unroll = std::nullopt;
+
+  return cir::LoopHintAttr::get(
+      hints.getContext(), /*must_progress=*/mlir::UnitAttr(),
+      hints.getVectorizeEnable(), hints.getVectorizeWidth(),
+      hints.getVectorizeScalable(), hints.getVectorizePredicate(),
+      hints.getInterleaveCount(), unroll, /*unroll_count=*/0,
+      hints.getUnrollAndJam(), hints.getUnrollAndJamCount(),
+      hints.getDistribute(), /*pipeline_disabled=*/mlir::UnitAttr(),
+      /*pipeline_initiation_interval=*/0, hints.getLicmDisabled(),
+      hints.getParallel(), /*code_align=*/0, /*vectorized=*/mlir::UnitAttr(),
+      /*unroll_and_jam_inner=*/nullptr);
+}
+
+static cir::LoopHintAttr getHintsAfterJam(cir::LoopHintAttr hints,
+                                          bool vectorizedBeforeJam) {
+  // Unrolling happens after the jam unless it is full.
+  std::optional<cir::LoopUnrollMode> unroll = hints.getUnroll();
+  if (unroll == cir::LoopUnrollMode::Full)
+    unroll = std::nullopt;
+
+  mlir::MLIRContext *ctx = hints.getContext();
+  return cir::LoopHintAttr::get(
+      ctx, /*must_progress=*/mlir::UnitAttr(),
+      /*vectorize_enable=*/mlir::BoolAttr(), /*vectorize_width=*/0,
+      /*vectorize_scalable=*/mlir::BoolAttr(), hints.getVectorizePredicate(),
+      /*interleave_count=*/0, unroll, hints.getUnrollCount(),
+      /*unroll_and_jam=*/std::nullopt, /*unroll_and_jam_count=*/0,
+      /*distribute=*/mlir::BoolAttr(), hints.getPipelineDisabled(),
+      hints.getPipelineInitiationInterval(), /*licm_disabled=*/mlir::UnitAttr(),
+      hints.getParallel(), /*code_align=*/0,
+      // Splitting the hints stops the vectorization that happens before the
+      // jam from being known after it, so it has to be recorded.
+      /*vectorized=*/
+      vectorizedBeforeJam ? mlir::UnitAttr::get(ctx) : mlir::UnitAttr(),
+      /*unroll_and_jam_inner=*/nullptr);
+}
+
+// Whether the loop is vectorized by the hints.
+static bool vectorizes(cir::LoopHintAttr hints) {
+  mlir::BoolAttr scalable = hints.getVectorizeScalable();
+  return hints.getVectorizeEnable() || hints.getVectorizePredicate() ||
+         hints.getInterleaveCount() || hints.getVectorizeWidth() ||
+         (scalable && scalable.getValue());
+}
+
+// Whether there is something to do to a loop with the hints (which would be
+// the hints from getHintsAfterJam).
+static bool hasTransformsAfterJam(cir::LoopHintAttr hints) {
+  std::optional<cir::LoopUnrollMode> unroll = hints.getUnroll();
+  bool unrolls = unroll == cir::LoopUnrollMode::Enable ||
+                 (!unroll && hints.getUnrollCount());
+  bool pipelines =
+      !hints.getPipelineDisabled() && hints.getPipelineInitiationInterval();
+  return hints.getVectorizePredicate() || unrolls || pipelines;
+}
+
+CIRGenFunction::LoopHintsScope::LoopHintsScope(CIRGenFunction &cgf,
+                                               ArrayRef<const Attr *> attrs,
+                                               bool mustProgress)
+    : cgf(cgf), parent(cgf.currentLoopHintsScope) {
+  cgf.currentLoopHintsScope = this;
+
+  hints = cgf.getLoopHints(attrs, mustProgress);
+  if (!hints)
     return;
-  loopOp.setLoopHintsAttr(loopHints);
-  loopOp.setLoopIdAttr(
-      mlir::DistinctAttr::create(mlir::UnitAttr::get(loopOp->getContext())));
+
+  loopId =
+      mlir::DistinctAttr::create(mlir::UnitAttr::get(&cgf.getMLIRContext()));
+
+  // The parent being unrolled and jammed applies to the hints as they were
+  // before they were split.
+  unrollAndJams = hints.getUnrollAndJam() || hints.getUnrollAndJamCount();
+
+  // Only the hints of a loop that is unrolled and jammed by its parent are
+  // split.
+  if (!parent || !parent->unrollAndJams)
+    return;
+
+  // Only the first loop that has something to do after the jam is kept.
+  if (!parent->unrollAndJamInnerHints) {
+    cir::LoopHintAttr afterJam = getHintsAfterJam(hints, vectorizes(hints));
+    if (hasTransformsAfterJam(afterJam))
+      parent->unrollAndJamInnerHints = afterJam;
+  }
+  hints = getHintsBeforeJam(hints);
+}
+
+void CIRGenFunction::LoopHintsScope::setLoopHints(
+    cir::LoopOpInterface loopOp) const {
+  if (!hints)
+    return;
+
+  loopOp.setLoopIdAttr(loopId);
+  if (!unrollAndJamInnerHints) {
+    loopOp.setLoopHintsAttr(hints);
+    return;
+  }
+
+  loopOp.setLoopHintsAttr(cir::LoopHintAttr::get(
+      hints.getContext(), hints.getMustProgress(), hints.getVectorizeEnable(),
+      hints.getVectorizeWidth(), hints.getVectorizeScalable(),
+      hints.getVectorizePredicate(), hints.getInterleaveCount(),
+      hints.getUnroll(), hints.getUnrollCount(), hints.getUnrollAndJam(),
+      hints.getUnrollAndJamCount(), hints.getDistribute(),
+      hints.getPipelineDisabled(), hints.getPipelineInitiationInterval(),
+      hints.getLicmDisabled(), hints.getParallel(), hints.getCodeAlign(),
+      hints.getVectorized(), unrollAndJamInnerHints));
 }
 
 mlir::LogicalResult
@@ -1094,8 +1203,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
 
     // FIXME: Classic codegen never sets 'must progress' on these loops, but
     // probably could?
-    cir::LoopHintAttr loopHints =
-        getLoopHints(forAttrs, /*mustProgress=*/false);
+    LoopHintsScope loopHintsScope(*this, forAttrs, /*mustProgress=*/false);
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -1126,7 +1234,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
               loopRes = mlir::failure();
           builder.createYield(loc);
         });
-    setLoopHints(forOp, loopHints);
+    loopHintsScope.setLoopHints(forOp);
     return loopRes;
   };
 
@@ -1162,7 +1270,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s,
         return mlir::failure();
     bool mustProgress =
         checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
-    cir::LoopHintAttr loopHints = getLoopHints(attrs, mustProgress);
+    LoopHintsScope loopHintsScope(*this, attrs, mustProgress);
 
     // A condition variable's lifetime is a single iteration, so capture its
     // destructor and lifetime-end cleanups, and those of the temporaries that
@@ -1231,7 +1339,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s,
                                 bodyBuilder, stepBuilder);
     }
 
-    setLoopHints(forOp, loopHints);
+    loopHintsScope.setLoopHints(forOp);
     return loopRes;
   };
 
@@ -1259,7 +1367,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s,
     mlir::LogicalResult loopRes = mlir::success();
     bool mustProgress =
         checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
-    cir::LoopHintAttr loopHints = getLoopHints(attrs, mustProgress);
+    LoopHintsScope loopHintsScope(*this, attrs, mustProgress);
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1281,7 +1389,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s,
             loopRes = mlir::failure();
           emitStopPoint(&s);
         });
-    setLoopHints(doWhileOp, loopHints);
+    loopHintsScope.setLoopHints(doWhileOp);
     return loopRes;
   };
 
@@ -1310,7 +1418,7 @@ CIRGenFunction::emitWhileStmt(const WhileStmt &s,
     mlir::LogicalResult loopRes = mlir::success();
     bool mustProgress =
         checkIfLoopMustProgress(s.getCond(), CodeGenUtils::hasEmptyLoopBody(s));
-    cir::LoopHintAttr loopHints = getLoopHints(attrs, mustProgress);
+    LoopHintsScope loopHintsScope(*this, attrs, mustProgress);
 
     // A condition variable's lifetime is a single iteration, so capture its
     // destructor and lifetime-end cleanups, and those of the temporaries that
@@ -1365,7 +1473,7 @@ CIRGenFunction::emitWhileStmt(const WhileStmt &s,
       whileOp = builder.createWhile(getLoc(s.getSourceRange()), condBuilder,
                                     bodyBuilder);
     }
-    setLoopHints(whileOp, loopHints);
+    loopHintsScope.setLoopHints(whileOp);
     return loopRes;
   };
 

@@ -1037,6 +1037,12 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     - `parallel`: the loop's iterations are independent, so its memory
       accesses are parallel accesses.
     - `code_align`: the alignment of the loop, in bytes.
+    - `vectorized`: the loop is the result of vectorizing another one. This is
+      only valid on the hints in `unroll_and_jam_inner`.
+    - `unroll_and_jam_inner`: only valid when the loop is unrolled and jammed.
+      It holds the hints that apply to the first loop inside of this one after
+      it has been jammed. That loop's own hints only have what happens before
+      the jam.
 
     Example:
     ```
@@ -1044,6 +1050,8 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     #cir.loop_hint< must_progress>
     #cir.loop_hint< must_progress vectorize_enable = true interleave_count = 2
                     unroll_count = 4>
+    #cir.loop_hint< must_progress unroll_and_jam = enable
+                    unroll_and_jam_inner = #cir.loop_hint< unroll_count = 4>>
     ```
   }];
 
@@ -1063,7 +1071,13 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     OptionalParameter<"uint32_t">:$pipeline_initiation_interval,
     CIR_FlagParam<"licm_disabled">:$licm_disabled,
     CIR_FlagParam<"parallel">:$parallel,
-    OptionalParameter<"uint32_t">:$code_align);
+    OptionalParameter<"uint32_t">:$code_align,
+    CIR_FlagParam<"vectorized">:$vectorized,
+    // This is a LoopHintAttr, but the attribute can't have a parameter of its
+    // own type, so this is checked by the verifier.
+    OptionalParameter<"mlir::Attribute">:$unroll_and_jam_inner);
+
+  let genVerifyDecl = 1;
 
   let assemblyFormat = [{
     `<`
@@ -1083,6 +1097,8 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
       (` ` $licm_disabled^)?
       (` ` $parallel^)?
       (` ` `code_align` `=` $code_align^)?
+      (` ` $vectorized^)?
+      (` ` `unroll_and_jam_inner` `=` $unroll_and_jam_inner^)?
     `>`
   }];
 
@@ -1097,10 +1113,18 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
              !getUnroll() && !getUnrollCount() && !getUnrollAndJam() &&
              !getUnrollAndJamCount() && !getDistribute() &&
              !getPipelineDisabled() && !getPipelineInitiationInterval() &&
-             !getLicmDisabled() && !getParallel() && !getCodeAlign();
+             !getLicmDisabled() && !getParallel() && !getCodeAlign() &&
+             !getVectorized() && !getUnrollAndJamInner();
+    }
+
+    /// The hints for the first loop inside of this one, after this one has
+    /// been unrolled and jammed. Null if there are none.
+    cir::LoopHintAttr getUnrollAndJamInnerHints() const {
+      return mlir::cast_or_null<cir::LoopHintAttr>(getUnrollAndJamInner());
     }
   }];
 
+  let genVerifyDecl = 1;
   let canHaveIllegalCXXABIType = 0;
 }
 
