@@ -1029,3 +1029,30 @@ TEST(Decl, ObjCPropertyDeclNameForDiagnostic) {
                              /*Qualified=*/true);
   EXPECT_EQ(ExtPQualifiedOS.str(), "-[MyClass extensionProp]");
 }
+
+TEST(Decl, DeclGroupRefOpaquePtrRoundTrip) {
+  auto AST = tooling::buildASTFromCode("int a, b;");
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *A = const_cast<VarDecl *>(
+      selectFirst<VarDecl>("a", match(varDecl(hasName("a")).bind("a"), Ctx)));
+  auto *B = const_cast<VarDecl *>(
+      selectFirst<VarDecl>("b", match(varDecl(hasName("b")).bind("b"), Ctx)));
+  ASSERT_NE(A, nullptr);
+  ASSERT_NE(B, nullptr);
+
+  DeclGroupRef Single(A);
+  DeclGroupRef SingleRoundTrip =
+      DeclGroupRef::getFromOpaquePtr(Single.getAsOpaquePtr());
+  EXPECT_TRUE(SingleRoundTrip.isSingleDecl());
+  EXPECT_EQ(SingleRoundTrip.getSingleDecl(), A);
+
+  Decl *Decls[] = {A, B};
+  DeclGroupRef Group = DeclGroupRef::Create(Ctx, Decls, 2);
+  DeclGroupRef GroupRoundTrip =
+      DeclGroupRef::getFromOpaquePtr(Group.getAsOpaquePtr());
+  ASSERT_TRUE(GroupRoundTrip.isDeclGroup());
+  ASSERT_EQ(std::distance(GroupRoundTrip.begin(), GroupRoundTrip.end()), 2);
+  EXPECT_EQ(GroupRoundTrip.begin()[0], A);
+  EXPECT_EQ(GroupRoundTrip.begin()[1], B);
+}
