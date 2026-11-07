@@ -24,7 +24,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -143,7 +143,7 @@ const RegisterInfo *ABISysV_arc::GetRegisterInfoArray(uint32_t &count) {
 
 size_t ABISysV_arc::GetRedZoneSize() const { return 0; }
 
-bool ABISysV_arc::IsRegisterFileReduced(RegisterContext &reg_ctx) const {
+bool ABISysV_arc::IsRegisterFileReduced(ThreadRegisterContext &reg_ctx) const {
   if (!m_is_reg_file_reduced) {
     const auto *const rf_build_reg = reg_ctx.GetRegisterInfoByName("rf_build");
 
@@ -425,7 +425,7 @@ static bool SetSizedFloat(Scalar &scalar, uint64_t raw_value,
   return true;
 }
 
-static uint64_t ReadRawValue(const RegisterContextSP &reg_ctx,
+static uint64_t ReadRawValue(const ThreadRegisterContextSP &reg_ctx,
                              uint8_t size_in_bytes) {
   auto reg_info_r0 =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);

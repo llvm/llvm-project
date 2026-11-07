@@ -81,7 +81,7 @@ Block *BorrowedStackFrame::GetFrameBlock() {
   return m_borrowed_frame_sp->GetFrameBlock();
 }
 
-RegisterContextSP BorrowedStackFrame::GetRegisterContext() {
+ThreadRegisterContextSP BorrowedStackFrame::GetRegisterContext() {
   return m_borrowed_frame_sp->GetRegisterContext();
 }
 

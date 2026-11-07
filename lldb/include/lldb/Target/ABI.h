@@ -174,7 +174,7 @@ public:
   ///   the effective permissions. If the target does not have an overlay
   ///   system, or it does and the protection key is invalid, returns nullopt.
   virtual std::optional<MemoryPermissions>
-  GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+  GetMemoryPermissions(lldb_private::ThreadRegisterContext &reg_ctx,
                        unsigned protection_key, uint32_t original_permissions) {
     return std::nullopt;
   }

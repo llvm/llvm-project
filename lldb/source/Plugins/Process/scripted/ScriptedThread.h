@@ -38,9 +38,9 @@ public:
   Create(ScriptedProcess &process,
          StructuredData::Generic *script_object = nullptr);
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
   bool LoadArtificialStackFrames();

@@ -10,7 +10,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM64_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM64_H
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
 // Break only in privileged or user mode
@@ -25,7 +25,7 @@
 #define WCR_LOAD ((uint32_t)(1u << 3))
 #define WCR_STORE ((uint32_t)(1u << 4))
 
-class RegisterContextDarwin_arm64 : public lldb_private::RegisterContext {
+class RegisterContextDarwin_arm64 : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextDarwin_arm64(lldb_private::Thread &thread,
                               uint32_t concrete_frame_idx);

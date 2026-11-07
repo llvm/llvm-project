@@ -74,7 +74,7 @@ bool RegisterContextCore_arm64::IsPOE(unsigned reg) const {
 RegisterContextCore_arm64::RegisterContextCore_arm64(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfo_arm64> register_info)
-    : lldb_private::RegisterContext(thread, 0),
+    : lldb_private::ThreadRegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
 RegisterContextCore_arm64::~RegisterContextCore_arm64() = default;

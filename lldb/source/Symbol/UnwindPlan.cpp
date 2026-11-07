@@ -9,7 +9,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
@@ -571,7 +571,7 @@ llvm::StringRef UnwindPlan::GetSourceName() const { return m_source_name; }
 const RegisterInfo *UnwindPlan::GetRegisterInfo(Thread *thread,
                                                 uint32_t unwind_reg) const {
   if (thread) {
-    RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
     if (reg_ctx) {
       uint32_t reg;
       if (m_register_kind == eRegisterKindLLDB)

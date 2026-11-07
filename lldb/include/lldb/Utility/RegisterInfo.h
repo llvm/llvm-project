@@ -31,7 +31,7 @@ struct RegisterInfo {
   uint32_t byte_size;
   /// The byte offset in the register context data where this register's value
   /// is found.
-  /// This is optional, and can be 0 if a particular RegisterContext does not
+  /// This is optional, and can be 0 if a particular ThreadRegisterContext does not
   /// need to address its registers by byte offset.
   uint32_t byte_offset;
   /// Encoding of the register bits.
@@ -80,9 +80,9 @@ struct RegisterSet {
   /// The number of registers in REGISTERS array below.
   size_t num_registers;
   /// An array of register indicies in this set. The values in this array are
-  /// *indices* (not register numbers) into a particular RegisterContext's
+  /// *indices* (not register numbers) into a particular ThreadRegisterContext's
   /// register array. For example, if eax is defined at index 4 for a particular
-  /// RegisterContext, eax would be included in this RegisterSet by adding the
+  /// ThreadRegisterContext, eax would be included in this RegisterSet by adding the
   /// value 4. Not by adding the value lldb_eax_i386.
   const uint32_t *registers;
 };

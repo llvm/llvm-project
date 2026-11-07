@@ -9,14 +9,14 @@
 #ifndef liblldb_RegisterContextWindows_H_
 #define liblldb_RegisterContextWindows_H_
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-forward.h"
 
 namespace lldb_private {
 
 class Thread;
 
-class RegisterContextWindows : public lldb_private::RegisterContext {
+class RegisterContextWindows : public lldb_private::ThreadRegisterContext {
 public:
   // Constructors and Destructors
   RegisterContextWindows(Thread &thread, uint32_t concrete_frame_idx);

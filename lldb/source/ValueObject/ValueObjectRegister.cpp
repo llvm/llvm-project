@@ -14,7 +14,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -43,7 +43,7 @@ using namespace lldb_private;
 
 ValueObjectSP
 ValueObjectRegisterSet::Create(ExecutionContextScope *exe_scope,
-                               lldb::RegisterContextSP &reg_ctx_sp,
+                               lldb::ThreadRegisterContextSP &reg_ctx_sp,
                                uint32_t set_idx) {
   auto manager_sp = ValueObjectManager::Create();
   return (new ValueObjectRegisterSet(exe_scope, *manager_sp, reg_ctx_sp,
@@ -53,7 +53,7 @@ ValueObjectRegisterSet::Create(ExecutionContextScope *exe_scope,
 
 ValueObjectRegisterSet::ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
                                                ValueObjectManager &manager,
-                                               lldb::RegisterContextSP &reg_ctx,
+                                               lldb::ThreadRegisterContextSP &reg_ctx,
                                                uint32_t reg_set_idx)
     : ValueObject(exe_scope, manager), m_reg_ctx_sp(reg_ctx),
       m_reg_set(nullptr), m_reg_set_idx(reg_set_idx) {
@@ -192,7 +192,7 @@ void ValueObjectRegister::ConstructObject(const RegisterInfo *reg_info) {
 }
 
 ValueObjectRegister::ValueObjectRegister(ValueObject &parent,
-                                         lldb::RegisterContextSP &reg_ctx_sp,
+                                         lldb::ThreadRegisterContextSP &reg_ctx_sp,
                                          const RegisterInfo *reg_info)
     : ValueObject(parent), m_reg_ctx_sp(reg_ctx_sp), m_reg_info(),
       m_reg_value(), m_type_name(), m_compiler_type() {
@@ -201,7 +201,7 @@ ValueObjectRegister::ValueObjectRegister(ValueObject &parent,
 }
 
 ValueObjectSP ValueObjectRegister::Create(ExecutionContextScope *exe_scope,
-                                          lldb::RegisterContextSP &reg_ctx_sp,
+                                          lldb::ThreadRegisterContextSP &reg_ctx_sp,
                                           const RegisterInfo *reg_info) {
   auto manager_sp = ValueObjectManager::Create();
   return (new ValueObjectRegister(exe_scope, *manager_sp, reg_ctx_sp, reg_info))
@@ -210,7 +210,7 @@ ValueObjectSP ValueObjectRegister::Create(ExecutionContextScope *exe_scope,
 
 ValueObjectRegister::ValueObjectRegister(ExecutionContextScope *exe_scope,
                                          ValueObjectManager &manager,
-                                         lldb::RegisterContextSP &reg_ctx,
+                                         lldb::ThreadRegisterContextSP &reg_ctx,
                                          const RegisterInfo *reg_info)
     : ValueObject(exe_scope, manager), m_reg_ctx_sp(reg_ctx), m_reg_info(),
       m_reg_value(), m_type_name(), m_compiler_type() {

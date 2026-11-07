@@ -29,7 +29,7 @@ public:
   /// concrete frame index, or LLDB_INVALID_ADDRESS if it is unavailable.
   lldb::addr_t GetConcreteFramePC(uint32_t concrete_frame_idx);
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
 
 protected:

@@ -43,7 +43,7 @@ lldb::addr_t ThreadWasm::GetConcreteFramePC(uint32_t concrete_frame_idx) {
   return LLDB_INVALID_ADDRESS;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 ThreadWasm::CreateRegisterContextForFrame(StackFrame *frame) {
   uint32_t concrete_frame_idx = 0;
   ProcessSP process_sp(GetProcess());

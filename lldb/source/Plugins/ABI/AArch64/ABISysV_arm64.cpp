@@ -19,7 +19,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
@@ -59,7 +59,7 @@ ABISysV_arm64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) 
 }
 
 static Status PushToLinuxGuardedControlStack(addr_t return_addr,
-                                             RegisterContext *reg_ctx,
+                                             ThreadRegisterContext *reg_ctx,
                                              Thread &thread) {
   Status err;
 
@@ -119,7 +119,7 @@ static Status PushToLinuxGuardedControlStack(addr_t return_addr,
 bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                        addr_t func_addr, addr_t return_addr,
                                        llvm::ArrayRef<addr_t> args) const {
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
@@ -194,7 +194,7 @@ bool ABISysV_arm64::GetArgumentValues(Thread &thread, ValueList &values) const {
 
   // Extract the register context so we can read arguments from registers
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -291,7 +291,7 @@ Status ABISysV_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   Thread *thread = frame_sp->GetThread().get();
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   if (reg_ctx) {
     DataExtractor data;
@@ -478,7 +478,7 @@ bool ABISysV_arm64::RegisterIsVolatile(const RegisterInfo *reg_info) {
 }
 
 static bool LoadValueFromConsecutiveGPRRegisters(
-    ExecutionContext &exe_ctx, RegisterContext *reg_ctx,
+    ExecutionContext &exe_ctx, ThreadRegisterContext *reg_ctx,
     const CompilerType &value_type,
     bool is_return_value, // false => parameter, true => return value
     uint32_t &NGRN,       // NGRN (see ABI documentation)
@@ -629,7 +629,7 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
   // value.SetContext (Value::eContextTypeClangType, return_compiler_type);
   value.SetCompilerType(return_compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 
@@ -826,7 +826,7 @@ static lldb::addr_t ReadLinuxProcessAddressMask(lldb::ProcessSP process_sp,
     // If Pointer Authentication feature is enabled then Linux exposes
     // PAC data and code mask register. Try reading relevant register
     // below and merge it with default address mask calculated above.
-    lldb::RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+    lldb::ThreadRegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
     if (reg_ctx_sp) {
       const RegisterInfo *reg_info =
           reg_ctx_sp->GetRegisterInfoByName(reg_name, 0);
@@ -893,7 +893,7 @@ void ABISysV_arm64::Terminate() {
 }
 
 std::optional<ABISysV_arm64::MemoryPermissions>
-ABISysV_arm64::GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+ABISysV_arm64::GetMemoryPermissions(lldb_private::ThreadRegisterContext &reg_ctx,
                                     unsigned protection_key,
                                     uint32_t original_permissions) {
   // The presence of the POR register means we have the Permission Overlay

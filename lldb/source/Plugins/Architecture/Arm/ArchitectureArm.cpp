@@ -13,7 +13,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnwindLLDB.h"
@@ -77,7 +77,7 @@ void ArchitectureArm::OverrideStopInfo(Thread &thread) const {
   // trailing 16 bits (the second half of the 32 bit thumb instruction you
   // partially overwrote).
 
-  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  ThreadRegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
   if (!reg_ctx_sp)
     return;
 
@@ -277,7 +277,7 @@ UnwindPlanSP ArchitectureArm::GetArchitectureUnwindPlan(
       dwarf_regs::s12, dwarf_regs::s13, dwarf_regs::s14, dwarf_regs::s15};
   const int fpr_reg_count = std::size(fpr_regs);
 
-  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
   std::vector<uint32_t> saved_regs;
   for (int i = 0; i < gpr_reg_count; i++) {
     uint32_t regno = gpr_regs[i];

@@ -21,7 +21,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
@@ -1041,7 +1041,7 @@ bool DynamicLoaderPOSIXDYLD::IsCoreFile() const {
 // For our ELF/POSIX builds save off the fs_base/gs_base regions
 static void AddThreadLocalMemoryRegions(Process &process, ThreadSP &thread_sp,
                                         std::vector<MemoryRegionInfo> &ranges) {
-  lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
+  lldb::ThreadRegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
   if (!reg_ctx)
     return;
 

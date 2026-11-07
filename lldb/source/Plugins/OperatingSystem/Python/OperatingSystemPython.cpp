@@ -291,10 +291,10 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
 
 void OperatingSystemPython::ThreadWasSelected(Thread *thread) {}
 
-RegisterContextSP
+ThreadRegisterContextSP
 OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
                                                       addr_t reg_data_addr) {
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   if (!m_interpreter || !m_script_object_sp || !thread)
     return reg_ctx_sp;
 

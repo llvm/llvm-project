@@ -30,7 +30,7 @@
 
 namespace lldb_private {
 class OptionValueDictionary;
-class RegisterContext;
+class ThreadRegisterContext;
 class RegisterValue;
 class Stream;
 class Target;
@@ -529,7 +529,7 @@ public:
                                            lldb::RegisterKind &reg_kind,
                                            uint32_t &reg_num);
 
-  static uint32_t GetInternalRegisterNumber(RegisterContext *reg_ctx,
+  static uint32_t GetInternalRegisterNumber(ThreadRegisterContext *reg_ctx,
                                             const RegisterInfo &reg_info);
 
   static std::unique_ptr<SingleStepBreakpointLocationsPredictor>

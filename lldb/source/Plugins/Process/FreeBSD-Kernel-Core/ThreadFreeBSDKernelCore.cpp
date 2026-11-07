@@ -40,15 +40,15 @@ ThreadFreeBSDKernelCore::~ThreadFreeBSDKernelCore() {}
 
 void ThreadFreeBSDKernelCore::RefreshStateAfterStop() {}
 
-lldb::RegisterContextSP ThreadFreeBSDKernelCore::GetRegisterContext() {
+lldb::ThreadRegisterContextSP ThreadFreeBSDKernelCore::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 ThreadFreeBSDKernelCore::CreateRegisterContextForFrame(StackFrame *frame) {
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
 
   if (frame)

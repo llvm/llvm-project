@@ -28,8 +28,8 @@ public:
   void RefreshStateAfterStop() override;
   void WillResume(lldb::StateType resume_state) override;
   void DidStop() override;
-  lldb::RegisterContextSP GetRegisterContext() override;
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
   bool CalculateStopInfo() override;
   const char *GetName() override;
@@ -43,7 +43,7 @@ public:
   HostThread GetHostThread() const { return m_host_thread; }
 
 private:
-  lldb::RegisterContextSP m_thread_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_thread_reg_ctx_sp;
   HostThread m_host_thread;
   std::string m_name;
 };

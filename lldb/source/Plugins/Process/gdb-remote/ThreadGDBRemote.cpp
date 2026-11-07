@@ -11,7 +11,7 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
@@ -290,15 +290,15 @@ bool ThreadGDBRemote::ThreadIDIsValid(lldb::tid_t thread) {
 void ThreadGDBRemote::Dump(Log *log, uint32_t index) {}
 
 bool ThreadGDBRemote::ShouldStop(bool &step_more) { return true; }
-lldb::RegisterContextSP ThreadGDBRemote::GetRegisterContext() {
+lldb::ThreadRegisterContextSP ThreadGDBRemote::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
 
   if (frame)

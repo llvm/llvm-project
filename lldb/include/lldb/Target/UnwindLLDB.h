@@ -14,7 +14,7 @@
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/lldb-public.h"
 
@@ -88,14 +88,14 @@ protected:
                              lldb::addr_t &start_pc,
                              bool &behaves_like_zeroth_frame) override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
   typedef std::shared_ptr<RegisterContextUnwind> RegisterContextLLDBSP;
 
   // Needed to retrieve the "next" frame (e.g. frame 2 needs to retrieve frame
   // 1's RegisterContextUnwind)
-  // The RegisterContext for frame_num must already exist or this returns an
+  // The ThreadRegisterContext for frame_num must already exist or this returns an
   // empty shared pointer.
   RegisterContextLLDBSP GetRegisterContextForFrameNum(uint32_t frame_num);
 

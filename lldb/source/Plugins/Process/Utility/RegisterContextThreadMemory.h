@@ -12,12 +12,12 @@
 #include <vector>
 
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
-class RegisterContextThreadMemory : public lldb_private::RegisterContext {
+class RegisterContextThreadMemory : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextThreadMemory(Thread &thread, lldb::addr_t register_data_addr);
 
@@ -59,7 +59,7 @@ public:
   bool WriteAllRegisterValues(
       const lldb_private::RegisterCheckpoint &reg_checkpoint) override;
 
-  bool CopyFromRegisterContext(lldb::RegisterContextSP context);
+  bool CopyFromRegisterContext(lldb::ThreadRegisterContextSP context);
 
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
@@ -91,7 +91,7 @@ protected:
   void UpdateRegisterContext();
 
   lldb::ThreadWP m_thread_wp;
-  lldb::RegisterContextSP m_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_reg_ctx_sp;
   lldb::addr_t m_register_data_addr;
   uint32_t m_stop_id;
 

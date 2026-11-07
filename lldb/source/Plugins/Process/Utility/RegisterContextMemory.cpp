@@ -22,7 +22,7 @@ RegisterContextMemory::RegisterContextMemory(Thread &thread,
                                              uint32_t concrete_frame_idx,
                                              DynamicRegisterInfoSP reg_infos_sp,
                                              addr_t reg_data_addr)
-    : RegisterContext(thread, concrete_frame_idx),
+    : ThreadRegisterContext(thread, concrete_frame_idx),
       m_reg_infos_sp(std::move(reg_infos_sp)), m_reg_valid(), m_reg_data(),
       m_reg_data_addr(reg_data_addr) {
   // Resize our vector of bools to contain one bool for every register. We will

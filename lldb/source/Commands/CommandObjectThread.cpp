@@ -27,7 +27,7 @@
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -1840,7 +1840,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
     StackFrame *frame = m_exe_ctx.GetFramePtr();
     Thread *thread = m_exe_ctx.GetThreadPtr();
     Target *target = m_exe_ctx.GetTargetPtr();

@@ -39,7 +39,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
@@ -70,7 +70,7 @@ enum LocationDescriptionKind {
 /// so they don't need to re-thread these individually.
 struct EvalContext {
   ExecutionContext *exe_ctx;
-  RegisterContext *reg_ctx;
+  ThreadRegisterContext *reg_ctx;
   lldb::ModuleSP module_sp;
   const DWARFExpression::Delegate *dwarf_cu;
   lldb::RegisterKind reg_kind;
@@ -89,7 +89,7 @@ struct EvalContext {
   LocationDescriptionKind loc_desc_kind = Memory;
   /// @}
 
-  EvalContext(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+  EvalContext(ExecutionContext *exe_ctx, ThreadRegisterContext *reg_ctx,
               lldb::ModuleSP module_sp,
               const DWARFExpression::Delegate *dwarf_cu,
               lldb::RegisterKind reg_kind, lldb::ByteOrder byte_order,
@@ -157,7 +157,7 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
 }
 
 llvm::Error
-DWARFExpression::ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+DWARFExpression::ReadRegisterValueAsScalar(ThreadRegisterContext *reg_ctx,
                                            lldb::RegisterKind reg_kind,
                                            uint32_t reg_num, Value &value) {
   if (reg_ctx == nullptr)
@@ -1582,7 +1582,7 @@ static bool IsPotentiallyGenericIntegerOperand(const Scalar &operand,
 }
 
 llvm::Expected<Value> DWARFExpression::Evaluate(
-    ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+    ExecutionContext *exe_ctx, ThreadRegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
     const DWARFExpression::Delegate *dwarf_cu,
     const lldb::RegisterKind reg_kind, const Value *initial_value_ptr,
@@ -2476,7 +2476,7 @@ bool DWARFExpression::MatchesOperand(
     StackFrame &frame, const Instruction::Operand &operand) const {
   using namespace OperandMatchers;
 
-  RegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
   if (!reg_ctx_sp) {
     return false;
   }

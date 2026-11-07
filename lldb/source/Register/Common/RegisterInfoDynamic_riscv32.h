@@ -11,7 +11,7 @@
 
 #include "Register/RegisterInfoAndSetInterface.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"

@@ -34,11 +34,11 @@ add_lldb_library(lldbTarget
   Platform.cpp
   Process.cpp
   ProcessIOHandler.cpp
+  ThreadRegisterContext.cpp
   ProcessTrace.cpp
   Queue.cpp
   QueueItem.cpp
   QueueList.cpp
-  RegisterContext.cpp
   RegisterContextUnwind.cpp
   RegisterNumber.cpp
   RemoteAwarePlatform.cpp

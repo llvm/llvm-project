@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DumpRegisterInfo.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Register/RegisterType.h"
 #include "lldb/Register/RegisterTypeFlags.h"
 #include "lldb/Utility/Stream.h"
@@ -21,7 +21,7 @@ using namespace lldb_private;
 
 using SetInfo = std::pair<const char *, uint32_t>;
 
-void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
+void lldb_private::DumpRegisterInfo(Stream &strm, ThreadRegisterContext &ctx,
                                     const RegisterInfo &info,
                                     uint32_t terminal_width) {
   std::vector<const char *> invalidates;

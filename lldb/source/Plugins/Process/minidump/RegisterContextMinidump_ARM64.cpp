@@ -783,7 +783,7 @@ constexpr size_t k_num_reg_sets = std::size(g_reg_sets);
 
 RegisterContextMinidump_ARM64::RegisterContextMinidump_ARM64(
     lldb_private::Thread &thread, const DataExtractor &data)
-    : RegisterContext(thread, 0) {
+    : ThreadRegisterContext(thread, 0) {
   lldb::offset_t offset = 0;
   m_regs.context_flags = data.GetU64(&offset);
   for (unsigned i = 0; i < 32; ++i)

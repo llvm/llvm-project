@@ -13,7 +13,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/RegisterContextUnwind.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -160,13 +160,13 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
       return GetOneMoreFrame(abi);
     }
 
-    LLDB_LOGF(log, "%*sFrame %d did not get a RegisterContext, stopping.",
+    LLDB_LOGF(log, "%*sFrame %d did not get a ThreadRegisterContext, stopping.",
               cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
   }
 
   if (!reg_ctx_sp->IsValid()) {
-    // We failed to get a valid RegisterContext. See if the regctx below this
+    // We failed to get a valid ThreadRegisterContext. See if the regctx below this
     // on the stack has a fallback unwind plan it can use. Subsequent calls to
     // TryFallbackUnwindPlan() will return false.
     if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan()) {
@@ -180,7 +180,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
     }
 
     LLDB_LOGF(log,
-              "%*sFrame %d invalid RegisterContext for this frame, "
+              "%*sFrame %d invalid ThreadRegisterContext for this frame, "
               "stopping stack walk",
               cur_idx < 100 ? cur_idx : 100, "", cur_idx);
     return nullptr;
@@ -434,9 +434,9 @@ bool UnwindLLDB::DoGetFrameInfoAtIndex(uint32_t idx, addr_t &cfa, addr_t &pc,
   return false;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 UnwindLLDB::DoCreateRegisterContextForFrame(StackFrame *frame) {
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
   uint32_t idx = frame->GetConcreteFrameIndex();
 
   if (idx == 0) {
@@ -506,7 +506,7 @@ bool UnwindLLDB::SearchForSavedLocationForRegister(
     // register M in the middle of the stack (and N can equal M here, meaning
     // the register was not used in this function), then change the register
     // number we're looking for to M and keep looking for a concrete  location
-    // down the stack, or an actual value from a live RegisterContext at frame
+    // down the stack, or an actual value from a live ThreadRegisterContext at frame
     // 0.
     if (result == UnwindLLDB::RegisterSearchResult::eRegisterFound &&
         regloc.type ==

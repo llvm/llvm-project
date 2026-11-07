@@ -14,7 +14,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -577,7 +577,7 @@ bool EmulateInstruction::GetBestRegisterKindAndNumber(
 }
 
 uint32_t
-EmulateInstruction::GetInternalRegisterNumber(RegisterContext *reg_ctx,
+EmulateInstruction::GetInternalRegisterNumber(ThreadRegisterContext *reg_ctx,
                                               const RegisterInfo &reg_info) {
   lldb::RegisterKind reg_kind;
   uint32_t reg_num;

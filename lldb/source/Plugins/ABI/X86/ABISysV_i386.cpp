@@ -15,7 +15,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -84,7 +84,7 @@ ABISysV_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
 bool ABISysV_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
                                       addr_t func_addr, addr_t return_addr,
                                       llvm::ArrayRef<addr_t> args) const {
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -162,7 +162,7 @@ bool ABISysV_i386::GetArgumentValues(Thread &thread, ValueList &values) const {
   unsigned int num_values = values.GetSize();
   unsigned int value_index;
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -214,7 +214,7 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   const uint32_t type_flags = compiler_type.GetTypeInfo();
   Thread *thread = frame_sp->GetThread().get();
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
   DataExtractor data;
   Status data_error;
   size_t num_bytes = new_value_sp->GetData(data, data_error);
@@ -364,7 +364,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
 
   value.SetCompilerType(return_compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 
@@ -604,7 +604,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectImpl(
   if (return_valobj_sp)
     return return_valobj_sp;
 
-  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
   if (!reg_ctx_sp)
     return return_valobj_sp;
 

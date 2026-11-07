@@ -22,7 +22,7 @@
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
@@ -50,7 +50,7 @@ static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
   return reg_name ? strlen(reg_name) : 0;
 }
 
-static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
+static size_t ComputeLongestRegisterName(ThreadRegisterContext *reg_ctx,
                                          const RegisterSet &reg_set,
                                          bool use_primary_name,
                                          bool primitive_only) {
@@ -111,7 +111,7 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
-                    RegisterContext &reg_ctx, const RegisterInfo &reg_info,
+                    ThreadRegisterContext &reg_ctx, const RegisterInfo &reg_info,
                     bool print_type, size_t reg_name_right_align_at) {
     RegisterValue reg_value;
     if (!reg_ctx.ReadRegister(&reg_info, reg_value))
@@ -189,7 +189,7 @@ public:
   }
 
   bool DumpRegisterSet(const ExecutionContext &exe_ctx, Stream &strm,
-                       RegisterContext *reg_ctx, size_t set_idx,
+                       ThreadRegisterContext *reg_ctx, size_t set_idx,
                        bool primitive_only = false) {
     uint32_t unavailable_count = 0;
     uint32_t available_count = 0;
@@ -232,7 +232,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
-    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
 
     if (command.GetArgumentCount() == 0) {
       size_t set_idx;
@@ -473,7 +473,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     DataExtractor reg_data;
-    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
 
     if (command.GetArgumentCount() != 2) {
       result.AppendError(
@@ -570,7 +570,7 @@ protected:
     }
 
     llvm::StringRef reg_name = command[0].ref();
-    RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
     if (reg_info) {
       DumpRegisterInfo(

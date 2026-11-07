@@ -36,7 +36,7 @@ using namespace lldb_private;
 RegisterContextDummy::RegisterContextDummy(Thread &thread,
                                            uint32_t concrete_frame_idx,
                                            uint32_t address_byte_size)
-    : RegisterContext(thread, concrete_frame_idx) {
+    : ThreadRegisterContext(thread, concrete_frame_idx) {
   m_reg_set0.name = "General Purpose Registers";
   m_reg_set0.short_name = "GPR";
   m_reg_set0.num_registers = 1;

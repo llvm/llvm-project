@@ -51,9 +51,9 @@ public:
 
   bool ThreadHasQueueInformation() const override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
 
   void Dump(Log *log, uint32_t index);

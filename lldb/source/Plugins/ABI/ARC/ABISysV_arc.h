@@ -92,7 +92,8 @@ private:
   GetReturnValueObjectSimple(lldb_private::Thread &thread,
                              lldb_private::CompilerType &ast_type) const;
 
-  bool IsRegisterFileReduced(lldb_private::RegisterContext &reg_ctx) const;
+  bool
+  IsRegisterFileReduced(lldb_private::ThreadRegisterContext &reg_ctx) const;
 
   using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 
