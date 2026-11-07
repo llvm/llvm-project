@@ -2328,8 +2328,21 @@ bool CombinerHelper::matchCombineUnmergeConstant(
   Register SrcReg = MI.getOperand(SrcIdx).getReg();
   // Break down the big constant in smaller ones.
   APInt Val;
-  if (!mi_match(SrcReg, MRI, m_GConstantOrFConstantBits(Val)))
-    return false;
+  while (!mi_match(SrcReg, MRI, m_GConstantOrFConstantBits(Val))) {
+
+    if (!Register::isVirtualRegister(SrcReg))
+      return false;
+    MachineInstr *Def = MRI.getVRegDef(SrcReg);
+
+    if (!Def || Def->getOpcode() != TargetOpcode::COPY)
+      return false;
+
+    Register NextReg = Def->getOperand(1).getReg();
+    if (!Register::isVirtualRegister(NextReg))
+      return false;
+
+    SrcReg = NextReg;
+  }
 
   LLT Dst0Ty = MRI.getType(MI.getOperand(0).getReg());
   unsigned ShiftAmt = Dst0Ty.getSizeInBits();
