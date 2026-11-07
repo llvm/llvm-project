@@ -25,6 +25,7 @@
 #include "NoexceptSwapCheck.h"
 #include "PreferSingleCharOverloadsCheck.h"
 #include "StringViewConversionsCheck.h"
+#include "SubstrSelfAssignmentCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitializationCheck.h"
@@ -71,6 +72,8 @@ public:
         "performance-prefer-single-char-overloads");
     CheckFactories.registerCheck<StringViewConversionsCheck>(
         "performance-string-view-conversions");
+    CheckFactories.registerCheck<SubstrSelfAssignmentCheck>(
+        "performance-substr-self-assignment");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(
