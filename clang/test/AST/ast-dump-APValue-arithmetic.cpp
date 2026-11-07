@@ -1,7 +1,7 @@
 // Test without serialization:
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++17 \
 // RUN:            -ast-dump %s -ast-dump-filter Test \
-// RUN: | FileCheck --strict-whitespace --match-full-lines %s
+// RUN: | FileCheck --check-prefixes=CHECK,CHECK-NOPCH --strict-whitespace --match-full-lines %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=gnu++17 -emit-pch -o %t %s
@@ -29,21 +29,21 @@ void Test() {
 
   constexpr _Complex int ComplexInt = 42 + 24i;
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} referenced ComplexInt 'const _Complex int' constexpr cinit
-  // CHECK-NEXT:  |   |-value: ComplexInt 42 + 24i
+  // CHECK-NOPCH-NEXT:  |   |-value: ComplexInt 42 + 24i
 
   constexpr _Complex float ComplexFloat = 3.1415f + 42i;
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} referenced ComplexFloat 'const _Complex float' constexpr cinit
-  // CHECK-NEXT:  |   |-value: ComplexFloat 3.141500e+00 + 4.200000e+01i
+  // CHECK-NOPCH-NEXT:  |   |-value: ComplexFloat 3.141500e+00 + 4.200000e+01i
 
   constexpr _Complex int ArrayOfComplexInt[10] = {ComplexInt, ComplexInt, ComplexInt, ComplexInt};
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} ArrayOfComplexInt 'const _Complex int[10]' constexpr cinit
-  // CHECK-NEXT:  |   |-value: Array size=10
-  // CHECK-NEXT:  |   | |-elements: ComplexInt 42 + 24i, ComplexInt 42 + 24i, ComplexInt 42 + 24i, ComplexInt 42 + 24i
-  // CHECK-NEXT:  |   | `-filler: 6 x ComplexInt 0 + 0i
+  // CHECK-NOPCH-NEXT:  |   |-value: Array size=10
+  // CHECK-NOPCH-NEXT:  |   | |-elements: ComplexInt 42 + 24i, ComplexInt 42 + 24i, ComplexInt 42 + 24i, ComplexInt 42 + 24i
+  // CHECK-NOPCH-NEXT:  |   | `-filler: 6 x ComplexInt 0 + 0i
 
   constexpr _Complex float ArrayOfComplexFloat[10] = {ComplexFloat, ComplexFloat, ComplexInt, ComplexInt};
   // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} ArrayOfComplexFloat 'const _Complex float[10]' constexpr cinit
-  // CHECK-NEXT:      |-value: Array size=10
-  // CHECK-NEXT:      | |-elements: ComplexFloat 3.141500e+00 + 4.200000e+01i, ComplexFloat 3.141500e+00 + 4.200000e+01i, ComplexFloat 4.200000e+01 + 2.400000e+01i, ComplexFloat 4.200000e+01 + 2.400000e+01i
-  // CHECK-NEXT:      | `-filler: 6 x ComplexFloat 0.000000e+00 + 0.000000e+00i
+  // CHECK-NOPCH-NEXT:      |-value: Array size=10
+  // CHECK-NOPCH-NEXT:      | |-elements: ComplexFloat 3.141500e+00 + 4.200000e+01i, ComplexFloat 3.141500e+00 + 4.200000e+01i, ComplexFloat 4.200000e+01 + 2.400000e+01i, ComplexFloat 4.200000e+01 + 2.400000e+01i
+  // CHECK-NOPCH-NEXT:      | `-filler: 6 x ComplexFloat 0.000000e+00 + 0.000000e+00i
 }

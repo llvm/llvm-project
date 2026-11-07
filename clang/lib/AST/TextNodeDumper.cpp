@@ -2649,15 +2649,9 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
     dumpPointer(Instance);
   }
 
-  if (D->hasInit()) {
-    const Expr *E = D->getInit();
-    // Only evaluate the value of constexpr VarDecls.
-    if (E && !E->isValueDependent() && D->isConstexpr() &&
-        !D->getType()->isDependentType())
-      D->evaluateValue();
-
+  if (const Expr *Init = D->getInit()) {
     if (const APValue *V = D->getEvaluatedValue())
-      AddChild("value", [=] { Visit(*V, E->getType()); });
+      AddChild("value", [=] { Visit(*V, Init->getType()); });
   }
 
   if (!D->getDescribedVarTemplate()) {
