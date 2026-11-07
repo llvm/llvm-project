@@ -346,6 +346,44 @@ func.func @masked_reduce_minimumnumf_f32_fast(%arg0: vector<16xf32>, %mask : vec
 
 // -----
 
+// The flags also apply to the scalar op that combines the reduced value with
+// the accumulator.
+
+func.func @reduce_maximumf_f32_acc_fastmath(%arg0: vector<16xf32>, %acc: f32) -> f32 {
+  %0 = vector.reduction <maximumf>, %arg0, %acc fastmath<nnan, nsz> : vector<16xf32> into f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @reduce_maximumf_f32_acc_fastmath(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
+// CHECK-SAME:                                      %[[ACC:.*]]: f32) -> f32 {
+// CHECK:           %[[RED:.*]] = llvm.intr.vector.reduce.fmaximum(%[[INPUT]]) fastmath<nnan, nsz> : (vector<16xf32>) -> f32
+// CHECK:           %[[RESULT:.*]] = llvm.intr.maximum(%[[RED]], %[[ACC]]) fastmath<nnan, nsz> : (f32, f32) -> f32
+// CHECK:           return %[[RESULT]]
+//
+// REASSOC-LABEL:   func.func @reduce_maximumf_f32_acc_fastmath(
+// REASSOC:           llvm.intr.vector.reduce.fmaximum({{.*}}) fastmath<nnan, nsz, reassoc>
+// REASSOC:           llvm.intr.maximum({{.*}}) fastmath<nnan, nsz, reassoc>
+
+// -----
+
+func.func @masked_reduce_maximumnumf_f32_acc_nnan(%arg0: vector<16xf32>, %mask : vector<16xi1>, %acc: f32) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <maximumnumf>, %arg0, %acc fastmath<nnan> : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_maximumnumf_f32_acc_nnan(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>,
+// CHECK-SAME:                                      %[[ACC:.*]]: f32) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<0xFF800000> : vector<16xf32>) : vector<16xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<16xi1>, vector<16xf32>
+// CHECK:           %[[RED:.*]] = llvm.intr.vector.reduce.fmaximumnum(%[[MASKED]]) fastmath<nnan> : (vector<16xf32>) -> f32
+// CHECK:           %[[RESULT:.*]] = llvm.intr.maximumnum(%[[RED]], %[[ACC]]) fastmath<nnan> : (f32, f32) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
 func.func @masked_reduce_maximumnumf_f32_scalable(%arg0: vector<[16]xf32>, %mask : vector<[16]xi1>) -> f32 {
   %0 = vector.mask %mask { vector.reduction <maximumnumf>, %arg0 : vector<[16]xf32> into f32 } : vector<[16]xi1> -> f32
   return %0 : f32
