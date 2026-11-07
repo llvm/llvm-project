@@ -1008,7 +1008,8 @@ struct UnrollMultiReductionOp
       Value reduced = tiles[0];
       for (size_t i = 1; i < tiles.size(); ++i)
         reduced =
-            vector::makeArithReduction(rewriter, loc, kind, reduced, tiles[i]);
+            vector::makeArithReduction(rewriter, loc, kind, reduced, tiles[i],
+                                       reductionOp.getFastmathAttr());
 
       // Step 3: Perform a single multi_reduction with the accumulator slice.
       SmallVector<int64_t> accStrides(keptTileShape.size(), 1);
@@ -1016,7 +1017,8 @@ struct UnrollMultiReductionOp
           rewriter, loc, acc, keptOffsets, keptTileShape, accStrides);
 
       auto newReduction = vector::MultiDimReductionOp::create(
-          rewriter, loc, reduced, accSlice, reductionMask, kind);
+          rewriter, loc, reduced, accSlice, reductionMask, kind,
+          reductionOp.getFastmath());
 
       // Step 4: Insert the reduced result into the output vector.
       SmallVector<int64_t> dstStrides(keptTileShape.size(), 1);
