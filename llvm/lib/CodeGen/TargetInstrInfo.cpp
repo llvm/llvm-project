@@ -650,16 +650,12 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
   return NewMI;
 }
 
-/// Rewrite each register operand of the inline asm \p MI that's set in \p Fold
-/// (indexed by operand number) to refer to stack slot \p FI.
-static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<bool> Fold,
+/// Rewrite each register operand of the inline asm \p MI that has an entry in
+/// \p Offsets (indexed by operand number) to refer to stack slot \p FI at
+/// that byte offset.
+static void foldInlineAsmMemOperands(MachineInstr &MI,
+                                     ArrayRef<std::optional<unsigned>> Offsets,
                                      int FI, const TargetInstrInfo &TII) {
-  SmallVector<MachineOperand, 5> MemOps;
-  TII.getFrameIndexOperands(MemOps, FI);
-  assert(!MemOps.empty() && "getFrameIndexOperands didn't create any operands");
-  InlineAsm::Flag MemFlag(InlineAsm::Kind::Mem, MemOps.size());
-  MemFlag.setMemConstraint(InlineAsm::ConstraintCode::m);
-
   // A folded operand becomes the operands of a memory reference, moving every
   // later one, and MachineInstr can't move a tied operand. So untie everything
   // (untying a use also unties its def), re-add the operands from the first
@@ -673,12 +669,12 @@ static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<bool> Fold,
       continue;
 
     MI.untieRegOperand(I);
-    if (!Fold[I])
+    if (!Offsets[I])
       Ties.emplace_back(DefIdx, I);
   }
 
   unsigned First = InlineAsm::MIOp_FirstOperand;
-  while (!Fold[First])
+  while (!Offsets[First])
     ++First;
 
   SmallVector<MachineOperand, 16> Tail(MI.operands_begin() + First,
@@ -689,7 +685,8 @@ static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<bool> Fold,
   SmallVector<unsigned, 16> NewIdx;
   for (auto [I, MO] : enumerate(Tail)) {
     NewIdx.push_back(MI.getNumOperands());
-    if (!Fold[First + I]) {
+    std::optional<unsigned> Offset = Offsets[First + I];
+    if (!Offset) {
       MI.addOperand(MO);
       continue;
     }
@@ -699,6 +696,12 @@ static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<bool> Fold,
     MachineOperand &FlagMO = MI.getOperand(MI.getNumOperands() - 1);
     assert(InlineAsm::Flag(FlagMO.getImm()).getNumOperandRegisters() == 1 &&
            "cannot fold one register of a multi-register operand");
+    SmallVector<MachineOperand, 5> MemOps;
+    TII.getFrameIndexOperands(MemOps, FI, *Offset);
+    assert(!MemOps.empty() &&
+           "getFrameIndexOperands didn't create any operands");
+    InlineAsm::Flag MemFlag(InlineAsm::Kind::Mem, MemOps.size());
+    MemFlag.setMemConstraint(InlineAsm::ConstraintCode::m);
     FlagMO.setImm(MemFlag);
     for (const MachineOperand &MemOp : MemOps)
       MI.addOperand(MemOp);
@@ -735,12 +738,14 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
   if (!MI.mayFoldInlineAsmReg(Reg))
     return nullptr;
 
-  // Find the operands to fold. A use tied to another register's def keeps its
-  // register. The use tied to one of Reg's defs is folded along with the def,
-  // and reads the def's slot. That use need not hold Reg when the allocator
-  // lowers ties itself; the caller must then store the tied use's value into
-  // the slot before the asm.
-  SmallVector<bool, 16> Fold(MI.getNumOperands());
+  // Find the operands to fold and where each refers to in the slot, which
+  // holds the whole register: a subregister is at its offset in it. A use
+  // tied to another register's def keeps its register. The use tied to one of
+  // Reg's defs is folded along with the def, and reads the def's slot. That
+  // use need not hold Reg when the allocator lowers ties itself; the caller
+  // must then store the tied use's value into the slot before the asm.
+  MachineFunction &MF = *MI.getMF();
+  SmallVector<std::optional<unsigned>, 16> Offsets(MI.getNumOperands());
   bool Reads = false;
   bool Writes = false;
   for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
@@ -755,13 +760,21 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
     if (SlotMO.getReg() != Reg)
       continue;
 
-    Fold[I] = true;
+    unsigned Offset = 0;
+    if (unsigned SubReg = SlotMO.getSubReg()) {
+      unsigned Size;
+      [[maybe_unused]] bool InSlot = TII.getStackSlotRange(
+          MF.getRegInfo().getRegClass(Reg), SubReg, Size, Offset, MF);
+      assert(InSlot && "foldable subregister isn't in the stack slot");
+    }
+
+    Offsets[I] = Offset;
     Reads |= MO.readsReg();
     Writes |= MO.isDef();
   }
 
   MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
-  foldInlineAsmMemOperands(NewMI, Fold, FI, TII);
+  foldInlineAsmMemOperands(NewMI, Offsets, FI, TII);
 
   // Update mayload/maystore metadata, and memoperands.
   MachineOperand &ExtraMO = NewMI.getOperand(InlineAsm::MIOp_ExtraInfo);
@@ -774,12 +787,12 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
     ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
     Flags |= MachineMemOperand::MOStore;
   }
-  MachineFunction *MF = NewMI.getMF();
-  const MachineFrameInfo &MFI = MF->getFrameInfo();
-  MachineMemOperand *MMO = MF->getMachineMemOperand(
-      MachinePointerInfo::getFixedStack(*MF, FI), Flags, MFI.getObjectSize(FI),
-      MFI.getObjectAlign(FI));
-  NewMI.addMemOperand(*MF, MMO);
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI), Flags,
+                              MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
+  NewMI.addMemOperand(MF, MMO);
 
   return &NewMI;
 }
