@@ -7,11 +7,11 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x8
 ; CHECK-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x10
-; CHECK-NEXT:    s_mov_b64 s[16:17], 0
+; CHECK-NEXT:    s_mov_b64 s[14:15], 0
 ; CHECK-NEXT:    v_mov_b32_e32 v30, 0x9037ab78
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
-; CHECK-NEXT:    s_cselect_b64 s[14:15], -1, 0
+; CHECK-NEXT:    s_cselect_b64 s[16:17], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s0, 8
 ; CHECK-NEXT:    s_cselect_b64 s[18:19], -1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v31, 0x3e21eeb6
@@ -34,7 +34,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_mov_b32_e32 v18, 0x55555523
 ; CHECK-NEXT:    v_mov_b32_e32 v19, 0xbfd55555
 ; CHECK-NEXT:    s_and_b64 s[0:1], exec, s[18:19]
-; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[14:15]
+; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[16:17]
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b64_e32 v[20:21], s[10:11]
@@ -44,13 +44,13 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[12:13]
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[20:21]
-; CHECK-NEXT:    s_mov_b64 s[16:17], 0
+; CHECK-NEXT:    s_mov_b64 s[14:15], 0
 ; CHECK-NEXT:  .LBB0_2: ; %._crit_edge2105.i.i.i2330
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[22:23], s[8:9]
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
 ; CHECK-NEXT:    s_mov_b64 s[20:21], s[6:7]
 ; CHECK-NEXT:  .LBB0_3: ; %._crit_edge1942.i.i.i3548
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
@@ -59,9 +59,9 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
 ; CHECK-NEXT:  ; %bb.4: ; %.preheader1868.i.i.i3244
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[14:15]
+; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[16:17]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_10
 ; CHECK-NEXT:  ; %bb.5: ; %.preheader1855.i.i.i3329.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    flat_load_dwordx2 v[24:25], v[20:21]
@@ -84,7 +84,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_accvgpr_read_b32 v27, a3
 ; CHECK-NEXT:    v_accvgpr_read_b32 v26, a2
 ; CHECK-NEXT:    s_mov_b64 vcc, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_10
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_11
 ; CHECK-NEXT:  ; %bb.7: ; %.lr.ph2070.i.i.i3291
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
 ; CHECK-NEXT:    v_accvgpr_mov_b32 a3, a1
@@ -93,6 +93,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_6
 ; CHECK-NEXT:  ; %bb.8: ; %.preheader1856.preheader.i.i.i3325
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
+; CHECK-NEXT:    s_mov_b64 s[6:7], 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a2, v28
 ; CHECK-NEXT:    v_accvgpr_write_b32 a3, v29
 ; CHECK-NEXT:    s_mov_b64 vcc, s[4:5]
@@ -100,25 +101,28 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:  ; %bb.9: ; %loop.exit.guard
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[6:7]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_11
-; CHECK-NEXT:    s_branch .LBB0_12
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_12
+; CHECK-NEXT:    s_branch .LBB0_13
 ; CHECK-NEXT:  .LBB0_10: ; in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    s_cbranch_execz .LBB0_12
-; CHECK-NEXT:  .LBB0_11: ; %._crit_edge2105.i.i.i2330.loopexit
+; CHECK-NEXT:    v_accvgpr_read_b32 v25, a1
+; CHECK-NEXT:    v_accvgpr_read_b32 v24, a0
+; CHECK-NEXT:    s_branch .LBB0_2
+; CHECK-NEXT:  .LBB0_11: ; in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    s_cbranch_execz .LBB0_13
+; CHECK-NEXT:  .LBB0_12: ; %._crit_edge2105.i.i.i2330.loopexit
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    v_cmp_nlg_f64_e64 s[6:7], 0, v[26:27]
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v24
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v25
+; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_cndmask_b32_e64 v26, 0, 1, s[6:7]
-; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[14:15]
+; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v27, v26
 ; CHECK-NEXT:    s_cselect_b32 s7, 0, s21
 ; CHECK-NEXT:    s_cselect_b32 s6, 0, s20
-; CHECK-NEXT:    s_cselect_b32 s17, s17, 0
-; CHECK-NEXT:    s_cselect_b32 s16, s16, 0
+; CHECK-NEXT:    s_cselect_b32 s15, s15, 0
+; CHECK-NEXT:    s_cselect_b32 s14, s14, 0
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[26:27], s[8:9]
 ; CHECK-NEXT:    s_branch .LBB0_2
-; CHECK-NEXT:  .LBB0_12: ; %DummyReturnBlock
+; CHECK-NEXT:  .LBB0_13: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_endpgm
 entry:
   br label %._crit_edge1942.i.i.i3548
