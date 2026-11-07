@@ -2398,6 +2398,12 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   if (IsFloatingPointTy && NewBO->hasNoInfs() && !isKnownNeverInfinity(X, SQ))
     NewBO->setHasNoInfs(false);
 
+  // Drop nsz if X can be zero: the identity lanes return X exactly in the
+  // original program, but with nsz a zero in those lanes may change sign.
+  if (IsFloatingPointTy && NewBO->hasNoSignedZeros() &&
+      !computeKnownFPClass(X, fcZero, SQ).isKnownNeverZero())
+    NewBO->setHasNoSignedZeros(false);
+
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
   // If we already made a safe constant, then there's no danger.
