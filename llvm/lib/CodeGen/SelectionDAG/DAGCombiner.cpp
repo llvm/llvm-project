@@ -7358,6 +7358,66 @@ static SDValue combineSelectAsExtAnd(SDValue Cond, SDValue T, SDValue F,
   return DAG.getNode(ISD::AND, DL, OpVT, CondMask, T.getOperand(0));
 }
 
+/// The mask that the single-bit-test select fold ANDs with the selected value:
+/// bit \p BitIdx of \p X copied into every bit, built as
+/// `sra (shl X, BW - 1 - BitIdx), BW - 1`. Returns an empty value if the target
+/// keeps such selects (shouldFoldSelectWithSingleBitTest).
+static SDValue getSingleBitTestMask(SelectionDAG &DAG, const SDLoc &DL,
+                                    SDValue X, unsigned BitIdx) {
+  EVT VT = X.getValueType();
+  unsigned ShCt = VT.getScalarSizeInBits() - 1;
+  if (!DAG.getTargetLoweringInfo().shouldFoldSelectWithSingleBitTest(
+          VT, APInt::getOneBitSet(ShCt + 1, BitIdx)))
+    return SDValue();
+  SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
+                            DAG.getShiftAmountConstant(ShCt - BitIdx, VT, DL));
+  return DAG.getNode(ISD::SRA, DL, VT, Shl,
+                     DAG.getShiftAmountConstant(ShCt, VT, DL));
+}
+
+// The single-bit-test fold of SimplifySelectCC, for a bit test that is a
+// truncate rather than a setcc:
+//   `(select (trunc (srl X, C) to i1), T, 0)`
+//   -> `(and (sra (shl X, BW - 1 - C), BW - 1), (freeze T))`.
+// The condition takes this form when it is an i1 value held in a wider
+// register, or when SimplifySetCC has already turned `(and X, 1 << C) != 0`
+// into a truncate.
+static SDValue foldSelectOfTruncatedBitTest(SDValue Cond, SDValue T, SDValue F,
+                                            const SDLoc &DL,
+                                            SelectionDAG &DAG) {
+  EVT VT = T.getValueType();
+  if (Cond.getOpcode() != ISD::TRUNCATE || Cond.getValueType() != MVT::i1 ||
+      !Cond.hasOneUse() || !VT.isScalarInteger() || !isNullConstant(F))
+    return SDValue();
+
+  // Unlike the setcc form, this also matches every select on a bool held in a
+  // wider register. That only pays off with several condition registers (lane
+  // masks, condition register bits), where a compare has to write the bit into
+  // one of them for the select. Otherwise the select reads the flags or an
+  // integer register, which is as cheap as the mask.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.hasMultipleConditionRegisters(MVT::i1))
+    return SDValue();
+
+  SDValue X = Cond.getOperand(0);
+  if (X.getValueType() != VT)
+    return SDValue();
+
+  unsigned BW = VT.getScalarSizeInBits();
+  unsigned BitIdx = 0;
+  if (X.getOpcode() == ISD::SRL) {
+    auto *Amt = dyn_cast<ConstantSDNode>(X.getOperand(1));
+    if (!Amt || Amt->getAPIntValue().uge(BW))
+      return SDValue();
+    BitIdx = Amt->getZExtValue();
+    X = X.getOperand(0);
+  }
+
+  if (SDValue Mask = getSingleBitTestMask(DAG, DL, X, BitIdx))
+    return DAG.getNode(ISD::AND, DL, VT, Mask, DAG.getFreeze(T));
+  return SDValue();
+}
+
 /// This contains all DAGCombine rules which reduce two values combined by
 /// an And operation to a single value. This makes them reusable in the context
 /// of visitSELECT(). Rules involving constants are not included as
@@ -13854,6 +13914,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       return BinOp;
 
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
+    return R;
+
+  if (SDValue R = foldSelectOfTruncatedBitTest(N0, N1, N2, DL, DAG))
     return R;
 
   if (SDValue R = combineSelectToPseudoMinMax(DAG, N))
@@ -31829,21 +31892,9 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     SDValue AndLHS = N0->getOperand(0);
     auto *ConstAndRHS = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     if (ConstAndRHS && ConstAndRHS->getAPIntValue().isPowerOf2()) {
-      // Shift the tested bit over the sign bit.
-      const APInt &AndMask = ConstAndRHS->getAPIntValue();
-      if (TLI.shouldFoldSelectWithSingleBitTest(VT, AndMask)) {
-        unsigned ShCt = AndMask.getBitWidth() - 1;
-        SDValue ShlAmt = DAG.getShiftAmountConstant(AndMask.countl_zero(), VT,
-                                                    SDLoc(AndLHS));
-        SDValue Shl = DAG.getNode(ISD::SHL, SDLoc(N0), VT, AndLHS, ShlAmt);
-
-        // Now arithmetic right shift it all the way over, so the result is
-        // either all-ones, or zero.
-        SDValue ShrAmt = DAG.getShiftAmountConstant(ShCt, VT, SDLoc(Shl));
-        SDValue Shr = DAG.getNode(ISD::SRA, SDLoc(N0), VT, Shl, ShrAmt);
-
-        return DAG.getNode(ISD::AND, DL, VT, Shr, N3);
-      }
+      unsigned BitIdx = ConstAndRHS->getAPIntValue().logBase2();
+      if (SDValue Mask = getSingleBitTestMask(DAG, SDLoc(N0), AndLHS, BitIdx))
+        return DAG.getNode(ISD::AND, DL, VT, Mask, N3);
     }
   }
 

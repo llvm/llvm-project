@@ -161,9 +161,10 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_cselect_b32 s20, 1, 0
 ; GFX11-NEXT:    s_and_b32 s22, s13, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s19, s19, s20
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_bitcmp1_b32 s19, 0
-; GFX11-NEXT:    s_cselect_b32 s19, 0x100, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_bfe_i32 s19, s19, 0x10000
+; GFX11-NEXT:    s_and_b32 s19, s19, 0x100
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s16, s19, s16
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB2_6
 ; GFX11-NEXT:  .LBB2_7: ; %Flow9
