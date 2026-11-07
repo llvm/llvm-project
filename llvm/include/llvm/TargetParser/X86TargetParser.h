@@ -177,6 +177,9 @@ LLVM_ABI std::array<uint32_t, 4>
 getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 LLVM_ABI unsigned getFeaturePriority(ProcessorFeatures Feat);
 
+/// Return the runtime function-multiversioning priority of features or CPUs.
+LLVM_ABI unsigned getFMVPriority(ArrayRef<StringRef> Features);
+
 } // namespace X86
 } // namespace llvm
 
