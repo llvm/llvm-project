@@ -101,14 +101,18 @@ twineToStrRef(const Twine &val,
   return StringRef(&strings.back()[0], strRef.size());
 }
 
+DiagnosticArgument Diagnostic::getStringArgument(const Twine &val) {
+  return DiagnosticArgument(twineToStrRef(val, strings));
+}
+
 /// Stream in a Twine argument.
 Diagnostic &Diagnostic::operator<<(char val) { return *this << Twine(val); }
 Diagnostic &Diagnostic::operator<<(const Twine &val) {
-  arguments.push_back(DiagnosticArgument(twineToStrRef(val, strings)));
+  arguments.push_back(getStringArgument(val));
   return *this;
 }
 Diagnostic &Diagnostic::operator<<(Twine &&val) {
-  arguments.push_back(DiagnosticArgument(twineToStrRef(val, strings)));
+  arguments.push_back(getStringArgument(val));
   return *this;
 }
 
@@ -727,7 +731,8 @@ void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
   using MatchResult = llvm::SourceMgrDiagnosticVerifier::MatchResult;
   MatchResult result = impl->verifier.process(
       os, mgr, getDiagKind(kind), /*hasLoc=*/static_cast<bool>(fileLoc), buf,
-      fileLoc ? fileLoc.getLine() : 0, msg, reportUnexpected);
+      fileLoc ? fileLoc.getLine() : 0, fileLoc ? fileLoc.getColumn() : 0, msg,
+      reportUnexpected);
   if (result == MatchResult::Unexpected)
     emitDiagnostic(loc, "unexpected " + getDiagKindStr(kind) + ": " + msg,
                    DiagnosticSeverity::Error);

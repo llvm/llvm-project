@@ -730,3 +730,83 @@ loop.latch:
 exit:
   ret void
 }
+
+; The load in %then is dereferenceable and its base is aligned, but the step of
+; 10 is not a multiple of the alignment of 4.
+define i64 @step_not_multiple_of_align(ptr %src) {
+; CHECK-LABEL: @step_not_multiple_of_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [40960 x i8], align 8
+; CHECK-NEXT:    call void @init(ptr [[A]])
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE2:%.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE2]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[PRED_LOAD_CONTINUE2]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge <2 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i64> [[VEC_IND]], splat (i64 10)
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
+; CHECK-NEXT:    br i1 [[TMP15]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; CHECK:       pred.load.if:
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> poison, i64 [[TMP16]], i64 0
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
+; CHECK:       pred.load.continue:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i64> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
+; CHECK-NEXT:    br i1 [[TMP17]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2]]
+; CHECK:       pred.load.if1:
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 1
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
+; CHECK:       pred.load.continue2:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i64> [ [[TMP9]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP10]], [[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[TMP14]], <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP11]] = add <2 x i64> [[VEC_PHI]], [[PREDPHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[TMP11]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[TMP13]]
+;
+entry:
+  %a = alloca [40960 x i8], align 8
+  call void @init(ptr %a)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %red = phi i64 [ 0, %entry ], [ %red.next, %loop.latch ]
+  %gep.src = getelementptr inbounds i8, ptr %src, i64 %iv
+  %l.src = load i8, ptr %gep.src, align 1
+  %c = icmp sge i8 %l.src, 0
+  br i1 %c, label %then, label %loop.latch
+
+then:
+  %offset = mul i64 %iv, 10
+  %gep.a = getelementptr inbounds i8, ptr %a, i64 %offset
+  %l.a = load i64, ptr %gep.a, align 4
+  br label %loop.latch
+
+loop.latch:
+  %p = phi i64 [ 0, %loop.header ], [ %l.a, %then ]
+  %red.next = add i64 %red, %p
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 4096
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret i64 %red.next
+}

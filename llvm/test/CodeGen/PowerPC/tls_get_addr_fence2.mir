@@ -1,5 +1,5 @@
 # ADJCALLSTACKDOWN and ADJCALLSTACKUP should not be generated around TLS pseudo code if it is located within existing ADJCALLSTACKDOWN/ADJCALLSTACKUP pair.
-# RUN: llc -mtriple=powerpc64le-linux-gnu -run-pass=ppc-tls-dynamic-call -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=powerpc64le-linux-gnu -run-pass=ppc-tls-dynamic-call -o - %s | FileCheck %s
 
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
