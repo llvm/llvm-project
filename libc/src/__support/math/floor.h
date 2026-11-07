@@ -9,16 +9,21 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FLOOR_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_FLOOR_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR double floor(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double floor(double x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
     !defined(LIBC_USE_CONSTEXPR)
-  return __builtin_floor(x);
+  if (cpp::is_constant_evaluated()) {
+    return fputil::floor(x);
+  } else {
+    return __builtin_floor(x);
+  }
 #else
   return fputil::floor(x);
 #endif

@@ -29,8 +29,8 @@ namespace expf_internal {
 
 using fputil::FloatFloat;
 
-LIBC_ALWAYS_INLINE FloatFloat horner_step(float x, const FloatFloat &poly,
-                                          const FloatFloat &coeff) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT FloatFloat
+horner_step(float x, const FloatFloat &poly, const FloatFloat &coeff) {
   float hi = fputil::multiply_add(x, poly.hi, coeff.hi);
   float lo = fputil::multiply_add(x, poly.hi, coeff.hi - hi);
   lo = fputil::multiply_add(x, poly.lo, lo + coeff.lo);
@@ -51,7 +51,7 @@ LIBC_ALWAYS_INLINE FloatFloat horner_step(float x, const FloatFloat &poly,
 // Float-float coefficients are split into:
 //   > hi = round(coeff(p, i), SG, RN);
 //   > lo = round(coeff(p, i) - hi, SG, RN);
-LIBC_INLINE FloatFloat exp_eval(const FloatFloat &u) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT FloatFloat exp_eval(const FloatFloat &u) {
   // Coefficients of u^2, ..., u^6, in {lo, hi} order.
   constexpr FloatFloat COEFFS[] = {
       {-0x1.dp-46f, 0x1p-1f},
@@ -103,8 +103,8 @@ LIBC_INLINE FloatFloat exp_eval(const FloatFloat &u) {
 }
 
 // Computes 2^k * (exp_u.hi + exp_u.lo).
-LIBC_INLINE float scale_result(const FloatFloat &exp_u, int k,
-                               bool produces_subnormal) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float
+scale_result(const FloatFloat &exp_u, int k, bool produces_subnormal) {
   using FPBits = fputil::FPBits<float>;
 
   // Scaling the rounded sum by 2^k is exact for normal results: only the

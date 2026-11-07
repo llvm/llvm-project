@@ -100,7 +100,7 @@ LIBC_INLINE_VAR constexpr double EXP10_EXACT[22] = {
 };
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_ALWAYS_INLINE double exp10(double x) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double exp10(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 

@@ -612,7 +612,8 @@ LIBC_INLINE_VAR constexpr Frac256 LOG2_RD_FRAC256[128] = {
 // The value -log2(r) is provided by LOG2_RD_FRAC256[idx_x].
 // log2(1 + dx) is evaluated with a degree-30 minimax polynomial using a 3-tier
 // Horner scheme (Frac64, Frac128, and Frac256).
-LIBC_INLINE DFloat256 log2_f256(int x_e, unsigned idx_x, double dx) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat256 log2_f256(int x_e, unsigned idx_x,
+                                                       double dx) {
   using FPBits = fputil::FPBits<double>;
 
   if (dx == 0.0) {
@@ -688,7 +689,7 @@ LIBC_INLINE DFloat256 log2_f256(int x_e, unsigned idx_x, double dx) {
 // Then:
 //   2^z = 2^hi * EXP2_MID_FRAC256[idx] * 2^lo
 //       = 2^hi * EXP2_MID_FRAC256[idx] * (1 + lo * P(lo)).
-LIBC_INLINE DFloat256 exp2_f256(const DFloat256 &z) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat256 exp2_f256(const DFloat256 &z) {
   double z_d = static_cast<double>(z);
   double z_scaled = z_d * 64.0;
   double kd = fputil::nearest_integer(z_scaled);
@@ -773,8 +774,8 @@ LIBC_INLINE DFloat256 exp2_f256(const DFloat256 &z) {
 // Since exact 54-bit boundaries are already handled in pow_accurate, the
 // 256-bit evaluation with error < 2^-250 is sufficient to correctly round all
 // remaining cases.
-LIBC_INLINE double pow_accurate_256(double y, bool is_neg, int x_e,
-                                    unsigned idx_x, double dx) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+pow_accurate_256(double y, bool is_neg, int x_e, unsigned idx_x, double dx) {
   DFloat256 log2_x = log2_f256(x_e, idx_x, dx);
   DFloat256 y_f256(y);
   DFloat256 z = fputil::quick_mul(y_f256, log2_x);

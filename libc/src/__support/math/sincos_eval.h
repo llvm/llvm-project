@@ -25,8 +25,8 @@ namespace sincos_eval_internal {
 using fputil::DoubleDouble;
 using DFloat128 = fputil::DyadicFloat<128>;
 
-LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
-                               DoubleDouble &cos_u) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u, DoubleDouble &cos_u) {
   // Evaluate sin(y) = sin(x - k * (pi/128))
   // We use the degree-7 Taylor approximation:
   //   sin(y) ~ y - y^3/3! + y^5/5! - y^7/7!
@@ -98,8 +98,8 @@ LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
                               0x1.0p-51, 0x1.0p-105);
 }
 
-LIBC_INLINE void sincos_eval(const DFloat128 &u, DFloat128 &sin_u,
-                             DFloat128 &cos_u) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void
+sincos_eval(const DFloat128 &u, DFloat128 &sin_u, DFloat128 &cos_u) {
   DFloat128 u_sq = fputil::quick_mul(u, u);
 
   // sin(u) ~ x - x^3/3! + x^5/5! - x^7/7! + x^9/9! - x^11/11! + x^13/13!

@@ -100,7 +100,7 @@ namespace powf_internal = LIBC_NAMESPACE::math::powf_internal;
 // which provides a compact, code-size-friendly implementation without large
 // exponent lookup tables.
 
-LIBC_INLINE float powf(float x, float y) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float powf(float x, float y) {
   using FPBits = fputil::FPBits<float>;
   using namespace powf_internal;
 

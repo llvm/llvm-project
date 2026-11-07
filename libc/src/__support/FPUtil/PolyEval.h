@@ -48,7 +48,7 @@ polyeval(const T &x, const T &a0, const Ts &...a) {
 }
 
 template <typename T, typename... Ts>
-LIBC_INLINE LIBC_CONSTEXPR cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
+LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
 polyeval(T x, T a0, Ts... a) {
   return multiply_add(x, polyeval(x, a...), a0);
 }

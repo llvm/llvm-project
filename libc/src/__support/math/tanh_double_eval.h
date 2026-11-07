@@ -232,7 +232,7 @@ LIBC_INLINE_VAR constexpr double TANH_SMALL_P_COEFFS[6] = {
 
 // Evaluate P_rem(x^2) ~ (tanh(x) - x) / x^3 - (-0x1.554p-2) using Estrin's
 // scheme:
-LIBC_ALWAYS_INLINE double tanh_small_poly(double x2) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double tanh_small_poly(double x2) {
   double x4 = x2 * x2;
   double x8 = x4 * x4;
   double c0 =
@@ -409,7 +409,8 @@ LIBC_MATH_SMALL_TABLES_INLINE double tanh_eval(double x) {
 
 // Evaluate tanh(x) for |x| < SMALL_BOUND (2^-27 + ulp(2^-27) when
 // LIBC_MATH_HAS_SKIP_ACCURATE_PASS is defined, or 2^-3 otherwise):
-LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double tanh_small_eval(double x,
+                                                          uint64_t x_abs) {
   using FPBits = fputil::FPBits<double>;
 
   // Tiny and subnormal range: |x| <= 2^-27.
@@ -506,7 +507,8 @@ LIBC_INLINE double tanh_small_eval(double x, uint64_t x_abs) {
 
 // Handle saturation, inf, and nan for tanh(x) when
 // |x| >= 0x1.30fc1931f09cap+4:
-LIBC_NOINLINE LIBC_INLINE double tanh_exceptional(double x) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+tanh_exceptional(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -520,7 +522,7 @@ LIBC_NOINLINE LIBC_INLINE double tanh_exceptional(double x) {
                         : fputil::round_result_slightly_down(1.0);
 }
 
-LIBC_ALWAYS_INLINE double tanh(double x) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double tanh(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
