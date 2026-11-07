@@ -36,7 +36,10 @@ namespace llvm {
 ///    extended by the rematerialization. When reducing spilling under
 ///    -amdgpu-remat-extend-deps, rematerializable dependencies holding a single
 ///    value that still reaches the rematerialization points are exempt; their
-///    live range is extended instead.
+///    live range is extended instead. This is only allowed when the
+///    register's own pressure covers the pressure of those dependencies in
+///    every register class, such that the rematerialization cannot increase
+///    RP anywhere.
 /// 4. The register has at least one user outside its defining region. If
 ///    rematerialized, one copy is made per using region and the original
 ///    register stays if the defining region has users.
@@ -146,8 +149,9 @@ private:
                        const BitVector &LiveOut);
 
     /// Sets the live-in and live-out lanes of register \p Reg in regions set in
-    /// \p Regions from its current live interval.
-    void refreshLiveMaps(Register Reg, const BitVector &Regions);
+    /// \p Regions from its current live interval. Returns the regions in which
+    /// \p Reg became live-in or live-out.
+    BitVector refreshLiveMaps(Register Reg, const BitVector &Regions);
 
   private:
     static const uint64_t FreqScaleFactor = 1024;
@@ -189,6 +193,10 @@ private:
     /// clear it as a target if its RP target has been reached.
     void updateRPTargets(const BitVector &UpdateRegions,
                          const GCNRegPressure &RPSave);
+
+    /// In all regions set in \p UpdateRegions, adds pressure \p AddedRP and
+    /// sets it as a target if its RP target is no longer reached.
+    void addRP(const BitVector &UpdateRegions, const GCNRegPressure &AddedRP);
 
     /// Fully recomputes RP from the DAG in \p UpdateRegions. Among those
     /// regions, sets again all targets that were optimistically marked as

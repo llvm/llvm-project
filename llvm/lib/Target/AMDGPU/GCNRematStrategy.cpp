@@ -127,9 +127,11 @@ void GCNRematStrategy::RematRegions::addToLiveMaps(Register Reg,
     LiveOuts[I].insert(LiveReg);
 }
 
-void GCNRematStrategy::RematRegions::refreshLiveMaps(Register Reg,
-                                                     const BitVector &Regions) {
+BitVector
+GCNRematStrategy::RematRegions::refreshLiveMaps(Register Reg,
+                                                const BitVector &Regions) {
   const LiveInterval &LI = LIS.getInterval(Reg);
+  BitVector NewlyLive(size());
   for (unsigned I : Regions.set_bits()) {
     auto [RegionBegin, RegionEnd] = Bounds[I];
     // Previous rematerializations may have left the region empty or with only
@@ -139,14 +141,21 @@ void GCNRematStrategy::RematRegions::refreshLiveMaps(Register Reg,
     if (FirstMI == RegionEnd)
       continue;
     SlotIndex LiveInIdx = LIS.getInstructionIndex(*FirstMI).getBaseIndex();
-    if (LaneBitmask Mask = getLiveLaneMask(LI, LiveInIdx, MRI); Mask.any())
+    if (LaneBitmask Mask = getLiveLaneMask(LI, LiveInIdx, MRI); Mask.any()) {
+      if (!LiveIns[I].contains(Reg))
+        NewlyLive.set(I);
       LiveIns[I][Reg] = Mask;
+    }
     MachineInstr &LastMI =
         *skipDebugInstructionsBackward(std::prev(RegionEnd), RegionBegin);
     SlotIndex LiveOutIdx = LIS.getInstructionIndex(LastMI).getDeadSlot();
-    if (LaneBitmask Mask = getLiveLaneMask(LI, LiveOutIdx, MRI); Mask.any())
+    if (LaneBitmask Mask = getLiveLaneMask(LI, LiveOutIdx, MRI); Mask.any()) {
+      if (!LiveOuts[I].contains(Reg))
+        NewlyLive.set(I);
       LiveOuts[I][Reg] = Mask;
+    }
   }
+  return NewlyLive;
 }
 
 GCNRematStrategy::RematTargets::RematTargets(
@@ -176,6 +185,15 @@ void GCNRematStrategy::RematTargets::updateRPTargets(
       LLVM_DEBUG(dbgs() << "  [" << I << "] Target reached!\n");
       ExcessRP.reset(I);
     }
+  }
+}
+
+void GCNRematStrategy::RematTargets::addRP(const BitVector &UpdateRegions,
+                                           const GCNRegPressure &AddedRP) {
+  for (unsigned I : UpdateRegions.set_bits()) {
+    RPTargets[I].addRP(AddedRP);
+    if (!ExcessRP[I] && !RPTargets[I].satisfied())
+      ExcessRP.set(I);
   }
 }
 
@@ -430,11 +448,25 @@ void GCNRematStrategy::rematerializeFor(
       // Extended dependencies are now live in regions where they previously
       // weren't. These are all within the candidate's original live range.
       // Live-ins seed RP recomputation so they have to be updated, and the
-      // estimated RP save is wrong in those regions since it doesn't account
-      // for the extensions.
-      for (RegisterIdx DepRegIdx : Cand.ExtendedDeps)
-        Regions.refreshLiveMaps(Remater.getReg(DepRegIdx).getDefReg(),
-                                Cand.Live);
+      // dependencies' pressure is added to RP targets in regions where they
+      // became live-in or live-out. This must happen before the save is
+      // applied below.
+      for (RegisterIdx DepRegIdx : Cand.ExtendedDeps) {
+        const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+        Register DepDefReg = DepReg.getDefReg();
+        BitVector NewlyLive = Regions.refreshLiveMaps(DepDefReg, Cand.Live);
+        if (NewlyLive.none())
+          continue;
+        GCNRegPressure DepRP;
+        DepRP.inc(DepDefReg, LaneBitmask::getNone(), DepReg.Mask, MRI);
+        LLVM_DEBUG({
+          for (unsigned I : NewlyLive.set_bits())
+            dbgs() << "  [" << I << "] Extending "
+                   << printReg(DepDefReg, MRI.getTargetRegisterInfo(), 0, &MRI)
+                   << '\n';
+        });
+        Targets.addRP(NewlyLive, DepRP);
+      }
 
       // Adjust RP targets. The save is guaranteed in regions in which the
       // register is live-through and unused but optimistic in all other regions
@@ -534,6 +566,28 @@ void GCNRematStrategy::createCandidates(bool AllowExtendDeps) {
       continue;
 
     Register DefReg = CandReg.getDefReg();
+
+    // Extended dependencies only become live in regions where the candidate
+    // was live and no longer is after rematerialization. The candidate's
+    // pressure must cover theirs in every register class for the
+    // rematerialization not to increase RP in any of these regions.
+    if (!ExtendedDeps.empty()) {
+      GCNRegPressure Save, Cost;
+      Save.inc(DefReg, LaneBitmask::getNone(), CandReg.Mask, MRI);
+      for (RegisterIdx DepRegIdx : ExtendedDeps) {
+        const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+        Cost.inc(DepReg.getDefReg(), LaneBitmask::getNone(), DepReg.Mask, MRI);
+      }
+      if (Save.getSGPRNum() < Cost.getSGPRNum() ||
+          Save.getArchVGPRNum() < Cost.getArchVGPRNum() ||
+          Save.getAGPRNum() < Cost.getAGPRNum()) {
+        LLVM_DEBUG(dbgs() << "Not extending dependencies of "
+                          << Remater.printID(RegIdx)
+                          << ": their pressure exceeds the save\n");
+        continue;
+      }
+    }
+
     MarkedRegs.insert(DefReg);
     DefRegToCandIdx[DefReg] = static_cast<unsigned>(Candidates.size());
     Candidates.emplace_back(RegIdx, NumRegions).ExtendedDeps =
