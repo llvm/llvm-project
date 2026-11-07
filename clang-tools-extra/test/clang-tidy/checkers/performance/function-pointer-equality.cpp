@@ -58,3 +58,12 @@ void test_member_function_equality() {
   bool b2 = &Foo::MyStaticMethod1 != &Foo::MyStaticMethod2;
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: function pointer equality comparison is unsound with '--icf=all' enabled [performance-function-pointer-equality]
 }
+
+bool weird_nullptr_edgecase(decltype(nullptr) a, void (*b)()) {
+  // Should not report an issue, as `a` is a nullptr.
+  return a == b;
+}
+
+void test_nullptr_t() {
+  weird_nullptr_edgecase(nullptr, &f);
+}

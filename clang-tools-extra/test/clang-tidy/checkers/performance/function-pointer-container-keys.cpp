@@ -78,11 +78,13 @@ std::set<void (*)()> returns_set();
 template <typename T>
 bool generic_eq(T a, T b) {
   return a == b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: function pointer equality comparison is unsound with '--icf=all' enabled [performance-function-pointer-equality]
 }
 
 template <typename T>
 void generic_set() {
   std::set<T> s;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: associative or unordered container 's' with a function pointer key type is unsound with '--icf=all' enabled [performance-function-pointer-equality]
 }
 
 template <typename T>

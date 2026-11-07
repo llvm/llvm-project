@@ -26,12 +26,11 @@ void FunctionPointerEqualityCheck::registerMatchers(MatchFinder *Finder) {
                      hasLHS(hasType(FunctionPointerType)),
                      hasRHS(hasType(FunctionPointerType)),
                      unless(hasEitherOperand(ignoringParenCasts(
-                         anyOf(nullPointerConstant(), hasType(isInteger()))))),
-                     unless(isInTemplateInstantiation()))
+                         anyOf(nullPointerConstant(), hasType(isInteger()))))))
           .bind("op"),
       this);
 
-  // Note, that while some of these containers check equality through the
+  // Note, that while some of these containers check equality through theG
   // `Compare` requirement, the `Compare` requirement mandates strict weak
   // ordering, which is unspecified behaviour anyways. So even though they
   // aren't an issue with --icf=all, they're still discouraged.
@@ -46,8 +45,7 @@ void FunctionPointerEqualityCheck::registerMatchers(MatchFinder *Finder) {
                       "::std::unordered_map", "::std::unordered_multimap",
                       "::std::unordered_multiset", "::std::unordered_set"),
                   hasTemplateArgument(0,
-                                      refersToType(FunctionPointerType))))))),
-          unless(anyOf(isInstantiated(), hasAncestor(decl(isInstantiated())))))
+                                      refersToType(FunctionPointerType))))))))
           .bind("var"),
       this);
 }
@@ -55,6 +53,12 @@ void FunctionPointerEqualityCheck::registerMatchers(MatchFinder *Finder) {
 void FunctionPointerEqualityCheck::check(
     const MatchFinder::MatchResult &Result) {
   if (const auto *MatchedOp = Result.Nodes.getNodeAs<BinaryOperator>("op")) {
+    // Skip if either type is of type decltype(nullptr). This is a builtin
+    // type.
+    if (MatchedOp->getLHS()->IgnoreParenCasts()->getType()->isNullPtrType() ||
+        MatchedOp->getRHS()->IgnoreParenCasts()->getType()->isNullPtrType()) {
+      return;
+    }
     diag(MatchedOp->getOperatorLoc(),
          "function pointer equality comparison is unsound with '--icf=all' "
          "enabled");
