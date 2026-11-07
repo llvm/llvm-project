@@ -1702,6 +1702,8 @@ void SPIRVEmitIntrinsicsImpl::replaceMemInstrUses(Instruction *Old,
     }
   }
   New->copyMetadata(*Old);
+  GR->removeAssignPtrTypeInstr(Old); // Old's address could be re-used.
+  TypeValidated.erase(Old);
   Old->eraseFromParent();
 }
 
