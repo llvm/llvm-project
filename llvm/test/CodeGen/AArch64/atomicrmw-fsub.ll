@@ -916,9 +916,8 @@ define <2 x float> @test_atomicrmw_fsub_v2f32_seq_cst_align8(ptr %ptr, <2 x floa
 ; SOFTFP-NOLSE-NEXT:    mov w0, w22
 ; SOFTFP-NOLSE-NEXT:    mov w1, w21
 ; SOFTFP-NOLSE-NEXT:    bl __subsf3
-; SOFTFP-NOLSE-NEXT:    mov w8, w0
 ; SOFTFP-NOLSE-NEXT:    mov w9, w22
-; SOFTFP-NOLSE-NEXT:    // kill: def $w23 killed $w23 killed $x23 def $x23
+; SOFTFP-NOLSE-NEXT:    mov w8, w0
 ; SOFTFP-NOLSE-NEXT:    orr x8, x8, x24, lsl #32
 ; SOFTFP-NOLSE-NEXT:    orr x9, x9, x23, lsl #32
 ; SOFTFP-NOLSE-NEXT:  .LBB9_2: // %cmpxchg.start

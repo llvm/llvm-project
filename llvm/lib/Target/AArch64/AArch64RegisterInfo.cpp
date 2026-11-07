@@ -1461,15 +1461,6 @@ bool AArch64RegisterInfo::shouldCoalesce(
       !MF.getSubtarget<AArch64Subtarget>().enableSRLTSubregToRegMitigation())
     return false;
 
-  if (MI->isCopy() &&
-      ((DstRC->getID() == AArch64::GPR64RegClassID) ||
-       (DstRC->getID() == AArch64::GPR64commonRegClassID)) &&
-      MI->getOperand(0).getSubReg() && MI->getOperand(1).getSubReg())
-    // Do not coalesce in the case of a 32-bit subregister copy
-    // which implements a 32 to 64 bit zero extension
-    // which relies on the upper 32 bits being zeroed.
-    return false;
-
   auto IsCoalescerBarrier = [](const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AArch64::COALESCER_BARRIER_FPR16:
