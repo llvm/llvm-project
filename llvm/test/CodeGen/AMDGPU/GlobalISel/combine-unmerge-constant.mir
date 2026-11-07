@@ -84,7 +84,6 @@ body: |
     $vgpr1 = COPY %5(s32)
 ...
 ---
----
 name: unmerge_constant_after_multiple_copies
 legalized: true
 regBankSelected: true
