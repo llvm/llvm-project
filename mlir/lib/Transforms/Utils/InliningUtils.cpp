@@ -149,7 +149,10 @@ bool InlinerInterface::allowSingleBlockOptimization(
   if (inlinedBlocks.empty()) {
     return true;
   }
-  auto *handler = getInterfaceFor(inlinedBlocks.begin()->getParentOp());
+  // The fast path hands the terminator to the interface of the terminator's
+  // dialect (see handleTerminator), so that interface decides whether the fast
+  // path is allowed.
+  auto *handler = getInterfaceFor(inlinedBlocks.begin()->getTerminator());
   assert(handler && "expected valid dialect handler");
   return handler->allowSingleBlockOptimization(inlinedBlocks);
 }
