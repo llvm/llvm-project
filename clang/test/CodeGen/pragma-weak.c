@@ -21,6 +21,10 @@
 // CHECK-DAG: @undecfunc_alias2 = weak{{.*}} alias void (), ptr @undecfunc
 // CHECK-DAG: @undecfunc_alias3 = weak{{.*}} alias void (), ptr @undecfunc
 // CHECK-DAG: @undecfunc_alias4 = weak{{.*}} alias void (), ptr @undecfunc
+// CHECK-DAG: @predecl_alias = weak{{.*}} alias i32 (i32), ptr @__predecl_alias
+// CHECK-DAG: @predecl_noproto_alias = weak{{.*}} alias i32 (...), ptr @__predecl_noproto_alias
+// CHECK-DAG: @predecl_alias2 = weak{{.*}} alias i32 (i32), ptr @__predecl_alias2
+// CHECK-DAG: @predecl_var_alias = weak{{.*}} alias i32, ptr @__predecl_var_alias
 
 
 
@@ -148,6 +152,39 @@ __attribute((noinline,const)) int __xxx(void) { return 0; }
 #pragma weak undecfunc_alias2 = undecfunc
 void undecfunc_alias2(void);
 void undecfunc(void) { }
+
+///////////// GH35478, GH56760: the weak name is declared before the pragma. The
+// pragma must apply to that declaration rather than introduce a second one, so
+// uses of the name stay unambiguous.
+int predecl_alias(int), __predecl_alias(int);
+#pragma weak predecl_alias = __predecl_alias
+int __predecl_alias(int i) { return 0; }
+int use_predecl_alias(void) { return predecl_alias(0); }
+// CHECK-LABEL: define{{.*}} i32 @use_predecl_alias()
+// CHECK: call i32 @predecl_alias(i32 noundef 0)
+
+// Same, without a prototype (GH35478).
+extern int predecl_noproto_alias();
+#pragma weak predecl_noproto_alias = __predecl_noproto_alias
+int __predecl_noproto_alias() { return 0; }
+int use_predecl_noproto_alias(void) { return predecl_noproto_alias(); }
+// CHECK-LABEL: define{{.*}} i32 @use_predecl_noproto_alias()
+// CHECK: call i32 (...) @predecl_noproto_alias()
+
+// Same, but with the pragma preceding both declarations.
+#pragma weak predecl_alias2 = __predecl_alias2
+int predecl_alias2(int), __predecl_alias2(int);
+int __predecl_alias2(int i) { return 0; }
+int use_predecl_alias2(void) { return predecl_alias2(0); }
+// CHECK-LABEL: define{{.*}} i32 @use_predecl_alias2()
+// CHECK: call i32 @predecl_alias2(i32 noundef 0)
+
+extern int predecl_var_alias;
+int __predecl_var_alias = 3;
+#pragma weak predecl_var_alias = __predecl_var_alias
+int use_predecl_var_alias(void) { return predecl_var_alias; }
+// CHECK-LABEL: define{{.*}} i32 @use_predecl_var_alias()
+// CHECK: load i32, ptr @predecl_var_alias
 
 ///////////// PR10878: Make sure we can call a weak alias
 void SHA512Pad(void *context) {}
