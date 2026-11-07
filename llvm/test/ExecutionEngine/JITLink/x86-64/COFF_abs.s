@@ -3,11 +3,14 @@
 # RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec %t 2>&1 \
 # RUN:              | FileCheck %s
 #
-# Check absolute symbol is created with a correct value.
+# Check absolute symbols are created with a correct value, and that only
+# external ones get default scope.
 #
 # CHECK: Creating graph symbols...
 # CHECK:   6: Creating defined graph symbol for COFF symbol "abs" in (absolute) (index: -1)
 # CHECK-NEXT:  0x53 (addressable + 0x00000000): size: 0x00000000, linkage: strong, scope: local, dead  -   abs
+# CHECK:   7: Creating defined graph symbol for COFF symbol "ext_abs" in (absolute) (index: -1)
+# CHECK-NEXT:  0x54 (addressable + 0x00000000): size: 0x00000000, linkage: strong, scope: default, dead  -   ext_abs
 
 	.text
 	.def	abs;
@@ -16,6 +19,13 @@
 	.endef
 	.globl  abs
 .set abs, 0x53
+
+	.def	ext_abs;
+	.scl	2;
+	.type	0;
+	.endef
+	.globl  ext_abs
+.set ext_abs, 0x54
 
 	.def	main;
 	.scl	2;
