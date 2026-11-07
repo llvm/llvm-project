@@ -16,6 +16,7 @@
       font-style: italic;
    }
   .complete { background-color: #99FF99; }
+  .experimental { background-color: #FFB000 }
 </style>
 ```
 
@@ -35,4 +36,7 @@
 :::
 
 :::{role} complete
+:::
+
+:::{role} experimental
 :::

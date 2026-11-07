@@ -391,8 +391,6 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addReg(X86::NoRegister)
           .addMemOperand(
               MBB->getParent()->getMachineMemOperand(LMMO, Offset, Size));
-  if (LoadBase.isReg())
-    getBaseOperand(NewLoad).setIsKill(false);
   LLVM_DEBUG(NewLoad->dump());
   // If the load and store are consecutive, use the loadInst location to
   // reduce register pressure.
@@ -411,11 +409,6 @@ void X86AvoidSFBImpl::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addReg(Reg1)
           .addMemOperand(
               MBB->getParent()->getMachineMemOperand(SMMO, Offset, Size));
-  if (StoreBase.isReg())
-    getBaseOperand(NewStore).setIsKill(false);
-  MachineOperand &StoreSrcVReg = StoreInst->getOperand(X86::AddrNumOperands);
-  assert(StoreSrcVReg.isReg() && "Expected virtual register");
-  NewStore->getOperand(X86::AddrNumOperands).setIsKill(StoreSrcVReg.isKill());
   LLVM_DEBUG(NewStore->dump());
 }
 
@@ -473,31 +466,6 @@ void X86AvoidSFBImpl::buildCopies(int Size, MachineInstr *LoadInst,
     }
   }
   assert(Size == 0 && "Wrong size division");
-}
-
-static void updateKillStatus(MachineInstr *LoadInst, MachineInstr *StoreInst) {
-  MachineOperand &LoadBase = getBaseOperand(LoadInst);
-  MachineOperand &StoreBase = getBaseOperand(StoreInst);
-  auto *StorePrevNonDbgInstr =
-      prev_nodbg(MachineBasicBlock::instr_iterator(StoreInst),
-                 LoadInst->getParent()->instr_begin())
-          .getNodePtr();
-  if (LoadBase.isReg()) {
-    MachineInstr *LastLoad = LoadInst->getPrevNode();
-    // If the original load and store to xmm/ymm were consecutive
-    // then the partial copies were also created in
-    // a consecutive order to reduce register pressure,
-    // and the location of the last load is before the last store.
-    if (StorePrevNonDbgInstr == LoadInst)
-      LastLoad = LoadInst->getPrevNode()->getPrevNode();
-    getBaseOperand(LastLoad).setIsKill(LoadBase.isKill());
-  }
-  if (StoreBase.isReg()) {
-    MachineInstr *StInst = StoreInst;
-    if (StorePrevNonDbgInstr == LoadInst)
-      StInst = LoadInst;
-    getBaseOperand(StInst->getPrevNode()).setIsKill(StoreBase.isKill());
-  }
 }
 
 bool X86AvoidSFBImpl::alias(const MachineMemOperand &Op1,
@@ -694,7 +662,6 @@ bool X86AvoidSFBImpl::runOnMachineFunction(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "Replaced with:\n");
     removeRedundantBlockingStores(BlockingStoresDispSizeMap);
     breakBlockedCopies(LoadInst, StoreInst, BlockingStoresDispSizeMap);
-    updateKillStatus(LoadInst, StoreInst);
     ForRemoval.push_back(LoadInst);
     ForRemoval.push_back(StoreInst);
   }

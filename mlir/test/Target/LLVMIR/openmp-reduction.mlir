@@ -79,6 +79,35 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
+omp.declare_reduction @add_f32 : f32 init {
+^bb0(%arg: f32):
+  %zero = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield(%zero : f32)
+} combiner {
+^bb0(%lhs: f32, %rhs: f32):
+  %sum = llvm.fadd %lhs, %rhs : f32
+  omp.yield(%sum : f32)
+}
+
+// A wsloop with nowait must not emit a barrier before or after the reduction.
+// CHECK-LABEL: define void @wsloop_reduction_nowait(
+// CHECK-NOT:   @__kmpc_barrier
+// CHECK:       call i32 @__kmpc_reduce_nowait(
+// CHECK-NOT:   @__kmpc_barrier
+// CHECK:       call void @__kmpc_end_reduce_nowait(
+// CHECK-NOT:   @__kmpc_barrier
+// CHECK:       {{^}}}
+llvm.func @wsloop_reduction_nowait(%sum: !llvm.ptr, %lb: i64, %ub: i64, %step: i64) {
+  omp.wsloop nowait reduction(@add_f32 %sum -> %private : !llvm.ptr) {
+    omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):

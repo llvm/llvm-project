@@ -19,6 +19,7 @@ globals().update(common_conf(tags))
 myst_enable_extensions += ["substitution"]
 myst_substitutions = {
     "Complete": "{complete}`Complete`",
+    "Experimental": "{experimental}`Experimental`",
     "InProgress": "{inprogress}`In Progress`",
     "NotStarted": "{notstarted}`Not Started`",
     "NothingToDo": "{nothingtodo}`Nothing To Do`",

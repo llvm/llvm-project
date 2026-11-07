@@ -324,7 +324,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
       ES, std::make_unique<InProcessMemoryManager>(4096)};
 
   auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-      ES, TestDylibMgr, {}, [&](JITDylib &JD, SymbolMap Syms) {
+      TestDylibMgr, {}, [&](JITDylib &JD, SymbolMap Syms) {
         auto G =
             absoluteSymbolsLinkGraph(Triple("x86_64-apple-darwin"),
                                      ES.getSymbolStringPool(), std::move(Syms));

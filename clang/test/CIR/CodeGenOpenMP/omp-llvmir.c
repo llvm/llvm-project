@@ -88,9 +88,6 @@
 // LLVM: br i1 %[[CMP]], label %[[PAR_REGION4:.*]], label %[[PAR_REGION6:.*]]
 
 // LLVM: [[PAR_REGION6]]:
-// LLVM: br label %[[PAR_REGION7:.*]]
-
-// LLVM: [[PAR_REGION7]]:
 // LLVM: br label %[[REGION_CONT:.*]]
 
 // LLVM: [[REGION_CONT]]:
