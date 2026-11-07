@@ -7,6 +7,11 @@
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:31-[[@LINE-1]]:31}:"__attribute__(("
 // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:49-[[@LINE-2]]:49}:"))"
 
+#pragma clang attribute push(const, apply_to=function)
+// CHECK: note: use the GNU '__attribute__' syntax
+// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:30-[[@LINE-2]]:30}:"__attribute__(("
+// CHECK: fix-it:{{.*}}:{[[@LINE-3]]:36-[[@LINE-3]]:36}:"))"
+
 #pragma clang attribute push(__attribute__((annotate("test"))), apply_to = any( enum, function, function, namespace, function ))
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:97-[[@LINE-1]]:107}:""
 // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:118-[[@LINE-2]]:127}:""
