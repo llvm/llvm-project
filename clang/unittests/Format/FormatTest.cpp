@@ -15605,6 +15605,49 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
                "  return 42;\n"
                "}",
                CustomMixed);
+
+  // Test with Other = true, Empty = false
+  FormatStyle CustomOther = getLLVMStyle();
+  CustomOther.AllowShortFunctionsOnASingleLine = {/*Empty=*/false,
+                                                  /*Inline=*/false,
+                                                  /*Other=*/true};
+
+  // Non-empty functions should be on a single line
+  verifyFormat("int f() { return 42; }", CustomOther);
+  verifyFormat("class C {\n"
+               "  int f() { return 42; }\n"
+               "};",
+               CustomOther);
+
+  // Empty functions should be multi-line
+  verifyFormat("int f() {\n"
+               "}",
+               CustomOther);
+  verifyFormat("class C {\n"
+               "  int f() {\n"
+               "  }\n"
+               "};",
+               CustomOther);
+
+  // Test with AfterFunction = true
+  CustomOther.BreakBeforeBraces = FormatStyle::BS_Custom;
+  CustomOther.BraceWrapping.AfterFunction = true;
+  verifyFormat("int f() { return 42; }", CustomOther);
+  verifyFormat("int f()\n"
+               "{\n"
+               "}",
+               CustomOther);
+
+  // Inline = true still merges empty functions in a class
+  CustomOther.AllowShortFunctionsOnASingleLine.Inline = true;
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               CustomOther);
+  verifyFormat("int f()\n"
+               "{\n"
+               "}",
+               CustomOther);
 }
 
 TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
