@@ -30,6 +30,62 @@ def too_many_perms : GICombineRule<
   ),
   (apply (COPY $dst, (i32 0)))>;
 
+// Each commutable instruction doubles the number of permutations.
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: cannot emit rule 'too_many_commuted_perms'; 32 permutations would be emitted, but the max is 16
+def too_many_commuted_perms : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $dst, $a, 0),
+         (G_AND $a, $b, 0),
+         (G_AND $b, $c, 0),
+         (G_AND $c, $d, 0),
+         (G_AND $d, $e, 0)),
+  (apply (COPY $dst, (i32 0)))>;
+
+// Reject before allocating millions of permutations.
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: cannot emit rule 'exponential_commuted_perms'; 33554432 permutations would be emitted, but the max is 16
+def exponential_commuted_perms : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $dst, $a0, 0),
+         (G_AND $a0, $a1, 0),
+         (G_AND $a1, $a2, 0),
+         (G_AND $a2, $a3, 0),
+         (G_AND $a3, $a4, 0),
+         (G_AND $a4, $a5, 0),
+         (G_AND $a5, $a6, 0),
+         (G_AND $a6, $a7, 0),
+         (G_AND $a7, $a8, 0),
+         (G_AND $a8, $a9, 0),
+         (G_AND $a9, $a10, 0),
+         (G_AND $a10, $a11, 0),
+         (G_AND $a11, $a12, 0),
+         (G_AND $a12, $a13, 0),
+         (G_AND $a13, $a14, 0),
+         (G_AND $a14, $a15, 0),
+         (G_AND $a15, $a16, 0),
+         (G_AND $a16, $a17, 0),
+         (G_AND $a17, $a18, 0),
+         (G_AND $a18, $a19, 0),
+         (G_AND $a19, $a20, 0),
+         (G_AND $a20, $a21, 0),
+         (G_AND $a21, $a22, 0),
+         (G_AND $a22, $a23, 0),
+         (G_AND $a23, $a24, 0)),
+  (apply (COPY $dst, (i32 0)))>;
+
+def CommutedAlts : GICombinePatFrag<
+  (outs root:$dst), (ins $src),
+  [(pattern (G_AND $dst, $src, 0)),
+   (pattern (G_OR $dst, $src, 0)),
+   (pattern (G_XOR $dst, $src, 0))]>;
+
+// The limit also applies to the sum across PatFrag alternatives.
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: cannot emit rule 'cumulative_commuted_perms'; 6 permutations would be emitted, but the max is 4
+let MaxPermutations = 4 in
+def cumulative_commuted_perms : GICombineRule<
+  (defs root:$dst),
+  (match (CommutedAlts $dst, $src)),
+  (apply (GIReplaceReg $dst, $src))>;
+
 def DummyCXXPF: GICombinePatFrag<
     (outs),
     (ins gi_mo:$in),
@@ -288,6 +344,9 @@ def badtype_for_flagref_in_apply : GICombineRule<
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
   too_many_perms,
+  too_many_commuted_perms,
+  exponential_commuted_perms,
+  cumulative_commuted_perms,
   undef_livein,
   out_must_be_root,
   bad_out_type,

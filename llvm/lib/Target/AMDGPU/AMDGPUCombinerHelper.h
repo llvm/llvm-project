@@ -44,7 +44,7 @@ public:
                                    Register Src1, Register Src2) const;
 
   bool matchCombineFmulWithSelectToFldexp(
-      MachineInstr &MI, MachineInstr &Sel,
+      MachineInstr &MI, MachineInstr &Sel, Register XReg,
       std::function<void(MachineIRBuilder &)> &MatchInfo) const;
 
   bool matchConstantIs32BitMask(Register Reg) const;
