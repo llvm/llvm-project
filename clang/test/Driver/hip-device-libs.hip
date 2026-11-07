@@ -136,6 +136,134 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
 
+// Individual math options override earlier umbrella options.
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math -fno-finite-math-only \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=UNSAFE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math -fno-finite-math-only -fno-associative-math \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=UNSAFE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-finite-math-only -ffast-math \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math -fno-finite-math-only -ffinite-math-only \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math -fno-fast-math -ffinite-math-only \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffinite-math-only -fno-fast-math \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math -fno-associative-math \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math -fhonor-infinities \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=UNSAFE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math -fhonor-nans \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=UNSAFE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fhonor-infinities -ffast-math \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fhonor-nans -ffast-math \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-honor-infinities -fno-honor-nans \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-honor-infinities -fno-honor-nans -fno-finite-math-only \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-finite-math-only -fno-honor-infinities -fno-honor-nans \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+
+// FP models and the effective -Ofast setting also affect finite-only math.
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-honor-infinities -fno-honor-nans -ffp-model=precise \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-honor-infinities -fno-honor-nans -ffp-model=fast \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-honor-infinities -fno-honor-nans -ffp-model=strict \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-finite-math-only -ffp-model=aggressive \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffp-model=aggressive -fno-finite-math-only \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffp-model=precise -fno-honor-infinities -fno-honor-nans \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffp-model=aggressive -fhonor-infinities \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fhonor-infinities -ffp-model=aggressive \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffast-math -ffp-model=precise \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=UNSAFE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffp-model=precise -ffast-math \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FAST
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -Ofast \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -Ofast -fno-finite-math-only \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -fno-finite-math-only -Ofast \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -Ofast -O2 \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -Ofast -ffp-model=precise \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,ROCMDIR
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffp-model=precise -Ofast \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -ffp-model=aggressive -Ofast -O2 \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=FINITE
+
 // Test -ffinite-math-only
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -ffinite-math-only --rocm-path=%S/Inputs/rocm \
