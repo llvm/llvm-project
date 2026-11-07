@@ -169,10 +169,10 @@ struct BPFUnwindLower : public MachineFunctionPass {
     SmallVector<MachineInstr *, 8> Labels, Resumes;
     SmallSetVector<MachineBasicBlock *, 8> Pads;
 
-    if (const char *Msg = unsupported(MF)) {
+    const char *Msg = unsupported(MF);
+    if (Msg) {
       const Function &F = MF.getFunction();
       F.getContext().diagnose(DiagnosticInfoUnsupported(F, Msg));
-      return false;
     }
 
     for (const LandingPadInfo &LP : MF.getLandingPads())
@@ -216,12 +216,11 @@ struct BPFUnwindLower : public MachineFunctionPass {
     if (Labels.empty() && Resumes.empty())
       return false;
     // There is no unwind_goto after the calls of it.
-    if (!Resumes.empty() && !canUnwind(MF.getFunction())) {
+    if (!Msg && !Resumes.empty() && !canUnwind(MF.getFunction())) {
       const Function &F = MF.getFunction();
       F.getContext().diagnose(DiagnosticInfoUnsupported(
           F, "BPF cannot unwind out of a function that is nounwind or has no "
              "uwtable"));
-      return false;
     }
     for (MachineInstr *MI : Labels)
       MI->eraseFromParent();
