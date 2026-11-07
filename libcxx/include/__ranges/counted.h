@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___RANGES_COUNTED_H
 #define _LIBCPP___RANGES_COUNTED_H
 
+#include <__assert>
 #include <__concepts/convertible_to.h>
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -47,12 +48,14 @@ struct __fn {
        iter_difference_t<_It> __count) noexcept(noexcept(span(std::to_address(__it), static_cast<size_t>(__count))))
   // Deliberately omit return-type SFINAE, because to_address is not SFINAE-friendly
   {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__count >= 0, "views::counted(it, count) called with a negative count");
     return span(std::to_address(__it), static_cast<size_t>(__count));
   }
 
   template <random_access_iterator _It>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __go(_It __it, iter_difference_t<_It> __count) noexcept(
       noexcept(subrange(__it, __it + __count))) -> decltype(subrange(__it, __it + __count)) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__count >= 0, "views::counted(it, count) called with a negative count");
     return subrange(__it, __it + __count);
   }
 
