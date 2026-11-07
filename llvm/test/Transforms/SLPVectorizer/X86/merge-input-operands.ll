@@ -2,14 +2,16 @@
 ; RUN: opt -S -mtriple=x86_64-unknown-linux -mcpu=znver4 -passes=slp-vectorizer < %s | FileCheck %s
 
 ; The MergeInputOps transform targets a binary-operator bundle whose two operand
-; bundles each reuse a small set of scalars. Here a 4-wide fmul has
-;   left  operands = [s0, s1, s0, s1]
-;   right operands = [s2, s3, s3, s2]
-; and the four sums s0..s3 are all fadd. With merging enabled the union
-; [s0,s1,s2,s3] becomes one <4 x float> add feeding two reuse shuffles; with it
-; disabled the sums are built as two separate <2 x float> adds.
-define void @merge_products_of_sums(ptr %A, ptr %Out) {
-; CHECK-LABEL: @merge_products_of_sums(
+; columns each reuse a small set of scalars. For a 4-wide fmul with
+;   left  operands = [a0, a1, a0, a1]
+;   right operands = [a2, a3, a3, a2]
+; the union [a0,a1,a2,a3] becomes one node feeding two lane-select shuffles,
+; instead of two narrow nodes each widened back to four lanes. The pool has to
+; be a leaf, so the sums below are not merged.
+
+define void @no_merge_products_of_sums(ptr %A, ptr %Out) {
+;
+; CHECK-LABEL: @no_merge_products_of_sums(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
 ; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A]], i64 4
@@ -67,6 +69,7 @@ entry:
 ; merged bundle would be an alt-shuffle node. Merging must be rejected and the
 ; output must be identical with the flag on or off.
 define void @no_merge_mixed_opcode(ptr %A, ptr %Out) {
+;
 ; CHECK-LABEL: @no_merge_mixed_opcode(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V:%.*]] = load <16 x i32>, ptr [[A:%.*]], align 64
@@ -127,6 +130,7 @@ entry:
 ; Negative: a value (s0) is used on both operand sides, so the merged bundle
 ; would contain a duplicate lane. Merging must be rejected.
 define void @no_merge_overlapping_operands(ptr %A, ptr %Out) {
+;
 ; CHECK-LABEL: @no_merge_overlapping_operands(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, ptr [[A:%.*]], i64 1
@@ -175,24 +179,16 @@ entry:
   ret void
 }
 
-; Flag propagation: every merged scalar (the four fadd sums) carries the same
-; fast-math flags, so the single merged fadd must keep the full "fast" flag set.
+; Flag propagation: every lane of the merged node carries the same fast-math
+; flags, so the single vector fmul must keep the full "fast" set.
 define void @merge_fmf_uniform(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_fmf_uniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr float, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -203,25 +199,10 @@ entry:
   %a2 = load float, ptr %p2
   %p3 = getelementptr float, ptr %A, i64 3
   %a3 = load float, ptr %p3
-  %p4 = getelementptr float, ptr %A, i64 4
-  %a4 = load float, ptr %p4
-  %p5 = getelementptr float, ptr %A, i64 5
-  %a5 = load float, ptr %p5
-  %p6 = getelementptr float, ptr %A, i64 6
-  %a6 = load float, ptr %p6
-  %p7 = getelementptr float, ptr %A, i64 7
-  %a7 = load float, ptr %p7
-
-  %s0 = fadd fast float %a0, %a4
-  %s1 = fadd fast float %a1, %a5
-  %s2 = fadd fast float %a2, %a6
-  %s3 = fadd fast float %a3, %a7
-
-  %m0 = fmul fast float %s0, %s2
-  %m1 = fmul fast float %s1, %s3
-  %m2 = fmul fast float %s0, %s3
-  %m3 = fmul fast float %s1, %s2
-
+  %m0 = fmul fast float %a0, %a2
+  %m1 = fmul fast float %a1, %a3
+  %m2 = fmul fast float %a0, %a3
+  %m3 = fmul fast float %a1, %a2
   store float %m0, ptr %Out
   %q1 = getelementptr float, ptr %Out, i64 1
   store float %m1, ptr %q1
@@ -232,25 +213,16 @@ entry:
   ret void
 }
 
-; Flag propagation: the merged scalars carry different fast-math flags. Two sums
-; are "fast" and two are only "nnan ninf", so the single merged fadd must keep
-; only the common subset ("nnan ninf"), not the full "fast" set.
+; Flag propagation: the lanes carry different fast-math flags, so the single
+; vector fmul must keep only the common subset ("nnan").
 define void @merge_fmf_mixed(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_fmf_mixed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr float, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd nnan ninf <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -261,25 +233,10 @@ entry:
   %a2 = load float, ptr %p2
   %p3 = getelementptr float, ptr %A, i64 3
   %a3 = load float, ptr %p3
-  %p4 = getelementptr float, ptr %A, i64 4
-  %a4 = load float, ptr %p4
-  %p5 = getelementptr float, ptr %A, i64 5
-  %a5 = load float, ptr %p5
-  %p6 = getelementptr float, ptr %A, i64 6
-  %a6 = load float, ptr %p6
-  %p7 = getelementptr float, ptr %A, i64 7
-  %a7 = load float, ptr %p7
-
-  %s0 = fadd fast float %a0, %a4
-  %s1 = fadd fast float %a1, %a5
-  %s2 = fadd nnan ninf float %a2, %a6
-  %s3 = fadd nnan ninf float %a3, %a7
-
-  %m0 = fmul fast float %s0, %s2
-  %m1 = fmul fast float %s1, %s3
-  %m2 = fmul fast float %s0, %s3
-  %m3 = fmul fast float %s1, %s2
-
+  %m0 = fmul fast float %a0, %a2
+  %m1 = fmul nnan float %a1, %a3
+  %m2 = fmul fast float %a0, %a3
+  %m3 = fmul nnan ninf float %a1, %a2
   store float %m0, ptr %Out
   %q1 = getelementptr float, ptr %Out, i64 1
   store float %m1, ptr %q1
@@ -290,24 +247,16 @@ entry:
   ret void
 }
 
-; Flag propagation: integer wrap flags. Every merged scalar (the four adds)
-; carries "nsw nuw", so the single merged add must keep both flags.
+; Flag propagation: every lane carries "nsw nuw", so the single vector mul
+; must keep both.
 define void @merge_int_wrap_uniform(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_int_wrap_uniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr i32, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -318,25 +267,10 @@ entry:
   %a2 = load i32, ptr %p2
   %p3 = getelementptr i32, ptr %A, i64 3
   %a3 = load i32, ptr %p3
-  %p4 = getelementptr i32, ptr %A, i64 4
-  %a4 = load i32, ptr %p4
-  %p5 = getelementptr i32, ptr %A, i64 5
-  %a5 = load i32, ptr %p5
-  %p6 = getelementptr i32, ptr %A, i64 6
-  %a6 = load i32, ptr %p6
-  %p7 = getelementptr i32, ptr %A, i64 7
-  %a7 = load i32, ptr %p7
-
-  %s0 = add nsw nuw i32 %a0, %a4
-  %s1 = add nsw nuw i32 %a1, %a5
-  %s2 = add nsw nuw i32 %a2, %a6
-  %s3 = add nsw nuw i32 %a3, %a7
-
-  %m0 = mul i32 %s0, %s2
-  %m1 = mul i32 %s1, %s3
-  %m2 = mul i32 %s0, %s3
-  %m3 = mul i32 %s1, %s2
-
+  %m0 = mul nsw nuw i32 %a0, %a2
+  %m1 = mul nsw nuw i32 %a1, %a3
+  %m2 = mul nsw nuw i32 %a0, %a3
+  %m3 = mul nsw nuw i32 %a1, %a2
   store i32 %m0, ptr %Out
   %q1 = getelementptr i32, ptr %Out, i64 1
   store i32 %m1, ptr %q1
@@ -347,24 +281,16 @@ entry:
   ret void
 }
 
-; Flag propagation: mixed integer wrap flags. Two adds carry "nsw nuw" and two
-; carry only "nsw", so the single merged add must keep only "nsw".
+; Flag propagation: two lanes carry "nsw nuw" and two only "nsw", so the
+; single vector mul must keep only "nsw".
 define void @merge_int_wrap_mixed(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_int_wrap_mixed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr i32, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -375,25 +301,10 @@ entry:
   %a2 = load i32, ptr %p2
   %p3 = getelementptr i32, ptr %A, i64 3
   %a3 = load i32, ptr %p3
-  %p4 = getelementptr i32, ptr %A, i64 4
-  %a4 = load i32, ptr %p4
-  %p5 = getelementptr i32, ptr %A, i64 5
-  %a5 = load i32, ptr %p5
-  %p6 = getelementptr i32, ptr %A, i64 6
-  %a6 = load i32, ptr %p6
-  %p7 = getelementptr i32, ptr %A, i64 7
-  %a7 = load i32, ptr %p7
-
-  %s0 = add nsw nuw i32 %a0, %a4
-  %s1 = add nsw nuw i32 %a1, %a5
-  %s2 = add nsw i32 %a2, %a6
-  %s3 = add nsw i32 %a3, %a7
-
-  %m0 = mul i32 %s0, %s2
-  %m1 = mul i32 %s1, %s3
-  %m2 = mul i32 %s0, %s3
-  %m3 = mul i32 %s1, %s2
-
+  %m0 = mul nsw nuw i32 %a0, %a2
+  %m1 = mul nsw i32 %a1, %a3
+  %m2 = mul nsw nuw i32 %a0, %a3
+  %m3 = mul nsw i32 %a1, %a2
   store i32 %m0, ptr %Out
   %q1 = getelementptr i32, ptr %Out, i64 1
   store i32 %m1, ptr %q1
@@ -404,24 +315,15 @@ entry:
   ret void
 }
 
-; Flag propagation: the "exact" flag on shifts. Every merged scalar (the four
-; lshr ops) is "exact", so the single merged lshr must keep "exact".
+; Flag propagation: the "exact" flag on shifts.
 define void @merge_exact_shift(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_exact_shift(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr i32, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr exact <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr exact <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -432,141 +334,10 @@ entry:
   %a2 = load i32, ptr %p2
   %p3 = getelementptr i32, ptr %A, i64 3
   %a3 = load i32, ptr %p3
-  %p4 = getelementptr i32, ptr %A, i64 4
-  %a4 = load i32, ptr %p4
-  %p5 = getelementptr i32, ptr %A, i64 5
-  %a5 = load i32, ptr %p5
-  %p6 = getelementptr i32, ptr %A, i64 6
-  %a6 = load i32, ptr %p6
-  %p7 = getelementptr i32, ptr %A, i64 7
-  %a7 = load i32, ptr %p7
-
-  %s0 = lshr exact i32 %a0, %a4
-  %s1 = lshr exact i32 %a1, %a5
-  %s2 = lshr exact i32 %a2, %a6
-  %s3 = lshr exact i32 %a3, %a7
-
-  %m0 = mul i32 %s0, %s2
-  %m1 = mul i32 %s1, %s3
-  %m2 = mul i32 %s0, %s3
-  %m3 = mul i32 %s1, %s2
-
-  store i32 %m0, ptr %Out
-  %q1 = getelementptr i32, ptr %Out, i64 1
-  store i32 %m1, ptr %q1
-  %q2 = getelementptr i32, ptr %Out, i64 2
-  store i32 %m2, ptr %q2
-  %q3 = getelementptr i32, ptr %Out, i64 3
-  store i32 %m3, ptr %q3
-  ret void
-}
-
-; Flag propagation for the merged-inputs transform: the four fmul lanes carry
-; different fast-math flags ("fast" and "nnan ninf"), while the four fadd sums
-; feeding them are uniformly "fast".
-define void @merge_fmf_mixed_user(ptr %A, ptr %Out) {
-; CHECK-LABEL: @merge_fmf_mixed_user(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr float, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul nnan ninf <4 x float> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    ret void
-;
-entry:
-  %a0 = load float, ptr %A
-  %p1 = getelementptr float, ptr %A, i64 1
-  %a1 = load float, ptr %p1
-  %p2 = getelementptr float, ptr %A, i64 2
-  %a2 = load float, ptr %p2
-  %p3 = getelementptr float, ptr %A, i64 3
-  %a3 = load float, ptr %p3
-  %p4 = getelementptr float, ptr %A, i64 4
-  %a4 = load float, ptr %p4
-  %p5 = getelementptr float, ptr %A, i64 5
-  %a5 = load float, ptr %p5
-  %p6 = getelementptr float, ptr %A, i64 6
-  %a6 = load float, ptr %p6
-  %p7 = getelementptr float, ptr %A, i64 7
-  %a7 = load float, ptr %p7
-
-  %s0 = fadd fast float %a0, %a4
-  %s1 = fadd fast float %a1, %a5
-  %s2 = fadd fast float %a2, %a6
-  %s3 = fadd fast float %a3, %a7
-
-  %m0 = fmul fast float %s0, %s2
-  %m1 = fmul fast float %s1, %s3
-  %m2 = fmul nnan ninf float %s0, %s3
-  %m3 = fmul nnan ninf float %s1, %s2
-
-  store float %m0, ptr %Out
-  %q1 = getelementptr float, ptr %Out, i64 1
-  store float %m1, ptr %q1
-  %q2 = getelementptr float, ptr %Out, i64 2
-  store float %m2, ptr %q2
-  %q3 = getelementptr float, ptr %Out, i64 3
-  store float %m3, ptr %q3
-  ret void
-}
-
-; Flag propagation for the merged-inputs transform: integer wrap flags. Two mul
-; lanes carry "nsw nuw" and two carry only "nsw", while the four add sums
-; feeding them uniformly carry both.
-define void @merge_int_wrap_mixed_user(ptr %A, ptr %Out) {
-; CHECK-LABEL: @merge_int_wrap_mixed_user(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr i32, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul nsw <4 x i32> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT:%.*]], align 4
-; CHECK-NEXT:    ret void
-;
-entry:
-  %a0 = load i32, ptr %A
-  %p1 = getelementptr i32, ptr %A, i64 1
-  %a1 = load i32, ptr %p1
-  %p2 = getelementptr i32, ptr %A, i64 2
-  %a2 = load i32, ptr %p2
-  %p3 = getelementptr i32, ptr %A, i64 3
-  %a3 = load i32, ptr %p3
-  %p4 = getelementptr i32, ptr %A, i64 4
-  %a4 = load i32, ptr %p4
-  %p5 = getelementptr i32, ptr %A, i64 5
-  %a5 = load i32, ptr %p5
-  %p6 = getelementptr i32, ptr %A, i64 6
-  %a6 = load i32, ptr %p6
-  %p7 = getelementptr i32, ptr %A, i64 7
-  %a7 = load i32, ptr %p7
-
-  %s0 = add nsw nuw i32 %a0, %a4
-  %s1 = add nsw nuw i32 %a1, %a5
-  %s2 = add nsw nuw i32 %a2, %a6
-  %s3 = add nsw nuw i32 %a3, %a7
-
-  %m0 = mul nsw nuw i32 %s0, %s2
-  %m1 = mul nsw nuw i32 %s1, %s3
-  %m2 = mul nsw i32 %s0, %s3
-  %m3 = mul nsw i32 %s1, %s2
-
+  %m0 = lshr exact i32 %a0, %a2
+  %m1 = lshr exact i32 %a1, %a3
+  %m2 = lshr exact i32 %a0, %a3
+  %m3 = lshr exact i32 %a1, %a2
   store i32 %m0, ptr %Out
   %q1 = getelementptr i32, ptr %Out, i64 1
   store i32 %m1, ptr %q1
@@ -581,15 +352,14 @@ entry:
 ; the reorder along with the operands; otherwise the shuffle masks describe
 ; the pre-reorder lanes and the stores get the wrong products.
 define void @merge_reorder_load(ptr %A, ptr %Out) {
+;
 ; CHECK-LABEL: @merge_reorder_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -614,73 +384,10 @@ entry:
   ret void
 }
 
-; The shl demotion checker reads the shift amounts from input column 1, which
-; a merged node holds in its recorded columns rather than in operand 1.
-define void @merge_shl_minbw(ptr %A, ptr %Out) {
-; CHECK-LABEL: @merge_shl_minbw(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = load i8, ptr [[A:%.*]], align 1
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[A]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[A]], i64 2
-; CHECK-NEXT:    [[A2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[A]], i64 3
-; CHECK-NEXT:    [[A3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[A0]] to i32
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[A1]] to i32
-; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[A2]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[A3]] to i32
-; CHECK-NEXT:    [[M0:%.*]] = shl i32 [[Z0]], [[Z2]]
-; CHECK-NEXT:    [[M1:%.*]] = shl i32 [[Z1]], [[Z3]]
-; CHECK-NEXT:    [[M2:%.*]] = shl i32 [[Z0]], [[Z3]]
-; CHECK-NEXT:    [[M3:%.*]] = shl i32 [[Z1]], [[Z2]]
-; CHECK-NEXT:    [[T0:%.*]] = trunc i32 [[M0]] to i8
-; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[M1]] to i8
-; CHECK-NEXT:    [[T2:%.*]] = trunc i32 [[M2]] to i8
-; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[M3]] to i8
-; CHECK-NEXT:    store i8 [[T0]], ptr [[OUT:%.*]], align 1
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i8, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store i8 [[T1]], ptr [[Q1]], align 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i8, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store i8 [[T2]], ptr [[Q2]], align 1
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr i8, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store i8 [[T3]], ptr [[Q3]], align 1
-; CHECK-NEXT:    ret void
+; Negative: a select pool is not a leaf.
+define void @no_merge_select_pool(ptr %A, ptr %B, ptr %Out) {
 ;
-entry:
-  %a0 = load i8, ptr %A
-  %p1 = getelementptr i8, ptr %A, i64 1
-  %a1 = load i8, ptr %p1
-  %p2 = getelementptr i8, ptr %A, i64 2
-  %a2 = load i8, ptr %p2
-  %p3 = getelementptr i8, ptr %A, i64 3
-  %a3 = load i8, ptr %p3
-  %z0 = zext i8 %a0 to i32
-  %z1 = zext i8 %a1 to i32
-  %z2 = zext i8 %a2 to i32
-  %z3 = zext i8 %a3 to i32
-  %m0 = shl i32 %z0, %z2
-  %m1 = shl i32 %z1, %z3
-  %m2 = shl i32 %z0, %z3
-  %m3 = shl i32 %z1, %z2
-  %t0 = trunc i32 %m0 to i8
-  %t1 = trunc i32 %m1 to i8
-  %t2 = trunc i32 %m2 to i8
-  %t3 = trunc i32 %m3 to i8
-  store i8 %t0, ptr %Out
-  %q1 = getelementptr i8, ptr %Out, i64 1
-  store i8 %t1, ptr %q1
-  %q2 = getelementptr i8, ptr %Out, i64 2
-  store i8 %t2, ptr %q2
-  %q3 = getelementptr i8, ptr %Out, i64 3
-  store i8 %t3, ptr %q3
-  ret void
-}
-
-; The pool can be any node kind that feeds a binary operator. A select pool
-; is costed with its compare condition's predicate.
-define void @merge_select_pool(ptr %A, ptr %B, ptr %Out) {
-; CHECK-LABEL: @merge_select_pool(
+; CHECK-LABEL: @no_merge_select_pool(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 2
@@ -738,9 +445,10 @@ entry:
   ret void
 }
 
-; A compare pool yields i1 lanes, merged under an i1 xor.
-define void @merge_cmp_pool(ptr %A, ptr %B, ptr %Out) {
-; CHECK-LABEL: @merge_cmp_pool(
+; Negative: a compare pool is not a leaf.
+define void @no_merge_cmp_pool(ptr %A, ptr %B, ptr %Out) {
+;
+; CHECK-LABEL: @no_merge_cmp_pool(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 2
@@ -800,10 +508,10 @@ entry:
   ret void
 }
 
-; An intrinsic call pool is costed as the cheaper of the vector intrinsic and
-; the vector library call.
-define void @merge_call_pool(ptr %A, ptr %Out) {
-; CHECK-LABEL: @merge_call_pool(
+; Negative: an intrinsic call pool is not a leaf.
+define void @no_merge_call_pool(ptr %A, ptr %Out) {
+;
+; CHECK-LABEL: @no_merge_call_pool(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
@@ -845,9 +553,10 @@ entry:
   ret void
 }
 
-; A cast pool.
-define void @merge_sitofp_pool(ptr %A, ptr %Out) {
-; CHECK-LABEL: @merge_sitofp_pool(
+; Negative: a cast pool is not a leaf.
+define void @no_merge_sitofp_pool(ptr %A, ptr %Out) {
+;
+; CHECK-LABEL: @no_merge_sitofp_pool(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
@@ -892,6 +601,7 @@ entry:
 ; An extract pool reuses its source vector, so the merged node itself is free;
 ; the natural columns each permute the source into a narrow vector.
 define void @merge_extractelement_pool(<4 x float> %v, ptr %Out) {
+;
 ; CHECK-LABEL: @merge_extractelement_pool(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x float> [[V:%.*]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -921,14 +631,14 @@ entry:
 
 ; Extractvalues from an aggregate load are reused as one vector load.
 define void @merge_extractvalue_pool(ptr %A, ptr %Out) {
+;
 ; CHECK-LABEL: @merge_extractvalue_pool(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -951,9 +661,9 @@ entry:
   ret void
 }
 
-; Negative: a freeze pool costs nothing either way, so both shapes pay the
-; same two permutes and the natural one is kept.
+; Negative: a freeze pool is not a leaf.
 define void @no_merge_freeze_pool(ptr %A, ptr %Out) {
+;
 ; CHECK-LABEL: @no_merge_freeze_pool(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
@@ -1000,6 +710,7 @@ entry:
 ; postpones it as a gathered load; the rejected merge must not leave that
 ; postponement behind for the natural operand node.
 define void @no_merge_strided_pool(ptr %A, ptr %Out) {
+;
 ; CHECK-LABEL: @no_merge_strided_pool(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 4

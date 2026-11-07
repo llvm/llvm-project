@@ -50,6 +50,8 @@ enum class RecurKind;
 
 namespace llvm::slpvectorizer {
 
+class InstructionsState;
+
 /// Returns the cost of the shuffle instructions with the given \p Kind, vector
 /// type \p Tp and optional \p Mask. Adds SLP-specific cost estimation for
 /// insert subvector pattern.
@@ -77,6 +79,16 @@ InstructionCost
 getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
                    unsigned AddressSpace,
                    const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of one vector node vectorizing the lanes \p VL with the
+/// opcode of \p S. Estimated from the lanes rather than a tree entry, so it can
+/// compare the merged-inputs shape against the natural one before either is
+/// built. \p S must be a plain same-opcode state that can be vectorized as a
+/// node with scalar non-pointer lanes.
+InstructionCost getMergeInputOpsNodeCost(
+    const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+    const InstructionsState &S, ArrayRef<Value *> VL, Type *ScalarTy,
+    TargetTransformInfo::TargetCostKind CostKind);
 
 /// Returns the cost of the cast between the widened strided access type and
 /// the entry vector type.
