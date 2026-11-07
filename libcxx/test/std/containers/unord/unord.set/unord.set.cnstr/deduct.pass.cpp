@@ -273,6 +273,60 @@ int main(int, char**) {
   }
 #endif
 
+  // LWG 2982: Making size_type consistent in associative container deduction guides
+  {
+    using Alloc    = test_allocator<int>;
+    using SizeType = Alloc::size_type;
+    struct OtherType {};
+
+    using Iter = const int*;
+    using Hash = std::hash<int>;
+
+    { // (iter, iter, size, alloc)
+      static_assert(!SFINAEs_away<std::unordered_set, Iter, Iter, OnlyConvertibleTo<SizeType>, Alloc>);
+      static_assert(SFINAEs_away<std::unordered_set, Iter, Iter, OnlyConvertibleTo<OtherType>, Alloc>);
+    }
+
+    { // (iter, iter, size, hash, alloc)
+      static_assert(!SFINAEs_away<std::unordered_set, Iter, Iter, OnlyConvertibleTo<SizeType>, Hash, Alloc>);
+      static_assert(SFINAEs_away<std::unordered_set, Iter, Iter, OnlyConvertibleTo<OtherType>, Hash, Alloc>);
+    }
+
+    using InitList = std::initializer_list<int>;
+
+    { // (init_list, size, alloc)
+      static_assert(!SFINAEs_away<std::unordered_set, InitList, OnlyConvertibleTo<SizeType>, Alloc>);
+      static_assert(SFINAEs_away<std::unordered_set, InitList, OnlyConvertibleTo<OtherType>, Alloc>);
+    }
+
+    { // (init_list, size, hash, alloc)
+      static_assert(!SFINAEs_away<std::unordered_set, InitList, OnlyConvertibleTo<SizeType>, Hash, Alloc>);
+      static_assert(SFINAEs_away<std::unordered_set, InitList, OnlyConvertibleTo<OtherType>, Hash, Alloc>);
+    }
+
+#if TEST_STD_VER >= 23
+    using Range = std::array<int, 0>;
+
+    { // (from_range, range, size, alloc)
+      static_assert(!SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<SizeType>, Alloc>);
+      static_assert(SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<OtherType>, Alloc>);
+    }
+
+    { // (from_range, range, size, hash, alloc)
+      static_assert(!SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<SizeType>, Hash, Alloc>);
+      static_assert(SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<OtherType>, Hash, Alloc>);
+    }
+#endif
+
+    { // (iter, iter, size, alloc) - runtime check
+      const int arr[] = {1, 2, 1, INT_MAX, 3};
+      std::unordered_set s(std::begin(arr), std::end(arr), OnlyConvertibleTo<SizeType>{}, Alloc(0, 45));
+      ASSERT_SAME_TYPE(decltype(s), std::unordered_set<int, std::hash<int>, std::equal_to<int>, Alloc>);
+      assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
+      assert(s.get_allocator().get_id() == 45);
+    }
+  }
+
   UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_set, std::unordered_set<int>>();
 
   return 0;

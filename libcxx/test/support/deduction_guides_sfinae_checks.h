@@ -56,6 +56,17 @@ constexpr bool SFINAEs_away =
 
 struct Empty {};
 
+// `OnlyConvertibleTo` allows implicit conversion strictly to `TargetType` and prevents
+// subsequent standard conversions (e.g. integral promotion/conversion).
+// Useful for verifying that a deduction guide accepts the exact deduced `size_type`.
+template <class TargetType>
+struct OnlyConvertibleTo {
+  template <class T, std::enable_if_t<std::is_same_v<T, TargetType>, int> = 0>
+  constexpr operator T() const {
+    return T();
+  }
+};
+
 // For sequence containers the deduction guides should be SFINAE'd away when
 // given:
 // - "bad" input iterators (that is, a type not qualifying as an input
