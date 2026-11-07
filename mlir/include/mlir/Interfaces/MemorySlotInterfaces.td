@@ -182,6 +182,25 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
            "::mlir::Value":$reachingDefinition,
            "const ::mlir::DataLayout &":$dataLayout)
     >,
+    InterfaceMethod<[{
+        Returns whether this operation owns the blocking uses of a single
+        wrapped memory access. If true, it must have one single-block region
+        containing only that access and a terminator. All blocking uses must
+        belong to the wrapped access, not this operation or its terminator.
+
+        Promotion calls this operation's interface methods with the wrapped
+        access's operands in `blockingUses`, without consulting
+        `PromotableRegionOpInterface` for its region. The builder inserts IR
+        outside the region, before or after this operation.
+
+        An operation that owns embedded blocking uses must not add uses to
+        `newBlockingUses`.
+
+        No IR mutation is allowed in this method.
+      }],
+      "bool", "ownsEmbeddedBlockingUses", (ins), [{}],
+      /*defaultImplementation=*/[{ return false; }]
+    >,
   ];
 }
 
