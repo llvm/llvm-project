@@ -17,6 +17,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -70,6 +71,8 @@ struct HostInfoBaseFields {
   FileSpec m_lldb_system_plugin_dir;
   llvm::once_flag m_lldb_user_home_dir_once;
   FileSpec m_lldb_user_home_dir;
+  llvm::once_flag m_lldb_user_config_dir_once;
+  FileSpec m_lldb_user_config_dir;
   llvm::once_flag m_lldb_user_lldb_dir_once;
   FileSpec m_lldb_user_lldb_dir;
   llvm::once_flag m_lldb_user_plugin_dir_once;
@@ -181,6 +184,16 @@ FileSpec HostInfoBase::GetUserHomeDir() {
              g_fields->m_lldb_user_home_dir);
   });
   return g_fields->m_lldb_user_home_dir;
+}
+
+FileSpec HostInfoBase::GetUserConfigDir() {
+  llvm::call_once(g_fields->m_lldb_user_config_dir_once, []() {
+    if (!HostInfo::ComputeUserConfigDirectory(g_fields->m_lldb_user_config_dir))
+      g_fields->m_lldb_user_config_dir = FileSpec();
+    LLDB_LOG(GetLog(LLDBLog::Host), "user config dir -> `{0}`",
+             g_fields->m_lldb_user_config_dir);
+  });
+  return g_fields->m_lldb_user_config_dir;
 }
 
 FileSpec HostInfoBase::GetUserLLDBDir() {
@@ -361,6 +374,17 @@ bool HostInfoBase::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 
 bool HostInfoBase::ComputeUserHomeDirectory(FileSpec &file_spec) {
   FileSpec temp_file("~");
+  FileSystem::Instance().Resolve(temp_file);
+  file_spec.SetDirectory(temp_file.GetPath());
+  return true;
+}
+
+bool HostInfoBase::ComputeUserConfigDirectory(FileSpec &file_spec) {
+  llvm::SmallString<256> str;
+  if (!llvm::sys::path::user_config_directory(str))
+    return false;
+  llvm::sys::path::append(str, "lldb");
+  FileSpec temp_file(str);
   FileSystem::Instance().Resolve(temp_file);
   file_spec.SetDirectory(temp_file.GetPath());
   return true;

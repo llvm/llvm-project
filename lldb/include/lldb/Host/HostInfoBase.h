@@ -150,6 +150,10 @@ public:
   /// directory member of the FileSpec is filled in.
   static FileSpec GetUserHomeDir();
 
+  /// Returns the directory containing the users configs (e.g. `~/.config`).
+  /// Only the directory member of the FileSpec is filled in.
+  static FileSpec GetUserConfigDir();
+
   /// Returns the directory containing the users lldb home (e.g. `~/.lldb/`).
   /// Only the directory member of the FileSpec is filled in.
   static FileSpec GetUserLLDBDir();
@@ -278,6 +282,7 @@ protected:
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
   static bool ComputeUserHomeDirectory(FileSpec &file_spec);
+  static bool ComputeUserConfigDirectory(FileSpec &file_spec);
   static bool ComputeUserLLDBHomeDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
 
