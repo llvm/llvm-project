@@ -2641,10 +2641,11 @@ if.end:                                           ; preds = %if.then, %entry
 
 @global = internal global %struct.STy zeroinitializer, align 8
 
-; We mark %dst as writeonly and %src as readonly, that is (for now) all we can expect.
+; The pointer-bearing heap object is published through @global. Following its
+; contents alone is insufficient to prove that %dst and %src are not captured.
 define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; TUNIT-LABEL: define dso_local void @test_nested_memory(
-; TUNIT-SAME: ptr nofree writeonly captures(none) [[DST:%.*]], ptr nofree readonly captures(none) [[SRC:%.*]]) {
+; TUNIT-SAME: ptr nofree [[DST:%.*]], ptr nofree [[SRC:%.*]]) {
 ; TUNIT-NEXT:  [[ENTRY:.*:]]
 ; TUNIT-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 24, align 1
 ; TUNIT-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
