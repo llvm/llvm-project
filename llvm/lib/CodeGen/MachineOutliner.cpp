@@ -77,6 +77,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SuffixTree.h"
@@ -165,6 +166,67 @@ static cl::opt<bool> AppendContentHashToOutlinedName(
 
 namespace {
 
+/// Wrap MachineInstrExpressionTrait for MachineOutliner.
+/// Keep the original comparison for non-CFI instructions.
+///
+/// CFI indices are local to each MachineFunction. Across functions, equal
+/// indices can refer to different rules, so also compare the rules themselves.
+///
+/// Keep the original hash: this comparison only rejects additional matches,
+/// so equal instructions still have equal hashes.
+struct OutlinerInstrExpressionTrait : MachineInstrExpressionTrait {
+private:
+  // Compare common CFI rules based on BOLT's MCCFIInstruction comparison
+  // in bolt/lib/Utils/Utils.cpp.
+  // Unsupported rules cannot match across functions.
+  static bool sameCFI(const MCCFIInstruction &L, const MCCFIInstruction &R) {
+    if (L.getOperation() != R.getOperation())
+      return false;
+    switch (L.getOperation()) {
+    case MCCFIInstruction::OpRestore:
+    case MCCFIInstruction::OpSameValue:
+    case MCCFIInstruction::OpUndefined:
+    case MCCFIInstruction::OpDefCfaRegister:
+      return L.getRegister() == R.getRegister();
+    case MCCFIInstruction::OpRegister:
+      return L.getRegister() == R.getRegister() &&
+             L.getRegister2() == R.getRegister2();
+    case MCCFIInstruction::OpOffset:
+    case MCCFIInstruction::OpRelOffset:
+    case MCCFIInstruction::OpDefCfa:
+      return L.getRegister() == R.getRegister() &&
+             L.getOffset() == R.getOffset();
+    case MCCFIInstruction::OpEscape:
+      return L.getValues() == R.getValues();
+    case MCCFIInstruction::OpRememberState:
+    case MCCFIInstruction::OpRestoreState:
+      return true;
+    case MCCFIInstruction::OpDefCfaOffset:
+    case MCCFIInstruction::OpAdjustCfaOffset:
+      return L.getOffset() == R.getOffset();
+    default:
+      return false;
+    }
+  }
+
+public:
+  static bool isEqual(const MachineInstr *const &LHS,
+                      const MachineInstr *const &RHS) {
+    if (LHS == RHS)
+      return true;
+    if (!MachineInstrExpressionTrait::isEqual(LHS, RHS))
+      return false;
+    // Within one function, equal CFI indices already refer to the same rule.
+    if (!LHS->isCFIInstruction() || LHS->getMF() == RHS->getMF())
+      return true;
+    const auto &L =
+        LHS->getMF()->getFrameInstructions()[LHS->getOperand(0).getCFIIndex()];
+    const auto &R =
+        RHS->getMF()->getFrameInstructions()[RHS->getOperand(0).getCFIIndex()];
+    return sameCFI(L, R);
+  }
+};
+
 /// Maps \p MachineInstrs to unsigned integers and stores the mappings.
 struct InstructionMapper {
   const MachineModuleInfo &MMI;
@@ -180,7 +242,7 @@ struct InstructionMapper {
   unsigned LegalInstrNumber = 0;
 
   /// Correspondence from \p MachineInstrs to unsigned integers.
-  DenseMap<MachineInstr *, unsigned, MachineInstrExpressionTrait>
+  DenseMap<MachineInstr *, unsigned, OutlinerInstrExpressionTrait>
       InstructionIntegerMap;
 
   /// Correspondence between \p MachineBasicBlocks and target-defined flags.
@@ -228,7 +290,7 @@ struct InstructionMapper {
     InstrListForMBB.push_back(It);
     MachineInstr &MI = *It;
     bool WasInserted;
-    DenseMap<MachineInstr *, unsigned, MachineInstrExpressionTrait>::iterator
+    DenseMap<MachineInstr *, unsigned, OutlinerInstrExpressionTrait>::iterator
         ResultIt;
     std::tie(ResultIt, WasInserted) =
         InstructionIntegerMap.insert(std::make_pair(&MI, LegalInstrNumber));
