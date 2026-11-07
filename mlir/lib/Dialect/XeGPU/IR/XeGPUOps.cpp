@@ -124,14 +124,29 @@ isValidContiguity(std::optional<uint64_t> contiguity, Type offsetsTy,
 LogicalResult
 IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
                       UnitAttr subgroup_block_io, DistributeLayoutAttr layout,
+                      std::optional<uint64_t> contiguity,
                       function_ref<InFlightDiagnostic()> emitError) {
 
   if (!dataTy) {
     if (subgroup_block_io)
       return emitError() << "subgroup_block_io "
                             "are only allowed when result is a VectorType.";
-    else
-      return success();
+    if (contiguity)
+      return emitError() << "contiguity requires a vector payload.";
+    return success();
+  }
+
+  // The innermost data dimension is contiguous in runs of `contiguity`, so it
+  // must be >= 2 and must divide that dimension.
+  if (contiguity) {
+    int64_t size = static_cast<int64_t>(*contiguity);
+    int64_t inner = dataTy.getShape().back();
+    if (size < 2)
+      return emitError() << "contiguity = " << size << " (must be >= 2)";
+    if (inner % size != 0)
+      return emitError() << "contiguity = " << size
+                         << " (must divide the innermost data dim " << inner
+                         << ")";
   }
 
   ArrayRef<int64_t> dataShape = dataTy.getShape();
@@ -880,7 +895,7 @@ void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
   // Call the generated builder with all parameters (including optional ones as
   // nullptr/empty)
   build(builder, state, res, memDesc, dynamicOffsets, staticOffsetsAttr,
-        /*subgroup_block_io=*/nullptr, layout);
+        /*subgroup_block_io=*/nullptr, layout, /*contiguity=*/nullptr);
 }
 
 LogicalResult LoadMatrixOp::verify() {
@@ -890,7 +905,8 @@ LogicalResult LoadMatrixOp::verify() {
   MemDescType mdescTy = getMemDesc().getType();
 
   return IsValidMatrixOpParams(resTy, mdescTy, subgroup_block_io,
-                               getLayoutAttr(), [&]() { return emitError(); });
+                               getLayoutAttr(), getContiguity(),
+                               [&]() { return emitError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -905,7 +921,7 @@ void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
   build(builder, state, data, memDesc, dynamicOffsets, staticOffsetsAttr,
-        /*subgroup_block_io=*/nullptr, layout);
+        /*subgroup_block_io=*/nullptr, layout, /*contiguity=*/nullptr);
 }
 
 LogicalResult StoreMatrixOp::verify() {
@@ -914,7 +930,8 @@ LogicalResult StoreMatrixOp::verify() {
   UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
   MemDescType mdescTy = getMemDesc().getType();
   return IsValidMatrixOpParams(dataTy, mdescTy, subgroup_block_io,
-                               getLayoutAttr(), [&]() { return emitError(); });
+                               getLayoutAttr(), getContiguity(),
+                               [&]() { return emitError(); });
 }
 
 //===----------------------------------------------------------------------===//
