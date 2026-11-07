@@ -325,6 +325,35 @@ def A53ReadEarly : SchedReadAdvance<0>;
 // chain through the accumulator alone recurs every 2 cycles.
 def A53ReadAcc2  : SchedReadAdvance<2>;
 
+// Cryptography. The crypto unit is 128 bits wide: every AES/SHA/PMULL op takes
+// both FP/ASIMD datapath lanes for one cycle, so they issue one per cycle and
+// never alongside another FP/ASIMD op. They read their operands late (see
+// A53ReadLate), except the two non-tied sources of SHA1C/M/P, SHA256H/H2 and
+// SHA256SU1, which are read early. Latencies to an early reader: AES, SHA1H,
+// SHA1SU0/1 and the 64-bit PMULL 3; the 8-bit PMULL and SHA256SU0 4;
+// SHA1C/M/P, SHA256H/H2 and SHA256SU1 6.
+// AESMC/AESIMC fuse with the AESE/AESD that feeds them (FeatureFuseAES keeps
+// the pair together): a chain of fused pairs recurs every 2 cycles, no more
+// than AESE alone, so AESMC/AESIMC read an AESE/AESD result with no delay.
+// (Any other producer reaches an AESMC/AESIMC one cycle sooner on hardware,
+// which a single ReadAdvance cannot also express.)
+// On hardware a fused pair also issues in a single cycle; here AESMC keeps its
+// own datapath cycle, so independent fused pairs are modelled at one pair per
+// two cycles rather than one per cycle.
+def A53WriteAES : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 3;
+  let RetireOOO = 1;
+}
+def A53WriteVecQ_6 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 6;
+  let RetireOOO = 1;
+}
+def A53WriteAESMC : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 3;
+  let RetireOOO = 1;
+}
+def A53ReadAESMC : SchedReadAdvance<3, [A53WriteAES]>;
+
 // Register transfers between a GPR and an FP/SIMD register (FMOV). Their
 // latency depends on the consumer, not on the direction:
 //  - FP-to-GPR: the result reaches an integer ALU consumer in 2 cycles, a MAC
@@ -493,11 +522,6 @@ def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST4Fourv(2d)_POST$")>;
 //---
 // Floating Point MAC, DIV, SQRT
 //---
-// Q-form crypto (AES/SHA/PMULL) needs no special case: taking both datapath
-// lanes for one cycle is exactly the throughput of the 128-bit-wide crypto
-// unit, and it leaves fused AES pairs (FeatureFuseAES) free to issue
-// back-to-back.
-
 // The scalar forms take the addend as their third source operand, so only the
 // third read forwards; the ASIMD forms accumulate into the tied destination,
 // which is their first source operand.
@@ -747,5 +771,17 @@ def : InstRW<[A53WriteVecQ_4],
                  "^SQABSv(16i8|2i64|4i32|8i16)$",
                  "^[SU](MAX|MIN)Vv(16i8v|4i32v|8i16v)$",
                  "^F(ADD|MAX|MIN|MAXNM|MINNM)Pv2i64p$")>;
+
+// Cryptography (see the write classes above).
+def : InstRW<[A53WriteAES, A53ReadLate, A53ReadLate], (instrs AESErr, AESDrr)>;
+def : InstRW<[A53WriteAESMC, A53ReadAESMC],
+      (instrs AESMCrr, AESIMCrr, AESMCrrTied, AESIMCrrTied)>;
+def : InstRW<[A53WriteIVecQ_3, A53ReadLate, A53ReadLate, A53ReadLate],
+      (instrs SHA1Hrr, SHA1SU0rrr, SHA1SU1rr, PMULLv1i64, PMULLv2i64)>;
+def : InstRW<[A53WriteVecQ_4, A53ReadLate, A53ReadLate, A53ReadLate],
+      (instrs SHA256SU0rr, PMULLv8i8, PMULLv16i8)>;
+def : InstRW<[A53WriteVecQ_6, A53ReadLate, A53ReadEarly, A53ReadEarly],
+      (instrs SHA1Crrr, SHA1Mrrr, SHA1Prrr, SHA256Hrrr, SHA256H2rrr,
+              SHA256SU1rrr)>;
 
 }

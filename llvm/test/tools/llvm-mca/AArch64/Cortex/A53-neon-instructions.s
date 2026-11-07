@@ -35,10 +35,10 @@
 # CHECK-NEXT:  1      3     0.50                        addv	h0, v0.8h
 # CHECK-NEXT:  1      3     0.50                        addv	b0, v0.8b
 # CHECK-NEXT:  1      3     0.50                        addv	b0, v0.16b
-# CHECK-NEXT:  1      6     1.00                        aesd	v0.16b, v0.16b
-# CHECK-NEXT:  1      6     1.00                        aese	v0.16b, v0.16b
-# CHECK-NEXT:  1      6     1.00                        aesimc	v0.16b, v0.16b
-# CHECK-NEXT:  1      6     1.00                        aesmc	v0.16b, v0.16b
+# CHECK-NEXT:  1      3     1.00                        aesd	v0.16b, v0.16b
+# CHECK-NEXT:  1      3     1.00                        aese	v0.16b, v0.16b
+# CHECK-NEXT:  1      3     1.00                        aesimc	v0.16b, v0.16b
+# CHECK-NEXT:  1      3     1.00                        aesmc	v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.50                        and	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      2     0.50                        bic	v0.4h, #15, lsl #8
 # CHECK-NEXT:  1      2     1.00                        bic	v23.8h, #101
@@ -673,8 +673,8 @@
 # CHECK-NEXT:  1      2     1.00                        orr	v4.4s, #0
 # CHECK-NEXT:  1      4     1.00                        pmul	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      4     0.50                        pmul	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     1.00                        pmull	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     1.00                        pmull2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      4     1.00                        pmull	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      4     1.00                        pmull2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  1      4     1.00                        raddhn	v0.2s, v0.2d, v0.2d
 # CHECK-NEXT:  1      4     1.00                        raddhn	v0.4h, v0.4s, v0.4s
 # CHECK-NEXT:  1      4     1.00                        raddhn	v0.8b, v0.8h, v0.8h
