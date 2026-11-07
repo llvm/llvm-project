@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -triple i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -x c++ -std=c++11 -triple i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -x c++ -triple i386-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK1
-// RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -std=c++11 -DLAMBDA -triple i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK3
+// RUN: %clang_cc1 -fno-module-local-hints -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -std=c++11 -DLAMBDA -triple i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK3
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -fblocks -DBLOCKS -triple i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK4
 
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp-simd -x c++ -triple i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
@@ -14,7 +14,7 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -triple x86_64-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK9
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -x c++ -std=c++11 -triple x86_64-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -x c++ -triple x86_64-pc-linux-gnu -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK9
-// RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -std=c++11 -DLAMBDA -triple x86_64-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang_cc1 -fno-module-local-hints -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -std=c++11 -DLAMBDA -triple x86_64-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK11
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -fblocks -DBLOCKS -triple x86_64-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK12
 
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp-simd -x c++ -triple x86_64-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
@@ -23,7 +23,7 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp-simd -x c++ -std=c++11 -DLAMBDA -triple x86_64-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp-simd -x c++ -fblocks -DBLOCKS -triple x86_64-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 
-// RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK17
+// RUN: %clang_cc1 -fno-module-local-hints -no-enable-noundef-analysis -verify -Wno-vla -fopenmp -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK17
 
 // RUN: %clang_cc1 -no-enable-noundef-analysis -verify -Wno-vla -fopenmp-simd -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s --implicit-check-not="{{__kmpc|__tgt}}"
 // expected-no-diagnostics

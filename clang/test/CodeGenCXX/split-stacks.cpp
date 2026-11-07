@@ -1,5 +1,5 @@
 // RUN: %clang -target x86_64-linux-gnu -fsplit-stack -S -std=c++11 %s -emit-llvm -o - | FileCheck -check-prefix=CHECK-SEGSTK %s
-// RUN: %clang -target x86_64-linux-gnu -S -std=c++11 %s -emit-llvm -o - | FileCheck -check-prefix=CHECK-NOSEGSTK %s
+// RUN: %clang -fno-module-local-hints -target x86_64-linux-gnu -S -std=c++11 %s -emit-llvm -o - | FileCheck -check-prefix=CHECK-NOSEGSTK %s
 
 int foo() {
   return 0;
