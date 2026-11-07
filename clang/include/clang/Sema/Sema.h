@@ -14605,7 +14605,8 @@ public:
 
   void PerformDependentDiagnostics(
       const DeclContext *Pattern,
-      const MultiLevelTemplateArgumentList &TemplateArgs);
+      const MultiLevelTemplateArgumentList &TemplateArgs,
+      bool MarkInactive = false);
 
 private:
   /// Introduce the instantiated local variables into the local
