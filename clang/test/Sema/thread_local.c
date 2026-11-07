@@ -5,8 +5,8 @@
 // restrict local variables to be explicitly static or extern.
 void func(void) {
   // FIXME: it would be nice if the diagnostic said 'thread_local' in this case.
-  thread_local int i = 12;  // expected-error {{'_Thread_local' variables must have global storage}}
-  _Thread_local int j = 13; // expected-error {{'_Thread_local' variables must have global storage}}
+  thread_local int i = 12;  // expected-error {{'_Thread_local' at block scope requires 'static' or 'extern'}}
+  _Thread_local int j = 13; // expected-error {{'_Thread_local' at block scope requires 'static' or 'extern'}}
 
   static thread_local int k = 14;
   static _Thread_local int l = 15;

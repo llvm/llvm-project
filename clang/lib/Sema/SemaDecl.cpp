@@ -8217,11 +8217,18 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (NewVD->hasLocalStorage() &&
         (SCSpec != DeclSpec::SCS_unspecified ||
          TSCS != DeclSpec::TSCS_thread_local ||
-         !DC->isFunctionOrMethod()))
-      Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
-           diag::err_thread_non_global)
-        << DeclSpec::getSpecifierName(TSCS);
-    else if (!Context.getTargetInfo().isTLSSupported()) {
+         !DC->isFunctionOrMethod())) {
+      if (TSCS == DeclSpec::TSCS__Thread_local &&
+          DC->isFunctionOrMethod()) {
+        Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
+             diag::err_thread_local_block_scope)
+            << DeclSpec::getSpecifierName(TSCS);
+      } else {
+        Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
+             diag::err_thread_non_global)
+            << DeclSpec::getSpecifierName(TSCS);
+      }
+    } else if (!Context.getTargetInfo().isTLSSupported()) {
       if (getLangOpts().CUDA || getLangOpts().isTargetDevice()) {
         // Postpone error emission until we've collected attributes required to
         // figure out whether it's a host or device variable and whether the
