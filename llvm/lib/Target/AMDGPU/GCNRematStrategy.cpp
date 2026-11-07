@@ -565,29 +565,15 @@ void GCNRematStrategy::createCandidates(bool AllowExtendDeps) {
                                 AllowExtendDeps ? &ExtendedDeps : nullptr))
       continue;
 
-    Register DefReg = CandReg.getDefReg();
-
-    // Extended dependencies only become live in regions where the candidate
-    // was live and no longer is after rematerialization. The candidate's
-    // pressure must cover theirs in every register class for the
-    // rematerialization not to increase RP in any of these regions.
-    if (!ExtendedDeps.empty()) {
-      GCNRegPressure Save, Cost;
-      Save.inc(DefReg, LaneBitmask::getNone(), CandReg.Mask, MRI);
-      for (RegisterIdx DepRegIdx : ExtendedDeps) {
-        const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
-        Cost.inc(DepReg.getDefReg(), LaneBitmask::getNone(), DepReg.Mask, MRI);
-      }
-      if (Save.getSGPRNum() < Cost.getSGPRNum() ||
-          Save.getArchVGPRNum() < Cost.getArchVGPRNum() ||
-          Save.getAGPRNum() < Cost.getAGPRNum()) {
-        LLVM_DEBUG(dbgs() << "Not extending dependencies of "
-                          << Remater.printID(RegIdx)
-                          << ": their pressure exceeds the save\n");
-        continue;
-      }
+    if (!ExtendedDeps.empty() &&
+        !candidateSaveCoversExtendedDeps(RegIdx, ExtendedDeps)) {
+      LLVM_DEBUG(dbgs() << "Not extending dependencies of "
+                        << Remater.printID(RegIdx)
+                        << ": their pressure exceeds the save\n");
+      continue;
     }
 
+    Register DefReg = CandReg.getDefReg();
     MarkedRegs.insert(DefReg);
     DefRegToCandIdx[DefReg] = static_cast<unsigned>(Candidates.size());
     Candidates.emplace_back(RegIdx, NumRegions).ExtendedDeps =
@@ -664,6 +650,20 @@ bool GCNRematStrategy::candidateHasValidUsers(
       return false;
   }
   return true;
+}
+
+bool GCNRematStrategy::candidateSaveCoversExtendedDeps(
+    RegisterIdx CandIdx, ArrayRef<RegisterIdx> ExtendedDeps) const {
+  const Rematerializer::Reg &CandReg = Remater.getReg(CandIdx);
+  GCNRegPressure Save, Cost;
+  Save.inc(CandReg.getDefReg(), LaneBitmask::getNone(), CandReg.Mask, MRI);
+  for (RegisterIdx DepRegIdx : ExtendedDeps) {
+    const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+    Cost.inc(DepReg.getDefReg(), LaneBitmask::getNone(), DepReg.Mask, MRI);
+  }
+  return Save.getSGPRNum() >= Cost.getSGPRNum() &&
+         Save.getArchVGPRNum() >= Cost.getArchVGPRNum() &&
+         Save.getAGPRNum() >= Cost.getAGPRNum();
 }
 
 void GCNRematStrategy::rollbackRecordedRemats() {

@@ -353,6 +353,15 @@ private:
   bool candidateHasValidUsers(
       RegisterIdx CandIdx, const SmallSet<Register, 4> &MarkedRegs,
       SmallVectorImpl<RegisterIdx> *ExtendedDeps = nullptr) const;
+
+  /// Determines whether the pressure of rematerialization candidate \p CandIdx
+  /// covers the summed pressure of \p ExtendedDeps in every register class.
+  /// Extended dependencies only become live in regions where the candidate was
+  /// live and no longer is after rematerialization, so when this holds the
+  /// rematerialization cannot increase RP in any of these regions.
+  bool
+  candidateSaveCoversExtendedDeps(RegisterIdx CandIdx,
+                                  ArrayRef<RegisterIdx> ExtendedDeps) const;
 };
 
 } // namespace llvm
