@@ -21,6 +21,7 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
@@ -40,11 +41,13 @@
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -402,6 +405,32 @@ public:
   static CFGBlockInfo getEmptyBlockInfo(LocalVariableMap &M);
 };
 
+static Expr *ignoreNoOpCastSingleStep(Expr *E) {
+  if (auto *CE = dyn_cast<CastExpr>(E); CE && CE->getCastKind() == CK_NoOp)
+    return CE->getSubExpr();
+  return E;
+}
+
+static Expr *ignoreFullExprOrOpaqueValueSingleStep(Expr *E) {
+  if (auto *FE = dyn_cast<FullExpr>(E))
+    return FE->getSubExpr();
+  if (auto *OVE = dyn_cast<OpaqueValueExpr>(E))
+    if (Expr *Src = OVE->getSourceExpr())
+      return Src;
+  return E;
+}
+
+/// Strip expression wrappers that have no effect on the value or type of \p E:
+/// parentheses, __extension__, _Generic, __builtin_choose_expr, FullExpr,
+/// OpaqueValueExpr, and CK_NoOp casts.
+static const Expr *stripNoOpExprWrappers(const Expr *E) {
+  if (!E)
+    return nullptr;
+  return IgnoreExprNodes(E, IgnoreParensSingleStep,
+                         ignoreFullExprOrOpaqueValueSingleStep,
+                         ignoreNoOpCastSingleStep);
+}
+
 // A LocalVariableMap maintains a map from local variables to their currently
 // valid definitions.  It provides SSA-like functionality when traversing the
 // CFG.  Like SSA, each definition or assignment to a variable is assigned a
@@ -442,6 +471,12 @@ public:
     // The map with which Exp should be interpreted.
     Context Ctx;
 
+    // Whether this is a reference to a definition of a variable whose value
+    // may have been modified through an alias since that definition.
+    // lookupValueExpr() does not look through such a reference; lookupExpr()
+    // does.
+    bool Clobbered = false;
+
     bool isReference() const { return !Exp; }
 
     void invalidateRef() { DirectRef = CanonicalRef = 0; }
@@ -461,6 +496,9 @@ private:
   Context::Factory ContextFactory;
   std::vector<VarDefinition> VarDefinitions;
   std::vector<std::pair<const Stmt *, Context>> SavedContexts;
+  // Local variables that may be modified other than by a direct assignment,
+  // e.g. because their address is taken; see traverseCFG().
+  llvm::SmallPtrSet<const ValueDecl *, 8> EscapedVars;
 
 public:
   LocalVariableMap() {
@@ -468,8 +506,32 @@ public:
     VarDefinitions.push_back(VarDefinition(nullptr, 0, 0, getEmptyContext()));
   }
 
+  /// Record that \p VD may be modified other than by a direct assignment.
+  /// Must be called before traverseCFG().
+  void addEscapedVar(const ValueDecl *VD) {
+    EscapedVars.insert(cast<ValueDecl>(VD->getCanonicalDecl()));
+  }
+
+  /// Return whether the value of \p D can be tracked through its definitions.
+  /// This does not hold for variables without local storage, whose
+  /// initializer only runs once, nor for volatile and __block variables,
+  /// since these may be modified behind the analysis' back, nor for
+  /// references to anything but a temporary, since a direct assignment to
+  /// the referenced variable modifies them. Variables whose address escapes
+  /// are tracked until they may be modified through an alias; see
+  /// traverseCFG().
+  bool hasTrackableValue(const NamedDecl *D) const {
+    const auto *VD = dyn_cast<VarDecl>(D);
+    if (!VD || !VD->hasLocalStorage() || VD->getType().isVolatileQualified() ||
+        VD->hasAttr<BlocksAttr>())
+      return false;
+    return !VD->getType()->isReferenceType() ||
+           isa_and_nonnull<MaterializeTemporaryExpr>(
+               stripNoOpExprWrappers(VD->getInit()));
+  }
+
   /// Look up a definition, within the given context.
-  const VarDefinition* lookup(const NamedDecl *D, Context Ctx) {
+  const VarDefinition *lookup(const NamedDecl *D, Context Ctx) const {
     const unsigned *i = Ctx.lookup(D);
     if (!i)
       return nullptr;
@@ -480,7 +542,7 @@ public:
   /// Look up the definition for D within the given context.  Returns
   /// NULL if the expression is not statically known.  If successful, also
   /// modifies Ctx to hold the context of the return Expr.
-  const Expr* lookupExpr(const NamedDecl *D, Context &Ctx) {
+  const Expr *lookupExpr(const NamedDecl *D, Context &Ctx) const {
     const unsigned *P = Ctx.lookup(D);
     if (!P)
       return nullptr;
@@ -496,11 +558,28 @@ public:
     return nullptr;
   }
 
+  /// Look up the definition of \p D if the value of \p D is known to equal
+  /// its last definition. Use this when evaluating the value of a variable,
+  /// e.g. a trylock result.
+  const Expr *lookupValueExpr(const NamedDecl *D, Context &Ctx) const {
+    if (Ctx.isEmpty() || !hasTrackableValue(D))
+      return nullptr;
+    const unsigned *P = Ctx.lookup(D);
+    return P && !isClobbered(*P) ? lookupExpr(D, Ctx) : nullptr;
+  }
+
   Context getEmptyContext() { return ContextFactory.getEmptyMap(); }
+
+  /// If \p D has a definition in \p Ctx, return a context in which that
+  /// definition is cleared; otherwise return \p Ctx.
+  Context clearDefinitionIfSet(const NamedDecl *D, Context Ctx) {
+    return clearDefinition(D, Ctx);
+  }
 
   /// Return the next context after processing S.  This function is used by
   /// clients of the class to get the appropriate context when traversing the
-  /// CFG.  It must be called for every assignment or DeclStmt.
+  /// CFG.  It must be called for every assignment, increment/decrement,
+  /// CallExpr, or DeclStmt.
   const Context &getNextContext(unsigned &CtxIndex, const Stmt *S,
                                 const Context &C) {
     if (SavedContexts[CtxIndex + 1].first == S) {
@@ -553,6 +632,13 @@ public:
   }
 
   /// Builds the variable map.
+  ///
+  /// Since a pointer or reference to a variable recorded by addEscapedVar()
+  /// may be stored anywhere, the value of such a variable may change at
+  /// every statement that may modify an object through a pointer or
+  /// reference or that may run unknown code, e.g. a call. Such a statement
+  /// clobbers the definition of the variable until it is assigned a new
+  /// value directly; lookupValueExpr() fails for clobbered definitions.
   void traverseCFG(CFG *CFGraph, const PostOrderCFGView *SortedGraph,
                    std::vector<CFGBlockInfo> &BlockInfo);
 
@@ -606,6 +692,26 @@ protected:
     return Ctx;
   }
 
+  // Whether the value of a variable may have been modified through an alias
+  // since the last definition that the definition ID refers to.
+  bool isClobbered(unsigned ID) const {
+    for (; ID > 0 && VarDefinitions[ID].isReference();
+         ID = VarDefinitions[ID].DirectRef)
+      if (VarDefinitions[ID].Clobbered)
+        return true;
+    return false;
+  }
+
+  // Record that the value of D may have been modified through an alias.
+  Context clobberDefinition(const NamedDecl *D, Context Ctx) {
+    const unsigned *ID = Ctx.lookup(D);
+    if (!ID || *ID == 0 || isClobbered(*ID))
+      return Ctx;
+    Ctx = addReference(D, *ID, Ctx);
+    VarDefinitions.back().Clobbered = true;
+    return Ctx;
+  }
+
   // Removes a definition from the context, but keeps the variable name
   // as a valid variable.  The index 0 is a placeholder for cleared definitions.
   Context clearDefinition(const NamedDecl *D, Context Ctx) {
@@ -649,9 +755,21 @@ public:
   VarMapBuilder(LocalVariableMap *VM, LocalVariableMap::Context C)
       : VMap(VM), Ctx(C) {}
 
+  // Whether Ctx has changed since the last saved context, e.g. because a
+  // destructor clobbered escaped variables, such that it must be saved with
+  // the next statement for which the context is looked up.
+  bool PendingSave = false;
+
+  bool clearModifiedLocalVars(const Expr *E);
+  void clobberEscapedVars();
+
   void VisitDeclStmt(const DeclStmt *S);
   void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitCallExpr(const CallExpr *CE);
+  void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitAsmStmt(const AsmStmt *AS);
+  void VisitExplicitCastExpr(const ExplicitCastExpr *CE);
 };
 
 } // namespace
@@ -676,15 +794,133 @@ void VarMapBuilder::VisitDeclStmt(const DeclStmt *S) {
     VMap->saveContext(S, Ctx);
 }
 
+static const DeclRefExpr *unwrapDirectLValueDRE(const Expr *E) {
+  if (!E)
+    return nullptr;
+  return dyn_cast<DeclRefExpr>(
+      IgnoreExprNodes(E, IgnoreParensSingleStep, ignoreNoOpCastSingleStep));
+}
+
+static bool collectAddrOfDREs(const Expr *E,
+                              SmallVectorImpl<const DeclRefExpr *> &DREs,
+                              unsigned Depth = 0);
+
+/// Collect the variables that the lvalue \p E may designate, i.e. the
+/// variables that are modified by an assignment to or an increment of \p E.
+/// Look through parentheses, no-op and lvalue bit casts, the right operand of
+/// a comma, both arms of a conditional operator, assignments and prefix
+/// increments and decrements, which are lvalues in C++, and dereferences of
+/// the address of a variable.
+static void
+collectModifiedLValueDREs(const Expr *E,
+                          SmallVectorImpl<const DeclRefExpr *> &DREs,
+                          unsigned Depth = 0) {
+  if (!E || Depth > 32)
+    return;
+  E = IgnoreExprNodes(E, IgnoreParensSingleStep, ignoreNoOpCastSingleStep);
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    DREs.push_back(DRE);
+  } else if (const auto *CE = dyn_cast<CastExpr>(E)) {
+    // E.g. 'reinterpret_cast<void *&>(p)' designates the same variable.
+    if (CE->getCastKind() == CK_LValueBitCast)
+      collectModifiedLValueDREs(CE->getSubExpr(), DREs, Depth + 1);
+  } else if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    if (BO->getOpcode() == BO_Comma)
+      collectModifiedLValueDREs(BO->getRHS(), DREs, Depth + 1);
+    else if (BO->isAssignmentOp())
+      collectModifiedLValueDREs(BO->getLHS(), DREs, Depth + 1);
+  } else if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->isPrefix() && UO->isIncrementDecrementOp())
+      collectModifiedLValueDREs(UO->getSubExpr(), DREs, Depth + 1);
+    else if (UO->getOpcode() == UO_Deref)
+      // E.g. '*(void **)&p'.
+      collectAddrOfDREs(UO->getSubExpr(), DREs, Depth + 1);
+  } else if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+    collectModifiedLValueDREs(CO->getTrueExpr(), DREs, Depth + 1);
+    collectModifiedLValueDREs(CO->getFalseExpr(), DREs, Depth + 1);
+  } else if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E)) {
+    // The common operand of a binary conditional operator.
+    if (const Expr *Src = OVE->getSourceExpr())
+      collectModifiedLValueDREs(Src, DREs, Depth + 1);
+  }
+}
+
+/// If \p E takes the address of an lvalue, possibly through no-op and
+/// pointer casts, the right operand of a comma or the arms of a conditional
+/// operator, add the variables that the lvalue may designate to \p DREs.
+/// Return whether \p E takes the address of an lvalue.
+static bool collectAddrOfDREs(const Expr *E,
+                              SmallVectorImpl<const DeclRefExpr *> &DREs,
+                              unsigned Depth) {
+  if (Depth > 32)
+    return false;
+  while (E) {
+    E = E->IgnoreParens();
+    if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E)) {
+      E = MTE->getSubExpr();
+      continue;
+    }
+    if (const auto *FE = dyn_cast<FullExpr>(E)) {
+      E = FE->getSubExpr();
+      continue;
+    }
+    if (const auto *Cast = dyn_cast<CastExpr>(E)) {
+      if (Cast->getCastKind() == CK_NoOp ||
+          ((Cast->getCastKind() == CK_BitCast ||
+            Cast->getCastKind() == CK_DerivedToBase ||
+            Cast->getCastKind() == CK_UncheckedDerivedToBase) &&
+           Cast->getType()->isPointerType() &&
+           Cast->getSubExpr()->getType()->isPointerType())) {
+        E = Cast->getSubExpr();
+        continue;
+      }
+    }
+    if (const auto *BO = dyn_cast<BinaryOperator>(E);
+        BO && BO->getOpcode() == BO_Comma) {
+      E = BO->getRHS();
+      continue;
+    }
+    if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E);
+        OVE && OVE->getSourceExpr()) {
+      E = OVE->getSourceExpr();
+      continue;
+    }
+    break;
+  }
+  if (const auto *CO = dyn_cast_or_null<AbstractConditionalOperator>(E)) {
+    // E.g. 'c ? &p : &q'. Collect the variables of both arms.
+    bool TrueAddr = collectAddrOfDREs(CO->getTrueExpr(), DREs, Depth + 1);
+    bool FalseAddr = collectAddrOfDREs(CO->getFalseExpr(), DREs, Depth + 1);
+    return TrueAddr || FalseAddr;
+  }
+  const auto *UO = dyn_cast_or_null<UnaryOperator>(E);
+  if (!UO || UO->getOpcode() != UO_AddrOf)
+    return false;
+  collectModifiedLValueDREs(UO->getSubExpr(), DREs, Depth + 1);
+  return true;
+}
+
+bool VarMapBuilder::clearModifiedLocalVars(const Expr *E) {
+  SmallVector<const DeclRefExpr *, 2> DREs;
+  collectModifiedLValueDREs(E, DREs);
+  bool Modified = false;
+  for (const DeclRefExpr *DRE : DREs) {
+    const ValueDecl *VDec = DRE->getDecl();
+    if (Ctx.lookup(VDec)) {
+      Ctx = VMap->clearDefinition(VDec, Ctx);
+      Modified = true;
+    }
+  }
+  return Modified;
+}
+
 // Update local variable definitions in variable map
 void VarMapBuilder::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
 
-  Expr *LHSExp = BO->getLHS()->IgnoreParenCasts();
-
   // Update the variable map and current context.
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(LHSExp)) {
+  if (const DeclRefExpr *DRE = unwrapDirectLValueDRE(BO->getLHS())) {
     const ValueDecl *VDec = DRE->getDecl();
     if (Ctx.lookup(VDec)) {
       if (BO->getOpcode() == BO_Assign)
@@ -694,58 +930,365 @@ void VarMapBuilder::VisitBinaryOperator(const BinaryOperator *BO) {
         Ctx = VMap->clearDefinition(VDec, Ctx);
       VMap->saveContext(BO, Ctx);
     }
+    return;
+  }
+
+  if (clearModifiedLocalVars(BO->getLHS()))
+    VMap->saveContext(BO, Ctx);
+}
+
+// Invalidate the definitions of local variables that are incremented or
+// decremented.
+void VarMapBuilder::VisitUnaryOperator(const UnaryOperator *UO) {
+  if (UO->isIncrementDecrementOp() && clearModifiedLocalVars(UO->getSubExpr()))
+    VMap->saveContext(UO, Ctx);
+}
+
+/// If argument \p Idx of a call or constructor invocation passes the address
+/// of or a mutable reference to an lvalue in a form that the callee may use
+/// to modify it, add the variables that the lvalue may designate to \p DREs.
+/// \p FPT is the prototype of the callee of an indirect call, if any.
+static void collectInvalidatedCallOrCtorArgDREs(
+    const FunctionDecl *FD, bool HasImplicitObjArg, ArrayRef<const Expr *> Args,
+    unsigned Idx, SmallVectorImpl<const DeclRefExpr *> &DREs,
+    const FunctionProtoType *FPT = nullptr) {
+  const Expr *RawArg = Args[Idx];
+  if (HasImplicitObjArg && Idx == 0) {
+    if (!cast<CXXMethodDecl>(FD)->isConst() && RawArg->isGLValue())
+      collectModifiedLValueDREs(RawArg, DREs);
+    return;
+  }
+
+  unsigned ParamIdx = HasImplicitObjArg ? Idx - 1 : Idx;
+  QualType ParamType;
+  if (FD && ParamIdx < FD->getNumParams())
+    ParamType = FD->getParamDecl(ParamIdx)->getType();
+  else if (!FD && FPT && ParamIdx < FPT->getNumParams())
+    ParamType = FPT->getParamType(ParamIdx);
+  if (ParamType.isNull()) {
+    // The parameter type is not known, e.g. for a variadic argument or an
+    // indirect call without a prototype. Assume that the callee may modify
+    // the lvalue.
+    if (!collectAddrOfDREs(RawArg, DREs) && RawArg->isGLValue())
+      collectModifiedLValueDREs(RawArg, DREs);
+    return;
+  }
+
+  SmallVector<const DeclRefExpr *, 2> AddrDREs;
+  if (collectAddrOfDREs(RawArg, AddrDREs)) {
+    QualType NonRefTy = ParamType.getNonReferenceType();
+    if (NonRefTy->isPointerType() &&
+        !NonRefTy->getPointeeType().isConstQualified())
+      DREs.append(AddrDREs.begin(), AddrDREs.end());
+    return;
+  }
+  if (ParamType->isReferenceType() &&
+      !ParamType->getPointeeType().isConstQualified() && RawArg->isGLValue())
+    collectModifiedLValueDREs(RawArg, DREs);
+}
+
+static void
+collectInvalidatedCallArgDREs(const CallExpr *CE, unsigned Idx,
+                              SmallVectorImpl<const DeclRefExpr *> &DREs) {
+  const FunctionDecl *FD = CE->getDirectCallee();
+  ArrayRef<const Expr *> Args(CE->getArgs(), CE->getNumArgs());
+  bool HasImplicitObjArg = false;
+  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(FD);
+      MD && isa<CXXOperatorCallExpr>(CE)) {
+    if (MD->isStatic()) {
+      // The first argument of a call of a static operator is the object
+      // expression, which is not passed to the operator.
+      if (Idx == 0)
+        return;
+      return collectInvalidatedCallOrCtorArgDREs(
+          FD, /*HasImplicitObjArg=*/false, Args.drop_front(), Idx - 1, DREs);
+    }
+    HasImplicitObjArg = MD->isImplicitObjectMemberFunction();
+  }
+  const FunctionProtoType *FPT = nullptr;
+  if (!FD) {
+    // An indirect call, e.g. through a function, block or member function
+    // pointer.
+    const Expr *Callee = CE->getCallee();
+    QualType CalleeTy = Callee->getType();
+    if (CalleeTy->isSpecificPlaceholderType(BuiltinType::BoundMember))
+      CalleeTy = Expr::findBoundMemberType(Callee);
+    else if (const auto *PT = CalleeTy->getAs<PointerType>())
+      CalleeTy = PT->getPointeeType();
+    else if (const auto *BPT = CalleeTy->getAs<BlockPointerType>())
+      CalleeTy = BPT->getPointeeType();
+    if (!CalleeTy.isNull())
+      FPT = CalleeTy->getAs<FunctionProtoType>();
+  }
+  collectInvalidatedCallOrCtorArgDREs(FD, HasImplicitObjArg, Args, Idx, DREs,
+                                      FPT);
+}
+
+static void forEachInvalidatedCallOrCtorArgDRE(
+    const Stmt *S, llvm::function_ref<void(const DeclRefExpr *)> Fn) {
+  if (const auto *CE = dyn_cast_or_null<CallExpr>(S)) {
+    const FunctionDecl *FD = CE->getDirectCallee();
+    // Heuristic for likely-benign functions that pass by mutable reference.
+    // This is needed to avoid a slew of false positives due to mutable
+    // reference passing where the captured reference is usually passed on
+    // by-value.
+    if (const IdentifierInfo *II = FD ? FD->getIdentifier() : nullptr) {
+      // Any kind of std::bind-like functions.
+      if (II->isStr("bind") || II->isStr("bind_front"))
+        return;
+    }
+    SmallVector<const DeclRefExpr *, 4> DREs;
+    if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(CE)) {
+      const CXXMethodDecl *MD = MCE->getMethodDecl();
+      if (!MD || (!MD->isStatic() && !MD->isConst())) {
+        if (const Expr *ObjArg = MCE->getImplicitObjectArgument()) {
+          if (ObjArg->getType()->isPointerType())
+            collectAddrOfDREs(ObjArg, DREs);
+          else if (ObjArg->isGLValue())
+            collectModifiedLValueDREs(ObjArg, DREs);
+        }
+      }
+    }
+    for (unsigned Idx = 0, N = CE->getNumArgs(); Idx < N; ++Idx)
+      collectInvalidatedCallArgDREs(CE, Idx, DREs);
+    for (const DeclRefExpr *DRE : DREs)
+      Fn(DRE);
+    return;
+  }
+  if (const auto *CCE = dyn_cast_or_null<CXXConstructExpr>(S)) {
+    const CXXConstructorDecl *CD = CCE->getConstructor();
+    ArrayRef<const Expr *> Args(CCE->getArgs(), CCE->getNumArgs());
+    SmallVector<const DeclRefExpr *, 4> DREs;
+    for (unsigned Idx = 0, N = Args.size(); Idx < N; ++Idx)
+      collectInvalidatedCallOrCtorArgDREs(CD, /*HasImplicitObjArg=*/false, Args,
+                                          Idx, DREs);
+    for (const DeclRefExpr *DRE : DREs)
+      Fn(DRE);
   }
 }
 
 // Invalidates local variable definitions if variable escaped.
 void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
-  const FunctionDecl *FD = CE->getDirectCallee();
-  if (!FD)
-    return;
-
-  // Heuristic for likely-benign functions that pass by mutable reference. This
-  // is needed to avoid a slew of false positives due to mutable reference
-  // passing where the captured reference is usually passed on by-value.
-  if (const IdentifierInfo *II = FD->getIdentifier()) {
-    // Any kind of std::bind-like functions.
-    if (II->isStr("bind") || II->isStr("bind_front"))
-      return;
-  }
-
-  // Invalidate local variable definitions that are passed by non-const
-  // reference or non-const pointer.
-  for (unsigned Idx = 0; Idx < CE->getNumArgs(); ++Idx) {
-    if (Idx >= FD->getNumParams())
-      break;
-
-    const Expr *Arg = CE->getArg(Idx)->IgnoreParenImpCasts();
-    const ParmVarDecl *PVD = FD->getParamDecl(Idx);
-    QualType ParamType = PVD->getType();
-
-    // Potential reassignment if passed by non-const reference / pointer.
-    const ValueDecl *VDec = nullptr;
-    if (ParamType->isReferenceType() &&
-        !ParamType->getPointeeType().isConstQualified()) {
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
-        VDec = DRE->getDecl();
-    } else if (ParamType->isPointerType() &&
-               !ParamType->getPointeeType().isConstQualified()) {
-      Arg = Arg->IgnoreParenCasts();
-      if (const auto *UO = dyn_cast<UnaryOperator>(Arg)) {
-        if (UO->getOpcode() == UO_AddrOf) {
-          const Expr *SubE = UO->getSubExpr()->IgnoreParenCasts();
-          if (const auto *DRE = dyn_cast<DeclRefExpr>(SubE))
-            VDec = DRE->getDecl();
-        }
-      }
-    }
-
-    if (VDec)
-      Ctx = VMap->clearDefinition(VDec, Ctx);
-  }
+  forEachInvalidatedCallOrCtorArgDRE(CE, [&](const DeclRefExpr *DRE) {
+    Ctx = VMap->clearDefinition(DRE->getDecl(), Ctx);
+  });
   // Save the context after the call where escaped variables' definitions (if
   // they exist) are cleared.
   VMap->saveContext(CE, Ctx);
+}
+
+void VarMapBuilder::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
+  forEachInvalidatedCallOrCtorArgDRE(CCE, [&](const DeclRefExpr *DRE) {
+    Ctx = VMap->clearDefinition(DRE->getDecl(), Ctx);
+  });
+  VMap->saveContext(CCE, Ctx);
+}
+
+void VarMapBuilder::VisitAsmStmt(const AsmStmt *AS) {
+  bool Modified = false;
+  for (unsigned I = 0, N = AS->getNumOutputs(); I < N; ++I)
+    Modified |= clearModifiedLocalVars(AS->getOutputExpr(I));
+  if (Modified)
+    VMap->saveContext(AS, Ctx);
+}
+
+static void visitDeclTypeVLAExprs(QualType QT, bool IncludeTopLevelVLA,
+                                  llvm::function_ref<void(const Expr *)> Fn) {
+  while (!QT.isNull() && QT->isVariablyModifiedType()) {
+    const Type *T = QT.getTypePtr();
+    if (isa<TypedefType>(T))
+      return;
+    if (const auto *AT = dyn_cast<ArrayType>(T)) {
+      if (IncludeTopLevelVLA)
+        if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
+          if (const Expr *Sz = VAT->getSizeExpr())
+            Fn(Sz);
+      QT = AT->getElementType();
+      continue;
+    }
+    IncludeTopLevelVLA = true;
+    if (const auto *PT = dyn_cast<ParenType>(T)) {
+      QT = PT->getInnerType();
+      continue;
+    }
+    if (const auto *AT = dyn_cast<AttributedType>(T)) {
+      QT = AT->getModifiedType();
+      continue;
+    }
+    if (const auto *MQT = dyn_cast<MacroQualifiedType>(T)) {
+      QT = MQT->getUnderlyingType();
+      continue;
+    }
+    if (const auto *AdjT = dyn_cast<AdjustedType>(T)) {
+      QT = AdjT->getOriginalType();
+      continue;
+    }
+    if (const auto *PtrT = dyn_cast<PointerType>(T)) {
+      QT = PtrT->getPointeeType();
+      continue;
+    }
+    if (const auto *RefT = dyn_cast<ReferenceType>(T)) {
+      QT = RefT->getPointeeType();
+      continue;
+    }
+    if (const auto *BPtrT = dyn_cast<BlockPointerType>(T)) {
+      QT = BPtrT->getPointeeType();
+      continue;
+    }
+    if (const auto *MPtrT = dyn_cast<MemberPointerType>(T)) {
+      QT = MPtrT->getPointeeType();
+      continue;
+    }
+    if (const auto *AtomT = dyn_cast<AtomicType>(T)) {
+      QT = AtomT->getValueType();
+      continue;
+    }
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(T)) {
+      visitDeclTypeVLAExprs(FPT->getReturnType(), /*IncludeTopLevelVLA=*/true,
+                            Fn);
+      for (QualType ParamTy : FPT->getParamTypes())
+        visitDeclTypeVLAExprs(ParamTy, /*IncludeTopLevelVLA=*/true, Fn);
+      return;
+    }
+    if (const auto *FT = dyn_cast<FunctionType>(T)) {
+      QT = FT->getReturnType();
+      continue;
+    }
+    if (const auto *TOET = dyn_cast<TypeOfExprType>(T)) {
+      if (const Expr *E = TOET->getUnderlyingExpr()) {
+        Fn(E);
+        visitDeclTypeVLAExprs(E->getType(), /*IncludeTopLevelVLA=*/true, Fn);
+      }
+      return;
+    }
+    if (const auto *TOT = dyn_cast<TypeOfType>(T)) {
+      QT = TOT->getUnmodifiedType();
+      continue;
+    }
+    break;
+  }
+}
+
+/// Call \p Fn for the size expressions of the variable length array types
+/// in the declarations of \p DS. If \p IncludeTopLevelVLA is false, skip the
+/// size expression of the outermost array type of a declared variable or
+/// typedef.
+static void forEachDeclVLAExpr(const DeclStmt *DS, bool IncludeTopLevelVLA,
+                               llvm::function_ref<void(const Expr *)> Fn) {
+  if (!DS)
+    return;
+  for (const Decl *D : DS->decls()) {
+    if (const auto *VD = dyn_cast<VarDecl>(D))
+      visitDeclTypeVLAExprs(VD->getType(), IncludeTopLevelVLA, Fn);
+    else if (const auto *TND = dyn_cast<TypedefNameDecl>(D))
+      visitDeclTypeVLAExprs(TND->getUnderlyingType(), IncludeTopLevelVLA, Fn);
+  }
+}
+
+/// Call \p Fn for the size expressions of the variable length array types
+/// in the type \p QT.
+static void forEachTypeVLAExpr(QualType QT,
+                               llvm::function_ref<void(const Expr *)> Fn) {
+  visitDeclTypeVLAExprs(QT, /*IncludeTopLevelVLA=*/true, Fn);
+}
+
+// The CFG does not contain the size expressions of variable length array
+// types in casts. Conservatively invalidate the definitions of the local
+// variables that they reference. The context is saved with the next
+// statement, since the clients of the variable map do not look up the
+// context of casts.
+void VarMapBuilder::VisitExplicitCastExpr(const ExplicitCastExpr *CE) {
+  forEachTypeVLAExpr(CE->getTypeAsWritten(), [&](const Expr *Sz) {
+    SmallVector<const Stmt *, 8> Worklist = {Sz};
+    while (!Worklist.empty()) {
+      const Stmt *S = Worklist.pop_back_val();
+      if (!S)
+        continue;
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(S);
+          DRE && Ctx.lookup(DRE->getDecl())) {
+        Ctx = VMap->clearDefinition(DRE->getDecl(), Ctx);
+        PendingSave = true;
+      }
+      llvm::append_range(Worklist, S->children());
+    }
+  });
+}
+
+// Clobber the definitions of the variables that may be modified through a
+// pointer or reference; see LocalVariableMap::traverseCFG().
+void VarMapBuilder::clobberEscapedVars() {
+  for (const ValueDecl *VD : VMap->EscapedVars) {
+    LocalVariableMap::Context NewCtx = VMap->clobberDefinition(VD, Ctx);
+    if (NewCtx != Ctx) {
+      Ctx = NewCtx;
+      PendingSave = true;
+    }
+  }
+}
+
+/// Whether the lvalue \p E designates a local variable that is not a
+/// reference or a subobject of one, such that a modification of \p E cannot
+/// modify another variable.
+static bool isLocalObjectLValue(const Expr *E) {
+  while (true) {
+    E = E->IgnoreParens();
+    if (const auto *CE = dyn_cast<CastExpr>(E);
+        CE && (CE->getCastKind() == CK_NoOp ||
+               CE->getCastKind() == CK_LValueBitCast)) {
+      E = CE->getSubExpr();
+    } else if (const auto *ME = dyn_cast<MemberExpr>(E); ME && !ME->isArrow()) {
+      E = ME->getBase();
+    } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      // An element of a local array.
+      const Expr *Base = ASE->getBase()->IgnoreParenImpCasts();
+      if (!Base->getType()->isArrayType())
+        break;
+      E = Base;
+    } else {
+      break;
+    }
+  }
+  const auto *DRE = dyn_cast<DeclRefExpr>(E);
+  const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
+  return VD && VD->hasLocalStorage() && !VD->getType()->isReferenceType();
+}
+
+/// Whether the CFG statement \p S may modify a local variable through a
+/// pointer or reference, e.g. because it calls a function or assigns to the
+/// object that a pointer points to.
+static bool mayModifyThroughAlias(const Stmt *S) {
+  if (const auto *CE = dyn_cast<CallExpr>(S)) {
+    const FunctionDecl *FD = CE->getDirectCallee();
+    return !FD || (!FD->hasAttr<ConstAttr>() && !FD->hasAttr<PureAttr>());
+  }
+  if (const auto *CCE = dyn_cast<CXXConstructExpr>(S))
+    return !CCE->getConstructor()->isTrivial();
+  if (const auto *BO = dyn_cast<BinaryOperator>(S))
+    return BO->isAssignmentOp() && !isLocalObjectLValue(BO->getLHS());
+  if (const auto *UO = dyn_cast<UnaryOperator>(S))
+    return UO->isIncrementDecrementOp() &&
+           !isLocalObjectLValue(UO->getSubExpr());
+  if (const auto *DS = dyn_cast<DeclStmt>(S)) {
+    // The CFG does not contain these size expressions.
+    bool HasVLAExpr = false;
+    forEachDeclVLAExpr(DS, /*IncludeTopLevelVLA=*/false,
+                       [&](const Expr *) { HasVLAExpr = true; });
+    return HasVLAExpr;
+  }
+  if (const auto *CE = dyn_cast<ExplicitCastExpr>(S))
+    return CE->getTypeAsWritten()->isVariablyModifiedType();
+  return isa<AsmStmt, AtomicExpr, CXXDeleteExpr, CXXNewExpr, ObjCMessageExpr>(
+      S);
+}
+
+/// Whether the clients of LocalVariableMap look up the context after \p S;
+/// see LocalVariableMap::getNextContext().
+static bool hasNextContext(const Stmt *S) {
+  if (const auto *BO = dyn_cast<BinaryOperator>(S))
+    return BO->isAssignmentOp();
+  if (const auto *UO = dyn_cast<UnaryOperator>(S))
+    return UO->isIncrementDecrementOp();
+  return isa<AsmStmt, CallExpr, CXXConstructExpr, DeclStmt>(S);
 }
 
 // Computes the intersection of two contexts.  The intersection is the
@@ -765,6 +1308,10 @@ LocalVariableMap::intersectContexts(Context C1, Context C2) {
       // If canonical definitions mismatch the underlying definitions are
       // different, invalidate.
       Result = clearDefinition(Dec, Result);
+    } else if (!isClobbered(P.second) && isClobbered(*I2)) {
+      // The variable may have been modified through an alias on the second
+      // path.
+      Result = ContextFactory.add(Result, Dec, *I2);
     }
   }
   return Result;
@@ -800,6 +1347,8 @@ void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
     // and determines if the variable is truly loop-invariant.
     if (VDef->CanonicalRef != getCanonicalDefinitionID(*I2))
       VDef->invalidateRef(); // Mark this variable as undefined
+    else if (isClobbered(*I2))
+      VDef->Clobbered = true; // Modified through an alias in the loop
   }
 }
 
@@ -890,13 +1439,30 @@ void LocalVariableMap::traverseCFG(CFG *CFGraph,
     VarMapBuilder VMapBuilder(this, CurrBlockInfo->EntryContext);
     for (const auto &BI : *CurrBlock) {
       switch (BI.getKind()) {
-        case CFGElement::Statement: {
-          CFGStmt CS = BI.castAs<CFGStmt>();
-          VMapBuilder.Visit(CS.getStmt());
-          break;
+      case CFGElement::Statement: {
+        const Stmt *S = BI.castAs<CFGStmt>().getStmt();
+        if (!EscapedVars.empty() && mayModifyThroughAlias(S))
+          VMapBuilder.clobberEscapedVars();
+        size_t NumSavedContexts = SavedContexts.size();
+        VMapBuilder.Visit(S);
+        if (VMapBuilder.PendingSave && hasNextContext(S)) {
+          if (SavedContexts.size() == NumSavedContexts)
+            saveContext(S, VMapBuilder.Ctx);
+          VMapBuilder.PendingSave = false;
         }
-        default:
-          break;
+        break;
+      }
+      case CFGElement::AutomaticObjectDtor:
+      case CFGElement::BaseDtor:
+      case CFGElement::CleanupFunction:
+      case CFGElement::DeleteDtor:
+      case CFGElement::MemberDtor:
+      case CFGElement::TemporaryDtor:
+        if (!EscapedVars.empty())
+          VMapBuilder.clobberEscapedVars();
+        break;
+      default:
+        break;
       }
     }
     CurrBlockInfo->ExitContext = VMapBuilder.Ctx;
@@ -1239,6 +1805,7 @@ class ThreadSafetyAnalyzer {
 
   ThreadSafetyHandler &Handler;
   const FunctionDecl *CurrentFunction;
+  ASTContext *ASTCtx = nullptr;
   LocalVariableMap LocalVarMap;
   // Maps constructed objects to `this` placeholder prior to initialization.
   llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
@@ -1297,6 +1864,7 @@ public:
     intersectAndWarn(EntrySet, ExitSet, JoinLoc, LEK, LEK);
   }
 
+  void markEscapedLocalVars(AnalysisDeclContext &AC);
   void runAnalysis(AnalysisDeclContext &AC);
 
   void warnIfMutexNotHeld(const FactSet &FSet, const NamedDecl *D,
@@ -1638,7 +2206,7 @@ const CallExpr* ThreadSafetyAnalyzer::getTrylockCallExpr(const Stmt *Cond,
   else if (const auto *FE = dyn_cast<FullExpr>(Cond))
     return getTrylockCallExpr(FE->getSubExpr(), C, Negate);
   else if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    const Expr *E = LocalVarMap.lookupExpr(DRE->getDecl(), C);
+    const Expr *E = LocalVarMap.lookupValueExpr(DRE->getDecl(), C);
     return getTrylockCallExpr(E, C, Negate);
   }
   else if (const auto *UOP = dyn_cast<UnaryOperator>(Cond)) {
@@ -1931,6 +2499,7 @@ public:
   void VisitCallExpr(const CallExpr *Exp);
   void VisitCXXConstructExpr(const CXXConstructExpr *Exp);
   void VisitDeclStmt(const DeclStmt *S);
+  void VisitAsmStmt(const AsmStmt *S) { updateLocalVarMapCtx(S); }
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Exp);
   void VisitReturnStmt(const ReturnStmt *S);
 };
@@ -2482,6 +3051,7 @@ void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
     case UO_PreDec:
     case UO_PreInc:
       checkAccess(UO->getSubExpr(), AK_Written);
+      updateLocalVarMapCtx(UO);
       break;
     default:
       break;
@@ -2622,6 +3192,8 @@ void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
   }
   if (D && D->hasAttrs())
     handleCall(Exp, D);
+  else
+    updateLocalVarMapCtx(Exp);
 }
 
 static const Expr *UnpackConstruction(const Expr *E) {
@@ -2842,6 +3414,422 @@ static bool neverReturns(const CFGBlock *B) {
   return false;
 }
 
+namespace {
+/// The prototype of the function that the indirect call \p CE calls, if
+/// known, e.g. for a call through a function pointer, a block or a pointer to
+/// member function.
+static const FunctionProtoType *getIndirectCalleeProtoType(const CallExpr *CE) {
+  if (CE->getDirectCallee() || isa<CXXOperatorCallExpr>(CE))
+    return nullptr;
+  const Expr *Callee = CE->getCallee()->IgnoreParens();
+  QualType T = Callee->getType();
+  if (const auto *BO = dyn_cast<BinaryOperator>(Callee); BO && BO->isPtrMemOp())
+    T = BO->getRHS()->getType();
+  if (const auto *MPT = T->getAs<MemberPointerType>())
+    T = MPT->getPointeeType();
+  else if (const auto *PT = T->getAs<PointerType>())
+    T = PT->getPointeeType();
+  else if (const auto *BPT = T->getAs<BlockPointerType>())
+    T = BPT->getPointeeType();
+  return T->getAs<FunctionProtoType>();
+}
+
+static bool isConstRefType(QualType T) {
+  return T->isReferenceType() && T->getPointeeType().isConstQualified();
+}
+
+/// The type of parameter \p ParamIdx of the callee \p FD or, if \p FD is
+/// null, of the prototype \p Proto, or a null type if it is not known.
+static QualType getCallParamType(const FunctionDecl *FD,
+                                 const FunctionProtoType *Proto,
+                                 unsigned ParamIdx) {
+  if (FD)
+    return ParamIdx < FD->getNumParams() ? FD->getParamDecl(ParamIdx)->getType()
+                                         : QualType();
+  if (Proto && ParamIdx < Proto->getNumParams())
+    return Proto->getParamType(ParamIdx);
+  return QualType();
+}
+
+static bool
+isSafeCallOrCtorLValueArg(const FunctionDecl *FD, bool HasImplicitObjArg,
+                          unsigned Idx,
+                          const FunctionProtoType *Proto = nullptr) {
+  if (HasImplicitObjArg && Idx == 0)
+    return cast<CXXMethodDecl>(FD)->isConst();
+  unsigned ParamIdx = HasImplicitObjArg ? Idx - 1 : Idx;
+  QualType ParamType = getCallParamType(FD, Proto, ParamIdx);
+  return !ParamType.isNull() && isConstRefType(ParamType);
+}
+
+/// The type of the parameter of the callee of \p CE that argument \p Idx
+/// initializes, or a null type if it is not known.
+static QualType getCallArgParamType(const CallExpr *CE, unsigned Idx) {
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(FD);
+      MD && isa<CXXOperatorCallExpr>(CE)) {
+    if (MD->isStatic() || MD->isImplicitObjectMemberFunction()) {
+      // The first argument is the object expression.
+      if (Idx == 0)
+        return QualType();
+      --Idx;
+    }
+  }
+  return getCallParamType(FD, getIndirectCalleeProtoType(CE), Idx);
+}
+
+static bool isSafeCallLValueArg(const CallExpr *CE, unsigned Idx) {
+  const FunctionDecl *FD = CE->getDirectCallee();
+  bool HasImplicitObjArg = false;
+  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(FD);
+      MD && isa<CXXOperatorCallExpr>(CE)) {
+    if (MD->isStatic()) {
+      if (Idx == 0)
+        return true;
+      return isSafeCallOrCtorLValueArg(FD, /*HasImplicitObjArg=*/false,
+                                       Idx - 1);
+    }
+    HasImplicitObjArg = MD->isImplicitObjectMemberFunction();
+  }
+  return isSafeCallOrCtorLValueArg(FD, HasImplicitObjArg, Idx,
+                                   getIndirectCalleeProtoType(CE));
+}
+
+/// Whether the result of the call \p CE cannot designate or point to an
+/// argument of the call, such that the callee cannot pass on the address of
+/// an argument through its result.
+static bool callResultCannotAliasArgs(const CallExpr *CE) {
+  QualType T = CE->getType();
+  return CE->isPRValue() &&
+         (T->isVoidType() || T->isArithmeticType() || T->isEnumeralType());
+}
+
+/// Whether \p ParamType is a pointer to a const-qualified type or a reference
+/// to such a pointer.
+static bool isConstPointeeParamType(QualType ParamType) {
+  if (ParamType.isNull())
+    return false;
+  QualType T = ParamType.getNonReferenceType();
+  return T->isPointerType() && T->getPointeeType().isConstQualified();
+}
+
+/// Helper class for scanTrylockVars() that recursively visits a statement
+/// and collects the escaped and the modified local variables.
+class TrylockVarScanner {
+public:
+  TrylockVarScanner(const ASTContext &Ctx,
+                    llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars,
+                    llvm::SmallPtrSetImpl<const ValueDecl *> &ModifiedVars)
+      : Ctx(Ctx), EscapedVars(EscapedVars), ModifiedVars(ModifiedVars) {}
+
+  void visit(const Stmt *S, bool InNestedClosure, bool LValueIsSafe) {
+    static constexpr unsigned MaxASTWalkDepth = 512;
+    if (!S || Depth >= MaxASTWalkDepth)
+      return;
+    ++Depth;
+
+    if (recordClosureCaptures(S))
+      InNestedClosure = true;
+
+    if (!InNestedClosure)
+      recordSafeUse(S, LValueIsSafe);
+
+    recordDeclRef(S, InNestedClosure, LValueIsSafe);
+
+    visitChildren(S, InNestedClosure, LValueIsSafe);
+    --Depth;
+  }
+
+private:
+  /// Record that the variable \p VD escapes and may be modified.
+  void recordEscapedVar(const ValueDecl *VD) {
+    EscapedVars.insert(VD);
+    ModifiedVars.insert(VD);
+  }
+
+  /// If \p S is a closure, record the variables that it captures by
+  /// reference and return true.
+  bool recordClosureCaptures(const Stmt *S) {
+    if (const auto *LE = dyn_cast<LambdaExpr>(S)) {
+      for (const LambdaCapture &Cap : LE->captures()) {
+        if (Cap.capturesVariable() && Cap.getCaptureKind() == LCK_ByRef) {
+          const ValueDecl *VD =
+              cast<ValueDecl>(Cap.getCapturedVar()->getCanonicalDecl());
+          recordEscapedVar(VD);
+        }
+      }
+      return true;
+    }
+    if (const auto *BE = dyn_cast<BlockExpr>(S)) {
+      if (const BlockDecl *BD = BE->getBlockDecl()) {
+        for (const BlockDecl::Capture &Cap : BD->captures()) {
+          if (Cap.isByRef()) {
+            const ValueDecl *VD =
+                cast<ValueDecl>(Cap.getVariable()->getCanonicalDecl());
+            recordEscapedVar(VD);
+          }
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Record the variable references in \p S that only read or assign the
+  /// value of a variable and the variables that \p S modifies.
+  void recordSafeUse(const Stmt *S, bool LValueIsSafe) {
+    if (const auto *CE = dyn_cast<CastExpr>(S)) {
+      if (CE->getCastKind() == CK_LValueToRValue)
+        if (const auto *DRE = unwrapDirectLValueDRE(CE->getSubExpr()))
+          SafeDREs.insert(DRE);
+      return;
+    }
+    const Expr *ModLV = nullptr;
+    if (const auto *BO = dyn_cast<BinaryOperator>(S);
+        BO && BO->isAssignmentOp())
+      ModLV = BO->getLHS();
+    else if (const auto *UO = dyn_cast<UnaryOperator>(S);
+             UO && UO->isIncrementDecrementOp())
+      ModLV = UO->getSubExpr();
+    if (ModLV) {
+      SmallVector<const DeclRefExpr *, 2> DREs;
+      collectModifiedLValueDREs(ModLV, DREs);
+      const bool IsSafe = !cast<Expr>(S)->isGLValue() || LValueIsSafe;
+      for (const DeclRefExpr *DRE : DREs) {
+        if (IsSafe)
+          SafeDREs.insert(DRE);
+        if (isa<VarDecl>(DRE->getDecl()))
+          ModifiedVars.insert(
+              cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl()));
+      }
+    }
+  }
+
+  /// If \p S is a reference to a variable other than by reading or assigning
+  /// its value, record that the variable escapes.
+  void recordDeclRef(const Stmt *S, bool InNestedClosure, bool LValueIsSafe) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        const ValueDecl *CanonVD = cast<ValueDecl>(VD->getCanonicalDecl());
+        if (InNestedClosure || (!LValueIsSafe && !SafeDREs.contains(DRE)))
+          recordEscapedVar(CanonVD);
+      }
+    }
+  }
+
+  /// Visit the children of \p S and whether an lvalue child is used safely.
+  void visitChildren(const Stmt *S, bool InNestedClosure, bool LValueIsSafe) {
+    if (const auto *PE = dyn_cast<ParenExpr>(S)) {
+      visit(PE->getSubExpr(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *FE = dyn_cast<FullExpr>(S)) {
+      visit(FE->getSubExpr(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *CE = dyn_cast<CastExpr>(S)) {
+      // The CFG does not contain the size expressions of variable length
+      // array types in casts.
+      if (const auto *ECE = dyn_cast<ExplicitCastExpr>(CE))
+        forEachTypeVLAExpr(ECE->getTypeAsWritten(), [&](const Expr *Sz) {
+          visit(Sz, InNestedClosure, /*LValueIsSafe=*/true);
+        });
+      bool ChildSafe = false;
+      if (CE->getCastKind() == CK_LValueToRValue ||
+          CE->getCastKind() == CK_ToVoid)
+        ChildSafe = true;
+      else if (CE->getCastKind() == CK_NoOp && CE->isGLValue())
+        ChildSafe = LValueIsSafe;
+      visit(CE->getSubExpr(), InNestedClosure, ChildSafe);
+      return;
+    }
+    if (const auto *BO = dyn_cast<BinaryOperator>(S);
+        BO && BO->getOpcode() == BO_Comma) {
+      visit(BO->getLHS(), InNestedClosure, /*LValueIsSafe=*/true);
+      visit(BO->getRHS(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *CO = dyn_cast<ConditionalOperator>(S)) {
+      visit(CO->getCond(), InNestedClosure, /*LValueIsSafe=*/false);
+      visit(CO->getTrueExpr(), InNestedClosure, LValueIsSafe);
+      visit(CO->getFalseExpr(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *BCO = dyn_cast<BinaryConditionalOperator>(S)) {
+      visit(BCO->getCommon(), InNestedClosure, LValueIsSafe);
+      visit(BCO->getFalseExpr(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *OVE = dyn_cast<OpaqueValueExpr>(S)) {
+      visit(OVE->getSourceExpr(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *SE = dyn_cast<StmtExpr>(S)) {
+      if (const CompoundStmt *CS = SE->getSubStmt()) {
+        for (const Stmt *Sub : llvm::drop_end(CS->body()))
+          visit(Sub, InNestedClosure, /*LValueIsSafe=*/true);
+        if (!CS->body_empty())
+          visit(CS->body_back(), InNestedClosure, /*LValueIsSafe=*/false);
+      }
+      return;
+    }
+    if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
+      for (const Stmt *Sub : CS->body())
+        visit(Sub, InNestedClosure, /*LValueIsSafe=*/true);
+      return;
+    }
+    if (const auto *LS = dyn_cast<LabelStmt>(S)) {
+      visit(LS->getSubStmt(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *AS = dyn_cast<AttributedStmt>(S)) {
+      visit(AS->getSubStmt(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *DS = dyn_cast<DefaultStmt>(S)) {
+      visit(DS->getSubStmt(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *CS = dyn_cast<CaseStmt>(S)) {
+      visit(CS->getLHS(), InNestedClosure, /*LValueIsSafe=*/false);
+      visit(CS->getRHS(), InNestedClosure, /*LValueIsSafe=*/false);
+      visit(CS->getSubStmt(), InNestedClosure, LValueIsSafe);
+      return;
+    }
+    if (const auto *IS = dyn_cast<IfStmt>(S)) {
+      visit(IS->getInit(), InNestedClosure, /*LValueIsSafe=*/true);
+      visit(IS->getConditionVariableDeclStmt(), InNestedClosure,
+            /*LValueIsSafe=*/false);
+      visit(IS->getCond(), InNestedClosure, /*LValueIsSafe=*/false);
+      visit(IS->getThen(), InNestedClosure, /*LValueIsSafe=*/true);
+      visit(IS->getElse(), InNestedClosure, /*LValueIsSafe=*/true);
+      return;
+    }
+    if (const auto *WS = dyn_cast<WhileStmt>(S)) {
+      visit(WS->getConditionVariableDeclStmt(), InNestedClosure,
+            /*LValueIsSafe=*/false);
+      visit(WS->getCond(), InNestedClosure, /*LValueIsSafe=*/false);
+      visit(WS->getBody(), InNestedClosure, /*LValueIsSafe=*/true);
+      return;
+    }
+    if (const auto *DS = dyn_cast<DoStmt>(S)) {
+      visit(DS->getBody(), InNestedClosure, /*LValueIsSafe=*/true);
+      visit(DS->getCond(), InNestedClosure, /*LValueIsSafe=*/false);
+      return;
+    }
+    if (const auto *FS = dyn_cast<ForStmt>(S)) {
+      visit(FS->getInit(), InNestedClosure, /*LValueIsSafe=*/true);
+      visit(FS->getConditionVariableDeclStmt(), InNestedClosure,
+            /*LValueIsSafe=*/false);
+      visit(FS->getCond(), InNestedClosure, /*LValueIsSafe=*/false);
+      visit(FS->getInc(), InNestedClosure, /*LValueIsSafe=*/true);
+      visit(FS->getBody(), InNestedClosure, /*LValueIsSafe=*/true);
+      return;
+    }
+    if (const auto *SS = dyn_cast<SwitchStmt>(S)) {
+      visit(SS->getInit(), InNestedClosure, /*LValueIsSafe=*/true);
+      visit(SS->getConditionVariableDeclStmt(), InNestedClosure,
+            /*LValueIsSafe=*/false);
+      visit(SS->getCond(), InNestedClosure, /*LValueIsSafe=*/false);
+      visit(SS->getBody(), InNestedClosure, /*LValueIsSafe=*/true);
+      return;
+    }
+    if (const auto *CE = dyn_cast<CallExpr>(S)) {
+      visit(CE->getCallee(), InNestedClosure, /*LValueIsSafe=*/false);
+      bool CanPropagateConstRef =
+          LValueIsSafe || !CE->isGLValue() || CE->getType().isConstQualified();
+      // A variable whose address is passed as a pointer to const cannot be
+      // modified through it, unless the callee returns the pointer, e.g.
+      // strchr().
+      const bool ResultCannotAliasArgs = callResultCannotAliasArgs(CE);
+      for (unsigned I = 0, N = CE->getNumArgs(); I < N; ++I) {
+        SmallVector<const DeclRefExpr *, 2> ConstPointeeDREs;
+        if (ResultCannotAliasArgs &&
+            isConstPointeeParamType(getCallArgParamType(CE, I)) &&
+            collectAddrOfDREs(CE->getArg(I), ConstPointeeDREs))
+          SafeDREs.insert_range(ConstPointeeDREs);
+        bool ArgSafe = CanPropagateConstRef && isSafeCallLValueArg(CE, I);
+        visit(CE->getArg(I), InNestedClosure, ArgSafe);
+      }
+      return;
+    }
+    if (const auto *CCE = dyn_cast<CXXConstructExpr>(S)) {
+      const CXXConstructorDecl *CD = CCE->getConstructor();
+      for (unsigned I = 0, N = CCE->getNumArgs(); I < N; ++I) {
+        bool ArgSafe =
+            isSafeCallOrCtorLValueArg(CD, /*HasImplicitObjArg=*/false, I);
+        visit(CCE->getArg(I), InNestedClosure, ArgSafe);
+      }
+      return;
+    }
+
+    // Note: DeclStmt::children() includes the variable initializers.
+    if (const auto *DS = dyn_cast<DeclStmt>(S)) {
+      visitDeclStmt(DS, InNestedClosure);
+      return;
+    }
+    for (const Stmt *Child : S->children())
+      if (Child)
+        visit(Child, InNestedClosure, /*LValueIsSafe=*/false);
+  }
+
+  void visitDeclStmt(const DeclStmt *DS, bool InNestedClosure) {
+    forEachDeclVLAExpr(DS, /*IncludeTopLevelVLA=*/true, [&](const Expr *Sz) {
+      visit(Sz, InNestedClosure, /*LValueIsSafe=*/true);
+    });
+    // The lvalue that a const reference is bound to cannot be modified
+    // through the reference. The value of the reference changes with the
+    // lvalue though, so the reference cannot be tracked as a variable.
+    llvm::SmallPtrSet<const Stmt *, 2> ConstRefInits;
+    for (const Decl *D : DS->decls()) {
+      const auto *VD = dyn_cast<VarDecl>(D);
+      if (!VD || !VD->getInit() || !isConstRefType(VD->getType()))
+        continue;
+      ConstRefInits.insert(VD->getInit());
+      if (!isa<MaterializeTemporaryExpr>(stripNoOpExprWrappers(VD->getInit())))
+        recordEscapedVar(cast<ValueDecl>(VD->getCanonicalDecl()));
+    }
+    for (const Stmt *Child : DS->children())
+      if (Child)
+        visit(Child, InNestedClosure,
+              /*LValueIsSafe=*/ConstRefInits.contains(Child));
+  }
+
+  const ASTContext &Ctx;
+  llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars;
+  llvm::SmallPtrSetImpl<const ValueDecl *> &ModifiedVars;
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> SafeDREs;
+  unsigned Depth = 0;
+};
+} // namespace
+
+/// Scan a statement AST subtree \p Root and collect:
+///  - \p EscapedVars: variables that are referenced in any context other than
+///    a direct lvalue-to-rvalue read or a direct assignment/increment LHS
+///    whose resulting glvalue is not used by an enclosing expression (or that
+///    are referenced inside a nested lambda or block).
+///  - \p ModifiedVars: variables that are directly modified by an assignment
+///    or increment/decrement, or that escape.
+static void
+scanTrylockVars(const Stmt *Root, const ASTContext &Ctx,
+                llvm::SmallPtrSetImpl<const ValueDecl *> &EscapedVars,
+                llvm::SmallPtrSetImpl<const ValueDecl *> &ModifiedVars) {
+  if (!Root)
+    return;
+
+  TrylockVarScanner Scanner(Ctx, EscapedVars, ModifiedVars);
+  Scanner.visit(Root, /*InNestedClosure=*/false,
+                /*LValueIsSafe=*/isa<CompoundStmt>(Root));
+}
+
+void ThreadSafetyAnalyzer::markEscapedLocalVars(AnalysisDeclContext &AC) {
+  llvm::SmallPtrSet<const ValueDecl *, 16> EscapedVars;
+  llvm::SmallPtrSet<const ValueDecl *, 16> ModifiedVars;
+  scanTrylockVars(AC.getBody(), *ASTCtx, EscapedVars, ModifiedVars);
+  for (const ValueDecl *VD : EscapedVars)
+    LocalVarMap.addEscapedVar(VD);
+}
+
 /// Check a function's CFG for thread-safety violations.
 ///
 /// We traverse the blocks in the CFG, compute the set of mutexes that are held
@@ -2859,6 +3847,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
   CFG *CFGraph = walker.getGraph();
   const NamedDecl *D = walker.getDecl();
+  ASTCtx = &AC.getASTContext();
   CurrentFunction = dyn_cast<FunctionDecl>(D);
 
   if (D->hasAttr<NoThreadSafetyAnalysisAttr>())
@@ -2889,6 +3878,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
   // Mark entry block as reachable
   Initial.Reachable = true;
+
+  markEscapedLocalVars(AC);
 
   // Compute SSA names for local variables
   LocalVarMap.traverseCFG(CFGraph, SortedGraph, BlockInfo);

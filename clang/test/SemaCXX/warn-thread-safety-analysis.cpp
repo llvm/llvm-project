@@ -8139,6 +8139,165 @@ void testTwoLocalPointersInCapExpr(Selector *in_s, Mutex *in_m) {
   lockSelected(sel, m);
   unlockSelected(in_s, in_m);
 }
+
+// '__extension__' and '__builtin_choose_expr' designate the same lvalue as
+// their (selected) operand.
+void testExtensionAndChooseExprAliasAssignment(Foo *a, Foo *b) {
+  Foo *p1 = a;
+  __extension__(p1) = b;
+  p1->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'b->mu'}}
+  p1->mu.Unlock();
+
+  Foo *p2 = a;
+  __builtin_choose_expr(1, p2, p2) = b;
+  p2->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'b->mu'}}
+  p2->mu.Unlock();
+}
+
+void redirectVoidRef(void *&p, void *target);
+void redirectFooPtr(Foo **pp, Foo *target);
+void step();
+
+void testCastAndAddrOfAliasInvalidations(Foo *a, Foo *b, bool cond) {
+  // Assignments through an lvalue bit cast.
+  Foo *p1 = a;
+  reinterpret_cast<void *&>(p1) = b;
+  p1->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p1->mu'}}
+  p1->mu.Unlock();
+
+  Foo *p2 = a;
+  redirectVoidRef(reinterpret_cast<void *&>(p2), b);
+  p2->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p2->mu'}}
+  p2->mu.Unlock();
+
+  // Assignments through a dereferenced address.
+  Foo *p3 = a;
+  *(void **)&p3 = b;
+  p3->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p3->mu'}}
+  p3->mu.Unlock();
+
+  // Addresses passed through a conditional or a comma operator.
+  Foo *p4 = a, *q4 = a;
+  redirectFooPtr(cond ? &p4 : &q4, b);
+  p4->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p4->mu'}}
+  p4->mu.Unlock();
+  q4->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'q4->mu'}}
+  q4->mu.Unlock();
+
+  Foo *p5 = a;
+  redirectFooPtr((step(), &p5), b);
+  p5->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p5->mu'}}
+  p5->mu.Unlock();
+}
+
+// Indirect calls whose prototype does not allow modifying the argument do
+// not invalidate aliases.
+void testIndirectCallConstArgs(Foo *a, Foo *b,
+                               void (*inspectRef)(Foo *const &),
+                               void (*inspectPtr)(Foo *const *),
+                               void (&inspectFnRef)(Foo *const &),
+                               void (Foo::*inspectMember)(Foo *const &) const) {
+  Foo *p1 = a;
+  inspectRef(p1);
+  inspectPtr(&p1);
+  inspectFnRef(p1);
+  (b->*inspectMember)(p1);
+  p1->mu.Lock();
+  a->data = 1;
+  p1->mu.Unlock();
+}
+struct RedirectFooPtr {
+  RedirectFooPtr(Foo *&p, Foo *other) { p = other; }
+};
+
+void testCapabilityAliasInvalidations(Foo *a, Foo *b, void (*indir)(Foo **)) {
+  Foo *p1 = a;
+  ++p1;
+  p1->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p1->mu'}}
+  p1->mu.Unlock();
+
+  Foo *p2 = a;
+  (p2 = a) = b;
+  p2->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p2->mu'}}
+  p2->mu.Unlock();
+
+  Foo *p3 = a;
+  indir(&p3);
+  p3->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p3->mu'}}
+  p3->mu.Unlock();
+
+  Foo *p4 = a;
+  auto set = [&](Foo *&q) { q = b; };
+  set(p4);
+  p4->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p4->mu'}}
+  p4->mu.Unlock();
+
+  Foo *p5 = a;
+  RedirectFooPtr redir(p5, b);
+  p5->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p5->mu'}}
+  p5->mu.Unlock();
+
+  Foo *p6 = a;
+  asm("" : "+r"(p6));
+  p6->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p6->mu'}}
+  p6->mu.Unlock();
+}
+
+void testCompoundLValueAliasInvalidations(Foo *a, Foo *b, Foo *c, bool cond) {
+  Foo *p1 = a;
+  (cond ? p1 : c) = b;
+  p1->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p1->mu'}}
+  p1->mu.Unlock();
+
+  Foo *p2 = a;
+  ((void)c, p2) = b;
+  p2->mu.Lock();
+  a->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'a->mu' exclusively}} \
+               // expected-note{{found near match 'p2->mu'}}
+  p2->mu.Unlock();
+
+  // Only the assigned variable is modified.
+  Foo *p3 = a;
+  Foo *q3 = c;
+  ((p3 = c), q3) = b;
+  q3->mu.Lock();
+  c->data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'c->mu' exclusively}} \
+               // expected-note{{found near match 'q3->mu'}}
+  q3->mu.Unlock();
+  p3->mu.Lock();
+  c->data = 1;
+  p3->mu.Unlock();
+}
 }  // namespace CapabilityAliases
 
 namespace WideStringLiteral {
