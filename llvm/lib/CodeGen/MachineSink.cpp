@@ -391,10 +391,6 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
   MRI->replaceRegWith(DstReg, SrcReg);
   MI.eraseFromParent();
 
-  // Conservatively, clear any kill flags, since it's possible that they are no
-  // longer correct.
-  MRI->clearKillFlags(SrcReg);
-
   ++NumCoalesces;
   return true;
 }
@@ -578,25 +574,9 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       New = &*std::prev(InsertPt);
       if (!New->getDebugLoc())
         New->setDebugLoc(SinkDst->getDebugLoc());
-
-      // The operand registers of the "sunk" instruction have their live range
-      // extended and their kill flags may no longer be correct. Conservatively
-      // clear the kill flags.
-      if (UsedRegA)
-        MRI->clearKillFlags(UsedRegA);
-      if (UsedRegB)
-        MRI->clearKillFlags(UsedRegB);
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
-
-      // The registers of the addressing mode may have their live range extended
-      // and their kill flags may no longer be correct. Conservatively clear the
-      // kill flags.
-      if (Register R = MaybeAM.BaseReg; R.isValid() && R.isVirtual())
-        MRI->clearKillFlags(R);
-      if (Register R = MaybeAM.ScaledReg; R.isValid() && R.isVirtual())
-        MRI->clearKillFlags(R);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
     // Clear the StoreInstrCache, since we may invalidate it by erasing.
