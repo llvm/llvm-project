@@ -250,6 +250,8 @@ void TokenLexer::stringifyVAOPTContents(
 /// return preexpanded tokens from Tokens.
 void TokenLexer::ExpandFunctionArguments() {
   SmallVector<Token, 128> ResultToks;
+  // Remember an empty paste result that can supply the LHS of a later ##.
+  bool HasLeadingPlacemarker = false;
 
   // Loop through 'Tokens', expanding them into ResultToks.  Keep
   // track of whether we change anything.  If not, no need to keep them.  If so,
@@ -425,6 +427,17 @@ void TokenLexer::ExpandFunctionArguments() {
     IdentifierInfo *II = CurTok.getIdentifierInfo();
     int ArgNo = II ? Macro->getParameterNum(II) : -1;
     if (ArgNo == -1) {
+      if (CurTok.is(tok::hashhash) && ResultToks.empty()) {
+        // A preceding empty paste can leave a placemarker even though no
+        // tokens were emitted. It supplies the LHS of this paste.
+        if (HasLeadingPlacemarker) {
+          HasLeadingPlacemarker = false;
+          continue;
+        }
+        SourceLocation Loc = PP.getSourceManager().createExpansionLoc(
+            CurTok.getLocation(), ExpandLocStart, ExpandLocEnd, 2);
+        PP.Diag(Loc, diag::err_paste_at_start);
+      }
       // This isn't an argument, just add it.
       ResultToks.push_back(CurTok);
 
@@ -610,6 +623,9 @@ void TokenLexer::ExpandFunctionArguments() {
       MaybeRemoveCommaBeforeVaArgs(ResultToks,
                                    /*HasPasteOperator=*/true,
                                    Macro, ArgNo, PP);
+
+    if (ResultToks.empty())
+      HasLeadingPlacemarker = true;
   }
 
   // If anything changed, install this as the new Tokens list.
@@ -790,7 +806,14 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
     PasteOpLoc = TokenStream[CurIdx].getLocation();
     if (TokenStream[CurIdx].is(tok::hashhash))
       ++CurIdx;
-    assert(!IsAtEnd() && "No token on the RHS of a paste operator!");
+
+    if (IsAtEnd()) {
+      SourceManager &SM = PP.getSourceManager();
+      SourceLocation Loc =
+          SM.createExpansionLoc(PasteOpLoc, ExpandLocStart, ExpandLocEnd, 2);
+      PP.Diag(Loc, diag::err_paste_at_end);
+      break;
+    }
 
     // Get the RHS token.
     const Token &RHS = TokenStream[CurIdx];
