@@ -1,0 +1,138 @@
+# RUN: llc -mtriple=x86_64-unknown-windows-msvc -run-pass=prolog-epilog -o - %s | FileCheck %s
+
+# The register allocator can split the live range of a value that is stored over
+# the caller's return address, so the store still reads the register that the
+# tail call setup then redefines (here the swiftasync context in r14, which is
+# also the register in which the callee takes its own context). The store is
+# sunk to just before the epilogue, so the value must be saved in a scratch
+# register first.
+
+# CHECK-LABEL: name: f
+# CHECK:       $[[TMP:r[0-9a-z]+]] = MOV64rr $r14
+# CHECK-NEXT:  $r14 = MOV64rm renamable $rdx
+# CHECK-NEXT:  MOV64mr $rsp, 1, $noreg, {{[0-9]+}}, $noreg, $[[TMP]] :: (volatile store (s64) into %fixed-stack.3)
+# CHECK-NEXT:  SEH_BeginEpilogue
+
+--- |
+  target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-windows-msvc"
+
+  declare swifttailcc void @callee(ptr swiftasync, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+  define swifttailcc void @f(ptr swiftasync %ctx, ptr %a, ptr %b, ptr %c, ptr %d) {
+    %next = load ptr, ptr %b, align 8
+    musttail call swifttailcc void @callee(ptr swiftasync %next, ptr %a, ptr %b, ptr %c, ptr %d, ptr %a, ptr %ctx, ptr %b, ptr %c, ptr %d, ptr %a)
+    ret void
+  }
+...
+---
+name:            f
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r14', virtual-reg: '' }
+  - { reg: '$rcx', virtual-reg: '' }
+  - { reg: '$rdx', virtual-reg: '' }
+  - { reg: '$r8', virtual-reg: '' }
+  - { reg: '$r9', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  framePointerPolicy: none
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     true
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:
+  - { id: 0, type: default, offset: 24, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, type: default, offset: 16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 3, type: default, offset: 0, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 4, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 5, type: default, offset: -16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 6, type: default, offset: -56, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 7, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $rcx, $rdx, $r8, $r9, $r14
+  
+    renamable $rax = COPY $r14
+    MOV64mr %stack.0, 1, $noreg, 0, $noreg, $r14 :: (store (s64) into %stack.0)
+    renamable $r10 = MOV64rm %fixed-stack.7, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.7)
+    MOV64mr %fixed-stack.6, 1, $noreg, 0, $noreg, killed renamable $r10 :: (volatile store (s64) into %fixed-stack.6)
+    MOV64mr %fixed-stack.5, 1, $noreg, 0, $noreg, renamable $rcx :: (store (s64) into %fixed-stack.5, align 16)
+    MOV64mr %fixed-stack.3, 1, $noreg, 0, $noreg, renamable $rdx :: (store (s64) into %fixed-stack.3, align 16)
+    MOV64mr %fixed-stack.2, 1, $noreg, 0, $noreg, renamable $r8 :: (store (s64) into %fixed-stack.2)
+    MOV64mr %fixed-stack.1, 1, $noreg, 0, $noreg, renamable $r9 :: (store (s64) into %fixed-stack.1, align 16)
+    MOV64mr %fixed-stack.0, 1, $noreg, 0, $noreg, renamable $rcx :: (store (s64) into %fixed-stack.0)
+    MOV64mr %fixed-stack.4, 1, $noreg, 0, $noreg, $r14 :: (volatile store (s64) into %fixed-stack.4)
+    $r14 = MOV64rm renamable $rdx, 1, $noreg, 0, $noreg :: (load (s64) from %ir.b)
+    TCRETURNdi64 @callee, -48, csr_win64_swifttail, implicit $rsp, implicit $ssp, implicit $r14, implicit $rcx, implicit $rdx, implicit $r8, implicit $r9, implicit killed renamable $rax
+...
