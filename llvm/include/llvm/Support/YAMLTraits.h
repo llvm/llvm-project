@@ -1039,16 +1039,20 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
 template <typename T>
 std::enable_if_t<has_CustomMappingTraits<T>::value, void>
 yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
+  if (has_FlowTraits<CustomMappingTraits<T>>::value)
+    io.beginFlowMapping();
+  else
+    io.beginMapping();
   if (io.outputting()) {
-    io.beginMapping();
     CustomMappingTraits<T>::output(io, Val);
-    io.endMapping();
   } else {
-    io.beginMapping();
     for (StringRef key : io.keys())
       CustomMappingTraits<T>::inputOne(io, key, Val);
-    io.endMapping();
   }
+  if (has_FlowTraits<CustomMappingTraits<T>>::value)
+    io.endFlowMapping();
+  else
+    io.endMapping();
 }
 
 template <typename T>
