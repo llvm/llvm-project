@@ -19,7 +19,9 @@ unsigned long _Accum ula;
 short _Fract sf;
 _Fract f;
 long _Fract lf;
+unsigned short _Fract usf;
 unsigned _Fract uf;
+unsigned long _Fract ulf;
 
 _Sat short _Accum sat_sa;
 _Sat _Accum sat_a;
@@ -540,6 +542,58 @@ void fix_int2(void) {
   i = usa;
 }
 
+// SIGNED-LABEL: @fix_int3(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load i8, ptr @usf, align 1
+// SIGNED-NEXT:    store i32 0, ptr @i, align 4
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @fix_int3(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load i8, ptr @usf, align 1
+// UNSIGNED-NEXT:    [[DOWNSCALE:%.*]] = lshr i8 [[TMP0]], 7
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = zext i8 [[DOWNSCALE]] to i32
+// UNSIGNED-NEXT:    store i32 [[RESIZE]], ptr @i, align 4
+// UNSIGNED-NEXT:    ret void
+//
+void fix_int3(void) {
+  i = usf;
+}
+
+// SIGNED-LABEL: @fix_int4(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load i16, ptr @uf, align 2
+// SIGNED-NEXT:    store i32 0, ptr @i, align 4
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @fix_int4(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, ptr @uf, align 2
+// UNSIGNED-NEXT:    [[DOWNSCALE:%.*]] = lshr i16 [[TMP0]], 15
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = zext i16 [[DOWNSCALE]] to i32
+// UNSIGNED-NEXT:    store i32 [[RESIZE]], ptr @i, align 4
+// UNSIGNED-NEXT:    ret void
+//
+void fix_int4(void) {
+  i = uf;
+}
+
+// SIGNED-LABEL: @fix_int5(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load i32, ptr @ulf, align 4
+// SIGNED-NEXT:    store i32 0, ptr @i, align 4
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @fix_int5(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load i32, ptr @ulf, align 4
+// UNSIGNED-NEXT:    [[DOWNSCALE:%.*]] = lshr i32 [[TMP0]], 31
+// UNSIGNED-NEXT:    store i32 [[DOWNSCALE]], ptr @i, align 4
+// UNSIGNED-NEXT:    ret void
+//
+void fix_int5(void) {
+  i = ulf;
+}
 
 // CHECK-LABEL: @int_fix1(
 // CHECK-NEXT:  entry:
