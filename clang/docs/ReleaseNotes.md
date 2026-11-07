@@ -163,6 +163,11 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- Fixed RTTI name for internal-linkage types lacking '*', fixed breaking
+  type_info::operator== and dynamic_cast with libstdc++. Fixed libc++ NonUnique
+  implementation incorrectly comparing internal-linkage types equal via strcmp.
+  (#GH34255)
+
 - On Windows targets using Microsoft C++ ABI, fixed returning a class with
   a deleted template constructor which should be returned in a register.
   This affects the ABI of `std::strong_ordering` in some versions of the
