@@ -14,6 +14,7 @@
 #ifndef CLANG_SUPPORT_COMPILER_H
 #define CLANG_SUPPORT_COMPILER_H
 
+#include "clang/Config/clang-config.h"
 #include "llvm/Support/Compiler.h"
 
 /// CLANG_ABI is the main export/visibility macro to mark something as
@@ -40,12 +41,8 @@
 // in the build so can't depend on the llvm shared library. If export macros
 // were left enabled when building these we would get duplicate or
 // missing symbol linker errors on windows.
-#if defined(CLANG_BUILD_STATIC)
-#define CLANG_ABI
-#define CLANG_ABI_EXPORT
-#define CLANG_TEMPLATE_ABI
-#define CLANG_EXPORT_TEMPLATE
-#elif defined(_WIN32) && !defined(__MINGW32__)
+#if defined(CLANG_ENABLE_CLANG_EXPORT_ANNOTATIONS) && !defined(CLANG_BUILD_STATIC)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #if defined(CLANG_EXPORTS)
 #define CLANG_ABI __declspec(dllexport)
 #define CLANG_TEMPLATE_ABI
@@ -56,17 +53,22 @@
 #define CLANG_EXPORT_TEMPLATE
 #endif
 #define CLANG_ABI_EXPORT __declspec(dllexport)
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__) || defined(__CYGWIN__)
-#define CLANG_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define CLANG_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define CLANG_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif __has_attribute(visibility)
+#if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
+    defined(__MVS__) || defined(__CYGWIN__) || defined(__MACH__) ||            \
+    defined(__wasm__) || defined(__EMSCRIPTEN__)
+#define CLANG_ABI __attribute__((visibility("default")))
+#define CLANG_TEMPLATE_ABI CLANG_ABI
 #define CLANG_EXPORT_TEMPLATE
-#elif defined(__MACH__) || defined(__wasm__) || defined(__EMSCRIPTEN__)
-#define CLANG_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define CLANG_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define CLANG_ABI_EXPORT CLANG_ABI
+#endif
+#endif
+#endif
+#if !defined(CLANG_ABI)
+#define CLANG_ABI
 #define CLANG_TEMPLATE_ABI
 #define CLANG_EXPORT_TEMPLATE
+#define CLANG_ABI_EXPORT
 #endif
 #endif
 
