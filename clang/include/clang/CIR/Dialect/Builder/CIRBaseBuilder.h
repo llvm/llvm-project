@@ -279,7 +279,8 @@ public:
   /// environment currently in effect. This is attached to floating-point
   /// operations that support it to capture the rounding and exception
   /// behavior. Returns a null attribute when constrained floating-point is not
-  /// enabled, in which case no attribute should be attached.
+  /// enabled, in which case the operation gets the default, unconstrained
+  /// `#cir.fenv<>`.
   cir::FenvAttr getConstrainedFPAttr() {
     if (!isFPConstrained)
       return {};

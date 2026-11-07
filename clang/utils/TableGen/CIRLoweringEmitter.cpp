@@ -203,9 +203,9 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   if (!ConstrainedLLVMIntrinsic.empty()) {
     // Generate a matchAndRewrite body for a floating-point operation that
-    // carries an optional `fenv` attribute. The shared `lowerConstrainableFPOp`
-    // helper lowers to the plain `llvmOp` when no `fenv` attribute is present
-    // and to a call to the constrained floating-point intrinsic when one is.
+    // carries an `fenv` attribute. The shared `lowerConstrainableFPOp` helper
+    // lowers to the plain `llvmOp` when `fenv` is the empty `#cir.fenv<>` and
+    // to a call to the constrained floating-point intrinsic otherwise.
     assert(!LLVMOp.empty() && "constrainedLLVMIntrinsic requires llvmOp");
     Code
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
@@ -213,7 +213,7 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
            "const override {\n";
     Code << "    return lowerConstrainableFPOp<mlir::LLVM::" << LLVMOp
          << ">(\n";
-    Code << "        op, adaptor.getOperands(), op.getFenvAttr(),\n";
+    Code << "        op, adaptor.getOperands(), op.getConstrainedFenv(),\n";
     Code << "        "
          << (HasFastMathFlags ? "op.getFastmathFlagsAttr()"
                               : "cir::FastMathFlagsAttr{}")
