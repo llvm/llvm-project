@@ -8,12 +8,13 @@
 # RUN:   -macho-relocatable-dwarf %s -o %t.o
 # RUN: lldb-test symtab --find-symbols-by-regex='.*' %t.o | FileCheck %s
 
-# CHECK-DAG: Code 0x0000000000000000 0x0000000000000002 {{.*}} foo
-# CHECK-DAG: Code 0x0000000000000002 0x0000000000000002 {{.*}} bar
+# CHECK-DAG: Code 0x0000000000000000 0x0000000000000003 {{.*}} foo
+# CHECK-DAG: Code 0x0000000000000003 0x0000000000000002 {{.*}} bar
 
 	.text
 	.globl	_foo
 _foo:
+	nop
 	nop
 	ret
 	.globl	_bar

@@ -889,8 +889,10 @@ static void AddSectionsToRangeMap(SectionList *sectlist,
       if (child_sectlist.GetNumSections(0) > 0) {
         AddSectionsToRangeMap(&child_sectlist, section_ranges);
       } else {
+        // Debug info sections can share addresses with the sections that
+        // symbols are defined in.
         size_t size = sect_sp->GetByteSize();
-        if (size > 0) {
+        if (size > 0 && !sect_sp->ContainsOnlyDebugInfo()) {
           addr_t base_addr = sect_sp->GetFileAddress();
           RangeVector<addr_t, addr_t>::Entry entry;
           entry.SetRangeBase(base_addr);
@@ -943,24 +945,15 @@ void Symtab::InitAddressIndexes() {
             m_file_addr_to_index.GetMutableEntryAtIndex(i);
         if (entry->GetByteSize() == 0) {
           addr_t curr_base_addr = entry->GetRangeBase();
-          Symbol &symbol = m_symbols[entry->data];
+          const RangeVector<addr_t, addr_t>::Entry *containing_section =
+              section_ranges.FindEntryThatContains(curr_base_addr);
 
-          // Use the end of the section as the default max size of the symbol.
-          // Sections of an object file can share addresses, so prefer the
-          // section the symbol is defined in over one found by its address.
+          // Use the end of the section as the default max size of the symbol
           addr_t sym_size = 0;
-          SectionSP symbol_section = symbol.GetAddressRef().GetSection();
-          if (symbol_section &&
-              symbol_section->ContainsFileAddress(curr_base_addr)) {
-            sym_size = symbol_section->GetFileAddress() +
-                       symbol_section->GetByteSize() - curr_base_addr;
-          } else if (const RangeVector<addr_t, addr_t>::Entry
-                         *containing_section =
-                             section_ranges.FindEntryThatContains(
-                                 curr_base_addr)) {
+          if (containing_section) {
             sym_size =
                 containing_section->GetByteSize() -
-                (curr_base_addr - containing_section->GetRangeBase());
+                (entry->GetRangeBase() - containing_section->GetRangeBase());
           }
 
           for (size_t j = i; j < num_entries; j++) {
@@ -981,6 +974,7 @@ void Symtab::InitAddressIndexes() {
 
           if (sym_size > 0) {
             entry->SetByteSize(sym_size);
+            Symbol &symbol = m_symbols[entry->data];
             symbol.SetByteSize(sym_size);
             symbol.SetSizeIsSynthesized(true);
           }
