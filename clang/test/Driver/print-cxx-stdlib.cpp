@@ -33,6 +33,11 @@
 // RUN:   --target=x86_64-pc-windows-msvc \
 // RUN:   -Xmicrosoft-visualc-tools-root %t/VC/Tools/MSVC/27.1828.18284 \
 // RUN:   -nostdinc++ \
+// RUN:   | FileCheck %s --check-prefix=MSVC-INCLUDES --allow-empty
+// RUN: %clangxx --print-cxx-stdlib-include-dirs \
+// RUN:   --target=x86_64-pc-windows-msvc \
+// RUN:   -Xmicrosoft-visualc-tools-root %t/VC/Tools/MSVC/27.1828.18284 \
+// RUN:   -nostdinc \
 // RUN:   | FileCheck %s --check-prefix=NO-INCLUDES --allow-empty
 // RUN: %clangxx --print-cxx-stdlib-include-dirs -stdlib=libc++ \
 // RUN:   --target=x86_64-pc-windows-msvc \

@@ -415,6 +415,9 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   case ToolChain::CST_Libstdcxx:
     addLibStdCxxIncludePaths(DriverArgs, CC1Args);
     break;
+  case ToolChain::CST_MSVCSTL:
+    llvm::report_fatal_error("picking up MSVC STL headers is unimplemented");
+    break;
   }
 
   std::string SysRootDir(computeSysRoot());
@@ -461,6 +464,9 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       }
       break;
     }
+    case ToolChain::CST_MSVCSTL: {
+      break;
+    }
     }
   }
   switch (GetCXXStdlibType(DriverArgs)) {
@@ -472,6 +478,7 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     break;
   }
   case ToolChain::CST_Libstdcxx:
+  case ToolChain::CST_MSVCSTL:
     break;
   }
 }
@@ -572,7 +579,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool NeedCRTs =
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
 
-  const char *CRTBegin, *CRTEnd;
+  const char *CRTBegin = nullptr, *CRTEnd = nullptr;
   if (NeedCRTs) {
     if (!Args.hasArg(options::OPT_r)) {
       const char *crt = "crt0.o";
@@ -593,6 +600,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
             TC.getCompilerRTArgString(Args, "crtbegin", ToolChain::FT_Object);
         CRTEnd =
             TC.getCompilerRTArgString(Args, "crtend", ToolChain::FT_Object);
+        break;
+      }
+      case (ToolChain::RLT_VCRuntime): {
         break;
       }
       }
