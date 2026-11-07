@@ -574,8 +574,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});
 
-  getActionDefinitionsBuilder(G_FFREXP).legalForCartesianProduct(
-      allFloatScalarsAndVectors, {s32, v2s32, v3s32, v4s32, v8s32, v16s32});
+  getActionDefinitionsBuilder(G_FFREXP)
+      .legalForCartesianProduct(allFloatScalarsAndVectors,
+                                {s32, v2s32, v3s32, v4s32, v8s32, v16s32})
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      // LegalizerHelper::moreElementsVector does not support G_FFREXP.
+      .scalarizeIf(numElementsNotPow2(0), 0);
 
   // TODO: Review the target OpenCL and GLSL Extended Instruction Set specs to
   // tighten these requirements. Many of these math functions are only legal on
