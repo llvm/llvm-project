@@ -5340,6 +5340,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
+  // No support for PPCDoubleDouble.
+  if (V->getType()->getScalarType()->isMultiUnitFPType()) {
+    Known.resetAll();
+    return;
+  }
+
   if (auto *CFP = dyn_cast<ConstantFP>(V)) {
     Known = KnownFPClass(CFP->getValueAPF());
     return;

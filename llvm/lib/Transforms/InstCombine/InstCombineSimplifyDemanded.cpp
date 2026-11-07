@@ -2424,6 +2424,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
   Type *VTy = I->getType();
 
+  // No support for PPCDoubleDouble.
+  if (VTy->getScalarType()->isMultiUnitFPType()) {
+    Known.resetAll();
+    return nullptr;
+  }
+
   FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
     FMF = FPOp->getFastMathFlags();

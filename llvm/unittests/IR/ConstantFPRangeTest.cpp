@@ -529,6 +529,16 @@ TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
   EXPECT_DEATH((void)(One.unionWith(OneF32)),
                "Should only use the same semantics");
 }
+TEST_F(ConstantFPRangeTest, UnsupportedSemantics) {
+  APFloat PPCPosOne(APFloat::PPCDoubleDouble(), "1.0");
+  EXPECT_DEATH((void)(ConstantFPRange::getFull(APFloat::PPCDoubleDouble())),
+               "Unsupported FP semantics");
+  EXPECT_DEATH((void)(ConstantFPRange::getEmpty(APFloat::PPCDoubleDouble())),
+               "Unsupported FP semantics");
+  EXPECT_DEATH((void)(ConstantFPRange(PPCPosOne)), "Unsupported FP semantics");
+  EXPECT_DEATH((void)(ConstantFPRange::getNonNaN(PPCPosOne, PPCPosOne)),
+               "Unsupported FP semantics");
+}
 #endif
 #endif
 

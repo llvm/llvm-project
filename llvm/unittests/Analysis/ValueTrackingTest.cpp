@@ -2552,6 +2552,45 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
   }
 }
 
+TEST_F(ComputeKnownFPClassTest, MultiUnitFPTypeConstants) {
+  parseAssembly("declare ppc_fp128 @func()\n"
+                "define ppc_fp128 @test() {\n"
+                "  %A = call ppc_fp128 @func()\n"
+                "  ret ppc_fp128 %A\n"
+                "}\n");
+
+  Type *PPCF128 = Type::getPPC_FP128Ty(Context);
+  Type *V2PPCF128 = FixedVectorType::get(PPCF128, 2);
+
+  {
+    KnownFPClass Poison = computeKnownFPClass(PoisonValue::get(PPCF128),
+                                              M->getDataLayout(), fcAllFlags);
+    EXPECT_EQ(fcAllFlags, Poison.getKnownFPClasses());
+    EXPECT_FALSE(Poison.getSignBit());
+  }
+
+  {
+    KnownFPClass Poison = computeKnownFPClass(PoisonValue::get(V2PPCF128),
+                                              M->getDataLayout(), fcAllFlags);
+    EXPECT_EQ(fcAllFlags, Poison.getKnownFPClasses());
+    EXPECT_FALSE(Poison.getSignBit());
+  }
+
+  {
+    KnownFPClass Zero = computeKnownFPClass(ConstantFP::getZero(PPCF128),
+                                            M->getDataLayout(), fcAllFlags);
+    EXPECT_EQ(fcAllFlags, Zero.getKnownFPClasses());
+    EXPECT_FALSE(Zero.getSignBit());
+  }
+
+  {
+    KnownFPClass ConstAggZero = computeKnownFPClass(
+        ConstantAggregateZero::get(V2PPCF128), M->getDataLayout(), fcAllFlags);
+    EXPECT_EQ(fcAllFlags, ConstAggZero.getKnownFPClasses());
+    EXPECT_FALSE(ConstAggZero.getSignBit());
+  }
+}
+
 TEST_F(ComputeKnownFPClassTest, fcmpImpliesClass_fabs_zero) {
   parseAssembly("define float @test(float %x) {\n"
                 "  %A = call float @llvm.fabs.f32(float %x)\n"
