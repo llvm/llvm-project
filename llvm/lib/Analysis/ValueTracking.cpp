@@ -6260,6 +6260,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
 
+    const APFloat *CLHS;
+    if (match(Op->getOperand(0), m_APFloat(CLHS))) {
+      computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
+                          Q, Depth + 1);
+      Known = KnownFPClass::fdiv(*CLHS, KnownRHS, Mode);
+      break;
+    }
+
     computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
                         Q, Depth + 1);
 

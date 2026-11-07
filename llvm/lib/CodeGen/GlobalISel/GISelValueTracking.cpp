@@ -2056,6 +2056,13 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       break;
     }
 
+    auto LHSCst = GFConstant::getConstant(LHS, MRI);
+    if (LHSCst && LHSCst->getKind() == GFConstant::GFConstantKind::Scalar) {
+      computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Depth + 1);
+      Known = KnownFPClass::fdiv(LHSCst->getScalarValue(), KnownRHS, Mode);
+      break;
+    }
+
     computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Depth + 1);
 
     bool KnowSomethingUseful =

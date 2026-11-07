@@ -577,6 +577,102 @@ static KnownFPClass scaleByExpRange(const KnownFPClass &KnownSrc_, int MinExp,
   return Known;
 }
 
+static KnownFPClass recipByExpRange(const KnownFPClass &KnownSrc_, int MinExp,
+                                    int MaxExp, bool Negate,
+                                    const fltSemantics &Flt, RoundingMode RM) {
+  // Return unknown if the range contradicts itself.
+  if (MinExp > MaxExp)
+    return KnownFPClass();
+
+  // We are assuming that fcNormal has a magnitude strictly larger than
+  // fcSubnormal, which does not hold for PPCDoubleDouble.
+  if (&Flt == &APFloat::PPCDoubleDouble())
+    return KnownFPClass();
+
+  KnownFPClass KnownSrc = KnownSrc_;
+
+  // We need to negate first to properly handle asymmetric rounding modes such
+  // as TowardsPositive and TowardsNegative.
+  if (Negate)
+    KnownSrc.fneg();
+
+  const bool IsRNE = RM == RoundingMode::NearestTiesToEven;
+
+  KnownFPClass Known;
+
+  Known.propagateNonNaN(KnownSrc);
+
+  // The basic theory when taking the reciprocal:
+  // C / x --> log2(C / x) --> log2(C) - log2(x)
+
+  const int Precision = APFloat::semanticsPrecision(Flt);
+
+  const int MinNormalExp = APFloat::semanticsMinExponent(Flt);
+  const int MinSubnormalExp = MinNormalExp - Precision + 1;
+  const int UnderflowExp = MinSubnormalExp - 1;
+  const int OverflowExp = APFloat::semanticsMaxExponent(Flt) + 1;
+
+  // |C / x| in (2^SubnormalDivLo, 2^SubnormalDivHi]
+  const int SubnormalDivLo = MinExp - MinNormalExp;
+  const int SubnormalDivHi = MaxExp - MinSubnormalExp;
+
+  // |C / x| in (2^NormalDivLo, 2^NormalDivHi]
+  const int NormalDivLo = MinExp - OverflowExp;
+  const int NormalDivHi = MaxExp - MinNormalExp;
+
+  const bool SubnormalNeverZero = SubnormalDivLo >= MinSubnormalExp ||
+                                  (IsRNE && SubnormalDivLo >= UnderflowExp);
+  const bool SubnormalNeverSubnormal =
+      SubnormalDivLo >= MinNormalExp || SubnormalDivHi <= UnderflowExp;
+  const bool SubnormalNeverNormal =
+      SubnormalDivHi < MinNormalExp || (IsRNE && SubnormalDivLo >= OverflowExp);
+  const bool SubnormalNeverInfinity = SubnormalDivHi < OverflowExp;
+
+  const bool NormalNeverZero =
+      NormalDivLo >= MinSubnormalExp || (IsRNE && NormalDivLo >= UnderflowExp);
+  const bool NormalNeverSubnormal =
+      NormalDivLo >= MinNormalExp || NormalDivHi <= UnderflowExp;
+  const bool NormalNeverNormal =
+      NormalDivHi < MinNormalExp || (IsRNE && NormalDivLo >= OverflowExp);
+  const bool NormalNeverInfinity = NormalDivHi < OverflowExp;
+
+  // C / inf --> zero
+  if (KnownSrc.isKnownNever(fcPosInf) &&
+      (KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverZero) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalNeverZero))
+    Known.knownNot(fcPosZero);
+  if (KnownSrc.isKnownNever(fcNegInf) &&
+      (KnownSrc.isKnownNever(fcNegSubnormal) || SubnormalNeverZero) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverZero))
+    Known.knownNot(fcNegZero);
+
+  if ((KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverSubnormal) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalNeverSubnormal))
+    Known.knownNot(fcPosSubnormal);
+  if ((KnownSrc.isKnownNever(fcNegSubnormal) || SubnormalNeverSubnormal) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverSubnormal))
+    Known.knownNot(fcNegSubnormal);
+
+  if ((KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverNormal) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalNeverNormal))
+    Known.knownNot(fcPosNormal);
+  if ((KnownSrc.isKnownNever(fcNegSubnormal) || SubnormalNeverNormal) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverNormal))
+    Known.knownNot(fcNegNormal);
+
+  // C / zero --> inf
+  if (KnownSrc.isKnownNever(fcPosZero) &&
+      (KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverInfinity) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalNeverInfinity))
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNever(fcNegZero) &&
+      (KnownSrc.isKnownNever(fcNegSubnormal) || SubnormalNeverInfinity) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverInfinity))
+    Known.knownNot(fcNegInf);
+
+  return Known;
+}
+
 // Handle known sign bit and nan cases for fadd, fsub, and fma.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, bool IsFMA) {
@@ -838,6 +934,32 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS_,
                             RoundingMode::NearestTiesToEven);
   } else {
     KnownFPClass KnownRHS = applyInputDenormalMode(KnownFPClass(CRHS), Mode);
+    Known = fdiv(KnownLHS, KnownRHS, DenormalMode::getIEEE());
+  }
+
+  return applyOutputDenormalMode(Known, Mode);
+}
+
+KnownFPClass KnownFPClass::fdiv(const APFloat &CLHS,
+                                const KnownFPClass &KnownRHS_,
+                                DenormalMode Mode) {
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
+
+  const fltSemantics &Flt = CLHS.getSemantics();
+
+  KnownFPClass Known;
+  // TODO: Handle subnormal CLHS (which may flush to zero).
+  if (CLHS.isNormal() && &Flt != &APFloat::PPCDoubleDouble()) {
+    const int Exp = ilogb(CLHS);
+    const bool IsPow2 = CLHS.getExactLog2Abs() != INT_MIN;
+
+    // |C| in [2^Exp, 2^Exp] exactly when C is power of two
+    // |C| in [2^Exp, 2^(Exp+1)) otherwise
+    Known = recipByExpRange(KnownRHS, Exp, IsPow2 ? Exp : Exp + 1,
+                            CLHS.isNegative(), Flt,
+                            RoundingMode::NearestTiesToEven);
+  } else {
+    KnownFPClass KnownLHS = applyInputDenormalMode(KnownFPClass(CLHS), Mode);
     Known = fdiv(KnownLHS, KnownRHS, DenormalMode::getIEEE());
   }
 

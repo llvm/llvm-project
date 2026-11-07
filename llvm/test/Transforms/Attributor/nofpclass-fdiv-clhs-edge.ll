@@ -7,7 +7,7 @@
 
 ; fdiv_f16(nextdown(2^-9), norm, RNE) = zero | sub | norm
 define half @ret_fdiv_clhs_f16__norm__zero_sub_norm__max__rne(half nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__norm__zero_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf) half @ret_fdiv_clhs_f16__norm__zero_sub_norm__max__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 1.952170e-03, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -18,7 +18,7 @@ define half @ret_fdiv_clhs_f16__norm__zero_sub_norm__max__rne(half nofpclass(nan
 
 ; fdiv_f16(2^-9, norm, RNE) = sub | norm
 define half @ret_fdiv_clhs_f16__norm__sub_norm__min__rne(half nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__norm__sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) half @ret_fdiv_clhs_f16__norm__sub_norm__min__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 1.953130e-03, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -29,7 +29,7 @@ define half @ret_fdiv_clhs_f16__norm__sub_norm__min__rne(half nofpclass(nan inf 
 
 ; fdiv_f16(2^1, norm, RNE) = sub | norm
 define half @ret_fdiv_clhs_f16__norm__sub_norm__max__rne(half nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__norm__sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) half @ret_fdiv_clhs_f16__norm__sub_norm__max__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 2.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -40,7 +40,7 @@ define half @ret_fdiv_clhs_f16__norm__sub_norm__max__rne(half nofpclass(nan inf 
 
 ; fdiv_f16(nextup(2^1), norm, RNE) = inf | sub | norm
 define half @ret_fdiv_clhs_f16__norm__inf_sub_norm__min__rne(half nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__norm__inf_sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero) half @ret_fdiv_clhs_f16__norm__inf_sub_norm__min__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 2.001950e+00, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -51,7 +51,7 @@ define half @ret_fdiv_clhs_f16__norm__inf_sub_norm__min__rne(half nofpclass(nan 
 
 ; fdiv_f16(nextdown(2^2), norm, RNE) = inf | sub | norm
 define half @ret_fdiv_clhs_f16__norm__inf_sub_norm__max__rne(half nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__norm__inf_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero) half @ret_fdiv_clhs_f16__norm__inf_sub_norm__max__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 3.998050e+00, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -62,7 +62,7 @@ define half @ret_fdiv_clhs_f16__norm__inf_sub_norm__max__rne(half nofpclass(nan 
 
 ; fdiv_f16(2^2, norm, RNE) = inf | norm
 define half @ret_fdiv_clhs_f16__norm__inf_norm__min__rne(half nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__norm__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) half @ret_fdiv_clhs_f16__norm__inf_norm__min__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -73,7 +73,7 @@ define half @ret_fdiv_clhs_f16__norm__inf_norm__min__rne(half nofpclass(nan inf 
 
 ; fdiv_f16(2^-9, sub, RNE) = norm
 define half @ret_fdiv_clhs_f16__sub__norm__max__rne(half nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__sub__norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero sub) half @ret_fdiv_clhs_f16__sub__norm__max__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 1.953130e-03, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -84,7 +84,7 @@ define half @ret_fdiv_clhs_f16__sub__norm__max__rne(half nofpclass(nan inf zero 
 
 ; fdiv_f16(nextup(2^-9), sub, RNE) = inf | norm
 define half @ret_fdiv_clhs_f16__sub__inf_norm__min__rne(half nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__sub__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) half @ret_fdiv_clhs_f16__sub__inf_norm__min__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 1.955030e-03, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -95,7 +95,7 @@ define half @ret_fdiv_clhs_f16__sub__inf_norm__min__rne(half nofpclass(nan inf z
 
 ; fdiv_f16(nextdown(2^2), sub, RNE) = inf | norm
 define half @ret_fdiv_clhs_f16__sub__inf_norm__max__rne(half nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__sub__inf_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) half @ret_fdiv_clhs_f16__sub__inf_norm__max__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 3.998050e+00, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -106,7 +106,7 @@ define half @ret_fdiv_clhs_f16__sub__inf_norm__max__rne(half nofpclass(nan inf z
 
 ; fdiv_f16(2^2, sub, RNE) = inf
 define half @ret_fdiv_clhs_f16__sub__inf__min__rne(half nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) half @ret_fdiv_clhs_f16__sub__inf__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub norm) half @ret_fdiv_clhs_f16__sub__inf__min__rne(
 ; CHECK-SAME: half nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret half [[DIV]]
@@ -121,7 +121,7 @@ define half @ret_fdiv_clhs_f16__sub__inf__min__rne(half nofpclass(nan inf zero n
 
 ; fdiv_bf16(nextdown(2^-6), norm, RNE) = zero | sub | norm
 define bfloat @ret_fdiv_clhs_bf16__norm__zero_sub_norm__max__rne(bfloat nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__norm__zero_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf) bfloat @ret_fdiv_clhs_bf16__norm__zero_sub_norm__max__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 1.556400e-02, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -132,7 +132,7 @@ define bfloat @ret_fdiv_clhs_bf16__norm__zero_sub_norm__max__rne(bfloat nofpclas
 
 ; fdiv_bf16(2^-6, norm, RNE) = sub | norm
 define bfloat @ret_fdiv_clhs_bf16__norm__sub_norm__min__rne(bfloat nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__norm__sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) bfloat @ret_fdiv_clhs_bf16__norm__sub_norm__min__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 1.562500e-02, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -143,7 +143,7 @@ define bfloat @ret_fdiv_clhs_bf16__norm__sub_norm__min__rne(bfloat nofpclass(nan
 
 ; fdiv_bf16(2^1, norm, RNE) = sub | norm
 define bfloat @ret_fdiv_clhs_bf16__norm__sub_norm__max__rne(bfloat nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__norm__sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) bfloat @ret_fdiv_clhs_bf16__norm__sub_norm__max__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 2.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -154,7 +154,7 @@ define bfloat @ret_fdiv_clhs_bf16__norm__sub_norm__max__rne(bfloat nofpclass(nan
 
 ; fdiv_bf16(nextup(2^1), norm, RNE) = inf | sub | norm
 define bfloat @ret_fdiv_clhs_bf16__norm__inf_sub_norm__min__rne(bfloat nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__norm__inf_sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero) bfloat @ret_fdiv_clhs_bf16__norm__inf_sub_norm__min__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 2.015630e+00, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -165,7 +165,7 @@ define bfloat @ret_fdiv_clhs_bf16__norm__inf_sub_norm__min__rne(bfloat nofpclass
 
 ; fdiv_bf16(nextdown(2^2), norm, RNE) = inf | sub | norm
 define bfloat @ret_fdiv_clhs_bf16__norm__inf_sub_norm__max__rne(bfloat nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__norm__inf_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero) bfloat @ret_fdiv_clhs_bf16__norm__inf_sub_norm__max__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 3.984380e+00, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -176,7 +176,7 @@ define bfloat @ret_fdiv_clhs_bf16__norm__inf_sub_norm__max__rne(bfloat nofpclass
 
 ; fdiv_bf16(2^2, norm, RNE) = inf | norm
 define bfloat @ret_fdiv_clhs_bf16__norm__inf_norm__min__rne(bfloat nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__norm__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) bfloat @ret_fdiv_clhs_bf16__norm__inf_norm__min__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -187,7 +187,7 @@ define bfloat @ret_fdiv_clhs_bf16__norm__inf_norm__min__rne(bfloat nofpclass(nan
 
 ; fdiv_bf16(2^-6, sub, RNE) = norm
 define bfloat @ret_fdiv_clhs_bf16__sub__norm__max__rne(bfloat nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__sub__norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero sub) bfloat @ret_fdiv_clhs_bf16__sub__norm__max__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 1.562500e-02, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -198,7 +198,7 @@ define bfloat @ret_fdiv_clhs_bf16__sub__norm__max__rne(bfloat nofpclass(nan inf 
 
 ; fdiv_bf16(nextup(2^-6), sub, RNE) = inf | norm
 define bfloat @ret_fdiv_clhs_bf16__sub__inf_norm__min__rne(bfloat nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__sub__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) bfloat @ret_fdiv_clhs_bf16__sub__inf_norm__min__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 1.574710e-02, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -209,7 +209,7 @@ define bfloat @ret_fdiv_clhs_bf16__sub__inf_norm__min__rne(bfloat nofpclass(nan 
 
 ; fdiv_bf16(nextdown(2^2), sub, RNE) = inf | norm
 define bfloat @ret_fdiv_clhs_bf16__sub__inf_norm__max__rne(bfloat nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__sub__inf_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) bfloat @ret_fdiv_clhs_bf16__sub__inf_norm__max__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 3.984380e+00, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -220,7 +220,7 @@ define bfloat @ret_fdiv_clhs_bf16__sub__inf_norm__max__rne(bfloat nofpclass(nan 
 
 ; fdiv_bf16(2^2, sub, RNE) = inf
 define bfloat @ret_fdiv_clhs_bf16__sub__inf__min__rne(bfloat nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fdiv_clhs_bf16__sub__inf__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub norm) bfloat @ret_fdiv_clhs_bf16__sub__inf__min__rne(
 ; CHECK-SAME: bfloat nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv bfloat 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret bfloat [[DIV]]
@@ -235,7 +235,7 @@ define bfloat @ret_fdiv_clhs_bf16__sub__inf__min__rne(bfloat nofpclass(nan inf z
 
 ; fdiv_f32(nextdown(2^-22), norm, RNE) = zero | sub | norm
 define float @ret_fdiv_clhs__norm__zero_sub_norm__max__rne(float nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__norm__zero_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf) float @ret_fdiv_clhs__norm__zero_sub_norm__max__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float f0x347FFFFF, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -246,7 +246,7 @@ define float @ret_fdiv_clhs__norm__zero_sub_norm__max__rne(float nofpclass(nan i
 
 ; fdiv_f32(2^-22, norm, RNE) = sub | norm
 define float @ret_fdiv_clhs__norm__sub_norm__min__rne(float nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__norm__sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) float @ret_fdiv_clhs__norm__sub_norm__min__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float f0x34800000, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -257,7 +257,7 @@ define float @ret_fdiv_clhs__norm__sub_norm__min__rne(float nofpclass(nan inf ze
 
 ; fdiv_f32(2^1, norm, RNE) = sub | norm
 define float @ret_fdiv_clhs__norm__sub_norm__max__rne(float nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__norm__sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) float @ret_fdiv_clhs__norm__sub_norm__max__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float 2.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -268,7 +268,7 @@ define float @ret_fdiv_clhs__norm__sub_norm__max__rne(float nofpclass(nan inf ze
 
 ; fdiv_f32(nextup(2^1), norm, RNE) = inf | sub | norm
 define float @ret_fdiv_clhs__norm__inf_sub_norm__min__rne(float nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__norm__inf_sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero) float @ret_fdiv_clhs__norm__inf_sub_norm__min__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float f0x40000001, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -279,7 +279,7 @@ define float @ret_fdiv_clhs__norm__inf_sub_norm__min__rne(float nofpclass(nan in
 
 ; fdiv_f32(nextdown(2^2), norm, RNE) = inf | sub | norm
 define float @ret_fdiv_clhs__norm__inf_sub_norm__max__rne(float nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__norm__inf_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero) float @ret_fdiv_clhs__norm__inf_sub_norm__max__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float f0x407FFFFF, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -290,7 +290,7 @@ define float @ret_fdiv_clhs__norm__inf_sub_norm__max__rne(float nofpclass(nan in
 
 ; fdiv_f32(2^2, norm, RNE) = inf | norm
 define float @ret_fdiv_clhs__norm__inf_norm__min__rne(float nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__norm__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) float @ret_fdiv_clhs__norm__inf_norm__min__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -301,7 +301,7 @@ define float @ret_fdiv_clhs__norm__inf_norm__min__rne(float nofpclass(nan inf ze
 
 ; fdiv_f32(2^-22, sub, RNE) = norm
 define float @ret_fdiv_clhs__sub__norm__max__rne(float nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__sub__norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @ret_fdiv_clhs__sub__norm__max__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float f0x34800000, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -312,7 +312,7 @@ define float @ret_fdiv_clhs__sub__norm__max__rne(float nofpclass(nan inf zero no
 
 ; fdiv_f32(nextup(2^-22), sub, RNE) = inf | norm
 define float @ret_fdiv_clhs__sub__inf_norm__min__rne(float nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__sub__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) float @ret_fdiv_clhs__sub__inf_norm__min__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float f0x34800001, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -323,7 +323,7 @@ define float @ret_fdiv_clhs__sub__inf_norm__min__rne(float nofpclass(nan inf zer
 
 ; fdiv_f32(nextdown(2^2), sub, RNE) = inf | norm
 define float @ret_fdiv_clhs__sub__inf_norm__max__rne(float nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__sub__inf_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) float @ret_fdiv_clhs__sub__inf_norm__max__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float f0x407FFFFF, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -334,7 +334,7 @@ define float @ret_fdiv_clhs__sub__inf_norm__max__rne(float nofpclass(nan inf zer
 
 ; fdiv_f32(2^2, sub, RNE) = inf
 define float @ret_fdiv_clhs__sub__inf__min__rne(float nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fdiv_clhs__sub__inf__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_fdiv_clhs__sub__inf__min__rne(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret float [[DIV]]
@@ -349,7 +349,7 @@ define float @ret_fdiv_clhs__sub__inf__min__rne(float nofpclass(nan inf zero nor
 
 ; fdiv_f64(nextdown(2^-51), norm, RNE) = zero | sub | norm
 define double @ret_fdiv_clhs_f64__norm__zero_sub_norm__max__rne(double nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__norm__zero_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf) double @ret_fdiv_clhs_f64__norm__zero_sub_norm__max__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double f0x3CBFFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -360,7 +360,7 @@ define double @ret_fdiv_clhs_f64__norm__zero_sub_norm__max__rne(double nofpclass
 
 ; fdiv_f64(2^-51, norm, RNE) = sub | norm
 define double @ret_fdiv_clhs_f64__norm__sub_norm__min__rne(double nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__norm__sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) double @ret_fdiv_clhs_f64__norm__sub_norm__min__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double f0x3CC0000000000000, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -371,7 +371,7 @@ define double @ret_fdiv_clhs_f64__norm__sub_norm__min__rne(double nofpclass(nan 
 
 ; fdiv_f64(2^1, norm, RNE) = sub | norm
 define double @ret_fdiv_clhs_f64__norm__sub_norm__max__rne(double nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__norm__sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) double @ret_fdiv_clhs_f64__norm__sub_norm__max__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double 2.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -382,7 +382,7 @@ define double @ret_fdiv_clhs_f64__norm__sub_norm__max__rne(double nofpclass(nan 
 
 ; fdiv_f64(nextup(2^1), norm, RNE) = inf | sub | norm
 define double @ret_fdiv_clhs_f64__norm__inf_sub_norm__min__rne(double nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__norm__inf_sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero) double @ret_fdiv_clhs_f64__norm__inf_sub_norm__min__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double f0x4000000000000001, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -393,7 +393,7 @@ define double @ret_fdiv_clhs_f64__norm__inf_sub_norm__min__rne(double nofpclass(
 
 ; fdiv_f64(nextdown(2^2), norm, RNE) = inf | sub | norm
 define double @ret_fdiv_clhs_f64__norm__inf_sub_norm__max__rne(double nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__norm__inf_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero) double @ret_fdiv_clhs_f64__norm__inf_sub_norm__max__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double f0x400FFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -404,7 +404,7 @@ define double @ret_fdiv_clhs_f64__norm__inf_sub_norm__max__rne(double nofpclass(
 
 ; fdiv_f64(2^2, norm, RNE) = inf | norm
 define double @ret_fdiv_clhs_f64__norm__inf_norm__min__rne(double nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__norm__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) double @ret_fdiv_clhs_f64__norm__inf_norm__min__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -415,7 +415,7 @@ define double @ret_fdiv_clhs_f64__norm__inf_norm__min__rne(double nofpclass(nan 
 
 ; fdiv_f64(2^-51, sub, RNE) = norm
 define double @ret_fdiv_clhs_f64__sub__norm__max__rne(double nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__sub__norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero sub) double @ret_fdiv_clhs_f64__sub__norm__max__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double f0x3CC0000000000000, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -426,7 +426,7 @@ define double @ret_fdiv_clhs_f64__sub__norm__max__rne(double nofpclass(nan inf z
 
 ; fdiv_f64(nextup(2^-51), sub, RNE) = inf | norm
 define double @ret_fdiv_clhs_f64__sub__inf_norm__min__rne(double nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__sub__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) double @ret_fdiv_clhs_f64__sub__inf_norm__min__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double f0x3CC0000000000001, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -437,7 +437,7 @@ define double @ret_fdiv_clhs_f64__sub__inf_norm__min__rne(double nofpclass(nan i
 
 ; fdiv_f64(nextdown(2^2), sub, RNE) = inf | norm
 define double @ret_fdiv_clhs_f64__sub__inf_norm__max__rne(double nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__sub__inf_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) double @ret_fdiv_clhs_f64__sub__inf_norm__max__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double f0x400FFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -448,7 +448,7 @@ define double @ret_fdiv_clhs_f64__sub__inf_norm__max__rne(double nofpclass(nan i
 
 ; fdiv_f64(2^2, sub, RNE) = inf
 define double @ret_fdiv_clhs_f64__sub__inf__min__rne(double nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) double @ret_fdiv_clhs_f64__sub__inf__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub norm) double @ret_fdiv_clhs_f64__sub__inf__min__rne(
 ; CHECK-SAME: double nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret double [[DIV]]
@@ -463,7 +463,7 @@ define double @ret_fdiv_clhs_f64__sub__inf__min__rne(double nofpclass(nan inf ze
 
 ; fdiv_f80(nextdown(2^-62), norm, RNE) = zero | sub | norm
 define x86_fp80 @ret_fdiv_clhs_f80__norm__zero_sub_norm__max__rne(x86_fp80 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__norm__zero_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf) x86_fp80 @ret_fdiv_clhs_f80__norm__zero_sub_norm__max__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 f0x3FC0FFFFFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -474,7 +474,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__norm__zero_sub_norm__max__rne(x86_fp80 nofpc
 
 ; fdiv_f80(2^-62, norm, RNE) = sub | norm
 define x86_fp80 @ret_fdiv_clhs_f80__norm__sub_norm__min__rne(x86_fp80 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__norm__sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) x86_fp80 @ret_fdiv_clhs_f80__norm__sub_norm__min__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 f0x3FC18000000000000000, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -485,7 +485,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__norm__sub_norm__min__rne(x86_fp80 nofpclass(
 
 ; fdiv_f80(2^1, norm, RNE) = sub | norm
 define x86_fp80 @ret_fdiv_clhs_f80__norm__sub_norm__max__rne(x86_fp80 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__norm__sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) x86_fp80 @ret_fdiv_clhs_f80__norm__sub_norm__max__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 2.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -496,7 +496,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__norm__sub_norm__max__rne(x86_fp80 nofpclass(
 
 ; fdiv_f80(nextup(2^1), norm, RNE) = inf | sub | norm
 define x86_fp80 @ret_fdiv_clhs_f80__norm__inf_sub_norm__min__rne(x86_fp80 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__norm__inf_sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero) x86_fp80 @ret_fdiv_clhs_f80__norm__inf_sub_norm__min__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 f0x40008000000000000001, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -507,7 +507,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__norm__inf_sub_norm__min__rne(x86_fp80 nofpcl
 
 ; fdiv_f80(nextdown(2^2), norm, RNE) = inf | sub | norm
 define x86_fp80 @ret_fdiv_clhs_f80__norm__inf_sub_norm__max__rne(x86_fp80 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__norm__inf_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero) x86_fp80 @ret_fdiv_clhs_f80__norm__inf_sub_norm__max__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 f0x4000FFFFFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -518,7 +518,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__norm__inf_sub_norm__max__rne(x86_fp80 nofpcl
 
 ; fdiv_f80(2^2, norm, RNE) = inf | norm
 define x86_fp80 @ret_fdiv_clhs_f80__norm__inf_norm__min__rne(x86_fp80 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__norm__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) x86_fp80 @ret_fdiv_clhs_f80__norm__inf_norm__min__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -529,7 +529,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__norm__inf_norm__min__rne(x86_fp80 nofpclass(
 
 ; fdiv_f80(2^-62, sub, RNE) = norm
 define x86_fp80 @ret_fdiv_clhs_f80__sub__norm__max__rne(x86_fp80 nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__sub__norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero sub) x86_fp80 @ret_fdiv_clhs_f80__sub__norm__max__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 f0x3FC18000000000000000, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -540,7 +540,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__sub__norm__max__rne(x86_fp80 nofpclass(nan i
 
 ; fdiv_f80(nextup(2^-62), sub, RNE) = inf | norm
 define x86_fp80 @ret_fdiv_clhs_f80__sub__inf_norm__min__rne(x86_fp80 nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__sub__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) x86_fp80 @ret_fdiv_clhs_f80__sub__inf_norm__min__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 f0x3FC18000000000000001, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -551,7 +551,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__sub__inf_norm__min__rne(x86_fp80 nofpclass(n
 
 ; fdiv_f80(nextdown(2^2), sub, RNE) = inf | norm
 define x86_fp80 @ret_fdiv_clhs_f80__sub__inf_norm__max__rne(x86_fp80 nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__sub__inf_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) x86_fp80 @ret_fdiv_clhs_f80__sub__inf_norm__max__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 f0x4000FFFFFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -562,7 +562,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__sub__inf_norm__max__rne(x86_fp80 nofpclass(n
 
 ; fdiv_f80(2^2, sub, RNE) = inf
 define x86_fp80 @ret_fdiv_clhs_f80__sub__inf__min__rne(x86_fp80 nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fdiv_clhs_f80__sub__inf__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub norm) x86_fp80 @ret_fdiv_clhs_f80__sub__inf__min__rne(
 ; CHECK-SAME: x86_fp80 nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv x86_fp80 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret x86_fp80 [[DIV]]
@@ -577,7 +577,7 @@ define x86_fp80 @ret_fdiv_clhs_f80__sub__inf__min__rne(x86_fp80 nofpclass(nan in
 
 ; fdiv_f128(nextdown(2^-111), norm, RNE) = zero | sub | norm
 define fp128 @ret_fdiv_clhs_f128__norm__zero_sub_norm__max__rne(fp128 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__norm__zero_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf) fp128 @ret_fdiv_clhs_f128__norm__zero_sub_norm__max__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 f0x3F8FFFFFFFFFFFFFFFFFFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -588,7 +588,7 @@ define fp128 @ret_fdiv_clhs_f128__norm__zero_sub_norm__max__rne(fp128 nofpclass(
 
 ; fdiv_f128(2^-111, norm, RNE) = sub | norm
 define fp128 @ret_fdiv_clhs_f128__norm__sub_norm__min__rne(fp128 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__norm__sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) fp128 @ret_fdiv_clhs_f128__norm__sub_norm__min__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 f0x3F900000000000000000000000000000, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -599,7 +599,7 @@ define fp128 @ret_fdiv_clhs_f128__norm__sub_norm__min__rne(fp128 nofpclass(nan i
 
 ; fdiv_f128(2^1, norm, RNE) = sub | norm
 define fp128 @ret_fdiv_clhs_f128__norm__sub_norm__max__rne(fp128 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__norm__sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero) fp128 @ret_fdiv_clhs_f128__norm__sub_norm__max__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 2.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -610,7 +610,7 @@ define fp128 @ret_fdiv_clhs_f128__norm__sub_norm__max__rne(fp128 nofpclass(nan i
 
 ; fdiv_f128(nextup(2^1), norm, RNE) = inf | sub | norm
 define fp128 @ret_fdiv_clhs_f128__norm__inf_sub_norm__min__rne(fp128 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__norm__inf_sub_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero) fp128 @ret_fdiv_clhs_f128__norm__inf_sub_norm__min__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 f0x40000000000000000000000000000001, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -621,7 +621,7 @@ define fp128 @ret_fdiv_clhs_f128__norm__inf_sub_norm__min__rne(fp128 nofpclass(n
 
 ; fdiv_f128(nextdown(2^2), norm, RNE) = inf | sub | norm
 define fp128 @ret_fdiv_clhs_f128__norm__inf_sub_norm__max__rne(fp128 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__norm__inf_sub_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero) fp128 @ret_fdiv_clhs_f128__norm__inf_sub_norm__max__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 f0x4000FFFFFFFFFFFFFFFFFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -632,7 +632,7 @@ define fp128 @ret_fdiv_clhs_f128__norm__inf_sub_norm__max__rne(fp128 nofpclass(n
 
 ; fdiv_f128(2^2, norm, RNE) = inf | norm
 define fp128 @ret_fdiv_clhs_f128__norm__inf_norm__min__rne(fp128 nofpclass(nan inf zero sub) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__norm__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) fp128 @ret_fdiv_clhs_f128__norm__inf_norm__min__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero sub) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -643,7 +643,7 @@ define fp128 @ret_fdiv_clhs_f128__norm__inf_norm__min__rne(fp128 nofpclass(nan i
 
 ; fdiv_f128(2^-111, sub, RNE) = norm
 define fp128 @ret_fdiv_clhs_f128__sub__norm__max__rne(fp128 nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__sub__norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan inf zero sub) fp128 @ret_fdiv_clhs_f128__sub__norm__max__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 f0x3F900000000000000000000000000000, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -654,7 +654,7 @@ define fp128 @ret_fdiv_clhs_f128__sub__norm__max__rne(fp128 nofpclass(nan inf ze
 
 ; fdiv_f128(nextup(2^-111), sub, RNE) = inf | norm
 define fp128 @ret_fdiv_clhs_f128__sub__inf_norm__min__rne(fp128 nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__sub__inf_norm__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) fp128 @ret_fdiv_clhs_f128__sub__inf_norm__min__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 f0x3F900000000000000000000000000001, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -665,7 +665,7 @@ define fp128 @ret_fdiv_clhs_f128__sub__inf_norm__min__rne(fp128 nofpclass(nan in
 
 ; fdiv_f128(nextdown(2^2), sub, RNE) = inf | norm
 define fp128 @ret_fdiv_clhs_f128__sub__inf_norm__max__rne(fp128 nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__sub__inf_norm__max__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub) fp128 @ret_fdiv_clhs_f128__sub__inf_norm__max__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 f0x4000FFFFFFFFFFFFFFFFFFFFFFFFFFFF, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
@@ -676,7 +676,7 @@ define fp128 @ret_fdiv_clhs_f128__sub__inf_norm__max__rne(fp128 nofpclass(nan in
 
 ; fdiv_f128(2^2, sub, RNE) = inf
 define fp128 @ret_fdiv_clhs_f128__sub__inf__min__rne(fp128 nofpclass(nan inf zero norm) %arg) {
-; CHECK-LABEL: define nofpclass(nan) fp128 @ret_fdiv_clhs_f128__sub__inf__min__rne(
+; CHECK-LABEL: define nofpclass(nan zero sub norm) fp128 @ret_fdiv_clhs_f128__sub__inf__min__rne(
 ; CHECK-SAME: fp128 nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fp128 4.000000e+00, [[ARG]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]

@@ -20,7 +20,7 @@ define float @ret_inv_sqrt(float %x) {
 
 ; TODO: Also infer that the result cannot be +Inf.
 define float @ret_inv_sqrt_x_not_infinity_not_zero(float nofpclass(inf zero) %x) {
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_inv_sqrt_x_not_infinity_not_zero
+; CHECK-LABEL: define nofpclass(ninf zero nsub nnorm) float @ret_inv_sqrt_x_not_infinity_not_zero
 ; CHECK-SAME: (float nofpclass(inf zero) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float nofpclass(inf zero) [[X]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[INV_SQRT:%.*]] = fdiv float 1.000000e+00, [[SQRT]]
@@ -46,10 +46,10 @@ define float @ret_sqrt_inv(float %x) {
 }
 
 define float @ret_sqrt_inv_not_infinity_not_zero(float nofpclass(inf zero) %x) {
-; CHECK-LABEL: define nofpclass(ninf sub nnorm) float @ret_sqrt_inv_not_infinity_not_zero
+; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @ret_sqrt_inv_not_infinity_not_zero
 ; CHECK-SAME: (float nofpclass(inf zero) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[INV:%.*]] = fdiv float 1.000000e+00, [[X]]
-; CHECK-NEXT:    [[SQRT_INV:%.*]] = call nofpclass(ninf sub nnorm) float @llvm.sqrt.f32(float [[INV]]) #[[ATTR2]]
+; CHECK-NEXT:    [[SQRT_INV:%.*]] = call nofpclass(ninf nzero sub nnorm) float @llvm.sqrt.f32(float [[INV]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[SQRT_INV]]
 ;
   %inv = fdiv float 1.0, %x
