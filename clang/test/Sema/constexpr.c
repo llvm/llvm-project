@@ -54,12 +54,12 @@ void f3(constexpr register int P1) { // expected-error {{function parameter cann
   constexpr register auto V10 = 0.0;
 }
 
-constexpr thread_local int V11 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
-constexpr static thread_local double V12 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
-constexpr extern thread_local char V13; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
+constexpr thread_local int V11 = 38; // expected-error {{cannot combine with previous 'thread_local' declaration specifier}}
+constexpr static thread_local double V12 = 38; // expected-error {{cannot combine with previous 'thread_local' declaration specifier}}
+constexpr extern thread_local char V13; // expected-error {{cannot combine with previous 'thread_local' declaration specifier}}
 // expected-error@-1 {{cannot combine with previous 'constexpr' declaration specifier}}
 // expected-error@-2 {{constexpr variable declaration must be a definition}}
-constexpr thread_local short V14 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
+constexpr thread_local short V14 = 38; // expected-error {{cannot combine with previous 'thread_local' declaration specifier}}
 
 // Check how constexpr works with qualifiers.
 constexpr _Atomic int V15 = 0; // expected-error {{constexpr variable cannot have type 'const _Atomic(int)'}}

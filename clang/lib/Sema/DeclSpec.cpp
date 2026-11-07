@@ -496,6 +496,11 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TSCS S) {
   llvm_unreachable("Unknown typespec!");
 }
 
+const char *DeclSpec::getThreadStorageClassSpecName() const {
+  return C23ThreadLocalSpelling ? "thread_local"
+                                : getSpecifierName(getThreadStorageClassSpec());
+}
+
 const char *DeclSpec::getSpecifierName(TypeSpecifierWidth W) {
   switch (W) {
   case TypeSpecifierWidth::Unspecified:
@@ -698,11 +703,16 @@ bool DeclSpec::SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
 
 bool DeclSpec::SetStorageClassSpecThread(TSCS TSC, SourceLocation Loc,
                                          const char *&PrevSpec,
-                                         unsigned &DiagID) {
-  if (ThreadStorageClassSpec != TSCS_unspecified)
-    return BadSpecifier(TSC, (TSCS)ThreadStorageClassSpec, PrevSpec, DiagID);
+                                         unsigned &DiagID,
+                                         bool IsC23ThreadLocal) {
+  if (ThreadStorageClassSpec != TSCS_unspecified) {
+    BadSpecifier(TSC, (TSCS)ThreadStorageClassSpec, PrevSpec, DiagID);
+    PrevSpec = getThreadStorageClassSpecName();
+    return true;
+  }
 
   ThreadStorageClassSpec = TSC;
+  C23ThreadLocalSpelling = IsC23ThreadLocal;
   ThreadStorageClassSpecLoc = Loc;
   return false;
 }
@@ -1390,9 +1400,9 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
       if (S.getSourceManager().isBeforeInTranslationUnit(
             getThreadStorageClassSpecLoc(), getStorageClassSpecLoc()))
         S.Diag(getStorageClassSpecLoc(),
-             diag::err_invalid_decl_spec_combination)
-          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
-          << SourceRange(getThreadStorageClassSpecLoc());
+               diag::err_invalid_decl_spec_combination)
+            << getThreadStorageClassSpecName()
+            << SourceRange(getThreadStorageClassSpecLoc());
       else
         S.Diag(getThreadStorageClassSpecLoc(),
              diag::err_invalid_decl_spec_combination)
@@ -1400,12 +1410,13 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
           << SourceRange(getStorageClassSpecLoc());
       // Discard the thread storage class specifier to recover.
       ThreadStorageClassSpec = TSCS_unspecified;
+      C23ThreadLocalSpelling = false;
       ThreadStorageClassSpecLoc = SourceLocation();
     }
     if (S.getLangOpts().C23 &&
         getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
       S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
-          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+          << getThreadStorageClassSpecName()
           << SourceRange(getThreadStorageClassSpecLoc());
     }
   }
