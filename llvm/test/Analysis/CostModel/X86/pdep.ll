@@ -11,17 +11,17 @@
 
 define i32 @pdep_i8(i32 %arg) {
 ; SSE2-LABEL: 'pdep_i8'
-; SSE2-NEXT:  Cost Model: Found costs of 41 for: %I8 = call i8 @llvm.pdep.i8(i8 undef, i8 undef)
-; SSE2-NEXT:  Cost Model: Found costs of 687 for: %V16I8 = call <16 x i8> @llvm.pdep.v16i8(<16 x i8> undef, <16 x i8> undef)
-; SSE2-NEXT:  Cost Model: Found costs of 1374 for: %V32I8 = call <32 x i8> @llvm.pdep.v32i8(<32 x i8> undef, <32 x i8> undef)
-; SSE2-NEXT:  Cost Model: Found costs of 2748 for: %V64I8 = call <64 x i8> @llvm.pdep.v64i8(<64 x i8> undef, <64 x i8> undef)
+; SSE2-NEXT:  Cost Model: Found costs of 34 for: %I8 = call i8 @llvm.pdep.i8(i8 undef, i8 undef)
+; SSE2-NEXT:  Cost Model: Found costs of 575 for: %V16I8 = call <16 x i8> @llvm.pdep.v16i8(<16 x i8> undef, <16 x i8> undef)
+; SSE2-NEXT:  Cost Model: Found costs of 1150 for: %V32I8 = call <32 x i8> @llvm.pdep.v32i8(<32 x i8> undef, <32 x i8> undef)
+; SSE2-NEXT:  Cost Model: Found costs of 2300 for: %V64I8 = call <64 x i8> @llvm.pdep.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSE42-LABEL: 'pdep_i8'
-; SSE42-NEXT:  Cost Model: Found costs of 41 for: %I8 = call i8 @llvm.pdep.i8(i8 undef, i8 undef)
-; SSE42-NEXT:  Cost Model: Found costs of 672 for: %V16I8 = call <16 x i8> @llvm.pdep.v16i8(<16 x i8> undef, <16 x i8> undef)
-; SSE42-NEXT:  Cost Model: Found costs of 1344 for: %V32I8 = call <32 x i8> @llvm.pdep.v32i8(<32 x i8> undef, <32 x i8> undef)
-; SSE42-NEXT:  Cost Model: Found costs of 2688 for: %V64I8 = call <64 x i8> @llvm.pdep.v64i8(<64 x i8> undef, <64 x i8> undef)
+; SSE42-NEXT:  Cost Model: Found costs of 34 for: %I8 = call i8 @llvm.pdep.i8(i8 undef, i8 undef)
+; SSE42-NEXT:  Cost Model: Found costs of 560 for: %V16I8 = call <16 x i8> @llvm.pdep.v16i8(<16 x i8> undef, <16 x i8> undef)
+; SSE42-NEXT:  Cost Model: Found costs of 1120 for: %V32I8 = call <32 x i8> @llvm.pdep.v32i8(<32 x i8> undef, <32 x i8> undef)
+; SSE42-NEXT:  Cost Model: Found costs of 2240 for: %V64I8 = call <64 x i8> @llvm.pdep.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'pdep_i8'
@@ -48,10 +48,10 @@ define i32 @pdep_i8(i32 %arg) {
 
 define i32 @pdep_i16(i32 %arg) {
 ; SSE-LABEL: 'pdep_i16'
-; SSE-NEXT:  Cost Model: Found costs of 62 for: %I16 = call i16 @llvm.pdep.i16(i16 undef, i16 undef)
-; SSE-NEXT:  Cost Model: Found costs of 504 for: %V8I16 = call <8 x i16> @llvm.pdep.v8i16(<8 x i16> undef, <8 x i16> undef)
-; SSE-NEXT:  Cost Model: Found costs of 1008 for: %V16I16 = call <16 x i16> @llvm.pdep.v16i16(<16 x i16> undef, <16 x i16> undef)
-; SSE-NEXT:  Cost Model: Found costs of 2016 for: %V32I16 = call <32 x i16> @llvm.pdep.v32i16(<32 x i16> undef, <32 x i16> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:63 Lat:66 SizeLat:63 for: %I16 = call i16 @llvm.pdep.i16(i16 undef, i16 undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:520 CodeSize:512 Lat:536 SizeLat:512 for: %V8I16 = call <8 x i16> @llvm.pdep.v8i16(<8 x i16> undef, <8 x i16> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:1040 CodeSize:1024 Lat:1072 SizeLat:1024 for: %V16I16 = call <16 x i16> @llvm.pdep.v16i16(<16 x i16> undef, <16 x i16> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:2080 CodeSize:2048 Lat:2144 SizeLat:2048 for: %V32I16 = call <32 x i16> @llvm.pdep.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'pdep_i16'
@@ -78,17 +78,17 @@ define i32 @pdep_i16(i32 %arg) {
 
 define i32 @pdep_i32(i32 %arg) {
 ; SSE2-LABEL: 'pdep_i32'
-; SSE2-NEXT:  Cost Model: Found costs of 87 for: %I32 = call i32 @llvm.pdep.i32(i32 undef, i32 undef)
-; SSE2-NEXT:  Cost Model: Found costs of 355 for: %V4I32 = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> undef, <4 x i32> undef)
-; SSE2-NEXT:  Cost Model: Found costs of 710 for: %V8I32 = call <8 x i32> @llvm.pdep.v8i32(<8 x i32> undef, <8 x i32> undef)
-; SSE2-NEXT:  Cost Model: Found costs of 1420 for: %V16I32 = call <16 x i32> @llvm.pdep.v16i32(<16 x i32> undef, <16 x i32> undef)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:75 CodeSize:75 Lat:78 SizeLat:75 for: %I32 = call i32 @llvm.pdep.i32(i32 undef, i32 undef)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:307 CodeSize:307 Lat:319 SizeLat:307 for: %V4I32 = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> undef, <4 x i32> undef)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:614 CodeSize:614 Lat:638 SizeLat:614 for: %V8I32 = call <8 x i32> @llvm.pdep.v8i32(<8 x i32> undef, <8 x i32> undef)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:1228 CodeSize:1228 Lat:1276 SizeLat:1228 for: %V16I32 = call <16 x i32> @llvm.pdep.v16i32(<16 x i32> undef, <16 x i32> undef)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSE42-LABEL: 'pdep_i32'
-; SSE42-NEXT:  Cost Model: Found costs of 87 for: %I32 = call i32 @llvm.pdep.i32(i32 undef, i32 undef)
-; SSE42-NEXT:  Cost Model: Found costs of 352 for: %V4I32 = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> undef, <4 x i32> undef)
-; SSE42-NEXT:  Cost Model: Found costs of 704 for: %V8I32 = call <8 x i32> @llvm.pdep.v8i32(<8 x i32> undef, <8 x i32> undef)
-; SSE42-NEXT:  Cost Model: Found costs of 1408 for: %V16I32 = call <16 x i32> @llvm.pdep.v16i32(<16 x i32> undef, <16 x i32> undef)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:75 CodeSize:75 Lat:78 SizeLat:75 for: %I32 = call i32 @llvm.pdep.i32(i32 undef, i32 undef)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:304 CodeSize:304 Lat:316 SizeLat:304 for: %V4I32 = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> undef, <4 x i32> undef)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:608 CodeSize:608 Lat:632 SizeLat:608 for: %V8I32 = call <8 x i32> @llvm.pdep.v8i32(<8 x i32> undef, <8 x i32> undef)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1216 CodeSize:1216 Lat:1264 SizeLat:1216 for: %V16I32 = call <16 x i32> @llvm.pdep.v16i32(<16 x i32> undef, <16 x i32> undef)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-FAST-LABEL: 'pdep_i32'
@@ -122,17 +122,17 @@ define i32 @pdep_i32(i32 %arg) {
 
 define i32 @pdep_i64(i32 %arg) {
 ; SSE2-LABEL: 'pdep_i64'
-; SSE2-NEXT:  Cost Model: Found costs of 116 for: %I64 = call i64 @llvm.pdep.i64(i64 undef, i64 undef)
-; SSE2-NEXT:  Cost Model: Found costs of 235 for: %V2I64 = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> undef, <2 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found costs of 470 for: %V4I64 = call <4 x i64> @llvm.pdep.v4i64(<4 x i64> undef, <4 x i64> undef)
-; SSE2-NEXT:  Cost Model: Found costs of 940 for: %V8I64 = call <8 x i64> @llvm.pdep.v8i64(<8 x i64> undef, <8 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:99 Lat:104 SizeLat:100 for: %I64 = call i64 @llvm.pdep.i64(i64 undef, i64 undef)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:203 CodeSize:201 Lat:211 SizeLat:203 for: %V2I64 = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> undef, <2 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:406 CodeSize:402 Lat:422 SizeLat:406 for: %V4I64 = call <4 x i64> @llvm.pdep.v4i64(<4 x i64> undef, <4 x i64> undef)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:812 CodeSize:804 Lat:844 SizeLat:812 for: %V8I64 = call <8 x i64> @llvm.pdep.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSE42-LABEL: 'pdep_i64'
-; SSE42-NEXT:  Cost Model: Found costs of 116 for: %I64 = call i64 @llvm.pdep.i64(i64 undef, i64 undef)
-; SSE42-NEXT:  Cost Model: Found costs of 234 for: %V2I64 = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> undef, <2 x i64> undef)
-; SSE42-NEXT:  Cost Model: Found costs of 468 for: %V4I64 = call <4 x i64> @llvm.pdep.v4i64(<4 x i64> undef, <4 x i64> undef)
-; SSE42-NEXT:  Cost Model: Found costs of 936 for: %V8I64 = call <8 x i64> @llvm.pdep.v8i64(<8 x i64> undef, <8 x i64> undef)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:99 Lat:104 SizeLat:100 for: %I64 = call i64 @llvm.pdep.i64(i64 undef, i64 undef)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:202 CodeSize:200 Lat:210 SizeLat:202 for: %V2I64 = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> undef, <2 x i64> undef)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:404 CodeSize:400 Lat:420 SizeLat:404 for: %V4I64 = call <4 x i64> @llvm.pdep.v4i64(<4 x i64> undef, <4 x i64> undef)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:808 CodeSize:800 Lat:840 SizeLat:808 for: %V8I64 = call <8 x i64> @llvm.pdep.v8i64(<8 x i64> undef, <8 x i64> undef)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-FAST-LABEL: 'pdep_i64'

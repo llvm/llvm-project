@@ -7,41 +7,31 @@ define i8 @pext_i8(i8 %val, i8 %mask) nounwind {
 ; CHECK-LABEL: pext_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mvn w8, w1
-; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
-; CHECK-NEXT:    and w10, w0, w1
-; CHECK-NEXT:    lsl w8, w8, #1
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    pmul v1.8b, v1.8b, v0.8b
-; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    and w11, w0, w1
+; CHECK-NEXT:    eon w9, w1, w8, lsl #1
+; CHECK-NEXT:    eor w9, w9, w9, lsl #2
+; CHECK-NEXT:    eor w9, w9, w9, lsl #4
 ; CHECK-NEXT:    bic w8, w8, w9
-; CHECK-NEXT:    and w9, w9, w1
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    and w11, w10, w9
-; CHECK-NEXT:    eor w13, w1, w9
+; CHECK-NEXT:    and w9, w11, w9
+; CHECK-NEXT:    and w10, w8, #0xfe
+; CHECK-NEXT:    eor w11, w11, w9
 ; CHECK-NEXT:    and w9, w9, #0xfe
-; CHECK-NEXT:    eor w10, w10, w11
-; CHECK-NEXT:    and w11, w11, #0xfe
-; CHECK-NEXT:    orr w9, w13, w9, lsr #1
-; CHECK-NEXT:    pmul v1.8b, v1.8b, v0.8b
-; CHECK-NEXT:    fmov w12, s1
-; CHECK-NEXT:    bic w8, w8, w12
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    orr w8, w10, w11, lsr #1
-; CHECK-NEXT:    and w10, w12, w9
+; CHECK-NEXT:    eor w8, w8, w10, lsr #1
+; CHECK-NEXT:    eor w9, w11, w9, lsr #1
+; CHECK-NEXT:    eor w10, w8, w8, lsl #2
+; CHECK-NEXT:    eor w10, w10, w10, lsl #4
+; CHECK-NEXT:    bic w8, w8, w10
+; CHECK-NEXT:    and w10, w9, w10
+; CHECK-NEXT:    and w11, w8, #0xfc
 ; CHECK-NEXT:    eor w9, w9, w10
-; CHECK-NEXT:    and w11, w8, w10
 ; CHECK-NEXT:    and w10, w10, #0xfc
-; CHECK-NEXT:    pmul v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    orr w9, w9, w10, lsr #2
-; CHECK-NEXT:    eor w8, w8, w11
-; CHECK-NEXT:    and w11, w11, #0xfc
-; CHECK-NEXT:    orr w8, w8, w11, lsr #2
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    and w9, w10, w9
-; CHECK-NEXT:    and w9, w8, w9
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    and w9, w9, #0xf0
-; CHECK-NEXT:    orr w0, w8, w9, lsr #4
+; CHECK-NEXT:    eor w8, w8, w11, lsr #2
+; CHECK-NEXT:    eor w9, w9, w10, lsr #2
+; CHECK-NEXT:    eor w8, w8, w8, lsl #4
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    eor w9, w9, w8
+; CHECK-NEXT:    and w8, w8, #0xf0
+; CHECK-NEXT:    eor w0, w9, w8, lsr #4
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BITPERM-LABEL: pext_i8:
@@ -57,112 +47,46 @@ define i8 @pext_i8(i8 %val, i8 %mask) nounwind {
 }
 
 define i16 @pext_i16(i16 %val, i16 %mask) nounwind {
-; CHECK-BASE-LABEL: pext_i16:
-; CHECK-BASE:       // %bb.0:
-; CHECK-BASE-NEXT:    mvn w8, w1
-; CHECK-BASE-NEXT:    and w11, w0, w1
-; CHECK-BASE-NEXT:    lsl w9, w8, #1
-; CHECK-BASE-NEXT:    eor w8, w9, w8, lsl #2
-; CHECK-BASE-NEXT:    eor w8, w8, w8, lsl #2
-; CHECK-BASE-NEXT:    eor w8, w8, w8, lsl #4
-; CHECK-BASE-NEXT:    eor w8, w8, w8, lsl #8
-; CHECK-BASE-NEXT:    bic w9, w9, w8
-; CHECK-BASE-NEXT:    and w8, w8, w1
-; CHECK-BASE-NEXT:    eor w10, w9, w9, lsl #1
-; CHECK-BASE-NEXT:    and w13, w11, w8
-; CHECK-BASE-NEXT:    eor w14, w1, w8
-; CHECK-BASE-NEXT:    and w8, w8, #0xfffe
-; CHECK-BASE-NEXT:    eor w11, w11, w13
-; CHECK-BASE-NEXT:    and w13, w13, #0xfffe
-; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #2
-; CHECK-BASE-NEXT:    orr w8, w14, w8, lsr #1
-; CHECK-BASE-NEXT:    orr w11, w11, w13, lsr #1
-; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #4
-; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #8
-; CHECK-BASE-NEXT:    bic w9, w9, w10
-; CHECK-BASE-NEXT:    and w10, w10, w8
-; CHECK-BASE-NEXT:    eor w12, w9, w9, lsl #1
-; CHECK-BASE-NEXT:    and w13, w11, w10
-; CHECK-BASE-NEXT:    eor w8, w8, w10
-; CHECK-BASE-NEXT:    and w10, w10, #0xfffc
-; CHECK-BASE-NEXT:    eor w11, w11, w13
-; CHECK-BASE-NEXT:    and w13, w13, #0xfffc
-; CHECK-BASE-NEXT:    eor w12, w12, w12, lsl #2
-; CHECK-BASE-NEXT:    orr w8, w8, w10, lsr #2
-; CHECK-BASE-NEXT:    orr w10, w11, w13, lsr #2
-; CHECK-BASE-NEXT:    eor w12, w12, w12, lsl #4
-; CHECK-BASE-NEXT:    eor w12, w12, w12, lsl #8
-; CHECK-BASE-NEXT:    bic w9, w9, w12
-; CHECK-BASE-NEXT:    and w11, w12, w8
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #1
-; CHECK-BASE-NEXT:    and w12, w10, w11
-; CHECK-BASE-NEXT:    eor w8, w8, w11
-; CHECK-BASE-NEXT:    eor w10, w10, w12
-; CHECK-BASE-NEXT:    and w12, w12, #0xfff0
-; CHECK-BASE-NEXT:    and w11, w11, #0xfff0
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #2
-; CHECK-BASE-NEXT:    orr w10, w10, w12, lsr #4
-; CHECK-BASE-NEXT:    orr w8, w8, w11, lsr #4
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #4
-; CHECK-BASE-NEXT:    and w8, w10, w8
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #8
-; CHECK-BASE-NEXT:    and w8, w8, w9
-; CHECK-BASE-NEXT:    eor w9, w10, w8
-; CHECK-BASE-NEXT:    and w8, w8, #0xff00
-; CHECK-BASE-NEXT:    orr w0, w9, w8, lsr #8
-; CHECK-BASE-NEXT:    ret
-;
-; CHECK-PMUL-LABEL: pext_i16:
-; CHECK-PMUL:       // %bb.0:
-; CHECK-PMUL-NEXT:    mvn w8, w1
-; CHECK-PMUL-NEXT:    movi d0, #0x0000000000ffff
-; CHECK-PMUL-NEXT:    and w10, w0, w1
-; CHECK-PMUL-NEXT:    lsl w8, w8, #1
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov w9, s1
-; CHECK-PMUL-NEXT:    bic w8, w8, w9
-; CHECK-PMUL-NEXT:    and w9, w9, w1
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    and w11, w10, w9
-; CHECK-PMUL-NEXT:    eor w13, w1, w9
-; CHECK-PMUL-NEXT:    and w9, w9, #0xfffe
-; CHECK-PMUL-NEXT:    eor w10, w10, w11
-; CHECK-PMUL-NEXT:    and w11, w11, #0xfffe
-; CHECK-PMUL-NEXT:    orr w9, w13, w9, lsr #1
-; CHECK-PMUL-NEXT:    orr w10, w10, w11, lsr #1
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov w12, s1
-; CHECK-PMUL-NEXT:    bic w8, w8, w12
-; CHECK-PMUL-NEXT:    and w11, w12, w9
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    and w12, w10, w11
-; CHECK-PMUL-NEXT:    eor w9, w9, w11
-; CHECK-PMUL-NEXT:    and w11, w11, #0xfffc
-; CHECK-PMUL-NEXT:    eor w10, w10, w12
-; CHECK-PMUL-NEXT:    and w12, w12, #0xfffc
-; CHECK-PMUL-NEXT:    orr w9, w9, w11, lsr #2
-; CHECK-PMUL-NEXT:    orr w10, w10, w12, lsr #2
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov w13, s1
-; CHECK-PMUL-NEXT:    bic w8, w8, w13
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    and w8, w13, w9
-; CHECK-PMUL-NEXT:    and w11, w10, w8
-; CHECK-PMUL-NEXT:    eor w9, w9, w8
-; CHECK-PMUL-NEXT:    and w8, w8, #0xfff0
-; CHECK-PMUL-NEXT:    eor w10, w10, w11
-; CHECK-PMUL-NEXT:    and w11, w11, #0xfff0
-; CHECK-PMUL-NEXT:    orr w8, w9, w8, lsr #4
-; CHECK-PMUL-NEXT:    pmull v0.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    orr w9, w10, w11, lsr #4
-; CHECK-PMUL-NEXT:    fmov w10, s0
-; CHECK-PMUL-NEXT:    and w8, w10, w8
-; CHECK-PMUL-NEXT:    and w8, w9, w8
-; CHECK-PMUL-NEXT:    eor w9, w9, w8
-; CHECK-PMUL-NEXT:    and w8, w8, #0xff00
-; CHECK-PMUL-NEXT:    orr w0, w9, w8, lsr #8
-; CHECK-PMUL-NEXT:    ret
+; CHECK-LABEL: pext_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w8, w1
+; CHECK-NEXT:    and w11, w0, w1
+; CHECK-NEXT:    eon w9, w1, w8, lsl #1
+; CHECK-NEXT:    eor w9, w9, w9, lsl #2
+; CHECK-NEXT:    eor w9, w9, w9, lsl #4
+; CHECK-NEXT:    eor w9, w9, w9, lsl #8
+; CHECK-NEXT:    bic w8, w8, w9
+; CHECK-NEXT:    and w9, w11, w9
+; CHECK-NEXT:    and w10, w8, #0xfffe
+; CHECK-NEXT:    eor w11, w11, w9
+; CHECK-NEXT:    and w9, w9, #0xfffe
+; CHECK-NEXT:    eor w8, w8, w10, lsr #1
+; CHECK-NEXT:    eor w9, w11, w9, lsr #1
+; CHECK-NEXT:    eor w10, w8, w8, lsl #2
+; CHECK-NEXT:    eor w10, w10, w10, lsl #4
+; CHECK-NEXT:    eor w10, w10, w10, lsl #8
+; CHECK-NEXT:    bic w8, w8, w10
+; CHECK-NEXT:    and w10, w9, w10
+; CHECK-NEXT:    and w12, w8, #0xfffc
+; CHECK-NEXT:    eor w9, w9, w10
+; CHECK-NEXT:    and w10, w10, #0xfffc
+; CHECK-NEXT:    eor w8, w8, w12, lsr #2
+; CHECK-NEXT:    eor w9, w9, w10, lsr #2
+; CHECK-NEXT:    eor w11, w8, w8, lsl #4
+; CHECK-NEXT:    eor w11, w11, w11, lsl #8
+; CHECK-NEXT:    bic w8, w8, w11
+; CHECK-NEXT:    and w11, w9, w11
+; CHECK-NEXT:    and w10, w8, #0xfff0
+; CHECK-NEXT:    eor w9, w9, w11
+; CHECK-NEXT:    eor w8, w8, w10, lsr #4
+; CHECK-NEXT:    and w10, w11, #0xfff0
+; CHECK-NEXT:    eor w9, w9, w10, lsr #4
+; CHECK-NEXT:    eor w8, w8, w8, lsl #8
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    eor w9, w9, w8
+; CHECK-NEXT:    and w8, w8, #0xff00
+; CHECK-NEXT:    eor w0, w9, w8, lsr #8
+; CHECK-NEXT:    ret
 ;
 ; CHECK-BITPERM-LABEL: pext_i16:
 ; CHECK-BITPERM:       // %bb.0:
@@ -177,124 +101,49 @@ define i16 @pext_i16(i16 %val, i16 %mask) nounwind {
 }
 
 define i32 @pext_i32(i32 %val, i32 %mask) nounwind {
-; CHECK-BASE-LABEL: pext_i32:
-; CHECK-BASE:       // %bb.0:
-; CHECK-BASE-NEXT:    mvn w8, w1
-; CHECK-BASE-NEXT:    and w13, w0, w1
-; CHECK-BASE-NEXT:    lsl w9, w8, #1
-; CHECK-BASE-NEXT:    eor w8, w9, w8, lsl #2
-; CHECK-BASE-NEXT:    eor w8, w8, w8, lsl #2
-; CHECK-BASE-NEXT:    eor w8, w8, w8, lsl #4
-; CHECK-BASE-NEXT:    eor w8, w8, w8, lsl #8
-; CHECK-BASE-NEXT:    eor w8, w8, w8, lsl #16
-; CHECK-BASE-NEXT:    bic w9, w9, w8
-; CHECK-BASE-NEXT:    and w8, w8, w1
-; CHECK-BASE-NEXT:    eor w10, w9, w9, lsl #1
-; CHECK-BASE-NEXT:    and w14, w13, w8
-; CHECK-BASE-NEXT:    eor w15, w1, w8
-; CHECK-BASE-NEXT:    orr w8, w15, w8, lsr #1
-; CHECK-BASE-NEXT:    eor w13, w13, w14
-; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #2
-; CHECK-BASE-NEXT:    orr w13, w13, w14, lsr #1
-; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #4
-; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #8
-; CHECK-BASE-NEXT:    eor w10, w10, w10, lsl #16
-; CHECK-BASE-NEXT:    bic w9, w9, w10
-; CHECK-BASE-NEXT:    and w10, w10, w8
-; CHECK-BASE-NEXT:    eor w11, w9, w9, lsl #1
-; CHECK-BASE-NEXT:    and w14, w13, w10
-; CHECK-BASE-NEXT:    eor w8, w8, w10
-; CHECK-BASE-NEXT:    orr w8, w8, w10, lsr #2
-; CHECK-BASE-NEXT:    eor w10, w13, w14
-; CHECK-BASE-NEXT:    eor w11, w11, w11, lsl #2
-; CHECK-BASE-NEXT:    orr w10, w10, w14, lsr #2
-; CHECK-BASE-NEXT:    eor w11, w11, w11, lsl #4
-; CHECK-BASE-NEXT:    eor w11, w11, w11, lsl #8
-; CHECK-BASE-NEXT:    eor w11, w11, w11, lsl #16
-; CHECK-BASE-NEXT:    bic w9, w9, w11
-; CHECK-BASE-NEXT:    and w11, w11, w8
-; CHECK-BASE-NEXT:    eor w12, w9, w9, lsl #1
-; CHECK-BASE-NEXT:    and w13, w10, w11
-; CHECK-BASE-NEXT:    eor w8, w8, w11
-; CHECK-BASE-NEXT:    eor w10, w10, w13
-; CHECK-BASE-NEXT:    orr w8, w8, w11, lsr #4
-; CHECK-BASE-NEXT:    eor w12, w12, w12, lsl #2
-; CHECK-BASE-NEXT:    orr w10, w10, w13, lsr #4
-; CHECK-BASE-NEXT:    eor w12, w12, w12, lsl #4
-; CHECK-BASE-NEXT:    eor w12, w12, w12, lsl #8
-; CHECK-BASE-NEXT:    eor w12, w12, w12, lsl #16
-; CHECK-BASE-NEXT:    bic w9, w9, w12
-; CHECK-BASE-NEXT:    and w11, w12, w8
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #1
-; CHECK-BASE-NEXT:    and w12, w10, w11
-; CHECK-BASE-NEXT:    eor w8, w8, w11
-; CHECK-BASE-NEXT:    eor w10, w10, w12
-; CHECK-BASE-NEXT:    orr w8, w8, w11, lsr #8
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #2
-; CHECK-BASE-NEXT:    orr w10, w10, w12, lsr #8
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #4
-; CHECK-BASE-NEXT:    and w8, w10, w8
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #8
-; CHECK-BASE-NEXT:    eor w9, w9, w9, lsl #16
-; CHECK-BASE-NEXT:    and w8, w8, w9
-; CHECK-BASE-NEXT:    eor w9, w10, w8
-; CHECK-BASE-NEXT:    orr w0, w9, w8, lsr #16
-; CHECK-BASE-NEXT:    ret
-;
-; CHECK-PMUL-LABEL: pext_i32:
-; CHECK-PMUL:       // %bb.0:
-; CHECK-PMUL-NEXT:    mvn w8, w1
-; CHECK-PMUL-NEXT:    movi v0.2d, #0xffffffffffffffff
-; CHECK-PMUL-NEXT:    and w11, w0, w1
-; CHECK-PMUL-NEXT:    lsl w8, w8, #1
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov w9, s1
-; CHECK-PMUL-NEXT:    bic w8, w8, w9
-; CHECK-PMUL-NEXT:    and w9, w9, w1
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    and w12, w11, w9
-; CHECK-PMUL-NEXT:    eor w13, w1, w9
-; CHECK-PMUL-NEXT:    eor w11, w11, w12
-; CHECK-PMUL-NEXT:    orr w9, w13, w9, lsr #1
-; CHECK-PMUL-NEXT:    orr w11, w11, w12, lsr #1
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov w10, s1
-; CHECK-PMUL-NEXT:    bic w8, w8, w10
-; CHECK-PMUL-NEXT:    and w10, w10, w9
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    and w13, w11, w10
-; CHECK-PMUL-NEXT:    eor w9, w9, w10
-; CHECK-PMUL-NEXT:    eor w11, w11, w13
-; CHECK-PMUL-NEXT:    orr w9, w9, w10, lsr #2
-; CHECK-PMUL-NEXT:    orr w10, w11, w13, lsr #2
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov w12, s1
-; CHECK-PMUL-NEXT:    bic w8, w8, w12
-; CHECK-PMUL-NEXT:    and w11, w12, w9
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    and w12, w10, w11
-; CHECK-PMUL-NEXT:    eor w9, w9, w11
-; CHECK-PMUL-NEXT:    eor w10, w10, w12
-; CHECK-PMUL-NEXT:    orr w9, w9, w11, lsr #4
-; CHECK-PMUL-NEXT:    orr w10, w10, w12, lsr #4
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov w13, s1
-; CHECK-PMUL-NEXT:    bic w8, w8, w13
-; CHECK-PMUL-NEXT:    fmov s1, w8
-; CHECK-PMUL-NEXT:    and w8, w13, w9
-; CHECK-PMUL-NEXT:    and w11, w10, w8
-; CHECK-PMUL-NEXT:    eor w9, w9, w8
-; CHECK-PMUL-NEXT:    eor w10, w10, w11
-; CHECK-PMUL-NEXT:    orr w8, w9, w8, lsr #8
-; CHECK-PMUL-NEXT:    pmull v0.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    orr w9, w10, w11, lsr #8
-; CHECK-PMUL-NEXT:    fmov w10, s0
-; CHECK-PMUL-NEXT:    and w8, w10, w8
-; CHECK-PMUL-NEXT:    and w8, w9, w8
-; CHECK-PMUL-NEXT:    eor w9, w9, w8
-; CHECK-PMUL-NEXT:    orr w0, w9, w8, lsr #16
-; CHECK-PMUL-NEXT:    ret
+; CHECK-LABEL: pext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w8, w1
+; CHECK-NEXT:    and w12, w0, w1
+; CHECK-NEXT:    eon w9, w1, w8, lsl #1
+; CHECK-NEXT:    eor w9, w9, w9, lsl #2
+; CHECK-NEXT:    eor w9, w9, w9, lsl #4
+; CHECK-NEXT:    eor w9, w9, w9, lsl #8
+; CHECK-NEXT:    eor w9, w9, w9, lsl #16
+; CHECK-NEXT:    bic w8, w8, w9
+; CHECK-NEXT:    and w9, w12, w9
+; CHECK-NEXT:    eor w8, w8, w8, lsr #1
+; CHECK-NEXT:    eor w12, w12, w9
+; CHECK-NEXT:    eor w9, w12, w9, lsr #1
+; CHECK-NEXT:    eor w10, w8, w8, lsl #2
+; CHECK-NEXT:    eor w10, w10, w10, lsl #4
+; CHECK-NEXT:    eor w10, w10, w10, lsl #8
+; CHECK-NEXT:    eor w10, w10, w10, lsl #16
+; CHECK-NEXT:    bic w8, w8, w10
+; CHECK-NEXT:    and w10, w9, w10
+; CHECK-NEXT:    eor w8, w8, w8, lsr #2
+; CHECK-NEXT:    eor w9, w9, w10
+; CHECK-NEXT:    eor w9, w9, w10, lsr #2
+; CHECK-NEXT:    eor w11, w8, w8, lsl #4
+; CHECK-NEXT:    eor w11, w11, w11, lsl #8
+; CHECK-NEXT:    eor w11, w11, w11, lsl #16
+; CHECK-NEXT:    bic w8, w8, w11
+; CHECK-NEXT:    and w11, w9, w11
+; CHECK-NEXT:    eor w8, w8, w8, lsr #4
+; CHECK-NEXT:    eor w9, w9, w11
+; CHECK-NEXT:    eor w9, w9, w11, lsr #4
+; CHECK-NEXT:    eor w10, w8, w8, lsl #8
+; CHECK-NEXT:    eor w10, w10, w10, lsl #16
+; CHECK-NEXT:    bic w8, w8, w10
+; CHECK-NEXT:    and w10, w9, w10
+; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    eor w9, w9, w10
+; CHECK-NEXT:    eor w9, w9, w10, lsr #8
+; CHECK-NEXT:    eor w8, w8, w8, lsl #16
+; CHECK-NEXT:    and w8, w9, w8
+; CHECK-NEXT:    eor w9, w9, w8
+; CHECK-NEXT:    eor w0, w9, w8, lsr #16
+; CHECK-NEXT:    ret
 ;
 ; CHECK-BITPERM-LABEL: pext_i32:
 ; CHECK-BITPERM:       // %bb.0:
@@ -308,152 +157,60 @@ define i32 @pext_i32(i32 %val, i32 %mask) nounwind {
 }
 
 define i64 @pext_i64(i64 %val, i64 %mask) nounwind {
-; CHECK-BASE-LABEL: pext_i64:
-; CHECK-BASE:       // %bb.0:
-; CHECK-BASE-NEXT:    mvn x8, x1
-; CHECK-BASE-NEXT:    and x14, x0, x1
-; CHECK-BASE-NEXT:    lsl x9, x8, #1
-; CHECK-BASE-NEXT:    eor x8, x9, x8, lsl #2
-; CHECK-BASE-NEXT:    eor x8, x8, x8, lsl #2
-; CHECK-BASE-NEXT:    eor x8, x8, x8, lsl #4
-; CHECK-BASE-NEXT:    eor x8, x8, x8, lsl #8
-; CHECK-BASE-NEXT:    eor x8, x8, x8, lsl #16
-; CHECK-BASE-NEXT:    eor x8, x8, x8, lsl #32
-; CHECK-BASE-NEXT:    bic x9, x9, x8
-; CHECK-BASE-NEXT:    and x8, x8, x1
-; CHECK-BASE-NEXT:    eor x10, x9, x9, lsl #1
-; CHECK-BASE-NEXT:    and x15, x14, x8
-; CHECK-BASE-NEXT:    eor x16, x1, x8
-; CHECK-BASE-NEXT:    orr x8, x16, x8, lsr #1
-; CHECK-BASE-NEXT:    eor x14, x14, x15
-; CHECK-BASE-NEXT:    eor x10, x10, x10, lsl #2
-; CHECK-BASE-NEXT:    orr x14, x14, x15, lsr #1
-; CHECK-BASE-NEXT:    eor x10, x10, x10, lsl #4
-; CHECK-BASE-NEXT:    eor x10, x10, x10, lsl #8
-; CHECK-BASE-NEXT:    eor x10, x10, x10, lsl #16
-; CHECK-BASE-NEXT:    eor x10, x10, x10, lsl #32
-; CHECK-BASE-NEXT:    bic x9, x9, x10
-; CHECK-BASE-NEXT:    and x10, x10, x8
-; CHECK-BASE-NEXT:    eor x11, x9, x9, lsl #1
-; CHECK-BASE-NEXT:    and x15, x14, x10
-; CHECK-BASE-NEXT:    eor x8, x8, x10
-; CHECK-BASE-NEXT:    orr x8, x8, x10, lsr #2
-; CHECK-BASE-NEXT:    eor x10, x14, x15
-; CHECK-BASE-NEXT:    eor x11, x11, x11, lsl #2
-; CHECK-BASE-NEXT:    orr x10, x10, x15, lsr #2
-; CHECK-BASE-NEXT:    eor x11, x11, x11, lsl #4
-; CHECK-BASE-NEXT:    eor x11, x11, x11, lsl #8
-; CHECK-BASE-NEXT:    eor x11, x11, x11, lsl #16
-; CHECK-BASE-NEXT:    eor x11, x11, x11, lsl #32
-; CHECK-BASE-NEXT:    bic x9, x9, x11
-; CHECK-BASE-NEXT:    and x11, x11, x8
-; CHECK-BASE-NEXT:    eor x12, x9, x9, lsl #1
-; CHECK-BASE-NEXT:    and x14, x10, x11
-; CHECK-BASE-NEXT:    eor x8, x8, x11
-; CHECK-BASE-NEXT:    orr x8, x8, x11, lsr #4
-; CHECK-BASE-NEXT:    eor x10, x10, x14
-; CHECK-BASE-NEXT:    eor x12, x12, x12, lsl #2
-; CHECK-BASE-NEXT:    orr x10, x10, x14, lsr #4
-; CHECK-BASE-NEXT:    eor x12, x12, x12, lsl #4
-; CHECK-BASE-NEXT:    eor x12, x12, x12, lsl #8
-; CHECK-BASE-NEXT:    eor x12, x12, x12, lsl #16
-; CHECK-BASE-NEXT:    eor x12, x12, x12, lsl #32
-; CHECK-BASE-NEXT:    bic x9, x9, x12
-; CHECK-BASE-NEXT:    and x11, x12, x8
-; CHECK-BASE-NEXT:    eor x13, x9, x9, lsl #1
-; CHECK-BASE-NEXT:    and x12, x10, x11
-; CHECK-BASE-NEXT:    eor x8, x8, x11
-; CHECK-BASE-NEXT:    eor x10, x10, x12
-; CHECK-BASE-NEXT:    orr x8, x8, x11, lsr #8
-; CHECK-BASE-NEXT:    eor x13, x13, x13, lsl #2
-; CHECK-BASE-NEXT:    orr x10, x10, x12, lsr #8
-; CHECK-BASE-NEXT:    eor x13, x13, x13, lsl #4
-; CHECK-BASE-NEXT:    eor x13, x13, x13, lsl #8
-; CHECK-BASE-NEXT:    eor x13, x13, x13, lsl #16
-; CHECK-BASE-NEXT:    eor x13, x13, x13, lsl #32
-; CHECK-BASE-NEXT:    bic x9, x9, x13
-; CHECK-BASE-NEXT:    and x11, x13, x8
-; CHECK-BASE-NEXT:    eor x9, x9, x9, lsl #1
-; CHECK-BASE-NEXT:    and x12, x10, x11
-; CHECK-BASE-NEXT:    eor x8, x8, x11
-; CHECK-BASE-NEXT:    eor x10, x10, x12
-; CHECK-BASE-NEXT:    orr x8, x8, x11, lsr #16
-; CHECK-BASE-NEXT:    eor x9, x9, x9, lsl #2
-; CHECK-BASE-NEXT:    orr x10, x10, x12, lsr #16
-; CHECK-BASE-NEXT:    eor x9, x9, x9, lsl #4
-; CHECK-BASE-NEXT:    and x8, x10, x8
-; CHECK-BASE-NEXT:    eor x9, x9, x9, lsl #8
-; CHECK-BASE-NEXT:    eor x9, x9, x9, lsl #16
-; CHECK-BASE-NEXT:    eor x9, x9, x9, lsl #32
-; CHECK-BASE-NEXT:    and x8, x8, x9
-; CHECK-BASE-NEXT:    eor x9, x10, x8
-; CHECK-BASE-NEXT:    orr x0, x9, x8, lsr #32
-; CHECK-BASE-NEXT:    ret
-;
-; CHECK-PMUL-LABEL: pext_i64:
-; CHECK-PMUL:       // %bb.0:
-; CHECK-PMUL-NEXT:    mvn x8, x1
-; CHECK-PMUL-NEXT:    movi d0, #0xffffffffffffffff
-; CHECK-PMUL-NEXT:    and x11, x0, x1
-; CHECK-PMUL-NEXT:    lsl x8, x8, #1
-; CHECK-PMUL-NEXT:    fmov d1, x8
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov x9, d1
-; CHECK-PMUL-NEXT:    bic x8, x8, x9
-; CHECK-PMUL-NEXT:    and x9, x9, x1
-; CHECK-PMUL-NEXT:    fmov d1, x8
-; CHECK-PMUL-NEXT:    and x12, x11, x9
-; CHECK-PMUL-NEXT:    eor x14, x1, x9
-; CHECK-PMUL-NEXT:    eor x11, x11, x12
-; CHECK-PMUL-NEXT:    orr x9, x14, x9, lsr #1
-; CHECK-PMUL-NEXT:    orr x11, x11, x12, lsr #1
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov x10, d1
-; CHECK-PMUL-NEXT:    bic x8, x8, x10
-; CHECK-PMUL-NEXT:    and x10, x10, x9
-; CHECK-PMUL-NEXT:    fmov d1, x8
-; CHECK-PMUL-NEXT:    and x12, x11, x10
-; CHECK-PMUL-NEXT:    eor x9, x9, x10
-; CHECK-PMUL-NEXT:    eor x11, x11, x12
-; CHECK-PMUL-NEXT:    orr x9, x9, x10, lsr #2
-; CHECK-PMUL-NEXT:    orr x10, x11, x12, lsr #2
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov x13, d1
-; CHECK-PMUL-NEXT:    bic x8, x8, x13
-; CHECK-PMUL-NEXT:    and x12, x13, x9
-; CHECK-PMUL-NEXT:    fmov d1, x8
-; CHECK-PMUL-NEXT:    and x13, x10, x12
-; CHECK-PMUL-NEXT:    eor x9, x9, x12
-; CHECK-PMUL-NEXT:    eor x10, x10, x13
-; CHECK-PMUL-NEXT:    orr x9, x9, x12, lsr #4
-; CHECK-PMUL-NEXT:    orr x10, x10, x13, lsr #4
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov x11, d1
-; CHECK-PMUL-NEXT:    bic x8, x8, x11
-; CHECK-PMUL-NEXT:    and x11, x11, x9
-; CHECK-PMUL-NEXT:    fmov d1, x8
-; CHECK-PMUL-NEXT:    and x12, x10, x11
-; CHECK-PMUL-NEXT:    eor x9, x9, x11
-; CHECK-PMUL-NEXT:    eor x10, x10, x12
-; CHECK-PMUL-NEXT:    orr x9, x9, x11, lsr #8
-; CHECK-PMUL-NEXT:    orr x10, x10, x12, lsr #8
-; CHECK-PMUL-NEXT:    pmull v1.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    fmov x13, d1
-; CHECK-PMUL-NEXT:    bic x8, x8, x13
-; CHECK-PMUL-NEXT:    fmov d1, x8
-; CHECK-PMUL-NEXT:    and x8, x13, x9
-; CHECK-PMUL-NEXT:    and x11, x10, x8
-; CHECK-PMUL-NEXT:    eor x9, x9, x8
-; CHECK-PMUL-NEXT:    eor x10, x10, x11
-; CHECK-PMUL-NEXT:    orr x8, x9, x8, lsr #16
-; CHECK-PMUL-NEXT:    pmull v0.1q, v1.1d, v0.1d
-; CHECK-PMUL-NEXT:    orr x9, x10, x11, lsr #16
-; CHECK-PMUL-NEXT:    fmov x10, d0
-; CHECK-PMUL-NEXT:    and x8, x10, x8
-; CHECK-PMUL-NEXT:    and x8, x9, x8
-; CHECK-PMUL-NEXT:    eor x9, x9, x8
-; CHECK-PMUL-NEXT:    orr x0, x9, x8, lsr #32
-; CHECK-PMUL-NEXT:    ret
+; CHECK-LABEL: pext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x8, x1
+; CHECK-NEXT:    and x12, x0, x1
+; CHECK-NEXT:    eon x9, x1, x8, lsl #1
+; CHECK-NEXT:    eor x9, x9, x9, lsl #2
+; CHECK-NEXT:    eor x9, x9, x9, lsl #4
+; CHECK-NEXT:    eor x9, x9, x9, lsl #8
+; CHECK-NEXT:    eor x9, x9, x9, lsl #16
+; CHECK-NEXT:    eor x9, x9, x9, lsl #32
+; CHECK-NEXT:    bic x8, x8, x9
+; CHECK-NEXT:    and x9, x12, x9
+; CHECK-NEXT:    eor x8, x8, x8, lsr #1
+; CHECK-NEXT:    eor x12, x12, x9
+; CHECK-NEXT:    eor x9, x12, x9, lsr #1
+; CHECK-NEXT:    eor x10, x8, x8, lsl #2
+; CHECK-NEXT:    eor x10, x10, x10, lsl #4
+; CHECK-NEXT:    eor x10, x10, x10, lsl #8
+; CHECK-NEXT:    eor x10, x10, x10, lsl #16
+; CHECK-NEXT:    eor x10, x10, x10, lsl #32
+; CHECK-NEXT:    bic x8, x8, x10
+; CHECK-NEXT:    and x10, x9, x10
+; CHECK-NEXT:    eor x8, x8, x8, lsr #2
+; CHECK-NEXT:    eor x9, x9, x10
+; CHECK-NEXT:    eor x9, x9, x10, lsr #2
+; CHECK-NEXT:    eor x11, x8, x8, lsl #4
+; CHECK-NEXT:    eor x11, x11, x11, lsl #8
+; CHECK-NEXT:    eor x11, x11, x11, lsl #16
+; CHECK-NEXT:    eor x11, x11, x11, lsl #32
+; CHECK-NEXT:    bic x8, x8, x11
+; CHECK-NEXT:    and x11, x9, x11
+; CHECK-NEXT:    eor x8, x8, x8, lsr #4
+; CHECK-NEXT:    eor x9, x9, x11
+; CHECK-NEXT:    eor x9, x9, x11, lsr #4
+; CHECK-NEXT:    eor x12, x8, x8, lsl #8
+; CHECK-NEXT:    eor x12, x12, x12, lsl #16
+; CHECK-NEXT:    eor x10, x12, x12, lsl #32
+; CHECK-NEXT:    bic x8, x8, x10
+; CHECK-NEXT:    and x10, x9, x10
+; CHECK-NEXT:    eor x8, x8, x8, lsr #8
+; CHECK-NEXT:    eor x9, x9, x10
+; CHECK-NEXT:    eor x9, x9, x10, lsr #8
+; CHECK-NEXT:    eor x11, x8, x8, lsl #16
+; CHECK-NEXT:    eor x11, x11, x11, lsl #32
+; CHECK-NEXT:    bic x8, x8, x11
+; CHECK-NEXT:    and x10, x9, x11
+; CHECK-NEXT:    eor x8, x8, x8, lsr #16
+; CHECK-NEXT:    eor x9, x9, x10
+; CHECK-NEXT:    eor x9, x9, x10, lsr #16
+; CHECK-NEXT:    eor x8, x8, x8, lsl #32
+; CHECK-NEXT:    and x8, x9, x8
+; CHECK-NEXT:    eor x9, x9, x8
+; CHECK-NEXT:    eor x0, x9, x8, lsr #32
+; CHECK-NEXT:    ret
 ;
 ; CHECK-BITPERM-LABEL: pext_i64:
 ; CHECK-BITPERM:       // %bb.0:
@@ -465,3 +222,6 @@ define i64 @pext_i64(i64 %val, i64 %mask) nounwind {
   %res = call i64 @llvm.pext.i64(i64 %val, i64 %mask)
   ret i64 %res
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-BASE: {{.*}}
+; CHECK-PMUL: {{.*}}
