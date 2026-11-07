@@ -146,8 +146,8 @@ VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.
-template <typename PredT>
-inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+template <typename RecipeTy, typename PredT>
+inline RecipeTy *findUserRecursively(VPValue *Start, PredT Pred) {
   SetVector<VPValue *> Worklist;
   Worklist.insert(Start);
   for (unsigned I = 0; I != Worklist.size(); ++I) {
@@ -156,7 +156,7 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
     if (!R)
       continue;
     if (Pred(R))
-      return R;
+      return cast<RecipeTy>(R);
     for (VPUser *U : Cur->users()) {
       for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
         Worklist.insert(V);
