@@ -22,25 +22,62 @@
 //      OPENMP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
 // OPENMP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
 
-// OPENMP-REL: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading.relocatable", align 8
+// OPENMP-REL: @.llvm_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading.relocatable", align 8
 
-//      OPENMP: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading", align 8
-// OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr (i8, ptr @.omp_offloading.device_image, i64 [[IMG_OFF:[0-9]+]]), ptr getelementptr (i8, ptr @.omp_offloading.device_image, i64 [[IMG_OFF]]), ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, ptr @__stop_llvm_offload_entries }]
-// OPENMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, ptr @__stop_llvm_offload_entries }
-// OPENMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.omp_offloading.descriptor_reg, ptr null }]
+//      OPENMP: @.llvm_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading", align 8
+// OPENMP-NEXT: @.llvm_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr (i8, ptr @.llvm_offloading.device_image, i64 [[IMG_OFF:[0-9]+]]), ptr getelementptr (i8, ptr @.llvm_offloading.device_image, i64 [[IMG_OFF]]), ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, ptr @__stop_llvm_offload_entries }]
+// OPENMP-NEXT: @.llvm_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.llvm_offloading.device_images, ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, ptr @__stop_llvm_offload_entries }
+// OPENMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.llvm_offloading.descriptor_reg, ptr null }]
 
-//      OPENMP: define internal void @.omp_offloading.descriptor_reg() section ".text.startup" {
+//      OPENMP: define internal void @.llvm_offloading.descriptor_reg() section ".text.startup" {
 // OPENMP-NEXT: entry:
-// OPENMP-NEXT:   call void @__tgt_register_lib(ptr @.omp_offloading.descriptor)
-// OPENMP-NEXT:   %0 = call i32 @atexit(ptr @.omp_offloading.descriptor_unreg)
+// OPENMP-NEXT:   call void @__tgt_register_lib(ptr @.llvm_offloading.descriptor)
+// OPENMP-NEXT:   %0 = call i32 @atexit(ptr @.llvm_offloading.descriptor_unreg)
 // OPENMP-NEXT:   ret void
 // OPENMP-NEXT: }
 
-//      OPENMP: define internal void @.omp_offloading.descriptor_unreg() section ".text.startup" {
+//      OPENMP: define internal void @.llvm_offloading.descriptor_unreg() section ".text.startup" {
 // OPENMP-NEXT: entry:
-// OPENMP-NEXT:   call void @__tgt_unregister_lib(ptr @.omp_offloading.descriptor)
+// OPENMP-NEXT:   call void @__tgt_unregister_lib(ptr @.llvm_offloading.descriptor)
 // OPENMP-NEXT:   ret void
 // OPENMP-NEXT: }
+
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=openacc,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=OPENACC,OPENACC-ELF
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run -r --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=OPENACC-ELF,OPENACC-REL
+// RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-windows-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=OPENACC,OPENACC-COFF
+
+//      OPENACC-ELF: @__start_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
+// OPENACC-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
+// OPENACC-ELF-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries"
+
+//      OPENACC-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+// OPENACC-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
+
+// OPENACC-REL: @.llvm_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading.relocatable", align 8
+
+//      OPENACC: @.llvm_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading", align 8
+// OPENACC-NEXT: @.llvm_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr (i8, ptr @.llvm_offloading.device_image, i64 [[IMG_OFF:[0-9]+]]), ptr getelementptr (i8, ptr @.llvm_offloading.device_image, i64 [[IMG_OFF]]), ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, ptr @__stop_llvm_offload_entries }]
+// OPENACC-NEXT: @.llvm_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.llvm_offloading.device_images, ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(i8, ptr @__start_llvm_offload_entries, i64 [0-9]+\))}}, ptr @__stop_llvm_offload_entries }
+// OPENACC-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.llvm_offloading.descriptor_reg, ptr null }]
+
+//      OPENACC: define internal void @.llvm_offloading.descriptor_reg() section ".text.startup" {
+// OPENACC-NEXT: entry:
+// OPENACC-NEXT:   call void @__tgt_acc_register_lib(ptr @.llvm_offloading.descriptor)
+// OPENACC-NEXT:   %0 = call i32 @atexit(ptr @.llvm_offloading.descriptor_unreg)
+// OPENACC-NEXT:   ret void
+// OPENACC-NEXT: }
+
+//      OPENACC: define internal void @.llvm_offloading.descriptor_unreg() section ".text.startup" {
+// OPENACC-NEXT: entry:
+// OPENACC-NEXT:   call void @__tgt_acc_unregister_lib(ptr @.llvm_offloading.descriptor)
+// OPENACC-NEXT:   ret void
+// OPENACC-NEXT: }
 
 // RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \

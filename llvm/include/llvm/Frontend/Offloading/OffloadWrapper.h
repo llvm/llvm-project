@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Compiler.h"
 
 #include <string>
@@ -19,16 +20,18 @@ namespace llvm {
 namespace offloading {
 using EntryArrayTy = std::pair<Constant *, Constant *>;
 /// Wraps the input device images into the module \p M as global symbols and
-/// registers the images with the OpenMP Offloading runtime libomptarget.
+/// registers the images with the OpenMP (libomptarget) or OpenACC
+/// (libacctarget) offloading runtime, depending on \p Kind.
 /// \param EntryArray Optional pair pointing to the begin and end of the
 /// `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
 /// \param Relocatable Indicate if we need to change the offloading section to
 /// create a relocatable object.
+/// \param Kind The producer kind (either OpenMP or OpenACC).
 LLVM_ABI llvm::Error
-wrapOpenMPBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
-                   EntryArrayTy EntryArray, llvm::StringRef Suffix = "",
-                   bool Relocatable = false);
+wrapLLVMBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
+                 EntryArrayTy EntryArray, llvm::StringRef Suffix,
+                 bool Relocatable, object::OffloadKind Kind);
 
 /// Wraps the input fatbinary image into the module \p M as global symbols and
 /// registers the images with the CUDA runtime.

@@ -743,7 +743,8 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       "-o",
       *BitcodeOrErr,
   };
-  if (Kind == OFK_OpenMP && Args.hasArg(OPT_relocatable))
+  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
+      Args.hasArg(OPT_relocatable))
     WrapperArgs.push_back("--relocatable");
   for (const auto &Buffer : Buffers)
     WrapperArgs.push_back(Buffer->getBufferIdentifier());
@@ -803,9 +804,10 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 
   switch (Kind) {
   case OFK_OpenMP:
-    if (Error Err = offloading::wrapOpenMPBinaries(
+  case OFK_OpenACC:
+    if (Error Err = offloading::wrapLLVMBinaries(
             M, BuffersToWrap, offloading::getOffloadEntryArray(M),
-            /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable)))
+            /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable), Kind))
       return std::move(Err);
     break;
   case OFK_Cuda:
@@ -853,9 +855,10 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
   return *FileOrErr;
 }
 
-/// Perform the OpenMP bundling with 'llvm-offload-binary' in verbose mode.
+/// Perform the OpenMP and OpenACC bundling with 'llvm-offload-binary' in
+/// verbose mode.
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOpenMPVerbose(ArrayRef<OffloadingImage> Images) {
+bundleLLVMVerbose(ArrayRef<OffloadingImage> Images) {
   Expected<std::string> OffloadBinaryPath = findProgram(
       "llvm-offload-binary", {getExecutableDir("llvm-offload-binary")});
   if (!OffloadBinaryPath)
@@ -898,7 +901,7 @@ bundleOpenMPVerbose(ArrayRef<OffloadingImage> Images) {
 }
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOpenMP(ArrayRef<OffloadingImage> Images) {
+bundleLLVM(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
   for (const OffloadingImage &Image : Images)
     Buffers.emplace_back(
@@ -982,8 +985,9 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
-    return (Verbose && SaveTemps) ? bundleOpenMPVerbose(Images)
-                                  : bundleOpenMP(Images);
+  case OFK_OpenACC:
+    return (Verbose && SaveTemps) ? bundleLLVMVerbose(Images)
+                                  : bundleLLVM(Images);
   case OFK_SYCL:
     return bundleSYCL(Images);
   case OFK_Cuda:
@@ -1149,7 +1153,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
       return OutputOrErr.takeError();
 
     // Store the offloading image for each linked output file.
-    for (OffloadKind Kind = OFK_OpenMP; Kind != OFK_LAST;
+    for (OffloadKind Kind = OFK_FIRST; Kind != OFK_LAST;
          Kind = static_cast<OffloadKind>((uint16_t)(Kind) << 1)) {
       if ((ActiveOffloadKindMask & Kind) == 0)
         continue;

@@ -36,7 +36,9 @@ static cl::opt<object::OffloadKind> Kind(
     cl::values(clEnumValN(object::OFK_OpenMP, "openmp", "Wrap OpenMP binaries"),
                clEnumValN(object::OFK_Cuda, "cuda", "Wrap CUDA binaries"),
                clEnumValN(object::OFK_HIP, "hip", "Wrap HIP binaries"),
-               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries")));
+               clEnumValN(object::OFK_SYCL, "sycl", "Wrap SYCL binaries"),
+               clEnumValN(object::OFK_OpenACC, "openacc",
+                          "Wrap OpenACC binaries")));
 
 static cl::opt<bool> Relocatable(
     "relocatable",
@@ -69,9 +71,10 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
 
   switch (Kind) {
   case llvm::object::OFK_OpenMP:
-    if (Error Err = offloading::wrapOpenMPBinaries(
+  case llvm::object::OFK_OpenACC:
+    if (Error Err = offloading::wrapLLVMBinaries(
             M, BuffersToWrap, offloading::getOffloadEntryArray(M),
-            /*Suffix=*/"", /*Relocatable=*/Relocatable))
+            /*Suffix=*/"", /*Relocatable=*/Relocatable, Kind))
       return Err;
     break;
   case llvm::object::OFK_Cuda:
