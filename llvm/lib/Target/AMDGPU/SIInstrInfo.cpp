@@ -4889,6 +4889,7 @@ AMDGPU::AsyncStages SIInstrInfo::getAsyncStage(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   // Keep in sync with FLATInstructions.td.
   case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay:
   case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_SADDR:
   case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32:
   case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32_SADDR:
