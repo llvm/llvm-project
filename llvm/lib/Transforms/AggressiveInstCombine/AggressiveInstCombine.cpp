@@ -1479,7 +1479,8 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
-  // Alias Analysis to check for stores b/w the loads.
+  // Check that the later load can be hoisted without changing the memory read
+  // or introducing a memory access on a path that does not reach that load.
   LoadInst *Start = LOps.FoundRoot ? LOps.RootInsert : LI1, *End = LI2;
   MemoryLocation Loc;
   if (!Start->comesBefore(End)) {
@@ -1500,6 +1501,9 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   unsigned NumScanned = 0;
   for (Instruction &Inst :
        make_range(Start->getIterator(), End->getIterator())) {
+    if (!isGuaranteedToTransferExecutionToSuccessor(&Inst))
+      return false;
+
     if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
 
