@@ -8373,10 +8373,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(
 
     if (const auto *CB = dyn_cast<CallBase>(V)) {
       const auto *FP = dyn_cast<FPMathOperator>(CB);
-      bool HasPostAttrPoison =
-          includesPoison(Kind) &&
-          ((FP && (FP->hasNoNaNs() || FP->hasNoInfs())) ||
-           CB->hasMetadata(LLVMContext::MD_range));
+      bool HasPostAttrPoison = includesPoison(Kind) &&
+                               ((FP && (FP->hasNoNaNs() || FP->hasNoInfs())) ||
+                                CB->hasMetadata(LLVMContext::MD_range));
       if (!HasPostAttrPoison)
         if (CB->hasRetAttr(Attribute::NoUndef) ||
             CB->hasRetAttr(Attribute::Dereferenceable) ||
