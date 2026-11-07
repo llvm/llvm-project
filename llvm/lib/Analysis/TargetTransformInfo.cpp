@@ -717,6 +717,24 @@ TargetTransformInfo::getBuildVectorContextHint(
   return TTIImpl->getBuildVectorContextHint(Mask, Scalars, GatherUseOps);
 }
 
+bool TargetTransformInfo::isSplatFolded(
+    ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
+    const {
+  Value *Splat = nullptr;
+  SmallVector<int> Mask(Scalars.size(), PoisonMaskElem);
+  for (auto [I, V] : enumerate(Scalars)) {
+    if (isa<PoisonValue>(V))
+      continue;
+    if (isa<Constant>(V) || (Splat && V != Splat))
+      return false;
+    Splat = V;
+    Mask[I] = 0;
+  }
+  return Splat && getBuildVectorContextHint(Mask, Scalars, GatherUseOps) ==
+                      VectorInstrContext::SplatOpFolded;
+}
+
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
