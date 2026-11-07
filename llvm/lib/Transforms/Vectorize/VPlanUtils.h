@@ -299,6 +299,9 @@ class VPSCEVExpander {
   /// if none is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
 
+  /// Returns true if \p S can be expanded in IR, hoisted out of HoistOutOf.
+  bool canExpandInIR(const SCEV *S);
+
   /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
   VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
 

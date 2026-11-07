@@ -973,6 +973,11 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   return nullptr;
 }
 
+bool VPSCEVExpander::canExpandInIR(const SCEV *S) {
+  return HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+         SE.isGuaranteedNotToCauseUB(S);
+}
+
 VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
   VPValue *Base = expand(SE.getPointerBase(S));
   VPValue *Offset = expand(SE.removePointerBase(S));
@@ -1011,8 +1016,7 @@ VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
 
-  if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
-      SE.isGuaranteedNotToCauseUB(S))
+  if (canExpandInIR(S))
     return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
                                                   /*ExpandInIR=*/true);
 
