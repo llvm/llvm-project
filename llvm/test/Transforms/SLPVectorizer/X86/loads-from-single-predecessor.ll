@@ -342,7 +342,7 @@ define void @metadata_missing_in_predecessor(ptr noalias %dst, ptr noalias %src,
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC]], align 4, !tbaa [[INT_TBAA3:![0-9]+]], !invariant.load [[META5:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC]], align 4, !invariant.load [[META3:![0-9]+]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -578,7 +578,5 @@ exit:
 ; CHECK: [[CHAR_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"omnipotent char", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"Simple C++ TBAA"}
-; CHECK: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-; CHECK: [[META4]] = !{!"int", [[META1]], i64 0}
-; CHECK: [[META5]] = !{}
+; CHECK: [[META3]] = !{}
 ;.
