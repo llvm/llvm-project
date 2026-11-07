@@ -1,5 +1,6 @@
 ; RUN: llubi < %s 2>&1 | FileCheck %s --check-prefix=DOUBLE
 ; RUN: not llubi --entry-function=half_arg < %s 2>&1 | FileCheck %s --check-prefix=HALF
+; RUN: not llubi --entry-function=half_arg_capital < %s 2>&1 | FileCheck %s --check-prefix=HALF-CAPITAL
 ; RUN: not llubi --entry-function=bfloat_arg < %s 2>&1 | FileCheck %s --check-prefix=BFLOAT
 ; RUN: not llubi --entry-function=float_arg < %s 2>&1 | FileCheck %s --check-prefix=FLOAT
 ; RUN: not llubi --entry-function=fp80_arg < %s 2>&1 | FileCheck %s --check-prefix=FP80
@@ -9,6 +10,7 @@
 
 @fmt_all = constant [22 x i8] c"%f %e %E %g %G %a %A\0A\00"
 @fmt_f = constant [3 x i8] c"%f\00"
+@fmt_F = constant [3 x i8] c"%F\00"
 @fmt_e = constant [3 x i8] c"%e\00"
 @fmt_E = constant [3 x i8] c"%E\00"
 @fmt_g = constant [3 x i8] c"%g\00"
@@ -32,6 +34,14 @@ define void @half_arg() {
 
 ; HALF: Immediate UB detected: Argument type mismatch in printf for format specifier 'f' at argument index 1.
 ; HALF-NEXT: error: Execution of function 'half_arg' failed.
+
+define void @half_arg_capital() {
+  call i32 (ptr, ...) @printf(ptr @fmt_F, half 0.0)
+  ret void
+}
+
+; HALF-CAPITAL: Immediate UB detected: Argument type mismatch in printf for format specifier 'F' at argument index 1.
+; HALF-CAPITAL-NEXT: error: Execution of function 'half_arg_capital' failed.
 
 define void @bfloat_arg() {
   call i32 (ptr, ...) @printf(ptr @fmt_e, bfloat 0.0)

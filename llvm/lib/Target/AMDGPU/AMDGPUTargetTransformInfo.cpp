@@ -1591,6 +1591,7 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_make_buffer_rsrc:
+  case Intrinsic::amdgcn_flat_prefetch:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1643,6 +1644,20 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         M, II->getIntrinsicID(), {DstTy, SrcTy, NumRecordsTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
+  case Intrinsic::amdgcn_flat_prefetch: {
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (!AMDGPU::isExtendedGlobalAddrSpace(NewAS))
+      return nullptr;
+    // llvm.amdgcn.global.prefetch only takes a global pointer.
+    if (NewAS != AMDGPUAS::GLOBAL_ADDRESS)
+      NewV = IRBuilder<>(II).CreateAddrSpaceCast(
+          NewV, PointerType::get(II->getContext(), AMDGPUAS::GLOBAL_ADDRESS));
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        II->getModule(), Intrinsic::amdgcn_global_prefetch);
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;
@@ -2168,22 +2183,98 @@ GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
                                                : KnownIEEEMode::On;
 }
 
+static unsigned getNumMemoryInsts(unsigned Bytes, unsigned MaxBytes,
+                                  bool HasDwordx3) {
+  unsigned NumInsts = Bytes / MaxBytes;
+  unsigned Rem = Bytes % MaxBytes;
+  if (HasDwordx3 && Rem >= 12) {
+    ++NumInsts;
+    Rem -= 12;
+  }
+  return NumInsts + llvm::popcount(Rem);
+}
+
 InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             Align Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
-  if (VectorType *VecTy = dyn_cast<VectorType>(Src)) {
-    if ((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
-        CostKind != TTI::TCK_Latency &&
-        VecTy->getElementType()->isIntegerTy(8)) {
-      return divideCeil(DL.getTypeSizeInBits(VecTy) - 1,
+  Type *EltTy = Src->getScalarType();
+  if ((Opcode != Instruction::Load && Opcode != Instruction::Store) ||
+      CostKind == TTI::TCK_Latency || isa<ScalableVectorType>(Src) ||
+      (!EltTy->isIntOrPtrTy() && !EltTy->isFloatingPointTy()))
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
+  unsigned EltBits = std::max<unsigned>(8, DL.getTypeSizeInBits(EltTy));
+
+  if (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+      AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+      AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
+    if (Src->isVectorTy() && EltTy->isIntegerTy(8))
+      return divideCeil(DL.getTypeSizeInBits(Src) - 1,
                         getLoadStoreVecRegBitWidth(AddressSpace));
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+  }
+
+  auto *VecTy = dyn_cast<FixedVectorType>(Src);
+  if (VecTy && EltBits % 8 == 0 && !isPowerOf2_32(EltBits) &&
+      !TLI->shouldCombineMemoryType(TLI->getValueType(DL, Src))) {
+    Align EltAlign = commonAlignment(Alignment, EltBits / 8);
+    return VecTy->getNumElements() * getMemoryOpCost(Opcode, EltTy, EltAlign,
+                                                     AddressSpace, CostKind,
+                                                     OpInfo);
+  }
+
+  unsigned Bytes = DL.getTypeStoreSize(Src);
+  unsigned MaxBytes =
+      std::min(16u, getLoadStoreVecRegBitWidth(AddressSpace) / 8);
+  if (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+      !ST->hasMultiDwordFlatScratchAddressing())
+    MaxBytes = getLoadStoreVecRegBitWidth(AMDGPUAS::PRIVATE_ADDRESS) / 8;
+  bool IsDS = AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
+              AddressSpace == AMDGPUAS::REGION_ADDRESS;
+  bool HasDwordx3 = ST->hasDwordx3LoadStores();
+  bool HasUnalignedAccess = ST->hasUnalignedBufferAccessEnabled();
+  if (AddressSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+      AddressSpace == AMDGPUAS::FLAT_ADDRESS)
+    HasUnalignedAccess = ST->hasUnalignedScratchAccessEnabled();
+  else if (IsDS) {
+    HasUnalignedAccess = ST->hasUnalignedDSAccessEnabled();
+    if (Alignment >= 4 && Alignment < 8)
+      MaxBytes = 8;
+    HasDwordx3 = HasDwordx3 &&
+                 (Alignment >= 16 || (Alignment < 4 && HasUnalignedAccess));
+  }
+  if (Alignment < 4 && !HasUnalignedAccess)
+    MaxBytes = std::min<unsigned>(MaxBytes, Alignment.value());
+  bool MergesDwords = ST->hasFlatInstOffsets() &&
+                      (AMDGPU::isExtendedGlobalAddrSpace(AddressSpace) ||
+                       (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+                        !ST->hasFlatSegmentOffsetBug()));
+
+  if (Opcode == Instruction::Load) {
+    if (VecTy && Alignment >= PowerOf2Ceil(Bytes))
+      return divideCeil(Bytes, MaxBytes);
+    if (EltBits <= 16 && Alignment >= 4 && Bytes % 4) {
+      unsigned Piece = std::min(EltBits == 8 ? 8u : 16u, MaxBytes);
+      unsigned Granule = std::min<unsigned>(Alignment.value(), Piece);
+      if (!IsDS && !MergesDwords)
+        return Bytes / Piece + llvm::popcount(Bytes % Piece / Granule) +
+               (Bytes % Granule != 0);
+      unsigned Tail = Bytes % Granule;
+      if (Tail > EltBits / 8) {
+        Bytes += std::max<unsigned>(4, PowerOf2Ceil(Tail)) - Tail;
+        if (IsDS)
+          HasDwordx3 = false;
+      }
     }
   }
-  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
-                                OpInfo, I);
+  if (!MergesDwords && Bytes % MaxBytes > 12)
+    HasDwordx3 = false;
+  return getNumMemoryInsts(Bytes, MaxBytes, HasDwordx3);
 }
 
 unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
