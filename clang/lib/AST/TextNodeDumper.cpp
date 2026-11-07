@@ -2652,9 +2652,9 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
   if (D->hasInit()) {
     const Expr *E = D->getInit();
     // Only evaluate the value of constexpr VarDecls.
-    if (E && !E->isValueDependent() && D->isConstexpr() &&
-        !D->getType()->isDependentType())
-      D->evaluateValue();
+    // if (E && !E->isValueDependent() && D->isConstexpr() &&
+        // !D->getType()->isDependentType())
+      // D->evaluateValue();
 
     if (const APValue *V = D->getEvaluatedValue())
       AddChild("value", [=] { Visit(*V, E->getType()); });
