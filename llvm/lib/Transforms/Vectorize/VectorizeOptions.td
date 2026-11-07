@@ -284,6 +284,8 @@ defm : ValueField<"slp-recursion-max-depth", "unsigned", "12",
   "Limit the recursion depth when building a vectorizable tree">;
 defm : ValueField<"slp-reduction-budget", "unsigned", "65536",
   "Limit the number of scalars in the rejected trees of the same reduction">;
+defm : ValueField<"slp-retry-max-depth", "unsigned", "2",
+  "Maximum number of user levels tried as roots above a rejected window">;
 defm : BoolField<"slp-revec", "false",
   "Enable vectorization for wider vector utilization">;
 // The runtime checks and the guard branch execute on both the vector and the

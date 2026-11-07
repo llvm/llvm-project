@@ -23527,6 +23527,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     }
   };
   if (!ExtractShuffles.empty() || !GatherShuffles.empty()) {
+    const bool HasUndefScalars = any_of(E->Scalars, [](Value *V) {
+      return isa<UndefValue>(V) && !isa<PoisonValue>(V);
+    });
+    auto IsNotPoisonedVector = [&](Value *Vec) {
+      return !HasUndefScalars || isGuaranteedNotToBePoison(Vec, AC);
+    };
     bool IsNonPoisoned = true;
     bool IsUsedInExpr = true;
     Value *Vec1 = nullptr;
@@ -23563,11 +23569,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
       if (Vec2) {
         IsUsedInExpr = false;
-        IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1, AC) &&
-                         isGuaranteedNotToBePoison(Vec2, AC);
+        IsNonPoisoned &= IsNotPoisonedVector(Vec1) && IsNotPoisonedVector(Vec2);
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
-        bool IsNotPoisonedVec = isGuaranteedNotToBePoison(Vec1, AC);
+        bool IsNotPoisonedVec = IsNotPoisonedVector(Vec1);
         IsUsedInExpr &= FindReusedSplat(
             ExtractMask,
             cast<FixedVectorType>(Vec1->getType())->getNumElements(), 0,
@@ -23602,7 +23607,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         if (TEs.size() == 1) {
           bool IsNotPoisonedVec =
               TEs.front()->VectorizedValue
-                  ? isGuaranteedNotToBePoison(TEs.front()->VectorizedValue, AC)
+                  ? IsNotPoisonedVector(TEs.front()->VectorizedValue)
                   : true;
           IsUsedInExpr &=
               FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I,
@@ -23614,8 +23619,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
           ShuffleBuilder.add(*TEs.front(), *TEs.back(), VecMask);
           if (TEs.front()->VectorizedValue && TEs.back()->VectorizedValue)
             IsNonPoisoned &=
-                isGuaranteedNotToBePoison(TEs.front()->VectorizedValue, AC) &&
-                isGuaranteedNotToBePoison(TEs.back()->VectorizedValue, AC);
+                IsNotPoisonedVector(TEs.front()->VectorizedValue) &&
+                IsNotPoisonedVector(TEs.back()->VectorizedValue);
         }
       }
     }
@@ -31216,6 +31221,49 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       isa<PHINode>(I0) ? Opts->slp_phi_list_budget
                        : std::numeric_limits<unsigned>::max();
   unsigned RejectedTreesSize = 0;
+  std::optional<InstructionCost> WindowCost;
+
+  auto TryVectorizeWindow = [&](ArrayRef<Value *> Ops) {
+    LLVM_DEBUG(dbgs() << "SLP: Analyzing " << Ops.size() << " operations "
+                      << "\n");
+
+    WindowCost = std::nullopt;
+    R.buildTree(Ops);
+    if (R.isTreeTinyAndNotFullyVectorizable()) {
+      RejectedTreesSize += R.getTreeSize();
+      R.analyzedBundle(Ops);
+      return false;
+    }
+    if (R.isProfitableToReorder()) {
+      R.reorderTopToBottom();
+      R.reorderBottomToTop(
+          !isa<InsertElementInst, InsertValueInst>(Ops.front()));
+    }
+    R.transformNodes();
+    R.computeMinimumValueSizes();
+    InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+    R.buildExternalUses();
+
+    InstructionCost Cost = R.getTreeCost(TreeCost);
+    WindowCost = Cost;
+    CandidateFound = true;
+    MinCost = std::min(MinCost, Cost);
+
+    LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
+                      << " for VF=" << Ops.size() << "\n");
+    if (Cost >= -R.getCostThreshold()) {
+      RejectedTreesSize += R.getTreeSize();
+      R.analyzedBundle(Ops);
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
+    R.getORE()->emit(
+        OptimizationRemark(SV_NAME, "VectorizedList", cast<Instruction>(Ops[0]))
+        << "SLP vectorized with cost " << ore::NV("Cost", Cost)
+        << " and with tree size " << ore::NV("TreeSize", R.getTreeSize()));
+    R.vectorizeTree();
+    return true;
+  };
 
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
@@ -31230,11 +31278,12 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     // The window revisiting the dependent seeds skipped by the last vectorized
     // window, 0 if there is none.
     unsigned RevisitI = 0;
+    unsigned ResumeI = 0;
     for (unsigned I = NextInst;
          I < MaxInst && RejectedTreesSize <= RejectedTreesBudget; ++I) {
       // The skipped seeds are revisited, continue as if they were not skipped.
       if (RevisitI && I > RevisitI) {
-        I = NextInst - 1;
+        I = ResumeI - 1;
         RevisitI = 0;
         continue;
       }
@@ -31262,12 +31311,14 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         if (Inst && R.isDeleted(Inst))
           continue;
         // The lanes cannot depend on each other, so the seed, fed by the
-        // already taken one, is left for the next window.
+        // already taken one, is left for the next window. So are its users,
+        // which depend on the taken seed through it.
         if (StandaloneSeeds && Inst &&
             any_of(Inst->operand_values(),
                    [&](const Value *Op) { return Taken.contains(Op); })) {
           if (!FirstSkipped)
             FirstSkipped = I + Off;
+          Taken.insert(Inst);
           continue;
         }
         Ops[Idx] = V;
@@ -31298,54 +31349,71 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         continue;
       }
 
-      LLVM_DEBUG(dbgs() << "SLP: Analyzing " << ActualVF << " operations "
-                        << "\n");
-
-      R.buildTree(Ops);
-      if (R.isTreeTinyAndNotFullyVectorizable()) {
-        RejectedTreesSize += R.getTreeSize();
-        R.analyzedBundle(Ops);
-        if (StandaloneSeeds)
-          I += ActualVF - 1;
-        continue;
-      }
-      if (R.isProfitableToReorder()) {
-        R.reorderTopToBottom();
-        R.reorderBottomToTop(
-            !isa<InsertElementInst, InsertValueInst>(Ops.front()));
-      }
-      R.transformNodes();
-      R.computeMinimumValueSizes();
-      InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
-      R.buildExternalUses();
-
-      InstructionCost Cost = R.getTreeCost(TreeCost);
-      CandidateFound = true;
-      MinCost = std::min(MinCost, Cost);
-
-      LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
-                        << " for VF=" << ActualVF << "\n");
-      if (Cost < -R.getCostThreshold()) {
-        LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
-        R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
-                                            cast<Instruction>(Ops[0]))
-                         << "SLP vectorized with cost " << ore::NV("Cost", Cost)
-                         << " and with tree size "
-                         << ore::NV("TreeSize", R.getTreeSize()));
-
-        R.vectorizeTree();
+      if (TryVectorizeWindow(Ops)) {
         // Move to the next bundle. The skipped dependent seeds are fed by the
         // vectorized lanes now, revisit them first.
         NextInst = I + VF;
         RevisitI = FirstSkipped.value_or(0);
+        ResumeI = NextInst;
         I = FirstSkipped.value_or(NextInst) - 1;
         Changed = true;
-      } else {
-        RejectedTreesSize += R.getTreeSize();
-        R.analyzedBundle(Ops);
-        if (StandaloneSeeds)
-          I += ActualVF - 1;
+        continue;
       }
+
+      // Give rejected lanes a chance to collect and vectorize by using
+      // itself as root. Every retry tree contains the rejected one, so only
+      // the first few levels of users may turn it profitable.
+      if (StandaloneSeeds && FirstSkipped && WindowCost &&
+          (!WindowCost->isValid() || *WindowCost <= ActualVF)) {
+        SmallVector<Value *> Lanes(Ops);
+        SmallPtrSet<Value *, 8> Tried(llvm::from_range, Ops);
+        bool UsersVectorized = false;
+        for (unsigned Depth = 0; Depth < Opts->slp_retry_max_depth &&
+                                 RejectedTreesSize <= RejectedTreesBudget;
+             ++Depth) {
+          SmallVector<Value *> Users;
+          for (Value *Lane : Lanes) {
+            auto *It = find_if(VL.drop_front(*FirstSkipped), [&](Value *V) {
+              auto *I = dyn_cast<Instruction>(V);
+              return I && !R.isDeleted(I) && !Tried.contains(I) &&
+                     !is_contained(Users, I) &&
+                     is_contained(I->operand_values(), Lane);
+            });
+            if (It != VL.end())
+              Users.push_back(*It);
+          }
+          if (Users.size() < MinVF)
+            break;
+          Users.resize(getFloorFullVectorNumberOfElements(
+              *TTI, ScalarTy, Users.size(), Opts->slp_revec));
+          if (Users.size() < MinVF)
+            break;
+          Tried.insert_range(Users);
+          // The lanes cannot depend on each other.
+          if (any_of(Users, [&](Value *V) {
+                return any_of(
+                    cast<Instruction>(V)->operand_values(),
+                    [&](Value *Op) { return is_contained(Users, Op); });
+              }))
+            break;
+          LLVM_DEBUG(dbgs() << "SLP: Retrying the users of the rejected "
+                               "lanes.\n");
+          if (!R.isAnalyzedBundle(Users) && TryVectorizeWindow(Users)) {
+            UsersVectorized = true;
+            break;
+          }
+          Lanes = std::move(Users);
+        }
+        if (UsersVectorized) {
+          Changed = true;
+          RevisitI = *FirstSkipped;
+          ResumeI = I + ActualVF;
+          I = *FirstSkipped - 1;
+          continue;
+        }
+      }
+      if (StandaloneSeeds)
+        I += ActualVF - 1;
     }
   }
 
