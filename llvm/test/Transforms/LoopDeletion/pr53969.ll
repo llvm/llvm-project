@@ -10,9 +10,7 @@ define void @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP9:%.*]] = and i32 undef, 1
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[TMP10]], label [[BB33_LOOPEXIT1:%.*]], label [[BB34_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BB33_LOOPEXIT1:%.*]], label [[BB34_PREHEADER:%.*]]
 ; CHECK:       bb34.preheader:
 ; CHECK-NEXT:    br label [[BB34:%.*]]
 ; CHECK:       bb11:

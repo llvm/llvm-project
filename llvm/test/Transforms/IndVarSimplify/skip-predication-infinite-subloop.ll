@@ -9,11 +9,11 @@ define void @infinite_subloop_skips_predication() {
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp eq i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       inner.header:
-; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp eq i8 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[INNER_COND]], label [[INNER_HEADER]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
@@ -47,12 +47,12 @@ define void @mustprogress_subloop_still_predicated() {
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       inner.header:
-; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp eq i8 [[IV]], 1
-; CHECK-NEXT:    br i1 [[INNER_COND]], label [[INNER_HEADER]], label [[OUTER_LATCH]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[INNER_HEADER]], label [[OUTER_LATCH]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[OUTER_HEADER]]
@@ -84,11 +84,11 @@ define void @mustprogress_function_subloop_predicated() mustprogress {
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp eq i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       inner.header:
-; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp eq i8 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[INNER_COND]], label [[INNER_HEADER]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
@@ -121,11 +121,11 @@ define void @willreturn_function_subloop_predicated() willreturn {
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp eq i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       inner.header:
-; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp eq i8 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[INNER_COND]], label [[INNER_HEADER]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
