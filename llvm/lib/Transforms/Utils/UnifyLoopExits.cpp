@@ -276,10 +276,6 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
       AddBlockToLoop(G);
     for (BasicBlock *C : MultiBrTargetBlocksToFix)
       AddBlockToLoop(C);
-#ifndef NDEBUG
-    DenseSet<const Loop *> Loops;
-    ParentLoop->getOutermostLoop()->verifyLoopNest(&Loops);
-#endif
   }
 
 #if defined(EXPENSIVE_CHECKS)
