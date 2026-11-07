@@ -1650,7 +1650,6 @@ static VectorType getCollapsedVecType(VectorType type,
 ///
 /// If the vector sizes are not provided:
 ///  * the vector sizes are determined from the destination tensor static shape.
-///  * the inBounds attribute is used instead of masking.
 ///
 /// EXAMPLE (no vector sizes):
 /// ```
@@ -1696,15 +1695,12 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   ArrayRef<int64_t> &writeVectorSizes = inputVectorSizes;
 
   // In the absence of input-vector-sizes, use the _static_ input tensor shape.
-  // In addition, use the inBounds attribute instead of masking.
-  bool useInBoundsInsteadOfMasking = false;
   if (writeVectorSizes.empty()) {
     if (ShapedType::isDynamicShape(destShape))
       return rewriter.notifyMatchFailure(packOp,
                                          "unable to infer vector sizes");
 
     writeVectorSizes = destShape;
-    useInBoundsInsteadOfMasking = true;
   }
 
   // Compute pre-transpose-write-vector-type, i.e. the write vector type
@@ -1731,8 +1727,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
 
   // Create masked TransferReadOp.
   auto maskedRead = vector::createReadOrMaskedRead(
-      rewriter, loc, packOp.getSource(), readVecType, padValue,
-      useInBoundsInsteadOfMasking);
+      rewriter, loc, packOp.getSource(), readVecType, padValue);
 
   // Create ShapeCastOp.
   auto shapeCastOp = vector::ShapeCastOp::create(
@@ -1759,7 +1754,6 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
 ///
 /// If the vector sizes are not provided:
 ///  * the vector sizes are determined from the input tensor static shape.
-///  * the inBounds attribute is used instead of masking.
 ///
 /// EXAMPLE (no vector sizes):
 /// ```
@@ -1798,7 +1792,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   ShapedType unpackTensorType = unpackOp.getSourceType();
 
   ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
-  bool useInBoundsInsteadOfMasking = false;
 
   Location loc = unpackOp->getLoc();
 
@@ -1813,7 +1806,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
                                          "Unable to infer vector sizes!");
 
     readVectorSizes.assign(sourceShape.begin(), sourceShape.end());
-    useInBoundsInsteadOfMasking = true;
   }
 
   // -- Generate the read operation --
@@ -1821,8 +1813,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
       VectorType::get(readVectorSizes, unpackTensorType.getElementType(),
                       readScalableVectorFlags);
   Value readResult = vector::createReadOrMaskedRead(
-      rewriter, loc, unpackOp.getSource(), readVecType, std::nullopt,
-      useInBoundsInsteadOfMasking);
+      rewriter, loc, unpackOp.getSource(), readVecType, std::nullopt);
 
   // -- Generate the transpose operation --
   PackingMetadata packMetadata;
@@ -1841,8 +1832,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
 
   // -- Generate the write operation --
   Operation *write = vector::createWriteOrMaskedWrite(
-      rewriter, loc, shapeCastOp.getResult(), unpackOp.getDest(),
-      /*writeIndices=*/{}, useInBoundsInsteadOfMasking);
+      rewriter, loc, shapeCastOp.getResult(), unpackOp.getDest());
 
   newResults.push_back(write->getResult(0));
   return success();
