@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_PPC64LE_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_PPC64LE_H
 
-#include "Register/Arch/lldb-ppc64le-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
 #include "Register/RegisterInfoInterface.h"
-#include "Utility/PPC64LE_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-ppc64le-dwarf-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -41,16 +41,22 @@ public:
 
 protected:
   // 64-bit general purpose registers.
-  uint64_t m_gpr_ppc64le[k_num_gpr_registers_ppc64le];
+  uint64_t
+      m_gpr_ppc64le[lldb_private::registers::ppc64le::id::k_num_gpr_registers];
 
   // floating-point registers including extended register.
-  uint64_t m_fpr_ppc64le[k_num_fpr_registers_ppc64le];
+  uint64_t
+      m_fpr_ppc64le[lldb_private::registers::ppc64le::id::k_num_fpr_registers];
 
   // VMX registers.
-  uint64_t m_vmx_ppc64le[k_num_vmx_registers_ppc64le * 2];
+  uint64_t
+      m_vmx_ppc64le[lldb_private::registers::ppc64le::id::k_num_vmx_registers *
+                    2];
 
   // VSX registers.
-  uint64_t m_vsx_ppc64le[k_num_vsx_registers_ppc64le * 2];
+  uint64_t
+      m_vsx_ppc64le[lldb_private::registers::ppc64le::id::k_num_vsx_registers *
+                    2];
 
   std::unique_ptr<lldb_private::RegisterInfoInterface> m_register_info_up;
 

@@ -221,7 +221,7 @@ protected:
 
   static uint32_t GetRegisterNumber(uint32_t reg_kind, uint32_t reg_num);
 
-  static int GetSetForNativeRegNum(int reg_num);
+  static int GetSetForNativeRegNum(uint32_t reg_num);
 
   static size_t GetRegisterInfosCount();
 

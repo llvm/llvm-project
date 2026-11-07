@@ -1363,8 +1363,9 @@ public:
     }
 
     lldb_private::DataBufferHeap buf(reg_value.GetByteSize(), 0);
-    reg_value.GetAsMemoryData(m_register_info, buf.GetBytes(),
-                              buf.GetByteSize(), map.GetByteOrder(), err);
+    reg_value.GetAsMemoryData(m_register_info.byte_size, buf.GetBytes(),
+                              buf.GetByteSize(), map.GetByteOrder(), err,
+                              m_register_info.name);
     if (!err.Success())
       return;
 

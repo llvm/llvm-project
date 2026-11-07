@@ -16,7 +16,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MathExtras.h"
 
-#include "Utility/LoongArch_DWARF_Registers.h"
+#include "lldb/Register/Arch/lldb-loongarch-dwarf-register-enums.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Target/RegisterContext.h"
@@ -49,6 +49,8 @@
 #define DEFINE_REGISTER_STUB(dwarf_num)                                        \
   DEFINE_GENERIC_REGISTER_STUB(dwarf_num, LLDB_INVALID_REGNUM)
 
+
+namespace dwarf_regs = lldb_private::registers::loongarch::dwarf;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -417,12 +419,12 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
     if (reg_ctx->ReadRegister(reg_info_a0, reg_value_a0) &&
         reg_ctx->ReadRegister(reg_info_a1, reg_value_a1)) {
       Status error;
-      if (reg_value_a0.GetAsMemoryData(*reg_info_a0,
+      if (reg_value_a0.GetAsMemoryData(reg_info_a0->byte_size,
                                        heap_data_up->GetBytes() + 0, 8,
-                                       byte_order, error) &&
-          reg_value_a1.GetAsMemoryData(*reg_info_a1,
+                                       byte_order, error, reg_info_a0->name) &&
+          reg_value_a1.GetAsMemoryData(reg_info_a1->byte_size,
                                        heap_data_up->GetBytes() + 8, 8,
-                                       byte_order, error)) {
+                                       byte_order, error, reg_info_a1->name)) {
         value.SetBytes(heap_data_up.release(), byte_size);
         return ValueObjectConstResult::Create(
             thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
@@ -530,9 +532,9 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectImpl(
 }
 
 UnwindPlanSP ABISysV_loongarch::CreateFunctionEntryUnwindPlan() {
-  uint32_t pc_reg_num = loongarch_dwarf::dwarf_gpr_pc;
-  uint32_t sp_reg_num = loongarch_dwarf::dwarf_gpr_sp;
-  uint32_t ra_reg_num = loongarch_dwarf::dwarf_gpr_ra;
+  uint32_t pc_reg_num = dwarf_regs::gpr_pc;
+  uint32_t sp_reg_num = dwarf_regs::gpr_sp;
+  uint32_t ra_reg_num = dwarf_regs::gpr_ra;
 
   UnwindPlan::Row row;
 

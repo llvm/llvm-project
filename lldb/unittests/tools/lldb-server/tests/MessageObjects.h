@@ -11,6 +11,7 @@
 
 #include "lldb/Host/Host.h"
 #include "lldb/Register/RegisterValue.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"

@@ -59,31 +59,23 @@ TEST(RegisterValueTest, GetScalarValue) {
 
 TEST(RegisterValueTest, GetDataInTargetByteOrder) {
   uint8_t big_endian_bytes[] = {0x01, 0x02, 0x03};
-  RegisterInfo reg_info{"test",
-                        nullptr,
-                        sizeof(big_endian_bytes),
-                        0,
-                        lldb::eEncodingUint,
-                        lldb::eFormatHex,
-                        {0, 0, 0, LLDB_INVALID_REGNUM, 0},
-                        nullptr,
-                        nullptr,
-                        nullptr};
+  constexpr uint32_t byte_size = sizeof(big_endian_bytes);
   DataExtractor source(big_endian_bytes, sizeof(big_endian_bytes),
                        lldb::eByteOrderBig, 8);
   RegisterValue value;
-  ASSERT_TRUE(value.SetValueFromData(reg_info, source, 0, false).Success());
+  ASSERT_TRUE(value
+                  .SetValueFromData(lldb::eEncodingUint, byte_size, source, 0,
+                                    false, "test")
+                  .Success());
 
   DataExtractor target_data;
-  ASSERT_TRUE(
-      value.GetData(target_data, reg_info.byte_size, lldb::eByteOrderBig));
+  ASSERT_TRUE(value.GetData(target_data, byte_size, lldb::eByteOrderBig));
   EXPECT_EQ(target_data.GetByteOrder(), lldb::eByteOrderBig);
   EXPECT_EQ(
       llvm::ArrayRef(target_data.GetDataStart(), target_data.GetByteSize()),
       llvm::ArrayRef(big_endian_bytes));
 
-  ASSERT_TRUE(
-      value.GetData(target_data, reg_info.byte_size, lldb::eByteOrderLittle));
+  ASSERT_TRUE(value.GetData(target_data, byte_size, lldb::eByteOrderLittle));
   EXPECT_EQ(target_data.GetByteOrder(), lldb::eByteOrderLittle);
   uint8_t little_endian_bytes[] = {0x03, 0x02, 0x01};
   EXPECT_EQ(
@@ -93,8 +85,8 @@ TEST(RegisterValueTest, GetDataInTargetByteOrder) {
   uint8_t padded_big_endian_bytes[] = {0x00, 0x01, 0x02, 0x03};
   RegisterValue padded_value = RegisterValue(
       llvm::ArrayRef(padded_big_endian_bytes), lldb::eByteOrderBig);
-  ASSERT_TRUE(padded_value.GetData(target_data, reg_info.byte_size,
-                                   lldb::eByteOrderBig));
+  ASSERT_TRUE(
+      padded_value.GetData(target_data, byte_size, lldb::eByteOrderBig));
   EXPECT_EQ(
       llvm::ArrayRef(target_data.GetDataStart(), target_data.GetByteSize()),
       llvm::ArrayRef(big_endian_bytes));
@@ -143,19 +135,11 @@ TEST(RegisterValueTest, GetScalarDataInTargetByteOrder) {
 void TestSetValueFromData(const Scalar &etalon, void *src, size_t src_byte_size,
                           const lldb::ByteOrder endianness,
                           const RegisterValue::Type register_value_type) {
-  RegisterInfo ri{"test",
-                  nullptr,
-                  static_cast<uint32_t>(src_byte_size),
-                  0,
-                  lldb::Encoding::eEncodingUint,
-                  lldb::Format::eFormatDefault,
-                  {0, 0, 0, LLDB_INVALID_REGNUM, 0},
-                  nullptr,
-                  nullptr,
-                  nullptr};
   DataExtractor src_extractor(src, src_byte_size, endianness, 8);
   RegisterValue rv;
-  EXPECT_TRUE(rv.SetValueFromData(ri, src_extractor, 0, false).Success());
+  EXPECT_TRUE(rv.SetValueFromData(lldb::eEncodingUint, src_byte_size,
+                                  src_extractor, 0, false, "test")
+                  .Success());
   Scalar s;
   EXPECT_TRUE(rv.GetScalarValue(s));
   EXPECT_EQ(rv.GetType(), register_value_type);
@@ -438,4 +422,47 @@ TEST(RegisterValueTest, SetValueFromData_257_be) {
                    0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
   TestSetValueFromData(etalon257, src, 33, lldb::ByteOrder::eByteOrderBig,
                        RegisterValue::eTypeUIntN);
+}
+
+TEST(RegisterValueTest, ParsesValuePropertiesWithoutRegisterMetadata) {
+  RegisterValue value;
+  EXPECT_TRUE(
+      value
+          .SetValueFromString(lldb::eEncodingUint, 2, llvm::StringRef("0xbeef"))
+          .Success());
+  EXPECT_EQ(value.GetAsUInt16(), 0xbeefu);
+  EXPECT_TRUE(
+      value.SetValueFromString(lldb::eEncodingSint, 2, llvm::StringRef("-1"))
+          .Success());
+  EXPECT_EQ(value.GetAsUInt16(), UINT16_MAX);
+  EXPECT_TRUE(
+      value.SetValueFromString(lldb::eEncodingUint, 0, llvm::StringRef("0"))
+          .Fail());
+}
+
+TEST(RegisterValueTest, MemoryConversionsPreserveSizeOrderAndDiagnostics) {
+  const uint8_t input[] = {0x12, 0x34};
+  RegisterValue value;
+  Status error;
+  EXPECT_EQ(value.SetFromMemoryData(lldb::eEncodingUint, 4, input,
+                                    sizeof(input), lldb::eByteOrderBig, error,
+                                    "saved_value"),
+            sizeof(input));
+  ASSERT_TRUE(error.Success());
+  EXPECT_EQ(value.GetAsUInt32(), 0x1234u);
+  uint8_t output[4] = {};
+  EXPECT_EQ(value.GetAsMemoryData(4, output, sizeof(output),
+                                  lldb::eByteOrderLittle, error),
+            4u);
+  ASSERT_TRUE(error.Success());
+  const uint8_t expected[] = {0x34, 0x12, 0, 0};
+  EXPECT_EQ(llvm::ArrayRef(output), llvm::ArrayRef(expected));
+
+  EXPECT_EQ(value.SetFromMemoryData(lldb::eEncodingUint, 1, input,
+                                    sizeof(input), lldb::eByteOrderBig, error,
+                                    "small_value"),
+            0u);
+  ASSERT_TRUE(error.Fail());
+  EXPECT_NE(llvm::StringRef(error.AsCString()).find("small_value"),
+            llvm::StringRef::npos);
 }

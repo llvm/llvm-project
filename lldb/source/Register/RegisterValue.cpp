@@ -73,20 +73,21 @@ bool RegisterValue::GetData(DataExtractor &data, uint32_t byte_size,
   return data.SetData(buffer_sp) == byte_size;
 }
 
-uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
+uint32_t RegisterValue::GetAsMemoryData(uint32_t byte_size, void *dst,
                                         uint32_t dst_len,
                                         lldb::ByteOrder dst_byte_order,
-                                        Status &error) const {
+                                        Status &error,
+                                        llvm::StringRef name) const {
   // ReadRegister should have already been called on this object prior to
   // calling this.
   if (GetType() == eTypeInvalid) {
     // No value has been read into this object...
     error = Status::FromErrorStringWithFormatv(
-        "invalid register value type for register {0}", reg_info.name);
+        "invalid register value type for register {0}", name);
     return 0;
   }
 
-  const uint32_t src_len = reg_info.byte_size;
+  const uint32_t src_len = byte_size;
 
   // Extract the register data into a data extractor
   DataExtractor reg_data;
@@ -103,16 +104,17 @@ uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
                                    dst_len,         // dst length
                                    dst_byte_order); // dst byte order
   if (bytes_copied == 0)
-    error = Status::FromErrorStringWithFormat(
-        "failed to copy data for register write of %s", reg_info.name);
+    error = Status::FromErrorStringWithFormatv(
+        "failed to copy data for register write of {0}", name);
 
   return bytes_copied;
 }
 
-uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo &reg_info,
-                                          const void *src, uint32_t src_len,
+uint32_t RegisterValue::SetFromMemoryData(lldb::Encoding encoding,
+                                          uint32_t byte_size, const void *src,
+                                          uint32_t src_len,
                                           lldb::ByteOrder src_byte_order,
-                                          Status &error) {
+                                          Status &error, llvm::StringRef name) {
   // Moving from addr into a register
   //
   // Case 1: src_len == dst_len
@@ -129,12 +131,12 @@ uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo &reg_info,
   //   |AABB| Address contents
   //   |AABB0000| Register contents [on little-endian hardware]
   //   |0000AABB| Register contents [on big-endian hardware]
-  const uint32_t dst_len = reg_info.byte_size;
+  const uint32_t dst_len = byte_size;
 
   if (src_len > dst_len) {
-    error = Status::FromErrorStringWithFormat(
-        "%u bytes is too big to store in register %s (%u bytes)", src_len,
-        reg_info.name, dst_len);
+    error = Status::FromErrorStringWithFormatv(
+        "{0} bytes is too big to store in register {1} ({2} bytes)", src_len,
+        name, dst_len);
     return 0;
   }
 
@@ -142,7 +144,7 @@ uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo &reg_info,
   // register value
   DataExtractor src_data(src, src_len, src_byte_order, 4);
 
-  error = SetValueFromData(reg_info, src_data, 0, true);
+  error = SetValueFromData(encoding, byte_size, src_data, 0, true, name);
   if (error.Fail())
     return 0;
 
@@ -177,12 +179,13 @@ bool RegisterValue::GetScalarValue(Scalar &scalar) const {
 
 void RegisterValue::Clear() { m_type = eTypeInvalid; }
 
-RegisterValue::Type RegisterValue::SetType(const RegisterInfo &reg_info) {
+RegisterValue::Type RegisterValue::SetType(lldb::Encoding encoding,
+                                           uint32_t byte_size) {
   // To change the type, we simply copy the data in again, using the new format
   RegisterValue copy;
   DataExtractor copy_data;
   if (copy.CopyValue(*this) && copy.GetData(copy_data)) {
-    Status error = SetValueFromData(reg_info, copy_data, 0, true);
+    Status error = SetValueFromData(encoding, byte_size, copy_data, 0, true);
     assert(error.Success() && "Expected SetValueFromData to succeed.");
     UNUSED_IF_ASSERT_DISABLED(error);
   }
@@ -190,10 +193,11 @@ RegisterValue::Type RegisterValue::SetType(const RegisterInfo &reg_info) {
   return m_type;
 }
 
-Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
-                                       DataExtractor &src,
+Status RegisterValue::SetValueFromData(lldb::Encoding encoding,
+                                       uint32_t byte_size, DataExtractor &src,
                                        lldb::offset_t src_offset,
-                                       bool partial_data_ok) {
+                                       bool partial_data_ok,
+                                       llvm::StringRef name) {
   Status error;
 
   if (src.GetByteSize() == 0) {
@@ -201,36 +205,36 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
     return error;
   }
 
-  if (reg_info.byte_size == 0) {
-    error = Status::FromErrorString("invalid register info.");
+  if (byte_size == 0) {
+    error = Status::FromErrorString("invalid register byte size.");
     return error;
   }
 
   uint32_t src_len = src.GetByteSize() - src_offset;
 
-  if (!partial_data_ok && (src_len < reg_info.byte_size)) {
+  if (!partial_data_ok && (src_len < byte_size)) {
     error = Status::FromErrorString("not enough data.");
     return error;
   }
 
   // Cap the data length if there is more than enough bytes for this register
   // value
-  if (src_len > reg_info.byte_size)
-    src_len = reg_info.byte_size;
+  if (src_len > byte_size)
+    src_len = byte_size;
 
   m_type = eTypeInvalid;
-  switch (reg_info.encoding) {
+  switch (encoding) {
   case eEncodingInvalid:
     break;
   case eEncodingUint:
   case eEncodingSint:
-    if (reg_info.byte_size == 1)
+    if (byte_size == 1)
       SetUInt8(src.GetMaxU32(&src_offset, src_len));
-    else if (reg_info.byte_size <= 2)
+    else if (byte_size <= 2)
       SetUInt16(src.GetMaxU32(&src_offset, src_len));
-    else if (reg_info.byte_size <= 4)
+    else if (byte_size <= 4)
       SetUInt32(src.GetMaxU32(&src_offset, src_len));
-    else if (reg_info.byte_size <= 8)
+    else if (byte_size <= 8)
       SetUInt64(src.GetMaxU64(&src_offset, src_len));
     else {
       std::vector<uint8_t> native_endian_src(src_len, 0);
@@ -242,17 +246,17 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
     }
     break;
   case eEncodingIEEE754:
-    if (reg_info.byte_size == sizeof(float))
+    if (byte_size == sizeof(float))
       SetFloat(src.GetFloat(&src_offset));
-    else if (reg_info.byte_size == sizeof(double))
+    else if (byte_size == sizeof(double))
       SetDouble(src.GetDouble(&src_offset));
-    else if (reg_info.byte_size == sizeof(long double))
+    else if (byte_size == sizeof(long double))
       SetLongDouble(src.GetLongDouble(&src_offset));
     break;
   case eEncodingVector: {
     m_type = eTypeBytes;
-    assert(reg_info.byte_size <= kMaxRegisterByteSize);
-    buffer.bytes.resize(reg_info.byte_size);
+    assert(byte_size <= kMaxRegisterByteSize);
+    buffer.bytes.resize(byte_size);
     buffer.byte_order = src.GetByteOrder();
     if (src.CopyByteOrderedData(
             src_offset,          // offset within "src" to start extracting data
@@ -261,23 +265,22 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
             buffer.bytes.size(), // dst length
             buffer.byte_order) == 0) // dst byte order
     {
-      error = Status::FromErrorStringWithFormat(
-          "failed to copy data for register write of %s", reg_info.name);
+      error = Status::FromErrorStringWithFormatv(
+          "failed to copy data for register write of {0}", name);
       return error;
     }
   }
   }
 
   if (m_type == eTypeInvalid)
-    error = Status::FromErrorStringWithFormat(
-        "invalid register value type for register %s", reg_info.name);
+    error = Status::FromErrorStringWithFormatv(
+        "invalid register value type for register {0}", name);
   return error;
 }
 
 /// Parse the textual byte-vector notation without interpreting it as a scalar.
 /// The caller applies the register width and byte-order policy afterward.
-static bool ParseVectorEncoding(const RegisterInfo *reg_info,
-                                llvm::StringRef vector_str,
+static bool ParseVectorEncoding(llvm::StringRef vector_str,
                                 const uint32_t byte_size,
                                 RegisterValue *reg_value) {
   // Example: vector_str = "{0x2c 0x4b 0x2a 0x3e 0xd0 0x4f 0x2a 0x3e 0xac 0x4a
@@ -343,11 +346,12 @@ static bool SInt64ValueIsValidForByteSize(int64_t sval64,
   return min <= sval64 && sval64 <= max;
 }
 
-Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
+Status RegisterValue::SetValueFromString(lldb::Encoding encoding,
+                                         uint32_t byte_size,
                                          llvm::StringRef value_str) {
   Status error;
-  if (reg_info == nullptr) {
-    error = Status::FromErrorString("Invalid register info argument.");
+  if (byte_size == 0) {
+    error = Status::FromErrorString("Invalid register byte size.");
     return error;
   }
 
@@ -356,14 +360,13 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
     error = Status::FromErrorString("Invalid c-string value string.");
     return error;
   }
-  const uint32_t byte_size = reg_info->byte_size;
 
   uint64_t uval64;
   int64_t ival64;
   float flt_val;
   double dbl_val;
   long double ldbl_val;
-  switch (reg_info->encoding) {
+  switch (encoding) {
   case eEncodingInvalid:
     error = Status::FromErrorString("Invalid encoding.");
     break;
@@ -388,7 +391,7 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
       break;
     }
 
-    if (!SetUInt(uval64, reg_info->byte_size)) {
+    if (!SetUInt(uval64, byte_size)) {
       error = Status::FromErrorStringWithFormat(
           "unsupported unsigned integer byte size: %u", byte_size);
       break;
@@ -416,7 +419,7 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
       break;
     }
 
-    if (!SetUInt(ival64, reg_info->byte_size)) {
+    if (!SetUInt(ival64, byte_size)) {
       error = Status::FromErrorStringWithFormat(
           "unsupported signed integer byte size: %u", byte_size);
       break;
@@ -457,7 +460,7 @@ Status RegisterValue::SetValueFromString(const RegisterInfo *reg_info,
     break;
   }
   case eEncodingVector:
-    if (!ParseVectorEncoding(reg_info, value_str, byte_size, this))
+    if (!ParseVectorEncoding(value_str, byte_size, this))
       error =
           Status::FromErrorString("unrecognized vector encoding string value.");
     break;

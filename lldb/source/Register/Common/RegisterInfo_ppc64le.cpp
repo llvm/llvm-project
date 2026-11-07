@@ -7,13 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
+#include "lldb/Register/Arch/lldb-ppc64le-ehframe-register-enums.h"
 #include <cstddef>
 #include <vector>
 
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64le-dwarf-register-enums.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
 #include "llvm/Support/Compiler.h"
+#include <cstdint>
 
 #include "RegisterInfo_ppc64le.h"
+
+using namespace lldb_private;
 
 // Include RegisterInfo_ppc64le to declare our g_register_infos_ppc64le
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT

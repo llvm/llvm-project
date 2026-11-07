@@ -15,7 +15,6 @@
 #define LLDB_REGISTER_REGISTERVALUE_H
 
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -110,7 +109,7 @@ public:
 
   /// Select storage from the register encoding and width without populating a
   /// value. Return eTypeInvalid when the encoding or width is unsupported.
-  RegisterValue::Type SetType(const RegisterInfo &reg_info);
+  RegisterValue::Type SetType(lldb::Encoding encoding, uint32_t byte_size);
 
   /// Expose a borrowed view of the current representation and its byte order.
   /// The view must not outlive this value or a mutation of its storage. Return
@@ -126,16 +125,17 @@ public:
   /// Copy a register-width value to a buffer in the requested byte order. Copy
   /// its least significant bytes when the destination is shorter, or pad with
   /// zeroes when it is longer. Return the bytes copied, or zero on error.
-  uint32_t GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
-                           uint32_t dst_len, lldb::ByteOrder dst_byte_order,
-                           Status &error) const;
+  uint32_t GetAsMemoryData(uint32_t byte_size, void *dst, uint32_t dst_len,
+                           lldb::ByteOrder dst_byte_order, Status &error,
+                           llvm::StringRef name = {}) const;
 
   /// Decode source bytes using the register encoding and declared width. Short
   /// inputs are zero-padded in the supplied byte order; oversized inputs are
   /// rejected. Return the number of source bytes consumed, or zero on error.
-  uint32_t SetFromMemoryData(const RegisterInfo &reg_info, const void *src,
-                             uint32_t src_len, lldb::ByteOrder src_byte_order,
-                             Status &error);
+  uint32_t SetFromMemoryData(lldb::Encoding encoding, uint32_t byte_size,
+                             const void *src, uint32_t src_len,
+                             lldb::ByteOrder src_byte_order, Status &error,
+                             llvm::StringRef name = {});
 
   /// Copy a scalar interpretation when supported by the current representation.
   /// Return false when the value cannot be represented as a Scalar.
@@ -281,17 +281,18 @@ public:
 
   /// Parse a scalar or vector value using the register encoding and width.
   /// Return an error for malformed input or a value that does not fit.
-  Status SetValueFromString(const RegisterInfo *reg_info,
+  Status SetValueFromString(lldb::Encoding encoding, uint32_t byte_size,
                             llvm::StringRef value_str);
-  Status SetValueFromString(const RegisterInfo *reg_info,
+  Status SetValueFromString(lldb::Encoding encoding, uint32_t byte_size,
                             const char *value_str) = delete;
 
   /// Decode a register at the supplied offset without changing the extractor.
   /// When partial data is allowed, missing bytes are zero-padded; otherwise a
   /// short input is an error. The register encoding determines the
   /// representation.
-  Status SetValueFromData(const RegisterInfo &reg_info, DataExtractor &data,
-                          lldb::offset_t offset, bool partial_data_ok);
+  Status SetValueFromData(lldb::Encoding encoding, uint32_t byte_size,
+                          DataExtractor &data, lldb::offset_t offset,
+                          bool partial_data_ok, llvm::StringRef name = {});
 
   /// Return borrowed representation bytes, or nullptr for an invalid value.
   /// Interpret these bytes using GetByteOrder(), not necessarily target byte

@@ -91,13 +91,15 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
 
     // Get the bytes for the full register.
     const uint32_t dest_size = full_value.GetAsMemoryData(
-        *full_reg_info, dst.data(), dst.size(), byte_order, error);
+        full_reg_info->byte_size, dst.data(), dst.size(), byte_order, error,
+        full_reg_info->name);
     if (error.Success() && dest_size) {
       RegisterValue::BytesContainer src(reg_info->byte_size);
 
       // Get the bytes for the source data.
-      const uint32_t src_size = reg_value.GetAsMemoryData(
-          *reg_info, src.data(), src.size(), byte_order, error);
+      const uint32_t src_size =
+          reg_value.GetAsMemoryData(reg_info->byte_size, src.data(), src.size(),
+                                    byte_order, error, reg_info->name);
       if (error.Success() && src_size && (src_size < dest_size)) {
         // Copy the src bytes to the destination.
         memcpy(dst.data() + (reg_info->byte_offset & 0x1), src.data(),
@@ -105,7 +107,8 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
         // Set this full register as the value to write.
         value_to_write.SetBytes(dst.data(), full_value.GetByteSize(),
                                 byte_order);
-        value_to_write.SetType(*full_reg_info);
+        value_to_write.SetType(full_reg_info->encoding,
+                               full_reg_info->byte_size);
         reg_to_write = full_reg;
       }
     }
