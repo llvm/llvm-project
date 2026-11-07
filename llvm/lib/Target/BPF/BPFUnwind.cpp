@@ -342,6 +342,11 @@ struct BPFUnwindLower : public MachineFunctionPass {
 char BPFUnwindPrepare::ID = 0;
 char BPFUnwindLower::ID = 0;
 
+INITIALIZE_PASS(BPFUnwindPrepare, "bpf-unwind-prepare", "BPF Unwind Prepare",
+                false, false)
+INITIALIZE_PASS(BPFUnwindLower, "bpf-unwind-lower", "BPF Unwind Lower", false,
+                false)
+
 ModulePass *llvm::createBPFUnwindPreparePass() {
   return new BPFUnwindPrepare();
 }

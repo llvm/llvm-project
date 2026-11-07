@@ -243,6 +243,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wc++2d-extensions` and `-Wpre-c++2d-compat`, and `__cpp_pack_indexing` is
   bumped to `202606L`.
 
+- Clang now supports [P3668R4](https://wg21.link/p3668r4) (Defaulting postfix
+  increment and decrement operations), which allows the postfix `operator++(int)`
+  and `operator--(int)` to be explicitly defaulted. 
+  This is available in all C++ language modes as an extension, controlled
+  by `-Wc++2d-extensions` and `-Wpre-c++2d-compat`.
+
 #### C++2c Feature Support
 
 - `#embed` ([P1967R14](https://wg21.link/P1967R14)) is no longer diagnosed as
@@ -802,6 +808,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wno-unsafe-buffer-usage-in-libc-call-string-examination` silences `strlen`
   while `memcpy` is still diagnosed. (#GH127849)
 
+- Fixed the `no-` prefix being dropped when diagnosing an unknown
+  `-Wno-error=` or `-Wno-fatal-errors=` warning option. Clang now preserves
+  the no- prefix in the diagnostic and spelling suggestion.
+  (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
 ### Improvements to Clang's time-trace
@@ -869,6 +879,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
+- Fixed an assertion failure when compiling an OpenMP `target` region for a CPU offload target with debug info enabled. (#GH188535)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 - Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
@@ -1044,6 +1055,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   conversion function to a function pointer that was introduced into the class
   by a using-declaration (e.g. `using Base::operator auto;`). Such a conversion
   function is now also diagnosed if it is deleted. (#GH189146)
+
+- Fixed an assertion failure when an array whose element type was still
+  incomplete when the array type was formed (for example, an array of a class
+  template specialization that is only instantiated later) turned out to be too
+  large once the element type was completed. Clang now diagnoses the oversized
+  array instead of asserting. (#GH213855)
 
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
