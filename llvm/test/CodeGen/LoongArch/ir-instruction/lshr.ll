@@ -101,10 +101,9 @@ define i64 @lshr_i64(i64 %x, i64 %y) {
 ; LA32R-NEXT:    sll.w $a4, $a5, $a4
 ; LA32R-NEXT:    or $a0, $a0, $a4
 ; LA32R-NEXT:  .LBB4_3:
-; LA32R-NEXT:    slti $a3, $a3, 0
-; LA32R-NEXT:    sub.w $a3, $zero, $a3
 ; LA32R-NEXT:    srl.w $a1, $a1, $a2
-; LA32R-NEXT:    and $a1, $a3, $a1
+; LA32R-NEXT:    srai.w $a2, $a3, 31
+; LA32R-NEXT:    and $a1, $a2, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: lshr_i64:
