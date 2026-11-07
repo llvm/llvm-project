@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_LINALG_IR_LINALG_H
 #define MLIR_DIALECT_LINALG_IR_LINALG_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"

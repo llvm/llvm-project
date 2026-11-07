@@ -328,7 +328,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     if (Op.getOpcode() == ISD::STRICT_FSETCC ||
         Op.getOpcode() == ISD::STRICT_FSETCCS) {
       MVT OpVT = Node->getOperand(1).getSimpleValueType();
-      ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(3))->get();
+      ISD::CondCode CCCode = Node->getOperandCondCode(3);
       Action = TLI.getCondCodeAction(CCCode, OpVT);
       if (Action == TargetLowering::Legal)
         Action = TLI.getOperationAction(Node->getOpcode(), OpVT);
@@ -556,7 +556,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::SETCC: {
     MVT OpVT = Node->getOperand(0).getSimpleValueType();
-    ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
+    ISD::CondCode CCCode = Node->getOperandCondCode(2);
     Action = TLI.getCondCodeAction(CCCode, OpVT);
     if (Action == TargetLowering::Legal)
       Action = TLI.getOperationAction(Node->getOpcode(), OpVT);
@@ -2257,7 +2257,7 @@ bool VectorLegalizer::tryExpandVecMathCall(
       LCImpl = Libcalls.getVectorLibcallImplOrMasked(GetLibcall(CallVT));
   }
 
-  const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
 
   auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(
       Ctx, DAG.getSubtarget().getTargetTriple(), DAG.getDataLayout(), LCImpl);

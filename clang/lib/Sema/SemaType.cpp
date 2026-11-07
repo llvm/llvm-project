@@ -46,6 +46,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -8870,31 +8871,36 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned MinElts = Info.EC.getKnownMinValue();
 
-  VectorKind VecKind = VectorKind::RVVFixedLengthData;
+  VectorKind VecKind;
   unsigned ExpectedSize = VScale->first * MinElts;
   QualType EltType = CurType->getRVVEltType(S.Context);
   unsigned EltSize = S.Context.getTypeSize(EltType);
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
+    // A mask is stored in bytes. One with fewer than 8 lanes takes a single
+    // byte, and its lane count is recorded in the vector kind.
     NumElts = VecSize / S.Context.getCharWidth();
+    unsigned SubByteLanes = 0;
     if (!NumElts) {
       NumElts = 1;
-      switch (VecSize) {
-      case 1:
-        VecKind = VectorKind::RVVFixedLengthMask_1;
-        break;
-      case 2:
-        VecKind = VectorKind::RVVFixedLengthMask_2;
-        break;
-      case 4:
-        VecKind = VectorKind::RVVFixedLengthMask_4;
-        break;
-      }
-    } else
-      VecKind = VectorKind::RVVFixedLengthMask;
+      if (VecSize == 1 || VecSize == 2 || VecSize == 4)
+        SubByteLanes = VecSize;
+    }
+    // Record the ratio of the vbool<R>_t type in the vector kind, so that
+    // later stages do not have to re-derive it from VLEN and the lane count.
+    // vbool<R>_t has RVVBitsPerBlock / R lanes at vscale=1.
+    VecKind = getRVVFixedLengthMaskVectorKind(
+        llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock / MinElts), SubByteLanes);
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
+
+    // Record the LMUL of the sizeless type in the vector kind, so that later
+    // stages do not have to re-derive it from VLEN and the element count.
+    //   LMUL = MinElts * EltSize / RVVBitsPerBlock
+    VecKind = getRVVFixedLengthDataVectorKind(
+        int(llvm::Log2_32(MinElts * EltSize)) -
+        int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock)));
   }
 
   // The attribute vector size must match -mrvv-vector-bits.
@@ -9747,6 +9753,35 @@ static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
   }
 }
 
+/// If \p T is (or contains) a constant array type whose size in bytes cannot
+/// be represented within ConstantArrayType::getMaxSizeBits, return the
+/// offending array type. Nested arrays are checked from the inside out, since
+/// the size of an outer array can only be computed once its element's size is
+/// known to fit. BuildArrayType can only check the element count if the
+/// element type is still incomplete when the array type is formed, so the
+/// size has to be rechecked once the element type is completed.
+static const ConstantArrayType *
+getOversizedConstantArray(const ASTContext &Context, QualType T) {
+  if (T->isDependentType() || T->isVariablyModifiedType() ||
+      T->isUndeducedType())
+    return nullptr;
+
+  const ConstantArrayType *CAT = Context.getAsConstantArrayType(T);
+  if (!CAT)
+    return nullptr;
+
+  QualType ElementType = CAT->getElementType();
+  if (const ConstantArrayType *Inner =
+          getOversizedConstantArray(Context, ElementType))
+    return Inner;
+
+  if (ConstantArrayType::getNumAddressingBits(Context, ElementType,
+                                              CAT->getSize()) >
+      ConstantArrayType::getMaxSizeBits(Context))
+    return CAT;
+  return nullptr;
+}
+
 bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                                    CompleteTypeKind Kind,
                                    TypeDiagnoser *Diagnoser) {
@@ -9797,6 +9832,19 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         diagnoseMissingImport(Loc, Suggested, MissingImportKind::Definition,
                               /*Recover*/ TreatAsComplete);
       return !TreatAsComplete;
+    }
+
+    // The element type may have been incomplete when the array type was
+    // formed, in which case BuildArrayType could not check the array's size.
+    if (const ConstantArrayType *CAT = getOversizedConstantArray(Context, T)) {
+      if (Diagnoser) {
+        CharUnits ElementSize =
+            Context.getTypeSizeInChars(CAT->getElementType());
+        llvm::APInt SizeInBytes = CAT->getSize().zext(128) *
+                                  llvm::APInt(128, ElementSize.getQuantity());
+        Diag(Loc, diag::err_array_size_too_large) << SizeInBytes;
+      }
+      return true;
     }
     return false;
   }

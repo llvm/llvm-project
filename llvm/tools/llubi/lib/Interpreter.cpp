@@ -23,7 +23,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
@@ -115,6 +114,9 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
     return true;
   });
   if (!MO)
+    return true;
+
+  if (MO->getState() == MemoryObjectState::Freed)
     return true;
 
   const APInt &PtrAddr = Ptr.address();
@@ -1124,7 +1126,12 @@ public:
   void returnFromCallee() {
     if (hasProgramExited())
       return;
+
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
+    if (CB.doesNotReturn() || (CurrentFrame->ResolvedCallee &&
+                               CurrentFrame->ResolvedCallee->doesNotReturn()))
+      reportImmediateUB() << "Return from a noreturn function/callsite.";
+
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
       // RetVal is the oracle's result; use it to complete the load.
@@ -1969,6 +1976,20 @@ public:
     case Intrinsic::masked_scatter:
       return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
                                           MaskedAddrMode::PerLane);
+    case Intrinsic::matrix_transpose: {
+      const auto &Vec = Args[0].asAggregate();
+      const unsigned Rows =
+          cast<ConstantInt>(CB.getArgOperand(1))->getZExtValue();
+      const unsigned Cols =
+          cast<ConstantInt>(CB.getArgOperand(2))->getZExtValue();
+      // Column I of the result is row I of the column-major input.
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size());
+      for (unsigned I = 0; I != Rows; ++I)
+        for (unsigned J = 0; J != Cols; ++J)
+          Res.push_back(Vec[J * Rows + I]);
+      return std::move(Res);
+    }
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
