@@ -57,7 +57,7 @@ public:
     VirtRegMap &VRM;
     LiveRegMatrix &Matrix;
     RegisterClassInfo RCI;
-    reassign::Cache Cache;
+    ::llvm::Cache Cache;
 
     Fixture(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM,
             LiveRegMatrix &Matrix, unsigned MaxFreedRegs = 64)
@@ -90,7 +90,7 @@ public:
       SlotIndex Zero = Indexes.getZeroIndex();
       unsigned Before =
           static_cast<unsigned>(Zero.distance(Range.beginIndex())) >>
-          reassign::Cache::BucketShift;
+          Cache::BucketShift;
 
       MachineBasicBlock &MBB = MF.front();
       const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -100,7 +100,7 @@ public:
       // SlotIndex::InstrDist apart, so this many new entries advance every
       // later index by one bucket.
       constexpr unsigned NumInsert =
-          (1u << reassign::Cache::BucketShift) / SlotIndex::InstrDist;
+          (1u << Cache::BucketShift) / SlotIndex::InstrDist;
       for (unsigned I = 0; I < NumInsert; ++I) {
         MachineInstr *MI =
             BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::S_NOP)).addImm(0);
@@ -110,7 +110,7 @@ public:
 
       unsigned After =
           static_cast<unsigned>(Zero.distance(Range.beginIndex())) >>
-          reassign::Cache::BucketShift;
+          Cache::BucketShift;
       EXPECT_NE(Before, After);
     }
 
@@ -118,8 +118,8 @@ public:
     /// refer to a temporary lambda.
     static void listen(void *Ctx, const LiveInterval &Unassigned,
                        MCRegister PhysReg, bool ClearAll) {
-      static_cast<reassign::Cache *>(Ctx)->noteUnassign(Unassigned, PhysReg,
-                                                        ClearAll);
+      static_cast<::llvm::Cache *>(Ctx)->noteUnassign(Unassigned, PhysReg,
+                                                      ClearAll);
     }
 
     void installListener() { Matrix.setUnassignListener(listen, &Cache); }
@@ -166,7 +166,7 @@ TEST_F(FailedReassignCacheTest, RememberAndHitFalse) {
 
     EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
     EXPECT_TRUE(F.Cache.freedRegs(LI.reg().id()).empty());
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::HitFalse);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::HitFalse);
     EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
   });
 }
@@ -177,7 +177,7 @@ TEST_F(FailedReassignCacheTest, ForgetErase) {
     F.Cache.remember(LI, /*HintOnly=*/false);
     F.Cache.erase(LI.reg().id());
     EXPECT_TRUE(F.Cache.empty());
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
   });
 }
 
@@ -198,7 +198,7 @@ TEST_F(FailedReassignCacheTest, NoteUnassignRecordsOverlappingFree) {
 
     const LiveInterval &LI = F.LI(0);
     F.Cache.remember(LI, /*HintOnly=*/false);
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::HitFalse);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::HitFalse);
 
     F.unassign(1);
     ArrayRef<MCPhysReg> Freed = F.Cache.freedRegs(LI.reg().id());
@@ -217,7 +217,7 @@ TEST_F(FailedReassignCacheTest, RecheckTrueAfterOverlappingUnassign) {
     F.Cache.remember(LI, /*HintOnly=*/false);
     F.unassign(1);
 
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::RecheckTrue);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::RecheckTrue);
     EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
   });
 }
@@ -233,10 +233,10 @@ TEST_F(FailedReassignCacheTest, RecheckFalseKeepsFingerprint) {
     // Record VGPR1 as freed while it is still occupied, so the recheck fails.
     F.Cache.noteUnassign(F.LI(1), F.vgpr(1),
                          /*ClearAllReferencingSegments=*/false);
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::RecheckFalse);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::RecheckFalse);
     EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
     EXPECT_TRUE(F.Cache.freedRegs(LI.reg().id()).empty());
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::HitFalse);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::HitFalse);
   });
 }
 
@@ -251,7 +251,7 @@ TEST_F(FailedReassignCacheTest, MultiEntryNoteUnassignUpdatesOverlap) {
     // A's own failure is dropped so the next query recomputes it. Interior
     // segment bounds are not part of the fingerprint.
     EXPECT_FALSE(F.Cache.contains(A.reg().id()));
-    EXPECT_EQ(F.Cache.reuse(A, F.vgpr(2)), reassign::Reuse::Miss);
+    EXPECT_EQ(F.Cache.reuse(A, F.vgpr(2)), Reuse::Miss);
     ArrayRef<MCPhysReg> FreedB = F.Cache.freedRegs(B.reg().id());
     ASSERT_EQ(FreedB.size(), 1u);
     // Both live in the same block, so the free updates every other overlapping
@@ -274,15 +274,15 @@ TEST_F(FailedReassignCacheTest, HintOnlyMissesOnceFreed) {
   runWithFixture(64, [&](Fixture &F) {
     const LiveInterval &LI = F.LI(0);
     F.Cache.remember(LI, /*HintOnly=*/true);
-    // Hint-only is not a hit even before any free: the hint set is not
-    // validated against the matrix.
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
-    EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
+    // Hint-only failures are not stored: the hint set can change without
+    // an overlapping unassign, so bookkeeping cannot repay its cost.
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
+    EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
 
     F.Cache.noteUnassign(F.LI(1), F.vgpr(1),
                          /*ClearAllReferencingSegments=*/false);
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
-    EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
+    EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
   });
 }
 
@@ -302,8 +302,25 @@ TEST_F(FailedReassignCacheTest, HintOnlyMissesOnNonOverlappingUnassign) {
                          /*ClearAllReferencingSegments=*/false);
 
     EXPECT_TRUE(F.Cache.freedRegs(LI.reg().id()).empty());
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
-    EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
+    EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
+  });
+}
+
+TEST_F(FailedReassignCacheTest, HintOnlyFailureErasesEarlierFullSearchFailure) {
+  runWithFixture(64, [&](Fixture &F) {
+    const LiveInterval &LI = F.LI(0);
+    F.Cache.remember(LI, /*HintOnly=*/false);
+    ASSERT_TRUE(F.Cache.contains(LI.reg().id()));
+
+    // Switching to a hint-only search must discard an earlier full-search
+    // entry as well as avoid inserting a new entry. Otherwise unassigns
+    // continue updating a failure that cannot be reused.
+    F.Cache.remember(LI, /*HintOnly=*/true);
+    EXPECT_TRUE(F.Cache.empty());
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
+    F.Cache.noteUnassign(F.LI(1), F.vgpr(1), false);
+    EXPECT_TRUE(F.Cache.empty());
   });
 }
 
@@ -318,7 +335,7 @@ TEST_F(FailedReassignCacheTest, FingerprintMismatchErases) {
     ASSERT_TRUE(Mid < LI.endIndex());
     Fake.addSegment(LiveRange::Segment(Begin, Mid, nullptr));
 
-    EXPECT_EQ(F.Cache.reuse(Fake, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_EQ(F.Cache.reuse(Fake, F.vgpr(0)), Reuse::Miss);
     EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
   });
 }
@@ -337,7 +354,7 @@ TEST_F(FailedReassignCacheTest, SaturatesAfterMaxFreedRegs) {
     F.Cache.noteUnassign(F.LI(3), F.vgpr(3), false);
     EXPECT_TRUE(F.Cache.isSaturated(LI.reg().id()));
     EXPECT_TRUE(F.Cache.freedRegs(LI.reg().id()).empty());
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
   });
 }
 
@@ -359,7 +376,7 @@ TEST_F(FailedReassignCacheTest, RenumberDropsCache) {
 
     // The fingerprint would still match, but bucket keys are stale. Consulting
     // the cache drops it instead of returning HitFalse.
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
     EXPECT_TRUE(F.Cache.empty());
   });
 
@@ -376,7 +393,7 @@ TEST_F(FailedReassignCacheTest, RenumberDropsCache) {
     // the cache instead of leaving a stale failure.
     F.unassign(1);
     EXPECT_TRUE(F.Cache.empty());
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
   });
 }
 
@@ -386,8 +403,8 @@ TEST_F(FailedReassignCacheTest, NestedAdvisorsBothSeeUnassign) {
     // then an embedded DefaultEvictionAdvisor, which registers another. The
     // outer cache must still observe unassigns.
     const TargetRegisterInfo &TRI = *F.MF.getSubtarget().getRegisterInfo();
-    reassign::Cache Outer(F.LIS, F.Matrix, F.MF.getRegInfo(), TRI, F.RCI);
-    reassign::Cache Inner(F.LIS, F.Matrix, F.MF.getRegInfo(), TRI, F.RCI);
+    ::llvm::Cache Outer(F.LIS, F.Matrix, F.MF.getRegInfo(), TRI, F.RCI);
+    ::llvm::Cache Inner(F.LIS, F.Matrix, F.MF.getRegInfo(), TRI, F.RCI);
     F.Matrix.setUnassignListener(Fixture::listen, &Outer);
     F.Matrix.setUnassignListener(Fixture::listen, &Inner);
 
@@ -399,14 +416,14 @@ TEST_F(FailedReassignCacheTest, NestedAdvisorsBothSeeUnassign) {
     Inner.remember(LI, /*HintOnly=*/false);
     F.unassign(1);
 
-    EXPECT_EQ(Outer.reuse(LI, F.vgpr(0)), reassign::Reuse::RecheckTrue);
-    EXPECT_EQ(Inner.reuse(LI, F.vgpr(0)), reassign::Reuse::RecheckTrue);
+    EXPECT_EQ(Outer.reuse(LI, F.vgpr(0)), Reuse::RecheckTrue);
+    EXPECT_EQ(Inner.reuse(LI, F.vgpr(0)), Reuse::RecheckTrue);
 
     // Dropping the embedded advisor must leave the outer listener in place.
     F.Matrix.clearUnassignListener(&Inner);
     Outer.remember(LI, /*HintOnly=*/false);
     F.unassign(2);
-    EXPECT_EQ(Outer.reuse(LI, F.vgpr(0)), reassign::Reuse::RecheckTrue);
+    EXPECT_EQ(Outer.reuse(LI, F.vgpr(0)), Reuse::RecheckTrue);
 
     F.Matrix.clearUnassignListener(&Outer);
   });
@@ -418,7 +435,7 @@ TEST_F(FailedReassignCacheTest, ClearEmptiesEntriesAndBuckets) {
     F.Cache.remember(F.LI(1), false);
     F.Cache.clear();
     EXPECT_TRUE(F.Cache.empty());
-    EXPECT_EQ(F.Cache.reuse(F.LI(0), F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_EQ(F.Cache.reuse(F.LI(0), F.vgpr(0)), Reuse::Miss);
   });
 }
 
@@ -462,7 +479,7 @@ body: |
         ASSERT_EQ(F.Cache.freedRegs(LI.reg().id()).size(), 1u);
         EXPECT_EQ(F.Matrix.checkInterference(LI, AMDGPU::VGPR2_VGPR3),
                   LiveRegMatrix::IK_Free);
-        EXPECT_EQ(F.Cache.reuse(LI, FromReg), reassign::Reuse::RecheckTrue);
+        EXPECT_EQ(F.Cache.reuse(LI, FromReg), Reuse::RecheckTrue);
         EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
       },
       TupleMIR);
@@ -508,14 +525,14 @@ body: |
         F.unassign(1);
         EXPECT_EQ(F.Matrix.checkInterference(LI, AMDGPU::VGPR2_VGPR3),
                   LiveRegMatrix::IK_VirtReg);
-        EXPECT_EQ(F.Cache.reuse(LI, FromReg), reassign::Reuse::RecheckFalse);
+        EXPECT_EQ(F.Cache.reuse(LI, FromReg), Reuse::RecheckFalse);
         EXPECT_TRUE(F.Cache.contains(LI.reg().id()));
-        EXPECT_EQ(F.Cache.reuse(LI, FromReg), reassign::Reuse::HitFalse);
+        EXPECT_EQ(F.Cache.reuse(LI, FromReg), Reuse::HitFalse);
 
         F.unassign(2);
         EXPECT_EQ(F.Matrix.checkInterference(LI, AMDGPU::VGPR2_VGPR3),
                   LiveRegMatrix::IK_Free);
-        EXPECT_EQ(F.Cache.reuse(LI, FromReg), reassign::Reuse::RecheckTrue);
+        EXPECT_EQ(F.Cache.reuse(LI, FromReg), Reuse::RecheckTrue);
         EXPECT_FALSE(F.Cache.contains(LI.reg().id()));
       },
       TupleMIR);
@@ -562,7 +579,7 @@ TEST_F(FailedReassignCacheTest, InteriorEditAfterUnassignDropsFailure) {
     // incorrectly return HitFalse despite the unchanged outer bounds/count.
     EXPECT_EQ(F.Matrix.checkInterference(LI, F.vgpr(1)),
               LiveRegMatrix::IK_Free);
-    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), reassign::Reuse::Miss);
+    EXPECT_EQ(F.Cache.reuse(LI, F.vgpr(0)), Reuse::Miss);
   });
 }
 

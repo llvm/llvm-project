@@ -56,16 +56,17 @@ public:
   void clear();
   void erase(unsigned VirtRegId);
 
-  /// Record that canReassign failed for \p LI. \p HintOnly means only the
-  /// preferred-register subset of the order was searched.
+  /// Record that canReassign failed for \p LI. If \p HintOnly is true, only
+  /// the preferred-register subset was searched; discard any existing entry
+  /// without recording a failure, since the hint set can change independently.
   void remember(const LiveInterval &LI, bool HintOnly);
 
   /// Look up a prior canReassign failure for \p LI (currently on \p FromReg).
   ///
   /// \returns
-  /// - Miss: no entry, fingerprint mismatch (entry erased), saturated,
-  ///   hint-only (the hint set is not validated here), or slot indexes were
-  ///   renumbered since the entry was recorded (the cache is dropped).
+  /// - Miss: no entry, fingerprint mismatch (entry erased), saturated, or
+  ///   slot indexes were renumbered since the entry was recorded (the cache
+  ///   is dropped).
   ///   Caller runs the full scan.
   /// - HitFalse: entry is valid and FreedRegs is empty; failure still holds.
   /// - RecheckFalse: FreedRegs were tested (and aliases in the order); none
@@ -94,8 +95,6 @@ private:
     unsigned SegCount = 0;  ///< Segment count at remember time (fingerprint).
     SlotIndex Begin;        ///< Live range begin (fingerprint).
     SlotIndex End;          ///< Live range end (fingerprint).
-    bool HintOnly = false;  ///< Hint-only scan. Not reused; hints can change
-                            ///< without an overlapping unassign.
     bool Saturated = false; ///< FreedRegs hit MaxFreedRegs; treat as Miss.
     SmallVector<MCPhysReg, 4>
         FreedRegs; ///< Physregs freed across [Begin, End).

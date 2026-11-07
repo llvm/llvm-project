@@ -96,10 +96,7 @@ struct EvictionCost {
   bool operator>=(const EvictionCost &O) const { return !(*this < O); }
 };
 
-namespace reassign {
 class Cache;
-} // namespace reassign
-
 class RAGreedy;
 
 /// Interface to the eviction advisor, which is responsible for making a
@@ -164,7 +161,7 @@ protected:
   const bool EnableLocalReassign;
 
 private:
-  mutable std::unique_ptr<reassign::Cache> FailedCache;
+  mutable std::unique_ptr<Cache> FailedCache;
 
   /// Record that canReassign failed for \p VirtReg. \p HintOnly means only the
   /// preferred-register subset of the order was searched; that failure is not

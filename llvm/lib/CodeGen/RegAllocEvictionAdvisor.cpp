@@ -72,7 +72,7 @@ static cl::opt<unsigned> ReassignCacheMaxFreed(
     "regalloc-reassign-cache-max-freed", cl::Hidden,
     cl::desc("Number of freed physical registers recorded for one cached "
              "canReassign failure before the entry is saturated"),
-    cl::init(reassign::Cache::DefaultMaxFreedRegs));
+    cl::init(llvm::Cache::DefaultMaxFreedRegs));
 
 static cl::opt<cl::boolOrDefault> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
@@ -221,8 +221,8 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
            MF.getSubtarget().enableRALocalReassignment(
                MF.getTarget().getOptLevel()))) {
   assert(Matrix && LIS && "Eviction advisor requires LiveRegMatrix and LIS");
-  FailedCache = std::make_unique<reassign::Cache>(
-      *LIS, *Matrix, *MRI, *TRI, RegClassInfo, ReassignCacheMaxFreed);
+  FailedCache = std::make_unique<Cache>(*LIS, *Matrix, *MRI, *TRI, RegClassInfo,
+                                        ReassignCacheMaxFreed);
   Matrix->setUnassignListener(unassignListener, this);
 }
 
@@ -258,19 +258,19 @@ bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
                                           MCRegister FromReg) const {
   ++NumCanReassignCalls;
   switch (FailedCache->reuse(VirtReg, FromReg)) {
-  case reassign::Reuse::HitFalse:
+  case Reuse::HitFalse:
     ++NumCanReassignFail;
     ++NumCanReassignCacheHits;
     return false;
-  case reassign::Reuse::RecheckFalse:
+  case Reuse::RecheckFalse:
     ++NumCanReassignFail;
     ++NumCanReassignRechecks;
     return false;
-  case reassign::Reuse::RecheckTrue:
+  case Reuse::RecheckTrue:
     ++NumCanReassignSuccess;
     ++NumCanReassignRechecks;
     return true;
-  case reassign::Reuse::Miss:
+  case Reuse::Miss:
     break;
   }
 

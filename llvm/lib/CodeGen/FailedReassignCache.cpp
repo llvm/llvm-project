@@ -131,6 +131,12 @@ bool Cache::isFree(const LiveInterval &LI, MCRegister Reg) const {
 }
 
 void Cache::remember(const LiveInterval &LI, bool HintOnly) {
+  // Hint sets can change without an overlapping unassign. These failures
+  // cannot be reused, so discard any old entry instead of maintaining it.
+  if (HintOnly) {
+    erase(LI.reg().id());
+    return;
+  }
   if (LI.empty())
     return;
   dropIfRenumbered();
@@ -144,7 +150,6 @@ void Cache::remember(const LiveInterval &LI, bool HintOnly) {
   E.SegCount = LI.segments.size();
   E.Begin = LI.beginIndex();
   E.End = LI.endIndex();
-  E.HintOnly = HintOnly;
   addToBuckets(Id, E);
 }
 
@@ -158,7 +163,7 @@ Reuse Cache::reuse(const LiveInterval &LI, MCRegister FromReg) {
     erase(LI.reg().id());
     return Reuse::Miss;
   }
-  if (isSaturated(LI.reg().id()) || E.HintOnly)
+  if (isSaturated(LI.reg().id()))
     return Reuse::Miss;
   if (freedRegs(LI.reg().id()).empty())
     return Reuse::HitFalse;
@@ -227,4 +232,4 @@ void Cache::noteUnassign(const LiveInterval &Unassigned, MCRegister PhysReg,
   }
 }
 
-} // namespace llvm::reassign
+} // namespace llvm
