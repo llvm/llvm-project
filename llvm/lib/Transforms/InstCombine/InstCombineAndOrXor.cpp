@@ -4017,10 +4017,35 @@ static Value *foldBitmaskMul(Value *Op0, Value *Op1,
   return nullptr;
 }
 
+/// ((X + C) & -C) | (X & (C-1)) -> X + C, for power-of-two C.
+static Value *foldOrOfAddMaskWithLowBits(Value *Op0, Value *Op1,
+                                         InstCombiner::BuilderTy &Builder) {
+  Value *X;
+  const APInt *C, *NegC, *LowMask;
+  auto MatchesAddMask = [&](Value *V) {
+    return match(V, m_c_And(m_c_Add(m_Value(X), m_APInt(C)), m_APInt(NegC))) ||
+           match(V, m_c_Add(m_c_And(m_Value(X), m_APInt(NegC)), m_APInt(C)));
+  };
+  auto MatchesLowMask = [&](Value *V) {
+    return match(V, m_c_And(m_Specific(X), m_APInt(LowMask)));
+  };
+
+  if (!((MatchesAddMask(Op0) && MatchesLowMask(Op1)) ||
+        (MatchesAddMask(Op1) && MatchesLowMask(Op0))))
+    return nullptr;
+
+  if (!C->isPowerOf2() || *NegC != -*C || *LowMask != *C - 1)
+    return nullptr;
+
+  return Builder.CreateAdd(X, ConstantInt::get(X->getType(), *C));
+}
+
 Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
   if (Value *Res = foldBitmaskMul(LHS, RHS, Builder))
     return Res;
   if (Value *Res = foldIntegerRepackThroughZExt(LHS, RHS, Builder))
+    return Res;
+  if (Value *Res = foldOrOfAddMaskWithLowBits(LHS, RHS, Builder))
     return Res;
 
   return nullptr;
