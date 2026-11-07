@@ -1,9 +1,8 @@
 include(LLVM-Build)
 
-# Libraries must not need static initializers: embedders pay for them even if
-# they never parse a command line. HAS_WERROR_GLOBAL_CTORS and
-# LLVM_HAS_NOGLOBAL_CTOR_MUTEX are set by lib/Support/CMakeLists.txt. Clang only,
-# since LLVM_REGISTER_LIBRARY_OPTIONS suppresses the diagnostic only for Clang.
+# HAS_WERROR_GLOBAL_CTORS and LLVM_HAS_NOGLOBAL_CTOR_MUTEX are set by
+# lib/Support/CMakeLists.txt. Clang only, since LLVM_REGISTER_LIBRARY_OPTIONS
+# suppresses the diagnostic only for Clang.
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND HAS_WERROR_GLOBAL_CTORS AND
     LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
   set(LLVM_LIB_WERROR_GLOBAL_CTORS ON)
@@ -74,7 +73,6 @@ if (LLVM_LIB_WERROR_GLOBAL_CTORS)
       LLVMAMDGPUCodeGen
       LLVMAMDGPUDesc
       LLVMAMDGPUUtils
-      LLVMARCCodeGen
       LLVMARMAsmParser
       LLVMARMCodeGen
       LLVMAggressiveInstCombine

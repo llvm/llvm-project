@@ -118,6 +118,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/ThreadPoolRunnerTest.cpp
 
   bedrock/sps/CallSPSCITest.cpp
+  bedrock/sps/LookupInJITDylibSPSTest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
   bedrock/sps/SessionSPSCITest.cpp

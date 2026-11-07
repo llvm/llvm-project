@@ -7,7 +7,10 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=x86_64-pc-cygwin < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CYGWIN %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=x86_64-unknown-uefi < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=UEFI %s
 
-; MSVC: declare void @_Unwind_Resume(ptr)
+; MSVC: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; MSVC-NEXT: @__security_cookie = external global ptr
+; MSVC-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; MSVC-NEXT: declare void @_Unwind_Resume(ptr)
 ; MSVC-NEXT: declare double @__adddf3(double, double)
 ; MSVC-NEXT: declare float @__addsf3(float, float)
 ; MSVC-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -74,11 +77,14 @@
 ; MSVC-NEXT: declare void @__atomic_store_2(ptr, i16 zeroext, i32)
 ; MSVC-NEXT: declare void @__atomic_store_4(ptr, i32, i32)
 ; MSVC-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
-; MSVC-NEXT: declare void @__chkstk(...)
+; MSVC-NEXT: declare void @__chkstk()
 ; MSVC-NEXT: declare void @__clear_cache(ptr, ptr)
 ; MSVC-NEXT: declare i32 @__clzdi2(i64)
 ; MSVC-NEXT: declare i32 @__clzsi2(i32)
 ; MSVC-NEXT: declare i32 @__clzti2(<2 x i64>)
+; MSVC-NEXT: declare i32 @__ctzdi2(i64)
+; MSVC-NEXT: declare i32 @__ctzsi2(i32)
+; MSVC-NEXT: declare i32 @__ctzti2(<2 x i64>)
 ; MSVC-NEXT: declare void @__cxa_end_cleanup()
 ; MSVC-NEXT: declare double @__divdf3(double, double)
 ; MSVC-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
@@ -231,9 +237,7 @@
 ; MSVC-NEXT: declare double @__pow_finite(double, double)
 ; MSVC-NEXT: declare float @__powf_finite(float, float)
 ; MSVC-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
-; MSVC-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; MSVC-NEXT: declare void @__security_check_cookie(ptr)
-; MSVC-NEXT: declare void @__security_cookie(...)
 ; MSVC-NEXT: declare double @__subdf3(double, double)
 ; MSVC-NEXT: declare float @__subsf3(float, float)
 ; MSVC-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -424,7 +428,7 @@
 ; MSVC-NEXT: declare double @sinh(double)
 ; MSVC-NEXT: declare float @sinhf(float)
 ; MSVC-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
-; MSVC-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
+; MSVC-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @tan(double)
 ; MSVC-NEXT: declare float @tanf(float)
 ; MSVC-NEXT: declare double @tanh(double)
@@ -438,8 +442,11 @@
 ; MSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; MINGW: declare void @_Unwind_Resume(ptr)
-; MINGW-NEXT: declare void @___chkstk_ms(...)
+; MINGW: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; MINGW-NEXT: @__stack_chk_guard = external global ptr
+; MINGW-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; MINGW-NEXT: declare void @_Unwind_Resume(ptr)
+; MINGW-NEXT: declare void @___chkstk_ms()
 ; MINGW-NEXT: declare double @__adddf3(double, double)
 ; MINGW-NEXT: declare float @__addsf3(float, float)
 ; MINGW-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -510,6 +517,9 @@
 ; MINGW-NEXT: declare i32 @__clzdi2(i64)
 ; MINGW-NEXT: declare i32 @__clzsi2(i32)
 ; MINGW-NEXT: declare i32 @__clzti2(<2 x i64>)
+; MINGW-NEXT: declare i32 @__ctzdi2(i64)
+; MINGW-NEXT: declare i32 @__ctzsi2(i32)
+; MINGW-NEXT: declare i32 @__ctzti2(<2 x i64>)
 ; MINGW-NEXT: declare void @__cxa_end_cleanup()
 ; MINGW-NEXT: declare double @__divdf3(double, double)
 ; MINGW-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
@@ -675,9 +685,7 @@
 ; MINGW-NEXT: declare float @__powf_finite(float, float)
 ; MINGW-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; MINGW-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; MINGW-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; MINGW-NEXT: declare void @__stack_chk_fail()
-; MINGW-NEXT: declare void @__stack_chk_guard(...)
 ; MINGW-NEXT: declare double @__subdf3(double, double)
 ; MINGW-NEXT: declare float @__subsf3(float, float)
 ; MINGW-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -958,7 +966,7 @@
 ; MINGW-NEXT: declare x86_fp80 @sinhl(x86_fp80)
 ; MINGW-NEXT: declare x86_fp80 @sinl(x86_fp80)
 ; MINGW-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
-; MINGW-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
+; MINGW-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare fp128 @sqrtf128(fp128)
 ; MINGW-NEXT: declare x86_fp80 @sqrtl(x86_fp80)
 ; MINGW-NEXT: declare double @tan(double)
@@ -981,8 +989,11 @@
 ; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; CYGWIN: declare void @_Unwind_Resume(ptr)
-; CYGWIN-NEXT: declare void @___chkstk_ms(...)
+; CYGWIN: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; CYGWIN-NEXT: @__stack_chk_guard = external global ptr
+; CYGWIN-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; CYGWIN-NEXT: declare void @_Unwind_Resume(ptr)
+; CYGWIN-NEXT: declare void @___chkstk_ms()
 ; CYGWIN-NEXT: declare double @__adddf3(double, double)
 ; CYGWIN-NEXT: declare float @__addsf3(float, float)
 ; CYGWIN-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -1053,6 +1064,9 @@
 ; CYGWIN-NEXT: declare i32 @__clzdi2(i64)
 ; CYGWIN-NEXT: declare i32 @__clzsi2(i32)
 ; CYGWIN-NEXT: declare i32 @__clzti2(<2 x i64>)
+; CYGWIN-NEXT: declare i32 @__ctzdi2(i64)
+; CYGWIN-NEXT: declare i32 @__ctzsi2(i32)
+; CYGWIN-NEXT: declare i32 @__ctzti2(<2 x i64>)
 ; CYGWIN-NEXT: declare void @__cxa_end_cleanup()
 ; CYGWIN-NEXT: declare double @__divdf3(double, double)
 ; CYGWIN-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
@@ -1214,9 +1228,7 @@
 ; CYGWIN-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; CYGWIN-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; CYGWIN-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; CYGWIN-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; CYGWIN-NEXT: declare void @__stack_chk_fail()
-; CYGWIN-NEXT: declare void @__stack_chk_guard(...)
 ; CYGWIN-NEXT: declare double @__subdf3(double, double)
 ; CYGWIN-NEXT: declare float @__subsf3(float, float)
 ; CYGWIN-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1455,7 +1467,7 @@
 ; CYGWIN-NEXT: declare x86_fp80 @sinhl(x86_fp80)
 ; CYGWIN-NEXT: declare x86_fp80 @sinl(x86_fp80)
 ; CYGWIN-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
-; CYGWIN-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
+; CYGWIN-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @sqrtl(x86_fp80)
 ; CYGWIN-NEXT: declare double @tan(double)
 ; CYGWIN-NEXT: declare float @tanf(float)
@@ -1474,7 +1486,10 @@
 ; CYGWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; CYGWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; UEFI: declare void @_Unwind_Resume(ptr)
+; UEFI: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; UEFI-NEXT: @__stack_chk_guard = external global ptr
+; UEFI-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; UEFI-NEXT: declare void @_Unwind_Resume(ptr)
 ; UEFI-NEXT: declare double @__adddf3(double, double)
 ; UEFI-NEXT: declare float @__addsf3(float, float)
 ; UEFI-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -1541,11 +1556,14 @@
 ; UEFI-NEXT: declare void @__atomic_store_2(ptr, i16 zeroext, i32)
 ; UEFI-NEXT: declare void @__atomic_store_4(ptr, i32, i32)
 ; UEFI-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
-; UEFI-NEXT: declare void @__chkstk(...)
+; UEFI-NEXT: declare void @__chkstk()
 ; UEFI-NEXT: declare void @__clear_cache(ptr, ptr)
 ; UEFI-NEXT: declare i32 @__clzdi2(i64)
 ; UEFI-NEXT: declare i32 @__clzsi2(i32)
 ; UEFI-NEXT: declare i32 @__clzti2(<2 x i64>)
+; UEFI-NEXT: declare i32 @__ctzdi2(i64)
+; UEFI-NEXT: declare i32 @__ctzsi2(i32)
+; UEFI-NEXT: declare i32 @__ctzti2(<2 x i64>)
 ; UEFI-NEXT: declare void @__cxa_end_cleanup()
 ; UEFI-NEXT: declare double @__divdf3(double, double)
 ; UEFI-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
@@ -1701,9 +1719,7 @@
 ; UEFI-NEXT: declare float @__powisf2(float, i32)
 ; UEFI-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; UEFI-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
-; UEFI-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; UEFI-NEXT: declare void @__stack_chk_fail()
-; UEFI-NEXT: declare void @__stack_chk_guard(...)
 ; UEFI-NEXT: declare double @__subdf3(double, double)
 ; UEFI-NEXT: declare float @__subsf3(float, float)
 ; UEFI-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1896,7 +1912,7 @@
 ; UEFI-NEXT: declare double @sinh(double)
 ; UEFI-NEXT: declare float @sinhf(float)
 ; UEFI-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
-; UEFI-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
+; UEFI-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @tan(double)
 ; UEFI-NEXT: declare float @tanf(float)
 ; UEFI-NEXT: declare double @tanh(double)

@@ -171,8 +171,8 @@ public:
 } // namespace llvm
 
 /// Defines the file-scope registration of options struct T for a library that
-/// has no initialization function to register it from. This is the one static
-/// constructor that -Werror=global-constructors allows in such a library.
+/// has no initialization function to register it from, exempting this static
+/// constructor from -Wglobal-constructors.
 // clang-format off
 #ifdef __clang__
 #define LLVM_REGISTER_LIBRARY_OPTIONS(T)                                       \
