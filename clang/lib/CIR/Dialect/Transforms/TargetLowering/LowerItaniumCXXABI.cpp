@@ -478,15 +478,12 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
 
   cir::ConstantOp offsetValue = getConstantInt(offset);
   mlir::Value adjustedPtr;
-  if (isDerivedToBase) {
-    auto subOp = cir::SubOp::create(builder, loc, ty, loweredSrc, offsetValue);
-    subOp.setNoSignedWrap(true);
-    adjustedPtr = subOp;
-  } else {
-    auto addOp = cir::AddOp::create(builder, loc, ty, loweredSrc, offsetValue);
-    addOp.setNoSignedWrap(true);
-    adjustedPtr = addOp;
-  }
+  if (isDerivedToBase)
+    adjustedPtr = cir::SubOp::create(builder, loc, loweredSrc, offsetValue,
+                                     cir::OverflowFlags::NoSignedWrap);
+  else
+    adjustedPtr = cir::AddOp::create(builder, loc, loweredSrc, offsetValue,
+                                     cir::OverflowFlags::NoSignedWrap);
 
   return cir::SelectOp::create(builder, loc, ty, isNull, loweredSrc,
                                adjustedPtr);
@@ -528,17 +525,14 @@ static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
   auto offsetValue = cir::ConstantOp::create(
       builder, op->getLoc(), cir::IntAttr::get(ptrdiffCIRTy, offset));
   mlir::Value adjustedAdjField;
-  if (isDerivedToBase) {
-    auto subOp = cir::SubOp::create(builder, op->getLoc(), ptrdiffCIRTy,
-                                    adjField, offsetValue);
-    subOp.setNoSignedWrap(true);
-    adjustedAdjField = subOp;
-  } else {
-    auto addOp = cir::AddOp::create(builder, op->getLoc(), ptrdiffCIRTy,
-                                    adjField, offsetValue);
-    addOp.setNoSignedWrap(true);
-    adjustedAdjField = addOp;
-  }
+  if (isDerivedToBase)
+    adjustedAdjField =
+        cir::SubOp::create(builder, op->getLoc(), adjField, offsetValue,
+                           cir::OverflowFlags::NoSignedWrap);
+  else
+    adjustedAdjField =
+        cir::AddOp::create(builder, op->getLoc(), adjField, offsetValue,
+                           cir::OverflowFlags::NoSignedWrap);
 
   return cir::InsertMemberOp::create(builder, op->getLoc(), loweredSrc, 1,
                                      adjustedAdjField);

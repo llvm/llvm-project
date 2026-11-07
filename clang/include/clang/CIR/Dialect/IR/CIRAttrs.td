@@ -1139,6 +1139,22 @@ def CIR_FastMathFlags : CIR_I32BitEnum<
 def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
+// OverflowFlags
+//===----------------------------------------------------------------------===//
+
+// `nuw` is listed first so the flags print in LLVM IR order, `nuw nsw`.
+def CIR_OFNone : I32BitEnumCaseNone<"None", "none">;
+def CIR_OFNoSignedWrap : I32BitEnumCaseBit<"NoSignedWrap", 0, "nsw">;
+def CIR_OFNoUnsignedWrap : I32BitEnumCaseBit<"NoUnsignedWrap", 1, "nuw">;
+
+def CIR_OverflowFlags : CIR_I32BitEnum<
+    "OverflowFlags", "integer overflow flags", [
+  CIR_OFNone, CIR_OFNoUnsignedWrap, CIR_OFNoSignedWrap
+]> {
+  let separator = " ";
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
