@@ -445,6 +445,87 @@ define float @fmuladd_x_y_0_nsz(float %x, float %y) {
   ret float %fma
 }
 
+define float @fma_x_x_0(float %x) {
+; CHECK-LABEL: @fma_x_x_0(
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %fma = call float @llvm.fma.f32(float %x, float %x, float 0.0)
+  ret float %fma
+}
+
+define float @fmuladd_x_x_0(float %x) {
+; CHECK-LABEL: @fmuladd_x_x_0(
+; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %fma = call float @llvm.fmuladd.f32(float %x, float %x, float 0.0)
+  ret float %fma
+}
+
+define <8 x half> @fma_x_x_0_v(<8 x half> %x) {
+; CHECK-LABEL: @fma_x_x_0_v(
+; CHECK-NEXT:    [[FMA:%.*]] = fmul <8 x half> [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret <8 x half> [[FMA]]
+;
+  %fma = call <8 x half> @llvm.fma.v8f16(<8 x half> %x, <8 x half> %x, <8 x half> zeroinitializer)
+  ret <8 x half> %fma
+}
+
+define float @fma_fabs_x_fabs_y_0(float %x, float %y) {
+; CHECK-LABEL: @fma_fabs_x_fabs_y_0(
+; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[Y]])
+; CHECK-NEXT:    ret float [[AY]]
+;
+  %ax = call float @llvm.fabs.f32(float %x)
+  %ay = call float @llvm.fabs.f32(float %y)
+  %fma = call float @llvm.fma.f32(float %ax, float %ay, float 0.0)
+  ret float %fma
+}
+
+define float @fma_nabs_x_nabs_y_0(float %x, float %y) {
+; CHECK-LABEL: @fma_nabs_x_nabs_y_0(
+; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[Y]])
+; CHECK-NEXT:    ret float [[AY]]
+;
+  %ax = call float @llvm.fabs.f32(float %x)
+  %ay = call float @llvm.fabs.f32(float %y)
+  %nx = fneg float %ax
+  %ny = fneg float %ay
+  %fma = call float @llvm.fma.f32(float %nx, float %ny, float 0.0)
+  ret float %fma
+}
+
+; The product of a positive and a negative operand can be -0.0.
+define float @fma_fabs_x_nabs_y_0(float %x, float %y) {
+; CHECK-LABEL: @fma_fabs_x_nabs_y_0(
+; CHECK-NEXT:    [[AX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[AY:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[NY:%.*]] = fneg float [[AY]]
+; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[AX]], float [[NY]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %ax = call float @llvm.fabs.f32(float %x)
+  %ay = call float @llvm.fabs.f32(float %y)
+  %ny = fneg float %ay
+  %fma = call float @llvm.fma.f32(float %ax, float %ny, float 0.0)
+  ret float %fma
+}
+
+; Only one sign known.
+define float @fma_fabs_x_y_0(float %x, float %y) {
+; CHECK-LABEL: @fma_fabs_x_y_0(
+; CHECK-NEXT:    [[AX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[AX]], float [[Y:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %ax = call float @llvm.fabs.f32(float %x)
+  %fma = call float @llvm.fma.f32(float %ax, float %y, float 0.0)
+  ret float %fma
+}
+
 define float @fma_x_y_m0(float %x, float %y) {
 ; CHECK-LABEL: @fma_x_y_m0(
 ; CHECK-NEXT:    [[FMA:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]

@@ -3310,11 +3310,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return BinaryOperator::CreateFAddFMF(V, Src2, II->getFastMathFlags());
 
     // fma x, y, 0 -> fmul x, y
-    // This is always valid for -0.0, but requires nsz for +0.0 as
-    // -0.0 + 0.0 = 0.0, which would not be the same as the fmul on its own.
-    if (match(Src2, m_NegZeroFP()) ||
-        (match(Src2, m_PosZeroFP()) && II->getFastMathFlags().noSignedZeros()))
+    // This is always valid for -0.0. For +0.0 it needs nsz or a product that
+    // cannot be -0.0 (-0.0 + 0.0 = 0.0): x * x, or operands of the same sign.
+    if (match(Src2, m_NegZeroFP()))
       return BinaryOperator::CreateFMulFMF(Src0, Src1, II);
+    if (match(Src2, m_PosZeroFP())) {
+      auto SameSign = [&] {
+        if (Src0 == Src1)
+          return true;
+        SimplifyQuery Q = SQ.getWithInstruction(II);
+        std::optional<bool> Sign0 = computeKnownFPSignBit(Src0, Q);
+        if (!Sign0)
+          return false;
+        std::optional<bool> Sign1 = computeKnownFPSignBit(Src1, Q);
+        return Sign1 && *Sign0 == *Sign1;
+      };
+      if (II->getFastMathFlags().noSignedZeros() || SameSign())
+        return BinaryOperator::CreateFMulFMF(Src0, Src1, II);
+    }
 
     // fma x, -1.0, y -> fsub y, x
     if (match(Src1, m_SpecificFP(-1.0)))
