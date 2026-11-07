@@ -85,6 +85,10 @@ define void @taildup_ds_atomic_async_barrier_arrive(ptr addrspace(1) %a, ptr add
 ; GCN-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GCN-NEXT:    ds_atomic_async_barrier_arrive_b64 v2
 ; GCN-NEXT:    s_wait_alu depctr_vm_vsrc(0)
+; GCN-NEXT:    s_mov_b32 s1, exec_lo
+; GCN-NEXT:    s_mov_b32 exec_lo, 0
+; GCN-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
+; GCN-NEXT:    s_mov_b32 exec_lo, s1
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   br i1 %cond, label %bb1, label %bb2

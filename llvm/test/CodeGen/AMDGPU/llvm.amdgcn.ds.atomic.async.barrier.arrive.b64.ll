@@ -12,6 +12,10 @@ define void @test_ds_atomic_async_barrier_arrive_b64(ptr addrspace(3) %bar) {
 ; GCN-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GCN-NEXT:    ds_atomic_async_barrier_arrive_b64 v0
 ; GCN-NEXT:    s_wait_alu depctr_vm_vsrc(0)
+; GCN-NEXT:    s_mov_b32 s0, exec_lo
+; GCN-NEXT:    s_mov_b32 exec_lo, 0
+; GCN-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
+; GCN-NEXT:    s_mov_b32 exec_lo, s0
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   call void @llvm.amdgcn.ds.atomic.async.barrier.arrive.b64(ptr addrspace(3) %bar)
@@ -26,6 +30,10 @@ define void @test_ds_atomic_async_barrier_arrive_b64_off(ptr addrspace(3) %in) {
 ; GCN-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GCN-NEXT:    ds_atomic_async_barrier_arrive_b64 v0 offset:8184
 ; GCN-NEXT:    s_wait_alu depctr_vm_vsrc(0)
+; GCN-NEXT:    s_mov_b32 s0, exec_lo
+; GCN-NEXT:    s_mov_b32 exec_lo, 0
+; GCN-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
+; GCN-NEXT:    s_mov_b32 exec_lo, s0
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %bar = getelementptr i64, ptr addrspace(3) %in, i32 1023
@@ -44,6 +52,10 @@ define amdgpu_ps void @test_ds_atomic_async_barrier_arrive_b64_s(ptr addrspace(3
 ; GCN-NEXT:    s_wait_alu depctr_vm_vsrc(0)
 ; GCN-NEXT:    ds_atomic_async_barrier_arrive_b64 v0
 ; GCN-NEXT:    s_wait_alu depctr_vm_vsrc(0)
+; GCN-NEXT:    s_mov_b32 s105, exec_lo
+; GCN-NEXT:    s_mov_b32 exec_lo, 0
+; GCN-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
+; GCN-NEXT:    s_mov_b32 exec_lo, s105
 ; GCN-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.ds.atomic.async.barrier.arrive.b64(ptr addrspace(3) %bar)
