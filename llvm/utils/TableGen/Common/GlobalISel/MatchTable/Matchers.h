@@ -2223,6 +2223,7 @@ public:
     AK_DebugComment,
     AK_BuildMI,
     AK_BuildConstantMI,
+    AK_BuildConstantInPlace,
     AK_EraseInst,
     AK_ReplaceReg,
     AK_ConstraintOpsToDef,
@@ -2347,6 +2348,31 @@ public:
 
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_BuildConstantMI;
+  }
+
+  void emitActionOpcodes(MatchTable &Table) const override;
+};
+
+/// Generates code to create a constant (or FP constant, if \p IsFP) that
+/// defines operand \p OpIdx of matched instruction \p InsnID, which must be
+/// erased afterwards. For an FP constant, \p Val is the bit pattern of the
+/// register's scalar FP type, truncated to that width. A non-zero \p Val is a
+/// fatal error at runtime if that type is wider than 64 bits, or is s16, which
+/// could be either half or bfloat.
+class BuildConstantInPlaceAction : public MatchAction {
+  unsigned InsnID;
+  unsigned OpIdx;
+  int64_t Val;
+  bool IsFP;
+
+public:
+  BuildConstantInPlaceAction(unsigned InsnID, unsigned OpIdx, int64_t Val,
+                             bool IsFP)
+      : MatchAction(AK_BuildConstantInPlace), InsnID(InsnID), OpIdx(OpIdx),
+        Val(Val), IsFP(IsFP) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_BuildConstantInPlace;
   }
 
   void emitActionOpcodes(MatchTable &Table) const override;
