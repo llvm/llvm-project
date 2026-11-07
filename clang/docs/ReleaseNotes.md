@@ -95,6 +95,10 @@ in a future version of Clang.
   template. Previous versions emitted an ill-formed symbol with no name in that
   position. `-fclang-abi-compat=23` restores the previous behavior. (#GH88592)
 
+- Clang now mangles an original dependent enable_if attribute expression if
+  the function is an instantiation. Previous instantiated expression mangling
+  results in infinite recursion if the expression contains a lambda. (#GH233087)
+
 - Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
 for 256- and 512-bit vector arguments and returns from effective per-function
 target features. Features and `arch=` CPUs that imply AVX or AVX512F are
