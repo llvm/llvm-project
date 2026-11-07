@@ -199,6 +199,33 @@ llvm.func @compare_capture_float_failonly(%x : !llvm.ptr, %e : !llvm.ptr, %d : !
   llvm.return
 }
 
+// f80 postfix compare+capture: the value is padded to 16 bytes, so the old
+// value comes out of the i128 PHI through trunc and bitcast.
+// CHECK-LABEL: define void @compare_capture_f80_postfix(
+// CHECK:         load atomic i128, ptr %{{.*}} monotonic
+// CHECK:         fcmp oeq x86_fp80
+// CHECK:         cmpxchg ptr %{{.*}}, i128 %{{.*}}, i128 %{{.*}} monotonic monotonic
+// CHECK:       {{.*}}.atomic.exit:
+// CHECK:         %[[OK:.*]] = phi i1 [ false,
+// CHECK:         %[[OLD_BITS:.*]] = trunc i128 %{{.*}} to i80
+// CHECK:         %[[OLD_FP:.*]] = bitcast i80 %[[OLD_BITS]] to x86_fp80
+// CHECK:         %[[NEW:.*]] = select i1 %[[OK]], x86_fp80 %{{.*}}, x86_fp80 %[[OLD_FP]]
+// CHECK:         store x86_fp80 %[[NEW]], ptr %{{.*}}
+llvm.func @compare_capture_f80_postfix(%x : !llvm.ptr, %e : !llvm.ptr, %d : !llvm.ptr, %v : !llvm.ptr) {
+  %eval = llvm.load %e : !llvm.ptr -> f80
+  %dval = llvm.load %d : !llvm.ptr -> f80
+  omp.atomic.capture memory_order(relaxed) {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval: f80):
+      %cmp = llvm.fcmp "oeq" %xval, %eval : f80
+      %sel = llvm.select %cmp, %dval, %xval : i1, f80
+      omp.yield(%sel : f80)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, f80
+  }
+  llvm.return
+}
+
 // ===== Complex (struct<(f32, f32)>) tests =====
 // Complex uses bitcast to i64 for cmpxchg, with FP neg-zero handling.
 
