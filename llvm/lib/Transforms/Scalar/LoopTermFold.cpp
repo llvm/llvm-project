@@ -21,7 +21,9 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -47,6 +49,47 @@ using namespace llvm;
 
 STATISTIC(NumTermFold,
           "Number of terminating condition fold recognized and performed");
+
+// An aligned pointer with a power-of-two stride must visit null before it
+// repeats. If it is dereferenced on every iteration, and the alignment is at
+// least the stride, those iterations cannot all execute in a defined program.
+static bool hasNoSelfWrapViaDereference(PHINode &PN,
+                                        const SCEVAddRecExpr *AddRec,
+                                        ScalarEvolution &SE, DominatorTree &DT,
+                                        Instruction *LatchTerm) {
+  auto *PtrTy = dyn_cast<PointerType>(PN.getType());
+  if (!PtrTy || AddRec->getLoop()->getHeader() != PN.getParent() ||
+      NullPointerIsDefined(PN.getFunction(), PtrTy->getAddressSpace()))
+    return false;
+
+  const auto *Step = dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(SE));
+  if (!Step)
+    return false;
+  APInt Stride = Step->getAPInt().abs();
+  if (!Stride.isPowerOf2() || Stride.getActiveBits() > 64)
+    return false;
+
+  const DataLayout &DL = PN.getDataLayout();
+  // GEP arithmetic must cover the entire pointer representation for its cycle
+  // to include null.
+  if (DL.isNonIntegralPointerType(PtrTy) ||
+      DL.getIndexSizeInBits(PtrTy->getAddressSpace()) !=
+          DL.getPointerSizeInBits(PtrTy->getAddressSpace()))
+    return false;
+
+  for (User *U : PN.users()) {
+    if (getLoadStorePointerOperand(U) != &PN)
+      continue;
+    // Volatile accesses may legally use address zero (for example, MMIO).
+    if (cast<Instruction>(U)->isVolatile())
+      continue;
+    if (getLoadStoreAlignment(U).value() >= Stride.getZExtValue() &&
+        DL.getTypeStoreSize(getLoadStoreType(U)).getKnownMinValue() != 0 &&
+        DT.dominates(cast<Instruction>(U), LatchTerm))
+      return true;
+  }
+  return false;
+}
 
 static std::optional<std::tuple<PHINode *, PHINode *, const SCEV *, bool>>
 canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
@@ -152,7 +195,9 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     // iteration. The simplest case to consider is a candidate IV which is
     // narrower than the trip count (and thus original IV), but this can
     // also happen due to non-unit strides on the candidate IVs.
-    if (!AddRec->hasNoSelfWrap() ||
+    if ((!AddRec->hasNoSelfWrap() &&
+         !hasNoSelfWrapViaDereference(PN, AddRec, SE, DT,
+                                      LoopLatch->getTerminator())) ||
         !SE.isKnownNonZero(AddRec->getStepRecurrence(SE)))
       continue;
 
