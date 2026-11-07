@@ -182,6 +182,9 @@ let Namespace = "Hexagon" in {
   def FRAMEKEY : Rc<17, "framekey", ["c17"]>, DwarfRegNum<[84]>;
   def PKTCOUNTLO : Rc<18, "pktcountlo", ["c18"]>, DwarfRegNum<[85]>;
   def PKTCOUNTHI : Rc<19, "pktcounthi", ["c19"]>, DwarfRegNum<[86]>;
+  // VFRAMELIMIT and VSP are only defined for v83+.
+  def VFRAMELIMIT : Rc<28, "vframelimit", ["c28"]>, DwarfRegNum<[95]>;
+  def VSP : Rc<29, "vsp", ["c29"]>, DwarfRegNum<[96]>;
   def UTIMERLO : Rc<30, "utimerlo", ["c30"]>, DwarfRegNum<[97]>;
   def UTIMERHI : Rc<31, "utimerhi", ["c31"]>, DwarfRegNum<[98]>;
 
@@ -200,8 +203,22 @@ let Namespace = "Hexagon" in {
     def C17_16 : Rcc<16, "c17:16", [FRAMELIMIT, FRAMEKEY]>, DwarfRegNum<[83]>;
     def PKTCOUNT : Rcc<18, "c19:18", [PKTCOUNTLO, PKTCOUNTHI], ["pktcount"]>,
                    DwarfRegNum<[85]>;
+    def C29_28 : Rcc<28, "c29:28", [VFRAMELIMIT, VSP]>, DwarfRegNum<[95]>;
     def UTIMER : Rcc<30, "c31:30", [UTIMERLO, UTIMERHI], ["utimer"]>,
                  DwarfRegNum<[97]>;
+  }
+
+  // CS/M register pairs.
+  class HexagonCircPairRegs<bits<1> num, string n,
+                          list<Register> subregs, list<string> alt = []>
+      : RegisterWithSubRegs<n, subregs> {
+    let AltNames = alt;
+    let HWEncoding{0-0} = num;
+  }
+
+  let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
+    def CS_M0 : HexagonCircPairRegs<0, "cs_m0", [CS0, M0]>;
+    def CS_M1 : HexagonCircPairRegs<1, "cs_m1", [CS1, M1]>;
   }
 
   foreach i = 0 -31 in {
@@ -212,23 +229,29 @@ let Namespace = "Hexagon" in {
   def VTMP : Ri<0, "vtmp">, DwarfRegNum<[131]>;
 
   // Aliases of the V* registers used to hold double vec values.
-  let SubRegIndices = [vsub_lo, vsub_hi, vsub_fake], CoveredBySubRegs = 1 in {
-    def W0 : Rd<0, "v1:0", [V0, V1, VF0]>, DwarfRegNum<[99]>;
-    def W1 : Rd<2, "v3:2", [V2, V3, VF1]>, DwarfRegNum<[101]>;
-    def W2 : Rd<4, "v5:4", [V4, V5, VF2]>, DwarfRegNum<[103]>;
-    def W3 : Rd<6, "v7:6", [V6, V7, VF3]>, DwarfRegNum<[105]>;
-    def W4 : Rd<8, "v9:8", [V8, V9, VF4]>, DwarfRegNum<[107]>;
-    def W5 : Rd<10, "v11:10", [V10, V11, VF5]>, DwarfRegNum<[109]>;
-    def W6 : Rd<12, "v13:12", [V12, V13, VF6]>, DwarfRegNum<[111]>;
-    def W7 : Rd<14, "v15:14", [V14, V15, VF7]>, DwarfRegNum<[113]>;
-    def W8 : Rd<16, "v17:16", [V16, V17, VF8]>, DwarfRegNum<[115]>;
-    def W9 : Rd<18, "v19:18", [V18, V19, VF9]>, DwarfRegNum<[117]>;
-    def W10 : Rd<20, "v21:20", [V20, V21, VF10]>, DwarfRegNum<[119]>;
-    def W11 : Rd<22, "v23:22", [V22, V23, VF11]>, DwarfRegNum<[121]>;
-    def W12 : Rd<24, "v25:24", [V24, V25, VF12]>, DwarfRegNum<[123]>;
-    def W13 : Rd<26, "v27:26", [V26, V27, VF13]>, DwarfRegNum<[125]>;
-    def W14 : Rd<28, "v29:28", [V28, V29, VF14]>, DwarfRegNum<[127]>;
-    def W15 : Rd<30, "v31:30", [V30, V31, VF15]>, DwarfRegNum<[129]>;
+  // VF[0-15] registers are intentionally not listed as sub-registers of
+  // W0-W15 here: doing so would introduce artificial (fake) sub-register
+  // regunit sharing that misleads generic passes such as MachineCopy-
+  // Propagation into treating DBG_VALUEs of $wN as users of unrelated
+  // $vM COPYs, tripping the hasDebugOperandForReg assertion in
+  // updateDbgUsersToReg.
+  let SubRegIndices = [vsub_lo, vsub_hi], CoveredBySubRegs = 1 in {
+  def W0  : Rd< 0,  "v1:0",  [V0,  V1]>,  DwarfRegNum<[99]>;
+  def W1  : Rd< 2,  "v3:2",  [V2,  V3]>,  DwarfRegNum<[101]>;
+  def W2  : Rd< 4,  "v5:4",  [V4,  V5]>,  DwarfRegNum<[103]>;
+  def W3  : Rd< 6,  "v7:6",  [V6,  V7]>,  DwarfRegNum<[105]>;
+  def W4  : Rd< 8,  "v9:8",  [V8,  V9]>,  DwarfRegNum<[107]>;
+  def W5  : Rd<10, "v11:10", [V10, V11]>, DwarfRegNum<[109]>;
+  def W6  : Rd<12, "v13:12", [V12, V13]>, DwarfRegNum<[111]>;
+  def W7  : Rd<14, "v15:14", [V14, V15]>, DwarfRegNum<[113]>;
+  def W8  : Rd<16, "v17:16", [V16, V17]>, DwarfRegNum<[115]>;
+  def W9  : Rd<18, "v19:18", [V18, V19]>, DwarfRegNum<[117]>;
+  def W10 : Rd<20, "v21:20", [V20, V21]>, DwarfRegNum<[119]>;
+  def W11 : Rd<22, "v23:22", [V22, V23]>, DwarfRegNum<[121]>;
+  def W12 : Rd<24, "v25:24", [V24, V25]>, DwarfRegNum<[123]>;
+  def W13 : Rd<26, "v27:26", [V26, V27]>, DwarfRegNum<[125]>;
+  def W14 : Rd<28, "v29:28", [V28, V29]>, DwarfRegNum<[127]>;
+  def W15 : Rd<30, "v31:30", [V30, V31]>, DwarfRegNum<[129]>;
   }
 
   // Reverse Aliases of the V* registers used to hold double vec values.
@@ -558,12 +581,18 @@ let Size = 32 in def PredRegs
 let Size =
     32 in def ModRegs : RegisterClass<"Hexagon", [i32], 32, (add M0, M1)>;
 
+let Size = 32, CopyCost = -1 in
+def CSRegs : RegisterClass<"Hexagon", [i32], 32, (add CS0, CS1)>;
+
+let Size = 64, CopyCost = -1 in
+def CircRegs : RegisterClass<"Hexagon", [i64], 64, (add CS_M0, CS_M1)>;
+
 let Size = 32, isAllocatable = 0 in def CtrRegs
     : RegisterClass<"Hexagon", [i32], 32,
                     (add LC0, SA0, LC1, SA1, P3_0, C5, C8, PC, UGP, GP, CS0,
                         CS1, UPCYCLELO, UPCYCLEHI, FRAMELIMIT, FRAMEKEY,
-                        PKTCOUNTLO, PKTCOUNTHI, UTIMERLO, UTIMERHI, M0, M1,
-                        USR)>;
+                        PKTCOUNTLO, PKTCOUNTHI, UTIMERLO, UTIMERHI,
+                        VFRAMELIMIT, VSP, M0, M1, USR)>;
 
 let Size = 64 in def VectRegRev
     : RegisterClass<"Hexagon", [i64], 64, (add (sequence "WR%u", 0, 15))>;
@@ -574,7 +603,7 @@ let isAllocatable =
 let Size = 64, isAllocatable = 0 in def CtrRegs64
     : RegisterClass<"Hexagon", [i64], 64,
                     (add C1_0, C3_2, C5_4, C7_6, C9_8, C11_10, CS, UPCYCLE,
-                        C17_16, PKTCOUNT, UTIMER)>;
+                        C17_16, PKTCOUNT, C29_28, UTIMER)>;
 
 let Size = 32, isAllocatable = 0 in def GuestRegs
     : RegisterClass<"Hexagon", [i32], 32,

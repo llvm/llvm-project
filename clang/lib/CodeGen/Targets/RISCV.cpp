@@ -38,6 +38,10 @@ private:
 
   llvm::Type *detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen) const;
 
+  llvm::Type *detectHomogeneousRVVFixedLengthStruct(QualType Ty) const;
+
+  unsigned getRVVFixedLengthMinElts(const VectorType *VT) const;
+
 public:
   RISCVABIInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen, unsigned FLen,
                bool EABI)
@@ -67,6 +71,11 @@ public:
                                                CharUnits Field2Off) const;
 
   ABIArgInfo coerceVLSVector(QualType Ty, unsigned ABIVLen = 0) const;
+  // Some unsupported type e.g. bf16 without zvfbfmin or zvfbfa, should be
+  // passed as same size i8 type. This function check and return the appropriate
+  // fixed vector type.
+  llvm::FixedVectorType *
+  getVLSCCCompatibleType(llvm::FixedVectorType *FixedVecTy) const;
 
   using ABIInfo::appendAttributeMangling;
   void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
@@ -218,6 +227,12 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
     if (Field1Ty)
       return false;
     QualType EltTy = CTy->getElementType();
+    // Only floating-point complex types (e.g. _Complex float/double) are
+    // eligible to be passed in floating-point argument registers. Complex
+    // integer types (a GNU extension) should be treated like a normal
+    // aggregate and packed into GPRs instead.
+    if (!EltTy->isRealFloatingType())
+      return false;
     if (getContext().getTypeSize(EltTy) > FLen)
       return false;
     Field1Ty = CGT.ConvertType(EltTy);
@@ -397,6 +412,41 @@ ABIArgInfo RISCVABIInfo::coerceAndExpandFPCCEligibleStruct(
   return ABIArgInfo::getCoerceAndExpand(CoerceToType, UnpaddedCoerceToType);
 }
 
+/// Minimum element count of the scalable vector an RVV fixed-length *data*
+/// vector is coerced to, i.e. the N in <vscale x N x T>. The LMUL comes from
+/// the vector kind - the type the typedef was written against - rather than
+/// from VLEN and the element count.
+static unsigned getRVVFixedLengthDataMinElts(VectorKind VK,
+                                             unsigned EltSizeInBits) {
+  // The underlying scalable type holds LMUL * RVVBitsPerBlock bits at
+  // vscale=1.
+  int LMulLog2 = getRVVFixedLengthDataLMulLog2(VK);
+  unsigned SizeAtVScale1 = LMulLog2 >= 0
+                               ? llvm::RISCV::RVVBitsPerBlock << LMulLog2
+                               : llvm::RISCV::RVVBitsPerBlock >> -LMulLog2;
+  assert(SizeAtVScale1 >= EltSizeInBits && "LMUL too small for element type");
+  return SizeAtVScale1 / EltSizeInBits;
+}
+
+/// Minimum element count of the scalable vector a vbool<R>_t mask is coerced
+/// to, i.e. the N in <vscale x N x i1>.
+static unsigned getRVVFixedLengthMaskMinElts(VectorKind VK) {
+  return llvm::RISCV::RVVBitsPerBlock >> getRVVFixedLengthMaskRatioLog2(VK);
+}
+
+/// Minimum element count of the scalable vector \p VT is coerced to, in units
+/// of \p VT's own Clang element type. Masks are modelled as i8 vectors, so
+/// their i1 lane count is rounded up to whole bytes.
+unsigned RISCVABIInfo::getRVVFixedLengthMinElts(const VectorType *VT) const {
+  unsigned EltSizeInBits = getContext().getTypeSize(VT->getElementType());
+  if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()))
+    return getRVVFixedLengthDataMinElts(VT->getVectorKind(), EltSizeInBits);
+  assert(isRVVFixedLengthMaskVectorKind(VT->getVectorKind()) &&
+         "not an RVV fixed-length vector");
+  return llvm::divideCeil(getRVVFixedLengthMaskMinElts(VT->getVectorKind()),
+                          EltSizeInBits);
+}
+
 llvm::Type *RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty,
                                                     unsigned ABIVLen) const {
   // No riscv_vls_cc attribute.
@@ -495,10 +545,10 @@ llvm::Type *RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty,
   // Turn them into scalable vector type or vector tuple type if legal.
   if (NumElts == 1) {
     // Handle single fixed-length vector.
+    llvm::FixedVectorType *VLSTy = getVLSCCCompatibleType(FixedVecTy);
     return llvm::ScalableVectorType::get(
-        FixedVecTy->getElementType(),
-        llvm::divideCeil(FixedVecTy->getNumElements() *
-                             llvm::RISCV::RVVBitsPerBlock,
+        VLSTy->getElementType(),
+        llvm::divideCeil(VLSTy->getNumElements() * llvm::RISCV::RVVBitsPerBlock,
                          ABIVLen));
   }
 
@@ -520,6 +570,109 @@ llvm::Type *RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty,
       NumElts);
 }
 
+llvm::Type *
+RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(QualType Ty) const {
+  const auto *RT = Ty->getAsCanonical<RecordType>();
+  if (!RT)
+    return nullptr;
+
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
+  if (RD->isUnion())
+    return nullptr;
+  if (getRecordArgABI(Ty, getCXXABI()))
+    return nullptr;
+
+  // Reject C++ types with base classes.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (CXXRD->getNumBases() != 0)
+      return nullptr;
+
+  SmallVector<const FieldDecl *, 8> Fields(RD->fields());
+
+  if (Fields.empty())
+    return nullptr;
+
+  auto IsFixedLengthRVVVector = [](const VectorType *VT) {
+    return isRVVFixedLengthVectorKind(VT->getVectorKind());
+  };
+
+  QualType CommonTy;
+  unsigned Count = 0;
+
+  // Single array field: struct { fixed-length RVV T a[N]; }
+  if (Fields.size() == 1) {
+    QualType FieldTy = Fields[0]->getType().getCanonicalType();
+    if (const ConstantArrayType *AT =
+            getContext().getAsConstantArrayType(FieldTy)) {
+      QualType EltTy = AT->getElementType().getCanonicalType();
+      if (const auto *VT = EltTy->getAs<VectorType>();
+          VT && IsFixedLengthRVVVector(VT)) {
+        CommonTy = EltTy;
+        Count = AT->getZExtSize();
+      }
+    }
+  }
+
+  // All fields are the same fixed-length RVV vector type (data or mask).
+  if (CommonTy.isNull()) {
+    if (Fields.size() > 8)
+      return nullptr;
+    for (const FieldDecl *FD : Fields) {
+      QualType FieldTy = FD->getType().getCanonicalType();
+      const auto *VT = FieldTy->getAs<VectorType>();
+      if (!VT || !IsFixedLengthRVVVector(VT))
+        return nullptr;
+      if (CommonTy.isNull())
+        CommonTy = FieldTy;
+      else if (!getContext().hasSameType(CommonTy, FieldTy))
+        return nullptr;
+    }
+    Count = Fields.size();
+  }
+
+  if (Count == 0 || Count > 8)
+    return nullptr;
+
+  const auto *VT = CommonTy->castAs<VectorType>();
+  llvm::Type *EltType = CGT.ConvertType(VT->getElementType());
+  unsigned MinElts = getRVVFixedLengthMinElts(VT);
+
+  // Ensure total register usage does not exceed 8. Each vector occupies
+  // max(1, LMUL) registers.
+  uint64_t RegsPerVec =
+      llvm::divideCeil((uint64_t)MinElts * EltType->getScalarSizeInBits(),
+                       llvm::RISCV::RVVBitsPerBlock);
+  if (Count > 1 && Count * RegsPerVec > 8)
+    return nullptr;
+
+  if (Count == 1)
+    return llvm::ScalableVectorType::get(EltType, MinElts);
+
+  unsigned I8EltCount =
+      llvm::divideCeil((uint64_t)MinElts * EltType->getScalarSizeInBits(), 8);
+  auto *I8Vec = llvm::ScalableVectorType::get(
+      llvm::Type::getInt8Ty(getVMContext()), I8EltCount);
+  return llvm::TargetExtType::get(getVMContext(), "riscv.vector.tuple", I8Vec,
+                                  Count);
+}
+
+llvm::FixedVectorType *
+RISCVABIInfo::getVLSCCCompatibleType(llvm::FixedVectorType *FixedVecTy) const {
+  llvm::Type *EltType = FixedVecTy->getElementType();
+  const TargetInfo &TI = getContext().getTargetInfo();
+  if ((EltType->isHalfTy() && !TI.hasFeature("zvfhmin")) ||
+      (EltType->isBFloatTy() &&
+       !(TI.hasFeature("zvfbfmin") || TI.hasFeature("experimental-zvfbfa"))) ||
+      (EltType->isFloatTy() && !TI.hasFeature("zve32f")) ||
+      (EltType->isDoubleTy() && !TI.hasFeature("zve64d")) ||
+      (EltType->isIntegerTy(64) && !TI.hasFeature("zve64x")) ||
+      EltType->isIntegerTy(128))
+    return llvm::FixedVectorType::get(llvm::Type::getInt8Ty(getVMContext()),
+                                      FixedVecTy->getNumElements() *
+                                          EltType->getScalarSizeInBits() / 8);
+  return FixedVecTy;
+}
+
 // Fixed-length RVV vectors are represented as scalable vectors in function
 // args/return and must be coerced from fixed vectors.
 ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
@@ -531,35 +684,38 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
   auto VScale = getContext().getTargetInfo().getVScaleRange(
       getContext().getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
 
-  unsigned NumElts = VT->getNumElements();
-  llvm::Type *EltType = llvm::Type::getInt1Ty(getVMContext());
-  switch (VT->getVectorKind()) {
-  case VectorKind::RVVFixedLengthMask_1:
-    break;
-  case VectorKind::RVVFixedLengthMask_2:
-    NumElts *= 2;
-    break;
-  case VectorKind::RVVFixedLengthMask_4:
-    NumElts *= 4;
-    break;
-  case VectorKind::RVVFixedLengthMask:
-    NumElts *= 8;
-    break;
-  default:
+  unsigned NumElts;
+  llvm::Type *EltType;
+  if (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())) {
+    NumElts = VT->getRVVFixedLengthMaskLanes();
+    EltType = llvm::Type::getInt1Ty(getVMContext());
+  } else {
     assert((VT->getVectorKind() == VectorKind::Generic ||
-            VT->getVectorKind() == VectorKind::RVVFixedLengthData) &&
+            isRVVFixedLengthDataVectorKind(VT->getVectorKind())) &&
            "Unexpected vector kind");
+    NumElts = VT->getNumElements();
     EltType = CGT.ConvertType(VT->getElementType());
   }
 
   llvm::ScalableVectorType *ResType;
 
   if (ABIVLen == 0) {
-    // The MinNumElts is simplified from equation:
-    // NumElts / VScale =
-    //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
-    //    * (RVVBitsPerBlock / EltSize)
-    ResType = llvm::ScalableVectorType::get(EltType, NumElts / VScale->first);
+    unsigned MinScalableElts;
+    if (isRVVFixedLengthDataVectorKind(VT->getVectorKind())) {
+      // Use the LMUL of the type the typedef was written against.
+      MinScalableElts = getRVVFixedLengthDataMinElts(
+          VT->getVectorKind(), EltType->getScalarSizeInBits());
+    } else if (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())) {
+      // Use the ratio of the vbool<R>_t type the typedef was written against.
+      MinScalableElts = getRVVFixedLengthMaskMinElts(VT->getVectorKind());
+    } else {
+      // The MinNumElts is simplified from equation:
+      // NumElts / VScale =
+      //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
+      //    * (RVVBitsPerBlock / EltSize)
+      MinScalableElts = NumElts / VScale->first;
+    }
+    ResType = llvm::ScalableVectorType::get(EltType, MinScalableElts);
   } else {
     // Check registers needed <= 8.
     if ((EltType->getScalarSizeInBits() * NumElts / ABIVLen) > 8)
@@ -569,27 +725,12 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
 
     // Generic vector
     // The number of elements needs to be at least 1.
+    llvm::FixedVectorType *VLSTy =
+        getVLSCCCompatibleType(llvm::FixedVectorType::get(EltType, NumElts));
     ResType = llvm::ScalableVectorType::get(
-        EltType,
-        llvm::divideCeil(NumElts * llvm::RISCV::RVVBitsPerBlock, ABIVLen));
-
-    // If the corresponding extension is not supported, just make it an i8
-    // vector with same LMUL.
-    const TargetInfo &TI = getContext().getTargetInfo();
-    if ((EltType->isHalfTy() && !TI.hasFeature("zvfhmin")) ||
-        (EltType->isBFloatTy() && !(TI.hasFeature("zvfbfmin") ||
-                                    TI.hasFeature("experimental-zvfbfa"))) ||
-        (EltType->isFloatTy() && !TI.hasFeature("zve32f")) ||
-        (EltType->isDoubleTy() && !TI.hasFeature("zve64d")) ||
-        (EltType->isIntegerTy(64) && !TI.hasFeature("zve64x")) ||
-        EltType->isIntegerTy(128)) {
-      // The number of elements needs to be at least 1.
-      ResType = llvm::ScalableVectorType::get(
-          llvm::Type::getInt8Ty(getVMContext()),
-          llvm::divideCeil(EltType->getScalarSizeInBits() * NumElts *
-                               llvm::RISCV::RVVBitsPerBlock,
-                           8 * ABIVLen));
-    }
+        VLSTy->getElementType(),
+        llvm::divideCeil(VLSTy->getNumElements() * llvm::RISCV::RVVBitsPerBlock,
+                         ABIVLen));
   }
 
   return ABIArgInfo::getDirect(ResType);
@@ -656,6 +797,9 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   }
 
   if (IsFixed && Ty->isStructureOrClassType()) {
+    if (llvm::Type *CoerceTy = detectHomogeneousRVVFixedLengthStruct(Ty))
+      return ABIArgInfo::getTargetSpecific(CoerceTy);
+
     if (llvm::Type *VLSType = detectVLSCCEligibleStruct(Ty, ABIVLen))
       return ABIArgInfo::getTargetSpecific(VLSType);
   }
@@ -708,11 +852,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/419
   if (const VectorType *VT = Ty->getAs<VectorType>();
       VT && !VT->getElementType()->isBitIntType()) {
-    if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
+    if (isRVVFixedLengthVectorKind(VT->getVectorKind()))
       return coerceVLSVector(Ty);
     if (VT->getVectorKind() == VectorKind::Generic && ABIVLen != 0)
       // Generic vector without riscv_vls_cc should fall through and pass by
@@ -826,11 +966,16 @@ llvm::Value *RISCVABIInfo::createCoercedLoad(Address Src, const ABIArgInfo &AI,
     for (unsigned i = 0; i < NumElts; ++i) {
       // Extract from struct
       llvm::Value *ExtractFromLoad = CGF.Builder.CreateExtractValue(Load, i);
+      auto *FixedVecTy =
+          cast<llvm::FixedVectorType>(ExtractFromLoad->getType());
+      llvm::FixedVectorType *VLSTy = getVLSCCCompatibleType(FixedVecTy);
+      if (VLSTy != FixedVecTy)
+        ExtractFromLoad = CGF.Builder.CreateBitCast(ExtractFromLoad, VLSTy);
       // Element in vector tuple type is always i8, so we need to cast back to
       // it's original element type.
       EltTy =
           cast<llvm::ScalableVectorType>(llvm::VectorType::getWithSizeAndScalar(
-              cast<llvm::VectorType>(EltTy), ExtractFromLoad->getType()));
+              cast<llvm::VectorType>(EltTy), VLSTy));
       llvm::Value *VectorVal = llvm::PoisonValue::get(EltTy);
       // Insert to scalable vector
       VectorVal = CGF.Builder.CreateInsertVector(
@@ -863,9 +1008,11 @@ llvm::Value *RISCVABIInfo::createCoercedLoad(Address Src, const ABIArgInfo &AI,
   if (auto *ArrayTy = dyn_cast<llvm::ArrayType>(SrcTy))
     SrcTy = ArrayTy->getElementType();
   Src = Src.withElementType(SrcTy);
-  [[maybe_unused]] auto *FixedSrcTy = cast<llvm::FixedVectorType>(SrcTy);
-  assert(ScalableDstTy->getElementType() == FixedSrcTy->getElementType());
-  auto *Load = CGF.Builder.CreateLoad(Src);
+  auto *FixedSrcTy = cast<llvm::FixedVectorType>(SrcTy);
+  llvm::Value *Load = CGF.Builder.CreateLoad(Src);
+  llvm::FixedVectorType *VLSTy = getVLSCCCompatibleType(FixedSrcTy);
+  if (VLSTy != FixedSrcTy)
+    Load = CGF.Builder.CreateBitCast(Load, VLSTy);
   auto *VectorVal = llvm::PoisonValue::get(ScalableDstTy);
   llvm::Value *Result = CGF.Builder.CreateInsertVector(
       ScalableDstTy, VectorVal, Load, uint64_t(0), "cast.scalable");
@@ -906,21 +1053,26 @@ void RISCVABIInfo::createCoercedStore(llvm::Value *Val, Address Dst,
       FixedVecTy = ArrayTy->getArrayElementType();
     }
 
+    llvm::FixedVectorType *VLSTy =
+        getVLSCCCompatibleType(cast<llvm::FixedVectorType>(FixedVecTy));
+
     // Perform extract element and store
     for (unsigned i = 0; i < NumElts; ++i) {
       // Element in vector tuple type is always i8, so we need to cast back
       // to it's original element type.
       EltTy =
           cast<llvm::ScalableVectorType>(llvm::VectorType::getWithSizeAndScalar(
-              cast<llvm::VectorType>(EltTy), FixedVecTy));
+              cast<llvm::VectorType>(EltTy), VLSTy));
       // Extract scalable vector from tuple
       llvm::Value *Idx = CGF.Builder.getInt32(i);
       auto *TupleElement = CGF.Builder.CreateIntrinsic(
           llvm::Intrinsic::riscv_tuple_extract, {EltTy, TupTy}, {Val, Idx});
 
       // Extract fixed vector from scalable vector
-      auto *ExtractVec = CGF.Builder.CreateExtractVector(
-          FixedVecTy, TupleElement, uint64_t(0));
+      llvm::Value *ExtractVec =
+          CGF.Builder.CreateExtractVector(VLSTy, TupleElement, uint64_t(0));
+      if (VLSTy != FixedVecTy)
+        ExtractVec = CGF.Builder.CreateBitCast(ExtractVec, FixedVecTy);
       // Store fixed vector to corresponding address
       Address EltPtr = Address::invalid();
       if (Dst.getElementType()->isStructTy())
@@ -952,8 +1104,12 @@ void RISCVABIInfo::createCoercedStore(llvm::Value *Val, Address Dst,
     assert(ArrayTy->getNumElements() == 1);
     EltTy = ArrayTy->getElementType();
   }
-  auto *Coerced = CGF.Builder.CreateExtractVector(
-      cast<llvm::FixedVectorType>(EltTy), Val, uint64_t(0));
+  auto *FixedVecTy = cast<llvm::FixedVectorType>(EltTy);
+  llvm::FixedVectorType *VLSTy = getVLSCCCompatibleType(FixedVecTy);
+  llvm::Value *Coerced =
+      CGF.Builder.CreateExtractVector(VLSTy, Val, uint64_t(0));
+  if (VLSTy != FixedVecTy)
+    Coerced = CGF.Builder.CreateBitCast(Coerced, FixedVecTy);
   auto *I = CGF.Builder.CreateStore(Coerced, Dst, DestIsVolatile);
   CGF.addInstToCurrentSourceAtom(I, Val);
 }

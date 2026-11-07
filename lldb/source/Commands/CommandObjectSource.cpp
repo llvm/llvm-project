@@ -146,7 +146,7 @@ protected:
     assert(target && "target guaranteed by eCommandRequiresTarget");
     uint32_t num_matches = 0;
     // Dump all the line entries for the file in the list.
-    ConstString last_module_file_name;
+    llvm::StringRef last_module_file_name;
     for (const SymbolContext &sc : sc_list) {
       if (sc.comp_unit) {
         Module *module = sc.module_sp.get();
@@ -168,8 +168,8 @@ protected:
           continue;
 
         // Print a new header if the module changed.
-        ConstString module_file_name = module->GetFileSpec().GetFilename();
-        assert(module_file_name);
+        llvm::StringRef module_file_name = module->GetFileSpec().GetFilename();
+        assert(!module_file_name.empty());
         if (module_file_name != last_module_file_name) {
           if (num_matches > 0)
             strm << "\n\n";
@@ -202,8 +202,8 @@ protected:
     uint32_t num_matches = 0;
     assert(module);
     if (cu) {
-      assert(file_spec.GetFilename().AsCString(nullptr));
-      bool has_path = (file_spec.GetDirectory().AsCString(nullptr) != nullptr);
+      assert(!file_spec.GetFilename().empty());
+      bool has_path = !file_spec.GetDirectory().empty();
       const SupportFileList &cu_file_list = cu->GetSupportFiles();
       size_t file_idx = cu_file_list.FindFileIndex(0, file_spec, has_path);
       if (file_idx != UINT32_MAX) {
@@ -213,8 +213,8 @@ protected:
 
         // Dump all matching lines at or above start_line for the file in the
         // CU.
-        ConstString file_spec_name = file_spec.GetFilename();
-        ConstString module_file_name = module->GetFileSpec().GetFilename();
+        llvm::StringRef file_spec_name = file_spec.GetFilename();
+        llvm::StringRef module_file_name = module->GetFileSpec().GetFilename();
         bool cu_header_printed = false;
         uint32_t line = start_line;
         while (true) {
@@ -753,11 +753,11 @@ protected:
     bool operator<(const SourceInfo &rhs) const {
       if (function.GetCString() < rhs.function.GetCString())
         return true;
-      if (line_entry.GetFile().GetDirectory().GetCString() <
-          rhs.line_entry.GetFile().GetDirectory().GetCString())
+      if (line_entry.GetFile().GetDirectory() <
+          rhs.line_entry.GetFile().GetDirectory())
         return true;
-      if (line_entry.GetFile().GetFilename().GetCString() <
-          rhs.line_entry.GetFile().GetFilename().GetCString())
+      if (line_entry.GetFile().GetFilename() <
+          rhs.line_entry.GetFile().GetFilename())
         return true;
       if (line_entry.line < rhs.line_entry.line)
         return true;

@@ -22,12 +22,50 @@
 #define TYSAN_INTERCEPT___STRDUP 0
 #endif
 
-#if SANITIZER_LINUX
+#if !SANITIZER_APPLE
+#define TYSAN_INTERCEPT_FUNC(name)                                             \
+  do {                                                                         \
+    if (!INTERCEPT_FUNCTION(name))                                             \
+      VReport(1, "TypeSanitizer: failed to intercept '%s'\n", #name);          \
+  } while (0)
+#else // Apple interceptors don't need to be initialized with
+      // INTERCEPT_FUNCTION.
+#define TYSAN_INTERCEPT_FUNC(name)
+#endif
+
+#if SANITIZER_GLIBC
 extern "C" int mallopt(int param, int value);
 #endif
 
 using namespace __sanitizer;
 using namespace __tysan;
+
+namespace __tysan {
+// Defined in tysan.cpp
+void OnStackUnwind(const SignalContext &sig, const void *,
+                   BufferedStackTrace *stack);
+
+static void TysanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
+}
+
+void InitializeDeadlySignals();
+} // namespace __tysan
+
+#define SIGNAL_INTERCEPTOR_ENTER() __tysan::InitializeDeadlySignals()
+#define COMMON_INTERCEPT_FUNCTION(name) TYSAN_INTERCEPT_FUNC(name)
+#include "sanitizer_common/sanitizer_signal_interceptors.inc"
+
+namespace __tysan {
+void InitializeDeadlySignals() {
+  static bool tysanSignalsInitialized = false;
+  if (tysanSignalsInitialized)
+    return;
+  InitializeSignalInterceptors();
+  InstallDeadlySignalHandlers(&TysanOnDeadlySignal);
+  tysanSignalsInitialized = true;
+}
+} // namespace __tysan
 
 namespace {
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
@@ -49,18 +87,6 @@ INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
     return internal_memmove(dst, src, size);
 
   void *res = REAL(memmove)(dst, src, size);
-  tysan_copy_types(dst, src, size);
-  return res;
-}
-
-INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
-  if (!tysan_inited && REAL(memcpy) == nullptr) {
-    // memmove is used here because on some platforms this will also
-    // intercept the memmove implementation.
-    return internal_memmove(dst, src, size);
-  }
-
-  void *res = REAL(memcpy)(dst, src, size);
   tysan_copy_types(dst, src, size);
   return res;
 }
@@ -211,7 +237,7 @@ void InitializeInterceptors() {
   CHECK_EQ(inited, 0);
 
   // Instruct libc malloc to consume less memory.
-#if SANITIZER_LINUX
+#if SANITIZER_GLIBC
   mallopt(1, 0);          // M_MXFAST
   mallopt(-3, 32 * 1024); // M_MMAP_THRESHOLD
 #endif
@@ -233,12 +259,11 @@ void InitializeInterceptors() {
   TYSAN_MAYBE_INTERCEPT_MEMALIGN;
   TYSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN;
   TYSAN_MAYBE_INTERCEPT_PVALLOC;
-  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
+  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
 
   INTERCEPT_FUNCTION(memset);
   INTERCEPT_FUNCTION(memmove);
-  INTERCEPT_FUNCTION(memcpy);
 
   inited = 1;
 }

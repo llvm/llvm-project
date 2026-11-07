@@ -25,7 +25,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cstdlib>
 #include <string>
 #include <utility>
 
@@ -187,6 +186,17 @@ const LLVMRemarkStreamer *LLVMContext::getLLVMRemarkStreamer() const {
 void LLVMContext::setLLVMRemarkStreamer(
     std::unique_ptr<LLVMRemarkStreamer> RemarkStreamer) {
   pImpl->LLVMRS = std::move(RemarkStreamer);
+}
+
+vfs::FileSystem &LLVMContext::getVirtualFileSystem() const {
+  return *getVirtualFileSystemPtr();
+}
+IntrusiveRefCntPtr<vfs::FileSystem>
+LLVMContext::getVirtualFileSystemPtr() const {
+  return pImpl->FS ? pImpl->FS : vfs::getRealFileSystem();
+}
+void LLVMContext::setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+  pImpl->FS = std::move(FS);
 }
 
 DiagnosticHandler::DiagnosticHandlerTy
@@ -356,6 +366,10 @@ OptPassGate &LLVMContext::getOptPassGate() const {
 
 void LLVMContext::setOptPassGate(OptPassGate& OPG) {
   pImpl->setOptPassGate(OPG);
+}
+
+cl::LibraryOptionsContext &LLVMContext::getLibraryOptions() const {
+  return pImpl->LibraryOptions;
 }
 
 const DiagnosticHandler *LLVMContext::getDiagHandlerPtr() const {

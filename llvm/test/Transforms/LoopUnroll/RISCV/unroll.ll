@@ -160,3 +160,48 @@ exit_loop:
   ret void
 }
 
+; The non-call instructions in the loop only cost 6, but the ctpop calls push
+; the cost past the 12 instruction limit for force unrolling. Without
+; UP.Force, a loop with a small max trip count is not runtime unrolled.
+define void @ctpop_loop(i32 %start, ptr %p) {
+; CHECK-LABEL: @ctpop_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[END:%.*]] = add i32 [[START:%.*]], 8
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[V:%.*]] = load volatile i64, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[C0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[V]])
+; CHECK-NEXT:    [[C1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C0]])
+; CHECK-NEXT:    [[C2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C1]])
+; CHECK-NEXT:    [[C3:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C2]])
+; CHECK-NEXT:    [[C4:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C3]])
+; CHECK-NEXT:    store volatile i64 [[C4]], ptr [[GEP]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP_3:%.*]] = icmp ult i32 [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP_3]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %end = add i32 %start, 8
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr inbounds i64, ptr %p, i32 %iv
+  %v = load volatile i64, ptr %gep, align 8
+  %c0 = call i64 @llvm.ctpop.i64(i64 %v)
+  %c1 = call i64 @llvm.ctpop.i64(i64 %c0)
+  %c2 = call i64 @llvm.ctpop.i64(i64 %c1)
+  %c3 = call i64 @llvm.ctpop.i64(i64 %c2)
+  %c4 = call i64 @llvm.ctpop.i64(i64 %c3)
+  store volatile i64 %c4, ptr %gep, align 8
+  %iv.next = add nuw i32 %iv, 1
+  %cmp = icmp ult i32 %iv.next, %end
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}

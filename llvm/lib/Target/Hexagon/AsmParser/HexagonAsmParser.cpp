@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
@@ -51,7 +50,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -481,7 +479,6 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   MCSubtargetInfo const &STI = getSTI();
 
-  MCInst OrigBundle = MCB;
   HexagonMCChecker Check(getContext(), MII, STI, MCB, *RI, true);
 
   bool CheckOk = HexagonMCInstrInfo::canonicalizePacket(
@@ -869,7 +866,7 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
 
 // validate register against architecture
 bool HexagonAsmParser::RegisterMatchesArch(MCRegister MatchNum) const {
-  if (HexagonMCRegisterClasses[Hexagon::V62RegsRegClassID].contains(MatchNum))
+  if (getHexagonMCRegisterClass(Hexagon::V62RegsRegClassID).contains(MatchNum))
     if (!getSTI().hasFeature(Hexagon::ArchV62))
       return false;
   return true;
@@ -1559,7 +1556,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
       MES->switchSection(mySection);
       unsigned byteSize = is32bit ? 4 : 8;
-      getStreamer().emitCodeAlignment(Align(byteSize), &getSTI(), byteSize);
+      getStreamer().emitCodeAlignment(Align(byteSize), getSTI(), byteSize);
 
       MCSymbol *Sym;
 

@@ -16,9 +16,9 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -1269,6 +1269,9 @@ Error DWARFDebugLine::LineTable::parse(
         " is not terminated",
         DebugLineOffset));
 
+  Rows.shrink_to_fit();
+  Sequences.shrink_to_fit();
+
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
     llvm::stable_sort(Sequences, Sequence::orderByHighPC);
@@ -1654,7 +1657,9 @@ void DWARFDebugLine::SectionParser::moveToNextTable(uint64_t OldOffset,
     return;
   }
 
-  Offset = OldOffset + P.TotalLength + P.sizeofTotalLength();
+  // Prevent an overflowing length from wrapping back into the section.
+  Offset = SaturatingAdd(OldOffset, P.TotalLength,
+                         static_cast<uint64_t>(P.sizeofTotalLength()));
   if (!DebugLineData.isValidOffset(Offset)) {
     Done = true;
     return;

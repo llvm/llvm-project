@@ -139,3 +139,13 @@ void typeAliases(BaseAlias *b, DerivedAlias *d, FinalDerivedAlias *fd,
   fdp += 1;
   // no-warning
 }
+
+// pointer arithmetic on an incomplete type must not crash the matcher.
+template <typename T>
+struct IncompletePointeeCrash {
+  struct Incomplete;
+  void f(Incomplete *p) {
+    p[0];
+    // no-warning
+  }
+};

@@ -1,4 +1,10 @@
-# -*- coding: utf-8 -*-
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
 #
 # libc documentation build configuration file.
 #
@@ -12,37 +18,23 @@
 
 import sys, os
 from datetime import date
+from pathlib import Path
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-# sys.path.insert(0, os.path.abspath('.'))
+from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
+
+globals().update(common_conf(tags))
 
 # -- General configuration -----------------------------------------------------
 
-# If your documentation needs a minimal Sphinx version, state it here.
-# needs_sphinx = '1.0'
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = [
+extensions += [
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx_reredirects",
-    "myst_parser",
 ]
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
-# The suffix of source filenames.
-source_suffix = [".rst", ".md"]
-
-# The encoding of source files.
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = "index"
+myst_enable_extensions += ["deflist"]
 
 # General information about the project.
 project = "libc"
@@ -71,12 +63,9 @@ today_fmt = "%Y-%m-%d"
 # directories to ignore when looking for source files.
 exclude_patterns = ["_build"]
 
-rst_prolog = """
-.. role::  raw-html(raw)
-    :format: html
-
-.. |check| replace:: :raw-html:`&#x2705`
-"""
+myst_substitutions = {
+    "check": "\N{WHITE HEAVY CHECK MARK}",
+}
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 # default_role = None
@@ -101,27 +90,16 @@ pygments_style = "friendly"
 
 # -- Options for HTML output ---------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-# html_theme = 'haiku'
-html_theme = "furo"
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-html_theme_options = {
-    # "Edit this page" links
-    "source_repository": "https://github.com/llvm/llvm-project/",
-    "source_branch": "main",
-    "source_directory": "libc/docs/",
-}
+configure_furo(
+    globals(),
+    source_directory="libc/docs/",
+    html_title="The LLVM C Library",
+    local_static_path=["_static"],
+    extra_css_files=["status.css"],
+)
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
-
-# The name for this set of Sphinx documents.  If None, it defaults to
-# "<project> v<release> documentation".
-html_title = "The LLVM C Library"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
@@ -131,18 +109,9 @@ html_title = "The LLVM C Library"
 # html_logo = None
 
 # The name of an image file (within the static path) to use as favicon of the
-# docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
+# docs.  This file should be a Windows icon file (.ico)/SVG file (.svg) being 16x16 or 32x32
 # pixels large.
-# html_favicon = None
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
-
-# Custom JS/CSS files
-html_js_files = ["copybutton.js"]
-html_css_files = ["copybutton.css"]
+html_favicon = "_static/llvm_libc_logo.svg"
 
 # html_context = {
 #    'css_files': [
@@ -280,3 +249,20 @@ intersphinx_mapping = {}
 todo_include_todos = True
 
 redirects = {"math/index": "../headers/math/index.html"}
+
+
+def _configure_generated_header_links(app, pagename, templatename, context, doctree):
+    if not pagename.startswith("headers/"):
+        return
+    stem = pagename[len("headers/") :]
+    yaml_rel = f"libc/utils/docgen/{stem}.yaml"
+    for p in Path(__file__).resolve().parents:
+        if (p / yaml_rel).exists():
+            repo = "https://github.com/llvm/llvm-project"
+            context["theme_source_view_link"] = f"{repo}/blob/main/{yaml_rel}?plain=1"
+            context["theme_source_edit_link"] = f"{repo}/edit/main/{yaml_rel}"
+            break
+
+
+def setup(app):
+    app.connect("html-page-context", _configure_generated_header_links)

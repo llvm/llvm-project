@@ -11,13 +11,15 @@
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/IR/CallingConv.h"
 #include <variant>
 
 namespace llvm {
 
 class LLT;
 class raw_ostream;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 struct ArgDescriptor {
@@ -160,6 +162,10 @@ struct AMDGPUFunctionArgInfo {
 
   std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
   getPreloadedValue(PreloadedValue Value) const;
+
+  /// Returns the register a non-entry function with calling convention \p CC
+  /// expects the private segment buffer in.
+  static MCRegister getPrivateSegmentBufferReg(CallingConv::ID CC);
 
   static AMDGPUFunctionArgInfo fixedABILayout();
   static const AMDGPUFunctionArgInfo FixedABIFunctionInfo;

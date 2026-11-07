@@ -23,6 +23,11 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 
+#include <cstddef>
+#include <functional>
+#include <type_traits>
+#include <vector>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 class platform;
@@ -56,7 +61,7 @@ public:
 
   /// Constructs a SYCL device instance using the device
   /// identified by the provided device selector.
-  /// \param DeviceSelector is SYCL 2020 device selector, a simple callable that
+  /// \param deviceSelector is SYCL 2020 device selector, a simple callable that
   /// takes a device and returns an int.
   template <
       typename DeviceSelector,
@@ -96,7 +101,7 @@ public:
   platform get_platform() const;
 
   /// Queries this SYCL device for information requested by the template
-  /// parameter param.
+  /// parameter Param.
   ///
   /// \return device info of type described in 4.6.4.4.
   template <typename Param>
@@ -111,62 +116,63 @@ public:
 
   /// Queries which optional features this device supports (if any).
   ///
+  /// \param asp is one of the values defined in SYCL 2020 Section 4.6.4.5.
   /// \return true if this device has the given aspect.
   bool has(aspect asp) const;
 
   /// Partition device into sub devices.
   ///
-  /// Available only when prop is info::partition_property::partition_equally.
+  /// Available only when Prop is info::partition_property::partition_equally.
   /// If this SYCL device does not support
   /// info::partition_property::partition_equally a feature_not_supported
   /// exception will be thrown.
   ///
-  /// \param ComputeUnits is a desired count of compute units in each sub
+  /// \param count is a desired count of compute units in each sub
   /// device.
   /// \return sub devices partitioned from this SYCL device equally based on the
-  /// ComputeUnits parameter.
-  template <info::partition_property prop>
-  std::vector<device> create_sub_devices(size_t ComputeUnits) const;
+  /// count parameter.
+  template <info::partition_property Prop>
+  std::vector<device> create_sub_devices(std::size_t count) const;
 
   /// Partition device into sub devices.
   ///
-  /// Available only when prop is info::partition_property::partition_by_counts.
+  /// Available only when Prop is info::partition_property::partition_by_counts.
   /// If this SYCL device does not support
   /// info::partition_property::partition_by_counts a feature_not_supported
   /// exception will be thrown.
   ///
-  /// \param Counts is a std::vector of desired compute units in sub devices.
+  /// \param counts is a std::vector of desired compute units in sub devices.
   /// \return sub devices partitioned from this SYCL device by count sizes based
-  /// on the Counts parameter.
-  template <info::partition_property prop>
+  /// on the counts parameter.
+  template <info::partition_property Prop>
   std::vector<device>
-  create_sub_devices(const std::vector<size_t> &Counts) const;
+  create_sub_devices(const std::vector<std::size_t> &counts) const;
 
   /// Partition device into sub devices.
   ///
-  /// Available only when prop is
+  /// Available only when Prop is
   /// info::partition_property::partition_by_affinity_domain. If this SYCL
   /// device does not support
   /// info::partition_property::partition_by_affinity_domain or the SYCL device
   /// does not support provided info::affinity_domain provided a
   /// feature_not_supported exception will be thrown.
   ///
-  /// \param AffinityDomain is one of the values described in Table 4.20 of the
+  /// \param affinityDomain is one of the values described in Table 4.20 of the
   /// SYCL 2020 specification.
   /// \return sub devices partitioned from this SYCL device by affinity domain
-  /// based on the AffinityDomain parameter.
-  template <info::partition_property prop>
+  /// based on the affinityDomain parameter.
+  template <info::partition_property Prop>
   std::vector<device>
-  create_sub_devices(info::partition_affinity_domain AffinityDomain) const;
+  create_sub_devices(info::partition_affinity_domain affinityDomain) const;
 
   /// Query available SYCL devices.
   ///
-  /// \param deviceType is one of the values described in A.3 of the SYCL 2020
+  /// \param type is one of the values described in A.3 of the SYCL 2020
   /// specification.
   /// \return all SYCL devices available in the system of the device type
   /// specified.
   static std::vector<device>
-  get_devices(info::device_type deviceType = info::device_type::all);
+  get_devices(info::device_type type = info::device_type::all);
 
 private:
   device(detail::DeviceImpl &Impl) : impl(&Impl) {}

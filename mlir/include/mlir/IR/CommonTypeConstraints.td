@@ -34,6 +34,12 @@ def IsVectorOfAnyRankTypePred : CPred<"::llvm::isa<::mlir::VectorType>($_self)">
 // Whether a type is a fixed-length VectorType.
 def IsFixedVectorOfAnyRankTypePred : CPred<[{::llvm::isa<::mlir::FixedVectorType>($_self)}]>;
 
+// Whether a type is a rank 1 VectorType (i.e. 1D vector).
+def IsVectorOfRank1Pred : And<[
+  CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
+  CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() == 1">
+]>;
+
 // Whether a type is a scalable VectorType.
 def IsVectorTypeWithAnyDimScalablePred
         : CPred<[{::llvm::isa<::mlir::ScalableVectorType>($_self)}]>;
@@ -127,7 +133,6 @@ class Variadic<Type type> : TypeConstraint<type.predicate,
                                            "variadic of " # type.summary,
                                            type.cppType> {
   Type baseType = type;
-  int minSize = 0;
 }
 
 // A nested variadic type constraint. It expands to zero or more variadic ranges
@@ -378,6 +383,8 @@ def F6E3M2FN : Type<CPred<"::llvm::isa<::mlir::Float6E3M2FNType>($_self)">, "f6E
                BuildableType<"$_builder.getType<Float6E3M2FNType>()">;
 def F8E8M0FNU : Type<CPred<"::llvm::isa<::mlir::Float8E8M0FNUType>($_self)">, "f8E8M0FNU type">,
                 BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
+def F8E5M3FNU : Type<CPred<"::llvm::isa<::mlir::Float8E5M3FNUType>($_self)">, "f8E5M3FNU type">,
+                BuildableType<"$_builder.getType<Float8E5M3FNUType>()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
@@ -425,13 +432,14 @@ class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
 
 class ShapedContainerType<list<Type> allowedTypes,
                           Pred containerPred, string descr,
-                          string cppType = "::mlir::Type"> :
+                          string cppType = "::mlir::Type",
+                          string summary = ""> :
     Type<And<[containerPred,
               Concat<"[](::mlir::Type elementType) { return ",
                 SubstLeaves<"$_self", "elementType",
                 AnyTypeOf<allowedTypes>.predicate>,
                 "; }(::llvm::cast<::mlir::ShapedType>($_self).getElementType())">]>,
-         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values", cppType>;
+         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values" # summary, cppType>;
 
 // Whether a shaped type is ranked.
 def HasRankPred : CPred<"::llvm::cast<::mlir::ShapedType>($_self).hasRank()">;
@@ -480,6 +488,10 @@ class FixedVectorOfAnyRank<list<Type> allowedTypes> :
 class ScalableVectorOfAnyRank<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypeWithAnyDimScalablePred,
           "scalable vector", "::mlir::VectorType">;
+
+class ScalableVectorOfRank1<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, And<[IsVectorTypeWithAnyDimScalablePred,
+  IsVectorOfRank1Pred]>, "scalable 1D vector", "::mlir::VectorType">;
 
 // Any vector with a single trailing scalable dimension, with an element type in
 // the `allowedTypes` list.
@@ -765,7 +777,7 @@ def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
 
 def AnyFixedVectorOfAnyRank : FixedVectorOfAnyRank<[AnyType]>;
 
-def AnyScalableVectorOfAnyRank : ScalableVectorOfAnyRank<[AnyType]>;
+def AnyScalableVectorOfRank1 : ScalableVectorOfRank1<[AnyType]>;
 
 // Shaped types.
 
@@ -930,8 +942,8 @@ class AnyStridedMemRefOfRank<int rank> :
        AnyStridedMemRef.summary # " of rank " # rank>;
 
 class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
-    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>],
-         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
+    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>, HasStridesPred],
+         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " strided " #
          MemRefOf<allowedTypes>.summary>;
 
 // This represents a generic tuple without any constraints on element type.

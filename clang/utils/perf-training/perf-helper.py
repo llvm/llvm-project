@@ -73,9 +73,11 @@ def merge_fdata(args):
             + "\tMerges all fdata files from path into output."
         )
         return 1
-    cmd = [args[0], "-o", args[1]]
-    cmd.extend(findFilesWithExtension(args[2], "fdata"))
-    subprocess.check_call(cmd)
+    inputs = findFilesWithExtension(args[2], "fdata")
+    subprocess.check_call([args[0], inputs, "-o", args[1]])
+    # Remove input fdata files to save space.
+    for filename in inputs:
+        os.remove(filename)
     return 0
 
 
@@ -276,6 +278,9 @@ def get_cc1_command_for_args(cmd, env):
             or ln.startswith(" (in-process)")
             or ln.startswith("Configuration file:")
             or ln.startswith("Build config:")
+            or ln.startswith("clang: warning:")
+            or ln.startswith("clang: note:")
+            or ln.startswith("clang: remark:")
             or " version " in ln
         ):
             continue

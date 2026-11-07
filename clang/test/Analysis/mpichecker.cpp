@@ -48,6 +48,46 @@ void matchedWait3() {
   }
 } // no error
 
+void matchedWaitIscatterv() {
+  double buf = 0;
+  MPI_Request req = MPI_REQUEST_NULL;
+  MPI_Iscatterv(NULL, NULL, NULL, MPI_DATATYPE_NULL, &buf, 0, MPI_DATATYPE_NULL,
+                0, MPI_COMM_WORLD, &req);
+  MPI_Wait(&req, MPI_STATUS_IGNORE);
+} // no error: this used to report a FP before GH208107.
+
+void missingWaitIscatterv() {
+  double buf = 0;
+  MPI_Request req = MPI_REQUEST_NULL;
+  MPI_Iscatterv(NULL, NULL, NULL, MPI_DATATYPE_NULL, &buf, 0, MPI_DATATYPE_NULL,
+                0, MPI_COMM_WORLD, &req);
+} // expected-warning {{Request 'req' has no matching wait.}}
+
+void doubleNonblockingIscatterv() {
+  double buf = 0;
+  MPI_Request req = MPI_REQUEST_NULL;
+  MPI_Iscatterv(NULL, NULL, NULL, MPI_DATATYPE_NULL, &buf, 0, MPI_DATATYPE_NULL,
+                0, MPI_COMM_WORLD, &req);
+  // expected-warning@+1 {{Double nonblocking on request 'req'.}}
+  MPI_Iscatterv(NULL, NULL, NULL, MPI_DATATYPE_NULL, &buf, 0, MPI_DATATYPE_NULL,
+                0, MPI_COMM_WORLD, &req);
+  MPI_Wait(&req, MPI_STATUS_IGNORE);
+}
+
+void matchedWaitIscan() {
+  double buf = 0;
+  MPI_Request req = MPI_REQUEST_NULL;
+  MPI_Iscan(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &req);
+  MPI_Wait(&req, MPI_STATUS_IGNORE);
+} // no error
+
+void missingWaitIreduceScatter() {
+  double buf = 0;
+  MPI_Request req = MPI_REQUEST_NULL;
+  MPI_Ireduce_scatter(MPI_IN_PLACE, &buf, NULL, MPI_DOUBLE, MPI_SUM,
+                      MPI_COMM_WORLD, &req);
+} // expected-warning {{Request 'req' has no matching wait.}}
+
 void missingWait1() { // Check missing wait for dead region.
   double buf = 0;
   MPI_Request sendReq1;

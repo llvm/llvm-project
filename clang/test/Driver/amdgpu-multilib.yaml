@@ -4,7 +4,7 @@
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
 # RUN:     --target=amdgcn-amd-amdhsa -mcpu=gfx1030 -fmultilib-flag=debug -nogpulib \
 # RUN:   | FileCheck --check-prefix=CHECK-DEBUG %s
-# CHECK-DEBUG:      "-cc1" "-triple" "amdgcn-amd-amdhsa"
+# CHECK-DEBUG:      "-cc1" "-triple" "amdgpu10.30-amd-amdhsa"
 # CHECK-DEBUG:      "-L{{[^"]*}}/debug"
 
 # Default behavior where no variant path is prepended.

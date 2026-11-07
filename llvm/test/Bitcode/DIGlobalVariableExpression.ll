@@ -5,15 +5,15 @@
 ; BC: GLOBAL_DECL_ATTACHMENT
 ; CHECK: @g = common global i32 0, align 4, !dbg ![[G:[0-9]+]]
 ; CHECK: @h = common global i32 0, align 4, !dbg ![[H:[0-9]+]]
-; CHECK: ![[G]] = {{.*}}!DIGlobalVariableExpression(var: ![[GVAR:[0-9]+]], expr: !DIExpression(DW_OP_plus_uconst, 1))
-; CHECK: ![[GVAR]] = distinct !DIGlobalVariable(name: "g",
-; CHECK: DICompileUnit({{.*}}, imports: ![[IMPORTS:[0-9]+]]
-; CHECK: !DIGlobalVariableExpression(var: ![[CVAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 23, DW_OP_stack_value))
-; CHECK: ![[CVAR]] = distinct !DIGlobalVariable(name: "c",
-; CHECK: ![[HVAR:[0-9]+]] = distinct !DIGlobalVariable(name: "h",
-; CHECK: ![[IMPORTS]] = !{![[CIMPORT:[0-9]+]]}
-; CHECK: ![[CIMPORT]] = !DIImportedEntity({{.*}}entity: ![[HVAR]]
-; CHECK: ![[H]] = {{.*}}!DIGlobalVariableExpression(var: ![[HVAR]], expr: !DIExpression())
+; CHECK-DAG: ![[G]] = {{.*}}!DIGlobalVariableExpression(var: ![[GVAR:[0-9]+]], expr: !DIExpression(DW_OP_plus_uconst, 1))
+; CHECK-DAG: ![[GVAR]] = distinct !DIGlobalVariable(name: "g",
+; CHECK-DAG: DICompileUnit({{.*}}, imports: ![[IMPORTS:[0-9]+]]
+; CHECK-DAG: !DIGlobalVariableExpression(var: ![[CVAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 23, DW_OP_stack_value))
+; CHECK-DAG: ![[CVAR]] = distinct !DIGlobalVariable(name: "c",
+; CHECK-DAG: ![[HVAR:[0-9]+]] = distinct !DIGlobalVariable(name: "h",
+; CHECK-DAG: ![[IMPORTS]] = !{![[CIMPORT:[0-9]+]]}
+; CHECK-DAG: ![[CIMPORT]] = !DIImportedEntity({{.*}}entity: ![[HVAR]]
+; CHECK-DAG: ![[H]] = {{.*}}!DIGlobalVariableExpression(var: ![[HVAR]], expr: !DIExpression())
 
 @g = common global i32 0, align 4, !dbg !0
 @h = common global i32 0, align 4, !dbg !11

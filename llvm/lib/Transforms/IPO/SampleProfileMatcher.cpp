@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileMatcher.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -158,17 +159,48 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    for (const auto &C : I.second.getCallTargets())
+
+    const auto &CallTargets = I.second.getCallTargets();
+    const bool HasSampledTarget =
+        llvm::any_of(CallTargets, [](const auto &C) { return C.second != 0; });
+    for (const auto &C : CallTargets) {
+      // Zero-count targets remain meaningful in the profile, but should not
+      // obscure a uniquely sampled callee when choosing a matching anchor.
+      // Ignore them here when sampled targets exist; retain all-zero locations.
+      if (HasSampledTarget && C.second == 0)
+        continue;
       InsertAnchor(Loc, C.first, ProfileAnchors);
+    }
   }
 
   for (const auto &I : FS.getCallsiteSamples()) {
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    for (const auto &C : I.second)
+
+    const auto &Callees = I.second;
+    const bool HasSampledCallee = llvm::any_of(
+        Callees, [](const auto &C) { return C.second.getTotalSamples() != 0; });
+    for (const auto &C : Callees) {
+      // Apply the same anchor selection policy to inline callees, preserving
+      // zero-sample frames in the profile.
+      if (HasSampledCallee && C.second.getTotalSamples() == 0)
+        continue;
       InsertAnchor(Loc, C.first, ProfileAnchors);
+    }
   }
+}
+
+bool SampleProfileMatcher::anchorsMatch(const FunctionId &IRAnchor,
+                                        const FunctionId &ProfileAnchor) const {
+  // Check whether the callees at an already-aligned location are compatible.
+  // An indirect IR call has no statically known callee, so any profiled target
+  // is compatible. The reverse is not true: multiple sampled profile targets
+  // cannot match a direct IR call. This is only a compatibility test; an
+  // indirect anchor carries no callee identity and must not be used to
+  // establish the location alignment itself.
+  return IRAnchor == ProfileAnchor ||
+         IRAnchor == FunctionId(UnknownIndirectCallee);
 }
 
 bool SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName,
@@ -362,6 +394,67 @@ void SampleProfileMatcher::runStaleProfileMatching(
       longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
                             RunCGMatching /* Match unused functions */);
 
+  // Scan through the matched anchors to make sure functions and profiles are
+  // 1:1 mapped. If the profile has already been mapped to another function
+  // during previous fuzzy matching, create a new profile with the same sample
+  // counts and assumed to be pre-inlined.
+  for (const auto &IR : IRAnchors) {
+    bool ProfileConflicted = false;
+    const auto &Loc = IR.first;
+    Function *Callee = M.getFunction(IR.second.stringRef());
+    if (!Callee)
+      continue;
+    FunctionId ProfAnchor;
+    auto AnchorLoc = MatchedAnchors.find(Loc);
+    if (AnchorLoc == MatchedAnchors.end()) {
+      // Search within the module and find if we have conflicts in pre-matched
+      // profiles for this anchor
+      auto PreMatched = FuncToProfileNameMap.find(Callee);
+      if (PreMatched == FuncToProfileNameMap.end())
+        continue;
+      ProfAnchor = PreMatched->second;
+    } else {
+      const auto &Prof = ProfileAnchors.find(AnchorLoc->second);
+      if (Prof == ProfileAnchors.end())
+        continue;
+      ProfAnchor = Prof->second;
+    }
+
+    // Conflicting profile previously matched
+    auto Cached = MatchedAnchorCache.find(ProfAnchor);
+    if (Cached == MatchedAnchorCache.end())
+      MatchedAnchorCache[ProfAnchor] = Callee;
+    else if (Cached->second != Callee)
+      ProfileConflicted = true;
+
+    if (ProfileConflicted) {
+      // Create a flattened profile using the IR function name to avoid profile
+      // name conflicts
+      const auto *FSForMatching = getFlattenedSamplesFor(ProfAnchor);
+      if (!FSForMatching)
+        FSForMatching = Reader.getSamplesFor(ProfAnchor.stringRef());
+      if (!FSForMatching)
+        continue;
+
+      FunctionId NewAnchor(
+          FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
+      auto R = FuncProfileMatchCache.find({Callee, NewAnchor});
+      if (R != FuncProfileMatchCache.end() && R->second)
+        continue;
+      FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
+      NewFS.merge(*FSForMatching);
+      FuncToProfileNameMap[Callee] = NewAnchor;
+      FuncProfileMatchCache[{Callee, NewAnchor}] = true;
+
+      // Update profile in the sample profile reader
+      SampleProfileMap &Profiles = Reader.getProfiles();
+      SampleContext FContext(NewAnchor);
+      auto Res = Profiles.try_emplace(FContext.getHashCode(), FContext, NewFS);
+      FunctionSamples &FProfile = Res.first->second;
+      FProfile.setContext(FContext);
+    }
+  }
+
   // CFG level matching:
   // Apply the callsite matchings to infer matching for the basic
   // block(non-callsite) locations and write the result to
@@ -462,7 +555,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (It == ProfileAnchors.end())
       continue;
     const auto &ProfCalleeId = It->second;
-    if (IRCalleeId == ProfCalleeId) {
+    if (anchorsMatch(IRCalleeId, ProfCalleeId)) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
         CallsiteMatchStates.try_emplace(ProfileLoc, MatchState::InitialMatch);
@@ -710,9 +803,6 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   // TODO: Support MD5 profile.
   if (FunctionSamples::UseMD5)
     return;
-  StringSet<> NamesInProfile;
-  for (FunctionId Name : Reader.getNameTable())
-    NamesInProfile.insert(Name.stringRef());
 
   for (auto &F : M) {
     // Skip declarations, as even if the function can be matched, we have
@@ -728,7 +818,7 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
     // For extended binary, functions fully inlined may not be loaded in the
     // top-level profile, so check the NameTable which has the all symbol names
     // in profile.
-    if (NamesInProfile.count(CanonFName))
+    if (Reader.contains(CanonFName))
       continue;
 
     // For extended binary, non-profiled function symbols are in the profile
@@ -838,6 +928,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
       continue;
 
     FuncToProfileNameMap[OrphanFunc] = ProfId;
+    MatchedAnchorCache[ProfId] = OrphanFunc;
     if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef()))
       NewlyLoadedProfiles.create(FS->getFunction()).merge(*FS);
     MatchCount++;

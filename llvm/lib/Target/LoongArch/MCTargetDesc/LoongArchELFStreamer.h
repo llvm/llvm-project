@@ -29,6 +29,17 @@ public:
   void finish() override;
 };
 
+class LoongArchELFStreamer : public MCELFStreamer {
+public:
+  LoongArchELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
+                       std::unique_ptr<MCObjectWriter> MOW,
+                       std::unique_ptr<MCCodeEmitter> MCE)
+      : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
+
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
+                         unsigned MaxBytesToEmit) override;
+};
+
 MCELFStreamer *createLoongArchELFStreamer(MCContext &C,
                                           std::unique_ptr<MCAsmBackend> MAB,
                                           std::unique_ptr<MCObjectWriter> MOW,

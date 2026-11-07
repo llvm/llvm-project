@@ -3,10 +3,10 @@
 ; Vector bits size lower than 256 bits end up assuming Neon cost model
 ; CHECK-NEON has same performance as CHECK-SVE-128
 
-; RUN: opt -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+neon  < %s | FileCheck %s --check-prefix=CHECK-NEON
-; RUN: opt -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=128 < %s | FileCheck %s --check-prefix=CHECK-SVE-128
-; RUN: opt -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=256 < %s | FileCheck %s --check-prefix=CHECK-SVE-256
-; RUN: opt -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=512 < %s | FileCheck %s --check-prefix=CHECK-SVE-512
+; RUN: opt -passes="print<cost-model>" -cost-kind=all -disable-output -mtriple=aarch64--linux-gnu -mattr=+neon  < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NEON
+; RUN: opt -passes="print<cost-model>" -cost-kind=all -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=128 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SVE-128
+; RUN: opt -passes="print<cost-model>" -cost-kind=all -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=256 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SVE-256
+; RUN: opt -passes="print<cost-model>" -cost-kind=all -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=512 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SVE-512
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -145,11 +145,11 @@ define void @store4(ptr %ptr, <4 x i8> %val) {
 define <16 x i16> @load_256(ptr %ptr) {
 ; CHECK: function 'load_256'
 ; CHECK-NEON-LABEL: 'load_256'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %out = load <16 x i16>, ptr %ptr, align 32
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %out = load <16 x i16>, ptr %ptr, align 32
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %out
 ;
 ; CHECK-SVE-128-LABEL: 'load_256'
-; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %out = load <16 x i16>, ptr %ptr, align 32
+; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %out = load <16 x i16>, ptr %ptr, align 32
 ; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %out
 ;
 ; CHECK-SVE-256-LABEL: 'load_256'
@@ -167,15 +167,15 @@ define <16 x i16> @load_256(ptr %ptr) {
 define <8 x i64> @load_512(ptr %ptr) {
 ; CHECK: function 'load_512'
 ; CHECK-NEON-LABEL: 'load_512'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %out = load <8 x i64>, ptr %ptr, align 64
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %out = load <8 x i64>, ptr %ptr, align 64
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %out
 ;
 ; CHECK-SVE-128-LABEL: 'load_512'
-; CHECK-SVE-128-NEXT:  Cost Model: Found costs of 4 for: %out = load <8 x i64>, ptr %ptr, align 64
+; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %out = load <8 x i64>, ptr %ptr, align 64
 ; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %out
 ;
 ; CHECK-SVE-256-LABEL: 'load_512'
-; CHECK-SVE-256-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:2 for: %out = load <8 x i64>, ptr %ptr, align 64
+; CHECK-SVE-256-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %out = load <8 x i64>, ptr %ptr, align 64
 ; CHECK-SVE-256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %out
 ;
 ; CHECK-SVE-512-LABEL: 'load_512'

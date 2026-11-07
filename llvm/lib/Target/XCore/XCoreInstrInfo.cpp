@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "XCoreInstrInfo.h"
-#include "XCore.h"
 #include "XCoreSubtarget.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"

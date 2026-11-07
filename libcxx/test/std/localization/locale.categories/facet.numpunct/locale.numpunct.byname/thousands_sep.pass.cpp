@@ -9,8 +9,6 @@
 // NetBSD does not support LC_NUMERIC at the moment
 // XFAIL: netbsd
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 
@@ -66,8 +64,8 @@ int main(int, char**)
         // The below tests work around GLIBC's use of U202F as LC_NUMERIC thousands_sep.
         std::locale l(LOCALE_fr_FR_UTF_8);
         {
-#if defined(_CS_GNU_LIBC_VERSION) || defined(_WIN32) || defined(_AIX) || defined(__APPLE__)
-            const char sep = ' ';
+#if defined(_CS_GNU_LIBC_VERSION) || defined(_WIN32) || defined(_AIX) || defined(__APPLE__) || defined(__FreeBSD__)
+          const char sep = ' ';
 #else
             const char sep = ',';
 #endif

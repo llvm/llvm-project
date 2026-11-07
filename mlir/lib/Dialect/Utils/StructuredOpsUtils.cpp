@@ -198,7 +198,8 @@ Operation *mlir::clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
                        ValueRange newOperands) {
   IRMapping bvm;
   OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
-                       op->getAttrs());
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
   for (Region &r : op->getRegions()) {
     Region *newRegion = state.addRegion();
     b.cloneRegionBefore(r, *newRegion, newRegion->begin(), bvm);
@@ -210,7 +211,8 @@ Operation *mlir::cloneWithoutRegions(OpBuilder &b, Operation *op,
                                      TypeRange newResultTypes,
                                      ValueRange newOperands) {
   OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
-                       op->getAttrs());
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
   for (size_t cnt = 0, e = op->getNumRegions(); cnt < e; ++cnt)
     state.addRegion();
   return b.create(state);
@@ -221,7 +223,7 @@ mlir::getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs) {
   llvm::StringSet<> elidedAttrsSet;
   elidedAttrsSet.insert_range(elidedAttrs);
   SmallVector<NamedAttribute> attrs;
-  for (auto attr : op->getAttrs()) {
+  for (auto attr : op->getDiscardableAttrDictionary().getValue()) {
     if (elidedAttrsSet.count(attr.getName()))
       continue;
     attrs.push_back(attr);

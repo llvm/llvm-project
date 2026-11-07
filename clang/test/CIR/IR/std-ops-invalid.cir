@@ -1,0 +1,51 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @bad_find(%f: !cir.ptr<!s8i>, %l: !cir.ptr<!s8i>, %v: !cir.ptr<!s8i>) -> !s32i {
+    // expected-error@below {{'cir.std.find' op failed to verify that all of {first, last, result} have same type}}
+    %0 = cir.std.find(%f : !cir.ptr<!s8i>, %l : !cir.ptr<!s8i>, %v : !cir.ptr<!s8i>, @x) -> !s32i
+    cir.return %0 : !s32i
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+
+module {
+  cir.func @bad_strlen(%s: !cir.ptr<!s32i>) -> !u64i {
+    // expected-error@below {{'cir.std.strlen' op operand #0 must be pointer to 8-bit character type}}
+    %0 = cir.std.strlen(%s : !cir.ptr<!s32i>, @strlen) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+
+// -----
+
+!bi8 = !cir.int<s, 8, bitint>
+!u64i = !cir.int<u, 64>
+
+module {
+  cir.func @bad_strlen_bitint_arg(%s: !cir.ptr<!bi8>) -> !u64i {
+    // expected-error@below {{'cir.std.strlen' op operand #0 must be pointer to 8-bit character type}}
+    %0 = cir.std.strlen(%s : !cir.ptr<!bi8>, @strlen) -> !u64i
+    cir.return %0 : !u64i
+  }
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s64i = !cir.int<s, 64>
+
+module {
+  cir.func @bad_strlen_signed_result(%s: !cir.ptr<!s8i>) -> !s64i {
+    // expected-error@below {{'cir.std.strlen' op result #0 must be fundamental unsigned integer type}}
+    %0 = cir.std.strlen(%s : !cir.ptr<!s8i>, @strlen) -> !s64i
+    cir.return %0 : !s64i
+  }
+}

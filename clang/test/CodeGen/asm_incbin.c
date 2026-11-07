@@ -6,4 +6,5 @@ asm(".incbin \"foo.h\"");
 // RUN: cd %t
 // RUN: %clang -c -emit-llvm %t/tu.c -o %t/tu.ll
 // RUN: llvm-dis %t/tu.ll -o - | FileCheck %s
-// CHECK: module asm ".incbin \22foo.h\22"
+// CHECK: module asm
+// CHECK-NEXT: ".incbin \22foo.h\22"

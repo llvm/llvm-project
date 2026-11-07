@@ -449,6 +449,9 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
       // enabled.
       (!Style.BraceWrapping.BeforeLambdaBody ||
        Current.isNot(TT_LambdaLBrace)) &&
+      // Same for the opening brace of requires expressions.
+      (!Style.BraceWrapping.AfterRequiresExpression ||
+       Current.isNot(TT_RequiresExpressionLBrace)) &&
       CurrentState.NoLineBreakInOperand) {
     return false;
   }
@@ -472,10 +475,10 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   const FormatToken &Current = *State.NextToken;
   const FormatToken &Previous = *Current.Previous;
   const auto &CurrentState = State.Stack.back();
-  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
-      Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
-    auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
-    return LambdaBodyLength > getColumnLimit(State);
+  if (Style.BraceWrapping.AfterRequiresExpression && Current.CanBreakBefore &&
+      Current.is(TT_RequiresExpressionLBrace) &&
+      getLengthToMatchingParen(Current, State.Stack) > getColumnLimit(State)) {
+    return true;
   }
   if (Current.MustBreakBefore ||
       (Current.is(TT_InlineASMColon) &&
@@ -483,6 +486,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline &&
          Style.ColumnLimit > 0)))) {
     return true;
+  }
+  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
+      Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
+    const auto LambdaBodyLength =
+        getLengthToMatchingParen(Current, State.Stack);
+    return LambdaBodyLength > getColumnLimit(State);
   }
   if (CurrentState.BreakBeforeClosingBrace &&
       (Current.closesBlockOrBlockTypeList(Style) ||
@@ -817,6 +826,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     if (Prev->BlockParameterCount == 0)
       return false;
 
+    // A lambda brace that must break makes the single-line strategy impossible.
+    for (const auto *Tok = &Current; Tok && Tok != Prev->MatchingParen;
+         Tok = Tok->Next) {
+      if (Tok->is(TT_LambdaLBrace) && Tok->MustBreakBefore)
+        return false;
+    }
+
     // Multiple lambdas in the same function call.
     if (Prev->BlockParameterCount > 1)
       return true;
@@ -1099,7 +1115,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.LastSpace = State.Column;
   } else if (Previous.isOneOf(TT_ConditionalExpr, TT_CtorInitializerColon)) {
     CurrentState.LastSpace = State.Column;
-  } else if (Previous.is(TT_BinaryOperator) &&
+  } else if (Previous.isOneOf(TT_BinaryOperator, TT_EnumEqual) &&
              ((Previous.getPrecedence() != prec::Assignment &&
                (Previous.isNot(tok::lessless) || Previous.OperatorIndex != 0 ||
                 Previous.NextOperator)) ||
@@ -1301,8 +1317,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !Current.MatchingParen->Children.empty()) {
       // lambdas and arrow functions are expressions, thus their r_brace is not
       // on its own line, and thus not covered by UnwrappedLineFormatter's logic
-      // about removing empty lines on closing blocks. Special case them here.
-      MaxEmptyLinesToKeep = 1;
+      // about removing empty lines on closing blocks. Special case them here
+      // with an exception if the KeepEmptyLines.AtEndOfBlock is used.
+      if (!Style.KeepEmptyLines.AtEndOfBlock)
+        MaxEmptyLinesToKeep = 1;
     }
     const unsigned Newlines =
         std::max(1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
@@ -1379,8 +1397,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !PreviousNonComment->ClosesRequiresClause) ||
        Current.NestingLevel != 0) &&
       PreviousNonComment->isNoneOf(
-          TT_BinaryOperator, TT_FunctionAnnotationRParen, TT_JavaAnnotation,
-          TT_LeadingJavaAnnotation) &&
+          TT_BinaryOperator, TT_EnumEqual, TT_FunctionAnnotationRParen,
+          TT_JavaAnnotation, TT_LeadingJavaAnnotation) &&
       Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope() &&
       // We don't want to enforce line breaks for subsequent arguments just
       // because we have been forced to break before a lambda body.
@@ -1506,6 +1524,13 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
                           ? CurrentState.Indent
                           : State.FirstIndent;
     return From + Style.IndentWidth;
+  }
+
+  // Align the wrapped opening brace of a requires expression with its
+  // closing brace.
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Current.is(TT_RequiresExpressionLBrace)) {
+    return CurrentState.NestedBlockIndent;
   }
 
   if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
@@ -1667,10 +1692,11 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
          Current.isNot(tok::l_paren) &&
          !Current.endsSequence(TT_StartOfName, TT_AttributeMacro,
                                TT_PointerOrReference)) ||
-        PreviousNonComment->isOneOf(TT_AttributeRParen, TT_AttributeRSquare,
-                                    TT_FunctionAnnotationRParen,
-                                    TT_JavaAnnotation,
-                                    TT_LeadingJavaAnnotation))) ||
+        (PreviousNonComment->isOneOf(TT_AttributeRParen, TT_AttributeRSquare,
+                                     TT_FunctionAnnotationRParen,
+                                     TT_JavaAnnotation,
+                                     TT_LeadingJavaAnnotation) &&
+         !Current.isBinaryOperator()))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName)) ||
       (State.Line->ReturnTypeWrapped && PreviousNonComment &&
@@ -2532,7 +2558,8 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
   // Compute the raw string style to use in case this is a raw string literal
   // that can be reformatted.
   auto RawStringStyle = getRawStringStyle(Current, State);
-  if (RawStringStyle && !Current.Finalized) {
+  if (RawStringStyle && !Current.Finalized &&
+      (!Current.MacroCtx || Current.MacroCtx->Role != MR_ExpandedArg)) {
     Penalty = reformatRawStringLiteral(Current, State, *RawStringStyle, DryRun,
                                        Newline);
   } else if (Current.IsMultiline && Current.isNot(TT_BlockComment)) {

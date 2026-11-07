@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::abseil {
 
 void TimeComparisonCheck::registerMatchers(MatchFinder *Finder) {
-  auto Matcher =
+  const auto Matcher =
       expr(comparisonOperatorWithCallee(functionDecl(
                functionDecl(timeConversionFunction()).bind("function_decl"))))
           .bind("binop");

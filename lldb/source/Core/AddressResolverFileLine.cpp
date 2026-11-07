@@ -52,13 +52,13 @@ AddressResolverFileLine::SearchCallback(SearchFilter &filter,
       AddressRange new_range(line_start, byte_size);
       m_address_ranges.push_back(new_range);
     } else {
-      LLDB_LOGF(log,
-                "error: Unable to resolve address at file address 0x%" PRIx64
-                " for %s:%d\n",
-                line_start.GetFileAddress(),
-                m_src_location_spec.GetFileSpec().GetFilename().AsCString(
-                    "<Unknown>"),
-                m_src_location_spec.GetLine().value_or(0));
+      LLDB_LOG(log,
+               "error: Unable to resolve address at file address {0:x}"
+               " for {1}:{2}\n",
+               line_start.GetFileAddress(),
+               m_src_location_spec.GetFileSpec().GetFilename().nonEmptyOr(
+                   "<Unknown>"),
+               m_src_location_spec.GetLine().value_or(0));
     }
   }
   return Searcher::eCallbackReturnContinue;
@@ -69,8 +69,8 @@ lldb::SearchDepth AddressResolverFileLine::GetDepth() {
 }
 
 void AddressResolverFileLine::GetDescription(Stream *s) {
-  s->Printf(
-      "File and line address - file: \"%s\" line: %u",
-      m_src_location_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"),
+  s->Format(
+      "File and line address - file: \"{0}\" line: {1}",
+      m_src_location_spec.GetFileSpec().GetFilename().nonEmptyOr("<Unknown>"),
       m_src_location_spec.GetLine().value_or(0));
 }

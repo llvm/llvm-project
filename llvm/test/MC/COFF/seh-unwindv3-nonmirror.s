@@ -143,19 +143,20 @@ mixed_epilogs:
 // CHECK:            ALLOC_SMALL Size=0x20
 // CHECK:            PUSH Reg=RDI
 // CHECK:            PUSH Reg=RBX
-// Mirror epilog (FirstOp=0, NumberOfOps=3)
+// V3 emits epilog descriptors in descending address order (tail-relative
+// offsets), so the later partial epilog (2 ops) is Epilog [0].
 // CHECK:          Epilog [0] {
+// CHECK:            NumberOfOps: 2
+// CHECK:            FirstOp: 0x0
+// CHECK:            ALLOC_SMALL Size=0x20
+// CHECK:            PUSH Reg=RDI
+// Mirror epilog (FirstOp=0, NumberOfOps=3).
+// CHECK:          Epilog [1] {
 // CHECK:            NumberOfOps: 3
 // CHECK:            FirstOp: 0x0
 // CHECK:            ALLOC_SMALL Size=0x20
 // CHECK:            PUSH Reg=RDI
 // CHECK:            PUSH Reg=RBX
-// Partial epilog — different NumberOfOps, so NOT inherited.
-// CHECK:          Epilog [1] {
-// CHECK:            NumberOfOps: 2
-// CHECK:            FirstOp: 0x0
-// CHECK:            ALLOC_SMALL Size=0x20
-// CHECK:            PUSH Reg=RDI
 
 // --- Test 4: reordered epilog ---
 // Prolog: push rbx, push rdi, sub rsp, 32

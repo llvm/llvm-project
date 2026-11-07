@@ -35,10 +35,10 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -68,25 +68,13 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTION
-};
 
-class DsymutilOptTable : public opt::GenericOptTable {
+class DsymutilOptTable : public opt::OptTable {
 public:
-  DsymutilOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  DsymutilOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -869,18 +857,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     }
     Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
 
-    // Statistics only require different architectures to be processed
-    // sequentially, the link itself can still happen in parallel. Change the
-    // thread pool strategy here instead of modifying LinkOpts.Threads.
-    ThreadPoolStrategy S = hardware_concurrency(
-        Options.LinkOpts.Statistics ? 1 : Options.LinkOpts.Threads);
-    if (Options.LinkOpts.Threads == 0) {
-      // If NumThreads is not specified, create one thread for each input, up to
-      // the number of hardware threads.
-      S.ThreadsRequested = DebugMapPtrsOrErr->size();
-      S.Limit = true;
-    }
-    DefaultThreadPool Threads(S);
+    // Use a single thread for --statistics and --verbose (which forces one
+    // thread) so the per-architecture link output is emitted in order.
+    DefaultThreadPool ThreadPool(hardware_concurrency(
+        Options.LinkOpts.Statistics ? 1 : Options.LinkOpts.Threads));
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
@@ -900,11 +880,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     const bool Crashed = !CRC.RunSafely([&]() {
       for (auto &Map : *DebugMapPtrsOrErr) {
-        if (Options.LinkOpts.Verbose || Options.DumpDebugMap)
+        if (Options.DumpDebugMap) {
           Map->print(outs());
-
-        if (Options.DumpDebugMap)
           continue;
+        }
 
         if (Map->begin() == Map->end()) {
           if (!Options.LinkOpts.Quiet) {
@@ -950,8 +929,12 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
         auto LinkLambda = [&,
                            OutputFile](std::shared_ptr<raw_fd_ostream> Stream) {
+          // Print the debug map here, on the thread that links it, so verbose
+          // output stays interleaved per architecture.
+          if (Options.LinkOpts.Verbose)
+            Map->print(outs());
           DwarfLinkerForBinary Linker(*Stream, BinHolder, Options.LinkOpts,
-                                      ErrorHandlerMutex);
+                                      ErrorHandlerMutex, &ThreadPool);
           AllOK.fetch_and(Linker.link(*Map));
           Stream->flush();
           if (flagIsSet(Options.Verify, DWARFVerify::Output) ||
@@ -963,16 +946,10 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           }
         };
 
-        // FIXME: The DwarfLinker can have some very deep recursion that can max
-        // out the (significantly smaller) stack when using threads. We don't
-        // want this limitation when we only have a single thread.
-        if (S.ThreadsRequested == 1)
-          LinkLambda(OS);
-        else
-          Threads.async(LinkLambda, OS);
+        ThreadPool.async(LinkLambda, OS);
       }
 
-      Threads.wait();
+      ThreadPool.wait();
     });
 
     if (Crashed)

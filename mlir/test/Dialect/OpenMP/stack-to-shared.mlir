@@ -25,11 +25,11 @@ omp.private {type = firstprivate} @firstprivatizer_f32 : !llvm.ptr copy {
   omp.yield(%arg0 : !llvm.ptr)
 }
 
-llvm.func @foo(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>}
+llvm.func @foo(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>}
 
 // CHECK-LABEL: llvm.func @device_func(
 // CHECK-SAME:  %[[N:.*]]: i64, %[[COND:.*]]: i1)
-llvm.func @device_func(%arg0: i64, %cond: i1) attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>} {
+llvm.func @device_func(%arg0: i64, %cond: i1) attributes {omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = to>} {
   // CHECK: %[[ALLOC0:.*]] = omp.alloc_shared_mem %[[N]] x i64 : (i64) -> !llvm.ptr
   %0 = llvm.alloca %arg0 x i64 : (i64) -> !llvm.ptr
   // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem %[[N]] x f32 : (i64) align(128) -> !llvm.ptr
@@ -99,8 +99,8 @@ llvm.func @host_func(%arg0: i64) {
   omp.parallel {
     // CHECK: llvm.call @foo(%[[ALLOC0]]) : (!llvm.ptr) -> ()
     llvm.call @foo(%0) : (!llvm.ptr) -> ()
-    // CHECK: omp.target
-    omp.target {
+    // CHECK: omp.target kernel_type(generic)
+    omp.target kernel_type(generic) {
       %c0 = llvm.mlir.constant(1 : i64) : i64
       // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem [[ALLOC1_SIZE:.*]] -> !llvm.ptr
       %1 = llvm.alloca %c0 x i32 : (i64) -> !llvm.ptr
@@ -119,7 +119,7 @@ llvm.func @host_func(%arg0: i64) {
 llvm.func @target_spmd() {
   // CHECK-NOT: omp.alloc_shared_mem
   // CHECK-NOT: omp.free_shared_mem
-  omp.target {
+  omp.target kernel_type(spmd) {
     %c = llvm.mlir.constant(1 : i64) : i64
     %0 = llvm.alloca %c x i32 : (i64) -> !llvm.ptr
     omp.teams {
@@ -139,9 +139,9 @@ llvm.func @target_spmd() {
         omp.terminator
       } {omp.composite}
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
   // CHECK: return
   llvm.return
 }

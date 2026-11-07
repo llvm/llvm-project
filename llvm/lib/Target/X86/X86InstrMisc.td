@@ -1276,6 +1276,29 @@ multiclass Bls_Pats<string suffix> {
             (!cast<Instruction>(BLSI32rr#suffix) GR32:$src)>;
   def : Pat<(and_flag_nocf GR64:$src, (ineg_su GR64:$src)),
             (!cast<Instruction>(BLSI64rr#suffix) GR64:$src)>;
+
+  // BLSI only has GR32/GR64 forms. For an i8 operand we any-extend into a
+  // 32-bit register, isolate the lowest set bit with BLSI32, and extract
+  // the low byte. Any-extend is safe because BLSI keeps only the lowest
+  // set bit, so upper-bit garbage cannot affect the extracted byte.
+  def : Pat<(and GR8:$src, (ineg_su GR8:$src)),
+            (EXTRACT_SUBREG
+              (!cast<Instruction>(BLSI32rr#suffix)
+                (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src, sub_8bit)),
+              sub_8bit)>;
+
+  // BLSMSK only has GR32/GR64 forms. For an i8 operand we use INSERT_SUBREG
+  // with IMPLICIT_DEF (any-extend) rather than SUBREG_TO_REG (zero-extend).
+  // Although BLSMSK computes (src XOR (src-1)), dirty upper bits [31:8] cannot
+  // corrupt bits [7:0] of the result: borrow from (src-1) only propagates
+  // downward through contiguous zeros, and even when [7:0] is zero the
+  // EXTRACT_SUBREG still yields the correct all-ones result. This matches the
+  // same approach used for BLSI.
+  def : Pat<(xor GR8:$src, (add GR8:$src, -1)),
+            (EXTRACT_SUBREG
+              (!cast<Instruction>(BLSMSK32rr#suffix)
+                (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src, sub_8bit)),
+              sub_8bit)>;
 }
 
 let Predicates = [HasBMI, NoEGPR] in

@@ -3,7 +3,7 @@
 
 define i32 @cttz_abs(i32 %x) {
 ; CHECK-LABEL: @cttz_abs(
-; CHECK-NEXT:    [[R:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 0
@@ -29,7 +29,7 @@ define i32 @cttz_abs2(i32 %x) {
 ; CHECK-LABEL: @cttz_abs2(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use_cond(i1 [[C]])
-; CHECK-NEXT:    [[R:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp sgt i32 %x, 0
@@ -44,7 +44,7 @@ define i32 @cttz_abs3(i32 %x) {
 ; CHECK-LABEL: @cttz_abs3(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use_cond(i1 [[C]])
-; CHECK-NEXT:    [[R:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp sgt i32 %x, -1
@@ -57,7 +57,7 @@ define i32 @cttz_abs3(i32 %x) {
 
 define i32 @cttz_abs4(i32 %x) {
 ; CHECK-LABEL: @cttz_abs4(
-; CHECK-NEXT:    [[R:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 1
@@ -69,7 +69,7 @@ define i32 @cttz_abs4(i32 %x) {
 
 define i32 @cttz_nabs(i32 %x) {
 ; CHECK-LABEL: @cttz_nabs(
-; CHECK-NEXT:    [[R:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 0
@@ -107,7 +107,7 @@ define i32 @cttz_abs_multiuse(i32 %x) {
 ; CHECK-LABEL: @cttz_abs_multiuse(
 ; CHECK-NEXT:    [[D:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    call void @use_abs(i32 [[D]])
-; CHECK-NEXT:    [[R:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 1
@@ -123,7 +123,7 @@ define i32 @cttz_nabs_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    [[D:%.*]] = sub i32 0, [[TMP1]]
 ; CHECK-NEXT:    call void @use_abs(i32 [[D]])
-; CHECK-NEXT:    [[R:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 1

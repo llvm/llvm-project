@@ -10,6 +10,7 @@
 // RUN: fir-opt --target-rewrite="target=powerpc64-ibm-aix7.2.0.0" %s | FileCheck %s --check-prefix=PPC64
 // RUN: fir-opt --target-rewrite="target=powerpc-ibm-aix7.2.0.0" %s | FileCheck %s --check-prefix=PPC
 // RUN: fir-opt --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=LOONGARCH64
+// RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SYSTEMZ
 
 // Test that we rewrite the signature and body of a function that returns a
 // complex<4>.
@@ -24,6 +25,8 @@
 // PPC64-LABEL: func @returncomplex4() -> tuple<f32, f32>
 // PPC-LABEL: func @returncomplex4() -> tuple<f32, f32>
 // LOONGARCH64-LABEL: func @returncomplex4() -> tuple<f32, f32>
+// SYSTEMZ-LABEL: func @returncomplex4
+// SYSTEMZ-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>>  {llvm.align = 8 : i32, llvm.sret = tuple<f32, f32>})
 func.func @returncomplex4() -> complex<f32> {
   // I32: fir.insert_value
   // I32: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
@@ -47,6 +50,8 @@ func.func @returncomplex4() -> complex<f32> {
   // PPC: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
   // LOONGARCH64: fir.insert_value
   // LOONGARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
+  // SYSTEMZ: fir.insert_value
+  // SYSTEMZ: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value
   %1 = fir.undefined complex<f32>
   %2 = arith.constant 2.0 : f32
   %3 = fir.convert %2 : (f32) -> f32
@@ -105,6 +110,9 @@ func.func @returncomplex4() -> complex<f32> {
   // PPC: return [[RES]] : tuple<f32, f32>
   // LOONGARCH64: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
   // LOONGARCH64: [[ADDRC:%[0-9A-Za-z]+]] = fir.convert [[ADDRT]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // SYSTEMZ: [[ADDR:%[0-9A-Za-z]+]] = fir.convert [[ARG0]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // SYSTEMZ: fir.store [[VAL]] to [[ADDR]] : !fir.ref<complex<f32>>
+  // SYSTEMZ: return
   return %6 : complex<f32>
 }
 
@@ -124,6 +132,8 @@ func.func @returncomplex4() -> complex<f32> {
 // PPC64-LABEL: func @returncomplex8() -> tuple<f64, f64>
 // PPC-LABEL: func @returncomplex8() -> tuple<f64, f64>
 // LOONGARCH64-LABEL: func @returncomplex8() -> tuple<f64, f64>
+// SYSTEMZ-LABEL: func @returncomplex8
+// SYSTEMZ-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<tuple<f64, f64>>  {llvm.align = 8 : i32, llvm.sret = tuple<f64, f64>})
 func.func @returncomplex8() -> complex<f64> {
   // I32: fir.insert_value
   // I32: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
@@ -147,6 +157,8 @@ func.func @returncomplex8() -> complex<f64> {
   // PPC: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
   // LOONGARCH64: fir.insert_value
   // LOONGARCH64: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
+  // SYSTEMZ: fir.insert_value
+  // SYSTEMZ: [[VAL:%[0-9A-Za-z]+]] = fir.insert_value {{.*}}
   %1 = fir.undefined complex<f64>
   %2 = arith.constant 1.0 : f64
   %3 = arith.constant -4.0 : f64
@@ -204,6 +216,9 @@ func.func @returncomplex8() -> complex<f64> {
   // LOONGARCH64: fir.store [[VAL]] to [[ADDRC]] : !fir.ref<complex<f64>>
   // LOONGARCH64: [[RES:%[0-9A-Za-z]+]] = fir.load [[ADDRT]] : !fir.ref<tuple<f64, f64>>
   // LOONGARCH64: return [[RES]] : tuple<f64, f64>
+  // SYSTEMZ: [[ADDRC:%[0-9A-Za-z]+]] = fir.convert [[ARG0]] : (!fir.ref<tuple<f64, f64>>) -> !fir.ref<complex<f64>>
+  // SYSTEMZ: fir.store [[VAL]] to [[ADDRC]] : !fir.ref<complex<f64>>
+  // SYSTEMZ: return
   return %5 : complex<f64>
 }
 
@@ -219,6 +234,7 @@ func.func @returncomplex8() -> complex<f64> {
 // PPC64-LABEL: func private @paramcomplex4(f32, f32)
 // PPC-LABEL: func private @paramcomplex4(f32, f32)
 // LOONGARCH64-LABEL: func private @paramcomplex4(f32, f32)
+// SYSTEMZ-LABEL: func private @paramcomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
 func.func private @paramcomplex4(complex<f32>) -> ()
 
 // Test that we rewrite calls to functions that return or accept complex<4>.
@@ -233,6 +249,7 @@ func.func private @paramcomplex4(complex<f32>) -> ()
 // PPC64-LABEL: func @callcomplex4
 // PPC-LABEL: func @callcomplex4
 // LOONGARCH64-LABEL: func @callcomplex4
+// SYSTEMZ-LABEL: func @callcomplex4
 func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {
 
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> i64
@@ -246,6 +263,9 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // PPC64: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> tuple<f32, f32>
   // PPC: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> tuple<f32, f32>
   // LOONGARCH64: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex4() : () -> tuple<f32, f32>
+  // SYSTEMZ: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // SYSTEMZ: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
+  // SYSTEMZ: fir.call @returncomplex4([[RES]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32, llvm.sret = tuple<f32, f32>}) -> ()
   %1 = fir.call @returncomplex4() : () -> complex<f32>
 
   // I32: [[ADDRI64:%[0-9A-Za-z]+]] = fir.alloca i64
@@ -343,18 +363,31 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // LOONGARCH64: [[A:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [0 : i32] : (complex<f32>) -> f32
   // LOONGARCH64: [[B:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [1 : i32] : (complex<f32>) -> f32
   // LOONGARCH64: fir.call @paramcomplex4([[A]], [[B]]) : (f32, f32) -> ()
+  // SYSTEMZ: [[RESC:%[0-9A-Za-z]+]] = fir.convert [[RES]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // SYSTEMZ: [[C:%[0-9A-Za-z]+]] = fir.load [[RESC]] : !fir.ref<complex<f32>>
+  // SYSTEMZ: llvm.intr.stackrestore [[STCK]] : !llvm.ptr
+  // SYSTEMZ: [[TMP:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // SYSTEMZ: fir.store [[C]] to [[TMP]] : !fir.ref<complex<f32>>
+  // SYSTEMZ: [[T:%[0-9A-Za-z]+]] = fir.convert [[TMP]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // SYSTEMZ: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> ()
   fir.call @paramcomplex4(%1) : (complex<f32>) -> ()
 
-  // I32: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> i64 {pass_arg_pos = 0 : i32}
-  // I32_MINGW: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> i64 {pass_arg_pos = 0 : i32}
-  // X64: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.vector<2:f32> {pass_arg_pos = 0 : i32}
-  // X64_MINGW: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> i64 {pass_arg_pos = 0 : i32}
-  // AARCH64: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> {pass_arg_pos = 0 : i32}
-  // PPC64le: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> {pass_arg_pos = 0 : i32}
-  // SPARCV9: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> {pass_arg_pos = 0 : i32}
-  // PPC64: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> {pass_arg_pos = 0 : i32}
-  // PPC: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> {pass_arg_pos = 0 : i32}
-  %2 = fir.dispatch "ret_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> complex<f32> {pass_arg_pos = 0 : i32}
+  // I32: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> i64 pass_arg_pos(0)
+  // I32_MINGW: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> i64 pass_arg_pos(0)
+  // X64: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.vector<2:f32> pass_arg_pos(0)
+  // X64_MINGW: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> i64 pass_arg_pos(0)
+  // AARCH64: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> pass_arg_pos(0)
+  // PPC64le: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> pass_arg_pos(0)
+  // SPARCV9: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> pass_arg_pos(0)
+  // PPC64: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> pass_arg_pos(0)
+  // PPC: [[RES:%[0-9A-Za-z]+]] = fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> tuple<f32, f32> pass_arg_pos(0)
+  // SYSTEMZ: [[STCK2:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // SYSTEMZ: [[RES2:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
+  // SYSTEMZ: fir.dispatch "ret_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) ([[RES2]], %{{.*}} : !fir.ref<tuple<f32, f32>>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // SYSTEMZ: [[RESC2:%[0-9A-Za-z]+]] = fir.convert [[RES2]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // SYSTEMZ: [[C2:%[0-9A-Za-z]+]] = fir.load [[RESC2]] : !fir.ref<complex<f32>>
+  // SYSTEMZ: llvm.intr.stackrestore [[STCK2]] : !llvm.ptr
+  %2 = fir.dispatch "ret_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> complex<f32> pass_arg_pos(0)
 
   // I32: [[ADDRI64:%[0-9A-Za-z]+]] = fir.alloca i64
   // I32: fir.store [[RES]] to [[ADDRI64]] : !fir.ref<i64>
@@ -363,7 +396,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // I32: [[ADDRC2:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
   // I32: fir.store [[C]] to [[ADDRC2]] : !fir.ref<complex<f32>>
   // I32: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC2]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
-  // I32: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) {pass_arg_pos = 0 : i32}
+  // I32: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) pass_arg_pos(0)
 
   // I32_MINGW: [[ADDRI64:%[0-9A-Za-z]+]] = fir.alloca i64
   // I32_MINGW: fir.store [[RES]] to [[ADDRI64]] : !fir.ref<i64>
@@ -372,7 +405,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // I32_MINGW: [[ADDRC2:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
   // I32_MINGW: fir.store [[C]] to [[ADDRC2]] : !fir.ref<complex<f32>>
   // I32_MINGW: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC2]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
-  // I32_MINGW: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) {pass_arg_pos = 0 : i32}
+  // I32_MINGW: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) pass_arg_pos(0)
 
   // X64: [[ADDRV:%[0-9A-Za-z]+]] = fir.alloca !fir.vector<2:f32>
   // X64: fir.store [[RES]] to [[ADDRV]] : !fir.ref<!fir.vector<2:f32>>
@@ -382,7 +415,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // X64: [[ADDRC2:%[0-9A-Za-z]+]] = fir.convert [[ADDRV2]] : (!fir.ref<!fir.vector<2:f32>>) -> !fir.ref<complex<f32>>
   // X64: fir.store [[V]] to [[ADDRC2]] : !fir.ref<complex<f32>>
   // X64: [[VRELOADED:%[0-9A-Za-z]+]] = fir.load [[ADDRV2]] : !fir.ref<!fir.vector<2:f32>>
-  // X64: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[VRELOADED]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.vector<2:f32>) {pass_arg_pos = 0 : i32}
+  // X64: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[VRELOADED]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.vector<2:f32>) pass_arg_pos(0)
 
   // X64_MINGW: [[ADDRV:%[0-9A-Za-z]+]] = fir.alloca i64
   // X64_MINGW: fir.store [[RES]] to [[ADDRV]] : !fir.ref<i64>
@@ -392,7 +425,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // X64_MINGW: [[ADDRC2:%[0-9A-Za-z]+]] = fir.convert [[ADDRV2]] : (!fir.ref<i64>) -> !fir.ref<complex<f32>>
   // X64_MINGW: fir.store [[V]] to [[ADDRC2]] : !fir.ref<complex<f32>>
   // X64_MINGW: [[VRELOADED:%[0-9A-Za-z]+]] = fir.load [[ADDRV2]] : !fir.ref<i64>
-  // X64_MINGW: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[VRELOADED]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, i64) {pass_arg_pos = 0 : i32}
+  // X64_MINGW: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[VRELOADED]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, i64) pass_arg_pos(0)
 
   // AARCH64: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
   // AARCH64: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f32, f32>>
@@ -402,7 +435,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // AARCH64: [[ADDRC2:%[0-9A-Za-z]+]] = fir.convert [[ADDRARR]] : (!fir.ref<!fir.array<2xf32>>) -> !fir.ref<complex<f32>>
   // AARCH64: fir.store [[V]] to [[ADDRC2]] : !fir.ref<complex<f32>>
   // AARCH64: [[ARR:%[0-9A-Za-z]+]] = fir.load [[ADDRARR]] : !fir.ref<!fir.array<2xf32>>
-  // AARCH64: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[ARR]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.array<2xf32>) {pass_arg_pos = 0 : i32}
+  // AARCH64: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[ARR]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.array<2xf32>) pass_arg_pos(0)
 
   // PPC64le: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
   // PPC64le: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f32, f32>>
@@ -410,7 +443,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // PPC64le: [[V:%[0-9A-Za-z]+]] = fir.load [[ADDRC]] : !fir.ref<complex<f32>>
   // PPC64le: [[A:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [0 : i32] : (complex<f32>) -> f32
   // PPC64le: [[B:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [1 : i32] : (complex<f32>) -> f32
-  // PPC64le: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[A]], [[B]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, f32, f32) {pass_arg_pos = 0 : i32}
+  // PPC64le: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[A]], [[B]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, f32, f32) pass_arg_pos(0)
 
   // SPARCV9: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
   // SPARCV9: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f32, f32>>
@@ -418,7 +451,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // SPARCV9: [[V:%[0-9A-Za-z]+]] = fir.load [[ADDRC]] : !fir.ref<complex<f32>>
   // SPARCV9: [[A:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [0 : i32] : (complex<f32>) -> f32
   // SPARCV9: [[B:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [1 : i32] : (complex<f32>) -> f32
-  // SPARCV9: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[A]], [[B]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, f32, f32) {pass_arg_pos = 0 : i32}
+  // SPARCV9: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[A]], [[B]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, f32, f32) pass_arg_pos(0)
 
   // PPC64: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
   // PPC64: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f32, f32>>
@@ -426,8 +459,14 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // PPC64: [[V:%[0-9A-Za-z]+]] = fir.load [[ADDRC]] : !fir.ref<complex<f32>>
   // PPC64: [[A:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [0 : i32] : (complex<f32>) -> f32
   // PPC64: [[B:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [1 : i32] : (complex<f32>) -> f32
-  // PPC64: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[A]], [[B]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, f32, f32) {pass_arg_pos = 0 : i32}
-  fir.dispatch "with_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0, %2 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, complex<f32>) {pass_arg_pos = 0 : i32}
+  // PPC64: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[A]], [[B]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, f32, f32) pass_arg_pos(0)
+  // SYSTEMZ: [[STCK3:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // SYSTEMZ: [[TMP3:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // SYSTEMZ: fir.store [[C2]] to [[TMP3]] : !fir.ref<complex<f32>>
+  // SYSTEMZ: [[T3:%[0-9A-Za-z]+]] = fir.convert [[TMP3]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // SYSTEMZ: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T3]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) pass_arg_pos(0)
+  // SYSTEMZ: llvm.intr.stackrestore [[STCK3]] : !llvm.ptr
+  fir.dispatch "with_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0, %2 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, complex<f32>) pass_arg_pos(0)
 
   // PPC: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f32, f32>
   // PPC: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f32, f32>>
@@ -435,21 +474,34 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // PPC: [[V:%[0-9A-Za-z]+]] = fir.load [[ADDRC]] : !fir.ref<complex<f32>>
   // PPC: [[A:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [0 : i32] : (complex<f32>) -> f32
   // PPC: [[B:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [1 : i32] : (complex<f32>) -> f32
-  // PPC: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[A]], [[B]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, f32, f32) {pass_arg_pos = 0 : i32}
-  fir.dispatch "with_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0, %2 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, complex<f32>) {pass_arg_pos = 0 : i32}
+  // PPC: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[A]], [[B]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, f32, f32) pass_arg_pos(0)
+  // SYSTEMZ: [[STCK4:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // SYSTEMZ: [[TMP4:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // SYSTEMZ: fir.store [[C2]] to [[TMP4]] : !fir.ref<complex<f32>>
+  // SYSTEMZ: [[T4:%[0-9A-Za-z]+]] = fir.convert [[TMP4]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // SYSTEMZ: fir.dispatch "with_complex"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, [[T4]] : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, !fir.ref<tuple<f32, f32>>) pass_arg_pos(0)
+  // SYSTEMZ: llvm.intr.stackrestore [[STCK4]] : !llvm.ptr
 
-  // I32: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : !fir.ref<tuple<f32, f32>>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
-  // I32_MINGW: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : !fir.ref<tuple<f32, f32>>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
-  // X64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : !fir.vector<2:f32>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
-  // X64_MINGW: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : i64, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
-  // AARCH64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : !fir.array<2xf32>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
-  // PPC64le: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 2 : i32}
-  // SPARCV9: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 2 : i32}
-  // RISCV64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 2 : i32}
-  // PPC64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 2 : i32}
-  // PPC: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 2 : i32}
-  // LOONGARCH64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 2 : i32}
-  fir.dispatch "with_complex2"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%2, %arg0 : complex<f32>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
+  fir.dispatch "with_complex"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%arg0, %2 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>, complex<f32>) pass_arg_pos(0)
+
+  // I32: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : !fir.ref<tuple<f32, f32>>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // I32_MINGW: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : !fir.ref<tuple<f32, f32>>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // X64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : !fir.vector<2:f32>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // X64_MINGW: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : i64, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // AARCH64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}} : !fir.array<2xf32>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // PPC64le: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(2)
+  // SPARCV9: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(2)
+  // RISCV64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(2)
+  // PPC64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(2)
+  // PPC: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(2)
+  // LOONGARCH64: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%{{.*}}, %{{.*}}, %{{.*}} : f32, f32, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(2)
+  // SYSTEMZ: [[STCK5:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // SYSTEMZ: [[TMP5:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // SYSTEMZ: fir.store [[C2]] to [[TMP5]] : !fir.ref<complex<f32>>
+  // SYSTEMZ: [[T5:%[0-9A-Za-z]+]] = fir.convert [[TMP5]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // SYSTEMZ: fir.dispatch "with_complex2"(%{{.*}} : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) ([[T5]], %{{.*}} : !fir.ref<tuple<f32, f32>>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
+  // SYSTEMZ: llvm.intr.stackrestore [[STCK5]] : !llvm.ptr
+  fir.dispatch "with_complex2"(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) (%2, %arg0 : complex<f32>, !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) pass_arg_pos(1)
 
   return
 }
@@ -466,6 +518,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
 // PPC64-LABEL: func private @paramcomplex8(f64, f64)
 // PPC-LABEL: func private @paramcomplex8(f64, f64)
 // LOONGARCH64-LABEL: func private @paramcomplex8(f64, f64)
+// SYSTEMZ-LABEL: func private @paramcomplex8(!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32})
 func.func private @paramcomplex8(complex<f64>) -> ()
 
 // Test that we rewrite calls to functions that return or accept complex<8>.
@@ -480,6 +533,7 @@ func.func private @paramcomplex8(complex<f64>) -> ()
 // PPC64-LABEL: func @callcomplex8()
 // PPC-LABEL: func @callcomplex8()
 // LOONGARCH64-LABEL: func @callcomplex8()
+// SYSTEMZ-LABEL: func @callcomplex8()
 func.func @callcomplex8() {
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
   // I32: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 4 : i32, llvm.sret = tuple<f64, f64>}) -> ()
@@ -495,6 +549,9 @@ func.func @callcomplex8() {
   // PPC64: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<f64, f64>
   // PPC: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<f64, f64>
   // LOONGARCH64: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<f64, f64>
+  // SYSTEMZ: [[STCK:%[0-9A-Za-z]+]] = llvm.intr.stacksave : !llvm.ptr
+  // SYSTEMZ: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
+  // SYSTEMZ: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.sret = tuple<f64, f64>}) -> ()
   %1 = fir.call @returncomplex8() : () -> complex<f64>
 
   // I32: [[RESC:%[0-9A-Za-z]+]] = fir.convert [[RES]] : (!fir.ref<tuple<f64, f64>>) -> !fir.ref<complex<f64>>
@@ -583,6 +640,13 @@ func.func @callcomplex8() {
   // LOONGARCH64: [[A:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [0 : i32] : (complex<f64>) -> f64
   // LOONGARCH64: [[B:%[0-9A-Za-z]+]] = fir.extract_value [[V]], [1 : i32] : (complex<f64>) -> f64
   // LOONGARCH64: fir.call @paramcomplex8([[A]], [[B]]) : (f64, f64) -> ()
+  // SYSTEMZ: [[RESC:%[0-9A-Za-z]+]] = fir.convert [[RES]] : (!fir.ref<tuple<f64, f64>>) -> !fir.ref<complex<f64>>
+  // SYSTEMZ: [[C:%[0-9A-Za-z]+]] = fir.load [[RESC]] : !fir.ref<complex<f64>>
+  // SYSTEMZ: llvm.intr.stackrestore [[STCK]] : !llvm.ptr
+  // SYSTEMZ: [[TMP:%[0-9A-Za-z]+]] = fir.alloca complex<f64>
+  // SYSTEMZ: fir.store [[C]] to [[TMP]] : !fir.ref<complex<f64>>
+  // SYSTEMZ: [[T:%[0-9A-Za-z]+]] = fir.convert [[TMP]] : (!fir.ref<complex<f64>>) -> !fir.ref<tuple<f64, f64>>
+  // SYSTEMZ: fir.call @paramcomplex8([[T]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32}) -> ()
   
   fir.call @paramcomplex8(%1) : (complex<f64>) -> ()
   return
@@ -600,6 +664,7 @@ func.func @callcomplex8() {
 // PPC64-LABEL: func private @calleemultipleparamscomplex4(f32, f32, f32, f32, f32, f32)
 // PPC-LABEL: func private @calleemultipleparamscomplex4(f32, f32, f32, f32, f32, f32)
 // LOONGARCH64-LABEL: func private @calleemultipleparamscomplex4(f32, f32, f32, f32, f32, f32)
+// SYSTEMZ-LABEL: func private @calleemultipleparamscomplex4(!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
 func.func private @calleemultipleparamscomplex4(complex<f32>, complex<f32>, complex<f32>) -> ()
 
 // I32-LABEL: func @multipleparamscomplex4
@@ -624,6 +689,8 @@ func.func private @calleemultipleparamscomplex4(complex<f32>, complex<f32>, comp
 // PPC-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32, [[A3:%[0-9A-Za-z]+]]: f32, [[B3:%[0-9A-Za-z]+]]: f32)
 // LOONGARCH64-LABEL: func @multipleparamscomplex4
 // LOONGARCH64-SAME: ([[A1:%[0-9A-Za-z]+]]: f32, [[B1:%[0-9A-Za-z]+]]: f32, [[A2:%[0-9A-Za-z]+]]: f32, [[B2:%[0-9A-Za-z]+]]: f32, [[A3:%[0-9A-Za-z]+]]: f32, [[B3:%[0-9A-Za-z]+]]: f32)
+// SYSTEMZ-LABEL: func @multipleparamscomplex4
+// SYSTEMZ-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, [[Z3:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32})
 func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : complex<f32>) {
   // I32-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // I32-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
@@ -860,6 +927,22 @@ func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : 
   // LOONGARCH64-DAG: [[B3_EXTR:%[0-9A-Za-z]+]] = fir.extract_value [[Z3]], [1 : i32] : (complex<f32>) -> f32
 
   // LOONGARCH64: fir.call @calleemultipleparamscomplex4([[A1_EXTR]], [[B1_EXTR]], [[A2_EXTR]], [[B2_EXTR]], [[A3_EXTR]], [[B3_EXTR]]) : (f32, f32, f32, f32, f32, f32) -> ()
+  // SYSTEMZ-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z2_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z2]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z2_VAL:%[0-9A-Za-z]+]] = fir.load [[Z2_ADDR]] : !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z3_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z3]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z3_VAL:%[0-9A-Za-z]+]] = fir.load [[Z3_ADDR]] : !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z1_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // SYSTEMZ-DAG: fir.store [[Z1_VAL]] to [[Z1_ADDRC]] : !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z1_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z1_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // SYSTEMZ-DAG: [[Z2_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // SYSTEMZ-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC]] : !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z2_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z2_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // SYSTEMZ-DAG: [[Z3_ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
+  // SYSTEMZ-DAG: fir.store [[Z3_VAL]] to [[Z3_ADDRC]] : !fir.ref<complex<f32>>
+  // SYSTEMZ-DAG: [[Z3_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z3_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
+  // SYSTEMZ: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}, !fir.ref<tuple<f32, f32>> {llvm.align = 8 : i32}) -> ()
   fir.call @calleemultipleparamscomplex4(%z1, %z2, %z3) : (complex<f32>, complex<f32>, complex<f32>) -> ()
   return
 }

@@ -1,8 +1,8 @@
 # RUN: not llvm-mc -triple=riscv32 --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8f,+xsfmm64a64f %s 2>&1 \
+# RUN:     --mattr=+xsfmm32a8i,+xsfmm32a32f,+xsfmm32a8f,+xsfmm64a64f %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK
 # RUN: not llvm-mc -triple=riscv64 --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8f,+xsfmm64a64f %s 2>&1 \
+# RUN:     --mattr=+xsfmm32a8i,+xsfmm32a32f,+xsfmm32a8f,+xsfmm64a64f %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK
 
 sf.vsettnt a0, a1, e128, w1 # CHECK: :[[@LINE]]:20: error: operand must be e[8|16|16alt|32|64],w[1|2|4]

@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Any, Optional
 
 import lldb
 import struct
@@ -39,7 +40,10 @@ class OperatingSystem(ScriptedThread):
         described by the dictionary returned from a call to the get_register_info() method.
     """
 
-    def __init__(self, process):
+    registers: dict[str, Any]
+    threads: list[dict]
+
+    def __init__(self, process: lldb.SBProcess):
         """Initialization needs a valid lldb.SBProcess object. This plug-in
         will get created after a live process is valid and has stopped for the
         first time.
@@ -52,7 +56,7 @@ class OperatingSystem(ScriptedThread):
         self.registers = self.register_info
         self.threads = []
 
-    def create_thread(self, tid, context):
+    def create_thread(self, tid: int, context: int) -> Optional[dict]:
         """Lazily create an operating system thread using a thread information
         dictionary and an optional operating system thread context address.
         This method is called manually, using the SBAPI
@@ -69,7 +73,7 @@ class OperatingSystem(ScriptedThread):
         return None
 
     @abstractmethod
-    def get_thread_info(self):
+    def get_thread_info(self) -> list[dict]:
         """Get the list of operating system threads. This method gets called
         automatically every time the process stops and it needs to update its
         thread list.
@@ -83,7 +87,7 @@ class OperatingSystem(ScriptedThread):
         pass
 
     @abstractmethod
-    def get_register_data(self, tid):
+    def get_register_data(self, tid: int) -> str:
         """Get the operating system thread register context for given a thread
         id. This method is called when unwinding the stack of one of the
         operating system threads.
@@ -96,8 +100,8 @@ class OperatingSystem(ScriptedThread):
         """
         pass
 
-    def get_register_context(self):
+    def get_register_context(self) -> Optional[str]:
         pass
 
-    def get_stop_reason(self):
+    def get_stop_reason(self) -> Optional[dict[str, Any]]:
         pass

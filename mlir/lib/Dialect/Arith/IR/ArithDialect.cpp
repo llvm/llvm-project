@@ -13,10 +13,8 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::arith;
@@ -55,8 +53,10 @@ void arith::ArithDialect::initialize() {
                            SelectOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConstantOp,
                             IndexCastOp, SelectOp>();
-  declarePromisedInterfaces<ValueBoundsOpInterface, AddIOp, ConstantOp, SubIOp,
-                            MulIOp, SelectOp, FloorDivSIOp, MinSIOp, MaxSIOp>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, ConstantOp, ExtSIOp, AddIOp,
+                            SubIOp, MulIOp, SelectOp, FloorDivSIOp, CeilDivSIOp,
+                            MinSIOp, MaxSIOp, MinUIOp, MaxUIOp, RemSIOp,
+                            RemUIOp, DivUIOp, DivSIOp>();
 }
 
 /// Materialize an integer or floating point constant.

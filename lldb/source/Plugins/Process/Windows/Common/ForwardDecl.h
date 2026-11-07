@@ -24,6 +24,16 @@ enum class ExceptionResult {
                     // no debugger attached.
 };
 
+// DllEventAction is returned by the debug delegate's DLL load/unload handlers
+// to tell the DebuggerThread what to do with its debug loop.
+enum class DllEventAction : bool {
+  // Keep the debug loop running: no stop was reported to the client.
+  ContinueDebugLoop = false,
+  // A stop was reported to the client. Park the debug loop until the client
+  // resumes the process.
+  ParkDebugLoop = true,
+};
+
 namespace lldb_private {
 
 class ProcessWindows;

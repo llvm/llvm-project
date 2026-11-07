@@ -13,11 +13,11 @@ define <4 x float> @coverage_gap(<4 x float> %init, <2 x float> %a, <1 x float> 
 ; CHECK-NEXT:    [[R0:%.*]] = fadd <2 x float> [[ALLOCA_SROA_0_0_VEC_EXTRACT]], [[A]]
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[R0]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_0_VECBLEND:%.*]] = shufflevector <4 x float> [[ALLOCA_SROA_0_0_VEC_EXPAND]], <4 x float> [[INIT]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[ALLOCA_SROA_0_12_VEC_EXTRACT:%.*]] = extractelement <4 x float> [[ALLOCA_SROA_0_0_VECBLEND]], i32 3
+; CHECK-NEXT:    [[ALLOCA_SROA_0_12_VEC_EXTRACT:%.*]] = extractelement <4 x float> [[ALLOCA_SROA_0_0_VECBLEND]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[ALLOCA_SROA_0_12_VEC_EXTRACT]] to <1 x float>
 ; CHECK-NEXT:    [[R1:%.*]] = fadd <1 x float> [[TMP0]], [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x float> [[R1]] to float
-; CHECK-NEXT:    [[ALLOCA_SROA_0_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[ALLOCA_SROA_0_0_VECBLEND]], float [[TMP1]], i32 3
+; CHECK-NEXT:    [[ALLOCA_SROA_0_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[ALLOCA_SROA_0_0_VECBLEND]], float [[TMP1]], i64 3
 ; CHECK-NEXT:    ret <4 x float> [[ALLOCA_SROA_0_12_VEC_INSERT]]
 ;
 entry:

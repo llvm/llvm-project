@@ -166,9 +166,8 @@ int main(int, char**)
     test<std::size_t>();
 
     // _BitInt tests. Width tiers follow C23 7.18.2.5.
-    // rotr uses numeric_limits::digits internally, so only byte-aligned
-    // widths are safe.
-#if TEST_HAS_EXTENSION(bit_int)
+    // rotr depends on numeric_limits::digits, so only byte-aligned widths.
+#if TEST_HAS_BITINT
     {
       using T32 = unsigned _BitInt(32);
       using T64 = unsigned _BitInt(64);
@@ -219,7 +218,7 @@ int main(int, char**)
       assert(std::rotr(T256(1), 256 + 4) == T256(1) << 252);
     }
 #  endif
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

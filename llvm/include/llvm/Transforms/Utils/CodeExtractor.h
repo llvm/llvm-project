@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
@@ -262,13 +263,14 @@ public:
 protected:
   /// Allocate an intermediate variable at the specified point.
   virtual Instruction *allocateVar(IRBuilder<>::InsertPoint AllocaIP,
-                                   Type *VarType, const Twine &Name = Twine(""),
+                                   DebugLoc DL, Type *VarType,
+                                   const Twine &Name = Twine(""),
                                    AddrSpaceCastInst **CastedAlloc = nullptr);
 
   /// Deallocate a previously-allocated intermediate variable at the specified
   /// point.
   virtual Instruction *deallocateVar(IRBuilder<>::InsertPoint DeallocIP,
-                                     Value *Var, Type *VarType);
+                                     DebugLoc DL, Value *Var, Type *VarType);
 
 private:
   struct LifetimeMarkerInfo {

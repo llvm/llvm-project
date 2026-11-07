@@ -2,15 +2,15 @@ add_llvm_component_group(SPIRV)
 
 set(LLVM_TARGET_DEFINITIONS SPIRV.td)
 
-tablegen(LLVM SPIRVGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM SPIRVGenGlobalISel.inc -gen-global-isel)
-tablegen(LLVM SPIRVGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM SPIRVGenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM SPIRVGenRegisterBank.inc -gen-register-bank)
-tablegen(LLVM SPIRVGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM SPIRVGenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM SPIRVGenTables.inc -gen-searchable-tables)
-tablegen(LLVM SPIRVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(SPIRVGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(SPIRVGenGlobalISel.inc -gen-global-isel)
+llvm_tablegen(SPIRVGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(SPIRVGenMCCodeEmitter.inc -gen-emitter)
+llvm_tablegen(SPIRVGenRegisterBank.inc -gen-register-bank)
+llvm_tablegen(SPIRVGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(SPIRVGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(SPIRVGenTables.inc -gen-searchable-tables)
+llvm_tablegen(SPIRVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="SPIRVPreLegalizerCombiner")
 
 add_public_tablegen_target(SPIRVCommonTableGen)
@@ -20,6 +20,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
+  SPIRVCodeGenPassBuilder.cpp
   SPIRVInlineAsmLowering.cpp
   SPIRVCommandLine.cpp
   SPIRVCtorDtorLowering.cpp
@@ -27,7 +28,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
-  SPIRVLegalizeImplicitBinding.cpp
+  SPIRVLegalizeResourceBinding.cpp
   SPIRVLegalizeZeroSizeArrays.cpp
   SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
@@ -46,6 +47,8 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
+  SPIRVFinalizeShaderLinkage.cpp
+  SPIRVRemoveUnusedResources.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
@@ -67,6 +70,7 @@ add_llvm_target(SPIRVCodeGen
   FrontendHLSL
   IPO
   MC
+  Passes
   SPIRVAnalysis
   SPIRVDesc
   SPIRVInfo

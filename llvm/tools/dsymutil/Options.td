@@ -219,7 +219,7 @@ def include_swiftmodules_from_interface: Flag<["--", "-"], "include-swiftmodules
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'parallel'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
 

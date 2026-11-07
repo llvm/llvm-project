@@ -29,6 +29,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -348,12 +349,14 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   BasicBlock *EntryBlock = &F.front();
 
   DominatorTree DT(F);
+  CycleInfo CI;
+  CI.compute(F);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(F, LI);
+  BranchProbabilityInfo BPI(F, CI);
   std::unique_ptr<BlockFrequencyInfo> ScopedBFI;
   BlockFrequencyInfo *BFI;
   if (!GetBFI) {
-    ScopedBFI.reset(new BlockFrequencyInfo(F, BPI, LI));
+    ScopedBFI.reset(new BlockFrequencyInfo(F, BPI, CI));
     BFI = ScopedBFI.get();
   } else
     BFI = &(GetBFI(F));
@@ -720,13 +723,13 @@ bool PartialInlinerImpl::shouldPartialInline(
     return isInlineViable(*Callee).isSuccess();
 
   Function *Caller = CB.getCaller();
-  auto &CalleeTTI = GetTTI(*Callee);
+  auto &CallerTTI = GetTTI(*Caller);
   bool RemarksEnabled =
       Callee->getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
           DEBUG_TYPE);
-  InlineCost IC =
-      getInlineCost(CB, getInlineParams(), CalleeTTI, GetAssumptionCache,
-                    GetTLI, GetBFI, &PSI, RemarksEnabled ? &ORE : nullptr);
+  InlineCost IC = getInlineCost(CB, getInlineParams(CB.getContext()), CallerTTI,
+                                GetAssumptionCache, GetTLI, GetBFI, &PSI,
+                                RemarksEnabled ? &ORE : nullptr);
 
   if (IC.isAlways()) {
     ORE.emit([&]() {
@@ -760,7 +763,7 @@ bool PartialInlinerImpl::shouldPartialInline(
   const DataLayout &DL = Caller->getDataLayout();
 
   // The savings of eliminating the call:
-  int NonWeightedSavings = getCallsiteCost(CalleeTTI, CB, DL);
+  int NonWeightedSavings = getCallsiteCost(CallerTTI, CB, DL);
   BlockFrequency NormWeightedSavings(NonWeightedSavings);
 
   // Weighted saving is smaller than weighted cost, return false
@@ -798,7 +801,7 @@ PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
                                         TargetTransformInfo *TTI) {
   InstructionCost InlineCost = 0;
   const DataLayout &DL = BB->getDataLayout();
-  int InstrCost = InlineConstants::getInstrCost();
+  int InstrCost = InlineConstants::getInstrCost(BB->getContext());
   for (Instruction &I : *BB) {
     // Skip free instructions.
     switch (I.getOpcode()) {
@@ -877,7 +880,8 @@ PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) const {
   // additional unconditional branches. Those branches will be eliminated
   // later with bb layout. The cost should be adjusted accordingly:
   OutlinedFunctionCost -=
-      2 * InlineConstants::getInstrCost() * Cloner.OutlinedFunctions.size();
+      2 * InlineConstants::getInstrCost(Cloner.OrigFunc->getContext()) *
+      Cloner.OutlinedFunctions.size();
 
   InstructionCost OutliningRuntimeOverhead =
       OutliningFuncCallCost +
@@ -902,10 +906,10 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
   auto ComputeCurrBFI = [&,this](Function *Caller) {
       // For the old pass manager:
       if (!GetBFI) {
-        DominatorTree DT(*Caller);
-        LoopInfo LI(DT);
-        BranchProbabilityInfo BPI(*Caller, LI);
-        TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, LI));
+        CycleInfo CI;
+        CI.compute(*Caller);
+        BranchProbabilityInfo BPI(*Caller, CI);
+        TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, CI));
         CurrentCallerBFI = TempBFI.get();
       } else {
         // New pass manager:
@@ -1088,9 +1092,10 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
   DT.recalculate(*ClonedFunc);
 
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
-  LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*ClonedFunc, LI);
-  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
+  CycleInfo CI;
+  CI.compute(*ClonedFunc);
+  BranchProbabilityInfo BPI(*ClonedFunc, CI);
+  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, CI));
 
   // Cache and recycle the CodeExtractor analysis to avoid O(n^2) compile-time.
   CodeExtractorAnalysisCache CEAC(*ClonedFunc);
@@ -1163,9 +1168,10 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
   DT.recalculate(*ClonedFunc);
 
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
-  LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*ClonedFunc, LI);
-  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
+  CycleInfo CI;
+  CI.compute(*ClonedFunc);
+  BranchProbabilityInfo BPI(*ClonedFunc, CI);
+  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, CI));
 
   // Gather up the blocks that we're going to extract.
   std::vector<BasicBlock *> ToExtract;
@@ -1355,8 +1361,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   if (CalleeEntryCount)
     computeCallsiteToProfCountMap(Cloner.ClonedFunc, CallSiteToProfCountMap);
 
-  uint64_t CalleeEntryCountV =
-      (CalleeEntryCount ? CalleeEntryCount->getCount() : 0);
+  uint64_t CalleeEntryCountV = (CalleeEntryCount ? *CalleeEntryCount : 0);
 
   bool AnyInline = false;
   for (User *User : Users) {
@@ -1408,8 +1413,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   if (AnyInline) {
     Cloner.IsFunctionInlined = true;
     if (CalleeEntryCount)
-      Cloner.OrigFunc->setEntryCount(Function::ProfileCount(
-          CalleeEntryCountV, CalleeEntryCount->getType()));
+      Cloner.OrigFunc->setEntryCount(CalleeEntryCountV);
     OptimizationRemarkEmitter OrigFuncORE(Cloner.OrigFunc);
     OrigFuncORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "PartiallyInlined", Cloner.OrigFunc)

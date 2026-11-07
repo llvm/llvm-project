@@ -176,7 +176,9 @@ void CallGraph::eraseNode(CallGraphNode *node) {
 //===----------------------------------------------------------------------===//
 
 /// Dump the graph in a human readable format.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void CallGraph::dump() const { print(llvm::errs()); }
+#endif
 void CallGraph::print(raw_ostream &os) const {
   os << "// ---- CallGraph ----\n";
 
@@ -195,9 +197,18 @@ void CallGraph::print(raw_ostream &os) const {
     auto *parentOp = callableRegion->getParentOp();
     os << "'" << callableRegion->getParentOp()->getName() << "' - Region #"
        << callableRegion->getRegionNumber();
-    auto attrs = parentOp->getAttrDictionary();
-    if (!attrs.empty())
-      os << " : " << attrs;
+    NamedAttrList attrs(parentOp->getDiscardableAttrDictionary());
+    parentOp->getName().walkInherentAttrs(
+        parentOp,
+        [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+    if (!attrs.empty()) {
+      os << " : { ";
+      llvm::interleaveComma(attrs, os, [&](NamedAttribute attr) {
+        os << attr.getName().getValue() << " = ";
+        attr.getValue().print(os);
+      });
+      os << " }";
+    }
   };
 
   for (auto &nodeIt : nodes) {

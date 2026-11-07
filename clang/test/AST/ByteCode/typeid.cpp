@@ -22,6 +22,8 @@ class type_info : public __pointer_type_info {
 protected:
   typedef __type_info_implementations::__impl __impl;
   __impl::__type_name_t __type_name;
+public:
+  const char *name;
 };
 }; // namespace std
 
@@ -31,6 +33,9 @@ static_assert(&typeid(int) < &typeid(long)); // both-error {{not an integral con
                                              // both-note {{comparison between pointers to unrelated objects '&typeid(int)' and '&typeid(long)' has unspecified value}}
 static_assert(&typeid(int) > &typeid(long)); // both-error {{not an integral constant expression}} \
                                              // both-note {{comparison between pointers to unrelated objects '&typeid(int)' and '&typeid(long)' has unspecified value}}
+
+constexpr auto name = typeid(int).name; // both-error {{constant expression}} \
+                                        // both-note {{read of object 'typeid(int).name' whose value is not known}}
 
 struct Base {
  virtual void func() ;
@@ -92,4 +97,17 @@ namespace MissingInitalizer {
                                     // both-note {{declared here}}
   constexpr auto &x = items[0].ti; // both-error {{must be initialized by a constant expression}} \
                                    // both-note {{initializer of 'items' is unknown}}
+}
+
+namespace TypeIdInOtherStruct {
+  struct X {
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {};
+  struct Z {
+    mutable Y y;
+  };
+  constexpr Z z;
+  auto &zti = typeid(z.y);
+  static_assert(&zti == &typeid(Y));
 }

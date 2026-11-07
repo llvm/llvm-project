@@ -27,9 +27,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [iterator.cust.move]
 
@@ -62,7 +62,7 @@ struct __fn {
   // NOLINTBEGIN(libcpp-robust-against-adl) iter_move ADL calls should only be made through ranges::iter_move
   template <class _Ip>
     requires __unqualified_iter_move<_Ip>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Ip&& __i) const
+  [[nodiscard]] constexpr decltype(auto) operator()(_Ip&& __i) const
       noexcept(noexcept(iter_move(std::forward<_Ip>(__i)))) {
     return iter_move(std::forward<_Ip>(__i));
   }
@@ -70,15 +70,15 @@ struct __fn {
 
   template <class _Ip>
     requires __move_deref<_Ip>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Ip&& __i) const
-      noexcept(noexcept(std::move(*std::forward<_Ip>(__i)))) -> decltype(std::move(*std::forward<_Ip>(__i))) {
+  [[nodiscard]] constexpr auto operator()(_Ip&& __i) const noexcept(noexcept(std::move(*std::forward<_Ip>(__i))))
+      -> decltype(std::move(*std::forward<_Ip>(__i))) {
     return std::move(*std::forward<_Ip>(__i));
   }
 
   template <class _Ip>
     requires __just_deref<_Ip>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Ip&& __i) const
-      noexcept(noexcept(*std::forward<_Ip>(__i))) -> decltype(*std::forward<_Ip>(__i)) {
+  [[nodiscard]] constexpr auto operator()(_Ip&& __i) const noexcept(noexcept(*std::forward<_Ip>(__i)))
+      -> decltype(*std::forward<_Ip>(__i)) {
     return *std::forward<_Ip>(__i);
   }
 };
@@ -95,9 +95,9 @@ template <__dereferenceable _Tp>
   }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(std::declval<_Tp&>()));
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

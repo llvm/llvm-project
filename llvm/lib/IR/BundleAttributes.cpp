@@ -8,7 +8,6 @@
 
 #include "llvm/IR/BundleAttributes.h"
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 
 using namespace llvm;
@@ -39,10 +38,12 @@ BundleAttr llvm::getBundleAttrFromID(uint32_t ID) {
 AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
   assert(OBU.getTagID() == LLVMContext::OB_Align && OBU.Inputs.size() >= 2 &&
          OBU.Inputs.size() <= 3);
-  AssumeAlignInfo Ret{OBU.Inputs[0], OBU.Inputs[1], std::nullopt, std::nullopt};
+  AssumeAlignInfo Ret{OBU.Inputs[0], OBU.Inputs[1], nullptr, std::nullopt,
+                      std::nullopt};
   if (auto *Align = dyn_cast<ConstantInt>(OBU.Inputs[1]))
     Ret.AlignmentVal = Align->getZExtValue();
   if (OBU.Inputs.size() == 3) {
+    Ret.Offset = &OBU.Inputs[2];
     if (auto *Offset = dyn_cast<ConstantInt>(OBU.Inputs[2]))
       Ret.OffsetVal = Offset->getZExtValue();
   } else {
@@ -54,6 +55,13 @@ AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
 AssumeNoUndefInfo llvm::getAssumeNoUndefInfo(OperandBundleUse OBU) {
   assert(OBU.getTagID() == LLVMContext::OB_NoUndef && OBU.Inputs.size() == 1);
   return {OBU.Inputs[0]};
+}
+
+AssumeRangeInfo llvm::getAssumeRangeInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagID() == LLVMContext::OB_Range && OBU.Inputs.size() == 3);
+  return {OBU.Inputs[0],
+          ConstantRange(cast<ConstantInt>(OBU.Inputs[1])->getValue(),
+                        cast<ConstantInt>(OBU.Inputs[2])->getValue())};
 }
 
 AssumeSeparateStorageInfo
@@ -83,7 +91,7 @@ bool llvm::assumeBundleImpliesNonNull(const Value *Val, const Function *Context,
                                       OperandBundleUse OBU) {
   switch (getBundleAttrFromOBU(OBU)) {
   case BundleAttr::Align: {
-    auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+    auto [Ptr, _, _2, Alignment, Offset] = getAssumeAlignInfo(OBU);
     return Ptr == Val && Alignment && Offset && isPowerOf2_64(*Alignment) &&
            *Offset % *Alignment != 0;
   }
@@ -97,6 +105,11 @@ bool llvm::assumeBundleImpliesNonNull(const Value *Val, const Function *Context,
 
   case BundleAttr::NonNull:
     return getAssumeNonNullInfo(OBU).Ptr == Val;
+
+  case BundleAttr::Range: {
+    auto [V, Range] = getAssumeRangeInfo(OBU);
+    return V == Val && !Range.contains(APInt::getZero(Range.getBitWidth()));
+  }
 
   default:
     return false;

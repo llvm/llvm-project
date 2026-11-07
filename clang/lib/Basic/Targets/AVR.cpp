@@ -21,17 +21,16 @@ using namespace clang::targets;
 
 static constexpr int NumBuiltins = AVR::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsAVR.def"
-    ;
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsAVR.inc"
+#undef GET_BUILTIN_STR_TABLE
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#include "clang/Basic/BuiltinsAVR.def"
-});
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsAVR.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
 namespace clang {
 namespace targets {
@@ -501,7 +500,7 @@ void AVRTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
     Values.push_back(Info.Name);
 }
 
-bool AVRTargetInfo::setCPU(const std::string &Name) {
+bool AVRTargetInfo::setCPU(StringRef Name) {
   // Set the ABI field based on the device or family name.
   auto It = llvm::find_if(
       AVRMcus, [&](const MCUInfo &Info) { return Info.Name == Name; });

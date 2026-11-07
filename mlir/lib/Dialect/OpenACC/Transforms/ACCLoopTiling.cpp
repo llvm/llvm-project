@@ -12,28 +12,32 @@
 // Overview:
 // ---------
 // The tile clause specifies that the iterations of the associated loops should
-// be divided into tiles (rectangular blocks). This pass transforms a single
-// or nested acc.loop with tile clauses into a structure of "tile loops"
-// (iterating over tiles) containing "element loops" (iterating within tiles).
+// be divided into tiles (rectangular blocks). This pass transforms an acc.loop
+// with a tile clause into a "tile group" loop (iterating over tiles) containing
+// an "element group" loop (iterating within a tile). Each of them carries all
+// the induction variables of the original loop.
 //
-// For example, tiling a 2-level nested loop with tile(T1, T2) produces:
+// The tile clause lists its sizes innermost loop first, so the first size
+// applies to the last induction variable. For example, tiling a 2-level loop
+// nest with tile(T1, T2) produces:
 //
 //   // Before tiling:
-//   acc.loop tile(T1, T2) control(%i, %j) = (lb1, lb2) to (ub1, ub2) step (s1,
-//   s2)
+//   acc.loop tile(T1, T2) control(%i, %j) = (lb1, lb2) to (ub1, ub2)
+//       step (s1, s2)
 //
 //   // After tiling:
-//   acc.loop control(%i) = (lb1) to (ub1) step (s1*T1) {      // tile loop 1
-//     acc.loop control(%j) = (lb2) to (ub2) step (s2*T2) {    // tile loop 2
-//       acc.loop control(%ii) = (%i) to (min(ub1, %i+s1*T1)) step (s1) { //
-//       element 1
-//         acc.loop control(%jj) = (%j) to (min(ub2, %j+s2*T2)) step (s2) { //
-//         element 2
-//           // loop body using %ii, %jj
-//         }
-//       }
+//   acc.loop control(%i, %j) = (lb1, lb2) to (ub1, ub2)
+//       step (s1*T2, s2*T1) {                               // tile group
+//     acc.loop control(%ii, %jj) = (%i, %j)
+//         to (min(ub1, %i+s1*T2), min(ub2, %j+s2*T1))
+//         step (s1, s2) {                                   // element group
+//       // loop body using %ii, %jj
 //     }
 //   }
+//
+// The example element loop bounds above assume ascending steps. For an
+// acc.loop with negative steps, a descending dimension would use
+// max(ub, %i+s*T) instead.
 //
 // Gang/worker/vector attributes are distributed as follows:
 // - gang: applied to tile loops
@@ -56,6 +60,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsTiling.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
@@ -87,15 +92,17 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
   // Check that tile size types are not narrower than IV types.
   // We only check when both types are IntegerType. For IndexType, the width
   // is target-dependent and the casting utility will handle it correctly.
+  // The tile sizes are in clause order, so the last one belongs to the
+  // outermost IV.
   LogicalResult checkTileSizeTypes(acc::LoopOp loop,
                                    ArrayRef<Value> tileSizes) const {
     auto ivTypes = loop.getBody().getArgumentTypes();
-    for (size_t i = 0; i < tileSizes.size() && i < ivTypes.size(); ++i) {
-      Type tileType = tileSizes[i].getType();
-      Type ivType = ivTypes[i];
+    for (auto [tileSize, ivType] :
+         llvm::zip(llvm::reverse(tileSizes), ivTypes)) {
+      Type tileType = tileSize.getType();
 
       // Skip unknown tile sizes (will be created with correct type)
-      auto constVal = getConstantIntValue(tileSizes[i]);
+      auto constVal = getConstantIntValue(tileSize);
       if (constVal && *constVal < 0)
         continue;
 
@@ -154,16 +161,40 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
     }
   }
 
+  static void clearTileOperands(acc::LoopOp loop, PatternRewriter &rewriter) {
+    rewriter.modifyOpInPlace(loop, [&]() {
+      loop.getTileOperandsMutable().clear();
+      loop.removeTileOperandsSegmentsAttr();
+      loop.removeTileOperandsDeviceTypeAttr();
+    });
+  }
+
   LogicalResult matchAndRewrite(acc::LoopOp origLoop,
                                 PatternRewriter &rewriter) const override {
 
     if (origLoop.getTileValues().empty())
       return failure();
 
+    // The iterations of an unstructured loop are implemented by the control
+    // flow in its body, and it has no induction variables to tile. The tile
+    // clause does not require tiling, so drop it and keep the loop as is.
+    if (origLoop.getUnstructured()) {
+      clearTileOperands(origLoop, rewriter);
+      return success();
+    }
+
     SmallVector<Value> tileSizes(origLoop.getTileValues().begin(),
                                  origLoop.getTileValues().end());
-    unsigned tileCount = tileSizes.size();
-    unsigned collapseCount = origLoop.getCollapseValue().value_or(1);
+
+    // A tile clause and a collapse clause on the same loop are not supported:
+    // they give conflicting descriptions of how many loops the construct
+    // associates.
+    if (origLoop.getCollapseAttr()) {
+      accSupport.emitNYI(origLoop.getLoc(),
+                         "a tile clause combined with a collapse clause on the "
+                         "same loop");
+      return failure();
+    }
 
     // Sanity check tile size types
     if (failed(checkTileSizeTypes(origLoop, tileSizes)))
@@ -175,31 +206,14 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
 
     LLVM_DEBUG(llvm::dbgs() << "\nBefore tiling:\n" << *origLoop << "\n");
 
-    // Clear tile operands from origLoop
-    rewriter.startOpModification(origLoop);
-    origLoop.getTileOperandsMutable().clear();
-    origLoop.removeTileOperandsSegmentsAttr();
-    origLoop.removeTileOperandsDeviceTypeAttr();
-    rewriter.finalizeOpModification(origLoop);
+    clearTileOperands(origLoop, rewriter);
 
-    SmallVector<acc::LoopOp> loopsToTile;
-    if (collapseCount < tileCount) {
-      // Uncollapse tile loops before tiling if necessary
-      loopsToTile =
-          acc::uncollapseLoops(origLoop, tileCount, collapseCount, rewriter);
-      rewriter.replaceOp(origLoop, loopsToTile[0]);
-      LLVM_DEBUG(llvm::dbgs() << "\nAfter uncollapsing:\n"
-                              << *loopsToTile[0] << "\n");
-    } else {
-      loopsToTile.push_back(origLoop);
-    }
-
-    // loopsToTile is a vector of perfectly nested loops. The outermost loop
-    // may have multiple IVs but inner loops can only have one IV.
+    // Tile the single fused loop in place: the tile iterations become one
+    // multi-IV "tile group" loop wrapping one multi-IV "element group" loop.
     // The utility handles unknown tile sizes (*) by using `defaultTileSize`.
-    acc::tileACCLoops(loopsToTile, tileSizes, defaultTileSize, rewriter);
+    acc::tileACCLoops(origLoop, tileSizes, defaultTileSize, rewriter);
 
-    LLVM_DEBUG(llvm::dbgs() << "\nAfter tiling:\n " << *loopsToTile[0] << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "\nAfter tiling:\n " << *origLoop << "\n");
     return success();
   }
 
@@ -211,6 +225,11 @@ private:
 class ACCLoopTiling : public acc::impl::ACCLoopTilingBase<ACCLoopTiling> {
 public:
   using ACCLoopTilingBase<ACCLoopTiling>::ACCLoopTilingBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCLoopTilingBase<ACCLoopTiling>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
@@ -225,5 +244,4 @@ public:
     (void)applyPatternsGreedily(funcOp, std::move(patterns), grc);
   }
 };
-
 } // namespace

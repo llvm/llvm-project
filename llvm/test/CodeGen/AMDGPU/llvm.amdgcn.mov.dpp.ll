@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG,PREGFX10,PREGFX10-OPT %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-NOOPT,PREGFX10,PREGFX10-NOOPT %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-GISEL %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG,PREGFX10,PREGFX10-OPT %s
+; RUN: llc -O0 -mtriple=amdgpu8.02 -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-NOOPT,PREGFX10,PREGFX10-NOOPT %s
+; RUN: llc -mtriple=amdgpu10.10 -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00 -mattr=-flat-for-global -amdgpu-enable-vopd=0 -show-mc-encoding < %s | FileCheck -check-prefixes=VI,VI-OPT,VI-OPT-GISEL %s
 
 ; FIXME: The register allocator / scheduler should be able to avoid these hazards.
 

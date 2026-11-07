@@ -137,8 +137,8 @@ std::string TypeFormatImpl_Format::GetDescription() {
 }
 
 TypeFormatImpl_EnumType::TypeFormatImpl_EnumType(
-    ConstString type_name, const TypeFormatImpl::Flags &flags)
-    : TypeFormatImpl(flags), m_enum_type(type_name), m_types() {}
+    std::string type_name, const TypeFormatImpl::Flags &flags)
+    : TypeFormatImpl(flags), m_enum_type(std::move(type_name)), m_types() {}
 
 TypeFormatImpl_EnumType::~TypeFormatImpl_EnumType() = default;
 
@@ -165,7 +165,7 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     if (!target_sp)
       return false;
     const ModuleList &images(target_sp->GetImages());
-    TypeQuery query(m_enum_type.GetStringRef());
+    TypeQuery query(m_enum_type);
     TypeResults results;
     images.FindTypes(nullptr, query, results);
     if (results.GetTypeMap().Empty())
@@ -201,7 +201,8 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
 
 std::string TypeFormatImpl_EnumType::GetDescription() {
   StreamString sstr;
-  sstr.Printf("as type %s%s%s%s", m_enum_type.AsCString("<invalid type>"),
+  sstr.Format("as type {0}{1}{2}{3}",
+              llvm::StringRef(m_enum_type).nonEmptyOr("<invalid type>"),
               Cascades() ? "" : " (not cascading)",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "");

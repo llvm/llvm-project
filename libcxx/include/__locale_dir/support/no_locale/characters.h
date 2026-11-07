@@ -10,19 +10,21 @@
 #define _LIBCPP___LOCALE_DIR_SUPPORT_NO_LOCALE_CHARACTERS_H
 
 #include <__config>
-#include <__cstddef/size_t.h>
-#include <cctype>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <cwchar>
-#  include <cwctype>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+
+#  include <__cstddef/size_t.h>
+#  include <cctype>
+#  include <cstdlib>
+#  include <cstring>
+#  include <ctime>
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    include <cwchar>
+#    include <cwctype>
+#  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
@@ -30,7 +32,6 @@ namespace __locale {
 //
 // Character manipulation functions
 //
-#if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t) { return std::toupper(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __tolower(int __c, __locale_t) { return std::tolower(__c); }
@@ -85,9 +86,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
     __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t) {
   return std::strftime(__s, __max, __format, __tm);
 }
-#endif // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#endif // _LIBCPP_BUILDING_LIBRARY
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_NO_LOCALE_CHARACTERS_H

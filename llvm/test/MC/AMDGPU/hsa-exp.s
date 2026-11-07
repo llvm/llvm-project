@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=kaveri -show-encoding %s | FileCheck %s --check-prefix=ASM
-// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri -show-encoding %s | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
+// RUN: llvm-mc -triple=amdgpu7.00--amdhsa -show-encoding %s | FileCheck %s --check-prefix=ASM
+// RUN: llvm-mc -filetype=obj -triple=amdgpu7.00--amdhsa -show-encoding %s | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
 
 // ELF: Section {
 // ELF: Name: .text
@@ -13,11 +13,11 @@
 // ELF: Section: .text
 // ELF: }
 
-.amdgcn_target "amdgcn-unknown-amdhsa--gfx700"
-// ASM: .amdgcn_target "amdgcn-unknown-amdhsa--gfx700"
+.amdgcn_target "amdgpu7.00-unknown-amdhsa--gfx700"
 
 .amdhsa_code_object_version 4
 // ASM: .amdhsa_code_object_version 4
+// ASM: .amdgcn_target "amdgpu7.00-unknown-amdhsa-unknown-gfx700"
 
 .set my_is_ptr64, 1
 

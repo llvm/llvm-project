@@ -2,19 +2,23 @@ add_llvm_component_group(XCore)
 
 set(LLVM_TARGET_DEFINITIONS XCore.td)
 
-tablegen(LLVM XCoreGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM XCoreGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM XCoreGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM XCoreGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM XCoreGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM XCoreGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM XCoreGenSDNodeInfo.inc -gen-sd-node-info)
-tablegen(LLVM XCoreGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(XCoreGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(XCoreGenCallingConv.inc -gen-callingconv)
+llvm_tablegen(XCoreGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(XCoreGenDisassemblerTables.inc -gen-disassembler)
+llvm_tablegen(XCoreGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(XCoreGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(XCoreGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(XCoreGenSubtargetInfo.inc -gen-subtarget)
+
+set(LLVM_TARGET_DEFINITIONS XCoreOptions.td)
+llvm_tablegen(XCoreOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(XCoreCommonTableGen)
 
 add_llvm_target(XCoreCodeGen
   XCoreAsmPrinter.cpp
+  XCoreCodeGenPassBuilder.cpp
   XCoreFrameLowering.cpp
   XCoreInstrInfo.cpp
   XCoreISelDAGToDAG.cpp
@@ -36,6 +40,8 @@ add_llvm_target(XCoreCodeGen
   CodeGenTypes
   Core
   MC
+  Option
+  Passes
   SelectionDAG
   Support
   Target

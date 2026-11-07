@@ -77,7 +77,7 @@ public:
 
   DeclVendor *GetDeclVendor() override;
 
-  lldb::addr_t LookupRuntimeSymbol(ConstString name) override;
+  lldb::addr_t LookupRuntimeSymbol(llvm::StringRef name) override;
 
   EncodingToTypeSP GetEncodingToType() override;
 
@@ -418,7 +418,7 @@ private:
 
   AppleObjCRuntimeV2(Process *process, const lldb::ModuleSP &objc_module_sp);
 
-  ObjCISA GetPointerISA(ObjCISA isa);
+  ObjCISA GetPointerISA(ObjCISA isa) override;
 
   lldb::addr_t GetISAHashTablePointer();
 

@@ -92,8 +92,26 @@ INTERCEPTOR(void*, vec_malloc, uptr size) {
   return asan_vec_malloc(size, &stack);
 }
 
+// __linux_vec_malloc is the XL compiler internal symbol emitted instead of
+// vec_malloc.
+INTERCEPTOR(void*, __linux_vec_malloc, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size, 16);
+  GET_STACK_TRACE_MALLOC;
+  return asan_vec_malloc(size, &stack);
+}
+
 // Unlike calloc, vec_calloc must return memory aligned to 16 bytes.
 INTERCEPTOR(void*, vec_calloc, uptr nmemb, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size, 16);
+  GET_STACK_TRACE_MALLOC;
+  return asan_vec_calloc(nmemb, size, &stack);
+}
+
+// __linux_vec_calloc is the XL compiler internal symbol emitted instead of
+// vec_calloc.
+INTERCEPTOR(void*, __linux_vec_calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(nmemb, size, 16);
   GET_STACK_TRACE_MALLOC;
@@ -126,6 +144,17 @@ INTERCEPTOR(void*, realloc, void* ptr, uptr size) {
   GET_STACK_TRACE_MALLOC;
   return asan_realloc(ptr, size, &stack);
 }
+
+#  if SANITIZER_AIX
+// __linux_realloc is the XL compiler internal symbol emitted instead of
+// realloc.
+INTERCEPTOR(void*, __linux_realloc, void* ptr, uptr size) {
+  if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Realloc(ptr, size, kWordSize);
+  GET_STACK_TRACE_MALLOC;
+  return asan_realloc(ptr, size, &stack);
+}
+#  endif
 
 #  if SANITIZER_INTERCEPT_REALLOCARRAY
 INTERCEPTOR(void*, reallocarray, void* ptr, uptr nmemb, uptr size) {

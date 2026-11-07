@@ -11,11 +11,12 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class TestTwoHitsOneActual(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
+    # Flakey on Windows and Linux: https://github.com/llvm/llvm-project/issues/220945
+    @skipIf(oslist=["linux", "windows"], archs=["arm$", "aarch64"])
     def test_two_hits_one_actual(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()

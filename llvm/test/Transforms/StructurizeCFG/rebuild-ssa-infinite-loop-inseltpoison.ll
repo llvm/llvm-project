@@ -1,10 +1,10 @@
-; RUN: opt -o /dev/null -structurizecfg %s
+; RUN: opt -disable-output -structurizecfg %s
 
 ; The following function caused an infinite loop inside the structurizer's
 ; rebuildSSA routine, where we were iterating over an instruction's uses while
 ; modifying the use list, without taking care to do this safely.
 
-target triple = "amdgcn--"
+target triple = "amdgpu6.00--"
 
 define amdgpu_vs void @wrapper(i32 inreg %arg, i32 %arg1) {
 main_body:

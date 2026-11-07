@@ -12,8 +12,8 @@
 
 #include <level_zero/zes_api.h>
 
+#include "L0Context.h"
 #include "L0Device.h"
-#include "L0Interop.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
 #include "L0Trace.h"
@@ -26,9 +26,21 @@ using namespace llvm::omp::target;
 using namespace error;
 
 Expected<int32_t> LevelZeroPluginTy::findDevices() {
-  CALL_ZE_RET_ERROR(zeInit, ZE_INIT_FLAG_GPU_ONLY);
+  ze_result_t RC;
+  CALL_ZE(RC, zeInit, ZE_INIT_FLAG_GPU_ONLY);
+  if (RC != ZE_RESULT_SUCCESS) {
+    ODBG(OLDT_Init) << "Cannot initialize Level Zero library. Error: "
+                    << getZeErrorName(RC);
+    return 0;
+  }
+
   uint32_t NumDrivers = 0;
-  CALL_ZE_RET_ERROR(zeDriverGet, &NumDrivers, nullptr);
+  CALL_ZE(RC, zeDriverGet, &NumDrivers, nullptr);
+  if (RC != ZE_RESULT_SUCCESS) {
+    ODBG(OLDT_Init) << "Error getting number of drivers. Error: "
+                    << getZeErrorName(RC);
+    return 0;
+  }
   if (NumDrivers == 0) {
     ODBG(OLDT_Init) << "Cannot find any drivers.";
     return 0;
@@ -42,7 +54,7 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
   struct RootInfoTy {
     uint32_t OrderId;
     ze_device_handle_t ZeDevice;
-    L0ContextTy *Driver;
+    L0DriverTy *Driver;
     bool IsDiscrete;
   };
   llvm::SmallVector<RootInfoTy> RootDevices;
@@ -58,12 +70,13 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
                       << ".";
       continue;
     }
+
     // We have a driver that supports at least one device.
-    ContextList.emplace_back(*this, Driver, DriverId);
-    auto &DrvInfo = ContextList.back();
+    DriverList.emplace_back(*this, Driver, DriverId);
+    auto &DrvInfo = DriverList.back();
     if (auto Err = DrvInfo.init()) {
-      // Remove the partially initialized context from the list
-      ContextList.pop_back();
+      // Remove the partially initialized driver from the list
+      DriverList.pop_back();
       return std::move(Err);
     }
     llvm::SmallVector<ze_device_handle_t> FoundDevices(DeviceCount);
@@ -121,12 +134,10 @@ Expected<int32_t> LevelZeroPluginTy::initImpl() {
 
 Error LevelZeroPluginTy::deinitImpl() {
   ODBG(OLDT_Deinit) << "Deinit Level0 plugin!";
-  if (auto Err = ContextTLSTable.deinit())
-    return Err;
-  for (auto &Context : ContextList)
-    if (auto Err = Context.deinit())
+  for (auto &Driver : DriverList)
+    if (auto Err = Driver.deinit())
       return Err;
-  ContextList.clear();
+  DriverList.clear();
   ODBG(OLDT_Deinit) << "Level0 plugin deinitialized successfully";
   return Plugin::success();
 }
@@ -139,14 +150,14 @@ GenericDeviceTy *LevelZeroPluginTy::createDevice(GenericPluginTy &Plugin,
   auto SubId = DeviceInfo.Id.SubId;
   auto CCSId = DeviceInfo.Id.CCSId;
   auto zeDevice = DeviceInfo.Id.zeId;
-  auto *zeDriver = DeviceInfo.Driver;
+  auto *Driver = DeviceInfo.Driver;
 
   std::string IdStr = std::to_string(RootId) +
                       (SubId < 0 ? "" : "." + std::to_string(SubId)) +
                       (CCSId < 0 ? "" : "." + std::to_string(CCSId));
 
   return new L0DeviceTy(static_cast<LevelZeroPluginTy &>(Plugin), DeviceId,
-                        NumDevices, zeDevice, *zeDriver, std::move(IdStr),
+                        NumDevices, zeDevice, *Driver, std::move(IdStr),
                         CCSId < 0 ? 0 : CCSId /* ComputeIndex */);
 }
 
@@ -154,17 +165,6 @@ GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {
   return new L0GlobalHandlerTy();
 }
 
-Error LevelZeroPluginTy::flushQueueImpl(omp_interop_val_t *Interop) {
-  return Plugin::success();
-}
-
-Expected<bool> LevelZeroPluginTy::isELFCompatible(uint32_t DeviceId,
-                                                  StringRef Image) const {
-  uint64_t MajorVer, MinorVer;
-  return isValidOneOmpImage(Image, MajorVer, MinorVer);
-}
-
-// We only need to check for formats other than ELF here.
 Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
   switch (identify_magic(Image)) {
   case file_magic::spirv_object:
@@ -189,7 +189,8 @@ Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
       return false;
 
     if (ImageKind != llvm::object::IMG_SPIRV &&
-        ImageKind != llvm::object::IMG_Object)
+        ImageKind != llvm::object::IMG_Object &&
+        ImageKind != llvm::object::IMG_PISA)
       return false;
 
     return true;
@@ -200,46 +201,52 @@ Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
   }
 }
 
-Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
-  if (!Interop) {
+Expected<std::unique_ptr<PluginContextTy>>
+LevelZeroPluginTy::createPluginContext(
+    llvm::ArrayRef<GenericDeviceTy *> Devices) {
+  if (Devices.empty())
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "Invalid/inconsistent OpenMP interop " DPxMOD "\n",
-                         DPxPTR(Interop));
+                         "createPluginContext called with no devices");
+
+  // All devices must share the same L0 driver, since a ze_context is scoped to
+  // a single driver.
+  auto &First = static_cast<L0DeviceTy &>(*Devices[0]);
+  L0DriverTy &Driver = First.getL0Driver();
+  ze_driver_handle_t ZeDriver = Driver.getZeDriver();
+  for (auto *D : Devices.drop_front()) {
+    auto &L0D = static_cast<L0DeviceTy &>(*D);
+    if (&L0D.getL0Driver() != &Driver)
+      return Plugin::error(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in an L0 context must share the same driver");
   }
-  if (!Interop->async_info || !Interop->async_info->Queue)
-    return Plugin::success();
 
-  const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-
-  ODBG(OLDT_Sync) << "LevelZeroPluginTy::sync_barrier: Synchronizing "
-                  << Interop << " with ImmCmdList barrier";
-  auto ImmCmdList = L0->ImmCmdList;
-
-  CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, ImmCmdList, L0DefaultTimeout);
-
-  return Plugin::success();
-}
-
-Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
-  if (!Interop) {
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "Invalid/inconsistent OpenMP interop " DPxMOD "\n",
-                         DPxPTR(Interop));
+  // When the user requests every device on the driver, share the driver's
+  // default ze_context so we interop cleanly with other L0 clients on the
+  // same driver. Partial device sets get their own fresh context.
+  size_t DriverDeviceCount = 0;
+  for (int32_t I = 0, N = getNumDevices(); I != N; ++I) {
+    auto &L0D = static_cast<const L0DeviceTy &>(getDevice(I));
+    if (&L0D.getL0Driver() == &Driver)
+      ++DriverDeviceCount;
   }
-  if (!Interop->async_info || !Interop->async_info->Queue)
-    return Plugin::success();
+  const bool IsFullDriver = (Devices.size() == DriverDeviceCount);
 
-  const auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
-  if (Interop->attrs.inorder)
-    return Plugin::success();
+  ze_context_handle_t ZeContext = nullptr;
+  bool OwnsZeContext = false;
+  if (IsFullDriver && Driver.DriverGetDefaultContext.available())
+    ZeContext = Driver.DriverGetDefaultContext(ZeDriver);
+  if (!ZeContext) {
+    ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+    CALL_ZE_RET_ERROR(zeContextCreate, ZeDriver, &Desc, &ZeContext);
+    OwnsZeContext = true;
+  }
 
-  ODBG(OLDT_Sync) << "LevelZeroPluginTy::async_barrier: Appending ImmCmdList "
-                  << "barrier to " << Interop;
-  auto ImmCmdList = L0->ImmCmdList;
-  CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, ImmCmdList, nullptr, 0,
-                    nullptr);
-
-  return Plugin::success();
+  auto Ctx = std::make_unique<LevelZeroPluginContextTy>(
+      *this, Devices, ZeDriver, ZeContext, OwnsZeContext);
+  if (auto Err = Ctx->initAllocators())
+    return std::move(Err);
+  return Ctx;
 }
 
 } // namespace llvm::omp::target::plugin

@@ -15,8 +15,9 @@
 #include "associative_container_benchmarks.h"
 #include "../../GenerateInput.h"
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
-static void BM_map_find_string_literal(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_map_find_string_literal(benchmark::State& state) {
   std::map<std::string, int> map;
   map.emplace("Something very very long to show a long string situation", 1);
   map.emplace("Something Else", 2);
@@ -27,14 +28,14 @@ static void BM_map_find_string_literal(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_map_find_string_literal);
+BENCHMARK(BM_map_find_string_literal)->Name("std::map<std::string, int>::find(const char*)");
 
 template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
   using ValueType = typename std::map<K, V>::value_type;
   using KeyType   = typename std::map<K, V>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
-  static KeyType key_from_value(ValueType const& value) { return value.first; }
+  static ValueType make_value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
+  static KeyType const& key_from_value(ValueType const& value) { return value.first; }
 
   using InsertionResult = std::pair<typename std::map<K, V>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }

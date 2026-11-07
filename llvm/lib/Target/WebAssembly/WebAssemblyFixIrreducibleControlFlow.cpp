@@ -57,8 +57,12 @@
 #include "WebAssemblySubtarget.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include <limits>
 using namespace llvm;
@@ -243,105 +247,18 @@ void ReachabilityGraph::calculate() {
 #endif
 }
 
-class WebAssemblyFixIrreducibleControlFlow final : public MachineFunctionPass {
+class WebAssemblyFixIrreducibleControlFlowLegacy final
+    : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Fix Irreducible Control Flow";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  bool processRegion(MachineBasicBlock *Entry, BlockSet &Blocks,
-                     MachineFunction &MF);
-
-  void makeSingleEntryLoop(const BlockSet &Entries, BlockSet &Blocks,
-                           MachineFunction &MF, const ReachabilityGraph &Graph);
-
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyFixIrreducibleControlFlow() : MachineFunctionPass(ID) {}
+  WebAssemblyFixIrreducibleControlFlowLegacy() : MachineFunctionPass(ID) {}
 };
-
-bool WebAssemblyFixIrreducibleControlFlow::processRegion(
-    MachineBasicBlock *Entry, BlockSet &Blocks, MachineFunction &MF) {
-  bool Changed = false;
-  // Remove irreducibility before processing child loops, which may take
-  // multiple iterations.
-  while (true) {
-    ReachabilityGraph Graph(Entry, Blocks);
-
-    bool FoundIrreducibility = false;
-
-    for (auto *LoopEntry : getSortedEntries(Graph.getLoopEntries())) {
-      // Find mutual entries - all entries which can reach this one, and
-      // are reached by it (that always includes LoopEntry itself). All mutual
-      // entries must be in the same SCC, so if we have more than one, then we
-      // have irreducible control flow.
-      //
-      // (Note that we need to sort the entries here, as otherwise the order can
-      // matter: being mutual is a symmetric relationship, and each set of
-      // mutuals will be handled properly no matter which we see first. However,
-      // there can be multiple disjoint sets of mutuals, and which we process
-      // first changes the output.)
-      //
-      // Note that irreducibility may involve inner loops, e.g. imagine A
-      // starts one loop, and it has B inside it which starts an inner loop.
-      // If we add a branch from all the way on the outside to B, then in a
-      // sense B is no longer an "inner" loop, semantically speaking. We will
-      // fix that irreducibility by adding a block that dispatches to either
-      // either A or B, so B will no longer be an inner loop in our output.
-      // (A fancier approach might try to keep it as such.)
-      //
-      // Note that we still need to recurse into inner loops later, to handle
-      // the case where the irreducibility is entirely nested - we would not
-      // be able to identify that at this point, since the enclosing loop is
-      // a group of blocks all of whom can reach each other. (We'll see the
-      // irreducibility after removing branches to the top of that enclosing
-      // loop.)
-      auto &MutualLoopEntries =
-          Graph.getLoopEntriesForSCC(Graph.getSCCId(LoopEntry));
-
-      if (MutualLoopEntries.size() > 1) {
-        makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
-        FoundIrreducibility = true;
-        Changed = true;
-        break;
-      }
-    }
-
-    // Only go on to actually process the inner loops when we are done
-    // removing irreducible control flow and changing the graph. Modifying
-    // the graph as we go is possible, and that might let us avoid looking at
-    // the already-fixed loops again if we are careful, but all that is
-    // complex and bug-prone. Since irreducible loops are rare, just starting
-    // another iteration is best.
-    if (FoundIrreducibility) {
-      continue;
-    }
-
-    for (auto *LoopEntry : Graph.getLoopEntries()) {
-      BlockSet InnerBlocks;
-
-      auto EntrySCCId = Graph.getSCCId(LoopEntry);
-      for (auto *Block : Blocks) {
-        if (EntrySCCId == Graph.getSCCId(Block)) {
-          InnerBlocks.insert(Block);
-        }
-      }
-
-      // Each of these calls to processRegion may change the graph, but are
-      // guaranteed not to interfere with each other. The only changes we make
-      // to the graph are to add blocks on the way to a loop entry. As the
-      // loops are disjoint, that means we may only alter branches that exit
-      // another loop, which are ignored when recursing into that other loop
-      // anyhow.
-      if (processRegion(LoopEntry, InnerBlocks, MF)) {
-        Changed = true;
-      }
-    }
-
-    return Changed;
-  }
-}
 
 // Given a set of entries to a single loop, create a single entry for that
 // loop by creating a dispatch block for them, routing control flow using
@@ -349,9 +266,8 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
 // that we properly track all the blocks in the region. But this does not update
 // ReachabilityGraph; this will be updated in the caller of this function as
 // needed.
-void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
-    const BlockSet &Entries, BlockSet &Blocks, MachineFunction &MF,
-    const ReachabilityGraph &Graph) {
+void makeSingleEntryLoop(const BlockSet &Entries, BlockSet &Blocks,
+                         MachineFunction &MF, const ReachabilityGraph &Graph) {
   assert(Entries.size() >= 2);
 
   // Sort the entries to ensure a deterministic build.
@@ -497,14 +413,96 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
                  .getMBB());
 }
 
+bool processRegion(MachineBasicBlock *Entry, BlockSet &Blocks,
+                   MachineFunction &MF) {
+  bool Changed = false;
+  // Remove irreducibility before processing child loops, which may take
+  // multiple iterations.
+  while (true) {
+    ReachabilityGraph Graph(Entry, Blocks);
+
+    bool FoundIrreducibility = false;
+
+    for (auto *LoopEntry : getSortedEntries(Graph.getLoopEntries())) {
+      // Find mutual entries - all entries which can reach this one, and
+      // are reached by it (that always includes LoopEntry itself). All mutual
+      // entries must be in the same SCC, so if we have more than one, then we
+      // have irreducible control flow.
+      //
+      // (Note that we need to sort the entries here, as otherwise the order can
+      // matter: being mutual is a symmetric relationship, and each set of
+      // mutuals will be handled properly no matter which we see first. However,
+      // there can be multiple disjoint sets of mutuals, and which we process
+      // first changes the output.)
+      //
+      // Note that irreducibility may involve inner loops, e.g. imagine A
+      // starts one loop, and it has B inside it which starts an inner loop.
+      // If we add a branch from all the way on the outside to B, then in a
+      // sense B is no longer an "inner" loop, semantically speaking. We will
+      // fix that irreducibility by adding a block that dispatches to either
+      // either A or B, so B will no longer be an inner loop in our output.
+      // (A fancier approach might try to keep it as such.)
+      //
+      // Note that we still need to recurse into inner loops later, to handle
+      // the case where the irreducibility is entirely nested - we would not
+      // be able to identify that at this point, since the enclosing loop is
+      // a group of blocks all of whom can reach each other. (We'll see the
+      // irreducibility after removing branches to the top of that enclosing
+      // loop.)
+      auto &MutualLoopEntries =
+          Graph.getLoopEntriesForSCC(Graph.getSCCId(LoopEntry));
+
+      if (MutualLoopEntries.size() > 1) {
+        makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
+        FoundIrreducibility = true;
+        Changed = true;
+        break;
+      }
+    }
+
+    // Only go on to actually process the inner loops when we are done
+    // removing irreducible control flow and changing the graph. Modifying
+    // the graph as we go is possible, and that might let us avoid looking at
+    // the already-fixed loops again if we are careful, but all that is
+    // complex and bug-prone. Since irreducible loops are rare, just starting
+    // another iteration is best.
+    if (FoundIrreducibility) {
+      continue;
+    }
+
+    for (auto *LoopEntry : Graph.getLoopEntries()) {
+      BlockSet InnerBlocks;
+
+      auto EntrySCCId = Graph.getSCCId(LoopEntry);
+      for (auto *Block : Blocks) {
+        if (EntrySCCId == Graph.getSCCId(Block)) {
+          InnerBlocks.insert(Block);
+        }
+      }
+
+      // Each of these calls to processRegion may change the graph, but are
+      // guaranteed not to interfere with each other. The only changes we make
+      // to the graph are to add blocks on the way to a loop entry. As the
+      // loops are disjoint, that means we may only alter branches that exit
+      // another loop, which are ignored when recursing into that other loop
+      // anyhow.
+      if (processRegion(LoopEntry, InnerBlocks, MF)) {
+        Changed = true;
+      }
+    }
+
+    return Changed;
+  }
+}
+
 } // end anonymous namespace
 
-char WebAssemblyFixIrreducibleControlFlow::ID = 0;
-INITIALIZE_PASS(WebAssemblyFixIrreducibleControlFlow, DEBUG_TYPE,
+char WebAssemblyFixIrreducibleControlFlowLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyFixIrreducibleControlFlowLegacy, DEBUG_TYPE,
                 "Removes irreducible control flow", false, false)
 
-FunctionPass *llvm::createWebAssemblyFixIrreducibleControlFlow() {
-  return new WebAssemblyFixIrreducibleControlFlow();
+FunctionPass *llvm::createWebAssemblyFixIrreducibleControlFlowLegacyPass() {
+  return new WebAssemblyFixIrreducibleControlFlowLegacy();
 }
 
 // Test whether the given register has an ARGUMENT def.
@@ -547,8 +545,7 @@ static void addImplicitDefs(MachineFunction &MF) {
   }
 }
 
-bool WebAssemblyFixIrreducibleControlFlow::runOnMachineFunction(
-    MachineFunction &MF) {
+static bool fixIrreducibleControlFlow(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Fixing Irreducible Control Flow **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -574,4 +571,16 @@ bool WebAssemblyFixIrreducibleControlFlow::runOnMachineFunction(
   }
 
   return false;
+}
+
+bool WebAssemblyFixIrreducibleControlFlowLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return fixIrreducibleControlFlow(MF);
+}
+
+PreservedAnalyses WebAssemblyFixIrreducibleControlFlowPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  return fixIrreducibleControlFlow(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+             : PreservedAnalyses::all();
 }
