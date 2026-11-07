@@ -299,7 +299,8 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     DeclareOpInterfaceMethods<PromotableOpInterface>,
     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
     DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
-    DeclareOpInterfaceMethods<ViewLikeOpInterface>
+    DeclareOpInterfaceMethods<ViewLikeOpInterface,
+        ["mayHaveNonZeroOffset"]>
     ]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
@@ -671,7 +672,8 @@ def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
     LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
     LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
     [DeclareOpInterfaceMethods<PromotableOpInterface>,
-     DeclareOpInterfaceMethods<ViewLikeOpInterface>]> {
+     DeclareOpInterfaceMethods<ViewLikeOpInterface,
+        ["mayHaveNonZeroOffset"]>]> {
   let hasFolder = 1;
 }
 def LLVM_IntToPtrOp : LLVM_DereferenceableCastOp<"inttoptr", "IntToPtr",
