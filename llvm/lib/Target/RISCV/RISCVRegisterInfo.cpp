@@ -66,6 +66,11 @@ RISCVRegisterInfo::getIPRACSRegs(const MachineFunction *MF) const {
   return CSR_IPRA_SaveList;
 }
 
+bool RISCVRegisterInfo::enableCSRFirstTimeMinCost(
+    const MachineFunction &MF) const {
+  return true;
+}
+
 const MCPhysReg *
 RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<RISCVSubtarget>();
