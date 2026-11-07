@@ -220,10 +220,10 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
   StringExtractor(HexValue).GetHexBytes(Bytes, '\xcc');
   RegisterValue Value;
   Status ST;
-  Value.SetFromMemoryData(Info, Bytes.data(), Bytes.size(),
-                          Endian == llvm::endianness::little ? eByteOrderLittle
-                                                             : eByteOrderBig,
-                          ST);
+  Value.SetFromMemoryData(
+      Info.encoding, Info.byte_size, Bytes.data(), Bytes.size(),
+      Endian == llvm::endianness::little ? eByteOrderLittle : eByteOrderBig, ST,
+      Info.name);
   if (ST.Fail())
     return ST.ToError();
   return Value;

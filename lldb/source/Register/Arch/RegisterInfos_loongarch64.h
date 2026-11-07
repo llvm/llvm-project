@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Textual register-table fragment; intentionally has no include guard.
+// Include its ordinary dependencies at file scope before defining layout macros.
+// See README.md for the inclusion contract.
+
+#if !defined(DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT)
+#error Select a register-table generation mode before including this fragment
+#endif
+
 #ifdef DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT
-
-#include <stddef.h>
-
-#include "lldb/lldb-defines.h"
-#include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-private.h"
-
-#include "Utility/LoongArch_DWARF_Registers.h"
-#include "lldb-loongarch-register-enums.h"
 
 #ifndef GPR_OFFSET
 #error GPR_OFFSET must be defined before including this header file
@@ -33,15 +32,13 @@
 #error LASX_OFFSET must be defined before including this header file
 #endif
 
-using namespace loongarch_dwarf;
-
 // clang-format off
 
 // I suppose EHFrame and DWARF are the same.
 #define KIND_HELPER(reg, generic_kind)                                         \
   {                                                                            \
-    loongarch_dwarf::dwarf_##reg, loongarch_dwarf::dwarf_##reg, generic_kind,  \
-    LLDB_INVALID_REGNUM, reg##_loongarch                                       \
+    lldb_private::registers::loongarch::ehframe::reg, lldb_private::registers::loongarch::dwarf::reg, generic_kind,  \
+    LLDB_INVALID_REGNUM, lldb_private::registers::loongarch::id::reg                                       \
   }
 
 // Generates register kinds array for generic purpose registers
@@ -54,7 +51,7 @@ using namespace loongarch_dwarf;
 #define DEFINE_GPR64(reg, generic_kind) DEFINE_GPR64_ALT(reg, reg, generic_kind)
 #define DEFINE_GPR64_ALT(reg, alt, generic_kind)                               \
   {                                                                            \
-    #reg, #alt, 8, GPR_OFFSET(gpr_##reg##_loongarch - gpr_first_loongarch),    \
+    #reg, #alt, 8, GPR_OFFSET(lldb_private::registers::loongarch::id::gpr_##reg - lldb_private::registers::loongarch::id::gpr_first),    \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
     GPR64_KIND(gpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
   }
@@ -63,14 +60,14 @@ using namespace loongarch_dwarf;
 #define DEFINE_FPR64(reg, generic_kind) DEFINE_FPR64_ALT(reg, reg, generic_kind)
 #define DEFINE_FPR64_ALT(reg, alt, generic_kind)                               \
   {                                                                            \
-    #reg, #alt, 8, FPR_OFFSET(fpr_##reg##_loongarch - fpr_first_loongarch),    \
+    #reg, #alt, 8, FPR_OFFSET(lldb_private::registers::loongarch::id::fpr_##reg - lldb_private::registers::loongarch::id::fpr_first),    \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
     FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
   }
 
 #define DEFINE_FCC(reg, generic_kind)                                          \
   {                                                                            \
-    #reg, nullptr, 1, FCC_OFFSET(fpr_##reg##_loongarch - fpr_fcc0_loongarch),  \
+    #reg, nullptr, 1, FCC_OFFSET(lldb_private::registers::loongarch::id::fpr_##reg - lldb_private::registers::loongarch::id::fpr_fcc0),  \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
     FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
   }
@@ -84,7 +81,7 @@ using namespace loongarch_dwarf;
 
 #define DEFINE_LSX(reg, generic_kind) \
   {                                                                            \
-    #reg, nullptr, 16, LSX_OFFSET(lsx_##reg##_loongarch - lsx_first_loongarch),\
+    #reg, nullptr, 16, LSX_OFFSET(lldb_private::registers::loongarch::id::lsx_##reg - lldb_private::registers::loongarch::id::lsx_first),\
     lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,                         \
     KIND_HELPER(lsx_##reg, generic_kind), nullptr, nullptr, nullptr,           \
   }
@@ -92,14 +89,14 @@ using namespace loongarch_dwarf;
 #define DEFINE_LASX(reg, generic_kind) \
   {                                                                            \
     #reg, nullptr, 32,                                                         \
-    LASX_OFFSET(lasx_##reg##_loongarch - lasx_first_loongarch),                \
+    LASX_OFFSET(lldb_private::registers::loongarch::id::lasx_##reg - lldb_private::registers::loongarch::id::lasx_first),                \
     lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,                         \
     KIND_HELPER(lasx_##reg, generic_kind), nullptr, nullptr, nullptr,          \
   }
 
 // clang-format on
 
-static lldb_private::RegisterInfo g_register_infos_loongarch64[] = {
+static RegisterInfo g_register_infos_loongarch64[] = {
     DEFINE_GPR64_ALT(r0, zero, LLDB_INVALID_REGNUM),
     DEFINE_GPR64_ALT(r1, ra, LLDB_REGNUM_GENERIC_RA),
     DEFINE_GPR64_ALT(r2, tp, LLDB_INVALID_REGNUM),
@@ -258,3 +255,15 @@ static lldb_private::RegisterInfo g_register_infos_loongarch64[] = {
 };
 
 #endif // DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT
+
+#undef KIND_HELPER
+#undef GPR64_KIND
+#undef FPR64_KIND
+#undef DEFINE_GPR64
+#undef DEFINE_GPR64_ALT
+#undef DEFINE_FPR64
+#undef DEFINE_FPR64_ALT
+#undef DEFINE_FCC
+#undef DEFINE_FCSR
+#undef DEFINE_LSX
+#undef DEFINE_LASX

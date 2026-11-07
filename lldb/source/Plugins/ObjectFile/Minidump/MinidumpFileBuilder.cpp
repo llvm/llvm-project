@@ -479,7 +479,8 @@ void read_register_u128(RegisterContext *reg_ctx, llvm::StringRef reg_name,
     if (reg_ctx->ReadRegister(reg_info, reg_value)) {
       Status error;
       uint32_t bytes_copied = reg_value.GetAsMemoryData(
-          *reg_info, dst, 16, lldb::ByteOrder::eByteOrderLittle, error);
+          reg_info->byte_size, dst, 16, lldb::ByteOrder::eByteOrderLittle,
+          error, reg_info->name);
       if (bytes_copied == 16)
         return;
     }

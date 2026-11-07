@@ -14,7 +14,7 @@
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Register/Native/NativeRegisterContextDBReg_arm.h"
 #include "Register/Common/RegisterInfo_arm.h"
-#include "Register/Arch/lldb-arm-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm-register-enums.h"
 
 namespace lldb_private {
 namespace process_linux {
@@ -71,7 +71,7 @@ protected:
   size_t GetTLSSize() { return sizeof(m_tls); }
 
 private:
-  uint32_t m_gpr_arm[k_num_gpr_registers_arm];
+  uint32_t m_gpr_arm[registers::arm::id::k_num_gpr_registers];
   RegisterInfo_arm::FPU m_fpr;
   RegisterInfo_arm::TLS m_tls;
 

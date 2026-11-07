@@ -126,7 +126,8 @@ bool RegisterContextWasm::ReadRegister(const RegisterInfo *reg_info,
   wasm_reg_info->encoding = lldb::eEncodingUint;
 
   Status error = value.SetValueFromData(
-      *reg_info, reg_data, reg_info->byte_offset, /*partial_data_ok=*/false);
+      reg_info->encoding, reg_info->byte_size, reg_data, reg_info->byte_offset,
+      /*partial_data_ok=*/false, reg_info->name);
   return error.Success();
 }
 

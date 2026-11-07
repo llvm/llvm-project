@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 

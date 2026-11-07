@@ -13,7 +13,7 @@
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Register/Common/RegisterInfo_loongarch64.h"
-#include "Register/Arch/lldb-loongarch-register-enums.h"
+#include "lldb/Register/Arch/lldb-loongarch-register-enums.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
@@ -202,8 +202,9 @@ Status NativeRegisterContextLinux_loongarch64::ReadRegister(
         "failed - register wasn't recognized to be a GPR or an FPR, "
         "write strategy unknown");
 
-  reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
-                              eByteOrderLittle, error);
+  reg_value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, src,
+                              reg_info->byte_size, eByteOrderLittle, error,
+                              reg_info->name);
 
   return error;
 }

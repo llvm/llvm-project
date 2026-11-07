@@ -82,8 +82,8 @@ bool RegisterContextMemory::ReadRegister(const RegisterInfo *reg_info,
   }
   const bool partial_data_ok = false;
   return reg_value
-      .SetValueFromData(*reg_info, m_reg_data, reg_info->byte_offset,
-                        partial_data_ok)
+      .SetValueFromData(reg_info->encoding, reg_info->byte_size, m_reg_data,
+                        reg_info->byte_offset, partial_data_ok, reg_info->name)
       .Success();
 }
 

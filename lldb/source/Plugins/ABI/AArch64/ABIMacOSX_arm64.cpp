@@ -303,7 +303,9 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           if (v0_info) {
             if (byte_size <= 16) {
               RegisterValue reg_value;
-              error = reg_value.SetValueFromData(*v0_info, data, 0, true);
+              error = reg_value.SetValueFromData(v0_info->encoding,
+                                                 v0_info->byte_size, data, 0,
+                                                 true, v0_info->name);
               if (error.Success())
                 if (!reg_ctx->WriteRegister(v0_info, reg_value))
                   error =
@@ -325,7 +327,9 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         if (v0_info) {
           if (byte_size <= v0_info->byte_size) {
             RegisterValue reg_value;
-            error = reg_value.SetValueFromData(*v0_info, data, 0, true);
+            error = reg_value.SetValueFromData(v0_info->encoding,
+                                               v0_info->byte_size, data, 0,
+                                               true, v0_info->name);
             if (error.Success()) {
               if (!reg_ctx->WriteRegister(v0_info, reg_value))
                 error = Status::FromErrorString("failed to write register v0");
@@ -480,8 +484,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
         // Make sure we have enough room in "heap_data_up"
         if ((data_offset + *base_byte_size) <= heap_data_up->GetByteSize()) {
           const size_t bytes_copied = reg_value.GetAsMemoryData(
-              *reg_info, heap_data_up->GetBytes() + data_offset,
-              *base_byte_size, byte_order, error);
+              reg_info->byte_size, heap_data_up->GetBytes() + data_offset,
+              *base_byte_size, byte_order, error, reg_info->name);
           if (bytes_copied != *base_byte_size)
             return false;
           data_offset += bytes_copied;
@@ -520,8 +524,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
 
       const size_t curr_byte_size = std::min<size_t>(8, bytes_left);
       const size_t bytes_copied = reg_value.GetAsMemoryData(
-          *reg_info, heap_data_up->GetBytes() + data_offset, curr_byte_size,
-          byte_order, error);
+          reg_info->byte_size, heap_data_up->GetBytes() + data_offset,
+          curr_byte_size, byte_order, error, reg_info->name);
       if (bytes_copied == 0)
         return false;
       if (bytes_copied >= bytes_left)
@@ -632,11 +636,13 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
                       reg_ctx->ReadRegister(x1_reg_info, x1_reg_value)) {
                     Status error;
                     if (x0_reg_value.GetAsMemoryData(
-                            *x0_reg_info, heap_data_up->GetBytes() + 0, 8,
-                            byte_order, error) &&
+                            x0_reg_info->byte_size,
+                            heap_data_up->GetBytes() + 0, 8, byte_order, error,
+                            x0_reg_info->name) &&
                         x1_reg_value.GetAsMemoryData(
-                            *x1_reg_info, heap_data_up->GetBytes() + 8, 8,
-                            byte_order, error)) {
+                            x1_reg_info->byte_size,
+                            heap_data_up->GetBytes() + 8, 8, byte_order, error,
+                            x1_reg_info->name)) {
                       DataExtractor data(
                           DataBufferSP(heap_data_up.release()), byte_order,
                           exe_ctx.GetProcessRef().GetAddressByteSize());
@@ -728,9 +734,10 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
           RegisterValue reg_value;
           if (reg_ctx->ReadRegister(v0_info, reg_value)) {
             Status error;
-            if (reg_value.GetAsMemoryData(*v0_info, heap_data_up->GetBytes(),
+            if (reg_value.GetAsMemoryData(v0_info->byte_size,
+                                          heap_data_up->GetBytes(),
                                           heap_data_up->GetByteSize(),
-                                          byte_order, error)) {
+                                          byte_order, error, v0_info->name)) {
               DataExtractor data(DataBufferSP(heap_data_up.release()),
                                  byte_order,
                                  exe_ctx.GetProcessRef().GetAddressByteSize());

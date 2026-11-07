@@ -11,7 +11,7 @@
 
 #include "Register/RegisterInfoInterface.h"
 #include "Register/Common/RegisterInfo_loongarch64.h"
-#include "Register/Arch/lldb-loongarch-register-enums.h"
+#include "lldb/Register/Arch/lldb-loongarch-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -56,7 +56,9 @@ protected:
 
   size_t GetFPRSize() { return sizeof(RegisterInfo_loongarch64::FPR); }
 
-  uint32_t GetRegNumFCSR() const { return fpr_fcsr_loongarch; }
+  uint32_t GetRegNumFCSR() const {
+    return lldb_private::registers::loongarch::id::fpr_fcsr;
+  }
 
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;

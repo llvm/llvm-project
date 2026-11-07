@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfos_x86_64_with_base_shared.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 
 #include "lldb/lldb-defines.h"
 #include <cassert>
@@ -17,223 +19,241 @@ using namespace lldb;
 namespace lldb_private {
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_eax[] = {
-    lldb_eax_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::eax, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_ebx[] = {
-    lldb_ebx_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::ebx, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_ecx[] = {
-    lldb_ecx_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::ecx, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_edx[] = {
-    lldb_edx_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::edx, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_edi[] = {
-    lldb_edi_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::edi, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_esi[] = {
-    lldb_esi_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::esi, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_ebp[] = {
-    lldb_ebp_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::ebp, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_esp[] = {
-    lldb_esp_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::esp, LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_eax[] = {
-    lldb_eax_i386, lldb_ax_i386, lldb_ah_i386, lldb_al_i386,
+    registers::x86::id::eax, registers::x86::id::ax, registers::x86::id::ah, registers::x86::id::al,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_ebx[] = {
-    lldb_ebx_i386, lldb_bx_i386, lldb_bh_i386, lldb_bl_i386,
+    registers::x86::id::ebx, registers::x86::id::bx, registers::x86::id::bh, registers::x86::id::bl,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_ecx[] = {
-    lldb_ecx_i386, lldb_cx_i386, lldb_ch_i386, lldb_cl_i386,
+    registers::x86::id::ecx, registers::x86::id::cx, registers::x86::id::ch, registers::x86::id::cl,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_edx[] = {
-    lldb_edx_i386, lldb_dx_i386, lldb_dh_i386, lldb_dl_i386,
+    registers::x86::id::edx, registers::x86::id::dx, registers::x86::id::dh, registers::x86::id::dl,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_edi[] = {
-    lldb_edi_i386, lldb_di_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::edi, registers::x86::id::di, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_esi[] = {
-    lldb_esi_i386, lldb_si_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::esi, registers::x86::id::si, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_ebp[] = {
-    lldb_ebp_i386, lldb_bp_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::ebp, registers::x86::id::bp, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_esp[] = {
-    lldb_esp_i386, lldb_sp_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::esp, registers::x86::id::sp, LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_rax[] = {
-    x86_64_with_base::lldb_rax, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rax, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_rbx[] = {
-    x86_64_with_base::lldb_rbx, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rbx, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_rcx[] = {
-    x86_64_with_base::lldb_rcx, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rcx, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_rdx[] = {
-    x86_64_with_base::lldb_rdx, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rdx, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_rdi[] = {
-    x86_64_with_base::lldb_rdi, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rdi, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_rsi[] = {
-    x86_64_with_base::lldb_rsi, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rsi, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_rbp[] = {
-    x86_64_with_base::lldb_rbp, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rbp, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_rsp[] = {
-    x86_64_with_base::lldb_rsp, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rsp, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_r8[] = {
-    x86_64_with_base::lldb_r8, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::r8, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_r9[] = {
-    x86_64_with_base::lldb_r9, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::r9, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_r10[] = {
-    x86_64_with_base::lldb_r10, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::r10, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_r11[] = {
-    x86_64_with_base::lldb_r11, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::r11, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_r12[] = {
-    x86_64_with_base::lldb_r12, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::r12, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_r13[] = {
-    x86_64_with_base::lldb_r13, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::r13, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_r14[] = {
-    x86_64_with_base::lldb_r14, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::r14, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_r15[] = {
-    x86_64_with_base::lldb_r15, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::r15, LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_rax[] = {
-    x86_64_with_base::lldb_rax, x86_64_with_base::lldb_eax,
-    x86_64_with_base::lldb_ax,  x86_64_with_base::lldb_ah,
-    x86_64_with_base::lldb_al,  LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rax,
+    registers::x86_64::id::with_base::eax,
+    registers::x86_64::id::with_base::ax,
+    registers::x86_64::id::with_base::ah,
+    registers::x86_64::id::with_base::al,
+    LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_rbx[] = {
-    x86_64_with_base::lldb_rbx, x86_64_with_base::lldb_ebx,
-    x86_64_with_base::lldb_bx,  x86_64_with_base::lldb_bh,
-    x86_64_with_base::lldb_bl,  LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rbx,
+    registers::x86_64::id::with_base::ebx,
+    registers::x86_64::id::with_base::bx,
+    registers::x86_64::id::with_base::bh,
+    registers::x86_64::id::with_base::bl,
+    LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_rcx[] = {
-    x86_64_with_base::lldb_rcx, x86_64_with_base::lldb_ecx,
-    x86_64_with_base::lldb_cx,  x86_64_with_base::lldb_ch,
-    x86_64_with_base::lldb_cl,  LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rcx,
+    registers::x86_64::id::with_base::ecx,
+    registers::x86_64::id::with_base::cx,
+    registers::x86_64::id::with_base::ch,
+    registers::x86_64::id::with_base::cl,
+    LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_rdx[] = {
-    x86_64_with_base::lldb_rdx, x86_64_with_base::lldb_edx,
-    x86_64_with_base::lldb_dx,  x86_64_with_base::lldb_dh,
-    x86_64_with_base::lldb_dl,  LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rdx,
+    registers::x86_64::id::with_base::edx,
+    registers::x86_64::id::with_base::dx,
+    registers::x86_64::id::with_base::dh,
+    registers::x86_64::id::with_base::dl,
+    LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_rdi[] = {
-    x86_64_with_base::lldb_rdi, x86_64_with_base::lldb_edi,
-    x86_64_with_base::lldb_di, x86_64_with_base::lldb_dil, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rdi,
+    registers::x86_64::id::with_base::edi, registers::x86_64::id::with_base::di,
+    registers::x86_64::id::with_base::dil, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_rsi[] = {
-    x86_64_with_base::lldb_rsi, x86_64_with_base::lldb_esi,
-    x86_64_with_base::lldb_si, x86_64_with_base::lldb_sil, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rsi,
+    registers::x86_64::id::with_base::esi, registers::x86_64::id::with_base::si,
+    registers::x86_64::id::with_base::sil, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_rbp[] = {
-    x86_64_with_base::lldb_rbp, x86_64_with_base::lldb_ebp,
-    x86_64_with_base::lldb_bp, x86_64_with_base::lldb_bpl, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rbp,
+    registers::x86_64::id::with_base::ebp, registers::x86_64::id::with_base::bp,
+    registers::x86_64::id::with_base::bpl, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_rsp[] = {
-    x86_64_with_base::lldb_rsp, x86_64_with_base::lldb_esp,
-    x86_64_with_base::lldb_sp, x86_64_with_base::lldb_spl, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::rsp,
+    registers::x86_64::id::with_base::esp, registers::x86_64::id::with_base::sp,
+    registers::x86_64::id::with_base::spl, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_r8[] = {
-    x86_64_with_base::lldb_r8, x86_64_with_base::lldb_r8d,
-    x86_64_with_base::lldb_r8w, x86_64_with_base::lldb_r8l,
+    registers::x86_64::id::with_base::r8, registers::x86_64::id::with_base::r8d,
+    registers::x86_64::id::with_base::r8w, registers::x86_64::id::with_base::r8l,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_r9[] = {
-    x86_64_with_base::lldb_r9, x86_64_with_base::lldb_r9d,
-    x86_64_with_base::lldb_r9w, x86_64_with_base::lldb_r9l,
+    registers::x86_64::id::with_base::r9, registers::x86_64::id::with_base::r9d,
+    registers::x86_64::id::with_base::r9w, registers::x86_64::id::with_base::r9l,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_r10[] = {
-    x86_64_with_base::lldb_r10, x86_64_with_base::lldb_r10d,
-    x86_64_with_base::lldb_r10w, x86_64_with_base::lldb_r10l,
+    registers::x86_64::id::with_base::r10, registers::x86_64::id::with_base::r10d,
+    registers::x86_64::id::with_base::r10w, registers::x86_64::id::with_base::r10l,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_r11[] = {
-    x86_64_with_base::lldb_r11, x86_64_with_base::lldb_r11d,
-    x86_64_with_base::lldb_r11w, x86_64_with_base::lldb_r11l,
+    registers::x86_64::id::with_base::r11, registers::x86_64::id::with_base::r11d,
+    registers::x86_64::id::with_base::r11w, registers::x86_64::id::with_base::r11l,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_r12[] = {
-    x86_64_with_base::lldb_r12, x86_64_with_base::lldb_r12d,
-    x86_64_with_base::lldb_r12w, x86_64_with_base::lldb_r12l,
+    registers::x86_64::id::with_base::r12, registers::x86_64::id::with_base::r12d,
+    registers::x86_64::id::with_base::r12w, registers::x86_64::id::with_base::r12l,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_r13[] = {
-    x86_64_with_base::lldb_r13, x86_64_with_base::lldb_r13d,
-    x86_64_with_base::lldb_r13w, x86_64_with_base::lldb_r13l,
+    registers::x86_64::id::with_base::r13, registers::x86_64::id::with_base::r13d,
+    registers::x86_64::id::with_base::r13w, registers::x86_64::id::with_base::r13l,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_r14[] = {
-    x86_64_with_base::lldb_r14, x86_64_with_base::lldb_r14d,
-    x86_64_with_base::lldb_r14w, x86_64_with_base::lldb_r14l,
+    registers::x86_64::id::with_base::r14, registers::x86_64::id::with_base::r14d,
+    registers::x86_64::id::with_base::r14w, registers::x86_64::id::with_base::r14l,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_r15[] = {
-    x86_64_with_base::lldb_r15, x86_64_with_base::lldb_r15d,
-    x86_64_with_base::lldb_r15w, x86_64_with_base::lldb_r15l,
+    registers::x86_64::id::with_base::r15, registers::x86_64::id::with_base::r15d,
+    registers::x86_64::id::with_base::r15w, registers::x86_64::id::with_base::r15l,
     LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_fip[] = {
-    x86_64_with_base::lldb_fip, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::fip, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_fdp[] = {
-    x86_64_with_base::lldb_fdp, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::fdp, LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_fip[] = {
-    x86_64_with_base::lldb_fip, x86_64_with_base::lldb_fioff,
-    x86_64_with_base::lldb_fiseg, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::fip,
+    registers::x86_64::id::with_base::fioff,
+    registers::x86_64::id::with_base::fiseg, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_fdp[] = {
-    x86_64_with_base::lldb_fdp, x86_64_with_base::lldb_fooff,
-    x86_64_with_base::lldb_foseg, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::fdp,
+    registers::x86_64::id::with_base::fooff,
+    registers::x86_64::id::with_base::foseg, LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st0_32[] = {
-    lldb_st0_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st0, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st1_32[] = {
-    lldb_st1_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st1, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st2_32[] = {
-    lldb_st2_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st2, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st3_32[] = {
-    lldb_st3_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st3, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st4_32[] = {
-    lldb_st4_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st4, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st5_32[] = {
-    lldb_st5_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st5, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st6_32[] = {
-    lldb_st6_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st6, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st7_32[] = {
-    lldb_st7_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st7, LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st0_32[] = {
-    lldb_st0_i386, lldb_mm0_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st0, registers::x86::id::mm0, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st1_32[] = {
-    lldb_st1_i386, lldb_mm1_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st1, registers::x86::id::mm1, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st2_32[] = {
-    lldb_st2_i386, lldb_mm2_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st2, registers::x86::id::mm2, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st3_32[] = {
-    lldb_st3_i386, lldb_mm3_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st3, registers::x86::id::mm3, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st4_32[] = {
-    lldb_st4_i386, lldb_mm4_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st4, registers::x86::id::mm4, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st5_32[] = {
-    lldb_st5_i386, lldb_mm5_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st5, registers::x86::id::mm5, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st6_32[] = {
-    lldb_st6_i386, lldb_mm6_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st6, registers::x86::id::mm6, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st7_32[] = {
-    lldb_st7_i386, lldb_mm7_i386, LLDB_INVALID_REGNUM};
+    registers::x86::id::st7, registers::x86::id::mm7, LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st0_64[] = {
-    x86_64_with_base::lldb_st0, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::st0, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st1_64[] = {
-    x86_64_with_base::lldb_st1, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::st1, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st2_64[] = {
-    x86_64_with_base::lldb_st2, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::st2, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st3_64[] = {
-    x86_64_with_base::lldb_st3, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::st3, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st4_64[] = {
-    x86_64_with_base::lldb_st4, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::st4, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st5_64[] = {
-    x86_64_with_base::lldb_st5, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::st5, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st6_64[] = {
-    x86_64_with_base::lldb_st6, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::st6, LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_contained_st7_64[] = {
-    x86_64_with_base::lldb_st7, LLDB_INVALID_REGNUM};
+    registers::x86_64::id::with_base::st7, LLDB_INVALID_REGNUM};
 
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st0_64[] = {
-    x86_64_with_base::lldb_st0, x86_64_with_base::lldb_mm0,
+    registers::x86_64::id::with_base::st0, registers::x86_64::id::with_base::mm0,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st1_64[] = {
-    x86_64_with_base::lldb_st1, x86_64_with_base::lldb_mm1,
+    registers::x86_64::id::with_base::st1, registers::x86_64::id::with_base::mm1,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st2_64[] = {
-    x86_64_with_base::lldb_st2, x86_64_with_base::lldb_mm2,
+    registers::x86_64::id::with_base::st2, registers::x86_64::id::with_base::mm2,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st3_64[] = {
-    x86_64_with_base::lldb_st3, x86_64_with_base::lldb_mm3,
+    registers::x86_64::id::with_base::st3, registers::x86_64::id::with_base::mm3,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st4_64[] = {
-    x86_64_with_base::lldb_st4, x86_64_with_base::lldb_mm4,
+    registers::x86_64::id::with_base::st4, registers::x86_64::id::with_base::mm4,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st5_64[] = {
-    x86_64_with_base::lldb_st5, x86_64_with_base::lldb_mm5,
+    registers::x86_64::id::with_base::st5, registers::x86_64::id::with_base::mm5,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st6_64[] = {
-    x86_64_with_base::lldb_st6, x86_64_with_base::lldb_mm6,
+    registers::x86_64::id::with_base::st6, registers::x86_64::id::with_base::mm6,
     LLDB_INVALID_REGNUM};
 uint32_t RegisterInfos_x86_64_with_base_shared::g_invalidate_st7_64[] = {
-    x86_64_with_base::lldb_st7, x86_64_with_base::lldb_mm7,
+    registers::x86_64::id::with_base::st7, registers::x86_64::id::with_base::mm7,
     LLDB_INVALID_REGNUM};
 
 RegInfo &GetRegInfoShared(llvm::Triple::ArchType arch_type, bool with_base) {
@@ -244,23 +264,23 @@ RegInfo &GetRegInfoShared(llvm::Triple::ArchType arch_type, bool with_base) {
   switch (arch_type) {
   case llvm::Triple::x86:
     std::call_once(once_flag_x86, []() {
-      reg_info_x86.num_registers = k_num_registers_i386;
-      reg_info_x86.num_gpr_registers = k_num_gpr_registers_i386;
-      reg_info_x86.num_fpr_registers = k_num_fpr_registers_i386;
-      reg_info_x86.num_avx_registers = k_num_avx_registers_i386;
-      reg_info_x86.last_gpr = k_last_gpr_i386;
-      reg_info_x86.first_fpr = k_first_fpr_i386;
-      reg_info_x86.last_fpr = k_last_fpr_i386;
-      reg_info_x86.first_st = lldb_st0_i386;
-      reg_info_x86.last_st = lldb_st7_i386;
-      reg_info_x86.first_mm = lldb_mm0_i386;
-      reg_info_x86.last_mm = lldb_mm7_i386;
-      reg_info_x86.first_xmm = lldb_xmm0_i386;
-      reg_info_x86.last_xmm = lldb_xmm7_i386;
-      reg_info_x86.first_ymm = lldb_ymm0_i386;
-      reg_info_x86.last_ymm = lldb_ymm7_i386;
-      reg_info_x86.first_dr = lldb_dr0_i386;
-      reg_info_x86.gpr_flags = lldb_eflags_i386;
+      reg_info_x86.num_registers = registers::x86::id::k_num_registers;
+      reg_info_x86.num_gpr_registers = registers::x86::id::k_num_gpr_registers;
+      reg_info_x86.num_fpr_registers = registers::x86::id::k_num_fpr_registers;
+      reg_info_x86.num_avx_registers = registers::x86::id::k_num_avx_registers;
+      reg_info_x86.last_gpr = registers::x86::id::k_last_gpr;
+      reg_info_x86.first_fpr = registers::x86::id::k_first_fpr;
+      reg_info_x86.last_fpr = registers::x86::id::k_last_fpr;
+      reg_info_x86.first_st = registers::x86::id::st0;
+      reg_info_x86.last_st = registers::x86::id::st7;
+      reg_info_x86.first_mm = registers::x86::id::mm0;
+      reg_info_x86.last_mm = registers::x86::id::mm7;
+      reg_info_x86.first_xmm = registers::x86::id::xmm0;
+      reg_info_x86.last_xmm = registers::x86::id::xmm7;
+      reg_info_x86.first_ymm = registers::x86::id::ymm0;
+      reg_info_x86.last_ymm = registers::x86::id::ymm7;
+      reg_info_x86.first_dr = registers::x86::id::dr0;
+      reg_info_x86.gpr_flags = registers::x86::id::eflags;
     });
 
     return reg_info_x86;
@@ -268,48 +288,64 @@ RegInfo &GetRegInfoShared(llvm::Triple::ArchType arch_type, bool with_base) {
     if (with_base) {
       std::call_once(once_flag_x86_64_with_base, []() {
         reg_info_x86_64_with_base.num_registers =
-            x86_64_with_base::k_num_registers;
+            registers::x86_64::id::with_base::k_num_registers;
         reg_info_x86_64_with_base.num_gpr_registers =
-            x86_64_with_base::k_num_gpr_registers;
+            registers::x86_64::id::with_base::k_num_gpr_registers;
         reg_info_x86_64_with_base.num_fpr_registers =
-            x86_64_with_base::k_num_fpr_registers;
+            registers::x86_64::id::with_base::k_num_fpr_registers;
         reg_info_x86_64_with_base.num_avx_registers =
-            x86_64_with_base::k_num_avx_registers;
-        reg_info_x86_64_with_base.last_gpr = x86_64_with_base::k_last_gpr;
-        reg_info_x86_64_with_base.first_fpr = x86_64_with_base::k_first_fpr;
-        reg_info_x86_64_with_base.last_fpr = x86_64_with_base::k_last_fpr;
-        reg_info_x86_64_with_base.first_st = x86_64_with_base::lldb_st0;
-        reg_info_x86_64_with_base.last_st = x86_64_with_base::lldb_st7;
-        reg_info_x86_64_with_base.first_mm = x86_64_with_base::lldb_mm0;
-        reg_info_x86_64_with_base.last_mm = x86_64_with_base::lldb_mm7;
-        reg_info_x86_64_with_base.first_xmm = x86_64_with_base::lldb_xmm0;
-        reg_info_x86_64_with_base.last_xmm = x86_64_with_base::lldb_xmm15;
-        reg_info_x86_64_with_base.first_ymm = x86_64_with_base::lldb_ymm0;
-        reg_info_x86_64_with_base.last_ymm = x86_64_with_base::lldb_ymm15;
-        reg_info_x86_64_with_base.first_dr = x86_64_with_base::lldb_dr0;
-        reg_info_x86_64_with_base.gpr_flags = x86_64_with_base::lldb_rflags;
+            registers::x86_64::id::with_base::k_num_avx_registers;
+        reg_info_x86_64_with_base.last_gpr =
+            registers::x86_64::id::with_base::k_last_gpr;
+        reg_info_x86_64_with_base.first_fpr =
+            registers::x86_64::id::with_base::k_first_fpr;
+        reg_info_x86_64_with_base.last_fpr =
+            registers::x86_64::id::with_base::k_last_fpr;
+        reg_info_x86_64_with_base.first_st =
+            registers::x86_64::id::with_base::st0;
+        reg_info_x86_64_with_base.last_st =
+            registers::x86_64::id::with_base::st7;
+        reg_info_x86_64_with_base.first_mm =
+            registers::x86_64::id::with_base::mm0;
+        reg_info_x86_64_with_base.last_mm =
+            registers::x86_64::id::with_base::mm7;
+        reg_info_x86_64_with_base.first_xmm =
+            registers::x86_64::id::with_base::xmm0;
+        reg_info_x86_64_with_base.last_xmm =
+            registers::x86_64::id::with_base::xmm15;
+        reg_info_x86_64_with_base.first_ymm =
+            registers::x86_64::id::with_base::ymm0;
+        reg_info_x86_64_with_base.last_ymm =
+            registers::x86_64::id::with_base::ymm15;
+        reg_info_x86_64_with_base.first_dr =
+            registers::x86_64::id::with_base::dr0;
+        reg_info_x86_64_with_base.gpr_flags =
+            registers::x86_64::id::with_base::rflags;
       });
 
       return reg_info_x86_64_with_base;
     } else {
       std::call_once(once_flag_x86_64, []() {
-        reg_info_x86_64.num_registers = k_num_registers_x86_64;
-        reg_info_x86_64.num_gpr_registers = k_num_gpr_registers_x86_64;
-        reg_info_x86_64.num_fpr_registers = k_num_fpr_registers_x86_64;
-        reg_info_x86_64.num_avx_registers = k_num_avx_registers_x86_64;
-        reg_info_x86_64.last_gpr = k_last_gpr_x86_64;
-        reg_info_x86_64.first_fpr = k_first_fpr_x86_64;
-        reg_info_x86_64.last_fpr = k_last_fpr_x86_64;
-        reg_info_x86_64.first_st = lldb_st0_x86_64;
-        reg_info_x86_64.last_st = lldb_st7_x86_64;
-        reg_info_x86_64.first_mm = lldb_mm0_x86_64;
-        reg_info_x86_64.last_mm = lldb_mm7_x86_64;
-        reg_info_x86_64.first_xmm = lldb_xmm0_x86_64;
-        reg_info_x86_64.last_xmm = lldb_xmm15_x86_64;
-        reg_info_x86_64.first_ymm = lldb_ymm0_x86_64;
-        reg_info_x86_64.last_ymm = lldb_ymm15_x86_64;
-        reg_info_x86_64.first_dr = lldb_dr0_x86_64;
-        reg_info_x86_64.gpr_flags = lldb_rflags_x86_64;
+        reg_info_x86_64.num_registers = registers::x86_64::id::k_num_registers;
+        reg_info_x86_64.num_gpr_registers =
+            registers::x86_64::id::k_num_gpr_registers;
+        reg_info_x86_64.num_fpr_registers =
+            registers::x86_64::id::k_num_fpr_registers;
+        reg_info_x86_64.num_avx_registers =
+            registers::x86_64::id::k_num_avx_registers;
+        reg_info_x86_64.last_gpr = registers::x86_64::id::k_last_gpr;
+        reg_info_x86_64.first_fpr = registers::x86_64::id::k_first_fpr;
+        reg_info_x86_64.last_fpr = registers::x86_64::id::k_last_fpr;
+        reg_info_x86_64.first_st = registers::x86_64::id::st0;
+        reg_info_x86_64.last_st = registers::x86_64::id::st7;
+        reg_info_x86_64.first_mm = registers::x86_64::id::mm0;
+        reg_info_x86_64.last_mm = registers::x86_64::id::mm7;
+        reg_info_x86_64.first_xmm = registers::x86_64::id::xmm0;
+        reg_info_x86_64.last_xmm = registers::x86_64::id::xmm15;
+        reg_info_x86_64.first_ymm = registers::x86_64::id::ymm0;
+        reg_info_x86_64.last_ymm = registers::x86_64::id::ymm15;
+        reg_info_x86_64.first_dr = registers::x86_64::id::dr0;
+        reg_info_x86_64.gpr_flags = registers::x86_64::id::rflags;
       });
       return reg_info_x86_64;
     }

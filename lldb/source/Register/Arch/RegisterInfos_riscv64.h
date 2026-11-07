@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Textual register-table fragment; intentionally has no include guard.
+// Include its ordinary dependencies at file scope before defining layout macros.
+// See README.md for the inclusion contract.
+
+#if !defined(DECLARE_REGISTER_INFOS_RISCV64_STRUCT)
+#error Select a register-table generation mode before including this fragment
+#endif
+
 #ifdef DECLARE_REGISTER_INFOS_RISCV64_STRUCT
-
-#include <stddef.h>
-
-#include "lldb/lldb-defines.h"
-#include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-private.h"
-
-#include "Utility/RISCV_DWARF_Registers.h"
-#include "lldb-riscv-register-enums.h"
 
 #ifndef GPR_OFFSET
 #error GPR_OFFSET must be defined before including this header file
@@ -25,15 +24,13 @@
 #error FPR_OFFSET must be defined before including this header file
 #endif
 
-using namespace riscv_dwarf;
-
 // clang-format off
 
 // I suppose EHFrame and DWARF are the same.
 #define KIND_HELPER(reg, generic_kind)                                         \
   {                                                                            \
-    riscv_dwarf::dwarf_##reg, riscv_dwarf::dwarf_##reg, generic_kind,          \
-    LLDB_INVALID_REGNUM, reg##_riscv                                           \
+    lldb_private::registers::riscv::ehframe::reg, lldb_private::registers::riscv::dwarf::reg, generic_kind,          \
+    LLDB_INVALID_REGNUM, lldb_private::registers::riscv::id::reg                                           \
   }
 
 // Generates register kinds array for vector registers
@@ -51,7 +48,7 @@ using namespace riscv_dwarf;
 // Defines a 64-bit general purpose register
 #define DEFINE_GPR64_ALT(reg, alt, generic_kind)                               \
   {                                                                            \
-    #reg, #alt, 8, GPR_OFFSET(gpr_##reg##_riscv - gpr_first_riscv),            \
+    #reg, #alt, 8, GPR_OFFSET(lldb_private::registers::riscv::id::gpr_##reg - lldb_private::registers::riscv::id::gpr_first),            \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
     GPR64_KIND(gpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
   }
@@ -62,7 +59,7 @@ using namespace riscv_dwarf;
 
 #define DEFINE_FPR_ALT(reg, alt, size, generic_kind)                           \
   {                                                                            \
-    #reg, #alt, size, FPR_OFFSET(fpr_##reg##_riscv - fpr_first_riscv),         \
+    #reg, #alt, size, FPR_OFFSET(lldb_private::registers::riscv::id::fpr_##reg - lldb_private::registers::riscv::id::fpr_first),         \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
     FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr, nullptr,           \
   }
@@ -79,7 +76,7 @@ using namespace riscv_dwarf;
 
 // clang-format on
 
-static lldb_private::RegisterInfo g_register_infos_riscv64_gpr[] = {
+static RegisterInfo g_register_infos_riscv64_gpr[] = {
     // DEFINE_GPR64(name, GENERIC KIND)
     DEFINE_GPR64(pc, LLDB_REGNUM_GENERIC_PC),
     DEFINE_GPR64_ALT(ra, x1, LLDB_REGNUM_GENERIC_RA),
@@ -116,7 +113,7 @@ static lldb_private::RegisterInfo g_register_infos_riscv64_gpr[] = {
     DEFINE_GPR64_ALT(zero, x0, LLDB_INVALID_REGNUM),
 };
 
-static lldb_private::RegisterInfo g_register_infos_riscv64_fpr[] = {
+static RegisterInfo g_register_infos_riscv64_fpr[] = {
     DEFINE_FPR64_ALT(ft0, f0, LLDB_INVALID_REGNUM),
     DEFINE_FPR64_ALT(ft1, f1, LLDB_INVALID_REGNUM),
     DEFINE_FPR64_ALT(ft2, f2, LLDB_INVALID_REGNUM),
@@ -152,7 +149,7 @@ static lldb_private::RegisterInfo g_register_infos_riscv64_fpr[] = {
     DEFINE_FPR_ALT(fcsr, nullptr, 4, LLDB_INVALID_REGNUM),
 };
 
-static lldb_private::RegisterInfo g_register_infos_riscv64_vpr[] = {
+static RegisterInfo g_register_infos_riscv64_vpr[] = {
     DEFINE_VPR(v0, LLDB_INVALID_REGNUM),  DEFINE_VPR(v1, LLDB_INVALID_REGNUM),
     DEFINE_VPR(v2, LLDB_INVALID_REGNUM),  DEFINE_VPR(v3, LLDB_INVALID_REGNUM),
     DEFINE_VPR(v4, LLDB_INVALID_REGNUM),  DEFINE_VPR(v5, LLDB_INVALID_REGNUM),
@@ -172,3 +169,15 @@ static lldb_private::RegisterInfo g_register_infos_riscv64_vpr[] = {
 };
 
 #endif // DECLARE_REGISTER_INFOS_RISCV64_STRUCT
+
+#undef KIND_HELPER
+#undef GPR64_KIND
+#undef FPR64_KIND
+#undef VPR_KIND
+#undef DEFINE_GPR64
+#undef DEFINE_GPR64_ALT
+#undef DEFINE_FPR64
+#undef DEFINE_FPR64_ALT
+#undef DEFINE_FPR_ALT
+#undef DEFINE_VPR
+#undef DEFINE_VPR_ALT

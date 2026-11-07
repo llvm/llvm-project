@@ -9,7 +9,7 @@
 #ifndef lldb_RegisterInfos_x86_64_with_base_shared_h
 #define lldb_RegisterInfos_x86_64_with_base_shared_h
 
-#include "lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 #include <stdint.h>
 
 #include "llvm/TargetParser/Triple.h"

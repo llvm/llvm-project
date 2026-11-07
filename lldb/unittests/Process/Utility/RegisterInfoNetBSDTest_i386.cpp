@@ -16,9 +16,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 #include "Register/NetBSD/RegisterInfoNetBSD_i386.h"
 
+namespace reg_ids = lldb_private::registers::x86::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -33,11 +34,11 @@ static std::pair<size_t, size_t> GetRegParams(RegisterInfoInterface &ctx,
               ::testing::Pair(offset + base_offset, size))
 
 #define EXPECT_GPR_I386(regname)                                               \
-  EXPECT_THAT(GetRegParams(reg_ctx, lldb_##regname##_i386),                    \
+  EXPECT_THAT(GetRegParams(reg_ctx, reg_ids::regname),                    \
               ::testing::Pair(offsetof(reg, r_##regname),         \
                               sizeof(reg::r_##regname)))
 #define EXPECT_DBR_I386(num)                                                   \
-  EXPECT_OFF(dr##num##_i386, offsetof(dbreg, dr[num]),            \
+  EXPECT_OFF(reg_ids::dr##num, offsetof(dbreg, dr[num]),            \
              sizeof(dbreg::dr[num]))
 
 TEST(RegisterInfoNetBSDTest, i386) {
@@ -63,7 +64,7 @@ TEST(RegisterInfoNetBSDTest, i386) {
 
   // fctrl is the first FPR field, it is used to determine offset of the whole
   // FPR struct
-  size_t base_offset = reg_ctx.GetRegisterInfo()[lldb_fctrl_i386].byte_offset;
+  size_t base_offset = reg_ctx.GetRegisterInfo()[reg_ids::fctrl].byte_offset;
 
   // assert against FXSAVE struct
   EXPECT_OFF(fctrl_i386, 0x00, 2);
@@ -104,7 +105,7 @@ TEST(RegisterInfoNetBSDTest, i386) {
   EXPECT_OFF(xmm6_i386, 0x100, 16);
   EXPECT_OFF(xmm7_i386, 0x110, 16);
 
-  base_offset = reg_ctx.GetRegisterInfo()[lldb_dr0_i386].byte_offset;
+  base_offset = reg_ctx.GetRegisterInfo()[reg_ids::dr0].byte_offset;
   EXPECT_DBR_I386(0);
   EXPECT_DBR_I386(1);
   EXPECT_DBR_I386(2);

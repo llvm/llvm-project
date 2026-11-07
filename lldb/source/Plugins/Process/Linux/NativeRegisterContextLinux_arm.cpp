@@ -9,6 +9,7 @@
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
 
 #include "NativeRegisterContextLinux_arm.h"
+#include "lldb/Register/Arch/lldb-arm-register-enums.h"
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
@@ -51,6 +52,7 @@
 #define PTRACE_GET_THREAD_AREA 22
 #endif
 
+namespace reg_ids = lldb_private::registers::arm::id;
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -152,7 +154,7 @@ NativeRegisterContextLinux_arm::ReadRegister(const RegisterInfo *reg_info,
       // then use the type specified by reg_info rather than the uint64_t
       // default
       if (reg_value.GetByteSize() > reg_info->byte_size)
-        reg_value.SetType(*reg_info);
+        reg_value.SetType(reg_info->encoding, reg_info->byte_size);
     }
     return error;
   }
@@ -442,10 +444,10 @@ Status NativeRegisterContextLinux_arm::DoWriteRegisterValue(
   // As precaution for an undefined behavior encountered while setting PC we
   // will clear thumb bit of new PC if we are already in thumb mode; that is
   // CPSR thumb mode bit is set.
-  if (offset / sizeof(uint32_t) == gpr_pc_arm) {
+  if (offset / sizeof(uint32_t) == reg_ids::gpr_pc) {
     // Check if we are already in thumb mode and thumb bit of current PC is
     // read out to be zero and thumb bit of next PC is read out to be one.
-    if ((m_gpr_arm[gpr_cpsr_arm] & 0x20) && !(m_gpr_arm[gpr_pc_arm] & 0x01) &&
+    if ((m_gpr_arm[reg_ids::gpr_cpsr] & 0x20) && !(m_gpr_arm[reg_ids::gpr_pc] & 0x01) &&
         (value.GetAsUInt32() & 0x01)) {
       reg_value &= (~1ull);
     }

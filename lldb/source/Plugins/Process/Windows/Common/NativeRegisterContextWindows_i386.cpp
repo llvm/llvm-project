@@ -9,6 +9,7 @@
 #if defined(__i386__) || defined(_M_IX86)
 
 #include "NativeRegisterContextWindows_i386.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 
 #include "NativeThreadWindows.h"
 #include "Register/Windows/RegisterInfoWindows_i386.h"
@@ -22,6 +23,7 @@
 #include "lldb/Register/RegisterValue.h"
 #include "llvm/ADT/STLExtras.h"
 
+namespace reg_ids = lldb_private::registers::x86::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -29,10 +31,10 @@ using namespace lldb_private;
 
 namespace {
 static const uint32_t g_gpr_regnums_i386[] = {
-    lldb_eax_i386,      lldb_ebx_i386,    lldb_ecx_i386, lldb_edx_i386,
-    lldb_edi_i386,      lldb_esi_i386,    lldb_ebp_i386, lldb_esp_i386,
-    lldb_eip_i386,      lldb_eflags_i386, lldb_cs_i386,  lldb_fs_i386,
-    lldb_gs_i386,       lldb_ss_i386,     lldb_ds_i386,  lldb_es_i386,
+    reg_ids::eax,       reg_ids::ebx,    reg_ids::ecx, reg_ids::edx,
+    reg_ids::edi,       reg_ids::esi,    reg_ids::ebp, reg_ids::esp,
+    reg_ids::eip,       reg_ids::eflags, reg_ids::cs,  reg_ids::fs,
+    reg_ids::gs,        reg_ids::ss,     reg_ids::ds,  reg_ids::es,
     LLDB_INVALID_REGNUM // Register sets must be terminated with this flag.
 };
 
@@ -96,11 +98,11 @@ NativeRegisterContextWindows_i386::NativeRegisterContextWindows_i386(
           native_thread, CreateRegisterInfoInterface(target_arch)) {}
 
 bool NativeRegisterContextWindows_i386::IsGPR(uint32_t reg_index) const {
-  return (reg_index < k_first_alias_i386);
+  return (reg_index < reg_ids::k_first_alias);
 }
 
 bool NativeRegisterContextWindows_i386::IsDR(uint32_t reg_index) const {
-  return (reg_index >= lldb_dr0_i386 && reg_index <= lldb_dr7_i386);
+  return (reg_index >= reg_ids::dr0 && reg_index <= reg_ids::dr7);
 }
 
 uint32_t NativeRegisterContextWindows_i386::GetRegisterSetCount() const {
@@ -124,52 +126,52 @@ Status NativeRegisterContextWindows_i386::GPRRead(const uint32_t reg,
     return error;
 
   switch (reg) {
-  case lldb_eax_i386:
+  case reg_ids::eax:
     reg_value.SetUInt32(tls_context.Eax);
     break;
-  case lldb_ebx_i386:
+  case reg_ids::ebx:
     reg_value.SetUInt32(tls_context.Ebx);
     break;
-  case lldb_ecx_i386:
+  case reg_ids::ecx:
     reg_value.SetUInt32(tls_context.Ecx);
     break;
-  case lldb_edx_i386:
+  case reg_ids::edx:
     reg_value.SetUInt32(tls_context.Edx);
     break;
-  case lldb_edi_i386:
+  case reg_ids::edi:
     reg_value.SetUInt32(tls_context.Edi);
     break;
-  case lldb_esi_i386:
+  case reg_ids::esi:
     reg_value.SetUInt32(tls_context.Esi);
     break;
-  case lldb_ebp_i386:
+  case reg_ids::ebp:
     reg_value.SetUInt32(tls_context.Ebp);
     break;
-  case lldb_esp_i386:
+  case reg_ids::esp:
     reg_value.SetUInt32(tls_context.Esp);
     break;
-  case lldb_eip_i386:
+  case reg_ids::eip:
     reg_value.SetUInt32(tls_context.Eip);
     break;
-  case lldb_eflags_i386:
+  case reg_ids::eflags:
     reg_value.SetUInt32(tls_context.EFlags);
     break;
-  case lldb_cs_i386:
+  case reg_ids::cs:
     reg_value.SetUInt32(tls_context.SegCs);
     break;
-  case lldb_fs_i386:
+  case reg_ids::fs:
     reg_value.SetUInt32(tls_context.SegFs);
     break;
-  case lldb_gs_i386:
+  case reg_ids::gs:
     reg_value.SetUInt32(tls_context.SegGs);
     break;
-  case lldb_ss_i386:
+  case reg_ids::ss:
     reg_value.SetUInt32(tls_context.SegSs);
     break;
-  case lldb_ds_i386:
+  case reg_ids::ds:
     reg_value.SetUInt32(tls_context.SegDs);
     break;
-  case lldb_es_i386:
+  case reg_ids::es:
     reg_value.SetUInt32(tls_context.SegEs);
     break;
   }
@@ -189,52 +191,52 @@ NativeRegisterContextWindows_i386::GPRWrite(const uint32_t reg,
     return error;
 
   switch (reg) {
-  case lldb_eax_i386:
+  case reg_ids::eax:
     tls_context.Eax = reg_value.GetAsUInt32();
     break;
-  case lldb_ebx_i386:
+  case reg_ids::ebx:
     tls_context.Ebx = reg_value.GetAsUInt32();
     break;
-  case lldb_ecx_i386:
+  case reg_ids::ecx:
     tls_context.Ecx = reg_value.GetAsUInt32();
     break;
-  case lldb_edx_i386:
+  case reg_ids::edx:
     tls_context.Edx = reg_value.GetAsUInt32();
     break;
-  case lldb_edi_i386:
+  case reg_ids::edi:
     tls_context.Edi = reg_value.GetAsUInt32();
     break;
-  case lldb_esi_i386:
+  case reg_ids::esi:
     tls_context.Esi = reg_value.GetAsUInt32();
     break;
-  case lldb_ebp_i386:
+  case reg_ids::ebp:
     tls_context.Ebp = reg_value.GetAsUInt32();
     break;
-  case lldb_esp_i386:
+  case reg_ids::esp:
     tls_context.Esp = reg_value.GetAsUInt32();
     break;
-  case lldb_eip_i386:
+  case reg_ids::eip:
     tls_context.Eip = reg_value.GetAsUInt32();
     break;
-  case lldb_eflags_i386:
+  case reg_ids::eflags:
     tls_context.EFlags = reg_value.GetAsUInt32();
     break;
-  case lldb_cs_i386:
+  case reg_ids::cs:
     tls_context.SegCs = reg_value.GetAsUInt32();
     break;
-  case lldb_fs_i386:
+  case reg_ids::fs:
     tls_context.SegFs = reg_value.GetAsUInt32();
     break;
-  case lldb_gs_i386:
+  case reg_ids::gs:
     tls_context.SegGs = reg_value.GetAsUInt32();
     break;
-  case lldb_ss_i386:
+  case reg_ids::ss:
     tls_context.SegSs = reg_value.GetAsUInt32();
     break;
-  case lldb_ds_i386:
+  case reg_ids::ds:
     tls_context.SegDs = reg_value.GetAsUInt32();
     break;
-  case lldb_es_i386:
+  case reg_ids::es:
     tls_context.SegEs = reg_value.GetAsUInt32();
     break;
   }
@@ -252,26 +254,26 @@ Status NativeRegisterContextWindows_i386::DRRead(const uint32_t reg,
     return error;
 
   switch (reg) {
-  case lldb_dr0_i386:
+  case reg_ids::dr0:
     reg_value.SetUInt32(tls_context.Dr0);
     break;
-  case lldb_dr1_i386:
+  case reg_ids::dr1:
     reg_value.SetUInt32(tls_context.Dr1);
     break;
-  case lldb_dr2_i386:
+  case reg_ids::dr2:
     reg_value.SetUInt32(tls_context.Dr2);
     break;
-  case lldb_dr3_i386:
+  case reg_ids::dr3:
     reg_value.SetUInt32(tls_context.Dr3);
     break;
-  case lldb_dr4_i386:
+  case reg_ids::dr4:
     return Status::FromErrorString("register DR4 is obsolete");
-  case lldb_dr5_i386:
+  case reg_ids::dr5:
     return Status::FromErrorString("register DR5 is obsolete");
-  case lldb_dr6_i386:
+  case reg_ids::dr6:
     reg_value.SetUInt32(tls_context.Dr6);
     break;
-  case lldb_dr7_i386:
+  case reg_ids::dr7:
     reg_value.SetUInt32(tls_context.Dr7);
     break;
   }
@@ -291,26 +293,26 @@ NativeRegisterContextWindows_i386::DRWrite(const uint32_t reg,
     return error;
 
   switch (reg) {
-  case lldb_dr0_i386:
+  case reg_ids::dr0:
     tls_context.Dr0 = reg_value.GetAsUInt32();
     break;
-  case lldb_dr1_i386:
+  case reg_ids::dr1:
     tls_context.Dr1 = reg_value.GetAsUInt32();
     break;
-  case lldb_dr2_i386:
+  case reg_ids::dr2:
     tls_context.Dr2 = reg_value.GetAsUInt32();
     break;
-  case lldb_dr3_i386:
+  case reg_ids::dr3:
     tls_context.Dr3 = reg_value.GetAsUInt32();
     break;
-  case lldb_dr4_i386:
+  case reg_ids::dr4:
     return Status::FromErrorString("register DR4 is obsolete");
-  case lldb_dr5_i386:
+  case reg_ids::dr5:
     return Status::FromErrorString("register DR5 is obsolete");
-  case lldb_dr6_i386:
+  case reg_ids::dr6:
     tls_context.Dr6 = reg_value.GetAsUInt32();
     break;
-  case lldb_dr7_i386:
+  case reg_ids::dr7:
     tls_context.Dr7 = reg_value.GetAsUInt32();
     break;
   }
@@ -423,7 +425,7 @@ Status NativeRegisterContextWindows_i386::IsWatchpointHit(uint32_t wp_index,
     return Status::FromErrorString("watchpoint index out of range");
 
   RegisterValue reg_value;
-  Status error = DRRead(lldb_dr6_i386, reg_value);
+  Status error = DRRead(reg_ids::dr6, reg_value);
   if (error.Fail())
     return error;
 
@@ -459,7 +461,7 @@ Status NativeRegisterContextWindows_i386::IsWatchpointVacant(uint32_t wp_index,
     return Status::FromErrorString("Watchpoint index out of range");
 
   RegisterValue reg_value;
-  Status error = DRRead(lldb_dr7_i386, reg_value);
+  Status error = DRRead(reg_ids::dr7, reg_value);
   if (error.Fail())
     return error;
 
@@ -477,13 +479,13 @@ bool NativeRegisterContextWindows_i386::ClearHardwareWatchpoint(
   // the debug status register (DR6)
 
   RegisterValue reg_value;
-  Status error = DRRead(lldb_dr6_i386, reg_value);
+  Status error = DRRead(reg_ids::dr6, reg_value);
   if (error.Fail())
     return false;
 
   uint32_t bit_mask = 1 << wp_index;
   uint32_t status_bits = reg_value.GetAsUInt32() & ~bit_mask;
-  error = DRWrite(lldb_dr6_i386, RegisterValue(status_bits));
+  error = DRWrite(reg_ids::dr6, RegisterValue(status_bits));
   if (error.Fail())
     return false;
 
@@ -491,13 +493,13 @@ bool NativeRegisterContextWindows_i386::ClearHardwareWatchpoint(
   // {2-3,20-23}, {4-5,24-27}, or {6-7,28-31} of the debug control register
   // (DR7)
 
-  error = DRRead(lldb_dr7_i386, reg_value);
+  error = DRRead(reg_ids::dr7, reg_value);
   if (error.Fail())
     return false;
 
   bit_mask = (0x3 << (2 * wp_index)) | (0xF << (16 + 4 * wp_index));
   uint32_t control_bits = reg_value.GetAsUInt32() & ~bit_mask;
-  return DRWrite(lldb_dr7_i386, RegisterValue(control_bits)).Success();
+  return DRWrite(reg_ids::dr7, RegisterValue(control_bits)).Success();
 }
 
 Status NativeRegisterContextWindows_i386::ClearAllHardwareWatchpoints() {
@@ -505,23 +507,23 @@ Status NativeRegisterContextWindows_i386::ClearAllHardwareWatchpoints() {
 
   // clear bits {0-4} of the debug status register (DR6)
 
-  Status error = DRRead(lldb_dr6_i386, reg_value);
+  Status error = DRRead(reg_ids::dr6, reg_value);
   if (error.Fail())
     return error;
 
   uint32_t status_bits = reg_value.GetAsUInt32() & ~0xF;
-  error = DRWrite(lldb_dr6_i386, RegisterValue(status_bits));
+  error = DRWrite(reg_ids::dr6, RegisterValue(status_bits));
   if (error.Fail())
     return error;
 
   // clear bits {0-7,16-31} of the debug control register (DR7)
 
-  error = DRRead(lldb_dr7_i386, reg_value);
+  error = DRRead(reg_ids::dr7, reg_value);
   if (error.Fail())
     return error;
 
   uint32_t control_bits = reg_value.GetAsUInt32() & ~0xFFFF00FF;
-  return DRWrite(lldb_dr7_i386, RegisterValue(control_bits));
+  return DRWrite(reg_ids::dr7, RegisterValue(control_bits));
 }
 
 uint32_t NativeRegisterContextWindows_i386::SetHardwareWatchpoint(
@@ -563,7 +565,7 @@ uint32_t NativeRegisterContextWindows_i386::SetHardwareWatchpoint(
 Status NativeRegisterContextWindows_i386::ApplyHardwareBreakpoint(
     uint32_t wp_index, lldb::addr_t addr, size_t size, uint32_t flags) {
   RegisterValue reg_value;
-  auto error = DRRead(lldb_dr7_i386, reg_value);
+  auto error = DRRead(reg_ids::dr7, reg_value);
   if (error.Fail())
     return error;
 
@@ -584,11 +586,11 @@ Status NativeRegisterContextWindows_i386::ApplyHardwareBreakpoint(
   uint32_t control_bits = reg_value.GetAsUInt32() & ~bit_mask;
   control_bits |= enable_bit | rw_bits | size_bits;
 
-  error = DRWrite(lldb_dr7_i386, RegisterValue(control_bits));
+  error = DRWrite(reg_ids::dr7, RegisterValue(control_bits));
   if (error.Fail())
     return error;
 
-  error = DRWrite(lldb_dr0_i386 + wp_index, RegisterValue(addr));
+  error = DRWrite(reg_ids::dr0 + wp_index, RegisterValue(addr));
   if (error.Fail())
     return error;
 
@@ -601,7 +603,7 @@ NativeRegisterContextWindows_i386::GetWatchpointAddress(uint32_t wp_index) {
     return LLDB_INVALID_ADDRESS;
 
   RegisterValue reg_value;
-  if (DRRead(lldb_dr0_i386 + wp_index, reg_value).Fail())
+  if (DRRead(reg_ids::dr0 + wp_index, reg_value).Fail())
     return LLDB_INVALID_ADDRESS;
 
   return reg_value.GetAsUInt32();

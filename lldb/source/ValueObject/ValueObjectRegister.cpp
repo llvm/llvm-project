@@ -317,8 +317,8 @@ bool ValueObjectRegister::UpdateValue() {
 bool ValueObjectRegister::SetValueFromCString(const char *value_str,
                                               Status &error) {
   // The new value will be in the m_data.  Copy that into our register value.
-  error =
-      m_reg_value.SetValueFromString(&m_reg_info, llvm::StringRef(value_str));
+  error = m_reg_value.SetValueFromString(
+      m_reg_info.encoding, m_reg_info.byte_size, llvm::StringRef(value_str));
   if (!error.Success())
     return false;
 
@@ -332,7 +332,9 @@ bool ValueObjectRegister::SetValueFromCString(const char *value_str,
 }
 
 bool ValueObjectRegister::SetData(DataExtractor &data, Status &error) {
-  error = m_reg_value.SetValueFromData(m_reg_info, data, 0, false);
+  error =
+      m_reg_value.SetValueFromData(m_reg_info.encoding, m_reg_info.byte_size,
+                                   data, 0, false, m_reg_info.name);
   if (!error.Success())
     return false;
 

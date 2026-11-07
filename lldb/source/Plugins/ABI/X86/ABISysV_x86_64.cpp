@@ -509,8 +509,9 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
             if (reg_ctx->ReadRegister(altivec_reg, reg_value)) {
               Status error;
               if (reg_value.GetAsMemoryData(
-                      *altivec_reg, heap_data_up->GetBytes(),
-                      heap_data_up->GetByteSize(), byte_order, error)) {
+                      altivec_reg->byte_size, heap_data_up->GetBytes(),
+                      heap_data_up->GetByteSize(), byte_order, error,
+                      altivec_reg->name)) {
                 DataExtractor data(DataBufferSP(heap_data_up.release()),
                                    byte_order,
                                    process_sp->GetTarget()
@@ -537,13 +538,14 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
 
                 Status error;
                 if (reg_value.GetAsMemoryData(
-                        *altivec_reg, heap_data_up->GetBytes(),
-                        altivec_reg->byte_size, byte_order, error) &&
+                        altivec_reg->byte_size, heap_data_up->GetBytes(),
+                        altivec_reg->byte_size, byte_order, error,
+                        altivec_reg->name) &&
                     reg_value2.GetAsMemoryData(
-                        *altivec_reg2,
+                        altivec_reg2->byte_size,
                         heap_data_up->GetBytes() + altivec_reg->byte_size,
                         heap_data_up->GetByteSize() - altivec_reg->byte_size,
-                        byte_order, error)) {
+                        byte_order, error, altivec_reg2->name)) {
                   DataExtractor data(DataBufferSP(heap_data_up.release()),
                                      byte_order,
                                      process_sp->GetTarget()

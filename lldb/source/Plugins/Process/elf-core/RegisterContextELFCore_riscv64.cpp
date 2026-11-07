@@ -76,8 +76,7 @@ bool RegisterContextELFCore_riscv64::ReadRegister(
   }
 
   Status error;
-  value.SetFromMemoryData(*reg_info, src + offset, reg_info->byte_size,
-                          lldb::eByteOrderLittle, error);
+  value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, src + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
   return error.Success();
 }
 

@@ -1089,8 +1089,8 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         reg_ctx->ReadRegister(r2_info, r2_value);
 
         const size_t bytes_copied = r2_value.GetAsMemoryData(
-            *r2_info, data_sp->GetBytes(), r2_info->byte_size,
-            target_byte_order, error);
+            r2_info->byte_size, data_sp->GetBytes(), r2_info->byte_size,
+            target_byte_order, error, r2_info->name);
         if (bytes_copied != r2_info->byte_size)
           return return_valobj_sp;
         sucess = true;
@@ -1098,8 +1098,8 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       if (use_r3) {
         reg_ctx->ReadRegister(r3_info, r3_value);
         const size_t bytes_copied = r3_value.GetAsMemoryData(
-            *r3_info, data_sp->GetBytes() + r2_info->byte_size,
-            r3_info->byte_size, target_byte_order, error);
+            r3_info->byte_size, data_sp->GetBytes() + r2_info->byte_size,
+            r3_info->byte_size, target_byte_order, error, r3_info->name);
 
         if (bytes_copied != r3_info->byte_size)
           return return_valobj_sp;

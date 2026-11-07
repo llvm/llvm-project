@@ -7,11 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
+#include "lldb/Register/Arch/lldb-loongarch-ehframe-register-enums.h"
+
 #include <lldb/Utility/Flags.h>
 #include <stddef.h>
 
+#include "lldb/Register/Arch/lldb-loongarch-register-enums.h"
+#include "lldb/Register/Arch/lldb-loongarch-dwarf-register-enums.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "lldb/lldb-private.h"
 #include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
 
 #include "RegisterInfo_loongarch64.h"
 
@@ -32,6 +41,10 @@
    sizeof(RegisterInfo_loongarch64::FPR) +                                \
    sizeof(RegisterInfo_loongarch64::LSX) +                                \
    sizeof(RegisterInfo_loongarch64::LASX))
+
+
+namespace reg_ids = lldb_private::registers::loongarch::id;
+using namespace lldb_private;
 
 #define DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT
 #include "Register/Arch/RegisterInfos_loongarch64.h"
@@ -63,30 +76,30 @@ uint32_t RegisterInfo_loongarch64::GetRegisterInfoCount(
 
 // Number of register sets provided by this context.
 enum {
-  k_num_gpr_registers = gpr_last_loongarch - gpr_first_loongarch + 1,
-  k_num_fpr_registers = fpr_last_loongarch - fpr_first_loongarch + 1,
-  k_num_lsx_registers = lsx_last_loongarch - lsx_first_loongarch + 1,
-  k_num_lasx_registers = lasx_last_loongarch - lasx_first_loongarch + 1,
+  k_num_gpr_registers = reg_ids::gpr_last - reg_ids::gpr_first + 1,
+  k_num_fpr_registers = reg_ids::fpr_last - reg_ids::fpr_first + 1,
+  k_num_lsx_registers = reg_ids::lsx_last - reg_ids::lsx_first + 1,
+  k_num_lasx_registers = reg_ids::lasx_last - reg_ids::lasx_first + 1,
   k_num_register_sets = 4
 };
 
 // LoongArch64 general purpose registers.
 static const uint32_t g_gpr_regnums_loongarch64[] = {
-    gpr_r0_loongarch,        gpr_r1_loongarch,        gpr_r2_loongarch,
-    gpr_r3_loongarch,        gpr_r4_loongarch,        gpr_r5_loongarch,
-    gpr_r6_loongarch,        gpr_r7_loongarch,        gpr_r8_loongarch,
-    gpr_r9_loongarch,        gpr_r10_loongarch,       gpr_r11_loongarch,
-    gpr_r12_loongarch,       gpr_r13_loongarch,       gpr_r14_loongarch,
-    gpr_r15_loongarch,       gpr_r16_loongarch,       gpr_r17_loongarch,
-    gpr_r18_loongarch,       gpr_r19_loongarch,       gpr_r20_loongarch,
-    gpr_r21_loongarch,       gpr_r22_loongarch,       gpr_r23_loongarch,
-    gpr_r24_loongarch,       gpr_r25_loongarch,       gpr_r26_loongarch,
-    gpr_r27_loongarch,       gpr_r28_loongarch,       gpr_r29_loongarch,
-    gpr_r30_loongarch,       gpr_r31_loongarch,       gpr_orig_a0_loongarch,
-    gpr_pc_loongarch,        gpr_badv_loongarch,      gpr_reserved0_loongarch,
-    gpr_reserved1_loongarch, gpr_reserved2_loongarch, gpr_reserved3_loongarch,
-    gpr_reserved4_loongarch, gpr_reserved5_loongarch, gpr_reserved6_loongarch,
-    gpr_reserved7_loongarch, gpr_reserved8_loongarch, gpr_reserved9_loongarch,
+    reg_ids::gpr_r0,        reg_ids::gpr_r1,        reg_ids::gpr_r2,
+    reg_ids::gpr_r3,        reg_ids::gpr_r4,        reg_ids::gpr_r5,
+    reg_ids::gpr_r6,        reg_ids::gpr_r7,        reg_ids::gpr_r8,
+    reg_ids::gpr_r9,        reg_ids::gpr_r10,       reg_ids::gpr_r11,
+    reg_ids::gpr_r12,       reg_ids::gpr_r13,       reg_ids::gpr_r14,
+    reg_ids::gpr_r15,       reg_ids::gpr_r16,       reg_ids::gpr_r17,
+    reg_ids::gpr_r18,       reg_ids::gpr_r19,       reg_ids::gpr_r20,
+    reg_ids::gpr_r21,       reg_ids::gpr_r22,       reg_ids::gpr_r23,
+    reg_ids::gpr_r24,       reg_ids::gpr_r25,       reg_ids::gpr_r26,
+    reg_ids::gpr_r27,       reg_ids::gpr_r28,       reg_ids::gpr_r29,
+    reg_ids::gpr_r30,       reg_ids::gpr_r31,       reg_ids::gpr_orig_a0,
+    reg_ids::gpr_pc,        reg_ids::gpr_badv,      reg_ids::gpr_reserved0,
+    reg_ids::gpr_reserved1, reg_ids::gpr_reserved2, reg_ids::gpr_reserved3,
+    reg_ids::gpr_reserved4, reg_ids::gpr_reserved5, reg_ids::gpr_reserved6,
+    reg_ids::gpr_reserved7, reg_ids::gpr_reserved8, reg_ids::gpr_reserved9,
     LLDB_INVALID_REGNUM};
 
 static_assert(((sizeof g_gpr_regnums_loongarch64 /
@@ -96,20 +109,17 @@ static_assert(((sizeof g_gpr_regnums_loongarch64 /
 
 // LoongArch64 floating point registers.
 static const uint32_t g_fpr_regnums_loongarch64[] = {
-    fpr_f0_loongarch,   fpr_f1_loongarch,   fpr_f2_loongarch,
-    fpr_f3_loongarch,   fpr_f4_loongarch,   fpr_f5_loongarch,
-    fpr_f6_loongarch,   fpr_f7_loongarch,   fpr_f8_loongarch,
-    fpr_f9_loongarch,   fpr_f10_loongarch,  fpr_f11_loongarch,
-    fpr_f12_loongarch,  fpr_f13_loongarch,  fpr_f14_loongarch,
-    fpr_f15_loongarch,  fpr_f16_loongarch,  fpr_f17_loongarch,
-    fpr_f18_loongarch,  fpr_f19_loongarch,  fpr_f20_loongarch,
-    fpr_f21_loongarch,  fpr_f22_loongarch,  fpr_f23_loongarch,
-    fpr_f24_loongarch,  fpr_f25_loongarch,  fpr_f26_loongarch,
-    fpr_f27_loongarch,  fpr_f28_loongarch,  fpr_f29_loongarch,
-    fpr_f30_loongarch,  fpr_f31_loongarch,  fpr_fcc0_loongarch,
-    fpr_fcc1_loongarch, fpr_fcc2_loongarch, fpr_fcc3_loongarch,
-    fpr_fcc4_loongarch, fpr_fcc5_loongarch, fpr_fcc6_loongarch,
-    fpr_fcc7_loongarch, fpr_fcsr_loongarch, LLDB_INVALID_REGNUM};
+    reg_ids::fpr_f0,   reg_ids::fpr_f1,    reg_ids::fpr_f2,   reg_ids::fpr_f3,
+    reg_ids::fpr_f4,   reg_ids::fpr_f5,    reg_ids::fpr_f6,   reg_ids::fpr_f7,
+    reg_ids::fpr_f8,   reg_ids::fpr_f9,    reg_ids::fpr_f10,  reg_ids::fpr_f11,
+    reg_ids::fpr_f12,  reg_ids::fpr_f13,   reg_ids::fpr_f14,  reg_ids::fpr_f15,
+    reg_ids::fpr_f16,  reg_ids::fpr_f17,   reg_ids::fpr_f18,  reg_ids::fpr_f19,
+    reg_ids::fpr_f20,  reg_ids::fpr_f21,   reg_ids::fpr_f22,  reg_ids::fpr_f23,
+    reg_ids::fpr_f24,  reg_ids::fpr_f25,   reg_ids::fpr_f26,  reg_ids::fpr_f27,
+    reg_ids::fpr_f28,  reg_ids::fpr_f29,   reg_ids::fpr_f30,  reg_ids::fpr_f31,
+    reg_ids::fpr_fcc0, reg_ids::fpr_fcc1,  reg_ids::fpr_fcc2, reg_ids::fpr_fcc3,
+    reg_ids::fpr_fcc4, reg_ids::fpr_fcc5,  reg_ids::fpr_fcc6, reg_ids::fpr_fcc7,
+    reg_ids::fpr_fcsr, LLDB_INVALID_REGNUM};
 
 static_assert(((sizeof g_fpr_regnums_loongarch64 /
                 sizeof g_fpr_regnums_loongarch64[0]) -
@@ -118,17 +128,15 @@ static_assert(((sizeof g_fpr_regnums_loongarch64 /
 
 // LoongArch64 lsx vector registers.
 static const uint32_t g_lsx_regnums_loongarch64[] = {
-    lsx_vr0_loongarch,  lsx_vr1_loongarch,  lsx_vr2_loongarch,
-    lsx_vr3_loongarch,  lsx_vr4_loongarch,  lsx_vr5_loongarch,
-    lsx_vr6_loongarch,  lsx_vr7_loongarch,  lsx_vr8_loongarch,
-    lsx_vr9_loongarch,  lsx_vr10_loongarch, lsx_vr11_loongarch,
-    lsx_vr12_loongarch, lsx_vr13_loongarch, lsx_vr14_loongarch,
-    lsx_vr15_loongarch, lsx_vr16_loongarch, lsx_vr17_loongarch,
-    lsx_vr18_loongarch, lsx_vr19_loongarch, lsx_vr20_loongarch,
-    lsx_vr21_loongarch, lsx_vr22_loongarch, lsx_vr23_loongarch,
-    lsx_vr24_loongarch, lsx_vr25_loongarch, lsx_vr26_loongarch,
-    lsx_vr27_loongarch, lsx_vr28_loongarch, lsx_vr29_loongarch,
-    lsx_vr30_loongarch, lsx_vr31_loongarch, LLDB_INVALID_REGNUM};
+    reg_ids::lsx_vr0,   reg_ids::lsx_vr1,  reg_ids::lsx_vr2,  reg_ids::lsx_vr3,
+    reg_ids::lsx_vr4,   reg_ids::lsx_vr5,  reg_ids::lsx_vr6,  reg_ids::lsx_vr7,
+    reg_ids::lsx_vr8,   reg_ids::lsx_vr9,  reg_ids::lsx_vr10, reg_ids::lsx_vr11,
+    reg_ids::lsx_vr12,  reg_ids::lsx_vr13, reg_ids::lsx_vr14, reg_ids::lsx_vr15,
+    reg_ids::lsx_vr16,  reg_ids::lsx_vr17, reg_ids::lsx_vr18, reg_ids::lsx_vr19,
+    reg_ids::lsx_vr20,  reg_ids::lsx_vr21, reg_ids::lsx_vr22, reg_ids::lsx_vr23,
+    reg_ids::lsx_vr24,  reg_ids::lsx_vr25, reg_ids::lsx_vr26, reg_ids::lsx_vr27,
+    reg_ids::lsx_vr28,  reg_ids::lsx_vr29, reg_ids::lsx_vr30, reg_ids::lsx_vr31,
+    LLDB_INVALID_REGNUM};
 
 static_assert(((sizeof g_lsx_regnums_loongarch64 /
                 sizeof g_lsx_regnums_loongarch64[0]) -
@@ -137,17 +145,17 @@ static_assert(((sizeof g_lsx_regnums_loongarch64 /
 
 // LoongArch64 lasx vector registers.
 static const uint32_t g_lasx_regnums_loongarch64[] = {
-    lasx_xr0_loongarch,  lasx_xr1_loongarch,  lasx_xr2_loongarch,
-    lasx_xr3_loongarch,  lasx_xr4_loongarch,  lasx_xr5_loongarch,
-    lasx_xr6_loongarch,  lasx_xr7_loongarch,  lasx_xr8_loongarch,
-    lasx_xr9_loongarch,  lasx_xr10_loongarch, lasx_xr11_loongarch,
-    lasx_xr12_loongarch, lasx_xr13_loongarch, lasx_xr14_loongarch,
-    lasx_xr15_loongarch, lasx_xr16_loongarch, lasx_xr17_loongarch,
-    lasx_xr18_loongarch, lasx_xr19_loongarch, lasx_xr20_loongarch,
-    lasx_xr21_loongarch, lasx_xr22_loongarch, lasx_xr23_loongarch,
-    lasx_xr24_loongarch, lasx_xr25_loongarch, lasx_xr26_loongarch,
-    lasx_xr27_loongarch, lasx_xr28_loongarch, lasx_xr29_loongarch,
-    lasx_xr30_loongarch, lasx_xr31_loongarch, LLDB_INVALID_REGNUM};
+    reg_ids::lasx_xr0,  reg_ids::lasx_xr1,  reg_ids::lasx_xr2,
+    reg_ids::lasx_xr3,  reg_ids::lasx_xr4,  reg_ids::lasx_xr5,
+    reg_ids::lasx_xr6,  reg_ids::lasx_xr7,  reg_ids::lasx_xr8,
+    reg_ids::lasx_xr9,  reg_ids::lasx_xr10, reg_ids::lasx_xr11,
+    reg_ids::lasx_xr12, reg_ids::lasx_xr13, reg_ids::lasx_xr14,
+    reg_ids::lasx_xr15, reg_ids::lasx_xr16, reg_ids::lasx_xr17,
+    reg_ids::lasx_xr18, reg_ids::lasx_xr19, reg_ids::lasx_xr20,
+    reg_ids::lasx_xr21, reg_ids::lasx_xr22, reg_ids::lasx_xr23,
+    reg_ids::lasx_xr24, reg_ids::lasx_xr25, reg_ids::lasx_xr26,
+    reg_ids::lasx_xr27, reg_ids::lasx_xr28, reg_ids::lasx_xr29,
+    reg_ids::lasx_xr30, reg_ids::lasx_xr31, LLDB_INVALID_REGNUM};
 
 static_assert(((sizeof g_lasx_regnums_loongarch64 /
                 sizeof g_lasx_regnums_loongarch64[0]) -
@@ -196,13 +204,13 @@ size_t RegisterInfo_loongarch64::GetRegisterSetCount() const {
 size_t RegisterInfo_loongarch64::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
   // coverity[unsigned_compare]
-  if (reg_index >= gpr_first_loongarch && reg_index <= gpr_last_loongarch)
+  if (reg_index >= reg_ids::gpr_first && reg_index <= reg_ids::gpr_last)
     return GPRegSet;
-  if (reg_index >= fpr_first_loongarch && reg_index <= fpr_last_loongarch)
+  if (reg_index >= reg_ids::fpr_first && reg_index <= reg_ids::fpr_last)
     return FPRegSet;
-  if (reg_index >= lsx_first_loongarch && reg_index <= lsx_last_loongarch)
+  if (reg_index >= reg_ids::lsx_first && reg_index <= reg_ids::lsx_last)
     return LSXRegSet;
-  if (reg_index >= lasx_first_loongarch && reg_index <= lasx_last_loongarch)
+  if (reg_index >= reg_ids::lasx_first && reg_index <= reg_ids::lasx_last)
     return LASXRegSet;
   return LLDB_INVALID_REGNUM;
 }

@@ -7,6 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeProcessAIX.h"
+#include "lldb/Register/Arch/lldb-ppc64-ehframe-register-enums.h"
+
+#include "lldb/Register/Arch/lldb-ppc64-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64-dwarf-register-enums.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -26,12 +36,14 @@
 #include <string>
 #include <sys/ptrace.h>
 #include <unistd.h>
+
+using namespace lldb_private;
+
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
 #include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 using namespace lldb;
-using namespace lldb_private;
 using namespace lldb_private::process_aix;
 using namespace llvm;
 

@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_POWERPC_H
 
 #include "Register/RegisterInfoInterface.h"
-#include "Register/Arch/RegisterContext_powerpc.h"
+#include "lldb/Register/Arch/lldb-powerpc-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -43,11 +43,15 @@ public:
   const char *GetRegisterName(unsigned reg);
 
 protected:
+  // General purpose registers.
   uint64_t
-      m_gpr_powerpc[k_num_gpr_registers_powerpc]; // general purpose registers.
+      m_gpr_powerpc[lldb_private::registers::powerpc::id::k_num_gpr_registers];
+  // Floating point registers.
   uint64_t
-      m_fpr_powerpc[k_num_fpr_registers_powerpc]; // floating point registers.
-  uint32_t m_vmx_powerpc[k_num_vmx_registers_powerpc][4];
+      m_fpr_powerpc[lldb_private::registers::powerpc::id::k_num_fpr_registers];
+  uint32_t
+      m_vmx_powerpc[lldb_private::registers::powerpc::id::k_num_vmx_registers]
+                   [4];
   std::unique_ptr<lldb_private::RegisterInfoInterface>
       m_register_info_up; // Register Info Interface (FreeBSD or Linux)
 

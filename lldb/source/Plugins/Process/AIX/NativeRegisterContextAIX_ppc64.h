@@ -12,13 +12,23 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_PPC64_H
 
 #include "Plugins/Process/AIX/NativeRegisterContextAIX.h"
-#include "Register/Arch/lldb-ppc64-register-enums.h"
+
+#include "lldb/Register/Arch/lldb-ppc64-dwarf-register-enums.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
+
+#include "lldb/Register/Arch/lldb-ppc64-register-enums.h"
+
+namespace lldb_private {
 
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
 #include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
-namespace lldb_private {
 namespace process_aix {
 
 class NativeProcessAIX;

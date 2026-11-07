@@ -7,8 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoDynamic_riscv32.h"
+#include "lldb/Register/Arch/lldb-riscv-ehframe-register-enums.h"
 
-#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-dwarf-register-enums.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "lldb/lldb-private.h"
+#include <cstddef>
+#include <cstdint>
+
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
@@ -17,6 +25,12 @@
 
 #define GPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
 #define FPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
+
+
+namespace dwarf_regs = lldb_private::registers::riscv::dwarf;
+namespace ehframe_regs = lldb_private::registers::riscv::ehframe;
+namespace reg_ids = lldb_private::registers::riscv::id;
+using namespace lldb_private;
 
 #define DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 #include "Register/Arch/RegisterInfos_riscv32.h"
@@ -106,7 +120,8 @@ void RegisterInfoDynamic_riscv32::BuildCSRegInfos(
   normalized_features.erase(llvm::unique(normalized_features),
                             normalized_features.end());
 
-  const uint32_t k_num_csr_registers = csr_last_riscv - csr_first_riscv + 1;
+  const uint32_t k_num_csr_registers =
+      reg_ids::csr_last - reg_ids::csr_first + 1;
   cs_reg_infos.reserve(k_num_csr_registers);
 
   // Construct default CS register information. CS register information entries
@@ -123,11 +138,11 @@ void RegisterInfoDynamic_riscv32::BuildCSRegInfos(
     csr.byte_offset = 0;
     csr.encoding = lldb::eEncodingUint;
     csr.format = lldb::eFormatHex;
-    csr.kinds[lldb::eRegisterKindEHFrame] = riscv_dwarf::dwarf_first_csr + reg;
-    csr.kinds[lldb::eRegisterKindDWARF] = riscv_dwarf::dwarf_first_csr + reg;
+    csr.kinds[lldb::eRegisterKindEHFrame] = ehframe_regs::first_csr + reg;
+    csr.kinds[lldb::eRegisterKindDWARF] = dwarf_regs::first_csr + reg;
     csr.kinds[lldb::eRegisterKindGeneric] = LLDB_INVALID_REGNUM;
     csr.kinds[lldb::eRegisterKindProcessPlugin] = LLDB_INVALID_REGNUM;
-    csr.kinds[lldb::eRegisterKindLLDB] = csr_first_riscv + reg;
+    csr.kinds[lldb::eRegisterKindLLDB] = reg_ids::csr_first + reg;
     csr.value_regs = nullptr;
     csr.invalidate_regs = nullptr;
     csr.register_type = nullptr;
@@ -160,9 +175,9 @@ void RegisterInfoDynamic_riscv32::ConfigureCSRegInfos(
 
   for (const auto &csr : it->second) {
     const uint32_t lldb_reg = csr.kinds[lldb::eRegisterKindLLDB];
-    if (lldb_reg < csr_first_riscv || lldb_reg > csr_last_riscv)
+    if (lldb_reg < reg_ids::csr_first || lldb_reg > reg_ids::csr_last)
       continue;
-    uint32_t idx = lldb_reg - csr_first_riscv;
+    uint32_t idx = lldb_reg - reg_ids::csr_first;
     if (idx < cs_reg_infos.size())
       cs_reg_infos[idx] = csr;
   }

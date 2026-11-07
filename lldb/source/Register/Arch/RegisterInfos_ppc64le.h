@@ -6,9 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+// Textual register-table fragment; intentionally has no include guard.
+// Include its ordinary dependencies at file scope before defining layout macros.
+// See README.md for the inclusion contract.
 
-#include <cstddef>
+#if !defined(DECLARE_REGISTER_INFOS_PPC64LE_STRUCT)
+#error Select a register-table generation mode before including this fragment
+#endif
+
+#ifdef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 
 // Computes the offset of the given GPR in the user data area.
 #define GPR_OFFSET(regname) (offsetof(GPR, regname))
@@ -18,45 +24,42 @@
   (offsetof(VSX, regname) + sizeof(GPR) + sizeof(FPR) + sizeof(VMX))
 #define GPR_SIZE(regname) (sizeof(((GPR *)NULL)->regname))
 
-#include "Utility/PPC64LE_DWARF_Registers.h"
-#include "lldb-ppc64le-register-enums.h"
-
 // Note that the size and offset will be updated by platform-specific classes.
 #define DEFINE_GPR(reg, alt, lldb_kind)                                        \
   {                                                                            \
     #reg, alt, GPR_SIZE(reg), GPR_OFFSET(reg), lldb::eEncodingUint,            \
                                          lldb::eFormatHex,                     \
-                                         {ppc64le_dwarf::dwarf_##reg##_ppc64le,\
-                                          ppc64le_dwarf::dwarf_##reg##_ppc64le,\
+                                         {lldb_private::registers::ppc64le::ehframe::reg,\
+                                          lldb_private::registers::ppc64le::dwarf::reg,\
                                           lldb_kind,                           \
                                           LLDB_INVALID_REGNUM,                 \
-                                          gpr_##reg##_ppc64le },               \
+                                          lldb_private::registers::ppc64le::id::gpr_##reg },               \
                                           NULL, NULL, NULL,                    \
   }
 #define DEFINE_FPR(reg, alt, lldb_kind)                                        \
   {                                                                            \
 #reg, alt, 8, FPR_OFFSET(reg), lldb::eEncodingIEEE754, lldb::eFormatFloat, \
-        {ppc64le_dwarf::dwarf_##reg##_ppc64le,                                 \
-         ppc64le_dwarf::dwarf_##reg##_ppc64le, lldb_kind, LLDB_INVALID_REGNUM, \
-         fpr_##reg##_ppc64le },                                                \
+        {lldb_private::registers::ppc64le::ehframe::reg,                                 \
+         lldb_private::registers::ppc64le::dwarf::reg, lldb_kind, LLDB_INVALID_REGNUM, \
+         lldb_private::registers::ppc64le::id::fpr_##reg },                                                \
          NULL, NULL, NULL,                                                     \
   }
 #define DEFINE_VMX(reg, lldb_kind)                                             \
   {                                                                            \
 #reg, NULL, 16, VMX_OFFSET(reg), lldb::eEncodingVector,                    \
         lldb::eFormatVectorOfUInt32,                                           \
-        {ppc64le_dwarf::dwarf_##reg##_ppc64le,                                 \
-         ppc64le_dwarf::dwarf_##reg##_ppc64le, lldb_kind, LLDB_INVALID_REGNUM, \
-         vmx_##reg##_ppc64le },                                                \
+        {lldb_private::registers::ppc64le::ehframe::reg,                                 \
+         lldb_private::registers::ppc64le::dwarf::reg, lldb_kind, LLDB_INVALID_REGNUM, \
+         lldb_private::registers::ppc64le::id::vmx_##reg },                                                \
          NULL, NULL, NULL,                                                     \
   }
 #define DEFINE_VSX(reg, lldb_kind)                                             \
   {                                                                            \
 #reg, NULL, 16, VSX_OFFSET(reg), lldb::eEncodingVector,                    \
         lldb::eFormatVectorOfUInt32,                                           \
-        {ppc64le_dwarf::dwarf_##reg##_ppc64le,                                 \
-         ppc64le_dwarf::dwarf_##reg##_ppc64le, lldb_kind, LLDB_INVALID_REGNUM, \
-         vsx_##reg##_ppc64le },                                                \
+        {lldb_private::registers::ppc64le::ehframe::reg,                                 \
+         lldb_private::registers::ppc64le::dwarf::reg, lldb_kind, LLDB_INVALID_REGNUM, \
+         lldb_private::registers::ppc64le::id::vsx_##reg },                                                \
          NULL, NULL, NULL,                                                     \
   }
 
@@ -142,9 +145,9 @@
        FPR_OFFSET(fpscr),                                                      \
        lldb::eEncodingUint,                                                    \
        lldb::eFormatHex,                                                       \
-       {ppc64le_dwarf::dwarf_fpscr_ppc64le,                                    \
-        ppc64le_dwarf::dwarf_fpscr_ppc64le, LLDB_INVALID_REGNUM,               \
-        LLDB_INVALID_REGNUM, fpr_fpscr_ppc64le},                               \
+       {lldb_private::registers::ppc64le::ehframe::fpscr,                                    \
+        lldb_private::registers::ppc64le::dwarf::fpscr, LLDB_INVALID_REGNUM,               \
+        LLDB_INVALID_REGNUM, lldb_private::registers::ppc64le::id::fpr_fpscr},                               \
        NULL,                                                                   \
        NULL,                                                                   \
        NULL,                                                                   \
@@ -187,8 +190,8 @@
        VMX_OFFSET(vscr),                                                       \
        lldb::eEncodingUint,                                                    \
        lldb::eFormatHex,                                                       \
-       {ppc64le_dwarf::dwarf_vscr_ppc64le, ppc64le_dwarf::dwarf_vscr_ppc64le,  \
-        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vscr_ppc64le},           \
+       {lldb_private::registers::ppc64le::ehframe::vscr, lldb_private::registers::ppc64le::dwarf::vscr,  \
+        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_private::registers::ppc64le::id::vmx_vscr},           \
        NULL,                                                                   \
        NULL,                                                                   \
        NULL,                                                                   \
@@ -199,9 +202,9 @@
        VMX_OFFSET(vrsave),                                                     \
        lldb::eEncodingUint,                                                    \
        lldb::eFormatHex,                                                       \
-       {ppc64le_dwarf::dwarf_vrsave_ppc64le,                                   \
-        ppc64le_dwarf::dwarf_vrsave_ppc64le, LLDB_INVALID_REGNUM,              \
-        LLDB_INVALID_REGNUM, vmx_vrsave_ppc64le},                              \
+       {lldb_private::registers::ppc64le::ehframe::vrsave,                                   \
+        lldb_private::registers::ppc64le::dwarf::vrsave, LLDB_INVALID_REGNUM,              \
+        LLDB_INVALID_REGNUM, lldb_private::registers::ppc64le::id::vmx_vrsave},                              \
        NULL,                                                                   \
        NULL,                                                                   \
        NULL,                                                                   \
@@ -457,18 +460,24 @@ typedef struct _VSX {
   uint32_t vs63[4];
 } VSX;
 
-static lldb_private::RegisterInfo g_register_infos_ppc64le[] = {
+static RegisterInfo g_register_infos_ppc64le[] = {
     POWERPC_REGS
 };
 
 static_assert((sizeof(g_register_infos_ppc64le) /
                sizeof(g_register_infos_ppc64le[0])) ==
-                  k_num_registers_ppc64le,
+                  lldb_private::registers::ppc64le::id::k_num_registers,
               "g_register_infos_powerpc64 has wrong number of register infos");
 
-#undef DEFINE_FPR
+#endif // DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+
+#undef GPR_OFFSET
+#undef FPR_OFFSET
+#undef VMX_OFFSET
+#undef VSX_OFFSET
+#undef GPR_SIZE
 #undef DEFINE_GPR
+#undef DEFINE_FPR
 #undef DEFINE_VMX
 #undef DEFINE_VSX
-
-#endif // DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+#undef POWERPC_REGS

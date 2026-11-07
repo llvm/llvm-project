@@ -16,8 +16,10 @@
 
 #include "Plugins/Instruction/LoongArch/EmulateInstructionLoongArch.h"
 #include "Register/Common/RegisterInfo_loongarch64.h"
-#include "Register/Arch/lldb-loongarch-register-enums.h"
+#include "lldb/Register/Arch/lldb-loongarch-register-enums.h"
 
+
+namespace reg_ids = lldb_private::registers::loongarch::id;
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
@@ -64,15 +66,15 @@ struct LoongArch64EmulatorTester : public EmulateInstructionLoongArch,
     LoongArch64EmulatorTester *tester =
         (LoongArch64EmulatorTester *)instruction;
     uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    if (reg >= gpr_r0_loongarch && reg <= gpr_r31_loongarch)
+    if (reg >= reg_ids::gpr_r0 && reg <= reg_ids::gpr_r31)
       reg_value.SetUInt(tester->gpr.gpr[reg], reg_info->byte_size);
-    else if (reg == gpr_orig_a0_loongarch)
+    else if (reg == reg_ids::gpr_orig_a0)
       reg_value.SetUInt(tester->gpr.orig_a0, reg_info->byte_size);
-    else if (reg == gpr_pc_loongarch)
+    else if (reg == reg_ids::gpr_pc)
       reg_value.SetUInt(tester->gpr.csr_era, reg_info->byte_size);
-    else if (reg == gpr_badv_loongarch)
+    else if (reg == reg_ids::gpr_badv)
       reg_value.SetUInt(tester->gpr.csr_badv, reg_info->byte_size);
-    else if (reg == fpr_first_loongarch + 32)
+    else if (reg == reg_ids::fpr_first + 32)
       // fcc0
       reg_value.SetUInt(tester->fpr.fcc, reg_info->byte_size);
     return true;
@@ -85,13 +87,13 @@ struct LoongArch64EmulatorTester : public EmulateInstructionLoongArch,
     LoongArch64EmulatorTester *tester =
         (LoongArch64EmulatorTester *)instruction;
     uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    if (reg >= gpr_r0_loongarch && reg <= gpr_r31_loongarch)
+    if (reg >= reg_ids::gpr_r0 && reg <= reg_ids::gpr_r31)
       tester->gpr.gpr[reg] = reg_value.GetAsUInt64();
-    else if (reg == gpr_orig_a0_loongarch)
+    else if (reg == reg_ids::gpr_orig_a0)
       tester->gpr.orig_a0 = reg_value.GetAsUInt64();
-    else if (reg == gpr_pc_loongarch)
+    else if (reg == reg_ids::gpr_pc)
       tester->gpr.csr_era = reg_value.GetAsUInt64();
-    else if (reg == gpr_badv_loongarch)
+    else if (reg == reg_ids::gpr_badv)
       tester->gpr.csr_badv = reg_value.GetAsUInt64();
     return true;
   }

@@ -20,12 +20,13 @@
 #include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
 #include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
 #include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
-#include "Register/Arch/RegisterContext_powerpc.h"
+#include "lldb/Register/Arch/lldb-powerpc-register-enums.h"
 #include "Register/Common/RegisterInfo_arm.h"
 #include "Register/Common/RegisterInfo_arm64.h"
-#include "Register/Arch/lldb-arm-register-enums.h"
-#include "Register/Arch/lldb-arm64-register-enums.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm64-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -44,10 +45,11 @@ std::pair<size_t, size_t> GetRegParams(RegisterInfoInterface &ctx,
 
 #define EXPECT_GPR_X86_64(regname)                                             \
   EXPECT_THAT(                                                                 \
-      GetRegParams(reg_ctx, lldb_##regname##_x86_64),                          \
+      GetRegParams(reg_ctx, registers::x86_64::id::regname),                   \
       ::testing::Pair(offsetof(reg, r_##regname), sizeof(reg::r_##regname)))
 #define EXPECT_DBR_X86_64(num)                                                 \
-  EXPECT_OFF(dr##num##_x86_64, offsetof(dbreg, dr[num]), sizeof(dbreg::dr[num]))
+  EXPECT_OFF(registers::x86_64::id::dr##num, offsetof(dbreg, dr[num]),         \
+             sizeof(dbreg::dr[num]))
 
 TEST(RegisterInfoFreeBSDTest, x86_64) {
   ArchSpec arch{"x86_64-unknown-freebsd"};
@@ -80,7 +82,8 @@ TEST(RegisterInfoFreeBSDTest, x86_64) {
 
   // fctrl is the first FPR field, it is used to determine offset of the whole
   // FPR struct
-  size_t base_offset = reg_ctx.GetRegisterInfo()[lldb_fctrl_x86_64].byte_offset;
+  size_t base_offset =
+      reg_ctx.GetRegisterInfo()[registers::x86_64::id::fctrl].byte_offset;
 
   // assert against FXSAVE struct
   EXPECT_OFF(fctrl_x86_64, 0x00, 2);
@@ -133,7 +136,8 @@ TEST(RegisterInfoFreeBSDTest, x86_64) {
   EXPECT_OFF(xmm14_x86_64, 0x180, 16);
   EXPECT_OFF(xmm15_x86_64, 0x190, 16);
 
-  base_offset = reg_ctx.GetRegisterInfo()[lldb_dr0_x86_64].byte_offset;
+  base_offset =
+      reg_ctx.GetRegisterInfo()[registers::x86_64::id::dr0].byte_offset;
   EXPECT_DBR_X86_64(0);
   EXPECT_DBR_X86_64(1);
   EXPECT_DBR_X86_64(2);
@@ -149,11 +153,12 @@ TEST(RegisterInfoFreeBSDTest, x86_64) {
 #if defined(__i386__) || defined(__x86_64__)
 
 #define EXPECT_GPR_I386(regname)                                               \
-  EXPECT_THAT(GetRegParams(reg_ctx, lldb_##regname##_i386),                    \
+  EXPECT_THAT(GetRegParams(reg_ctx, registers::x86::id::regname),              \
               ::testing::Pair(offsetof(native_i386_regs, r_##regname),         \
                               sizeof(native_i386_regs::r_##regname)))
 #define EXPECT_DBR_I386(num)                                                   \
-  EXPECT_OFF(dr##num##_i386, offsetof(native_i386_dbregs, dr[num]),            \
+  EXPECT_OFF(registers::x86::id::dr##num,                                      \
+             offsetof(native_i386_dbregs, dr[num]),                            \
              sizeof(native_i386_dbregs::dr[num]))
 
 TEST(RegisterInfoFreeBSDTest, i386) {
@@ -187,7 +192,8 @@ TEST(RegisterInfoFreeBSDTest, i386) {
 
   // fctrl is the first FPR field, it is used to determine offset of the whole
   // FPR struct
-  size_t base_offset = reg_ctx.GetRegisterInfo()[lldb_fctrl_i386].byte_offset;
+  size_t base_offset =
+      reg_ctx.GetRegisterInfo()[registers::x86::id::fctrl].byte_offset;
 
   // assert against FXSAVE struct
   EXPECT_OFF(fctrl_i386, 0x00, 2);
@@ -228,7 +234,7 @@ TEST(RegisterInfoFreeBSDTest, i386) {
   EXPECT_OFF(xmm6_i386, 0x100, 16);
   EXPECT_OFF(xmm7_i386, 0x110, 16);
 
-  base_offset = reg_ctx.GetRegisterInfo()[lldb_dr0_i386].byte_offset;
+  base_offset = reg_ctx.GetRegisterInfo()[registers::x86::id::dr0].byte_offset;
   EXPECT_DBR_I386(0);
   EXPECT_DBR_I386(1);
   EXPECT_DBR_I386(2);
@@ -244,10 +250,10 @@ TEST(RegisterInfoFreeBSDTest, i386) {
 #if defined(__arm__)
 
 #define EXPECT_GPR_ARM(lldb_reg, fbsd_reg)                                     \
-  EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_arm),                     \
+  EXPECT_THAT(GetRegParams(reg_ctx, registers::arm::id::gpr_##lldb_reg),       \
               ::testing::Pair(offsetof(reg, fbsd_reg), sizeof(reg::fbsd_reg)))
 #define EXPECT_FPU_ARM(lldb_reg, fbsd_reg)                                     \
-  EXPECT_THAT(GetRegParams(reg_ctx, fpu_##lldb_reg##_arm),                     \
+  EXPECT_THAT(GetRegParams(reg_ctx, registers::arm::id::fpu_##lldb_reg),       \
               ::testing::Pair(offsetof(vfp_state, fbsd_reg) + base_offset,     \
                               sizeof(vfp_state::fbsd_reg)))
 
@@ -273,7 +279,8 @@ TEST(RegisterInfoFreeBSDTest, arm) {
   EXPECT_GPR_ARM(pc, r_pc);
   EXPECT_GPR_ARM(cpsr, r_cpsr);
 
-  size_t base_offset = reg_ctx.GetRegisterInfo()[fpu_d0_arm].byte_offset;
+  size_t base_offset =
+      reg_ctx.GetRegisterInfo()[registers::arm::id::fpu_d0].byte_offset;
 
   EXPECT_FPU_ARM(d0, reg[0]);
   EXPECT_FPU_ARM(d1, reg[1]);
@@ -315,10 +322,10 @@ TEST(RegisterInfoFreeBSDTest, arm) {
 #if defined(__aarch64__)
 
 #define EXPECT_GPR_ARM64(lldb_reg, fbsd_reg)                                   \
-  EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_arm64),                   \
+  EXPECT_THAT(GetRegParams(reg_ctx, registers::arm64::id::gpr_##lldb_reg),     \
               ::testing::Pair(offsetof(reg, fbsd_reg), sizeof(reg::fbsd_reg)))
 #define EXPECT_FPU_ARM64(lldb_reg, fbsd_reg)                                   \
-  EXPECT_THAT(GetRegParams(reg_ctx, fpu_##lldb_reg##_arm64),                   \
+  EXPECT_THAT(GetRegParams(reg_ctx, registers::arm64::id::fpu_##lldb_reg),     \
               ::testing::Pair(offsetof(fpreg, fbsd_reg) + base_offset,         \
                               sizeof(fpreg::fbsd_reg)))
 
@@ -362,7 +369,8 @@ TEST(RegisterInfoFreeBSDTest, arm64) {
   EXPECT_GPR_ARM64(pc, elr);
   EXPECT_GPR_ARM64(cpsr, spsr);
 
-  size_t base_offset = reg_ctx.GetRegisterInfo()[fpu_v0_arm64].byte_offset;
+  size_t base_offset =
+      reg_ctx.GetRegisterInfo()[registers::arm64::id::fpu_v0].byte_offset;
 
   EXPECT_FPU_ARM64(v0, fp_q[0]);
   EXPECT_FPU_ARM64(v1, fp_q[1]);
@@ -405,10 +413,10 @@ TEST(RegisterInfoFreeBSDTest, arm64) {
 #if defined(__powerpc__)
 
 #define EXPECT_GPR_PPC(lldb_reg, fbsd_reg)                                     \
-  EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_powerpc),                 \
+  EXPECT_THAT(GetRegParams(reg_ctx, registers::powerpc::id::gpr_##lldb_reg),   \
               ::testing::Pair(offsetof(reg, fbsd_reg), sizeof(reg::fbsd_reg)))
 #define EXPECT_FPU_PPC(lldb_reg, fbsd_reg)                                     \
-  EXPECT_THAT(GetRegParams(reg_ctx, fpr_##lldb_reg##_powerpc),                 \
+  EXPECT_THAT(GetRegParams(reg_ctx, registers::powerpc::id::fpr_##lldb_reg),   \
               ::testing::Pair(offsetof(fpreg, fbsd_reg) + base_offset,         \
                               sizeof(fpreg::fbsd_reg)))
 
@@ -454,7 +462,8 @@ TEST(RegisterInfoFreeBSDTest, powerpc32) {
   EXPECT_GPR_PPC(ctr, ctr);
   EXPECT_GPR_PPC(pc, pc);
 
-  size_t base_offset = reg_ctx.GetRegisterInfo()[fpr_f0_powerpc].byte_offset;
+  size_t base_offset =
+      reg_ctx.GetRegisterInfo()[registers::powerpc::id::fpr_f0].byte_offset;
 
   EXPECT_FPU_PPC(f0, fpreg[0]);
   EXPECT_FPU_PPC(f1, fpreg[1]);

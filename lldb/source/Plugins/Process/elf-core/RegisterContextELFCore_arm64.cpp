@@ -256,8 +256,7 @@ bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
 
   offset = reg_info->byte_offset;
   if (offset + reg_info->byte_size <= GetGPRSize()) {
-    value.SetFromMemoryData(*reg_info, m_gpr_data.GetDataStart() + offset,
-                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_gpr_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
     return error.Success();
   }
 
@@ -270,9 +269,7 @@ bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
       // SVE is disabled take legacy route for FPU register access
       offset -= GetGPRSize();
       if (offset < m_fpr_data.GetByteSize()) {
-        value.SetFromMemoryData(*reg_info, m_fpr_data.GetDataStart() + offset,
-                                reg_info->byte_size, lldb::eByteOrderLittle,
-                                error);
+        value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_fpr_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
         return error.Success();
       }
     } else {
@@ -303,9 +300,7 @@ bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
 
       assert(sve_reg_num != LLDB_INVALID_REGNUM);
       assert(offset < m_sve_data.GetByteSize());
-      value.SetFromMemoryData(*reg_info, GetSVEBuffer(offset),
-                              reg_info->byte_size, lldb::eByteOrderLittle,
-                              error);
+      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, GetSVEBuffer(offset), reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
     }
   } else if (IsSVE(reg)) {
     if (IsSVEVG(reg)) {
@@ -327,16 +322,13 @@ bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
         assert(offset < m_sve_data.GetByteSize());
         src = GetSVEBuffer(offset);
       }
-      value.SetFromMemoryData(*reg_info, src, byte_size, lldb::eByteOrderLittle,
-                              error);
+      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, src, byte_size, lldb::eByteOrderLittle, error, reg_info->name);
     } break;
     case SVEState::Full:
     case SVEState::Streaming:
       offset = CalculateSVEOffset(reg_info);
       assert(offset < m_sve_data.GetByteSize());
-      value.SetFromMemoryData(*reg_info, GetSVEBuffer(offset),
-                              reg_info->byte_size, lldb::eByteOrderLittle,
-                              error);
+      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, GetSVEBuffer(offset), reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
       break;
     case SVEState::Disabled:
     default:
@@ -345,23 +337,19 @@ bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
   } else if (IsPAuth(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetPAuthOffset();
     assert(offset < m_pac_data.GetByteSize());
-    value.SetFromMemoryData(*reg_info, m_pac_data.GetDataStart() + offset,
-                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_pac_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
   } else if (IsTLS(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetTLSOffset();
     assert(offset < m_tls_data.GetByteSize());
-    value.SetFromMemoryData(*reg_info, m_tls_data.GetDataStart() + offset,
-                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_tls_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
   } else if (IsMTE(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetMTEOffset();
     assert(offset < m_mte_data.GetByteSize());
-    value.SetFromMemoryData(*reg_info, m_mte_data.GetDataStart() + offset,
-                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_mte_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
   } else if (IsGCS(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetGCSOffset();
     assert(offset < m_gcs_data.GetByteSize());
-    value.SetFromMemoryData(*reg_info, m_gcs_data.GetDataStart() + offset,
-                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_gcs_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
   } else if (IsSME(reg)) {
     // If you had SME in the process, active or otherwise, there will at least
     // be a ZA header. No header, no SME at all.
@@ -394,32 +382,24 @@ bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
         src = disabled_za_data.data();
       }
 
-      value.SetFromMemoryData(*reg_info, src + sizeof(sve::user_za_header),
-                              reg_info->byte_size, lldb::eByteOrderLittle,
-                              error);
+      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, src + sizeof(sve::user_za_header), reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
     } else if (m_register_info_up->IsSMERegZT(reg)) {
-      value.SetFromMemoryData(*reg_info, m_zt_data.GetDataStart(),
-                              reg_info->byte_size, lldb::eByteOrderLittle,
-                              error);
+      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_zt_data.GetDataStart(), reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
     } else {
       offset = reg_info->byte_offset - m_register_info_up->GetSMEOffset();
       assert(offset < sizeof(m_sme_pseudo_regs));
       // Host endian since these values are derived instead of being read from a
       // core file note.
-      value.SetFromMemoryData(
-          *reg_info, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset,
-          reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error);
+      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset, reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error, reg_info->name);
     }
   } else if (IsFPMR(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetFPMROffset();
     assert(offset < m_fpmr_data.GetByteSize());
-    value.SetFromMemoryData(*reg_info, m_fpmr_data.GetDataStart() + offset,
-                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_fpmr_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
   } else if (IsPOE(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetPOEOffset();
     assert(offset < m_poe_data.GetByteSize());
-    value.SetFromMemoryData(*reg_info, m_poe_data.GetDataStart() + offset,
-                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_poe_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
   } else
     return false;
 

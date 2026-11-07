@@ -62,7 +62,7 @@ bool RegisterContextELFCore_arm::ReadRegister(const RegisterInfo *reg_info,
     lldb::offset_t offset = reg_info->byte_offset - GetGPRSize();
     if (m_fpr.ValidOffsetForDataOfSize(offset, reg_info->byte_size))
       return value
-          .SetValueFromData(*reg_info, m_fpr, offset, /*partial_data_ok=*/false)
+          .SetValueFromData(reg_info->encoding, reg_info->byte_size, m_fpr, offset, /*partial_data_ok=*/false, reg_info->name)
           .Success();
   }
 

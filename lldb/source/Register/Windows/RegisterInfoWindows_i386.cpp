@@ -7,10 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoWindows_i386.h"
-#include "Register/Arch/RegisterContext_x86.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-ehframe-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
 
+
+namespace dwarf_regs = lldb_private::registers::x86::dwarf;
+namespace ehframe_regs = lldb_private::registers::x86::ehframe;
+namespace reg_ids = lldb_private::registers::x86::id;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -41,7 +46,7 @@ typedef struct _GPR {
   {                                                                            \
 #reg, alt, sizeof(((GPR *)nullptr)->reg), GPR_OFFSET(reg), eEncodingUint,  \
         eFormatHex,                                                            \
-        {kind1, kind2, kind3, kind4, lldb_##reg##_i386 }, nullptr, nullptr,    \
+        {kind1, kind2, kind3, kind4, reg_ids::reg }, nullptr, nullptr,    \
         nullptr,                                                               \
   }
 
@@ -49,22 +54,22 @@ typedef struct _GPR {
 static RegisterInfo g_register_infos_i386[] = {
 // General purpose registers     EH_Frame              DWARF                 Generic                     Process Plugin
 //  ===========================  ==================    ================      =========================   ====================
-    DEFINE_GPR(eax,   nullptr,   ehframe_eax_i386,     dwarf_eax_i386,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(ebx,   nullptr,   ehframe_ebx_i386,     dwarf_ebx_i386,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(ecx,   nullptr,   ehframe_ecx_i386,     dwarf_ecx_i386,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(edx,   nullptr,   ehframe_edx_i386,     dwarf_edx_i386,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(edi,   nullptr,   ehframe_edi_i386,     dwarf_edi_i386,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(esi,   nullptr,   ehframe_esi_i386,     dwarf_esi_i386,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(ebp,   "fp",      ehframe_ebp_i386,     dwarf_ebp_i386,       LLDB_REGNUM_GENERIC_FP,     LLDB_INVALID_REGNUM),
-    DEFINE_GPR(esp,   "sp",      ehframe_esp_i386,     dwarf_esp_i386,       LLDB_REGNUM_GENERIC_SP,     LLDB_INVALID_REGNUM),
-    DEFINE_GPR(eip,   "pc",      ehframe_eip_i386,     dwarf_eip_i386,       LLDB_REGNUM_GENERIC_PC,     LLDB_INVALID_REGNUM),
-    DEFINE_GPR(eflags, "flags",  ehframe_eflags_i386,  dwarf_eflags_i386,    LLDB_REGNUM_GENERIC_FLAGS,  LLDB_INVALID_REGNUM),
-    DEFINE_GPR(cs,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_cs_i386,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(fs,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_fs_i386,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(gs,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_gs_i386,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(ss,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_ss_i386,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(ds,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_ds_i386,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
-    DEFINE_GPR(es,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_es_i386,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(eax,   nullptr,   ehframe_regs::eax,     dwarf_regs::eax,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(ebx,   nullptr,   ehframe_regs::ebx,     dwarf_regs::ebx,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(ecx,   nullptr,   ehframe_regs::ecx,     dwarf_regs::ecx,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(edx,   nullptr,   ehframe_regs::edx,     dwarf_regs::edx,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(edi,   nullptr,   ehframe_regs::edi,     dwarf_regs::edi,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(esi,   nullptr,   ehframe_regs::esi,     dwarf_regs::esi,       LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(ebp,   "fp",      ehframe_regs::ebp,     dwarf_regs::ebp,       LLDB_REGNUM_GENERIC_FP,     LLDB_INVALID_REGNUM),
+    DEFINE_GPR(esp,   "sp",      ehframe_regs::esp,     dwarf_regs::esp,       LLDB_REGNUM_GENERIC_SP,     LLDB_INVALID_REGNUM),
+    DEFINE_GPR(eip,   "pc",      ehframe_regs::eip,     dwarf_regs::eip,       LLDB_REGNUM_GENERIC_PC,     LLDB_INVALID_REGNUM),
+    DEFINE_GPR(eflags, "flags",  ehframe_regs::eflags,  dwarf_regs::eflags,    LLDB_REGNUM_GENERIC_FLAGS,  LLDB_INVALID_REGNUM),
+    DEFINE_GPR(cs,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_regs::cs,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(fs,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_regs::fs,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(gs,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_regs::gs,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(ss,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_regs::ss,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(ds,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_regs::ds,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
+    DEFINE_GPR(es,     nullptr,  LLDB_INVALID_REGNUM,  dwarf_regs::es,        LLDB_INVALID_REGNUM,        LLDB_INVALID_REGNUM),
 };
 // clang-format on
 } // namespace

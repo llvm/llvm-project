@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextFreeBSDKernelCore_arm.h"
-#include "Register/Arch/lldb-arm-register-enums.h"
+#include "lldb/Register/Arch/lldb-arm-register-enums.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
@@ -18,6 +18,8 @@
 #include <machine/frame.h>
 #endif
 
+
+namespace reg_ids = lldb_private::registers::arm::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -102,7 +104,7 @@ bool RegisterContextFreeBSDKernelCore_arm::ReadRegister(
   switch (reg) {
 
 #define REG(x)                                                                 \
-  case gpr_##x##_arm:                                                          \
+  case reg_ids::gpr_##x:                                                       \
     value = pcb.x;                                                             \
     break;
 

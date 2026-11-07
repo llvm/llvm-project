@@ -7,6 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextELFCore_riscv32.h"
+#include "lldb/Register/Arch/lldb-riscv-ehframe-register-enums.h"
+
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-dwarf-register-enums.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "lldb/lldb-private.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
+#include <stddef.h>
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -19,11 +31,11 @@
 #define GPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
 #define FPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
 
+using namespace lldb_private;
+
 #define DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 #include "Register/Arch/RegisterInfos_riscv32.h"
 #undef DECLARE_REGISTER_INFOS_RISCV32_STRUCT
-
-using namespace lldb_private;
 
 static std::vector<uint32_t> CopyRegisterListToVector(const uint32_t *regs) {
   if (!regs)
@@ -286,9 +298,7 @@ bool RegisterContextELFCore_riscv32::ReadRegister(
     }
 
     Status error;
-    value.SetFromMemoryData(*dyn_reg_info, src + offset,
-                            dyn_reg_info->byte_size, lldb::eByteOrderLittle,
-                            error);
+    value.SetFromMemoryData(dyn_reg_info->encoding, dyn_reg_info->byte_size, src + offset, dyn_reg_info->byte_size, lldb::eByteOrderLittle, error, dyn_reg_info->name);
     return error.Success();
   } else {
     return false;

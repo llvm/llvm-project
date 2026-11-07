@@ -16,12 +16,17 @@
 
 #include "ProcessWindowsLog.h"
 #include "RegisterContextWindows_x86.h"
-#include "Register/Arch/RegisterContext_x86.h"
+#include "lldb/Register/Arch/lldb-x86-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-ehframe-register-enums.h"
 #include "TargetThreadWindows.h"
-#include "Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
 
 #include "llvm/ADT/STLExtras.h"
 
+
+namespace dwarf_regs = lldb_private::registers::x86::dwarf;
+namespace ehframe_regs = lldb_private::registers::x86::ehframe;
+namespace reg_ids = lldb_private::registers::x86::id;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -52,71 +57,71 @@ enum RegisterIndex {
 // Array of all register information supported by Windows x86
 RegisterInfo g_register_infos[] = {
     {DEFINE_GPR(eax, nullptr),
-     {ehframe_eax_i386, dwarf_eax_i386, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_eax_i386},
+     {ehframe_regs::eax, dwarf_regs::eax, LLDB_INVALID_REGNUM,
+      LLDB_INVALID_REGNUM, reg_ids::eax},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR(ebx, nullptr),
-     {ehframe_ebx_i386, dwarf_ebx_i386, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_ebx_i386},
+     {ehframe_regs::ebx, dwarf_regs::ebx, LLDB_INVALID_REGNUM,
+      LLDB_INVALID_REGNUM, reg_ids::ebx},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR(ecx, nullptr),
-     {ehframe_ecx_i386, dwarf_ecx_i386, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_ecx_i386},
+     {ehframe_regs::ecx, dwarf_regs::ecx, LLDB_INVALID_REGNUM,
+      LLDB_INVALID_REGNUM, reg_ids::ecx},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR(edx, nullptr),
-     {ehframe_edx_i386, dwarf_edx_i386, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_edx_i386},
+     {ehframe_regs::edx, dwarf_regs::edx, LLDB_INVALID_REGNUM,
+      LLDB_INVALID_REGNUM, reg_ids::edx},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR(edi, nullptr),
-     {ehframe_edi_i386, dwarf_edi_i386, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_edi_i386},
+     {ehframe_regs::edi, dwarf_regs::edi, LLDB_INVALID_REGNUM,
+      LLDB_INVALID_REGNUM, reg_ids::edi},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR(esi, nullptr),
-     {ehframe_esi_i386, dwarf_esi_i386, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, lldb_esi_i386},
+     {ehframe_regs::esi, dwarf_regs::esi, LLDB_INVALID_REGNUM,
+      LLDB_INVALID_REGNUM, reg_ids::esi},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR(ebp, "fp"),
-     {ehframe_ebp_i386, dwarf_ebp_i386, LLDB_REGNUM_GENERIC_FP,
-      LLDB_INVALID_REGNUM, lldb_ebp_i386},
+     {ehframe_regs::ebp, dwarf_regs::ebp, LLDB_REGNUM_GENERIC_FP,
+      LLDB_INVALID_REGNUM, reg_ids::ebp},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR(esp, "sp"),
-     {ehframe_esp_i386, dwarf_esp_i386, LLDB_REGNUM_GENERIC_SP,
-      LLDB_INVALID_REGNUM, lldb_esp_i386},
+     {ehframe_regs::esp, dwarf_regs::esp, LLDB_REGNUM_GENERIC_SP,
+      LLDB_INVALID_REGNUM, reg_ids::esp},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR(eip, "pc"),
-     {ehframe_eip_i386, dwarf_eip_i386, LLDB_REGNUM_GENERIC_PC,
-      LLDB_INVALID_REGNUM, lldb_eip_i386},
+     {ehframe_regs::eip, dwarf_regs::eip, LLDB_REGNUM_GENERIC_PC,
+      LLDB_INVALID_REGNUM, reg_ids::eip},
      nullptr,
      nullptr,
      nullptr,
     },
     {DEFINE_GPR_BIN(eflags, "flags"),
-     {ehframe_eflags_i386, dwarf_eflags_i386, LLDB_REGNUM_GENERIC_FLAGS,
-      LLDB_INVALID_REGNUM, lldb_eflags_i386},
+     {ehframe_regs::eflags, dwarf_regs::eflags, LLDB_REGNUM_GENERIC_FLAGS,
+      LLDB_INVALID_REGNUM, reg_ids::eflags},
      nullptr,
      nullptr,
      nullptr,
@@ -174,25 +179,25 @@ bool RegisterContextWindows_x86::ReadRegister(const RegisterInfo *reg_info,
 
   uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
   switch (reg) {
-  case lldb_eax_i386:
+  case reg_ids::eax:
     return ReadRegisterHelper(CONTEXT_INTEGER, "EAX", m_context.Eax, reg_value);
-  case lldb_ebx_i386:
+  case reg_ids::ebx:
     return ReadRegisterHelper(CONTEXT_INTEGER, "EBX", m_context.Ebx, reg_value);
-  case lldb_ecx_i386:
+  case reg_ids::ecx:
     return ReadRegisterHelper(CONTEXT_INTEGER, "ECX", m_context.Ecx, reg_value);
-  case lldb_edx_i386:
+  case reg_ids::edx:
     return ReadRegisterHelper(CONTEXT_INTEGER, "EDX", m_context.Edx, reg_value);
-  case lldb_edi_i386:
+  case reg_ids::edi:
     return ReadRegisterHelper(CONTEXT_INTEGER, "EDI", m_context.Edi, reg_value);
-  case lldb_esi_i386:
+  case reg_ids::esi:
     return ReadRegisterHelper(CONTEXT_INTEGER, "ESI", m_context.Esi, reg_value);
-  case lldb_ebp_i386:
+  case reg_ids::ebp:
     return ReadRegisterHelper(CONTEXT_CONTROL, "EBP", m_context.Ebp, reg_value);
-  case lldb_esp_i386:
+  case reg_ids::esp:
     return ReadRegisterHelper(CONTEXT_CONTROL, "ESP", m_context.Esp, reg_value);
-  case lldb_eip_i386:
+  case reg_ids::eip:
     return ReadRegisterHelper(CONTEXT_CONTROL, "EIP", m_context.Eip, reg_value);
-  case lldb_eflags_i386:
+  case reg_ids::eflags:
     return ReadRegisterHelper(CONTEXT_CONTROL, "EFLAGS", m_context.EFlags,
                               reg_value);
   default:
@@ -215,43 +220,43 @@ bool RegisterContextWindows_x86::WriteRegister(const RegisterInfo *reg_info,
   Log *log = GetLog(WindowsLog::Registers);
   uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
   switch (reg) {
-  case lldb_eax_i386:
+  case reg_ids::eax:
     LLDB_LOG(log, "Write value {0:x} to EAX", reg_value.GetAsUInt32());
     m_context.Eax = reg_value.GetAsUInt32();
     break;
-  case lldb_ebx_i386:
+  case reg_ids::ebx:
     LLDB_LOG(log, "Write value {0:x} to EBX", reg_value.GetAsUInt32());
     m_context.Ebx = reg_value.GetAsUInt32();
     break;
-  case lldb_ecx_i386:
+  case reg_ids::ecx:
     LLDB_LOG(log, "Write value {0:x} to ECX", reg_value.GetAsUInt32());
     m_context.Ecx = reg_value.GetAsUInt32();
     break;
-  case lldb_edx_i386:
+  case reg_ids::edx:
     LLDB_LOG(log, "Write value {0:x} to EDX", reg_value.GetAsUInt32());
     m_context.Edx = reg_value.GetAsUInt32();
     break;
-  case lldb_edi_i386:
+  case reg_ids::edi:
     LLDB_LOG(log, "Write value {0:x} to EDI", reg_value.GetAsUInt32());
     m_context.Edi = reg_value.GetAsUInt32();
     break;
-  case lldb_esi_i386:
+  case reg_ids::esi:
     LLDB_LOG(log, "Write value {0:x} to ESI", reg_value.GetAsUInt32());
     m_context.Esi = reg_value.GetAsUInt32();
     break;
-  case lldb_ebp_i386:
+  case reg_ids::ebp:
     LLDB_LOG(log, "Write value {0:x} to EBP", reg_value.GetAsUInt32());
     m_context.Ebp = reg_value.GetAsUInt32();
     break;
-  case lldb_esp_i386:
+  case reg_ids::esp:
     LLDB_LOG(log, "Write value {0:x} to ESP", reg_value.GetAsUInt32());
     m_context.Esp = reg_value.GetAsUInt32();
     break;
-  case lldb_eip_i386:
+  case reg_ids::eip:
     LLDB_LOG(log, "Write value {0:x} to EIP", reg_value.GetAsUInt32());
     m_context.Eip = reg_value.GetAsUInt32();
     break;
-  case lldb_eflags_i386:
+  case reg_ids::eflags:
     LLDB_LOG(log, "Write value {0:x} to EFLAGS", reg_value.GetAsUInt32());
     m_context.EFlags = reg_value.GetAsUInt32();
     break;

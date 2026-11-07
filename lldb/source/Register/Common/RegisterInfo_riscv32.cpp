@@ -7,6 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfo_riscv32.h"
+#include "lldb/Register/Arch/lldb-riscv-ehframe-register-enums.h"
+
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-dwarf-register-enums.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "lldb/lldb-private.h"
+#include <cstddef>
+#include <cstdint>
+
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
@@ -20,6 +30,10 @@
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterInfo_riscv32::GPR) +                                    \
    sizeof(RegisterInfo_riscv32::FPR))
+
+
+namespace reg_ids = lldb_private::registers::riscv::id;
+using namespace lldb_private;
 
 #define DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 #include "Register/Arch/RegisterInfos_riscv32.h"
@@ -50,22 +64,22 @@ uint32_t RegisterInfo_riscv32::GetRegisterInfoCount(
 
 // Number of register sets provided by this context.
 enum {
-  k_num_gpr_registers = gpr_last_riscv - gpr_first_riscv + 1,
-  k_num_fpr_registers = fpr_last_riscv - fpr_first_riscv + 1,
+  k_num_gpr_registers = reg_ids::gpr_last - reg_ids::gpr_first + 1,
+  k_num_fpr_registers = reg_ids::fpr_last - reg_ids::fpr_first + 1,
   k_num_register_sets = 2
 };
 
 // RISC-V32 general purpose registers.
 static const uint32_t g_gpr_regnums_riscv32[] = {
-    gpr_pc_riscv,  gpr_ra_riscv,       gpr_sp_riscv,  gpr_x3_riscv,
-    gpr_x4_riscv,  gpr_x5_riscv,       gpr_x6_riscv,  gpr_x7_riscv,
-    gpr_fp_riscv,  gpr_x9_riscv,       gpr_x10_riscv, gpr_x11_riscv,
-    gpr_x12_riscv, gpr_x13_riscv,      gpr_x14_riscv, gpr_x15_riscv,
-    gpr_x16_riscv, gpr_x17_riscv,      gpr_x18_riscv, gpr_x19_riscv,
-    gpr_x20_riscv, gpr_x21_riscv,      gpr_x22_riscv, gpr_x23_riscv,
-    gpr_x24_riscv, gpr_x25_riscv,      gpr_x26_riscv, gpr_x27_riscv,
-    gpr_x28_riscv, gpr_x29_riscv,      gpr_x30_riscv, gpr_x31_riscv,
-    gpr_x0_riscv,  LLDB_INVALID_REGNUM};
+    reg_ids::gpr_pc,  reg_ids::gpr_ra,    reg_ids::gpr_sp,  reg_ids::gpr_x3,
+    reg_ids::gpr_x4,  reg_ids::gpr_x5,    reg_ids::gpr_x6,  reg_ids::gpr_x7,
+    reg_ids::gpr_fp,  reg_ids::gpr_x9,    reg_ids::gpr_x10, reg_ids::gpr_x11,
+    reg_ids::gpr_x12, reg_ids::gpr_x13,   reg_ids::gpr_x14, reg_ids::gpr_x15,
+    reg_ids::gpr_x16, reg_ids::gpr_x17,   reg_ids::gpr_x18, reg_ids::gpr_x19,
+    reg_ids::gpr_x20, reg_ids::gpr_x21,   reg_ids::gpr_x22, reg_ids::gpr_x23,
+    reg_ids::gpr_x24, reg_ids::gpr_x25,   reg_ids::gpr_x26, reg_ids::gpr_x27,
+    reg_ids::gpr_x28, reg_ids::gpr_x29,   reg_ids::gpr_x30, reg_ids::gpr_x31,
+    reg_ids::gpr_x0,  LLDB_INVALID_REGNUM};
 
 static_assert(((sizeof g_gpr_regnums_riscv32 /
                 sizeof g_gpr_regnums_riscv32[0]) -
@@ -74,15 +88,15 @@ static_assert(((sizeof g_gpr_regnums_riscv32 /
 
 // RISC-V32 floating point registers.
 static const uint32_t g_fpr_regnums_riscv32[] = {
-    fpr_f0_riscv,   fpr_f1_riscv,       fpr_f2_riscv,  fpr_f3_riscv,
-    fpr_f4_riscv,   fpr_f5_riscv,       fpr_f6_riscv,  fpr_f7_riscv,
-    fpr_f8_riscv,   fpr_f9_riscv,       fpr_f10_riscv, fpr_f11_riscv,
-    fpr_f12_riscv,  fpr_f13_riscv,      fpr_f14_riscv, fpr_f15_riscv,
-    fpr_f16_riscv,  fpr_f17_riscv,      fpr_f18_riscv, fpr_f19_riscv,
-    fpr_f20_riscv,  fpr_f21_riscv,      fpr_f22_riscv, fpr_f23_riscv,
-    fpr_f24_riscv,  fpr_f25_riscv,      fpr_f26_riscv, fpr_f27_riscv,
-    fpr_f28_riscv,  fpr_f29_riscv,      fpr_f30_riscv, fpr_f31_riscv,
-    fpr_fcsr_riscv, LLDB_INVALID_REGNUM};
+    reg_ids::fpr_f0,   reg_ids::fpr_f1,    reg_ids::fpr_f2,  reg_ids::fpr_f3,
+    reg_ids::fpr_f4,   reg_ids::fpr_f5,    reg_ids::fpr_f6,  reg_ids::fpr_f7,
+    reg_ids::fpr_f8,   reg_ids::fpr_f9,    reg_ids::fpr_f10, reg_ids::fpr_f11,
+    reg_ids::fpr_f12,  reg_ids::fpr_f13,   reg_ids::fpr_f14, reg_ids::fpr_f15,
+    reg_ids::fpr_f16,  reg_ids::fpr_f17,   reg_ids::fpr_f18, reg_ids::fpr_f19,
+    reg_ids::fpr_f20,  reg_ids::fpr_f21,   reg_ids::fpr_f22, reg_ids::fpr_f23,
+    reg_ids::fpr_f24,  reg_ids::fpr_f25,   reg_ids::fpr_f26, reg_ids::fpr_f27,
+    reg_ids::fpr_f28,  reg_ids::fpr_f29,   reg_ids::fpr_f30, reg_ids::fpr_f31,
+    reg_ids::fpr_fcsr, LLDB_INVALID_REGNUM};
 
 static_assert(((sizeof g_fpr_regnums_riscv32 /
                 sizeof g_fpr_regnums_riscv32[0]) -
@@ -127,9 +141,9 @@ size_t RegisterInfo_riscv32::GetRegisterSetCount() const {
 size_t RegisterInfo_riscv32::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
   // coverity[unsigned_compare]
-  if (reg_index >= gpr_first_riscv && reg_index <= gpr_last_riscv)
+  if (reg_index >= reg_ids::gpr_first && reg_index <= reg_ids::gpr_last)
     return eRegsetMaskDefault;
-  if (reg_index >= fpr_first_riscv && reg_index <= fpr_last_riscv)
+  if (reg_index >= reg_ids::fpr_first && reg_index <= reg_ids::fpr_last)
     return eRegsetMaskFP;
   return LLDB_INVALID_REGNUM;
 }

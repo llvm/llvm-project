@@ -7,10 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoLinux_s390x.h"
-#include "Register/Arch/RegisterContext_s390x.h"
-#include "Register/Arch/lldb-s390x-register-enums.h"
+#include "lldb/Register/Arch/lldb-s390x-ehframe-register-enums.h"
+
+#include "lldb/Register/Arch/lldb-s390x-dwarf-register-enums.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/Support/Compiler.h"
+#include <cstddef>
+#include <cstdint>
+
+#include "lldb/Register/Arch/lldb-s390x-register-enums.h"
 #include "lldb/lldb-defines.h"
 
+
+namespace reg_ids = lldb_private::registers::s390x::id;
 using namespace lldb_private;
 using namespace lldb;
 
@@ -32,7 +42,7 @@ static const RegisterInfo *GetRegisterInfoPtr(const ArchSpec &target_arch) {
 static uint32_t GetRegisterInfoCount(const ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::systemz:
-    return k_num_registers_s390x;
+    return reg_ids::k_num_registers;
   default:
     assert(false && "Unhandled target architecture.");
     return 0;
@@ -42,7 +52,7 @@ static uint32_t GetRegisterInfoCount(const ArchSpec &target_arch) {
 static uint32_t GetUserRegisterInfoCount(const ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::systemz:
-    return k_num_user_registers_s390x + k_num_linux_registers_s390x;
+    return reg_ids::k_num_user_registers + reg_ids::k_num_linux_registers;
   default:
     assert(false && "Unhandled target architecture.");
     return 0;

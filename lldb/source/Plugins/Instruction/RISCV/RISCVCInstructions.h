@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <variant>
 
-#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 #include "RISCVInstructions.h"
 
 namespace lldb_private {
@@ -56,7 +56,7 @@ RISCVInst DecodeC_LWSP(uint32_t inst) {
                     | ((inst >> 2) & 0x1c); // offset[4:2]
   if (rd == 0)
     return RESERVED{inst};
-  return LW{rd, Rs{gpr_sp_riscv}, uint32_t(offset)};
+  return LW{rd, Rs{registers::riscv::id::gpr_sp}, uint32_t(offset)};
 }
 
 RISCVInst DecodeC_LDSP(uint32_t inst) {
@@ -66,19 +66,21 @@ RISCVInst DecodeC_LDSP(uint32_t inst) {
                     | ((inst >> 2) & 0x18); // offset[4:3]
   if (rd == 0)
     return RESERVED{inst};
-  return LD{rd, Rs{gpr_sp_riscv}, uint32_t(offset)};
+  return LD{rd, Rs{registers::riscv::id::gpr_sp}, uint32_t(offset)};
 }
 
 RISCVInst DecodeC_SWSP(uint32_t inst) {
   uint16_t offset = ((inst >> 1) & 0xc0)    // offset[7:6]
                     | ((inst >> 7) & 0x3c); // offset[5:2]
-  return SW{Rs{gpr_sp_riscv}, DecodeCSS_RS2(inst), uint32_t(offset)};
+  return SW{Rs{registers::riscv::id::gpr_sp}, DecodeCSS_RS2(inst),
+            uint32_t(offset)};
 }
 
 RISCVInst DecodeC_SDSP(uint32_t inst) {
   uint16_t offset = ((inst >> 1) & 0x1c0)   // offset[8:6]
                     | ((inst >> 7) & 0x38); // offset[5:3]
-  return SD{Rs{gpr_sp_riscv}, DecodeCSS_RS2(inst), uint32_t(offset)};
+  return SD{Rs{registers::riscv::id::gpr_sp}, DecodeCSS_RS2(inst),
+            uint32_t(offset)};
 }
 
 RISCVInst DecodeC_LW(uint32_t inst) {
@@ -180,8 +182,10 @@ RISCVInst DecodeC_LUI_ADDI16SP(uint32_t inst) {
     if (nzimm == 0)
       return RESERVED{inst};
     if ((nzimm & 0x200) == 0)
-      return ADDI{Rd{gpr_sp_riscv}, Rs{gpr_sp_riscv}, uint32_t(nzimm)};
-    return ADDI{Rd{gpr_sp_riscv}, Rs{gpr_sp_riscv},
+      return ADDI{Rd{registers::riscv::id::gpr_sp},
+                  Rs{registers::riscv::id::gpr_sp}, uint32_t(nzimm)};
+    return ADDI{Rd{registers::riscv::id::gpr_sp},
+                Rs{registers::riscv::id::gpr_sp},
                 uint32_t(int32_t(int16_t(nzimm | 0xfc00)))};
   }
   uint32_t imm =
@@ -222,7 +226,7 @@ RISCVInst DecodeC_ADDI4SPN(uint32_t inst) {
     return INVALID{inst};
   if (nzuimm == 0)
     return RESERVED{inst};
-  return ADDI{rd, Rs{gpr_sp_riscv}, uint32_t(nzuimm)};
+  return ADDI{rd, Rs{registers::riscv::id::gpr_sp}, uint32_t(nzuimm)};
 }
 
 RISCVInst DecodeC_SLLI(uint32_t inst) {
@@ -318,13 +322,14 @@ RISCVInst DecodeC_FLWSP(uint32_t inst) {
   uint16_t offset = ((inst << 4) & 0xc0)    // offset[7:6]
                     | ((inst >> 7) & 0x20)  // offset[5]
                     | ((inst >> 2) & 0x1c); // offset[4:2]
-  return FLW{rd, Rs{gpr_sp_riscv}, uint32_t(offset)};
+  return FLW{rd, Rs{registers::riscv::id::gpr_sp}, uint32_t(offset)};
 }
 
 RISCVInst DecodeC_FSWSP(uint32_t inst) {
   uint16_t offset = ((inst >> 1) & 0xc0)    // offset[7:6]
                     | ((inst >> 7) & 0x3c); // offset[5:2]
-  return FSW{Rs{gpr_sp_riscv}, DecodeCSS_RS2(inst), uint32_t(offset)};
+  return FSW{Rs{registers::riscv::id::gpr_sp}, DecodeCSS_RS2(inst),
+             uint32_t(offset)};
 }
 
 RISCVInst DecodeC_FLDSP(uint32_t inst) {
@@ -332,13 +337,14 @@ RISCVInst DecodeC_FLDSP(uint32_t inst) {
   uint16_t offset = ((inst << 4) & 0x1c0)   // offset[8:6]
                     | ((inst >> 7) & 0x20)  // offset[5]
                     | ((inst >> 2) & 0x18); // offset[4:3]
-  return FLD{rd, Rs{gpr_sp_riscv}, uint32_t(offset)};
+  return FLD{rd, Rs{registers::riscv::id::gpr_sp}, uint32_t(offset)};
 }
 
 RISCVInst DecodeC_FSDSP(uint32_t inst) {
   uint16_t offset = ((inst >> 1) & 0x1c0)   // offset[8:6]
                     | ((inst >> 7) & 0x38); // offset[5:3]
-  return FSD{Rs{gpr_sp_riscv}, DecodeCSS_RS2(inst), uint32_t(offset)};
+  return FSD{Rs{registers::riscv::id::gpr_sp}, DecodeCSS_RS2(inst),
+             uint32_t(offset)};
 }
 
 RISCVInst DecodeC_FLD(uint32_t inst) {

@@ -494,7 +494,8 @@ protected:
       if (reg_info) {
         RegisterValue reg_value;
 
-        Status error(reg_value.SetValueFromString(reg_info, value_str));
+        Status error(reg_value.SetValueFromString(
+            reg_info->encoding, reg_info->byte_size, value_str));
         if (error.Success()) {
           if (reg_ctx->WriteRegister(reg_info, reg_value)) {
             // Toss all frames and anything else in the thread after a register

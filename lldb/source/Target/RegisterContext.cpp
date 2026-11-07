@@ -352,8 +352,9 @@ Status RegisterContext::ReadRegisterValueFromMemory(
     // TODO: we might need to add a parameter to this function in case the byte
     // order of the memory data doesn't match the process. For now we are
     // assuming they are the same.
-    reg_value.SetFromMemoryData(*reg_info, src.data(), src_len,
-                                process_sp->GetByteOrder(), error);
+    reg_value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size,
+                                src.data(), src_len, process_sp->GetByteOrder(),
+                                error, reg_info->name);
   } else
     return Status::FromErrorString("invalid process");
 
@@ -381,7 +382,8 @@ Status RegisterContext::WriteRegisterValueToMemory(
   // assuming they are the same.
   RegisterValue::BytesContainer dst(dst_len);
   const uint32_t bytes_copied = reg_value.GetAsMemoryData(
-      *reg_info, dst.data(), dst_len, process_sp->GetByteOrder(), error);
+      reg_info->byte_size, dst.data(), dst_len, process_sp->GetByteOrder(),
+      error, reg_info->name);
 
   if (error.Success()) {
     if (bytes_copied == 0) {

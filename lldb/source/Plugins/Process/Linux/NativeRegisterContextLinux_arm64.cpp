@@ -466,9 +466,9 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       if (GetRegisterInfo().IsSVEPReg(reg) ||
           GetRegisterInfo().IsSVERegFFR(reg)) {
         std::vector<uint8_t> fake_reg(reg_info->byte_size, 0);
-        reg_value.SetFromMemoryData(*reg_info, &fake_reg[0],
-                                    reg_info->byte_size, eByteOrderLittle,
-                                    error);
+        reg_value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size,
+                                    &fake_reg[0], reg_info->byte_size,
+                                    eByteOrderLittle, error, reg_info->name);
         return error;
       }
 
@@ -496,8 +496,9 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       // Copy from FP into a fake Z value.
       std::vector<uint8_t> fake_z(reg_info->byte_size, 0);
       std::memcpy(&fake_z[0], src, 16 /* 128 bits */);
-      reg_value.SetFromMemoryData(*reg_info, &fake_z[0], reg_info->byte_size,
-                                  eByteOrderLittle, error);
+      reg_value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size,
+                                  &fake_z[0], reg_info->byte_size,
+                                  eByteOrderLittle, error, reg_info->name);
 
       return error;
     } else {
@@ -618,8 +619,9 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         "failed - register wasn't recognized to be a GPR or an FPR, "
         "write strategy unknown");
 
-  reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
-                              eByteOrderLittle, error);
+  reg_value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, src,
+                              reg_info->byte_size, eByteOrderLittle, error,
+                              reg_info->name);
 
   return error;
 }

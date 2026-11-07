@@ -11,8 +11,7 @@
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "ThreadGDBRemote.h"
-#include "Utility/ARM_DWARF_Registers.h"
-#include "Utility/ARM_ehframe_Registers.h"
+#include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
 #include "lldb/Core/Architecture.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
@@ -123,13 +122,15 @@ bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
       }
 
       Status error;
-      return value.SetFromMemoryData(
-                 *reg_info, combined_data.data(), combined_data.size(),
-                 m_reg_data.GetByteOrder(), error) == combined_data.size();
+      return value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size,
+                                     combined_data.data(), combined_data.size(),
+                                     m_reg_data.GetByteOrder(), error,
+                                     reg_info->name) == combined_data.size();
     } else {
       const bool partial_data_ok = false;
       Status error(value.SetValueFromData(
-          *reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
+          reg_info->encoding, reg_info->byte_size, m_reg_data,
+          reg_info->byte_offset, partial_data_ok, reg_info->name));
       return error.Success();
     }
   }
