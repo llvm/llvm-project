@@ -592,7 +592,7 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
     if (!Solver.isBlockExecutable(Call->getParent()))
       continue;
 
-    DenseSet<Value *> NoPromote;
+    SmallDenseSet<Value *> NoPromote;
     SmallVector<unsigned> ConstValArgs;
     for (const Use &U : Call->args()) {
       unsigned Idx = Call->getArgOperandNo(&U);
@@ -622,7 +622,6 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
         GV = new GlobalVariable(M, ConstVal->getType(), true,
                                 GlobalValue::InternalLinkage, ConstVal,
                                 "specialized.arg." + Twine(++NGlobals));
-        ArgVals[ArgOp] = GV;
       }
       Call->setArgOperand(Idx, GV);
     }
