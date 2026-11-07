@@ -153,6 +153,24 @@ class ScriptedFrameObjectProvider(ScriptedFrameProvider):
         return None
 
 
+class DefaultVariablesFrameProvider(ScriptedFrameProvider):
+    """Provider whose first frame keeps ScriptedFrame's default
+    get_variables(), which returns None."""
+
+    @staticmethod
+    def get_description():
+        """Return a description of this provider."""
+        return "Provider prepending a scripted frame without variables"
+
+    def get_frame_at_index(self, index):
+        if index == 0:
+            pc = self.input_frames.GetFrameAtIndex(0).GetPC()
+            return CustomScriptedFrame(self.thread, 0, pc, "no_variables")
+        if index - 1 < len(self.input_frames):
+            return index - 1  # Real frame index.
+        return None
+
+
 class ThreadFilterFrameProvider(ScriptedFrameProvider):
     """Provider that only applies to thread with ID 1."""
 

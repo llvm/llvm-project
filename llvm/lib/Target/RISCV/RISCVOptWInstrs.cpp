@@ -586,6 +586,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCORN:
     case RISCV::PseudoCCXNOR:
     case RISCV::PHI:
+    case RISCV::PseudoMERGE:
     case RISCV::MERGE:
     case RISCV::MVM:
     case RISCV::MVMN: {
@@ -617,6 +618,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         B = 1;
         E = 4;
         break;
+      case RISCV::PseudoMERGE:
       case RISCV::MERGE:
       case RISCV::MVM:
       case RISCV::MVMN:
@@ -786,7 +788,6 @@ bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
 
       LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
       MRI.replaceRegWith(DstReg, SrcReg);
-      MRI.clearKillFlags(SrcReg);
       MI.eraseFromParent();
       ++NumRemovedSExtW;
       MadeChange = true;
