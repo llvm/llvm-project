@@ -166,9 +166,14 @@ define void @other_block(<2 x i32> %v) nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    # freeze: $x8
+; RV32-NEXT:    mv a0, s0
 ; RV32-NEXT:    call use
+; RV32-NEXT:    mv a0, s0
 ; RV32-NEXT:    call use
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -176,9 +181,14 @@ define void @other_block(<2 x i32> %v) nounwind {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    # freeze: $x8
+; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    call use
+; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    call use
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 entry:

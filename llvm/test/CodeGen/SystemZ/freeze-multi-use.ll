@@ -14,7 +14,7 @@ define i32 @nsw_other_block(ptr %px, ptr %py, ptr %out, i1 %p) nounwind {
 ; CHECK-NEXT:    l %r0, 0(%r2)
 ; CHECK-NEXT:    a %r0, 0(%r3)
 ; CHECK-NEXT:    st %r0, 0(%r4)
-; CHECK-NEXT:    jl .LBB0_3
+; CHECK-NEXT:    cijl %r0, 0, .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %other
 ; CHECK-NEXT:    lhi %r2, 0
 ; CHECK-NEXT:    br %r14
