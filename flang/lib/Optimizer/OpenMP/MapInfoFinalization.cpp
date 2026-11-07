@@ -121,13 +121,13 @@ class MapInfoFinalizationPass
     return false;
   }
 
-  bool isDeclareTargetOperation(mlir::Operation *op) {
+  static bool isDeclareTargetOperation(mlir::Operation *op) {
     auto declareTarget =
         mlir::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
     return declareTarget && static_cast<bool>(declareTarget.getDeclareTarget());
   }
 
-  bool isDeclareTargetMappedValue(mlir::Value value) {
+  static bool isDeclareTargetMappedValue(mlir::Value value) {
     while (mlir::Operation *defOp = value.getDefiningOp()) {
       if (isDeclareTargetOperation(defOp))
         return true;
@@ -1167,14 +1167,12 @@ class MapInfoFinalizationPass
         op.getMapType(), mlir::omp::ClauseMapFlags::attach_never);
     bool isAttachAlways = bitEnumContainsAll(
         op.getMapType(), mlir::omp::ClauseMapFlags::attach_always);
-    bool isRefPtr = bitEnumContainsAll(op.getMapType(),
-                                       mlir::omp::ClauseMapFlags::ref_ptr) &&
-                    !bitEnumContainsAll(op.getMapType(),
-                                        mlir::omp::ClauseMapFlags::ref_ptee);
-    bool isRefPtee = bitEnumContainsAll(op.getMapType(),
-                                        mlir::omp::ClauseMapFlags::ref_ptee) &&
-                     !bitEnumContainsAll(op.getMapType(),
-                                         mlir::omp::ClauseMapFlags::ref_ptr);
+    bool hasRefPtr =
+        bitEnumContainsAll(op.getMapType(), mlir::omp::ClauseMapFlags::ref_ptr);
+    bool hasRefPtee = bitEnumContainsAll(op.getMapType(),
+                                         mlir::omp::ClauseMapFlags::ref_ptee);
+    bool isRefPtr = hasRefPtr && !hasRefPtee;
+    bool isRefPtee = hasRefPtee && !hasRefPtr;
 
     mlir::Value descriptor =
         getDescriptorFromBoxMap(op, builder, descCanBeDeferred);
@@ -1199,7 +1197,7 @@ class MapInfoFinalizationPass
     // runtimes LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is set to false,
     // behaving as it should in later specification iterations. So, perhaps a
     // compiler flag can be provided for users that know the impact of the
-    // privatization won't affect there application, but at least for the moment
+    // privatization won't affect their application, but at least for the moment
     // we do not privatize the pointer descriptors for target regions.
     //
     // We also need to avoid privatizing anything with reference or attach
@@ -1213,7 +1211,7 @@ class MapInfoFinalizationPass
     if (isHasDeviceAddrFlag || getUseDeviceAddrBlockArg(op, *target) ||
         isUseDevicePtr(op, *target) || !mapMemberUsers.empty() ||
         isDeclareTargetMap || isAttachAlways || isAttachNever ||
-        isImplicitPointerMap)
+        isImplicitPointerMap || hasRefPtr || hasRefPtee)
       canOptimizeDescViaPrivatization = false;
 
     // If we're a derived type descriptor, that's been flagged as ref_ptr,

@@ -630,7 +630,7 @@ end subroutine mapType_common_block_members
 !CHECK: %[[DTYPE_BASE_ADDR_LOAD_3:.*]] = load ptr, ptr %[[DTYPE_BASE_ADDR_ACCESS_3]], align 8
 !CHECK: %[[DTYPE_BASE_ADDR_LOAD_3_1:.*]] = load ptr, ptr %[[DTYPE_BASE_ADDR_ACCESS_3]], align 8
 !CHECK: %[[LOAD_DTYPE_DESC_MEMBER:.*]] = load ptr, ptr %[[DTYPE_ALLOCA_MEMBER_BASE_ADDR_ACCESS]], align 8
-!CHECK: %[[MEMBER_ARRAY_OFFSET:.*]] = getelementptr inbounds i32, ptr %[[LOAD_DTYPE_DESC_MEMBER]], i64 0
+!CHECK: %[[MEMBER_ARRAY_OFFSET:.*]] = getelementptr inbounds i8, ptr %[[LOAD_DTYPE_DESC_MEMBER]], i64 %{{.*}}
 !CHECK: %[[NULL_CMP:.*]] = icmp eq ptr %[[DTYPE_BASE_ADDR_LOAD_3_1]], null
 !CHECK: %[[SEL_SZ:.*]] = select i1 %[[NULL_CMP]], i64 0, i64 40
 !CHECK: getelementptr inbounds [8 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
