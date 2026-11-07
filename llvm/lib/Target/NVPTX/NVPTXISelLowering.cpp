@@ -8477,6 +8477,16 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
                            IsSigned ? RHS.sext(BitWidth) : RHS.zext(BitWidth));
     break;
   }
+  case NVPTXISD::CLZ_B64:
+  case NVPTXISD::POPC_B64: {
+    KnownBits Input =
+        DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned MaxCount = Op.getOpcode() == NVPTXISD::CLZ_B64
+                            ? Input.countMaxLeadingZeros()
+                            : Input.countMaxPopulation();
+    Known.Zero.setBitsFrom(llvm::bit_width(MaxCount));
+    break;
+  }
   case NVPTXISD::PRMT:
     computeKnownBitsForPRMT(Op, Known, DAG, Depth);
     break;
