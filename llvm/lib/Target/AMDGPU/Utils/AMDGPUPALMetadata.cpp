@@ -366,11 +366,17 @@ void AMDGPUPALMetadata::setScratchSize(unsigned CC, const MCExpr *Val,
   setHwStage(CC, ".scratch_memory_size", msgpack::Type::UInt, Val);
 }
 
-// Set the stack frame size of a function in the metadata.
-void AMDGPUPALMetadata::setFunctionScratchSize(StringRef FnName, unsigned Val) {
+void AMDGPUPALMetadata::setFunctionStackFrameSize(StringRef FnName,
+                                                  unsigned Val) {
   auto Node = getShaderFunction(FnName);
   Node[".stack_frame_size_in_bytes"] = MsgPackDoc.getNode(Val);
-  Node[".backend_stack_size"] = MsgPackDoc.getNode(Val);
+}
+
+void AMDGPUPALMetadata::setFunctionBackendStackSize(StringRef FnName,
+                                                    const MCExpr *Val) {
+  msgpack::MapDocNode Node = getShaderFunction(FnName);
+  DelayedExprs.assignDocNode(Node[".backend_stack_size"], msgpack::Type::UInt,
+                             Val);
 }
 
 // Set the amount of LDS used in bytes in the metadata.

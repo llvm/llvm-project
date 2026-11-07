@@ -103,8 +103,14 @@ public:
   void setScratchSize(unsigned CC, unsigned Val);
   void setScratchSize(unsigned CC, const MCExpr *Val, MCContext &Ctx);
 
-  // Set the stack frame size of a function in the metadata.
-  void setFunctionScratchSize(StringRef FnName, unsigned Val);
+  // Set the stack frame size of a function in the metadata. This only covers
+  // the frame of the function itself, not the frames of any of its callees.
+  void setFunctionStackFrameSize(StringRef FnName, unsigned Val);
+
+  // Set the backend stack size metadata, including the frames of its known
+  // callees. Recursion and indirect/external calls must be handled by the
+  // consumer.
+  void setFunctionBackendStackSize(StringRef FnName, const MCExpr *Val);
 
   // Set the amount of LDS used in bytes in the metadata. This is an optional
   // advisory record for logging etc; wave dispatch actually uses the rsrc1
