@@ -6,33 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/fcntl_macros.h"
-#include "hdr/sys_stat_macros.h"
+#include "hdr/errno_macros.h"
 #include "hdr/unistd_macros.h"
-#include "src/fcntl/open.h"
+#include "src/unistd/close.h"
+#include "src/unistd/pipe.h"
 #include "src/unistd/posix_close.h"
 #include "src/unistd/read.h"
-#include "src/unistd/unlink.h"
-#include "src/unistd/write.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
-
-class LlvmLibcPosixCloseTest
-    : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
-protected:
-  static constexpr const char *FILENAME = "posix_close.test";
-  const char *test_path = nullptr;
-
-  void SetUp() override { test_path = libc_make_test_file_path(FILENAME); }
-
-  void TearDown() override {
-    if (test_path)
-      LIBC_NAMESPACE::unlink(test_path);
-  }
-};
+using LlvmLibcPosixCloseTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcPosixCloseTest, InvalidFlag) {
   // Invalid flag should fail with EINVAL.
@@ -50,28 +35,28 @@ TEST_F(LlvmLibcPosixCloseTest, InvalidFd) {
 }
 
 TEST_F(LlvmLibcPosixCloseTest, CloseSuccess) {
-  int fd = LIBC_NAMESPACE::open(test_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_GT(fd, 0);
+  int pipefd[2];
+  ASSERT_THAT(LIBC_NAMESPACE::pipe(pipefd), Succeeds(0));
 
-  EXPECT_THAT(LIBC_NAMESPACE::posix_close(fd, 0), Succeeds(0));
+  EXPECT_THAT(LIBC_NAMESPACE::posix_close(pipefd[0], 0), Succeeds(0));
+  EXPECT_THAT(LIBC_NAMESPACE::close(pipefd[1]), Succeeds(0));
 
   // Subsequent operation on closed fd should fail with EBADF.
   char buf[1];
-  EXPECT_THAT(LIBC_NAMESPACE::read(fd, buf, 1), Fails<ssize_t>(EBADF));
+  EXPECT_THAT(LIBC_NAMESPACE::read(pipefd[0], buf, 1), Fails<ssize_t>(EBADF));
 }
 
 TEST_F(LlvmLibcPosixCloseTest, CloseWithRestartFlag) {
 #ifdef POSIX_CLOSE_RESTART
-  int fd = LIBC_NAMESPACE::open(test_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_GT(fd, 0);
+  int pipefd[2];
+  ASSERT_THAT(LIBC_NAMESPACE::pipe(pipefd), Succeeds(0));
 
-  EXPECT_THAT(LIBC_NAMESPACE::posix_close(fd, POSIX_CLOSE_RESTART),
+  EXPECT_THAT(LIBC_NAMESPACE::posix_close(pipefd[0], POSIX_CLOSE_RESTART),
               Succeeds(0));
+  EXPECT_THAT(LIBC_NAMESPACE::close(pipefd[1]), Succeeds(0));
 
   // Subsequent operation on closed fd should fail with EBADF.
   char buf[1];
-  EXPECT_THAT(LIBC_NAMESPACE::read(fd, buf, 1), Fails<ssize_t>(EBADF));
+  EXPECT_THAT(LIBC_NAMESPACE::read(pipefd[0], buf, 1), Fails<ssize_t>(EBADF));
 #endif
 }

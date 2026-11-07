@@ -454,14 +454,12 @@ add_libc_test(
   SRCS
     posix_close_test.cpp
   DEPENDS
-    libc.hdr.fcntl_macros
-    libc.hdr.sys_stat_macros
+    libc.hdr.errno_macros
     libc.hdr.unistd_macros
-    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.pipe
     libc.src.unistd.posix_close
     libc.src.unistd.read
-    libc.src.unistd.unlink
-    libc.src.unistd.write
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
