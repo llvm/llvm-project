@@ -1404,9 +1404,9 @@ define float @ret_frem_self_negnormal_negsubnormal_mode_ftpz_dapz(float noundef 
 ;-------------------------------------------------------------------------------
 
 define float @ret_constrained_frem__ieee_ieee(float %lhs, float %rhs) #0 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__ieee_ieee
+; CHECK-LABEL: define nofpclass(inf) float @ret_constrained_frem__ieee_ieee
 ; CHECK-SAME: (float [[LHS:%.*]], float [[RHS:%.*]]) #[[ATTR13:[0-9]+]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float [[LHS]], float [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20:[0-9]+]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(inf) float @llvm.experimental.constrained.frem.f32(float [[LHS]], float [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20:[0-9]+]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1414,9 +1414,9 @@ define float @ret_constrained_frem__ieee_ieee(float %lhs, float %rhs) #0 strictf
 }
 
 define float @ret_constrained_frem__no_nan__no_nan__ieee_ieee(float nofpclass(nan) %lhs, float nofpclass(nan) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__no_nan__no_nan__ieee_ieee
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_constrained_frem__no_nan__no_nan__ieee_ieee
 ; CHECK-SAME: (float nofpclass(nan) [[LHS:%.*]], float nofpclass(nan) [[RHS:%.*]]) #[[ATTR13]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(nan) [[LHS]], float nofpclass(nan) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(snan inf) float @llvm.experimental.constrained.frem.f32(float nofpclass(nan) [[LHS]], float nofpclass(nan) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1424,9 +1424,9 @@ define float @ret_constrained_frem__no_nan__no_nan__ieee_ieee(float nofpclass(na
 }
 
 define float @ret_constrained_frem__no_snan__no_snan__ieee_ieee(float nofpclass(snan) %lhs, float nofpclass(snan) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__no_snan__no_snan__ieee_ieee
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_constrained_frem__no_snan__no_snan__ieee_ieee
 ; CHECK-SAME: (float nofpclass(snan) [[LHS:%.*]], float nofpclass(snan) [[RHS:%.*]]) #[[ATTR13]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(snan) [[LHS]], float nofpclass(snan) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(snan inf) float @llvm.experimental.constrained.frem.f32(float nofpclass(snan) [[LHS]], float nofpclass(snan) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1434,9 +1434,9 @@ define float @ret_constrained_frem__no_snan__no_snan__ieee_ieee(float nofpclass(
 }
 
 define float @ret_constrained_frem__no_qnan_inf__no_qnan_zero__ieee_ieee(float nofpclass(qnan inf) %lhs, float nofpclass(qnan zero) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__no_qnan_inf__no_qnan_zero__ieee_ieee
+; CHECK-LABEL: define nofpclass(inf) float @ret_constrained_frem__no_qnan_inf__no_qnan_zero__ieee_ieee
 ; CHECK-SAME: (float nofpclass(qnan inf) [[LHS:%.*]], float nofpclass(qnan zero) [[RHS:%.*]]) #[[ATTR13]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(qnan inf) [[LHS]], float nofpclass(qnan zero) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(inf) float @llvm.experimental.constrained.frem.f32(float nofpclass(qnan inf) [[LHS]], float nofpclass(qnan zero) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1444,9 +1444,9 @@ define float @ret_constrained_frem__no_qnan_inf__no_qnan_zero__ieee_ieee(float n
 }
 
 define float @ret_constrained_frem__psub_pnorm__pnorm_psub__ieee_ieee__round_upward(float nofpclass(nan inf zero nsub nnorm) %lhs, float nofpclass(nan inf zero nsub nnorm) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__psub_pnorm__pnorm_psub__ieee_ieee__round_upward
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @ret_constrained_frem__psub_pnorm__pnorm_psub__ieee_ieee__round_upward
 ; CHECK-SAME: (float nofpclass(nan inf zero nsub nnorm) [[LHS:%.*]], float nofpclass(nan inf zero nsub nnorm) [[RHS:%.*]]) #[[ATTR13]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero nsub nnorm) [[LHS]], float nofpclass(nan inf zero nsub nnorm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(nan inf nzero nsub nnorm) float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero nsub nnorm) [[LHS]], float nofpclass(nan inf zero nsub nnorm) [[RHS]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.upward", metadata !"fpexcept.strict")
@@ -1454,9 +1454,9 @@ define float @ret_constrained_frem__psub_pnorm__pnorm_psub__ieee_ieee__round_upw
 }
 
 define float @ret_constrained_frem__psub_pnorm__pnorm_psub__ieee_ieee__round_downward(float nofpclass(nan inf zero nsub nnorm) %lhs, float nofpclass(nan inf zero nsub nnorm) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__psub_pnorm__pnorm_psub__ieee_ieee__round_downward
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @ret_constrained_frem__psub_pnorm__pnorm_psub__ieee_ieee__round_downward
 ; CHECK-SAME: (float nofpclass(nan inf zero nsub nnorm) [[LHS:%.*]], float nofpclass(nan inf zero nsub nnorm) [[RHS:%.*]]) #[[ATTR13]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero nsub nnorm) [[LHS]], float nofpclass(nan inf zero nsub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(nan inf nzero nsub nnorm) float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero nsub nnorm) [[LHS]], float nofpclass(nan inf zero nsub nnorm) [[RHS]], metadata !"round.downward", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.downward", metadata !"fpexcept.strict")
@@ -1464,9 +1464,9 @@ define float @ret_constrained_frem__psub_pnorm__pnorm_psub__ieee_ieee__round_dow
 }
 
 define float @ret_constrained_frem__nnorm__inf_nsub__ieee_ieee(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(nan zero psub norm) %rhs) #0 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__nnorm__inf_nsub__ieee_ieee
+; CHECK-LABEL: define nofpclass(nan inf pzero psub pnorm) float @ret_constrained_frem__nnorm__inf_nsub__ieee_ieee
 ; CHECK-SAME: (float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(nan zero psub norm) [[RHS:%.*]]) #[[ATTR13]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero sub pnorm) [[LHS]], float nofpclass(nan zero psub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(nan inf pzero psub pnorm) float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero sub pnorm) [[LHS]], float nofpclass(nan zero psub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1474,9 +1474,9 @@ define float @ret_constrained_frem__nnorm__inf_nsub__ieee_ieee(float nofpclass(n
 }
 
 define float @ret_constrained_frem__nnorm__inf_nsub__dynamic_dynamic(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(nan zero psub norm) %rhs) #4 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__nnorm__inf_nsub__dynamic_dynamic
+; CHECK-LABEL: define nofpclass(snan inf psub pnorm) float @ret_constrained_frem__nnorm__inf_nsub__dynamic_dynamic
 ; CHECK-SAME: (float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(nan zero psub norm) [[RHS:%.*]]) #[[ATTR14:[0-9]+]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero sub pnorm) [[LHS]], float nofpclass(nan zero psub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(snan inf psub pnorm) float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero sub pnorm) [[LHS]], float nofpclass(nan zero psub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1484,9 +1484,9 @@ define float @ret_constrained_frem__nnorm__inf_nsub__dynamic_dynamic(float nofpc
 }
 
 define float @ret_constrained_frem__nnorm__inf_nsub__ftz_daz(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(nan zero psub norm) %rhs) #6 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__nnorm__inf_nsub__ftz_daz
+; CHECK-LABEL: define nofpclass(snan inf pzero psub pnorm) float @ret_constrained_frem__nnorm__inf_nsub__ftz_daz
 ; CHECK-SAME: (float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(nan zero psub norm) [[RHS:%.*]]) #[[ATTR15:[0-9]+]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero sub pnorm) [[LHS]], float nofpclass(nan zero psub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(snan inf pzero psub pnorm) float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero sub pnorm) [[LHS]], float nofpclass(nan zero psub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -1494,9 +1494,9 @@ define float @ret_constrained_frem__nnorm__inf_nsub__ftz_daz(float nofpclass(nan
 }
 
 define float @ret_constrained_frem__nnorm__inf_nsub__ftpz_dapz(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(nan zero psub norm) %rhs) #5 strictfp {
-; CHECK-LABEL: define float @ret_constrained_frem__nnorm__inf_nsub__ftpz_dapz
+; CHECK-LABEL: define nofpclass(snan inf psub pnorm) float @ret_constrained_frem__nnorm__inf_nsub__ftpz_dapz
 ; CHECK-SAME: (float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(nan zero psub norm) [[RHS:%.*]]) #[[ATTR16:[0-9]+]] {
-; CHECK-NEXT:    [[FREM:%.*]] = call float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero sub pnorm) [[LHS]], float nofpclass(nan zero psub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
+; CHECK-NEXT:    [[FREM:%.*]] = call nofpclass(snan inf psub pnorm) float @llvm.experimental.constrained.frem.f32(float nofpclass(nan inf zero sub pnorm) [[LHS]], float nofpclass(nan zero psub norm) [[RHS]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[FREM]]
 ;
   %frem = call float @llvm.experimental.constrained.frem.f32(float %lhs, float %rhs, metadata !"round.dynamic", metadata !"fpexcept.strict")
