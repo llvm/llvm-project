@@ -649,11 +649,26 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
         MatchedBlocks[YamlBB.Index] = {MatchedBlock, &YamlBB};
       };
 
+  // YAML can omit block exec counts even when branch counts are present.
+  // Weights are for statistics only, including unmatched profile blocks.
+  DenseMap<uint32_t, std::pair<uint64_t, uint64_t>> ProfileEdgeCounts;
+  for (const yaml::bolt::BinaryBasicBlockProfile &BB : YamlBF.Blocks) {
+    for (const yaml::bolt::SuccessorInfo &SI : BB.Successors) {
+      ProfileEdgeCounts[BB.Index].second += SI.Count;
+      ProfileEdgeCounts[SI.Index].first += SI.Count;
+    }
+  }
+  auto getProfileExecCount =
+      [&](const yaml::bolt::BinaryBasicBlockProfile &BB) {
+        const auto [Incoming, Outgoing] = ProfileEdgeCounts.lookup(BB.Index);
+        return std::max({BB.ExecCount, Incoming, Outgoing});
+      };
+
   // Match blocks from the profile to the blocks in CFG by strict hash.
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
     // Update matching stats.
     ++BC.Stats.NumStaleBlocks;
-    BC.Stats.StaleSampleCount += YamlBB.ExecCount;
+    BC.Stats.StaleSampleCount += getProfileExecCount(YamlBB);
 
     assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
     BlendedBlockHash YamlHash(YamlBB.Hash);
@@ -708,7 +723,7 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
                       << " with hash " << Twine::utohexstr(BinHash.combine())
                       << "\n");
     (void)BinHash;
-    uint64_t ExecCount = YamlBB->ExecCount;
+    const uint64_t ExecCount = getProfileExecCount(*YamlBB);
     // Update matching stats accounting for the matched block.
     switch (Method) {
     case StaleMatcher::MATCH_EXACT:
