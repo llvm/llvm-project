@@ -204,6 +204,25 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
       },
       {
           R"cpp(
+            struct Foo {
+              template <class Fn>
+              void call(Fn &&fn) requires requires { fn(*this); } {
+                fn(*this);
+              }
+              template <class Fn>
+              void call(Fn &&fn) const requires requires { fn(*this); } {
+                fn(*this);
+              }
+            };
+            void test() {
+              Foo foo;
+              foo.call([](^auto &&x) {});
+            }
+          )cpp",
+          "struct Foo &",
+      },
+      {
+          R"cpp(
             // Generic lambda instantiated twice, conflicting deduction.
             struct Foo{};
             auto Generic = [](^auto y) { return 0; };
@@ -307,6 +326,67 @@ TEST(ClangdAST, GetOnlyInstantiation) {
     PP.TerseOutput = true;
     std::string Name;
     if (auto *Result = getOnlyInstantiation(
+            const_cast<NamedDecl *>(&findDecl(AST, [&](const NamedDecl &D) {
+              return D.getDescribedTemplate() != nullptr &&
+                     D.getDeclKindName() == Case.NodeType;
+            })))) {
+      llvm::raw_string_ostream OS(Name);
+      Result->print(OS, PP);
+    }
+
+    if (Case.Name)
+      EXPECT_EQ(Case.Name, Name);
+    else
+      EXPECT_THAT(Name, IsEmpty());
+  }
+}
+
+TEST(ClangdAST, GetOnlyUsedInstantiation) {
+  struct {
+    const char *Code;
+    llvm::StringLiteral NodeType;
+    const char *Name;
+  } Cases[] = {
+      {
+          R"cpp(
+            namespace std {
+            template <class T, class U>
+            concept same_as = __is_same(T, U) && __is_same(U, T);
+            }
+
+            struct Callable {
+              int operator()(auto &&x) const { return static_cast<int>(x); }
+            };
+            template <class Fn>
+            void invoke(Fn &&fn)
+                requires requires { { fn(0) } -> std::same_as<int>; }
+            {
+              fn(0);
+            }
+            template <class Fn>
+            void invoke(Fn &&fn)
+                requires requires { { fn(0.0) } -> std::same_as<long>; }
+            {
+              fn(0.0);
+            }
+            void test() {
+              invoke(Callable{});
+            }
+          )cpp",
+          "CXXMethod",
+          "template<> int operator()<int>(int &&x) const",
+      },
+  };
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    auto TU = TestTU::withCode(Case.Code);
+    TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
+    PrintingPolicy PP = AST.getASTContext().getPrintingPolicy();
+    PP.TerseOutput = true;
+    std::string Name;
+    if (auto *Result = getOnlyUsedInstantiation(
             const_cast<NamedDecl *>(&findDecl(AST, [&](const NamedDecl &D) {
               return D.getDescribedTemplate() != nullptr &&
                      D.getDeclKindName() == Case.NodeType;
