@@ -113,17 +113,17 @@ define <8 x double> @test_pow_v8f64(<8 x double> %x, <8 x double> %y) nounwind {
 ; LIBMVEC-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; LIBMVEC-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; LIBMVEC-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; LIBMVEC-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LIBMVEC-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
 ; LIBMVEC-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; LIBMVEC-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; LIBMVEC-NEXT:    vmovaps %xmm1, (%rsp) # 16-byte Spill
+; LIBMVEC-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LIBMVEC-NEXT:    vmovaps %xmm2, %xmm0
 ; LIBMVEC-NEXT:    vzeroupper
 ; LIBMVEC-NEXT:    callq pow@PLT
 ; LIBMVEC-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; LIBMVEC-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; LIBMVEC-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
 ; LIBMVEC-NEXT:    # xmm0 = mem[1,0]
-; LIBMVEC-NEXT:    vpermilpd $1, (%rsp), %xmm1 # 16-byte Folded Reload
+; LIBMVEC-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
 ; LIBMVEC-NEXT:    # xmm1 = mem[1,0]
 ; LIBMVEC-NEXT:    callq pow@PLT
 ; LIBMVEC-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
@@ -256,31 +256,31 @@ define <16 x float> @test_pow_v16f32(<16 x float> %x, <16 x float> %y) nounwind 
 ; LIBMVEC-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; LIBMVEC-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; LIBMVEC-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; LIBMVEC-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; LIBMVEC-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LIBMVEC-NEXT:    vextractf128 $1, %ymm2, %xmm1
-; LIBMVEC-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LIBMVEC-NEXT:    vmovaps %xmm1, (%rsp) # 16-byte Spill
 ; LIBMVEC-NEXT:    vzeroupper
 ; LIBMVEC-NEXT:    callq powf@PLT
 ; LIBMVEC-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; LIBMVEC-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
+; LIBMVEC-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; LIBMVEC-NEXT:    # xmm0 = mem[1,1,3,3]
-; LIBMVEC-NEXT:    vmovshdup {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; LIBMVEC-NEXT:    vmovshdup (%rsp), %xmm1 # 16-byte Folded Reload
 ; LIBMVEC-NEXT:    # xmm1 = mem[1,1,3,3]
 ; LIBMVEC-NEXT:    callq powf@PLT
 ; LIBMVEC-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; LIBMVEC-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
 ; LIBMVEC-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; LIBMVEC-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
+; LIBMVEC-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; LIBMVEC-NEXT:    # xmm0 = mem[1,0]
-; LIBMVEC-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; LIBMVEC-NEXT:    vpermilpd $1, (%rsp), %xmm1 # 16-byte Folded Reload
 ; LIBMVEC-NEXT:    # xmm1 = mem[1,0]
 ; LIBMVEC-NEXT:    callq powf@PLT
 ; LIBMVEC-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; LIBMVEC-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
 ; LIBMVEC-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; LIBMVEC-NEXT:    vpermilps $255, (%rsp), %xmm0 # 16-byte Folded Reload
+; LIBMVEC-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; LIBMVEC-NEXT:    # xmm0 = mem[3,3,3,3]
-; LIBMVEC-NEXT:    vpermilps $255, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; LIBMVEC-NEXT:    vpermilps $255, (%rsp), %xmm1 # 16-byte Folded Reload
 ; LIBMVEC-NEXT:    # xmm1 = mem[3,3,3,3]
 ; LIBMVEC-NEXT:    callq powf@PLT
 ; LIBMVEC-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload

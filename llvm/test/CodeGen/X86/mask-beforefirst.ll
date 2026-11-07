@@ -345,31 +345,31 @@ define <64 x i8> @v64i1(<64 x i8> %a0, <64 x i8> %a1) "min-legal-vector-width"="
 ; SSE2-NEXT:    movq %rax, %xmm8
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm8 = xmm8[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm9 = xmm8[0,0,1,1,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm10 = xmm9[0,0,1,1]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; SSE2-NEXT:    pand %xmm9, %xmm10
-; SSE2-NEXT:    pcmpeqb %xmm9, %xmm10
-; SSE2-NEXT:    pand %xmm10, %xmm0
-; SSE2-NEXT:    pandn %xmm4, %xmm10
-; SSE2-NEXT:    por %xmm10, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm9[0,0,1,1]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm10 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; SSE2-NEXT:    pand %xmm10, %xmm9
+; SSE2-NEXT:    pcmpeqb %xmm10, %xmm9
+; SSE2-NEXT:    pand %xmm9, %xmm0
+; SSE2-NEXT:    pandn %xmm4, %xmm9
+; SSE2-NEXT:    por %xmm9, %xmm0
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm8[2,2,3,3,4,5,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,1,1]
-; SSE2-NEXT:    pand %xmm9, %xmm4
-; SSE2-NEXT:    pcmpeqb %xmm9, %xmm4
+; SSE2-NEXT:    pand %xmm10, %xmm4
+; SSE2-NEXT:    pcmpeqb %xmm10, %xmm4
 ; SSE2-NEXT:    pand %xmm4, %xmm1
 ; SSE2-NEXT:    pandn %xmm5, %xmm4
 ; SSE2-NEXT:    por %xmm4, %xmm1
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm8[0,1,2,3,4,4,5,5]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,2,3,3]
-; SSE2-NEXT:    pand %xmm9, %xmm4
-; SSE2-NEXT:    pcmpeqb %xmm9, %xmm4
+; SSE2-NEXT:    pand %xmm10, %xmm4
+; SSE2-NEXT:    pcmpeqb %xmm10, %xmm4
 ; SSE2-NEXT:    pand %xmm4, %xmm2
 ; SSE2-NEXT:    pandn %xmm6, %xmm4
 ; SSE2-NEXT:    por %xmm4, %xmm2
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm8[0,1,2,3,6,6,7,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,2,3,3]
-; SSE2-NEXT:    pand %xmm9, %xmm4
-; SSE2-NEXT:    pcmpeqb %xmm9, %xmm4
+; SSE2-NEXT:    pand %xmm10, %xmm4
+; SSE2-NEXT:    pcmpeqb %xmm10, %xmm4
 ; SSE2-NEXT:    pand %xmm4, %xmm3
 ; SSE2-NEXT:    pandn %xmm7, %xmm4
 ; SSE2-NEXT:    por %xmm4, %xmm3

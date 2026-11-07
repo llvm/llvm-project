@@ -20,19 +20,19 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:  # %bb.2: # %forbody
 ; WIDE-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; WIDE-NEXT:    movl (%esp), %eax
-; WIDE-NEXT:    leal (,%eax,8), %edx
-; WIDE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIDE-NEXT:    addl %edx, %ecx
-; WIDE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %edx
+; WIDE-NEXT:    leal (,%eax,8), %ecx
+; WIDE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIDE-NEXT:    addl %ecx, %edx
 ; WIDE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; WIDE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; WIDE-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; WIDE-NEXT:    psubb %xmm0, %xmm3
 ; WIDE-NEXT:    psrlw $2, %xmm3
 ; WIDE-NEXT:    pand %xmm1, %xmm3
 ; WIDE-NEXT:    pxor %xmm2, %xmm3
 ; WIDE-NEXT:    psubb %xmm2, %xmm3
-; WIDE-NEXT:    movq %xmm3, (%ecx,%eax,8)
+; WIDE-NEXT:    movq %xmm3, (%edx,%eax,8)
 ; WIDE-NEXT:    incl (%esp)
 ; WIDE-NEXT:    jmp .LBB0_1
 ; WIDE-NEXT:  .LBB0_3: # %afterfor

@@ -254,30 +254,30 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %esi, %xmm1
 ; SSE2-NEXT:    movd %edi, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; SSE2-NEXT:    movd %edx, %xmm3
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm3[0]
-; SSE2-NEXT:    pslld $31, %xmm4
-; SSE2-NEXT:    psrad $31, %xmm4
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; SSE2-NEXT:    movd %edx, %xmm4
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; SSE2-NEXT:    pslld $31, %xmm3
+; SSE2-NEXT:    psrad $31, %xmm3
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    movdqa %xmm4, %xmm6
+; SSE2-NEXT:    movdqa %xmm3, %xmm6
 ; SSE2-NEXT:    por %xmm5, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm4[2,3,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm3[2,3,2,3]
 ; SSE2-NEXT:    por %xmm7, %xmm5
 ; SSE2-NEXT:    pcmpgtd %xmm5, %xmm6
-; SSE2-NEXT:    pand %xmm6, %xmm4
+; SSE2-NEXT:    pand %xmm6, %xmm3
 ; SSE2-NEXT:    pandn %xmm7, %xmm6
-; SSE2-NEXT:    por %xmm4, %xmm6
+; SSE2-NEXT:    por %xmm3, %xmm6
 ; SSE2-NEXT:    movd %xmm6, %eax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[1,1,1,1]
-; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[1,1,1,1]
+; SSE2-NEXT:    movd %xmm3, %ecx
 ; SSE2-NEXT:    cmpl %ecx, %eax
 ; SSE2-NEXT:    cmoval %eax, %ecx
 ; SSE2-NEXT:    andl $3, %ecx
-; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm4, %xmm2
 ; SSE2-NEXT:    por %xmm1, %xmm2
 ; SSE2-NEXT:    movd %xmm2, %edx
 ; SSE2-NEXT:    andb $1, %dl

@@ -551,44 +551,44 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwind {
 ; AVX1-LABEL: vec256_i64_unsigned_reg_reg:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    # xmm4 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm6
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm6
-; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm6, %xmm4, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm3 = mem[0,0]
+; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpxor %xmm3, %xmm5, %xmm6
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm6, %xmm4
+; AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm6
+; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubq %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vpsubq %xmm3, %xmm2, %xmm3
-; AVX1-NEXT:    vpxor %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vpsubq %xmm3, %xmm5, %xmm3
-; AVX1-NEXT:    vpsrlq $1, %xmm3, %xmm6
+; AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpsubq %xmm1, %xmm3, %xmm1
+; AVX1-NEXT:    vpsubq %xmm2, %xmm5, %xmm2
+; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpsubq %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
-; AVX1-NEXT:    vpor %xmm4, %xmm8, %xmm9
+; AVX1-NEXT:    vpor %xmm3, %xmm8, %xmm9
 ; AVX1-NEXT:    vpmuludq %xmm1, %xmm9, %xmm1
-; AVX1-NEXT:    vpsrlq $32, %xmm4, %xmm4
-; AVX1-NEXT:    vpmuludq %xmm4, %xmm7, %xmm4
-; AVX1-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vpsrlq $32, %xmm3, %xmm3
+; AVX1-NEXT:    vpmuludq %xmm3, %xmm7, %xmm3
+; AVX1-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX1-NEXT:    vpmuludq %xmm7, %xmm9, %xmm4
-; AVX1-NEXT:    vpsrlq $33, %xmm3, %xmm3
-; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm7
-; AVX1-NEXT:    vpmuludq %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm5
-; AVX1-NEXT:    vpmuludq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpaddq %xmm3, %xmm5, %xmm3
-; AVX1-NEXT:    vpsllq $32, %xmm3, %xmm3
-; AVX1-NEXT:    vpmuludq %xmm7, %xmm6, %xmm5
-; AVX1-NEXT:    vpaddq %xmm2, %xmm5, %xmm2
-; AVX1-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddq %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vpmuludq %xmm7, %xmm9, %xmm3
+; AVX1-NEXT:    vpsrlq $33, %xmm2, %xmm2
+; AVX1-NEXT:    vpor %xmm4, %xmm8, %xmm7
+; AVX1-NEXT:    vpmuludq %xmm7, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrlq $32, %xmm4, %xmm4
+; AVX1-NEXT:    vpmuludq %xmm4, %xmm6, %xmm4
+; AVX1-NEXT:    vpaddq %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpsllq $32, %xmm2, %xmm2
+; AVX1-NEXT:    vpmuludq %xmm7, %xmm6, %xmm4
+; AVX1-NEXT:    vpaddq %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddq %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpaddq %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -2407,31 +2407,31 @@ define <32 x i8> @vec256_i8_signed_mem_reg(ptr %a1_addr, <32 x i8> %a2) nounwind
 define <32 x i8> @vec256_i8_signed_reg_mem(<32 x i8> %a1, ptr %a2_addr) nounwind {
 ; AVX1-LABEL: vec256_i8_signed_reg_mem:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %ymm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vpcmpgtb %xmm3, %xmm1, %xmm4
-; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm0, %xmm5
-; AVX1-NEXT:    vpminsb %xmm2, %xmm0, %xmm6
-; AVX1-NEXT:    vpmaxsb %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpsubb %xmm6, %xmm2, %xmm2
-; AVX1-NEXT:    vpminsb %xmm3, %xmm1, %xmm6
-; AVX1-NEXT:    vpmaxsb %xmm3, %xmm1, %xmm3
+; AVX1-NEXT:    vmovdqa (%rdi), %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpcmpgtb %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm5
+; AVX1-NEXT:    vpminsb %xmm1, %xmm0, %xmm6
+; AVX1-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm1
+; AVX1-NEXT:    vpsubb %xmm6, %xmm1, %xmm1
+; AVX1-NEXT:    vpminsb %xmm3, %xmm2, %xmm6
+; AVX1-NEXT:    vpmaxsb %xmm3, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsubb %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrlw $1, %xmm3, %xmm3
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
-; AVX1-NEXT:    vpsrlw $1, %xmm2, %xmm2
-; AVX1-NEXT:    vpand %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm6, %xmm1, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX1-NEXT:    vpor %xmm6, %xmm5, %xmm5
-; AVX1-NEXT:    vpmullw %xmm5, %xmm2, %xmm7
+; AVX1-NEXT:    vpmullw %xmm5, %xmm1, %xmm7
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm7, %xmm8, %xmm7
 ; AVX1-NEXT:    vpandn %xmm5, %xmm8, %xmm5
-; AVX1-NEXT:    vpmaddubsw %xmm5, %xmm2, %xmm2
-; AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
-; AVX1-NEXT:    vpor %xmm2, %xmm7, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm1, %xmm7, %xmm1
 ; AVX1-NEXT:    vpor %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpmullw %xmm4, %xmm3, %xmm5
 ; AVX1-NEXT:    vpand %xmm5, %xmm8, %xmm5
@@ -2439,9 +2439,9 @@ define <32 x i8> @vec256_i8_signed_reg_mem(<32 x i8> %a1, ptr %a2_addr) nounwind
 ; AVX1-NEXT:    vpmaddubsw %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsllw $8, %xmm3, %xmm3
 ; AVX1-NEXT:    vpor %xmm3, %xmm5, %xmm3
-; AVX1-NEXT:    vpaddb %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpaddb %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec256_i8_signed_reg_mem:
