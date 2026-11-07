@@ -333,3 +333,19 @@ define void @test_unordered_atomic_store_unpromoted(ptr %p, ptr %q) {
   store i32 0, ptr %p
   ret void
 }
+
+define void @test_sequenced_stores_remain_clusterable(ptr %p) {
+; CHECK-LABEL: test_sequenced_stores_remain_clusterable:%bb.0
+; CHECK:       Promoting SU([[S:[0-9]+]]) to sequencing store
+; CHECK-NOT:   Promoting
+
+; CHECK:       SU({{[0-9]+}}): STRXui $xzr, %{{[0-9]+}}:gpr64common, 0 :: (store (s64) into %ir.p)
+; CHECK:       Successors:
+; CHECK-NEXT:    SU([[S]]): Ord Latency=0 Barrier
+; CHECK-NEXT:    SU([[S]]): Ord Latency=0 Cluster
+; CHECK:       SU([[S]]): STRXui %{{[0-9]+}}:gpr64, %{{[0-9]+}}:gpr64common, 1 :: (store (s64) into %ir.p.gep.1)
+  %p.gep.1 = getelementptr i8, ptr %p, i64 8
+  store i64 0, ptr %p
+  store i64 1, ptr %p.gep.1
+  ret void
+}

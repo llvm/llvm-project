@@ -2344,6 +2344,10 @@ public:
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
+private:
+  bool canCluster(ScheduleDAGInstrs *DAG, SUnit *SUa, SUnit *SUb,
+                  bool ReorderWhileClustering);
+
 protected:
   void clusterNeighboringMemOps(ArrayRef<MemOpInfo> MemOps, bool FastCluster,
                                 ScheduleDAGInstrs *DAG);
@@ -2383,6 +2387,44 @@ llvm::createStoreClusterDAGMutation(const TargetInstrInfo *TII,
                             : nullptr;
 }
 
+// Return true if \p SUa and \p SUb are clusterable. This means that they are
+// either independent or ordered directly by a memory ordering edge.
+bool BaseMemOpClusterMutation::canCluster(ScheduleDAGInstrs *DAG, SUnit *SUa,
+                                          SUnit *SUb,
+                                          bool ReorderWhileClustering) {
+  bool AReachesB = DAG->IsReachable(SUb, SUa);
+  bool BReachesA = DAG->IsReachable(SUa, SUb);
+
+  if (!BReachesA && !AReachesB)
+    return true;
+
+  // We have a path. Make sure the only path between the two SUs is a single
+  // memory ordering edge.
+  if (BReachesA) {
+    // If the path runs from B -> A, normalise so that it runs from A -> B,
+    // unless reordering while clustering is enabled, in which case give up.
+    assert(!AReachesB && "Cycle detected");
+    if (ReorderWhileClustering)
+      return false;
+    std::swap(SUa, SUb);
+  }
+
+  for (const SDep &Succ : SUa->Succs) {
+    if (Succ.getSUnit() == &DAG->ExitSU)
+      continue;
+    if (Succ.getSUnit() == SUb) {
+      if (!Succ.isNormalMemoryOrBarrier())
+        return false;
+      continue;
+    }
+
+    if (DAG->IsReachable(SUb, Succ.getSUnit()))
+      return false;
+  }
+
+  return true;
+}
+
 // Sorting all the loads/stores first, then for each load/store, checking the
 // following load/store one by one, until reach the first non-dependent one and
 // call target hook to see if they can cluster.
@@ -2395,7 +2437,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   DenseMap<unsigned, std::pair<unsigned, unsigned>> SUnit2ClusterInfo;
   EquivalenceClasses<SUnit *> Clusters;
 
-  // At this point, `MemOpRecords` array must hold atleast two mem ops. Try to
+  // At this point, `MemOpRecords` array must hold at least two mem ops. Try to
   // cluster mem ops collected within `MemOpRecords` array.
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     // Decision to cluster mem ops is taken based on target dependent logic
@@ -2404,12 +2446,10 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     // Seek for the next load/store to do the cluster.
     unsigned NextIdx = Idx + 1;
     for (; NextIdx < End; ++NextIdx)
-      // Skip if MemOpb has been clustered already or has dependency with
-      // MemOpa.
+      // Skip if MemOpb has been clustered already or can't cluster with MemOpa.
       if (!SUnit2ClusterInfo.count(MemOpRecords[NextIdx].SU->NodeNum) &&
-          (FastCluster ||
-           (!DAG->IsReachable(MemOpRecords[NextIdx].SU, MemOpa.SU) &&
-            !DAG->IsReachable(MemOpa.SU, MemOpRecords[NextIdx].SU))))
+          (FastCluster || canCluster(DAG, MemOpa.SU, MemOpRecords[NextIdx].SU,
+                                     ReorderWhileClustering)))
         break;
     if (NextIdx == End)
       continue;
@@ -2462,8 +2502,6 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
       // SUb dependent on scheduled in-between SUb and SUa. Successor edges
       // do not need to be copied from SUa to SUb since no one will depend
       // on stores.
-      // Notice that, we don't need to care about the memory dependency as
-      // we won't try to cluster them if they have any memory dependency.
       for (const SDep &Pred : SUb->Preds) {
         if (Pred.getSUnit() == SUa)
           continue;

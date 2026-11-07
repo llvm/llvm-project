@@ -223,27 +223,27 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; RV64I-CCMOV-NEXT:    sext.w a2, a0
 ; RV64I-CCMOV-NEXT:    slt a2, t0, a2
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a0, t0
-; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a3, a0
-; RV64I-CCMOV-NEXT:    slt a3, a3, t1
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, t1, a0
+; RV64I-CCMOV-NEXT:    sext.w a2, a0
 ; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a4, a0
-; RV64I-CCMOV-NEXT:    slt a4, a4, a2
+; RV64I-CCMOV-NEXT:    slt a2, a2, t1
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, t1, a0
+; RV64I-CCMOV-NEXT:    sext.w a2, a0
+; RV64I-CCMOV-NEXT:    lw a4, 0(a1)
 ; RV64I-CCMOV-NEXT:    lw a5, 0(a1)
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a4, a0, a2
-; RV64I-CCMOV-NEXT:    lw a2, 0(a1)
-; RV64I-CCMOV-NEXT:    sext.w a4, a0
 ; RV64I-CCMOV-NEXT:    lw a6, 0(a1)
-; RV64I-CCMOV-NEXT:    slt a4, a3, a4
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a4, a3, a0
-; RV64I-CCMOV-NEXT:    slti a3, a5, 1
+; RV64I-CCMOV-NEXT:    slt a2, a2, a3
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a0, a3
+; RV64I-CCMOV-NEXT:    sext.w a2, a0
+; RV64I-CCMOV-NEXT:    lw a3, 0(a1)
+; RV64I-CCMOV-NEXT:    slt a2, a4, a2
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a4, a0
+; RV64I-CCMOV-NEXT:    slti a2, a5, 1
 ; RV64I-CCMOV-NEXT:    lw a1, 0(a1)
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a0, a5
-; RV64I-CCMOV-NEXT:    srli a3, a5, 63
-; RV64I-CCMOV-NEXT:    mips.ccmov a0, a3, a2, a0
-; RV64I-CCMOV-NEXT:    slti a2, a6, 1025
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a0, a5
+; RV64I-CCMOV-NEXT:    srli a2, a5, 63
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a6, a0
+; RV64I-CCMOV-NEXT:    slti a2, a3, 1025
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a3, a0
 ; RV64I-CCMOV-NEXT:    sltiu a2, a5, 2047
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a2, a1, a0
 ; RV64I-CCMOV-NEXT:    sext.w a0, a0
