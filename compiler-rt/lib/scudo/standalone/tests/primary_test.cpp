@@ -615,3 +615,103 @@ TEST(ScudoPrimaryTest, PushBlocksDifferentGroups) {
   SizeClassAllocator.destroy(nullptr);
 }
 #endif
+
+TEST(ScudoPrimaryDeathTest, BatchInvalidCount) {
+  using Primary = TestAllocator<TestConfig2, scudo::DefaultSizeClassMap>;
+  using BatchT = Primary::BatchT;
+  constexpr scudo::u16 MaxCount = Primary::MaxNumBlocksInBatch;
+  alignas(BatchT) char Storage[2][Primary::getSizeOfBatchClass()];
+  BatchT *B = reinterpret_cast<BatchT *>(Storage[0]);
+  BatchT *Other = reinterpret_cast<BatchT *>(Storage[1]);
+  Primary::CompactPtrT Array[MaxCount] = {};
+
+  B->clear();
+  while (B->getCount() < MaxCount)
+    B->add(B->getCount());
+  SCUDO_EXPECT_DEATH(B->add(0), "Count");
+  SCUDO_EXPECT_DEATH(B->appendFromArray(Array, 1), "Count");
+  SCUDO_EXPECT_DEATH(B->moveNToArray(Array, MaxCount + 1), "Count");
+  // A full batch still moves out whole.
+  B->moveNToArray(Array, MaxCount);
+  EXPECT_TRUE(B->empty());
+  EXPECT_EQ(Array[MaxCount - 1], MaxCount - 1U);
+
+  Other->clear();
+  Other->add(0);
+  for (scudo::u16 Count : {static_cast<scudo::u16>(MaxCount + 1),
+                           static_cast<scudo::u16>(UINT16_MAX)}) {
+    B->setCountTestOnly(Count);
+    SCUDO_EXPECT_DEATH(B->add(0), "Count");
+    SCUDO_EXPECT_DEATH(B->appendFromArray(Array, 1), "Count");
+    SCUDO_EXPECT_DEATH(B->appendFromBatch(Other, 1), "Count");
+    SCUDO_EXPECT_DEATH(Other->appendFromBatch(B, 1), "Count");
+    SCUDO_EXPECT_DEATH(B->moveNToArray(Array, 1), "Count");
+  }
+}
+
+template <template <typename> class BaseConfig>
+struct ScudoPrimaryDeathTest : public Test {};
+
+// A Batch in the BatchClass freelist with a corrupted count must stop popBlocks
+// and pushBlocks before they copy blocks past it.
+SCUDO_TYPED_TEST(ScudoPrimaryDeathTest, BatchClassFreeListInvalidCount) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  using BatchT = typename Primary::BatchT;
+  using CompactPtrT = typename Primary::CompactPtrT;
+  constexpr scudo::uptr BatchClassId = Primary::SizeClassMap::BatchClassId;
+  constexpr scudo::u16 MaxCount = Primary::MaxNumBlocksInBatch;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
+
+  std::vector<CompactPtrT> Blocks;
+  CompactPtrT Popped[MaxCount];
+  while (Blocks.size() < 2U * MaxCount + 4U) {
+    const scudo::u16 N = Allocator->popBlocks(&SizeClassAllocator, BatchClassId,
+                                              Popped, MaxCount);
+    ASSERT_GT(N, 0U);
+    Blocks.insert(Blocks.end(), Popped, Popped + N);
+  }
+  for (CompactPtrT Block : Blocks)
+    memset(Allocator->decompactPtr(BatchClassId, Block), 0,
+           Primary::getSizeByClassId(BatchClassId));
+  CompactPtrT Kept = Blocks.back();
+  Blocks.pop_back();
+
+  // BatchClass blocks hold their own Batches. After the first push the
+  // freelist has a Batch, so the second push builds at least one new Batch in
+  // its blocks and puts it at the front.
+  Allocator->pushBlocks(&SizeClassAllocator, BatchClassId, Blocks.data(), 3U);
+  Allocator->pushBlocks(&SizeClassAllocator, BatchClassId, Blocks.data() + 3,
+                        static_cast<scudo::u32>(Blocks.size() - 3));
+  std::vector<BatchT *> Batches;
+  for (size_t I = 3; I < Blocks.size(); ++I) {
+    BatchT *B = reinterpret_cast<BatchT *>(
+        Allocator->decompactPtr(BatchClassId, Blocks[I]));
+    if (!B->empty())
+      Batches.push_back(B);
+  }
+  EXPECT_FALSE(Batches.empty());
+
+  auto CorruptBatches = [&]() {
+    for (BatchT *B : Batches)
+      B->setCountTestOnly(MaxCount + 1);
+  };
+  SCUDO_EXPECT_DEATH(
+      {
+        CorruptBatches();
+        Allocator->popBlocks(&SizeClassAllocator, BatchClassId, Popped,
+                             MaxCount);
+      },
+      "PopCount");
+  SCUDO_EXPECT_DEATH(
+      {
+        CorruptBatches();
+        Allocator->pushBlocks(&SizeClassAllocator, BatchClassId, &Kept, 1U);
+      },
+      "MaxCachedPerBatch");
+
+  Allocator->pushBlocks(&SizeClassAllocator, BatchClassId, &Kept, 1U);
+  SizeClassAllocator.destroy(nullptr);
+}

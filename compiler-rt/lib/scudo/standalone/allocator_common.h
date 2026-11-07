@@ -24,14 +24,15 @@ template <class SizeClassAllocator> struct Batch {
     memcpy(Blocks, Array, sizeof(Blocks[0]) * Count);
   }
   void appendFromArray(CompactPtrT *Array, u16 N) {
-    DCHECK_LE(N, SizeClassAllocator::MaxNumBlocksInBatch - Count);
+    CHECK_LE(N, SizeClassAllocator::MaxNumBlocksInBatch - Count);
     memcpy(Blocks + Count, Array, sizeof(Blocks[0]) * N);
     // u16 will be promoted to int by arithmetic type conversion.
     Count = static_cast<u16>(Count + N);
   }
   void appendFromBatch(Batch *B, u16 N) {
-    DCHECK_LE(N, SizeClassAllocator::MaxNumBlocksInBatch - Count);
-    DCHECK_GE(B->Count, N);
+    CHECK_LE(N, SizeClassAllocator::MaxNumBlocksInBatch - Count);
+    CHECK_LE(B->Count, SizeClassAllocator::MaxNumBlocksInBatch);
+    CHECK_GE(B->Count, N);
     // Append from the back of `B`.
     memcpy(Blocks + Count, B->Blocks + (B->Count - N), sizeof(Blocks[0]) * N);
     // u16 will be promoted to int by arithmetic type conversion.
@@ -41,7 +42,7 @@ template <class SizeClassAllocator> struct Batch {
   void clear() { Count = 0; }
   bool empty() { return Count == 0; }
   void add(CompactPtrT P) {
-    DCHECK_LT(Count, SizeClassAllocator::MaxNumBlocksInBatch);
+    CHECK_LT(Count, SizeClassAllocator::MaxNumBlocksInBatch);
     Blocks[Count++] = P;
   }
   void moveToArray(CompactPtrT *Array) {
@@ -50,16 +51,18 @@ template <class SizeClassAllocator> struct Batch {
   }
 
   void moveNToArray(CompactPtrT *Array, u16 N) {
-    DCHECK_LE(N, Count);
+    CHECK_LE(Count, SizeClassAllocator::MaxNumBlocksInBatch);
+    CHECK_LE(N, Count);
     memcpy(Array, Blocks + Count - N, sizeof(Blocks[0]) * N);
     Count = static_cast<u16>(Count - N);
   }
   u16 getCount() const { return Count; }
   bool isEmpty() const { return Count == 0U; }
   CompactPtrT get(u16 I) const {
-    DCHECK_LE(I, Count);
+    DCHECK_LT(I, Count);
     return Blocks[I];
   }
+  void setCountTestOnly(u16 N) { Count = N; }
   Batch *Next;
 
 private:
