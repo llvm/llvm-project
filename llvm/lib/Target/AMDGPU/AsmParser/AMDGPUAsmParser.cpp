@@ -21,6 +21,7 @@
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -40,16 +41,24 @@
 #include "llvm/Support/AMDGPUObjLinkingInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <optional>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
 using namespace llvm::amdhsa;
 
 namespace {
+
+static cl::opt<bool> WarnAsyncBarrierReplay(
+    "amdgpu-asm-warn-async-barrier-replay",
+    cl::desc("Warn about async barrier arrivals without a recognized replay "
+             "workaround in assembly"),
+    cl::init(true), cl::Hidden);
 
 class AMDGPUAsmParser;
 
@@ -1134,6 +1143,12 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   const unsigned HwMode;
   const AMDGPU::GPUKind Gfx;
   const AMDGPU::IsaVersion ISA;
+
+  SmallVector<SMLoc, 4> PendingAsyncBarrierArrivals;
+  bool AsyncBarrierExecCleared = false;
+
+  void checkAsyncBarrierReplay(const MCInst &Inst);
+  void warnPendingAsyncBarrierArrivals();
 
   /// @name Auto-generated Match Functions
   /// {
@@ -5839,6 +5854,64 @@ static bool isInvalidVOPDY(const OperandVector &Operands,
   return false;
 }
 
+void AMDGPUAsmParser::warnPendingAsyncBarrierArrivals() {
+  for (SMLoc Loc : PendingAsyncBarrierArrivals) {
+    Warning(Loc, "no recognized replay workaround after "
+                 "'ds_atomic_async_barrier_arrive_b64' on this GPU");
+  }
+  PendingAsyncBarrierArrivals.clear();
+  AsyncBarrierExecCleared = false;
+}
+
+void AMDGPUAsmParser::checkAsyncBarrierReplay(const MCInst &Inst) {
+  if (!WarnAsyncBarrierReplay ||
+      !getSTI().hasFeature(AMDGPU::FeatureAsyncBarrierArriveReplayBug) ||
+      getTargetStreamer().getTargetID()->getXnackSetting() ==
+          AMDGPU::TargetIDSetting::Off)
+    return;
+
+  const bool ExecCleared = std::exchange(AsyncBarrierExecCleared, false);
+  switch (Inst.getOpcode()) {
+  case AMDGPU::DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64_gfx12:
+    PendingAsyncBarrierArrivals.push_back(Inst.getLoc());
+    return;
+  // These instructions change control flow but their MC descriptors do not
+  // carry branch, return, or trap flags.
+  case AMDGPU::S_RFE_B64_gfx1250:
+  case AMDGPU::S_TRAP_gfx12:
+    warnPendingAsyncBarrierArrivals();
+    return;
+  case AMDGPU::S_MOV_B32_gfx12:
+    if (!PendingAsyncBarrierArrivals.empty()) {
+      const MCOperand &Dst = Inst.getOperand(0);
+      const MCOperand &Src = Inst.getOperand(1);
+      AsyncBarrierExecCleared = Dst.isReg() &&
+                                mc2PseudoReg(Dst.getReg()) == AMDGPU::EXEC_LO &&
+                                Src.isImm() && Src.getImm() == 0;
+    }
+    return;
+  case AMDGPU::S_SET_VGPR_MSB_gfx12:
+    // Changing the VGPR bank preserves EXEC during a handwritten replay.
+    AsyncBarrierExecCleared = ExecCleared;
+    return;
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_gfx1250:
+    // Recognize only the compiler's EXEC-zero B8 dummy form.
+    if (ExecCleared)
+      PendingAsyncBarrierArrivals.clear();
+    return;
+  }
+
+  if (PendingAsyncBarrierArrivals.empty())
+    return;
+
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+  // Check only a straight-line sequence. Labels and control-flow changes end
+  // recognition rather than allowing a load on another path to hide a warning.
+  if (Desc.isBranch() || Desc.isCall() || Desc.isTerminator() ||
+      (SIInstrFlags::isVMEM(Desc) && !SIInstrFlags::usesASYNC_CNT(Desc)))
+    warnPendingAsyncBarrierArrivals();
+}
+
 bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -5878,6 +5951,7 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       return true;
     }
     emitTargetDirective();
+    checkAsyncBarrierReplay(Inst);
     Out.emitInstruction(Inst, getSTI());
     // Record for kernel prologue checking.
     OpcodeStream.push_back(Inst.getOpcode());
@@ -7022,6 +7096,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUInfo() {
 }
 
 void AMDGPUAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
+  warnPendingAsyncBarrierArrivals();
   // Record every parsed label in the timeline so that, at end of file, the
   // instructions following a kernel's label can be located regardless of
   // whether the .amdhsa_kernel directive came before or after the label.
@@ -7052,6 +7127,7 @@ void AMDGPUAsmParser::checkKernelPrologues() {
 }
 
 void AMDGPUAsmParser::onEndOfFile() {
+  warnPendingAsyncBarrierArrivals();
   emitTargetDirective();
   checkKernelPrologues();
   if (InfoData)
@@ -7060,6 +7136,11 @@ void AMDGPUAsmParser::onEndOfFile() {
 
 bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
+
+  // Debug locations do not interrupt the instruction sequence. Other
+  // directives may change sections or emit bytes outside this parser.
+  if (IDVal != ".loc" && IDVal != ".file")
+    warnPendingAsyncBarrierArrivals();
 
   if (isHsaAbi(getSTI())) {
     if (IDVal == ".amdhsa_kernel")

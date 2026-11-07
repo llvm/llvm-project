@@ -302,8 +302,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AMDGPU Backend
 
-* Added a compiler workaround for async barrier arrivals on gfx1250 and gfx1251
-  unless XNACK is explicitly disabled.
+* Added an async barrier arrival workaround for gfx1250 and gfx1251, and
+  assembler warnings for unrecognized sequences in handwritten or inline
+  assembly. Both are omitted when XNACK is explicitly disabled. See
+  {ref}`amdgpu-async-barrier-replay-warning` for recognized sequences and
+  warning controls.
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
   and `amdgpu.sramecc` module flags.
