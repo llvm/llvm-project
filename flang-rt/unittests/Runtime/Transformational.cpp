@@ -13,6 +13,9 @@
 #include "flang/Common/float128.h"
 #include "flang/Common/numeric-limits.h"
 #include <vector>
+#if defined(__x86_64__) && defined(__SSE2__)
+#include <xmmintrin.h>
+#endif
 
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;
@@ -98,6 +101,72 @@ template <int KIND> static void testBesselJn(BesselFuncType<KIND> rtFunc) {
       {-0.327579111, 0.046565145, 0.364831239, 0.391232371, 0.261140555});
 }
 
+// Cases the plain downward recursion from J(n2) and J(n2-1) gets wrong:
+// underflowed anchors, tiny x, and negative orders.
+template <int KIND>
+static void testBesselJnHardCases(BesselFuncType<KIND> rtFunc) {
+  using T = CppTypeFor<TypeCategory::Real, KIND>;
+  StaticDescriptor desc;
+  Descriptor &result{desc.descriptor()};
+  auto at{[&](int j) { return *result.ZeroBasedIndexedElement<T>(j); }};
+
+  // Both anchors underflow; the low orders are representable.
+  rtFunc(result, 1, 1000, 1.0, 0.0, 0.0, __FILE__, __LINE__);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 1000);
+  EXPECT_NEAR(at(0), 0.440050572, 1e-6);
+  EXPECT_NEAR(at(1), 0.114903487, 1e-6);
+  EXPECT_NEAR(at(2), 0.019563354, 1e-6);
+  EXPECT_EQ(at(998), 0.0);
+  EXPECT_EQ(at(999), 0.0);
+  rtFunc(result, 0, 1001, -1.0, 0.0, 0.0, __FILE__, __LINE__);
+  EXPECT_NEAR(at(0), 0.765197687, 1e-6);
+  EXPECT_NEAR(at(1), -0.440050572, 1e-6);
+  rtFunc(result, 8, 300, 1.0, 0.0, 0.0, __FILE__, __LINE__);
+  EXPECT_NEAR(at(0) / T(9.4223441726e-08), 1.0, 1e-5);
+  EXPECT_NEAR(at(1) / T(5.24925017991e-09), 1.0, 1e-5);
+
+  // Only J(n2) is flushed to zero; J(n2-1) alone loses ~5 digits.
+  if constexpr (KIND == 8) {
+    rtFunc(result, 1, 150, 1.0, 0.0, 3.6728611e-306, __FILE__, __LINE__);
+    EXPECT_NEAR(at(0), 0.4400505857449335, 1e-9);
+  }
+
+  // Tiny x: J(0) = 1 although J(2) and J(3) underflow.
+  T tinyX{KIND == 4 ? T(1e-20) : T(1e-200)};
+  rtFunc(result, 0, 3, tinyX, 0.0, 0.0, __FILE__, __LINE__);
+  EXPECT_NEAR(at(0), 1.0, 1e-6);
+  EXPECT_NEAR(at(1) / (tinyX / 2), 1.0, 1e-6);
+
+  // Negative orders: J(-k, x) = (-1)^k J(k, x).
+  rtFunc(result, -3, 5, 1.0, 0.000249757730211, 0.00247663896104, __FILE__,
+      __LINE__);
+  EXPECT_NEAR(at(0), -0.0195633539827, 1e-6);
+  EXPECT_NEAR(at(2), -0.440050585745, 1e-6);
+  EXPECT_NEAR(at(3), 0.765197686558, 1e-6);
+  EXPECT_NEAR(at(8), 0.000249757730211, 1e-6);
+  rtFunc(result, -12, -10, -1.0, 2.63061512369e-10, 1.1980067463e-11, __FILE__,
+      __LINE__);
+  EXPECT_NEAR(at(0) / T(4.99971817945e-13), 1.0, 1e-5);
+  EXPECT_NEAR(at(2) / T(2.63061512369e-10), 1.0, 1e-5);
+  rtFunc(result, -5, 2, 30.0, 0.0784512460733, -0.118751062617, __FILE__,
+      __LINE__);
+  EXPECT_NEAR(at(0), 0.143240295512, 1e-5);
+  EXPECT_NEAR(at(1), -0.0526090003213, 1e-5);
+  EXPECT_NEAR(at(7), 0.0784512460733, 1e-5);
+
+  // Infinite and NaN x keep their limits.
+  T inf{static_cast<T>(std::numeric_limits<double>::infinity())};
+  T nan{static_cast<T>(std::numeric_limits<double>::quiet_NaN())};
+  rtFunc(result, 0, 5, -inf, 0.0, 0.0, __FILE__, __LINE__);
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(at(j), 0.0);
+  }
+  rtFunc(result, -2, 5, nan, nan, nan, __FILE__, __LINE__);
+  for (int j{0}; j < 8; ++j) {
+    EXPECT_TRUE(at(j) != at(j));
+  }
+}
+
 template <int KIND> static void testBesselJnX0(BesselX0FuncType<KIND> rtFunc) {
   testBesselJnX0<KIND>(rtFunc, 1, 0);
   testBesselJnX0<KIND>(rtFunc, 0, 0);
@@ -109,6 +178,14 @@ template <int KIND> static void testBesselJnX0(BesselX0FuncType<KIND> rtFunc) {
 static void testBesselJn() {
   testBesselJn<4>(RTNAME(BesselJn_4));
   testBesselJn<8>(RTNAME(BesselJn_8));
+  testBesselJnHardCases<4>(RTNAME(BesselJn_4));
+  testBesselJnHardCases<8>(RTNAME(BesselJn_8));
+#if HAS_FLOAT80
+  testBesselJnHardCases<10>(RTNAME(BesselJn_10));
+#endif
+#if HAS_LDBL128 || HAS_FLOAT128
+  testBesselJnHardCases<16>(RTNAME(BesselJn_16));
+#endif
 #if HAS_FLOAT80
   testBesselJn<10>(RTNAME(BesselJn_10));
 #endif
@@ -127,6 +204,21 @@ static void testBesselJn() {
 }
 
 TEST(Transformational, BesselJn) { testBesselJn(); }
+
+#if defined(__x86_64__) && defined(__SSE2__)
+// With subnormals flushed to zero, the recurrence's rescale factor must
+// stay a normal number.
+TEST(Transformational, BesselJnFlushToZero) {
+  unsigned csr{_mm_getcsr()};
+  _mm_setcsr(csr | 0x8040); // FTZ | DAZ
+  StaticDescriptor desc;
+  Descriptor &result{desc.descriptor()};
+  RTNAME(BesselJn_8)(result, 1, 10000, 1.0, 0.0, 0.0, __FILE__, __LINE__);
+  _mm_setcsr(csr);
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<double>(0), 0.440050586, 1e-8);
+  EXPECT_NEAR(*result.ZeroBasedIndexedElement<double>(1), 0.114903485, 1e-8);
+}
+#endif
 
 template <int KIND>
 static void testBesselYn(BesselFuncType<KIND> rtFunc, int32_t n1, int32_t n2,

@@ -19,10 +19,13 @@
 #include "flang/Runtime/transformational.h"
 #include "copy.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/numeric-templates.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang/Common/float128.h"
+#include "flang/Common/real.h"
+#include <cmath>
 
 namespace Fortran::runtime {
 
@@ -164,10 +167,84 @@ static inline RT_API_ATTRS std::size_t AllocateBesselResult(Descriptor &result,
   return elementLen;
 }
 
+// Computes J(k, x) for k in [lo, hi] with Miller's algorithm: recur down from
+// an arbitrary seed at order start >= hi (start > |x|), rescaling to avoid
+// overflow, and normalize with J(0) + 2 * sum(J(2k)) = 1. Returns false if x
+// is too small to recur without overflow.
+template <typename T, typename ELT>
+static RT_API_ATTRS bool MillerBesselJn(
+    int lo, int hi, int start, T x, T minNormal, ELT elt) {
+  T absX{x < 0 ? -x : x};
+  T growth{2 * start / absX + 2}; // bounds |J(n-1)| / max(|J(n)|, |J(n+1)|)
+  // Keep |J| below 1 / minNormal so that the rescale factor stays normal
+  // (a subnormal one is flushed to zero under FTZ).
+  T limit{1 / (minNormal * (growth + 2))};
+  if (!(limit > 1)) {
+    return false;
+  }
+  T twoOverX{2 / x};
+  T jp1{0}, j{1}, evenSum{0};
+  int top{hi}; // stored orders above top are zero
+  if (start == hi) {
+    elt(start) = j;
+  }
+  if ((start & 1) == 0) {
+    evenSum += 2 * j;
+  }
+  for (int n{start}; n >= 1; --n) {
+    T jm{twoOverX * n * j - jp1}; // J(n-1)
+    jp1 = j;
+    j = jm;
+    if ((jm < 0 ? -jm : jm) > limit) {
+      T inv{1 / jm};
+      // Stored orders shrink as k grows: once one underflows, zero the rest
+      // and never revisit them.
+      for (int k{n > lo ? n : lo}; k <= top; ++k) {
+        if ((elt(k) *= inv) == 0) {
+          for (int m{k + 1}; m <= top; ++m) {
+            elt(m) = 0;
+          }
+          top = k - 1;
+        }
+      }
+      evenSum *= inv;
+      jp1 *= inv;
+      j = jm * inv;
+    }
+    if (n - 1 >= lo && n - 1 <= hi) {
+      elt(n - 1) = j;
+    }
+    if (n - 1 == 0) {
+      evenSum += j;
+    } else if (((n - 1) & 1) == 0) {
+      evenSum += 2 * j;
+    }
+  }
+  for (int k{lo}; k <= top; ++k) {
+    elt(k) /= evenSum;
+  }
+  return true;
+}
+
+// For |x| this small, J(k, x) = (x/2)^k / k! to working precision.
+template <typename T, typename ELT>
+static RT_API_ATTRS void TinyXBesselJn(int lo, int hi, T x, ELT elt) {
+  T term{1};
+  for (int k{0}; k <= hi; ++k) {
+    if (k > 0) {
+      term *= x / 2 / k;
+    }
+    if (k >= lo) {
+      elt(k) = term;
+    }
+  }
+}
+
 template <TypeCategory CAT, int KIND>
 static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
     int32_t n2, CppTypeFor<CAT, KIND> x, CppTypeFor<CAT, KIND> bn2,
     CppTypeFor<CAT, KIND> bn2_1, const char *sourceFile, int line) {
+  using T = CppTypeFor<CAT, KIND>;
   Terminator terminator{sourceFile, line};
   AllocateBesselResult<CAT, KIND>(result, n1, n2, terminator, "BESSEL_JN");
 
@@ -182,17 +259,74 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   for (int j{0}; j < maxRank; ++j) {
     at[j] = 0;
   }
+  auto elt{[&](int k) -> T & {
+    at[0] = k - n1 + 1;
+    return *result.Element<T>(at);
+  }};
+  const T minNormal{MinValue<common::PrecisionOfRealKind(KIND), T>::get()};
+  T absX{x < 0 ? -x : x};
 
-  // if n2 >= n1, there will be at least one element in the result.
-  at[0] = n2 - n1 + 1;
-  *result.Element<CppTypeFor<CAT, KIND>>(at) = bn2;
-
-  if (n2 == n1) {
+  if (n1 < 0) {
+    // J(-k, x) = (-1)^k * J(k, x). Recursing down from the caller's anchors
+    // into negative orders is unstable, so compute J(0..maxOrder) and reflect.
+    int maxOrder{-n1 > n2 ? -n1 : n2};
+    T *j{static_cast<T *>(
+        AllocateMemoryOrCrash(terminator, (maxOrder + 1) * sizeof(T)))};
+    auto jElt{[&](int k) -> T & { return j[k]; }};
+    if (absX > maxOrder || x != x) {
+      // Every order is below |x|, where recursion is stable both ways: start
+      // from the anchors as J(a) and J(a + 1) with a >= 0.
+      int a{n2 >= 1 ? n2 - 1 : -n2};
+      T ja{n2 >= 1 ? bn2_1 : (a & 1) ? -bn2 : bn2};
+      T ja1{n2 >= 1 ? bn2 : (a & 1) ? bn2_1 : -bn2_1};
+      T twoOverX{2 / x};
+      T lo1{ja1}, lo0{ja};
+      for (int k{a}; k >= 0; --k) {
+        if (k <= maxOrder) {
+          j[k] = lo0;
+        }
+        T next{twoOverX * k * lo0 - lo1}; // J(k-1)
+        lo1 = lo0;
+        lo0 = next;
+      }
+      T up0{ja}, up1{ja1};
+      for (int k{a + 1}; k <= maxOrder; ++k) {
+        j[k] = up1;
+        T next{twoOverX * k * up1 - up0}; // J(k+1)
+        up0 = up1;
+        up1 = next;
+      }
+    } else {
+      int start{maxOrder + 16 + static_cast<int>(std::sqrt(160.0 * maxOrder))};
+      if (!MillerBesselJn(0, maxOrder, start, x, minNormal, jElt)) {
+        TinyXBesselJn(0, maxOrder, x, jElt);
+      }
+    }
+    for (int k{n1}; k <= n2; ++k) {
+      elt(k) = k >= 0 ? j[k] : ((-k) & 1) ? -j[-k] : j[-k];
+    }
+    FreeMemory(j);
     return;
   }
 
-  at[0] = n2 - n1;
-  *result.Element<CppTypeFor<CAT, KIND>>(at) = bn2_1;
+  // if n2 >= n1, there will be at least one element in the result.
+  elt(n2) = bn2;
+  if (n2 == n1) {
+    return;
+  }
+  elt(n2 - 1) = bn2_1;
+
+  // If J(n2, x) is zero or subnormal, the recursion below cannot recover
+  // the lower orders (e.g. BESSEL_JN(1, 10000, 1.0) would be all zeros).
+  if (n2 - n1 >= 2 && absX < n2 && bn2 < minNormal && bn2 > -minNormal) {
+    if (!MillerBesselJn(n1, n2, n2, x, minNormal, elt)) {
+      TinyXBesselJn(n1, n2, x, elt);
+    }
+    // Keep the caller's more accurate values for the top two orders.
+    elt(n2) = bn2;
+    elt(n2 - 1) = bn2_1;
+    return;
+  }
 
   // Bessel functions of the first kind are stable for a backward recursion
   // (see https://dlmf.nist.gov/10.74.iv and https://dlmf.nist.gov/10.6.E1).
@@ -203,15 +337,12 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   //
   //     J(n, x) = (2.0 / x) * (n + 1) * J(n+1, x) - J(n+2, x)
   //
-  CppTypeFor<CAT, KIND> bn_2 = bn2;
-  CppTypeFor<CAT, KIND> bn_1 = bn2_1;
-  CppTypeFor<CAT, KIND> twoOverX = 2.0 / x;
+  T bn_2 = bn2;
+  T bn_1 = bn2_1;
+  T twoOverX = 2.0 / x;
   for (int n{n2 - 2}; n >= n1; --n) {
     auto bn = twoOverX * (n + 1) * bn_1 - bn_2;
-
-    at[0] = n - n1 + 1;
-    *result.Element<CppTypeFor<CAT, KIND>>(at) = bn;
-
+    elt(n) = bn;
     bn_2 = bn_1;
     bn_1 = bn;
   }
