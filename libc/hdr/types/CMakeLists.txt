@@ -227,6 +227,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_statx
+  HDRS
+    struct_statx.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_statx
+)
+
+add_proxy_header_library(
   struct_statfs
   HDRS
     struct_statfs.h
