@@ -103,6 +103,8 @@ class L0DeviceTy final : public GenericDeviceTy {
   ze_device_properties_t DeviceProperties{};
   ze_device_compute_properties_t ComputeProperties{};
   ze_device_memory_properties_t MemoryProperties{};
+  /// Sum of totalSize over all memory heaps of the device.
+  uint64_t TotalGlobalMemorySize = 0;
   ze_device_cache_properties_t CacheProperties{};
   ze_device_module_properties_t ModuleProperties{};
 
@@ -298,7 +300,7 @@ public:
     return ComputeProperties.maxGroupCountZ;
   }
   uint32_t getMemoryClockRate() const { return MemoryProperties.maxClockRate; }
-  uint64_t getGlobalMemorySize() const { return MemoryProperties.totalSize; }
+  uint64_t getGlobalMemorySize() const { return TotalGlobalMemorySize; }
   size_t getCacheSize() const { return CacheProperties.cacheSize; }
   uint64_t getMaxMemAllocSize() const {
     return DeviceProperties.maxMemAllocSize;
