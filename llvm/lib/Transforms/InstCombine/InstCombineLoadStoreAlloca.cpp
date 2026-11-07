@@ -714,6 +714,15 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
       assert(!LoadTy->isX86_AMXTy() && "Load from x86_amx* should not happen!");
       if (BC->getType()->isX86_AMXTy())
         return nullptr;
+
+      // Try fold shuffle (bitcast X) -> bitcast (shuffle X).
+      if (BC->hasOneUse())
+        if (auto *SVI = dyn_cast<ShuffleVectorInst>(BC->user_back()))
+          if (Value *V = IC.foldShuffleOfBitcast(*SVI)) {
+            IC.replaceInstUsesWith(*SVI, V);
+            IC.eraseInstFromFunction(*SVI);
+            return &Load;
+          }
     }
 
     if (auto *CastUser = dyn_cast<CastInst>(Load.user_back())) {

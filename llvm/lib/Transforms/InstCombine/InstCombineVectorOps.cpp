@@ -2760,7 +2760,7 @@ static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
 /// Try to fold an extract subvector operation.
 static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
-  if (!Shuf.isIdentityWithExtract() || !match(Op1, m_Poison()))
+  if (!Shuf.isIdentityWithExtract() || !match(Op1, m_Undef()))
     return nullptr;
 
   // Check if we are extracting all bits of an inserted scalar:
@@ -2992,6 +2992,68 @@ Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
   return new ShuffleVectorInst(NewBO, SVI.getShuffleMask());
 }
 
+/// Try fold shuffle (bitcast X) -> bitcast (shuffle X). This can always be done
+/// if the original type of X has larger lanes than the bitcast type. It can be
+/// done sometimes if the original type of X has smaller lanes, if the shuffle
+/// selects adjacent lanes together that sum to the width of the bitcast type
+/// lanes. This is profitable if:
+/// - The shuffle on the non-bitcast type can be simplified further. Ex. if the
+///   shuffle reverses an earlier shuffle on the same type, they cancel out and
+///   can be removed.
+/// - X has a wider lane type than the bitcast type.
+Value *InstCombinerImpl::foldShuffleOfBitcast(ShuffleVectorInst &SVI) {
+  Value *X;
+  Value *LHS = SVI.getOperand(0);
+  Value *RHS = SVI.getOperand(1);
+  if (!match(LHS, m_BitCast(m_Value(X))) || !match(RHS, m_Undef()))
+    return nullptr;
+
+  auto *SrcTy = dyn_cast<FixedVectorType>(X->getType());
+  auto *CastTy = dyn_cast<FixedVectorType>(LHS->getType());
+  if (!SrcTy || !CastTy)
+    return nullptr;
+
+  unsigned SrcNumElts = SrcTy->getNumElements();
+  unsigned CastNumElts = CastTy->getNumElements();
+  SmallVector<int, 16> ScaledMask;
+  // See if we can perform the shuffle on the SrcTy instead of CastTy. If we
+  // can, ScaledMask will hold the new shuffle mask.
+  if (CastNumElts >= SrcNumElts) {
+    if (CastNumElts % SrcNumElts ||
+        !widenShuffleMaskElts(CastNumElts / SrcNumElts, SVI.getShuffleMask(),
+                              ScaledMask))
+      return nullptr;
+  } else {
+    if (SrcNumElts % CastNumElts)
+      return nullptr;
+    narrowShuffleMaskElts(SrcNumElts / CastNumElts, SVI.getShuffleMask(),
+                          ScaledMask);
+  }
+
+  auto *ShufTy =
+      FixedVectorType::get(SrcTy->getElementType(), ScaledMask.size());
+  Value *Y = ConstantExpr::getBitCast(cast<Constant>(RHS), SrcTy);
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(&SVI);
+
+  // First see if computing the shuffle on SrcTy can help us simplify it. For
+  // example,
+  if (Value *V = simplifyShuffleVectorInst(X, Y, ScaledMask, ShufTy,
+                                           SQ.getWithInstruction(&SVI)))
+    return Builder.CreateBitCast(V, SVI.getType());
+
+  // Prefer extracting an inserted scalar over forming a new vector shuffle.
+  if (Instruction *I = foldIdentityExtractShuffle(SVI))
+    return Builder.Insert(I);
+
+  // Otheriwse, prefer a shuffle on the wider lane type.
+  if (SrcNumElts >= CastNumElts || !LHS->hasOneUse())
+    return nullptr;
+
+  Value *Shuf = Builder.CreateShuffleVector(X, Y, ScaledMask);
+  return Builder.CreateBitCast(Shuf, SVI.getType());
+}
+
 Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
@@ -3034,26 +3096,8 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
 
   ArrayRef<int> Mask = SVI.getShuffleMask();
 
-  // Peek through a bitcasted shuffle operand by scaling the mask. If the
-  // simulated shuffle can simplify, then this shuffle is unnecessary:
-  // shuf (bitcast X), undef, Mask --> bitcast X'
-  // TODO: This could be extended to allow length-changing shuffles.
-  //       The transform might also be obsoleted if we allowed canonicalization
-  //       of bitcasted shuffles.
-  if (match(LHS, m_BitCast(m_Value(X))) && match(RHS, m_Undef()) &&
-      X->getType()->isVectorTy() && VWidth == LHSWidth) {
-    // Try to create a scaled mask constant.
-    auto *XType = cast<FixedVectorType>(X->getType());
-    unsigned XNumElts = XType->getNumElements();
-    SmallVector<int, 16> ScaledMask;
-    if (scaleShuffleMaskElts(XNumElts, Mask, ScaledMask)) {
-      // If the shuffled source vector simplifies, cast that value to this
-      // shuffle's type.
-      if (auto *V = simplifyShuffleVectorInst(X, UndefValue::get(XType),
-                                              ScaledMask, XType, ShufQuery))
-        return BitCastInst::Create(Instruction::BitCast, V, SVI.getType());
-    }
-  }
+  if (Value *V = foldShuffleOfBitcast(SVI))
+    return replaceInstUsesWith(SVI, V);
 
   // shuffle x, x, mask --> shuffle x, undef, mask'
   if (LHS == RHS) {

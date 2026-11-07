@@ -188,6 +188,7 @@ public:
   foldAggregateConstructionIntoAggregateReuse(InsertValueInst &OrigIVI);
   Instruction *visitInsertValueInst(InsertValueInst &IV);
   Instruction *visitInsertElementInst(InsertElementInst &IE);
+  Value *foldShuffleOfBitcast(ShuffleVectorInst &SVI);
   Instruction *visitExtractElementInst(ExtractElementInst &EI);
   Instruction *simplifyBinOpSplats(ShuffleVectorInst &SVI);
   Instruction *visitShuffleVectorInst(ShuffleVectorInst &SVI);

@@ -24,9 +24,7 @@ define <2 x i64> @test_extrq_zero_arg0(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrq_zero_arg1(<2 x i64> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @test_extrq_zero_arg1(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[X:%.*]] to <16 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[X:%.*]], <2 x i64> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> zeroinitializer) nounwind
@@ -60,9 +58,7 @@ define <2 x i64> @test_extrq_constant_poison(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrq_call_constexpr(<2 x i64> %x) {
 ; CHECK-LABEL: @test_extrq_call_constexpr(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[X:%.*]] to <16 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[X:%.*]], <2 x i64> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %1 = call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> bitcast (<2 x i64> <i64 0, i64 poison> to <16 x i8>))
@@ -241,9 +237,7 @@ define <2 x i64> @test_insertqi_call_constexpr(<2 x i64> %x) {
 ; second arg
 define <2 x i64> @testInsert64Bits(<2 x i64> %v, <2 x i64> %i) {
 ; CHECK-LABEL: @testInsert64Bits(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[I:%.*]] to <16 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[I:%.*]], <2 x i64> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %v, <2 x i64> %i, i8 64, i8 0)
@@ -252,9 +246,7 @@ define <2 x i64> @testInsert64Bits(<2 x i64> %v, <2 x i64> %i) {
 
 define <2 x i64> @testZeroLength(<2 x i64> %v, <2 x i64> %i) {
 ; CHECK-LABEL: @testZeroLength(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[I:%.*]] to <16 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[I:%.*]], <2 x i64> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %v, <2 x i64> %i, i8 0, i8 0)
