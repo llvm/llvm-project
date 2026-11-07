@@ -562,15 +562,18 @@ int PipelineSolver::EdgeSetBuilder::buildImpl(
       if (A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
         continue;
 
+      // An edge that already holds is skipped, as in SchedGroup::link:
+      // removeEdges would otherwise delete an existing edge it duplicates.
       if (MakePred) {
         // Try add SU -> A.
         if (Preds.contains(A)) { // Would add cycle since A ~> SU.
           ++MissedEdges;
           continue;
         }
-        // Succs does not need to be updated, since it will not be
-        // queried after entering the MakePred case.
-        NewEdges.emplace_back(SU, A);
+        // Succs is not updated for the new edges, which is enough to find
+        // the edges that already hold.
+        if (!Succs.contains(A))
+          NewEdges.emplace_back(SU, A);
         continue;
       }
 
@@ -579,6 +582,8 @@ int PipelineSolver::EdgeSetBuilder::buildImpl(
         ++MissedEdges;
         continue;
       }
+      if (Preds.contains(A))
+        continue;
       NewEdges.emplace_back(A, SU);
       computePreds(Preds, A);
     }
