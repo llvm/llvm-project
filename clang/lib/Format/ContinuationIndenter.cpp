@@ -2372,7 +2372,11 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
                                    State.Stack.back().LastSpace,
                                    /*AvoidBinPacking=*/true, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
-  State.Stack.back().BreakBeforeParameter = true;
+  // Preserve the input's line breaks in short enums with no column limit
+  // instead of forcing each enumerator onto its own line.
+  State.Stack.back().BreakBeforeParameter =
+      Style.ColumnLimit != 0 || !Style.AllowShortEnumsOnASingleLine ||
+      State.NextToken->isNot(TT_EnumLBrace);
 }
 
 static unsigned getLastLineEndColumn(StringRef Text, unsigned StartColumn,
