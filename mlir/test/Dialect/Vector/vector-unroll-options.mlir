@@ -601,6 +601,31 @@ func.func @vector_create_mask_constant_dim_sizes() -> vector<16x16xi1> {
 
 // -----
 
+func.func @vector_create_mask_rank_mismatch(%size: index) -> vector<2x8x8xi1> {
+  %c8 = arith.constant 8 : index
+  %0 = vector.create_mask %size, %c8, %c8 : vector<2x8x8xi1>
+  return %0 : vector<2x8x8xi1>
+}
+
+// CHECK-LABEL: func @vector_create_mask_rank_mismatch
+// CHECK-SAME: (%[[SIZE:.*]]: index) -> vector<2x8x8xi1>
+//       CHECK:   %[[C8:.*]] = arith.constant 8 : index
+//       CHECK:   %[[ACC:.*]] = arith.constant dense<false> : vector<2x8x8xi1>
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[C1:.*]] = arith.constant 1 : index
+//       CHECK:   %[[MAX0:.*]] = arith.maxsi %[[SIZE]], %[[C0]] : index
+//       CHECK:   %[[MIN0:.*]] = arith.minsi %[[MAX0]], %[[C1]] : index
+//       CHECK:   %[[MASK0:.*]] = vector.create_mask %[[MIN0]], %[[C8]], %[[C8]] : vector<1x8x8xi1>
+//       CHECK:   %[[INS0:.*]] = vector.insert_strided_slice %[[MASK0]], %[[ACC]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   %[[SUB1:.*]] = arith.subi %[[SIZE]], %[[C1]] : index
+//       CHECK:   %[[MAX1:.*]] = arith.maxsi %[[SUB1]], %[[C0]] : index
+//       CHECK:   %[[MIN1:.*]] = arith.minsi %[[MAX1]], %[[C1]] : index
+//       CHECK:   %[[MASK1:.*]] = vector.create_mask %[[MIN1]], %[[C8]], %[[C8]] : vector<1x8x8xi1>
+//       CHECK:   %[[INS1:.*]] = vector.insert_strided_slice %[[MASK1]], %[[INS0]] offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   return %[[INS1]] : vector<2x8x8xi1>
+
+// -----
+
 func.func @vector_constant_mask() -> vector<16x16xi1> {
   %0 = vector.constant_mask [12, 10] : vector<16x16xi1>
   return %0 : vector<16x16xi1>
@@ -618,6 +643,40 @@ func.func @vector_constant_mask() -> vector<16x16xi1> {
 //       CHECK:   %[[MASK11:.*]] = vector.constant_mask [4, 2] : vector<8x8xi1>
 //       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[MASK11]], %[[INS10]] offsets = [8, 8], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
 //       CHECK:   return %[[INS11]] : vector<16x16xi1>
+
+// -----
+
+func.func @vector_constant_mask_no_rank_mismatch() -> vector<16x16xi1> {
+  %0 = vector.constant_mask [8, 8] : vector<16x16xi1>
+  return %0 : vector<16x16xi1>
+}
+
+// CHECK-LABEL: func @vector_constant_mask_no_rank_mismatch
+// CHECK-SAME: () -> vector<16x16xi1>
+//       CHECK:   %[[EMPTY:.*]] = arith.constant dense<false> : vector<8x8xi1>
+//       CHECK:   %[[ACC:.*]] = arith.constant dense<false> : vector<16x16xi1>
+//       CHECK:   %[[FULL:.*]] = arith.constant dense<true> : vector<8x8xi1>
+//       CHECK:   %[[INS00:.*]] = vector.insert_strided_slice %[[FULL]], %[[ACC]] offsets = [0, 0], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS01:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS00]] offsets = [0, 8], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS10:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS01]] offsets = [8, 0], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS10]] offsets = [8, 8], strides = [1, 1] : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   return %[[INS11]] : vector<16x16xi1>
+
+// -----
+
+func.func @vector_constant_mask_rank_mismatch() -> vector<2x8x8xi1> {
+  %0 = vector.constant_mask [1, 8, 8] : vector<2x8x8xi1>
+  return %0 : vector<2x8x8xi1>
+}
+
+// CHECK-LABEL: func @vector_constant_mask_rank_mismatch
+// CHECK-SAME: () -> vector<2x8x8xi1>
+//       CHECK:   %[[EMPTY:.*]] = arith.constant dense<false> : vector<1x8x8xi1>
+//       CHECK:   %[[ACC:.*]] = arith.constant dense<false> : vector<2x8x8xi1>
+//       CHECK:   %[[FULL:.*]] = arith.constant dense<true> : vector<1x8x8xi1>
+//       CHECK:   %[[INS0:.*]] = vector.insert_strided_slice %[[FULL]], %[[ACC]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   %[[INS1:.*]] = vector.insert_strided_slice %[[EMPTY]], %[[INS0]] offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   return %[[INS1]] : vector<2x8x8xi1>
 
 // -----
 
