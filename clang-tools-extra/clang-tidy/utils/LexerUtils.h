@@ -52,21 +52,14 @@ SourceLocation findPreviousAnyTokenKind(SourceLocation Start,
                                         TokenKind TK, TokenKinds... TKs) {
   if (Start.isInvalid() || Start.isMacroID())
     return {};
-  while (true) {
-    const SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
-    if (L.isInvalid() || L.isMacroID())
-      return {};
+  while (auto T = Lexer::findPreviousToken(Start, SM, LangOpts,
+                                           /*IncludeComments=*/true)) {
+    if (T->isOneOf(TK, TKs...))
+      return T->getLocation();
 
-    Token T;
-    // Returning 'true' is used to signal failure to retrieve the token.
-    if (Lexer::getRawToken(L, T, SM, LangOpts, /*IgnoreWhiteSpace=*/true))
-      return {};
-
-    if (T.isOneOf(TK, TKs...))
-      return T.getLocation();
-
-    Start = L;
+    Start = T->getLocation();
   }
+  return {};
 }
 
 template <typename TokenKind, typename... TokenKinds>
