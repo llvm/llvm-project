@@ -304,8 +304,7 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    movl %edx, %ebx
 ; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    shrb $3, %al
-; X86-NEXT:    andb $12, %al
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    andl $12, %eax
 ; X86-NEXT:    movl 92(%esp,%eax), %esi
 ; X86-NEXT:    movl 88(%esp,%eax), %edx
 ; X86-NEXT:    movl %edx, %edi
