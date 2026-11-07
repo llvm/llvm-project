@@ -453,6 +453,8 @@ public:
       assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
              "Must be reg");
       assert(!isMatched() && "Tied operand cannot be marked foldable");
+      assert((!B || getNumOperandRegisters() == 1) &&
+             "Only a single register can be folded");
       Bitfield::set<RegMayBeFolded>(Storage, B);
     }
     bool getRegMayBeFolded() const {
