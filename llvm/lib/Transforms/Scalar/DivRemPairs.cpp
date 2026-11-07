@@ -44,30 +44,33 @@ struct ExpandedMatch {
 } // namespace
 
 /// See if we can match: (which is the form we expand into)
-///   X - ((X ?/ Y) * Y)
+///   X - ((X / Y) * Y)
 /// which is equivalent to:
-///   X ?% Y
+///   X % Y
+/// Also look for:
+///   X ==/!= ((X / Y) * Y)
+/// which is equivalent to:
+///   X % Y ==/!= 0
 static std::optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
-  Value *Dividend, *XroundedDownToMultipleOfY;
-  if (!match(&I, m_Sub(m_Value(Dividend), m_Value(XroundedDownToMultipleOfY))))
-    return std::nullopt;
-
-  Value *Divisor;
+  Value *Dividend = nullptr, *Divisor;
   Instruction *Div;
-  // Look for  ((X / Y) * Y)
-  if (!match(
-          XroundedDownToMultipleOfY,
-          m_c_Mul(m_CombineAnd(m_IDiv(m_Specific(Dividend), m_Value(Divisor)),
-                               m_Instruction(Div)),
-                  m_Deferred(Divisor))))
-    return std::nullopt;
 
-  ExpandedMatch M;
-  M.Key.SignedOp = Div->getOpcode() == Instruction::SDiv;
-  M.Key.Dividend = Dividend;
-  M.Key.Divisor = Divisor;
-  M.Value = &I;
-  return M;
+  auto DivMul = m_c_Mul(
+      m_Instruction(Div, m_IDiv(m_Deferred(Dividend), m_Value(Divisor))),
+      m_Deferred(Divisor));
+
+  if (match(&I, m_Sub(m_Value(Dividend), DivMul)) ||
+      (match(&I, m_c_ICmp(m_Value(Dividend), DivMul)) &&
+       cast<ICmpInst>(I).isEquality())) {
+    ExpandedMatch M;
+    M.Key.SignedOp = Div->getOpcode() == Instruction::SDiv;
+    M.Key.Dividend = Dividend;
+    M.Key.Divisor = Divisor;
+    M.Value = &I;
+    return M;
+  }
+
+  return std::nullopt;
 }
 
 namespace {
@@ -86,7 +89,9 @@ struct DivRemPairWorklistEntry {
     assert((DivInst->getOpcode() == Instruction::UDiv ||
             DivInst->getOpcode() == Instruction::SDiv) &&
            "Not a division.");
-    assert(DivInst->getType() == RemInst->getType() && "Types should match.");
+    assert((RemInst->getOpcode() == Instruction::ICmp ||
+            DivInst->getType() == RemInst->getType()) &&
+           "Types should match.");
     // We can't check anything else about remainder instruction,
     // it's not strictly required to be a urem/srem.
   }
@@ -209,14 +214,28 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       // Note that we place it right next to the original expanded instruction,
       // and letting further handling to move it if needed.
       RealRem->setName(RemInst->getName() + ".recomposed");
+      RealRem->setDebugLoc(RemInst->getDebugLoc());
       RealRem->insertAfter(RemInst->getIterator());
       Instruction *OrigRemInst = RemInst;
       // Update AssertingVH<> with new instruction so it doesn't assert.
       RemInst = RealRem;
-      // And replace the original instruction with the new one.
-      OrigRemInst->replaceAllUsesWith(RealRem);
-      RealRem->setDebugLoc(OrigRemInst->getDebugLoc());
-      OrigRemInst->eraseFromParent();
+
+      if (auto *OrigCmp = dyn_cast<ICmpInst>(OrigRemInst)) {
+        // The expanded rem instruction is actually an icmp:
+        // X ==/!= (X / Y) * Y. Replace it with X % Y ==/!= 0.
+        Instruction *NewCmp =
+            new ICmpInst(OrigCmp->getPredicate(), RealRem,
+                         Constant::getNullValue(RealRem->getType()));
+        NewCmp->takeName(OrigCmp);
+        NewCmp->setDebugLoc(OrigCmp->getDebugLoc());
+        NewCmp->insertAfter(RealRem->getIterator());
+        OrigCmp->replaceAllUsesWith(NewCmp);
+        OrigCmp->eraseFromParent();
+      } else {
+        // Replace the expanded rem instruction with the new one.
+        OrigRemInst->replaceAllUsesWith(RealRem);
+        OrigRemInst->eraseFromParent();
+      }
       NumRecomposed++;
       // Note that we have left ((X / Y) * Y) around.
       // If it had other uses we could rewrite it as X - X % Y
