@@ -488,6 +488,22 @@ bool CodeGenPrepare::_run(Function &F) {
     }
   }
 
+  // A zero-sized alloca still gets a one-byte stack object, and alias analysis
+  // during codegen describes the stack object by the alloca. Make the alloca
+  // allocate that byte as well, as a byte array so that stack protection still
+  // treats it as an array.
+  for (Instruction &I : F.getEntryBlock()) {
+    auto *AI = dyn_cast<AllocaInst>(&I);
+    if (!AI || !AI->isStaticAlloca())
+      continue;
+    std::optional<TypeSize> Size = AI->getAllocationSize(*DL);
+    if (!Size || !Size->isZero())
+      continue;
+    AI->setAllocatedType(ArrayType::get(Type::getInt8Ty(F.getContext()), 1));
+    AI->setOperand(0, ConstantInt::get(AI->getArraySize()->getType(), 1));
+    EverMadeChange = true;
+  }
+
   // Get rid of @llvm.assume builtins before attempting to eliminate empty
   // blocks, since there might be blocks that only contain @llvm.assume calls
   // (plus arguments that we can get rid of).
