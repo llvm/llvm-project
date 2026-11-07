@@ -4,7 +4,7 @@
 ; when condition code 3 is possible (CCValid & 1 != 0) and the condition mask
 ; has no valid HLASM extended mnemonic (e.g. mask 9 from fcmp one).
 define void @test_bc_numeric_mask(float %a, float %b, ptr %p) {
-; CHECK-LABEL: test_bc_numeric_mask DS 0H
+; CHECK-LABEL: test_bc_numeric_mask DS 0B
 ; CHECK:       cebr  0,2
 ; CHECK-NEXT:  bc    9,2(7)
 ; CHECK:       mvhi  0(3),1
@@ -25,11 +25,11 @@ if.end:
 ; when condition code 3 is possible (CCValid & 1 != 0) and the condition mask
 ; has no valid HLASM extended mnemonic (e.g. mask 9 from fcmp one).
 define void @test_brc_numeric_mask(float %a, float %b) {
-; CHECK-LABEL: test_brc_numeric_mask DS 0H
+; CHECK-LABEL: test_brc_numeric_mask DS 0B
 ; CHECK:       cebr  0,2
 ; CHECK-NEXT:  brc   9,[[LABEL:L#BB[0-9_]+]]
 ; CHECK:       basr  7,6
-; CHECK:       [[LABEL]] DS 0H
+; CHECK:       [[LABEL]] DS 0B
 entry:
   %cmp = fcmp one float %a, %b
   br i1 %cmp, label %bb1, label %bb2

@@ -6,9 +6,9 @@
 ; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
 define void @leaf() {
-; CHECK-LABEL: leaf DS 0H
+; CHECK-LABEL: leaf DS 0B
 ; CHECK:         stmg 6,9,1936(4)
-; CHECK-NEXT:    L#stack_update0 DS 0H
+; CHECK-NEXT:    L#stack_update0 DS 0B
 ; CHECK-NEXT:    aghi 4,-128
 ; CHECK:         lmg 7,9,2072(4)
 ; CHECK-NEXT:    aghi 4,128
@@ -19,7 +19,7 @@ define void @leaf() {
 
 ; A true leaf (no callee-saved registers) still gets no stack frame.
 define i64 @trueleaf(i64 %a) {
-; CHECK-LABEL: trueleaf DS 0H
+; CHECK-LABEL: trueleaf DS 0B
 ; CHECK-NOT:     stmg
 ; CHECK-NOT:     aghi 4,
 ; CHECK:         b 2(7)

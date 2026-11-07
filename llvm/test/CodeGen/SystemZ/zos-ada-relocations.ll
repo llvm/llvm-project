@@ -2,7 +2,7 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
-; CHECK-LABEL: DoIt DS 0H
+; CHECK-LABEL: DoIt DS 0B
 ; CHECK:    stmg    6,7,1840(4)
 ; CHECK:    aghi    4,-224
 ; CHECK:    lg  1,0(5)
@@ -25,7 +25,7 @@ entry:
 declare void @DoFunc()
 declare void @Caller(ptr noundef)
 
-; CHECK-LABEL: get_i DS 0H
+; CHECK-LABEL: get_i DS 0B
 ; CHECK:    stmg    6,8,1872(4)
 ; CHECK:    aghi    4,-192
 ; CHECK:    lg  1,24(5)

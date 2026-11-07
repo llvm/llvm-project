@@ -20,7 +20,7 @@ entry:
 ; Check the attributes on the function
 ; CHECK:       ENTRY calc
 ; CHECK-NEXT: calc XATTR LINKAGE(XPLINK),REFERENCE(CODE),PSECT(stdin#S),SCOPE(EXPORT)
-; CHECK-NEXT: calc DS 0H
+; CHECK-NEXT: calc DS 0B
 
 ; Check the definition of the variable
 ; CHECK:      a CSECT
