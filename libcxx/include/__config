@@ -245,7 +245,7 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_POP_MACROS _Pragma("pop_macro(\"min\")") _Pragma("pop_macro(\"max\")") _Pragma("pop_macro(\"refresh\")") _Pragma("pop_macro(\"move\")") _Pragma("pop_macro(\"erase\")")
 // clang-format on
 
-#  ifndef _LIBCPP_NO_AUTO_LINK
+#  if !defined(_LIBCPP_NO_AUTO_LINK) && !defined(_VC_NODEFAULTLIB)
 #    if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #      if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 #        pragma comment(lib, "c++.lib")
@@ -253,7 +253,7 @@ typedef __char32_t char32_t;
 #        pragma comment(lib, "libc++.lib")
 #      endif
 #    endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
-#  endif   // _LIBCPP_NO_AUTO_LINK
+#  endif   // !defined(_LIBCPP_NO_AUTO_LINK) && !defined(_VC_NODEFAULTLIB)
 
 // c8rtomb() and mbrtoc8() were added in C++20 and C23. Support for these
 // functions is gradually being added to existing C libraries. The conditions
