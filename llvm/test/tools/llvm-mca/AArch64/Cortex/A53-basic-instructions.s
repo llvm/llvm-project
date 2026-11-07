@@ -544,8 +544,8 @@
 # CHECK-NEXT:  1      2     0.50                        fcsel	s3, s20, s9, pl
 # CHECK-NEXT:  1      2     0.50                        fcsel	d9, d10, d11, mi
 # CHECK-NEXT:  1      2     0.50                        fcsel	h26, h2, h11, hs
-# CHECK-NEXT:  1      1     0.50                        fmov	h18, h28
-# CHECK-NEXT:  1      1     0.50                        fmov	s0, s1
+# CHECK-NEXT:  1      2     0.50                        fmov	h18, h28
+# CHECK-NEXT:  1      2     0.50                        fmov	s0, s1
 # CHECK-NEXT:  1      4     0.50                        fabs	s2, s3
 # CHECK-NEXT:  1      4     0.50                        fneg	h2, h9
 # CHECK-NEXT:  1      4     0.50                        fneg	s4, s5
@@ -566,7 +566,7 @@
 # CHECK-NEXT:  1      4     0.50                        frintx	s22, s23
 # CHECK-NEXT:  1      4     0.50                        frinti	s24, s25
 # CHECK-NEXT:  1      4     0.50                        frinti	h31, h14
-# CHECK-NEXT:  1      1     0.50                        fmov	d0, d1
+# CHECK-NEXT:  1      2     0.50                        fmov	d0, d1
 # CHECK-NEXT:  1      4     0.50                        fabs	d2, d3
 # CHECK-NEXT:  1      4     0.50                        fneg	d4, d5
 # CHECK-NEXT:  1      33    29.00                       fsqrt	h13, h24
