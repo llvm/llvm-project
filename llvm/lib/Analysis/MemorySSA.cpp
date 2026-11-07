@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemorySSA.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -61,22 +62,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "memoryssa"
 
-static cl::opt<std::string>
-    DotCFGMSSA("dot-cfg-mssa",
-               cl::value_desc("file name for generated dot file"),
-               cl::desc("file name for generated dot file"), cl::init(""));
-
 INITIALIZE_PASS_BEGIN(MemorySSAWrapperPass, "memoryssa", "Memory SSA", false,
                       true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MemorySSAWrapperPass, "memoryssa", "Memory SSA", false,
                     true)
-
-static cl::opt<unsigned> MaxCheckLimit(
-    "memssa-check-limit", cl::Hidden, cl::init(100),
-    cl::desc("The maximum number of stores/phis MemorySSA"
-             "will consider trying to walk past (default = 100)"));
 
 // Always verify MemorySSA if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
@@ -716,16 +707,9 @@ class ClobberWalker {
   };
 
   using def_path_iterator = generic_def_path_iterator<DefPath, ClobberWalker>;
-  using const_def_path_iterator =
-      generic_def_path_iterator<const DefPath, const ClobberWalker>;
 
   iterator_range<def_path_iterator> def_path(ListIndex From) {
     return make_range(def_path_iterator(this, From), def_path_iterator());
-  }
-
-  iterator_range<const_def_path_iterator> const_def_path(ListIndex From) const {
-    return make_range(const_def_path_iterator(this, From),
-                      const_def_path_iterator());
   }
 
   struct OptznResult {
@@ -1035,13 +1019,13 @@ public:
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
                                           BatchAAResults &BAA) override {
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     return getClobberingMemoryAccess(MA, BAA, UpwardWalkLimit);
   }
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
                                           const MemoryLocation &Loc,
                                           BatchAAResults &BAA) override {
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     return getClobberingMemoryAccess(MA, Loc, BAA, UpwardWalkLimit);
   }
 
@@ -1073,13 +1057,13 @@ public:
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
                                           BatchAAResults &BAA) override {
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     return getClobberingMemoryAccess(MA, BAA, UpwardWalkLimit);
   }
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
                                           const MemoryLocation &Loc,
                                           BatchAAResults &BAA) override {
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     return getClobberingMemoryAccess(MA, Loc, BAA, UpwardWalkLimit);
   }
 
@@ -1230,8 +1214,8 @@ void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
 }
 
 MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
-    : DT(DT), F(&Func), LiveOnEntryDef(nullptr), Walker(nullptr),
-      SkipWalker(nullptr) {
+    : Opts(getAnalysisOptions(Func)), DT(DT), F(&Func), LiveOnEntryDef(nullptr),
+      Walker(nullptr), SkipWalker(nullptr) {
   // Build MemorySSA using a batch alias analysis. This reuses the internal
   // state that AA collects during an alias()/getModRefInfo() call. This is
   // safe because there are no CFG changes while building MemorySSA and can
@@ -1248,8 +1232,8 @@ MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
 }
 
 MemorySSA::MemorySSA(Loop &L, AliasAnalysis *AA, DominatorTree *DT)
-    : DT(DT), L(&L), LiveOnEntryDef(nullptr), Walker(nullptr),
-      SkipWalker(nullptr) {
+    : Opts(getAnalysisOptions(L)), DT(DT), L(&L), LiveOnEntryDef(nullptr),
+      Walker(nullptr), SkipWalker(nullptr) {
   // Build MemorySSA using a batch alias analysis. This reuses the internal
   // state that AA collects during an alias()/getModRefInfo() call. This is
   // safe because there are no CFG changes while building MemorySSA and can
@@ -1434,7 +1418,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     // In any case, the new upper bound is the top of the stack.
     unsigned long UpperBound = VersionStack.size() - 1;
 
-    if (UpperBound - LocInfo.LowerBound > MaxCheckLimit) {
+    if (UpperBound - LocInfo.LowerBound > MSSA->Opts.memssa_check_limit) {
       LLVM_DEBUG(dbgs() << "MemorySSA skipping optimization of " << *MU << " ("
                         << *(MU->getMemoryInst()) << ")"
                         << " because there are "
@@ -1446,7 +1430,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
       continue;
     }
     bool FoundClobberResult = false;
-    unsigned UpwardWalkLimit = MaxCheckLimit;
+    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
     while (UpperBound > LocInfo.LowerBound) {
       if (isa<MemoryPhi>(VersionStack[UpperBound])) {
         // For phis, use the walker, see where we ended up, go there.
@@ -1514,6 +1498,16 @@ void MemorySSA::placePHINodes(
     createMemoryPhi(BB);
 }
 
+/// Allocate a MemoryUse or MemoryDef from \p Allocator, with its operands in
+/// front of it like User::operator new.
+template <typename AccessT, typename AllocatorT, typename... ArgTs>
+static AccessT *allocateUseOrDef(AllocatorT &Allocator, ArgTs &&...Args) {
+  size_t OpsSize = sizeof(Use) * OperandTraits<AccessT>::operands(nullptr);
+  char *Mem = static_cast<char *>(
+      Allocator.Allocate(OpsSize + sizeof(AccessT), alignof(AccessT)));
+  return ::new (Mem + OpsSize) AccessT(std::forward<ArgTs>(Args)...);
+}
+
 template <typename IterT>
 void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // We create an access to represent "live on entry", for things like
@@ -1523,8 +1517,9 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // semantics do *not* imply that something with no immediate uses can simply
   // be removed.
   BasicBlock &StartingPoint = *Blocks.begin();
-  LiveOnEntryDef.reset(new MemoryDef(StartingPoint.getContext(), nullptr,
-                                     nullptr, &StartingPoint, NextID++));
+  LiveOnEntryDef.reset(
+      allocateUseOrDef<MemoryDef>(UseOrDefAllocator, StartingPoint.getContext(),
+                                  nullptr, nullptr, &StartingPoint, NextID++));
 
   // We maintain lists of memory accesses per-block, trading memory for time. We
   // could just look up the memory access for every possible instruction in the
@@ -1822,9 +1817,11 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
 
   MemoryUseOrDef *MUD;
   if (Def) {
-    MUD = new MemoryDef(I->getContext(), nullptr, I, I->getParent(), NextID++);
+    MUD = allocateUseOrDef<MemoryDef>(UseOrDefAllocator, I->getContext(),
+                                      nullptr, I, I->getParent(), NextID++);
   } else {
-    MUD = new MemoryUse(I->getContext(), nullptr, I, I->getParent());
+    MUD = allocateUseOrDef<MemoryUse>(UseOrDefAllocator, I->getContext(),
+                                      nullptr, I, I->getParent());
     if (isUseTriviallyOptimizableToLiveOnEntry(*AAP, I)) {
       MemoryAccess *LiveOnEntry = getLiveOnEntryDef();
       MUD->setOptimized(LiveOnEntry);
@@ -2383,9 +2380,10 @@ PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
   if (EnsureOptimizedUses)
     MSSA.ensureOptimizedUses();
-  if (DotCFGMSSA != "") {
+  StringRef DotCFGMSSA = getAnalysisOptions(F).dot_cfg_mssa;
+  if (!DotCFGMSSA.empty()) {
     DOTFuncMSSAInfo CFGInfo(F, MSSA);
-    WriteGraph(&CFGInfo, "", false, "MSSA", DotCFGMSSA);
+    WriteGraph(&CFGInfo, "", false, "MSSA", DotCFGMSSA.str());
   } else {
     OS << "MemorySSA for function: " << F.getName() << "\n";
     MSSA.print(OS);
@@ -2628,11 +2626,11 @@ void MemoryPhi::deleteMe(DerivedUser *Self) {
 }
 
 void MemoryDef::deleteMe(DerivedUser *Self) {
-  delete static_cast<MemoryDef *>(Self);
+  static_cast<MemoryDef *>(Self)->~MemoryDef();
 }
 
 void MemoryUse::deleteMe(DerivedUser *Self) {
-  delete static_cast<MemoryUse *>(Self);
+  static_cast<MemoryUse *>(Self)->~MemoryUse();
 }
 
 bool upward_defs_iterator::IsGuaranteedLoopInvariant(const Value *Ptr) const {
