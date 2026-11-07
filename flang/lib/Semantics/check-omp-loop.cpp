@@ -633,7 +633,7 @@ void OmpStructureChecker::CheckAssociatedLoopConstraints(
 
 void OmpStructureChecker::CheckDistLinear(
     const parser::OpenMPLoopConstruct &x) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().OpenMPVersion};
   SymbolSourceMap indexVars;
 
   // Collect symbols of all the variables from linear clauses
