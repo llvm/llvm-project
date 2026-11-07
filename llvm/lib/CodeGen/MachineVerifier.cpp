@@ -2717,6 +2717,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         MO->getReg().isVirtual()) // TODO: Apply to physregs too
       report("Undef virtual register def operands require a subregister", MO, MONum);
 
+    if (MO->isKill() && Reg.isVirtual())
+      report("Kill flag on virtual register", MO, MONum);
+
     // Verify the consistency of tied operands.
     if (MO->isTied()) {
       unsigned OtherIdx = MI->findTiedOperandIdx(MONum);

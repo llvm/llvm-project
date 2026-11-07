@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: 'vscale_range' minimum must be greater than 0
 declare ptr @a(ptr) vscale_range(0, 1)
