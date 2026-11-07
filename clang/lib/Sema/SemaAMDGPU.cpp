@@ -185,6 +185,13 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
         << ArgExpr->getSourceRange();
     return true;
   }
+  case AMDGPU::BI__builtin_amdgcn_s_waitcnt:
+    if (Builtin::evaluateRequiredTargetFeatures("gfx1250-insts",
+                                                CallerFeatureMap))
+      return SemaRef.targetDiag(TheCall->getBeginLoc(),
+                                diag::err_builtin_target_unsupported)
+             << TheCall->getSourceRange();
+    return false;
   case AMDGPU::BI__builtin_amdgcn_s_wait_event: {
     llvm::APSInt Result;
     if (SemaRef.BuiltinConstantArg(TheCall, 0, Result))
