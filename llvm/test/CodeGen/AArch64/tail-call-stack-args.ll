@@ -99,3 +99,14 @@ define tailcc void @wrapper_func_9_bytes_argspace(i64 %0, i64 %1, i64 %2, i64 %3
   musttail call tailcc void @func_9_bytes_argspace(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, ptr %8, i1 %9)
   ret void
 }
+
+declare void @func_aggregate(i64, i64, i64, i64, i64, i64, i64, i64, [2 x i64])
+
+define void @wrapper_func_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8) {
+; CHECK-LABEL: wrapper_func_aggregate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b func_aggregate
+  tail call void @func_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8)
+  ret void
+}
+

@@ -25149,9 +25149,14 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
                          ? peekThroughTruncates(Value)
                          : Value;
   if (auto *Ld = dyn_cast<LoadSDNode>(TruncVal)) {
-    if (Ld->getBasePtr() == Ptr && ST->getMemoryVT() == Ld->getMemoryVT() &&
-        ST->isUnindexed() && ST->isSimple() &&
-        Ld->getAddressSpace() == ST->getAddressSpace() &&
+    int64_t Off = 0;
+    if (ST->getMemoryVT() == Ld->getMemoryVT() && ST->isUnindexed() &&
+        ST->isSimple() && Ld->getAddressSpace() == ST->getAddressSpace() &&
+        (Ld->getBasePtr() == Ptr ||
+         (Ld->isUnindexed() &&
+          BaseIndexOffset::match(Ld, DAG).equalBaseIndex(
+              BaseIndexOffset::match(ST, DAG), DAG, Off) &&
+          Off == 0)) &&
         // There can't be any side effects between the load and store, such as
         // a call or store.
         Chain.reachesChainWithoutSideEffects(SDValue(Ld, 1))) {
