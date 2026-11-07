@@ -13446,6 +13446,9 @@ NamedDecl *Sema::BuildUsingDeclaration(
     } else {
       Diag(IdentLoc, diag::err_no_member)
         << NameInfo.getName() << LookupContext << SS.getRange();
+      if (const auto *CTSD =
+              dyn_cast<ClassTemplateSpecializationDecl>(LookupContext))
+        NoteUnsatisfiedPartialSpecializations(IdentLoc, CTSD);
       return BuildInvalid();
     }
   }
@@ -17876,6 +17879,52 @@ static bool UsefulToPrintExpr(const Expr *E) {
   return true;
 }
 
+static void DiagnoseStaticAssertPartialSpecializations(Sema &S, const Expr *E) {
+  if (!E)
+    return;
+  E = E->IgnoreParenImpCasts();
+  if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+    DiagnoseStaticAssertPartialSpecializations(S, UO->getSubExpr());
+    return;
+  }
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    DiagnoseStaticAssertPartialSpecializations(S, BO->getLHS());
+    DiagnoseStaticAssertPartialSpecializations(S, BO->getRHS());
+    return;
+  }
+  if (const auto *Ref = dyn_cast<DeclRefExpr>(E)) {
+    if (const auto *VTSD =
+            dyn_cast<VarTemplateSpecializationDecl>(Ref->getDecl())) {
+      S.NoteUnsatisfiedPartialSpecializations(E->getExprLoc(), VTSD);
+      return;
+    }
+    if (Ref->hasQualifier()) {
+      if (const Type *T = Ref->getQualifier().getAsType()) {
+        if (const auto *RD = T->getAsCXXRecordDecl()) {
+          if (const auto *CTSD =
+                  dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+            S.NoteUnsatisfiedPartialSpecializations(E->getExprLoc(), CTSD);
+            return;
+          }
+        }
+      }
+    }
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(
+            Ref->getDecl()->getDeclContext())) {
+      S.NoteUnsatisfiedPartialSpecializations(E->getExprLoc(), CTSD);
+      return;
+    }
+  }
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(
+            ME->getMemberDecl()->getDeclContext())) {
+      S.NoteUnsatisfiedPartialSpecializations(E->getExprLoc(), CTSD);
+      return;
+    }
+    DiagnoseStaticAssertPartialSpecializations(S, ME->getBase());
+  }
+}
+
 void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
   // FIXME: Should we also ignore explicit casts?
   E = E->IgnoreParenImpCasts();
@@ -17913,10 +17962,13 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
           << DiagSides[0].ValueString << Op->getOpcodeStr()
           << DiagSides[1].ValueString << Op->getSourceRange();
     }
+    DiagnoseStaticAssertPartialSpecializations(*this, LHS);
+    DiagnoseStaticAssertPartialSpecializations(*this, RHS);
   } else if (const auto *RE = dyn_cast<RequiresExpr>(E)) {
     DiagnoseUnsatisfiedRequiresExpr(RE);
   } else {
     DiagnoseTypeTraitDetails(E);
+    DiagnoseStaticAssertPartialSpecializations(*this, E);
   }
 }
 

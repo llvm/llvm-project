@@ -5984,6 +5984,8 @@ def note_non_deducible_parameter : Note<
 def err_partial_spec_ordering_ambiguous : Error<
     "ambiguous partial specializations of %0">;
 def note_partial_spec_match : Note<"partial specialization matches %0">;
+def note_partial_spec_not_selected_less_constrained : Note<
+    "candidate is less constrained than the selected specialization">;
 def err_partial_spec_redeclared : Error<
   "class template partial specialization %0 cannot be redeclared">;
 def note_prev_partial_spec_here : Note<

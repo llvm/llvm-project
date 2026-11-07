@@ -962,12 +962,16 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (RetryExpr.isUsable())
       Diag(OpLoc, diag::err_no_member_overloaded_arrow)
           << MemberName << DC << FixItHint::CreateReplacement(OpLoc, "->");
-    else
+    else {
       Diag(R.getNameLoc(), diag::err_no_member)
           << MemberName << DC
           << (SS.isSet()
                   ? SS.getRange()
                   : (BaseExpr ? BaseExpr->getSourceRange() : SourceRange()));
+      if (const auto *CTSD =
+              dyn_cast<ClassTemplateSpecializationDecl>(DC))
+        NoteUnsatisfiedPartialSpecializations(R.getNameLoc(), CTSD);
+    }
     return RetryExpr;
   }
 
