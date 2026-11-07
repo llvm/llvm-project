@@ -38,6 +38,7 @@ public:
     // we will consider |mode| as incorrect and set the file's mode to zero
     // meaning the file's mode is in an invalid state.;
     int main_mode_count = 0;
+    bool unknown_character = false;
 
     for (; *mode != '\0'; ++mode) {
       switch (*mode) {
@@ -65,12 +66,19 @@ public:
       case 'e':
         file_mode_ |= static_cast<Mode>(Extension::CLOSE_ON_EXEC);
         break;
+      case 't':
+        // Text mode is the default on Linux. On Windows it asks for newline
+        // translation, so programs written for it pass "rt".
+        break;
       default:
-        file_mode_ = 0;
+        unknown_character = true;
+        break;
       }
     }
 
-    if (main_mode_count != 1)
+    // An unknown character makes the mode invalid wherever it is, and must not
+    // be undone by the characters that follow it.
+    if (unknown_character || main_mode_count != 1)
       file_mode_ = 0;
   }
 

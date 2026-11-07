@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// file_mode_test.cpp
-/// This file contains possible test cases for FileMode class.
+/// \file
+/// Test cases for the FileMode class.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -228,6 +228,71 @@ TEST(LlvmLibcFileModeTest, CloseOnExecCombinations) {
   EXPECT_TRUE(write_all_modifiers.is_binary_format());
   EXPECT_TRUE(write_all_modifiers.read_allowed());
   EXPECT_TRUE(write_all_modifiers.write_allowed());
+}
+
+TEST(LlvmLibcFileModeTest, TextFlagIsAccepted) {
+  constexpr FileMode read_text("rt");
+  EXPECT_TRUE(read_text.is_valid());
+  EXPECT_TRUE(read_text.is_read());
+  EXPECT_FALSE(read_text.is_binary_format());
+
+  constexpr FileMode write_text("wt");
+  EXPECT_TRUE(write_text.is_valid());
+  EXPECT_TRUE(write_text.is_write());
+
+  constexpr FileMode append_text("at");
+  EXPECT_TRUE(append_text.is_valid());
+  EXPECT_TRUE(append_text.is_append());
+
+  constexpr FileMode update_text("r+t");
+  EXPECT_TRUE(update_text.is_valid());
+  EXPECT_TRUE(update_text.is_read());
+  EXPECT_TRUE(update_text.is_update());
+}
+
+TEST(LlvmLibcFileModeTest, TextFlagDoesNotDependOnOrder) {
+  constexpr FileMode text_then_binary("rtb");
+  EXPECT_TRUE(text_then_binary.is_valid());
+  EXPECT_TRUE(text_then_binary.is_binary_format());
+
+  constexpr FileMode binary_then_text("rbt");
+  EXPECT_TRUE(binary_then_text.is_valid());
+  EXPECT_TRUE(binary_then_text.is_binary_format());
+
+  constexpr FileMode text_with_cloexec("rte");
+  EXPECT_TRUE(text_with_cloexec.is_valid());
+  EXPECT_TRUE(text_with_cloexec.is_close_on_exec());
+}
+
+TEST(LlvmLibcFileModeTest, UnknownCharactersAreRejected) {
+  constexpr FileMode unknown_last("rz");
+  EXPECT_FALSE(unknown_last.is_valid());
+
+  constexpr FileMode unknown_in_the_middle("r?b");
+  EXPECT_FALSE(unknown_in_the_middle.is_valid());
+
+  // What follows an unknown character does not make the mode valid again.
+  constexpr FileMode unknown_then_binary("wzb");
+  EXPECT_FALSE(unknown_then_binary.is_valid());
+
+  constexpr FileMode unknown_then_cloexec("r?e");
+  EXPECT_FALSE(unknown_then_cloexec.is_valid());
+}
+
+TEST(LlvmLibcFileModeTest, FirstCharacterMustBeAMainMode) {
+  constexpr FileMode text_first("tr");
+  EXPECT_FALSE(text_first.is_valid());
+
+  constexpr FileMode exclusive_first("xw");
+  EXPECT_FALSE(exclusive_first.is_valid());
+
+  constexpr FileMode empty("");
+  EXPECT_FALSE(empty.is_valid());
+}
+
+TEST(LlvmLibcFileModeTest, TextFlagDoesNotAddAMainMode) {
+  constexpr FileMode two_main_modes("rtw");
+  EXPECT_FALSE(two_main_modes.is_valid());
 }
 
 TEST(LlvmLibcFileModeTest, InvalidCombinations) {
