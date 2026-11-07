@@ -16533,6 +16533,22 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     unsigned IntrinsicID = Op.getConstantOperandVal(0);
     // TODO: Handle more intrinsics
     switch (IntrinsicID) {
+    case Intrinsic::amdgcn_update_dpp: {
+      enum UpdateDPPOperand {
+        Src = 2,
+        RowMask = 4,
+        BankMask = 5,
+        BoundCtrl = 6,
+      };
+
+      if (QueryVT == MVT::f32 && (VT == MVT::i32 || VT == MVT::f32) &&
+          Op.getConstantOperandVal(RowMask) == 0xf &&  // Enable all rows.
+          Op.getConstantOperandVal(BankMask) == 0xf && // Enable all banks.
+          Op.getConstantOperandVal(BoundCtrl) != 0)    // Zero-fill OOB lanes.
+        return isCanonicalized(DAG, Op.getOperand(2), QueryVT, UserFlags,
+                               MaxDepth - 1);
+      return false;
+    }
     case Intrinsic::amdgcn_cvt_pkrtz:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_frexp_mant:
