@@ -50,8 +50,7 @@ define double @loop_acc_fadd(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[C8]], i64 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul reassoc nnan ninf arcp contract afn <4 x double> [[TMP14]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[TMP12]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP20]], <4 x double> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP22:%.*]] = fmul <4 x double> [[TMP19]], [[TMP21]]
 ; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP22]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1

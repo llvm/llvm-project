@@ -21932,6 +21932,26 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
                                  MaskVecTy, DemandedElts, /*Insert=*/true,
                                  /*Extract=*/false, CostKind);
+    // A lane taken from another vectorized entry needs a shuffle, which a zero
+    // insert price misses.
+    APInt VectorizedElts = APInt::getZero(SubMask.size());
+    SmallVector<int> VectorizedMask(SubMask.size(), PoisonMaskElem);
+    for (auto [I, Idx] : enumerate(SubMask)) {
+      if (Idx == PoisonMaskElem || !isVectorized(VL[I]))
+        continue;
+      VectorizedElts.setBit(I);
+      VectorizedMask[I] = Idx;
+    }
+    if (!VectorizedElts.isZero() &&
+        getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
+                                 MaskVecTy, VectorizedElts, /*Insert=*/true,
+                                 /*Extract=*/false,
+                                 CostKind) == TTI::TCC_Free) {
+      InstructionCost VectorizedShuffleCost =
+          GetShuffleCost(VectorizedMask, Entries, VecTy);
+      if (VectorizedShuffleCost.isValid())
+        BuildVectorCost += VectorizedShuffleCost;
+    }
     const TreeEntry *BestEntry = nullptr;
     auto MaskSlice = MutableArrayRef(Mask).slice(MaskBase, VL.size());
     if (FirstShuffleCost < ShuffleCost) {
