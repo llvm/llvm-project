@@ -248,6 +248,12 @@ struct CastAwayTransferReadLeadingOneDim
     if (newType == oldType)
       return failure();
 
+    // The dropped dims become non-vector dims, which must be in bounds.
+    SmallVector<bool> inBounds = read.getInBoundsValues();
+    if (llvm::is_contained(
+            ArrayRef<bool>(inBounds).drop_back(newType.getRank()), false))
+      return rewriter.notifyMatchFailure(read, "dropped dim is out of bounds");
+
     AffineMap oldMap = read.getPermutationMap();
     ArrayRef<AffineExpr> newResults =
         oldMap.getResults().take_back(newType.getRank());
@@ -299,6 +305,12 @@ struct CastAwayTransferWriteLeadingOneDim
     VectorType newType = trimLeadingUnitDims(oldType);
     if (newType == oldType)
       return failure();
+
+    // The dropped dims become non-vector dims, which must be in bounds.
+    SmallVector<bool> inBounds = write.getInBoundsValues();
+    if (llvm::is_contained(
+            ArrayRef<bool>(inBounds).drop_back(newType.getRank()), false))
+      return rewriter.notifyMatchFailure(write, "dropped dim is out of bounds");
 
     AffineMap oldMap = write.getPermutationMap();
     ArrayRef<AffineExpr> newResults =
