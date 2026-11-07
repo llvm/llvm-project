@@ -23,8 +23,8 @@ defm : ValueField<"riscv-br-merging-unlikely-bias", "int", "-1",
   "Decreases 'riscv-br-merging-base-cost' in cases that it is unlikely that all conditionals will be executed. For example for merging the conditionals (a == b && c > d), if its known that a == b is unlikely, then it is unlikely that if the conditionals are split both sides will be executed, so it may be desirable to decrease the instruction cost threshold. Set to -1 to never merge unlikely branches">;
 defm : ValueField<"riscv-lower-ext-max-web-size", "unsigned", "18",
   "Give the maximum size (in number of nodes) of the web of instructions that we will consider for VW expansion">;
-defm : BoolField<"riscv-lower-form-vw-w-with-splat", "false",
-  "Allow the formation of VW_W operations (e.g., VWADD_W) with splat constants">;
+defm : BoolField<"riscv-lower-form-vw-w-with-splat", "true",
+  "Allow profitable formation of VW_W operations (e.g., VWADD_W) with scalar splats">;
 defm : ValueField<"riscv-lower-fp-repeated-divisors", "unsigned", "2",
   "Set the minimum number of repetitions of a divisor to allow transformation to multiplications by the reciprocal">;
 defm : ValueField<"riscv-lower-fpimm-cost", "int", "3",
