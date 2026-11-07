@@ -267,6 +267,7 @@ private:
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectHi16ZeroSrc(SDValue In, SDValue &Src, SDValue &HiSrc) const;
   bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src, unsigned &Mods,
                                  MVT VT) const;
   bool SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,

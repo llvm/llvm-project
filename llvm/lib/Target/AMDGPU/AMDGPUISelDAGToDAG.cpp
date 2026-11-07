@@ -4386,6 +4386,55 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OpSelMods(SDValue In, SDValue &Src,
   return true;
 }
 
+// Match a divergent 16-bit value computed from (trunc X), where X is an i32
+// whose high 16 bits are known to be zero. The zero extension of such a value
+// can be formed as (REG_SEQUENCE In, lo16, X.hi16, hi16), which the register
+// coalescer can turn into a no-op when In is allocated to the low half of X.
+bool AMDGPUDAGToDAGISel::SelectHi16ZeroSrc(SDValue In, SDValue &Src,
+                                           SDValue &HiSrc) const {
+  if (!In->isDivergent())
+    return false;
+
+  switch (In.getOpcode()) {
+  case ISD::TRUNCATE:
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::BITCAST:
+    return false;
+  default:
+    break;
+  }
+
+  for (const SDValue &Op : In->op_values()) {
+    if (Op.getOpcode() != ISD::TRUNCATE)
+      continue;
+    // An extract of the high half is free as a hi16 operand; using the shift
+    // result as the hi16 source would force the shift to be materialized.
+    SDValue Unused;
+    if (isExtractHiElt(Op, Unused))
+      continue;
+    SDValue X = Op.getOperand(0);
+    if (X.getValueType() != MVT::i32 || !X->isDivergent())
+      continue;
+    // Require only the low half of X is used; not strictly have to
+    // be only one use of low half ofX.
+    if (!all_of(X->uses(), [&X](const SDUse &U) {
+          if (U.getResNo() != X.getResNo())
+            return true;
+          const SDNode *User = U.getUser();
+          return User->getOpcode() == ISD::TRUNCATE &&
+                 User->getValueType(0) == MVT::i16;
+        }))
+      continue;
+    if (CurDAG->computeKnownBits(X).countMinLeadingZeros() < 16)
+      continue;
+    Src = In;
+    HiSrc = X;
+    return true;
+  }
+
+  return false;
+}
+
 // Match lowered fpext from bf16 to f32. This is a bit operation extending
 // a 16-bit value with 16-bit of zeroes at LSB:
 //

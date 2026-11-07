@@ -3543,6 +3543,12 @@ def : GCNPat<
   (i32 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, $src))
 >;
 
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<zext> (i16 (Hi16ZeroSrc i16:$src, i32:$hi)))),
+  (REG_SEQUENCE VGPR_32, $src, lo16,
+                (i16 (EXTRACT_SUBREG VGPR_32:$hi, hi16)), hi16)
+>;
+
 def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> i16:$a)),
   (V_CMP_EQ_U16_t16_e64 (i32 0), (V_AND_B16_t16_e64 (i32 0), (i16 1), (i32 0), $a), (i32 0), (i16 1), (i32 0))
