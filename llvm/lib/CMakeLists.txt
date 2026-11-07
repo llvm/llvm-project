@@ -1,10 +1,8 @@
 include(LLVM-Build)
 
 # HAS_WERROR_GLOBAL_CTORS and LLVM_HAS_NOGLOBAL_CTOR_MUTEX are set by
-# lib/Support/CMakeLists.txt. Clang only, since LLVM_REGISTER_LIBRARY_OPTIONS
-# suppresses the diagnostic only for Clang.
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND HAS_WERROR_GLOBAL_CTORS AND
-    LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
+# lib/Support/CMakeLists.txt.
+if (HAS_WERROR_GLOBAL_CTORS AND LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
   set(LLVM_LIB_WERROR_GLOBAL_CTORS ON)
   string(APPEND CMAKE_CXX_FLAGS " -Werror=global-constructors")
 endif()
