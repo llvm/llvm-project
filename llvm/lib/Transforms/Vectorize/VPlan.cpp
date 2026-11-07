@@ -1377,7 +1377,8 @@ void VPlanPrinter::drawEdge(const VPBlockBase *From, const VPBlockBase *To,
   // exiting basic block and the entry basic of the respective regions.
   const VPBlockBase *Tail = From->getExitingBasicBlock();
   const VPBlockBase *Head = To->getEntryBasicBlock();
-  OS << Indent << getUID(Tail) << " -> " << getUID(Head);
+  OS << Indent << getUID(Tail);
+  OS << " -> " << getUID(Head);
   OS << " [ label=\"" << Label << '\"';
   if (Tail != From)
     OS << " ltail=" << getUID(From);
