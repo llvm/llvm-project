@@ -40,6 +40,20 @@ func.func @int32_scalar_srem(%lhs: i32, %rhs: i32) {
   return
 }
 
+// CHECK-LABEL: @int32_scalar_srem_overflow_zero(
+// CHECK-SAME: %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK-NEXT: %[[ABS_A:.*]] = spirv.GL.SAbs %[[A]] : i32
+// CHECK-NEXT: %[[ABS_B:.*]] = spirv.GL.SAbs %[[B]] : i32
+// CHECK-NEXT: %[[ABS_R:.*]] = spirv.UMod %[[ABS_A]], %[[ABS_B]] : i32
+// CHECK-NEXT: %[[POSITIVE:.*]] = spirv.IEqual %[[A]], %[[ABS_A]] : i32
+// CHECK-NEXT: %[[NEG_R:.*]] = spirv.SNegate %[[ABS_R]] : i32
+// CHECK-NEXT: %[[R:.*]] = spirv.Select %[[POSITIVE]], %[[ABS_R]], %[[NEG_R]] : i1, i32
+// CHECK-NEXT: return %[[R]] : i32
+func.func @int32_scalar_srem_overflow_zero(%a: i32, %b: i32) -> i32 {
+  %r = arith.remsi %a, %b overflow<zero> : i32
+  return %r : i32
+}
+
 // CHECK-LABEL: @scalar_ceildivui
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
 func.func @scalar_ceildivui(%lhs: i32, %rhs: i32) -> i32 {
@@ -279,6 +293,16 @@ func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
   // CHECK:      %{{.+}} = spirv.Select %[[POS]], %[[ABS]], %[[NEG]] : vector<3xi1>, vector<3xi16>
   %0 = arith.remsi %arg0, %arg1: vector<3xi16>
   return
+}
+
+// CHECK-LABEL: @vector_srem_overflow_zero(
+// CHECK-SAME: %[[A:.*]]: vector<4xi32>, %[[B:.*]]: vector<4xi32>
+// CHECK-NEXT: %[[ABS_A:.*]] = spirv.GL.SAbs %[[A]] : vector<4xi32>
+// CHECK-NEXT: %[[ABS_B:.*]] = spirv.GL.SAbs %[[B]] : vector<4xi32>
+// CHECK-NEXT: spirv.UMod %[[ABS_A]], %[[ABS_B]] : vector<4xi32>
+func.func @vector_srem_overflow_zero(%a: vector<4xi32>, %b: vector<4xi32>) -> vector<4xi32> {
+  %r = arith.remsi %a, %b overflow<zero> : vector<4xi32>
+  return %r : vector<4xi32>
 }
 
 // Check float vector types.
@@ -1498,6 +1522,16 @@ func.func @scalar_srem(%lhs: i32, %rhs: i32) {
   // CHECK:      %{{.+}} = spirv.Select %[[POS]], %[[ABS]], %[[NEG]] : i1, i32
   %0 = arith.remsi %lhs, %rhs: i32
   return
+}
+
+// CHECK-LABEL: @scalar_srem_overflow_zero(
+// CHECK-SAME: %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK-NEXT: %[[ABS_A:.*]] = spirv.CL.s_abs %[[A]] : i32
+// CHECK-NEXT: %[[ABS_B:.*]] = spirv.CL.s_abs %[[B]] : i32
+// CHECK-NEXT: spirv.UMod %[[ABS_A]], %[[ABS_B]] : i32
+func.func @scalar_srem_overflow_zero(%a: i32, %b: i32) -> i32 {
+  %r = arith.remsi %a, %b overflow<zero> : i32
+  return %r : i32
 }
 
 // CHECK-LABEL: @vector_srem

@@ -429,6 +429,15 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
         for (OpResult res : newOp->getResults()) {
           res.setType(targetType);
         }
+        // Narrowing can turn a defined remainder into INT_MIN % -1 at the
+        // smaller width. Preserve its zero result instead of introducing UB.
+        if (auto rem = dyn_cast<arith::RemSIOp>(newOp)) {
+          APInt min = APInt::getSignedMinValue(targetBitwidth)
+                          .sextOrTrunc(ranges[0].smin().getBitWidth());
+          if (ranges[0].smin().sle(min) && ranges[0].smax().sge(min) &&
+              ranges[1].smin().sle(-1) && ranges[1].smax().sge(-1))
+            rem.setIsOverflowZero(true);
+        }
         // Retain an overflow flag only when the casts preserve operand and
         // result values in the flag's signed or unsigned interpretation.
         if (auto overflowOp =
