@@ -11,9 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/math/pow.h"
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcPowTest = LIBC_NAMESPACE::testing::FPTest<double>;
@@ -224,15 +226,75 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
     // Overflow / Underflow:
-    if (ROUNDING_MODES[i] != RoundingMode::Downward &&
-        ROUNDING_MODES[i] != RoundingMode::TowardZero) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::pow(3.1, 2001.0),
-                                  FE_OVERFLOW);
-    }
-    if (ROUNDING_MODES[i] != RoundingMode::Upward) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(0.0, LIBC_NAMESPACE::pow(3.1, -2001.0),
-                                  FE_UNDERFLOW);
-    }
+    double expected_pos_ovf = (ROUNDING_MODES[i] == RoundingMode::Downward ||
+                               ROUNDING_MODES[i] == RoundingMode::TowardZero)
+                                  ? max_normal
+                                  : inf;
+    double expected_neg_ovf = (ROUNDING_MODES[i] == RoundingMode::Upward ||
+                               ROUNDING_MODES[i] == RoundingMode::TowardZero)
+                                  ? neg_max_normal
+                                  : neg_inf;
+    double expected_pos_udf =
+        (ROUNDING_MODES[i] == RoundingMode::Upward) ? min_denormal : zero;
+    double expected_neg_udf = (ROUNDING_MODES[i] == RoundingMode::Downward)
+                                  ? -min_denormal
+                                  : neg_zero;
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_pos_ovf,
+                                LIBC_NAMESPACE::pow(3.1, 2001.0),
+                                FE_OVERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_neg_ovf,
+                                LIBC_NAMESPACE::pow(-3.1, 2001.0),
+                                FE_OVERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_pos_udf,
+                                LIBC_NAMESPACE::pow(3.1, -2001.0),
+                                FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_neg_udf,
+                                LIBC_NAMESPACE::pow(-3.1, -2001.0),
+                                FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_pos_ovf,
+                                LIBC_NAMESPACE::pow(4.0, 512.0),
+                                FE_OVERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_pos_udf,
+                                LIBC_NAMESPACE::pow(4.0, -538.0),
+                                FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_pos_ovf,
+                                LIBC_NAMESPACE::pow(2.9, 667.0),
+                                FE_OVERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(expected_neg_ovf,
+                                LIBC_NAMESPACE::pow(-2.9, 667.0),
+                                FE_OVERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        expected_pos_ovf,
+        LIBC_NAMESPACE::pow(0x1.e2efc8289032dp+0, 0x1.17cp+10),
+        FE_OVERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        expected_neg_ovf,
+        LIBC_NAMESPACE::pow(-0x1.e2efc8289032dp+0, 0x1.17cp+10),
+        FE_OVERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        expected_pos_udf,
+        LIBC_NAMESPACE::pow(0x1.27867770a2afep-1, 0x1.534p+10),
+        FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        expected_neg_udf,
+        LIBC_NAMESPACE::pow(-0x1.27867770a2afep-1, 0x1.534p+10),
+        FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   }
 }
 
