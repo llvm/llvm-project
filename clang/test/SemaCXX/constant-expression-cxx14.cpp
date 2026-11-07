@@ -1466,3 +1466,74 @@ constexpr bool missingCase() {
     1u: return false; // expected-error {{expected 'case' keyword before expression}}
   }
 }
+
+constexpr int f(int x) {
+    ++x;
+    return x / x;          // expected-note {{division by zero}}
+}
+
+constexpr int ii = -1;
+static_assert(f(ii) == 1, "");  // expected-error {{static assertion expression is not an integral constant expression}} \
+                                   expected-note {{in call to 'f(-1)'}}
+
+constexpr int multi_arg_1(int x, int y) {
+  ++x;
+  ++y;
+  return x / (y - y); // expected-note {{division by zero}}
+}
+
+constexpr int a = -1;
+constexpr int b = 1;
+
+static_assert(multi_arg_1(a, b) == 1, "");  // expected-error {{not an integral constant expression}} \
+                                               expected-note {{in call to 'multi_arg_1(-1, 1)'}}
+
+constexpr int multi_arg_2(int x, int y) {
+  ++y;
+  return x / (y - y); // expected-note {{division by zero}}
+}
+
+constexpr int a1 = -1;
+constexpr int b1 = 1;
+
+static_assert(multi_arg_2(a1, b1) == 1, ""); // expected-error {{not an integral constant expression}} \
+                                                expected-note {{in call to 'multi_arg_2(-1, 1)'}}
+
+constexpr int ref_arg_1(int &x) {
+  ++x;
+  return x / (x - x); // expected-note {{division by zero}}
+}
+
+constexpr int test_ref_arg_1() {
+  int a = -1;
+  return ref_arg_1(a); // expected-note {{in call to 'ref_arg_1(a)'}}
+}
+
+static_assert(test_ref_arg_1() == 1, ""); // expected-error {{not an integral constant expression}} \
+                                             expected-note {{in call to 'test_ref_arg_1()'}}
+
+constexpr int ref_arg_2(int &x, int &y) {
+  ++x;
+  ++y;
+  return x / (y - y); // expected-note {{division by zero}}
+}
+
+constexpr int test_ref_arg_2() {
+  int a = -1;
+  int b = 1;
+  return ref_arg_2(a, b); // expected-note {{in call to 'ref_arg_2(a, b)'}}
+}
+
+static_assert(test_ref_arg_2() == 1, ""); // expected-error {{not an integral constant expression}} \
+                                             expected-note {{in call to 'test_ref_arg_2()'}}
+
+char c[3] = "Hi";
+
+constexpr char g1(int i) { i *= 2; return c[i]; } // expected-note {{cannot refer to element 10 of array of 3 elements in a constant expression}}
+constexpr char f1(int i, int j) {
+    auto line = i * 4;
+    return g1(line + j); // expected-note {{in call to 'g1(5)'}}
+}
+
+static_assert(f1(1, 1), ""); // expected-error {{not an integral constant expression}} \
+                                expected-note {{in call to 'f1(1, 1)'}}
