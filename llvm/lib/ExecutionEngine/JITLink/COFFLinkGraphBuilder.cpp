@@ -198,6 +198,11 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
   PendingComdatExports.resize(Obj.getNumberOfSections() + 1);
   GraphSymbols.resize(Obj.getNumberOfSymbols());
 
+  auto C = object::COFFComdatSections::create(Obj);
+  if (!C)
+    return C.takeError();
+  Comdats = std::move(*C);
+
   for (COFFSymbolIndex SymIndex = 0;
        SymIndex < static_cast<COFFSymbolIndex>(Obj.getNumberOfSymbols());
        SymIndex++) {
@@ -503,13 +508,32 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
           Symbol.getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION, false);
       DefinedSymbols[SymbolName] = GSym;
       return GSym;
-    } else {
-      if (!PendingComdatExports[Symbol.getSectionNumber()])
-        return make_error<JITLinkError>("No pending COMDAT export for symbol " +
-                                        formatv("{0:d}", SymIndex));
-
+    } else if (PendingComdatExports[Symbol.getSectionNumber()]) {
       return exportCOMDATSymbol(SymIndex, SymbolName, Symbol);
+    } else if (Comdats.getSelection(Symbol.getSectionNumber()) ==
+               COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+      // Part of the root COMDAT's group.
+      // FIXME: ORC resolves weak symbols one at a time, so the leader and its
+      // associative members can come from different objects.
+      auto L = getAssociativeCOMDATLinkage(Symbol.getSectionNumber());
+      if (!L)
+        return L.takeError();
+      auto GSym = &G->addDefinedSymbol(
+          *B, Symbol.getValue(), SymbolName, 0, *L, Scope::Default,
+          Symbol.getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION, false);
+      LLVM_DEBUG({
+        dbgs()
+            << "    " << SymIndex
+            << ": Exporting associative COMDAT graph symbol for COFF symbol \""
+            << SymbolName << "\" in section " << Symbol.getSectionNumber()
+            << "\n";
+        dbgs() << "      " << *GSym << "\n";
+      });
+      DefinedSymbols[SymbolName] = GSym;
+      return GSym;
     }
+    return make_error<JITLinkError>("No pending COMDAT export for symbol " +
+                                    formatv("{0:d}", SymIndex));
   }
 
   if (Symbol.getStorageClass() == COFF::IMAGE_SYM_CLASS_STATIC ||
@@ -523,11 +547,21 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
           Symbol.getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION, false);
     }
     if (Definition->Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+      // Check the chain here too, so the error does not depend on which
+      // symbol comes first.
+      if (auto L = getAssociativeCOMDATLinkage(Symbol.getSectionNumber()); !L)
+        return L.takeError();
       auto Target = Definition->getNumber(Symbol.isBigObj());
       auto GSym = &G->addDefinedSymbol(
           *B, Symbol.getValue(), SymbolName, 0, Linkage::Strong, Scope::Local,
           Symbol.getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION, false);
-      getGraphBlock(Target)->addEdge(Edge::KeepAlive, 0, *GSym, 0);
+      Block *TargetB = getGraphBlock(Target);
+      if (!TargetB)
+        return make_error<JITLinkError>(
+            "Associative COMDAT section " +
+            formatv("{0:d}", Symbol.getSectionNumber()) +
+            " has no block for its leader section " + formatv("{0:d}", Target));
+      TargetB->addEdge(Edge::KeepAlive, 0, *GSym, 0);
       return GSym;
     }
     if (PendingComdatExports[Symbol.getSectionNumber()])
@@ -539,6 +573,32 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
   return make_error<JITLinkError>("Unsupported storage class " +
                                   formatv("{0:d}", Symbol.getStorageClass()) +
                                   " in symbol " + formatv("{0:d}", SymIndex));
+}
+
+// The linkage of a COMDAT leader's symbol with the given selection.
+static Expected<Linkage> getCOMDATLinkage(uint8_t Selection) {
+  switch (Selection) {
+  case COFF::IMAGE_COMDAT_SELECT_NODUPLICATES:
+    return Linkage::Strong;
+  case COFF::IMAGE_COMDAT_SELECT_ANY:
+    return Linkage::Weak;
+  case COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH:
+  case COFF::IMAGE_COMDAT_SELECT_SAME_SIZE:
+    // FIXME: Implement size/content validation when LinkGraph is able to
+    // handle this.
+    return Linkage::Weak;
+  case COFF::IMAGE_COMDAT_SELECT_LARGEST:
+    // FIXME: Support IMAGE_COMDAT_SELECT_LARGEST properly when LinkGraph is
+    // able to handle this.
+    return Linkage::Weak;
+  case COFF::IMAGE_COMDAT_SELECT_NEWEST:
+    // Even link.exe doesn't support this selection properly.
+    return make_error<JITLinkError>(
+        "IMAGE_COMDAT_SELECT_NEWEST is not supported.");
+  default:
+    return make_error<JITLinkError>("Invalid comdat selection type: " +
+                                    formatv("{0:d}", Selection));
+  }
 }
 
 // COMDAT handling:
@@ -558,26 +618,10 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
 Expected<Symbol *> COFFLinkGraphBuilder::createCOMDATExportRequest(
     COFFSymbolIndex SymIndex, object::COFFSymbolRef Symbol,
     const object::coff_aux_section_definition *Definition) {
-  Linkage L = Linkage::Strong;
-  switch (Definition->Selection) {
-  case COFF::IMAGE_COMDAT_SELECT_NODUPLICATES: {
-    L = Linkage::Strong;
-    break;
-  }
-  case COFF::IMAGE_COMDAT_SELECT_ANY: {
-    L = Linkage::Weak;
-    break;
-  }
-  case COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH:
-  case COFF::IMAGE_COMDAT_SELECT_SAME_SIZE: {
-    // FIXME: Implement size/content validation when LinkGraph is able to
-    // handle this.
-    L = Linkage::Weak;
-    break;
-  }
-  case COFF::IMAGE_COMDAT_SELECT_LARGEST: {
-    // FIXME: Support IMAGE_COMDAT_SELECT_LARGEST properly when LinkGraph is
-    // able to handle this.
+  auto L = getCOMDATLinkage(Definition->Selection);
+  if (!L)
+    return L.takeError();
+  if (Definition->Selection == COFF::IMAGE_COMDAT_SELECT_LARGEST) {
     LLVM_DEBUG({
       dbgs() << "    " << SymIndex
              << ": Partially supported IMAGE_COMDAT_SELECT_LARGEST was used"
@@ -585,22 +629,25 @@ Expected<Symbol *> COFFLinkGraphBuilder::createCOMDATExportRequest(
              << Symbol.getSectionNumber() << " (size: " << Definition->Length
              << ")\n";
     });
-    L = Linkage::Weak;
-    break;
   }
-  case COFF::IMAGE_COMDAT_SELECT_NEWEST: {
-    // Even link.exe doesn't support this selection properly.
-    return make_error<JITLinkError>(
-        "IMAGE_COMDAT_SELECT_NEWEST is not supported.");
-  }
-  default: {
-    return make_error<JITLinkError>("Invalid comdat selection type: " +
-                                    formatv("{0:d}", Definition->Selection));
-  }
-  }
-  PendingComdatExports[Symbol.getSectionNumber()] = {SymIndex, L,
+  PendingComdatExports[Symbol.getSectionNumber()] = {SymIndex, *L,
                                                      Definition->Length};
   return nullptr;
+}
+
+// The linkage of a symbol in an associative section: that of the root of its
+// chain.
+Expected<Linkage> COFFLinkGraphBuilder::getAssociativeCOMDATLinkage(
+    COFFSectionIndex SecIndex) const {
+  auto Root = Comdats.getAssociativeRoot(SecIndex);
+  if (!Root)
+    return make_error<JITLinkError>("Associative COMDAT section " +
+                                    formatv("{0:d}", SecIndex) +
+                                    " has no leader");
+  // A non-COMDAT root is always kept, and so is the chain.
+  if (auto Selection = Comdats.getSelection(*Root))
+    return getCOMDATLinkage(*Selection);
+  return Linkage::Strong;
 }
 
 // Process the second symbol of COMDAT sequence.

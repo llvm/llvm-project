@@ -122,6 +122,8 @@ private:
   };
   std::vector<std::optional<ComdatExportRequest>> PendingComdatExports;
 
+  object::COFFComdatSections Comdats;
+
   // This represents a pending request to create a weak external symbol with a
   // name.
   struct WeakExternalRequest {
@@ -155,6 +157,8 @@ private:
   Expected<Symbol *> exportCOMDATSymbol(COFFSymbolIndex SymIndex,
                                         orc::SymbolStringPtr SymbolName,
                                         object::COFFSymbolRef Symbol);
+  Expected<Linkage>
+  getAssociativeCOMDATLinkage(COFFSectionIndex SecIndex) const;
 
   Error handleDirectiveSection(StringRef Str);
   Error flushWeakAliasRequests();
