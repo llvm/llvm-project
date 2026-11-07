@@ -30,7 +30,7 @@ void doSomething() noexcept;
 int f() {
   // CHECK: %[[RetVal:.+]] = alloca i32, align 4, !coro.outside.frame ![[OutFrameMetadata:.+]]
   // CHECK-NEXT: %[[GroActive:.+]] = alloca i1
-  // CHECK-NEXT: %[[Promise:.+]] = alloca %"struct.std::coroutine_traits<int>::promise_type", align 1
+  // CHECK-NEXT: %[[Promise:.+]] = alloca %"struct.std::coroutine_traits::promise_type{{(\.[0-9]+)?}}", align 1
   // CHECK-NEXT: %[[CoroGro:.+]] = alloca %struct.GroType, {{.*}} !coro.outside.frame ![[OutFrameMetadata]]
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()

@@ -9,15 +9,19 @@
 
 // CIR-DAG: ![[VoidTask:.*]] = !cir.struct<"folly::coro::Task<void>" {pad !u8i}>
 // CIR-DAG: ![[IntTask:.*]] = !cir.struct<"folly::coro::Task<int>" {pad !u8i}>
-// CIR-DAG: ![[VoidPromisse:.*]] = !cir.struct<"folly::coro::Task<void>::promise_type" {pad !u8i}>
-// CIR-DAG: ![[IntPromisse:.*]] = !cir.struct<"folly::coro::Task<int>::promise_type" {pad !u8i}>
+// The enclosing template arguments are not part of the name, so the promise
+// types of the different tasks are told apart by their uniquing suffix. Their
+// aliases are captured where they are used.
+// CIR-DAG: !cir.struct<"folly::coro::Task::promise_type" {pad !u8i}>
+// CIR-DAG: !cir.struct<"folly::coro::Task::promise_type.0" {pad !u8i}>
 // CIR-DAG: ![[StdString:.*]] = !cir.struct<"std::string" {pad !u8i}>
 // CIR-DAG: ![[CoroHandleVoid:.*]] = !cir.struct<"std::coroutine_handle<void>" {pad !u8i}>
-// CIR-DAG: ![[CoroHandlePromiseVoid:rec_.*]]  = !cir.struct<"std::coroutine_handle<folly::coro::Task<void>::promise_type>" {pad !u8i}>
-// CIR-DAG: ![[CoroHandlePromiseInt:rec_.*]] = !cir.struct<"std::coroutine_handle<folly::coro::Task<int>::promise_type>" {pad !u8i}>
+// CIR-DAG: !cir.struct<"std::coroutine_handle<folly::coro::Task::promise_type>" {pad !u8i}>
+// CIR-DAG: !cir.struct<"std::coroutine_handle<folly::coro::Task::promise_type>.0" {pad !u8i}>
 // CIR-DAG: ![[SuspendAlways:.*]] = !cir.struct<"std::suspend_always" {pad !u8i}>
 
-// OGCG-DAG: %[[VoidPromisse:"struct.folly::coro::Task<void>::promise_type"]] = type { i8 }
+// OGCG-DAG: %"struct.folly::coro::Task::promise_type" = type { i8 }
+// OGCG-DAG: %"struct.folly::coro::Task::promise_type.{{[0-9]+}}" = type { i8 }
 // OGCG-DAG: %[[VoidTask:"struct.folly::coro::Task"]] = type { i8 }
 // OGCG-DAG: %[[SuspendAlways:"struct.std::suspend_always"]] = type { i8 }
 
@@ -33,12 +37,12 @@ VoidTask silly_task() {
 // CIR: cir.func coroutine {{.*}} @_Z10silly_taskv() attributes
 // CIR-NEXT: %[[VoidTaskAddr:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[VoidTask]]>
 // CIR-NEXT: %[[SavedFrameAddr:.*]] = cir.alloca "__coro_frame_addr" {{.*}} : !cir.ptr<!cir.ptr<!void>>
-// CIR-NEXT: %[[VoidPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} : !cir.ptr<![[VoidPromisse]]>
+// CIR-NEXT: %[[VoidPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} : !cir.ptr<![[VoidPromisse:rec_[A-Za-z0-9_]+]]>
 // CIR-NEXT: %[[SuspendAlwaysAddr:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[SuspendAlways]]>
 // CIR-NEXT: %[[CoroHandleVoidAddr:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<![[CoroHandleVoid]]>
-// CIR-NEXT: %[[CoroHandlePromiseAddr:.*]] = cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<![[CoroHandlePromiseVoid]]>
+// CIR-NEXT: %[[CoroHandlePromiseAddr:.*]] = cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<![[CoroHandlePromiseVoid:rec_[A-Za-z0-9_]+]]>
 
-// OGCG: %[[VoidPromisseAddr:.*]] = alloca %[[VoidPromisse]], align 1
+// OGCG: %[[VoidPromisseAddr:.*]] = alloca %[[VoidPromisse:.*]], align 1
 // OGCG: %[[VoidTaskAddr:.*]] = alloca %[[VoidTask]], align 1
 // OGCG: %[[SuspendAlwaysAddr:.*]] = alloca %[[SuspendAlways]], align 1
 
@@ -394,10 +398,10 @@ folly::coro::Task<int> byRef(const std::string& s) {
 // CIR:    %[[AllocaParam:.*]] = cir.alloca "s" {{.*}} init const : !cir.ptr<!cir.ptr<![[StdString]]>>
 // CIR:    %[[SavedFrameAddr:.*]]  = cir.alloca "__coro_frame_addr" {{.*}} : !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[AllocaFnUse:.*]] = cir.alloca "s" {{.*}} init const : !cir.ptr<!cir.ptr<![[StdString]]>>
-// CIR:    %[[IntPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} : !cir.ptr<![[IntPromisse]]>
+// CIR:    %[[IntPromisseAddr:.*]] = cir.alloca "__promise" {{.*}} : !cir.ptr<![[IntPromisse:rec_[A-Za-z0-9_]+]]>
 // CIR:    %[[SuspendAlwaysAddr:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[SuspendAlways]]>
 // CIR:    %[[CoroHandleVoidAddr:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<![[CoroHandleVoid]]>
-// CIR:    %[[CoroHandlePromiseAddr:.*]] = cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<![[CoroHandlePromiseInt]]>
+// CIR:    %[[CoroHandlePromiseAddr:.*]] = cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<![[CoroHandlePromiseInt:rec_[A-Za-z0-9_]+]]>
 // CIR:    cir.store %[[ARG]], %[[AllocaParam]] : !cir.ptr<![[StdString]]>, {{.*}}
 
 // Call promise.get_return_object() to retrieve the task object.

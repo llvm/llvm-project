@@ -110,6 +110,9 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   policy.AlwaysIncludeTypeForTemplateArgument = true;
   policy.PrintAsCanonical = true;
   policy.SuppressTagKeyword = true;
+  // The template arguments of enclosing specializations can be enormous, and
+  // the name is made unique regardless.
+  policy.SuppressTemplateArgsInScope = true;
 
   if (recordDecl->getIdentifier())
     QualType(astContext.getCanonicalTagType(recordDecl))

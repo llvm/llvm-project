@@ -81,9 +81,10 @@ struct PrintingPolicy {
             llvm::to_underlying(AnonymousTagMode::SourceLocation)),
         SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
-        SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
-        Nullptr(LO.CPlusPlus11 || LO.C23), NullptrTypeInNamespace(LO.CPlusPlus),
-        Restrict(LO.C99), Alignof(LO.CPlusPlus11), UnderscoreAlignof(LO.C11),
+        SuppressTemplateArgsInScope(false), SuppressDefaultTemplateArgs(true),
+        Bool(LO.Bool), Nullptr(LO.CPlusPlus11 || LO.C23),
+        NullptrTypeInNamespace(LO.CPlusPlus), Restrict(LO.C99),
+        Alignof(LO.CPlusPlus11), UnderscoreAlignof(LO.C11),
         UseVoidForZeroParams(!LO.CPlusPlus),
         SplitTemplateClosers(!LO.CPlusPlus11), TerseOutput(false),
         PolishForDeclaration(false), Half(LO.Half),
@@ -223,6 +224,13 @@ struct PrintingPolicy {
   /// constructors.
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTemplateArgsInCXXConstructors : 1;
+
+  /// When true, don't print the template arguments of class template
+  /// specializations that enclose the entity being printed, e.g. print
+  /// `F::Inner` rather than `F<int, char>::Inner`. The template arguments of
+  /// the entity itself are not affected.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressTemplateArgsInScope : 1;
 
   /// When true, attempt to suppress template arguments that match the default
   /// argument for the parameter.

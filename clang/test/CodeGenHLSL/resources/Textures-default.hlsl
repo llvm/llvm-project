@@ -114,9 +114,9 @@
 //                      layout
 //   NOTEXEL            the type has no integer texel addressing
 
-// CHECK-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { [[HANDLE_TY]], %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// CHECK-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { [[HANDLE_TY]], %"struct.hlsl::[[TEXTURE]]::mips_type" }
 // CHECK-NOTEXEL: %"class.hlsl::[[TEXTURE]]" = type { [[HANDLE_TY]] }
-// CHECK-TEXEL: %"class.hlsl::[[TEXTURE]].0" = type { [[SCALAR_HANDLE_TY]], %"struct.hlsl::[[TEXTURE]]<float>::mips_type" }
+// CHECK-TEXEL: %"class.hlsl::[[TEXTURE]].0" = type { [[SCALAR_HANDLE_TY]], %"struct.hlsl::[[TEXTURE]]::mips_type.1" }
 // CHECK-NOTEXEL: %"class.hlsl::[[TEXTURE]].0" = type { [[SCALAR_HANDLE_TY]] }
 
 // CHECK: @{{.*}}t1 = internal global %"class.hlsl::[[TEXTURE]]" poison, align {{[0-9]+}}
