@@ -6076,15 +6076,20 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   }
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MUL_I24: {
-    KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
 
     // TODO: SelfMultiply can be poison, but not undef.
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
-    if (SelfMultiply)
+
+    KnownBits LHSKnown;
+    if (SelfMultiply) {
+      LHSKnown = RHSKnown;
       SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
           Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
           Depth + 1);
+    } else {
+      LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    }
 
     Known = computeKnownBitsForMul24(LHSKnown, RHSKnown,
                                      Op.getScalarValueSizeInBits(),
