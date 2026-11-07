@@ -94,10 +94,13 @@ define <4 x i32> @vec_across_call() nounwind {
 define void @other_block(<2 x i32> %v) nounwind {
 ; CHECK-LABEL: other_block:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    # freeze: $ebx
+; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
   %u = extractelement <2 x i32> %v, i32 5

@@ -2039,12 +2039,12 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    sw s1, 104(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s2, 100(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s3, 96(sp) # 4-byte Folded Spill
-; RV32-NEXT:    lw a4, 0(a1)
-; RV32-NEXT:    lw a2, 4(a1)
-; RV32-NEXT:    lw a3, 8(a1)
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lw a3, 4(a1)
+; RV32-NEXT:    lw a4, 8(a1)
 ; RV32-NEXT:    lw a5, 12(a1)
-; RV32-NEXT:    or a1, a2, a5
-; RV32-NEXT:    or a6, a4, a3
+; RV32-NEXT:    or a1, a3, a5
+; RV32-NEXT:    or a6, a2, a4
 ; RV32-NEXT:    or a1, a6, a1
 ; RV32-NEXT:    beqz a1, .LBB29_24
 ; RV32-NEXT:  # %bb.1: # %itofp-if-end
@@ -2053,19 +2053,19 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    mv a1, a5
 ; RV32-NEXT:    j .LBB29_4
 ; RV32-NEXT:  .LBB29_3:
-; RV32-NEXT:    neg a1, a3
-; RV32-NEXT:    or a6, a4, a2
-; RV32-NEXT:    snez a3, a3
+; RV32-NEXT:    neg a1, a4
+; RV32-NEXT:    or a6, a2, a3
+; RV32-NEXT:    snez a4, a4
 ; RV32-NEXT:    snez a6, a6
-; RV32-NEXT:    add a3, a5, a3
+; RV32-NEXT:    add a4, a5, a4
 ; RV32-NEXT:    sltu a7, a1, a6
-; RV32-NEXT:    neg t0, a3
-; RV32-NEXT:    sub a3, a1, a6
+; RV32-NEXT:    neg t0, a4
+; RV32-NEXT:    sub a4, a1, a6
 ; RV32-NEXT:    sub a1, t0, a7
-; RV32-NEXT:    snez a6, a4
+; RV32-NEXT:    snez a6, a2
+; RV32-NEXT:    neg a3, a3
+; RV32-NEXT:    sub a3, a3, a6
 ; RV32-NEXT:    neg a2, a2
-; RV32-NEXT:    neg a4, a4
-; RV32-NEXT:    sub a2, a2, a6
 ; RV32-NEXT:  .LBB29_4: # %itofp-if-end
 ; RV32-NEXT:    lui a6, 349525
 ; RV32-NEXT:    lui a7, 209715
@@ -2073,10 +2073,10 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    addi t0, a6, 1365
 ; RV32-NEXT:    addi a7, a7, 819
 ; RV32-NEXT:    addi a6, t1, -241
-; RV32-NEXT:    bnez a2, .LBB29_6
+; RV32-NEXT:    bnez a3, .LBB29_6
 ; RV32-NEXT:  # %bb.5: # %itofp-if-end
-; RV32-NEXT:    srli t1, a4, 1
-; RV32-NEXT:    or t1, a4, t1
+; RV32-NEXT:    srli t1, a2, 1
+; RV32-NEXT:    or t1, a2, t1
 ; RV32-NEXT:    srli t2, t1, 2
 ; RV32-NEXT:    or t1, t1, t2
 ; RV32-NEXT:    srli t2, t1, 4
@@ -2104,8 +2104,8 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    addi t3, t1, 32
 ; RV32-NEXT:    j .LBB29_7
 ; RV32-NEXT:  .LBB29_6:
-; RV32-NEXT:    srli t1, a2, 1
-; RV32-NEXT:    or t1, a2, t1
+; RV32-NEXT:    srli t1, a3, 1
+; RV32-NEXT:    or t1, a3, t1
 ; RV32-NEXT:    srli t2, t1, 2
 ; RV32-NEXT:    or t1, t1, t2
 ; RV32-NEXT:    srli t2, t1, 4
@@ -2131,15 +2131,15 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    add t1, t1, t2
 ; RV32-NEXT:    srli t3, t1, 24
 ; RV32-NEXT:  .LBB29_7: # %itofp-if-end
-; RV32-NEXT:    or t2, a3, a1
+; RV32-NEXT:    or t2, a4, a1
 ; RV32-NEXT:    addi t1, t3, 64
 ; RV32-NEXT:    snez t4, t2
 ; RV32-NEXT:    sltu t3, t1, t3
 ; RV32-NEXT:    addi t4, t4, -1
 ; RV32-NEXT:    bnez a1, .LBB29_9
 ; RV32-NEXT:  # %bb.8: # %itofp-if-end
-; RV32-NEXT:    srli t5, a3, 1
-; RV32-NEXT:    or t5, a3, t5
+; RV32-NEXT:    srli t5, a4, 1
+; RV32-NEXT:    or t5, a4, t5
 ; RV32-NEXT:    srli t6, t5, 2
 ; RV32-NEXT:    or t5, t5, t6
 ; RV32-NEXT:    srli t6, t5, 4
@@ -2246,9 +2246,9 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    sw zero, 60(sp)
 ; RV32-NEXT:    andi t2, t2, 12
 ; RV32-NEXT:    addi t3, sp, 32
-; RV32-NEXT:    sw a4, 32(sp)
-; RV32-NEXT:    sw a2, 36(sp)
-; RV32-NEXT:    sw a3, 40(sp)
+; RV32-NEXT:    sw a2, 32(sp)
+; RV32-NEXT:    sw a3, 36(sp)
+; RV32-NEXT:    sw a4, 40(sp)
 ; RV32-NEXT:    sw a1, 44(sp)
 ; RV32-NEXT:    add t3, t3, t2
 ; RV32-NEXT:    lw t4, 8(t3)
@@ -2268,9 +2268,9 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    andi s2, s2, 12
 ; RV32-NEXT:    addi s3, sp, 16
-; RV32-NEXT:    sw a4, 16(sp)
-; RV32-NEXT:    sw a2, 20(sp)
-; RV32-NEXT:    sw a3, 24(sp)
+; RV32-NEXT:    sw a2, 16(sp)
+; RV32-NEXT:    sw a3, 20(sp)
+; RV32-NEXT:    sw a4, 24(sp)
 ; RV32-NEXT:    sw a1, 28(sp)
 ; RV32-NEXT:    sub a1, s3, s2
 ; RV32-NEXT:    slli t4, t4, 1
@@ -2296,35 +2296,35 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    or a3, t3, a4
 ; RV32-NEXT:    or a1, a1, a2
 ; RV32-NEXT:    srl t0, t2, t1
-; RV32-NEXT:    snez a4, a1
-; RV32-NEXT:    or a4, a3, a4
-; RV32-NEXT:    mv a2, t4
-; RV32-NEXT:    mv a3, s0
+; RV32-NEXT:    snez a2, a1
+; RV32-NEXT:    or a2, a3, a2
+; RV32-NEXT:    mv a3, t4
+; RV32-NEXT:    mv a4, s0
 ; RV32-NEXT:    mv a1, t0
 ; RV32-NEXT:  .LBB29_20: # %itofp-sw-epilog
-; RV32-NEXT:    slli t0, a4, 29
+; RV32-NEXT:    slli t0, a2, 29
 ; RV32-NEXT:    srli t0, t0, 31
-; RV32-NEXT:    or t2, a4, t0
-; RV32-NEXT:    addi t2, t2, 1
-; RV32-NEXT:    seqz t0, t2
-; RV32-NEXT:    add t0, a2, t0
-; RV32-NEXT:    or a2, t2, t0
-; RV32-NEXT:    seqz t1, a2
-; RV32-NEXT:    add t1, a3, t1
-; RV32-NEXT:    sltu a4, t1, a3
+; RV32-NEXT:    or a2, a2, t0
+; RV32-NEXT:    addi a2, a2, 1
+; RV32-NEXT:    seqz t0, a2
+; RV32-NEXT:    add a3, a3, t0
+; RV32-NEXT:    or t0, a2, a3
+; RV32-NEXT:    seqz t0, t0
+; RV32-NEXT:    add t0, a4, t0
+; RV32-NEXT:    sltu a4, t0, a4
 ; RV32-NEXT:    add a4, a1, a4
 ; RV32-NEXT:    slli a1, a4, 12
 ; RV32-NEXT:    bltz a1, .LBB29_26
 ; RV32-NEXT:  # %bb.21:
-; RV32-NEXT:    srli a1, t1, 2
-; RV32-NEXT:    slli a2, a4, 30
-; RV32-NEXT:    srli a3, t2, 2
-; RV32-NEXT:    slli a7, t0, 30
-; RV32-NEXT:    or a2, a1, a2
-; RV32-NEXT:    or a1, a3, a7
-; RV32-NEXT:    slli t1, t1, 30
-; RV32-NEXT:    srli a3, t0, 2
-; RV32-NEXT:    or a3, a3, t1
+; RV32-NEXT:    srli a1, t0, 2
+; RV32-NEXT:    slli a7, a4, 30
+; RV32-NEXT:    srli t1, a2, 2
+; RV32-NEXT:    slli t2, a3, 30
+; RV32-NEXT:    or a2, a1, a7
+; RV32-NEXT:    or a1, t1, t2
+; RV32-NEXT:    slli t0, t0, 30
+; RV32-NEXT:    srli a3, a3, 2
+; RV32-NEXT:    or a3, a3, t0
 ; RV32-NEXT:    srai a4, a4, 2
 ; RV32-NEXT:  .LBB29_22: # %itofp-if-end26
 ; RV32-NEXT:    lui a7, 524288
@@ -2361,9 +2361,9 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    sw zero, 76(sp)
 ; RV32-NEXT:    andi a7, a7, 12
 ; RV32-NEXT:    addi t1, sp, 80
-; RV32-NEXT:    sw a4, 80(sp)
-; RV32-NEXT:    sw a2, 84(sp)
-; RV32-NEXT:    sw a3, 88(sp)
+; RV32-NEXT:    sw a2, 80(sp)
+; RV32-NEXT:    sw a3, 84(sp)
+; RV32-NEXT:    sw a4, 88(sp)
 ; RV32-NEXT:    sw a1, 92(sp)
 ; RV32-NEXT:    sub a1, t1, a7
 ; RV32-NEXT:    lw a2, 8(a1)
@@ -2387,12 +2387,12 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    sll a1, a1, t0
 ; RV32-NEXT:    j .LBB29_22
 ; RV32-NEXT:  .LBB29_26: # %itofp-if-then20
-; RV32-NEXT:    srli a1, t2, 3
+; RV32-NEXT:    srli a2, a2, 3
+; RV32-NEXT:    slli a1, a3, 29
+; RV32-NEXT:    srli a3, a3, 3
+; RV32-NEXT:    or a1, a2, a1
 ; RV32-NEXT:    slli a2, t0, 29
-; RV32-NEXT:    srli a3, t0, 3
-; RV32-NEXT:    or a1, a1, a2
-; RV32-NEXT:    slli a2, t1, 29
-; RV32-NEXT:    srli a6, t1, 3
+; RV32-NEXT:    srli a6, t0, 3
 ; RV32-NEXT:    slli t0, a4, 29
 ; RV32-NEXT:    or a3, a3, a2
 ; RV32-NEXT:    or a2, a6, t0
@@ -2400,18 +2400,18 @@ define fp128 @sitofp_i128(i128 %x) nounwind {
 ; RV32-NEXT:    mv a6, a7
 ; RV32-NEXT:    j .LBB29_22
 ; RV32-NEXT:  .LBB29_27: # %itofp-sw-bb
-; RV32-NEXT:    srli t0, a4, 31
-; RV32-NEXT:    slli t1, a2, 1
-; RV32-NEXT:    srli a2, a2, 31
-; RV32-NEXT:    or t0, t1, t0
+; RV32-NEXT:    srli t0, a2, 31
 ; RV32-NEXT:    slli t1, a3, 1
 ; RV32-NEXT:    srli a3, a3, 31
-; RV32-NEXT:    or t1, t1, a2
+; RV32-NEXT:    or t0, t1, t0
+; RV32-NEXT:    slli t1, a4, 1
+; RV32-NEXT:    srli a4, a4, 31
+; RV32-NEXT:    or t1, t1, a3
 ; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    or a1, a1, a3
-; RV32-NEXT:    slli a4, a4, 1
-; RV32-NEXT:    mv a2, t0
-; RV32-NEXT:    mv a3, t1
+; RV32-NEXT:    or a1, a1, a4
+; RV32-NEXT:    slli a2, a2, 1
+; RV32-NEXT:    mv a3, t0
+; RV32-NEXT:    mv a4, t1
 ; RV32-NEXT:    j .LBB29_20
 ;
 ; RV64-LABEL: sitofp_i128:

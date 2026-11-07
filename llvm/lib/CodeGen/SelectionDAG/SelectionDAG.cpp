@@ -5742,8 +5742,13 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::VALUETYPE:
   case ISD::FrameIndex:
   case ISD::TargetFrameIndex:
-  case ISD::CopyFromReg:
     return true;
+
+  case ISD::CopyFromReg: {
+    // A virtual register from another block may hold an undefined value.
+    Register Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
+    return !Reg.isVirtual() || MF->getRegInfo().getLiveInPhysReg(Reg).isValid();
+  }
 
   case ISD::POISON:
     return !includesPoison(Kind);
