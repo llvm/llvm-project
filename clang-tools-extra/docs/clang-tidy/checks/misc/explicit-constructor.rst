@@ -29,6 +29,7 @@ The check will suggest inserting ``explicit`` before the constructor or
 conversion operator declaration. However, copy and move constructors should not
 be explicit, as well as constructors taking a single ``initializer_list``
 argument.
+Declarations marked ``explicit(false)`` (since C++20) are treated as deliberately implicit and are not diagnosed, whereas non-literal constant expressions evaluating to ``false`` in ``explicit(...)`` are still diagnosed.
 
 This code:
 
