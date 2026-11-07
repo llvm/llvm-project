@@ -74,4 +74,14 @@ tbuffer A {
 
     // typedef declaration
     typedef float F32Typedef;
+
+    // export declarations
+    export {
+        void externalFn1();
+    }
+
+    export void externalFn2();
+
+    // static assert declarations
+    static_assert(sizeof(float) == 4, "something's wrong");
 }
