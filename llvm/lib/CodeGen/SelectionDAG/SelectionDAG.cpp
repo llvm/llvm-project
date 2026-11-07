@@ -93,9 +93,10 @@ static SDVTList makeVTList(const EVT *VTs, unsigned NumVTs) {
 }
 
 // Default null implementations of the callbacks.
-void SelectionDAG::DAGUpdateListener::NodeDeleted(SDNode*, SDNode*) {}
-void SelectionDAG::DAGUpdateListener::NodeUpdated(SDNode*) {}
+void SelectionDAG::DAGUpdateListener::NodeDeleted(SDNode *, SDNode *) {}
+void SelectionDAG::DAGUpdateListener::NodeUpdated(SDNode *) {}
 void SelectionDAG::DAGUpdateListener::NodeInserted(SDNode *) {}
+void SelectionDAG::DAGUpdateListener::NodeOperandsChanged(SDNode *) {}
 
 void SelectionDAG::DAGNodeDeletedListener::anchor() {}
 void SelectionDAG::DAGNodeInsertedListener::anchor() {}
@@ -12472,6 +12473,8 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op) {
   // If this gets put into a CSE map, add it.
   if (InsertToken)
     CSEMap.insert(N, InsertToken);
+  for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
+    DUL->NodeOperandsChanged(N);
   return N;
 }
 
@@ -12502,6 +12505,8 @@ SDNode *SelectionDAG::UpdateNodeOperands(SDNode *N, SDValue Op1, SDValue Op2) {
   // If this gets put into a CSE map, add it.
   if (InsertToken)
     CSEMap.insert(N, InsertToken);
+  for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
+    DUL->NodeOperandsChanged(N);
   return N;
 }
 
@@ -12554,6 +12559,8 @@ UpdateNodeOperands(SDNode *N, ArrayRef<SDValue> Ops) {
   // If this gets put into a CSE map, add it.
   if (InsertToken)
     CSEMap.insert(N, InsertToken);
+  for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
+    DUL->NodeOperandsChanged(N);
   return N;
 }
 
@@ -12749,6 +12756,8 @@ SDNode *SelectionDAG::MorphNodeTo(SDNode *N, unsigned Opc,
 
   if (InsertToken)
     CSEMap.insert(N, InsertToken); // Memoize the new node.
+  for (DAGUpdateListener *DUL = UpdateListeners; DUL; DUL = DUL->Next)
+    DUL->NodeOperandsChanged(N);
   return N;
 }
 
