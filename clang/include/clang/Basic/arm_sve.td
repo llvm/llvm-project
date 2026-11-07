@@ -1889,15 +1889,15 @@ def SVNMATCH : SInst<"svnmatch[_{d}]", "PPdd", "csUcUs", MergeNone, "aarch64_sve
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Contiguous conflict detection
 let SVETargetGuard = "sve2|sme" in {
-def SVWHILERW_B : SInst<"svwhilerw[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilerw_b", [IsOverloadWhileRW, VerifyRuntimeMode]>;
-def SVWHILERW_H : SInst<"svwhilerw[_{1}]", "Pcc", "sUshb", MergeNone, "aarch64_sve_whilerw_h", [IsOverloadWhileRW, VerifyRuntimeMode]>;
-def SVWHILERW_S : SInst<"svwhilerw[_{1}]", "Pcc", "iUif", MergeNone, "aarch64_sve_whilerw_s", [IsOverloadWhileRW, VerifyRuntimeMode]>;
-def SVWHILERW_D : SInst<"svwhilerw[_{1}]", "Pcc", "lUld", MergeNone, "aarch64_sve_whilerw_d", [IsOverloadWhileRW, VerifyRuntimeMode]>;
+def SVWHILERW_B : SInst<"svwhilerw[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilerw", [IsOverloadWhileRW, VerifyRuntimeMode]>;
+def SVWHILERW_H : SInst<"svwhilerw[_{1}]", "Pcc", "sUshb", MergeNone, "aarch64_sve_whilerw", [IsOverloadWhileRW, VerifyRuntimeMode]>;
+def SVWHILERW_S : SInst<"svwhilerw[_{1}]", "Pcc", "iUif", MergeNone, "aarch64_sve_whilerw", [IsOverloadWhileRW, VerifyRuntimeMode]>;
+def SVWHILERW_D : SInst<"svwhilerw[_{1}]", "Pcc", "lUld", MergeNone, "aarch64_sve_whilerw", [IsOverloadWhileRW, VerifyRuntimeMode]>;
 
-def SVWHILEWR_B : SInst<"svwhilewr[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilewr_b", [IsOverloadWhileRW, VerifyRuntimeMode]>;
-def SVWHILEWR_H : SInst<"svwhilewr[_{1}]", "Pcc", "sUshb", MergeNone, "aarch64_sve_whilewr_h", [IsOverloadWhileRW, VerifyRuntimeMode]>;
-def SVWHILEWR_S : SInst<"svwhilewr[_{1}]", "Pcc", "iUif", MergeNone, "aarch64_sve_whilewr_s", [IsOverloadWhileRW, VerifyRuntimeMode]>;
-def SVWHILEWR_D : SInst<"svwhilewr[_{1}]", "Pcc", "lUld", MergeNone, "aarch64_sve_whilewr_d", [IsOverloadWhileRW, VerifyRuntimeMode]>;
+def SVWHILEWR_B : SInst<"svwhilewr[_{1}]", "Pcc", "cUc",  MergeNone, "aarch64_sve_whilewr", [IsOverloadWhileRW, VerifyRuntimeMode]>;
+def SVWHILEWR_H : SInst<"svwhilewr[_{1}]", "Pcc", "sUshb", MergeNone, "aarch64_sve_whilewr", [IsOverloadWhileRW, VerifyRuntimeMode]>;
+def SVWHILEWR_S : SInst<"svwhilewr[_{1}]", "Pcc", "iUif", MergeNone, "aarch64_sve_whilewr", [IsOverloadWhileRW, VerifyRuntimeMode]>;
+def SVWHILEWR_D : SInst<"svwhilewr[_{1}]", "Pcc", "lUld", MergeNone, "aarch64_sve_whilewr", [IsOverloadWhileRW, VerifyRuntimeMode]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
