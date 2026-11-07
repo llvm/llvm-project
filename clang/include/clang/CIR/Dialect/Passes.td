@@ -88,6 +88,20 @@ def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def FallOffAnalysis : Pass<"cir-fall-off-analysis", "mlir::ModuleOp"> {
+  let summary = "Report how control reaches the end of each function";
+  let description = [{
+    Runs the fall-off analysis behind ClangIR's -Wreturn-type on every
+    function definition and emits a remark per function with its
+    classification: never, never-and-no-return, maybe, always or unknown.
+    This exposes the analysis to cir-opt tests; clang calls the analysis
+    directly and reports -Wreturn-type, not these remarks. The IR is not
+    modified.
+  }];
+  let constructor = "mlir::createFallOffAnalysisPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def GotoSolver : Pass<"cir-goto-solver", "mlir::ModuleOp"> {
   let summary = "Replaces goto operations with branches";
   let description = [{
