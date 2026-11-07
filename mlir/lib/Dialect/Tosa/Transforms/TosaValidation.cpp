@@ -1396,6 +1396,59 @@ LogicalResult checkErrorIfReshape(Operation *op) {
                                  shapeValues))
     return success();
 
+  // ERROR_IF(at most one dimension may be -1)
+  if (llvm::count(shapeValues, kInferableDimSize) > 1)
+    return op->emitOpError() << "expected at most one target dimension to be "
+                             << kInferableDimSize;
+
+  // ERROR_IF(any(shape < -1))
+  for (int64_t dim : shapeValues)
+    if (dim < kInferableDimSize)
+      return op->emitOpError()
+             << "new shape has invalid tensor dimension size " << dim;
+
+  auto outputType = dyn_cast<RankedTensorType>(reshapeOp.getType());
+
+  // ERROR_IF(shape disagrees with the statically known result shape)
+  if (outputType &&
+      outputType.getRank() == static_cast<int64_t>(shapeValues.size())) {
+    for (auto [newShapeDim, outputShapeDim] :
+         llvm::zip_equal(shapeValues, outputType.getShape())) {
+      if (newShapeDim == kInferableDimSize ||
+          ShapedType::isDynamic(outputShapeDim))
+        continue;
+      if (newShapeDim != outputShapeDim)
+        return op->emitOpError()
+               << "new shape is inconsistent with result shape";
+    }
+  }
+
+  // ERROR_IF(the number of elements is not preserved)
+  if (auto inputType =
+          dyn_cast<RankedTensorType>(reshapeOp.getInput1().getType());
+      inputType && inputType.hasStaticShape()) {
+    int64_t inputElementsNum = inputType.getNumElements();
+    if (outputType && outputType.hasStaticShape()) {
+      int64_t outputElementsNum = outputType.getNumElements();
+      if (inputElementsNum != outputElementsNum)
+        return op->emitOpError() << "cannot reshape " << inputElementsNum
+                                 << " elements into " << outputElementsNum;
+    }
+
+    int64_t newShapeElementsNum =
+        llvm::accumulate(shapeValues, int64_t(1), [](int64_t acc, int64_t dim) {
+          return (dim > 0) ? acc * dim : acc;
+        });
+    bool isStaticNewShape =
+        llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
+    if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||
+        (!isStaticNewShape && newShapeElementsNum > inputElementsNum))
+      return op->emitOpError() << "cannot reshape " << inputElementsNum
+                               << " elements into " << newShapeElementsNum;
+  }
+
+  // ERROR_IF(shape contains an inferable dimension (-1)); TOSA requires
+  // dynamic dimensions to be expressed with `tosa.dim`, not -1.
   if (llvm::is_contained(shapeValues, kInferableDimSize))
     return op->emitOpError("shape input contains inferable dimension (")
            << kInferableDimSize

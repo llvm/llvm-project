@@ -2701,6 +2701,17 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
   }
+
+  // An out-of-range dimension must not reach RankedTensorType::get(). Fall back
+  // to dynamic dimensions and let tosa-validate diagnose the shape.
+  if (llvm::any_of(newShapeValue,
+                   [](int64_t dim) { return dim < kInferableDimSize; })) {
+    auto rank = cast<tosa::shapeType>(adaptor.getShape().getType()).getRank();
+    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
+    return success();
+  }
+
   newShapeValue = convertToMlirShape(newShapeValue);
 
   // We cannot infer from the total number of elements so we must take the
@@ -2722,6 +2733,15 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     }
   }
 
+  // A zero-sized dimension makes the product zero, so resolving an inferable
+  // dimension would divide by zero. Leave the dynamic dimensions uninferred;
+  // the shape is diagnosed as invalid by tosa-validate.
+  if (staticMul == 0) {
+    inferredReturnShapes.push_back(
+        ShapedTypeComponents(newShapeValue, inputType));
+    return success();
+  }
+
   // Determine the length of the dynamic dimension.
   for (auto &val : newShapeValue) {
     if (ShapedType::isDynamic(val))
@@ -2739,59 +2759,13 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
           .failed()) {
     return failure();
   }
-  TensorType inputType = getInput1().getType();
 
-  SmallVector<int64_t> shapeValues;
-  if (!tosa::getConstShapeValues(getShape().getDefiningOp(), shapeValues)) {
-    // skip following checks if shape is not constant
-    return mlir::success();
-  }
-
-  int missingDims = llvm::count(shapeValues, kInferableDimSize);
-  if (missingDims > 1)
-    return emitOpError() << "expected at most one target dimension to be "
-                         << kInferableDimSize;
-
-  const auto outputType = dyn_cast<RankedTensorType>(getType());
-  if (!outputType)
-    return success();
-
-  if ((int64_t)shapeValues.size() != outputType.getRank())
-    return emitOpError() << "new shape does not match result rank";
-
-  for (auto [newShapeDim, outputShapeDim] :
-       zip(shapeValues, outputType.getShape())) {
-    if (newShapeDim != kInferableDimSize &&
-        newShapeDim != ShapedType::kDynamic &&
-        outputShapeDim != ShapedType::kDynamic && newShapeDim != outputShapeDim)
-      return emitOpError() << "new shape is inconsistent with result shape";
-
-    if (newShapeDim != ShapedType::kDynamic && newShapeDim < kInferableDimSize)
-      return emitOpError() << "new shape has invalid tensor dimension size "
-                           << newShapeDim;
-  }
-
-  if (inputType.hasStaticShape()) {
-    int64_t inputElementsNum = inputType.getNumElements();
-    if (outputType.hasStaticShape()) {
-      int64_t outputElementsNum = outputType.getNumElements();
-      if (inputElementsNum != outputElementsNum) {
-        return emitOpError() << "cannot reshape " << inputElementsNum
-                             << " elements into " << outputElementsNum;
-      }
-    }
-
-    int64_t newShapeElementsNum =
-        llvm::accumulate(shapeValues, int64_t(1), [](int64_t acc, int64_t dim) {
-          return (dim > 0) ? acc * dim : acc;
-        });
-    bool isStaticNewShape =
-        llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
-    if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||
-        (!isStaticNewShape && newShapeElementsNum > inputElementsNum)) {
-      return emitOpError() << "cannot reshape " << inputElementsNum
-                           << " elements into " << newShapeElementsNum;
-    }
+  // The rank of the shape operand is encoded in its type (`!tosa.shape<N>`),
+  // so it can be compared without inspecting the constant values.
+  if (auto outputType = dyn_cast<RankedTensorType>(getType())) {
+    if (cast<tosa::shapeType>(getShape().getType()).getRank() !=
+        outputType.getRank())
+      return emitOpError() << "new shape does not match result rank";
   }
 
   return mlir::success();
