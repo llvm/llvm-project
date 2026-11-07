@@ -1556,7 +1556,9 @@ getDpasSubgroupLayouts(
     std::tuple<SmallVector<int64_t>, SmallVector<int64_t>, SmallVector<int64_t>>
         instDataVecs,
     const xegpu::uArch::MMAInstructionInterface *uArchInstruction) {
-  auto [instDataA, instDataB, instDataCD] = instDataVecs;
+  SmallVector<int64_t> instDataA = std::get<0>(instDataVecs);
+  SmallVector<int64_t> instDataB = std::get<1>(instDataVecs);
+  SmallVector<int64_t> instDataCD = std::get<2>(instDataVecs);
 
   std::optional<LayoutRepresentation> consumerSgLayout = std::nullopt;
   if (consumerLayout && consumerLayout.isForWorkgroup()) {
