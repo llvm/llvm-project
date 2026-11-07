@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
@@ -88,10 +89,18 @@ void LexicalScopes::extractLexicalScopes(
     const MachineInstr *RangeBeginMI = nullptr;
     const MachineInstr *PrevMI = nullptr;
     const DILocation *PrevDL = nullptr;
-    for (const auto &MInsn : MBB) {
+    for (const auto &MInsn : MBB.instrs()) {
       // Ignore DBG_VALUE and similar instruction that do not contribute to any
       // instruction in the output.
       if (MInsn.isMetaInstruction())
+        continue;
+
+      // The instructions in a delay slot are bundled with the instruction
+      // that has it, but the AsmPrinter begins each of them separately, so
+      // they can start or end a range. Other bundles are emitted as a whole.
+      if (MInsn.isInsideBundle() &&
+          !getBundleStart(MInsn.getIterator())
+               ->hasDelaySlot(MachineInstr::IgnoreBundle))
         continue;
 
       // Check if instruction has valid location information.

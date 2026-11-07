@@ -5065,6 +5065,13 @@ isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
   return true;
 }
 
+void AsmPrinter::beginBundledInstruction(const MachineInstr *MI) {
+  for (auto &Handler : Handlers) {
+    Handler->endInstruction();
+    Handler->beginInstruction(MI);
+  }
+}
+
 GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
