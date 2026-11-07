@@ -1281,16 +1281,31 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   // into the bigger one and update the live interval. Remove the small alloca
   // and continue.
 
+  // remapInstructions() replaces the alloca of a merged slot with the alloca of
+  // the slot it is merged into, and alias analysis describes the slot by that
+  // alloca, so it must not be smaller. A zero-sized alloca still gets a
+  // one-byte stack object, so for stack objects of equal size, also sort by
+  // the size of the alloca.
+  const DataLayout &DL = MF->getDataLayout();
+  auto GetAllocaSize = [&](int Slot) -> uint64_t {
+    if (const AllocaInst *AI = MFI->getObjectAllocation(Slot))
+      if (std::optional<TypeSize> Size = AI->getAllocationSize(DL))
+        return Size->getKnownMinValue();
+    return MFI->getObjectSize(Slot);
+  };
+
   // Sort the slots according to their size. Place unused slots at the end.
   // Use stable sort to guarantee deterministic code generation.
-  llvm::stable_sort(SortedSlots, [this](int LHS, int RHS) {
+  llvm::stable_sort(SortedSlots, [&](int LHS, int RHS) {
     // We use -1 to denote a uninteresting slot. Place these slots at the end.
     if (LHS == -1)
       return false;
     if (RHS == -1)
       return true;
     // Sort according to size.
-    return MFI->getObjectSize(LHS) > MFI->getObjectSize(RHS);
+    if (MFI->getObjectSize(LHS) != MFI->getObjectSize(RHS))
+      return MFI->getObjectSize(LHS) > MFI->getObjectSize(RHS);
+    return GetAllocaSize(LHS) > GetAllocaSize(RHS);
   });
 
   for (auto &s : LiveStarts)
@@ -1342,6 +1357,8 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
           assert(MFI->getObjectSize(FirstSlot) >=
                  MFI->getObjectSize(SecondSlot) &&
                  "Merging a small object into a larger one");
+          assert(GetAllocaSize(FirstSlot) >= GetAllocaSize(SecondSlot) &&
+                 "Replacing an alloca with a smaller one");
 
           RemovedSlots+=1;
           ReducedSize += MFI->getObjectSize(SecondSlot);
