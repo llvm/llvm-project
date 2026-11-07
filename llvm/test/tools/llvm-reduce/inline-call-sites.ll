@@ -526,6 +526,14 @@ define void @callee_branch_funnel_musttail_caller(...) {
   ret void
 }
 
+; CHECK-LABEL: define void @callee_branch_funnel_caller(
+; RESULT-NEXT: call void (...) @callee_uses_branch_funnel()
+; RESULT-NEXT: ret void
+define void @callee_branch_funnel_caller() {
+  call void (...) @callee_uses_branch_funnel()
+  ret void
+}
+
 ; Ignore noinline on the callee function
 ; CHECK-LABEL: define void @noinline_callee(
 ; RESULT-NEXT: store i32 123, ptr %arg, align 4

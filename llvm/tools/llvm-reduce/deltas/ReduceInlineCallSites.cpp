@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceInlineCallSites.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
@@ -70,10 +72,25 @@ static bool inlineWillReduceComplexity(const Function &Caller,
 static void reduceCallSites(Oracle &O, Function &F) {
   std::vector<std::pair<CallBase *, InlineFunctionInfo>> CallSitesToInline;
 
+  bool HasBranchFunnel = false;
+  for (const Instruction &I : instructions(F)) {
+    const auto *CB = dyn_cast<CallBase>(&I);
+    const Function *Callee = CB ? CB->getCalledFunction() : nullptr;
+    if (Callee && Callee->getIntrinsicID() == Intrinsic::icall_branch_funnel) {
+      HasBranchFunnel = true;
+      break;
+    }
+  }
+
   for (Use &U : F.uses()) {
     if (CallBase *CB = dyn_cast<CallBase>(U.getUser())) {
       // Ignore callsites with wrong call type.
       if (!CB->isCallee(&U))
+        continue;
+
+      // Inlining at a non-musttail call site drops musttail from calls in F,
+      // but the branch funnel intrinsic requires it.
+      if (HasBranchFunnel && !CB->isMustTailCall())
         continue;
 
       // We do not consider isInlineViable here. It is overly conservative in
