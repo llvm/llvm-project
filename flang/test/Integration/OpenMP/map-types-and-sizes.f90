@@ -1242,5 +1242,5 @@ end subroutine mapType_polymorphic_array_whole_explicit
 !CHECK: %[[ITEM_DESC:.*]] = getelementptr %{{.*}}Twrapper_t, ptr %{{.*}}, i32 0, i32 1
 !CHECK: %[[ELEM_LEN_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
 !CHECK: %[[ELEM_LEN:.*]] = load i64, ptr %[[ELEM_LEN_FIELD]], align 8
-!CHECK: %[[DYNAMIC_ITEM_SIZE:.*]] = select i1 %{{.*}}, i64 0, i64 %{{.*}}
-!CHECK: call void @.omp_mapper.{{.*}}base_t_omp_default_mapper(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 %[[DYNAMIC_ITEM_SIZE]], i64 %{{.*}}, ptr {{.*}}) {{.*}}
+!CHECK: %[[DECLARED_ITEM_SIZE:.*]] = select i1 %{{.*}}, i64 0, i64 4
+!CHECK: call void @.omp_mapper.{{.*}}base_t_omp_default_mapper(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 %[[DECLARED_ITEM_SIZE]], i64 %{{.*}}, ptr {{.*}}) {{.*}}
