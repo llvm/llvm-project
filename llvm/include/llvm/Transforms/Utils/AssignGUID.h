@@ -40,6 +40,13 @@ public:
   // traverse all the module; or instead of making GlobalValue::assignGUID
   // public.
   LLVM_ABI static void assignGUIDForMergedGV(GlobalVariable &GV);
+
+  /// Record fallback GUIDs for definitions without assigned GUIDs in the
+  /// module's GUID map without attaching metadata.
+  LLVM_ABI static void recordMissingGUIDs(Module &M);
+
+  /// Transfer the GUID map entry for \p Src to \p Dst, if one exists.
+  LLVM_ABI static void transferGUID(const GlobalValue &Src, GlobalValue &Dst);
 };
 
 } // end namespace llvm

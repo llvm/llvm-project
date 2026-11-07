@@ -77,6 +77,24 @@ static void expectNoDiags(const DiagnosticInfo *DI, void *C) {
   llvm_unreachable("expectNoDiags called!");
 }
 
+TEST(IRMoverTest, MovesGUIDMapEntries) {
+  LLVMContext Ctx;
+  auto SrcM = std::make_unique<Module>("source", Ctx);
+  Module DstM("destination", Ctx);
+  Type *Ty = Type::getInt32Ty(Ctx);
+  auto *SrcGV = new GlobalVariable(*SrcM, Ty, /*isConstant=*/false,
+                                   GlobalValue::ExternalLinkage,
+                                   ConstantInt::get(Ty, 0), "global");
+
+  constexpr GlobalValue::GUID GUID = 101;
+  SrcM->insertGUID(SrcGV, GUID);
+
+  EXPECT_FALSE(Linker::linkModules(DstM, std::move(SrcM)));
+  GlobalVariable *DstGV = DstM.getNamedGlobal("global");
+  ASSERT_NE(DstGV, nullptr);
+  EXPECT_EQ(DstGV->getGUID(), GUID);
+}
+
 TEST_F(LinkModuleTest, BlockAddress) {
   IRBuilder<> Builder(EntryBB);
 
