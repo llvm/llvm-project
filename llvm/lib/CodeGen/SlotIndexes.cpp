@@ -246,6 +246,7 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
     packIndexes();
 
   ++NumLocalRenum;
+  ++IndexEpoch;
 }
 
 // Repair indexes after adding and removing instructions.
@@ -322,6 +323,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
 void SlotIndexes::packIndexes() {
   for (auto [Index, Entry] : enumerate(indexList))
     Entry.setIndex(Index * SlotIndex::InstrDist);
+  ++IndexEpoch;
 }
 
 unsigned SlotIndexes::compactIndexes() {
