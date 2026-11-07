@@ -178,6 +178,7 @@ void UnwrappedLineParser::reset() {
   PP.IncludeGuard = getIncludeGuardState(Style.IndentPPDirectives);
   PP.IncludeGuardToken = nullptr;
   ParsedPPDirectives.clear();
+  TokenAfterIfWithConditionalElse = nullptr;
   Line.reset(new UnwrappedLine);
   CommentsBeforeNextToken.clear();
   FormatTok = nullptr;
@@ -2933,6 +2934,186 @@ static bool containsPPDirective(const UnwrappedLine &Line) {
       [](const UnwrappedLineNode &Node) { return Node.Tok->FirstAfterPPLine; });
 }
 
+// Returns whether an `else` in a skipped preprocessor branch may follow.
+bool UnwrappedLineParser::isFollowedByConditionalElse() const {
+  const FormatToken *Last = nullptr;
+  if (!Line->Tokens.empty()) {
+    Last = Line->Tokens.back().Tok;
+  } else {
+    for (const auto &PreviousLine : llvm::reverse(*CurrentLines)) {
+      if (!PreviousLine.InPPDirective && !PreviousLine.Tokens.empty()) {
+        Last = PreviousLine.Tokens.back().Tok;
+        break;
+      }
+    }
+  }
+  if (!Last)
+    return false;
+
+  const auto *It =
+      llvm::lower_bound(AllTokens, Last->Tok.getLocation(),
+                        [](const FormatToken *Tok, SourceLocation Loc) {
+                          return Tok->Tok.getLocation() < Loc;
+                        });
+  if (It == AllTokens.end() || *It != Last)
+    return false;
+
+  // Whether a branch is always taken, for each conditional entered since Last.
+  SmallVector<bool, 4> Conditionals;
+  size_t UnreachableDepth = 0;
+  bool IsFirstOnLine = false;
+  bool IsFirstAfterDirective = false;
+  for (++It; It != AllTokens.end(); ++It) {
+    const auto &Tok = **It;
+    if (Tok.HasUnescapedNewline)
+      IsFirstOnLine = true;
+    if (Tok.is(tok::comment))
+      continue;
+    if (Tok.is(tok::hash) && IsFirstOnLine) {
+      SmallVector<const FormatToken *, 4> Directive;
+      for (const auto *Next = std::next(It);
+           Next != AllTokens.end() && !(*Next)->HasUnescapedNewline; ++Next) {
+        if ((*Next)->isNot(tok::comment))
+          Directive.push_back(*Next);
+        It = Next;
+      }
+      if (!Directive.empty()) {
+        const auto &Keyword = *Directive.front();
+        const auto IsLiteral = [&](bool Value) {
+          if (Keyword.isNoneOf(tok::pp_if, tok::pp_elif) ||
+              Directive.size() != 2) {
+            return false;
+          }
+          const auto &Condition = *Directive[1];
+          return Value
+                     ? Condition.is(tok::kw_true) || Condition.TokenText == "1"
+                     : Condition.is(tok::kw_false) ||
+                           Condition.TokenText == "0";
+        };
+        if (Keyword.isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef)) {
+          Conditionals.push_back(IsLiteral(true));
+          if (UnreachableDepth == 0 && IsLiteral(false))
+            UnreachableDepth = Conditionals.size();
+        } else if (Keyword.is(tok::pp_endif)) {
+          if (Conditionals.size() == UnreachableDepth)
+            UnreachableDepth = 0;
+          if (!Conditionals.empty())
+            Conditionals.pop_back();
+        } else if (Keyword.isOneOf(tok::pp_else, tok::pp_elif, tok::pp_elifdef,
+                                   tok::pp_elifndef)) {
+          if (Conditionals.size() == UnreachableDepth)
+            UnreachableDepth = 0;
+          if (Conditionals.empty())
+            Conditionals.push_back(false);
+          if (UnreachableDepth == 0 &&
+              (Conditionals.back() || IsLiteral(false))) {
+            UnreachableDepth = Conditionals.size();
+          } else if (IsLiteral(true)) {
+            Conditionals.back() = true;
+          }
+        }
+      }
+      IsFirstAfterDirective = true;
+      continue;
+    }
+    IsFirstOnLine = false;
+    if (UnreachableDepth > 0)
+      continue;
+    if (IsFirstAfterDirective && Tok.is(tok::kw_else))
+      return true;
+    if (Conditionals.empty())
+      return false;
+    IsFirstAfterDirective = false;
+  }
+  return false;
+}
+
+// Returns whether the body ends at RBraceTok in every preprocessor branch.
+bool UnwrappedLineParser::canInsertBraces(const FormatToken &LBraceTok,
+                                          const FormatToken &RBraceTok) const {
+  const auto *It =
+      llvm::lower_bound(AllTokens, LBraceTok.Tok.getLocation(),
+                        [](const FormatToken *Tok, SourceLocation Loc) {
+                          return Tok->Tok.getLocation() < Loc;
+                        });
+  if (It == AllTokens.end() || *It != &LBraceTok)
+    return false;
+
+  struct Conditional {
+    int StartDepth;
+    std::optional<int> EndDepth = std::nullopt;
+    bool HasElse = false;
+  };
+  SmallVector<Conditional, 2> Conditionals;
+  int Depth = 0;
+  bool InBody = false;
+  bool FirstNonCommentOnLine = false;
+  bool HasDirective = false;
+  bool HasMacroCall = false;
+  for (++It; It != AllTokens.end(); ++It) {
+    const auto &Tok = **It;
+    if (Tok.HasUnescapedNewline)
+      FirstNonCommentOnLine = true;
+    if (Tok.is(tok::hash) && FirstNonCommentOnLine) {
+      if (!InBody)
+        return false;
+      HasDirective = true;
+      const auto *Next = std::next(It);
+      while (Next != AllTokens.end() && (*Next)->is(tok::comment) &&
+             !(*Next)->HasUnescapedNewline) {
+        ++Next;
+      }
+      if (Next == AllTokens.end() || (*Next)->HasUnescapedNewline)
+        continue;
+      const auto &Keyword = **Next;
+      if (Keyword.isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef)) {
+        Conditionals.push_back({Depth});
+      } else if (Keyword.isOneOf(tok::pp_else, tok::pp_elif, tok::pp_elifdef,
+                                 tok::pp_elifndef, tok::pp_endif)) {
+        if (Conditionals.empty())
+          return false;
+        auto &C = Conditionals.back();
+        if (C.EndDepth && *C.EndDepth != Depth)
+          return false;
+        C.EndDepth = Depth;
+        if (Keyword.is(tok::pp_endif)) {
+          if (!C.HasElse && Depth != C.StartDepth)
+            return false;
+          Conditionals.pop_back();
+        } else {
+          C.HasElse = C.HasElse || Keyword.is(tok::pp_else);
+          Depth = C.StartDepth;
+        }
+      }
+      while (Next != AllTokens.end() && !(*Next)->HasUnescapedNewline)
+        It = Next++;
+      continue;
+    }
+    if (Tok.isNot(tok::comment)) {
+      FirstNonCommentOnLine = false;
+      InBody = true;
+      if (Tok.is(tok::identifier) && Macros.defined(Tok.TokenText))
+        HasMacroCall = true;
+      if (Tok.isOneOf(tok::l_paren, tok::l_square, tok::l_brace))
+        ++Depth;
+      else if (Tok.isOneOf(tok::r_paren, tok::r_square, tok::r_brace))
+        --Depth;
+      // A branch must not change where the statement ends.
+      if (Depth < 0 ||
+          (Depth == 0 && !Conditionals.empty() &&
+           Tok.isOneOf(tok::semi, tok::r_brace, tok::kw_if, tok::kw_else,
+                       tok::kw_for, tok::kw_while, tok::kw_do, tok::kw_switch,
+                       tok::kw_try, tok::kw_catch))) {
+        return false;
+      }
+    }
+    // Directives in a body with a configured macro call are not supported.
+    if (&Tok == &RBraceTok)
+      return Conditionals.empty() && !(HasDirective && HasMacroCall);
+  }
+  return false;
+}
+
 void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   FormatToken *Tok = nullptr;
 
@@ -2951,7 +3132,6 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   }
 
   addUnwrappedLine();
-  const auto BodyStart = CurrentLines->size();
   ++Line->Level;
   ++Line->UnbracedBodyLevel;
   parseStructuralElement();
@@ -2961,29 +3141,19 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
     assert(!Line->InPPDirective);
     FormatToken *const LBraceTok = Tok;
     Tok = nullptr;
-    auto BodyEnd = CurrentLines->size();
-    while (BodyEnd > 0) {
-      const auto &L = (*CurrentLines)[--BodyEnd];
-      if (!L.InPPDirective && getLastNonComment(L)) {
-        Tok = L.Tokens.back().Tok;
+    for (const auto &BodyLine : llvm::reverse(*CurrentLines)) {
+      if (!BodyLine.InPPDirective && getLastNonComment(BodyLine)) {
+        Tok = BodyLine.Tokens.back().Tok;
         break;
       }
     }
     assert(Tok);
-    // Don't insert the braces if they would enclose preprocessor directives.
-    bool EnclosesPPDirective = false;
-    for (size_t I = BodyStart; I <= BodyEnd && !EnclosesPPDirective; ++I) {
-      const auto &BodyLine = (*CurrentLines)[I];
-      EnclosesPPDirective =
-          BodyLine.InPPDirective ||
-          llvm::any_of(BodyLine.Tokens, [](const UnwrappedLineNode &Node) {
-            return Node.Tok->FirstAfterPPLine;
-          });
-    }
-    if (EnclosesPPDirective)
-      LBraceTok->BraceCount = 0;
-    else
+    if (FormatTok != TokenAfterIfWithConditionalElse &&
+        canInsertBraces(*LBraceTok, *Tok)) {
       ++Tok->BraceCount;
+    } else {
+      LBraceTok->BraceCount = 0;
+    }
   }
 
   if (CheckEOF && eof())
@@ -3175,6 +3345,8 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       parseUnbracedBody(/*CheckEOF=*/true);
     }
   } else {
+    if (Style.InsertBraces && isFollowedByConditionalElse())
+      TokenAfterIfWithConditionalElse = FormatTok;
     KeepIfBraces = KeepIfBraces || IfBlockKind == IfStmtKind::IfElse;
     if (NeedsUnwrappedLine)
       addUnwrappedLine();
