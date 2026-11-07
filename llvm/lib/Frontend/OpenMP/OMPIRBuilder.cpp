@@ -8047,8 +8047,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
   TargetIRAnalysis TIRA;
   if (TM)
-    TIRA = TargetIRAnalysis(
-        [&](const Function &F) { return TM->getTargetTransformInfo(F); });
+    TIRA = TM->getTargetIRAnalysis();
   FAM.registerPass([&]() { return TIRA; });
 
   TargetIRAnalysis::Result &&TTI = TIRA.run(*F, FAM);
