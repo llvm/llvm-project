@@ -1,15 +1,19 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-SSE --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-MEMORY --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-MEMORY --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclang-abi-compat=23 -emit-llvm %s -o %t-compat23.ll
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-MEMORY --input-file=%t-compat23.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclangir -emit-cir %s -o %t-avx.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-AVX --input-file=%t-avx.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclangir -emit-llvm %s -o %t-avx-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX --input-file=%t-avx-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-DIRECT --input-file=%t-avx-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm %s -o %t-avx.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX --input-file=%t-avx.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-MEMORY --input-file=%t-avx.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclang-abi-compat=23 -emit-llvm %s -o %t-avx-compat23.ll
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-DIRECT --input-file=%t-avx-compat23.ll %s
 
 typedef float v4f __attribute__((vector_size(16)));
 typedef float v2f __attribute__((vector_size(8)));
@@ -108,20 +112,21 @@ void take_over_aligned32(OverAligned32 u) {}
 // CIR: cir.func{{.*}} @take_over_aligned32(%arg0: !cir.ptr<!rec_OverAligned32> {llvm.align = 32 : i64, llvm.byval = !rec_OverAligned32, llvm.noundef} loc{{.*}})
 // LLVM: define{{.*}} void @take_over_aligned32(ptr noundef byval(%union.OverAligned32) align 32 %{{.+}})
 
-// 32 bytes against members of 16 and 17.  The quad reaches SSEUP, so with AVX
-// the coerce is named from the union's size, and without it memory.
+// The default classifier tracks all four eightbytes, so the char array makes
+// this union MEMORY. CIR and Clang 23 classify as SSE SSEUP with AVX-512.
 void take_quad32(Quad32 u) {}
 // CIR-SSE: cir.func{{.*}} @take_quad32(%arg0: !cir.ptr<!rec_Quad32> {llvm.align = 16 : i64, llvm.byval = !rec_Quad32, llvm.noundef} loc{{.*}})
 // CIR-AVX: cir.func{{.*}} @take_quad32(%arg0: !cir.vector<4 x !cir.double> loc{{.*}})
-// LLVM-SSE: define{{.*}} void @take_quad32(ptr noundef byval(%union.Quad32) align 16 %{{.+}})
-// LLVM-AVX: define{{.*}} void @take_quad32(<4 x double> %{{.+}})
+// LLVM-MEMORY: define{{.*}} void @take_quad32(ptr noundef byval(%union.Quad32) align 16 %{{.+}})
+// LLVM-DIRECT: define{{.*}} void @take_quad32(<4 x double> %{{.+}})
 
-// 64 bytes, the widest size an SSEUP coerce can be named from.
+// The same distinction applies at 64 bytes: default CodeGen uses MEMORY,
+// while CIR and Clang 23 retain classify as SSE SSEUP with AVX-512.
 void take_quad64(Quad64 u) {}
 // CIR-SSE: cir.func{{.*}} @take_quad64(%arg0: !cir.ptr<!rec_Quad64> {llvm.align = 16 : i64, llvm.byval = !rec_Quad64, llvm.noundef} loc{{.*}})
 // CIR-AVX: cir.func{{.*}} @take_quad64(%arg0: !cir.vector<8 x !cir.double> loc{{.*}})
-// LLVM-SSE: define{{.*}} void @take_quad64(ptr noundef byval(%union.Quad64) align 16 %{{.+}})
-// LLVM-AVX: define{{.*}} void @take_quad64(<8 x double> %{{.+}})
+// LLVM-MEMORY: define{{.*}} void @take_quad64(ptr noundef byval(%union.Quad64) align 16 %{{.+}})
+// LLVM-DIRECT: define{{.*}} void @take_quad64(<8 x double> %{{.+}})
 
 // 80 bytes, past 512, so the quad member cannot put it in registers.
 void take_quad80(Quad80 u) {}
@@ -133,12 +138,13 @@ void take_cplx_quad48(CplxQuad48 u) {}
 // CIR: cir.func{{.*}} @take_cplx_quad48(%arg0: !cir.ptr<!rec_CplxQuad48> {llvm.align = 16 : i64, llvm.byval = !rec_CplxQuad48, llvm.noundef} loc{{.*}})
 // LLVM: define{{.*}} void @take_cplx_quad48(ptr noundef byval(%union.CplxQuad48) align 16 %{{.+}})
 
-// A vector reaches SSEUP too, here with nothing spanning the union.
+// A vector member also produces the legacy SSE SSEUP classification with AVX-512,
+// while default/clang24 CodeGen classifies the char array and passes the union in memory.
 void take_vec_tail_pad(VecTailPad u) {}
 // CIR-SSE: cir.func{{.*}} @take_vec_tail_pad(%arg0: !cir.ptr<!rec_VecTailPad> {llvm.align = 16 : i64, llvm.byval = !rec_VecTailPad, llvm.noundef} loc{{.*}})
 // CIR-AVX: cir.func{{.*}} @take_vec_tail_pad(%arg0: !cir.vector<4 x !cir.double> loc{{.*}})
-// LLVM-SSE: define{{.*}} void @take_vec_tail_pad(ptr noundef byval(%union.VecTailPad) align 16 %{{.+}})
-// LLVM-AVX: define{{.*}} void @take_vec_tail_pad(<4 x double> %{{.+}})
+// LLVM-MEMORY: define{{.*}} void @take_vec_tail_pad(ptr noundef byval(%union.VecTailPad) align 16 %{{.+}})
+// LLVM-DIRECT: define{{.*}} void @take_vec_tail_pad(<4 x double> %{{.+}})
 
 // A vector narrower than 128 bits never reaches SSEUP, so this union is
 // classified from its size at every target.
