@@ -4,7 +4,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++23 -Wthread-safety %s
 
 // Tests for local variables whose value may change behind the analysis'
-// back: call-argument escapes and constructor arguments.
+// back: call-argument escapes, unevaluated operands, and constructor
+// arguments.
 
 struct __attribute__((capability("mutex"))) Mutex {
   int x;
@@ -20,7 +21,7 @@ int cond(void);
 int trylock_zero() __attribute__((try_acquire_capability(0, mu)));
 
 //===----------------------------------------------------------------------===//
-// Call-argument escapes and constructor arguments.
+// Call-argument escapes, unevaluated operands, and constructor arguments.
 //===----------------------------------------------------------------------===//
 
 int *id_ptr_alias(int *p) { return p; }
@@ -79,6 +80,31 @@ void test_lvalue_and_call_escapes() {
   if (r6 == 0) {
     data = 7; // expected-warning{{writing variable 'data' requires holding mutex 'mu' exclusively}}
   }
+}
+
+void test_builtin_constant_p_caller() {
+  int r = cond();
+  (void)__builtin_constant_p(r = trylock_zero());
+  if (r == 0) {
+    data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'mu' exclusively}}
+    unlock(&mu); // expected-warning{{releasing mutex 'mu' that was not held}}
+  }
+}
+
+void test_noexcept_caller() {
+  int r = cond();
+  (void)noexcept(r = trylock_zero()); // expected-warning{{expression with side effects has no effect in an unevaluated context}}
+  if (r == 0) {
+    data = 1; // expected-warning{{writing variable 'data' requires holding mutex 'mu' exclusively}}
+    unlock(&mu); // expected-warning{{releasing mutex 'mu' that was not held}}
+  }
+}
+
+// Unevaluated operands do not access guarded variables.
+void test_unevaluated_accesses() {
+  (void)noexcept(data = 1); // expected-warning{{expression with side effects has no effect in an unevaluated context}}
+  (void)__builtin_constant_p(data);
+  (void)__builtin_constant_p(data = 1);
 }
 
 // Constructor mutating a local pointer by reference invalidates

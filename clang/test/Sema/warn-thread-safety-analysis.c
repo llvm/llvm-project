@@ -764,6 +764,69 @@ void test_incdec_preserves_local_var_ctx(int count) {
   }
 }
 
+// _Generic controlling and unselected expressions are unevaluated.
+void test_generic_unevaluated_c(int unk) {
+  int r = unk;
+  (void)_Generic((r = mutex_exclusive_trylock(&mu1)), int: 0, default: 1); // expected-warning{{expression with side effects has no effect in an unevaluated context}}
+  if (r) {
+    work_data = 41; // expected-warning{{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+  }
+  int r2 = unk;
+  (void)_Generic(0, double: (r2 = mutex_exclusive_trylock(&mu1)), default: 0);
+  if (r2) {
+    work_data = 42; // expected-warning{{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+  }
+  (void)_Generic(work_data, int: 0, default: 1);
+  (void)_Generic(0, double: work_data, default: 0);
+}
+
+// sizeof on a VLA type evaluates the array bound, whereas sizeof on a pointer
+// to a VLA type and __alignof__ on a VLA type do not.
+void test_sizeof_vla_type_unevaluated_c(int unk) {
+  int r1 = unk;
+  (void)sizeof(int (*)[(r1 = mutex_exclusive_trylock(&mu1)) + 1]);
+  if (r1)
+    work_data = 43; // expected-warning{{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+  int r2 = unk;
+  (void)__alignof__(int[(r2 = mutex_exclusive_trylock(&mu1)) + 1]);
+  if (r2)
+    work_data = 44; // expected-warning{{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+  int r3 = unk;
+  (void)sizeof(int[(r3 = mutex_exclusive_trylock(&mu1)) + 1]);
+  if (r3) {
+    work_data = 45;
+    mutex_unlock(&mu1);
+  }
+}
+
+// The cleanup functions of variables declared in a statement expression in an
+// unevaluated operand do not run and the size expressions of the variable
+// length arrays declared in such a statement expression are not evaluated.
+void test_unevaluated_stmt_expr_decls_c(int unk) {
+  (void)__builtin_constant_p(({
+    struct Mutex *const __attribute__((unused, cleanup(unlock_scope))) s = &mu1;
+    0;
+  }));
+  int r = unk;
+  (void)__builtin_constant_p(({
+    int a[(r = mutex_exclusive_trylock(&mu1)) + 1];
+    a[0];
+  }));
+  if (r)
+    work_data = 46; // expected-warning{{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+  // The CFG represents a declaration of more than one variable with one
+  // synthetic declaration per variable.
+  int r2 = mutex_exclusive_trylock(&mu1);
+  (void)__builtin_constant_p(({
+    int(*p)[(r2 = 0) + 1], q;
+    0;
+  }));
+  if (r2) {
+    work_data = 47;
+    mutex_unlock(&mu1);
+  }
+}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}

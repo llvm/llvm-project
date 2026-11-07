@@ -539,6 +539,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `try_acquire_capability` function that has been stored in it or, with
   `-Wthread-safety-beta`, to name a capability accessed through it.
 
+- The thread safety analysis now ignores unevaluated operands of `sizeof`,
+  `alignof`, `typeid`, `noexcept`, C11 `_Generic` controlling expressions and
+  unselected associations, and the arguments of builtins that do not evaluate
+  their arguments, such as `__builtin_constant_p`. Accesses of guarded variables
+  in these operands are no longer diagnosed, and assignments in them no longer
+  affect the analysis.
+
 ### Improvements to Clang's diagnostics
 
 - Errors for invalid element types during instantiation of an `ext_vector_type`

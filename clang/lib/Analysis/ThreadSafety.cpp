@@ -640,7 +640,8 @@ public:
   /// clobbers the definition of the variable until it is assigned a new
   /// value directly; lookupValueExpr() fails for clobbered definitions.
   void traverseCFG(CFG *CFGraph, const PostOrderCFGView *SortedGraph,
-                   std::vector<CFGBlockInfo> &BlockInfo);
+                   std::vector<CFGBlockInfo> &BlockInfo,
+                   const llvm::SmallPtrSetImpl<const Stmt *> &UnevaluatedStmts);
 
 protected:
   friend class VarMapBuilder;
@@ -1389,9 +1390,10 @@ void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
 //   while (b)           { x -> x2, y -> y1  | [1st:] x2=x1; [2nd:] x2=NULL; }
 //     x = x+1;          { x -> x3, y -> y1  | x3 = x2 + 1, ... }
 //   ...                 { y -> y1           | x3 = 2, x2 = 1, ... }
-void LocalVariableMap::traverseCFG(CFG *CFGraph,
-                                   const PostOrderCFGView *SortedGraph,
-                                   std::vector<CFGBlockInfo> &BlockInfo) {
+void LocalVariableMap::traverseCFG(
+    CFG *CFGraph, const PostOrderCFGView *SortedGraph,
+    std::vector<CFGBlockInfo> &BlockInfo,
+    const llvm::SmallPtrSetImpl<const Stmt *> &UnevaluatedStmts) {
   PostOrderCFGView::CFGBlockSet VisitedBlocks(CFGraph);
 
   for (const auto *CurrBlock : *SortedGraph) {
@@ -1441,6 +1443,8 @@ void LocalVariableMap::traverseCFG(CFG *CFGraph,
       switch (BI.getKind()) {
       case CFGElement::Statement: {
         const Stmt *S = BI.castAs<CFGStmt>().getStmt();
+        if (UnevaluatedStmts.contains(S))
+          break;
         if (!EscapedVars.empty() && mayModifyThroughAlias(S))
           VMapBuilder.clobberEscapedVars();
         size_t NumSavedContexts = SavedContexts.size();
@@ -1804,8 +1808,8 @@ class ThreadSafetyAnalyzer {
   threadSafety::SExprBuilder SxBuilder;
 
   ThreadSafetyHandler &Handler;
-  const FunctionDecl *CurrentFunction;
   ASTContext *ASTCtx = nullptr;
+  const FunctionDecl *CurrentFunction;
   LocalVariableMap LocalVarMap;
   // Maps constructed objects to `this` placeholder prior to initialization.
   llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
@@ -1850,6 +1854,14 @@ public:
                       const CFGBlock *CurrBlock);
 
   void getTerminatorTrylockCaps(const CFGBlock *Block, CapExprSet &Caps);
+
+  // Subtrees of unevaluated operands, e.g. of noexcept or of the arguments of
+  // __builtin_constant_p(). These may be CFG elements but are not executed.
+  llvm::SmallPtrSet<const Stmt *, 8> UnevaluatedStmts;
+  // The variables declared in these subtrees, e.g. in a statement expression.
+  // Their destructors and cleanup functions do not run either.
+  llvm::SmallPtrSet<const VarDecl *, 4> UnevaluatedVarDecls;
+  void collectUnevaluatedStmts(CFG *CFGraph);
 
   bool join(const FactEntry &A, const FactEntry &B, SourceLocation JoinLoc,
             LockErrorKind EntryLEK);
@@ -2349,6 +2361,13 @@ void ThreadSafetyAnalyzer::getTerminatorTrylockCaps(const CFGBlock *Block,
 
   for (const auto *Attr : FunDecl->specific_attrs<TryAcquireCapabilityAttr>())
     getMutexIDs(Caps, Attr, Exp, FunDecl);
+}
+
+static bool
+isEvaluatedUnaryExprOrTypeTrait(const UnaryExprOrTypeTraitExpr *TE) {
+  if (TE->getKind() != UETT_SizeOf && TE->getKind() != UETT_CountOf)
+    return false;
+  return TE->getTypeOfArgument()->isVariableArrayType();
 }
 
 namespace {
@@ -3528,6 +3547,12 @@ public:
       return;
     ++Depth;
 
+    // Skip unevaluated operands completely.
+    if (visitUnevaluatedOperand(S, InNestedClosure, LValueIsSafe)) {
+      --Depth;
+      return;
+    }
+
     if (recordClosureCaptures(S))
       InNestedClosure = true;
 
@@ -3545,6 +3570,35 @@ private:
   void recordEscapedVar(const ValueDecl *VD) {
     EscapedVars.insert(VD);
     ModifiedVars.insert(VD);
+  }
+
+  /// If \p S is an operand that may not be evaluated, visit only its
+  /// evaluated parts and return true.
+  bool visitUnevaluatedOperand(const Stmt *S, bool InNestedClosure,
+                               bool LValueIsSafe) {
+    if (const auto *CE = dyn_cast<CallExpr>(S);
+        CE && CE->isUnevaluatedBuiltinCall(Ctx))
+      return true;
+    if (isa<CXXNoexceptExpr>(S))
+      return true;
+    if (const auto *TE = dyn_cast<UnaryExprOrTypeTraitExpr>(S)) {
+      if (isEvaluatedUnaryExprOrTypeTrait(TE))
+        for (const Stmt *Child : TE->children())
+          visit(Child, InNestedClosure, /*LValueIsSafe=*/false);
+      return true;
+    }
+    if (const auto *TE = dyn_cast<CXXTypeidExpr>(S)) {
+      if (!TE->isTypeOperand() && TE->isPotentiallyEvaluated())
+        visit(TE->getExprOperand(), InNestedClosure,
+              /*LValueIsSafe=*/false);
+      return true;
+    }
+    if (const auto *GSE = dyn_cast<GenericSelectionExpr>(S)) {
+      if (!GSE->isResultDependent())
+        visit(GSE->getResultExpr(), InNestedClosure, LValueIsSafe);
+      return true;
+    }
+    return false;
   }
 
   /// If \p S is a closure, record the variables that it captures by
@@ -3830,6 +3884,69 @@ void ThreadSafetyAnalyzer::markEscapedLocalVars(AnalysisDeclContext &AC) {
     LocalVarMap.addEscapedVar(VD);
 }
 
+/// Collect the subtrees of unevaluated expressions of \p CFGraph in
+/// UnevaluatedStmts.
+void ThreadSafetyAnalyzer::collectUnevaluatedStmts(CFG *CFGraph) {
+  auto AddUnevaluatedSubtree = [&](const Stmt *Root) {
+    if (!Root)
+      return;
+    SmallVector<const Stmt *, 16> Worklist = {Root};
+    while (!Worklist.empty()) {
+      const Stmt *S = Worklist.pop_back_val();
+      if (!S || !UnevaluatedStmts.insert(S).second)
+        continue;
+      if (const auto *DS = dyn_cast<DeclStmt>(S)) {
+        for (const Decl *D : DS->decls())
+          if (const auto *VD = dyn_cast<VarDecl>(D))
+            UnevaluatedVarDecls.insert(VD);
+        forEachDeclVLAExpr(DS, /*IncludeTopLevelVLA=*/true,
+                           [&](const Expr *Sz) { Worklist.push_back(Sz); });
+      }
+      llvm::append_range(Worklist, S->children());
+    }
+  };
+  for (const CFGBlock *B : *CFGraph) {
+    for (const CFGElement &BI : *B) {
+      std::optional<CFGStmt> CS = BI.getAs<CFGStmt>();
+      if (!CS)
+        continue;
+      const Stmt *S = CS->getStmt();
+      if (UnevaluatedStmts.contains(S))
+        continue;
+      // Neither assignments nor dereferences in unevaluated operands have
+      // any effect at runtime.
+      if (const auto *CE = dyn_cast<CallExpr>(S)) {
+        if (CE->isUnevaluatedBuiltinCall(*ASTCtx))
+          for (const Expr *Arg : CE->arguments())
+            AddUnevaluatedSubtree(Arg);
+      } else if (const auto *NE = dyn_cast<CXXNoexceptExpr>(S)) {
+        AddUnevaluatedSubtree(NE->getOperand());
+      } else if (const auto *GSE = dyn_cast<GenericSelectionExpr>(S)) {
+        if (GSE->isExprPredicate())
+          AddUnevaluatedSubtree(GSE->getControllingExpr());
+        if (!GSE->isResultDependent()) {
+          const Expr *ResultE = GSE->getResultExpr();
+          for (const Expr *AssocE : GSE->getAssocExprs())
+            if (AssocE != ResultE)
+              AddUnevaluatedSubtree(AssocE);
+        }
+      } else if (const auto *TE = dyn_cast<UnaryExprOrTypeTraitExpr>(S)) {
+        if (!isEvaluatedUnaryExprOrTypeTrait(TE))
+          for (const Stmt *Child : TE->children())
+            AddUnevaluatedSubtree(Child);
+      } else if (const auto *TE = dyn_cast<CXXTypeidExpr>(S)) {
+        if (!TE->isTypeOperand() && !TE->isPotentiallyEvaluated())
+          AddUnevaluatedSubtree(TE->getExprOperand());
+      }
+    }
+  }
+  // The CFG contains a synthetic DeclStmt for each variable of a DeclStmt
+  // that declares more than one variable. Treat these like their source.
+  for (const auto &[Synthetic, Source] : CFGraph->synthetic_stmts())
+    if (UnevaluatedStmts.contains(Source))
+      UnevaluatedStmts.insert(Synthetic);
+}
+
 /// Check a function's CFG for thread-safety violations.
 ///
 /// We traverse the blocks in the CFG, compute the set of mutexes that are held
@@ -3879,10 +3996,13 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   // Mark entry block as reachable
   Initial.Reachable = true;
 
+  // Identify subtrees of unevaluated expressions (which CFGBuilder may still
+  // emit as CFG elements when AlwaysAdd is set).
+  collectUnevaluatedStmts(CFGraph);
   markEscapedLocalVars(AC);
 
   // Compute SSA names for local variables
-  LocalVarMap.traverseCFG(CFGraph, SortedGraph, BlockInfo);
+  LocalVarMap.traverseCFG(CFGraph, SortedGraph, BlockInfo, UnevaluatedStmts);
 
   // Fill in source locations for all CFGBlocks.
   findBlockLocations(CFGraph, SortedGraph, BlockInfo);
@@ -4085,7 +4205,10 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       switch (BI.getKind()) {
         case CFGElement::Statement: {
           CFGStmt CS = BI.castAs<CFGStmt>();
-          LocksetBuilder.Visit(CS.getStmt());
+          const Stmt *S = CS.getStmt();
+          if (UnevaluatedStmts.contains(S))
+            break;
+          LocksetBuilder.Visit(S);
           break;
         }
         // Ignore BaseDtor and MemberDtor for now.
@@ -4096,7 +4219,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
           // the CFG does not contain the ctors. Ignore them as their
           // capabilities cannot be analysed because of this missing
           // information.
-          if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
+          if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()) ||
+              UnevaluatedVarDecls.contains(AD.getVarDecl()))
             break;
           if (!DD || !DD->hasAttrs())
             break;
@@ -4110,6 +4234,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
         case CFGElement::CleanupFunction: {
           const CFGCleanupFunction &CF = BI.castAs<CFGCleanupFunction>();
+          if (UnevaluatedVarDecls.contains(CF.getVarDecl()))
+            break;
           LocksetBuilder.handleCall(
               /*Exp=*/nullptr, CF.getFunctionDecl(),
               SxBuilder.translateVariable(CF.getVarDecl(), nullptr),

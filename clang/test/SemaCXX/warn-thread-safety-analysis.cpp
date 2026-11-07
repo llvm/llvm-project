@@ -8298,6 +8298,51 @@ void testCompoundLValueAliasInvalidations(Foo *a, Foo *b, Foo *c, bool cond) {
   c->data = 1;
   p3->mu.Unlock();
 }
+
+// Assignments in unevaluated operands do not modify capability aliases.
+void testUnevaluatedAliasAssignments(Foo *a, Foo *b) {
+  Foo *p1 = a;
+  (void)noexcept(p1 = b); // expected-warning{{expression with side effects has no effect in an unevaluated context}}
+  p1->mu.Lock();
+  a->data = 1;
+  a->mu.Unlock();
+
+  Foo *p2 = a;
+  (void)__builtin_constant_p(p2 = b);
+  p2->mu.Lock();
+  a->data = 1;
+  a->mu.Unlock();
+}
+
+template <typename T>
+void testDependentGeneric(Foo *a, T x) {
+  (void)_Generic(a->data + x, int: 0, default: 1);
+}
+
+#if __cplusplus >= 202002L
+void testRequiresUnevaluated(Foo *a, Foo *b) {
+  Foo *p = a;
+  bool ok = requires {
+    p = b;
+    a->data = 1;
+    a->mu.Lock();
+    a->mu.Unlock();
+  };
+  (void)ok;
+  p->mu.Lock();
+  a->data = 1;
+  a->mu.Unlock();
+}
+#endif
+
+// The destructors of variables declared in a statement expression in an
+// unevaluated operand do not run.
+void testUnevaluatedScopedLock(Foo *a) {
+  (void)noexcept(({ MutexLock l(&a->mu); 0; }));
+  a->mu.Lock();
+  a->data = 1;
+  a->mu.Unlock();
+}
 }  // namespace CapabilityAliases
 
 namespace WideStringLiteral {
