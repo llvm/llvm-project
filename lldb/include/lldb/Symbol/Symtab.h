@@ -225,19 +225,21 @@ public:
   /// index is saved to the cache, debug sessions can be slower. These accessors
   /// can be accessed by the statistics and emitted to help track these costs.
   /// \{
-  bool GetWasLoadedFromCache() const {
-    return m_loaded_from_cache;
-  }
-  void SetWasLoadedFromCache() {
-    m_loaded_from_cache = true;
-  }
-  bool GetWasSavedToCache() const {
-    return m_saved_to_cache;
-  }
-  void SetWasSavedToCache() {
-    m_saved_to_cache = true;
-  }
+  void SetWasLoadedFromCache() { SetState(lldb::eSymtabStateLoadedFromCache); }
+  void SetWasSavedToCache() { SetState(lldb::eSymtabStateSavedToCache); }
   /// \}
+
+  /// Flags describing state of this symbol table.
+  lldb::SymtabState GetState() const {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    return m_state;
+  }
+  void SetWasParsedFromObjectFile() {
+    SetState(lldb::eSymtabStateParsedFromObjectFile);
+  }
+  void SetSymbolFileAddedSymbols() {
+    SetState(lldb::eSymtabStateSymbolFileAddedSymbols);
+  }
 
 protected:
   typedef std::vector<Symbol> collection;
@@ -282,10 +284,13 @@ protected:
       m_name_to_symbol_indices;
   bool m_file_addr_to_index_computed = false;
   bool m_name_indexes_computed = false;
-  bool m_loaded_from_cache = false;
-  bool m_saved_to_cache = false;
+  lldb::SymtabState m_state = lldb::eSymtabStateNone;
 
 private:
+  void SetState(lldb::SymtabState state) {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    m_state |= state;
+  }
   UniqueCStringMap<uint32_t> &
   GetNameToSymbolIndexMap(lldb::FunctionNameType type) {
     auto map = m_name_to_symbol_indices.find(type);

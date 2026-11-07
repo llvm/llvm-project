@@ -3511,6 +3511,23 @@ protected:
         strm.Printf("%p", static_cast<void *>(module));
         break;
 
+      case 'F': {
+        std::string flags;
+        const lldb::SymtabState state = module->GetSymtabState();
+        if (state & eSymtabStateLoadedFromCache)
+          flags += 'C';
+        if (state & eSymtabStateParsedFromObjectFile)
+          flags += 'F';
+        if (state & eSymtabStateSavedToCache)
+          flags += 'W';
+        if (state & eSymtabStateSymbolFileAddedSymbols)
+          flags += 'S';
+        if (flags.empty())
+          flags = "-";
+        strm.Format("{0}",
+                    llvm::fmt_align(flags, llvm::AlignStyle::Left, width));
+      } break;
+
       case 'u':
         DumpModuleUUID(strm, module);
         break;
