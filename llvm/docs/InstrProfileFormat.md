@@ -12,7 +12,8 @@ of interpretation across use cases, the documentation is based on IRPGO.
 
 :::{note}
 Frontend-generated profiles are used together with coverage mapping for
-[source-based code coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html). The [coverage mapping format](CoverageMappingFormat.md) is different from
+[source-based code coverage](inv:clang:std:doc#SourceBasedCodeCoverage). The
+[coverage mapping format](CoverageMappingFormat.md) is different from
 profile format.
 :::
 
