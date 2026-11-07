@@ -122,21 +122,29 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     LDBG() << "Inferring ranges for "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
 
+    // Revisit the successor whose values depend on these operand ranges. For
+    // example, a gpu.launch dimension yielded by scf.execute_region can still
+    // be uninitialized when the launch body is first visited. When its range
+    // becomes available, revisit the body entry to infer the thread ID ranges.
+    // Revisiting the launch itself would skip its block arguments: a
+    // synchronous launch has no results. For operation results, revisit the
+    // point after the operation instead.
+    ProgramPoint *point =
+        successor.isRegion()
+            ? getProgramPointBefore(&successor.getSuccessor()->front())
+            : getProgramPointAfter(op);
     auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
-      return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
+      return getLatticeElementFor(point, value)->getValue();
     });
 
     auto joinCallback = [&](Value v, const IntegerValueRange &attrs) {
-      auto arg = dyn_cast<BlockArgument>(v);
-      if (!arg)
-        return;
-      if (!llvm::is_contained(successor.getSuccessor()->getArguments(), arg))
+      auto it = llvm::find(nonSuccessorInputs, v);
+      if (it == nonSuccessorInputs.end())
         return;
 
       LDBG() << "Inferred range " << attrs;
-      auto it = llvm::find(successor.getSuccessor()->getArguments(), arg);
       unsigned nonSuccessorInputIdx =
-          std::distance(successor.getSuccessor()->getArguments().begin(), it);
+          std::distance(nonSuccessorInputs.begin(), it);
       IntegerValueRangeLattice *lattice =
           nonSuccessorInputLattices[nonSuccessorInputIdx];
       propagateIfChanged(lattice, lattice->join(attrs));
