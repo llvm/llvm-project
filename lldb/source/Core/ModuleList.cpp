@@ -1377,6 +1377,12 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
   if (script_language == eScriptLanguageNone)
     return true;
 
+  // Discovering scripts can create the module's symbol vendor. Honor the
+  // effective policy before doing that work, including per-module overrides.
+  if (Platform::GetScriptLoadStyleForModule(module.GetFileSpec(), target) ==
+      eLoadScriptFromSymFileFalse)
+    return true;
+
   ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
   if (!script_interpreter) {
     error = Status::FromErrorString("invalid ScriptInterpreter");
@@ -1397,7 +1403,7 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
   if (!feedback_stream.Empty())
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
-  const bool trusted = platform_sp->IsSymbolFileTrusted(module);
+  std::optional<bool> trusted;
 
   for (const auto &[scripting_fspec, load_style] : file_specs) {
     if (load_style == eLoadScriptFromSymFileFalse)
@@ -1412,10 +1418,11 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
     case eLoadScriptFromSymFileTrue:
       break;
     case eLoadScriptFromSymFileTrusted:
-      if (trusted)
-        break;
-      LLVM_FALLTHROUGH;
     case eLoadScriptFromSymFileWarn:
+      if (!trusted.has_value())
+        trusted = platform_sp->IsSymbolFileTrusted(module);
+      if (load_style == eLoadScriptFromSymFileTrusted && *trusted)
+        break;
       debugger.ReportWarning(
           llvm::formatv(
               // clang-format off
@@ -1429,7 +1436,7 @@ To run all discovered debug scripts in this session:
 )",
               // clang-format on
               module.GetFileSpec().GetFileNameStrippingExtension(),
-              trusted ? "a trusted" : "an untrusted",
+              *trusted ? "a trusted" : "an untrusted",
               scripting_fspec.GetPath()),
           debugger.GetID());
 
