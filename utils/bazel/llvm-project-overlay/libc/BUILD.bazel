@@ -8740,6 +8740,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_modff80",
+    hdrs = ["src/__support/math/modff80.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_modff16",
     hdrs = ["src/__support/math/modff16.h"],
     deps = [
@@ -15958,6 +15970,15 @@ libc_math_function(
     name = "modff128",
     additional_deps = [
         ":__support_math_modff128",
+    ],
+)
+
+libc_math_function(
+    name = "modff80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_modff80",
     ],
 )
 

@@ -2727,6 +2727,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  modff80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    modff80_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modff80
+    libc.src.__support.FPUtil.float80
+)
+
+add_fp_unittest(
   modff128_test
   SUITE
     libc-math-smoke-tests

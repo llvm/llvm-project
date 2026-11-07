@@ -630,6 +630,7 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.ldexpf80
     libc.src.math.scalblnf80
     libc.src.math.scalbnf80
+    libc.src.math.modff80
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128

@@ -392,6 +392,7 @@
 #include "math/modff.h"
 #include "math/modff128.h"
 #include "math/modff16.h"
+#include "math/modff80.h"
 #include "math/modfl.h"
 #include "math/nan.h"
 #include "math/nanbf16.h"

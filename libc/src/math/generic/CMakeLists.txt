@@ -2092,6 +2092,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  modff80
+  SRCS
+    modff80.cpp
+  HDRS
+    ../modff80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.modff80
+)
+
+add_entrypoint_object(
   modff128
   SRCS
     modff128.cpp

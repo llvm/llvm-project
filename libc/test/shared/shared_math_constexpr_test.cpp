@@ -474,6 +474,10 @@ static_assert(Float80(0.0) ==
               LIBC_NAMESPACE::shared::scalbnf80(Float80(0.0), 0));
 static_assert(Float80(0.0) ==
               LIBC_NAMESPACE::shared::scalblnf80(Float80(0.0), 0L));
+static_assert(Float80(0.0) == [] {
+  Float80 iptr(0.0);
+  return LIBC_NAMESPACE::shared::modff80(Float80(0.0), &iptr);
+}());
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fdimf128(Float128(1.0), Float128(0.0)));
 static_assert(Float128(0.0) ==
