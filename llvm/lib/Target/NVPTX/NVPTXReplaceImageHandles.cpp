@@ -142,7 +142,9 @@ bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
     return Res;
   }
   default:
-    llvm_unreachable("Unknown instruction operating on handle");
+    // The handle is computed at runtime (e.g. returned by a call or merged by
+    // a phi), so there is no symbol to replace it with. Leave it in a register.
+    return false;
   }
 }
 
