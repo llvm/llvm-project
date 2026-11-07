@@ -13,6 +13,7 @@
 
 #include "Disassembler.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/SourceMgrDiagnosticVerifier.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -45,6 +47,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 
@@ -222,6 +225,12 @@ static cl::opt<bool> NoExecStack("no-exec-stack",
 static cl::opt<bool> ValidateCFI("validate-cfi",
                                  cl::desc("Validate the CFI directives"),
                                  cl::cat(MCCategory));
+
+static cl::list<std::string>
+    Verify("verify", cl::CommaSeparated, cl::ValueOptional,
+           cl::desc("Check diagnostics against '<prefix>-<kind>' comments in "
+                    "the input (default prefix: 'expected')"),
+           cl::value_desc("prefixes"), cl::cat(MCCategory));
 
 enum ActionType {
   AC_AsLex,
@@ -425,6 +434,32 @@ int main(int argc, char **argv) {
   setDwarfDebugProducer();
 
   const char *ProgName = argv[0];
+
+  SmallVector<StringRef> VerifyPrefixes;
+  for (StringRef Prefix : Verify) {
+    if (Prefix.empty())
+      continue;
+    if (!isAlpha(Prefix[0]) || !all_of(Prefix, [](char C) {
+          return isAlnum(C) || C == '-' || C == '_';
+        })) {
+      WithColor::error(errs(), ProgName)
+          << "invalid prefix '" << Prefix
+          << "' for --verify: prefixes must start with a letter and contain "
+             "only alphanumeric characters, hyphens and underscores\n";
+      return 1;
+    }
+    VerifyPrefixes.push_back(Prefix);
+  }
+  if (Verify.getNumOccurrences() && VerifyPrefixes.empty())
+    VerifyPrefixes.push_back("expected");
+  // --as-lex prints lexer errors as tokens rather than reporting diagnostics,
+  // so there would be nothing to verify.
+  if (!VerifyPrefixes.empty() && Action == AC_AsLex) {
+    WithColor::error(errs(), ProgName)
+        << "--verify is not supported with --as-lex\n";
+    return 1;
+  }
+
   const Target *TheTarget = GetTarget(ProgName);
   if (!TheTarget)
     return 1;
@@ -500,6 +535,42 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());
+
+  std::optional<SourceMgrDiagnosticVerifier> Verifier;
+  if (!VerifyPrefixes.empty()) {
+    Verifier.emplace(VerifyPrefixes);
+    // Scan the input up front so that its directives are checked even if it
+    // produces no diagnostics.
+    (void)Verifier->computeExpectedDiags(errs(), SrcMgr,
+                                         SrcMgr.getMemoryBuffer(1));
+    // Most diagnostics are reported through SrcMgr, but some (e.g. from the
+    // CFI checker) are only reported through Ctx, so route both to Ctx.
+    Ctx.setDiagnosticHandler([&](const SMDiagnostic &Diag, bool,
+                                 const SourceMgr &,
+                                 std::vector<const MDNode *> &) {
+      SMLoc Loc = Diag.getLoc();
+      const MemoryBuffer *Buf = nullptr;
+      if (unsigned ID = Loc.isValid() ? SrcMgr.FindBufferContainingLoc(Loc) : 0)
+        Buf = SrcMgr.getMemoryBuffer(ID);
+      // SMDiagnostic columns are 0-based, but printed (and written in
+      // directives) as 1-based.
+      if (Verifier->process(errs(), SrcMgr, Diag.getKind(), Loc.isValid(), Buf,
+                            Diag.getLineNo(), Diag.getColumnNo() + 1,
+                            Diag.getMessage()) !=
+          SourceMgrDiagnosticVerifier::MatchResult::Unexpected)
+        return;
+      SourceMgrDiagnosticVerifier::printMessage(
+          errs(), SrcMgr, Buf ? Loc : SMLoc(),
+          "unexpected " +
+              SourceMgrDiagnosticVerifier::getDiagKindStr(Diag.getKind()) +
+              ": " + Diag.getMessage());
+    });
+    SrcMgr.setDiagHandler(
+        [](const SMDiagnostic &Diag, void *Ctx) {
+          static_cast<MCContext *>(Ctx)->diagnose(Diag);
+        },
+        &Ctx);
+  }
 
   Ctx.setGenDwarfForAssembly(GenDwarfForAssembly);
   // Default to 4 for dwarf version.
@@ -679,12 +750,14 @@ int main(int argc, char **argv) {
     Res = Disassembler::disassemble(*TheTarget, *STI, *Str, *Buffer, SrcMgr,
                                     Ctx, HexBytes, NumBenchmarkRuns);
 
+  bool Verified = !Verifier || Verifier->verify(errs(), SrcMgr);
+
   // Keep output if no errors.
-  if (Res == 0) {
+  if (Res == 0 && Verified) {
     Out->keep();
     if (DwoOut)
       DwoOut->keep();
   }
 
-  return Res;
+  return Verifier ? !Verified : Res;
 }

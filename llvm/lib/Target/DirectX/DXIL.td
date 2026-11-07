@@ -324,7 +324,11 @@ defvar WaveBitOpKind_And = 0;
 defvar WaveBitOpKind_Or = 1;
 defvar WaveBitOpKind_Xor = 2;
 
+defvar WaveMultiPrefixOpKind_Sum = 0;
 defvar WaveMultiPrefixOpKind_And = 1;
+defvar WaveMultiPrefixOpKind_Or = 2;
+defvar WaveMultiPrefixOpKind_Xor = 3;
+defvar WaveMultiPrefixOpKind_Product = 4;
 
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
@@ -1570,13 +1574,57 @@ def WaveMultiPrefixOp : DXILOp<166, waveMultiPrefixOp> {
                    IntrinArgIndex<3>, IntrinArgIndex<4>,
                    IntrinArgI8<WaveMultiPrefixOpKind_And>,
                    IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_bit_or,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Or>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_bit_xor,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Xor>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_product,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_uproduct,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_sum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_multi_prefix_usum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgIndex<1>, IntrinArgIndex<2>,
+                   IntrinArgIndex<3>, IntrinArgIndex<4>,
+                   IntrinArgI8<WaveMultiPrefixOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
                  ]>
   ];
   let arguments = [
     OverloadTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, Int8Ty, Int8Ty
   ];
   let result = OverloadTy;
-  let overloads = [Overloads<DXIL1_5, [Int16Ty, Int32Ty, Int64Ty]>];
+  let overloads = [
+    Overloads<DXIL1_5, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
+  ];
   let stages = [Stages<DXIL1_5, [all_stages]>];
   let attributes = [Attributes<DXIL1_5, []>];
 }

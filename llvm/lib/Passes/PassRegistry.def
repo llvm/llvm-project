@@ -145,6 +145,7 @@ MODULE_PASS("print-callgraph", CallGraphPrinterPass(errs()))
 MODULE_PASS("print-callgraph-sccs", CallGraphSCCsPrinterPass(errs()))
 MODULE_PASS("print-lcg", LazyCallGraphPrinterPass(errs()))
 MODULE_PASS("print-lcg-dot", LazyCallGraphDOTPrinterPass(errs()))
+MODULE_PASS("print-mir", PrintMIRPass(errs()))
 MODULE_PASS("print-must-be-executed-contexts",
             MustBeExecutedContextPrinterPass(errs()))
 MODULE_PASS("print-profile-summary", ProfileSummaryPrinterPass(errs()))
