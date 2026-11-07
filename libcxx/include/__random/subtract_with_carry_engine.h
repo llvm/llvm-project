@@ -92,7 +92,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = 0u) {
-    linear_congruential_engine<uint_least32_t, 40014u, 0u, 2147483563u> __e(__sd == 0u ? default_seed : static_cast<uint_least32_t>(__sd % 2147483563u));
+    linear_congruential_engine<uint_least32_t, 40014u, 0u, 2147483563u> __e(
+        __sd == 0u ? default_seed : static_cast<uint_least32_t>(__sd % 2147483563u));
     for (size_t __i = 0; __i < __r; ++__i) {
       if _LIBCPP_CONSTEXPR ((1 + (__w - 1) / 32) == 1) {
         __x_[__i] = static_cast<result_type>(__e() & _Max);
