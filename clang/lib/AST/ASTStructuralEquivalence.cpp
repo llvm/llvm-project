@@ -211,6 +211,14 @@ class StmtComparer {
     return true; // Semantics only depend on children.
   }
 
+  bool IsStmtEquivalent(const CompoundLiteralExpr *E1,
+                        const CompoundLiteralExpr *E2) {
+    return E1->isFileScope() == E2->isFileScope() &&
+           E1->getStorageClass() == E2->getStorageClass() &&
+           E1->getTSCSpec() == E2->getTSCSpec() &&
+           E1->isConstexpr() == E2->isConstexpr();
+  }
+
   bool IsStmtEquivalent(const CompoundStmt *E1, const CompoundStmt *E2) {
     // Number of children is actually checked by the generic children comparison
     // code, but a CompoundStmt is one of the few statements where the number of

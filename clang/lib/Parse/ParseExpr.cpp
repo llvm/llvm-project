@@ -2631,6 +2631,47 @@ bool Parser::tryParseOpenMPArrayShapingCastPart() {
   return !ErrorFound;
 }
 
+bool Parser::isCompoundLiteralStorageClassSpecifier() const {
+  if (!getLangOpts().C23)
+    return false;
+  switch (Tok.getKind()) {
+  case tok::kw_constexpr:
+  case tok::kw_register:
+  case tok::kw_static:
+  case tok::kw___thread:
+  case tok::kw_thread_local:
+  case tok::kw__Thread_local:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool Parser::isTypeIdInParensWithStorageClassSpecifiers() {
+  return isCompoundLiteralStorageClassSpecifier() &&
+         isTypeIdInParensAfterStorageClassSpecifiers();
+}
+
+bool Parser::isTypeIdInParensAfterStorageClassSpecifiers() {
+  assert(isCompoundLiteralStorageClassSpecifier() &&
+         "expected a compound literal storage-class specifier");
+  RevertingTentativeParsingAction TPA(*this);
+  do
+    ConsumeToken();
+  while (isCompoundLiteralStorageClassSpecifier());
+  return isTypeIdInParens();
+}
+
+void Parser::ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS) {
+  while (isCompoundLiteralStorageClassSpecifier()) {
+    if (DS.getBeginLoc().isInvalid())
+      DS.SetRangeStart(Tok.getLocation());
+    ParseStorageClassSpecifier(DS,
+                               StorageClassSpecifierContext::CompoundLiteral,
+                               Actions.getPrintingPolicy());
+  }
+}
+
 ExprResult
 Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
                              ParenExprKind ParenBehavior,
@@ -2650,7 +2691,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
   PreferredType.enterParenExpr(Tok.getLocation(), OpenLoc);
 
   ExprResult Result(true);
-  bool isAmbiguousTypeId;
+  bool isAmbiguousTypeId = false;
   CastTy = nullptr;
 
   if (Tok.is(tok::code_completion)) {
@@ -2752,7 +2793,8 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
                                                BridgeKeywordLoc, Ty.get(),
                                                RParenLoc, SubExpr.get());
   } else if (ExprType >= ParenParseOption::CompoundLiteral &&
-             isTypeIdInParens(isAmbiguousTypeId)) {
+             (isTypeIdInParensWithStorageClassSpecifiers() ||
+              isTypeIdInParens(isAmbiguousTypeId))) {
 
     // Otherwise, this is a compound literal expression or cast expression.
 
@@ -2768,7 +2810,13 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
       return res;
     }
 
-    // Parse the type declarator.
+    std::optional<DeclSpec> CompoundDS;
+    if (isCompoundLiteralStorageClassSpecifier()) {
+      DeclSpec &DS = CompoundDS.emplace(AttrFactory);
+      ParseCompoundLiteralStorageClassSpecifiers(DS);
+      DS.Finish(Actions, Actions.getASTContext().getPrintingPolicy());
+    }
+
     DeclSpec DS(AttrFactory);
     ParseSpecifierQualifierList(DS);
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
@@ -2796,12 +2844,32 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
       RParenLoc = T.getCloseLocation();
       if (ParenBehavior == ParenExprKind::Unknown && Tok.is(tok::l_brace)) {
         ExprType = ParenParseOption::CompoundLiteral;
+
+        if (CompoundDS)
+          Diag(CompoundDS->getBeginLoc(),
+               diag::warn_c23_compat_compound_literal_storage_class);
+
         TypeResult Ty;
         {
           InMessageExpressionRAIIObject InMessage(*this, false);
           Ty = Actions.ActOnTypeName(DeclaratorInfo);
         }
-        return ParseCompoundLiteralExpression(Ty.get(), OpenLoc, RParenLoc);
+        return ParseCompoundLiteralExpression(Ty.get(), OpenLoc, RParenLoc,
+                                              CompoundDS);
+      }
+
+      if (CompoundDS && !DeclaratorInfo.isInvalidType()) {
+        if (CompoundDS->getParsedSpecifiers() &
+            DeclSpec::PQ_StorageClassSpecifier) {
+          SourceLocation Loc = CompoundDS->getStorageClassSpecLoc();
+          if (Loc.isInvalid())
+            Loc = CompoundDS->getThreadStorageClassSpecLoc();
+          Diag(Loc, diag::err_typename_invalid_storageclass);
+        }
+        if (CompoundDS->hasConstexprSpecifier())
+          Diag(CompoundDS->getConstexprSpecLoc(),
+               diag::err_typename_invalid_constexpr)
+              << static_cast<int>(CompoundDS->getConstexprSpecifier());
       }
 
       if (ParenBehavior == ParenExprKind::Unknown && Tok.is(tok::l_paren)) {
@@ -2976,16 +3044,17 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
 }
 
 ExprResult
-Parser::ParseCompoundLiteralExpression(ParsedType Ty,
-                                       SourceLocation LParenLoc,
-                                       SourceLocation RParenLoc) {
+Parser::ParseCompoundLiteralExpression(ParsedType Ty, SourceLocation LParenLoc,
+                                       SourceLocation RParenLoc,
+                                       const std::optional<DeclSpec> &DS) {
   assert(Tok.is(tok::l_brace) && "Not a compound literal!");
   if (!getLangOpts().C99)   // Compound literals don't exist in C90.
     Diag(LParenLoc, diag::ext_c99_compound_literal);
   PreferredType.enterTypeCast(Tok.getLocation(), Ty.get());
   ExprResult Result = ParseInitializer();
   if (!Result.isInvalid() && Ty)
-    return Actions.ActOnCompoundLiteral(LParenLoc, Ty, RParenLoc, Result.get());
+    return Actions.ActOnCompoundLiteral(LParenLoc, Ty, RParenLoc, Result.get(),
+                                        DS);
   return Result;
 }
 

@@ -1898,6 +1898,12 @@ private:
   /// DeclaratorContext enumerator values.
   DeclSpecContext
   getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context);
+
+  enum class StorageClassSpecifierContext { Declaration, CompoundLiteral };
+  void ParseStorageClassSpecifier(DeclSpec &DS,
+                                  StorageClassSpecifierContext Context,
+                                  const PrintingPolicy &Policy);
+
   void
   ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
                              AccessSpecifier AS = AS_none,
@@ -4319,9 +4325,9 @@ private:
   ///         '(' type-name ')' '{' initializer-list '}'
   ///         '(' type-name ')' '{' initializer-list ',' '}'
   /// \endverbatim
-  ExprResult ParseCompoundLiteralExpression(ParsedType Ty,
-                                            SourceLocation LParenLoc,
-                                            SourceLocation RParenLoc);
+  ExprResult ParseCompoundLiteralExpression(
+      ParsedType Ty, SourceLocation LParenLoc, SourceLocation RParenLoc,
+      const std::optional<DeclSpec> &DS = std::nullopt);
 
   /// ParseGenericSelectionExpression - Parse a C11 generic-selection
   /// [C11 6.5.1.1].
@@ -5130,6 +5136,11 @@ private:
     bool isAmbiguous;
     return isTypeIdInParens(isAmbiguous);
   }
+
+  bool isCompoundLiteralStorageClassSpecifier() const;
+  bool isTypeIdInParensWithStorageClassSpecifiers();
+  bool isTypeIdInParensAfterStorageClassSpecifiers();
+  void ParseCompoundLiteralStorageClassSpecifiers(DeclSpec &DS);
 
   /// Finish parsing a C++ unqualified-id that is a template-id of
   /// some form.
