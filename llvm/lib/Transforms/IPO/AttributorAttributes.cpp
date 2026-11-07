@@ -3505,22 +3505,28 @@ struct CachedReachabilityAA : public BaseTy {
     if (IsTemporaryRQI)
       QueryCache.erase(&RQI);
 
-    // Insert a plain RQI (w/o exclusion set) if that makes sense. Two options:
-    // 1) If it is reachable, it doesn't matter if we have an exclusion set for
-    // this query. 2) We did not use the exclusion set, potentially because
-    // there is none.
+    // A positive result also holds without exclusions. A negative result can
+    // be shared with an unrestricted query if no exclusion was used.
+    bool CacheWithExclusions = UsedExclusionSet;
     if (Result == RQITy::Reachable::Yes || !UsedExclusionSet) {
       RQITy PlainRQI(RQI.From, RQI.To);
-      if (!QueryCache.count(&PlainRQI)) {
+      auto It = QueryCache.find(&PlainRQI);
+      if (It == QueryCache.end()) {
         RQITy *RQIPtr = new (A.Allocator) RQITy(RQI.From, RQI.To);
         RQIPtr->Result = Result;
         QueryVector.push_back(RQIPtr);
         QueryCache.insert(RQIPtr);
+      } else if (Result == RQITy::Reachable::No &&
+                 (*It)->Result == RQITy::Reachable::Yes) {
+        // The existing unrestricted positive result cannot represent this
+        // negative result. Retain the query so we can revisit it on updates.
+        CacheWithExclusions = true;
       }
     }
 
     // Check if we need to insert a new permanent RQI with the exclusion set.
-    if (IsTemporaryRQI && Result != RQITy::Reachable::Yes && UsedExclusionSet) {
+    if (IsTemporaryRQI && Result == RQITy::Reachable::No &&
+        CacheWithExclusions) {
       assert((!RQI.ExclusionSet || !RQI.ExclusionSet->empty()) &&
              "Did not expect empty set!");
       RQITy *RQIPtr = new (A.Allocator)
