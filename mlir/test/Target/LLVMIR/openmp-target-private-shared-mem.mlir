@@ -34,8 +34,8 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
 
     // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}target_map_single_shared_mem_private{{.*}}({{.*}})
     // CHECK: call i32 @__kmpc_target_init
-    // CHECK: %[[ALLOC_ARGS0:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
     // CHECK: %[[ALLOC1:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+    // CHECK: %[[ALLOC_ARGS0:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
     // CHECK: %[[GEP0:.*]] = getelementptr { ptr }, ptr %[[ALLOC_ARGS0]], i32 0, i32 0
     // CHECK: store ptr %[[ALLOC1]], ptr %[[GEP0]], align 8
     // CHECK: %[[GEP1:.*]] = getelementptr inbounds [1 x ptr], ptr %[[PAR_ARGS0:.*]], i64 0, i64 0
@@ -54,8 +54,8 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
 
     // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}target_map_single_shared_mem_private{{.*}}({{.*}})
     // CHECK: call i32 @__kmpc_target_init
-    // CHECK: %[[ALLOC_ARGS1:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
     // CHECK: %[[ALLOC2:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+    // CHECK: %[[ALLOC_ARGS1:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
     // CHECK: %[[GEP2:.*]] = getelementptr { ptr }, ptr %[[ALLOC_ARGS1]], i32 0, i32 0
     // CHECK: store ptr %[[ALLOC2]], ptr %[[GEP2]], align 8
     // CHECK: %[[GEP3:.*]] = getelementptr inbounds [1 x ptr], ptr %[[PAR_ARGS1:.*]], i64 0, i64 0
