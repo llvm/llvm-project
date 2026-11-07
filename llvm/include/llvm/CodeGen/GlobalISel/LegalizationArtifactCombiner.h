@@ -353,9 +353,10 @@ public:
     // trunc(trunc) -> trunc
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
-      // Always combine trunc(trunc) since the eventual resulting trunc must be
-      // legal anyway as it must be legal for all outputs of the consumer type
-      // set.
+      // Do not undo scalar narrowing.
+      if (LI.getAction({TargetOpcode::G_TRUNC, {DstTy, MRI.getType(TruncSrc)}})
+              .Action == LegalizeActions::NarrowScalar)
+        return false;
       LLVM_DEBUG(dbgs() << ".. Combine G_TRUNC(G_TRUNC): " << MI);
 
       Builder.buildTrunc(DstReg, TruncSrc);
