@@ -271,8 +271,8 @@ define i64 @remainder_triangle_i64_multiple_rem_edges(i64 %a, i64 %b, i64 %c, pt
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A]], [[B]]
 ; CHECK-NEXT:    switch i64 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i64 0, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i64 2, label [[SW_BB]]
+; CHECK-NEXT:      i64 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i64 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    store i64 [[REM]], ptr [[RP:%.*]], align 8
@@ -302,8 +302,8 @@ define i64 @remainder_triangle_i64_multiple_div_edges(i64 %a, i64 %b, i64 %c, pt
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A]], [[B]]
 ; CHECK-NEXT:    switch i64 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i64 0, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i64 2, label [[SW_BB]]
+; CHECK-NEXT:      i64 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i64 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    store i64 [[REM]], ptr [[RP:%.*]], align 8
@@ -459,8 +459,8 @@ define i64 @remainder_not_triangle_i32(i64 %a, i64 %b, i64 %c, ptr %rp) {
 ; CHECK-LABEL: @remainder_not_triangle_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i64 [[C:%.*]], label [[RETURN:%.*]] [
-; CHECK-NEXT:    i64 0, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i64 1, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i64 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i64 1, label [[SW_BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
@@ -560,4 +560,91 @@ rembb:
 divbb:
   %div = sdiv i32 7, %t0
   ret i32 %div
+}
+
+; Recompose rem from equality comparison.
+; X == (X sdiv Y) * Y --> (X srem Y) == 0
+define i32 @recompose_srem_eq(i32 %x, i32 %y) {
+; CHECK-LABEL: @recompose_srem_eq(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[Y]]
+; CHECK-NEXT:    [[IS_MULTIPLE:%.*]] = icmp eq i32 [[X]], [[MUL]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[IS_MULTIPLE]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[DIV]], [[ZEXT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %div = sdiv i32 %x, %y
+  %mul = mul i32 %div, %y
+  %is_multiple = icmp eq i32 %x, %mul
+  %zext = zext i1 %is_multiple to i32
+  %res = add i32 %div, %zext
+  ret i32 %res
+}
+
+; Recompose rem from inequality comparison. mul and icmp are commuted.
+; Y * (X sdiv Y) != X --> (X srem Y) != 0
+define i32 @recompose_urem_ne_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @recompose_urem_ne_commuted(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[Y]], [[DIV]]
+; CHECK-NEXT:    [[IS_NOT_MULTIPLE:%.*]] = icmp ne i32 [[MUL]], [[X]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[IS_NOT_MULTIPLE]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[DIV]], [[ZEXT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %div = udiv i32 %x, %y
+  %mul = mul i32 %y, %div
+  %is_not_multiple = icmp ne i32 %mul, %x
+  %zext = zext i1 %is_not_multiple to i32
+  %res = add i32 %div, %zext
+  ret i32 %res
+}
+
+; Negative test. icmp has wrong predicate.
+define i32 @recompose_srem_wrong_predicate(i32 %x, i32 %y) {
+; CHECK-LABEL: @recompose_srem_wrong_predicate(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], [[MUL]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[DIV]], [[ZEXT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %div = sdiv i32 %x, %y
+  %mul = mul i32 %div, %y
+  %cmp = icmp ugt i32 %x, %mul
+  %zext = zext i1 %cmp to i32
+  %res = add i32 %div, %zext
+  ret i32 %res
+}
+
+; Recompose rem from equality comparison and hoist it.
+; X == (X sdiv Y) * Y --> (X srem Y) == 0
+define i1 @recompose_hoist_srem_eq(i32 %x, i32 %y) {
+; CHECK-LABEL: @recompose_hoist_srem_eq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DIV]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[Y]]
+; CHECK-NEXT:    [[IS_MULTIPLE:%.*]] = icmp eq i32 [[X]], [[MUL]]
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ [[IS_MULTIPLE]], [[IF_THEN]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %div = sdiv i32 %x, %y
+  %cmp = icmp eq i32 %div, 42
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %mul = mul i32 %div, %y
+  %is_multiple = icmp eq i32 %x, %mul
+  br label %if.end
+
+if.end:
+  %res = phi i1 [ %is_multiple, %if.then ], [ false, %entry ]
+  ret i1 %res
 }
