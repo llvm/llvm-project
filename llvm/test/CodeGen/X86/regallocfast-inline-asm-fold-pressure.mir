@@ -464,7 +464,7 @@ body:             |
 
   bb.1:
     %16:gr32 = MOV32r0 implicit-def dead $eflags
-    %17:gr64 = SUBREG_TO_REG killed %16, %subreg.sub_32bit
+    %17:gr64 = SUBREG_TO_REG %16, %subreg.sub_32bit
     $rax = COPY %17
     RET 0, $rax
 
