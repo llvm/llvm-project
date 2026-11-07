@@ -494,6 +494,43 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
   return Changed;
 }
 
+namespace {
+
+/// Walks all SCCs of the call graph bottom-up with a single scc_iterator.
+/// The walk starts at the external calling node; whenever it reaches its end,
+/// it resumes from the next function in module order that it has not reached
+/// yet (an internal function unreachable from the external calling node).
+/// Already visited nodes are never yielded again, so every SCC is visited
+/// exactly once.
+class AllSCCIterator {
+  CallGraph &CG;
+  scc_iterator<CallGraph *> CGSCCs;
+  Module::iterator OrphanScanPos;
+
+public:
+  AllSCCIterator(CallGraph &CG)
+      : CG(CG), CGSCCs(scc_begin(&CG)), OrphanScanPos(CG.getModule().begin()) {}
+
+  bool isAtEnd() const { return CGSCCs.isAtEnd(); }
+
+  const std::vector<CallGraphNode *> &operator*() const { return *CGSCCs; }
+
+  AllSCCIterator &operator++() {
+    ++CGSCCs;
+    while (CGSCCs.isAtEnd() && OrphanScanPos != CG.getModule().end()) {
+      if (!OrphanScanPos->isDeclaration() &&
+          !CGSCCs.isVisited(CG[&*OrphanScanPos]))
+        CGSCCs.resumeFrom(CG[&*OrphanScanPos]);
+      ++OrphanScanPos;
+    }
+    return *this;
+  }
+
+  scc_iterator<CallGraph *> &getCGSCCIterator() { return CGSCCs; }
+};
+
+} // anonymous namespace
+
 /// Execute all of the passes scheduled for execution.  Keep track of
 /// whether any of the passes modifies the module, and if so, return true.
 bool CGPassManager::runOnModule(Module &M) {
@@ -503,28 +540,32 @@ bool CGPassManager::runOnModule(Module &M) {
   bool Changed = doInitialization(CG);
 
   // Walk the callgraph in bottom-up SCC order.
-  scc_iterator<CallGraph*> CGI = scc_begin(&CG);
-
+  AllSCCIterator SCCI(CG);
   CallGraphSCC CurSCC(CG);
-  while (!CGI.isAtEnd()) {
+
+  // At the top level, we run all the passes in this pass manager on the
+  // functions in this SCC.  However, we support iterative compilation in the
+  // case where a function pass devirtualizes a call to a function.  For
+  // example, it is very common for a function pass (often GVN or instcombine)
+  // to eliminate the addressing that feeds into a call.  With that improved
+  // information, we would like the call to be an inline candidate, infer
+  // mod-ref information etc.
+  //
+  // We walk the callgraph with AllSCCIterator, which also visits orphaned
+  // functions (internal functions unreachable from the external calling node),
+  // each exactly once. If those orphaned functions do not get code generated
+  // for them, we get a miscompilation and a crash later on.
+  //
+  // Because of this, we allow iteration up to a specified iteration count.
+  // This only happens in the case of a devirtualized call, so we only burn
+  // compile time in the case that we're making progress.  We also have a hard
+  // iteration count limit in case there is crazy code.
+  while (!SCCI.isAtEnd()) {
     // Copy the current SCC and increment past it so that the pass can hack
     // on the SCC if it wants to without invalidating our iterator.
-    const std::vector<CallGraphNode *> &NodeVec = *CGI;
+    const std::vector<CallGraphNode *> &NodeVec = *SCCI;
     CurSCC.initialize(NodeVec);
-    ++CGI;
-
-    // At the top level, we run all the passes in this pass manager on the
-    // functions in this SCC.  However, we support iterative compilation in the
-    // case where a function pass devirtualizes a call to a function.  For
-    // example, it is very common for a function pass (often GVN or instcombine)
-    // to eliminate the addressing that feeds into a call.  With that improved
-    // information, we would like the call to be an inline candidate, infer
-    // mod-ref information etc.
-    //
-    // Because of this, we allow iteration up to a specified iteration count.
-    // This only happens in the case of a devirtualized call, so we only burn
-    // compile time in the case that we're making progress.  We also have a hard
-    // iteration count limit in case there is crazy code.
+    ++SCCI;
     unsigned Iteration = 0;
     bool DevirtualizedCall = false;
     do {
@@ -542,6 +583,7 @@ bool CGPassManager::runOnModule(Module &M) {
 
     MaxSCCIterations.updateMax(Iteration);
   }
+
   Changed |= doFinalization(CG);
   return Changed;
 }

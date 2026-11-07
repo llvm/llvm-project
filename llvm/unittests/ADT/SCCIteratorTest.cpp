@@ -8,8 +8,10 @@
 
 #include "llvm/ADT/SCCIterator.h"
 #include "TestGraph.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 #include <limits.h>
+#include <vector>
 
 using namespace llvm;
 
@@ -115,6 +117,99 @@ TEST(SCCIteratorTest, AllSmallGraphs) {
     // reachable from the initial node.
     EXPECT_EQ(NodesInSomeSCC, G.NodesReachableFrom(0));
   }
+}
+
+template <unsigned N>
+static std::vector<unsigned>
+sccIndices(const std::vector<typename Graph<N>::NodeType *> &SCC) {
+  std::vector<unsigned> Indices;
+  for (typename Graph<N>::NodeType *Node : SCC)
+    Indices.push_back(Node->first);
+  llvm::sort(Indices);
+  return Indices;
+}
+
+TEST(SCCIteratorTest, IsVisited) {
+  using GT = Graph<4>;
+  GT G;
+  G.AddEdge(0, 1);
+  G.AddEdge(2, 3);
+
+  scc_iterator<GT> I = scc_begin(G);
+  // Node 1 is finished before node 0, and node 0 is on the DFS stack while
+  // its SCC is being computed: both count as visited.
+  ASSERT_FALSE(I.isAtEnd());
+  EXPECT_EQ(sccIndices<4>(*I), std::vector<unsigned>({1}));
+  EXPECT_TRUE(I.isVisited(G.AccessNode(0)));
+  EXPECT_TRUE(I.isVisited(G.AccessNode(1)));
+  ++I;
+  ASSERT_FALSE(I.isAtEnd());
+  EXPECT_EQ(sccIndices<4>(*I), std::vector<unsigned>({0}));
+  ++I;
+  EXPECT_TRUE(I.isAtEnd());
+
+  EXPECT_TRUE(I.isVisited(G.AccessNode(0)));
+  EXPECT_TRUE(I.isVisited(G.AccessNode(1)));
+  EXPECT_FALSE(I.isVisited(G.AccessNode(2)));
+  EXPECT_FALSE(I.isVisited(G.AccessNode(3)));
+}
+
+TEST(SCCIteratorTest, ResumeFrom) {
+  // Component reached from the entry node 0: 0 -> 1.
+  // Component unreachable from 0: 4 -> 2 <-> 3, plus an edge 3 -> 1 back into
+  // the finished component.
+  using GT = Graph<5>;
+  GT G;
+  G.AddEdge(0, 1);
+  G.AddEdge(4, 2);
+  G.AddEdge(2, 3);
+  G.AddEdge(3, 2);
+  G.AddEdge(3, 1);
+
+  scc_iterator<GT> I = scc_begin(G);
+  std::vector<std::vector<unsigned>> SCCs;
+  for (; !I.isAtEnd(); ++I)
+    SCCs.push_back(sccIndices<5>(*I));
+  EXPECT_EQ(SCCs, std::vector<std::vector<unsigned>>({{1}, {0}}));
+  EXPECT_FALSE(I.isVisited(G.AccessNode(2)));
+  EXPECT_FALSE(I.isVisited(G.AccessNode(3)));
+  EXPECT_FALSE(I.isVisited(G.AccessNode(4)));
+
+  // Resuming from 4 yields the remaining SCCs exactly once, callees before
+  // callers, and does not yield the finished SCC {1} again.
+  I.resumeFrom(G.AccessNode(4));
+  for (; !I.isAtEnd(); ++I)
+    SCCs.push_back(sccIndices<5>(*I));
+  EXPECT_EQ(SCCs, std::vector<std::vector<unsigned>>({{1}, {0}, {2, 3}, {4}}));
+  EXPECT_TRUE(I.isAtEnd());
+  for (unsigned Idx = 0; Idx != 5; ++Idx)
+    EXPECT_TRUE(I.isVisited(G.AccessNode(Idx)));
+}
+
+TEST(SCCIteratorTest, ResumeFromRootWithVisitedCallees) {
+  // 2 -> 3, with 3 reached first by an earlier resumption: resuming from 2
+  // yields only {2}.
+  using GT = Graph<4>;
+  GT G;
+  G.AddEdge(0, 1);
+  G.AddEdge(2, 3);
+
+  scc_iterator<GT> I = scc_begin(G);
+  std::vector<std::vector<unsigned>> SCCs;
+  for (; !I.isAtEnd(); ++I)
+    SCCs.push_back(sccIndices<4>(*I));
+
+  I.resumeFrom(G.AccessNode(3));
+  for (; !I.isAtEnd(); ++I)
+    SCCs.push_back(sccIndices<4>(*I));
+  EXPECT_FALSE(I.isVisited(G.AccessNode(2)));
+
+  I.resumeFrom(G.AccessNode(2));
+  for (; !I.isAtEnd(); ++I)
+    SCCs.push_back(sccIndices<4>(*I));
+
+  EXPECT_EQ(SCCs, std::vector<std::vector<unsigned>>({{1}, {0}, {3}, {2}}));
+  EXPECT_TRUE(I.isAtEnd());
 }
 
 }

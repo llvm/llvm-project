@@ -19,6 +19,7 @@ set(ANALYSIS_TEST_SOURCES
   BasicAliasAnalysisTest.cpp
   BlockFrequencyInfoTest.cpp
   BranchProbabilityInfoTest.cpp
+  CallGraphSCCPassTest.cpp
   CallGraphTest.cpp
   CaptureTrackingTest.cpp
   CFGTest.cpp
