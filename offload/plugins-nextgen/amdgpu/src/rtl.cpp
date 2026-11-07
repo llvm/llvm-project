@@ -346,6 +346,7 @@ static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
                         SrcAgent, Size, NumDepSignals, DepSignals,
                         CompletionSignal);
 
+  ODBG(OLDT_Tool) << "Running Async Copy on SDMA Engine: " << *SdmaEngine;
   hsa_status_t S = hsa_amd_memory_async_copy_on_engine(
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
       CompletionSignal, *SdmaEngine, /*force_copy_on_sdma=*/true);
@@ -2915,6 +2916,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return HardwareParallelism;
   }
 
+  /// See allowsDirectWrite() for the condition a transfer must meet in
+  /// addition.
+  uint64_t getMaxDirectWriteSize() const override {
+    return HostWritesDeviceMemory ? MaxDirectWriteSize : 0;
+  }
+
   /// We want to set up the RPC server for host services to the GPU if it is
   /// available.
   bool shouldSetupRPCServer() const override { return true; }
@@ -3099,9 +3106,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Whether a transfer of \p Size bytes should be done via direct H2D
   /// transfer.
   bool allowsDirectWrite(const void *Ptr, int64_t Size) const {
-    // A first heuristic, tune as new insights arise.
-    static constexpr int64_t MaxDirectWriteSize = 2 * 4096;
-    return HostWritesDeviceMemory && Size > 0 && Size <= MaxDirectWriteSize &&
+    return Size > 0 && uint64_t(Size) <= getMaxDirectWriteSize() &&
            hsa_utils::isHostWritable(Agent, Ptr, Size);
   }
 
@@ -3380,37 +3385,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   Expected<void *> getNativeHandle() override {
     return reinterpret_cast<void *>(Agent.handle);
-  }
-
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override {
-    // TODO: update once targetsync is supported
-    if (InteropType == kmp_interop_type_target)
-      return interop_spec_t{tgt_fr_hsa, {false, 0}, 0};
-    return interop_spec_t{tgt_fr_none, {false, 0}, 0};
-  }
-
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override {
-    auto *Ret = new omp_interop_val_t(
-        DeviceId, static_cast<kmp_interop_type_t>(InteropType));
-    Ret->fr_id = tgt_fr_hsa;
-    Ret->vendor_id = omp_vendor_amd;
-
-    // TODO: implement targetsync support
-
-    Ret->device_info.Platform = nullptr;
-    Ret->device_info.Device = reinterpret_cast<void *>(Agent.handle);
-    Ret->device_info.Context = nullptr;
-
-    return Ret;
-  }
-
-  Error releaseInterop(omp_interop_val_t *Interop) override {
-    if (Interop)
-      delete Interop;
-    return Plugin::success();
   }
 
   Error enqueueHostCallImpl(AMDGPUStreamTy::HostFnType Callback, void *UserData,
@@ -4010,6 +3984,10 @@ private:
   /// Whether the host can map this device's memory (large BAR) and write small
   /// transfers into it directly.
   bool HostWritesDeviceMemory = false;
+
+  /// The maximum size of a direct write. A first heuristic, tune as new
+  /// insights arise.
+  static constexpr uint64_t MaxDirectWriteSize = 2 * 4096;
 
   /// Whether the host reaches this device's memory over XGMI rather than PCIe.
   bool HostLinkIsXGMI = false;

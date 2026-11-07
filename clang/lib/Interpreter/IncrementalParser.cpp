@@ -200,11 +200,6 @@ class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
   Sema &S;
   TranslationUnitDecl *DiscardedTU;
 
-  template <typename DeclT> void withdraw(Redeclarable<DeclT> *DBase) {
-    if (NamedDecl *Prev = findSurvivor(static_cast<DeclT *>(DBase)))
-      unlinkRedeclChain(S.getASTContext(), DBase, Prev);
-  }
-
   /// The newest declaration of whatever D redeclares that still lives outside
   /// the DiscardedTU, or null if DiscardedTU introduced the name.
   NamedDecl *findSurvivor(NamedDecl *D) const {
@@ -257,22 +252,12 @@ class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
   /// and restore the redeclaration chain to previous state
   void VisitDeclContext(DeclContext *DC) {
     llvm::SmallVector<Decl *, 8> Members(DC->decls());
-    llvm::SmallVector<NamedDecl *, 8> Survivors;
     for (Decl *M : Members) {
-      if (auto *ND = dyn_cast<NamedDecl>(M))
-        if (NamedDecl *Prev = findSurvivor(ND))
-          Survivors.push_back(Prev);
-      Visit(M);          // restore redecls
-      DC->removeDecl(M); // remove from lookup
-      if (auto *ND = dyn_cast<NamedDecl>(M))
-        removeFromLookups(ND);
+      Visit(M); // restore redecls and lookup
+      // VisitNamedDecl() removes the named decls.
+      if (!isa<NamedDecl>(M))
+        DC->removeDecl(M);
     }
-
-    // Restore lookup for the surviving predecessor
-    // of any removed decl that had a surviving predecessor
-    DeclContext *Primary = DC->getPrimaryContext();
-    for (NamedDecl *Prev : Survivors)
-      Primary->makeDeclVisibleInContext(Prev);
   }
 
 public:
@@ -284,21 +269,50 @@ public:
       VisitDeclContext(DC);
   }
 
-  void VisitFunctionDecl(FunctionDecl *D) { withdraw(D); }
-  void VisitNamespaceAliasDecl(NamespaceAliasDecl *D) { withdraw(D); }
-  void VisitTypedefNameDecl(TypedefNameDecl *D) { withdraw(D); }
-  void VisitUsingShadowDecl(UsingShadowDecl *D) { withdraw(D); }
-  void VisitVarDecl(VarDecl *D) { withdraw(D); }
+  /// Remove ND from its context and the lookup tables, and make the
+  /// declaration it redeclares visible again. Called by VisitRedeclarable()
+  /// before it restores the redeclaration chain, which hides that declaration.
+  void VisitNamedDecl(NamedDecl *ND) {
+    // The templated decl of a template is not a member of its context: the
+    // template is.
+    DeclContext *DC = ND->getLexicalDeclContext();
+    if (!DC->containsDecl(ND))
+      return;
+    NamedDecl *Prev = findSurvivor(ND);
+    DC->removeDecl(ND);
+    removeFromLookups(ND);
+    // Like removeDecl(), use the semantic context: the out-of-line definition
+    // of a member is in DC, but it was removed from the lookup table of its
+    // class or namespace.
+    if (Prev)
+      Prev->getDeclContext()->makeDeclVisibleInContext(Prev);
+  }
+
+  /// Remove D like VisitNamedDecl() and restore its redeclaration chain to the
+  /// previous state. Returns the surviving previous declaration, if any.
+  /// DeclVisitor doesn't dispatch to it: Redeclarable is not a Decl class.
+  template <typename DeclT>
+  NamedDecl *VisitRedeclarable(Redeclarable<DeclT> *DBase) {
+    auto *D = static_cast<DeclT *>(DBase);
+    VisitNamedDecl(D);
+    NamedDecl *Prev = findSurvivor(D);
+    if (Prev)
+      unlinkRedeclChain(S.getASTContext(), DBase, Prev);
+    return Prev;
+  }
+
+  void VisitFunctionDecl(FunctionDecl *D) { VisitRedeclarable(D); }
+  void VisitNamespaceAliasDecl(NamespaceAliasDecl *D) { VisitRedeclarable(D); }
+  void VisitTypedefNameDecl(TypedefNameDecl *D) { VisitRedeclarable(D); }
+  void VisitUsingShadowDecl(UsingShadowDecl *D) { VisitRedeclarable(D); }
+  void VisitVarDecl(VarDecl *D) { VisitRedeclarable(D); }
 
   void VisitTagDecl(TagDecl *D) {
-    NamedDecl *Prev = findSurvivor(D);
-    if (!Prev)
-      return;
-    unlinkRedeclChain(S.getASTContext(), D, Prev);
+    NamedDecl *Prev = VisitRedeclarable(D);
 
     // A class definition is kept in DefinitionData outside the
     // redeclaration chain
-    auto *RD = dyn_cast<CXXRecordDecl>(Prev);
+    auto *RD = dyn_cast_if_present<CXXRecordDecl>(Prev);
     if (!RD)
       return;
     if (CXXRecordDecl *Def = RD->getDefinition();
@@ -308,7 +322,7 @@ public:
   }
 
   void VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
-    withdraw(D);
+    VisitRedeclarable(D);
     Visit(D->getTemplatedDecl());
   }
 
@@ -318,7 +332,7 @@ public:
     // PTU2: namespace outer { namespace ns { class Foo { ... }; error; } }
     // Foo's redeclaration needs to be restored
     VisitDeclContext(D);
-    withdraw(D);
+    VisitRedeclarable(D);
   }
 
   void VisitTranslationUnitDecl(TranslationUnitDecl *D) { VisitDeclContext(D); }

@@ -1814,14 +1814,14 @@ def X86pcmpgtm : PatFrag<(ops node:$src1, node:$src2),
                          (setcc node:$src1, node:$src2, SETGT)>;
 
 def X86pcmpm_imm : SDNodeXForm<setcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   uint8_t SSECC = X86::getVPCMPImmForCond(CC);
   return getI8Imm(SSECC, SDLoc(N));
 }]>;
 
 // Swapped operand version of the above.
 def X86pcmpm_imm_commute : SDNodeXForm<setcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   uint8_t SSECC = X86::getVPCMPImmForCond(CC);
   SSECC = X86::getSwappedVPCMPImm(SSECC);
   return getI8Imm(SSECC, SDLoc(N));
@@ -1829,25 +1829,25 @@ def X86pcmpm_imm_commute : SDNodeXForm<setcc, [{
 
 def X86pcmpm : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                        (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   return !ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
 def X86pcmpm_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                           (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   return N->hasOneUse() && !ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
 def X86pcmpum : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                         (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   return ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
 def X86pcmpum_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                            (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   return N->hasOneUse() && ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
