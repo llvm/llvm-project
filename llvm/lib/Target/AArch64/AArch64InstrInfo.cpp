@@ -10548,6 +10548,25 @@ outliningCandidatesSigningKeyConsensus(const outliner::Candidate &a,
   return MFIa->shouldSignWithBKey() == MFIb->shouldSignWithBKey();
 }
 
+static bool outliningCandidatesPAuthLRConsensus(const outliner::Candidate &a,
+                                                const outliner::Candidate &b) {
+  const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
+  const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
+
+  const AArch64Subtarget &SubtargetA =
+      a.getMF()->getSubtarget<AArch64Subtarget>();
+  const AArch64Subtarget &SubtargetB =
+      b.getMF()->getSubtarget<AArch64Subtarget>();
+
+  // Return true only if branch-protection-pauth-lr attributes match
+  // and +pauth-lr feature is enabled for both.
+  if (MFIa->branchProtectionPAuthLR() != MFIb->branchProtectionPAuthLR())
+    return false;
+
+  return !MFIa->branchProtectionPAuthLR() ||
+         SubtargetA.hasPAuthLR() == SubtargetB.hasPAuthLR();
+}
+
 static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
                                                 const outliner::Candidate &b) {
   const AArch64Subtarget &SubtargetA =
@@ -10658,8 +10677,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // We only allow outlining for functions having exactly matching return
   // address signing attributes, i.e., all share the same value for the
-  // attribute "sign-return-address" and all share the same type of key they
-  // are signed with.
+  // attribute "sign-return-address", all share the same type of key they
+  // are signed with & all share the same pauth-lr attributes.
   // Additionally we require all functions to simultaneously either support
   // v8.3a features or not. Otherwise an outlined function could get signed
   // using dedicated v8.3 instructions and a call from a function that doesn't
@@ -10668,10 +10687,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
           RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
           [](const outliner::Candidate &a, const outliner::Candidate &b) {
             // Return true if a and b are non-equal w.r.t. return address
-            // signing or support of v8.3a features
+            // signing, support of v8.3a features or support of pauth-lr
             if (outliningCandidatesSigningScopeConsensus(a, b) &&
                 outliningCandidatesSigningKeyConsensus(a, b) &&
-                outliningCandidatesV8_3OpsConsensus(a, b)) {
+                outliningCandidatesV8_3OpsConsensus(a, b) &&
+                outliningCandidatesPAuthLRConsensus(a, b)) {
               return false;
             }
             return true;
@@ -11089,6 +11109,8 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(CFn.getFnAttribute("ptrauth-returns"));
   if (CFn.hasFnAttribute("ptrauth-auth-traps"))
     F.addFnAttr(CFn.getFnAttribute("ptrauth-auth-traps"));
+  if (CFn.hasFnAttribute("branch-protection-pauth-lr"))
+    F.addFnAttr(CFn.getFnAttribute("branch-protection-pauth-lr"));
   // Since all candidates belong to the same module, just copy the
   // function-level attributes of an arbitrary function.
   if (CFn.hasFnAttribute("sign-return-address"))
@@ -11272,6 +11294,8 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   case AArch64::PACIBSP:
   case AArch64::PACIASPPC:
   case AArch64::PACIBSPPC:
+  case AArch64::PACNBIASPPC:
+  case AArch64::PACNBIBSPPC:
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
   case AArch64::AUTIASPPCi:
