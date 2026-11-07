@@ -902,11 +902,8 @@ bool PeepholeOptimizer::optimizeExtInstr(
       if (PHIBBs.count(UseMBB))
         continue;
 
-      // About to add uses of DstReg, clear DstReg's kill flags.
-      if (!Changed) {
-        MRI->clearKillFlags(DstReg);
+      if (!Changed)
         MRI->constrainRegClass(DstReg, DstRC);
-      }
 
       // SubReg defs are illegal in machine SSA phase,
       // we should not generate SubReg defs.
@@ -1166,10 +1163,6 @@ static MachineInstr &insertPHI(MachineRegisterInfo &MRI,
   for (const RegSubRegPair &RegPair : SrcRegs) {
     MIB.addReg(RegPair.Reg, {}, RegPair.SubReg);
     MIB.addMBB(OrigPHI.getOperand(MBBOpIdx).getMBB());
-    // Since we're extended the lifetime of RegPair.Reg, clear the
-    // kill flags to account for that and make RegPair.Reg reaches
-    // the new PHI.
-    MRI.clearKillFlags(RegPair.Reg);
     MBBOpIdx += 2;
   }
 
@@ -1274,11 +1267,8 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
     }
 
     // Rewrite source.
-    if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg)) {
-      // We may have extended the live-range of NewSrc, account for that.
-      MRI->clearKillFlags(NewSrc.Reg);
+    if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg))
       Changed = true;
-    }
   }
 
   // TODO: We could have a clean-up method to tidy the instruction.
@@ -1371,11 +1361,6 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   LLVM_DEBUG(dbgs() << "   Replacing: " << CopyLike);
   LLVM_DEBUG(dbgs() << "        With: " << *NewCopy);
   MRI->replaceRegWith(Def.Reg, NewVReg);
-  MRI->clearKillFlags(NewVReg);
-
-  // We extended the lifetime of NewSrc.Reg, clear the kill flags to
-  // account for that.
-  MRI->clearKillFlags(NewSrc.Reg);
 
   return *NewCopy;
 }
@@ -1532,7 +1517,6 @@ bool PeepholeOptimizer::foldImmediate(
         if (DstReg.isVirtual() &&
             MRI->getRegClass(DstReg) == MRI->getRegClass(Reg)) {
           MRI->replaceRegWith(DstReg, Reg);
-          MRI->clearKillFlags(Reg);
           MI.eraseFromParent();
           Deleted = true;
         }
@@ -1588,9 +1572,6 @@ bool PeepholeOptimizer::foldRedundantCopy(MachineInstr &MI) {
     return false;
 
   MRI->replaceRegWith(DstReg, PrevDstReg);
-
-  // Lifetime of the previous copy has been extended.
-  MRI->clearKillFlags(PrevDstReg);
   return true;
 }
 

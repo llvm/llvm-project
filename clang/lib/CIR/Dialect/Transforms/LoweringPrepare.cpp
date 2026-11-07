@@ -2671,6 +2671,9 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
       gv, mlir::SymbolTable::Visibility::Private);
   gv.setInitialValueAttr(constant);
   gv.setAlignment(alignment);
+  // Matches classic codegen's createUnnamedGlobalFrom: only the contents of
+  // the constant matter, not its address.
+  gv.setUnnamedAddr(true);
 
   // Keep the cached symbol table in sync with the new global so subsequent
   // lookups for other base names find it.
@@ -3503,9 +3506,11 @@ void LoweringPreparePass::runOnOperation() {
   mlirModule = getOperation();
 
   lowerModule = cir::createLowerModule(mlirModule);
-  if (!lowerModule) {
+  assert(lowerModule && "LowerModule shouldn't be null");
+  if (!lowerModule->hasTarget()) {
     mlirModule.emitError() << getArgument()
-                           << " requires a module with a triple";
+                           << " requires a module with a supported '"
+                           << CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }
 

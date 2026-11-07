@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
-// CIR-DAG: cir.global "private" constant cir_private @[[L5_ARR:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]>
-// LLVM-DAG: @[[L5_ARR:.*]] = private constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[L5_ARR:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]>
+// LLVM-DAG: @[[L5_ARR:.*]] = private unnamed_addr constant [4 x i32] [i32 1, i32 2, i32 3, i32 4]
 
 void l0() {
   for (;;) {
