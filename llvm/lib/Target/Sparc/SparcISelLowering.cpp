@@ -317,12 +317,11 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
   }
 
   unsigned RetAddrOffset = 8; // Call Inst + Delay Slot
-  // If the function returns a struct, copy the SRetReturnReg to I0
-  if (MF.getFunction().hasStructRetAttr()) {
-    SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
-    Register Reg = SFI->getSRetReturnReg();
-    if (!Reg)
-      llvm_unreachable("sret virtual register not created in the entry block");
+  // If the function returns a struct, copy the SRetReturnReg to I0. This
+  // covers both an explicit sret parameter and a return value that was
+  // demoted to sret because it does not fit in the return registers.
+  SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
+  if (Register Reg = SFI->getSRetReturnReg()) {
     auto PtrVT = getPointerTy(DAG.getDataLayout());
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, PtrVT);
     Chain = DAG.getCopyToReg(Chain, DL, SP::I0, Val, Glue);
@@ -332,7 +331,9 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
     // A zero-sized return value, e.g. an empty struct or union, is returned
     // without an unimp instruction after the call, so there is nothing for the
     // return to skip over.
-    Type *RetType = MF.getFunction().getParamStructRetType(0);
+    const Function &F = MF.getFunction();
+    Type *RetType =
+        F.hasStructRetAttr() ? F.getParamStructRetType(0) : F.getReturnType();
     if (!RetType->isEmptyTy())
       RetAddrOffset = 12; // CallInst + Delay Slot + Unimp
   }
@@ -591,7 +592,9 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
     }
   }
 
-  if (MF.getFunction().hasStructRetAttr()) {
+  // Ins[0] is an sret argument both for an explicit sret parameter and for a
+  // return value that was demoted to sret.
+  if (!Ins.empty() && Ins[0].Flags.isSRet()) {
     // Copy the SRet Argument to SRetReturnReg.
     SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
     Register Reg = SFI->getSRetReturnReg();
@@ -827,8 +830,13 @@ bool SparcTargetLowering::IsEligibleForTailCallOptimization(
     return false;
 
   // Do not tail call opt if either the callee or caller returns
-  // a struct and the other does not.
-  if (!Outs.empty() && Caller.hasStructRetAttr() != Outs[0].Flags.isSRet())
+  // a struct and the other does not. On 32-bit SPARC the caller's
+  // return value may have been demoted to sret, in which case it has
+  // an SRetReturnReg but no sret attribute.
+  const SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
+  bool CallerSRet = Caller.hasStructRetAttr() || SFI->getSRetReturnReg();
+  bool CalleeSRet = !Outs.empty() && Outs[0].Flags.isSRet();
+  if (CallerSRet != CalleeSRet)
     return false;
 
   // Byval parameters hand the function a pointer directly into the stack area
