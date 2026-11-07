@@ -265,10 +265,10 @@ define i32 @test_nouseful_bits(i8 %a, i32 %b) {
 ; CHECK-LABEL: test_nouseful_bits:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    lsl w8, w8, #8
-; CHECK-NEXT:    mov w9, w8
-; CHECK-NEXT:    bfxil w9, w0, #0, #8
-; CHECK-NEXT:    orr w0, w8, w9, lsl #16
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    orr w8, w8, w0, lsl #24
+; CHECK-NEXT:    bfi w8, w0, #8, #8
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
   %conv = zext i8 %a to i32     ;   0  0  0  A
   %shl = shl i32 %b, 8          ;   B2 B1 B0 0
