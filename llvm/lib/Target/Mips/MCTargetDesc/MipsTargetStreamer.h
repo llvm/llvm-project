@@ -333,7 +333,7 @@ public:
 
 // This part is for ELF object output
 class MipsTargetELFStreamer : public MipsTargetStreamer {
-  enum class ISAMode { Standard, MicroMips, Mips16 };
+  enum class ISAMode { Standard, MicroMips, Mips16, NanoMips };
   static ISAMode getISAMode(const MCSubtargetInfo &STI);
 
   const MipsMCOptions &CLOpts;
@@ -345,6 +345,7 @@ class MipsTargetELFStreamer : public MipsTargetStreamer {
 public:
   bool isMicroMipsEnabled() const { return Mode == ISAMode::MicroMips; }
   bool isMips16Enabled() const { return Mode == ISAMode::Mips16; }
+  bool isNanoMipsEnabled() const { return Mode == ISAMode::NanoMips; }
   MCELFStreamer &getStreamer();
   MipsTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 

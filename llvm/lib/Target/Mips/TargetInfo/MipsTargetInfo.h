@@ -17,6 +17,7 @@ Target &getTheMipsTarget();
 Target &getTheMipselTarget();
 Target &getTheMips64Target();
 Target &getTheMips64elTarget();
+Target &getTheNanoMipsTarget();
 
 } // namespace llvm
 

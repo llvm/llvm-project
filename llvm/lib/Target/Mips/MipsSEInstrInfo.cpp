@@ -83,7 +83,9 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (Mips::GPR32RegClass.contains(DestReg)) { // Copy to CPU Reg.
     if (Mips::GPR32RegClass.contains(SrcReg)) {
-      if (isMicroMips)
+      if (Subtarget.hasNanoMips())
+        Opc = Mips::MOVE_NM;
+      else if (isMicroMips)
         Opc = Mips::MOVE16_MM;
       else
         Opc = Mips::OR, ZeroReg = Mips::R0;
@@ -216,7 +218,7 @@ void MipsSEInstrInfo::storeRegToStack(MachineBasicBlock &MBB,
   unsigned Opc = 0;
 
   if (Mips::GPR32RegClass.hasSubClassEq(RC))
-    Opc = Mips::SW;
+    Opc = Subtarget.hasNanoMips() ? Mips::SW_NM : Mips::SW;
   else if (Mips::GPR64RegClass.hasSubClassEq(RC))
     Opc = Mips::SD;
   else if (Mips::ACC64RegClass.hasSubClassEq(RC))
@@ -296,7 +298,7 @@ void MipsSEInstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
                           DestReg == Mips::HI0 || DestReg == Mips::HI0_64);
 
   if (Mips::GPR32RegClass.hasSubClassEq(RC))
-    Opc = Mips::LW;
+    Opc = Subtarget.hasNanoMips() ? Mips::LW_NM : Mips::LW;
   else if (Mips::GPR64RegClass.hasSubClassEq(RC))
     Opc = Mips::LD;
   else if (Mips::ACC64RegClass.hasSubClassEq(RC))

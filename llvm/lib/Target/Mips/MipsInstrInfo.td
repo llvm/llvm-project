@@ -198,6 +198,10 @@ def HasMips32r6  :    Predicate<"Subtarget->hasMips32r6()">,
                       AssemblerPredicate<(all_of FeatureMips32r6)>;
 def NotMips32r6  :    Predicate<"!Subtarget->hasMips32r6()">,
                       AssemblerPredicate<(none_of FeatureMips32r6)>;
+def HasNanoMips  :    Predicate<"Subtarget->hasNanoMips()">,
+                      AssemblerPredicate<(all_of FeatureNanoMips)>;
+def NotNanoMips  :    Predicate<"!Subtarget->hasNanoMips()">,
+                      AssemblerPredicate<(none_of FeatureNanoMips)>;
 def IsGP64bit    :    Predicate<"Subtarget->isGP64bit()">,
                       AssemblerPredicate<(all_of FeatureGP64Bit)>;
 def IsGP32bit    :    Predicate<"!Subtarget->isGP64bit()">,
@@ -235,7 +239,8 @@ def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
 def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
 def HasStdEnc :       Predicate<"Subtarget->hasStandardEncoding()">,
-                      AssemblerPredicate<(none_of FeatureMips16)>;
+                      AssemblerPredicate<(none_of FeatureMips16,
+                                          FeatureNanoMips)>;
 def NotDSP :          Predicate<"!Subtarget->hasDSP()">;
 def InMicroMips    :  Predicate<"Subtarget->inMicroMipsMode()">,
                       AssemblerPredicate<(all_of FeatureMicroMips)>;
@@ -406,6 +411,9 @@ class ISA_MICROMIPS64R6 {
 class ISA_MICROMIPS32_NOT_MIPS32R6 {
   list<Predicate> InsnPredicates = [NotMips32r6];
   list<Predicate> EncodingPredicates = [InMicroMips];
+}
+class ISA_NANOMIPS {
+  list<Predicate> InsnPredicates = [HasNanoMips];
 }
 class ASE_EVA { list<Predicate> ASEPredicate = [HasEVA]; }
 
@@ -2377,9 +2385,9 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                              ISA_MIPS1_NOT_32R6_64R6;
 
 // Return instructions are matched as a RetRA instruction, then are expanded
-// into PseudoReturn/PseudoReturn64 after register allocation. Finally,
-// MipsAsmPrinter expands this into JR, JR64, JALR, or JALR64 depending on the
-// ISA.
+// into PseudoReturn/PseudoReturn64 after register allocation.
+// Finally, MipsAsmPrinter expands this into JR, JR64, JALR, JALR64 or JRC_NM
+// depending on the ISA.
 class PseudoReturnBase<RegisterOperand RO> : MipsPseudo<(outs), (ins RO:$rs),
                                                         []> {
   let isTerminator = 1;
@@ -2576,7 +2584,8 @@ def JR_HB : MMRel, JR_HB_DESC<GPR32Opnd>, JR_HB_ENC,
             ISA_MIPS32R2_NOT_32R6_64R6;
 def JALR_HB : MMRel, JALR_HB_DESC<GPR32Opnd>, JALR_HB_ENC, ISA_MIPS32;
 
-let AdditionalPredicates = [NotInMicroMips, UseIndirectJumpsHazard] in
+let AdditionalPredicates = [NotInMicroMips, NotNanoMips,
+                            UseIndirectJumpsHazard] in
   def JALRHBPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR_HB, R31>;
 
 
@@ -2753,7 +2762,7 @@ multiclass OneOrTwoOperandMacroImmediateAlias<string Memnomic,
                                         Imm:$imm), 0>;
 }
 
-let AdditionalPredicates = [NotInMicroMips] in {
+let AdditionalPredicates = [NotInMicroMips, NotNanoMips] in {
   def : MipsInstAlias<"move $dst, $src",
                       (OR GPR32Opnd:$dst, GPR32Opnd:$src, R0), 1>,
         GPR_32, ISA_MIPS1;
@@ -2946,7 +2955,7 @@ def : MipsInstAlias<"subu, $rd, $rs, $imm",
                            InvertedImOperand:$imm), 0>;
 def : MipsInstAlias<"subu $rs, $imm", (ADDiu GPR32Opnd:$rs, GPR32Opnd:$rs,
                                              InvertedImOperand:$imm), 0>;
-let AdditionalPredicates = [NotInMicroMips] in {
+let AdditionalPredicates = [NotInMicroMips, NotNanoMips] in {
   def : MipsInstAlias<"sll $rd, $rt, $rs",
                       (SLLV GPR32Opnd:$rd, GPR32Opnd:$rt, GPR32Opnd:$rs), 0>;
   def : MipsInstAlias<"sra $rd, $rt, $rs",
@@ -3499,3 +3508,7 @@ include "MicroMips32r6InstrInfo.td"
 // Micromips DSP
 include "MicroMipsDSPInstrFormats.td"
 include "MicroMipsDSPInstrInfo.td"
+
+// nanoMIPS
+include "NanoMipsInstrFormats.td"
+include "NanoMipsInstrInfo.td"

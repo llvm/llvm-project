@@ -1,0 +1,207 @@
+# RUN: llc %s -mtriple=nanomips-elf -start-after=mips-branch-expansion -show-mc-encoding -o - \
+# RUN:   | FileCheck %s
+
+# Encoding tests for 32-bit nanoMIPS control-transfer instructions (indirect
+# jumps/calls, direct branches/calls, conditional branches)
+#
+# Since the branch and call target operands will be fully supported in the
+# next upstreaming batch, they are set to 0 to allow confirming the mnemonics
+# and encoding of the remaining instruction parts.
+#
+# Encoding bytes are shown in on-disk order: each halfword is little-endian,
+# more significant halfword first.
+
+# --- indirect jump / call (register) ---
+---
+# CHECK-LABEL: balrsc:
+# CHECK: balrsc $ra, $5 # encoding: [0xe5,0x4b,0x00,0x80]
+name: balrsc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    $r31 = BALRSC_NM $r5
+...
+---
+# CHECK-LABEL: jalrc:
+# CHECK: jalrc $ra, $5 # encoding: [0xe5,0x4b,0x00,0x00]
+name: jalrc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    $r31 = JALRC_NM $r5
+...
+---
+# CHECK-LABEL: jalrchb:
+# CHECK: jalrc.hb $ra, $5 # encoding: [0xe5,0x4b,0x00,0x10]
+name: jalrchb
+tracksRegLiveness: false
+body: |
+  bb.0:
+    $r31 = JALRCHB_NM $r5
+...
+
+# --- direct branch / call (with placeholder operands for now) ---
+---
+# CHECK-LABEL: balc:
+# CHECK: balc 0 # encoding: [0x00,0x2a,0x00,0x00]
+name: balc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BALC_NM 0
+...
+---
+# CHECK-LABEL: bc:
+# CHECK: bc 0 # encoding: [0x00,0x28,0x00,0x00]
+name: bc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BC_NM 0
+...
+---
+# CHECK-LABEL: movebalc:
+# CHECK: move.balc $4, $5, 0 # encoding: [0xa0,0x08,0x00,0x00]
+name: movebalc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    $r4 = MOVEBALC_NM $r5, 0
+...
+
+# --- conditional branch (with placeholder operands for now) ---
+---
+# CHECK-LABEL: bbeqzc:
+# CHECK: bbeqzc $4, 3, 0 # encoding: [0x84,0xc8,0x00,0x18]
+name: bbeqzc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BBEQZC_NM $r4, 3, 0
+...
+---
+# CHECK-LABEL: bbnezc:
+# CHECK: bbnezc $4, 3, 0 # encoding: [0x94,0xc8,0x00,0x18]
+name: bbnezc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BBNEZC_NM $r4, 3, 0
+...
+---
+# CHECK-LABEL: beqc:
+# CHECK: beqc $4, $5, 0 # encoding: [0xa4,0x88,0x00,0x00]
+name: beqc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BEQC_NM $r4, $r5, 0
+...
+---
+# CHECK-LABEL: beqic:
+# CHECK: beqic $4, 5, 0 # encoding: [0x80,0xc8,0x00,0x28]
+name: beqic
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BEQIC_NM $r4, 5, 0
+...
+---
+# CHECK-LABEL: bgec:
+# CHECK: bgec $4, $5, 0 # encoding: [0xa4,0x88,0x00,0x80]
+name: bgec
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BGEC_NM $r4, $r5, 0
+...
+---
+# CHECK-LABEL: bgeic:
+# CHECK: bgeic $4, 5, 0 # encoding: [0x88,0xc8,0x00,0x28]
+name: bgeic
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BGEIC_NM $r4, 5, 0
+...
+---
+# CHECK-LABEL: bgeiuc:
+# CHECK: bgeiuc $4, 5, 0 # encoding: [0x8c,0xc8,0x00,0x28]
+name: bgeiuc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BGEIUC_NM $r4, 5, 0
+...
+---
+# CHECK-LABEL: bgeuc:
+# CHECK: bgeuc $4, $5, 0 # encoding: [0xa4,0x88,0x00,0xc0]
+name: bgeuc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BGEUC_NM $r4, $r5, 0
+...
+---
+# CHECK-LABEL: bltc:
+# CHECK: bltc $4, $5, 0 # encoding: [0xa4,0xa8,0x00,0x80]
+name: bltc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BLTC_NM $r4, $r5, 0
+...
+---
+# CHECK-LABEL: bltic:
+# CHECK: bltic $4, 5, 0 # encoding: [0x98,0xc8,0x00,0x28]
+name: bltic
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BLTIC_NM $r4, 5, 0
+...
+---
+# CHECK-LABEL: bltiuc:
+# CHECK: bltiuc $4, 5, 0 # encoding: [0x9c,0xc8,0x00,0x28]
+name: bltiuc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BLTIUC_NM $r4, 5, 0
+...
+---
+# CHECK-LABEL: bltuc:
+# CHECK: bltuc $4, $5, 0 # encoding: [0xa4,0xa8,0x00,0xc0]
+name: bltuc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BLTUC_NM $r4, $r5, 0
+...
+---
+# CHECK-LABEL: bnec:
+# CHECK: bnec $4, $5, 0 # encoding: [0xa4,0xa8,0x00,0x00]
+name: bnec
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BNEC_NM $r4, $r5, 0
+...
+---
+# CHECK-LABEL: bneic:
+# CHECK: bneic $4, 5, 0 # encoding: [0x90,0xc8,0x00,0x28]
+name: bneic
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BNEIC_NM $r4, 5, 0
+...
+---
+# CHECK-LABEL: brsc:
+# CHECK: brsc $4 # encoding: [0x04,0x48,0x00,0x80]
+name: brsc
+tracksRegLiveness: false
+body: |
+  bb.0:
+    BRSC_NM $r4, 0
+...
