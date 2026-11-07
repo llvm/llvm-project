@@ -2928,6 +2928,8 @@ public:
   /// Create an assume intrinsic call that represents a nonnull assumption on
   /// the provided pointer.
   LLVM_ABI CallInst *CreateNonnullAssumption(Value *PtrValue);
+
+  LLVM_ABI CallInst *CreateRangeAssumption(Value *Int, ConstantRange Range);
 };
 
 /// This provides a uniform API for creating instructions and inserting
