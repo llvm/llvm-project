@@ -1737,6 +1737,24 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, GRLenVT>;
 
 let Predicates = [Has32S] in {
+// The mask instructions test the whole condition register for zero, so an
+// integer equality comparison against zero need not produce a boolean first.
+// Prefer these patterns over the generic select patterns below.
+let AddedComplexity = 20 in {
+def : Pat<(select (GRLenVT (setne GPR:$cond, 0)), GPR:$t, 0),
+          (MASKEQZ GPR:$t, GPR:$cond)>;
+def : Pat<(select (GRLenVT (seteq GPR:$cond, 0)), GPR:$t, 0),
+          (MASKNEZ GPR:$t, GPR:$cond)>;
+def : Pat<(select (GRLenVT (setne GPR:$cond, 0)), 0, GPR:$f),
+          (MASKNEZ GPR:$f, GPR:$cond)>;
+def : Pat<(select (GRLenVT (seteq GPR:$cond, 0)), 0, GPR:$f),
+          (MASKEQZ GPR:$f, GPR:$cond)>;
+def : Pat<(select (GRLenVT (setne GPR:$cond, 0)), GPR:$t, GPR:$f),
+          (OR (MASKEQZ GPR:$t, GPR:$cond), (MASKNEZ GPR:$f, GPR:$cond))>;
+def : Pat<(select (GRLenVT (seteq GPR:$cond, 0)), GPR:$t, GPR:$f),
+          (OR (MASKNEZ GPR:$t, GPR:$cond), (MASKEQZ GPR:$f, GPR:$cond))>;
+} // AddedComplexity = 20
+
 def : Pat<(select GPR:$cond, GPR:$t, 0), (MASKEQZ GPR:$t, GPR:$cond)>;
 def : Pat<(select GPR:$cond, 0, GPR:$f), (MASKNEZ GPR:$f, GPR:$cond)>;
 def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
