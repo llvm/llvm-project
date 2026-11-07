@@ -1669,6 +1669,22 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
+/// Verifies that every op in `block` except the last one implements
+/// TransformOpInterface. Reports the error on `op`, with a note on the child.
+static LogicalResult verifyChildrenAreTransformOps(Operation *op,
+                                                   Block &block) {
+  for (Operation &child : block) {
+    if (&child == &block.back() || isa<transform::TransformOpInterface>(child))
+      continue;
+    InFlightDiagnostic diag =
+        op->emitOpError()
+        << "expected children ops to implement TransformOpInterface";
+    diag.attachNote(child.getLoc()) << "op without interface";
+    return diag;
+  }
+  return success();
+}
+
 void transform::ForeachOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // NB: this `zip` should be `zip_equal` - while this op's verifier catches
@@ -1756,17 +1772,7 @@ LogicalResult transform::ForeachOp::verify() {
                          "operands to have the same op/value/param type");
   }
 
-  for (Operation &child : getBody().front().without_terminator()) {
-    if (!isa<TransformOpInterface>(child)) {
-      InFlightDiagnostic diag =
-          emitOpError()
-          << "expected children ops to implement TransformOpInterface";
-      diag.attachNote(child.getLoc()) << "op without interface";
-      return diag;
-    }
-  }
-
-  return success();
+  return verifyChildrenAreTransformOps(getOperation(), getBody().front());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2920,17 +2926,11 @@ LogicalResult transform::SequenceOp::verify() {
     }
   }
 
+  if (failed(verifyChildrenAreTransformOps(getOperation(), *getBodyBlock())))
+    return failure();
+
   // Check properties of the nested operations they cannot check themselves.
   for (Operation &child : *getBodyBlock()) {
-    if (!isa<TransformOpInterface>(child) &&
-        &child != &getBodyBlock()->back()) {
-      InFlightDiagnostic diag =
-          emitOpError()
-          << "expected children ops to implement TransformOpInterface";
-      diag.attachNote(child.getLoc()) << "op without interface";
-      return diag;
-    }
-
     for (OpResult result : child.getResults()) {
       auto report = [&]() {
         return (child.emitError() << "result #" << result.getResultNumber());
