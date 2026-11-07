@@ -55,7 +55,11 @@ void DefinitionBlockSeparator::separateBlocks(
                                   tok::kw_union) ||
             (Style.isJavaScript() &&
              CurrentToken->is(ExtraKeywords.kw_function))) {
-          return true;
+          // The class/struct keyword in a scoped enum is not a record
+          // definition.
+          const auto *Previous = CurrentToken->getPreviousNonComment();
+          if (!ExcludeEnum || !Previous || Previous->isNot(tok::kw_enum))
+            return true;
         }
         if (!ExcludeEnum && CurrentToken->is(tok::kw_enum))
           return true;
