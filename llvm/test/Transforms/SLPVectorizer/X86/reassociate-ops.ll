@@ -503,8 +503,7 @@ define void @test_reassoc_fadd_identity(ptr %Aarray, ptr %Barray, ptr %Carray, p
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz <2 x double> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz <2 x double> [[TMP2]], splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz <2 x double> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz <2 x double> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -547,8 +546,7 @@ define void @test_reassoc_fmul_identity(ptr %Aarray, ptr %Barray, ptr %Carray, p
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz <2 x double> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul reassoc nsz <2 x double> [[TMP2]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul reassoc nsz <2 x double> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul reassoc nsz <2 x double> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -594,8 +592,7 @@ define void @test_reassoc_fsub_identity(ptr %Aarray, ptr %Barray, ptr %Carray, p
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc <2 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub reassoc <2 x double> [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub reassoc <2 x double> [[TMP4]], <double -0.000000e+00, double 0.000000e+00>
-; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[SARRAY]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[SARRAY]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
