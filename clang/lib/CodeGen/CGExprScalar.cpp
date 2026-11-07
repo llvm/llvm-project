@@ -581,8 +581,13 @@ public:
   Value *VisitOffsetOfExpr(OffsetOfExpr *E);
   Value *VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
   Value *VisitAddrLabelExpr(const AddrLabelExpr *E) {
+    // For some targets (such as AVR), code and data have different addrspaces.
     llvm::Value *V = CGF.GetAddrOfLabel(E->getLabel());
-    return Builder.CreateBitCast(V, ConvertType(E->getType()));
+    llvm::PointerType *DstTy =
+        cast<llvm::PointerType>(ConvertType(E->getType()));
+    if (V->getType()->getPointerAddressSpace() != DstTy->getAddressSpace())
+      return Builder.CreateAddrSpaceCast(V, DstTy);
+    return V;
   }
 
   Value *VisitSizeOfPackExpr(SizeOfPackExpr *E) {
