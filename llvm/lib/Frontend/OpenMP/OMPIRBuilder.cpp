@@ -11897,10 +11897,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         Builder.SetInsertPoint(&*ExitBB->getFirstNonPHIIt());
       }
 
-      if (V.Var)
-        OldValue = Builder.CreateBitCast(
-            Builder.CreateTrunc(OldIntPHI, ValueIntTy), X.ElemTy,
-            X.Var->getName() + ".atomic.old.fp");
+      OldValue =
+          Builder.CreateBitCast(Builder.CreateTrunc(OldIntPHI, ValueIntTy),
+                                X.ElemTy, X.Var->getName() + ".atomic.old.fp");
       SuccessOrFail = SuccessPHI;
     } else if (!IsInteger && HandleFPNegZero) {
       // IEEE 754 special cases for cmpxchg (which is bitwise):
@@ -12063,7 +12062,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
             Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
 
             Builder.SetInsertPoint(ContBB);
-            Builder.CreateAlignedStore(OldValue, V.Var, V.Alignment);
+            Builder.CreateAlignedStore(OldValue, V.Var, V.Alignment,
+                                       V.IsVolatile);
             Builder.CreateBr(ExitBB);
 
             if (UnreachableInst *ExitTI =
@@ -12075,7 +12075,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
             }
           } else {
             Value *CapturedValue =
-                Builder.CreateSelect(SuccessOrFail, E, OldValue);
+                Builder.CreateSelect(SuccessOrFail, D, OldValue);
             Builder.CreateAlignedStore(CapturedValue, V.Var, V.Alignment,
                                        V.IsVolatile);
           }
@@ -12089,9 +12089,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
         Value *SuccessFailureVal =
             Builder.CreateExtractValue(Result, /*Idxs=*/1);
-        Value *ResultCast =
-            R.IsSigned ? Builder.CreateSExt(SuccessFailureVal, R.ElemTy)
-                       : Builder.CreateZExt(SuccessFailureVal, R.ElemTy);
+        // r = x == e yields 1 or 0 whatever the signedness of r.
+        Value *ResultCast = Builder.CreateZExt(SuccessFailureVal, R.ElemTy);
         Builder.CreateAlignedStore(ResultCast, R.Var, R.Alignment,
                                    R.IsVolatile);
       }
@@ -12121,7 +12120,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
             Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
 
             Builder.SetInsertPoint(ContBB);
-            Builder.CreateAlignedStore(OldValue, V.Var, V.Alignment);
+            Builder.CreateAlignedStore(OldValue, V.Var, V.Alignment,
+                                       V.IsVolatile);
             Builder.CreateBr(ExitBB);
 
             if (UnreachableInst *ExitTI =
@@ -12133,7 +12133,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
             }
           } else {
             Value *CapturedValue =
-                Builder.CreateSelect(SuccessOrFail, E, OldValue);
+                Builder.CreateSelect(SuccessOrFail, D, OldValue);
             Builder.CreateAlignedStore(CapturedValue, V.Var, V.Alignment,
                                        V.IsVolatile);
           }
@@ -12145,9 +12145,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
                "r.var must be of pointer type");
         assert(R.ElemTy->isIntegerTy() && "r must be of integral type");
 
-        Value *ResultCast = R.IsSigned
-                                ? Builder.CreateSExt(SuccessOrFail, R.ElemTy)
-                                : Builder.CreateZExt(SuccessOrFail, R.ElemTy);
+        Value *ResultCast = Builder.CreateZExt(SuccessOrFail, R.ElemTy);
         Builder.CreateAlignedStore(ResultCast, R.Var, R.Alignment,
                                    R.IsVolatile);
       }

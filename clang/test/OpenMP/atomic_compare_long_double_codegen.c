@@ -21,8 +21,10 @@
 // CHECK-NEXT:    [[OK:%.*]] = extractvalue { i128, i1 } [[RES]], 1
 // CHECK-NEXT:    br i1 [[OK]], label %[[EXIT]], label %[[CONT]]
 // CHECK:       [[EXIT]]:
-// CHECK-NEXT:    phi i128 [ [[CURR]], %[[CONT]] ], [ [[CAS_OLD]], %[[CAS]] ]
+// CHECK-NEXT:    [[OLD_INT:%.*]] = phi i128 [ [[CURR]], %[[CONT]] ], [ [[CAS_OLD]], %[[CAS]] ]
 // CHECK-NEXT:    phi i1 [ false, %[[CONT]] ], [ true, %[[CAS]] ]
+// CHECK-NEXT:    [[OLD_BITS:%.*]] = trunc i128 [[OLD_INT]] to i80
+// CHECK-NEXT:    bitcast i80 [[OLD_BITS]] to x86_fp80
 // CHECK-NEXT:    ret void
 void f(long double ld) {
 #pragma omp atomic compare
@@ -60,6 +62,41 @@ void h(long double *x, long double *v, long double e, long double d) {
   {
     *v = *x;
     *x = *x == e ? d : *x;
+  }
+}
+
+// v = x after the update: v gets d on success.
+// CHECK-LABEL: define {{.*}}void @h_new(
+// CHECK:         [[D:%.*]] = load x86_fp80, ptr %d.addr, align 16
+// CHECK-NEXT:    [[V:%.*]] = load ptr, ptr %v.addr, align 8
+// CHECK:         [[OK:%.*]] = phi i1 [ false,
+// CHECK-NEXT:    [[OLD_BITS:%.*]] = trunc i128 {{%.*}} to i80
+// CHECK-NEXT:    [[OLD:%.*]] = bitcast i80 [[OLD_BITS]] to x86_fp80
+// CHECK-NEXT:    [[NEW:%.*]] = select i1 [[OK]], x86_fp80 [[D]], x86_fp80 [[OLD]]
+// CHECK-NEXT:    store x86_fp80 [[NEW]], ptr [[V]], align 16
+void h_new(long double *x, long double *v, long double e, long double d) {
+#pragma omp atomic compare capture
+  {
+    if (*x == e) {
+      *x = d;
+    }
+    *v = *x;
+  }
+}
+
+// A signed r still receives 1, not -1.
+// CHECK-LABEL: define {{.*}}void @r_signed(
+// CHECK:         [[OK:%.*]] = phi i1 [ false,
+// CHECK:         [[R:%.*]] = zext i1 [[OK]] to i32
+// CHECK-NEXT:    store i32 [[R]], ptr %r, align 4
+void r_signed(long double *x, long double e, long double d) {
+  int r = 0;
+#pragma omp atomic compare capture
+  {
+    r = *x == e;
+    if (r) {
+      *x = d;
+    }
   }
 }
 

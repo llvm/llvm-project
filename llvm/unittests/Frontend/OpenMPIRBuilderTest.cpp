@@ -4380,7 +4380,7 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   SelectInst *Sel1 = dyn_cast<SelectInst>(ExtVal2->getNextNode());
   EXPECT_NE(Sel1, nullptr);
   EXPECT_EQ(Sel1->getCondition(), ExtVal2);
-  EXPECT_EQ(Sel1->getTrueValue(), Expr);
+  EXPECT_EQ(Sel1->getTrueValue(), D);
   EXPECT_EQ(Sel1->getFalseValue(), ExtVal1);
   StoreInst *Store1 = dyn_cast<StoreInst>(Sel1->getNextNode());
   EXPECT_NE(Store1, nullptr);

@@ -45,6 +45,33 @@ static int capture(unsigned char padding) {
   return v == 1.0L && w == 2.0L;
 }
 
+static int capture_new(unsigned char padding) {
+  long double x = 1.0L, v = 0.0L;
+  set_padding(&x, padding);
+#pragma omp atomic compare capture
+  {
+    if (x == 1.0L) {
+      x = 2.0L;
+    }
+    v = x;
+  }
+  return v == 2.0L;
+}
+
+static int result_signed(unsigned char padding) {
+  long double x = 1.0L;
+  int r = 7;
+  set_padding(&x, padding);
+#pragma omp atomic compare capture
+  {
+    r = x == 1.0L;
+    if (r) {
+      x = 2.0L;
+    }
+  }
+  return r == 1;
+}
+
 static int negative_zero(void) {
   long double x = 0.0L, e = -0.0L, v;
 #pragma omp atomic compare
@@ -74,6 +101,14 @@ int main(void) {
   }
   if (!capture(0xa5)) {
     printf("Error: compare capture failed with nonzero padding\n");
+    ret++;
+  }
+  if (!capture_new(0xa5)) {
+    printf("Error: v = x after the update did not receive d\n");
+    ret++;
+  }
+  if (!result_signed(0xa5)) {
+    printf("Error: signed r did not receive 1\n");
     ret++;
   }
   if (!negative_zero()) {
