@@ -1263,7 +1263,7 @@ MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
   auto Res = PerBlockAccesses.try_emplace(BB);
 
   if (Res.second)
-    Res.first->second = std::make_unique<AccessList>();
+    Res.first->second.reset(new (UseOrDefAllocator) AccessList());
   return Res.first->second.get();
 }
 
@@ -1271,7 +1271,7 @@ MemorySSA::DefsList *MemorySSA::getOrCreateDefsList(const BasicBlock *BB) {
   auto Res = PerBlockDefs.try_emplace(BB);
 
   if (Res.second)
-    Res.first->second = std::make_unique<DefsList>();
+    Res.first->second.reset(new (UseOrDefAllocator) DefsList());
   return Res.first->second.get();
 }
 
@@ -1865,7 +1865,7 @@ void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
   // first.
   if (!isa<MemoryUse>(MA)) {
     auto DefsIt = PerBlockDefs.find(BB);
-    std::unique_ptr<DefsList> &Defs = DefsIt->second;
+    auto &Defs = DefsIt->second;
     Defs->remove(*MA);
     if (Defs->empty())
       PerBlockDefs.erase(DefsIt);
@@ -1874,7 +1874,7 @@ void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
   // The erase call here will delete it. If we don't want it deleted, we call
   // remove instead.
   auto AccessIt = PerBlockAccesses.find(BB);
-  std::unique_ptr<AccessList> &Accesses = AccessIt->second;
+  auto &Accesses = AccessIt->second;
   if (ShouldDelete)
     Accesses->erase(MA);
   else
