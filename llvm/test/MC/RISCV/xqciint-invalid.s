@@ -126,13 +126,13 @@ qc.c.setint x8
 # minus-error@+1:1 {{invalid instruction}}
 qc.c.mret x8
 
-# CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
-qc.c.mret # minus-error {{instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)}}
+# minus-error@+1:1 {{instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)}}
+qc.c.mret
 
 
 # plus-error@+2:12 {{unexpected extra operand for instruction}}
 # minus-error@+1:1 {{invalid instruction}}
 qc.c.mnret 10
 
-# CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)
-qc.c.mnret # minus-error {{instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)}}
+# minus-error@+1:1 {{instruction requires the following: 'Xqciint' (Qualcomm uC Interrupts Extension)}}
+qc.c.mnret
