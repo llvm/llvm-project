@@ -2597,7 +2597,17 @@ CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
   if (InputExpr->getStmtClass() == Expr::CXXThisExprClass)
     return {EmitScalarExpr(InputExpr), nullptr};
   InputExpr = InputExpr->IgnoreParenNoopCasts(getContext());
-  LValue Dest = EmitLValue(InputExpr);
+  LValue Dest;
+  if (InputExpr->isPRValue() &&
+      getEvaluationKind(InputExpr->getType()) == TEK_Complex) {
+    // Evaluate complex rvalues into temporary storage so they can use the
+    // same register or memory operand handling as other non-scalar inputs.
+    Dest = MakeAddrLValue(CreateMemTemp(InputExpr->getType(), "asm.input"),
+                          InputExpr->getType());
+    EmitComplexExprIntoLValue(InputExpr, Dest, /*isInit=*/true);
+  } else {
+    Dest = EmitLValue(InputExpr);
+  }
   return EmitAsmInputLValue(Info, Dest, InputExpr->getType(), ConstraintStr,
                             InputExpr->getExprLoc());
 }
