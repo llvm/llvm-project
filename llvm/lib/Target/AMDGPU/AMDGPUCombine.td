@@ -368,4 +368,5 @@ def AMDGPURegBankCombiner : GICombiner<
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
    d16_load, minmax_to_minmax3_combines, redundant_sext_inreg,
    redundant_zext_sext_inreg, redundant_aext_sext_inreg]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
