@@ -1368,6 +1368,17 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
   let VaryingLongVector = 1;
 }
 
+def hlsl_quad_all : HLSLBuiltin<"QuadAll", "__builtin_hlsl_quad_all"> {
+  let Doc = [{
+\brief Returns true if the condition is true in all active lanes in the quad.
+\param Cond The condition to evaluate.
+}];
+  let Args = [BoolTy];
+  let ReturnType = BoolTy;
+  let IsConvergent = 1;
+  let Availability = SM6_7;
+}
+
 // Reads the value from the lane across the X axis of the quad.
 def hlsl_quad_read_across_x :
     HLSLOneArgBuiltin<"QuadReadAcrossX",
