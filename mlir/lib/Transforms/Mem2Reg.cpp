@@ -355,6 +355,13 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
   return defaultValue = allocator.getDefaultValue(slot, builder);
 }
 
+/// Returns `op`'s parent if it owns the blocking uses of `op` as a wrapped
+/// access, or `op` otherwise.
+static Operation *getBlockingUseOwner(Operation *op) {
+  auto memOp = dyn_cast_or_null<PromotableMemOpInterface>(op->getParentOp());
+  return memOp && memOp.ownsWrappedBlockingUses() ? memOp : op;
+}
+
 LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     RegionBlockingUsesMap &userToBlockingUses,
     DenseMap<Region *, RegionPromotionInfo> &regionsToPromote,
@@ -376,8 +383,9 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // First insert that all immediate users of the slot pointer must no longer
   // use it.
   for (OpOperand &use : slot.ptr.getUses()) {
+    Operation *useOwner = getBlockingUseOwner(use.getOwner());
     SmallPtrSet<OpOperand *, 4> &blockingUses =
-        userToBlockingUses[use.getOwner()->getParentRegion()][use.getOwner()];
+        userToBlockingUses[useOwner->getParentRegion()][useOwner];
     blockingUses.insert(&use);
   }
 
@@ -393,7 +401,8 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // pointer.
   SetVector<Operation *> forwardSlice;
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
-  for (Operation *user : forwardSlice) {
+  for (Operation *op : forwardSlice) {
+    Operation *user = getBlockingUseOwner(op);
     // If the next operation has no blocking uses, everything is fine.
     auto *blockingUsesMapIt = userToBlockingUses.find(user->getParentRegion());
     if (blockingUsesMapIt == userToBlockingUses.end())
@@ -449,7 +458,7 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     for (OpOperand *blockingUse : newBlockingUses) {
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
-      Operation *useOwner = blockingUse->getOwner();
+      Operation *useOwner = getBlockingUseOwner(blockingUse->getOwner());
       SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
           userToBlockingUses[useOwner->getParentRegion()][useOwner];
       newUserBlockingUseSet.insert(blockingUse);
@@ -553,7 +562,7 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   DenseMap<Region *, SmallPtrSet<Block *, 16>> definingBlocks;
   auto collectStoringBlocks = [&](Value ptr, const MemorySlot &ptrSlot) {
     for (OpOperand &use : ptr.getUses()) {
-      Operation *user = use.getOwner();
+      Operation *user = getBlockingUseOwner(use.getOwner());
       if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user))
         if (storeOp.storesTo(ptrSlot))
           definingBlocks[user->getParentRegion()].insert(user->getBlock());
