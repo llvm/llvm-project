@@ -10725,12 +10725,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // distance from the stack pointer to the 5th argument, so the whole
     // outgoing argument area is reserved here, together with stack arguments
     // from the 5th, in the same dynamically allocated block.
-    SDValue ThunkVarArgAllocSize =
-        DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgSize,
-                    DAG.getConstant(NumBytes, DL, PtrVT));
     SDValue RoundedThunkVarArgSize =
-        DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgAllocSize,
-                    DAG.getConstant(15, DL, PtrVT));
+        DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgSize,
+                    DAG.getConstant(NumBytes + 15, DL, PtrVT));
     RoundedThunkVarArgSize =
         DAG.getNode(ISD::AND, DL, PtrVT, RoundedThunkVarArgSize,
                     DAG.getSignedConstant(-16, DL, PtrVT));
