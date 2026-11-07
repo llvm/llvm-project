@@ -1350,7 +1350,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_scalbnf:
   case LibFunc_scalbnl:
   case LibFunc_sin:
-  case LibFunc_sincospif_stret:
   case LibFunc_sinf:
   case LibFunc_sinh:
   case LibFunc_sinhf:
@@ -1419,6 +1418,10 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_roundeven:
   case LibFunc_roundevenf:
   case LibFunc_roundevenl:
+  case LibFunc_sincos_stret:
+  case LibFunc_sincosf_stret:
+  case LibFunc_sincospi_stret:
+  case LibFunc_sincospif_stret:
   case LibFunc_toascii:
   case LibFunc_trunc:
   case LibFunc_truncf:

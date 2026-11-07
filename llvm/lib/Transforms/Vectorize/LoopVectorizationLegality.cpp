@@ -137,7 +137,7 @@ void LoopVectorizeHints::reportDisallowedVectorization(
 }
 
 bool LoopVectorizeHints::allowVectorization(
-    Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
+    Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
     if (Force == LoopVectorizeHints::FK_Disabled) {
       reportDisallowedVectorization("#pragma vectorize disable",
@@ -724,7 +724,7 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
 
   // Int inductions are special because we only allow one IV.
   if (ID.getKind() == InductionDescriptor::IK_IntInduction &&
-      ID.getConstIntStepValue() && ID.getConstIntStepValue()->isOne() &&
+      ID.getConstStepValue() && ID.getConstStepValue()->isOne() &&
       isa<Constant>(ID.getStartValue()) &&
       cast<Constant>(ID.getStartValue())->isNullValue()) {
 
@@ -771,7 +771,7 @@ static bool isDisallowedStridedPointerInduction(const InductionDescriptor &ID,
   if (Opts.lv_strided_pointer_ivs)
     return false;
   return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-         ID.getConstIntStepValue() == nullptr;
+         !ID.getConstStepValue();
 }
 
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
@@ -929,6 +929,14 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
         !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(Phi, ID);
       return true;
+    }
+
+    if (isDisallowedStridedPointerInduction(ID, Opts)) {
+      reportVectorizationFailure("Found a disallowed pointer induction",
+                                 "pointer induction with a non-constant step "
+                                 "could not be vectorized",
+                                 "StridedPointerInduction", ORE, TheLoop, Phi);
+      return false;
     }
 
     reportVectorizationFailure("Found an unidentified PHI",
@@ -1715,10 +1723,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  if (Reductions.size() || FixedOrderRecurrences.size()) {
+  if (!FixedOrderRecurrences.empty()) {
     reportVectorizationFailure(
-        "Found reductions or recurrences in early-exit loop",
-        "Cannot vectorize early exit loop with reductions or recurrences",
+        "Found fixed-order recurrences in early-exit loop",
+        "Cannot vectorize early exit loop with fixed-order recurrences",
         "RecurrencesInEarlyExitLoop", ORE, TheLoop);
     return false;
   }
@@ -1752,7 +1760,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   Predicates.clear();
 
   if (UncountableExitingBlocks.empty()) {
-    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits");
+    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits\n");
     return false;
   }
 
@@ -2061,17 +2069,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
                                "to loop-invariant addresses",
                                "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
-  }
-
-  if (hasConditionalInductions()) {
-    reportVectorizationFailure(
-        "We can vectorize this loop with a compressstore or expandload, but "
-        "vectorization support is not implemented yet.",
-        "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
   }
 
   if (Result) {
