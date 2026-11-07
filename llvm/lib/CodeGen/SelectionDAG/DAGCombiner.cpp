@@ -28283,10 +28283,10 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
 
 SDValue DAGCombiner::visitVECTOR_DEINTERLEAVE(SDNode *N) {
   EVT VT = N->getValueType(0);
-  SDValue Op0 = N->getOperand(0);
 
-  // Canonicalize shuffle undef -> {undef, undef, ..}
-  if (Op0.isUndef()) {
+  // Canonicalize shuffle undef, undef -> {undef, undef, ..}
+  // Every result takes lanes from every operand, so all operands must be undef.
+  if (all_of(N->op_values(), [](SDValue Op) { return Op.isUndef(); })) {
     SDLoc DL(N);
     SmallVector<SDValue> Ops(N->getNumValues(), DAG.getUNDEF(VT));
     return DAG.getMergeValues(Ops, DL);

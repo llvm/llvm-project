@@ -879,6 +879,13 @@ define {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8
 define void @deinterleave2_v8i8_lo_poison(ptr %p, ptr %o) {
 ; CHECK-SD-LABEL: deinterleave2_v8i8_lo_poison:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    uzp2 v1.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip2 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    str s0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: deinterleave2_v8i8_lo_poison:
@@ -903,14 +910,10 @@ define void @deinterleave2_v8i8_lo_poison(ptr %p, ptr %o) {
 }
 
 define <4 x i32> @deinterleave2_v8i32_lo_poison(<4 x i32> %v) {
-; CHECK-SD-LABEL: deinterleave2_v8i32_lo_poison:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: deinterleave2_v8i32_lo_poison:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: deinterleave2_v8i32_lo_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
   %x = shufflevector <4 x i32> %v, <4 x i32> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3>
   %d = call {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
   %even = extractvalue {<4 x i32>, <4 x i32>} %d, 0
@@ -920,6 +923,13 @@ define <4 x i32> @deinterleave2_v8i32_lo_poison(<4 x i32> %v) {
 define <2 x i32> @deinterleave3_v6i32_first_poison(<2 x i32> %b, <2 x i32> %c) {
 ; CHECK-LABEL: deinterleave3_v6i32_first_poison:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    stp d0, d1, [sp, #16]
+; CHECK-NEXT:    ld3 { v31.2s, v0.2s, v1.2s }, [x8]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $d31_d0_d1
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %bc = shufflevector <2 x i32> %b, <2 x i32> %c, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %x = shufflevector <4 x i32> %bc, <4 x i32> poison, <6 x i32> <i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3>
