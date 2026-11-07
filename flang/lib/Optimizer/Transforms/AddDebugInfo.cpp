@@ -28,6 +28,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
@@ -687,6 +688,94 @@ getScope(mlir::Operation *op, mlir::LLVM::DISubprogramAttr defaultScope) {
   return defaultScope;
 }
 
+static bool hasDebugScope(mlir::Location loc) {
+  auto fusedLoc = llvm::dyn_cast<mlir::FusedLoc>(loc);
+  return fusedLoc && llvm::isa_and_nonnull<mlir::LLVM::DILocalScopeAttr>(
+                         fusedLoc.getMetadata());
+}
+
+namespace {
+/// Gives each block in a set a lexical block covering the blocks it dominates,
+/// nested in the lexical block of any enclosing one.
+class LexicalBlockBuilder {
+public:
+  LexicalBlockBuilder(mlir::func::FuncOp funcOp,
+                      mlir::LLVM::DISubprogramAttr spAttr,
+                      mlir::LLVM::DIFileAttr fileAttr,
+                      const llvm::SmallPtrSetImpl<mlir::Block *> &scopedBlocks)
+      : domInfo(funcOp), spAttr(spAttr), fileAttr(fileAttr),
+        scopedBlocks(scopedBlocks), builder(funcOp.getContext()) {}
+
+  void run(mlir::func::FuncOp funcOp) { visitRegion(funcOp.getBody(), spAttr); }
+
+  llvm::DenseMap<mlir::Block *, mlir::LLVM::DILexicalBlockAttr> blockScopes;
+
+private:
+  void visitRegion(mlir::Region &region, mlir::LLVM::DIScopeAttr scope) {
+    if (region.empty())
+      return;
+    if (region.hasOneBlock()) {
+      visitBlock(region.front(), scope);
+      return;
+    }
+    // Iterative, as the dominator tree of a long procedure can be deep.
+    llvm::SmallVector<
+        std::pair<mlir::DominanceInfoNode *, mlir::LLVM::DIScopeAttr>>
+        worklist{{domInfo.getRootNode(&region), scope}};
+    while (!worklist.empty()) {
+      auto [node, nodeScope] = worklist.pop_back_val();
+      nodeScope = visitBlock(*node->getBlock(), nodeScope);
+      for (mlir::DominanceInfoNode *child : node->children())
+        worklist.push_back({child, nodeScope});
+    }
+  }
+
+  mlir::LLVM::DIScopeAttr visitBlock(mlir::Block &block,
+                                     mlir::LLVM::DIScopeAttr scope) {
+    if (scopedBlocks.contains(&block)) {
+      auto [line, column] = getPosition(block);
+      auto blockAttr = mlir::LLVM::DILexicalBlockAttr::get(
+          builder.getContext(), scope, fileAttr, line, column);
+      blockScopes[&block] = blockAttr;
+      scope = blockAttr;
+    }
+    bool inLexicalBlock = llvm::isa<mlir::LLVM::DILexicalBlockAttr>(scope);
+    for (mlir::Operation &op : block) {
+      // A target region carries the subprogram that describes it.
+      if (inLexicalBlock && !hasDebugScope(op.getLoc()))
+        op.setLoc(builder.getFusedLoc({op.getLoc()}, scope));
+      // The body of an outlined region becomes a separate function.
+      if (llvm::isa<mlir::omp::OutlineableOpenMPOpInterface>(op))
+        continue;
+      for (mlir::Region &region : op.getRegions())
+        visitRegion(region, scope);
+    }
+    return scope;
+  }
+
+  /// Lexical blocks at the same position are the same attribute, and all the
+  /// declarations of a name share a position, so skip the declarations.
+  std::pair<unsigned, unsigned> getPosition(mlir::Block &block) {
+    mlir::Operation *posOp = &block.front();
+    for (mlir::Operation &op : block) {
+      if (!llvm::isa<fir::cg::XDeclareOp>(op)) {
+        posOp = &op;
+        break;
+      }
+    }
+    if (auto fileLoc = posOp->getLoc()->findInstanceOf<mlir::FileLineColLoc>())
+      return {fileLoc.getLine(), fileLoc.getColumn()};
+    return {0, 0};
+  }
+
+  mlir::DominanceInfo domInfo;
+  mlir::LLVM::DISubprogramAttr spAttr;
+  mlir::LLVM::DIFileAttr fileAttr;
+  const llvm::SmallPtrSetImpl<mlir::Block *> &scopedBlocks;
+  mlir::OpBuilder builder;
+};
+} // namespace
+
 void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
                                     mlir::LLVM::DIFileAttr fileAttr,
                                     mlir::LLVM::DICompileUnitAttr cuAttr,
@@ -978,9 +1067,40 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     return mlir::WalkResult::advance();
   });
 
+  // Constructs such as SELECT TYPE declare a name once per branch. Give each
+  // block other than the entry block that declares such a name a lexical block,
+  // so that only the declaration of the current branch is visible.
+  llvm::MapVector<llvm::StringRef, llvm::SmallVector<fir::cg::XDeclareOp>>
+      declaresByName;
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    mlir::LLVM::DISubprogramAttr spTy = getScope(declOp, spAttr);
-    handleDeclareOp(declOp, fileAttr, spTy, typeGen, symbolTable, dummyScope);
+    // TODO: Scope the names in outlined OpenMP regions too. A name there may be
+    // declared on a pointer loaded from the outlined function's argument, and
+    // at -O0 LLVM can lose such a variable in a lexical block.
+    if (declOp->getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>())
+      return;
+    declaresByName[declOp.getUniqName()].push_back(declOp);
+  });
+  llvm::SmallPtrSet<mlir::Block *, 4> scopedBlocks;
+  for (auto &declOps : llvm::make_second_range(declaresByName)) {
+    if (declOps.size() < 2)
+      continue;
+    for (fir::cg::XDeclareOp declOp : declOps)
+      if (declOp->getBlock() != &funcOp.getBody().front())
+        scopedBlocks.insert(declOp->getBlock());
+  }
+  llvm::DenseMap<mlir::Block *, mlir::LLVM::DILexicalBlockAttr> blockScopes;
+  if (!scopedBlocks.empty()) {
+    LexicalBlockBuilder lexicalBlocks(funcOp, spAttr, funcFileAttr,
+                                      scopedBlocks);
+    lexicalBlocks.run(funcOp);
+    blockScopes = std::move(lexicalBlocks.blockScopes);
+  }
+
+  funcOp.walk([&](fir::cg::XDeclareOp declOp) {
+    mlir::LLVM::DIScopeAttr scope = blockScopes.lookup(declOp->getBlock());
+    if (!scope)
+      scope = getScope(declOp, spAttr);
+    handleDeclareOp(declOp, fileAttr, scope, typeGen, symbolTable, dummyScope);
   });
   funcOp.walk([&](fir::DeclareValueOp declOp) {
     mlir::LLVM::DISubprogramAttr spTy = getScope(declOp, spAttr);
