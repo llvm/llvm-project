@@ -466,12 +466,17 @@ public:
     return Known;
   }
 
+  /// Report known values for fmul(x, C)
   LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS, const APFloat &RHS,
                                     DenormalMode Mode);
 
   /// Report known values for fdiv
   LLVM_ABI static KnownFPClass fdiv(const KnownFPClass &LHS,
                                     const KnownFPClass &RHS, DenormalMode Mode);
+
+  /// Report known values for fdiv(x, C)
+  LLVM_ABI static KnownFPClass fdiv(const KnownFPClass &LHS, const APFloat &RHS,
+                                    DenormalMode Mode);
 
   /// Report known values for fdiv x, x
   LLVM_ABI static KnownFPClass fdiv_self(const KnownFPClass &Src,
