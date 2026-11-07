@@ -17,7 +17,6 @@
 #include "L0Compat.h"
 #include "L0Defs.h"
 #include "L0Event.h"
-#include "L0Memory.h"
 #include "level_zero/ze_api.h"
 
 #include <atomic>
@@ -93,8 +92,11 @@ private:
   decltype(Fn) ExperimentalFallbackPtr = nullptr;
 };
 
-/// Driver and context-specific resources. We assume a single context per
-/// driver.
+/// Per-driver state: driver handle and version, extension dispatchers, the
+/// event pool, and a driver-wide ze_context. The ze_context is shared with
+/// the default plugin context used by the libomptarget path. Contexts created
+/// through olCreateContext are separate LevelZeroPluginContextTy objects (see
+/// L0Context.h).
 class L0DriverTy {
   /// The plugin that created this driver.
   LevelZeroPluginTy &Plugin;
@@ -104,7 +106,7 @@ class L0DriverTy {
 
   uint32_t DriverId;
 
-  /// Common Level Zero context.
+  /// Driver-wide Level Zero context.
   ze_context_handle_t zeContext = nullptr;
 
   /// API version supported by the Level Zero driver.
@@ -122,9 +124,6 @@ class L0DriverTy {
   /// Common event pool.
   EventPoolTy EventPool;
 
-  /// Host Memory allocator for this driver.
-  MemAllocatorTy HostMemAllocator;
-
   /// Default plugin-side context used by the libomptarget path.
   std::unique_ptr<LevelZeroPluginContextTy> DefaultUserCtx;
 
@@ -134,7 +133,6 @@ public:
   static constexpr int32_t ImportUnknown = 0;
   static constexpr int32_t ImportExist = 1;
 
-  /// Create context, initialize event pool and extension functions.
   L0DriverTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
              int32_t DriverId);
 
@@ -146,6 +144,8 @@ public:
   /// Release resources.
   ~L0DriverTy();
 
+  /// Create the driver-wide context, initialize the event pool, extension
+  /// functions and the default plugin context.
   Error init();
   Error deinit();
 
@@ -181,7 +181,7 @@ public:
 
   uint32_t getDriverId() const { return DriverId; }
 
-  /// Return context associated with the driver.
+  /// Return the driver-wide context.
   ze_context_handle_t getZeContext() const { return zeContext; }
 
   /// Return the default plugin-side context used by the libomptarget path.
@@ -203,9 +203,6 @@ public:
     // Large memory support is available since API version 1.1.
     return getDriverAPIVersion() >= ZE_API_VERSION_1_1;
   }
-
-  const MemAllocatorTy &getHostMemAllocator() const { return HostMemAllocator; }
-  MemAllocatorTy &getHostMemAllocator() { return HostMemAllocator; }
 
   std::atomic<bool> AppendLaunchKernelWithArgsSupported = true;
 
