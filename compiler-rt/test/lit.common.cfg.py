@@ -377,6 +377,7 @@ tool_symbolizer_path_list = [
     "MSAN_SYMBOLIZER_PATH",
     "LSAN_SYMBOLIZER_PATH",
     "UBSAN_SYMBOLIZER_PATH",
+    "CSAN_SYMBOLIZER_PATH",
 ]
 
 if config.have_disable_symbolizer_path_search:
@@ -696,7 +697,7 @@ if config.android:
             % (adb, android_api_level_str)
         )
     android_api_level = min(android_api_level, int(config.android_api_level))
-    for required in [26, 28, 29, 30, 37]:
+    for required in [26, 28, 29, 30, 34, 37]:
         if android_api_level >= required:
             config.available_features.add("android-%s" % required)
     # FIXME: Replace with appropriate version when availible.
@@ -761,6 +762,12 @@ if config.target_os == "Linux" and not config.android:
                 config.available_features.add("glibc")
     except:
         pass
+
+    if not emulator and config.compiler_id == "Clang" and config.sysroot:
+        config.target_cflags += (
+            f" -Wno-unused-command-line-argument --dyld-prefix={config.sysroot}"
+            rf" -Wl,--disable-new-dtags -Wl,-rpath,{config.sysroot}/\$LIB:{config.sysroot}/usr/\$LIB"
+        )
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):

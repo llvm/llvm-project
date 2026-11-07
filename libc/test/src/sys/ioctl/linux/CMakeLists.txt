@@ -10,7 +10,6 @@ add_libc_test(
     libc.hdr.types.struct_winsize
     libc.hdr.sys_ioctl_macros
     libc.src.sys.ioctl.ioctl
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.read

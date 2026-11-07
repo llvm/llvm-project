@@ -46,6 +46,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -1970,11 +1971,35 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
   return Context.getRValueReferenceType(T);
 }
 
+static bool checkOpenCLPipePacketType(Sema &S, QualType T, SourceLocation Loc) {
+  if (T->isPointerType())
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*pointer*/ 0 << T;
+  if (T->isReferenceType())
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*reference*/ 1 << T;
+  if (T->isBlockPointerType())
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*block pointer*/ 2 << T;
+  if (!T->isObjectType())
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*non-object*/ 3 << T;
+  if (!T->isDependentType() && !S.isCompleteType(Loc, T))
+    return S.Diag(Loc, diag::err_invalid_pipe_packet_type)
+           << /*incomplete*/ 4 << T;
+
+  return false;
+}
+
 QualType Sema::BuildReadPipeType(QualType T, SourceLocation Loc) {
+  if (checkOpenCLPipePacketType(*this, T, Loc))
+    return QualType();
   return Context.getReadPipeType(T);
 }
 
 QualType Sema::BuildWritePipeType(QualType T, SourceLocation Loc) {
+  if (checkOpenCLPipePacketType(*this, T, Loc))
+    return QualType();
   return Context.getWritePipeType(T);
 }
 
@@ -5498,8 +5523,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
     case DeclaratorChunk::Pipe: {
       T = S.BuildReadPipeType(T, DeclType.Loc);
-      processTypeAttrs(state, T, TAL_DeclSpec,
-                       D.getMutableDeclSpec().getAttributes());
+      if (!T.isNull())
+        processTypeAttrs(state, T, TAL_DeclSpec,
+                         D.getMutableDeclSpec().getAttributes());
       break;
     }
     }
@@ -6635,23 +6661,6 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
 static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
                                       TypeProcessingState &State) {
   Sema &S = State.getSema();
-
-  // This attribute is only supported in C.
-  // FIXME: we should implement checkCommonAttributeFeatures() in SemaAttr.cpp
-  // such that it handles type attributes, and then call that from
-  // processTypeAttrs() instead of one-off checks like this.
-  if (!Attr.diagnoseLangOpts(S)) {
-    Attr.setInvalid();
-    return;
-  }
-
-  // Check the number of attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
 
   // Ensure the argument is a string.
   auto *StrLiteral = dyn_cast<StringLiteral>(Attr.getArgAsExpr(0));
@@ -8560,13 +8569,6 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
 /// a type.
 static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                     Sema &S) {
-  // check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
-                                                                      << 1;
-    return;
-  }
-
   Expr *SizeExpr = Attr.getArgAsExpr(0);
   QualType T = S.BuildExtVectorType(CurType, SizeExpr, Attr.getLoc());
   if (!T.isNull())
@@ -8668,13 +8670,6 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
   // The number of elements must be an ICE.
   llvm::APSInt numEltsInt(32);
   if (!verifyValidIntegerConstantExpr(S, Attr, numEltsInt))
@@ -8781,14 +8776,6 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType, ParsedAttr &Attr,
     return;
   }
 
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
-
   // The vector size must be an integer constant expression.
   llvm::APSInt SveVectorSizeInBits(32);
   if (!verifyValidIntegerConstantExpr(S, Attr, SveVectorSizeInBits))
@@ -8865,14 +8852,6 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
-
   // The vector size must be an integer constant expression.
   llvm::APSInt RVVVectorSizeInBits(32);
   if (!verifyValidIntegerConstantExpr(S, Attr, RVVVectorSizeInBits))
@@ -8892,31 +8871,36 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned MinElts = Info.EC.getKnownMinValue();
 
-  VectorKind VecKind = VectorKind::RVVFixedLengthData;
+  VectorKind VecKind;
   unsigned ExpectedSize = VScale->first * MinElts;
   QualType EltType = CurType->getRVVEltType(S.Context);
   unsigned EltSize = S.Context.getTypeSize(EltType);
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
+    // A mask is stored in bytes. One with fewer than 8 lanes takes a single
+    // byte, and its lane count is recorded in the vector kind.
     NumElts = VecSize / S.Context.getCharWidth();
+    unsigned SubByteLanes = 0;
     if (!NumElts) {
       NumElts = 1;
-      switch (VecSize) {
-      case 1:
-        VecKind = VectorKind::RVVFixedLengthMask_1;
-        break;
-      case 2:
-        VecKind = VectorKind::RVVFixedLengthMask_2;
-        break;
-      case 4:
-        VecKind = VectorKind::RVVFixedLengthMask_4;
-        break;
-      }
-    } else
-      VecKind = VectorKind::RVVFixedLengthMask;
+      if (VecSize == 1 || VecSize == 2 || VecSize == 4)
+        SubByteLanes = VecSize;
+    }
+    // Record the ratio of the vbool<R>_t type in the vector kind, so that
+    // later stages do not have to re-derive it from VLEN and the lane count.
+    // vbool<R>_t has RVVBitsPerBlock / R lanes at vscale=1.
+    VecKind = getRVVFixedLengthMaskVectorKind(
+        llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock / MinElts), SubByteLanes);
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
+
+    // Record the LMUL of the sizeless type in the vector kind, so that later
+    // stages do not have to re-derive it from VLEN and the element count.
+    //   LMUL = MinElts * EltSize / RVVBitsPerBlock
+    VecKind = getRVVFixedLengthDataVectorKind(
+        int(llvm::Log2_32(MinElts * EltSize)) -
+        int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock)));
   }
 
   // The attribute vector size must match -mrvv-vector-bits.
@@ -8991,12 +8975,6 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                  Sema &S) {
   if (!S.getLangOpts().MatrixTypes) {
     S.Diag(Attr.getLoc(), diag::err_builtin_matrix_disabled);
-    return;
-  }
-
-  if (Attr.getNumArgs() != 2) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 2;
     return;
   }
 
@@ -9147,6 +9125,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         //   that can be applied to the declaration name).
         continue;
       }
+    }
+
+    if (attr.isTypeAttr() &&
+        state.getSema().checkCommonAttributeFeatures(type, attr)) {
+      attr.setInvalid();
+      continue;
     }
 
     // If this is an attribute we can handle, do so now,
