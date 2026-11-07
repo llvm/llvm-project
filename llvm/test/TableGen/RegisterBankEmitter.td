@@ -13,3 +13,19 @@ let Size = 32 in {
 // CHECK: MyTarget::ClassARegClassID
 // CHECK: MyTarget::ClassBRegClassID
 def GPRRegBank : RegisterBank<"GPR", [ClassA]>;
+
+// CHECK: {0, 8, BreakDownBank},
+// CHECK: {8, 8, BreakDownBank},
+// CHECK: {16, 8, BreakDownBank},
+// CHECK: {24, 8, BreakDownBank},
+// CHECK: {0, 16, BreakDownBank},
+// CHECK: {16, 16, BreakDownBank},
+// CHECK: {0, 32, BreakDownBank},
+def BreakDownBank : RegisterBank<"GPR", [ClassA]> {
+  let ExtraPartialMappings=[
+    PartialMapping<16>,
+    PartialMapping<8>,PartialMapping<8,8>,
+    PartialMapping<16, 16>,
+    PartialMapping<8,16>,PartialMapping<8,24>
+  ];
+}
