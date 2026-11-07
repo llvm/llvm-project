@@ -1,4 +1,5 @@
-// RUN: %libomp-compile && env OMP_NUM_THREADS_ALL=8 %libomp-run
+// RUN: %libomp-compile && env OMP_NUM_THREADS_ALL=8 \
+// RUN:   env -u OMP_NUM_THREADS %libomp-run
 //
 // OpenMP 6.0: host falls through to `_ALL` when `<ENV>` is unset.
 
