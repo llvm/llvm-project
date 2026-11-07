@@ -100,7 +100,7 @@ int nested(void) {
 // CIR:     cir.return %[[RES]] : !s32i
 // CIR:   }
 // CIR:   %[[FINAL_RES:.+]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
-// CIR:   cir.return %[[FINAL_RES]] : !s32i
+// CIR:   cir.return implicit %[[FINAL_RES]] : !s32i
 
 // LLVM: define dso_local i32 @nested()
 // LLVM:   %[[VAR6:.+]] = alloca i32, 
@@ -118,8 +118,6 @@ int nested(void) {
 // LLVM:     br label %[[LBL10:.+]]
 // LLVM: [[LBL10]]:
 // LLVM:     store i32 987, ptr %[[VAR1]]
-// LLVM:     br label %[[LBL11:.+]]
-// LLVM: [[LBL11]]:
 // LLVM:     br label %[[LBL12:.+]]
 // LLVM: [[LBL12]]:
 // LLVM:     store i32 123, ptr %[[VAR5]]
