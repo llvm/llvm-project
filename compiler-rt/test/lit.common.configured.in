@@ -8,7 +8,6 @@ def set_default(attr, value):
 # Generic config options for all compiler-rt lit tests.
 set_default("target_triple", "@COMPILER_RT_DEFAULT_TARGET_TRIPLE@")
 set_default("target_cflags", "@COMPILER_RT_TEST_COMPILER_CFLAGS@")
-set_default("sysroot", "@CMAKE_SYSROOT@")
 set_default("host_arch", "@HOST_ARCH@")
 set_default("target_arch", "@COMPILER_RT_DEFAULT_TARGET_ARCH@")
 set_default("target_os", "@HOST_OS@")
