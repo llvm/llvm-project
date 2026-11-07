@@ -10,12 +10,24 @@
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_RUST_RUSTLANGUAGE_H
 
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
+namespace formatters {
+SyntheticChildrenFrontEnd *
+RustVectorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                   lldb::ValueObjectSP valobj_sp);
+}
+
 class RustLanguage : public Language {
 public:
+  RustLanguage() = default;
+
+  ~RustLanguage() override = default;
+
   lldb::LanguageType GetLanguageType() const override {
     return lldb::eLanguageTypeRust;
   }
@@ -28,6 +40,10 @@ public:
   DemangledName DemangleSymbol(ConstString mangled,
                                Mangled::ManglingScheme scheme,
                                const DemangleOptions &options) const override;
+
+  lldb::TypeCategoryImplSP GetFormatters() override;
+
+  uint32_t GetPluginVersion() { return 1; }
 
   // Static Functions
   static void Initialize();
