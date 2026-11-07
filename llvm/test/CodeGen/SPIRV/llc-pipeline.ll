@@ -1,11 +1,11 @@
 ; UNSUPPORTED:expensive_checks
-; RUN:llc -O0 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN:llc -O0 -mtriple=spirv-- -enable-new-pm=false -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-O0 %s
-; RUN:llc -O1 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN:llc -O1 -mtriple=spirv-- -enable-new-pm=false -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
-; RUN:llc -O2 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN:llc -O2 -mtriple=spirv-- -enable-new-pm=false -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
-; RUN:llc -O3 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN:llc -O3 -mtriple=spirv-- -enable-new-pm=false -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
 ; RUN:llc -O0 -mtriple=spirv-- -enable-new-pm < %s \
 ; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
