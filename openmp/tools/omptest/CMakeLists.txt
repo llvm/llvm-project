@@ -107,8 +107,9 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
 else()
   message(STATUS "omptest build mode: standalone")
 
-  # Add 'standalone' compile definitions
-  target_compile_definitions(omptest PRIVATE
+  # PUBLIC: OmptTester.h selects the standalone variant on this macro, so
+  # consumers must see the same value the library was built with.
+  target_compile_definitions(omptest PUBLIC
     -DOPENMP_LIBOMPTEST_BUILD_STANDALONE)
 
   # Add 'standalone' source files
@@ -139,7 +140,10 @@ target_include_directories(omptest PUBLIC
 target_compile_features(omptest PRIVATE cxx_std_17)
 
 # Perform package configuration.
-set(OMPTEST_CONFIG_INSTALL_DIR "${OPENMP_INSTALL_LIBDIR}/cmake/openmp/omptest")
+# Keep the config at a target-independent path so consumers can find it
+# without knowing the host triple.
+set(OMPTEST_CONFIG_INSTALL_DIR
+    "lib${LLVM_LIBDIR_SUFFIX}/cmake/openmp/omptest")
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/omptest-config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/omptest-config.cmake
