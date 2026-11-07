@@ -101,9 +101,9 @@ define <8 x i32> @concata_addmul_big(<4 x i32> %a1, <4 x i32> %a2, <8 x i32> %b,
 
 define <16 x i32> @concata_addmul_bigger(<4 x i32> %a1a, <4 x i32> %a2a, <4 x i32> %a3a, <4 x i32> %a4a, <16 x i32> %b, <16 x i32> %c) {
 ; CHECK-LABEL: @concata_addmul_bigger(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A4A:%.*]], <4 x i32> [[A3A:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A2A:%.*]], <4 x i32> [[A1A:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A1A:%.*]], <4 x i32> [[A2A:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A3A:%.*]], <4 x i32> [[A4A:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i32> [[TMP3]], [[B:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = add <16 x i32> [[TMP4]], [[C:%.*]]
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
@@ -136,30 +136,12 @@ define <16 x i32> @concata_addmul_bigger(<4 x i32> %a1a, <4 x i32> %a2a, <4 x i3
 
 define <16 x i32> @concata_addmul_bigger_undef(<4 x i32> %a1a, <4 x i32> %a2a, <4 x i32> %a3a, <4 x i32> %a4a, <16 x i32> %b, <16 x i32> %c) {
 ; CHECK-LABEL: @concata_addmul_bigger_undef(
-; CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i32> [[A1A:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[A2:%.*]] = shufflevector <4 x i32> [[A2A:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[A3:%.*]] = shufflevector <4 x i32> [[A3A:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[A4:%.*]] = shufflevector <4 x i32> [[A4A:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[B1:%.*]] = shufflevector <16 x i32> [[B:%.*]], <16 x i32> poison, <4 x i32> <i32 15, i32 14, i32 13, i32 12>
-; CHECK-NEXT:    [[B2:%.*]] = shufflevector <16 x i32> [[B]], <16 x i32> poison, <4 x i32> <i32 11, i32 10, i32 9, i32 8>
-; CHECK-NEXT:    [[B3:%.*]] = shufflevector <16 x i32> [[B]], <16 x i32> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[B4:%.*]] = shufflevector <16 x i32> [[B]], <16 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[C1:%.*]] = shufflevector <16 x i32> [[C:%.*]], <16 x i32> poison, <4 x i32> <i32 15, i32 14, i32 13, i32 12>
-; CHECK-NEXT:    [[C2:%.*]] = shufflevector <16 x i32> [[C]], <16 x i32> poison, <4 x i32> <i32 11, i32 10, i32 9, i32 8>
-; CHECK-NEXT:    [[C3:%.*]] = shufflevector <16 x i32> [[C]], <16 x i32> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[C4:%.*]] = shufflevector <16 x i32> [[C]], <16 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[X1:%.*]] = mul <4 x i32> [[A1]], [[B1]]
-; CHECK-NEXT:    [[X2:%.*]] = mul <4 x i32> [[A2]], [[B2]]
-; CHECK-NEXT:    [[X3:%.*]] = mul <4 x i32> [[A3]], [[B3]]
-; CHECK-NEXT:    [[X4:%.*]] = mul <4 x i32> [[A4]], [[B4]]
-; CHECK-NEXT:    [[Y1:%.*]] = add <4 x i32> [[X1]], [[C1]]
-; CHECK-NEXT:    [[Y2:%.*]] = add <4 x i32> [[X2]], [[C2]]
-; CHECK-NEXT:    [[Y3:%.*]] = add <4 x i32> [[X3]], [[C3]]
-; CHECK-NEXT:    [[Y4:%.*]] = add <4 x i32> [[X4]], [[C4]]
-; CHECK-NEXT:    [[CC1:%.*]] = shufflevector <4 x i32> [[Y1]], <4 x i32> [[Y2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 7>
-; CHECK-NEXT:    [[CC2:%.*]] = shufflevector <4 x i32> [[Y3]], <4 x i32> [[Y4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[CC1:%.*]] = shufflevector <4 x i32> [[A1A:%.*]], <4 x i32> [[A2A:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 poison, i32 poison, i32 poison, i32 4>
+; CHECK-NEXT:    [[CC2:%.*]] = shufflevector <4 x i32> [[A3A:%.*]], <4 x i32> [[A4A:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i32> [[CC1]], <8 x i32> [[CC2]], <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    ret <16 x i32> [[R]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i32> [[R]], [[B:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = add <16 x i32> [[TMP4]], [[C:%.*]]
+; CHECK-NEXT:    ret <16 x i32> [[R1]]
 ;
   %a1 = shufflevector <4 x i32> %a1a, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %a2 = shufflevector <4 x i32> %a2a, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -273,13 +255,9 @@ define <16 x i32> @two_concats(<4 x i32> %a1a, <4 x i32> %a2a, <4 x i32> %a3a, <
 
 define <16 x double> @konkat(<16 x double> %wide.vec, <16 x double> %wide.vec115, <2 x double> %l27, <2 x double> %l28, <2 x double> %l29, <2 x double> %l30) {
 ; CHECK-LABEL: @konkat(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[L27:%.*]], <2 x double> [[L28:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[L29:%.*]], <2 x double> [[L30:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[L27]], <2 x double> [[L28]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[L29]], <2 x double> [[L30]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> [[TMP6]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[L27:%.*]], <2 x double> [[L28:%.*]], <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[L29:%.*]], <2 x double> [[L30:%.*]], <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> [[TMP2]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul reassoc nsz contract <16 x double> [[WIDE_VEC:%.*]], [[TMP7]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd reassoc nsz contract <16 x double> [[WIDE_VEC115:%.*]], [[TMP8]]
 ; CHECK-NEXT:    ret <16 x double> [[INTERLEAVED_VEC]]
