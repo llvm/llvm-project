@@ -3264,11 +3264,13 @@ static void findGadgets(const Stmt *S, ASTContext &Ctx,
   }
 }
 
-// Compares AST nodes by source locations.
+// Compares declarations by begin location, then by name location: declarators
+// in one declaration, such as `int *p, *q;`, share a begin location. The
+// expanded parameters of a pack still compare equal.
 template <typename NodeTy> struct CompareNode {
   bool operator()(const NodeTy *N1, const NodeTy *N2) const {
-    return N1->getBeginLoc().getRawEncoding() <
-           N2->getBeginLoc().getRawEncoding();
+    return std::make_pair(N1->getBeginLoc(), N1->getLocation()) <
+           std::make_pair(N2->getBeginLoc(), N2->getLocation());
   }
 };
 
