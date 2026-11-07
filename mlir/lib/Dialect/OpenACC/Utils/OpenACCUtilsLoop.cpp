@@ -26,7 +26,8 @@
 using namespace mlir;
 
 /// Calculate trip count for a loop: (ub - lb + step) / step
-/// If inclusiveUpperbound is false, subtracts 1 from ub first.
+/// If inclusiveUpperbound is false, first moves ub one unit towards lb, i.e.
+/// subtracts 1 for a positive step and adds 1 for a negative step.
 Value acc::calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
                               Value step, bool inclusiveUpperbound) {
   Type type = b.getIndexType();
@@ -37,8 +38,14 @@ Value acc::calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
   step = getValueOrCreateCastToIndexLike(b, loc, type, step);
 
   if (!inclusiveUpperbound) {
+    Value zero = arith::ConstantIndexOp::create(b, loc, 0);
     Value one = arith::ConstantIndexOp::create(b, loc, 1);
-    ub = b.createOrFold<arith::SubIOp>(loc, ub, one,
+    Value negOne = arith::ConstantIndexOp::create(b, loc, -1);
+    Value isDescending = b.createOrFold<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::slt, step, zero);
+    Value adjustment =
+        b.createOrFold<arith::SelectOp>(loc, isDescending, one, negOne);
+    ub = b.createOrFold<arith::AddIOp>(loc, ub, adjustment,
                                        arith::IntegerOverflowFlags::nsw);
   }
 
