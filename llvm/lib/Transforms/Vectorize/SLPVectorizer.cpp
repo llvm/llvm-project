@@ -31642,11 +31642,13 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       isa<PHINode>(I0) ? Opts->slp_phi_list_budget
                        : std::numeric_limits<unsigned>::max();
   unsigned RejectedTreesSize = 0;
+  std::optional<InstructionCost> WindowCost;
 
   auto TryVectorizeWindow = [&](ArrayRef<Value *> Ops) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing " << Ops.size() << " operations "
                       << "\n");
 
+    WindowCost = std::nullopt;
     R.buildTree(Ops);
     if (R.isTreeTinyAndNotFullyVectorizable()) {
       RejectedTreesSize += R.getTreeSize();
@@ -31664,6 +31666,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     R.buildExternalUses();
 
     InstructionCost Cost = R.getTreeCost(TreeCost);
+    WindowCost = Cost;
     CandidateFound = true;
     MinCost = std::min(MinCost, Cost);
 
@@ -31781,7 +31784,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       // Give rejected lanes a chance to collect and vectorize by using
       // itself as root. Every retry tree contains the rejected one, so only
       // the first few levels of users may turn it profitable.
-      if (StandaloneSeeds && FirstSkipped) {
+      if (StandaloneSeeds && FirstSkipped && WindowCost &&
+          (!WindowCost->isValid() || *WindowCost <= ActualVF)) {
         SmallVector<Value *> Lanes(Ops);
         SmallPtrSet<Value *, 8> Tried(llvm::from_range, Ops);
         bool UsersVectorized = false;
