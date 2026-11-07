@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -97,69 +98,6 @@ STATISTIC(NumFPLogicOpsConv, "Number of logic ops converted to fp ops");
 
 DEBUG_COUNTER(DAGCombineCounter, "dagcombine",
               "Controls whether a DAG combine is performed for a node");
-
-static cl::opt<bool>
-CombinerGlobalAA("combiner-global-alias-analysis", cl::Hidden,
-                 cl::desc("Enable DAG combiner's use of IR alias analysis"));
-
-static cl::opt<bool>
-UseTBAA("combiner-use-tbaa", cl::Hidden, cl::init(true),
-        cl::desc("Enable DAG combiner's use of TBAA"));
-
-#ifndef NDEBUG
-static cl::opt<std::string>
-CombinerAAOnlyFunc("combiner-aa-only-func", cl::Hidden,
-                   cl::desc("Only use DAG-combiner alias analysis in this"
-                            " function"));
-#endif
-
-/// Hidden option to stress test load slicing, i.e., when this option
-/// is enabled, load slicing bypasses most of its profitability guards.
-static cl::opt<bool>
-StressLoadSlicing("combiner-stress-load-slicing", cl::Hidden,
-                  cl::desc("Bypass the profitability model of load slicing"),
-                  cl::init(false));
-
-static cl::opt<bool>
-  MaySplitLoadIndex("combiner-split-load-index", cl::Hidden, cl::init(true),
-                    cl::desc("DAG combiner may split indexing from loads"));
-
-static cl::opt<bool>
-    EnableStoreMerging("combiner-store-merging", cl::Hidden, cl::init(true),
-                       cl::desc("DAG combiner enable merging multiple stores "
-                                "into a wider store"));
-
-static cl::opt<unsigned> TokenFactorInlineLimit(
-    "combiner-tokenfactor-inline-limit", cl::Hidden, cl::init(2048),
-    cl::desc("Limit the number of operands to inline for Token Factors"));
-
-static cl::opt<unsigned> StoreMergeDependenceLimit(
-    "combiner-store-merge-dependence-limit", cl::Hidden, cl::init(10),
-    cl::desc("Limit the number of times for the same StoreNode and RootNode "
-             "to bail out in store merging dependence check"));
-
-static cl::opt<bool> EnableReduceLoadOpStoreWidth(
-    "combiner-reduce-load-op-store-width", cl::Hidden, cl::init(true),
-    cl::desc("DAG combiner enable reducing the width of load/op/store "
-             "sequence"));
-static cl::opt<bool> ReduceLoadOpStoreWidthForceNarrowingProfitable(
-    "combiner-reduce-load-op-store-width-force-narrowing-profitable",
-    cl::Hidden, cl::init(false),
-    cl::desc("DAG combiner force override the narrowing profitable check when "
-             "reducing the width of load/op/store sequences"));
-
-static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
-    "combiner-shrink-load-replace-store-with-store", cl::Hidden, cl::init(true),
-    cl::desc("DAG combiner enable load/<replace bytes>/store with "
-             "a narrower store"));
-
-static cl::opt<bool> EnableTopologicalSorting(
-    "combiner-topological-sorting", cl::Hidden, cl::init(false),
-    cl::desc("DAG combiner nodes consistently processed in topological order"));
-
-static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
-                                     cl::init(false),
-                                     cl::desc("Disable the DAG combiner"));
 
 namespace {
 
@@ -273,9 +211,11 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
         : DAG(D), TLI(D.getTargetLoweringInfo()),
           STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL),
           BatchAA(BatchAA) {
+      const SelectionDAGOptions &Opts =
+          DAG.getLibraryOptions().get<SelectionDAGOptions>();
       ForCodeSize = DAG.shouldOptForSize();
-      DisableGenericCombines =
-          DisableCombines || (STI && STI->disableGenericCombines(OptLevel));
+      DisableGenericCombines = Opts.combiner_disabled ||
+                               (STI && STI->disableGenericCombines(OptLevel));
     }
 
     void ConsiderForPruning(SDNode *N) {
@@ -1120,8 +1060,9 @@ static bool isAnyConstantBuildVector(SDValue V, bool NoOpaques = false) {
 }
 
 // Determine if this an indexed load with an opaque target constant index.
-static bool canSplitIdx(LoadSDNode *LD) {
-  return MaySplitLoadIndex &&
+static bool canSplitIdx(LoadSDNode *LD,
+                        const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<SelectionDAGOptions>().combiner_split_load_index &&
          (LD->getOperand(2).getOpcode() != ISD::TargetConstant ||
           !cast<ConstantSDNode>(LD->getOperand(2))->isOpaque());
 }
@@ -1869,9 +1810,10 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
-  bool UseTopologicalSorting = EnableTopologicalSorting.getNumOccurrences() > 0
-                                   ? EnableTopologicalSorting
-                                   : TLI.useTopologicalSorting();
+  const SelectionDAGOptions &Opts =
+      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+  bool UseTopologicalSorting =
+      valueOr(Opts.combiner_topological_sorting, TLI.useTopologicalSorting());
 
   WorklistInserter AddNodes(*this);
 
@@ -2308,8 +2250,11 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   if (OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
+  const SelectionDAGOptions &Opts =
+      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+
   // Don't simplify the token factor if the node itself has too many operands.
-  if (N->getNumOperands() > TokenFactorInlineLimit)
+  if (N->getNumOperands() > Opts.combiner_tokenfactor_inline_limit)
     return SDValue();
 
   // If the sole user is a token factor, we should make sure we have a
@@ -2332,7 +2277,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
     // Limit number of nodes to inline, to avoid quadratic compile times.
     // We have to add the outstanding Token Factors to Ops, otherwise we might
     // drop Ops from the resulting Token Factors.
-    if (Ops.size() > TokenFactorInlineLimit) {
+    if (Ops.size() > Opts.combiner_tokenfactor_inline_limit) {
       for (unsigned j = i; j < TFs.size(); j++)
         Ops.emplace_back(TFs[j], 0);
       // Drop unprocessed Token Factors from TFs, so we do not add them to the
@@ -22271,7 +22216,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     if (LD->isIndexed()) {
       // Cannot handle opaque target constants and we must respect the user's
       // request not to split indexes from loads.
-      if (!canSplitIdx(LD))
+      if (!canSplitIdx(LD, DAG.getLibraryOptions()))
         return SDValue();
       SDValue Idx = SplitIndexingFromLoad(LD);
       SDValue Ops[] = {Val, Idx, Chain};
@@ -22418,7 +22363,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
       // the indexing into an add/sub directly (that TargetConstant may not be
       // valid for a different type of node, and we cannot convert an opaque
       // target constant into a regular constant).
-      bool CanSplitIdx = canSplitIdx(LD);
+      bool CanSplitIdx = canSplitIdx(LD, DAG.getLibraryOptions());
 
       if (!N->hasAnyUseOfValue(0) && (CanSplitIdx || !N->hasAnyUseOfValue(1))) {
         SDValue Poison = DAG.getPOISON(N->getValueType(0));
@@ -22918,10 +22863,12 @@ static void adjustCostForPairing(SmallVectorImpl<LoadedSlice> &LoadedSlices,
 ///
 /// FIXME: When the cost model will be mature enough, we can relax
 /// constraints (1) and (2).
-static bool isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
-                                const APInt &UsedBits, bool ForCodeSize) {
+static bool
+isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
+                    const APInt &UsedBits, bool ForCodeSize,
+                    const cl::LibraryOptionsContext &LibraryOptions) {
   unsigned NumberOfSlices = LoadedSlices.size();
-  if (StressLoadSlicing)
+  if (LibraryOptions.get<SelectionDAGOptions>().combiner_stress_load_slicing)
     return NumberOfSlices > 1;
 
   // Check (1).
@@ -23029,7 +22976,8 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
   }
 
   // Abort slicing if it does not seem to be profitable.
-  if (!isSlicingProfitable(LoadedSlices, UsedBits, ForCodeSize))
+  if (!isSlicingProfitable(LoadedSlices, UsedBits, ForCodeSize,
+                           DAG.getLibraryOptions()))
     return false;
 
   ++SlicedLoads;
@@ -23224,6 +23172,9 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
   if (ST->isTruncatingStore() || VT.isVector())
     return SDValue();
 
+  const SelectionDAGOptions &Opts =
+      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+
   unsigned Opc = Value.getOpcode();
 
   if ((Opc != ISD::OR && Opc != ISD::XOR && Opc != ISD::AND) ||
@@ -23235,7 +23186,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
   // Y is known to provide just those bytes.  If so, we try to replace the
   // load + replace + store sequence with a single (narrower) store, which makes
   // the load dead.
-  if (Opc == ISD::OR && EnableShrinkLoadReplaceStoreWithStore) {
+  if (Opc == ISD::OR && Opts.combiner_shrink_load_replace_store_with_store) {
     std::pair<unsigned, unsigned> MaskedLoad;
     MaskedLoad = CheckForMaskedLoad(Value.getOperand(0), Ptr, Chain);
     if (MaskedLoad.first)
@@ -23251,7 +23202,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
         return NewST;
   }
 
-  if (!EnableReduceLoadOpStoreWidth)
+  if (!Opts.combiner_reduce_load_op_store_width)
     return SDValue();
 
   if (Value.getOperand(1).getOpcode() != ISD::Constant)
@@ -23284,11 +23235,12 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     // The narrowing should be profitable, the load/store operation should be
     // legal (or custom) and the store size should be equal to the NewVT width.
-    while (NewBW < BitWidth &&
-           (NewVT.getStoreSizeInBits() != NewBW ||
-            !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
-            (!ReduceLoadOpStoreWidthForceNarrowingProfitable &&
-             !TLI.isNarrowingProfitable(N, VT, NewVT)))) {
+    while (
+        NewBW < BitWidth &&
+        (NewVT.getStoreSizeInBits() != NewBW ||
+         !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
+         (!Opts.combiner_reduce_load_op_store_width_force_narrowing_profitable &&
+          !TLI.isNarrowingProfitable(N, VT, NewVT)))) {
       NewBW = NextPowerOf2(NewBW);
       NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     }
@@ -23749,6 +23701,9 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
   StoreSource StoreSrc = getStoreSource(Val);
   assert(StoreSrc != StoreSource::Unknown && "Expected known source for store");
 
+  const SelectionDAGOptions &Opts =
+      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+
   // Match on loadbaseptr if relevant.
   EVT MemVT = St->getMemoryVT();
   BaseIndexOffset LBasePtr;
@@ -23862,7 +23817,8 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
     auto RootCount = StoreRootCountMap.find(StoreNode);
     return RootCount != StoreRootCountMap.end() &&
            RootCount->second.first == RootNode &&
-           RootCount->second.second > StoreMergeDependenceLimit;
+           RootCount->second.second >
+               Opts.combiner_store_merge_dependence_limit;
   };
 
   auto TryToAddCandidate = [&](SDUse &Use) {
@@ -24578,7 +24534,10 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 }
 
 bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
-  if (OptLevel == CodeGenOptLevel::None || !EnableStoreMerging)
+  const SelectionDAGOptions &Opts =
+      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+
+  if (OptLevel == CodeGenOptLevel::None || !Opts.combiner_store_merging)
     return false;
 
   // TODO: Extend this function to merge stores of scalable vectors.
@@ -32608,12 +32567,15 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
       return false;
   }
 
-  bool UseAA = CombinerGlobalAA.getNumOccurrences() > 0
-                   ? CombinerGlobalAA
-                   : DAG.getSubtarget().useAA();
+  const SelectionDAGOptions &Opts =
+      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+  bool UseAA =
+      valueOr(Opts.combiner_global_alias_analysis, DAG.getSubtarget().useAA());
+  bool UseTBAA = Opts.combiner_use_tbaa;
+
 #ifndef NDEBUG
-  if (CombinerAAOnlyFunc.getNumOccurrences() &&
-      CombinerAAOnlyFunc != DAG.getMachineFunction().getName())
+  if (Opts.combiner_aa_only_func.has_value() &&
+      Opts.combiner_aa_only_func.value() != DAG.getMachineFunction().getName())
     UseAA = false;
 #endif
 
