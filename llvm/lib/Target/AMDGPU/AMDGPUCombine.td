@@ -114,7 +114,7 @@ def int_minmax_to_med3 : GICombineRule<
 let Predicates = [Predicate<"Subtarget->d16PreservesUnusedBits()">] in
 def d16_load : GICombineRule<
   (defs root:$bitcast),
-  (combine (G_BITCAST $dst, $val):$bitcast,
+  (combine (G_BITCAST $dst, $src):$bitcast,
            [{ return combineD16Load(*${bitcast} ); }])>;
 
 
