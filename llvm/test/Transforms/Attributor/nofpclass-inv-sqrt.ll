@@ -18,11 +18,7 @@ define float @ret_inv_sqrt(float %x) {
   ret float %inv.sqrt
 }
 
-; Positive infinity and positive zero are impossible here. However, they are
-; reported as being possible because fdiv is not aware that the LHS is one.
-; fdiv only knows that it is computing the result of (normal / normal), which
-; may overflow to infinity or underflow to zero.
-; TODO: Also infer that the result cannot be +0.0 or +Inf.
+; TODO: Also infer that the result cannot be +Inf.
 define float @ret_inv_sqrt_x_not_infinity_not_zero(float nofpclass(inf zero) %x) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_inv_sqrt_x_not_infinity_not_zero
 ; CHECK-SAME: (float nofpclass(inf zero) [[X:%.*]]) #[[ATTR1]] {
