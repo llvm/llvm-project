@@ -221,7 +221,8 @@ module attributes {
     exceptions = false, threadsafe_statics = true, cuda = false,
     cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
     openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
-    long_double_size = 0, enable_noundef_attrs = false>
+    long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true,
+    ssp_buffer_size = 8>
 } {
 
   cir.func private @takes_big_no_noundef(%arg0: !rec_Big) requires_call_conv_lowering

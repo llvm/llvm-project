@@ -46,7 +46,7 @@ NeedsCtor needsCtor;
 // CIR:   %0 = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
 // CIR:   cir.call @_ZN9NeedsCtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtor> {{.*}}) -> ()
 
-// LLVM: define internal void @__cxx_global_var_init()
+// LLVM: define internal void @__cxx_global_var_init() #{{[0-9]+}}
 // LLVM:   call void @_ZN9NeedsCtorC1Ev(ptr noundef nonnull align 1 dereferenceable(1) @needsCtor)
 
 // OGCG: define internal void @__cxx_global_var_init() {{.*}} section ".text.startup" {
@@ -72,7 +72,7 @@ NeedsDtor needsDtor;
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[OBJ_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
-// LLVM: define internal void @__cxx_global_var_init.1() {
+// LLVM: define internal void @__cxx_global_var_init.1() #{{[0-9]+}} {
 // LLVM:   call i32 @__cxa_atexit(ptr @_ZN9NeedsDtorD1Ev, ptr @needsDtor, ptr @__dso_handle)
 
 // OGCG: define internal void @__cxx_global_var_init.1() {{.*}} section ".text.startup" {
@@ -103,7 +103,7 @@ NeedsCtorDtor needsCtorDtor;
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[OBJ_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
-// LLVM: define internal void @__cxx_global_var_init.2() {
+// LLVM: define internal void @__cxx_global_var_init.2() #{{[0-9]+}} {
 // LLVM:   call void @_ZN13NeedsCtorDtorC1Ev(ptr noundef nonnull align 1 dereferenceable(1) @needsCtorDtor)
 // LLVM:   call i32 @__cxa_atexit(ptr @_ZN13NeedsCtorDtorD1Ev, ptr @needsCtorDtor, ptr @__dso_handle)
 
@@ -136,7 +136,7 @@ float _Complex a = {num, num};
 // CIR:   %[[COMPLEX_VAL:.*]] = cir.complex.create %[[REAL]], %[[IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR:   cir.store{{.*}} %[[COMPLEX_VAL]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: define internal void @__cxx_global_var_init.3()
+// LLVM: define internal void @__cxx_global_var_init.3() #{{[0-9]+}}
 // LLVM:   %[[REAL:.*]] = load float, ptr @num, align 4
 // LLVM:   %[[IMAG:.*]] = load float, ptr @num, align 4
 // LLVM:   %[[TMP_COMPLEX_VAL:.*]] = insertvalue { float, float } {{.*}}, float %[[REAL]], 0
@@ -167,7 +167,7 @@ int i = (int)fp;
 // CIR:   %[[FP_I32:.*]] = cir.cast float_to_int %[[TMP_FP]] : !cir.float -> !s32i
 // CIR:   cir.store{{.*}} %[[FP_I32]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define internal void @__cxx_global_var_init.4()
+// LLVM: define internal void @__cxx_global_var_init.4() #{{[0-9]+}}
 // LLVM:   %[[TMP_FP:.*]] = load float, ptr @fp, align 4
 // LLVM:   %[[FP_I32:.*]] = fptosi float %[[TMP_FP]] to i32
 // LLVM:   store i32 %[[FP_I32]], ptr @i, align 4
@@ -223,7 +223,7 @@ ArrayDtor arrDtor[16];
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[ARR_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
-// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) {
+// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) #{{[0-9]+}} {
 // LLVM:   %[[BEGIN:.*]] = getelementptr %struct.ArrayDtor, ptr %[[ARR_ARG]], i32 0
 // LLVM:   %[[END:.*]] = getelementptr %struct.ArrayDtor, ptr %[[BEGIN]], i64 16
 // LLVM:   %[[CUR_ADDR:.*]] = alloca ptr
@@ -243,7 +243,7 @@ ArrayDtor arrDtor[16];
 // LLVM:   ret void
 // LLVM: }
 //
-// LLVM: define internal void @__cxx_global_var_init.5() {
+// LLVM: define internal void @__cxx_global_var_init.5() #{{[0-9]+}} {
 // LLVM:   call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @arrDtor, ptr @__dso_handle)
 
 // Note: OGCG defines these functions in reverse order of CIR->LLVM.
@@ -293,7 +293,7 @@ double &&globalDoubleRef = static_cast<double &&>(globalInt);
 // CIR:   cir.store align(8) %[[GET_BACKING_VAR]], %[[GET_SELF]] : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
 // CIR: cir.global "private" internal @_ZGR15globalDoubleRef_ = #cir.fp<0.000000e+00> : !cir.double
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.6()
+// LLVM-LABEL: define internal void @__cxx_global_var_init.6() #{{[0-9]+}}
 // LLVM:   %[[GET_INT_VAR:.*]] = load i32, ptr @globalInt, align 4
 // LLVM:   %[[CAST:.*]] = sitofp i32 %[[GET_INT_VAR]] to double
 // LLVM:   store double %[[CAST]], ptr @_ZGR15globalDoubleRef_, align 8
@@ -316,7 +316,7 @@ double &&globalDoubleRef = static_cast<double &&>(globalInt);
 // CIR:   cir.call @__cxx_global_var_init.5() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.6() : () -> ()
 
-// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME]]()
+// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME]]() #{{[0-9]+}}
 // LLVM:   call void @__cxx_global_var_init()
 // LLVM:   call void @__cxx_global_var_init.1()
 // LLVM:   call void @__cxx_global_var_init.2()

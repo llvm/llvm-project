@@ -3132,7 +3132,8 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNakedAttrName() ||
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
-         attr.getName() == CIRDialect::getDontCallWarnAttrName();
+         attr.getName() == CIRDialect::getDontCallWarnAttrName() ||
+         attr.getName() == CIRDialect::getRuntimeFuncAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -3328,6 +3329,24 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     if (auto diagnostic = op->getAttrOfType<mlir::StringAttr>(dontCallAttr))
       passthrough.push_back(rewriter.getArrayAttr(
           {rewriter.getStringAttr(dontCallAttr), diagnostic}));
+
+  // Every function but a runtime function gets the TU-wide default function
+  // attributes.
+  if (!op->hasAttr(CIRDialect::getRuntimeFuncAttrName())) {
+    if (auto langOpts = op->getParentOfType<mlir::ModuleOp>()
+                            ->getAttrOfType<cir::LoweringOptionsAttr>(
+                                CIRDialect::getLoweringOptionsAttrName())) {
+      // A strictfp function may use a pragma to observe FP exceptions locally,
+      // so the TU-wide default does not apply to it.
+      if (langOpts.getNoTrappingMath() &&
+          !op->hasAttr(CIRDialect::getStrictFPAttrName()))
+        passthrough.push_back(
+            rewriter.getStrArrayAttr({"no-trapping-math", "true"}));
+      passthrough.push_back(rewriter.getStrArrayAttr(
+          {"stack-protector-buffer-size",
+           llvm::utostr(langOpts.getSspBufferSize())}));
+    }
+  }
 
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
