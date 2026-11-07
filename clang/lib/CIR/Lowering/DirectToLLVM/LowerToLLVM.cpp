@@ -3395,6 +3395,11 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
   attributes.push_back(rewriter.getNamedAttr("visibility_", visibility));
 
+  if (op.getUnnamedAddr())
+    attributes.push_back(rewriter.getNamedAttr(
+        "unnamed_addr", mlir::LLVM::UnnamedAddrAttr::get(
+                            getContext(), mlir::LLVM::UnnamedAddr::Global)));
+
   if (op->getAttr(CUDAExternallyInitializedAttr::getMnemonic()))
     attributes.push_back(rewriter.getNamedAttr("externally_initialized",
                                                rewriter.getUnitAttr()));
