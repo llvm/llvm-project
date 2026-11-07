@@ -628,28 +628,30 @@ public:
   /// have no associated teams construct.
   ///
   /// Otherwise, return nullptr.
-  const Expr *getNumTeamsExprForTargetDirective(CodeGenFunction &CGF,
-                                                const OMPExecutableDirective &D,
-                                                int32_t &MinTeamsVal,
-                                                int32_t &MaxTeamsVal);
-  llvm::Value *emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
-                                              const OMPExecutableDirective &D);
+  llvm::SmallVector<const Expr *> getNumTeamsExprForTargetDirective(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      llvm::SmallVectorImpl<int32_t> &MinTeamsValues,
+      llvm::SmallVectorImpl<int32_t> &MaxTeamsValues);
+  void emitNumTeamsForTargetDirective(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      llvm::SmallVectorImpl<llvm::Value *> &NumTeamsValues);
 
   /// Check for a number of threads upper bound constant value (stored in \p
   /// UpperBound), or expression (returned). If the value is conditional (via an
   /// if-clause), store the condition in \p CondExpr. Similarly, a potential
   /// thread limit expression is stored in \p ThreadLimitExpr. If \p
   /// UpperBoundOnly is true, no expression evaluation is perfomed.
-  const Expr *getNumThreadsExprForTargetDirective(
+  llvm::SmallVector<const Expr *> getNumThreadsExprForTargetDirective(
       CodeGenFunction &CGF, const OMPExecutableDirective &D,
-      int32_t &UpperBound, bool UpperBoundOnly,
-      llvm::Value **CondExpr = nullptr, const Expr **ThreadLimitExpr = nullptr);
+      llvm::SmallVectorImpl<int32_t> &UpperBounds, bool UpperBoundsOnly,
+      llvm::Value **CondExpr = nullptr,
+      llvm::SmallVectorImpl<const Expr *> *ThreadLimitExprs = nullptr);
 
   /// Emit an expression that denotes the number of threads a target region
   /// shall use. Will generate "i32 0" to allow the runtime to choose.
-  llvm::Value *
-  emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
-                                   const OMPExecutableDirective &D);
+  void emitNumThreadsForTargetDirective(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      llvm::SmallVectorImpl<llvm::Value *> &NumThreadsValues);
 
   /// Return the trip count of loops associated with constructs / 'target teams
   /// distribute' and 'teams distribute parallel for'. \param SizeEmitter Emits
