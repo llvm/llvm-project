@@ -19,7 +19,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -269,7 +269,7 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
         BoundsSafetySoftTrapStr.data(), trap_reason_func_name.data());
   }
 
-  RegisterContextSP rc = thread_sp->GetRegisterContext();
+  ThreadRegisterContextSP rc = thread_sp->GetRegisterContext();
   if (!rc)
     return LogFailedCSI("failed to get register context");
 

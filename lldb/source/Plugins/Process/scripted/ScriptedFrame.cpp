@@ -141,7 +141,7 @@ ScriptedFrame::ScriptedFrame(ThreadSP thread_sp,
   // FIXME: This should be part of the base class constructor.
   m_stack_frame_kind = StackFrame::Kind::Synthetic;
 
-  llvm::Expected<lldb::RegisterContextSP> reg_ctx_or_err =
+  llvm::Expected<lldb::ThreadRegisterContextSP> reg_ctx_or_err =
       CreateRegisterContext();
   if (!reg_ctx_or_err) {
     std::optional<lldb::user_id_t> debugger_id;
@@ -212,7 +212,7 @@ llvm::Expected<DynamicRegisterInfoSP> ScriptedFrame::GetDynamicRegisterInfo() {
   return register_info_sp;
 }
 
-llvm::Expected<lldb::RegisterContextSP> ScriptedFrame::CreateRegisterContext() {
+llvm::Expected<lldb::ThreadRegisterContextSP> ScriptedFrame::CreateRegisterContext() {
   if (!m_scripted_frame_interface_sp)
     return llvm::createStringError("invalid scripted frame interface");
 
@@ -225,7 +225,7 @@ llvm::Expected<lldb::RegisterContextSP> ScriptedFrame::CreateRegisterContext() {
   std::optional<std::string> reg_data =
       m_scripted_frame_interface_sp->GetRegisterContext();
   if (!reg_data)
-    return lldb::RegisterContextSP();
+    return lldb::ThreadRegisterContextSP();
 
   DataBufferSP data_sp(
       std::make_shared<DataBufferHeap>(reg_data->c_str(), reg_data->size()));
@@ -248,7 +248,7 @@ llvm::Expected<lldb::RegisterContextSP> ScriptedFrame::CreateRegisterContext() {
   return reg_ctx_memory;
 }
 
-lldb::RegisterContextSP ScriptedFrame::GetRegisterContext() {
+lldb::ThreadRegisterContextSP ScriptedFrame::GetRegisterContext() {
   return m_reg_context_sp;
 }
 

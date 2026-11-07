@@ -8,7 +8,7 @@
 
 #include "Plugins/Architecture/AArch64/ArchitectureAArch64.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -76,7 +76,7 @@ UpdateARM64SMERegistersInfos(DynamicRegisterInfo::reg_collection_range regs,
 
 bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
                                                   DataExtractor &reg_data,
-                                                  RegisterContext &reg_context
+                                                  ThreadRegisterContext &reg_context
 
 ) const {
   // Once we start to reconfigure registers, we cannot read any of them.

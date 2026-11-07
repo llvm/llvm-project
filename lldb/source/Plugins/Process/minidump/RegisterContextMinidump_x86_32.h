@@ -14,7 +14,7 @@
 #include "Register/RegisterInfoInterface.h"
 #include "lldb/Register/Arch/lldb-x86-register-enums.h"
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"

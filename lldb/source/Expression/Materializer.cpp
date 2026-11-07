@@ -13,7 +13,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -1346,7 +1346,7 @@ public:
       return;
     }
 
-    lldb::RegisterContextSP reg_context_sp = frame_sp->GetRegisterContext();
+    lldb::ThreadRegisterContextSP reg_context_sp = frame_sp->GetRegisterContext();
 
     if (!reg_context_sp->ReadRegister(&m_register_info, reg_value)) {
       err = Status::FromErrorStringWithFormat(
@@ -1407,7 +1407,7 @@ public:
       return;
     }
 
-    lldb::RegisterContextSP reg_context_sp = frame_sp->GetRegisterContext();
+    lldb::ThreadRegisterContextSP reg_context_sp = frame_sp->GetRegisterContext();
 
     map.GetMemoryData(register_data, load_addr, m_register_info.byte_size,
                       extract_error);

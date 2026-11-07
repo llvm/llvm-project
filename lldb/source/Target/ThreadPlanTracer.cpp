@@ -17,7 +17,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -134,7 +134,7 @@ void ThreadPlanAssemblyTracer::Log() {
   if (!stream_sp)
     return;
 
-  RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
 
   lldb::addr_t pc = reg_ctx->GetPC();
   Address pc_addr;
@@ -210,7 +210,7 @@ void ThreadPlanAssemblyTracer::Log() {
   }
 
   if (m_register_values.empty()) {
-    RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
     m_register_values.resize(reg_ctx->GetRegisterCount());
   }
 

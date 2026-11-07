@@ -23,7 +23,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Register/RegisterValue.h"
@@ -390,7 +390,7 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
   if (m_resolved_value.GetContextType() == Value::ContextType::RegisterInfo) {
     RegisterInfo *reg_info = m_resolved_value.GetRegisterInfo();
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
     RegisterValue reg_value;
     if (!reg_info || !reg_ctx) {
       error = Status::FromErrorString("unable to retrieve register info");
@@ -425,7 +425,7 @@ bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
   if (m_resolved_value.GetContextType() == Value::ContextType::RegisterInfo) {
     RegisterInfo *reg_info = m_resolved_value.GetRegisterInfo();
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    RegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
+    ThreadRegisterContext *reg_ctx = exe_ctx.GetRegisterContext();
     RegisterValue reg_value;
     if (!reg_info || !reg_ctx) {
       error = Status::FromErrorString("unable to retrieve register info");

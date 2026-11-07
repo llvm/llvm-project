@@ -85,7 +85,7 @@ public:
   // to look up overlay permissions in por_el0 and apply them to the original
   // permissions.
   virtual std::optional<MemoryPermissions>
-  GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+  GetMemoryPermissions(lldb_private::ThreadRegisterContext &reg_ctx,
                        unsigned protection_key,
                        uint32_t original_permissions) override;
 

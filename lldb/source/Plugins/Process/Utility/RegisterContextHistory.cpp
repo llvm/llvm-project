@@ -37,7 +37,7 @@ RegisterContextHistory::RegisterContextHistory(Thread &thread,
                                                uint32_t concrete_frame_idx,
                                                uint32_t address_byte_size,
                                                addr_t pc_value)
-    : RegisterContext(thread, concrete_frame_idx), m_pc_value(pc_value) {
+    : ThreadRegisterContext(thread, concrete_frame_idx), m_pc_value(pc_value) {
   m_reg_set0.name = "General Purpose Registers";
   m_reg_set0.short_name = "GPR";
   m_reg_set0.num_registers = 1;

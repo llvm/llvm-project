@@ -13,7 +13,7 @@
 
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/UnwindLLDB.h"
 #include "lldb/lldb-private.h"
@@ -23,7 +23,7 @@ namespace lldb_private {
 class UnwindLLDB;
 class ArchitectureArm;
 
-class RegisterContextUnwind : public lldb_private::RegisterContext {
+class RegisterContextUnwind : public lldb_private::ThreadRegisterContext {
 public:
   typedef std::shared_ptr<RegisterContextUnwind> SharedPtr;
 
@@ -246,7 +246,7 @@ private:
   bool m_sym_ctx_valid; // if ResolveSymbolContextForAddress fails, don't try to
                         // use m_sym_ctx
 
-  uint32_t m_frame_number; // What stack frame this RegisterContext is
+  uint32_t m_frame_number; // What stack frame this ThreadRegisterContext is
 
   std::map<uint32_t, lldb_private::UnwindLLDB::ConcreteRegisterLocation>
       m_registers; // where to find reg values for this frame

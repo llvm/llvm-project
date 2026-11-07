@@ -20,7 +20,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -172,7 +172,7 @@ FuncUnwinders::GetArmUnwindUnwindPlan(Target &target) {
 namespace {
 class RegisterContextToInfo: public SymbolFile::RegisterInfoResolver {
 public:
-  RegisterContextToInfo(RegisterContext &ctx) : m_ctx(ctx) {}
+  RegisterContextToInfo(ThreadRegisterContext &ctx) : m_ctx(ctx) {}
 
   const RegisterInfo *ResolveName(llvm::StringRef name) const override {
     return m_ctx.GetRegisterInfoByName(name);
@@ -183,7 +183,7 @@ public:
   }
 
 private:
-  RegisterContext &m_ctx;
+  ThreadRegisterContext &m_ctx;
 };
 } // namespace
 

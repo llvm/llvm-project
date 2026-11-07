@@ -46,8 +46,8 @@ HistoryThread::~HistoryThread() {
   DestroyThread();
 }
 
-lldb::RegisterContextSP HistoryThread::GetRegisterContext() {
-  RegisterContextSP rctx;
+lldb::ThreadRegisterContextSP HistoryThread::GetRegisterContext() {
+  ThreadRegisterContextSP rctx;
   if (m_pcs.size() > 0) {
     rctx = std::make_shared<RegisterContextHistory>(
         *this, 0, GetProcess()->GetAddressByteSize(), m_pcs[0]);
@@ -55,7 +55,7 @@ lldb::RegisterContextSP HistoryThread::GetRegisterContext() {
   return rctx;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 HistoryThread::CreateRegisterContextForFrame(StackFrame *frame) {
   return m_unwinder_up->CreateRegisterContextForFrame(frame);
 }

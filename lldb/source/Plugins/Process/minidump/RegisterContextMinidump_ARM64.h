@@ -12,7 +12,7 @@
 #include "MinidumpTypes.h"
 
 #include "Register/RegisterInfoInterface.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -26,7 +26,7 @@ namespace minidump {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-class RegisterContextMinidump_ARM64 : public lldb_private::RegisterContext {
+class RegisterContextMinidump_ARM64 : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextMinidump_ARM64(lldb_private::Thread &thread,
                                 const DataExtractor &data);

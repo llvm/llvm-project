@@ -16,7 +16,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -229,7 +229,7 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
     return ThreadPlanSP();
   }
 
-  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
   if (!reg_ctx_sp)
     return ThreadPlanSP();
 

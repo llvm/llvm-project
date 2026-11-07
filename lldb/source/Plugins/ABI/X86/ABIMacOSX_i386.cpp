@@ -18,7 +18,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
@@ -62,7 +62,7 @@ ABIMacOSX_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
 bool ABIMacOSX_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
                                         addr_t func_addr, addr_t return_addr,
                                         llvm::ArrayRef<addr_t> args) const {
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
   uint32_t pc_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
@@ -144,7 +144,7 @@ bool ABIMacOSX_i386::GetArgumentValues(Thread &thread,
   // Get the pointer to the first stack argument so we have a place to start
   // when reading data
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -199,7 +199,7 @@ Status ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   bool is_signed;
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
@@ -260,7 +260,7 @@ ABIMacOSX_i386::GetReturnValueObjectImpl(Thread &thread,
   // compiler_type.GetOpaqueQualType());
   value.SetCompilerType(compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 

@@ -32,7 +32,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StopInfo.h"
@@ -651,7 +651,7 @@ static bool DumpFile(Stream &s, const FileSpec &file, FileKind file_kind) {
 static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
                          uint32_t reg_num, Format format) {
   if (frame) {
-    RegisterContext *reg_ctx = frame->GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = frame->GetRegisterContext().get();
 
     if (reg_ctx) {
       const uint32_t lldb_reg_num =
@@ -1079,7 +1079,7 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
 static bool DumpRegister(Stream &s, StackFrame *frame, const char *reg_name,
                          Format format) {
   if (frame) {
-    RegisterContext *reg_ctx = frame->GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = frame->GetRegisterContext().get();
 
     if (reg_ctx) {
       const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
@@ -2043,7 +2043,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::CurrentPCArrow:
     if (m_addr && m_exe_ctx && m_exe_ctx->GetFramePtr()) {
-      RegisterContextSP reg_ctx =
+      ThreadRegisterContextSP reg_ctx =
           m_exe_ctx->GetFramePtr()->GetRegisterContextSP();
       if (reg_ctx) {
         addr_t pc_loadaddr = reg_ctx->GetPC();

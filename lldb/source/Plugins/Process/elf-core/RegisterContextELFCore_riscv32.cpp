@@ -62,7 +62,7 @@ RegisterContextELFCore_riscv32::RegisterContextELFCore_riscv32(
     Thread &thread,
     std::unique_ptr<RegisterInfoDynamic_riscv32> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContext(thread, 0), m_reg_infos_up(std::move(register_info)) {
+    : ThreadRegisterContext(thread, 0), m_reg_infos_up(std::move(register_info)) {
   // Compute the maximum register counts for GPR, FPR, and CSR.
   constexpr uint32_t k_num_gpr_registers =
       std::size(g_register_infos_riscv32_gpr);

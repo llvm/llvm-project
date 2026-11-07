@@ -11,7 +11,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -125,7 +125,7 @@ bool ThreadPlan::WillResume(StateType resume_state, bool current_plan) {
     Log *log = GetLog(LLDBLog::Step);
 
     if (log) {
-      RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
+      ThreadRegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
       assert(reg_ctx);
       addr_t pc = reg_ctx->GetPC();
       addr_t sp = reg_ctx->GetSP();

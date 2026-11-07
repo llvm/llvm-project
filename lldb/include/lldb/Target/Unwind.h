@@ -53,7 +53,7 @@ public:
     return DoGetFrameInfoAtIndex(frame_idx, cfa, pc, behaves_like_zeroth_frame);
   }
 
-  lldb::RegisterContextSP CreateRegisterContextForFrame(StackFrame *frame) {
+  lldb::ThreadRegisterContextSP CreateRegisterContextForFrame(StackFrame *frame) {
     std::lock_guard<std::recursive_mutex> guard(m_unwind_mutex);
     return DoCreateRegisterContextForFrame(frame);
   }
@@ -70,7 +70,7 @@ protected:
                                      lldb::addr_t &pc,
                                      bool &behaves_like_zeroth_frame) = 0;
 
-  virtual lldb::RegisterContextSP
+  virtual lldb::ThreadRegisterContextSP
   DoCreateRegisterContextForFrame(StackFrame *frame) = 0;
 
   Thread &m_thread;

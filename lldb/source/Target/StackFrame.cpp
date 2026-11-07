@@ -24,7 +24,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -50,7 +50,7 @@ using namespace lldb_private;
 char StackFrame::ID;
 
 static std::pair<const RegisterInfo *, llvm::StringRef>
-FindRegisterInExpressionPath(RegisterContext &reg_ctx,
+FindRegisterInExpressionPath(ThreadRegisterContext &reg_ctx,
                              llvm::StringRef expression_path) {
   // Register names may contain periods. Prefer an exact name, then the
   // longest name that leaves a member or index expression as the suffix.
@@ -114,7 +114,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
 
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index,
-                       const RegisterContextSP &reg_context_sp, addr_t cfa,
+                       const ThreadRegisterContextSP &reg_context_sp, addr_t cfa,
                        addr_t pc, bool behaves_like_zeroth_frame,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
@@ -141,7 +141,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
 
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index,
-                       const RegisterContextSP &reg_context_sp, addr_t cfa,
+                       const ThreadRegisterContextSP &reg_context_sp, addr_t cfa,
                        const Address &pc_addr, bool behaves_like_zeroth_frame,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
@@ -253,7 +253,7 @@ const Address &StackFrame::GetFrameCodeAddress() {
 }
 
 // This can't be rewritten into a call to
-// RegisterContext::GetPCForSymbolication because this
+// ThreadRegisterContext::GetPCForSymbolication because this
 // StackFrame may have been constructed with a special pc,
 // e.g. tail-call artificial frames.
 Address StackFrame::GetFrameCodeAddressForSymbolication() {
@@ -671,7 +671,7 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
   VariableList *variable_list = nullptr;
 
   if (is_register_path) {
-    RegisterContextSP reg_ctx_sp = GetRegisterContextSP();
+    ThreadRegisterContextSP reg_ctx_sp = GetRegisterContextSP();
     auto [reg_info, register_path] =
         reg_ctx_sp
             ? FindRegisterInExpressionPath(*reg_ctx_sp, var_expr)
@@ -1288,7 +1288,7 @@ DWARFExpressionList *StackFrame::GetFrameBaseExpression(Status *error_ptr) {
   return &m_sc.function->GetFrameBaseExpression();
 }
 
-RegisterContextSP StackFrame::GetRegisterContext() {
+ThreadRegisterContextSP StackFrame::GetRegisterContext() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_reg_context_sp) {
     ThreadSP thread_sp(GetThread());
@@ -1459,7 +1459,7 @@ SourceLanguage StackFrame::GuessLanguage() {
 namespace {
 std::pair<const Instruction::Operand *, int64_t>
 GetBaseExplainingValue(const Instruction::Operand &operand,
-                       RegisterContext &register_context, lldb::addr_t value) {
+                       ThreadRegisterContext &register_context, lldb::addr_t value) {
   switch (operand.m_type) {
   case Instruction::Operand::Type::Dereference:
   case Instruction::Operand::Type::Immediate:
@@ -1522,7 +1522,7 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
 
 std::pair<const Instruction::Operand *, int64_t>
 GetBaseExplainingDereference(const Instruction::Operand &operand,
-                             RegisterContext &register_context,
+                             ThreadRegisterContext &register_context,
                              lldb::addr_t addr) {
   if (operand.m_type == Instruction::Operand::Type::Dereference) {
     return GetBaseExplainingValue(operand.m_children[0], register_context,
@@ -1564,7 +1564,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
     return ValueObjectSP();
   }
 
-  RegisterContextSP register_context_sp = GetRegisterContext();
+  ThreadRegisterContextSP register_context_sp = GetRegisterContext();
 
   if (!register_context_sp) {
     return ValueObjectSP();

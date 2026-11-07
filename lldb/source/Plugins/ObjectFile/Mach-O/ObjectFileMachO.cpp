@@ -168,7 +168,7 @@ static bool ReadMachOCommand(const DataExtractor &data, lldb::offset_t &offset,
   return true;
 }
 
-static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
+static void PrintRegisterValue(ThreadRegisterContext *reg_ctx, const char *name,
                                const char *alt_name, size_t reg_byte_size,
                                Stream &data) {
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
@@ -240,9 +240,9 @@ public:
   }
 
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
+      ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
@@ -445,9 +445,9 @@ public:
   }
 
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
+      ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
@@ -565,9 +565,9 @@ public:
   }
 
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
+      ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
@@ -700,9 +700,9 @@ public:
   }
 
   static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
     if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
+      ThreadRegisterContext *reg_ctx = reg_ctx_sp.get();
 
       data.PutHex32(GPRRegSet); // Flavor
       data.PutHex32(GPRWordCount);
@@ -4923,7 +4923,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
   //
   // So we just keep reading the various register flavors till we find the GPR
   // one, then read the PC out of there.
-  // FIXME: We will need to have a "RegisterContext data provider" class at some
+  // FIXME: We will need to have a "ThreadRegisterContext data provider" class at some
   // point that can get all the registers
   // out of data in this form & attach them to a given thread.  That should
   // underlie the MacOS X User process plugin, and we'll also need it for the
@@ -5477,10 +5477,10 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
   return object_sp;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
                                          lldb_private::Thread &thread) {
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
 
   ModuleSP module_sp(GetModule());
   if (module_sp) {

@@ -37,8 +37,8 @@ public:
   /// One of the two initialize methods that can be called on this object;
   /// they must be called before any of the assembly inspection methods
   /// are called.  This one should be used if the caller has access to a
-  /// valid RegisterContext.
-  void Initialize(lldb::RegisterContextSP &reg_ctx);
+  /// valid ThreadRegisterContext.
+  void Initialize(lldb::ThreadRegisterContextSP &reg_ctx);
 
   /// One of the two initialize methods that can be called on this object;
   /// they must be called before any of the assembly inspection methods
@@ -76,7 +76,7 @@ public:
   ///
   /// The \p unwind_plan 's register numbers must be converted into the lldb
   /// register numbering
-  /// scheme OR a RegisterContext must be provided in \p reg_ctx.  If the \p
+  /// scheme OR a ThreadRegisterContext must be provided in \p reg_ctx.  If the \p
   /// unwind_plan
   /// register numbers are already in lldb register numbering, \p reg_ctx may be
   /// null.
@@ -84,7 +84,7 @@ public:
   bool AugmentUnwindPlanFromCallSite(uint8_t *data, size_t size,
                                      lldb_private::AddressRange &func_range,
                                      lldb_private::UnwindPlan &unwind_plan,
-                                     lldb::RegisterContextSP &reg_ctx);
+                                     lldb::ThreadRegisterContextSP &reg_ctx);
 
   bool FindFirstNonPrologueInstruction(uint8_t *data, size_t size,
                                        size_t &offset);

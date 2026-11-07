@@ -19,7 +19,7 @@
 #include "lldb/Target/AppleArm64ExceptionClass.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Unwind.h"
@@ -69,13 +69,13 @@ void ThreadMachCore::RefreshStateAfterStop() {
 
 bool ThreadMachCore::ThreadIDIsValid(lldb::tid_t thread) { return thread != 0; }
 
-lldb::RegisterContextSP ThreadMachCore::GetRegisterContext() {
+lldb::ThreadRegisterContextSP ThreadMachCore::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
-lldb::RegisterContextSP
+lldb::ThreadRegisterContextSP
 ThreadMachCore::CreateRegisterContextForFrame(StackFrame *frame) {
   uint32_t concrete_frame_idx = 0;
 
@@ -95,7 +95,7 @@ ThreadMachCore::CreateRegisterContextForFrame(StackFrame *frame) {
   if (!core_objfile)
     return {};
 
-  RegisterContextSP core_thread_regctx_sp =
+  ThreadRegisterContextSP core_thread_regctx_sp =
       core_objfile->GetThreadContextAtIndex(m_objfile_lc_thread_idx, *this);
 
   if (!core_thread_regctx_sp)
@@ -140,7 +140,7 @@ bool ThreadMachCore::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
   if (process_sp) {
     StopInfoSP stop_info;
-    RegisterContextSP reg_ctx_sp = GetRegisterContext();
+    ThreadRegisterContextSP reg_ctx_sp = GetRegisterContext();
 
     if (reg_ctx_sp) {
       Target &target = process_sp->GetTarget();

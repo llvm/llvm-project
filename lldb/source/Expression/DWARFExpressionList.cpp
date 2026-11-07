@@ -9,7 +9,7 @@
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 
@@ -152,7 +152,7 @@ bool DWARFExpressionList::LinkThreadLocalStorage(
 
 bool DWARFExpressionList::MatchesOperand(
     StackFrame &frame, const Instruction::Operand &operand) const {
-  RegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
   if (!reg_ctx_sp) {
     return false;
   }
@@ -237,7 +237,7 @@ void DWARFExpressionList::GetDescription(Stream *s,
 
 llvm::Expected<const DWARFExpression *>
 DWARFExpressionList::GetExpressionAtPC(ExecutionContext *exe_ctx,
-                                       RegisterContext *reg_ctx,
+                                       ThreadRegisterContext *reg_ctx,
                                        lldb::addr_t func_load_addr) const {
   if (const DWARFExpression *always = GetAlwaysValidExpr())
     return always;
@@ -249,7 +249,7 @@ DWARFExpressionList::GetExpressionAtPC(ExecutionContext *exe_ctx,
       frame = exe_ctx->GetFramePtr();
     if (!frame)
       return llvm::createStringError("no frame");
-    RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
+    ThreadRegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
     if (!reg_ctx_sp)
       return llvm::createStringError("no register context");
     reg_ctx_sp->GetPCForSymbolication(pc);
@@ -267,7 +267,7 @@ DWARFExpressionList::GetExpressionAtPC(ExecutionContext *exe_ctx,
 }
 
 llvm::Expected<Value> DWARFExpressionList::Evaluate(
-    ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+    ExecutionContext *exe_ctx, ThreadRegisterContext *reg_ctx,
     lldb::addr_t func_load_addr, const Value *initial_value_ptr,
     const Value *object_address_ptr) const {
   llvm::Expected<const DWARFExpression *> expr =
@@ -285,7 +285,7 @@ llvm::Expected<Value> DWARFExpressionList::Evaluate(
 }
 
 bool DWARFExpressionList::IsImplicit(ExecutionContext *exe_ctx,
-                                     RegisterContext *reg_ctx,
+                                     ThreadRegisterContext *reg_ctx,
                                      lldb::addr_t func_load_addr) const {
   llvm::Expected<const DWARFExpression *> expr =
       GetExpressionAtPC(exe_ctx, reg_ctx, func_load_addr);

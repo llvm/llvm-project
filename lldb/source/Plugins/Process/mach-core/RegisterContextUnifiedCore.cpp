@@ -18,9 +18,9 @@ using namespace lldb_private;
 
 RegisterContextUnifiedCore::RegisterContextUnifiedCore(
     Thread &thread, uint32_t concrete_frame_idx,
-    RegisterContextSP core_thread_regctx_sp,
+    ThreadRegisterContextSP core_thread_regctx_sp,
     StructuredData::ObjectSP metadata_thread_registers)
-    : RegisterContext(thread, concrete_frame_idx) {
+    : ThreadRegisterContext(thread, concrete_frame_idx) {
 
   ProcessSP process_sp(thread.GetProcess());
   Target &target = process_sp->GetTarget();
@@ -159,7 +159,7 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
   };
 
   // Copy the core thread register sets into our combined register set list.
-  // RegisterSet indexes will be identical for the LC_THREAD RegisterContext.
+  // RegisterSet indexes will be identical for the LC_THREAD ThreadRegisterContext.
   for (size_t idx = 0; idx < core_thread_regctx_sp->GetRegisterSetCount();
        idx++) {
     RegisterSet new_set;
@@ -173,7 +173,7 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
     for (size_t idx = 0; idx < additional_reginfo_up->GetNumRegisterSets();
          idx++) {
       // See if this metadata RegisterSet name matches one already present
-      // from the LC_THREAD RegisterContext.
+      // from the LC_THREAD ThreadRegisterContext.
       bool found_match = false;
       const RegisterSet *old_set = additional_reginfo_up->GetRegisterSet(idx);
       for (size_t jdx = 0; jdx < m_register_sets.size(); jdx++) {
@@ -200,7 +200,7 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
     uint32_t registers_this_regset = 0;
 
     // Copy all LC_THREAD RegisterInfos that have a value into our
-    // combined RegisterInfo array.  (the LC_THREAD RegisterContext
+    // combined RegisterInfo array.  (the LC_THREAD ThreadRegisterContext
     // may describe registers that were not provided in this thread)
     //
     // LC_THREAD register set indexes are identical to the combined

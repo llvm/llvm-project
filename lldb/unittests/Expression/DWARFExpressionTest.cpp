@@ -31,7 +31,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
@@ -85,7 +85,7 @@ public:
   }
 
   bool ParseVendorDWARFOpcode(uint8_t op, const llvm::DataExtractor &opcodes,
-                              lldb::offset_t &offset, RegisterContext *reg_ctx,
+                              lldb::offset_t &offset, ThreadRegisterContext *reg_ctx,
                               lldb::RegisterKind reg_kind,
                               DWARFExpression::Stack &stack) const override {
     return false;
@@ -183,27 +183,27 @@ public:
 
   void RefreshStateAfterStop() override {}
 
-  lldb::RegisterContextSP GetRegisterContext() override { return m_reg_ctx_sp; }
+  lldb::ThreadRegisterContextSP GetRegisterContext() override { return m_reg_ctx_sp; }
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override {
     return m_reg_ctx_sp;
   }
 
   bool CalculateStopInfo() override { return false; }
 
-  void SetRegisterContext(lldb::RegisterContextSP reg_ctx_sp) {
+  void SetRegisterContext(lldb::ThreadRegisterContextSP reg_ctx_sp) {
     m_reg_ctx_sp = reg_ctx_sp;
   }
 
 private:
-  lldb::RegisterContextSP m_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_reg_ctx_sp;
 };
 
-class MockRegisterContext : public RegisterContext {
+class MockRegisterContext : public ThreadRegisterContext {
 public:
   MockRegisterContext(Thread &thread, const RegisterValue &reg_value)
-      : RegisterContext(thread, 0 /*concrete_frame_idx*/),
+      : ThreadRegisterContext(thread, 0 /*concrete_frame_idx*/),
         m_reg_value(reg_value) {}
 
   void InvalidateAllRegisters() override {}
@@ -341,7 +341,7 @@ static llvm::Expected<Value> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                       lldb::ModuleSP module_sp = {},
                                       DWARFExpression::Delegate *unit = nullptr,
                                       ExecutionContext *exe_ctx = nullptr,
-                                      RegisterContext *reg_ctx = nullptr) {
+                                      ThreadRegisterContext *reg_ctx = nullptr) {
   DataExtractor extractor(
       expr.data(), expr.size(), lldb::eByteOrderLittle,
       /*addr_size*/ exe_ctx ? exe_ctx->GetAddressByteSize() : 4);
@@ -413,7 +413,7 @@ struct TestContext {
   lldb::DebuggerSP debugger_sp;
   lldb::ProcessSP process_sp;
   lldb::ThreadSP thread_sp;
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
 };
 
 /// A helper function to create TestContext objects with the
@@ -451,7 +451,7 @@ static bool CreateTestContext(TestContext *ctx, llvm::StringRef triple,
 
   process_sp->GetThreadList().AddThread(thread_sp);
 
-  lldb::RegisterContextSP reg_ctx_sp;
+  lldb::ThreadRegisterContextSP reg_ctx_sp;
   if (reg_value) {
     reg_ctx_sp = std::make_shared<MockRegisterContext>(*thread_sp, *reg_value);
     thread_sp->SetRegisterContext(reg_ctx_sp);
@@ -2131,7 +2131,7 @@ public:
   virtual bool ParseVendorDWARFOpcode(
       uint8_t op, const llvm::DataExtractor &opcodes, lldb::offset_t &offset,
 
-      RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
+      ThreadRegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
       std::vector<lldb_private::Value> &stack) const override {
     if (op != DW_OP_WASM_location) {
       return false;
@@ -2159,7 +2159,7 @@ char CustomSymbolFileDWARF::ID;
 
 static auto testExpressionVendorExtensions(lldb::ModuleSP module_sp,
                                            DWARFUnit &dwarf_unit,
-                                           RegisterContext *reg_ctx) {
+                                           ThreadRegisterContext *reg_ctx) {
   // Test that expression extensions can be evaluated, for example
   // DW_OP_WASM_location which is not currently handled by DWARFExpression:
   EXPECT_THAT_EXPECTED(

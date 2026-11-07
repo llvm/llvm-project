@@ -34,7 +34,7 @@ public:
   ~ValueObjectRegisterSet() override;
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    lldb::RegisterContextSP &reg_ctx_sp,
+                                    lldb::ThreadRegisterContextSP &reg_ctx_sp,
                                     uint32_t set_idx);
 
   llvm::Expected<uint64_t> GetByteSize() override;
@@ -59,7 +59,7 @@ protected:
 
   CompilerType GetCompilerTypeImpl() override;
 
-  lldb::RegisterContextSP m_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_reg_ctx_sp;
   const RegisterSet *m_reg_set;
   uint32_t m_reg_set_idx;
 
@@ -68,7 +68,7 @@ private:
 
   ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
                          ValueObjectManager &manager,
-                         lldb::RegisterContextSP &reg_ctx_sp, uint32_t set_idx);
+                         lldb::ThreadRegisterContextSP &reg_ctx_sp, uint32_t set_idx);
 
   ValueObject *CreateChildAtIndex(size_t idx) override;
   ValueObject *CreateSyntheticArrayMember(size_t idx) override {
@@ -91,7 +91,7 @@ public:
   ~ValueObjectRegister() override;
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    lldb::RegisterContextSP &reg_ctx_sp,
+                                    lldb::ThreadRegisterContextSP &reg_ctx_sp,
                                     const RegisterInfo *reg_info);
 
   llvm ::Expected<uint64_t> GetByteSize() override;
@@ -120,7 +120,7 @@ protected:
 
   CompilerType GetCompilerTypeImpl() override;
 
-  lldb::RegisterContextSP m_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_reg_ctx_sp;
   RegisterInfo m_reg_info;
   RegisterValue m_reg_value;
   ConstString m_type_name;
@@ -131,11 +131,11 @@ private:
 
   friend class ValueObjectRegisterSet;
 
-  ValueObjectRegister(ValueObject &parent, lldb::RegisterContextSP &reg_ctx_sp,
+  ValueObjectRegister(ValueObject &parent, lldb::ThreadRegisterContextSP &reg_ctx_sp,
                       const RegisterInfo *reg_info);
   ValueObjectRegister(ExecutionContextScope *exe_scope,
                       ValueObjectManager &manager,
-                      lldb::RegisterContextSP &reg_ctx_sp,
+                      lldb::ThreadRegisterContextSP &reg_ctx_sp,
                       const RegisterInfo *reg_info);
 
   // For ValueObject only

@@ -14,7 +14,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/UnwindPlan.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/UnwindAssembly.h"
 
 using namespace lldb_private;
@@ -40,7 +40,7 @@ x86AssemblyInspectionEngine::~x86AssemblyInspectionEngine() {
   ::LLVMDisasmDispose(m_disasm_context);
 }
 
-void x86AssemblyInspectionEngine::Initialize(RegisterContextSP &reg_ctx) {
+void x86AssemblyInspectionEngine::Initialize(ThreadRegisterContextSP &reg_ctx) {
   m_cpu = k_cpu_unspecified;
   m_wordsize = -1;
   m_register_map_initialized = false;
@@ -1321,12 +1321,12 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
 
 bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
     uint8_t *data, size_t size, AddressRange &func_range,
-    UnwindPlan &unwind_plan, RegisterContextSP &reg_ctx) {
+    UnwindPlan &unwind_plan, ThreadRegisterContextSP &reg_ctx) {
   Address addr_start = func_range.GetBaseAddress();
   if (!addr_start.IsValid())
     return false;
 
-  // We either need a live RegisterContext, or we need the UnwindPlan to
+  // We either need a live ThreadRegisterContext, or we need the UnwindPlan to
   // already be in the lldb register numbering scheme.
   if (reg_ctx.get() == nullptr &&
       unwind_plan.GetRegisterKind() != eRegisterKindLLDB)

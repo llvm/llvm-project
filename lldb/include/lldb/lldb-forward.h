@@ -181,7 +181,7 @@ class REPL;
 class RealpathPrefixes;
 class RecognizedStackFrame;
 class RegisterCheckpoint;
-class RegisterContext;
+class ThreadRegisterContext;
 class RegisterTypeBuilder;
 class RegisterValue;
 class RegularExpression;
@@ -412,7 +412,7 @@ typedef std::shared_ptr<lldb_private::ProcessLaunchInfo> ProcessLaunchInfoSP;
 typedef std::unique_ptr<lldb_private::ProtocolServer> ProtocolServerUP;
 typedef std::weak_ptr<lldb_private::Process> ProcessWP;
 typedef std::shared_ptr<lldb_private::RegisterCheckpoint> RegisterCheckpointSP;
-typedef std::shared_ptr<lldb_private::RegisterContext> RegisterContextSP;
+typedef std::shared_ptr<lldb_private::ThreadRegisterContext> ThreadRegisterContextSP;
 typedef std::shared_ptr<lldb_private::RegisterTypeBuilder>
     RegisterTypeBuilderSP;
 typedef std::shared_ptr<lldb_private::RegularExpression> RegularExpressionSP;

@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_ARM_H
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
 // BCR address match type
@@ -43,7 +43,7 @@
 #define WCR_LOAD ((uint32_t)(1u << 3))
 #define WCR_STORE ((uint32_t)(1u << 4))
 
-class RegisterContextDarwin_arm : public lldb_private::RegisterContext {
+class RegisterContextDarwin_arm : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextDarwin_arm(lldb_private::Thread &thread,
                             uint32_t concrete_frame_idx);

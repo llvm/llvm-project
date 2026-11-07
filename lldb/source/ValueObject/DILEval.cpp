@@ -13,7 +13,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -432,7 +432,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
   if (!frame_sp)
     return nullptr;
   if (name_ref.consume_front("$")) {
-    lldb::RegisterContextSP reg_ctx(frame_sp->GetRegisterContext());
+    lldb::ThreadRegisterContextSP reg_ctx(frame_sp->GetRegisterContext());
     if (!reg_ctx)
       return nullptr;
 
@@ -1534,7 +1534,7 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const MemberOfNode &node) {
   if (std::optional<std::string> register_name = GetRegisterPathName(node)) {
     auto frame_sp = m_exe_ctx.GetFrameSP();
-    lldb::RegisterContextSP reg_ctx_sp =
+    lldb::ThreadRegisterContextSP reg_ctx_sp =
         frame_sp ? frame_sp->GetRegisterContext() : nullptr;
     if (reg_ctx_sp) {
       if (const RegisterInfo *reg_info =

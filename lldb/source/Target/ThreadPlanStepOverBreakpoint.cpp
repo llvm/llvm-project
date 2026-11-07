@@ -9,7 +9,7 @@
 #include "lldb/Target/ThreadPlanStepOverBreakpoint.h"
 
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"

@@ -26,7 +26,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
@@ -651,7 +651,7 @@ void CommandCompletions::Registers(CommandInterpreter &interpreter,
   if (request.GetCursorArgumentPrefix().starts_with("$"))
     reg_prefix = "$";
 
-  RegisterContext *reg_ctx =
+  ThreadRegisterContext *reg_ctx =
       interpreter.GetExecutionContext().GetRegisterContext();
   if (!reg_ctx)
     return;

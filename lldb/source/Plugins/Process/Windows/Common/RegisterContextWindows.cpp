@@ -27,7 +27,7 @@ const DWORD kWinContextFlags = CONTEXT_ALL;
 // Constructors and Destructors
 RegisterContextWindows::RegisterContextWindows(Thread &thread,
                                                uint32_t concrete_frame_idx)
-    : RegisterContext(thread, concrete_frame_idx), m_context(),
+    : ThreadRegisterContext(thread, concrete_frame_idx), m_context(),
       m_context_stale(true) {}
 
 RegisterContextWindows::~RegisterContextWindows() = default;

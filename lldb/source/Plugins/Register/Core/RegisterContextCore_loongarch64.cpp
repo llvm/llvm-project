@@ -24,7 +24,7 @@ using namespace lldb_private;
 RegisterContextCore_loongarch64::RegisterContextCore_loongarch64(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfo_loongarch64> register_info)
-    : lldb_private::RegisterContext(thread, 0),
+    : lldb_private::ThreadRegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
 RegisterContextCore_loongarch64::~RegisterContextCore_loongarch64() = default;

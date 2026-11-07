@@ -75,7 +75,7 @@ public:
 
   Block *GetFrameBlock() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
   VariableList *GetVariableList(bool get_file_globals,
                                 bool include_synthetic_vars,

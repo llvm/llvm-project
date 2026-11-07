@@ -42,7 +42,7 @@ bool RegisterContextCore_arm::IsFPR(unsigned reg) {
 RegisterContextCore_arm::RegisterContextCore_arm(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfo_arm> register_info)
-    : lldb_private::RegisterContext(thread, 0),
+    : lldb_private::ThreadRegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
 RegisterContextCore_arm::~RegisterContextCore_arm() = default;

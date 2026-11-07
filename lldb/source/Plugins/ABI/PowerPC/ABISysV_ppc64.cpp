@@ -30,7 +30,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -111,7 +111,7 @@ bool ABISysV_ppc64::PrepareTrivialCall(Thread &thread, addr_t sp,
     log->PutString(s.GetString());
   }
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
@@ -242,7 +242,7 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
 
   // Extract the register context so we can read arguments from registers
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -322,7 +322,7 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   bool is_signed;
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
@@ -416,19 +416,19 @@ class ReturnValueExtractor {
     // main constructor
     //
     // offs - field offset in struct
-    Register(Type ty, uint32_t index, uint32_t offs, RegisterContext *reg_ctx,
+    Register(Type ty, uint32_t index, uint32_t offs, ThreadRegisterContext *reg_ctx,
              ByteOrder byte_order)
         : m_index(index), m_offs(offs % sizeof(uint64_t)),
           m_avail(sizeof(uint64_t) - m_offs), m_type(ty), m_reg_ctx(reg_ctx),
           m_byte_order(byte_order) {}
 
     // explicit index, no offset
-    Register(Type ty, uint32_t index, RegisterContext *reg_ctx,
+    Register(Type ty, uint32_t index, ThreadRegisterContext *reg_ctx,
              ByteOrder byte_order)
         : Register(ty, index, 0, reg_ctx, byte_order) {}
 
     // GPR, calculate index from offs
-    Register(uint32_t offs, RegisterContext *reg_ctx, ByteOrder byte_order)
+    Register(uint32_t offs, ThreadRegisterContext *reg_ctx, ByteOrder byte_order)
         : Register(GPR, offs / sizeof(uint64_t), offs, reg_ctx, byte_order) {}
 
     uint32_t Index() const { return m_index; }
@@ -487,7 +487,7 @@ class ReturnValueExtractor {
     uint32_t m_offs;
     uint32_t m_avail;
     Type m_type;
-    RegisterContext *m_reg_ctx;
+    ThreadRegisterContext *m_reg_ctx;
     ByteOrder m_byte_order;
     Log *m_log = GetLog(LLDBLog::Expressions);
   };
@@ -508,10 +508,10 @@ public:
   // factory
   static llvm::Expected<ReturnValueExtractor> Create(Thread &thread,
                                                      CompilerType &type) {
-    RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+    ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
     if (!reg_ctx)
       return llvm::createStringError(LOG_PREFIX
-                                     "Failed to get RegisterContext");
+                                     "Failed to get ThreadRegisterContext");
 
     ProcessSP process_sp = thread.GetProcess();
     if (!process_sp)
@@ -564,7 +564,7 @@ private:
   int32_t m_dst_offs = 0;
   bool m_packed = false;
   Log *m_log = GetLog(LLDBLog::Expressions);
-  RegisterContext *m_reg_ctx;
+  ThreadRegisterContext *m_reg_ctx;
   ProcessSP m_process_sp;
   ByteOrder m_byte_order;
   uint32_t m_addr_size;
@@ -573,7 +573,7 @@ private:
 
   // constructor
   ReturnValueExtractor(Thread &thread, CompilerType &type,
-                       RegisterContext *reg_ctx, ProcessSP process_sp)
+                       ThreadRegisterContext *reg_ctx, ProcessSP process_sp)
       : m_thread(thread), m_type(type),
         m_byte_size(
             llvm::expectedToOptional(m_type.GetByteSize(&thread)).value_or(0)),

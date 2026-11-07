@@ -137,7 +137,7 @@ public:
   // be invalidated.
   virtual bool ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
                                        DataExtractor &reg_data,
-                                       RegisterContext &reg_context) const {
+                                       ThreadRegisterContext &reg_context) const {
     return false;
   }
 

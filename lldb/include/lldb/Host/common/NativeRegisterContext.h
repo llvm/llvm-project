@@ -172,14 +172,14 @@ public:
   // }
 
 protected:
-  // Classes that inherit from RegisterContext can see and modify these
+  // Classes that inherit from ThreadRegisterContext can see and modify these
   NativeThreadProtocol
       &m_thread; // The thread that this register context belongs to.
   // uint32_t m_stop_id;             // The stop ID that any data in this
   // context is valid for
 
 private:
-  // For RegisterContext only
+  // For ThreadRegisterContext only
   NativeRegisterContext(const NativeRegisterContext &) = delete;
   const NativeRegisterContext &
   operator=(const NativeRegisterContext &) = delete;

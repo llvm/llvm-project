@@ -137,7 +137,7 @@ public:
 
   bool LoadCoreFileImages(lldb_private::Process &process) override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) override;
 
   ObjectFile::Type CalculateType() override;

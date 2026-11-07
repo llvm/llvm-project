@@ -19,7 +19,7 @@ using namespace lldb_private;
 
 RegisterContextThreadMemory::RegisterContextThreadMemory(
     Thread &thread, lldb::addr_t register_data_addr)
-    : RegisterContext(thread, 0), m_thread_wp(thread.shared_from_this()),
+    : ThreadRegisterContext(thread, 0), m_thread_wp(thread.shared_from_this()),
       m_reg_ctx_sp(), m_register_data_addr(register_data_addr), m_stop_id(0) {}
 
 RegisterContextThreadMemory::~RegisterContextThreadMemory() = default;
@@ -141,7 +141,7 @@ bool RegisterContextThreadMemory::WriteAllRegisterValues(
 }
 
 bool RegisterContextThreadMemory::CopyFromRegisterContext(
-    lldb::RegisterContextSP reg_ctx_sp) {
+    lldb::ThreadRegisterContextSP reg_ctx_sp) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->CopyFromRegisterContext(reg_ctx_sp);

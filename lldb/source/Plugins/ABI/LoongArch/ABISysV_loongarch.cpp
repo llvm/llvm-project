@@ -19,7 +19,7 @@
 #include "lldb/Register/Arch/lldb-loongarch-dwarf-register-enums.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -162,7 +162,7 @@ ABISysV_loongarch::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
   return ABISP(abi);
 }
 
-static bool UpdateRegister(RegisterContext *reg_ctx,
+static bool UpdateRegister(ThreadRegisterContext *reg_ctx,
                            const lldb::RegisterKind reg_kind,
                            const uint32_t reg_num, const addr_t value) {
   Log *log = GetLog(LLDBLog::Expressions);
@@ -201,7 +201,7 @@ bool ABISysV_loongarch::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   const auto reg_ctx_sp = thread.GetRegisterContext();
   if (!reg_ctx_sp) {
-    LLDB_LOG(log, "Failed to get RegisterContext");
+    LLDB_LOG(log, "Failed to get ThreadRegisterContext");
     return false;
   }
 
@@ -378,7 +378,7 @@ static bool SetSizedFloat(Scalar &scalar, uint64_t raw_value,
 }
 
 static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
-                                          const RegisterContextSP &reg_ctx,
+                                          const ThreadRegisterContextSP &reg_ctx,
                                           llvm::Triple::ArchType machine,
                                           uint32_t type_flags,
                                           uint32_t byte_size) {
@@ -453,7 +453,7 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
 }
 
 static ValueObjectSP GetValObjFromFPRegs(Thread &thread,
-                                         const RegisterContextSP &reg_ctx,
+                                         const ThreadRegisterContextSP &reg_ctx,
                                          llvm::Triple::ArchType machine,
                                          uint32_t type_flags,
                                          uint32_t byte_size) {

@@ -10,7 +10,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ABI.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
@@ -295,7 +295,7 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
     StackFrame *frame = exe_ctx->GetFramePtr();
     llvm::StringRef reg_name = name;
     if (frame && reg_name.consume_front("$")) {
-      RegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
+      ThreadRegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
       if (reg_ctx_sp) {
         const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfoByName(reg_name);
         if (reg_info) {

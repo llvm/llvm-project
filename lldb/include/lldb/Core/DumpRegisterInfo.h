@@ -16,11 +16,11 @@
 namespace lldb_private {
 
 class Stream;
-class RegisterContext;
+class ThreadRegisterContext;
 struct RegisterInfo;
 class RegisterType;
 
-void DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
+void DumpRegisterInfo(Stream &strm, ThreadRegisterContext &ctx,
                       const RegisterInfo &info, uint32_t terminal_width);
 
 // For testing only. Use DumpRegisterInfo instead.

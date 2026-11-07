@@ -50,16 +50,16 @@ StructuredData::ObjectSP TargetThreadWindows::FetchThreadExtendedInfo() {
 
 void TargetThreadWindows::DidStop() {}
 
-RegisterContextSP TargetThreadWindows::GetRegisterContext() {
+ThreadRegisterContextSP TargetThreadWindows::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
 
   return m_reg_context_sp;
 }
 
-RegisterContextSP
+ThreadRegisterContextSP
 TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
   Log *log = GetLog(LLDBLog::Thread);
 

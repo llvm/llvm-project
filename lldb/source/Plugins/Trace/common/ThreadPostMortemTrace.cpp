@@ -13,7 +13,7 @@
 
 #include "Plugins/Process/Utility/RegisterContextHistory.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -21,14 +21,14 @@ using namespace llvm;
 
 void ThreadPostMortemTrace::RefreshStateAfterStop() {}
 
-RegisterContextSP ThreadPostMortemTrace::GetRegisterContext() {
+ThreadRegisterContextSP ThreadPostMortemTrace::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
 
   return m_reg_context_sp;
 }
 
-RegisterContextSP
+ThreadRegisterContextSP
 ThreadPostMortemTrace::CreateRegisterContextForFrame(StackFrame *frame) {
   // Eventually this will calculate the register context based on the current
   // trace position.

@@ -16,7 +16,7 @@
 /// A memory thread with its own ID, optionally backed by a real thread.
 /// Most methods of this class dispatch to the real thread if it is not null.
 /// Notable exceptions are the methods calculating the StopInfo and
-/// RegisterContext of the thread, those may query the OS plugin that created
+/// ThreadRegisterContext of the thread, those may query the OS plugin that created
 /// the thread.
 class ThreadMemory : public lldb_private::Thread {
 public:
@@ -26,9 +26,9 @@ public:
 
   ~ThreadMemory() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
+  lldb::ThreadRegisterContextSP GetRegisterContext() override;
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
   bool CalculateStopInfo() override;

@@ -19,7 +19,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/RegisterNumber.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -56,7 +56,7 @@ bool UnwindAssembly_x86::GetNonCallSiteUnwindPlanFromAssembly(
   if (process_sp->GetTarget().ReadMemory(
           func.GetBaseAddress(), function_text.data(), func.GetByteSize(),
           error) == func.GetByteSize()) {
-    RegisterContextSP reg_ctx(thread.GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx(thread.GetRegisterContext());
     m_assembly_inspection_engine->Initialize(reg_ctx);
     return m_assembly_inspection_engine->GetNonCallSiteUnwindPlanFromAssembly(
         function_text.data(), func.GetByteSize(), func, unwind_plan);
@@ -157,7 +157,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
     if (process_sp->GetTarget().ReadMemory(
             func.GetBaseAddress(), function_text.data(), func.GetByteSize(),
             error) == func.GetByteSize()) {
-      RegisterContextSP reg_ctx(thread.GetRegisterContext());
+      ThreadRegisterContextSP reg_ctx(thread.GetRegisterContext());
       m_assembly_inspection_engine->Initialize(reg_ctx);
       return m_assembly_inspection_engine->AugmentUnwindPlanFromCallSite(
           function_text.data(), func.GetByteSize(), func, unwind_plan, reg_ctx);

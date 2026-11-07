@@ -116,7 +116,7 @@ static size_t k_num_register_infos = std::size(g_register_infos_arm64_le);
 
 RegisterContextDarwin_arm64::RegisterContextDarwin_arm64(
     Thread &thread, uint32_t concrete_frame_idx)
-    : RegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc(), dbg() {
+    : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc(), dbg() {
   uint32_t i;
   for (i = 0; i < kNumErrors; i++) {
     gpr_errs[i] = -1;

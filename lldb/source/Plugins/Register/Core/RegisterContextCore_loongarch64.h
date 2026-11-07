@@ -12,10 +12,10 @@
 #include "Register/RegisterInfoInterface.h"
 #include "Register/Common/RegisterInfo_loongarch64.h"
 #include "lldb/Register/Arch/lldb-loongarch-register-enums.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextCore_loongarch64 : public lldb_private::RegisterContext {
+class RegisterContextCore_loongarch64 : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextCore_loongarch64(
       lldb_private::Thread &thread,

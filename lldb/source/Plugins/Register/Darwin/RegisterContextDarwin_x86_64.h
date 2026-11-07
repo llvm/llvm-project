@@ -9,10 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_X86_64_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_X86_64_H
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterContextDarwin_x86_64 : public lldb_private::RegisterContext {
+class RegisterContextDarwin_x86_64 : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextDarwin_x86_64(lldb_private::Thread &thread,
                                uint32_t concrete_frame_idx);

@@ -238,7 +238,7 @@ bool RegisterContextCore_x86::IsFPR(unsigned reg, FPRType fpr_type) {
 RegisterContextCore_x86::RegisterContextCore_x86(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
-    : RegisterContext(thread, concrete_frame_idx) {
+    : ThreadRegisterContext(thread, concrete_frame_idx) {
   m_register_info_up.reset(register_info);
 
   ::memset(&m_fpr, 0, sizeof(FPR));

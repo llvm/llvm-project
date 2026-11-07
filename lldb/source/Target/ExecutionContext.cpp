@@ -216,7 +216,7 @@ lldb::ByteOrder ExecutionContext::GetByteOrder() const {
   return endian::InlHostByteOrder();
 }
 
-RegisterContext *ExecutionContext::GetRegisterContext() const {
+ThreadRegisterContext *ExecutionContext::GetRegisterContext() const {
   if (m_frame_sp)
     return m_frame_sp->GetRegisterContext().get();
   else if (m_thread_sp)

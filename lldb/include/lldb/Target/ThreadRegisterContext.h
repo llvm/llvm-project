@@ -1,4 +1,4 @@
-//===-- RegisterContext.h ---------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_REGISTERCONTEXT_H
-#define LLDB_TARGET_REGISTERCONTEXT_H
+#ifndef LLDB_TARGET_THREADREGISTERCONTEXT_H
+#define LLDB_TARGET_THREADREGISTERCONTEXT_H
 
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Utility/RegisterInfo.h"
@@ -15,13 +15,13 @@
 
 namespace lldb_private {
 
-class RegisterContext : public std::enable_shared_from_this<RegisterContext>,
+class ThreadRegisterContext : public std::enable_shared_from_this<ThreadRegisterContext>,
                         public ExecutionContextScope {
 public:
   // Constructors and Destructors
-  RegisterContext(Thread &thread, uint32_t concrete_frame_idx);
+  ThreadRegisterContext(Thread &thread, uint32_t concrete_frame_idx);
 
-  ~RegisterContext() override;
+  ~ThreadRegisterContext() override;
 
   void InvalidateIfNeeded(bool force);
 
@@ -74,7 +74,7 @@ public:
   virtual bool WriteAllRegisterValues(
       const lldb_private::RegisterCheckpoint &reg_checkpoint);
 
-  bool CopyFromRegisterContext(lldb::RegisterContextSP context);
+  bool CopyFromRegisterContext(lldb::ThreadRegisterContextSP context);
 
   /// Convert from a given register numbering scheme to the lldb register
   /// numbering scheme
@@ -241,17 +241,17 @@ protected:
     return m_concrete_frame_idx == 0;
   }
 
-  // Classes that inherit from RegisterContext can see and modify these
+  // Classes that inherit from ThreadRegisterContext can see and modify these
   Thread &m_thread; // The thread that this register context belongs to.
   uint32_t m_concrete_frame_idx; // The concrete frame index for this register
                                  // context
   uint32_t m_stop_id; // The stop ID that any data in this context is valid for
 private:
-  // For RegisterContext only
-  RegisterContext(const RegisterContext &) = delete;
-  const RegisterContext &operator=(const RegisterContext &) = delete;
+  // For ThreadRegisterContext only
+  ThreadRegisterContext(const ThreadRegisterContext &) = delete;
+  const ThreadRegisterContext &operator=(const ThreadRegisterContext &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_REGISTERCONTEXT_H
+#endif // LLDB_TARGET_THREADREGISTERCONTEXT_H

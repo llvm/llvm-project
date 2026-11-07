@@ -80,7 +80,7 @@ bool RegisterContextCore_s390x::IsFPR(unsigned reg) {
 RegisterContextCore_s390x::RegisterContextCore_s390x(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
-    : RegisterContext(thread, concrete_frame_idx) {
+    : ThreadRegisterContext(thread, concrete_frame_idx) {
   m_register_info_up.reset(register_info);
 
   switch (register_info->GetTargetArchitecture().GetMachine()) {

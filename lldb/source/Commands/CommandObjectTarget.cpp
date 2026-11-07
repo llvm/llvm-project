@@ -42,7 +42,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/TargetGroup.h"
@@ -3133,7 +3133,7 @@ protected:
                 }
                 if (set_pc) {
                   ThreadList &thread_list = process->GetThreadList();
-                  RegisterContextSP reg_context(
+                  ThreadRegisterContextSP reg_context(
                       thread_list.GetSelectedThread()->GetRegisterContext());
                   addr_t file_entry_addr = file_entry.GetLoadAddress(target);
                   if (!reg_context->SetPC(file_entry_addr)) {

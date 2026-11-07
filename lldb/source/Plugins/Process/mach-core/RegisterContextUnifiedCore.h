@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-enumerations.h"
@@ -20,11 +20,11 @@
 
 namespace lldb_private {
 
-class RegisterContextUnifiedCore : public RegisterContext {
+class RegisterContextUnifiedCore : public ThreadRegisterContext {
 public:
   RegisterContextUnifiedCore(
       Thread &thread, uint32_t concrete_frame_idx,
-      lldb::RegisterContextSP core_thread_regctx_sp,
+      lldb::ThreadRegisterContextSP core_thread_regctx_sp,
       lldb_private::StructuredData::ObjectSP metadata_thread_registers);
 
   void InvalidateAllRegisters() override {};

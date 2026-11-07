@@ -33,7 +33,7 @@ GDBRemoteRegisterContext::GDBRemoteRegisterContext(
     ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
     DynamicRegisterInfoSP reg_info_sp, bool read_all_at_once,
     bool write_all_at_once)
-    : RegisterContext(thread, concrete_frame_idx),
+    : ThreadRegisterContext(thread, concrete_frame_idx),
       m_reg_info_sp(std::move(reg_info_sp)), m_reg_valid(), m_reg_data(),
       m_read_all_at_once(read_all_at_once),
       m_write_all_at_once(write_all_at_once), m_gpacket_cached(false) {

@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_REGISTER_COMMON_REGISTERINFO_LOONGARCH64_H
 
 #include "Register/RegisterInfoAndSetInterface.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 #include <map>
 

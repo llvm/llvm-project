@@ -16,7 +16,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -576,7 +576,7 @@ bool ABISysV_mips64::PrepareTrivialCall(Thread &thread, addr_t sp,
     log->PutString(s.GetString());
   }
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
@@ -669,7 +669,7 @@ Status ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   Thread *thread = frame_sp->GetThread().get();
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   if (!reg_ctx)
     error = Status::FromErrorString("no registers are available");
@@ -743,7 +743,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
   value.SetCompilerType(return_compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 

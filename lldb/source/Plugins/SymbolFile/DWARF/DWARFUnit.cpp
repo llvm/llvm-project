@@ -757,7 +757,7 @@ DWARFUnit::GetVendorDWARFOpcodeSize(const DataExtractor &data,
 bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op,
                                        const llvm::DataExtractor &opcodes,
                                        lldb::offset_t &offset,
-                                       RegisterContext *reg_ctx,
+                                       ThreadRegisterContext *reg_ctx,
                                        lldb::RegisterKind reg_kind,
                                        std::vector<Value> &stack) const {
   return GetSymbolFileDWARF().ParseVendorDWARFOpcode(op, opcodes, offset,

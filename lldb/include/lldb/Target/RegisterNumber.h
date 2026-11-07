@@ -49,7 +49,7 @@ public:
 private:
   typedef std::map<lldb::RegisterKind, uint32_t> Collection;
 
-  lldb::RegisterContextSP m_reg_ctx_sp;
+  lldb::ThreadRegisterContextSP m_reg_ctx_sp;
   uint32_t m_regnum = LLDB_INVALID_REGNUM;
   lldb::RegisterKind m_kind = lldb::kNumRegisterKinds;
   Collection m_kind_regnum_map;

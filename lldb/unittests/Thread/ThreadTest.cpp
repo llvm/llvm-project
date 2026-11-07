@@ -96,9 +96,9 @@ public:
 
   void RefreshStateAfterStop() override {}
 
-  lldb::RegisterContextSP GetRegisterContext() override { return nullptr; }
+  lldb::ThreadRegisterContextSP GetRegisterContext() override { return nullptr; }
 
-  lldb::RegisterContextSP
+  lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override {
     return nullptr;
   }

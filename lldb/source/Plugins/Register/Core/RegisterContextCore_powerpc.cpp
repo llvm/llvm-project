@@ -94,7 +94,7 @@ bool RegisterContextCore_powerpc::IsVMX(unsigned reg) {
 RegisterContextCore_powerpc::RegisterContextCore_powerpc(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
-    : RegisterContext(thread, concrete_frame_idx) {
+    : ThreadRegisterContext(thread, concrete_frame_idx) {
   m_register_info_up.reset(register_info);
 }
 

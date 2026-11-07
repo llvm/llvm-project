@@ -90,7 +90,7 @@ RegisterContextUnwind::RegisterContextUnwind(Thread &thread,
                                              SymbolContext &sym_ctx,
                                              uint32_t frame_number,
                                              UnwindLLDB &unwind_lldb)
-    : RegisterContext(thread, frame_number), m_thread(thread),
+    : ThreadRegisterContext(thread, frame_number), m_thread(thread),
       m_fast_unwind_plan_sp(), m_full_unwind_plan_sp(),
       m_fallback_unwind_plan_sp(), m_all_registers_available(false),
       m_frame_type(-1), m_cfa(LLDB_INVALID_ADDRESS),
@@ -148,7 +148,7 @@ bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
 void RegisterContextUnwind::InitializeZerothFrame() {
   Log *log = GetLog(LLDBLog::Unwind);
   ExecutionContext exe_ctx(m_thread.shared_from_this());
-  RegisterContextSP reg_ctx_sp = m_thread.GetRegisterContext();
+  ThreadRegisterContextSP reg_ctx_sp = m_thread.GetRegisterContext();
 
   if (reg_ctx_sp.get() == nullptr) {
     m_frame_type = eNotAValidFrame;
@@ -377,7 +377,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   // be the caller of the frame, e.g. Swift asynchronous frames.
   //
   // A LanguageRuntime may provide an UnwindPlan that is used in this
-  // stack trace base on the RegisterContext contents, intsead
+  // stack trace base on the ThreadRegisterContext contents, intsead
   // of the normal UnwindPlans we would use for the return-pc.
   std::shared_ptr<const UnwindPlan> lang_runtime_plan_sp =
       LanguageRuntime::GetRuntimeUnwindPlan(m_thread, this,
@@ -1610,7 +1610,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
 
   // We have no AbstractRegisterLocation, and the ABI says this is a
   // non-volatile / callee-preserved register.  Continue down the stack
-  // or to frame 0 & the live RegisterContext.
+  // or to frame 0 & the live ThreadRegisterContext.
   std::string unwindplan_name;
   if (m_full_unwind_plan_sp) {
     unwindplan_name += "via '";
@@ -1680,7 +1680,7 @@ RegisterContextUnwind::SavedLocationForRegister(
       m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
       UNWIND_LOG(log,
                  "supplying caller's register {0} ({1}) from the live "
-                 "RegisterContext at frame 0",
+                 "ThreadRegisterContext at frame 0",
                  regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
       return UnwindLLDB::RegisterSearchResult::eRegisterFound;
     }
@@ -2324,7 +2324,7 @@ lldb::addr_t RegisterContextUnwind::GetReturnAddressHint(int32_t plan_offset) {
 //     frame 0 - foo
 //     frame 1 - bar
 //     frame 2 - main
-//  and this RegisterContext is for frame 1 (bar) - if we want to get the pc
+//  and this ThreadRegisterContext is for frame 1 (bar) - if we want to get the pc
 //  value for frame 1, we need to ask
 //  where frame 0 (the "next" frame) saved that and retrieve the value.
 

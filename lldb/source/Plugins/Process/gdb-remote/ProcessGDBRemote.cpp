@@ -1808,7 +1808,7 @@ void ProcessGDBRemote::SetThreadPc(const ThreadSP &thread_sp, uint64_t index) {
       GetByteOrder() != eByteOrderInvalid) {
     ThreadGDBRemote *gdb_thread =
         static_cast<ThreadGDBRemote *>(thread_sp.get());
-    RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
+    ThreadRegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
     if (reg_ctx_sp) {
       uint32_t pc_regnum = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
@@ -1901,7 +1901,7 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
 void ProcessGDBRemote::ParseExpeditedRegisters(
     ExpeditedRegisterMap &expedited_register_map, ThreadSP thread_sp) {
   ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread_sp.get());
-  RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
+  ThreadRegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
 
   for (const auto &pair : expedited_register_map) {
     uint32_t lldb_regnum = gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
@@ -1952,7 +1952,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
   }
 
   ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread_sp.get());
-  RegisterContextSP reg_ctx_sp(gdb_thread->GetRegisterContext());
+  ThreadRegisterContextSP reg_ctx_sp(gdb_thread->GetRegisterContext());
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 

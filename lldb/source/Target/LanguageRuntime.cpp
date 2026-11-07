@@ -246,7 +246,7 @@ BreakpointSP LanguageRuntime::CreateExceptionBreakpoint(
 }
 
 UnwindPlanSP
-LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, RegisterContext *regctx,
+LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, ThreadRegisterContext *regctx,
                                       bool &behaves_like_zeroth_frame) {
   ProcessSP process_sp = thread.GetProcess();
   if (!process_sp.get())

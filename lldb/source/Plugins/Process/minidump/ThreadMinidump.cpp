@@ -20,7 +20,7 @@
 #include "Plugins/Process/elf-core/RegisterContextELFCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Unwind.h"
@@ -42,16 +42,16 @@ ThreadMinidump::~ThreadMinidump() = default;
 
 void ThreadMinidump::RefreshStateAfterStop() {}
 
-RegisterContextSP ThreadMinidump::GetRegisterContext() {
+ThreadRegisterContextSP ThreadMinidump::GetRegisterContext() {
   if (!m_reg_context_sp) {
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   }
   return m_reg_context_sp;
 }
 
-RegisterContextSP
+ThreadRegisterContextSP
 ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
-  RegisterContextSP reg_ctx_sp;
+  ThreadRegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
 
   if (frame)

@@ -20,7 +20,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
@@ -1321,7 +1321,7 @@ ABISysV_arm::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
 bool ABISysV_arm::PrepareTrivialCall(Thread &thread, addr_t sp,
                                      addr_t function_addr, addr_t return_addr,
                                      llvm::ArrayRef<addr_t> args) const {
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
@@ -1433,7 +1433,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
 
   // Extract the register context so we can read arguments from registers
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
 
   if (!reg_ctx)
     return false;
@@ -1504,7 +1504,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
 }
 
 static bool GetReturnValuePassedInMemory(Thread &thread,
-                                         RegisterContext *reg_ctx,
+                                         ThreadRegisterContext *reg_ctx,
                                          size_t byte_size, Value &value) {
   Status error;
   DataBufferHeap buffer(byte_size, 0);
@@ -1546,7 +1546,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
   // compiler_type.GetOpaqueQualType());
   value.SetCompilerType(compiler_type);
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 
@@ -1841,7 +1841,7 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   bool is_signed;
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||

@@ -16,7 +16,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -1058,7 +1058,7 @@ bool ABISysV_hexagon::PrepareTrivialCall(
   lldb::ProcessSP proc = thread.GetProcess();
 
   // get the register context for modifying all of the registers
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
@@ -1281,7 +1281,7 @@ ABISysV_hexagon::GetReturnValueObjectImpl(lldb_private::Thread &thread,
   ValueObjectSP vObjSP;
 
   // get the current register context
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return vObjSP;
 

@@ -57,7 +57,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessIOHandler.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Target/SystemRuntime.h"
@@ -6056,7 +6056,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
               }
 
               ts.Printf("<0x%4.4" PRIx64 " ", thread->GetID());
-              RegisterContext *register_context =
+              ThreadRegisterContext *register_context =
                   thread->GetRegisterContext().get();
 
               if (register_context)
@@ -7020,7 +7020,7 @@ static void SaveOffRegionsWithStackPointers(Process &process,
     StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
     if (!frame_sp)
       continue;
-    RegisterContextSP reg_ctx_sp = frame_sp->GetRegisterContext();
+    ThreadRegisterContextSP reg_ctx_sp = frame_sp->GetRegisterContext();
     if (!reg_ctx_sp)
       continue;
     const addr_t sp = reg_ctx_sp->GetSP();

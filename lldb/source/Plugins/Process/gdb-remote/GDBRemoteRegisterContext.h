@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "lldb/Target/DynamicRegisterInfo.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-enumerations.h"
@@ -28,7 +28,7 @@ namespace process_gdb_remote {
 class ThreadGDBRemote;
 class ProcessGDBRemote;
 
-class GDBRemoteRegisterContext : public RegisterContext {
+class GDBRemoteRegisterContext : public ThreadRegisterContext {
 public:
   GDBRemoteRegisterContext(ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
                            lldb::DynamicRegisterInfoSP reg_info_sp,

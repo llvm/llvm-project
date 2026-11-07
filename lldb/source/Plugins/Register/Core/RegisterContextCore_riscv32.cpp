@@ -23,7 +23,7 @@ using namespace lldb_private;
 RegisterContextCore_riscv32::RegisterContextCore_riscv32(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfo_riscv32> register_info)
-    : lldb_private::RegisterContext(thread, 0),
+    : lldb_private::ThreadRegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
 RegisterContextCore_riscv32::~RegisterContextCore_riscv32() = default;

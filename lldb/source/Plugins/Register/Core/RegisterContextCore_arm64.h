@@ -11,10 +11,10 @@
 
 #include "Register/RegisterInfoInterface.h"
 #include "Register/Common/RegisterInfo_arm64.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextCore_arm64 : public lldb_private::RegisterContext {
+class RegisterContextCore_arm64 : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextCore_arm64(
       lldb_private::Thread &thread,

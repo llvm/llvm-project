@@ -9,10 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_RISCV32_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_DARWIN_REGISTERCONTEXTDARWIN_RISCV32_H
 
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterContextDarwin_riscv32 : public lldb_private::RegisterContext {
+class RegisterContextDarwin_riscv32 : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextDarwin_riscv32(lldb_private::Thread &thread,
                                 uint32_t concrete_frame_idx);

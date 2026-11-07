@@ -11,10 +11,10 @@
 
 #include "Register/RegisterInfoInterface.h"
 #include "lldb/Register/Arch/lldb-powerpc-register-enums.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextCore_powerpc : public lldb_private::RegisterContext {
+class RegisterContextCore_powerpc : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextCore_powerpc(
       lldb_private::Thread &thread, uint32_t concrete_frame_idx,

@@ -492,9 +492,9 @@ public:
     GetStackFrameList()->SetDefaultFileAndLineToSelectedFrame();
   }
 
-  virtual lldb::RegisterContextSP GetRegisterContext() = 0;
+  virtual lldb::ThreadRegisterContextSP GetRegisterContext() = 0;
 
-  virtual lldb::RegisterContextSP
+  virtual lldb::ThreadRegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) = 0;
 
   virtual void ClearStackFrames();
@@ -1310,7 +1310,7 @@ public:
 
   /// Request the pc value the thread had when previously stopped.
   ///
-  /// When the thread performs execution, it copies the current RegisterContext
+  /// When the thread performs execution, it copies the current ThreadRegisterContext
   /// GetPC() value.  This method returns that value, if it is available.
   ///
   /// \return
@@ -1433,7 +1433,7 @@ protected:
                                            // hit, but will hit when we resume.
   const uint32_t m_index_id; ///< A unique 1 based index assigned to each thread
                              /// for easy UI/command line access.
-  lldb::RegisterContextSP m_reg_context_sp; ///< The register context for this
+  lldb::ThreadRegisterContextSP m_reg_context_sp; ///< The register context for this
                                             ///thread's current register state.
   lldb::StateType m_state;                  ///< The state of our process.
   mutable std::recursive_mutex

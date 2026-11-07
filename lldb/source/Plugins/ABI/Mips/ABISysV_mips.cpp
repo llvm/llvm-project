@@ -16,7 +16,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -578,7 +578,7 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
     log->PutString(s.GetString());
   }
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return false;
 
@@ -709,7 +709,7 @@ Status ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
   bool is_signed;
 
-  RegisterContext *reg_ctx = thread->GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
@@ -782,7 +782,7 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
   uint32_t fp_flag =
       target_arch.GetFlags() & lldb_private::ArchSpec::eMIPS_ABI_FP_mask;
 
-  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  ThreadRegisterContext *reg_ctx = thread.GetRegisterContext().get();
   if (!reg_ctx)
     return return_valobj_sp;
 

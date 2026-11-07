@@ -721,7 +721,7 @@ static size_t k_num_register_infos = std::size(g_register_infos);
 
 RegisterContextDarwin_riscv32::RegisterContextDarwin_riscv32(
     Thread &thread, uint32_t concrete_frame_idx)
-    : RegisterContext(thread, concrete_frame_idx), gpr(), fpr(), exc() {
+    : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpr(), exc() {
   uint32_t i;
   for (i = 0; i < kNumErrors; i++) {
     gpr_errs[i] = -1;
@@ -1048,7 +1048,7 @@ bool RegisterContextDarwin_riscv32::ReadRegister(const RegisterInfo *reg_info,
 
   case csr_bank:
     // These values don't fit into scalar types,
-    // RegisterContext::ReadRegisterBytes() must be used for these registers
+    // ThreadRegisterContext::ReadRegisterBytes() must be used for these registers
     //::memcpy (reg_value.value.vector.uint8, fpu.stmm[reg - fpu_stmm0].bytes,
     // 10);
 
@@ -1161,7 +1161,7 @@ bool RegisterContextDarwin_riscv32::WriteRegister(const RegisterInfo *reg_info,
 
   case csr_bank:
     // These values don't fit into scalar types,
-    // RegisterContext::ReadRegisterBytes() must be used for these registers
+    // ThreadRegisterContext::ReadRegisterBytes() must be used for these registers
     //::memcpy(csr.bytes, value.GetBytes(),
     // value.GetByteSize());
     return false;

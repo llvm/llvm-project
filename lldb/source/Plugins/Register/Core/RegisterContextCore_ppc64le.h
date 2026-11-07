@@ -12,10 +12,10 @@
 #include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
 #include "Register/RegisterInfoInterface.h"
 #include "lldb/Register/Arch/lldb-ppc64le-dwarf-register-enums.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextCore_ppc64le : public lldb_private::RegisterContext {
+class RegisterContextCore_ppc64le : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextCore_ppc64le(
       lldb_private::Thread &thread, uint32_t concrete_frame_idx,

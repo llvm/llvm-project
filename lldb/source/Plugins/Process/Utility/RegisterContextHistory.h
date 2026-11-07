@@ -13,12 +13,12 @@
 #include <vector>
 
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
-class RegisterContextHistory : public lldb_private::RegisterContext {
+class RegisterContextHistory : public lldb_private::ThreadRegisterContext {
 public:
   typedef std::shared_ptr<RegisterContextHistory> SharedPtr;
 

@@ -18,7 +18,7 @@
 
 #include <memory>
 
-class RegisterContextELFCore_riscv32 : public lldb_private::RegisterContext {
+class RegisterContextELFCore_riscv32 : public lldb_private::ThreadRegisterContext {
 public:
   struct csr_kv_t {
     uint32_t addr; // CSR address/index

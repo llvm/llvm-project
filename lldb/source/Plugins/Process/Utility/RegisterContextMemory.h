@@ -12,11 +12,11 @@
 #include <vector>
 
 #include "lldb/Target/DynamicRegisterInfo.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/lldb-private.h"
 
-class RegisterContextMemory : public lldb_private::RegisterContext {
+class RegisterContextMemory : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextMemory(lldb_private::Thread &thread,
                         uint32_t concrete_frame_idx,

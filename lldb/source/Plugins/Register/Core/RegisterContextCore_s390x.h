@@ -11,10 +11,10 @@
 
 #include "Register/RegisterInfoInterface.h"
 #include "lldb/Register/Arch/lldb-s390x-register-enums.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextCore_s390x : public lldb_private::RegisterContext {
+class RegisterContextCore_s390x : public lldb_private::ThreadRegisterContext {
 public:
   RegisterContextCore_s390x(
       lldb_private::Thread &thread, uint32_t concrete_frame_idx,
