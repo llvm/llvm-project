@@ -8120,11 +8120,52 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     }
   }
 
+  // Form a sign- or zero-extended addition. If the addition cannot overflow
+  // under the corresponding interpretation, extend its operands before
+  // forming the AddExpr.
+  //
+  // This ordering matters because getAddExpr folds loop-invariant operands
+  // into add recurrences:
+  //   (1 + {%c,+,1})<nsw> -> {(1 + %c)<nsw>,+,1}
+  // Extending the resulting recurrence is not equivalent to extending the
+  // original operands first:
+  //   sext ((1 + {%c,+,1})<nsw>) -> sext {(1 + %c)<nsw>,+,1}
+  //   sext ((1 + {%c,+,1})<nsw>) -> (1 + sext {%c,+,1})<nsw>
+  // For example, in the latter form SCEV can prove that subtracting
+  // sext {%c,+,1} yields exactly 1. In the former form, folding the
+  // loop-invariant operand into the recurrence changes the expression's
+  // meaning, so that conclusion is not valid.
+  auto getExtendAddExpr = [this](const BinaryOp &Add, Type *Ty,
+                                 bool SignExtend) -> const SCEV * {
+    assert(Add.Opcode == Instruction::Add);
+
+    SmallVector<SCEVUse, 2> Ops = {getSCEV(Add.LHS), getSCEV(Add.RHS)};
+    GroupByComplexity(Ops, &LI, DT);
+
+    SCEVFlags Flags = Add.Op ? getNoWrapFlagsFromUB(Add.Op) : SCEV::FlagNone;
+    Flags = StrengthenNoWrapFlags(this, scAddExpr, Ops, Flags);
+
+    SCEVFlags RequiredFlag = SignExtend ? SCEV::FlagNSW : SCEV::FlagNUW;
+    if (!hasFlags(Flags, RequiredFlag)) {
+      const SCEV *AddExpr = getAddExpr(Ops, Flags);
+      return SignExtend ? getSignExtendExpr(AddExpr, Ty)
+                        : getZeroExtendExpr(AddExpr, Ty);
+    }
+
+    for (SCEVUse &Op : Ops)
+      Op = SignExtend ? getSignExtendExpr(Op, Ty) : getZeroExtendExpr(Op, Ty);
+    return getAddExpr(Ops, RequiredFlag);
+  };
+
   switch (U->getOpcode()) {
   case Instruction::Trunc:
     return getTruncateExpr(getSCEV(U->getOperand(0)), U->getType());
 
   case Instruction::ZExt:
+    if (auto BO = MatchBinaryOp(U->getOperand(0), getDataLayout(), AC, DT,
+                                dyn_cast<Instruction>(V)))
+      if (BO->Opcode == Instruction::Add)
+        return getExtendAddExpr(*BO, U->getType(), /*SignExtend=*/false);
     return getZeroExtendExpr(getSCEV(U->getOperand(0)), U->getType());
 
   case Instruction::SExt:
@@ -8142,6 +8183,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         auto *V2 = getSignExtendExpr(getSCEV(BO->RHS), Ty);
         return getMinusSCEV(V1, V2, SCEV::FlagNSW);
       }
+
+      if (BO->Opcode == Instruction::Add)
+        return getExtendAddExpr(*BO, U->getType(), /*SignExtend=*/true);
     }
     return getSignExtendExpr(getSCEV(U->getOperand(0)), U->getType());
 
