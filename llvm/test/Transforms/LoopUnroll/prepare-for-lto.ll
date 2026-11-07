@@ -24,15 +24,13 @@ define i32 @extern_call(ptr %A) {
 ; LTO-NEXT:  entry:
 ; LTO-NEXT:    br label [[LOOP:%.*]]
 ; LTO:       loop:
-; LTO-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; LTO-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP]] ]
-; LTO-NEXT:    [[V:%.*]] = call i32 @extern_func(i32 [[I]])
-; LTO-NEXT:    [[ADD]] = add i32 [[SUM]], [[V]]
-; LTO-NEXT:    [[INC]] = add i32 [[I]], 1
-; LTO-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], 4
-; LTO-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
-; LTO:       exit:
-; LTO-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[LOOP]] ]
+; LTO-NEXT:    [[SUM:%.*]] = call i32 @extern_func(i32 0)
+; LTO-NEXT:    [[V:%.*]] = call i32 @extern_func(i32 1)
+; LTO-NEXT:    [[ADD:%.*]] = add i32 [[SUM]], [[V]]
+; LTO-NEXT:    [[V_2:%.*]] = call i32 @extern_func(i32 2)
+; LTO-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD]], [[V_2]]
+; LTO-NEXT:    [[V_3:%.*]] = call i32 @extern_func(i32 3)
+; LTO-NEXT:    [[ADD_LCSSA:%.*]] = add i32 [[ADD_2]], [[V_3]]
 ; LTO-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
@@ -116,15 +114,13 @@ define i32 @indirect_call(ptr %callee) {
 ; LTO-NEXT:  entry:
 ; LTO-NEXT:    br label [[LOOP:%.*]]
 ; LTO:       loop:
-; LTO-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; LTO-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP]] ]
-; LTO-NEXT:    [[V:%.*]] = call i32 [[CALLEE:%.*]](i32 [[I]])
-; LTO-NEXT:    [[ADD]] = add i32 [[SUM]], [[V]]
-; LTO-NEXT:    [[INC]] = add i32 [[I]], 1
-; LTO-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], 4
-; LTO-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
-; LTO:       exit:
-; LTO-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[LOOP]] ]
+; LTO-NEXT:    [[SUM:%.*]] = call i32 [[CALLEE:%.*]](i32 0)
+; LTO-NEXT:    [[V:%.*]] = call i32 [[CALLEE]](i32 1)
+; LTO-NEXT:    [[ADD:%.*]] = add i32 [[SUM]], [[V]]
+; LTO-NEXT:    [[V_2:%.*]] = call i32 [[CALLEE]](i32 2)
+; LTO-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD]], [[V_2]]
+; LTO-NEXT:    [[V_3:%.*]] = call i32 [[CALLEE]](i32 3)
+; LTO-NEXT:    [[ADD_LCSSA:%.*]] = add i32 [[ADD_2]], [[V_3]]
 ; LTO-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
