@@ -6,6 +6,12 @@
 // RUN: fir-opt --target-rewrite="target=nvptx64-nvidia-cuda" %s | FileCheck %s --check-prefix=INT64
 // RUN: fir-opt --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=INT64
 // RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu" %s | FileCheck %s --check-prefix=INT64
+// RUN: fir-opt --target-rewrite="target=mips64-unknown-linux-gnuabi64" %s | FileCheck %s --check-prefix=INT64
+// RUN: fir-opt --target-rewrite="target=mips64el-unknown-linux-gnuabi64" %s | FileCheck %s --check-prefix=INT64
+// RUN: fir-opt --target-rewrite="target=mips64-unknown-linux-gnuabin32" %s | FileCheck %s --check-prefix=INT32
+// RUN: fir-opt --target-rewrite="target=mips64el-unknown-linux-gnuabin32" %s | FileCheck %s --check-prefix=INT32
+// RUN: fir-opt --target-rewrite="target=mips64-unknown-linux-gnuabi64 target-abi=n32" %s | FileCheck %s --check-prefix=INT32
+// RUN: fir-opt --target-rewrite="target=mips64el-unknown-linux-gnuabin32 target-abi=n64" %s | FileCheck %s --check-prefix=INT64
 
 // Test that we rewrite the signatures and bodies of functions that take boxchar
 // parameters.
