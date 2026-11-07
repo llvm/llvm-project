@@ -1365,6 +1365,12 @@ return type of the current function.  The first parameter type must be
 a pointer type.  The second parameter type must be an integer type;
 it will be used only as a boolean flag.
 
+The fourth argument may instead be a {ref}`ptrauth constant <ptrauth_constant>`
+signing the prototype function. The continuation function pointers are then
+signed with the same key and discriminator. Its address discriminator must be
+either `null` or `inttoptr (i64 1 to ptr)`, which stands for the address of the
+buffer.
+
 The fifth argument must be a reference to a global function that will
 be used to allocate memory.  It may not fail, either by returning null
 or throwing an exception.  It must take an integer and return a pointer.
