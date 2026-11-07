@@ -351,9 +351,8 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
 }
 
-foreach FPTy = [ "F32", "F64" ] in {
-  def SINCOS_STRET_#FPTy : RuntimeLibcall;
-}
+def SINCOS_STRET_F32 : RuntimeLibcall<CFltPair, [Flt]>;
+def SINCOS_STRET_F64 : RuntimeLibcall<CDblPair, [Dbl]>;
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def POW_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -2014,6 +2013,7 @@ def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
 def __exp10f : RuntimeLibcallImpl<EXP10_F32>;
 def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
 def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
+
 def __sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
 def __sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
 

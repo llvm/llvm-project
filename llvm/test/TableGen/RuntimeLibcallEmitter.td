@@ -122,6 +122,8 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  AllocaPtr,
 // CHECK-NEXT:  BFloat,
 // CHECK-NEXT:  Bool,
+// CHECK-NEXT:  CDblPair,
+// CHECK-NEXT:  CFltPair,
 // CHECK-NEXT:  CmpResult,
 // CHECK-NEXT:  Dbl,
 // CHECK-NEXT:  Ellip,
