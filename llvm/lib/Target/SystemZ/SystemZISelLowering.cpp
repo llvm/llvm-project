@@ -313,17 +313,12 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // Type legalization will convert 8- and 16-bit atomic operations into
   // forms that operate on i32s (but still keeping the original memory VT).
   // Lower them into full i32 operations.
-  setOperationAction(ISD::ATOMIC_SWAP,      MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_ADD,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_SUB,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_AND,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_OR,   MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_XOR,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_MIN,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_MAX,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, Custom);
+  setOperationAction(
+      {ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD_ADD, ISD::ATOMIC_LOAD_SUB,
+       ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR, ISD::ATOMIC_LOAD_XOR,
+       ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN, ISD::ATOMIC_LOAD_MAX,
+       ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
+      {MVT::i8, MVT::i16}, Custom);
 
   // Whether or not i128 is not a legal type, we need to custom lower
   // the atomic operations in order to exploit SystemZ instructions.
@@ -7635,6 +7630,18 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
     }
     break;
   }
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+    break;
   default:
     llvm_unreachable("Unexpected node to lower");
   }

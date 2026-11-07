@@ -926,14 +926,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   for (MVT Ty : {MVT::f16, MVT::bf16, MVT::f32, MVT::f64})
     setOperationAction(ISD::ATOMIC_LOAD_FSUB, Ty, Expand);
   if (!Subtarget->hasLSE() && !Subtarget->outlineAtomics()) {
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB,
+                       {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, LibCall);
   } else {
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, Expand);
+    setOperationAction({ISD::ATOMIC_LOAD_SUB, ISD::ATOMIC_LOAD_AND},
+                       {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, Expand);
   }
-  setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i64, Custom);
 
   // Generate outline atomics library calls only if LSE was not specified for
   // subtarget
@@ -8970,8 +8968,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_MUL:
   case ISD::VECREDUCE_FMUL:
     return LowerVECREDUCE_MUL(Op, DAG);
-  case ISD::ATOMIC_LOAD_AND:
-    return LowerATOMIC_LOAD_AND(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::VSCALE:
@@ -18463,25 +18459,6 @@ SDValue AArch64TargetLowering::LowerVECREDUCE_MUL(SDValue Op,
   }
 
   return DAG.getExtractVectorElt(DL, Op.getValueType(), Src, 0);
-}
-
-SDValue AArch64TargetLowering::LowerATOMIC_LOAD_AND(SDValue Op,
-                                                    SelectionDAG &DAG) const {
-  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
-  // No point replacing if we don't have the relevant instruction/libcall anyway
-  if (!Subtarget.hasLSE() && !Subtarget.outlineAtomics())
-    return SDValue();
-
-  // LSE has an atomic load-clear instruction, but not a load-and.
-  SDLoc DL(Op);
-  MVT VT = Op.getSimpleValueType();
-  assert(VT != MVT::i128 && "Handled elsewhere, code replicated.");
-  SDValue RHS = Op.getOperand(2);
-  AtomicSDNode *AN = cast<AtomicSDNode>(Op.getNode());
-  RHS = DAG.getNode(ISD::XOR, DL, VT, DAG.getAllOnesConstant(DL, VT), RHS);
-  return DAG.getAtomic(ISD::ATOMIC_LOAD_CLR, DL, AN->getMemoryVT(),
-                       Op.getOperand(0), Op.getOperand(1), RHS,
-                       AN->getMemOperand());
 }
 
 SDValue
@@ -33163,9 +33140,9 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
 static unsigned getAtomicLoad128Opcode(unsigned ISDOpcode,
                                        AtomicOrdering Ordering) {
   // ATOMIC_LOAD_CLR only appears when lowering ATOMIC_LOAD_AND (see
-  // LowerATOMIC_LOAD_AND). We can't take that approach with 128-bit, because
-  // the type is not legal. Therefore we shouldn't expect to see a 128-bit
-  // ATOMIC_LOAD_CLR at any point.
+  // ATOMIC_LOAD_AND expansion). We can't take that approach with 128-bit,
+  // because the type is not legal. Therefore we shouldn't expect to see a
+  // 128-bit ATOMIC_LOAD_CLR at any point.
   assert(ISDOpcode != ISD::ATOMIC_LOAD_CLR &&
          "ATOMIC_LOAD_AND should be lowered to LDCLRP directly");
   assert(ISDOpcode != ISD::ATOMIC_LOAD_ADD && "There is no 128 bit LDADD");
