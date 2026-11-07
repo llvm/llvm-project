@@ -907,9 +907,13 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
 /// Check if \p VPV is an untruncated wide induction, either before or after the
 /// increment. If so return the header IV (before the increment), otherwise
-/// return null.
+/// return null. If \p StartOffset is provided, the induction plus any constant
+/// is also matched, and \p StartOffset is set to that constant if it can be
+/// folded into the induction's constant start value. It is left unset for an
+/// increment without such an offset.
 static VPWidenInductionRecipe *
-getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
+getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
+                   std::optional<APInt> *StartOffset = nullptr) {
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
     // VPV itself is a wide induction, separately compute the end value for exit
@@ -928,7 +932,17 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
   if (!WideIV)
     return nullptr;
 
-  auto IsWideIVInc = [&]() {
+  auto IsWideIVInc = [&](APInt &Offset) {
+    // (Start + C) + IV * Step stays affine for any constant C, including the
+    // Step, so it can be added to the Start value.
+    // It would not be profitable to look for a non-constant Start or C, as it
+    // would necessitate introducing an extra add or sub instruction.
+    const APInt *C;
+    if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C))))
+      Offset = *C;
+    else if (match(VPV, m_Sub(m_Specific(WideIV), m_APInt(C))))
+      Offset = -*C;
+
     auto &ID = WideIV->getInductionDescriptor();
 
     // Check if VPV increments the induction by the induction step.
@@ -961,7 +975,19 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
     }
     llvm_unreachable("should have been covered by switch above");
   };
-  return IsWideIVInc() ? WideIV : nullptr;
+
+  APInt Offset;
+  bool Res = IsWideIVInc(Offset);
+  if (!StartOffset || !Offset)
+    return Res ? WideIV : nullptr;
+
+  const APInt *StartC;
+  // A narrowed IV computes in a narrower type than its start value.
+  if (!match(WideIV->getStartValue(), m_APInt(StartC)) ||
+      StartC->getBitWidth() != Offset.getBitWidth())
+    return Res ? WideIV : nullptr;
+  *StartOffset = Offset;
+  return WideIV;
 }
 
 /// Attempts to optimize the induction variable exit values for users in the
@@ -6310,14 +6336,14 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       VPValue *Op = VPI.getOperand(0);
-      auto *WideIV = getOptimizableIVOf(Op, PSE);
+      std::optional<APInt> StartOffset;
+      VPWidenInductionRecipe *WideIV =
+          getOptimizableIVOf(Op, PSE, &StartOffset);
       if (!WideIV)
         continue;
 
-      // getOptimizableIVOf also matches an add of the IV and its step, which
-      // is not handled here.
-      // TODO: Also narrow truncates of the incremented IV.
-      if (Op != WideIV)
+      // An increment whose offset cannot be folded into the start value.
+      if (Op != WideIV && !StartOffset)
         continue;
 
       // A truncate that is not widened is left to the scalarization decisions
@@ -6340,8 +6366,15 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
 
       // Wrap flags of the original induction do not hold in the truncated
       // type, so do not propagate them.
+      VPValue *Start = WideIV->getStartValue();
+      if (StartOffset) {
+        const APInt *StartC;
+        [[maybe_unused]] bool IsConstantStart = match(Start, m_APInt(StartC));
+        assert(IsConstantStart && "expected a constant start for an offset IV");
+        Start = Plan.getConstantInt(*StartC + *StartOffset);
+      }
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
-          WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
+          WideIV->getPHINode(), Start, WideIV->getStepValue(),
           WideIV->getVFValue(), WideIV->getInductionDescriptor(),
           VPI.getScalarType(), VPIRFlags::WrapFlagsTy(false, false),
           VPI.getDebugLoc());
