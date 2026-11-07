@@ -19,20 +19,68 @@ define half @sitofp_i128_to_f16(i128 %a) nounwind {
 ;
 ; RV64IZFH-LABEL: sitofp_i128_to_f16:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addi sp, sp, -16
-; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZFH-NEXT:    call __floattihf
-; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    li a2, -1
+; RV64IZFH-NEXT:    srli a4, a2, 1
+; RV64IZFH-NEXT:    beqz a1, .LBB0_2
+; RV64IZFH-NEXT:  # %bb.1:
+; RV64IZFH-NEXT:    srli a3, a1, 63
+; RV64IZFH-NEXT:    beqz a3, .LBB0_3
+; RV64IZFH-NEXT:    j .LBB0_4
+; RV64IZFH-NEXT:  .LBB0_2:
+; RV64IZFH-NEXT:    sltu a3, a0, a4
+; RV64IZFH-NEXT:    bnez a3, .LBB0_4
+; RV64IZFH-NEXT:  .LBB0_3:
+; RV64IZFH-NEXT:    mv a0, a4
+; RV64IZFH-NEXT:  .LBB0_4:
+; RV64IZFH-NEXT:    neg a3, a3
+; RV64IZFH-NEXT:    and a3, a3, a1
+; RV64IZFH-NEXT:    slli a1, a2, 63
+; RV64IZFH-NEXT:    beq a3, a2, .LBB0_6
+; RV64IZFH-NEXT:  # %bb.5:
+; RV64IZFH-NEXT:    srli a3, a3, 63
+; RV64IZFH-NEXT:    xori a2, a3, 1
+; RV64IZFH-NEXT:    beqz a2, .LBB0_7
+; RV64IZFH-NEXT:    j .LBB0_8
+; RV64IZFH-NEXT:  .LBB0_6:
+; RV64IZFH-NEXT:    sltu a2, a1, a0
+; RV64IZFH-NEXT:    bnez a2, .LBB0_8
+; RV64IZFH-NEXT:  .LBB0_7:
+; RV64IZFH-NEXT:    mv a0, a1
+; RV64IZFH-NEXT:  .LBB0_8:
+; RV64IZFH-NEXT:    fcvt.h.l fa0, a0
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: sitofp_i128_to_f16:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    addi sp, sp, -16
-; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    call __floattihf
-; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZHINX-NEXT:    addi sp, sp, 16
+; RV64IZHINX-NEXT:    li a2, -1
+; RV64IZHINX-NEXT:    srli a4, a2, 1
+; RV64IZHINX-NEXT:    beqz a1, .LBB0_2
+; RV64IZHINX-NEXT:  # %bb.1:
+; RV64IZHINX-NEXT:    srli a3, a1, 63
+; RV64IZHINX-NEXT:    beqz a3, .LBB0_3
+; RV64IZHINX-NEXT:    j .LBB0_4
+; RV64IZHINX-NEXT:  .LBB0_2:
+; RV64IZHINX-NEXT:    sltu a3, a0, a4
+; RV64IZHINX-NEXT:    bnez a3, .LBB0_4
+; RV64IZHINX-NEXT:  .LBB0_3:
+; RV64IZHINX-NEXT:    mv a0, a4
+; RV64IZHINX-NEXT:  .LBB0_4:
+; RV64IZHINX-NEXT:    neg a3, a3
+; RV64IZHINX-NEXT:    and a3, a3, a1
+; RV64IZHINX-NEXT:    slli a1, a2, 63
+; RV64IZHINX-NEXT:    beq a3, a2, .LBB0_6
+; RV64IZHINX-NEXT:  # %bb.5:
+; RV64IZHINX-NEXT:    srli a3, a3, 63
+; RV64IZHINX-NEXT:    xori a2, a3, 1
+; RV64IZHINX-NEXT:    beqz a2, .LBB0_7
+; RV64IZHINX-NEXT:    j .LBB0_8
+; RV64IZHINX-NEXT:  .LBB0_6:
+; RV64IZHINX-NEXT:    sltu a2, a1, a0
+; RV64IZHINX-NEXT:    bnez a2, .LBB0_8
+; RV64IZHINX-NEXT:  .LBB0_7:
+; RV64IZHINX-NEXT:    mv a0, a1
+; RV64IZHINX-NEXT:  .LBB0_8:
+; RV64IZHINX-NEXT:    fcvt.h.l a0, a0
 ; RV64IZHINX-NEXT:    ret
   %1 = sitofp i128 %a to half
   ret half %1
@@ -51,20 +99,30 @@ define half @uitofp_i128_to_f16(i128 %a) nounwind {
 ;
 ; RV64IZFH-LABEL: uitofp_i128_to_f16:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addi sp, sp, -16
-; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZFH-NEXT:    call __floatuntihf
-; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    seqz a1, a1
+; RV64IZFH-NEXT:    addi a1, a1, -1
+; RV64IZFH-NEXT:    li a2, -1
+; RV64IZFH-NEXT:    or a0, a1, a0
+; RV64IZFH-NEXT:    srli a1, a2, 1
+; RV64IZFH-NEXT:    bltu a0, a1, .LBB1_2
+; RV64IZFH-NEXT:  # %bb.1:
+; RV64IZFH-NEXT:    mv a0, a1
+; RV64IZFH-NEXT:  .LBB1_2:
+; RV64IZFH-NEXT:    fcvt.h.l fa0, a0
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: uitofp_i128_to_f16:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    addi sp, sp, -16
-; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    call __floatuntihf
-; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZHINX-NEXT:    addi sp, sp, 16
+; RV64IZHINX-NEXT:    seqz a1, a1
+; RV64IZHINX-NEXT:    addi a1, a1, -1
+; RV64IZHINX-NEXT:    li a2, -1
+; RV64IZHINX-NEXT:    or a0, a1, a0
+; RV64IZHINX-NEXT:    srli a1, a2, 1
+; RV64IZHINX-NEXT:    bltu a0, a1, .LBB1_2
+; RV64IZHINX-NEXT:  # %bb.1:
+; RV64IZHINX-NEXT:    mv a0, a1
+; RV64IZHINX-NEXT:  .LBB1_2:
+; RV64IZHINX-NEXT:    fcvt.h.l a0, a0
 ; RV64IZHINX-NEXT:    ret
   %1 = uitofp i128 %a to half
   ret half %1

@@ -12,6 +12,28 @@ define <2 x half> @vector_sint64ToHalf(<2 x i64> %int64) {
   ret <2 x half> %fp16
 }
 
+define <2 x half> @vector_sint64ToHalf_strict(<2 x i64> %int64) strictfp {
+; CHECK-LABEL: vector_sint64ToHalf_strict:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps %xmm0, %xmm0
+; CHECK-NEXT:    vcvtqq2ph %zmm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %fp16 = call <2 x half> @llvm.experimental.constrained.sitofp.v2f16.v2i64(<2 x i64> %int64, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret <2 x half> %fp16
+}
+
+define <4 x half> @vector_sint64x4ToHalf_strict(<4 x i64> %int64) strictfp {
+; CHECK-LABEL: vector_sint64x4ToHalf_strict:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps %ymm0, %ymm0
+; CHECK-NEXT:    vcvtqq2ph %zmm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %fp16 = call <4 x half> @llvm.experimental.constrained.sitofp.v4f16.v4i64(<4 x i64> %int64, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret <4 x half> %fp16
+}
+
 define <4 x half> @vector_sint32ToHalf(<4 x i32> %int32) {
 ; CHECK-LABEL: vector_sint32ToHalf:
 ; CHECK:       # %bb.0:
@@ -79,6 +101,28 @@ define <2 x half> @vector_uint64ToHalf(<2 x i64> %int64) {
 ; CHECK-NEXT:    retq
   %fp16 = uitofp <2 x i64> %int64 to <2 x half>
   ret <2 x half> %fp16
+}
+
+define <2 x half> @vector_uint64ToHalf_strict(<2 x i64> %int64) strictfp {
+; CHECK-LABEL: vector_uint64ToHalf_strict:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps %xmm0, %xmm0
+; CHECK-NEXT:    vcvtuqq2ph %zmm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %fp16 = call <2 x half> @llvm.experimental.constrained.uitofp.v2f16.v2i64(<2 x i64> %int64, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret <2 x half> %fp16
+}
+
+define <4 x half> @vector_uint64x4ToHalf_strict(<4 x i64> %int64) strictfp {
+; CHECK-LABEL: vector_uint64x4ToHalf_strict:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps %ymm0, %ymm0
+; CHECK-NEXT:    vcvtuqq2ph %zmm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %fp16 = call <4 x half> @llvm.experimental.constrained.uitofp.v4f16.v4i64(<4 x i64> %int64, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret <4 x half> %fp16
 }
 
 define <4 x half> @vector_uint32ToHalf(<4 x i32> %int32) {
