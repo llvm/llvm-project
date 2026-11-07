@@ -10335,7 +10335,7 @@ class InstructionsCompatibilityAnalysis {
   }
 
   /// Checks if \p I can be the main op for copyable analysis: a supported
-  /// binary operator, fmuladd, or an integer min/max intrinsic, the only
+  /// binary operator, fma/fmuladd, or an integer min/max intrinsic, the only
   /// call with a well-defined idempotent value (FP min/max lacks one because of
   /// NaNs). An extractelement with constant index from a fixed vector is also
   /// supported: the matching lanes reuse the source vector and the copyable
@@ -10345,7 +10345,7 @@ class InstructionsCompatibilityAnalysis {
   /// modeled as zexts of truncated constants.
   static bool isSupportedMainOp(Instruction *I) {
     return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I) ||
-           RecurrenceDescriptor::isFMulAddIntrinsic(I) ||
+           isFMAOrFMulAdd(I) ||
            (isa<ExtractElementInst>(I) && isVectorLikeInstWithConstOps(I) &&
             isa<FixedVectorType>(I->getOperand(0)->getType())) ||
            (isa<GetElementPtrInst>(I) && I->getNumOperands() == 2 &&
@@ -10445,11 +10445,10 @@ class InstructionsCompatibilityAnalysis {
              I->getOpcode() == Instruction::FAdd) &&
             AbsorbCopyableFMulOrFAdds)
           continue;
-        // Same check when fmuladd replaces fmul/fadd on a tie.
+        // Same check when fma/fmuladd replaces fmul/fadd on a tie.
         if ((MainOp->getOpcode() == Instruction::FMul ||
              MainOp->getOpcode() == Instruction::FAdd) &&
-            RecurrenceDescriptor::isFMulAddIntrinsic(I) &&
-            !AbsorbCopyableFMulOrFAdds)
+            isFMAOrFMulAdd(I) && !AbsorbCopyableFMulOrFAdds)
           continue;
       }
       UsedOutside = PUsedOutside;
