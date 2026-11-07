@@ -22,6 +22,7 @@ add_llvm_component_library(LLVMOrcTargetProcess
   JITLoaderVTune.cpp
   LibraryScanner.cpp
   OrcRTBootstrap.cpp
+  PerfJITUnwindInfo.cpp
   RegisterEHFrames.cpp
   SimpleExecutorDylibManager.cpp
   SimpleExecutorMemoryManager.cpp
