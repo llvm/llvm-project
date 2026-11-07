@@ -108,6 +108,8 @@ public:
 
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
+  void AddHIPIncludeArgsLate(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const override;
 
   void addOffloadRTLibs(unsigned ActiveKinds, const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;

@@ -1951,6 +1951,9 @@ void ToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
 void ToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                   ArgStringList &CC1Args) const {}
 
+void ToolChain::AddHIPIncludeArgsLate(const ArgList &DriverArgs,
+                                      ArgStringList &CC1Args) const {}
+
 void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args) const {}
 

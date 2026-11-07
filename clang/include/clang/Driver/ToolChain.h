@@ -857,6 +857,12 @@ public:
   virtual void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) const;
 
+  /// Add HIP toolkit include paths that must appear after C++ stdlib headers
+  /// but before C system headers, so the selected ROCm installation's HIP
+  /// headers take precedence over any distro-installed copies in /usr/include.
+  virtual void AddHIPIncludeArgsLate(const llvm::opt::ArgList &DriverArgs,
+                                     llvm::opt::ArgStringList &CC1Args) const;
+
   /// Add arguments to use system-specific SYCL includes.
   virtual void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const;
