@@ -685,7 +685,7 @@ func.func @atan2() {
   // CHECK: -1.5708
   call @atan2_f32(%neg_one, %zero) : (f32, f32) -> ()
 
-  // CHECK: nan
+  // CHECK: {{^}}0
   call @atan2_f32(%zero, %zero) : (f32, f32) -> ()
 
   // CHECK: 1.10715
@@ -717,6 +717,36 @@ func.func @atan2() {
 
   // CHECK: -0.463648
   call @atan2_f32(%neg_one, %two) : (f32, f32) -> ()
+
+  %neg_zero = arith.constant -0.0 : f32
+  %inf = arith.constant 0x7F800000 : f32
+  %neg_inf = arith.constant 0xFF800000 : f32
+  %neg_tiny = arith.constant -1.0e-30 : f32
+  %neg_huge = arith.constant -1.0e30 : f32
+
+  // CHECK: -0
+  call @atan2_f32(%neg_zero, %zero) : (f32, f32) -> ()
+
+  // CHECK: {{^}}3.14159
+  call @atan2_f32(%zero, %neg_zero) : (f32, f32) -> ()
+
+  // CHECK: -3.14159
+  call @atan2_f32(%neg_zero, %neg_zero) : (f32, f32) -> ()
+
+  // CHECK: -3.14159
+  call @atan2_f32(%neg_zero, %neg_one) : (f32, f32) -> ()
+
+  // CHECK: 0.785398
+  call @atan2_f32(%inf, %inf) : (f32, f32) -> ()
+
+  // CHECK: -2.35619
+  call @atan2_f32(%neg_inf, %neg_inf) : (f32, f32) -> ()
+
+  // CHECK: -3.14159
+  call @atan2_f32(%neg_one, %neg_inf) : (f32, f32) -> ()
+
+  // CHECK: -3.14159
+  call @atan2_f32(%neg_tiny, %neg_huge) : (f32, f32) -> ()
 
   return
 }
