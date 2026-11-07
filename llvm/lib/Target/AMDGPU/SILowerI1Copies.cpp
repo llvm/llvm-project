@@ -17,7 +17,7 @@
 // pass.
 //
 // The only instructions that use or define vreg_1 virtual registers are COPY,
-// PHI, and IMPLICIT_DEF.
+// FREEZE, PHI, and IMPLICIT_DEF.
 //
 //===----------------------------------------------------------------------===//
 
@@ -591,7 +591,7 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
 
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() != AMDGPU::IMPLICIT_DEF &&
-          MI.getOpcode() != AMDGPU::COPY)
+          MI.getOpcode() != AMDGPU::COPY && MI.getOpcode() != AMDGPU::FREEZE)
         continue;
 
       Register DstReg = MI.getOperand(0).getReg();
@@ -628,6 +628,16 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
       } else {
         // SrcReg needs to be live beyond copy.
         MI.getOperand(1).setIsKill(false);
+      }
+
+      // Freeze the lane mask, and lower the rest like a copy.
+      if (MI.getOpcode() == AMDGPU::FREEZE) {
+        Register FrozenReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::FREEZE), FrozenReg)
+            .addReg(SrcReg);
+        MI.setDesc(TII->get(AMDGPU::COPY));
+        MI.getOperand(1).setReg(FrozenReg);
+        SrcReg = FrozenReg;
       }
 
       // Defs in a loop that are observed outside the loop must be transformed
@@ -770,7 +780,9 @@ void Vreg1LoweringHelper::collectIncomingValuesFromPhi(
     } else if (IncomingDef->getOpcode() == AMDGPU::IMPLICIT_DEF) {
       continue;
     } else {
-      assert(IncomingDef->isPHI() || PhiRegisters.count(IncomingReg));
+      assert(IncomingDef->isPHI() ||
+             IncomingDef->getOpcode() == AMDGPU::FREEZE ||
+             PhiRegisters.count(IncomingReg));
     }
 
     Incomings.emplace_back(IncomingReg, IncomingMBB, Register());
