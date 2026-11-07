@@ -20,7 +20,6 @@ __global__ void square(int *Dst, short Q, int *Src, short P) {
 }
 
 int main(int argc, char **argv) {
-  int DevNo = 0;
   int *Src, *Ptr;
   hipMalloc(&Ptr, 4);
   hipMalloc(&Src, 8);
@@ -30,6 +29,7 @@ int main(int argc, char **argv) {
   hipMemcpy(Ptr, &I, sizeof(int), hipMemcpyHostToDevice);
   hipMemcpy(Src, &HostSrc[0], 2*sizeof(int), hipMemcpyHostToDevice);
   square<<<1, 1>>>(Ptr, 3, Src, 4);
+  hipDeviceSynchronize();
   hipMemcpy(&I, Ptr, sizeof(int), hipMemcpyDeviceToHost);
   hipMemcpy(&HostSrc[0], Src, 2 * sizeof(int), hipMemcpyDeviceToHost);
   printf("I: %i\n", I);
