@@ -345,6 +345,18 @@ def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
 
 def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
   let summary = "Vectorize to a target independent n-D vector abstraction";
+  let description = [{
+    Transforms affine loops into vector operations (transfer_read/write,
+    load/store, gather/scatter, etc.) using a virtual target-independent
+    n-D vector size. The resulting IR uses vector ops instead of scalar
+    affine loads/stores.
+
+    When accesses are provably within bounds (all dimensions statically known
+    and access patterns fit the memref layout), the generated vector operations
+    carry `in_bounds = [true, ...]` attributes asserting that masking is not
+    needed. These properties enable downstream optimizations in vectorization-aware
+    lowering passes (e.g., LLVM code generation).
+  }];
   let dependentDialects = ["vector::VectorDialect"];
   let options = [
     ListOption<"vectorSizes", "virtual-vector-size", "int64_t",
