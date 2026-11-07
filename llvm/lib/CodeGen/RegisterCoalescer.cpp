@@ -1898,11 +1898,13 @@ void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
   }
 }
 
+// Update %SrcReg to %DstReg.SubIdx
 void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
                                           unsigned SubIdx) {
   bool DstIsPhys = DstReg.isPhysical();
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
 
+  // Joining Src and Dst may have exposed undef lanes. Visit existing Dst refs.
   if (DstInt && DstReg != SrcReg) {
     bool HasSubRanges = DstInt->hasSubRanges();
     for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
@@ -1927,6 +1929,8 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
     }
   }
 
+  // Now update SrcReg use/defs to DstReg.SubIdx
+  // LiveIntervals have already been updated.
   SmallPtrSet<MachineInstr *, 8> Visited;
   for (MachineRegisterInfo::reg_instr_iterator I = MRI->reg_instr_begin(SrcReg),
                                                E = MRI->reg_instr_end();
@@ -1957,8 +1961,17 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       // Adjust <undef> flags in case of sub-register joins. We don't want to
       // turn a full def into a read-modify-write sub-register def and vice
       // versa.
-      if (SubIdx && MO.isDef())
+      if (SubIdx && MO.isDef()) {
         MO.setIsUndef(!Reads);
+        // If live lanes at UseIdx are all covered by SubIdx, this Def can still
+        // be marked as read-undef because all the live lanes get re-defined.
+        if (Reads && DstInt && DstInt->hasSubRanges()) {
+          unsigned SubDefIdx =
+              TRI->composeSubRegIndices(SubIdx, MO.getSubReg());
+          SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI).getRegSlot(true);
+          addUndefFlag(*DstInt, UseIdx, MO, SubDefIdx);
+        }
+      }
 
       // A subreg use of a partially undef (super) register may be a complete
       // undef use now and then has to be marked that way.
