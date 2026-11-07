@@ -209,6 +209,8 @@ public:
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
 
+  bool isReadOnlyAndFastAddressSpace(unsigned AddressSpace) const override;
+
   bool isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddrSpace,
                           TTI::MaskKind MaskKind) const override;
 

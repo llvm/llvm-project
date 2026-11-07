@@ -585,6 +585,14 @@ defm : BoolField<"sroa-skip-mem2reg", "false", "">;
 // Only for testing.
 defm : BoolField<"enable-poison-reuse-guard", "true",
   "Enable poison-reuse guard">;
+defm : BoolField<"enable-partial-strength-reduce", "true",
+  "Enable partial strength reduce">;
+defm : ValueField<"psr-threshold", "unsigned", "4",
+  "The minimum number of candidates that's profitable to be optimized by a PSR basis">;
+defm : ValueField<"max-psr-path-length", "unsigned", "200",
+  "The maximum number of blocks in a PSR path">;
+defm : BoolField<"slsr-skip-scev-diff", "true",
+  "Aggressively skip computation of diff between SCEVs">;
 
 // StructurizeCFG.cpp
 defm : OptionalBoolField<"structurizecfg-skip-uniform-regions",
