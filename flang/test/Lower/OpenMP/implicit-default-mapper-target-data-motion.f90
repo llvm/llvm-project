@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -fno-implicit-default-mapper-allocatable-members %s -o - | FileCheck %s --check-prefix=NO-MAPPER
 
 module implicit_default_mapper_target_data_motion
   type :: t_enter_update_to_update_from_exit
@@ -53,6 +54,70 @@ contains
     !$omp target update to(x)
   end subroutine
 end module
+
+! NO-MAPPER: module
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-LABEL: func.func @_QMimplicit_default_mapper_target_data_motionPenter_update_to_update_from_exit(
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[ENTER_UPDATE_TO_UPDATE_FROM_EXIT_ENTER_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_enter_data map_entries(%[[ENTER_UPDATE_TO_UPDATE_FROM_EXIT_ENTER_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[ENTER_UPDATE_TO_UPDATE_FROM_EXIT_UPDATE_TO_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_update map_entries(%[[ENTER_UPDATE_TO_UPDATE_FROM_EXIT_UPDATE_TO_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[ENTER_UPDATE_TO_UPDATE_FROM_EXIT_UPDATE_FROM_MAP:.*]] = omp.map.info {{.*}} map_clauses(from) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_update map_entries(%[[ENTER_UPDATE_TO_UPDATE_FROM_EXIT_UPDATE_FROM_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[ENTER_UPDATE_TO_UPDATE_FROM_EXIT_EXIT_MAP:.*]] = omp.map.info {{.*}} map_clauses(from) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_exit_data map_entries(%[[ENTER_UPDATE_TO_UPDATE_FROM_EXIT_EXIT_MAP]]
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-LABEL: func.func @_QMimplicit_default_mapper_target_data_motionPexit_update_to_update_from_enter(
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[EXIT_UPDATE_TO_UPDATE_FROM_ENTER_EXIT_MAP:.*]] = omp.map.info {{.*}} map_clauses(from) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_exit_data map_entries(%[[EXIT_UPDATE_TO_UPDATE_FROM_ENTER_EXIT_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[EXIT_UPDATE_TO_UPDATE_FROM_ENTER_UPDATE_TO_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_update map_entries(%[[EXIT_UPDATE_TO_UPDATE_FROM_ENTER_UPDATE_TO_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[EXIT_UPDATE_TO_UPDATE_FROM_ENTER_UPDATE_FROM_MAP:.*]] = omp.map.info {{.*}} map_clauses(from) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_update map_entries(%[[EXIT_UPDATE_TO_UPDATE_FROM_ENTER_UPDATE_FROM_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[EXIT_UPDATE_TO_UPDATE_FROM_ENTER_ENTER_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_enter_data map_entries(%[[EXIT_UPDATE_TO_UPDATE_FROM_ENTER_ENTER_MAP]]
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-LABEL: func.func @_QMimplicit_default_mapper_target_data_motionPupdate_to_update_from_enter_exit(
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[UPDATE_TO_UPDATE_FROM_ENTER_EXIT_UPDATE_TO_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_update map_entries(%[[UPDATE_TO_UPDATE_FROM_ENTER_EXIT_UPDATE_TO_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[UPDATE_TO_UPDATE_FROM_ENTER_EXIT_UPDATE_FROM_MAP:.*]] = omp.map.info {{.*}} map_clauses(from) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_update map_entries(%[[UPDATE_TO_UPDATE_FROM_ENTER_EXIT_UPDATE_FROM_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[UPDATE_TO_UPDATE_FROM_ENTER_EXIT_ENTER_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_enter_data map_entries(%[[UPDATE_TO_UPDATE_FROM_ENTER_EXIT_ENTER_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[UPDATE_TO_UPDATE_FROM_ENTER_EXIT_EXIT_MAP:.*]] = omp.map.info {{.*}} map_clauses(from) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_exit_data map_entries(%[[UPDATE_TO_UPDATE_FROM_ENTER_EXIT_EXIT_MAP]]
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-LABEL: func.func @_QMimplicit_default_mapper_target_data_motionPupdate_from_enter_exit_update_to(
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_UPDATE_FROM_MAP:.*]] = omp.map.info {{.*}} map_clauses(from) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_update map_entries(%[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_UPDATE_FROM_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_ENTER_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_enter_data map_entries(%[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_ENTER_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_EXIT_MAP:.*]] = omp.map.info {{.*}} map_clauses(from) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_exit_data map_entries(%[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_EXIT_MAP]]
+! NO-MAPPER-NOT: mapper(
+! NO-MAPPER: %[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_UPDATE_TO_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("x")
+! NO-MAPPER-NEXT: omp.target_update map_entries(%[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_UPDATE_TO_MAP]]
+! NO-MAPPER-NOT: omp.declare_mapper
+! NO-MAPPER-NOT: mapper(
 
 ! CHECK: omp.declare_mapper @[[UPDATE_FROM_ENTER_EXIT_UPDATE_TO_MAPPER:.*t_update_from_enter_exit_update_to_omp_default_mapper]] :
 ! CHECK: omp.map.info {{.*}} map_clauses(implicit, tofrom, ref_ptee) {{.*}}name("")
