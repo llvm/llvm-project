@@ -1883,6 +1883,12 @@ public:
               Word("!DIR$ ASSUME_ALIGNED ");
               Walk(" ", assumeAligned, ", ");
             },
+            [&](const CompilerDirective::Align &align) {
+              // Canonical spelling.
+              Word("!DIR$ ALIGN(");
+              Walk(std::get<std::uint64_t>(align.t));
+              Walk(") :: ", std::get<std::list<Name>>(align.t), ", ");
+            },
             [&](const CompilerDirective::VectorAlways &valways) {
               Word("!DIR$ VECTOR ALWAYS");
             },
