@@ -88,10 +88,10 @@ define void @insert_f32_compute_fed(float %a, float %b) {
 ;
 ; GFX1250-LABEL: 'insert_f32_compute_fed'
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = fadd float %a, %b
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = insertelement <2 x float> poison, float %c, i32 0
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4 = insertelement <4 x float> poison, float %c, i32 1
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8 = insertelement <8 x float> poison, float %c, i32 3
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16 = insertelement <16 x float> poison, float %c, i32 7
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2 = insertelement <2 x float> poison, float %c, i32 0
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4 = insertelement <4 x float> poison, float %c, i32 1
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8 = insertelement <8 x float> poison, float %c, i32 3
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16 = insertelement <16 x float> poison, float %c, i32 7
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX900-LABEL: 'insert_f32_compute_fed'
