@@ -129,6 +129,7 @@ class Feature(enum.Flag):
     outline_atomics = enum.auto()  # -moutline-atomics
     rcpc3 = enum.auto()  # FEAT_LSE2 + FEAT_LRCPC3
     lse2_lse128 = enum.auto()  # FEAT_LSE2 + FEAT_LSE128
+    lscp = enum.auto()  # FEAT_LSE2 + FEAT_LSCP
 
     def test_scope():
         return "all"
@@ -143,6 +144,8 @@ class Feature(enum.Flag):
             return "+lse2,+rcpc3"
         if self == Feature.lse2_lse128:
             return "+lse2,+lse128"
+        if self == Feature.lscp:
+            return "+lse2,+lscp"
         return "+" + self.name
 
 
@@ -321,7 +324,7 @@ def emit_load_tests(f, datatypes, alignments, orderings):
 
 def all_load(f, feature):
     emit_load_tests(f, Type, Aligned, ATOMIC_LOAD_ORDERS)
-    if feature in [Feature.lse2, Feature.rcpc3, Feature.lse2_lse128]:
+    if feature in [Feature.lse2, Feature.rcpc3, Feature.lse2_lse128, Feature.lscp]:
         emit_load_tests(f, FP128LoadType, [Aligned.aligned], [AtomicOrder.seq_cst])
 
 

@@ -978,7 +978,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::i128, Custom);
 
   // Aligned 128-bit loads and stores are single-copy atomic according to the
-  // v8.4a spec. LRCPC3 introduces 128-bit STILP/LDIAPP but still requires LSE2.
+  // v8.4a spec. The paired loads/stores from LRCPC3 and LSCP still require
+  // LSE2.
   if (Subtarget->hasLSE2()) {
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i128, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i128, Custom);
@@ -8076,20 +8077,22 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   return SDValue();
 }
 
-/// Lower atomic or volatile 128-bit stores to a single STP instruction.
+/// Lower atomic or volatile 128-bit stores to a single paired store
+/// instruction.
 SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                                              SelectionDAG &DAG) const {
   MemSDNode *StoreNode = cast<MemSDNode>(Op);
   assert(StoreNode->getMemoryVT() == MVT::i128);
   assert(StoreNode->isVolatile() || StoreNode->isAtomic());
 
-  bool IsStoreRelease =
-      StoreNode->getMergedOrdering() == AtomicOrdering::Release;
-  if (StoreNode->isAtomic())
-    assert((Subtarget->hasFeature(AArch64::FeatureLSE2) &&
-            Subtarget->hasFeature(AArch64::FeatureRCPC3) && IsStoreRelease) ||
-           StoreNode->getMergedOrdering() == AtomicOrdering::Unordered ||
-           StoreNode->getMergedOrdering() == AtomicOrdering::Monotonic);
+  bool IsStoreRelease = isReleaseOrStronger(StoreNode->getMergedOrdering());
+  if (StoreNode->isAtomic()) {
+    assert(Subtarget->hasLSE2());
+    assert(
+        ((Subtarget->hasRCPC3() || Subtarget->hasLSCP()) && IsStoreRelease) ||
+        StoreNode->getMergedOrdering() == AtomicOrdering::Unordered ||
+        StoreNode->getMergedOrdering() == AtomicOrdering::Monotonic);
+  }
 
   SDValue Value = (StoreNode->getOpcode() == ISD::STORE ||
                    StoreNode->getOpcode() == ISD::ATOMIC_STORE)
@@ -8097,7 +8100,7 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
                       : StoreNode->getOperand(2);
   SDLoc DL(Op);
   auto StoreValue = DAG.SplitScalar(Value, DL, MVT::i64, MVT::i64);
-  unsigned Opcode = IsStoreRelease ? AArch64ISD::STILP : AArch64ISD::STP;
+  unsigned Opcode = IsStoreRelease ? AArch64ISD::STP_REL : AArch64ISD::STP;
   if (DAG.getDataLayout().isBigEndian())
     std::swap(StoreValue.first, StoreValue.second);
   SDValue Result = DAG.getMemIntrinsicNode(
@@ -8939,7 +8942,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerINTRINSIC_VOID(Op, DAG);
   case ISD::ATOMIC_STORE:
     if (cast<MemSDNode>(Op)->getMemoryVT() == MVT::i128) {
-      assert(Subtarget->hasLSE2() || Subtarget->hasRCPC3());
+      assert(Subtarget->hasLSE2());
       return LowerStore128(Op, DAG);
     }
     return SDValue();
@@ -33424,10 +33427,16 @@ void AArch64TargetLowering::ReplaceNodeResults(
       auto *AN = dyn_cast<AtomicSDNode>(LoadNode);
       bool isLoadAcquire =
           AN && AN->getSuccessOrdering() == AtomicOrdering::Acquire;
-      unsigned Opcode = isLoadAcquire ? AArch64ISD::LDIAPP : AArch64ISD::LDP;
-
-      if (isLoadAcquire)
-        assert(Subtarget->hasFeature(AArch64::FeatureRCPC3));
+      bool isSeqCst = AN && AN->getSuccessOrdering() ==
+                                AtomicOrdering::SequentiallyConsistent;
+      unsigned Opcode = AArch64ISD::LDP;
+      if (isSeqCst) {
+        assert(Subtarget->hasLSCP());
+        Opcode = AArch64ISD::LDAP;
+      } else if (isLoadAcquire) {
+        assert(Subtarget->hasRCPC3() || Subtarget->hasLSCP());
+        Opcode = AArch64ISD::LDP_ACQ;
+      }
 
       SDValue Result = DAG.getMemIntrinsicNode(
           Opcode, SDLoc(N), DAG.getVTList({MVT::i64, MVT::i64, MVT::Other}),
@@ -33643,13 +33652,32 @@ bool AArch64TargetLowering::isOpSuitableForRCPC3(const Instruction *I) const {
   if (auto SI = dyn_cast<StoreInst>(I))
     return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
            SI->getAlign() >= Align(16) &&
-           SI->getOrdering() == AtomicOrdering::Release;
+           isReleaseOrStronger(SI->getOrdering());
+
+  return false;
+}
+
+bool AArch64TargetLowering::isOpSuitableForLSCP(const Instruction *I) const {
+  if (!Subtarget->hasLSE2() || !Subtarget->hasLSCP())
+    return false;
+
+  if (auto LI = dyn_cast<LoadInst>(I))
+    return LI->getType()->getPrimitiveSizeInBits() == 128 &&
+           LI->getAlign() >= Align(16) &&
+           isAcquireOrStronger(LI->getOrdering());
+
+  if (auto SI = dyn_cast<StoreInst>(I))
+    return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
+           SI->getAlign() >= Align(16) &&
+           isReleaseOrStronger(SI->getOrdering());
 
   return false;
 }
 
 bool AArch64TargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
+  if (isOpSuitableForLSCP(I))
+    return false;
   if (isOpSuitableForRCPC3(I))
     return false;
   if (isOpSuitableForLSE128(I))
@@ -33714,6 +33742,8 @@ AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
   if (Size != 128)
     return AtomicExpansionKind::None;
+  if (isOpSuitableForLSCP(SI))
+    return AtomicExpansionKind::None;
   if (isOpSuitableForRCPC3(SI))
     return AtomicExpansionKind::None;
   if (isOpSuitableForLSE128(SI))
@@ -33731,6 +33761,8 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
 
   if (Size != 128)
+    return AtomicExpansionKind::None;
+  if (isOpSuitableForLSCP(LI))
     return AtomicExpansionKind::None;
   if (isOpSuitableForRCPC3(LI))
     return AtomicExpansionKind::None;

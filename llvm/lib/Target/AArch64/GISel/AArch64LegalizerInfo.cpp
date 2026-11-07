@@ -2239,14 +2239,22 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     AtomicOrdering Ordering = (*MI.memoperands_begin())->getSuccessOrdering();
     bool IsLoad = MI.getOpcode() == TargetOpcode::G_LOAD;
     bool IsLoadAcquire = IsLoad && Ordering == AtomicOrdering::Acquire;
-    bool IsStoreRelease = !IsLoad && Ordering == AtomicOrdering::Release;
+    bool IsLoadAcquireOrStronger = IsLoad && isAcquireOrStronger(Ordering);
+    bool IsStoreRelease = !IsLoad && isReleaseOrStronger(Ordering);
     bool IsRcpC3 =
         ST->hasLSE2() && ST->hasRCPC3() && (IsLoadAcquire || IsStoreRelease);
+    bool IsLSCP = ST->hasLSE2() && ST->hasLSCP() &&
+                  (IsLoadAcquireOrStronger || IsStoreRelease);
 
     LLT s64 = LLT::integer(64);
 
     unsigned Opcode;
-    if (IsRcpC3) {
+    if (IsLSCP) {
+      if (IsLoad)
+        Opcode = IsLoadAcquire ? AArch64::LDAPPi : AArch64::LDAPi;
+      else
+        Opcode = AArch64::STLPi;
+    } else if (IsRcpC3) {
       Opcode = IsLoad ? AArch64::LDIAPPX : AArch64::STILPX;
     } else {
       // For LSE2, loads/stores should have been converted to monotonic and had
@@ -2269,7 +2277,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
           Opcode, {}, {Split->getOperand(0), Split->getOperand(1)});
     }
 
-    if (IsRcpC3) {
+    if (IsRcpC3 || IsLSCP) {
       NewI.addUse(MI.getOperand(1).getReg());
     } else {
       Register Base;
