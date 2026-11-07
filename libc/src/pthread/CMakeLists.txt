@@ -558,6 +558,7 @@ add_entrypoint_object(
   HDRS
     pthread_mutex_destroy.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.include.pthread
     libc.src.__support.threads.mutex
 )
