@@ -6,13 +6,13 @@ define void @aarch64_vector_deinterleave_idx_ld2(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: aarch64_vector_deinterleave_idx_ld2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl x8, x1, #2
-; CHECK-NEXT:    and x9, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
-; CHECK-NEXT:    str q0, [x0, x9]
-; CHECK-NEXT:    str q1, [x0, x8]
+; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
+; CHECK-NEXT:    add x9, x1, #4
+; CHECK-NEXT:    lsr x9, x9, #2
+; CHECK-NEXT:    str q0, [x0, x8]
+; CHECK-NEXT:    str q1, [x0, x9, lsl #4]
 ; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
@@ -36,16 +36,16 @@ define void @aarch64_vector_deinterleave_idx_ld3(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: aarch64_vector_deinterleave_idx_ld3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl x8, x1, #2
-; CHECK-NEXT:    and x9, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    add x10, x0, x9
-; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x10]
-; CHECK-NEXT:    add x10, x8, #16
-; CHECK-NEXT:    add x8, x8, #32
-; CHECK-NEXT:    and x10, x10, #0xfffffffffffffff0
+; CHECK-NEXT:    add x10, x1, #8
+; CHECK-NEXT:    lsr x10, x10, #2
 ; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    str q0, [x0, x9]
-; CHECK-NEXT:    str q1, [x0, x10]
-; CHECK-NEXT:    str q2, [x0, x8]
+; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x9]
+; CHECK-NEXT:    add x9, x1, #4
+; CHECK-NEXT:    lsr x9, x9, #2
+; CHECK-NEXT:    str q0, [x0, x8]
+; CHECK-NEXT:    str q1, [x0, x9, lsl #4]
+; CHECK-NEXT:    str q2, [x0, x10, lsl #4]
 ; CHECK-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
@@ -74,20 +74,20 @@ define void @aarch64_vector_deinterleave_idx_ld4(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: aarch64_vector_deinterleave_idx_ld4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsl x8, x1, #2
-; CHECK-NEXT:    add x9, x8, #64
-; CHECK-NEXT:    add x11, x8, #96
-; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
-; CHECK-NEXT:    add x10, x0, x9
-; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x10]
-; CHECK-NEXT:    add x10, x8, #80
-; CHECK-NEXT:    add x8, x8, #112
-; CHECK-NEXT:    and x10, x10, #0xfffffffffffffff0
+; CHECK-NEXT:    add x10, x1, #24
+; CHECK-NEXT:    add x11, x1, #28
+; CHECK-NEXT:    lsr x10, x10, #2
+; CHECK-NEXT:    add x8, x8, #64
 ; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
-; CHECK-NEXT:    str q0, [x0, x9]
-; CHECK-NEXT:    and x9, x11, #0xfffffffffffffff0
-; CHECK-NEXT:    str q1, [x0, x10]
-; CHECK-NEXT:    str q2, [x0, x9]
-; CHECK-NEXT:    str q3, [x0, x8]
+; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x9]
+; CHECK-NEXT:    add x9, x1, #20
+; CHECK-NEXT:    lsr x9, x9, #2
+; CHECK-NEXT:    str q0, [x0, x8]
+; CHECK-NEXT:    lsr x8, x11, #2
+; CHECK-NEXT:    str q1, [x0, x9, lsl #4]
+; CHECK-NEXT:    str q2, [x0, x10, lsl #4]
+; CHECK-NEXT:    str q3, [x0, x8, lsl #4]
 ; CHECK-NEXT:    ret
 entry:
   %a1 = add i64 %idx, 16
