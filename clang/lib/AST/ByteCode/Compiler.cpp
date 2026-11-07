@@ -3128,11 +3128,112 @@ bool Compiler<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitVectorAbstractConditionalOperator(
+    const AbstractConditionalOperator *E) {
+  // GNU extension: In C++, the ternary operator ?: is available. a?b:c, where b
+  // and c are vectors of the same type and a is an integer vector with the same
+  // number of elements of the same size as b and c, computes all three
+  // arguments and creates a vector {a[0]?b[0]:c[0], a[1]?b[1]:c[1], ...}.
+  const Expr *Cond = E->getCond();
+  const Expr *TrueExpr = E->getTrueExpr();
+  const Expr *FalseExpr = E->getFalseExpr();
+
+  unsigned CondOffset = this->allocateLocalPrimitive(Cond, PT_Ptr, true);
+  if (!this->visit(Cond))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, CondOffset, E))
+    return false;
+
+  unsigned TrueOffset = this->allocateLocalPrimitive(TrueExpr, PT_Ptr, true);
+  if (!this->visit(TrueExpr))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, TrueOffset, E))
+    return false;
+
+  unsigned FalseOffset = this->allocateLocalPrimitive(FalseExpr, PT_Ptr, true);
+  if (!this->visit(FalseExpr))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, FalseOffset, E))
+    return false;
+
+  const auto *CondVT = Cond->getType()->castAs<VectorType>();
+  auto CondElemT = *this->classify(CondVT->getElementType());
+  auto ValueElemT = this->classifyVectorElementType(TrueExpr->getType());
+
+  auto pickElem = [=](unsigned Index, LabelTy EndLabel,
+                      LabelTy FalseElemLabel) {
+    if (!this->emitGetLocal(PT_Ptr, TrueOffset, E))
+      return false;
+    if (!this->emitArrayElemPop(ValueElemT, Index, E))
+      return false;
+    if (!this->jump(EndLabel, E))
+      return false;
+
+    this->emitLabel(FalseElemLabel);
+    if (!this->emitGetLocal(PT_Ptr, FalseOffset, E))
+      return false;
+    if (!this->emitArrayElemPop(ValueElemT, Index, E))
+      return false;
+    this->fallthrough(EndLabel);
+
+    this->emitLabel(EndLabel);
+    return this->emitInitElem(ValueElemT, Index, E);
+  };
+
+  auto NumElts = CondVT->getNumElements();
+  const APSInt Zero{APSInt::getZero(Ctx.getBitWidth(CondVT->getElementType()))};
+  if (CondVT->isExtVectorType() && !CondVT->isExtVectorBoolType()) {
+    for (unsigned I = 0; I < NumElts; ++I) {
+      LabelTy EndLabel = this->getLabel();
+      LabelTy FalseElemLabel = this->getLabel();
+      // Ext vector condition is true when the MSB is set.
+      if (!this->emitGetLocal(PT_Ptr, CondOffset, E))
+        return false;
+      if (!this->emitArrayElemPop(CondElemT, I, E))
+        return false;
+      if (!this->emitConst(Zero, CondElemT, E))
+        return false;
+      if (!this->emitGE(CondElemT, E))
+        return false;
+      if (!this->jumpTrue(FalseElemLabel, E))
+        return false;
+      if (!pickElem(I, EndLabel, FalseElemLabel))
+        return false;
+    }
+  } else {
+    for (unsigned I = 0; I < NumElts; ++I) {
+      LabelTy EndLabel = this->getLabel();
+      LabelTy FalseElemLabel = this->getLabel();
+      if (!this->emitGetLocal(PT_Ptr, CondOffset, E))
+        return false;
+      if (!this->emitArrayElemPop(CondElemT, I, E))
+        return false;
+      if (!this->emitConst(Zero, CondElemT, E))
+        return false;
+      if (!this->emitEQ(CondElemT, E))
+        return false;
+      if (!this->jumpTrue(FalseElemLabel, E))
+        return false;
+      if (!pickElem(I, EndLabel, FalseElemLabel))
+        return false;
+    }
+  }
+  return true;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *E) {
   const Expr *Condition = E->getCond();
   const Expr *TrueExpr = E->getTrueExpr();
   const Expr *FalseExpr = E->getFalseExpr();
+
+  if (Ctx.getLangOpts().CPlusPlus && Condition->getType()->isVectorType() &&
+      TrueExpr->getType()->isVectorType() &&
+      Ctx.getASTContext().hasSameType(TrueExpr->getType(),
+                                      FalseExpr->getType())) {
+    return VisitVectorAbstractConditionalOperator(E);
+  }
 
   if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
     if (*BoolValue)
