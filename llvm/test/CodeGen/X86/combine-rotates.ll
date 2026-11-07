@@ -450,3 +450,63 @@ declare i5 @llvm.fshl.i5(i5, i5, i5)
 
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+
+; PR239932 - the merged rotate amount must not overflow the shift amount type
+; (i8 on X86) when the type is not a power of 2 bits wide.
+define i193 @rotl_merge_i193(i193 %a) {
+; CHECK-LABEL: rotl_merge_i193:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    andl $1, %r8d
+; CHECK-NEXT:    leal (%r8,%rsi,2), %edi
+; CHECK-NEXT:    shldq $56, %rcx, %rdi
+; CHECK-NEXT:    movq %rsi, %r8
+; CHECK-NEXT:    shrdq $8, %rdx, %r8
+; CHECK-NEXT:    shldq $56, %rdx, %rcx
+; CHECK-NEXT:    shrl $7, %esi
+; CHECK-NEXT:    movq %rcx, 8(%rax)
+; CHECK-NEXT:    movq %r8, (%rax)
+; CHECK-NEXT:    andl $1, %esi
+; CHECK-NEXT:    movb %sil, 24(%rax)
+; CHECK-NEXT:    movq %rdi, 16(%rax)
+; CHECK-NEXT:    retq
+  %s1 = shl i193 %a, 1
+  %r1 = lshr i193 %a, 192
+  %rot1 = or i193 %s1, %r1
+  %s2 = shl i193 %rot1, 184
+  %r2 = lshr i193 %rot1, 9
+  %res = or i193 %s2, %r2
+  ret i193 %res
+}
+
+define i100 @rotl_merge_i100(i100 %a) {
+; CHECK-LABEL: rotl_merge_i100:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    shrdq $1, %rsi, %rdx
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl %ecx
+; CHECK-NEXT:    shldq $55, %rdx, %rcx
+; CHECK-NEXT:    shlq $26, %rdi
+; CHECK-NEXT:    shrq $10, %rax
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $67107840, %edx # imm = 0x3FFFC00
+; CHECK-NEXT:    orq %rdi, %rdx
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    shldq $63, %rcx, %rsi
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    shldq $55, %rsi, %rax
+; CHECK-NEXT:    shlq $26, %rcx
+; CHECK-NEXT:    shrq $10, %rdx
+; CHECK-NEXT:    andl $67108863, %edx # imm = 0x3FFFFFF
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    retq
+  %s1 = shl i100 %a, 90
+  %r1 = lshr i100 %a, 10
+  %rot1 = or i100 %s1, %r1
+  %s2 = shl i100 %rot1, 90
+  %r2 = lshr i100 %rot1, 10
+  %res = or i100 %s2, %r2
+  ret i100 %res
+}
