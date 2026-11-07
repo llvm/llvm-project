@@ -1427,34 +1427,30 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
   if (!SeqPos->containsPC(Address))
     return false;
 
-  SequenceIter StartPos = SeqPos;
-
-  // Process sequences that overlap with the desired range
-  while (SeqPos != LastSeq && SeqPos->LowPC < EndAddr) {
-    const DWARFDebugLine::Sequence &CurSeq = *SeqPos;
+  // Only get rows from the first sequences that contains address range.
+  // ICF can cause multiple sequences to contain the same address range, but we
+  // only want the first one. If we parse all sequences we can end up returning
+  // duplicate rows for the same address range and the addresses might not
+  // increase monotonically.
+  if (SeqPos->LowPC < EndAddr) {
     // For the first sequence, we need to find which row in the sequence is the
     // first in our range.
-    uint32_t FirstRowIndex = CurSeq.FirstRowIndex;
-    if (SeqPos == StartPos)
-      FirstRowIndex = findRowInSeq(CurSeq, Address);
+    uint32_t FirstRowIndex = findRowInSeq(*SeqPos, Address);
 
     // Figure out the last row in the range.
     uint32_t LastRowIndex =
-        findRowInSeq(CurSeq, {EndAddr - 1, Address.SectionIndex});
+        findRowInSeq(*SeqPos, {EndAddr - 1, Address.SectionIndex});
     if (LastRowIndex == UnknownRowIndex)
-      LastRowIndex = CurSeq.LastRowIndex - 1;
+      LastRowIndex = SeqPos->LastRowIndex - 1;
 
     assert(FirstRowIndex != UnknownRowIndex);
     assert(LastRowIndex != UnknownRowIndex);
 
-    for (uint32_t I = FirstRowIndex; I <= LastRowIndex; ++I) {
+    for (uint32_t I = FirstRowIndex; I <= LastRowIndex; ++I)
       Result.push_back(I);
-    }
-
-    ++SeqPos;
   }
 
-  return true;
+  return !Result.empty();
 }
 
 std::optional<StringRef>
