@@ -753,32 +753,6 @@ class LegalizeBufferContentTypesVisitor
 
   /// Break up the loads of a struct into the loads of its components
 
-  /// Return the maximum allowed load/store width for the given type and
-  /// alignment combination based on subtarget flags.
-  /// 1. If unaligned accesses are not enabled, then any load/store that is less
-  /// than word-aligned has to be handled one byte or ushort at a time.
-  /// 2. If relaxed OOB mode is not set, we must ensure that the in-bounds
-  /// part of a partially out of bounds read/write is performed correctly. This
-  /// means that any load that isn't naturally aligned has to be split into
-  /// parts that are naturally aligned, so that, after bitcasting, we don't have
-  /// unaligned loads that could discard valid data.
-  ///
-  /// For example, if we're loading a <8 x i8>, that's actually a load of a <2 x
-  /// i32>, and if we load from an align(2) address, that address might be 2
-  /// bytes from the end of the buffer. The hardware will, when performing the
-  /// <2 x i32> load, mask off the entire first word, causing the two in-bounds
-  /// bytes to be masked off. However,if we know the offset can't be too close
-  /// to the number of records in the buffer (if known), we can skip this
-  /// expansion.
-  ///
-  /// Unlike the complete disablement of unaligned accesses from point 1,
-  /// this does not apply to unaligned scalars, but will apply to cases like
-  /// `load <2 x i32>, align 4` since the left elemenvt might be out of bounds.
-  /// Note that if the we know that the base offset is known to be
-  /// less than `uint32_max - byte_size(Ty)`, we can skip these alignment
-  /// checks.
-  uint64_t maxIntrinsicWidth(Type *Ty, Align A, OobProperties OobProps);
-
   /// Convert a vector or scalar type that can't be operated on by buffer
   /// intrinsics to one that would be legal through bitcasts and/or truncation.
   /// Uses the wider of i32, i16, or i8 where possible, clamping to the maximum
@@ -950,14 +924,39 @@ LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
   return Result;
 }
 
-uint64_t
-LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T, Align A,
-                                                     OobProperties OobProps) {
+/// Return the maximum allowed load/store width for the given type and
+/// alignment combination based on subtarget flags.
+/// 1. If unaligned accesses are not enabled, then any load/store that is less
+/// than word-aligned has to be handled one byte or ushort at a time.
+/// 2. If relaxed OOB mode is not set, we must ensure that the in-bounds
+/// part of a partially out of bounds read/write is performed correctly. This
+/// means that any load that isn't naturally aligned has to be split into
+/// parts that are naturally aligned, so that, after bitcasting, we don't have
+/// unaligned loads that could discard valid data.
+///
+/// For example, if we're loading a <8 x i8>, that's actually a load of a <2 x
+/// i32>, and if we load from an align(2) address, that address might be 2
+/// bytes from the end of the buffer. The hardware will, when performing the
+/// <2 x i32> load, mask off the entire first word, causing the two in-bounds
+/// bytes to be masked off. However, if we know the offset can't be too close
+/// to the number of records in the buffer (if known), we can skip this
+/// expansion.
+///
+/// Unlike the complete disablement of unaligned accesses from point 1,
+/// this does not apply to unaligned scalars, but will apply to cases like
+/// `load <2 x i32>, align 4` since the left element might be out of bounds.
+/// Note that if we know that the base offset is known to be
+/// less than `uint32_max - byte_size(Ty)`, we can skip these alignment
+/// checks.
+uint64_t AMDGPU::getMaxBufferIntrinsicWidth(const GCNSubtarget &ST,
+                                            const DataLayout &DL, Type *T,
+                                            Align A, bool NoWrapFromMax,
+                                            bool NoPartialOOB) {
   Align Result(16);
-  if (!ST->hasUnalignedBufferAccessEnabled() && A < Align(4))
+  if (!ST.hasUnalignedBufferAccessEnabled() && A < Align(4))
     Result = A;
   auto *VT = dyn_cast<VectorType>(T);
-  if (!ST->hasRelaxedBufferOOBMode() && VT) {
+  if (!ST.hasRelaxedBufferOOBMode() && VT) {
     TypeSize ElemBits = DL.getTypeSizeInBits(VT->getElementType());
     if (ElemBits.isKnownMultipleOf(32)) {
       // Word-sized operations are bounds-checked per word. So, the only case we
@@ -965,7 +964,7 @@ LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T, Align A,
       // and those can only become in-bounds on a multiple of their alignment.
       // Therefore, we can use the declared alignment of the operation as the
       // maximum width, rounding up to 4.
-      if (!OobProps.NoWrapFromMax)
+      if (!NoWrapFromMax)
         Result = std::min(Result, std::max(A, Align(4)));
     } else if ((ElemBits.isKnownMultipleOf(8) ||
                 isPowerOf2_64(ElemBits.getKnownMinValue()))) {
@@ -984,7 +983,7 @@ LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T, Align A,
       // Strict OOB checking isn't supported if the size of each element is a
       // non-power-of-2 value less than 8, since there's no feasible way to
       // apply such a strict bounds check.
-      if (!OobProps.NoPartialOOB)
+      if (!NoPartialOOB)
         Result =
             commonAlignment(Result, divideCeil(ElemBits.getKnownMinValue(), 8));
     }
@@ -1211,7 +1210,9 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
   Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
   OobProperties OobProps =
       analyzeOobProperties(OrigLI.getPointerOperand(), PartType, AggByteOff);
-  uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
+  uint64_t MaxWidth = AMDGPU::getMaxBufferIntrinsicWidth(
+      *ST, DL, ArrayAsVecType, PartAlign, OobProps.NoWrapFromMax,
+      OobProps.NoPartialOOB);
   Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
 
   SmallVector<VecSlice> Slices;
@@ -1348,7 +1349,9 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   Align PartAlign = commonAlignment(OrigSI.getAlign(), AggByteOff);
   OobProperties OobProps =
       analyzeOobProperties(OrigSI.getPointerOperand(), PartType, AggByteOff);
-  uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
+  uint64_t MaxWidth = AMDGPU::getMaxBufferIntrinsicWidth(
+      *ST, DL, ArrayAsVecType, PartAlign, OobProps.NoWrapFromMax,
+      OobProps.NoPartialOOB);
   Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
   if (LegalType != ArrayAsVecType) {
     NewData = makeLegalNonAggregate(NewData, LegalType, Name);
