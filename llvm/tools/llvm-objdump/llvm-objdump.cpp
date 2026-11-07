@@ -1282,6 +1282,42 @@ addDynamicElfSymbols(const ELFObjectFileBase &Obj,
     llvm_unreachable("Unsupported binary format");
 }
 
+// Returns true if Obj is a separate debug file, e.g. one created by
+// `objcopy --only-keep-debug`: its section headers mirror those of the
+// original binary, but its code sections are SHT_NOBITS.
+static bool isSeparateDebugFile(const ObjectFile &Obj) {
+  return any_of(Obj.sections(), [](const SectionRef &Sec) {
+    return Sec.isText() && Sec.isVirtual();
+  });
+}
+
+// Add the symbols of the separate debug file DebugObj to the sections of Obj.
+// Like GNU objdump, match the sections by name, as the section indices of the
+// two files are not guaranteed to agree.
+static void addSeparateDebugFileSymbols(
+    const ObjectFile &Obj, const ObjectFile &DebugObj,
+    std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
+  StringMap<SectionRef> SectionsByName;
+  for (const SectionRef &Sec : Obj.sections())
+    SectionsByName.try_emplace(unwrapOrError(Sec.getName(), Obj.getFileName()),
+                               Sec);
+
+  const StringRef FileName = DebugObj.getFileName();
+  for (const SymbolRef &Symbol : DebugObj.symbols()) {
+    // Skip STT_FILE, STT_SECTION and mapping symbols.
+    if (cantFail(Symbol.getFlags()) & SymbolRef::SF_FormatSpecific)
+      continue;
+    if (unwrapOrError(Symbol.getName(), FileName).empty())
+      continue;
+    section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
+    if (SecI == DebugObj.section_end())
+      continue;
+    auto It = SectionsByName.find(unwrapOrError(SecI->getName(), FileName));
+    if (It != SectionsByName.end())
+      AllSymbols[It->second].push_back(createSymbolInfo(DebugObj, Symbol));
+  }
+}
+
 static std::optional<SectionRef> getWasmCodeSection(const WasmObjectFile &Obj) {
   for (auto SecI : Obj.sections()) {
     const WasmSection &Section = Obj.getWasmSection(SecI);
@@ -1822,6 +1858,7 @@ fetchBinaryByBuildID(const ObjectFile &Obj) {
 
 static void
 disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
+                  const ObjectFile *SeparateDebugObj,
                   DisassemblerTarget &PrimaryTarget,
                   std::optional<DisassemblerTarget> &SecondaryTarget,
                   SourcePrinter &SP, bool InlineRelocs, raw_ostream &OS) {
@@ -1947,6 +1984,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     else
       AbsoluteSymbols.push_back(createSymbolInfo(Obj, Symbol));
   }
+
+  if (AllSymbols.empty() && SeparateDebugObj)
+    addSeparateDebugFileSymbols(Obj, *SeparateDebugObj, AllSymbols);
 
   if (AllSymbols.empty() && Obj.isELF())
     addDynamicElfSymbols(cast<ELFObjectFileBase>(Obj), AllSymbols);
@@ -2764,12 +2804,20 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
   // If information useful for showing the disassembly is missing, try to find a
   // more complete binary and disassemble that instead.
   OwningBinary<Binary> FetchedBinary;
+  // A separate debug file has no code to disassemble, so only use it for
+  // symbols and debug info.
+  const ObjectFile *SeparateDebugObj = nullptr;
   if (Obj->symbols().empty()) {
     if (std::optional<OwningBinary<Binary>> FetchedBinaryOpt =
             fetchBinaryByBuildID(*Obj)) {
       if (auto *O = dyn_cast<ObjectFile>(FetchedBinaryOpt->getBinary())) {
-        if (!O->symbols().empty() ||
-            (!O->sections().empty() && Obj->sections().empty())) {
+        if (isSeparateDebugFile(*O)) {
+          if (!O->symbols().empty() && !Obj->sections().empty()) {
+            FetchedBinary = std::move(*FetchedBinaryOpt);
+            SeparateDebugObj = O;
+          }
+        } else if (!O->symbols().empty() ||
+                   (!O->sections().empty() && Obj->sections().empty())) {
           FetchedBinary = std::move(*FetchedBinaryOpt);
           Obj = O;
         }
@@ -2874,7 +2922,10 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
   }
 
   const ObjectFile *DbgObj = Obj;
-  if (!FetchedBinary.getBinary() && !Obj->hasDebugInfo()) {
+  if (SeparateDebugObj) {
+    if (SeparateDebugObj->hasDebugInfo())
+      DbgObj = SeparateDebugObj;
+  } else if (!FetchedBinary.getBinary() && !Obj->hasDebugInfo()) {
     if (std::optional<OwningBinary<Binary>> DebugBinaryOpt =
             fetchBinaryByBuildID(*Obj)) {
       if (auto *FetchedObj =
@@ -2905,8 +2956,8 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
       reportError(Obj->getFileName(),
                   "Unrecognized disassembler option: " + Opt);
 
-  disassembleObject(*Obj, *DbgObj, PrimaryTarget, SecondaryTarget, SP,
-                    InlineRelocs, OS);
+  disassembleObject(*Obj, *DbgObj, SeparateDebugObj, PrimaryTarget,
+                    SecondaryTarget, SP, InlineRelocs, OS);
 }
 
 void Dumper::printRelocations() {
