@@ -8,6 +8,7 @@
 
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare float @__addsf3(float, float)
@@ -553,6 +554,7 @@
 
 ; FREEBSD: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; FREEBSD-NEXT: @__stack_chk_guard = external global ptr
+; FREEBSD-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; FREEBSD-NEXT: declare void @_Unwind_Resume(ptr)
 ; FREEBSD-NEXT: declare double @__adddf3(double, double)
 ; FREEBSD-NEXT: declare float @__addsf3(float, float)
@@ -1045,6 +1047,7 @@
 
 ; OPENBSD: @__guard_local = external global ptr
 ; OPENBSD-NEXT: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; OPENBSD-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; OPENBSD-NEXT: declare void @_Unwind_Resume(ptr)
 ; OPENBSD-NEXT: declare double @__adddf3(double, double)
 ; OPENBSD-NEXT: declare float @__addsf3(float, float)

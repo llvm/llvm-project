@@ -7,6 +7,7 @@
 
 ; CHECK: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; CHECK-NEXT: @__stack_chk_guard = external global ptr
+; CHECK-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; CHECK-NEXT: declare void @_Unwind_Resume(ptr)
 ; CHECK-NEXT: declare double @__adddf3(double, double)
 ; CHECK-NEXT: declare float @__addsf3(float, float)
@@ -442,6 +443,7 @@
 
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare float @__addsf3(float, float)

@@ -7,6 +7,7 @@
 
 ; MIPS32: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MIPS32-NEXT: @__stack_chk_guard = external global ptr
+; MIPS32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; MIPS32-NEXT: declare void @_Unwind_Resume(ptr)
 ; MIPS32-NEXT: declare double @__adddf3(double, double)
 ; MIPS32-NEXT: declare float @__addsf3(float, float)
@@ -455,6 +456,7 @@
 
 ; MIPS64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MIPS64-NEXT: @__stack_chk_guard = external global ptr
+; MIPS64-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; MIPS64-NEXT: declare void @_Unwind_Resume(ptr)
 ; MIPS64-NEXT: declare double @__adddf3(double, double)
 ; MIPS64-NEXT: declare float @__addsf3(float, float)

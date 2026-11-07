@@ -5,6 +5,7 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=msp430-none-elf < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CHECK %s
 
 ; CHECK: @__stack_chk_guard = external global ptr
+; CHECK-NEXT: declare i16 @_Unwind_RaiseException(ptr)
 ; CHECK-NEXT: declare void @_Unwind_Resume(ptr)
 ; CHECK-NEXT: declare double @__adddf3(double, double)
 ; CHECK-NEXT: declare float @__addsf3(float, float)

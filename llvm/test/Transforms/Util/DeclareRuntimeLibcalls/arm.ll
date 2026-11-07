@@ -7,6 +7,7 @@
 
 ; SJLJ: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; SJLJ-NEXT: @__stack_chk_guard = external global ptr
+; SJLJ-NEXT: declare arm_aapcscc i32 @_Unwind_SjLj_RaiseException(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Resume(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Unregister(ptr)
@@ -477,6 +478,7 @@
 
 ; DWARF: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; DWARF-NEXT: @__stack_chk_guard = external global ptr
+; DWARF-NEXT: declare arm_aapcscc i32 @_Unwind_RaiseException(ptr)
 ; DWARF-NEXT: declare arm_aapcscc void @_Unwind_Resume(ptr)
 ; DWARF-NEXT: declare arm_aapcscc double @__adddf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @__addsf3(float, float)

@@ -10,6 +10,7 @@
 
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; LINUX-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
@@ -598,6 +599,7 @@
 
 ; DARWIN: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; DARWIN-NEXT: @__stack_chk_guard = external global ptr
+; DARWIN-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; DARWIN-NEXT: declare void @_Unwind_Resume(ptr)
 ; DARWIN-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; DARWIN-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
@@ -1129,6 +1131,7 @@
 
 ; WINMSVC: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; WINMSVC-NEXT: @__security_cookie = external global ptr
+; WINMSVC-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; WINMSVC-NEXT: declare void @_Unwind_Resume(ptr)
 ; WINMSVC-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; WINMSVC-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
@@ -1654,6 +1657,7 @@
 
 ; MINGW: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MINGW-NEXT: @__stack_chk_guard = external global ptr
+; MINGW-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; MINGW-NEXT: declare void @_Unwind_Resume(ptr)
 ; MINGW-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; MINGW-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
@@ -2183,6 +2187,7 @@
 
 ; ANDROID: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; ANDROID-NEXT: @__stack_chk_guard = external global ptr
+; ANDROID-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; ANDROID-NEXT: declare void @_Unwind_Resume(ptr)
 ; ANDROID-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr)
 ; ANDROID-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr)
