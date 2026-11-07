@@ -182,6 +182,12 @@ mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   if (rowsPerLine >= threadGroupSize)
     return failure();
 
+  // The XOR swizzle stays within a row only if the row size is a power of 2.
+  // Otherwise it moves some accesses into the next row, where they overwrite
+  // other elements.
+  if (!llvm::isPowerOf2_64(rowSize))
+    return failure();
+
   // Get sets of operations within the function that read/write to shared
   // memory.
   SmallVector<Operation *, 16> shmReadOps;

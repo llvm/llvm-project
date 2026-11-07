@@ -92,7 +92,7 @@ end module
 ! copy through temporary
 ! INLINE_HLFIR: } else {
 ! INLINE_HLFIR:   %[[TALLOC:.*]] = fir.allocmem !fir.array<10x100xi32>
-! INLINE_HLFIR:   %[[TEMP:.*]]:2 = hlfir.declare %[[TALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+! INLINE_HLFIR:   %[[TEMP:.*]]:2 = hlfir.declare %[[TALLOC]](%{{.*}}) uniq_name(".tmp")
 ! INLINE_HLFIR:   fir.do_loop {{.*}} unordered
 ! INLINE_HLFIR:     fir.do_loop {{.*}} unordered
 ! INLINE_HLFIR:       hlfir.designate %[[RHS]]

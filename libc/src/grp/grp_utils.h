@@ -61,6 +61,11 @@ ErrorOr<size_t> get_group_list(cpp::string_view user, gid_t group,
                                gid_t *groups, size_t ngroups,
                                const char *path = nullptr);
 
+// Sets the supplementary group access list for user, including the specified
+// group ID, by reading the group database.
+ErrorOr<int> init_groups(cpp::string_view user, gid_t group,
+                         const char *path = nullptr);
+
 } // namespace grp
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -147,6 +147,15 @@ def OIListWithSeparator : TEST_Op<"oilist_with_separator"> {
   }];
 }
 
+def OIListOptionalAttr : TEST_Op<"oilist_optional_attr"> {
+  let arguments = (ins UnitAttr:$keyword,
+                       OptionalAttr<CompoundAttrNested>:$nested);
+  let assemblyFormat = [{
+    oilist( `keyword` $keyword
+          | `nested` $nested) attr-dict
+  }];
+}
+
 def OIListAllowedLiteral : TEST_Op<"oilist_allowed_literal"> {
   let assemblyFormat = [{
     oilist( `foo` | `bar` ) `buzz` attr-dict
@@ -473,6 +482,16 @@ def OpWithTwoDefaultBitEnumProps : TEST_Op<"op_with_two_default_bit_enum_props">
     TestBitEnumPropDefault:$value1,
     TestBitEnumVerticalBarPropDefault:$value2);
   let assemblyFormat = "($value1^)? ($value2^)? attr-dict";
+}
+
+def TestBitEnumSpacePropDefault : EnumProp<TestBitEnumSpace> {
+  let defaultValue = TestBitEnumSpace.cppType # "::None";
+}
+def OpWithDefaultSpaceBitEnumProp
+    : TEST_Op<"op_with_default_space_bit_enum_prop"> {
+  let arguments = (ins TestBitEnumSpacePropDefault:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "($value^)? (`tag` $tag^)? attr-dict";
 }
 
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {

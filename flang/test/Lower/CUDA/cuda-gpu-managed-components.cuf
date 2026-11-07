@@ -27,9 +27,9 @@ subroutine test_component_local()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_component_local()
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
-! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: fir.embox {{.*}} allocator_idx(3)
+! CHECK: cuf.allocate {{.*}} data_attr(managed) -> i32
+! CHECK: cuf.deallocate {{.*}} data_attr(managed) -> i32
 
 ! -----------------------------------------------------------------------------
 ! POINTER component of a local derived-type object
@@ -42,9 +42,9 @@ subroutine test_component_pointer()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_component_pointer()
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer} -> i32
-! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer} -> i32
+! CHECK: fir.embox {{.*}} allocator_idx(3)
+! CHECK: cuf.allocate {{.*}} data_attr(managed) pointer -> i32
+! CHECK: cuf.deallocate {{.*}} data_attr(managed) pointer -> i32
 
 ! -----------------------------------------------------------------------------
 ! ALLOCATABLE component of a module-scope derived-type object
@@ -56,9 +56,9 @@ subroutine test_component_module()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_component_module()
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
-! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: fir.embox {{.*}} allocator_idx(3)
+! CHECK: cuf.allocate {{.*}} data_attr(managed) -> i32
+! CHECK: cuf.deallocate {{.*}} data_attr(managed) -> i32
 
 ! -----------------------------------------------------------------------------
 ! ALLOCATABLE component reached through a nested derived type
@@ -71,9 +71,9 @@ subroutine test_component_nested()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_component_nested()
-! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
-! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: fir.embox {{.*}} allocator_idx(3)
+! CHECK: cuf.allocate {{.*}} data_attr(managed) -> i32
+! CHECK: cuf.deallocate {{.*}} data_attr(managed) -> i32
 
 ! -----------------------------------------------------------------------------
 ! An explicitly attributed component keeps its own allocator; the
@@ -93,9 +93,9 @@ subroutine test_component_explicit_device()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_component_explicit_device()
-! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
-! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.embox {{.*}} allocator_idx(2)
+! CHECK: cuf.allocate {{.*}} data_attr(device) -> i32
+! CHECK: cuf.deallocate {{.*}} data_attr(device) -> i32
 
 ! -----------------------------------------------------------------------------
 ! The implicit attribution must not override a memory space the user
@@ -111,10 +111,10 @@ subroutine test_component_in_device_object()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_component_in_device_object()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "obj", data_attr = #cuf.cuda<device>
-! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
-! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.alloc {{.*}} bindc_name("obj") data_attr(device)
+! CHECK: fir.embox {{.*}} allocator_idx(2)
+! CHECK: cuf.allocate {{.*}} data_attr(device) -> i32
+! CHECK: cuf.deallocate {{.*}} data_attr(device) -> i32
 
 ! -----------------------------------------------------------------------------
 ! Same for a POINTER component.
@@ -127,10 +127,10 @@ subroutine test_pointer_component_in_device_object()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_pointer_component_in_device_object()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "obj", data_attr = #cuf.cuda<device>
-! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>, pointer} -> i32
-! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>, pointer} -> i32
+! CHECK: cuf.alloc {{.*}} bindc_name("obj") data_attr(device)
+! CHECK: fir.embox {{.*}} allocator_idx(2)
+! CHECK: cuf.allocate {{.*}} data_attr(device) pointer -> i32
+! CHECK: cuf.deallocate {{.*}} data_attr(device) pointer -> i32
 
 ! -----------------------------------------------------------------------------
 ! The enclosing object is reached through an array element.
@@ -144,11 +144,11 @@ subroutine test_component_in_device_array_element()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_component_in_device_array_element()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "objs", data_attr = #cuf.cuda<device>
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
-! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
-! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
-! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.alloc {{.*}} bindc_name("objs") data_attr(device)
+! CHECK: cuf.allocate {{.*}} data_attr(device) -> i32
+! CHECK: fir.embox {{.*}} allocator_idx(2)
+! CHECK: cuf.allocate {{.*}} data_attr(device) -> i32
+! CHECK: cuf.deallocate {{.*}} data_attr(device) -> i32
 
 ! -----------------------------------------------------------------------------
 ! Whether the enclosing object is relocated depends on all of its
@@ -180,7 +180,7 @@ subroutine test_order_implicit_first()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_order_implicit_first()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<managed>
+! CHECK: cuf.alloc {{.*}} bindc_name("d") data_attr(managed)
 
 subroutine test_order_explicit_first()
   use mod_order
@@ -189,7 +189,7 @@ subroutine test_order_explicit_first()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_order_explicit_first()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<managed>
+! CHECK: cuf.alloc {{.*}} bindc_name("d") data_attr(managed)
 
 ! With every component implicitly attributed, the object keeps the memory
 ! space the user asked for.
@@ -200,4 +200,4 @@ subroutine test_order_only_implicit()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_order_only_implicit()
-! CHECK: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<device>
+! CHECK: cuf.alloc {{.*}} bindc_name("d") data_attr(device)

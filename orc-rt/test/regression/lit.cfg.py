@@ -30,6 +30,12 @@ llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 
 llvm_config.use_default_substitutions()
 
+# split-file is required, like FileCheck and not: it's an LLVM utility, so it
+# is available wherever they are.
+llvm_config.add_tool_substitutions(
+    [ToolSubst("split-file", unresolved="fatal")], [config.llvm_tools_dir]
+)
+
 # %{obj-jit} runs JIT-loaded object files under ogre, with llvm-jitlink as the
 # controller. Tests that use it must be gated on the llvm-jitlink feature.
 ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")
@@ -43,11 +49,27 @@ if llvm_jitlink:
 
 
 # %{cc} and %{cxx} compile C and C++ for the runtime's target. They default to
-# clang and clang++ from the LLVM tools directory. Pass --param orc-rt-cc=<cc>
-# or --param orc-rt-cxx=<cxx> to use a different compiler: it must accept
-# clang-style options and target the runtime's target without being told to
-# (use a wrapper script if necessary). Tests that use %{cc} or %{cxx} must be
-# gated on the orc-rt-cc or orc-rt-cxx feature respectively.
+# clang and clang++ from the LLVM tools directory, building against the sysroot
+# that the runtime was built against (ORC_RT_TEST_SYSROOT, see
+# cmake/OrcRTTesting.cmake). Pass --param orc-rt-cc=<cc> or
+# --param orc-rt-cxx=<cxx> to use a different compiler: it must accept
+# clang-style options and target the runtime's target and sysroot without being
+# told to (use a wrapper script if necessary). Tests that use %{cc} or %{cxx}
+# must be gated on the orc-rt-cc or orc-rt-cxx feature respectively.
+target_is_apple = "apple" in config.target_triple.split("-")
+if config.orc_rt_sysroot:
+    sysroot_option = (
+        " -isysroot " if target_is_apple else " --sysroot="
+    ) + config.orc_rt_sysroot
+else:
+    sysroot_option = ""
+    if target_is_apple:
+        lit_config.note(
+            "no SDK found for %{cc} and %{cxx}; tests that include system "
+            "headers will fail"
+        )
+
+
 def add_compiler(name, clang_name):
     override = lit_config.params.get(name)
     if override:
@@ -58,7 +80,7 @@ def add_compiler(name, clang_name):
     else:
         compiler = llvm_config.use_llvm_tool(clang_name)
         if compiler:
-            compiler += " --target=" + config.target_triple
+            compiler += " --target=" + config.target_triple + sysroot_option
     if compiler:
         config.available_features.add(name)
         substitution = "%{" + name[len("orc-rt-") :] + "}"
@@ -81,14 +103,6 @@ if llvm_mc:
             "{} -triple={} -filetype=obj".format(llvm_mc, config.target_triple),
         )
     )
-
-# split-file splits a test into several files, e.g. so that a test can build
-# and link more than one object. Tests that use it must be gated on the
-# split-file feature.
-split_file = llvm_config.use_llvm_tool("split-file")
-if split_file:
-    config.available_features.add("split-file")
-    llvm_config.add_tool_substitutions([ToolSubst("split-file", command=split_file)])
 
 # Describe the runtime's target architecture and object format, so that object
 # format tests can gate on them:
@@ -135,6 +149,13 @@ def run_test_tool(name, *args):
         )
     return out
 
+
+def normalise_machine(machine):
+    arch = machine.lower()
+    return {
+        "amd64": "x86_64",
+        "x64": "x86_64",
+    }.get(arch, arch)
 
 # Probe the compiled-in logging configuration from orc-rt-log-check and
 # expose it as lit features, so logging tests can gate on the build's backend
@@ -192,7 +213,7 @@ config.substitutions.append(("%target-arch", config.target_triple.split("-")[0])
 config.substitutions.append(("%host-page-size", str(mmap.PAGESIZE)))
 
 # Add host OS and arch substitutions for host-detection tests.
-config.substitutions.append(("%host-arch", platform.machine()))
+config.substitutions.append(("%host-arch", normalise_machine(platform.machine())))
 if platform.system() == "Darwin":
     config.substitutions.append(("%host-os", "macosx"))
 else:

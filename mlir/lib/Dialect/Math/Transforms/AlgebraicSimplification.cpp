@@ -21,6 +21,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include <climits>
+#include <limits>
 
 using namespace mlir;
 
@@ -31,7 +32,7 @@ using namespace mlir;
 namespace {
 struct PowFStrengthReduction : public OpRewritePattern<math::PowFOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(math::PowFOp op,
                                 PatternRewriter &rewriter) const final;
@@ -151,26 +152,35 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   Location loc = op.getLoc();
   Value base = op.getLhs();
 
-  IntegerAttr scalarExponent;
-  DenseIntElementsAttr vectorExponent;
-
-  bool isScalar = matchPattern(op.getRhs(), m_Constant(&scalarExponent));
-  bool isVector = matchPattern(op.getRhs(), m_Constant(&vectorExponent));
-
   // Simplify cases with known exponent value.
-  int64_t exponentValue = 0;
-  if (isScalar)
-    exponentValue = scalarExponent.getInt();
-  else if (isVector && vectorExponent.isSplat())
-    exponentValue = vectorExponent.getSplatValue<IntegerAttr>().getInt();
-  else
+  APInt exponent;
+  if (!matchPattern(op.getRhs(), m_ConstantInt(&exponent)))
     return failure();
+
+  // Values outside int64_t exceed the strength reduction threshold.
+  if (!exponent.isSignedIntN(64))
+    return failure();
+  int64_t exponentValue = exponent.getSExtValue();
 
   // Compute abs(exponent) and check the threshold before creating any IR,
   // so that returning failure() here does not violate the pattern API contract.
   bool exponentIsNegative = false;
   if (exponentValue < 0) {
     exponentIsNegative = true;
+    // Integer division by zero is UB (unlike float/complex, where the
+    // division is defined and yields Inf). base isn't necessarily constant
+    // here, so defer negative-exponent IPowIOp to MathToFuncs's
+    // createElementIPowIFunc, which returns 0 for base == 0 without
+    // dividing. MathToFuncs does not lower index, so index keeps the
+    // strength reduction below.
+    if constexpr (std::is_same_v<PowIOpTy, math::IPowIOp>)
+      if (isa<IntegerType>(getElementTypeOrSelf(op.getType())))
+        return failure();
+    // INT64_MIN has no positive representation in int64_t, so negating it
+    // below would overflow. Bail out rather than negate. This is reached by
+    // FPowIOp, complex::PowiOp and index-typed IPowIOp.
+    if (exponentValue == std::numeric_limits<int64_t>::min())
+      return failure();
     exponentValue *= -1;
   }
 
@@ -252,7 +262,7 @@ namespace {
 template <typename ExpOpTy>
 struct ExpQuotientStrengthReduction : public OpRewritePattern<arith::DivFOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::DivFOp op,
                                 PatternRewriter &rewriter) const final {

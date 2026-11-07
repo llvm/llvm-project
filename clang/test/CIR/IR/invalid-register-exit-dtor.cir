@@ -1,0 +1,218 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global "private" internal @_ZGR1r_ = #cir.zero : !rec_Tmp
+
+  cir.func @in_function() {
+    // expected-error @below {{must be in the ctor region of a cir.global or cir.local_init}}
+    cir.register_exit_dtor @_ZGR1r_ {
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global "private" internal @_ZGR1r_ = #cir.zero : !rec_Tmp
+
+  cir.global external @r = #cir.zero : !rec_Tmp dtor {
+    // expected-error @below {{must be in the ctor region of a cir.global or cir.local_init}}
+    cir.register_exit_dtor @_ZGR1r_ {
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+    }
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.global "private" internal @_ZGR1r_ = #cir.zero : !rec_Tmp
+
+  cir.global external @r = #cir.zero : !rec_Tmp ctor {
+    // expected-error @below {{body must destroy the object}}
+    cir.register_exit_dtor @_ZGR1r_ {
+    }
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global "private" internal @_ZGR1r_ = #cir.zero : !rec_Tmp
+
+  cir.global external @r = #cir.zero : !rec_Tmp ctor {
+    // expected-error @below {{expects region #0 to have 0 or 1 blocks}}
+    cir.register_exit_dtor @_ZGR1r_ {
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.br ^bb1
+    ^bb1:
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+      cir.yield
+    }
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+
+  cir.global external @r = #cir.zero : !rec_Tmp ctor {
+    // expected-error @below {{'missing' does not reference a valid cir.global}}
+    cir.register_exit_dtor @missing {
+      %0 = cir.get_global @r : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+    }
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpC1Ev(!cir.ptr<!rec_Tmp>)
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global external @other = #cir.zero : !rec_Tmp ctor {
+    %0 = cir.get_global @other : !cir.ptr<!rec_Tmp>
+    cir.call @_ZN3TmpC1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+  }
+
+  cir.global external @r = #cir.zero : !rec_Tmp ctor {
+    // expected-error @below {{object must not have ctor or dtor regions}}
+    cir.register_exit_dtor @other {
+      %0 = cir.get_global @other : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+    }
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global "private" internal @_ZGR1r_ = #cir.zero : !rec_Tmp
+
+  cir.global external @r = #cir.zero : !rec_Tmp ctor {
+    %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+    // expected-note @below {{required by region isolation constraints}}
+    cir.register_exit_dtor @_ZGR1r_ {
+      // expected-error @below {{using value defined outside the region}}
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+    }
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global external @other = #cir.zero : !rec_Tmp dtor {
+    %0 = cir.get_global @other : !cir.ptr<!rec_Tmp>
+    cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+  }
+
+  cir.global external @r = #cir.zero : !rec_Tmp ctor {
+    // expected-error @below {{object must not have ctor or dtor regions}}
+    cir.register_exit_dtor @other {
+      %0 = cir.get_global @other : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+    }
+  }
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global "private" internal @_ZGRZ1fvE1r_ = #cir.zero : !rec_Tmp
+  cir.global "private" internal dynamic_init_guard<"_ZGVZ1fvE1r"> @_ZZ1fvE1r = #cir.zero : !rec_Tmp
+    dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+
+  cir.func @f() {
+    cir.local_init static_local @_ZZ1fvE1r dtor {
+      // expected-error @below {{must be in the ctor region of a cir.global or cir.local_init}}
+      cir.register_exit_dtor @_ZGRZ1fvE1r_ {
+        %0 = cir.get_global @_ZGRZ1fvE1r_ : !cir.ptr<!rec_Tmp>
+        cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+      }
+      cir.yield
+    }
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global "private" internal @_ZGR1r_ = #cir.zero : !rec_Tmp
+  cir.global "private" internal @_ZGR1r0_ = #cir.zero : !rec_Tmp
+
+  cir.global external @r = #cir.zero : !rec_Tmp ctor {
+    cir.register_exit_dtor @_ZGR1r_ {
+      // expected-error @below {{must be in the ctor region of a cir.global or cir.local_init}}
+      cir.register_exit_dtor @_ZGR1r0_ {
+        %0 = cir.get_global @_ZGR1r0_ : !cir.ptr<!rec_Tmp>
+        cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+      }
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+    }
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global "private" internal @_ZGR1r_ = #cir.zero : !rec_Tmp
+
+  cir.global external @r = #cir.zero : !rec_Tmp ctor {
+    // expected-error @below {{body must not yield a value}}
+    cir.register_exit_dtor @_ZGR1r_ {
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+      cir.yield %0 : !cir.ptr<!rec_Tmp>
+    }
+  }
+}

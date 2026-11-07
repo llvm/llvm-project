@@ -26,7 +26,7 @@
 
 define void @test0(ptr %a, ptr %b, ptr %c) #0 {
 ; VSCALEFORTUNING1-LABEL: 'test0'
-; VSCALEFORTUNING1:  Cost for VF vscale x 1: Invalid (Estimated cost per lane: Invalid)
+; VSCALEFORTUNING1:  Cost for VF vscale x 1: 10 (Estimated cost per lane: 10)
 ; VSCALEFORTUNING1:  Cost for VF vscale x 2: 10 (Estimated cost per lane: 5)
 ; VSCALEFORTUNING1:  Cost for VF vscale x 4: 10 (Estimated cost per lane: 2.5)
 ; VSCALEFORTUNING1:  Cost for VF vscale x 8: 10 (Estimated cost per lane: 1.25)
@@ -34,7 +34,7 @@ define void @test0(ptr %a, ptr %b, ptr %c) #0 {
 ; VSCALEFORTUNING1:  LV: Selecting VF: vscale x 16.
 ;
 ; VSCALEFORTUNING2-LABEL: 'test0'
-; VSCALEFORTUNING2:  Cost for VF vscale x 1: Invalid (Estimated cost per lane: Invalid)
+; VSCALEFORTUNING2:  Cost for VF vscale x 1: 10 (Estimated cost per lane: 5)
 ; VSCALEFORTUNING2:  Cost for VF vscale x 2: 10 (Estimated cost per lane: 2.5)
 ; VSCALEFORTUNING2:  Cost for VF vscale x 4: 10 (Estimated cost per lane: 1.25)
 ; VSCALEFORTUNING2:  Cost for VF vscale x 8: 10 (Estimated cost per lane: 0.625)
@@ -42,7 +42,7 @@ define void @test0(ptr %a, ptr %b, ptr %c) #0 {
 ; VSCALEFORTUNING2:  LV: Selecting VF: vscale x 16.
 ;
 ; VSCALEFORTUNING1-PREFER-FIXED-LABEL: 'test0'
-; VSCALEFORTUNING1-PREFER-FIXED:  Cost for VF vscale x 1: Invalid (Estimated cost per lane: Invalid)
+; VSCALEFORTUNING1-PREFER-FIXED:  Cost for VF vscale x 1: 10 (Estimated cost per lane: 10)
 ; VSCALEFORTUNING1-PREFER-FIXED:  Cost for VF vscale x 2: 10 (Estimated cost per lane: 5)
 ; VSCALEFORTUNING1-PREFER-FIXED:  Cost for VF vscale x 4: 10 (Estimated cost per lane: 2.5)
 ; VSCALEFORTUNING1-PREFER-FIXED:  Cost for VF vscale x 8: 10 (Estimated cost per lane: 1.25)

@@ -34,8 +34,8 @@ define void @single_pred(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; VPLAN-NEXT:  Successor(s): if.then, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 2305843009213693952 (25%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 4611686018427387903 (25%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -97,8 +97,8 @@ define void @single_pred_zero_weight(ptr noalias %a, ptr noalias %b, ptr noalias
 ; VPLAN-NEXT:  Successor(s): if.then, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 8589934591 (4.657E-8%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 8589934591 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -160,8 +160,8 @@ define void @single_pred_zero_weight_sibling(ptr noalias %a, ptr noalias %b, ptr
 ; VPLAN-NEXT:  Successor(s): if.then, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 9223372032559808512 (100%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 18446744065119617023 (100%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 18446744065119617023 (100%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -225,20 +225,20 @@ define void @two_preds(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noali
 ; VPLAN-NEXT:  Successor(s): then, else
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  else:
-; VPLAN-NEXT:    EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv> (!vplan.execution.frequency 6917529027641081856 (75%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.c> (!vplan.execution.frequency 6917529027641081856 (75%))
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp slt ir<%i>, ir<-100> (!vplan.execution.frequency 6917529027641081856 (75%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1, 2}, !vplan.execution.frequency 6917529027641081856 (75%))
+; VPLAN-NEXT:    EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv> (!vplan.execution.frequency 13835058055282163711 (75%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.c> (!vplan.execution.frequency 13835058055282163711 (75%))
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp slt ir<%i>, ir<-100> (!vplan.execution.frequency 13835058055282163711 (75%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1, 2}, !vplan.execution.frequency 13835058055282163711 (75%))
 ; VPLAN-NEXT:  Successor(s): merge, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 2305843009213693952 (25%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 4611686018427387904 (25%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 4611686018427387904 (25%))
 ; VPLAN-NEXT:  Successor(s): merge
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  merge:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 4611686019501129728 (50%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.b> (!vplan.execution.frequency 4611686019501129728 (50%))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 9223372039002259455 (50%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.b> (!vplan.execution.frequency 9223372039002259455 (50%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -308,15 +308,15 @@ define void @nested_ifs(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; VPLAN-NEXT:  Successor(s): if.0, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.0:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.b> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp slt ir<%i>, ir<100> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1, 1}, !vplan.execution.frequency 2305843009213693952 (25%))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 4611686018427387903 (25%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.b> (!vplan.execution.frequency 4611686018427387903 (25%))
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp slt ir<%i>, ir<100> (!vplan.execution.frequency 4611686018427387903 (25%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1, 1}, !vplan.execution.frequency 4611686018427387903 (25%))
 ; VPLAN-NEXT:  Successor(s): if.1, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.1:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 1152921504606846976 (12.5%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 1152921504606846976 (12.5%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 2305843009213693951 (12.5%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 2305843009213693951 (12.5%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -377,8 +377,8 @@ define void @second_branch_without_weights(ptr noalias %a, ptr noalias %b, ptr n
 ;
 ; VPLAN-LABEL: VPlan for loop in 'second_branch_without_weights'
 ; VPLAN:       if.then.1:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 2305843009213693952 (25%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 4611686018427387903 (25%))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; VPLAN-NEXT:  Successor(s): merge
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  merge:
@@ -386,8 +386,8 @@ define void @second_branch_without_weights(ptr noalias %a, ptr noalias %b, ptr n
 ; VPLAN-NEXT:  Successor(s): if.then.2, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then.2:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.b> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
+; VPLAN-NEXT:    EMIT store ir<%i>, ir<%gep.b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -450,18 +450,18 @@ define void @switch_common_dest(ptr noalias %a, ptr noalias %b, ptr noalias %c, 
 ; VPLAN-NEXT:  Successor(s): default, if.then, if.then, other
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  other:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 1152921504606846976 (12.5%))
-; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.b> (!vplan.execution.frequency 1152921504606846976 (12.5%))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 2305843009213693951 (12.5%))
+; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.b> (!vplan.execution.frequency 2305843009213693951 (12.5%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 3458764514357411840 (37.5%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 3458764514357411840 (37.5%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 6917529028714823680 (37.5%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 6917529028714823680 (37.5%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  default:
-; VPLAN-NEXT:    EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv> (!vplan.execution.frequency 4611686017890516992 (50%))
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.c> (!vplan.execution.frequency 4611686017890516992 (50%))
+; VPLAN-NEXT:    EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv> (!vplan.execution.frequency 9223372035781033984 (50%))
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.c> (!vplan.execution.frequency 9223372035781033984 (50%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -534,13 +534,13 @@ define void @switch_common_dest_weight_sum_not_a_power_of_two(ptr noalias %a, pt
 ; VPLAN-NEXT:  Successor(s): default, if.then, if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 6148914689804861440 (66.67%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 6148914689804861440 (66.67%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 12297829379609722879 (66.67%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 12297829379609722879 (66.67%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  default:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 3074457347049914368 (33.33%))
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 3074457347049914368 (33.33%))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 6148914694099828736 (33.33%))
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 6148914694099828736 (33.33%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -606,13 +606,13 @@ define void @switch_common_dest_almost_always_taken(ptr noalias %a, ptr noalias 
 ; VPLAN-NEXT:  Successor(s): default, if.then, if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 9223372032559808512 (100%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 18446744065119617023 (100%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 18446744065119617023 (100%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  default:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 8589934592 (4.657E-8%))
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 8589934592 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -681,14 +681,14 @@ define void @switch_common_dest_almost_never_taken(ptr noalias %a, ptr noalias %
 ; VPLAN-NEXT:  Successor(s): mid, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  mid:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT switch ir<%l>, ir<1>, ir<2>, ir<3>, ir<4> (!prof {1, 1, 1, 1, 1}, !vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 8589934591 (4.657E-8%))
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 8589934591 (4.657E-8%))
+; VPLAN-NEXT:    EMIT switch ir<%l>, ir<1>, ir<2>, ir<3>, ir<4> (!prof {1, 1, 1, 1, 1}, !vplan.execution.frequency 8589934591 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): latch, if.then, if.then, if.then, if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 3435973836 (3.725E-8%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 3435973836 (3.725E-8%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 6871947671 (3.725E-8%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 6871947671 (3.725E-8%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -759,14 +759,14 @@ define void @switch_common_dest_many_edges_almost_never_taken(ptr noalias %a, pt
 ; VPLAN-NEXT:  Successor(s): mid, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  mid:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT switch ir<%l>, ir<1>, ir<2>, ir<3>, ir<4>, ir<5>, ir<6>, ir<7>, ir<8> (!prof {1, 1, 1, 1, 1, 1, 1, 1, 1}, !vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 8589934591 (4.657E-8%))
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 8589934591 (4.657E-8%))
+; VPLAN-NEXT:    EMIT switch ir<%l>, ir<1>, ir<2>, ir<3>, ir<4>, ir<5>, ir<6>, ir<7>, ir<8> (!prof {1, 1, 1, 1, 1, 1, 1, 1, 1}, !vplan.execution.frequency 8589934591 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): latch, if.then, if.then, if.then, if.then, if.then, if.then, if.then, if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 3817748708 (4.139E-8%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 3817748708 (4.139E-8%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 7635497415 (4.139E-8%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 7635497415 (4.139E-8%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:
@@ -839,8 +839,8 @@ define void @switch_common_dest_weight_sum_exceeds_32_bits(ptr noalias %a, ptr n
 ; VPLAN-NEXT:  Successor(s): latch, if.then, if.then, if.then, if.then, if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 9223372019674906624 (100%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 9223372019674906624 (100%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 18446744039349813247 (100%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 18446744039349813247 (100%))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -891,8 +891,8 @@ define void @switch_many_edges_to_latch(ptr noalias %a, ptr noalias %idx) {
 ;
 ; VPLAN-LABEL: VPlan for loop in 'switch_many_edges_to_latch'
 ; VPLAN:       if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 7535434642392875008 (81.7%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 7535434642392875008 (81.7%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 15070869284785750015 (81.7%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 15070869284785750015 (81.7%))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -972,13 +972,13 @@ define void @switch_weights_clamped_at_both_ends(ptr noalias %a, ptr noalias %b,
 ;
 ; VPLAN-LABEL: VPlan for loop in 'switch_weights_clamped_at_both_ends'
 ; VPLAN:       if.then:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 9223372032559808512 (100%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 18446744065119617023 (100%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 18446744065119617023 (100%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  default:
-; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 8589934592 (4.657E-8%))
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.b> (!vplan.execution.frequency 8589934592 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -1019,7 +1019,7 @@ define void @nested_blocks_almost_never_entered(ptr noalias %a, ptr noalias %idx
 ;   %loop          1 =        1
 ;   %if.then.1 2^-31 ~ 4.66e-10
 ;   %if.then.2 2^-62 ~ 2.17e-19
-;   %if.then.3 2^-63 ~ 1.08e-19  (clamped up from 2^-93)
+;   %if.then.3 2^-64 ~ 5.42e-20  (clamped up from 2^-93)
 ;   %latch         1 =        1
 ;
 ; BFI-LABEL: block-frequency-info: nested_blocks_almost_never_entered
@@ -1033,18 +1033,18 @@ define void @nested_blocks_almost_never_entered(ptr noalias %a, ptr noalias %idx
 ;
 ; VPLAN-LABEL: VPlan for loop in 'nested_blocks_almost_never_entered'
 ; VPLAN:       if.then.1:
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%l>, ir<1> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1, 2147483647}, !vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%l>, ir<1> (!vplan.execution.frequency 8589934591 (4.657E-8%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1, 2147483647}, !vplan.execution.frequency 8589934591 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): if.then.2, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then.2:
-; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%l>, ir<2> (!vplan.execution.frequency 2 (2.168E-17%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1, 2147483647}, !vplan.execution.frequency 2 (2.168E-17%))
+; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%l>, ir<2> (!vplan.execution.frequency 3 (1.626E-17%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1, 2147483647}, !vplan.execution.frequency 3 (1.626E-17%))
 ; VPLAN-NEXT:  Successor(s): if.then.3, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then.3:
-; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 1 (1.084E-17%))
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 1 (1.084E-17%))
+; VPLAN-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 1 (5.421E-18%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 1 (5.421E-18%))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -1100,11 +1100,11 @@ define void @switch_join_always(ptr noalias %a, ptr noalias %idx) {
 ;
 ; VPLAN-LABEL: VPlan for loop in 'switch_join_always'
 ; VPLAN:       case.2:
-; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 1317624575466405888 (14.29%))
+; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 2635249150932811775 (14.29%))
 ; VPLAN-NEXT:  Successor(s): join
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  case.1:
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 1317624575670928140 (14.29%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 2635249151341856280 (14.29%))
 ; VPLAN-NEXT:  Successor(s): join
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  join:
@@ -1176,22 +1176,22 @@ define void @all_zero_weights(ptr noalias %a, ptr noalias %idx) {
 ;
 ; VPLAN-LABEL: VPlan for loop in 'all_zero_weights'
 ; VPLAN:       if.then:
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 4611686018427387904 (50%))
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 4611686018427387904 (50%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {0, 0}, !vplan.execution.frequency 4611686018427387904 (50%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 9223372036854775807 (50%))
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 9223372036854775807 (50%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {0, 0}, !vplan.execution.frequency 9223372036854775807 (50%))
 ; VPLAN-NEXT:  Successor(s): if.then.2, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then.2:
-; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 2305843009213693952 (25%))
+; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; VPLAN-NEXT:  Successor(s): join
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  join:
-; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20> (!vplan.execution.frequency 6917529027641081856 (75%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1, 1}, !vplan.execution.frequency 6917529027641081856 (75%))
+; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20> (!vplan.execution.frequency 13835058055282163711 (75%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1, 1}, !vplan.execution.frequency 13835058055282163711 (75%))
 ; VPLAN-NEXT:  Successor(s): if.then.3, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.then.3:
-; VPLAN-NEXT:    EMIT store ir<3>, ir<%gep.a> (!vplan.execution.frequency 3458764513820540928 (37.5%))
+; VPLAN-NEXT:    EMIT store ir<3>, ir<%gep.a> (!vplan.execution.frequency 6917529027641081855 (37.5%))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -1248,13 +1248,13 @@ define void @estimated_through_weighted_branch(ptr noalias %a, ptr noalias %idx)
 ;
 ; VPLAN-LABEL: VPlan for loop in 'estimated_through_weighted_branch'
 ; VPLAN:       outer.then:
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1, 3}, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1, 3}, !vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; VPLAN-NEXT:  Successor(s): inner.then, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  inner.then:
-; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 1441151880758558720 (15.63%, estimated))
+; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 2882303761517117439 (15.63%, estimated))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -1309,28 +1309,28 @@ define void @rarely_executed_chain(ptr noalias %a, ptr noalias %idx) {
 ;
 ; VPLAN-LABEL: VPlan for loop in 'rarely_executed_chain'
 ; VPLAN:       if.a:
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 4294967296 (4.657E-8%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1000, 0}, !vplan.execution.frequency 4294967296 (4.657E-8%))
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 8589934591 (4.657E-8%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1000, 0}, !vplan.execution.frequency 8589934591 (4.657E-8%))
 ; VPLAN-NEXT:  Successor(s): latch, if.b
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.b:
-; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20> (!vplan.execution.frequency 2 (2.168E-17%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1, 1}, !vplan.execution.frequency 2 (2.168E-17%))
+; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20> (!vplan.execution.frequency 3 (1.626E-17%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1, 1}, !vplan.execution.frequency 3 (1.626E-17%))
 ; VPLAN-NEXT:  Successor(s): if.c, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.c:
-; VPLAN-NEXT:    EMIT ir<%c.3> = icmp sgt ir<%i>, ir<30> (!vplan.execution.frequency 1 (1.084E-17%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.3> (!prof {1, 1}, !vplan.execution.frequency 1 (1.084E-17%))
+; VPLAN-NEXT:    EMIT ir<%c.3> = icmp sgt ir<%i>, ir<30> (!vplan.execution.frequency 1 (5.421E-18%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.3> (!prof {1, 1}, !vplan.execution.frequency 1 (5.421E-18%))
 ; VPLAN-NEXT:  Successor(s): latch, if.d
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.d:
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 1 (1.084E-17%))
-; VPLAN-NEXT:    EMIT ir<%c.4> = icmp sgt ir<%i>, ir<40> (!vplan.execution.frequency 1 (1.084E-17%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.4> (!prof {1, 1}, !vplan.execution.frequency 1 (1.084E-17%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 1 (5.421E-18%))
+; VPLAN-NEXT:    EMIT ir<%c.4> = icmp sgt ir<%i>, ir<40> (!vplan.execution.frequency 1 (5.421E-18%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.4> (!prof {1, 1}, !vplan.execution.frequency 1 (5.421E-18%))
 ; VPLAN-NEXT:  Successor(s): if.e, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  if.e:
-; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 1 (1.084E-17%))
+; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 1 (5.421E-18%))
 ; VPLAN-NEXT:  Successor(s): latch
 ;
 entry:
@@ -1395,19 +1395,19 @@ define void @nested_zero_weight_siblings(ptr noalias %a, ptr noalias %idx) {
 ;
 ; VPLAN-LABEL: VPlan for loop in 'nested_zero_weight_siblings'
 ; VPLAN:       then.0:
-; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.a> (!vplan.execution.frequency 9223372032559808512 (100%))
-; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 9223372032559808512 (100%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1000, 0}, !vplan.execution.frequency 9223372032559808512 (100%))
+; VPLAN-NEXT:    EMIT store ir<0>, ir<%gep.a> (!vplan.execution.frequency 18446744065119617023 (100%))
+; VPLAN-NEXT:    EMIT ir<%c.1> = icmp sgt ir<%i>, ir<10> (!vplan.execution.frequency 18446744065119617023 (100%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.1> (!prof {1000, 0}, !vplan.execution.frequency 18446744065119617023 (100%))
 ; VPLAN-NEXT:  Successor(s): then.1, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  then.1:
-; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 9223372028264841218 (100%))
-; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20> (!vplan.execution.frequency 9223372028264841218 (100%))
-; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1000, 0}, !vplan.execution.frequency 9223372028264841218 (100%))
+; VPLAN-NEXT:    EMIT store ir<1>, ir<%gep.a> (!vplan.execution.frequency 18446744056529682435 (100%))
+; VPLAN-NEXT:    EMIT ir<%c.2> = icmp sgt ir<%i>, ir<20> (!vplan.execution.frequency 18446744056529682435 (100%))
+; VPLAN-NEXT:    EMIT branch-on-cond ir<%c.2> (!prof {1000, 0}, !vplan.execution.frequency 18446744056529682435 (100%))
 ; VPLAN-NEXT:  Successor(s): then.2, latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  then.2:
-; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 9223372023969873925 (100%))
+; VPLAN-NEXT:    EMIT store ir<2>, ir<%gep.a> (!vplan.execution.frequency 18446744047939747850 (100%))
 ; VPLAN-NEXT:  Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:  latch:

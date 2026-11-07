@@ -202,22 +202,44 @@ Emits **all** remarks unconditionally.
 
 ### RemarkEmittingPolicyFinal
 
-Stores remarks until `finalize()` is called and emits only the **final** remark
-for each location. This is useful in multi-pass compilers where an early pass
-may report a failure, but a later pass succeeds. `finalize()` drains the stored
-remarks. Calling it again emits only remarks reported since.
+Stores remarks until `finalize()` is called and keeps the last report for each
+identity: the complete location, remark name, combined category and subcategory,
+and remark kind. The function name is not part of the identity. Reports with
+different kinds, such as a missed remark followed by a passed remark, both
+survive.
 
-**Example:** Only the successful remark is emitted:
+For example, only the second missed remark is emitted:
 
 ```c++
 auto opts = remark::RemarkOpts::name("Unroller").category("LoopUnroll");
 
-// First pass: reports failure
-remark::failed(loc, opts) << "Loop could not be unrolled";
+remark::missed(loc, opts) << "Loop trip count is unknown";
 
-// Later pass: reports success (this is the one emitted)
-remark::passed(loc, opts) << "Loop unrolled successfully";
+// A later report replaces the earlier remark with the same identity.
+remark::missed(loc, opts) << "Loop trip count is too small";
 ```
+
+`finalize()` drains one batch of stored remarks. Traversals start from roots
+with IDs in ID order, then ID-less roots in unspecified order, then any unvisited
+remarks in ID order. Related remarks are grouped after their parent.
+Shared targets, transitive links, and cycles emit every surviving remark once.
+Calling `finalize()` again emits only remarks reported since the previous drain.
+
+If a related target was overwritten in the current batch, its link is removed
+from the surviving consumer and its serialized arguments. The consumer still
+emits; its link is not redirected to the replacement. Explicit IDs that were not
+overwritten in that batch are preserved, including IDs from earlier batches and
+IDs unknown to the policy. Callers are responsible for the validity of those
+references. The policy releases the discarded-ID bookkeeping after each batch.
+An ordinary user argument named `RelatedTo` is preserved independently of typed
+remark links.
+
+Reports may run concurrently. Call `finalize()` after reporting stops; it must
+not overlap other policy operations, including calls from streamer callbacks.
+When concurrent reports have the same identity, the last report to acquire the
+policy lock wins. ID order does not guarantee reproducibility across thread
+schedules. The built-in LLVM streamer serializes writes; custom streamers used
+with `All` must support concurrent calls.
 
 You can also implement custom policies by inheriting from the policy interface.
 

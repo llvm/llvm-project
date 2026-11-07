@@ -21,6 +21,5 @@ unittest("BasicTests") {
     "SanitizersTest.cpp",
     "SarifTest.cpp",
     "SourceManagerTest.cpp",
-    "TargetIDTest.cpp",
   ]
 }

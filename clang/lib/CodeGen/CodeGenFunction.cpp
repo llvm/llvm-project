@@ -36,10 +36,10 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -688,6 +688,10 @@ void CodeGenFunction::markAsIgnoreThreadCheckingAtRuntime(llvm::Function *Fn) {
     Fn->addFnAttr("sanitize_thread_no_checking_at_run_time");
     Fn->removeFnAttr(llvm::Attribute::SanitizeThread);
   }
+  if (SanOpts.has(SanitizerKind::Concurrency)) {
+    Fn->addFnAttr("sanitize_concurrency_no_checking_at_run_time");
+    Fn->removeFnAttr(llvm::Attribute::SanitizeConcurrency);
+  }
 }
 
 /// Check if the return value of this function requires sanitization.
@@ -824,6 +828,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
     if (SanOpts.has(SanitizerKind::Thread))
       Fn->addFnAttr(llvm::Attribute::SanitizeThread);
+    if (SanOpts.has(SanitizerKind::Concurrency))
+      Fn->addFnAttr(llvm::Attribute::SanitizeConcurrency);
     if (SanOpts.has(SanitizerKind::Type))
       Fn->addFnAttr(llvm::Attribute::SanitizeType);
     if (SanOpts.has(SanitizerKind::NumericalStability))
@@ -851,9 +857,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (SanOpts.hasOneOf(SanitizerKind::Fuzzer | SanitizerKind::FuzzerNoLink))
     Fn->addFnAttr(llvm::Attribute::OptForFuzzing);
 
-  // Ignore TSan memory acesses from within ObjC/ObjC++ dealloc, initialize,
-  // .cxx_destruct, __destroy_helper_block_ and all of their calees at run time.
-  if (SanOpts.has(SanitizerKind::Thread)) {
+  // Ignore TSan/CSan memory accesses from within ObjC/ObjC++ dealloc,
+  // initialize, .cxx_destruct, __destroy_helper_block_ and all of their callees
+  // at run time.
+  if (SanOpts.hasOneOf(SanitizerKind::Thread | SanitizerKind::Concurrency)) {
     if (const auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
       const IdentifierInfo *II = OMD->getSelector().getIdentifierInfoForSlot(0);
       if (OMD->getMethodFamily() == OMF_dealloc ||
@@ -1053,6 +1060,33 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
   }
 
+  // Annotate C++ special member functions so that CopyProfPass can instrument
+  // them, provided the object is at least as large as the size threshold.
+  if (CGM.getCodeGenOpts().CopyProf) {
+    if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D)) {
+      StringRef Attr;
+      if (const auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
+        if (!CD->isMoveConstructor())
+          Attr =
+              CD->isCopyConstructor() ? "copyprof-copy-ctor" : "copyprof-ctor";
+      } else if (isa<CXXDestructorDecl>(MD)) {
+        Attr = "copyprof-dtor";
+      } else if (MD->isCopyAssignmentOperator()) {
+        Attr = "copyprof-copy-assign-op";
+      }
+      if (!Attr.empty()) {
+        // Finally, add the object size in bytes to the annotation.
+        // A special member function always has an implicit object parameter, so
+        // its type is guaranteed to be complete here.
+        CharUnits ObjSize = getContext().getTypeSizeInChars(
+            MD->getFunctionObjectParameterType());
+        if (ObjSize.getQuantity() >=
+            CGM.getCodeGenOpts().CopyProfStaticSizeThreshold)
+          Fn->addFnAttr(Attr, llvm::utostr(ObjSize.getQuantity()));
+      }
+    }
+  }
+
   // If we're in C++ mode and the function name is "main", it is guaranteed
   // to be norecurse by the standard (3.6.1.3 "The function main shall not be
   // used within a program").
@@ -1197,6 +1231,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   if (!CGM.getCodeGenOpts().ZOSPPA1Name)
     Fn->addFnAttr("zos-ppa1-name", "");
+  else if (getContext().getTargetInfo().getTriple().isOSzOS() && FD &&
+           FD->hasAttr<AsmLabelAttr>()) {
+    std::string SrcName = CGM.getMangledNameIgnoringAsmLabel(GD, FD);
+    Fn->addFnAttr("zos-ppa1-name", SrcName);
+  }
 
   if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX &&
       !CGM.getDiags().isIgnored(diag::warn_fe_backend_frame_larger_than, Loc))
@@ -1473,6 +1512,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       Clone = llvm::Function::Create(Fn->getFunctionType(),
                                      llvm::GlobalValue::InternalLinkage,
                                      Fn->getAddressSpace(), FDInlineName, M);
+      Clone->setCallingConv(Fn->getCallingConv());
+      Clone->setAttributes(Fn->getAttributes());
       Clone->addFnAttr(llvm::Attribute::AlwaysInline);
     }
     Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
@@ -1540,9 +1581,12 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (isa<CoroutineBodyStmt>(Body))
       ShouldEmitLifetimeMarkers = true;
 
-    // Initialize helper which will detect jumps which can cause invalid
-    // lifetime markers.
-    if (ShouldEmitLifetimeMarkers)
+    // Detect jumps that invalidate lifetime markers or bypass auto-var-init.
+    bool NeedsBypassDetection =
+        ShouldEmitLifetimeMarkers ||
+        (CGM.getLangOpts().getTrivialAutoVarInit() !=
+         LangOptions::TrivialAutoVarInitKind::Uninitialized);
+    if (NeedsBypassDetection)
       Bypasses.Init(CGM, Body);
   }
 
@@ -2886,7 +2930,7 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
   if (!CGM.getCodeGenOpts().SanitizeStats)
     return;
 
-  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
+  llvm::IRBuilder<> IRB(Builder.GetInsertPoint());
   IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
   CGM.getSanStats().create(IRB, SSK);
 }
@@ -3009,7 +3053,6 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
   // entry:
   llvm::BasicBlock *CurBlock = createBasicBlock("entry", Resolver);
 
-  SmallVector<std::pair<llvm::Value *, llvm::BasicBlock *>, 3> PhiArgs;
   for (const FMVResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
     // The 'default' or 'generic' case.
@@ -3198,6 +3241,10 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
   llvm::BasicBlock *CurBlock = createBasicBlock("resolver_entry", Resolver);
 
   for (const FMVResolverOption &RO : Options) {
+    // Skip unreachable versions.
+    if (RO.Function == nullptr)
+      continue;
+
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *Condition = FormAArch64ResolverCondition(RO);
 
@@ -3209,15 +3256,11 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
     }
 
     if (!AArch64CpuInitialized) {
-      Builder.SetInsertPoint(CurBlock, CurBlock->begin());
+      Builder.SetInsertPoint(CurBlock->begin());
       EmitAArch64CpuInit();
       AArch64CpuInitialized = true;
       Builder.SetInsertPoint(CurBlock);
     }
-
-    // Skip unreachable versions.
-    if (RO.Function == nullptr)
-      continue;
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
     CGBuilderTy RetBuilder(CGM, RetBlock);
@@ -3281,9 +3324,8 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     llvm::Instruction *Assumption) {
   assert(isa_and_nonnull<llvm::CallInst>(Assumption) &&
          cast<llvm::CallInst>(Assumption)->getCalledOperand() ==
-             llvm::Intrinsic::getOrInsertDeclaration(
-                 Builder.GetInsertBlock()->getParent()->getParent(),
-                 llvm::Intrinsic::assume) &&
+             llvm::Intrinsic::getOrInsertDeclaration(Builder.getModule(),
+                                                     llvm::Intrinsic::assume) &&
          "Assumption should be a call to llvm.assume().");
   assert(&(Builder.GetInsertBlock()->back()) == Assumption &&
          "Assumption should be the last instruction of the basic block, "

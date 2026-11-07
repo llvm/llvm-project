@@ -23,6 +23,14 @@ set(TARGET_LIBC_ENTRYPOINTS
   libc.src.pwd.setpwent
 )
 
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # grp.h entrypoints
+    libc.src.grp.initgroups
+    libc.src.grp.setgroups
+  )
+endif()
+
 set(TARGET_LIBM_ENTRYPOINTS "")
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

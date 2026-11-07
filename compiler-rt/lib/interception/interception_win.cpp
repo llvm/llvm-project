@@ -1394,31 +1394,71 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
   return 0;
 }
 
-bool OverrideFunction(
-    const char *func_name, uptr new_func, uptr *orig_old_func) {
-  static const char *kNtDllIgnore[] = {
-    "memcmp", "memcpy", "memmove", "memset"
-  };
+static bool IgnoreFunctionInNtDll(const char* func_name) {
+  static const char* kNtDllIgnore[] = {"memcmp", "memcpy", "memmove", "memset"};
+  for (const char* ignored : kNtDllIgnore) {
+    if (_strcmp(func_name, ignored) == 0)
+      return true;
+  }
+  return false;
+}
 
+static bool OverrideFunctionByName(const char* func_name, uptr new_func,
+                                   uptr* orig_old_func,
+                                   const char* alias_name) {
   bool hooked = false;
   void **DLLs = InterestingDLLsAvailable();
   for (size_t i = 0; DLLs[i]; ++i) {
-    if (DLLs[i + 1] == nullptr) {
-      // This is the last DLL, i.e. NTDLL. It exports some functions that
-      // we only want to override in the CRT.
-      for (const char *ignored : kNtDllIgnore) {
-        if (_strcmp(func_name, ignored) == 0)
-          return hooked;
-      }
-    }
+    if (DLLs[i + 1] == nullptr && IgnoreFunctionInNtDll(func_name))
+      return hooked;
 
     uptr func_addr = InternalGetProcAddress(DLLs[i], func_name);
-    if (func_addr &&
-        OverrideFunction(func_addr, new_func, orig_old_func)) {
-      hooked = true;
+    if (!func_addr)
+      continue;
+
+    if (alias_name) {
+      uptr alias_addr = InternalGetProcAddress(DLLs[i], alias_name);
+      if (alias_addr) {
+        // Same export address: |func_name| aliases |alias_name| in this DLL,
+        // so patching |alias_name| already covers it.
+        if (func_addr == alias_addr)
+          continue;
+        // A distinct address is a separate entry point and must be patched.
+        // For instance, in vcruntime140.dll 14.38+, memcpy is a jmp-rel32
+        // stub to memmove; OverrideFunctionWithRedirectJump handles that
+        // shape. If this DLL ships a shape we cannot patch, report it (calls
+        // through this export will not be checked), but do not abort: the
+        // caller is expected to install a safe fallback for REAL().
+        if (OverrideFunction(func_addr, new_func, orig_old_func)) {
+          hooked = true;
+        } else {
+          u8* p = (u8*)func_addr;
+          ReportError(
+              "interception_win: failed to intercept %s (%p) (alias %s is "
+              "%p); first bytes %02X %02X %02X %02X %02X; out-of-bounds "
+              "accesses through this export will not be detected\n",
+              func_name, (void*)func_addr, alias_name, (void*)alias_addr, p[0],
+              p[1], p[2], p[3], p[4]);
+        }
+        continue;
+      }
+      // |alias_name| is not exported by this DLL: patch |func_name| normally.
     }
+
+    if (OverrideFunction(func_addr, new_func, orig_old_func))
+      hooked = true;
   }
   return hooked;
+}
+
+bool OverrideFunction(const char* func_name, uptr new_func,
+                      uptr* orig_old_func) {
+  return OverrideFunctionByName(func_name, new_func, orig_old_func, nullptr);
+}
+
+bool OverrideFunctionIfNotAliased(const char* func_name, uptr new_func,
+                                  uptr* orig_old_func, const char* alias_name) {
+  return OverrideFunctionByName(func_name, new_func, orig_old_func, alias_name);
 }
 
 bool OverrideImportedFunction(const char *module_to_patch,

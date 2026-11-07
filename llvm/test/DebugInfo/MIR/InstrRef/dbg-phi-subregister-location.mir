@@ -1,4 +1,4 @@
-# RUN: llc %s -run-pass=livedebugvalues -experimental-debug-variable-locations\
+# RUN: llc %s -run-pass=live-debug-values -experimental-debug-variable-locations\
 # RUN:   -o - | FileCheck %s
 #
 # In the MIR below, there's an argument in the lowest byte of $edi. The debug
