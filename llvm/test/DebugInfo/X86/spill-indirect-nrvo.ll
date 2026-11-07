@@ -33,7 +33,7 @@
 ; OPTNONE: #DEBUG_VALUE: get_string:result <- [DW_OP_deref] [$rsp+0]
 ; OPTNONE: movq   %rdi, %rax
 ; OPTNONE: movq   %rax, [[OFFS:[0-9]+]](%rsp)          # 8-byte Spill
-; OPTNONE: #DEBUG_VALUE: get_string:result <- [$rdi+0]
+; OPTNONE: #DEBUG_VALUE: get_string:result <- [DW_OP_deref] [$rsp+0]
 ; OPTNONE: callq  _ZN6stringC1Ei
 
 ; CHECK: #APP
