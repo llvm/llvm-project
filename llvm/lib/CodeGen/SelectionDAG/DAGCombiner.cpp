@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -102,27 +103,12 @@ static cl::opt<bool>
 CombinerGlobalAA("combiner-global-alias-analysis", cl::Hidden,
                  cl::desc("Enable DAG combiner's use of IR alias analysis"));
 
-static cl::opt<bool>
-UseTBAA("combiner-use-tbaa", cl::Hidden, cl::init(true),
-        cl::desc("Enable DAG combiner's use of TBAA"));
-
 #ifndef NDEBUG
 static cl::opt<std::string>
 CombinerAAOnlyFunc("combiner-aa-only-func", cl::Hidden,
                    cl::desc("Only use DAG-combiner alias analysis in this"
                             " function"));
 #endif
-
-/// Hidden option to stress test load slicing, i.e., when this option
-/// is enabled, load slicing bypasses most of its profitability guards.
-static cl::opt<bool>
-StressLoadSlicing("combiner-stress-load-slicing", cl::Hidden,
-                  cl::desc("Bypass the profitability model of load slicing"),
-                  cl::init(false));
-
-static cl::opt<bool>
-  MaySplitLoadIndex("combiner-split-load-index", cl::Hidden, cl::init(true),
-                    cl::desc("DAG combiner may split indexing from loads"));
 
 static cl::opt<bool>
     EnableStoreMerging("combiner-store-merging", cl::Hidden, cl::init(true),
@@ -1120,8 +1106,9 @@ static bool isAnyConstantBuildVector(SDValue V, bool NoOpaques = false) {
 }
 
 // Determine if this an indexed load with an opaque target constant index.
-static bool canSplitIdx(LoadSDNode *LD) {
-  return MaySplitLoadIndex &&
+static bool canSplitIdx(LoadSDNode *LD,
+                        const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<SelectionDAGOptions>().combiner_split_load_index &&
          (LD->getOperand(2).getOpcode() != ISD::TargetConstant ||
           !cast<ConstantSDNode>(LD->getOperand(2))->isOpaque());
 }
@@ -22271,7 +22258,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     if (LD->isIndexed()) {
       // Cannot handle opaque target constants and we must respect the user's
       // request not to split indexes from loads.
-      if (!canSplitIdx(LD))
+      if (!canSplitIdx(LD, DAG.getContext()->getLibraryOptions()))
         return SDValue();
       SDValue Idx = SplitIndexingFromLoad(LD);
       SDValue Ops[] = {Val, Idx, Chain};
@@ -22418,7 +22405,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
       // the indexing into an add/sub directly (that TargetConstant may not be
       // valid for a different type of node, and we cannot convert an opaque
       // target constant into a regular constant).
-      bool CanSplitIdx = canSplitIdx(LD);
+      bool CanSplitIdx = canSplitIdx(LD, DAG.getContext()->getLibraryOptions());
 
       if (!N->hasAnyUseOfValue(0) && (CanSplitIdx || !N->hasAnyUseOfValue(1))) {
         SDValue Poison = DAG.getPOISON(N->getValueType(0));
@@ -22918,10 +22905,12 @@ static void adjustCostForPairing(SmallVectorImpl<LoadedSlice> &LoadedSlices,
 ///
 /// FIXME: When the cost model will be mature enough, we can relax
 /// constraints (1) and (2).
-static bool isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
-                                const APInt &UsedBits, bool ForCodeSize) {
+static bool
+isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
+                    const APInt &UsedBits, bool ForCodeSize,
+                    const cl::LibraryOptionsContext &LibraryOptions) {
   unsigned NumberOfSlices = LoadedSlices.size();
-  if (StressLoadSlicing)
+  if (LibraryOptions.get<SelectionDAGOptions>().combiner_stress_load_slicing)
     return NumberOfSlices > 1;
 
   // Check (1).
@@ -23029,7 +23018,8 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
   }
 
   // Abort slicing if it does not seem to be profitable.
-  if (!isSlicingProfitable(LoadedSlices, UsedBits, ForCodeSize))
+  if (!isSlicingProfitable(LoadedSlices, UsedBits, ForCodeSize,
+                           DAG.getContext()->getLibraryOptions()))
     return false;
 
   ++SlicedLoads;
@@ -32608,9 +32598,13 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
       return false;
   }
 
+  const cl::LibraryOptionsContext &LibraryOptions =
+      DAG.getContext()->getLibraryOptions();
   bool UseAA = CombinerGlobalAA.getNumOccurrences() > 0
                    ? CombinerGlobalAA
                    : DAG.getSubtarget().useAA();
+  bool UseTBAA = LibraryOptions.get<SelectionDAGOptions>().combiner_use_tbaa;
+
 #ifndef NDEBUG
   if (CombinerAAOnlyFunc.getNumOccurrences() &&
       CombinerAAOnlyFunc != DAG.getMachineFunction().getName())
