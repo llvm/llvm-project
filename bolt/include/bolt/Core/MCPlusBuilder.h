@@ -1789,6 +1789,16 @@ public:
     return IndirectBranchType::UNKNOWN;
   }
 
+  /// If the target of indirect branch \p Instruction is loaded from a GOT
+  /// entry by instructions in [\p Begin, \p End), return the address of that
+  /// entry.
+  virtual std::optional<uint64_t>
+  getIndirectBranchGOTEntry(const MCInst &Instruction,
+                            InstructionIterator Begin,
+                            InstructionIterator End) const {
+    return std::nullopt;
+  }
+
   /// Analyze branch \p Instruction in PLT section and try to determine
   /// associated got entry address.
   virtual uint64_t analyzePLTEntry(MCInst &Instruction,
