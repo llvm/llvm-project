@@ -58,6 +58,10 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
+    return ST->hasAVX512() ? TailFoldingStyle::DataAndControlFlow
+                           : TailFoldingStyle::DataWithoutLaneMask;
+  }
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
   unsigned getRegisterClassForType(bool Vector, Type *Ty) const override;
   bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const override;
