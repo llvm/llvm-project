@@ -1649,10 +1649,10 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
           Ty.getUnqualifiedType(), TInfo, Kind.getRange().getEnd());
     if (ListInitialization &&
         cast<InitListExpr>(Exprs[0])->getNumInits() == 0) {
-      return CXXFunctionalCastExpr::Create(
+      return CXXFunctionalCastExpr::CreateListInitializer(
           Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_ToVoid,
           Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides(),
-          Exprs[0]->getBeginLoc(), Exprs[0]->getEndLoc());
+          Exprs[0]->getEndLoc());
     }
   } else if (RequireCompleteType(TyBeginLoc, ElemTy,
                                  diag::err_invalid_incomplete_type_use,
@@ -1692,13 +1692,12 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     // to false.
     bool IsListInit = ListInitialization ||
                       (getLangOpts().HLSL && isa<InitListExpr>(Result.get()));
-    SourceRange Locs = IsListInit
-                           ? SourceRange()
-                           : SourceRange(LParenOrBraceLoc, RParenOrBraceLoc);
+    auto LParenOrBraceOrNullLoc =
+        IsListInit ? SourceLocation() : LParenOrBraceLoc;
     Result = CXXFunctionalCastExpr::Create(
         Context, ResultType, Expr::getValueKindForType(Ty), TInfo, CK_NoOp,
         Result.get(), /*Path=*/nullptr, CurFPFeatureOverrides(),
-        Locs.getBegin(), Locs.getEnd());
+        LParenOrBraceOrNullLoc, RParenOrBraceLoc);
   }
 
   return Result;

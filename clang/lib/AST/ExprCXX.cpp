@@ -973,6 +973,14 @@ CXXFunctionalCastExpr *CXXFunctionalCastExpr::CreateEmpty(const ASTContext &C,
       CXXFunctionalCastExpr(EmptyShell(), PathSize, HasFPFeatures);
 }
 
+CXXFunctionalCastExpr *CXXFunctionalCastExpr::CreateListInitializer(
+    const ASTContext &C, QualType T, ExprValueKind VK, TypeSourceInfo *Written,
+    CastKind K, Expr *Op, const CXXCastPath *BasePath, FPOptionsOverride FPO,
+    SourceLocation R) {
+  // List-initialization is represented by the null LParen location.
+  return Create(C, T, VK, Written, K, Op, BasePath, FPO, SourceLocation(), R);
+}
+
 SourceLocation CXXFunctionalCastExpr::getBeginLoc() const {
   return getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
 }
