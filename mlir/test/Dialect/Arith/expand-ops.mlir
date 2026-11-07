@@ -340,11 +340,13 @@ func.func @scaling_truncf_propagate_rounding_mode_fast_math(%arg0 : vector<4xf16
     %0 = arith.scaling_truncf %arg0, %arg1 to_nearest_even fastmath<fast> : vector<4xf16>, vector<4xf16> to vector<4xf6E3M2FN>
     return %0 : vector<4xf6E3M2FN>
 }
+// The scale already has the type the division happens in, so it is used as it
+// is rather than routed through f8E8M0FNU.
 // SCHECK-LABEL: @scaling_truncf_propagate_rounding_mode_fast_math
-// SCHECK: %[[SCALEF8:.+]] = arith.truncf %arg1 fastmath<fast> : vector<4xf16> to vector<4xf8E8M0FNU>
-// SCHECK: %[[SCALEINTY:.+]] = arith.extf %[[SCALEF8]] fastmath<fast> : vector<4xf8E8M0FNU> to vector<4xf16>
-// SCHECK: %[[DIVF:.+]] = arith.divf %arg0, %[[SCALEINTY]] fastmath<fast> : vector<4xf16>
-// SCHECK: %[[TRUNCF:.+]] = arith.truncf [[_:%[a-zA-Z0-9_]+]] to_nearest_even fastmath<fast> : vector<4xf16> to vector<4xf6E3M2FN>
+// SCHECK-SAME: %[[ARG0:.+]]: vector<4xf16>, %[[ARG1:.+]]: vector<4xf16>
+// SCHECK-NOT: f8E8M0FNU
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[ARG0]], %[[ARG1]] fastmath<fast> : vector<4xf16>
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf %[[DIVF]] to_nearest_even fastmath<fast> : vector<4xf16> to vector<4xf6E3M2FN>
 // SCHECK: return %[[TRUNCF]] : vector<4xf6E3M2FN>
 
 // -----
@@ -354,8 +356,11 @@ func.func @scaling_truncf_f16_to_f4E2M1FN_using_f16_scales(%arg0: f16, %arg1 : f
     return %0 : f4E2M1FN
 }
 // SCHECK-LABEL: @scaling_truncf_f16_to_f4E2M1FN_using_f16_scales
-// SCHECK: %[[SCALETRUNCF:.+]] = arith.truncf %arg1 : f16 to f8E8M0FN
-// SCHECK: return
+// SCHECK-SAME: %[[ARG0:.+]]: f16, %[[ARG1:.+]]: f16
+// SCHECK-NOT: f8E8M0FNU
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[ARG0]], %[[ARG1]] : f16
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf %[[DIVF]] : f16 to f4E2M1FN
+// SCHECK: return %[[TRUNCF]]
 
 // -----
 func.func @scaling_truncf_vector_f16_to_f4E2M1FN_using_f16_scales(%arg0: vector<4xf16>, %arg1 : vector<4xf16>) -> vector<4xf4E2M1FN> {
@@ -363,15 +368,84 @@ func.func @scaling_truncf_vector_f16_to_f4E2M1FN_using_f16_scales(%arg0: vector<
     return %0 : vector<4xf4E2M1FN>
 }
 // SCHECK-LABEL: @scaling_truncf_vector_f16_to_f4E2M1FN_using_f16_scales
-// SCHECK: %[[SCALETRUNCF:.+]] = arith.truncf %arg1 : vector<4xf16> to vector<4xf8E8M0FNU>
-// SCHECK: return
+// SCHECK-SAME: %[[ARG0:.+]]: vector<4xf16>, %[[ARG1:.+]]: vector<4xf16>
+// SCHECK-NOT: f8E8M0FNU
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[ARG0]], %[[ARG1]] : vector<4xf16>
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf %[[DIVF]] : vector<4xf16> to vector<4xf4E2M1FN>
+// SCHECK: return %[[TRUNCF]]
 
 // -----
 
-func.func @invalid_scaling_truncf_to_f4E2M1FN(%arg0: f16, %arg1 : f8E5M2FNUZ) -> f4E2M1FN {
-    // expected-error@+1 {{failed to legalize operation 'arith.scaling_truncf' that was explicitly marked illegal}}
+// A scale that is neither f8E8M0FNU nor as wide as the input is widened to the
+// input type and divided by, rather than rejected.
+func.func @scaling_truncf_f16_to_f4E2M1FN_using_f8E5M2FNUZ_scales(%arg0: f16, %arg1 : f8E5M2FNUZ) -> f4E2M1FN {
     %0 = arith.scaling_truncf %arg0, %arg1 : f16, f8E5M2FNUZ to f4E2M1FN
     return %0 : f4E2M1FN
+}
+
+// SCHECK-LABEL: @scaling_truncf_f16_to_f4E2M1FN_using_f8E5M2FNUZ_scales
+// SCHECK-SAME: %[[ARG0:.+]]: f16, %[[ARG1:.+]]: f8E5M2FNUZ
+// SCHECK: %[[SCALE:.+]] = arith.extf %[[ARG1]] : f8E5M2FNUZ to f16
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[ARG0]], %[[SCALE]] : f16
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf %[[DIVF]] : f16 to f4E2M1FN
+// SCHECK: return %[[TRUNCF]]
+
+// -----
+
+// An f8E5M3FNU scale carries a mantissa, and that mantissa is part of the value
+// the input is divided by.
+func.func @scaling_truncf_f16_to_f4E2M1FN_using_f8E5M3FNU_scales(%arg0: f16, %arg1 : f8E5M3FNU) -> f4E2M1FN {
+    %0 = arith.scaling_truncf %arg0, %arg1 : f16, f8E5M3FNU to f4E2M1FN
+    return %0 : f4E2M1FN
+}
+
+// SCHECK-LABEL: @scaling_truncf_f16_to_f4E2M1FN_using_f8E5M3FNU_scales
+// SCHECK-SAME: %[[ARG0:.+]]: f16, %[[ARG1:.+]]: f8E5M3FNU
+// SCHECK: %[[SCALE:.+]] = arith.extf %[[ARG1]] : f8E5M3FNU to f16
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[ARG0]], %[[SCALE]] : f16
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf %[[DIVF]] : f16 to f4E2M1FN
+// SCHECK: return %[[TRUNCF]]
+
+// -----
+
+// A scale as wide as the input but of a different type is bridged by
+// arith.convertf, which neither arith.extf nor arith.truncf can spell.
+func.func @scaling_truncf_equal_width_scale(%arg0: f8E4M3FN, %arg1 : f8E5M2FNUZ) -> f4E2M1FN {
+    %0 = arith.scaling_truncf %arg0, %arg1 : f8E4M3FN, f8E5M2FNUZ to f4E2M1FN
+    return %0 : f4E2M1FN
+}
+
+// SCHECK-LABEL: @scaling_truncf_equal_width_scale
+// SCHECK-SAME: %[[ARG0:.+]]: f8E4M3FN, %[[ARG1:.+]]: f8E5M2FNUZ
+// SCHECK: %[[SCALE:.+]] = arith.convertf %[[ARG1]] : f8E5M2FNUZ to f8E4M3FN
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[ARG0]], %[[SCALE]] : f8E4M3FN
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf %[[DIVF]] : f8E4M3FN to f4E2M1FN
+// SCHECK: return %[[TRUNCF]]
+
+// -----
+
+// The scale is narrowed to the type the division happens in. The op's rounding
+// mode belongs to the result cast, not to this one; fastmath reaches both.
+func.func @scaling_truncf_f16_to_f4E2M1FN_using_f32_scales(%arg0: f16, %arg1 : f32) -> f4E2M1FN {
+    %0 = arith.scaling_truncf %arg0, %arg1 to_nearest_even fastmath<fast> : f16, f32 to f4E2M1FN
+    return %0 : f4E2M1FN
+}
+
+// SCHECK-LABEL: @scaling_truncf_f16_to_f4E2M1FN_using_f32_scales
+// SCHECK-SAME: %[[ARG0:.+]]: f16, %[[ARG1:.+]]: f32
+// SCHECK: %[[SCALE:.+]] = arith.truncf %[[ARG1]] fastmath<fast> : f32 to f16
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[ARG0]], %[[SCALE]] fastmath<fast> : f16
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf %[[DIVF]] to_nearest_even fastmath<fast> : f16 to f4E2M1FN
+// SCHECK: return %[[TRUNCF]]
+
+// -----
+
+// No cast bridges a scalar scale and a shaped operand, and arith cannot
+// broadcast one.
+func.func @invalid_scaling_truncf_scalar_scale(%arg0: vector<4xf16>, %arg1 : f16) -> vector<4xf4E2M1FN> {
+    // expected-error@+1 {{failed to legalize operation 'arith.scaling_truncf' that was explicitly marked illegal}}
+    %0 = arith.scaling_truncf %arg0, %arg1 : vector<4xf16>, f16 to vector<4xf4E2M1FN>
+    return %0 : vector<4xf4E2M1FN>
 }
 
 // -----
@@ -480,18 +554,61 @@ func.func @scaling_extf_to_f32_using_f16_scales(%arg0: f4E2M1FN, %arg1 : f16) ->
 }
 
 // SCHECK-LABEL: @scaling_extf_to_f32_using_f16_scales
-// SCHECK: %[[TRUNCF_SCALE:.+]] = arith.truncf %arg1 : f16 to f8E8M0FNU
-// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[TRUNCF_SCALE]] : f8E8M0FNU to f32
-// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %arg0 : f4E2M1FN to f32
+// SCHECK-SAME: %[[ARG0:.+]]: f4E2M1FN, %[[ARG1:.+]]: f16
+// SCHECK-NOT: f8E8M0FNU
+// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[ARG1]] : f16 to f32
+// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %[[ARG0]] : f4E2M1FN to f32
 // SCHECK: %[[RESULT:.+]] = arith.mulf %[[EXT_INPUT]], %[[EXT_SCALE]] : f32
 // SCHECK: return %[[RESULT]]
 
 // -----
 
-func.func @invalid_scaling_extf_to_f32(%arg0: f4E2M1FN, %arg1 : f8E5M2FNUZ) -> f32 {
-    // expected-error@+1 {{failed to legalize operation 'arith.scaling_extf' that was explicitly marked illegal}}
+func.func @scaling_extf_to_f32_using_f8E5M2FNUZ_scales(%arg0: f4E2M1FN, %arg1 : f8E5M2FNUZ) -> f32 {
     %0 = arith.scaling_extf %arg0, %arg1 : f4E2M1FN, f8E5M2FNUZ to f32
     return %0 : f32
+}
+
+// SCHECK-LABEL: @scaling_extf_to_f32_using_f8E5M2FNUZ_scales
+// SCHECK-SAME: %[[ARG0:.+]]: f4E2M1FN, %[[ARG1:.+]]: f8E5M2FNUZ
+// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[ARG1]] : f8E5M2FNUZ to f32
+// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %[[ARG0]] : f4E2M1FN to f32
+// SCHECK: %[[RESULT:.+]] = arith.mulf %[[EXT_INPUT]], %[[EXT_SCALE]] : f32
+// SCHECK: return %[[RESULT]]
+
+// -----
+
+func.func @scaling_extf_to_f32_using_f8E5M3FNU_scales(%arg0: f4E2M1FN, %arg1 : f8E5M3FNU) -> f32 {
+    %0 = arith.scaling_extf %arg0, %arg1 : f4E2M1FN, f8E5M3FNU to f32
+    return %0 : f32
+}
+
+// SCHECK-LABEL: @scaling_extf_to_f32_using_f8E5M3FNU_scales
+// SCHECK-SAME: %[[ARG0:.+]]: f4E2M1FN, %[[ARG1:.+]]: f8E5M3FNU
+// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[ARG1]] : f8E5M3FNU to f32
+// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %[[ARG0]] : f4E2M1FN to f32
+// SCHECK: %[[RESULT:.+]] = arith.mulf %[[EXT_INPUT]], %[[EXT_SCALE]] : f32
+// SCHECK: return %[[RESULT]]
+
+// -----
+
+func.func @scaling_extf_equal_width_scale(%arg0: f4E2M1FN, %arg1 : f8E5M2FNUZ) -> f8E4M3FN {
+    %0 = arith.scaling_extf %arg0, %arg1 : f4E2M1FN, f8E5M2FNUZ to f8E4M3FN
+    return %0 : f8E4M3FN
+}
+
+// SCHECK-LABEL: @scaling_extf_equal_width_scale
+// SCHECK-SAME: %[[ARG0:.+]]: f4E2M1FN, %[[ARG1:.+]]: f8E5M2FNUZ
+// SCHECK: %[[EXT_SCALE:.+]] = arith.convertf %[[ARG1]] : f8E5M2FNUZ to f8E4M3FN
+// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %[[ARG0]] : f4E2M1FN to f8E4M3FN
+// SCHECK: %[[RESULT:.+]] = arith.mulf %[[EXT_INPUT]], %[[EXT_SCALE]] : f8E4M3FN
+// SCHECK: return %[[RESULT]]
+
+// -----
+
+func.func @invalid_scaling_extf_scalar_scale(%arg0: vector<4xf4E2M1FN>, %arg1 : f8E8M0FNU) -> vector<4xf32> {
+    // expected-error@+1 {{failed to legalize operation 'arith.scaling_extf' that was explicitly marked illegal}}
+    %0 = arith.scaling_extf %arg0, %arg1 : vector<4xf4E2M1FN>, f8E8M0FNU to vector<4xf32>
+    return %0 : vector<4xf32>
 }
 
 // -----
@@ -541,9 +658,10 @@ func.func @scaling_extf_vector_to_f32_using_f16_scales(%arg0: vector<4xf4E2M1FN>
 }
 
 // SCHECK-LABEL: @scaling_extf_vector_to_f32_using_f16_scales
-// SCHECK: %[[TRUNCF_SCALE:.+]] = arith.truncf %arg1 : vector<4xf16> to vector<4xf8E8M0FNU>
-// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[TRUNCF_SCALE]] : vector<4xf8E8M0FNU> to vector<4xf32>
-// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %arg0 : vector<4xf4E2M1FN> to vector<4xf32>
+// SCHECK-SAME: %[[ARG0:.+]]: vector<4xf4E2M1FN>, %[[ARG1:.+]]: vector<4xf16>
+// SCHECK-NOT: f8E8M0FNU
+// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[ARG1]] : vector<4xf16> to vector<4xf32>
+// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %[[ARG0]] : vector<4xf4E2M1FN> to vector<4xf32>
 // SCHECK: %[[RESULT:.+]] = arith.mulf %[[EXT_INPUT]], %[[EXT_SCALE]] : vector<4xf32>
 // SCHECK: return %[[RESULT]]
 
@@ -555,9 +673,10 @@ func.func @scaling_extf_vector_to_f32_using_f16_scales_fastmath(%arg0: vector<4x
 }
 
 // SCHECK-LABEL: @scaling_extf_vector_to_f32_using_f16_scales_fastmath
-// SCHECK: %[[TRUNCF_SCALE:.+]] = arith.truncf %arg1 fastmath<fast> : vector<4xf16> to vector<4xf8E8M0FNU>
-// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[TRUNCF_SCALE]] fastmath<fast> : vector<4xf8E8M0FNU> to vector<4xf32>
-// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %arg0 fastmath<fast> : vector<4xf4E2M1FN> to vector<4xf32>
+// SCHECK-SAME: %[[ARG0:.+]]: vector<4xf4E2M1FN>, %[[ARG1:.+]]: vector<4xf16>
+// SCHECK-NOT: f8E8M0FNU
+// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[ARG1]] fastmath<fast> : vector<4xf16> to vector<4xf32>
+// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %[[ARG0]] fastmath<fast> : vector<4xf4E2M1FN> to vector<4xf32>
 // SCHECK: %[[RESULT:.+]] = arith.mulf %[[EXT_INPUT]], %[[EXT_SCALE]] fastmath<fast> : vector<4xf32>
 // SCHECK: return %[[RESULT]]
 
