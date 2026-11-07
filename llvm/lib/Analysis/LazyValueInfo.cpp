@@ -18,6 +18,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
@@ -1397,9 +1398,14 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
 
   if (isa<Constant>(RHS)) {
     if (ICI->isEquality() && LHS == Val) {
-      if (EdgePred == ICmpInst::ICMP_EQ)
-        return ValueLatticeElement::get(cast<Constant>(RHS));
-      else if (!isa<UndefValue>(RHS))
+      if (EdgePred == ICmpInst::ICMP_EQ) {
+        auto Result = ValueLatticeElement::get(cast<Constant>(RHS));
+        // Record the fact that the constant ptr may have different provenance.
+        if (Val->getType()->isPtrOrPtrVectorTy())
+          Result.setMayHaveDifferentProvenance(true);
+        return Result;
+      }
+      if (!isa<UndefValue>(RHS))
         return ValueLatticeElement::getNot(cast<Constant>(RHS));
     }
   }
@@ -2033,22 +2039,39 @@ static bool isKnownNonConstant(Value *V) {
   return false;
 }
 
-Constant *LazyValueInfo::getConstant(Value *V, Instruction *CtxI) {
+/// Return the constant \p V is known to be equal to from \p Result, if any.
+/// A pointer constant derived from an equality condition may differ from \p V
+/// in provenance, thus such a constant is returned so long as substituting it
+/// for \p V is valid.
+static Constant *getConstantFromLattice(const ValueLatticeElement &Result,
+                                        Value *V, const Use *U,
+                                        const DataLayout &DL) {
+  Constant *C = nullptr;
+  if (Result.isConstant())
+    C = Result.getConstant();
+  else if (Result.isConstantRange())
+    if (const APInt *SingleVal = Result.getConstantRange().getSingleElement())
+      C = ConstantInt::get(V->getType(), *SingleVal);
+  if (!C)
+    return nullptr;
+
+  if (U && Result.mayHaveDifferentProvenance()) {
+    assert(U->get() == V && "Must be a use of V.");
+    if (!canReplacePointersInUseIfEqual(*U, C, DL))
+      return nullptr;
+  }
+  return C;
+}
+
+Constant *LazyValueInfo::getConstant(Value *V, Instruction *CtxI,
+                                     const Use *U) {
   // Bail out early if V is known not to be a Constant.
   if (isKnownNonConstant(V))
     return nullptr;
 
   BasicBlock *BB = CtxI->getParent();
   ValueLatticeElement Result = getOrCreateImpl().getValueInBlock(V, BB, CtxI);
-
-  if (Result.isConstant())
-    return Result.getConstant();
-  if (Result.isConstantRange()) {
-    const ConstantRange &CR = Result.getConstantRange();
-    if (const APInt *SingleVal = CR.getSingleElement())
-      return ConstantInt::get(V->getType(), *SingleVal);
-  }
-  return nullptr;
+  return getConstantFromLattice(Result, V, U, BB->getDataLayout());
 }
 
 ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CtxI,
@@ -2067,19 +2090,11 @@ ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
 /// Determine whether the specified value is known to be a
 /// constant on the specified edge. Return null if not.
 Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
-                                           BasicBlock *ToBB,
-                                           Instruction *CtxI) {
+                                           BasicBlock *ToBB, Instruction *CtxI,
+                                           const Use *U) {
   ValueLatticeElement Result =
       getOrCreateImpl().getValueOnEdge(V, FromBB, ToBB, CtxI);
-
-  if (Result.isConstant())
-    return Result.getConstant();
-  if (Result.isConstantRange()) {
-    const ConstantRange &CR = Result.getConstantRange();
-    if (const APInt *SingleVal = CR.getSingleElement())
-      return ConstantInt::get(V->getType(), *SingleVal);
-  }
-  return nullptr;
+  return getConstantFromLattice(Result, V, U, ToBB->getDataLayout());
 }
 
 ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
