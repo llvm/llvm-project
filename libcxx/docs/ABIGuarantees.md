@@ -169,6 +169,11 @@ This replaces the symbols that are exported for `basic_string` to avoid exportin
 inlined as well as explicitly moving paths to the built library which are slow, improving fast-path inlining of multiple
 functions. This flag is currently unstable.
 
+### ``LIBCPP_ABI_THREAD_SPECIFIC_PTR``
+
+This replaces APIs which depend on the presence of pthread-style TLS with new interfaces that hide the implementation
+details. This flag is currently unstable.
+
 ## Stability of the traits of a type
 
 Whether a particular trait of a type is kept stable depends heavily on the type in question and the trait. The most
