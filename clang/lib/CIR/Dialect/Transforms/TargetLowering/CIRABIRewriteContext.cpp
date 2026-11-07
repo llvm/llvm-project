@@ -971,15 +971,16 @@ static cir::LoadOp getWholeRecordLoad(mlir::Value recordVal) {
   return load;
 }
 
-/// Returns \p load if the address it read from can be passed in place of the
-/// loaded value for an indirect argument that needs \p minAlign alignment,
-/// and null otherwise, including when \p load is null.  A byval or byref
-/// argument also needs storageUnwrittenBetween.  On null the caller reports a
-/// non-byval argument or fills a slot of its own.
+/// Returns the address \p load read from, as a pointer of type \p paramTy, if
+/// it can be passed in place of the loaded value for an indirect argument that
+/// needs \p minAlign alignment, and null otherwise, including when \p load is
+/// null.  A byval or byref argument also needs storageUnwrittenBetween.  On
+/// null the caller reports a non-byval argument or fills a slot of its own.
 ///
 /// The address has to have \p paramTy, the rewritten parameter's type, since a
-/// cir.load pins the pointee type without pinning the address space.  The
-/// storage it names has to be a slot allocated here, reached through
+/// cir.load pins the pointee type without pinning the address space.  An
+/// address_space cast of a \p paramTy pointer qualifies through its source.
+/// The storage it names has to be a slot allocated here, reached through
 /// storage-preserving casts, already stating at least \p minAlign.  The
 /// enclosing function's own non-byval parameter qualifies as well, since its
 /// slot stands until finalizeParameterSlots and prepareNonByvalParameters has
@@ -991,13 +992,21 @@ static cir::LoadOp getWholeRecordLoad(mlir::Value recordVal) {
 /// Raising a slot's alignment here would not hold for one that stands in
 /// for a parameter, since finalizeParameterSlots replaces it with the
 /// incoming pointer, which promises only what the caller gave it.
-static cir::LoadOp forwardableIndirectLoad(cir::LoadOp load,
+static mlir::Value forwardableIndirectAddr(cir::LoadOp load,
                                            cir::PointerType paramTy,
                                            uint64_t minAlign) {
-  if (!load || load.getAddr().getType() != paramTy)
+  if (!load)
     return {};
-  cir::AllocaOp slot = cir::getUnderlyingAlloca(load.getAddr());
-  return slot && slot.getAlignment() >= minAlign ? load : cir::LoadOp();
+  mlir::Value addr = load.getAddr();
+  // CIRGen reads an alloca outside the default address space through a cast.
+  if (auto view = addr.getDefiningOp<cir::CastOp>();
+      view && view.getKind() == cir::CastKind::address_space &&
+      view.getSrc().getType() == paramTy)
+    addr = view.getSrc();
+  if (addr.getType() != paramTy)
+    return {};
+  cir::AllocaOp slot = cir::getUnderlyingAlloca(addr);
+  return slot && slot.getAlignment() >= minAlign ? addr : mlir::Value();
 }
 
 /// True when \p aliasAnalysis shows that nothing between \p load and \p call
@@ -2243,14 +2252,14 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // loaded value, so a store to that storage after the load is visible to
       // the callee.  byval fills a slot below, this cannot.
       if (!byCopy) {
-        cir::LoadOp fwdLoad = forwardableIndirectLoad(srcLoad, ptrTy, minAlign);
-        if (!fwdLoad)
+        mlir::Value fwdAddr = forwardableIndirectAddr(srcLoad, ptrTy, minAlign);
+        if (!fwdAddr)
           return call->emitOpError()
                  << "non-byval indirect argument that does not name the "
                     "caller's storage is not yet implemented in "
                     "CallConvLowering";
-        newArgs.push_back(fwdLoad.getAddr());
-        deadRecordLoads.push_back(fwdLoad);
+        newArgs.push_back(fwdAddr);
+        deadRecordLoads.push_back(srcLoad);
         continue;
       }
 
@@ -2260,12 +2269,12 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // call, since the operand carries the value as of the load.  A volatile
       // load is not forwarded, since the copy byval takes at the call is not
       // volatile.
-      if (cir::LoadOp fwdLoad =
-              forwardableIndirectLoad(srcLoad, ptrTy, minAlign);
-          fwdLoad && storageUnwrittenBetween(fwdLoad, call.getOperation(),
+      if (mlir::Value fwdAddr =
+              forwardableIndirectAddr(srcLoad, ptrTy, minAlign);
+          fwdAddr && storageUnwrittenBetween(srcLoad, call.getOperation(),
                                              aliasAnalysis)) {
-        newArgs.push_back(fwdLoad.getAddr());
-        deadRecordLoads.push_back(fwdLoad);
+        newArgs.push_back(fwdAddr);
+        deadRecordLoads.push_back(srcLoad);
         continue;
       }
 
