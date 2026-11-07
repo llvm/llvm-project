@@ -142,11 +142,11 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:8 th:TH_LOAD_LU ; 4-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:8 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:12 th:TH_LOAD_LU ; 4-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:12 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0

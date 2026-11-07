@@ -249,7 +249,6 @@
 ; GCN-O2-NEXT:       amdgpu-nsa-reassign
 ; GCN-O2-NEXT:       amdgpu-rewrite-agpr-copy-mfma
 ; GCN-O2-NEXT:       virt-reg-rewriter
-; GCN-O2-NEXT:       amdgpu-mark-last-scratch-load
 ; GCN-O2-NEXT:       stack-slot-coloring
 ; GCN-O2-NEXT:       machine-cp
 ; GCN-O2-NEXT:       machinelicm
@@ -271,6 +270,7 @@
 ; GCN-O2-NEXT:       block-placement
 ; GCN-O2-NEXT:       fentry-insert
 ; GCN-O2-NEXT:       xray-instrumentation
+; GCN-O2-NEXT:       amdgpu-mark-last-scratch-load
 ; GCN-O2-NEXT:       gcn-create-vopd
 ; GCN-O2-NEXT:       si-memory-legalizer
 ; GCN-O2-NEXT:       si-post-ra-16bit-mov-folding
@@ -437,7 +437,6 @@
 ; GCN-O3-NEXT:       amdgpu-nsa-reassign
 ; GCN-O3-NEXT:       amdgpu-rewrite-agpr-copy-mfma
 ; GCN-O3-NEXT:       virt-reg-rewriter
-; GCN-O3-NEXT:       amdgpu-mark-last-scratch-load
 ; GCN-O3-NEXT:       stack-slot-coloring
 ; GCN-O3-NEXT:       machine-cp
 ; GCN-O3-NEXT:       machinelicm
@@ -459,6 +458,7 @@
 ; GCN-O3-NEXT:       block-placement
 ; GCN-O3-NEXT:       fentry-insert
 ; GCN-O3-NEXT:       xray-instrumentation
+; GCN-O3-NEXT:       amdgpu-mark-last-scratch-load
 ; GCN-O3-NEXT:       gcn-create-vopd
 ; GCN-O3-NEXT:       si-memory-legalizer
 ; GCN-O3-NEXT:       si-post-ra-16bit-mov-folding

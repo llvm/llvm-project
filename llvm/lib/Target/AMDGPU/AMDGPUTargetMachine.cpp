@@ -2009,8 +2009,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   addPass(createRegAllocScoringPass());
 
-  addPass(&AMDGPUMarkLastScratchLoadID);
-
   return true;
 }
 
@@ -2028,6 +2026,8 @@ void GCNPassConfig::addPreSched2() {
 }
 
 void GCNPassConfig::addPreEmitPass() {
+  if (getOptLevel() > CodeGenOptLevel::None)
+    addPass(&AMDGPUMarkLastScratchLoadID);
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
     addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
@@ -2758,7 +2758,6 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
   addPreRewrite(PMW);
   addMachineFunctionPass(VirtRegRewriterPass(true), PMW);
 
-  addMachineFunctionPass(AMDGPUMarkLastScratchLoadPass(), PMW);
   return true;
 }
 
@@ -2782,6 +2781,9 @@ void AMDGPUCodeGenPassBuilder::addPostBBSections(PassManagerWrapper &PMW) {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
+  // Needs the final order of the spill code.
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addMachineFunctionPass(AMDGPUMarkLastScratchLoadPass(), PMW);
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less)) {
     addMachineFunctionPass(GCNCreateVOPDPass(), PMW);
   }
