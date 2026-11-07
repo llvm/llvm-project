@@ -12552,11 +12552,37 @@ defm VPCOMPRESSB : compress_by_elt_width<0x63, "vpcompressb", WriteVarShuffle256
                                          avx512vl_i8_info, HasVBMI2>, EVEX;
 defm VPCOMPRESSW : compress_by_elt_width <0x63, "vpcompressw", WriteVarShuffle256,
                                           avx512vl_i16_info, HasVBMI2>, EVEX, REX_W;
+
+let Predicates = [HasVBMI2] in {
+  defm : compress_by_vec_width_lowering<avx512vl_f16_info.info512, "VPCOMPRESSW">;
+  defm : compress_by_vec_width_lowering<avx512vl_bf16_info.info512, "VPCOMPRESSW">;
+}
+
+let Predicates = [HasVBMI2, HasVLX] in {
+  defm : compress_by_vec_width_lowering<avx512vl_f16_info.info128, "VPCOMPRESSW">;
+  defm : compress_by_vec_width_lowering<avx512vl_f16_info.info256, "VPCOMPRESSW">;
+  defm : compress_by_vec_width_lowering<avx512vl_bf16_info.info128, "VPCOMPRESSW">;
+  defm : compress_by_vec_width_lowering<avx512vl_bf16_info.info256, "VPCOMPRESSW">;
+}
+
 // Expand
 defm VPEXPANDB : expand_by_elt_width <0x62, "vpexpandb", WriteVarShuffle256,
                                       avx512vl_i8_info, HasVBMI2>, EVEX;
 defm VPEXPANDW : expand_by_elt_width <0x62, "vpexpandw", WriteVarShuffle256,
                                       avx512vl_i16_info, HasVBMI2>, EVEX, REX_W;
+
+
+let Predicates = [HasVBMI2] in {
+  defm : expand_by_vec_width_lowering<avx512vl_f16_info.info512, "VPEXPANDW">;
+  defm : expand_by_vec_width_lowering<avx512vl_bf16_info.info512, "VPEXPANDW">;
+}
+
+let Predicates = [HasVBMI2, HasVLX] in {
+  defm : expand_by_vec_width_lowering<avx512vl_f16_info.info128, "VPEXPANDW">;
+  defm : expand_by_vec_width_lowering<avx512vl_f16_info.info256, "VPEXPANDW">;
+  defm : expand_by_vec_width_lowering<avx512vl_bf16_info.info128, "VPEXPANDW">;
+  defm : expand_by_vec_width_lowering<avx512vl_bf16_info.info256, "VPEXPANDW">;
+}
 
 // Use 512bit VPSHLD/VPSHRD version to implement 128/256 bit in case NoVLX.
 multiclass vbmi2_funnel_novlx<X86VectorVTInfo Dst, X86VectorVTInfo Src,
