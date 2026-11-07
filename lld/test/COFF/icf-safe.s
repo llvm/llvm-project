@@ -6,22 +6,22 @@
 # RUN: lld-link /dll /noentry /out:%t.dll /verbose /opt:noref,safeicf %t1.obj %t2.obj 2>&1 | FileCheck %s --check-prefix=SAFEICF
 
 # CHECK-NOT:  Selected
-# CHECK:      Selected f1
+# CHECK:      Selected g3
+# CHECK-NEXT:   Removed g4
+# CHECK-NEXT: Selected f1
 # CHECK-NEXT:   Removed f2
 # CHECK-NEXT:   Removed f3
 # CHECK-NEXT:   Removed f4
-# CHECK-NEXT: Selected g3
-# CHECK-NEXT:   Removed g4
 # CHECK-NOT:  {{.}}
 
 # EXPORT-NOT: Selected g3
 # EXPORT-NOT: Selected g4
 
 # SAFEICF-NOT:  Selected
-# SAFEICF:      Selected f3
-# SAFEICF-NEXT:   Removed f4
-# SAFEICF-NEXT: Selected g3
+# SAFEICF:      Selected g3
 # SAFEICF-NEXT:   Removed g4
+# SAFEICF-NEXT: Selected f3
+# SAFEICF-NEXT:   Removed f4
 # SAFEICF-NOT:  {{.}}
 
 .section .rdata,"dr",one_only,g1
