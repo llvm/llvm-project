@@ -3062,6 +3062,41 @@ define <16 x i16> @fptoui_v16f32_v16i16(<16 x float> %x) {
   ret <16 x i16> %conv
 }
 
+define <8 x i8> @v8f32_almost_clamped_s8(<8 x float> %in) {
+; CHECK-LABEL: v8f32_almost_clamped_s8:
+; CHECK:         .functype v8f32_almost_clamped_s8 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local v128, v128
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const -127, -127, -127, -127
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    i32x4.max_s
+; CHECK-NEXT:    v128.const 127, 127, 127, 127
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i32x4.min_s
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.max_s
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32x4.min_s
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <8 x float> %in to <8 x i32>
+  %max = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %conv, <8 x i32> splat (i32 -127))
+  %min = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %max, <8 x i32> splat (i32 127))
+  %res = trunc nsw <8 x i32> %min to <8 x i8>
+  ret <8 x i8> %res
+}
+
 declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i32> @llvm.smax.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i32> @llvm.umin.v2i32(<2 x i32>, <2 x i32>)

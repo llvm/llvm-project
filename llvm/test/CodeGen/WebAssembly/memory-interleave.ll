@@ -4007,7 +4007,7 @@ define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 no
 define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
 ; CHECK-LABEL: scale_uv_row_down2_box:
 ; CHECK:         .functype scale_uv_row_down2_box (i32, i32, i32, i32) -> ()
-; CHECK-NEXT:    .local i32, i32, i32, i32, v128, v128, i32, v128, v128, v128
+; CHECK-NEXT:    .local i32, i32, i32, i32, v128, v128, i32, v128, v128, v128, v128
 ; CHECK-NEXT:    block
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i32.const 1
@@ -4108,6 +4108,11 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK-NEXT:    i16x8.add
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i16x8.shr_u
+; CHECK-NEXT:    v128.const 255, 255, 255, 255, 255, 255, 255, 255
+; CHECK-NEXT:    local.tee 14
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i8x16.shuffle 1, 5, 9, 13, 17, 21, 25, 29, 0, 0, 0, 0, 0, 0, 0, 0
@@ -4131,7 +4136,11 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK-NEXT:    i16x8.add
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i16x8.shr_u
-; CHECK-NEXT:    i8x16.shuffle 0, 16, 2, 18, 4, 20, 6, 22, 8, 24, 10, 26, 12, 28, 14, 30
+; CHECK-NEXT:    local.get 14
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23
 ; CHECK-NEXT:    v128.store 0:p2align=0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 32
@@ -4493,7 +4502,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
 define hidden void @scale_argb_row_down2_box(ptr noundef readonly captures(none) %arg, i32 noundef %arg1, ptr noundef writeonly captures(none) %arg2, i32 noundef %arg3) local_unnamed_addr #0 {
 ; CHECK-LABEL: scale_argb_row_down2_box:
 ; CHECK:         .functype scale_argb_row_down2_box (i32, i32, i32, i32) -> ()
-; CHECK-NEXT:    .local i32, i32, i32, i32, v128, v128, v128, v128, i32, v128, v128, v128, v128, v128, v128, v128, v128
+; CHECK-NEXT:    .local i32, i32, i32, i32, v128, v128, v128, v128, i32, v128, v128, v128, v128, v128, v128, v128
 ; CHECK-NEXT:    block
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i32.const 1
@@ -4618,7 +4627,11 @@ define hidden void @scale_argb_row_down2_box(ptr noundef readonly captures(none)
 ; CHECK-NEXT:    i16x8.add
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i16x8.shr_u
+; CHECK-NEXT:    v128.const 255, 255, 255, 255, 255, 255, 255, 255
 ; CHECK-NEXT:    local.tee 18
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i8x16.shuffle 1, 9, 17, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -4658,8 +4671,12 @@ define hidden void @scale_argb_row_down2_box(ptr noundef readonly captures(none)
 ; CHECK-NEXT:    i16x8.add
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i16x8.shr_u
+; CHECK-NEXT:    local.get 18
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23
 ; CHECK-NEXT:    local.tee 19
-; CHECK-NEXT:    i8x16.shuffle 8, 24, 0, 0, 10, 26, 0, 0, 12, 28, 0, 0, 14, 30, 0, 0
 ; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i8x16.shuffle 2, 10, 18, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -4699,9 +4716,10 @@ define hidden void @scale_argb_row_down2_box(ptr noundef readonly captures(none)
 ; CHECK-NEXT:    i16x8.add
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i16x8.shr_u
-; CHECK-NEXT:    local.tee 20
-; CHECK-NEXT:    i16x8.extract_lane_u 4
-; CHECK-NEXT:    i8x16.replace_lane 2
+; CHECK-NEXT:    local.get 18
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i8x16.shuffle 3, 11, 19, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -4741,56 +4759,18 @@ define hidden void @scale_argb_row_down2_box(ptr noundef readonly captures(none)
 ; CHECK-NEXT:    i16x8.add
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i16x8.shr_u
+; CHECK-NEXT:    local.get 18
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23
 ; CHECK-NEXT:    local.tee 8
-; CHECK-NEXT:    i16x8.extract_lane_u 4
-; CHECK-NEXT:    i8x16.replace_lane 3
-; CHECK-NEXT:    local.get 20
-; CHECK-NEXT:    i16x8.extract_lane_u 5
-; CHECK-NEXT:    i8x16.replace_lane 6
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i16x8.extract_lane_u 5
-; CHECK-NEXT:    i8x16.replace_lane 7
-; CHECK-NEXT:    local.get 20
-; CHECK-NEXT:    i16x8.extract_lane_u 6
-; CHECK-NEXT:    i8x16.replace_lane 10
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i16x8.extract_lane_u 6
-; CHECK-NEXT:    i8x16.replace_lane 11
-; CHECK-NEXT:    local.get 20
-; CHECK-NEXT:    i16x8.extract_lane_u 7
-; CHECK-NEXT:    i8x16.replace_lane 14
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i16x8.extract_lane_u 7
-; CHECK-NEXT:    i8x16.replace_lane 15
+; CHECK-NEXT:    i8x16.shuffle 4, 12, 20, 28, 5, 13, 21, 29, 6, 14, 22, 30, 7, 15, 23, 31
 ; CHECK-NEXT:    v128.store 16:p2align=0
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 18
 ; CHECK-NEXT:    local.get 19
-; CHECK-NEXT:    i8x16.shuffle 0, 16, 0, 0, 2, 18, 0, 0, 4, 20, 0, 0, 6, 22, 0, 0
-; CHECK-NEXT:    local.get 20
-; CHECK-NEXT:    i16x8.extract_lane_u 0
-; CHECK-NEXT:    i8x16.replace_lane 2
 ; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i16x8.extract_lane_u 0
-; CHECK-NEXT:    i8x16.replace_lane 3
-; CHECK-NEXT:    local.get 20
-; CHECK-NEXT:    i16x8.extract_lane_u 1
-; CHECK-NEXT:    i8x16.replace_lane 6
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i16x8.extract_lane_u 1
-; CHECK-NEXT:    i8x16.replace_lane 7
-; CHECK-NEXT:    local.get 20
-; CHECK-NEXT:    i16x8.extract_lane_u 2
-; CHECK-NEXT:    i8x16.replace_lane 10
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i16x8.extract_lane_u 2
-; CHECK-NEXT:    i8x16.replace_lane 11
-; CHECK-NEXT:    local.get 20
-; CHECK-NEXT:    i16x8.extract_lane_u 3
-; CHECK-NEXT:    i8x16.replace_lane 14
-; CHECK-NEXT:    local.get 8
-; CHECK-NEXT:    i16x8.extract_lane_u 3
-; CHECK-NEXT:    i8x16.replace_lane 15
+; CHECK-NEXT:    i8x16.shuffle 0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27
 ; CHECK-NEXT:    v128.store 0:p2align=0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 64
@@ -5415,7 +5395,7 @@ define hidden void @argb_to_uv_matrix_row(ptr noundef readonly captures(none) %a
 ; CHECK-NEXT:    i32.const 8
 ; CHECK-NEXT:    i16x8.shr_u
 ; CHECK-NEXT:    local.get 25
-; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    v128.store64_lane 0:p2align=0, 0
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    local.get 17
@@ -5438,7 +5418,7 @@ define hidden void @argb_to_uv_matrix_row(ptr noundef readonly captures(none) %a
 ; CHECK-NEXT:    i32.const 8
 ; CHECK-NEXT:    i16x8.shr_u
 ; CHECK-NEXT:    local.get 25
-; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    v128.store64_lane 0:p2align=0, 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 64
