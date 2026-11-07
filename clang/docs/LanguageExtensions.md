@@ -1783,6 +1783,7 @@ More information can be found [here](Modules.md).
 | Variadic Friends                              | \_\_cpp_variadic_friend            | C++26         | C++03         |
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
 | `#embed`                                      | \_\_cpp_pp_embed                   | C++26         | C++03         |
+| `#embed` `offset` parameter                   | \_\_cpp_pp_embed >= 202606L        | C++2d         | C++03         |
 |``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
 | Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
 | Defaulted postfix `++` and `--` operators     |                                    | C++2d         | C++03         |
@@ -6961,9 +6962,14 @@ avoided.
 
 ## `#embed` Parameters
 
-### `clang::offset`
+### `offset` / `clang::offset`
 
-The `clang::offset` embed parameter may appear zero or one time in the
+The `offset` embed parameter is a standard parameter in C++2d
+([P3540R3](https://wg21.link/p3540r3)). Clang also supports it in earlier C++
+language modes and in C as an extension, and accepts `clang::offset` as an
+older spelling of the same parameter in all language modes.
+
+The parameter may appear zero or one time in the
 embed parameter sequence. Its preprocessor argument clause shall be present and
 have the form:
 
