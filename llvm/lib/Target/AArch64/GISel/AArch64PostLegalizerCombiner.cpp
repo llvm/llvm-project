@@ -562,9 +562,10 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
   return true;
 }
 
-/// Lower a vector G_ASHR/G_LSHR by a non-immediate amount to SSHL/USHL of the
-/// negated amount, so the negation can be combined (e.g. folded into a
-/// constant). Splat-immediate shifts are left for vashr_vlshr_imm.
+/// Match a vector G_ASHR/G_LSHR whose amount is not a valid immediate. These
+/// are lowered to SSHL/USHL of the negated amount by vashr_to_sshl and
+/// vlshr_to_ushl, so the negation can be folded into a constant amount.
+/// Splat-immediate shifts are left for vashr_vlshr_imm.
 bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
          MI.getOpcode() == TargetOpcode::G_LSHR);
@@ -575,21 +576,6 @@ bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
   int64_t Cnt;
   return !AArch64GISelUtils::isVShiftRImm(MI.getOperand(2).getReg(), MRI, Ty,
                                           Cnt);
-}
-
-void applyVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B) {
-  B.setInstrAndDebugLoc(MI);
-  Register Dst = MI.getOperand(0).getReg();
-  LLT Ty = MRI.getType(Dst);
-  auto Neg = B.buildSub(Ty, B.buildConstant(Ty, 0), MI.getOperand(2).getReg());
-  Intrinsic::ID IntrID = MI.getOpcode() == TargetOpcode::G_ASHR
-                             ? Intrinsic::aarch64_neon_sshl
-                             : Intrinsic::aarch64_neon_ushl;
-  B.buildIntrinsic(IntrID, ArrayRef<Register>{Dst})
-      .addUse(MI.getOperand(1).getReg())
-      .addUse(Neg.getReg(0));
-  MI.eraseFromParent();
 }
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {
