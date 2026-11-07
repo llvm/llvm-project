@@ -8,6 +8,7 @@ static_library("mach-core") {
     "//lldb/source/Plugins/DynamicLoader/Darwin-Kernel",
     "//lldb/source/Plugins/DynamicLoader/MacOSX-DYLD",
     "//lldb/source/Plugins/ObjectFile/Mach-O",
+    "//lldb/source/Register",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",

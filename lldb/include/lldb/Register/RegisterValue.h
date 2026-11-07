@@ -1,13 +1,18 @@
-//===-- RegisterValue.h -----------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Owned register values and conversions between scalars and encoded bytes.
+///
+//===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_REGISTERVALUE_H
-#define LLDB_UTILITY_REGISTERVALUE_H
+#ifndef LLDB_REGISTER_REGISTERVALUE_H
+#define LLDB_REGISTER_REGISTERVALUE_H
 
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/RegisterInfo.h"
@@ -26,6 +31,11 @@ namespace lldb_private {
 class DataExtractor;
 class Stream;
 
+/// An owned scalar or byte sequence representing one register value.
+///
+/// Scalar storage uses host byte order; byte storage retains the byte order
+/// supplied by the producer. Memory conversion methods bridge that distinction.
+/// This object owns no register identity, target metadata, or process state.
 class RegisterValue {
 public:
   enum {
@@ -91,33 +101,44 @@ public:
 
   RegisterValue::Type GetType() const { return m_type; }
 
+  /// Copy the representation and owned bytes; return false for an invalid
+  /// source.
   bool CopyValue(const RegisterValue &rhs);
 
+  /// Change the representation tag without converting the existing value.
   void SetType(RegisterValue::Type type) { m_type = type; }
 
+  /// Select storage from the register encoding and width without populating a
+  /// value. Return eTypeInvalid when the encoding or width is unsupported.
   RegisterValue::Type SetType(const RegisterInfo &reg_info);
 
+  /// Expose a borrowed view of the current representation and its byte order.
+  /// The view must not outlive this value or a mutation of its storage. Return
+  /// false when the representation has no data.
   bool GetData(DataExtractor &data) const;
 
-  /// Copy \p byte_size bytes from this value into \p data using \p byte_order.
+  /// Create an owning extractor for the least significant requested bytes,
+  /// converted to the requested byte order. Return false when the value is too
+  /// short or either byte order is invalid.
   bool GetData(DataExtractor &data, uint32_t byte_size,
                lldb::ByteOrder byte_order) const;
 
-  // Copy the register value from this object into a buffer in "dst" and obey
-  // the "dst_byte_order" when copying the data. Also watch out in case
-  // "dst_len" is longer or shorter than the register value described by
-  // "reg_info" and only copy the least significant bytes of the register
-  // value, or pad the destination with zeroes if the register byte size is
-  // shorter that "dst_len" (all while correctly abiding the "dst_byte_order").
-  // Returns the number of bytes copied into "dst".
+  /// Copy a register-width value to a buffer in the requested byte order. Copy
+  /// its least significant bytes when the destination is shorter, or pad with
+  /// zeroes when it is longer. Return the bytes copied, or zero on error.
   uint32_t GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
                            uint32_t dst_len, lldb::ByteOrder dst_byte_order,
                            Status &error) const;
 
+  /// Decode source bytes using the register encoding and declared width. Short
+  /// inputs are zero-padded in the supplied byte order; oversized inputs are
+  /// rejected. Return the number of source bytes consumed, or zero on error.
   uint32_t SetFromMemoryData(const RegisterInfo &reg_info, const void *src,
                              uint32_t src_len, lldb::ByteOrder src_byte_order,
                              Status &error);
 
+  /// Copy a scalar interpretation when supported by the current representation.
+  /// Return false when the value cannot be represented as a Scalar.
   bool GetScalarValue(Scalar &scalar) const;
 
   uint8_t GetAsUInt8(uint8_t fail_value = UINT8_MAX,
@@ -154,8 +175,12 @@ public:
 
   void SetValueToInvalid() { m_type = eTypeInvalid; }
 
+  /// Clear a bit of a supported integer or byte representation. Return false
+  /// when the bit or representation is unsupported.
   bool ClearBit(uint32_t bit);
 
+  /// Set a bit of a supported integer or byte representation. Return false when
+  /// the bit or representation is unsupported.
   bool SetBit(uint32_t bit);
 
   bool operator==(const RegisterValue &rhs) const;
@@ -227,6 +252,8 @@ public:
     m_scalar = std::move(uint);
   }
 
+  /// Choose integer storage large enough for the requested byte width. A zero
+  /// width selects 64-bit storage; widths above 16 bytes are unsupported.
   bool SetUInt(uint64_t uint, uint32_t byte_size);
 
   void SetFloat(float f) {
@@ -244,18 +271,31 @@ public:
     m_scalar = f;
   }
 
+  /// Copy bytes and retain their byte order. Null or empty input invalidates
+  /// the value; the caller can release the source buffer after this call.
   void SetBytes(const void *bytes, size_t length, lldb::ByteOrder byte_order);
 
+  /// Extend the selected sign bit through integer storage. Return false for
+  /// non-integer representations or an invalid sign position.
   bool SignExtend(uint32_t sign_bitpos);
 
+  /// Parse a scalar or vector value using the register encoding and width.
+  /// Return an error for malformed input or a value that does not fit.
   Status SetValueFromString(const RegisterInfo *reg_info,
                             llvm::StringRef value_str);
   Status SetValueFromString(const RegisterInfo *reg_info,
                             const char *value_str) = delete;
 
+  /// Decode a register at the supplied offset without changing the extractor.
+  /// When partial data is allowed, missing bytes are zero-padded; otherwise a
+  /// short input is an error. The register encoding determines the
+  /// representation.
   Status SetValueFromData(const RegisterInfo &reg_info, DataExtractor &data,
                           lldb::offset_t offset, bool partial_data_ok);
 
+  /// Return borrowed representation bytes, or nullptr for an invalid value.
+  /// Interpret these bytes using GetByteOrder(), not necessarily target byte
+  /// order.
   const void *GetBytes() const;
 
   lldb::ByteOrder GetByteOrder() const {
@@ -266,6 +306,7 @@ public:
 
   uint32_t GetByteSize() const;
 
+  /// Discard the current value and mark it invalid.
   void Clear();
 
 protected:
@@ -283,4 +324,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_REGISTERVALUE_H
+#endif // LLDB_REGISTER_REGISTERVALUE_H

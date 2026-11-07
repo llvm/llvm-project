@@ -7,6 +7,7 @@ add_lldb_library(lldbPluginObjectFileMinidump PLUGIN
   LINK_LIBS
     lldbCore
     lldbHost
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

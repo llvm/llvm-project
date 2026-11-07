@@ -20,7 +20,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterType.h"
+#include "lldb/Register/RegisterType.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"

@@ -3,6 +3,7 @@ static_library("InstEmulation") {
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
   deps = [
     "//lldb/source/Core",
+    "//lldb/source/Register",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
   ]

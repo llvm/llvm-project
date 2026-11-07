@@ -11,7 +11,7 @@
 #include "NativeRegisterContextFreeBSD_arm64.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"

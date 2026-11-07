@@ -39,7 +39,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"

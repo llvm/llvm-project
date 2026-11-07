@@ -18,7 +18,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"

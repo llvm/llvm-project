@@ -31,7 +31,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/Locked.h"
-#include "lldb/Utility/RegisterType.h"
+#include "lldb/Register/RegisterType.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"

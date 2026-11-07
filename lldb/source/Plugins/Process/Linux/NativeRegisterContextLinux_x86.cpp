@@ -17,7 +17,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
 #include <algorithm>

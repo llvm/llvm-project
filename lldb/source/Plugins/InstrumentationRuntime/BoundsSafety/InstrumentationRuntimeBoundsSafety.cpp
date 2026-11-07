@@ -24,7 +24,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 

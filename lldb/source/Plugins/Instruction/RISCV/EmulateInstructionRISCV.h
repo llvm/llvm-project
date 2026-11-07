@@ -14,7 +14,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 

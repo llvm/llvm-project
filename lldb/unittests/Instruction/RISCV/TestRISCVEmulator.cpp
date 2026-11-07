@@ -13,7 +13,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
 #include "Register/Common/RegisterInfo_riscv32.h"

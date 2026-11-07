@@ -14,7 +14,7 @@
 #include "lldb/Core/Opcode.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Register/Common/RegisterInfo_arm64.h"

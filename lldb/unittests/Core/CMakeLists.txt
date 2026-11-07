@@ -35,6 +35,7 @@ add_lldb_unittest(LLDBCoreTests
     lldbPluginPlatformMacOSX
     lldbPluginRustLanguage
     lldbPluginSymbolFileSymtab
+    lldbRegister
     lldbSymbol
     lldbUtilityHelpers
     lldbHostHelpers

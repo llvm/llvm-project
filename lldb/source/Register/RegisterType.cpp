@@ -5,8 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Dependency-ordered XML serialization and size checks for register type graphs.
+///
+//===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/RegisterType.h"
+#include "lldb/Register/RegisterType.h"
 
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
@@ -22,6 +27,9 @@
 
 using namespace lldb_private;
 
+/// Allocate process-wide object identities without ordering unrelated state.
+/// XML IDs can be reused by different target descriptions; cache identities
+/// must not be reused when a type object is destroyed.
 static std::atomic<uint64_t> g_next_register_type_uid{1};
 
 RegisterType::RegisterType(RegisterTypeKind kind, std::string id)

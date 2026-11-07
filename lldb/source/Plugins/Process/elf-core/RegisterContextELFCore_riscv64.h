@@ -15,7 +15,7 @@
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <memory>
 

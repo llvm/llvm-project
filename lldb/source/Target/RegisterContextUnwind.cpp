@@ -34,7 +34,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"

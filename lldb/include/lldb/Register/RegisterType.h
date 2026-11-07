@@ -1,13 +1,18 @@
-//===------------------------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Semantic types used to interpret register values and describe them in XML.
+///
+//===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_REGISTERTYPE_H
-#define LLDB_UTILITY_REGISTERTYPE_H
+#ifndef LLDB_REGISTER_REGISTERTYPE_H
+#define LLDB_REGISTER_REGISTERTYPE_H
 
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
@@ -23,6 +28,11 @@ namespace lldb_private {
 class Stream;
 class Log;
 
+/// Semantic interpretation of a register value, independent of its storage.
+///
+/// The XML ID names a type within a target description; GetUID() identifies
+/// this particular object for host-side caches. Dependencies and composite
+/// child types are borrowed and must outlive the types that reference them.
 class RegisterType {
 public:
   enum RegisterTypeKind {
@@ -41,9 +51,11 @@ public:
   RegisterType(RegisterType &&) = delete;
   RegisterType &operator=(RegisterType &&) = delete;
 
-  /// Output XML that describes this type, to be inserted into a target XML
-  /// file. Reserved characters like "<" are replaced with their XML safe
-  /// equivalents like "&lt;".
+  /// Emit dependencies before this definition, escaping XML attribute values.
+  ///
+  /// \p previously_emitted is shared across one target description and
+  /// suppresses duplicate definitions by XML ID, not by host-side object
+  /// identity.
   virtual void ToXML(Stream &strm,
                      std::unordered_set<std::string> &previously_emitted,
                      const RegisterType *user = nullptr) const;
@@ -59,6 +71,7 @@ public:
   virtual void ToXMLElement(Stream &strm,
                             const RegisterType *user = nullptr) const = 0;
 
+  /// Return the target-description identifier used for XML type references.
   const std::string &GetID() const { return m_id; }
 
   /// Return an identifier unique among all RegisterType instances constructed
@@ -70,6 +83,8 @@ public:
   /// it depends on the target.
   virtual std::optional<uint64_t> GetByteSize() const { return std::nullopt; }
 
+  /// Record borrowed types that must be emitted before this type in target XML.
+  /// This does not transfer ownership or extend their lifetimes.
   void SetDependencies(std::vector<const RegisterType *> dependencies) {
     m_dependencies = dependencies;
   }
@@ -129,6 +144,9 @@ public:
   const RegisterType *GetElementType() const { return m_element_type; }
   uint32_t GetCount() const { return m_count; }
   std::optional<uint64_t> GetByteSize() const override;
+
+  /// Check whether this type can describe a register of the supplied byte size.
+  /// Target-sized builtin elements are resolved using the enclosing size.
   bool IsByteSizeCompatible(uint64_t byte_size) const;
 
   void DumpToLog(Log *log) const;
@@ -149,6 +167,7 @@ private:
 /// the same register data. Referenced field types must outlive the union.
 class RegisterTypeUnion : public RegisterTypeComposite {
 public:
+  /// One alternative interpretation of a union value; the type is borrowed.
   class Field {
   public:
     Field(std::string name, const RegisterType *type);
@@ -182,4 +201,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_REGISTERTYPE_H
+#endif // LLDB_REGISTER_REGISTERTYPE_H

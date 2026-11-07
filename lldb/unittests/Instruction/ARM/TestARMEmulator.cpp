@@ -13,7 +13,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 
 #include <map>
 

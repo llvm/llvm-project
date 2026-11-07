@@ -30,7 +30,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "lldb/ValueObject/DILLexer.h"
 #include "lldb/ValueObject/DILParser.h"

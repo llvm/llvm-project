@@ -14,7 +14,7 @@
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterInfo.h"
-#include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Register/RegisterTypeFlags.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 

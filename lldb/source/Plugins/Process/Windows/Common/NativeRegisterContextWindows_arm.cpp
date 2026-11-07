@@ -18,7 +18,7 @@
 #include "lldb/Host/windows/windows.h"
 
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;

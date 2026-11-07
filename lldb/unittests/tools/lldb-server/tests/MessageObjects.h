@@ -10,7 +10,7 @@
 #define LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
 
 #include "lldb/Host/Host.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"

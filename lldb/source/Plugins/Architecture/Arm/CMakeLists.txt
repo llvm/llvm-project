@@ -6,6 +6,7 @@ add_lldb_library(lldbPluginArchitectureArm PLUGIN
   LINK_LIBS
     lldbPluginProcessUtility
     lldbCore
+    lldbRegister
     lldbTarget
     lldbUtility
   )

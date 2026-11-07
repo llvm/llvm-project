@@ -8,6 +8,7 @@ add_lldb_library(lldbPluginProcessNetBSD
     Support
   LINK_LIBS
     lldbHost
+    lldbRegister
     lldbSymbol
     lldbTarget
     lldbUtility

@@ -6,6 +6,7 @@ add_lldb_library(lldbPluginProcessWasm PLUGIN
 
   LINK_LIBS
     lldbCore
+    lldbRegister
   LINK_COMPONENTS
     Support
   )

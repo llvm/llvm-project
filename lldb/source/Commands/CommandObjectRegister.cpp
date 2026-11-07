@@ -28,7 +28,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"

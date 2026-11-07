@@ -19,7 +19,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-forward.h"

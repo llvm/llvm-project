@@ -33,7 +33,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/TargetSelect.h"

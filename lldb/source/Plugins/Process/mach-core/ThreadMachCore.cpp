@@ -25,7 +25,7 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"

@@ -11,7 +11,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Register/RegisterValue.h"
 #include "gtest/gtest.h"
 
 #include "Plugins/Instruction/LoongArch/EmulateInstructionLoongArch.h"

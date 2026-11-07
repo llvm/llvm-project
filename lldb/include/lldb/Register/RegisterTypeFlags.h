@@ -1,19 +1,24 @@
-//===------------------------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Named integer values and bit fields used to display structured registers.
+///
+//===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_REGISTERTYPEFLAGS_H
-#define LLDB_UTILITY_REGISTERTYPEFLAGS_H
+#ifndef LLDB_REGISTER_REGISTERTYPEFLAGS_H
+#define LLDB_REGISTER_REGISTERTYPEFLAGS_H
 
 #include <stdint.h>
 #include <string>
 #include <vector>
 
-#include "lldb/Utility/RegisterType.h"
+#include "lldb/Register/RegisterType.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace lldb_private {
@@ -21,8 +26,11 @@ namespace lldb_private {
 class Stream;
 class Log;
 
+/// Named values for an integer register or a field within a flags register. The
+/// same enumeration can be reused by fields of different enclosing widths.
 class RegisterTypeEnum : public RegisterType {
 public:
+  /// One numeric value and its display name in an integer enumeration.
   struct Enumerator {
     uint64_t m_value;
     // Short name for the value. Shown in tables and when printing the field's
@@ -59,8 +67,15 @@ private:
   Enumerators m_enumerators;
 };
 
+/// A register interpreted as named bit fields, with padding made explicit.
+///
+/// Fields use inclusive bit positions counted from the least significant bit,
+/// independent of the byte order of a saved register image. Enumeration types
+/// referenced by fields are borrowed and must outlive this object.
 class RegisterTypeFlags : public RegisterType {
 public:
+  /// A named inclusive bit range, optionally interpreted by an enumeration.
+  /// Unnamed fields represent padding when rendering a register layout.
   class Field {
   public:
     /// Where start is the least significant bit and end is the most
@@ -98,6 +113,8 @@ public:
     unsigned GetStart() const { return m_start; }
     unsigned GetEnd() const { return m_end; }
     const RegisterTypeEnum *GetEnum() const { return m_enum_type; }
+
+    /// Return whether either inclusive bit range intersects the other.
     bool Overlaps(const Field &other) const;
     void DumpToLog(Log *log) const;
 
@@ -145,12 +162,12 @@ public:
   /// enum values, and lists what those values are.
   std::string DumpEnums(uint32_t max_width) const;
 
-  // Reverse the order of the fields, keeping their values the same.
-  // For example a field from bit 31 to 30 with value 0b10 will become bits
-  // 1 to 0, with the same 0b10 value.
-  // Use this when you are going to show the register using a bitfield struct
-  // type. If that struct expects MSB first and you are on little endian where
-  // LSB would be first, this corrects that (and vice versa for big endian).
+  /// Reverse the order of the fields, keeping their values the same.
+  /// For example a field from bit 31 to 30 with value 0b10 will become bits
+  /// 1 to 0, with the same 0b10 value.
+  /// Use this when you are going to show the register using a bitfield struct
+  /// type. If that struct expects MSB first and you are on little endian where
+  /// LSB would be first, this corrects that (and vice versa for big endian).
   template <typename T> T ReverseFieldOrder(T value) const {
     T ret = 0;
     unsigned shift = 0;
@@ -189,4 +206,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_REGISTERTYPEFLAGS_H
+#endif // LLDB_REGISTER_REGISTERTYPEFLAGS_H
