@@ -837,7 +837,6 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
   MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
-  MRI->clearKillFlags(NewDef);
   MI.eraseFromParent();
 
   return true;
@@ -853,8 +852,6 @@ bool AArch64MIPeepholeOptImpl::visitFMOVDr(MachineInstr &MI) {
   Register OldDef = MI.getOperand(0).getReg();
   Register NewDef = MI.getOperand(1).getReg();
   LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
-  MRI->clearKillFlags(OldDef);
-  MRI->clearKillFlags(NewDef);
   MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
   MI.eraseFromParent();
