@@ -72,6 +72,9 @@
 ; CHECK-NEXT: declare i16 @__clzdi2(i64) addrspace(1)
 ; CHECK-NEXT: declare i16 @__clzsi2(i32) addrspace(1)
 ; CHECK-NEXT: declare i16 @__clzti2(i128) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzdi2(i64) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzsi2(i32) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzti2(i128) addrspace(1)
 ; CHECK-NEXT: declare double @__divdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare i64 @__divdi3(i64, i64) addrspace(1)
 ; CHECK-NEXT: declare cc86 inreg { i16, i16 } @__divmodhi4(i16, i16) addrspace(1) [[DIVMOD_ATTRS:#[0-9]+]]

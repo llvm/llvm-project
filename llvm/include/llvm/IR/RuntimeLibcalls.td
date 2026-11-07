@@ -290,6 +290,7 @@ foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
 foreach IntTy = [TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
   def CTLZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
+  def CTTZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
   def CTPOP_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
 }
 
@@ -1299,6 +1300,10 @@ def __negdi2 : RuntimeLibcallImpl<NEG_I64>;
 def __clzsi2 : RuntimeLibcallImpl<CTLZ_I32>;
 def __clzdi2 : RuntimeLibcallImpl<CTLZ_I64>;
 def __clzti2 : RuntimeLibcallImpl<CTLZ_I128>;
+
+def __ctzsi2 : RuntimeLibcallImpl<CTTZ_I32>;
+def __ctzdi2 : RuntimeLibcallImpl<CTTZ_I64>;
+def __ctzti2 : RuntimeLibcallImpl<CTTZ_I128>;
 
 def __popcountsi2 : RuntimeLibcallImpl<CTPOP_I32>;
 def __popcountdi2 : RuntimeLibcallImpl<CTPOP_I64>;
