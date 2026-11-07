@@ -96,6 +96,8 @@ class AArch64AsmPrinter : public AsmPrinter {
   bool PtrauthInitFiniAddressDisc = false;
 #ifndef NDEBUG
   unsigned InstsEmitted;
+  bool ExplicitWinCFIRangeOpen = false;
+  bool EmittedExplicitWinCFIRange = false;
 #endif
   bool EnableImportCallOptimization = false;
   MapVector<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
@@ -110,6 +112,10 @@ public:
         MCInstLowering(OutContext, *this), FM(*this) {}
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
+
+  bool hasExplicitWinCFIRanges() const override {
+    return AArch64FI->hasExplicitWinCFIRanges();
+  }
 
   /// Wrapper for MCInstLowering.lowerOperand() for the
   /// tblgen'erated pseudo lowering.
@@ -314,6 +320,10 @@ public:
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
     STI = &MF.getSubtarget<AArch64Subtarget>();
 
+#ifndef NDEBUG
+    ExplicitWinCFIRangeOpen = false;
+    EmittedExplicitWinCFIRange = false;
+#endif
     SetupMachineFunction(MF);
 
     if (STI->isTargetCOFF()) {
@@ -344,6 +354,7 @@ public:
                               uint64_t Offset = 0) override;
 
 private:
+  void emitInstructionImpl(const MachineInstr *MI);
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
   bool printAsmMRegister(const MachineOperand &MO, char Mode, raw_ostream &O);
   bool printAsmRegInClass(const MachineOperand &MO,
@@ -1180,6 +1191,14 @@ void AArch64AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
 }
 
 void AArch64AsmPrinter::emitFunctionBodyEnd() {
+#ifndef NDEBUG
+  assert(!ExplicitWinCFIRangeOpen &&
+         "Explicit Windows CFI range is still open at function end");
+  assert(EmittedExplicitWinCFIRange == AArch64FI->hasExplicitWinCFIRanges() &&
+         "Explicit Windows CFI ranges should only be used for flagged "
+         "functions. If a function is flagged then it must have explicit "
+         "Windows CFI ranges.");
+#endif
   if (!AArch64FI->getLOHRelated().empty())
     emitLOHs();
 }
@@ -3458,6 +3477,19 @@ void AArch64AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 }
 
 void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
+  emitInstructionImpl(MI);
+  if (!MI->isBundledWithSucc())
+    return;
+
+  const MachineInstr *EndProc = MI->getNextNode();
+  assert(MI->isTerminator() && "Unexpected late AArch64 bundle head");
+  assert(EndProc->getOpcode() == AArch64::SEH_EndProc &&
+         !EndProc->isBundledWithSucc() &&
+         "Unexpected late AArch64 bundle member");
+  emitInstructionImpl(EndProc);
+}
+
+void AArch64AsmPrinter::emitInstructionImpl(const MachineInstr *MI) {
   AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
 
 #ifndef NDEBUG
@@ -3980,6 +4012,26 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::HWASAN_CHECK_MEMACCESS_FIXEDSHADOW:
   case AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
+    return;
+
+  case AArch64::SEH_StartProc:
+#ifndef NDEBUG
+    assert(!ExplicitWinCFIRangeOpen && "Starting an explicit Windows CFI range "
+                                       "before ending the previous one");
+    ExplicitWinCFIRangeOpen = true;
+    EmittedExplicitWinCFIRange = true;
+#endif
+    OutStreamer->emitWinCFIStartProc(CurrentFnSym);
+    return;
+
+  case AArch64::SEH_EndProc:
+#ifndef NDEBUG
+    assert(ExplicitWinCFIRangeOpen &&
+           "Ending an explicit Windows CFI range without a matching start");
+    ExplicitWinCFIRangeOpen = false;
+#endif
+    OutStreamer->emitWinCFIFuncletOrFuncEnd();
+    OutStreamer->emitWinCFIEndProc();
     return;
 
   case AArch64::SEH_EndC:
