@@ -168,7 +168,7 @@ void FakeStack::HandleNoReturn() { needs_gc_ = true; }
 // we are notified about all such events by HandleNoReturn().
 // If we recently had such no-return event we need to collect garbage frames.
 // We do it based on their 'real_stack' values -- everything that is lower
-// than the current real_stack is garbage.
+// than the current real_stack is garbage (higher where the stack grows up).
 NOINLINE void FakeStack::GC(uptr real_stack) {
   AsanThread* curr_thread = GetCurrentThread();
   if (!curr_thread)
@@ -187,7 +187,11 @@ NOINLINE void FakeStack::GC(uptr real_stack) {
       FakeFrame* ff =
           reinterpret_cast<FakeFrame*>(GetFrame(stack_size_log(), class_id, i));
       // GC only on the default stack.
+#if SANITIZER_HPPA
+      if (real_stack < ff->real_stack && ff->real_stack < top) {
+#else
       if (bottom < ff->real_stack && ff->real_stack < real_stack) {
+#endif
         flags[i] = 0;
         // Poison the frame, so the any access will be reported as UAR.
         SetShadow(reinterpret_cast<uptr>(ff), BytesInSizeClass(class_id),
@@ -371,6 +375,19 @@ void __asan_alloca_poison(uptr addr, uptr size) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __asan_allocas_unpoison(uptr top, uptr bottom) {
+#if SANITIZER_HPPA
+  // The stack grows up: the allocas lie between bottom and this frame, and
+  // none of that memory is live any more.
+  if (!top)
+    return;
+  uptr local;
+  uptr begin = RoundDownTo(bottom, ASAN_SHADOW_GRANULARITY);
+  uptr end = RoundDownTo((uptr)&local, ASAN_SHADOW_GRANULARITY);
+  if (begin < end)
+    REAL(memset)(reinterpret_cast<void*>(MemToShadow(begin)), 0,
+                 (end - begin) / ASAN_SHADOW_GRANULARITY);
+  return;
+#endif
   if ((!top) || (top > bottom))
     return;
   REAL(memset)(reinterpret_cast<void*>(MemToShadow(top)), 0,
