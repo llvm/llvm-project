@@ -1,5 +1,3 @@
-
-
 add_entrypoint_object(
   canonicalize
   SRCS
@@ -3315,6 +3313,16 @@ add_entrypoint_object(
     ../isnanf16.h
   DEPENDS
     libc.src.__support.math.isnanf16
+)
+
+add_entrypoint_object(
+  isnanbf16
+  SRCS
+    isnanbf16.cpp
+  HDRS
+    ../isnanbf16.h
+  DEPENDS
+    libc.src.__support.math.isnanbf16
 )
 
 add_entrypoint_object(
