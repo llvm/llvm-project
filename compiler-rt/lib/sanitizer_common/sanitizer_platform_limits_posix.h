@@ -1626,6 +1626,12 @@ struct __sanitizer_servent {
 
 extern const int si_SEGV_MAPERR;
 extern const int si_SEGV_ACCERR;
+
+#  if __has_include(<threads.h>)
+extern const int threads_mtx_plain;
+extern const int threads_mtx_recursive;
+extern const int threads_mtx_timed;
+#  endif
 }  // namespace __sanitizer
 
 #  define CHECK_TYPE_SIZE(TYPE) \
