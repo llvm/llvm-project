@@ -87,6 +87,7 @@ static int ActOnMatchingPlugins(
 int SetEnableOnMatchingPlugins(const llvm::StringRef &pattern,
                                CommandReturnObject &result, bool enabled,
                                Debugger &requesting_debugger,
+                               lldb::TargetSP selected_target,
                                PluginDomainKind domain) {
   return ActOnMatchingPlugins(
       pattern, [&](const PluginNamespace &plugin_namespace,
@@ -136,7 +137,8 @@ int SetEnableOnMatchingPlugins(const llvm::StringRef &pattern,
           }
           assert(plugin_namespace.GetSetEnabledAllDomainsFn().has_value());
           llvm::Error error = (*plugin_namespace.GetSetEnabledAllDomainsFn())(
-              plugin.name, enabled, requesting_debugger, domain);
+              plugin.name, enabled, requesting_debugger, selected_target,
+              domain);
 
           if (error) {
             result.AppendErrorWithFormatv("failed to {} plugin {}.{}: {}",
@@ -274,34 +276,55 @@ protected:
       for (size_t i = 0; i < argc; ++i)
         patterns.push_back(command[i].ref());
 
+    Debugger &requesting_debugger = GetDebugger();
+    TargetSP selected_target = GetCommandInterpreter().GetSelectedTarget();
     if (m_options.m_json_format)
-      OutputJsonFormat(patterns, result, GetDebugger(), m_options.m_domain);
+      OutputJsonFormat(patterns, result, requesting_debugger, selected_target,
+                       m_options.m_domain);
     else
-      OutputTextFormat(patterns, result, GetDebugger(), m_options.m_domain);
+      OutputTextFormat(patterns, result, requesting_debugger, selected_target,
+                       m_options.m_domain);
   }
 
 private:
   void OutputJsonFormat(const std::vector<llvm::StringRef> &patterns,
                         CommandReturnObject &result,
                         Debugger &requesting_debugger,
+                        lldb::TargetSP selected_target,
                         PluginDomainKind domain) {
-    if (domain != PluginDomainKind::ePluginDomainKindGlobal) {
-      result.AppendErrorWithFormatv(
-          "{} domain is not supported",
-          PluginManager::PluginDomainKindToStr(domain));
-      return;
-    }
-
     llvm::json::Object obj;
     bool found_empty = false;
     for (const llvm::StringRef pattern : patterns) {
-      llvm::json::Object pat_obj = PluginManager::GetJSON(pattern);
+      llvm::json::Object pat_obj = PluginManager::GetJSON(
+          pattern, requesting_debugger.shared_from_this(), selected_target,
+          domain);
       if (pat_obj.empty()) {
         found_empty = true;
         result.AppendErrorWithFormat(
             "Found no matching plugins for pattern '%s'", pattern.data());
         break;
       }
+
+      // Report any errors querying plugin enablement as command errors. These
+      // are reported in the same order and format as the text output. The
+      // errors are also kept in the JSON output.
+      for (const PluginNamespace &plugin_ns :
+           PluginManager::GetPluginNamespaces()) {
+        const llvm::json::Array *plugins = pat_obj.getArray(plugin_ns.name);
+        if (!plugins)
+          continue;
+        for (const llvm::json::Value &plugin : *plugins) {
+          const llvm::json::Object *plugin_obj = plugin.getAsObject();
+          if (!plugin_obj)
+            continue;
+          if (std::optional<llvm::StringRef> error =
+                  plugin_obj->getString("error"))
+            result.AppendErrorWithFormatv(
+                "{0}.{1}: {2}", plugin_ns.name,
+                plugin_obj->getString("name").value_or("<missing>"), *error);
+        }
+      }
+
       for (auto &entry : pat_obj) {
         obj[entry.first] = std::move(entry.second);
       }
@@ -314,22 +337,27 @@ private:
   void OutputTextFormat(const std::vector<llvm::StringRef> &patterns,
                         CommandReturnObject &result,
                         Debugger &requesting_debugger,
+                        lldb::TargetSP selected_target,
                         PluginDomainKind domain) {
-    if (domain != PluginDomainKind::ePluginDomainKindGlobal) {
-      result.AppendErrorWithFormatv(
-          "{} domain is not supported",
-          PluginManager::PluginDomainKindToStr(domain));
-      return;
-    }
-
     for (const llvm::StringRef pattern : patterns) {
       int num_matching = ActOnMatchingPlugins(
           pattern, [&](const PluginNamespace &plugin_namespace,
                        const std::vector<RegisteredPluginInfo> &plugins) {
             result.AppendMessage(plugin_namespace.name);
             for (auto &plugin : plugins) {
+              auto enabled = PluginManager::IsPluginEnabled(
+                  plugin_namespace, plugin, selected_target, domain);
+              if (llvm::Error E = enabled.takeError()) {
+                // Report the error and carry on so that the enablement of the
+                // other plugins is still reported. This uses the same format
+                // as the errors reported by `OutputJsonFormat()`.
+                result.AppendErrorWithFormatv(
+                    "{0}.{1}: {2}", plugin_namespace.name, plugin.name,
+                    llvm::toString(std::move(E)));
+                continue;
+              }
               result.AppendMessageWithFormatv("  {0} {1, -30} {2}",
-                                              plugin.enabled ? "[+]" : "[-]",
+                                              *enabled ? "[+]" : "[-]",
                                               plugin.name, plugin.description);
             }
           });
@@ -346,6 +374,7 @@ private:
 
 static void DoPluginEnableDisable(Args &command, CommandReturnObject &result,
                                   bool enable, Debugger &requesting_debugger,
+                                  lldb::TargetSP selected_target,
                                   PluginDomainKind domain) {
   const char *name = enable ? "enable" : "disable";
   size_t argc = command.GetArgumentCount();
@@ -358,8 +387,8 @@ static void DoPluginEnableDisable(Args &command, CommandReturnObject &result,
 
   for (size_t i = 0; i < argc; ++i) {
     llvm::StringRef pattern = command[i].ref();
-    int num_matching = SetEnableOnMatchingPlugins(pattern, result, enable,
-                                                  requesting_debugger, domain);
+    int num_matching = SetEnableOnMatchingPlugins(
+        pattern, result, enable, requesting_debugger, selected_target, domain);
 
     if (num_matching == 0) {
       result.AppendErrorWithFormat(
@@ -440,6 +469,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     DoPluginEnableDisable(command, result, /*enable=*/true, GetDebugger(),
+                          GetCommandInterpreter().GetSelectedTarget(),
                           m_options.m_domain);
   }
 
@@ -470,6 +500,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     DoPluginEnableDisable(command, result, /*enable=*/false, GetDebugger(),
+                          GetCommandInterpreter().GetSelectedTarget(),
                           m_options.m_domain);
   }
 
