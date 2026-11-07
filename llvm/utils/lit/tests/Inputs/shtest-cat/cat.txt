@@ -74,3 +74,15 @@
 ## Test that cat will pipe stdin to stdout if no other files are specified.
 # RUN: echo test | cat | FileCheck --check-prefix=CAT-STDIN %s
 # CAT-STDIN: test
+
+## Test that cat reads stdin in place of a "-" operand.
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: echo "abcdefgh" > %t/temp1.write
+# RUN: echo "mnopqrst" > %t/temp2.write
+# RUN: echo "efghijkl" | cat %t/temp1.write - %t/temp2.write | \
+# RUN:      FileCheck --check-prefix=DASH-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
+#      DASH-CAT-OUTPUT:abcdefgh
+# DASH-CAT-OUTPUT-NEXT:efghijkl
+# DASH-CAT-OUTPUT-NEXT:mnopqrst

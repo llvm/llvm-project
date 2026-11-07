@@ -71,7 +71,9 @@ def run(argv, stdin, stdout, stderr, cwd):
 
         contents = None
         is_text = False
-        if platform.system() == "OS/390":
+        if filename == "-":
+            contents = stdin.read()
+        elif platform.system() == "OS/390":
             try:
                 with open(path, "r") as fileToCat:
                     contents = fileToCat.read()
