@@ -8,22 +8,24 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
-  // [stacktrace.entry], class stacktrace_­entry
+#if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
+
+  // [stacktrace.entry], class stacktrace_entry
   using std::stacktrace_entry;
 
-  // [stacktrace.basic], class template basic_­stacktrace
+  // [stacktrace.basic], class template basic_stacktrace
   using std::basic_stacktrace;
 
-  // basic_­stacktrace typedef-names
+  // basic_stacktrace typedef-names
   using std::stacktrace;
 
   // [stacktrace.basic.nonmem], non-member functions
   using std::swap;
 
+#  if _LIBCPP_HAS_LOCALIZATION
   using std::to_string;
-
   using std::operator<<;
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
   namespace pmr {
     using std::pmr::stacktrace;
@@ -31,5 +33,11 @@ export namespace std {
 
   // [stacktrace.basic.hash], hash support
   using std::hash;
-#endif
+
+  // [stacktrace.format], formatting support
+  // (Excluded for now; issue #105257 will implement
+  // P2693R1, "Formatting thread::id and stacktrace")
+  // using std::formatter;
+
+#endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 } // namespace std
