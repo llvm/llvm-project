@@ -65,6 +65,8 @@ public:
                                  lldb_private::FileSpec &shared_cache_filepath,
                                  std::optional<uint64_t> &size) override;
 
+  bool SharedCacheInUse() override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 

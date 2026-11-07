@@ -1145,6 +1145,22 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
   return false;
 }
 
+bool DynamicLoaderMacOSXDYLD::SharedCacheInUse() {
+  addr_t binary_or_allimageinfo = m_process->GetImageInfoAddress();
+  if (binary_or_allimageinfo == LLDB_INVALID_ADDRESS)
+    return false;
+  Status err;
+  uint32_t version_or_magic = m_process->ReadUnsignedIntegerFromMemory(
+      binary_or_allimageinfo, 4, -1, err);
+  if (err.Success() && version_or_magic != static_cast<uint32_t>(-1) &&
+      version_or_magic != llvm::MachO::MH_MAGIC &&
+      version_or_magic != llvm::MachO::MH_CIGAM &&
+      version_or_magic != llvm::MachO::MH_MAGIC_64 &&
+      version_or_magic != llvm::MachO::MH_CIGAM_64 && version_or_magic >= 13)
+    return true;
+  return false;
+}
+
 bool DynamicLoaderMacOSXDYLD::IsFullyInitialized() {
   if (ReadAllImageInfosStructure())
     return m_dyld_all_image_infos.libSystemInitialized;

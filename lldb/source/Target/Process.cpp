@@ -18,6 +18,7 @@
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -2831,6 +2832,108 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
     return module_sp;
 
   return error.takeError();
+}
+
+std::optional<std::string>
+Process::GetHeaderBytesCacheKey(const FileSpec &file_spec, const UUID &uuid,
+                                lldb::addr_t header_addr) {
+  if (!uuid.IsValid())
+    return {};
+
+  DynamicLoader *dyld = GetDynamicLoader();
+  if (dyld && dyld->SharedCacheInUse()) {
+    // On a Darwin system with a shared cache, a binary will have its
+    // file addresses changed when the shared cache is constructed.
+    addr_t base_addr;
+    UUID shared_cache_uuid;
+    LazyBool using_shared_cache;
+    LazyBool private_shared_cache;
+    FileSpec sc_filepath;
+    std::optional<uint64_t> size;
+    // Without the shared cache range we can't tell if this binary is
+    // in it, and a key without the shared cache UUID may not be unique.
+    if (!dyld->GetSharedCacheInformation(
+            base_addr, shared_cache_uuid, using_shared_cache,
+            private_shared_cache, sc_filepath, size) ||
+        !size || !shared_cache_uuid.IsValid() ||
+        base_addr == LLDB_INVALID_ADDRESS)
+      return {};
+    if (header_addr >= base_addr && header_addr - base_addr < *size)
+      return llvm::formatv("{0}-{1}-sharedcache-{2}-headerbytes",
+                           file_spec.GetFilename(), uuid.GetAsString(),
+                           shared_cache_uuid.GetAsString());
+  }
+
+  return llvm::formatv("{0}-{1}-headerbytes", file_spec.GetFilename(),
+                       uuid.GetAsString());
+}
+
+bool Process::LoadHeaderBytesFromCache(DataFileCache &cache,
+                                       llvm::StringRef cache_key,
+                                       lldb::addr_t header_addr,
+                                       size_t size_to_read) {
+  // Read the memory bytes out of the DataFileCache, if it is there.
+  std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
+      cache.GetCachedData(cache_key);
+  if (mem_buffer_up && mem_buffer_up->getBufferSize() >= size_to_read) {
+    // Stuff the header bytes into the Process memory cache.
+    // The ObjectFile will read the bytes from there at this
+    // same stop.  ReadMemory strips non-addressable bits before
+    // looking in the memory cache, so do the same here.
+    // Only add the requested bytes; anything past them may be
+    // stale contents of the next segment.
+    lldb::addr_t cache_addr = FixAnyAddress(header_addr);
+    WritableDataBufferSP databuf_sp = std::make_shared<DataBufferHeap>(
+        mem_buffer_up->getBufferStart(), size_to_read);
+    AddCacheData(cache_addr, databuf_sp);
+    return true;
+  }
+
+  // SetCachedData won't overwrite an existing entry, so remove
+  // one that is too small to use.
+  if (mem_buffer_up)
+    cache.RemoveCacheFile(cache_key);
+  return false;
+}
+
+llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
+    const FileSpec &file_spec, const UUID &uuid, lldb::addr_t header_addr,
+    size_t size_to_read) {
+  // Don't cache the headerbytes when corefile debugging; reading
+  // from the corefile is just as fast.  The cached bytes are handed
+  // to the ObjectFile through the process memory cache, so they are
+  // of no use when that is disabled.  If no UUID, the cache_key name
+  // may not be unique.
+  DataFileCache *cache = nullptr;
+  if (IsLiveDebugSession() && !GetDisableMemoryCache())
+    cache = Module::GetIndexCache(/*memory_module=*/true);
+  if (!cache)
+    return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  std::optional<std::string> cache_key =
+      GetHeaderBytesCacheKey(file_spec, uuid, header_addr);
+  if (!cache_key)
+    return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  if (LoadHeaderBytesFromCache(*cache, *cache_key, header_addr, size_to_read))
+    return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  llvm::Expected<ModuleSP> module_sp_or_err =
+      ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  // Only cache bytes that produced a module with the expected UUID,
+  // so a bad read isn't handed to every later debug session.
+  if (module_sp_or_err && (*module_sp_or_err)->GetUUID() == uuid) {
+    // These bytes are in the memory cache now, so this doesn't
+    // read from the inferior again.
+    std::vector<uint8_t> data(size_to_read);
+    Status error;
+    if (ReadMemory(header_addr, data.data(), size_to_read, error) ==
+            size_to_read &&
+        error.Success())
+      cache->SetCachedData(*cache_key, data);
+  }
+  return module_sp_or_err;
 }
 
 bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,

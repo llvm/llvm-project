@@ -2,6 +2,7 @@ import time
 import lldb
 import glob
 import re
+import struct
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -28,7 +29,7 @@ class MemoryReadModuleSymtabTestCase(TestBase):
 
     def memory_read_requests(self, logfile):
         """Scan a gdb-remote packet log for memory read requests,
-        return an array of [start-address, end-address] entries."""
+        return an array of [start-address, end-address) entries."""
         self.assertTrue(os.path.exists(logfile), "packet log was created")
         log_text = [s.rstrip() for s in open(logfile).readlines()]
         read_lines = [line for line in log_text if "send packet: $x" in line]
@@ -51,11 +52,26 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         module_file_glob = os.path.join(cache_dir, "llvmcache-*a.out*-symtab-*")
         self.assertEqual(len(glob.glob(module_file_glob)), 1)
 
+        # Check that we have the header bytes cached for a.out.
+        module_file_glob = os.path.join(cache_dir, "llvmcache-a.out-*-headerbytes")
+        self.assertEqual(len(glob.glob(module_file_glob)), 1)
+
         # Check that we don't have a symtab for a system library.
         module_file_glob = os.path.join(
             cache_dir, "llvmcache-*libsystem_c.dylib*-symtab-*"
         )
         self.assertEqual(len(glob.glob(module_file_glob)), 0)
+
+    def header_and_load_commands_size(self, cache_dir):
+        """Return the size of a.out's mach_header_64 and load commands,
+        parsed from the cached 'headerbytes' file."""
+        module_file_glob = os.path.join(cache_dir, "llvmcache-a.out-*-headerbytes")
+        headerbytes_files = glob.glob(module_file_glob)
+        self.assertEqual(len(headerbytes_files), 1)
+        with open(headerbytes_files[0], "rb") as f:
+            magic, _, _, _, _, sizeofcmds, _, _ = struct.unpack("<8I", f.read(32))
+        self.assertEqual(magic, 0xFEEDFACF, "headerbytes is a mach_header_64")
+        return 32 + sizeofcmds
 
     def attach_to_process(self, pid):
         target = self.dbg.CreateTarget(None)
@@ -115,7 +131,7 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         self.dbg.MemoryPressureDetected()
 
         # Enable logging of gdb-remote packets, to look for any
-        # reads of a.out's __LINKEDIT in this second attach.
+        # reads of a.out's __TEXT or __LINKEDIT in this second attach.
         logfile = self.packet_log("packets")
 
         # Second attach:  Read the DataFileCache for the MemoryModule.
@@ -127,9 +143,14 @@ class MemoryReadModuleSymtabTestCase(TestBase):
 
         exe_filespec = lldb.SBFileSpec("a.out")
         exe_module = target.FindModule(exe_filespec)
-        print(exe_module)
+        exe_text = exe_module.FindSection("__TEXT")
+        self.assertTrue(exe_text.IsValid())
+        exe_header_start = exe_text.GetLoadAddress(target)
+        exe_header_end = exe_header_start + self.header_and_load_commands_size(
+            cache_dir
+        )
+
         exe_linkedit = exe_module.FindSection("__LINKEDIT")
-        print(exe_linkedit)
         self.assertTrue(exe_linkedit.IsValid())
         linkedit_startaddr = exe_linkedit.GetLoadAddress(target)
         linkedit_endaddr = linkedit_startaddr + exe_linkedit.GetByteSize()
@@ -139,16 +160,34 @@ class MemoryReadModuleSymtabTestCase(TestBase):
 
         # Iterate through the start & end address of every memory
         # read packet, and confirm that none of them are within
-        # the VM range of a.out's __LINKEDIT.  The SymbolTable for
-        # a.out should be gotten from the DataFileCache, not memory.
-        for addrs in memory_read_addrs:
-            for addr in addrs:
-                if addr >= linkedit_startaddr and addr < linkedit_endaddr:
-                    print(
-                        "Address 0x%x was read from a.out's __LINKEDIT; all symbol table information should have been retrieved from DataFileCache of it."
-                        % addr
-                    )
-                    if self.TraceOn():
-                        self.runCmd("target modules dump sections a.out")
-                        print("Read of address 0x%x is within LINKEDIT" % addr)
-                self.assertFalse(addr >= linkedit_startaddr and addr < linkedit_endaddr)
+        #   1. the VM range of a.out's Mach-O header and load commands
+        #      (not all of the padding before __text, which a read of the
+        #      start of __text, grown down to a cache line, may touch)
+        #   2. the VM range of __LINKEDIT.
+        #
+        # The Mach-O header and load commands should have been read from
+        # the 'headerbytes' DataCacheFile, and the SymbolTable aka LINKEDIT
+        # should have been read from the 'symtab' DataCacheFile.
+        # All ranges are half-open [start, end).
+        for read_start, read_end in memory_read_addrs:
+            reads_header = read_start < exe_header_end and exe_header_start < read_end
+            reads_linkedit = (
+                read_start < linkedit_endaddr and linkedit_startaddr < read_end
+            )
+            if (reads_header or reads_linkedit) and self.TraceOn():
+                self.runCmd("target modules dump sections a.out")
+
+            self.assertFalse(
+                reads_header,
+                "Read of [0x%x-0x%x) overlaps a.out's Mach-O header and load "
+                "commands [0x%x-0x%x); it should have been retrieved from the "
+                "'headerbytes' DataFileCache file."
+                % (read_start, read_end, exe_header_start, exe_header_end),
+            )
+            self.assertFalse(
+                reads_linkedit,
+                "Read of [0x%x-0x%x) overlaps a.out's __LINKEDIT [0x%x-0x%x); "
+                "the symbol table should have been retrieved from the 'symtab' "
+                "DataFileCache file."
+                % (read_start, read_end, linkedit_startaddr, linkedit_endaddr),
+            )
