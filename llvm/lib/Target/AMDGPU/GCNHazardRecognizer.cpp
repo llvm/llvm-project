@@ -270,7 +270,8 @@ void GCNHazardRecognizer::updateTRANSState(const MachineInstr &MI) {
 void GCNHazardRecognizer::updateMultiCycleVALUState(const MachineInstr &MI) {
   if (!hasCoExecWindowModel())
     return;
-  // Multi-cycle VALU (CVT, etc.) blocks subsequent VALU for BlockingCycles cycles.
+  // Multi-cycle VALU (CVT, etc.) blocks subsequent VALU for BlockingCycles
+  // cycles.
   if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
     return;
 
@@ -285,7 +286,8 @@ void GCNHazardRecognizer::updateMultiCycleVALUState(const MachineInstr &MI) {
     // hazard check (same convention as CyclesUntilTRANS), so to expose
     // BlockingCycles-1 cycles of shadow we must seed with BlockingCycles.
     CyclesUntilVALU = BlockingCycles;
-    LLVM_DEBUG(dbgs() << "    Multi-cycle VALU: BlockingCycles=" << BlockingCycles
+    LLVM_DEBUG(dbgs() << "    Multi-cycle VALU: BlockingCycles="
+                      << BlockingCycles
                       << ", CyclesUntilVALU=" << CyclesUntilVALU << "\n");
   }
 }
