@@ -621,17 +621,21 @@ static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
   return false;
 }
 
-// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd).
-static bool isFMinFMax(unsigned Opcode) {
+namespace {
+enum class FMinFMaxKind { None, Scalar, Vector, ScalarNM, VectorNM };
+} // end anonymous namespace
+
+// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd), and their
+// number (NM) variants.
+static FMinFMaxKind getFMinFMaxKind(unsigned Opcode) {
   switch (Opcode) {
-  // Scalar.
   case AArch64::FMAXHrr:
   case AArch64::FMAXSrr:
   case AArch64::FMAXDrr:
   case AArch64::FMINHrr:
   case AArch64::FMINSrr:
   case AArch64::FMINDrr:
-  // Vector.
+    return FMinFMaxKind::Scalar;
   case AArch64::FMAXv4f16:
   case AArch64::FMAXv8f16:
   case AArch64::FMAXv2f32:
@@ -642,22 +646,41 @@ static bool isFMinFMax(unsigned Opcode) {
   case AArch64::FMINv2f32:
   case AArch64::FMINv4f32:
   case AArch64::FMINv2f64:
-    return true;
+    return FMinFMaxKind::Vector;
+  case AArch64::FMAXNMHrr:
+  case AArch64::FMAXNMSrr:
+  case AArch64::FMAXNMDrr:
+  case AArch64::FMINNMHrr:
+  case AArch64::FMINNMSrr:
+  case AArch64::FMINNMDrr:
+    return FMinFMaxKind::ScalarNM;
+  case AArch64::FMAXNMv4f16:
+  case AArch64::FMAXNMv8f16:
+  case AArch64::FMAXNMv2f32:
+  case AArch64::FMAXNMv4f32:
+  case AArch64::FMAXNMv2f64:
+  case AArch64::FMINNMv4f16:
+  case AArch64::FMINNMv8f16:
+  case AArch64::FMINNMv2f32:
+  case AArch64::FMINNMv4f32:
+  case AArch64::FMINNMv2f64:
+    return FMinFMaxKind::VectorNM;
   }
-  return false;
+  return FMinFMaxKind::None;
 }
 
-// FMIN + FMAX.
+// FMIN + FMAX, or FMINNM + FMAXNM, both scalar or both vector.
 static bool isFMinFMaxPair(const MachineInstr *FirstMI,
                            const MachineInstr &SecondMI) {
-  if (!isFMinFMax(SecondMI.getOpcode()))
+  FMinFMaxKind SecondKind = getFMinFMaxKind(SecondMI.getOpcode());
+  if (SecondKind == FMinFMaxKind::None)
     return false;
 
   // Assume the 1st instr to be a wildcard if it is unspecified.
   if (FirstMI == nullptr)
     return true;
 
-  if (!isFMinFMax(FirstMI->getOpcode()))
+  if (getFMinFMaxKind(FirstMI->getOpcode()) != SecondKind)
     return false;
 
   return mayHaveWAWDependency(*FirstMI, SecondMI);
