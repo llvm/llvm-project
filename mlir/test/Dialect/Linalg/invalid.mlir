@@ -2466,3 +2466,27 @@ func.func @reduce_no_inputs() {
       }
   func.return
 }
+
+
+
+// -----
+
+// Vectors are shaped types but not supported by structured Linalg ops.
+// Previously this hit llvm_unreachable in the elementwise region builder.
+func.func @elementwise_vector_operands(%v: vector<4xf32>, %o: tensor<4xf32>) -> tensor<4xf32> {
+  %r = linalg.elementwise kind=#linalg.elementwise_kind<add>
+      // expected-error@+1 {{expected tensor or memref operand, got 'vector<4xf32>'}}
+      ins(%v, %v : vector<4xf32>, vector<4xf32>)
+      outs(%o : tensor<4xf32>) -> tensor<4xf32>
+  return %r : tensor<4xf32>
+}
+
+// -----
+
+func.func @elementwise_vector_input_tensor_output(%v: vector<4xf32>, %o: tensor<4xf32>) -> tensor<4xf32> {
+  %r = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+      // expected-error@+1 {{expected tensor or memref operand, got 'vector<4xf32>'}}
+      ins(%v : vector<4xf32>)
+      outs(%o : tensor<4xf32>) -> tensor<4xf32>
+  return %r : tensor<4xf32>
+}
