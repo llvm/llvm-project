@@ -11,6 +11,7 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS
 
+#include <cstddef>
 #include <deque>
 #include <forward_list>
 #include <list>
@@ -22,6 +23,10 @@
 #include <vector>
 
 #include "test_macros.h"
+
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+#  include <hive>
+#endif
 
 void containers() {
   std::deque<int> a;
@@ -38,6 +43,9 @@ void containers() {
   std::string l;
   std::vector<int> m;
   std::vector<bool> n;
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+  std::hive<int> o;
+#endif
 }
 
 void container_iterators() {
@@ -85,3 +93,7 @@ void container_const_iterators() {
   std::vector<bool>::const_iterator n;
 #endif
 }
+
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+void hive_types(std::size_t min, std::size_t max) { std::hive_limits a(min, max); }
+#endif

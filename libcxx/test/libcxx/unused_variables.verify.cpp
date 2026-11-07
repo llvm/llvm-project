@@ -11,6 +11,7 @@
 
 #include <barrier>
 #include <condition_variable>
+#include <cstddef>
 #include <deque>
 #include <forward_list>
 #include <latch>
@@ -27,6 +28,10 @@
 
 #include "test_macros.h"
 
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+#  include <hive>
+#endif
+
 void containers() {
   std::deque<int> a;                   // expected-warning {{unused variable}}
   std::forward_list<int> b;            // expected-warning {{unused variable}}
@@ -42,6 +47,9 @@ void containers() {
   std::string l;                       // expected-warning {{unused variable}}
   std::vector<int> m;                  // expected-warning {{unused variable}}
   std::vector<bool> n;                 // expected-warning {{unused variable}}
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+  std::hive<int> o; // expected-warning {{unused variable}}
+#endif
 }
 
 void container_iterators() {
@@ -59,6 +67,9 @@ void container_iterators() {
   std::string::iterator l;                       // expected-warning {{unused variable}}
   std::vector<int>::iterator m;                  // expected-warning {{unused variable}}
   std::vector<bool>::iterator n;                 // expected-warning {{unused variable}}
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+  std::hive<int>::iterator o; // expected-warning {{unused variable}}
+#endif
 }
 
 void container_const_iterators() {
@@ -76,7 +87,17 @@ void container_const_iterators() {
   std::string::const_iterator l;                       // expected-warning {{unused variable}}
   std::vector<int>::const_iterator m;                  // expected-warning {{unused variable}}
   std::vector<bool>::const_iterator n;                 // expected-warning {{unused variable}}
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+  std::hive<int>::const_iterator o; // expected-warning {{unused variable}}
+#endif
 }
+
+#if TEST_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+// Runtime arguments: without the attribute Clang only diagnoses a constant-evaluable initializer.
+void hive_types(std::size_t min, std::size_t max) {
+  std::hive_limits a(min, max); // expected-warning {{unused variable}}
+}
+#endif
 
 #ifndef TEST_HAS_NO_THREADS
 void synchronization(std::mutex& m) {

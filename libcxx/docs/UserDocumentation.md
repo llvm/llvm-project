@@ -64,6 +64,7 @@ when `-fexperimental-library` is passed:
 - The parallel algorithms library (`<execution>` and the associated algorithms)
 - `std::chrono::tzdb` and related time zone functionality
 - `<syncstream>`
+- `<hive>`
 
 Additionally, assertion semantics are an experimental feature that can be used
 to customize the behavior of Hardening (see {ref}`here <assertion-semantics>`).

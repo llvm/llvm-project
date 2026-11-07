@@ -1,0 +1,214 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_HIVE
+#define _LIBCPP_HIVE
+
+/*
+  Header <hive> synopsis
+
+#include <initializer_list>     // see [initializer.list.syn]
+#include <compare>              // see [compare.syn]
+
+namespace std {
+  struct hive_limits {
+    size_t min;
+    size_t max;
+    constexpr hive_limits(size_t minimum, size_t maximum) noexcept
+      : min(minimum), max(maximum) {}
+  };
+
+  // [hive], class template hive
+  template<class T, class Allocator = allocator<T>> class hive;
+
+  template<class T, class Allocator>
+    void swap(hive<T, Allocator>& x, hive<T, Allocator>& y)
+      noexcept(noexcept(x.swap(y)));
+
+  template<class T, class Allocator, class U = T>
+    typename hive<T, Allocator>::size_type
+      erase(hive<T, Allocator>& c, const U& value);
+
+  template<class T, class Allocator, class Predicate>
+    typename hive<T, Allocator>::size_type
+      erase_if(hive<T, Allocator>& c, Predicate pred);
+
+  namespace pmr {
+    template<class T>
+      using hive = std::hive<T, polymorphic_allocator<T>>;
+  }
+
+  template<class T, class Allocator = allocator<T>>
+  class hive {
+  public:
+    // types
+    using value_type = T;
+    using allocator_type = Allocator;
+    using pointer = allocator_traits<Allocator>::pointer;
+    using const_pointer = allocator_traits<Allocator>::const_pointer;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using size_type = implementation-defined;                               // see [container.requirements]
+    using difference_type = implementation-defined;                         // see [container.requirements]
+    using iterator = implementation-defined;                                // see [container.requirements]
+    using const_iterator = implementation-defined;                          // see [container.requirements]
+    using reverse_iterator = std::reverse_iterator<iterator>;               // see [container.requirements]
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;   // see [container.requirements]
+
+    // [hive.cons], construct/copy/destroy
+    constexpr hive() noexcept(noexcept(Allocator())) : hive(Allocator()) {}
+    constexpr explicit hive(const Allocator&) noexcept;
+    constexpr explicit hive(hive_limits block_limits) : hive(block_limits, Allocator()) {}
+    constexpr hive(hive_limits block_limits, const Allocator&);
+    explicit hive(size_type n, const Allocator& = Allocator());
+    hive(size_type n, hive_limits block_limits, const Allocator& = Allocator());
+    hive(size_type n, const T& value, const Allocator& = Allocator());
+    hive(size_type n, const T& value, hive_limits block_limits, const Allocator& = Allocator());
+    template<class InputIterator>
+      hive(InputIterator first, InputIterator last, const Allocator& = Allocator());
+    template<class InputIterator>
+      hive(InputIterator first, InputIterator last, hive_limits block_limits,
+           const Allocator& = Allocator());
+    template<container-compatible-range<T> R>
+      hive(from_range_t, R&& rg, const Allocator& = Allocator());
+    template<container-compatible-range<T> R>
+      hive(from_range_t, R&& rg, hive_limits block_limits, const Allocator& = Allocator());
+    hive(const hive& x);
+    hive(hive&&) noexcept;
+    hive(const hive& x, const type_identity_t<Allocator>& alloc);
+    hive(hive&&, const type_identity_t<Allocator>& alloc);
+    hive(initializer_list<T> il, const Allocator& = Allocator());
+    hive(initializer_list<T> il, hive_limits block_limits, const Allocator& = Allocator());
+    ~hive();
+
+    hive& operator=(const hive& x);
+    hive& operator=(hive&& x) noexcept(see below);
+    hive& operator=(initializer_list<T>);
+    template<class InputIterator>
+      void assign(InputIterator first, InputIterator last);
+    template<container-compatible-range<T> R>
+      void assign_range(R&& rg);
+    void assign(size_type n, const T& t);
+    void assign(initializer_list<T>);
+    allocator_type get_allocator() const noexcept;
+
+    // iterators
+    iterator               begin() noexcept;
+    const_iterator         begin() const noexcept;
+    iterator               end() noexcept;
+    const_iterator         end() const noexcept;
+    reverse_iterator       rbegin() noexcept;
+    const_reverse_iterator rbegin() const noexcept;
+    reverse_iterator       rend() noexcept;
+    const_reverse_iterator rend() const noexcept;
+    const_iterator         cbegin() const noexcept;
+    const_iterator         cend() const noexcept;
+    const_reverse_iterator crbegin() const noexcept;
+    const_reverse_iterator crend() const noexcept;
+
+    // [hive.capacity], capacity
+    bool empty() const noexcept;
+    size_type size() const noexcept;
+    size_type max_size() const noexcept;
+    size_type capacity() const noexcept;
+    void reserve(size_type n);
+    void shrink_to_fit();
+    void trim_capacity() noexcept;
+    void trim_capacity(size_type n) noexcept;
+    constexpr hive_limits block_capacity_limits() const noexcept;
+    static constexpr hive_limits block_capacity_default_limits() noexcept;
+    static constexpr hive_limits block_capacity_hard_limits() noexcept;
+    static constexpr bool is_within_hard_limits(hive_limits) noexcept;
+    void reshape(hive_limits block_limits);
+
+    // [hive.modifiers], modifiers
+    template<class... Args> iterator emplace(Args&&... args);
+    template<class... Args> iterator emplace_hint(const_iterator hint, Args&&... args);
+    iterator insert(const T& x);
+    iterator insert(T&& x);
+    iterator insert(const_iterator hint, const T& x);
+    iterator insert(const_iterator hint, T&& x);
+    void insert(initializer_list<T> il);
+    template<container-compatible-range<T> R>
+      void insert_range(R&& rg);
+    template<class InputIterator>
+      void insert(InputIterator first, InputIterator last);
+    void insert(size_type n, const T& x);
+
+    iterator erase(const_iterator position);
+    iterator erase(const_iterator first, const_iterator last);
+    void swap(hive&) noexcept(see below);
+    void clear() noexcept;
+
+    // [hive.operations], hive operations
+    void splice(hive& x);
+    void splice(hive&& x);
+    template<class BinaryPredicate = equal_to<T>>
+      size_type unique(BinaryPredicate binary_pred = BinaryPredicate());
+
+    template<class Compare = less<T>>
+      void sort(Compare comp = Compare());
+
+    iterator get_iterator(const_pointer p) noexcept;
+    const_iterator get_iterator(const_pointer p) const noexcept;
+
+  private:
+    hive_limits current-limits = implementation-defined;     // exposition only
+  };
+
+  template<class InputIterator, class Allocator = allocator<iter-value-type<InputIterator>>>
+    hive(InputIterator, InputIterator, Allocator = Allocator())
+      -> hive<iter-value-type<InputIterator>, Allocator>;
+
+  template<class InputIterator, class Allocator = allocator<iter-value-type<InputIterator>>>
+    hive(InputIterator, InputIterator, hive_limits, Allocator = Allocator())
+      -> hive<iter-value-type<InputIterator>, Allocator>;
+
+  template<ranges::input_range R, class Allocator = allocator<ranges::range_value_t<R>>>
+    hive(from_range_t, R&&, Allocator = Allocator())
+      -> hive<ranges::range_value_t<R>, Allocator>;
+
+  template<ranges::input_range R, class Allocator = allocator<ranges::range_value_t<R>>>
+    hive(from_range_t, R&&, hive_limits, Allocator = Allocator())
+      -> hive<ranges::range_value_t<R>, Allocator>;
+}
+*/
+
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
+#  include <__config>
+
+#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_HIVE
+#    include <__hive/hive.h>
+#  endif
+
+// for feature-test macros
+#  include <version>
+
+// standard required includes
+
+// [iterator.range]
+#  include <__iterator/access.h>
+#  include <__iterator/data.h>
+#  include <__iterator/empty.h>
+#  include <__iterator/reverse_access.h>
+#  include <__iterator/size.h>
+
+// [hive.syn]
+#  include <compare>
+#  include <initializer_list>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+
+#endif // _LIBCPP_HIVE

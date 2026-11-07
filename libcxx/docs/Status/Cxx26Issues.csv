@@ -138,7 +138,7 @@
 "[LWG4231](https://wg21.link/LWG4231)","`datapar::chunk<N>` should use `simd-size-type` instead of `size_t`","2025-06 (Sofia)","","","[#148215](https://github.com/llvm/llvm-project/issues/148215)",""
 "[LWG4232](https://wg21.link/LWG4232)","`datapar::resize` does not resize","2025-06 (Sofia)","","","[#148216](https://github.com/llvm/llvm-project/issues/148216)",""
 "[LWG4233](https://wg21.link/LWG4233)","The helper lambda of `std::erase` for `hive` should specify return type as `bool`","2025-06 (Sofia)","","","[#148217](https://github.com/llvm/llvm-project/issues/148217)",""
-"[LWG4234](https://wg21.link/LWG4234)","Including `<hive>` doesn't provide `std::begin/end`","2025-06 (Sofia)","","","[#148218](https://github.com/llvm/llvm-project/issues/148218)",""
+"[LWG4234](https://wg21.link/LWG4234)","Including `<hive>` doesn't provide `std::begin/end`","2025-06 (Sofia)","{{Complete}}","24","[#148218](https://github.com/llvm/llvm-project/issues/148218)",""
 "[LWG4235](https://wg21.link/LWG4235)","`cache_latest_view` and `to_input_view` miss `reserve_hint`","2025-06 (Sofia)","","","[#148219](https://github.com/llvm/llvm-project/issues/148219)",""
 "[LWG4236](https://wg21.link/LWG4236)","`chunk_view::outer-iterator::value_type` should provide `reserve_hint`","2025-06 (Sofia)","","","[#148220](https://github.com/llvm/llvm-project/issues/148220)",""
 "[LWG4239](https://wg21.link/LWG4239)","`flat_map`'s transparent comparator no longer works for string literals","2025-06 (Sofia)","","","[#148223](https://github.com/llvm/llvm-project/issues/148223)",""

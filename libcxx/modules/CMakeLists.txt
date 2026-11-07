@@ -52,6 +52,7 @@ set(LIBCXX_MODULE_STD_SOURCES
   std/future.inc
   std/generator.inc
   std/hazard_pointer.inc
+  std/hive.inc
   std/initializer_list.inc
   std/iomanip.inc
   std/ios.inc
