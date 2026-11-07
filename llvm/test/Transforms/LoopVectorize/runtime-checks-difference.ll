@@ -920,7 +920,7 @@ exit:
 }
 
 ; The start of %src.off is a non-affine AddRec of the outer loop with a step
-; containing udiv %m, (%stride + %y), which LAA rewrites to udiv %m, (%y + 1)
+; containing udiv %m, (%stride + %y), which gets rewritten to udiv %m, (%y + 1)
 ; using %stride == 1. The AddRec is expanded in the outer loop header, before
 ; the SCEV checks, so the udiv must not divide by zero if %stride != 1.
 define void @outer_nonaffine_addrec_bound_with_versioned_stride_udiv(ptr %dst, ptr %src, i64 %m, i64 %stride, i64 %y, i64 %tc, i64 %outer.n) {
@@ -938,7 +938,9 @@ define void @outer_nonaffine_addrec_bound_with_versioned_stride_udiv(ptr %dst, p
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[J_NEXT:%.*]], [[OUTER_LATCH1]] ]
 ; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], [[OUTER_LATCH1]] ]
 ; CHECK-NEXT:    [[STEP:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[STEP_NEXT:%.*]], [[OUTER_LATCH1]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[M]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[M]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], -4
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], [[J]]
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[ACC]]
