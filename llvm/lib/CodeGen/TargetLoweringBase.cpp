@@ -862,7 +862,8 @@ void TargetLoweringBase::initActions() {
                         ISD::FTANH,          ISD::FATAN2,
                         ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
                         ISD::CONVERT_TO_ARBITRARY_FP,
-                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX},
+                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX,
+                        ISD::CT_SELECT},
                        VT, Expand);
     // clang-format on
 
