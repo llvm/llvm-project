@@ -2343,12 +2343,21 @@ isGenericHidingProcedurePointer(const Fortran::semantics::Symbol &sym) {
 /// funit. A symbol is considered a host module variable if it is an
 /// ObjectEntityDetails, a ProcedurePointer, or a NamelistDetails symbol whose
 /// ultimate owning scope is a [sub]module scope containing \p funit's scope.
-/// Namelist groups are expanded to the set of their objects.
+/// Namelist groups are expanded to the set of their objects. A COMMON block
+/// name (e.g. in an OpenACC data clause) is expanded to the block's objects,
+/// whose instantiation also gives the block an address in \p funit.
 static void collectHostAssociatedModuleVariables(
     const Fortran::lower::pft::FunctionLikeUnit &funit,
     llvm::SetVector<const Fortran::semantics::Symbol *> &moduleVariables) {
   auto addIfHostModuleVariable = [&](const Fortran::semantics::Symbol &sym) {
     const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+    if (const auto *commonDetails =
+            ultimate.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+      if (ultimate.owner().kind() == Fortran::semantics::Scope::Kind::Module)
+        for (const auto &object : commonDetails->objects())
+          moduleVariables.insert(&object->GetUltimate());
+      return;
+    }
     const auto *namelistDetails =
         ultimate.detailsIf<Fortran::semantics::NamelistDetails>();
     if (!ultimate.has<Fortran::semantics::ObjectEntityDetails>() &&
