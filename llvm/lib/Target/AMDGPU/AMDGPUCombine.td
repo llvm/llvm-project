@@ -114,8 +114,20 @@ def int_minmax_to_med3 : GICombineRule<
 let Predicates = [Predicate<"Subtarget->d16PreservesUnusedBits()">] in
 def d16_load : GICombineRule<
   (defs root:$bitcast),
-  (combine (G_BITCAST $dst, $src):$bitcast,
+  (combine (G_BITCAST $dst, $val):$bitcast,
            [{ return combineD16Load(*${bitcast} ); }])>;
+
+
+def diverge_phi_combine_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_CONSTANT, G_FCONSTANT],
+           (pattern (op $dst, $val)))>;
+
+def diverge_phi_combine : GICombineRule<
+  (defs root:$dst),
+  (combine (diverge_phi_combine_frags $dst):$const,
+   [{ return combineDivPhi(*${const} ); }])>;
+
 
 def fp_minmax_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
@@ -367,5 +379,5 @@ def AMDGPURegBankCombiner : GICombiner<
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
    d16_load, minmax_to_minmax3_combines, redundant_sext_inreg,
-   redundant_zext_sext_inreg, redundant_aext_sext_inreg]> {
+   redundant_zext_sext_inreg, redundant_aext_sext_inreg, diverge_phi_combine]> {
 }

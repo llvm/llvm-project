@@ -411,10 +411,9 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    ; asyncmark(stages=all)
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
-; GISEL-NEXT:    s_mov_b32 s7, 0
+; GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GISEL-NEXT:    s_mov_b32 s6, 2
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0
-; GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GISEL-NEXT:    ; asyncmark(stages=all)
 ; GISEL-NEXT:  .LBB4_1: ; %loop_body
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
