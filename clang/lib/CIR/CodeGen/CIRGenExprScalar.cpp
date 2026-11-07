@@ -518,15 +518,18 @@ public:
   mlir::Value emitScalarCast(mlir::Value src, QualType srcType,
                              QualType dstType, mlir::Type srcTy,
                              mlir::Type dstTy, ScalarConversionOpts opts) {
-    assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
-           "Internal error: matrix types not handled by this function.");
     assert(!(mlir::isa<mlir::IntegerType>(srcTy) ||
              mlir::isa<mlir::IntegerType>(dstTy)) &&
            "Obsolete code. Don't use mlir::IntegerType with CIR.");
 
     mlir::Type fullDstTy = dstTy;
-    if (mlir::isa<cir::VectorType>(srcTy) &&
-        mlir::isa<cir::VectorType>(dstTy)) {
+    if (mlir::isa<cir::MatrixType>(srcTy) &&
+        mlir::isa<cir::MatrixType>(dstTy)) {
+      // Use the element types of the matrices to figure out the CastKind.
+      srcTy = mlir::dyn_cast<cir::MatrixType>(srcTy).getElementType();
+      dstTy = mlir::dyn_cast<cir::MatrixType>(dstTy).getElementType();
+    } else if (mlir::isa<cir::VectorType>(srcTy) &&
+               mlir::isa<cir::VectorType>(dstTy)) {
       // Use the element types of the vectors to figure out the CastKind.
       srcTy = mlir::dyn_cast<cir::VectorType>(srcTy).getElementType();
       dstTy = mlir::dyn_cast<cir::VectorType>(dstTy).getElementType();
@@ -1146,9 +1149,8 @@ public:
     }
 
     if (srcType->isMatrixType() && dstType->isMatrixType()) {
-      cgf.getCIRGenModule().errorNYI(loc,
-                                     "matrix type to matrix type conversion");
-      return {};
+      return emitScalarCast(src, srcType, dstType, mlirSrcType, mlirDstType,
+                            opts);
     }
     assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
            "Internal error: conversion between matrix type and scalar type");
