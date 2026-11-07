@@ -86,7 +86,7 @@ int test_ptr_side_effect(S *p) {
   // LLVM: ret i32 %{{.*}}
 
   // OGCG: %[[P_ADDR:.*]] = alloca ptr
-  // OGCG: %[[P_INC:.*]] = getelementptr inbounds %struct.S, ptr %{{.*}}, i32 1
+  // OGCG: %[[P_INC:.*]] = getelementptr inbounds {{.*}}%struct.S, ptr %{{.*}}, i32 1
   // OGCG: store ptr %[[P_INC]], ptr %[[P_ADDR]]
   // OGCG: %[[CALL_OGCG:.*]] = call noundef i32 @_ZN1S11static_funcEi(i32 noundef 100)
   // OGCG: ret i32 %[[CALL_OGCG]]
