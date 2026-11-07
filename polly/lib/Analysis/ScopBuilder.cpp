@@ -1500,7 +1500,8 @@ void ScopBuilder::addUserAssumptions(
     isl_set_free(Dom);
 
     isl::set AssumptionInvalidDomain = AssumptionInvalidDomainMap[BB];
-    bool HasPreconditions = !AssumptionInvalidDomain.is_empty();
+    bool HasPreconditions = !AssumptionInvalidDomain.is_empty() ||
+                            (InScop && !BBInvalidDomain.is_empty());
     InvalidDomainMap[BB] = BBInvalidDomain.unite(AssumptionInvalidDomain);
 
     if (!Valid)
@@ -1535,8 +1536,12 @@ void ScopBuilder::addUserAssumptions(
 
     // scop->setContext is used to gist AssumedContext and InvalidContext. Both
     // add RTCs, so using setContext would remove the RTC that would ensure the
-    // correctness of AssumptionCtx. Using DefinedBehaviorContext which does not
-    // gist the other contexts.
+    // correctness of AssumptionCtx. RTCs that must be preserved include the
+    // validity of the expressions the assumption contains
+    // (AssumptionInvalidDomain) as well as, for an assumption inside the SCoP,
+    // the reachability of the control flow that leads to the assumption
+    // (BBInvalidDomain). Use DefinedBehaviorContext, which does not gist the
+    // other contexts, in that case.
     // TODO: Use recordAssumption() for adding context/assumptions
     if (!HasPreconditions) {
       isl::set newContext =
