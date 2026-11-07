@@ -3435,7 +3435,7 @@ void Parser::ParseStorageClassSpecifier(DeclSpec &DS,
   case tok::kw_auto:
     if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
       auto IsTypedefName = [&](const Token &T) {
-        if (!T.is(tok::identifier))
+        if (T.isNot(tok::identifier))
           return false;
         IdentifierInfo *II = T.getIdentifierInfo();
         if (!II)
