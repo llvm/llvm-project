@@ -25,7 +25,7 @@ struct SimplifyQuery;
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const SimplifyQuery &Q,
                                     unsigned Depth);
 
-template <typename Arg> class WithCache {
+template <typename Arg, typename = void> class WithCache {
   static_assert(std::is_pointer_v<Arg>, "WithCache requires a pointer type!");
 
   using UnderlyingType = std::remove_pointer_t<Arg>;
@@ -54,6 +54,20 @@ public:
   WithCache(PointerType Pointer, const KnownBits &Known)
       : Pointer(Pointer, true), Known(Known) {}
 
+  /// Prevent slicing for the derived class, to avoid perf foot-guns around
+  /// duplicated caches.
+  template <typename U,
+            typename = std::enable_if_t<!std::is_const_v<U> &&
+                                        std::is_same_v<const U *, Arg>>>
+  WithCache(const WithCache<U *> &) = delete;
+
+  /// Prevent slicing for the derived class, to avoid perf foot-guns around
+  /// duplicated caches.
+  template <typename U,
+            typename = std::enable_if_t<!std::is_const_v<U> &&
+                                        std::is_same_v<const U *, Arg>>>
+  WithCache &operator=(const WithCache<U *> &) = delete;
+
   [[nodiscard]] PointerType getValue() const { return Pointer.getPointer(); }
 
   [[nodiscard]] const KnownBits &getKnownBits(const SimplifyQuery &Q) const {
@@ -68,6 +82,34 @@ public:
   PointerType operator->() const { return Pointer.getPointer(); }
   ReferenceType operator*() const { return *Pointer.getPointer(); }
 };
+
+/// Specialization of WithCache<T*> that allows a WithCache<const T*> reference
+/// to bind to it, allowing similar implicit conversion semantics as T* has when
+/// passed to an API taking a const T*.
+template <typename Arg>
+class WithCache<Arg,
+                std::enable_if_t<!std::is_const_v<std::remove_pointer_t<Arg>>>>
+    : public WithCache<
+          std::add_pointer_t<std::add_const_t<std::remove_pointer_t<Arg>>>> {
+  using UnderlyingType = std::remove_pointer_t<Arg>;
+  using Base = WithCache<const UnderlyingType *>;
+  using PointerType = Arg;
+  using ReferenceType = UnderlyingType &;
+
+public:
+  WithCache(PointerType Pointer) : Base(Pointer) {}
+  WithCache(PointerType Pointer, const KnownBits &Known)
+      : Base(Pointer, Known) {}
+
+  [[nodiscard]] PointerType getValue() const {
+    return const_cast<PointerType>(Base::getValue());
+  }
+
+  operator PointerType() const { return getValue(); }
+  PointerType operator->() const { return getValue(); }
+  ReferenceType operator*() const { return *getValue(); }
+};
+
 } // namespace llvm
 
 #endif

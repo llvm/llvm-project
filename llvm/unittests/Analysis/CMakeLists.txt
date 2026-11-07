@@ -60,6 +60,7 @@ set(ANALYSIS_TEST_SOURCES
   ValueLatticeTest.cpp
   ValueTrackingTest.cpp
   VectorUtilsTest.cpp
+  WithCacheTest.cpp
   )
 
 set(MLGO_TESTS TFUtilsTest.cpp)
