@@ -215,7 +215,6 @@ declare float @llvm.log10.f32(float)
 declare double @exp(double %x) #0
 declare double @exp2(double) #0
 declare float @exp10f(float) #0
-declare double @llvm.exp10(double) #0
 declare <2 x float> @llvm.exp2.v2f32(<2 x float>)
 declare double @pow(double, double) #0
 declare float @powf(float, float) #0
