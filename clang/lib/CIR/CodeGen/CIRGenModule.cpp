@@ -1834,12 +1834,14 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
     return false;
 
   // We don't import function bodies from other named module units since that
-  // behavior may break ABI compatibility of the current unit.
+  // behavior may break ABI compatibility of the current unit.  However, a
+  // library may declare an extern template without providing symbols for its
+  // always_inline members, so their bodies must be emitted here.
   if (const Module *m = fd->getOwningModule();
       m && m->getTopLevelModule()->isNamedModule() &&
-      getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
-    errorNYI(fd->getSourceRange(), "should emit function in a named module");
-  }
+      getASTContext().getCurrentNamedModule() != m->getTopLevelModule() &&
+      (!fd->isTemplateInstantiation() || !fd->hasAttr<AlwaysInlineAttr>()))
+    return false;
 
   if (fd->hasAttr<NoInlineAttr>())
     return false;
