@@ -4151,6 +4151,24 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
   Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
 
+  // For SYCL, compile once per IGCA target, e.g. once for igca_30r for both
+  // xe-mtl-u and xe-mtl-h, and record its Intel GPUs for ahead-of-time
+  // compilation.
+  if (Kind == Action::OFK_SYCL) {
+    llvm::DenseSet<StringRef> Targets;
+    for (StringRef Arch : Archs) {
+      OffloadArch ID = StringToOffloadArch(Arch);
+      if (!ID.isIntelGPU()) {
+        Targets.insert(Arch);
+        continue;
+      }
+      StringRef Target = OffloadArchToString(ID.intelGPUIGCATarget());
+      Targets.insert(Target);
+      C.addSYCLIGCADevice(&TC, Target, Arch);
+    }
+    Archs = std::move(Targets);
+  }
+
   SmallVector<StringRef> Sorted(Archs.begin(), Archs.end());
   llvm::sort(Sorted);
 

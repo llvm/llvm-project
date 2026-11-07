@@ -18,7 +18,7 @@
 // RUN:   --offload-arch=native --offload-arch-tool=%t/offload_arch_sm_70_gfx906_gfx90a_xe_pvc \
 // RUN:   -c %s 2>&1 | FileCheck %s
 // CHECK-NOT: "device-sycl ({{amdgpu|nvptx}}
-// CHECK: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc)"
+// CHECK: offload, "device-sycl (spirv64-unknown-unknown:igca_20ca)"
 // CHECK-NOT: "device-sycl ({{amdgpu|nvptx}}
 
 /// Without an Intel GPU, SYCL reports that no GPU was found, as HIP and CUDA

@@ -80,6 +80,9 @@ def arch_EQ : Joined<["--"], "arch=">,
 def triple_EQ : Joined<["--"], "triple=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<triple>">,
   HelpText<"The device target triple">;
+def device_EQ : Joined<["--"], "device=">,
+  Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<device>">,
+  HelpText<"An Intel GPU to compile a SYCL image ahead of time for">;
 def whole_program : Flag<["--"], "whole-program">,
   Flags<[DeviceOnlyOption, HelpHidden]>,
   HelpText<"LTO has visibility of all input files">;

@@ -121,6 +121,22 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
   return *Entry;
 }
 
+void Compilation::addSYCLIGCADevice(const ToolChain *TC, StringRef Target,
+                                    StringRef Device) {
+  SmallVector<StringRef, 2> &Devices = SYCLIGCADevices[{TC, Target}];
+  auto It = llvm::lower_bound(Devices, Device);
+  if (It == Devices.end() || *It != Device)
+    Devices.insert(It, Device);
+}
+
+ArrayRef<StringRef> Compilation::getSYCLIGCADevices(const ToolChain *TC,
+                                                    StringRef Target) const {
+  auto It = SYCLIGCADevices.find({TC, Target});
+  if (It == SYCLIGCADevices.end())
+    return {};
+  return It->second;
+}
+
 bool Compilation::CleanupFile(const char *File, bool IssueErrors) const {
   // FIXME: Why are we trying to remove files that we have not created? For
   // example we should only try to remove a temporary assembly file if

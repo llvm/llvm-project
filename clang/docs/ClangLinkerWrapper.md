@@ -82,6 +82,11 @@ other. Generally, this requires that the target triple and architecture match.
 An exception is made when the architecture is listed as `generic`, which will
 cause it be linked with any other device code with the same target triple.
 
+SYCL device code for an IGCA target can also list the Intel GPUs to compile it
+ahead of time for, as `code=xe-mtl-h,xe-mtl-u`. It is only linked with device
+code that lists the same GPUs, and the GPUs are passed on to
+`clang-sycl-linker`.
+
 ## Debugging
 
 The linker wrapper performs a lot of steps internally, such as input matching,
