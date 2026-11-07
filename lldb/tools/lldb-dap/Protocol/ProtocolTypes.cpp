@@ -884,7 +884,8 @@ bool fromJSON(const llvm::json::Value &Params, FunctionBreakpoint &FB,
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("name", FB.name) &&
          O.mapOptional("condition", FB.condition) &&
-         O.mapOptional("hitCondition", FB.hitCondition);
+         O.mapOptional("hitCondition", FB.hitCondition) &&
+         O.mapOptional("$__lldb_moduleName", FB.moduleName);
 }
 
 llvm::json::Value toJSON(const FunctionBreakpoint &FB) {
@@ -894,6 +895,9 @@ llvm::json::Value toJSON(const FunctionBreakpoint &FB) {
     result.insert({"condition", *FB.condition});
   if (!FB.hitCondition.empty())
     result.insert({"hitCondition", FB.hitCondition});
+  // lldb-dap extensions
+  if (!FB.moduleName.empty())
+    result.insert({"$__lldb_moduleName", FB.moduleName});
 
   return result;
 }

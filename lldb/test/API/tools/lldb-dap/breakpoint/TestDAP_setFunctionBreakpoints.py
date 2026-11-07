@@ -110,6 +110,61 @@ class TestDAP_setFunctionBreakpoints(DAPTestCaseBase):
             )
 
     @skipIfWindows
+    def test_module_name(self):
+        """Tests that a function breakpoint is identified by its module name
+        (if any) and its function name, and that the module name restricts the
+        lookup."""
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(self.getBuildArtifact("a.out"))):
+            any_module = FunctionBreakpoint(name="twelve")
+            in_module = FunctionBreakpoint(name="twelve", moduleName="a.out")
+            other_module = FunctionBreakpoint(
+                name="twelve", moduleName="does-not-exist"
+            )
+
+            # The same symbol with and without a module are different breakpoints.
+            response = session.set_function_breakpoints([any_module, in_module])
+            breakpoints = response.body.breakpoints
+            self.assertEqual(len(breakpoints), 2)
+            self.assertTrue(breakpoints[0].verified)
+            self.assertTrue(breakpoints[1].verified)
+            any_module_id = self.expect_not_none(breakpoints[0].id)
+            in_module_id = self.expect_not_none(breakpoints[1].id)
+            self.assertNotEqual(any_module_id, in_module_id)
+
+            # Sending the same request again keeps both breakpoints.
+            response = session.set_function_breakpoints([any_module, in_module])
+            self.assertEqual(
+                [bp.id for bp in response.body.breakpoints],
+                [any_module_id, in_module_id],
+            )
+
+            # Dropping one of them only removes that one.
+            response = session.set_function_breakpoints([in_module])
+            self.assertEqual(
+                [bp.id for bp in response.body.breakpoints], [in_module_id]
+            )
+            response = session.send_request(DAPTestGetTargetBreakpointsArgs()).result()
+            self.assertEqual(
+                [bp.id for bp in response.body.breakpoints], [in_module_id]
+            )
+
+            # The module name can't be updated: a different module is a new
+            # breakpoint and the old one is removed.
+            response = session.set_function_breakpoints([other_module])
+            breakpoints = response.body.breakpoints
+            self.assertEqual(len(breakpoints), 1)
+            self.assertNotEqual(breakpoints[0].id, in_module_id)
+            self.assertFalse(
+                breakpoints[0].verified,
+                "a module that doesn't exist should not resolve the breakpoint",
+            )
+            response = session.send_request(DAPTestGetTargetBreakpointsArgs()).result()
+            self.assertEqual(
+                [bp.id for bp in response.body.breakpoints], [breakpoints[0].id]
+            )
+
+    @skipIfWindows
     def test_functionality(self):
         """Tests hitting breakpoints and the functionality of a single
         breakpoint, like 'conditions' and 'hitCondition' settings."""

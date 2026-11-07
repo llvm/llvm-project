@@ -197,6 +197,7 @@ TEST(ProtocolTypesTest, FunctionBreakpoint) {
   function_breakpoint.name = "myFunction";
   function_breakpoint.condition = "x == 0";
   function_breakpoint.hitCondition = "3";
+  function_breakpoint.moduleName = "a.out";
 
   llvm::Expected<FunctionBreakpoint> deserialized_function_breakpoint =
       roundtripJSON(function_breakpoint);
@@ -207,6 +208,38 @@ TEST(ProtocolTypesTest, FunctionBreakpoint) {
             deserialized_function_breakpoint->condition);
   EXPECT_EQ(function_breakpoint.hitCondition,
             deserialized_function_breakpoint->hitCondition);
+  EXPECT_EQ(function_breakpoint.moduleName,
+            deserialized_function_breakpoint->moduleName);
+}
+
+TEST(ProtocolTypesTest, FunctionBreakpointModuleName) {
+  Expected<FunctionBreakpoint> no_module =
+      parse<FunctionBreakpoint>(R"({"name": "main"})");
+  ASSERT_THAT_EXPECTED(no_module, Succeeded());
+  EXPECT_TRUE(no_module->moduleName.empty());
+  Value no_module_json = toJSON(*no_module);
+  EXPECT_FALSE(no_module_json.getAsObject()->get("$__lldb_moduleName"));
+
+  Expected<FunctionBreakpoint> with_module = parse<FunctionBreakpoint>(
+      R"({"name": "main", "$__lldb_moduleName": "a.out"})");
+  ASSERT_THAT_EXPECTED(with_module, Succeeded());
+  EXPECT_EQ(with_module->moduleName, "a.out");
+  Value with_module_json = toJSON(*with_module);
+  EXPECT_EQ(with_module_json.getAsObject()->getString("$__lldb_moduleName"),
+            std::optional<StringRef>("a.out"));
+
+  // An empty module name is the same as an absent one.
+  Expected<FunctionBreakpoint> empty_module = parse<FunctionBreakpoint>(
+      R"({"name": "main", "$__lldb_moduleName": ""})");
+  ASSERT_THAT_EXPECTED(empty_module, Succeeded());
+  EXPECT_TRUE(empty_module->moduleName.empty());
+  Value empty_module_json = toJSON(*empty_module);
+  EXPECT_FALSE(empty_module_json.getAsObject()->get("$__lldb_moduleName"));
+
+  // Like `hitCondition`, the module name is not nullable.
+  EXPECT_THAT_EXPECTED(parse<FunctionBreakpoint>(
+                           R"({"name": "main", "$__lldb_moduleName": null})"),
+                       Failed());
 }
 
 TEST(ProtocolTypesTest, FunctionBreakpointOptionalHitCondition) {

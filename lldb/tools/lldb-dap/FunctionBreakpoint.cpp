@@ -16,7 +16,8 @@ namespace lldb_dap {
 FunctionBreakpoint::FunctionBreakpoint(
     DAP &d, const protocol::FunctionBreakpoint &breakpoint)
     : Breakpoint(d, breakpoint.condition, breakpoint.hitCondition),
-      m_function_name(breakpoint.name) {}
+      m_function_name(breakpoint.name),
+      m_module_name(breakpoint.moduleName) {}
 
 void FunctionBreakpoint::SetBreakpoint() {
   lldb::SBMutex lock = m_dap.GetAPIMutex();
@@ -24,7 +25,8 @@ void FunctionBreakpoint::SetBreakpoint() {
 
   if (m_function_name.empty())
     return;
-  m_bp = m_dap.target.BreakpointCreateByName(m_function_name.c_str());
+  m_bp = m_dap.target.BreakpointCreateByName(m_function_name.c_str(),
+                                             m_module_name.c_str());
   Breakpoint::SetBreakpoint();
 }
 
