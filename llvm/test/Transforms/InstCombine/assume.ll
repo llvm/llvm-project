@@ -1463,3 +1463,48 @@ attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
 !10 = !DISubroutineType(types: !11)
 !11 = !{null}
+
+define i32 @assume_disjoint_add(i32 noundef %x, i32 noundef %y) {
+; CHECK-LABEL: @assume_disjoint_add(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_NOT]])
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %and = and i32 %y, %x
+  %cmp.not = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp.not)
+  %add = add i32 %y, %x
+  ret i32 %add
+}
+
+define i32 @assume_disjoint_or(i32 noundef %x, i32 noundef %y) {
+; CHECK-LABEL: @assume_disjoint_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_NOT]])
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and = and i32 %y, %x
+  %cmp.not = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp.not)
+  %or = or i32 %y, %x
+  ret i32 %or
+}
+
+define i32 @assume_disjoint_xor(i32 noundef %x, i32 noundef %y) {
+; CHECK-LABEL: @assume_disjoint_xor(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_NOT]])
+; CHECK-NEXT:    [[XOR:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %and = and i32 %y, %x
+  %cmp.not = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp.not)
+  %xor = xor i32 %y, %x
+  ret i32 %xor
+}
