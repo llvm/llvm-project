@@ -1644,10 +1644,9 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   uint64_t TopSize = llvm::bit_floor(MaxLen);
   Instruction *InsertBefore = MemSet;
   uint64_t TotalCount = 0;
-  SmallVector<InstrProfValueData> ProfData =
-    getValueProfDataFromInst(*MemSet, InstrProfValueKind::IPVK_MemOPSize,
-                             /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(),
-                             TotalCount);
+  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
+      *MemSet, InstrProfValueKind::IPVK_MemOPSize,
+      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
   llvm::sort(ProfData,
              [](const InstrProfValueData &A, const InstrProfValueData &B) {
                return A.Value < B.Value;
@@ -1667,7 +1666,8 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
       IRBuilder<> B(InsertBefore);
       Value *Cond = B.CreateICmpUGE(Len, ConstantInt::get(LenTy, Size),
                                     "len.ge" + Twine(Size));
-      MDNode *BranchWeights = getBoundedMemSetBranchWeights(Size, MemSetPrefixSum, B.getContext(), *MemSet->getFunction());
+      MDNode *BranchWeights = getBoundedMemSetBranchWeights(
+          Size, MemSetPrefixSum, B.getContext(), *MemSet->getFunction());
       if (Size == MinStoreSize) {
         StoreBefore =
             SplitBlockAndInsertIfThen(Cond, InsertBefore, false, BranchWeights);
