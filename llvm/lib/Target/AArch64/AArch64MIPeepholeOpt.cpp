@@ -350,7 +350,6 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
     return false;
 
   MRI->replaceRegWith(DefReg, SrcReg);
-  MRI->clearKillFlags(SrcReg);
   LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
   MI.eraseFromParent();
 
