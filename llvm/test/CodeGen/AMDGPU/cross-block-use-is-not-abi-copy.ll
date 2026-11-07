@@ -184,8 +184,7 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s12, 0
-; GCN-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[12:13]
+; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
 ; GCN-NEXT:    s_cbranch_vccz .LBB4_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
@@ -235,8 +234,7 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s12, 0
-; GCN-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[12:13]
+; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
 ; GCN-NEXT:    s_cbranch_vccz .LBB5_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0

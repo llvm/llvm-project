@@ -201,10 +201,9 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(ptr addrspace(1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v1, v[1:2], s[4:7], 0 addr64 offset:8 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s8, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_and_b64 vcc, vcc, s[4:5]
+; GCN-NEXT:    s_cmp_lg_u32 s8, 0
+; GCN-NEXT:    s_cselect_b64 vcc, vcc, 0
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_mov_b32 s3, s7
 ; GCN-NEXT:    v_div_fmas_f32 v0, v3, v4, v1

@@ -269,8 +269,7 @@ define amdgpu_kernel void @no_clobbering_loop1(ptr addrspace(1) %arg, i1 %cc) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GCN-NEXT:    s_bitcmp1_b32 s3, 0
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
+; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
 ; GCN-NEXT:  .LBB4_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_load_dword s3, s[0:1], 0x4
@@ -385,8 +384,7 @@ define amdgpu_kernel void @clobbering_loop(ptr addrspace(1) %arg, ptr addrspace(
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GCN-NEXT:    s_bitcmp1_b32 s6, 0
-; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
 ; GCN-NEXT:  .LBB6_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    global_load_dword v1, v0, s[0:1] offset:4
