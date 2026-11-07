@@ -143,6 +143,13 @@ infrastructure are described first, followed by tool-specific sections.
   `ImplementationFileExtensions` contains an invalid entry, such as one with a
   leading dot. The invalid option is now reported as a warning.
 
+- Added a new {program}`clang-tidy` command line option `-sarif-export=<file>`
+  in which clang-tidy diagnostics are exported in the [SARIF](https://sarifweb.azurewebsites.net/)
+  format.
+
+- Added a new {program}`clang-tidy` command line option
+  `-experimental-sarif-base-uri=<id>=<path|uri>` to define base URIs, allowing artifactLocations to be written as relative URIs with a matching uriBaseId.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern

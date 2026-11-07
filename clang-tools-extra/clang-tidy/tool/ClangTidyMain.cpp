@@ -19,14 +19,19 @@
 #include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h" // IWYU pragma: keep
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
@@ -310,6 +315,25 @@ code with clang-apply-replacements.
 )"),
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
+
+static cl::opt<std::string> SarifExport("experimental-sarif-export", desc(R"(
+File in which to store diagnostics in SARIF format.
+Use '-' to write to stdout instead of the
+usual diagnostic output.
+)"),
+                                        cl::value_desc("filename"),
+                                        cl::cat(ClangTidyCategory));
+
+static cl::list<std::string> SarifBaseUri("experimental-sarif-base-uri",
+                                          desc(R"(
+Used with --experimental-sarif-base-uri to
+define a SARIF base URI as <id>=<path|uri>.
+Paths are converted to file URIs. Values with
+'://' are used verbatim. Artifact locations
+under a base are written relative to it, all
+others keep their absolute URI. Can be repeated.)"),
+                                          cl::value_desc("name=path"),
+                                          cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> Quiet("quiet", desc(R"(
 Run clang-tidy in quiet mode. This suppresses
@@ -604,6 +628,44 @@ static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
   return BaseFS;
 }
 
+static std::optional<std::string> parseBaseUri(StringRef Value) {
+  if (Value.contains("://")) {
+    if (Value.find_first_of("?#") != StringRef::npos)
+      return std::nullopt;
+    return (Value + (Value.ends_with("/") ? "" : "/")).str();
+  }
+  // Artifact URIs use real paths, so resolve symlinks when the path exists.
+  SmallString<256> Path;
+  if (sys::fs::real_path(Value, Path, /*expand_tilde=*/true)) {
+    sys::fs::expand_tilde(Value, Path);
+    if (sys::fs::make_absolute(Path))
+      return std::nullopt;
+    sys::path::remove_dots(Path, true);
+  }
+  return SarifDocumentWriter::fileNameToURI(Path) + "/";
+}
+
+// Paths go through fileNameToURI so they prefix-match artifact URIs; URIs are
+// kept verbatim.
+static std::optional<llvm::StringMap<SarifUriBase>>
+parseBaseUris(const cl::list<std::string> &SarifBaseUri) {
+  llvm::StringMap<SarifUriBase> Result;
+  for (StringRef BaseUri : SarifBaseUri) {
+    auto [Name, Value] = BaseUri.split('=');
+    std::optional<std::string> URI;
+    if (!Name.empty() && !Value.empty() && !Result.contains(Name) &&
+        json::isUTF8(BaseUri))
+      URI = parseBaseUri(Value);
+    if (!URI) {
+      llvm::errs() << "Invalid or duplicate SARIF base URI: " << BaseUri
+                   << "\n";
+      return std::nullopt;
+    }
+    Result[Name] = SarifUriBase().setURI(*URI);
+  }
+  return Result;
+}
+
 int clangTidyMain(int argc, const char **argv) {
   const llvm::InitLLVM X(argc, argv);
   SmallVector<const char *> Args{argv, argv + argc};
@@ -631,6 +693,15 @@ int clangTidyMain(int argc, const char **argv) {
                                   cl::ZeroOrMore);
   if (!OptionsParser) {
     llvm::WithColor::error() << llvm::toString(OptionsParser.takeError());
+    return 1;
+  }
+
+  if (!SarifExport.empty() && SarifExport == ExportFixes &&
+      !llvm::sys::fs::equivalent(SarifExport, ExportFixes)) {
+    llvm::errs() << "Error: --experimental-sarif-export and --export-fixes "
+                    "cannot write to "
+                    "the same output '"
+                 << SarifExport << "'.\n";
     return 1;
   }
 
@@ -730,6 +801,24 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
+  // Checked after the informational modes so they never truncate the file.
+  if (!SarifExport.empty() && SarifExport != "-") {
+    std::error_code EC;
+    {
+      const llvm::raw_fd_ostream OS(SarifExport, EC, llvm::sys::fs::OF_Text);
+    }
+    if (EC) {
+      llvm::errs() << "Error opening SARIF export file '" << SarifExport
+                   << "': " << EC.message() << '\n';
+      return 1;
+    }
+  }
+
+  const std::optional<llvm::StringMap<SarifUriBase>> BaseUris =
+      parseBaseUris(SarifBaseUri);
+  if (!BaseUris)
+    return 1;
+
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
@@ -754,7 +843,7 @@ int clangTidyMain(int argc, const char **argv) {
   unsigned WErrorCount = 0;
 
   handleErrors(Errors, Context, DisableFixes ? FB_NoFix : Behaviour,
-               WErrorCount, BaseFS);
+               WErrorCount, BaseFS, SarifExport, *BaseUris);
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;
