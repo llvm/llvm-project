@@ -406,8 +406,8 @@ def Vector_BroadcastOp :
     Results<(outs AnyVectorOfAnyRank:$vector)> {
   let summary = "broadcast operation";
   let description = [{
-    Broadcasts the scalar or k-D vector value in the source operand
-    to a n-D result vector such that the broadcast makes sense, i.e.,
+    Broadcasts the scalar or K-D vector value in the source operand
+    to a N-D result vector such that the broadcast makes sense, i.e.,
     the source operand is duplicated to match the given rank and sizes
     in the result vector. The legality rules are:
     * the source operand must have the same element type as the result type
@@ -430,16 +430,23 @@ def Vector_BroadcastOp :
     any shaped vector with the same element type is always legal.
 
     For every element in the result vector, the corresponding coordinate in
-    source dimension `j` can be computed from its linear offset `off` in the
-    result vector as follows:
+    source dimension `j` can be computed from its zero-based, row-major linear
+    element offset `off` in the result vector as follows:
+
     ```
     source_coord[j](off) = floor(off / result_stride(N - K + j)) % source_dim(j)
     ```
-    where `j = 1 .. K` (dimension indices in the source vector, 1-based, from
-    left to right) and `result_stride(N - K + j)` is the result stride
-    corresponding to source dimension `j` (i.e. one of the "stretch"
-    dimensions). Note that for `source_dim(j) == 1`,
-    `source_coord[j](off) == 0` for all values of `off`.
+
+    where `j = 1 .. K` indexes source dimensions from left to right, starting
+    at 1, and `result_stride(N - K + j)` is the row-major element stride of
+    the corresponding trailing result dimension. This stride is the product
+    of the sizes of all result dimensions to its right, or 1 for the last
+    dimension.
+
+    Dimension sizes and strides include any runtime `vscale` factors. In
+    particular, a scalable dimension `[1]` has size `vscale`. For a fixed
+    source dimension of size 1, `source_coord[j](off) == 0` for every valid
+    `off`.
 
     Example:
 
@@ -448,14 +455,17 @@ def Vector_BroadcastOp :
     %1 = vector.broadcast %0 : f32 to vector<16xf32>
     %2 = vector.broadcast %1 : vector<16xf32> to vector<4x16xf32>
 
-    // Let %src = [ [ [a], [b], [c], [d] ] ],
-    //    %3 = [ [ [a], [b], [c], [d] ], [ [a], [b], [c], [d] ], ... ]
-    //    For %off = 4, %3(%off)  = %src[0, 0, 0] = 'a'
-    //    For %off = 5, %3(%off)  = %src[0, 1, 0] = 'b'
+    // Let %src = [[[a], [b], [c], [d]]].
+
+    // %3 = [[[a], [b], [c], [d]], [[a], [b], [c], [d]], ...]
+    // For off = 4, the result element is %src[0, 0, 0] = a.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
     %3 = vector.broadcast %src : vector<1x4x1xf32> to vector<4x4x1xf32>
-    //    %4 = [ [ [a, a, a, a] ], [ [b, b, b, b] ], ... ]
-    //    For %off = 4, %4(%off) = %src[0, 1, 0] = 'b'
-    //    For %off = 5, %4(%off) = %src[0, 1, 0] = 'b'
+
+    // %4 = [[[a, a, a, a], [b, b, b, b],
+    //        [c, c, c, c], [d, d, d, d]]]
+    // For off = 4, the result element is %src[0, 1, 0] = b.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
     %4 = vector.broadcast %src : vector<1x4x1xf32> to vector<1x4x4xf32>
     ```
   }];
