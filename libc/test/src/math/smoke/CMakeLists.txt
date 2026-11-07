@@ -1816,6 +1816,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  frexpf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    frexpf80_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf80
+    libc.src.__support.FPUtil.float80
+)
+
+add_fp_unittest(
   frexpf128_test
   SUITE
     libc-math-smoke-tests
@@ -2195,6 +2208,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ilogbf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ilogbf80_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf80
+    libc.src.__support.FPUtil.float80
+)
+
+add_fp_unittest(
   ilogbf128_test
   SUITE
     libc-math-smoke-tests
@@ -2386,6 +2412,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  llogbf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    llogbf80_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.llogbf80
+    libc.src.__support.FPUtil.float80
+)
+
+add_fp_unittest(
   llogbf128_test
   SUITE
     libc-math-smoke-tests
@@ -2569,6 +2608,19 @@ add_fp_unittest(
     libc.src.math.logbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    logbf80_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbf80
+    libc.src.__support.FPUtil.float80
 )
 
 add_fp_unittest(

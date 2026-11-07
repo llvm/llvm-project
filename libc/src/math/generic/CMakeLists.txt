@@ -1568,6 +1568,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  frexpf80
+  SRCS
+    frexpf80.cpp
+  HDRS
+    ../frexpf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.frexpf80
+)
+
+add_entrypoint_object(
   frexpf128
   SRCS
     frexpf128.cpp
@@ -1626,6 +1637,17 @@ add_entrypoint_object(
     ../ilogbf16.h
   DEPENDS
     libc.src.__support.math.ilogbf16
+)
+
+add_entrypoint_object(
+  ilogbf80
+  SRCS
+    ilogbf80.cpp
+  HDRS
+    ../ilogbf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.ilogbf80
 )
 
 add_entrypoint_object(
@@ -1711,6 +1733,17 @@ add_entrypoint_object(
     ../llogbf16.h
   DEPENDS
     libc.src.__support.math.llogbf16
+)
+
+add_entrypoint_object(
+  llogbf80
+  SRCS
+    llogbf80.cpp
+  HDRS
+    ../llogbf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.llogbf80
 )
 
 add_entrypoint_object(
@@ -1973,6 +2006,17 @@ add_entrypoint_object(
     ../logbf16.h
   DEPENDS
     libc.src.__support.math.logbf16
+)
+
+add_entrypoint_object(
+  logbf80
+  SRCS
+    logbf80.cpp
+  HDRS
+    ../logbf80.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.math.logbf80
 )
 
 add_entrypoint_object(
