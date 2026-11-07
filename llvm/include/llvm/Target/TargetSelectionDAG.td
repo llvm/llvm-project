@@ -1356,6 +1356,8 @@ def vtFP       : PatLeaf<(vt),  [{ return N->getVT().isFloatingPoint(); }]>;
 // Use ISD::isConstantSplatVectorAllOnes or ISD::isConstantSplatVectorAllZeros
 // to look for the corresponding build_vector or splat_vector. Will look through
 // bitcasts and check for either opcode, except when used as a pattern root.
+// immAllZerosV also recognizes fixed-length vector bitcasts of scalar constants
+// with all bits zero.
 // When used as a pattern root, only fixed-length build_vector and scalable
 // splat_vector are supported.
 def immAllOnesV  : SDPatternOperator; // ISD::isConstantSplatVectorAllOnes
