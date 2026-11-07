@@ -57,8 +57,8 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
   for (int32_t I = 0; I < ArgNum; ++I) {
     const map_var_info_t VarName = (ArgNames) ? ArgNames[I] : nullptr;
     const char *Type = nullptr;
-    const char *Implicit =
-        (ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT) ? "(implicit)" : "";
+    const bool IsImplicit = ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT;
+    const char *Implicit = IsImplicit ? "(implicit)" : "";
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH &&
         ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS)
@@ -81,8 +81,11 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
     else
       Type = "use_address";
 
-    INFO(1, OMP_INFOTYPE_KERNEL_ARGS, DeviceId, "%s(%s)[%" PRId64 "] %s\n",
-         Type, getNameFromMapping(VarName).c_str(), ArgSizes[I], Implicit);
+    // Explicit, named maps are the L2 detail; implicit or unnamed args are L3.
+    const uint32_t ArgLevel = (IsImplicit || !VarName) ? 3 : 2;
+    INFO(ArgLevel, OMP_INFOTYPE_KERNEL_ARGS, DeviceId,
+         "%s(%s)[%" PRId64 "] %s\n", Type, getNameFromMapping(VarName).c_str(),
+         ArgSizes[I], Implicit);
   }
 }
 
@@ -91,7 +94,7 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
 /// asynchronous operations (data transfers and kernels) to complete.
 static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId,
                                  const AsyncInfoTy &AsyncInfo) {
-  if (!INFO_VERBOSITY(OMP_INFOTYPE_DATA_TRANSFER))
+  if (INFO_VERBOSITY(OMP_INFOTYPE_DATA_TRANSFER) < 3)
     return;
   if (AsyncInfo.SyncType != AsyncInfoTy::SyncTy::BLOCKING)
     return;
@@ -101,7 +104,7 @@ static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId,
     LocStr = " at " + std::string(Info.getFilename()) + ":" +
              std::to_string(Info.getLine()) + ":" +
              std::to_string(Info.getColumn());
-  INFO(1, OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
+  INFO(3, OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
        "Waiting for asynchronous operations to complete%s\n", LocStr.c_str());
 }
 

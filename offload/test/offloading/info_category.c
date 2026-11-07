@@ -3,6 +3,8 @@
 // RUN:   %fcheck-generic -check-prefix=SEL
 // RUN: env LIBOMPTARGET_INFO=1 %libomptarget-run-generic 2>&1 | \
 // RUN:   %fcheck-generic -check-prefix=SEL
+// RUN: env LIBOMPTARGET_DEBUG=Info %libomptarget-run-generic 2>&1 | \
+// RUN:   %fcheck-generic -check-prefix=SEL
 // RUN: env LIBOMPTARGET_DEBUG=DumpTable %libomptarget-run-generic 2>&1 | \
 // RUN:   %fcheck-generic -check-prefix=OTHER --allow-empty
 
