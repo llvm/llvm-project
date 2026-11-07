@@ -465,3 +465,50 @@ TEST(TinyPtrVectorTest, MutableArrayRefTest) {
     EXPECT_TRUE(mut_array[i] == (324 + data[i]));
   }
 }
+
+namespace {
+struct PolymorphicBase {
+  int Value = 0;
+  explicit PolymorphicBase(int V = 0) : Value(V) {}
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+} // namespace
+
+TEST(TinyPtrVectorTest, PolymorphicPointers) {
+  PolymorphicBase B1(1), B2(2);
+  PolymorphicDerived D1(3), D2(4);
+
+  TinyPtrVector<PolymorphicBase *> V;
+  EXPECT_TRUE(V.empty());
+  EXPECT_EQ(V.begin(), V.end());
+
+  // Single-element inline state (stored directly in PointerUnion).
+  V.push_back(&D1);
+  ASSERT_EQ(1u, V.size());
+  EXPECT_EQ(6, V.front()->get());
+  EXPECT_EQ(6, (*V.begin())->get());
+
+  // Transition to multi-element boxed SmallVector state (tagged PointerUnion).
+  V.push_back(&B1);
+  V.push_back(&D2);
+  V.insert(V.begin(), &B2);
+  ASSERT_EQ(4u, V.size());
+  EXPECT_EQ(2, V[0]->get());
+  EXPECT_EQ(6, V[1]->get());
+  EXPECT_EQ(1, V[2]->get());
+  EXPECT_EQ(8, V[3]->get());
+
+  TinyPtrVector<PolymorphicBase *> Copy(V);
+  ASSERT_EQ(4u, Copy.size());
+  EXPECT_EQ(8, Copy.back()->get());
+
+  V.erase(V.begin());
+  ASSERT_EQ(3u, V.size());
+  EXPECT_EQ(6, V.front()->get());
+}

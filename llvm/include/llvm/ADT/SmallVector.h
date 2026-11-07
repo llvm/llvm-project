@@ -275,7 +275,18 @@ public:
   using Base::size;
 
   // forward iterator creation methods.
+#ifdef __clang__
+  // Begin may point to uninitialized storage (e.g. when empty or before
+  // constructing elements in place); casting void* to T* before construction is
+  // valid in C++, but for polymorphic T, cfi-unrelated-cast reads the vtable
+  // pointer from the uninitialized memory at the cast before any constructor
+  // has initialized it.
+  LLVM_NO_SANITIZE("cfi-unrelated-cast")
+#endif
   iterator begin() { return (iterator)this->BeginX; }
+#ifdef __clang__
+  LLVM_NO_SANITIZE("cfi-unrelated-cast")
+#endif
   const_iterator begin() const { return (const_iterator)this->BeginX; }
   iterator end() { return begin() + size(); }
   const_iterator end() const { return begin() + size(); }
@@ -450,8 +461,15 @@ void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(size_t MinSize) {
 }
 
 template <typename T, bool TriviallyCopyable>
-T *SmallVectorTemplateBase<T, TriviallyCopyable>::mallocForGrow(
-    size_t MinSize, size_t &NewCapacity) {
+#ifdef __clang__
+// Casting the newly allocated void* buffer to T* before moveElementsForGrow
+// constructs the elements in place is valid in C++, but for polymorphic T,
+// cfi-unrelated-cast reads the vtable pointer from the uninitialized memory at
+// the cast before any constructor has initialized it.
+LLVM_NO_SANITIZE("cfi-unrelated-cast")
+#endif
+    T *SmallVectorTemplateBase<T, TriviallyCopyable>::mallocForGrow(
+        size_t MinSize, size_t &NewCapacity) {
   return static_cast<T *>(
       SmallVectorBase<SmallVectorSizeType<T>>::mallocForGrow(
           this->getFirstEl(), MinSize, sizeof(T), NewCapacity));

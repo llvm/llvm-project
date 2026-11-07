@@ -286,4 +286,65 @@ TEST(DenseSetCustomTest, EraseInvalidatesIterators) {
   EXPECT_DEATH((void)*It, "invalid iterator access");
 }
 #endif
+
+struct PolymorphicBase {
+  int Value = 0;
+  PolymorphicBase() = default;
+  explicit PolymorphicBase(int V) : Value(V) {}
+  PolymorphicBase(const PolymorphicBase &) = default;
+  PolymorphicBase(PolymorphicBase &&) noexcept = default;
+  PolymorphicBase &operator=(const PolymorphicBase &) = default;
+  PolymorphicBase &operator=(PolymorphicBase &&) noexcept = default;
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+  bool operator==(const PolymorphicBase &RHS) const {
+    return Value == RHS.Value;
+  }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+struct PolymorphicSetInfo {
+  static unsigned getHashValue(const PolymorphicBase &Val) {
+    return static_cast<unsigned>(Val.Value) * 37U;
+  }
+  static bool isEqual(const PolymorphicBase &LHS, const PolymorphicBase &RHS) {
+    return LHS == RHS;
+  }
+};
+
+TEST(DenseSetCustomTest, PolymorphicTypes) {
+  DenseSet<PolymorphicBase, PolymorphicSetInfo> Set;
+  SmallDenseSet<PolymorphicBase, 2, PolymorphicSetInfo> SmallSet;
+  for (int I = 0; I < 16; ++I) {
+    EXPECT_TRUE(Set.insert(PolymorphicBase(I)).second);
+    EXPECT_TRUE(SmallSet.insert(PolymorphicBase(I)).second);
+  }
+  EXPECT_EQ(16u, Set.size());
+  EXPECT_EQ(16u, SmallSet.size());
+  EXPECT_EQ(7, Set.find(PolymorphicBase(7))->get());
+  EXPECT_EQ(7, SmallSet.find(PolymorphicBase(7))->get());
+  EXPECT_TRUE(Set.erase(PolymorphicBase(7)));
+  EXPECT_TRUE(SmallSet.erase(PolymorphicBase(7)));
+  EXPECT_FALSE(Set.contains(PolymorphicBase(7)));
+  EXPECT_FALSE(SmallSet.contains(PolymorphicBase(7)));
+
+  PolymorphicBase B(3);
+  PolymorphicDerived D(4);
+  DenseSet<PolymorphicBase *> PtrSet;
+  SmallDenseSet<PolymorphicBase *, 2> SmallPtrSet;
+  PtrSet.insert(&B);
+  PtrSet.insert(&D);
+  SmallPtrSet.insert(&B);
+  SmallPtrSet.insert(&D);
+
+  const PolymorphicBase *ConstD = &D;
+  EXPECT_TRUE(PtrSet.contains(ConstD));
+  EXPECT_TRUE(SmallPtrSet.contains(ConstD));
+  EXPECT_EQ(8, (*PtrSet.find(ConstD))->get());
+  EXPECT_EQ(8, (*SmallPtrSet.find(ConstD))->get());
+}
 }
