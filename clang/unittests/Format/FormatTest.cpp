@@ -7131,6 +7131,43 @@ TEST_F(FormatTest, FormatsJoinedLinesOnSubsequentRuns) {
                SingleLine);
 }
 
+TEST_F(FormatTest, DeeplyNestedPreprocessorConditionals) {
+  std::string Input;
+  std::string Expected;
+  constexpr unsigned Depth = 20;
+  for (unsigned I = 0; I < Depth; ++I) {
+    Input += "#if A\nint  x=" + std::to_string(I) + ";\n";
+    Expected += "#if A\nint x = " + std::to_string(I) + ";\n";
+  }
+  for (unsigned I = 0; I < Depth; ++I) {
+    Input += "#elif B\nint  y=" + std::to_string(I) +
+             ";\n"
+             "#else\nint  z=" +
+             std::to_string(I) + ";\n#endif\n";
+    Expected += "#elif B\nint y = " + std::to_string(I) +
+                ";\n"
+                "#else\nint z = " +
+                std::to_string(I) + ";\n#endif\n";
+  }
+  verifyFormat(Expected, Input);
+
+  // Also verify conditionals nested inside #else branches (which are
+  // PP_Unreachable during the initial pass).
+  Input.clear();
+  Expected.clear();
+  for (unsigned I = 0; I < Depth; ++I) {
+    Input += "#if A\nint  x=" + std::to_string(I) + ";\n#else\n";
+    Expected += "#if A\nint x = " + std::to_string(I) + ";\n#else\n";
+  }
+  Input += "int  z=0;\n";
+  Expected += "int z = 0;\n";
+  for (unsigned I = 0; I < Depth; ++I) {
+    Input += "#endif\n";
+    Expected += "#endif\n";
+  }
+  verifyFormat(Expected, Input);
+}
+
 TEST_F(FormatTest, LayoutBlockInsideParens) {
   verifyFormat("functionCall({ int i; });");
   verifyFormat("functionCall({\n"
