@@ -271,6 +271,8 @@ public:
                              Align Alignment,
                              unsigned AddrSpace) const override;
 
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override;
+
   bool useFastCCForInternalCall(Function &F) const override;
 
 private:
