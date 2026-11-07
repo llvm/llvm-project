@@ -46,6 +46,7 @@ add_flang_unittest(FlangEvaluateTests
 
 target_link_libraries(FlangEvaluateTests
   PRIVATE
+  FortranSupport
   FortranEvaluate
   FortranDecimal
   FortranSemantics
