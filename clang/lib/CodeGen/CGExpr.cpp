@@ -33,6 +33,7 @@
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/MatrixUtils.h"
 #include "clang/AST/NSAPI.h"
+#include "clang/AST/OverflowHandler.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -1917,6 +1918,11 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitConditionalOperatorLValue(cast<BinaryConditionalOperator>(E));
   case Expr::ChooseExprClass:
     return EmitLValue(cast<ChooseExpr>(E)->getChosenSubExpr(), IsKnownNonNull);
+  case Expr::OverflowGotoExprClass: {
+    const auto *OGE = cast<OverflowGotoExpr>(E);
+    OverflowHandlerScope HandlerScope(LocalOverflowHandlers, getContext(), OGE);
+    return EmitLValue(OGE->getSubExpr(), IsKnownNonNull);
+  }
   case Expr::OpaqueValueExprClass:
     return EmitOpaqueValueLValue(cast<OpaqueValueExpr>(E));
   case Expr::SubstNonTypeTemplateParmExprClass:

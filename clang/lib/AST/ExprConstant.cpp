@@ -8844,6 +8844,9 @@ public:
     { return StmtVisitorTy::Visit(E->getSubExpr()); }
   bool VisitChooseExpr(const ChooseExpr *E)
     { return StmtVisitorTy::Visit(E->getChosenSubExpr()); }
+  bool VisitOverflowGotoExpr(const OverflowGotoExpr *E) {
+    return StmtVisitorTy::Visit(E->getSubExpr());
+  }
   bool VisitGenericSelectionExpr(const GenericSelectionExpr *E)
     { return StmtVisitorTy::Visit(E->getResultExpr()); }
   bool VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E)
@@ -23155,6 +23158,8 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 
   case Expr::ParenExprClass:
     return CheckICE(cast<ParenExpr>(E)->getSubExpr(), Ctx);
+  case Expr::OverflowGotoExprClass:
+    return CheckICE(cast<OverflowGotoExpr>(E)->getSubExpr(), Ctx);
   case Expr::GenericSelectionExprClass:
     return CheckICE(cast<GenericSelectionExpr>(E)->getResultExpr(), Ctx);
   case Expr::IntegerLiteralClass:

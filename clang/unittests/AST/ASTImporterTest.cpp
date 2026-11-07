@@ -1517,6 +1517,33 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportChooseExpr) {
             ToChooseExpr->isConditionDependent());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportOverflowGotoExpr) {
+  Decl *From, *To;
+  std::tie(From, To) =
+      getImportedDecl("int declToImport(int a) {"
+                      "  return __builtin_overflow_goto(a + 1, l);"
+                      "l:"
+                      "  return 0;"
+                      "}",
+                      Lang_C99, "", Lang_C99);
+
+  auto FindOverflowGoto = [](ASTContext &Ctx) -> const OverflowGotoExpr * {
+    for (const BoundNodes &N : match(expr().bind("e"), Ctx))
+      if (const auto *E = N.getNodeAs<OverflowGotoExpr>("e"))
+        return E;
+    return nullptr;
+  };
+  const OverflowGotoExpr *FromOGE = FindOverflowGoto(From->getASTContext());
+  const OverflowGotoExpr *ToOGE = FindOverflowGoto(To->getASTContext());
+  ASSERT_TRUE(FromOGE);
+  ASSERT_TRUE(ToOGE);
+
+  EXPECT_TRUE(isa<BinaryOperator>(ToOGE->getSubExpr()));
+  EXPECT_EQ(ToOGE->getLabel()->getName(), "l");
+  EXPECT_EQ(ToOGE->getLabel()->getDeclContext(), cast<DeclContext>(To));
+  EXPECT_TRUE(ToOGE->getLabel()->getStmt());
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportConvertVectorExpr) {
   Decl *From, *To;
   std::tie(From, To) = getImportedDecl(
