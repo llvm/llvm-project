@@ -34,7 +34,7 @@ define void @foo(ptr %arg3, i1 %icmp16) #0 {
 ; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_offset %rbx, -56
 ; CHECK-NEXT:    .cfi_offset %r12, -48
 ; CHECK-NEXT:    .cfi_offset %r13, -40
@@ -43,33 +43,33 @@ define void @foo(ptr %arg3, i1 %icmp16) #0 {
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    xorl %r15d, %r15d
+; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    xorl %r12d, %r12d
-; CHECK-NEXT:    # implicit-def: $r13
+; CHECK-NEXT:    # implicit-def: $rax
+; CHECK-NEXT:    # kill: killed $rax
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb5
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    orl $1, %r12d
-; CHECK-NEXT:    movq %r14, %r15
+; CHECK-NEXT:    movq %r14, %r13
 ; CHECK-NEXT:  .LBB0_2: # %bb7
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq *%rax
-; CHECK-NEXT:    movl %r13d, %r13d
+; CHECK-NEXT:    callq *%r15
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    movl $0, %r14d
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.3: # %bb17
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    testq %r15, %r15
+; CHECK-NEXT:    testq %r13, %r13
 ; CHECK-NEXT:    sete %r14b
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq *%rax
+; CHECK-NEXT:    callq *%r15
 ; CHECK-NEXT:    shll $4, %r14d
 ; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Folded Reload
-; CHECK-NEXT:    movl %r13d, 0
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    movl %eax, 0
 ; CHECK-NEXT:    movb $0, 4
 ; CHECK-NEXT:    jmp .LBB0_1
 bb:
