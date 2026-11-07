@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TypeTraitsCheck.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
@@ -158,6 +159,54 @@ static const llvm::StringSet<> TypeTraits = {
     "tuple_element",
     "variant_alternative",
 };
+
+// Value traits whose primary template is not defined for every argument. For
+// these, a dependent `trait<T>::value` can be a substitution failure while
+// `trait_v<T>` is a hard error, so the two are not equivalent in constraints.
+static const llvm::StringSet<> NonSFINAEFriendlyValueTraits = {
+    "tuple_size",
+    "variant_size",
+};
+
+static bool isClause(const Expr *Clause, const Expr *E) {
+  return Clause && E && Clause->IgnoreParens() == E->IgnoreParens();
+}
+
+static bool isRequiresClause(const TemplateParameterList *TPL, const Expr *E) {
+  return TPL && isClause(TPL->getRequiresClause(), E);
+}
+
+// Returns true if E is a requires-clause of the declaration in Node.
+static bool isRequiresClauseOf(const DynTypedNode &Node, const Expr *E) {
+  if (const auto *DD = Node.get<DeclaratorDecl>();
+      DD && isClause(DD->getTrailingRequiresClause().ConstraintExpr, E))
+    return true;
+  if (const auto *TD = Node.get<TemplateDecl>())
+    return isRequiresClause(TD->getTemplateParameters(), E);
+  if (const auto *CTPSD = Node.get<ClassTemplatePartialSpecializationDecl>())
+    return isRequiresClause(CTPSD->getTemplateParameters(), E);
+  if (const auto *VTPSD = Node.get<VarTemplatePartialSpecializationDecl>())
+    return isRequiresClause(VTPSD->getTemplateParameters(), E);
+  return false;
+}
+
+// Returns true if E is part of a requires-expression, a concept definition or
+// a requires-clause.
+static bool isInConstraint(const Expr &E, ASTContext &Ctx) {
+  DynTypedNode Node = DynTypedNode::create(E);
+  while (true) {
+    const DynTypedNodeList Parents = Ctx.getParents(Node);
+    if (Parents.empty())
+      return false;
+    const DynTypedNode &Parent = Parents[0];
+    if (Parent.get<RequiresExpr>() || Parent.get<ConceptDecl>() ||
+        isRequiresClauseOf(Parent, Node.get<Expr>()))
+      return true;
+    if (Parent.get<Decl>())
+      return false;
+    Node = Parent;
+  }
+}
 
 static DeclarationName getName(const DependentScopeDeclRefExpr &D) {
   return D.getDeclName();
@@ -313,8 +362,13 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *DSDRE =
           Result.Nodes.getNodeAs<DependentScopeDeclRefExpr>(Bind)) {
-    if (checkTemplatedDecl(DSDRE->getQualifier(), ValueTraits))
-      EmitValueWarning(DSDRE->getQualifierLoc(), DSDRE->getEndLoc());
+    if (!checkTemplatedDecl(DSDRE->getQualifier(), ValueTraits))
+      return;
+    if (checkTemplatedDecl(DSDRE->getQualifier(),
+                           NonSFINAEFriendlyValueTraits) &&
+        isInConstraint(*DSDRE, *Result.Context))
+      return;
+    EmitValueWarning(DSDRE->getQualifierLoc(), DSDRE->getEndLoc());
     return;
   }
 

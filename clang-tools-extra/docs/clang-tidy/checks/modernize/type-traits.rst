@@ -32,6 +32,12 @@ Would be converted into:
 
   std::remove_cvref_t<int>
 
+Does not diagnose ``std::tuple_size<T>::value`` and
+``std::variant_size<T>::value`` inside requires-expressions, concept definitions
+and requires-clauses. There, a substitution failure in the ``::value`` form
+makes the constraint unsatisfied, while ``std::tuple_size_v<T>`` and
+``std::variant_size_v<T>`` would cause a hard error instead.
+
 
 Options
 -------
