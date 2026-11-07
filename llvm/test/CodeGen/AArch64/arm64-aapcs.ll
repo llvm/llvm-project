@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -enable-misched=false -disable-post-ra < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64_be-linux-gnu -enable-misched=false -disable-post-ra < %s | FileCheck %s --check-prefix=BE
 
 @var = dso_local global i32 0, align 4
 
@@ -118,6 +119,59 @@ entry:
 ; CHECK-LABEL: test_vreg_stack:
 ; CHECK: ldr {{q[0-9]+}}, [sp]
   ret <2 x double> %varg_stack;
+}
+
+; Check that a v3f32 argument can be passed by stack after the VPRs are
+; exhausted.
+define dso_local <3 x float> @test_v3f32_vreg_stack([8 x <2 x double>],
+                                                 <3 x float> %arg) {
+; CHECK-LABEL: test_v3f32_vreg_stack:
+; CHECK:       ldr q0, [sp]
+; CHECK-NEXT:  ret
+; BE-LABEL: test_v3f32_vreg_stack:
+; BE:       ldr q0, [sp]
+; BE-NEXT:  ret
+  ret <3 x float> %arg
+}
+
+define dso_local float @test_v3f32_vreg_stack_first([8 x <2 x double>],
+                                                  <3 x float> %arg) {
+; CHECK-LABEL: test_v3f32_vreg_stack_first:
+; CHECK:       ldr s0, [sp]
+; CHECK-NEXT:  ret
+; BE-LABEL: test_v3f32_vreg_stack_first:
+; BE:       ldr s0, [sp]
+; BE-NEXT:  ret
+  %elt = extractelement <3 x float> %arg, i32 0
+  ret float %elt
+}
+
+define dso_local float @test_v3f32_vreg_stack_last([8 x <2 x double>],
+                                                 <3 x float> %arg) {
+; CHECK-LABEL: test_v3f32_vreg_stack_last:
+; CHECK:       ldr s0, [sp, #8]
+; CHECK-NEXT:  ret
+; BE-LABEL: test_v3f32_vreg_stack_last:
+; BE:       ldr s0, [sp, #8]
+; BE-NEXT:  ret
+  %elt = extractelement <3 x float> %arg, i32 2
+  ret float %elt
+}
+
+declare void @consume_v3f32([8 x <2 x double>], <3 x float>)
+
+define dso_local void @test_v3f32_call_vreg_stack(ptr %p) {
+; CHECK-LABEL: test_v3f32_call_vreg_stack:
+; CHECK:       ldr q[[V:[0-9]+]], [x0]
+; CHECK:       str q[[V]], [sp]
+; CHECK:       bl consume_v3f32
+; BE-LABEL: test_v3f32_call_vreg_stack:
+; BE:       ld1 { v[[V:[0-9]+]].4s }, [x0]
+; BE:       st1 { v[[V]].4s }, [sp]
+; BE:       bl consume_v3f32
+  %arg = load <3 x float>, ptr %p
+  call void @consume_v3f32([8 x <2 x double>] undef, <3 x float> %arg)
+  ret void
 }
 
 ; Check that f16 can be passed and returned (ACLE 2.0 extension)
