@@ -754,11 +754,10 @@ define <4 x i64> @lshl_add_u64_vvv_and_2_v4(<4 x i64> %v, <4 x i64> %a, <4 x i64
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[6:7], v17, v[6:7]
 ; GFX1250-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], v16, v[8:9]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-NEXT:    v_lshl_add_u64 v[4:5], v[4:5], v19, v[12:13]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], v18, v[10:11]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[6:7], v[6:7], v[14:15]
+; GFX1250-NEXT:    v_lshl_add_u64 v[4:5], v[4:5], v19, v[12:13]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX942-GISEL-LABEL: lshl_add_u64_vvv_and_2_v4:
@@ -797,11 +796,10 @@ define <4 x i64> @lshl_add_u64_vvv_and_2_v4(<4 x i64> %v, <4 x i64> %a, <4 x i64
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_lshlrev_b64_e32 v[6:7], v17, v[6:7]
 ; GFX1250-GISEL-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], v16, v[8:9]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], v18, v[10:11]
-; GFX1250-GISEL-NEXT:    v_lshl_add_u64 v[4:5], v[4:5], v19, v[12:13]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1250-GISEL-NEXT:    v_add_nc_u64_e32 v[6:7], v[6:7], v[14:15]
+; GFX1250-GISEL-NEXT:    v_lshl_add_u64 v[4:5], v[4:5], v19, v[12:13]
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %and = and <4 x i64> %s, <i64 1, i64 2, i64 3, i64 5>
   %shl = shl <4 x i64> %v, %and
