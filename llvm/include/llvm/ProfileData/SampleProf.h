@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SortedVectorMap.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,6 +46,7 @@
 namespace llvm {
 
 class DILocation;
+class DISubprogram;
 class raw_ostream;
 
 LLVM_ABI const std::error_category &sampleprof_category();
@@ -1250,35 +1252,43 @@ public:
     return Result;
   }
 
-  /// Recursively traverses all children, if the total sample count of the
-  /// corresponding function is no less than \p Threshold, add its corresponding
-  /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
-  /// to \p S.
+  /// Add the import GUID of profiled function \p Name to \p S. Only functions
+  /// defined outside this module need importing, unless \p IncludeLocal is
+  /// set: then another module that imports the caller also imports the
+  /// function, as needed for a deferred indirect call target.
+  static void
+  addImportGUID(DenseSet<GlobalValue::GUID> &S,
+                const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
+                FunctionId Name, bool IncludeLocal) {
+    const Function *F = SymbolMap.lookup(Name);
+    if (!F || F->isDeclaration())
+      S.insert(Name.getHashCode());
+    else if (IncludeLocal)
+      // GUID metadata is assigned at the end of pre-link, so use the fallback
+      // identity, which includes the source file name for locals.
+      S.insert(F->getGUIDOrFallback());
+  }
+
+  /// Recursively collect import GUIDs from contexts with total samples greater
+  /// than \p Threshold, including hot call targets in their body samples.
+  /// \p IncludeLocalTargets is passed to addImportGUID.
   void findInlinedFunctions(
       DenseSet<GlobalValue::GUID> &S,
       const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
-      uint64_t Threshold) const {
+      uint64_t Threshold, bool IncludeLocalTargets = false) const {
     if (TotalSamples <= Threshold)
       return;
-    auto IsDeclaration = [](const Function *F) {
-      return !F || F->isDeclaration();
-    };
-    if (IsDeclaration(SymbolMap.lookup(getFunction()))) {
-      // Add to the import list only when it's defined out of module.
-      S.insert(getGUID());
-    }
+    addImportGUID(S, SymbolMap, getFunction(), IncludeLocalTargets);
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : BodySamples)
       for (const auto &TS : BS.second.getCallTargets())
-        if (TS.second > Threshold) {
-          const Function *Callee = SymbolMap.lookup(TS.first);
-          if (IsDeclaration(Callee))
-            S.insert(TS.first.getHashCode());
-        }
+        if (TS.second > Threshold)
+          addImportGUID(S, SymbolMap, TS.first, IncludeLocalTargets);
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findInlinedFunctions(S, SymbolMap, Threshold);
+        NameFS.second.findInlinedFunctions(S, SymbolMap, Threshold,
+                                           IncludeLocalTargets);
   }
 
   /// Set the name of the function.
@@ -1418,12 +1428,18 @@ public:
   /// \returns the FunctionSamples pointer to the inlined instance.
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
-  /// name.
+  /// name. If \p Fallback is not null, it is called for an inlined frame that
+  /// has no profile under its caller, with the caller's profile, the call site,
+  /// and the frame's subprogram and name; a non-null result is used instead.
   LLVM_ABI const FunctionSamples *findFunctionSamples(
       const DILocation *DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr,
       const HashKeyMap<DenseMap, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const LLVM_LIFETIME_BOUND;
+          *FuncNameToProfNameMap = nullptr,
+      function_ref<const FunctionSamples *(const FunctionSamples &,
+                                           const LineLocation &,
+                                           const DISubprogram &, StringRef)>
+          Fallback = nullptr) const LLVM_LIFETIME_BOUND;
 
   SampleContext &getContext() const LLVM_LIFETIME_BOUND { return Context; }
 
