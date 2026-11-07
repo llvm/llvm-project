@@ -148,6 +148,7 @@ public:
   }
   const std::optional<Expr<SubscriptInteger>> &LEN() const { return LEN_; }
   TypeAndShape &set_LEN(Expr<SubscriptInteger> &&len) {
+    CHECK(IsSubscriptIntegerKind(len));
     LEN_ = std::move(len);
     return *this;
   }

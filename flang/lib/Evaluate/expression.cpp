@@ -197,6 +197,7 @@ bool ArrayConstructorValues<R>::operator==(
 
 auto ArrayConstructor<Type<TypeCategory::Character>>::set_LEN(
     Expr<SubscriptInteger> &&len) -> ArrayConstructor & {
+  CHECK(IsSubscriptIntegerKind(len));
   length_.emplace(std::move(len));
   return *this;
 }

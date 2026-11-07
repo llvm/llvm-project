@@ -18,12 +18,19 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
 
 namespace Fortran::evaluate {
+
+bool IsSubscriptIntegerKind(const Shape &shape) {
+  return llvm::all_of(shape, [](const MaybeExtentExpr &extent) {
+    return IsSubscriptIntegerKind(extent);
+  });
+}
 
 FoldingContext &GetFoldingContextFrom(const Symbol &symbol) {
   return symbol.owner().context().foldingContext();
