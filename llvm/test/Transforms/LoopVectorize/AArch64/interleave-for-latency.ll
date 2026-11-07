@@ -67,8 +67,6 @@ exit:
   ret void
 }
 
-; FIXME: On a320 and a510 we should be interleaving by 2 here, but
-; latency of interleaved loads is not yet implemented.
 define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16 %argval) {
 ; CHECK-LATENCY1-LABEL: define void @i16_add2(
 ; CHECK-LATENCY1-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) {
@@ -88,10 +86,12 @@ define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A510-LABEL: define void @i16_add2(
 ; CHECK-A510-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A510:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP1:%.*]], align 2
+; CHECK-A510:    [[WIDE_VEC2:%.*]] = load <16 x i16>, ptr [[TMP3:%.*]], align 2
 ;
 ; CHECK-A320-LABEL: define void @i16_add2(
 ; CHECK-A320-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A320:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP1:%.*]], align 2
+; CHECK-A320:    [[WIDE_VEC2:%.*]] = load <16 x i16>, ptr [[TMP3:%.*]], align 2
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
@@ -120,8 +120,6 @@ exit:
   ret void
 }
 
-; FIXME: On a320 and a510 we should be interleaving by 2 here, but
-; latency of interleaved loads is not yet implemented.
 define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16 %argval) {
 ; CHECK-LATENCY1-LABEL: define void @i16_add4(
 ; CHECK-LATENCY1-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) {
@@ -139,10 +137,12 @@ define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A510-LABEL: define void @i16_add4(
 ; CHECK-A510-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A510:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP1:%.*]], align 2
+; CHECK-A510:    [[WIDE_VEC4:%.*]] = load <32 x i16>, ptr [[TMP3:%.*]], align 2
 ;
 ; CHECK-A320-LABEL: define void @i16_add4(
 ; CHECK-A320-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A320:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP1:%.*]], align 2
+; CHECK-A320:    [[WIDE_VEC4:%.*]] = load <32 x i16>, ptr [[TMP3:%.*]], align 2
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
@@ -232,8 +232,6 @@ exit:
   ret void
 }
 
-; FIXME: On a320 and a510 we should be interleaving by 2 here, but
-; latency of interleaved loads is not yet implemented.
 define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32 %argval) {
 ; CHECK-LATENCY1-LABEL: define void @i32_add2(
 ; CHECK-LATENCY1-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) {
@@ -253,10 +251,12 @@ define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-A510-LABEL: define void @i32_add2(
 ; CHECK-A510-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A510:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1:%.*]], align 4
+; CHECK-A510:    [[WIDE_VEC2:%.*]] = load <8 x i32>, ptr [[TMP3:%.*]], align 4
 ;
 ; CHECK-A320-LABEL: define void @i32_add2(
 ; CHECK-A320-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A320:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1:%.*]], align 4
+; CHECK-A320:    [[WIDE_VEC2:%.*]] = load <8 x i32>, ptr [[TMP3:%.*]], align 4
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
