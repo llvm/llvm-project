@@ -4545,7 +4545,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         match(Op1, m_Select(m_Value(Y), m_Value(C), m_Value(D))) && X == Y) {
       Value *orTrue = Builder.CreateOr(A, C);
       Value *orFalse = Builder.CreateOr(B, D);
-      return SelectInst::Create(X, orTrue, orFalse);
+      // Both selects test same condition, so set any weight on new select.
+      Instruction *MDFrom = nullptr;
+      if (!ProfcheckDisableMetadataFixes) {
+        if (cast<Instruction>(Op0)->getMetadata(LLVMContext::MD_prof))
+          MDFrom = cast<Instruction>(Op0);
+        else if (cast<Instruction>(Op1)->getMetadata(LLVMContext::MD_prof))
+          MDFrom = cast<Instruction>(Op1);
+      }
+      if (ProfcheckDisableMetadataFixes || MDFrom)
+        return SelectInst::Create(X, orTrue, orFalse, "", nullptr, MDFrom);
+      return createSelectInstWithUnknownProfile(X, orTrue, orFalse);
     }
   }
 
