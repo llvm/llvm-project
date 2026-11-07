@@ -2,7 +2,7 @@
 ; RUN: opt -p loop-vectorize -mtriple aarch64 -mcpu=neoverse-v1 -S %s | FileCheck %s
 
 ; Test case for https://github.com/llvm/llvm-project/issues/94328.
-define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
+define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: define void @sdiv_feeding_gep(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X:%.*]], i64 [[M:%.*]], i64 [[CONV6:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -89,7 +89,7 @@ exit:
   ret void
 }
 
-define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
+define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: define void @sdiv_feeding_gep_predicated(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X:%.*]], i64 [[M:%.*]], i64 [[CONV6:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -196,7 +196,7 @@ exit:
 }
 
 ; Test case for https://github.com/llvm/llvm-project/issues/80416.
-define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
+define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: define void @udiv_urem_feeding_gep(
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

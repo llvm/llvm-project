@@ -1057,4 +1057,4 @@ exit:
   ret i32 %load
 }
 
-attributes #0 = { "target-cpu"="neoverse-v2" }
+attributes #0 = { "target-cpu"="neoverse-v2" vscale_range(1,16) }

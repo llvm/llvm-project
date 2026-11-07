@@ -4,7 +4,7 @@
 ;
 ; Integer reduction with interleaving & a start value of 5
 ;
-define i64 @int_reduction_add(ptr %a, i64 %N) {
+define i64 @int_reduction_add(ptr %a, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @int_reduction_add(
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 2

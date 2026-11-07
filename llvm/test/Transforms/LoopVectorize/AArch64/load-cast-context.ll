@@ -180,7 +180,7 @@ exit:
   ret i32 %or
 }
 
-attributes #0 = { "target-cpu"="neoverse-512tvb" }
+attributes #0 = { "target-cpu"="neoverse-512tvb" vscale_range(1,16) }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

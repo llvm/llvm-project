@@ -311,7 +311,7 @@ exit:
   ret void
 }
 
-define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, i64 %N) "target-features"="+sve" {
+define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, i64 %N) "target-features"="+sve" vscale_range(1,16) {
 ; DEFAULT-LABEL: define i32 @header_mask_and_invariant_compare(
 ; DEFAULT-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]], ptr [[E:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]

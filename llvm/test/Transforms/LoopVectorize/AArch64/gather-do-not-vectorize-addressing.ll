@@ -4,7 +4,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple=aarch64--linux-gnu -mattr=+sve -force-vector-width=2 -force-vector-interleave=1 \
 ; RUN:   -tail-folding-policy=dont-fold-tail -scalable-vectorization=on -S -o - | FileCheck --check-prefix=SVE %s
 
-define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) {
+define double @test(ptr nocapture noundef readonly %data, ptr nocapture noundef readonly %offset, i32 noundef %size) vscale_range(1,16) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[DATA:%.*]], ptr noundef readonly captures(none) [[OFFSET:%.*]], i32 noundef [[SIZE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -150,7 +150,7 @@ for.body:
 }
 
 ; %l is only used in an address via the first-order recurrence %for.
-define void @load_used_as_address_via_recurrence(ptr noalias %A, ptr noalias %src, ptr noalias %dst, i64 %n) {
+define void @load_used_as_address_via_recurrence(ptr noalias %A, ptr noalias %src, ptr noalias %dst, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @load_used_as_address_via_recurrence(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -278,7 +278,7 @@ exit:
 
 ; %l is used in an address via the pointer first-order recurrence %for, which
 ; is directly used as address.
-define void @load_used_as_address_via_ptr_recurrence(ptr noalias %A, ptr noalias %src, ptr noalias %dst, i64 %n) {
+define void @load_used_as_address_via_ptr_recurrence(ptr noalias %A, ptr noalias %src, ptr noalias %dst, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @load_used_as_address_via_ptr_recurrence(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:

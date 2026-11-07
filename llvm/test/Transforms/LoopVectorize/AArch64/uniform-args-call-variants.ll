@@ -266,7 +266,7 @@ declare double @bar(double, i32)
 declare <vscale x 2 x double> @foo_uniform(<vscale x 2 x double>, i64, <vscale x 2 x i1>)
 declare <vscale x 2 x double> @bar_uniform(<vscale x 2 x double>, i32, <vscale x 2 x i1>)
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" vscale_range(1,16) }
 
 ; Mappings
 attributes #1 = { nounwind "vector-function-abi-variant"="_ZGVsMxvu_foo(foo_uniform)" }
