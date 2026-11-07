@@ -967,7 +967,10 @@ SDValue LoongArchTargetLowering::lowerVSELECT(SDValue Op,
     int NumElts = CondVT.getVectorNumElements();
     Mask.resize(NumElts, -1);
     for (int i = 0; i < NumElts; ++i) {
-      auto *CondElt = dyn_cast<ConstantSDNode>(Cond.getOperand(i));
+      SDValue CondOp = Cond.getOperand(i);
+      if (CondOp.isUndef())
+        continue;
+      auto *CondElt = dyn_cast<ConstantSDNode>(CondOp);
       if (CondElt->getZExtValue() == 0)
         Mask[i] = i + NumElts;
       else

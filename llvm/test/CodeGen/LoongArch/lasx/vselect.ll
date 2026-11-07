@@ -113,6 +113,21 @@ define void @select_v16i16_2(ptr %res, ptr %a0, ptr %a1) nounwind {
   ret void
 }
 
+define void @select_v16i16_poison(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: select_v16i16_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr1, 0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <16 x i16>, ptr %a0
+  %v1 = load <16 x i16>, ptr %a1
+  %sel = select <16 x i1> <i1 false, i1 false, i1 true, i1 true, i1 poison, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i16> %v0, <16 x i16> %v1
+  store <16 x i16> %sel, ptr %res
+  ret void
+}
+
 define void @select_v8i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v8i32:
 ; CHECK:       # %bb.0:
@@ -164,8 +179,8 @@ define void @select_v4i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI10_0)
-; LA32-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI10_0)
+; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI11_0)
+; LA32-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI11_0)
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
@@ -189,8 +204,8 @@ define void @select_v4f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI11_0)
-; LA32-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI11_0)
+; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI12_0)
+; LA32-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI12_0)
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret

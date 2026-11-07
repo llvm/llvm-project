@@ -164,6 +164,29 @@ define void @select_v4i32_1(ptr %res, ptr %a0, ptr %a1) nounwind {
   ret void
 }
 
+define void @select_v4i32_poison(ptr %res, ptr %a0, ptr %a1) nounwind {
+; LA32-LABEL: select_v4i32_poison:
+; LA32:       # %bb.0:
+; LA32-NEXT:    vld $vr0, $a2, 0
+; LA32-NEXT:    ld.w $a1, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
+; LA32-NEXT:    vst $vr0, $a0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: select_v4i32_poison:
+; LA64:       # %bb.0:
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vextrins.w $vr1, $vr0, 0
+; LA64-NEXT:    vst $vr1, $a0, 0
+; LA64-NEXT:    ret
+  %v0 = load <4 x i32>, ptr %a0
+  %v1 = load <4 x i32>, ptr %a1
+  %sel = select <4 x i1> <i1 true, i1 poison, i1 false, i1 false>, <4 x i32> %v0, <4 x i32> %v1
+  store <4 x i32> %sel, ptr %res
+  ret void
+}
+
 define void @select_v4f32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v4f32:
 ; CHECK:       # %bb.0:
@@ -184,8 +207,8 @@ define void @select_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI11_0)
-; LA32-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI11_0)
+; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI12_0)
+; LA32-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI12_0)
 ; LA32-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
@@ -209,8 +232,8 @@ define void @select_v2f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI12_0)
-; LA32-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI12_0)
+; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI13_0)
+; LA32-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI13_0)
 ; LA32-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
