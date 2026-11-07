@@ -185,8 +185,6 @@ using RemFOpLowering =
     VectorConvertToLLVMPattern<arith::RemFOp, LLVM::FRemOp,
                                arith::AttrConvertFastMathToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
-using RemSIOpLowering =
-    VectorConvertToLLVMPattern<arith::RemSIOp, LLVM::SRemOp>;
 using RemUIOpLowering =
     VectorConvertToLLVMPattern<arith::RemUIOp, LLVM::URemOp>;
 using SelectOpLowering =
@@ -292,6 +290,14 @@ using MulSIExtendedOpLowering =
     MulIExtendedOpLowering<arith::MulSIExtendedOp, true>;
 using MulUIExtendedOpLowering =
     MulIExtendedOpLowering<arith::MulUIExtendedOp, false>;
+
+struct RemSIOpLowering : public ConvertOpToLLVMPattern<arith::RemSIOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
 
 struct CmpIOpLowering : public ConvertOpToLLVMPattern<arith::CmpIOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
@@ -690,6 +696,55 @@ LogicalResult MulIExtendedOpLowering<ArithMulOp, IsSigned>::matchAndRewrite(
 
   return rewriter.notifyMatchFailure(op,
                                      "ND vector types are not supported yet");
+}
+
+//===----------------------------------------------------------------------===//
+// RemSIOpLowering
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+RemSIOpLowering::matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                                 ConversionPatternRewriter &rewriter) const {
+  Type operandType = adaptor.getLhs().getType();
+  if (!LLVM::isCompatibleType(operandType))
+    return failure();
+
+  Location loc = op.getLoc();
+  auto buildRemainder = [&](Type type, ValueRange operands) -> Value {
+    OpAdaptor adaptor(operands);
+    auto elementType = cast<IntegerType>(getElementTypeOrSelf(type));
+    TypedAttr minusOneAttr = rewriter.getIntegerAttr(
+        elementType, APInt::getAllOnes(elementType.getWidth()));
+    if (auto vectorType = dyn_cast<VectorType>(type))
+      minusOneAttr = SplatElementsAttr::get(vectorType, minusOneAttr);
+    Value minusOne = LLVM::ConstantOp::create(rewriter, loc, minusOneAttr);
+    Value zero =
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getZeroAttr(type));
+
+    // arith.remsi(INT_MIN, -1) is zero, but llvm.srem has undefined behavior
+    // for this pair. Select a zero dividend before taking the remainder;
+    // selecting the result would not prevent the undefined behavior.
+    Value isMinusOne = LLVM::ICmpOp::create(
+        rewriter, loc, LLVM::ICmpPredicate::eq, adaptor.getRhs(), minusOne);
+    Value lhs = LLVM::SelectOp::create(rewriter, loc, isMinusOne, zero,
+                                       adaptor.getLhs());
+    auto remainder = LLVM::SRemOp::create(rewriter, loc, lhs, adaptor.getRhs());
+    remainder->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+    return remainder;
+  };
+
+  // Handle the scalar and 1D vector cases.
+  if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    rewriter.replaceOp(op, buildRemainder(operandType, adaptor.getOperands()));
+    return success();
+  }
+
+  if (!isa<VectorType>(op.getType()))
+    return rewriter.notifyMatchFailure(op, "expected vector result type");
+
+  return LLVM::detail::handleMultidimensionalVectors(
+      op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
+      buildRemainder, rewriter);
 }
 
 //===----------------------------------------------------------------------===//
