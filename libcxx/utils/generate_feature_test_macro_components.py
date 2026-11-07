@@ -3,7 +3,6 @@
 import os
 from builtins import range
 from dataclasses import dataclass
-from functools import reduce
 from typing import (
     Any,
     Dict,
@@ -2241,51 +2240,20 @@ def produce_tests():
 """
 
 
-def make_widths(grid):
-    widths = []
-    for i in range(0, len(grid[0])):
-        cell_width = 2 + max(
-            reduce(lambda x, y: x + y, [[len(row[i])] for row in grid], [])
-        )
-        widths += [cell_width]
-    return widths
+def create_table(grid):
+    widths = [max(len(row[column]) for row in grid) for column in range(len(grid[0]))]
 
-
-def create_table(grid, indent):
-    indent_str = " " * indent
-    col_widths = make_widths(grid)
-    result = [indent_str + add_divider(col_widths, 2)]
-    header_flag = 2
-    for row_i in range(0, len(grid)):
-        row = grid[row_i]
-        line = indent_str + " ".join(
-            [pad_cell(row[i], col_widths[i]) for i in range(0, len(row))]
+    def format_row(row):
+        return (
+            "| "
+            + " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(row))
+            + " |"
         )
-        result.append(line.rstrip())
-        if row_i == len(grid) - 1:
-            header_flag = 2
-        if row[0].startswith("**"):
-            header_flag += 1
-        separator = indent_str + add_divider(col_widths, header_flag)
-        result.append(separator.rstrip())
-        header_flag = 0
+
+    result = [format_row(grid[0])]
+    result.append("| " + " | ".join("-" * width for width in widths) + " |")
+    result.extend(format_row(row) for row in grid[1:])
     return "\n".join(result)
-
-
-def add_divider(widths, header_flag):
-    if header_flag == 3:
-        return "=".join(["=" * w for w in widths])
-    if header_flag == 2:
-        return " ".join(["=" * w for w in widths])
-    if header_flag == 1:
-        return "-".join(["-" * w for w in widths])
-    else:
-        return " ".join(["-" * w for w in widths])
-
-
-def pad_cell(s, length, left_align=True):
-    padding = (length - len(s)) * " "
-    return s + padding
 
 
 def get_status_table():
@@ -2295,41 +2263,39 @@ def get_status_table():
         for tc in feature_test_macros:
             if std not in tc["values"].keys():
                 continue
-            value = "``%sL``" % tc["values"][std]
+            value = "`%sL`" % tc["values"][std]
             if "unimplemented" in tc.keys():
                 value = "*unimplemented*"
-            table += [["``%s``" % tc["name"], value]]
+            table += [["`%s`" % tc["name"], value]]
     return table
 
 
 def produce_docs():
-    doc_str = """.. _FeatureTestMacroTable:
+    doc_str = """(featuretestmacrotable)=
 
-==========================
-Feature Test Macro Support
-==========================
+# Feature Test Macro Support
 
-.. contents::
-   :local:
+:::{{contents}}
+:local: true
+:::
 
-Overview
-========
+## Overview
 
 This file documents the feature test macros currently supported by libc++.
 
-.. _feature-status:
+(feature-status)=
 
-Status
-======
+## Status
 
-.. table:: Current Status
-    :name: feature-status-table
-    :widths: auto
+:::{{table}} Current Status
+:name: feature-status-table
+:widths: auto
 
 {status_tables}
+:::
 
 """.format(
-        status_tables=create_table(get_status_table(), 4)
+        status_tables=create_table(get_status_table())
     )
 
     table_doc_path = os.path.join(docs_path, "FeatureTestMacroTable.md")
