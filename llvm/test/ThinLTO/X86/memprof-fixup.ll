@@ -112,7 +112,7 @@ entry:
   ret i32 0
 }
 
-declare ptr @_Znam(i64)
+declare ptr @_Znam(i64) allockind("alloc,uninitialized") allocsize(0)
 
 !7 = !{!8, !10}
 !8 = !{!9, !"cold", !2}

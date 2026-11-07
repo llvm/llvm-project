@@ -77,8 +77,8 @@ declare noalias ptr addrspace(200) @aligned_alloc(i64, i64) addrspace(200) alloc
 declare noalias ptr addrspace(200) @strdup(ptr addrspace(200) %arg) addrspace(200)
 declare void @free(ptr addrspace(200)) addrspace(200) allockind("free") "alloc-family"="malloc"
 ; new/delete
-declare noalias ptr addrspace(200) @_Znwm(i64) addrspace(200)
-declare void @_ZdlPv(ptr addrspace(200)) addrspace(200)
+declare noalias ptr addrspace(200) @_Znwm(i64) addrspace(200) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znwm"
+declare void @_ZdlPv(ptr addrspace(200) allocptr) addrspace(200) allockind("free") "alloc-family"="_Znwm"
 ; new[]/delete[]
-declare noalias ptr addrspace(200) @_Znam(i64) addrspace(200)
-declare void @_ZdaPv(ptr addrspace(200)) addrspace(200)
+declare noalias ptr addrspace(200) @_Znam(i64) addrspace(200) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znam"
+declare void @_ZdaPv(ptr addrspace(200) allocptr) addrspace(200) allockind("free") "alloc-family"="_Znam"

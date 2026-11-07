@@ -49,7 +49,7 @@ void *operator new[](size_t size, std::align_val_t alignment,
 void hot_cold_new() {
   // CHECK: call noalias noundef nonnull ptr @_Znwm12__hot_cold_t(i64 noundef 1, i8 noundef zeroext 0) [[ATTR_NO_BUILTIN_CALL:#[^ ]*]]
   operator new(1, (__hot_cold_t)0);
-  // CHECK: call noalias noundef nonnull ptr @_Znwm12__hot_cold_t(i64 noundef 4, i8 noundef zeroext 0) [[ATTR_BUILTIN_CALL:#[^ ]*]]
+  // CHECK: call noalias noundef nonnull ptr @_Znwm12__hot_cold_t(i64 noundef 4, i8 noundef zeroext 0) [[ATTR_BUILTIN_NEW:#[^ ]*]]
   new ((__hot_cold_t)0) int;
 }
 
@@ -58,7 +58,7 @@ void hot_cold_new() {
 void hot_cold_new_array() {
   // CHECK: call noalias noundef nonnull ptr @_Znam12__hot_cold_t(i64 noundef 1, i8 noundef zeroext 0) [[ATTR_NO_BUILTIN_CALL:#[^ ]*]]
   operator new[](1, (__hot_cold_t)0);
-  // CHECK: call noalias noundef nonnull ptr @_Znam12__hot_cold_t(i64 noundef 4, i8 noundef zeroext 0) [[ATTR_BUILTIN_CALL:#[^ ]*]]
+  // CHECK: call noalias noundef nonnull ptr @_Znam12__hot_cold_t(i64 noundef 4, i8 noundef zeroext 0) [[ATTR_BUILTIN_ARRAY_NEW:#[^ ]*]]
   new ((__hot_cold_t)0) int[1];
 }
 
@@ -67,7 +67,7 @@ void hot_cold_new_array() {
 void hot_cold_new_nothrow() {
   // CHECK: call noalias noundef ptr @_ZnwmRKSt9nothrow_t12__hot_cold_t(i64 noundef 1, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_NO_BUILTIN_NOTHROW_CALL:#[^ ]*]]
   operator new(1, nothrow, (__hot_cold_t)0);
-  // CHECK: call noalias noundef ptr @_ZnwmRKSt9nothrow_t12__hot_cold_t(i64 noundef 4, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_BUILTIN_NOTHROW_CALL:#[^ ]*]]
+  // CHECK: call noalias noundef ptr @_ZnwmRKSt9nothrow_t12__hot_cold_t(i64 noundef 4, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_BUILTIN_NOTHROW_NEW:#[^ ]*]]
   new (nothrow, (__hot_cold_t)0) int;
 }
 
@@ -76,7 +76,7 @@ void hot_cold_new_nothrow() {
 void hot_cold_new_nothrow_array() {
   // CHECK: call noalias noundef ptr @_ZnamRKSt9nothrow_t12__hot_cold_t(i64 noundef 1, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_NO_BUILTIN_NOTHROW_CALL:#[^ ]*]]
   operator new[](1, nothrow, (__hot_cold_t)0);
-  // CHECK: call noalias noundef ptr @_ZnamRKSt9nothrow_t12__hot_cold_t(i64 noundef 4, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_BUILTIN_NOTHROW_CALL:#[^ ]*]]
+  // CHECK: call noalias noundef ptr @_ZnamRKSt9nothrow_t12__hot_cold_t(i64 noundef 4, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_BUILTIN_NOTHROW_ARRAY_NEW:#[^ ]*]]
   new (nothrow, (__hot_cold_t)0) int[1];
 }
 
@@ -89,7 +89,7 @@ class alignas(32) alignedstruct {
 void hot_cold_new_align() {
   // CHECK: call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t12__hot_cold_t(i64 noundef 1, i64 allocalign noundef 32, i8 noundef zeroext 0) [[ATTR_NO_BUILTIN_CALL:#[^ ]*]]
   operator new(1, (std::align_val_t)32, (__hot_cold_t)0);
-  // CHECK: call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t12__hot_cold_t(i64 noundef 32, i64 allocalign noundef 32, i8 noundef zeroext 0) [[ATTR_BUILTIN_CALL:#[^ ]*]]
+  // CHECK: call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t12__hot_cold_t(i64 noundef 32, i64 allocalign noundef 32, i8 noundef zeroext 0) [[ATTR_BUILTIN_ALIGN_NEW:#[^ ]*]]
   new ((__hot_cold_t)0) alignedstruct;
 }
 
@@ -98,7 +98,7 @@ void hot_cold_new_align() {
 void hot_cold_new_align_array() {
   // CHECK: call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t12__hot_cold_t(i64 noundef 1, i64 allocalign noundef 32, i8 noundef zeroext 0) [[ATTR_NO_BUILTIN_CALL:#[^ ]*]]
   operator new[](1, (std::align_val_t)32, (__hot_cold_t)0);
-  // CHECK: call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t12__hot_cold_t(i64 noundef 32, i64 allocalign noundef 32, i8 noundef zeroext 0) [[ATTR_BUILTIN_CALL:#[^ ]*]]
+  // CHECK: call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t12__hot_cold_t(i64 noundef 32, i64 allocalign noundef 32, i8 noundef zeroext 0) [[ATTR_BUILTIN_ALIGN_ARRAY_NEW:#[^ ]*]]
   new ((__hot_cold_t)0) alignedstruct[1];
 }
 
@@ -107,7 +107,7 @@ void hot_cold_new_align_array() {
 void hot_cold_new_align_nothrow() {
   // CHECK: call noalias noundef align 32 ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef 1, i64 allocalign noundef 32, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_NO_BUILTIN_NOTHROW_CALL:#[^ ]*]]
   operator new(1, (std::align_val_t)32, nothrow, (__hot_cold_t)0);
-  // CHECK: call noalias noundef align 32 ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef 32, i64 allocalign noundef 32, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_BUILTIN_NOTHROW_CALL:#[^ ]*]]
+  // CHECK: call noalias noundef align 32 ptr @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef 32, i64 allocalign noundef 32, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_BUILTIN_ALIGN_NOTHROW_NEW:#[^ ]*]]
   new (nothrow, (__hot_cold_t)0) alignedstruct;
 }
 
@@ -116,7 +116,7 @@ void hot_cold_new_align_nothrow() {
 void hot_cold_new_align_nothrow_array() {
   // CHECK: call noalias noundef align 32 ptr @_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef 1, i64 allocalign noundef 32, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_NO_BUILTIN_NOTHROW_CALL:#[^ ]*]]
   operator new[](1, (std::align_val_t)32, nothrow, (__hot_cold_t)0);
-  // CHECK: call noalias noundef align 32 ptr @_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef 32, i64 allocalign noundef 32, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_BUILTIN_NOTHROW_CALL:#[^ ]*]]
+  // CHECK: call noalias noundef align 32 ptr @_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 noundef 32, i64 allocalign noundef 32, {{.*}} @nothrow, i8 noundef zeroext 0) [[ATTR_BUILTIN_ALIGN_NOTHROW_ARRAY_NEW:#[^ ]*]]
   new (nothrow, (__hot_cold_t)0) alignedstruct[1];
 }
 
@@ -125,6 +125,12 @@ void hot_cold_new_align_nothrow_array() {
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN]] = { nobuiltin allocsize(0) {{.*}} }
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN_NOTHROW]] = { nobuiltin nounwind allocsize(0) {{.*}} }
 // CHECK-DAG: attributes [[ATTR_NO_BUILTIN_CALL]] = { allocsize(0) }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_CALL]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) }
 // CHECK-DAG: attributes [[ATTR_NO_BUILTIN_NOTHROW_CALL]] = { nounwind allocsize(0) }
-// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_CALL]] = { builtin nounwind allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znwm" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znam" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_NEW]] = { builtin nounwind allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znwm" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_NOTHROW_ARRAY_NEW]] = { builtin nounwind allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znam" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnwmSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnamSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NOTHROW_NEW]] = { builtin nounwind allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnwmSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ALIGN_NOTHROW_ARRAY_NEW]] = { builtin nounwind allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnamSt11align_val_t" }

@@ -20,15 +20,15 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  tail call void @_ZdlPv(ptr %foo) builtin
+  tail call void @_ZdlPv(ptr %foo) builtin allockind("free") "alloc-family"="_Znwm"
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
   ret void
 }
 
-declare ptr @_ZnwmRKSt9nothrow_t(i64, ptr) nobuiltin
-declare void @_ZdlPvRKSt9nothrow_t(ptr, ptr) nobuiltin
+declare ptr @_ZnwmRKSt9nothrow_t(i64, ptr) nobuiltin allocsize(0)
+declare void @_ZdlPvRKSt9nothrow_t(ptr allocptr, ptr) nobuiltin
 declare i32 @__gxx_personality_v0(...)
 declare void @_ZN1AC2Ev(ptr %this)
 
@@ -46,7 +46,7 @@ define void @test7() personality ptr @__gxx_personality_v0 {
 ;
 entry:
   %nt = alloca i8
-  %call.i = tail call ptr @_ZnwmRKSt9nothrow_t(i64 1, ptr %nt) builtin nounwind
+  %call.i = tail call ptr @_ZnwmRKSt9nothrow_t(i64 1, ptr %nt) builtin nounwind allockind("alloc,uninitialized") "alloc-family"="_Znwm"
   invoke void @_ZN1AC2Ev(ptr undef)
   to label %.noexc.i unwind label %lpad.i
 
@@ -55,12 +55,12 @@ entry:
 
 lpad.i:                                           ; preds = %entry
   %0 = landingpad { ptr, i32 } cleanup
-  call void @_ZdlPvRKSt9nothrow_t(ptr %call.i, ptr %nt) builtin nounwind
+  call void @_ZdlPvRKSt9nothrow_t(ptr %call.i, ptr %nt) builtin nounwind allockind("free") "alloc-family"="_Znwm"
   resume { ptr, i32 } %0
 }
 
-declare ptr @_Znwm(i64) nobuiltin
-define ptr @_Znwj(i32 %n) nobuiltin {
+declare ptr @_Znwm(i64) nobuiltin allocsize(0)
+define ptr @_Znwj(i32 %n) nobuiltin allocsize(0) {
 ; CHECK-LABEL: @_Znwj(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[N:%.*]] to i64
 ; CHECK-NEXT:    [[M:%.*]] = call ptr @_Znwm(i64 [[Z]])
@@ -70,12 +70,12 @@ define ptr @_Znwj(i32 %n) nobuiltin {
   %m = call ptr @_Znwm(i64 %z)
   ret ptr %m
 }
-declare ptr @_Znam(i64) nobuiltin
-declare ptr @_Znaj(i32) nobuiltin
-declare void @_ZdlPv(ptr) nobuiltin
-declare void @_ZdaPv(ptr) nobuiltin
+declare ptr @_Znam(i64) nobuiltin allocsize(0)
+declare ptr @_Znaj(i32) nobuiltin allocsize(0)
+declare void @_ZdlPv(ptr allocptr) nobuiltin
+declare void @_ZdaPv(ptr allocptr) nobuiltin
 
-define linkonce void @_ZdlPvm(ptr %p, i64) nobuiltin {
+define linkonce void @_ZdlPvm(ptr allocptr %p, i64) nobuiltin {
 ; CHECK-LABEL: @_ZdlPvm(
 ; CHECK-NEXT:    call void @_ZdlPv(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
@@ -83,7 +83,7 @@ define linkonce void @_ZdlPvm(ptr %p, i64) nobuiltin {
   call void @_ZdlPv(ptr %p)
   ret void
 }
-define linkonce void @_ZdlPvj(ptr %p, i32) nobuiltin {
+define linkonce void @_ZdlPvj(ptr allocptr %p, i32) nobuiltin {
 ; CHECK-LABEL: @_ZdlPvj(
 ; CHECK-NEXT:    call void @_ZdlPv(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
@@ -91,7 +91,7 @@ define linkonce void @_ZdlPvj(ptr %p, i32) nobuiltin {
   call void @_ZdlPv(ptr %p)
   ret void
 }
-define linkonce void @_ZdaPvm(ptr %p, i64) nobuiltin {
+define linkonce void @_ZdaPvm(ptr allocptr %p, i64) nobuiltin {
 ; CHECK-LABEL: @_ZdaPvm(
 ; CHECK-NEXT:    call void @_ZdaPv(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
@@ -99,7 +99,7 @@ define linkonce void @_ZdaPvm(ptr %p, i64) nobuiltin {
   call void @_ZdaPv(ptr %p)
   ret void
 }
-define linkonce void @_ZdaPvj(ptr %p, i32) nobuiltin {
+define linkonce void @_ZdaPvj(ptr allocptr %p, i32) nobuiltin {
 ; CHECK-LABEL: @_ZdaPvj(
 ; CHECK-NEXT:    call void @_ZdaPv(ptr [[P:%.*]])
 ; CHECK-NEXT:    ret void
@@ -110,25 +110,25 @@ define linkonce void @_ZdaPvj(ptr %p, i32) nobuiltin {
 
 
 ; new(size_t, align_val_t)
-declare ptr @_ZnwmSt11align_val_t(i64, i64) nobuiltin
+declare ptr @_ZnwmSt11align_val_t(i64, i64 allocalign) nobuiltin allocsize(0)
 ; new[](size_t, align_val_t)
-declare ptr @_ZnamSt11align_val_t(i64, i64) nobuiltin
+declare ptr @_ZnamSt11align_val_t(i64, i64 allocalign) nobuiltin allocsize(0)
 ; new(size_t, align_val_t, nothrow)
-declare ptr @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64, ptr) nobuiltin
+declare ptr @_ZnwmSt11align_val_tRKSt9nothrow_t(i64, i64 allocalign, ptr) nobuiltin allocsize(0)
 ; new[](size_t, align_val_t, nothrow)
-declare ptr @_ZnamSt11align_val_tRKSt9nothrow_t(i64, i64, ptr) nobuiltin
+declare ptr @_ZnamSt11align_val_tRKSt9nothrow_t(i64, i64 allocalign, ptr) nobuiltin allocsize(0)
 ; delete(ptr, align_val_t)
-declare void @_ZdlPvSt11align_val_t(ptr, i64) nobuiltin
+declare void @_ZdlPvSt11align_val_t(ptr allocptr, i64) nobuiltin
 ; delete[](ptr, align_val_t)
-declare void @_ZdaPvSt11align_val_t(ptr, i64) nobuiltin
+declare void @_ZdaPvSt11align_val_t(ptr allocptr, i64) nobuiltin
 ; delete(ptr, align_val_t, nothrow)
-declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr, i64, ptr) nobuiltin
+declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr allocptr, i64, ptr) nobuiltin
 ; delete[](ptr, align_val_t, nothrow)
-declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr, i64, ptr) nobuiltin
+declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr allocptr, i64, ptr) nobuiltin
 ; delete(ptr, unsigned long, align_val_t)
-declare void @_ZdlPvmSt11align_val_t(ptr, i64, i64) nobuiltin
+declare void @_ZdlPvmSt11align_val_t(ptr allocptr, i64, i64) nobuiltin
 ; delete[](ptr, unsigned long, align_val_t)
-declare void @_ZdaPvmSt11align_val_t(ptr, i64, i64) nobuiltin
+declare void @_ZdaPvmSt11align_val_t(ptr allocptr, i64, i64) nobuiltin
 
 declare void @llvm.assume(i1)
 
@@ -137,31 +137,31 @@ define void @test8() {
 ; CHECK-NEXT:    ret void
 ;
   %nt = alloca i8
-  %nw = call ptr @_Znwm(i64 32) builtin
-  call void @_ZdlPv(ptr %nw) builtin
-  %na = call ptr @_Znam(i64 32) builtin
-  call void @_ZdaPv(ptr %na) builtin
-  %nwm = call ptr @_Znwm(i64 32) builtin
-  call void @_ZdlPvm(ptr %nwm, i64 32) builtin
-  %nam = call ptr @_Znam(i64 32) builtin
-  call void @_ZdaPvm(ptr %nam, i64 32) builtin
-  %nwa = call ptr @_ZnwmSt11align_val_t(i64 32, i64 8) builtin
-  call void @_ZdlPvSt11align_val_t(ptr %nwa, i64 8) builtin
-  %naa = call ptr @_ZnamSt11align_val_t(i64 32, i64 8) builtin
-  call void @_ZdaPvSt11align_val_t(ptr %naa, i64 8) builtin
-  %nwat = call ptr @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, ptr %nt) builtin
-  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr %nwat, i64 8, ptr %nt) builtin
-  %naat = call ptr @_ZnamSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, ptr %nt) builtin
-  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr %naat, i64 8, ptr %nt) builtin
-  %nwa2 = call ptr @_ZnwmSt11align_val_t(i64 32, i64 8) builtin
-  call void @_ZdlPvmSt11align_val_t(ptr %nwa2, i64 32, i64 8) builtin
-  %naa2 = call ptr @_ZnamSt11align_val_t(i64 32, i64 8) builtin
-  call void @_ZdaPvmSt11align_val_t(ptr %naa2, i64 32, i64 8) builtin
+  %nw = call ptr @_Znwm(i64 32) builtin allockind("alloc,uninitialized") "alloc-family"="_Znwm"
+  call void @_ZdlPv(ptr %nw) builtin allockind("free") "alloc-family"="_Znwm"
+  %na = call ptr @_Znam(i64 32) builtin allockind("alloc,uninitialized") "alloc-family"="_Znam"
+  call void @_ZdaPv(ptr %na) builtin allockind("free") "alloc-family"="_Znam"
+  %nwm = call ptr @_Znwm(i64 32) builtin allockind("alloc,uninitialized") "alloc-family"="_Znwm"
+  call void @_ZdlPvm(ptr %nwm, i64 32) builtin allockind("free") "alloc-family"="_Znwm"
+  %nam = call ptr @_Znam(i64 32) builtin allockind("alloc,uninitialized") "alloc-family"="_Znam"
+  call void @_ZdaPvm(ptr %nam, i64 32) builtin allockind("free") "alloc-family"="_Znam"
+  %nwa = call ptr @_ZnwmSt11align_val_t(i64 32, i64 8) builtin allockind("alloc,uninitialized,aligned") "alloc-family"="_ZnwmSt11align_val_t"
+  call void @_ZdlPvSt11align_val_t(ptr %nwa, i64 8) builtin allockind("free") "alloc-family"="_ZnwmSt11align_val_t"
+  %naa = call ptr @_ZnamSt11align_val_t(i64 32, i64 8) builtin allockind("alloc,uninitialized,aligned") "alloc-family"="_ZnamSt11align_val_t"
+  call void @_ZdaPvSt11align_val_t(ptr %naa, i64 8) builtin allockind("free") "alloc-family"="_ZnamSt11align_val_t"
+  %nwat = call ptr @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, ptr %nt) builtin allockind("alloc,uninitialized,aligned") "alloc-family"="_ZnwmSt11align_val_t"
+  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr %nwat, i64 8, ptr %nt) builtin allockind("free") "alloc-family"="_ZnwmSt11align_val_t"
+  %naat = call ptr @_ZnamSt11align_val_tRKSt9nothrow_t(i64 32, i64 8, ptr %nt) builtin allockind("alloc,uninitialized,aligned") "alloc-family"="_ZnamSt11align_val_t"
+  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr %naat, i64 8, ptr %nt) builtin allockind("free") "alloc-family"="_ZnamSt11align_val_t"
+  %nwa2 = call ptr @_ZnwmSt11align_val_t(i64 32, i64 8) builtin allockind("alloc,uninitialized,aligned") "alloc-family"="_ZnwmSt11align_val_t"
+  call void @_ZdlPvmSt11align_val_t(ptr %nwa2, i64 32, i64 8) builtin allockind("free") "alloc-family"="_ZnwmSt11align_val_t"
+  %naa2 = call ptr @_ZnamSt11align_val_t(i64 32, i64 8) builtin allockind("alloc,uninitialized,aligned") "alloc-family"="_ZnamSt11align_val_t"
+  call void @_ZdaPvmSt11align_val_t(ptr %naa2, i64 32, i64 8) builtin allockind("free") "alloc-family"="_ZnamSt11align_val_t"
 
   ; Check that the alignment assume does not prevent the removal.
-  %nwa3 = call ptr @_ZnwmSt11align_val_t(i64 32, i64 16) builtin
+  %nwa3 = call ptr @_ZnwmSt11align_val_t(i64 32, i64 16) builtin allockind("alloc,uninitialized,aligned") "alloc-family"="_ZnwmSt11align_val_t"
   call void @llvm.assume(i1 true) [ "align"(ptr %nwa3, i64 16) ]
-  call void @_ZdlPvmSt11align_val_t(ptr %nwa3, i64 32, i64 16) builtin
+  call void @_ZdlPvmSt11align_val_t(ptr %nwa3, i64 32, i64 16) builtin allockind("free") "alloc-family"="_ZnwmSt11align_val_t"
 
   ret void
 }
@@ -177,11 +177,11 @@ define void @test10()  {
 
 define void @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(8) ptr @_Znwm(i64 8) #[[ATTR5]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(8) ptr @_Znwm(i64 8) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    call void @_ZdlPv(ptr [[CALL]])
 ; CHECK-NEXT:    ret void
 ;
-  %call = call ptr @_Znwm(i64 8) builtin
+  %call = call ptr @_Znwm(i64 8) builtin allockind("alloc,uninitialized") "alloc-family"="_Znwm"
   call void @_ZdlPv(ptr %call)
   ret void
 }
@@ -192,9 +192,9 @@ define void @test17() {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    ret void
 ;
-  %nw1 = call ptr @_Znwm(i64 32) builtin
+  %nw1 = call ptr @_Znwm(i64 32) builtin allockind("alloc,uninitialized") "alloc-family"="_Znwm"
   %nw2 = call ptr @llvm.launder.invariant.group(ptr %nw1)
   store i8 1, ptr %nw2
-  call void @_ZdlPv(ptr %nw2) builtin
+  call void @_ZdlPv(ptr %nw2) builtin allockind("free") "alloc-family"="_Znwm"
   ret void
 }
