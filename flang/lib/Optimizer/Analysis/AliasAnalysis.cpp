@@ -25,6 +25,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -549,13 +550,28 @@ bool AliasAnalysis::Source::mayBeActualArgWithPtr(
   return false;
 }
 
+// Return the type of the address \p v. If \p v is not of a FIR type, but is a
+// view of an address of a FIR type (e.g. a fir.convert to memref), return the
+// FIR type of the viewed address instead.
+static mlir::Type getFIRAddressType(mlir::Value v) {
+  while (!mlir::isa<fir::FIROpsDialect>(v.getType().getDialect())) {
+    if (auto view = v.getDefiningOp<mlir::ViewLikeOpInterface>())
+      v = view.getViewSource();
+    else if (auto view = v.getDefiningOp<fir::FortranObjectViewOpInterface>())
+      v = view.getViewSource(mlir::cast<mlir::OpResult>(v));
+    else
+      break;
+  }
+  return v.getType();
+}
+
 // Return true if the two locations cannot alias based
 // on the access data type, e.g. an address of a descriptor
 // cannot alias with an address of data (unless the data
 // may contain a descriptor).
 static bool noAliasBasedOnType(mlir::Value lhs, mlir::Value rhs) {
-  mlir::Type lhsType = lhs.getType();
-  mlir::Type rhsType = rhs.getType();
+  mlir::Type lhsType = getFIRAddressType(lhs);
+  mlir::Type rhsType = getFIRAddressType(rhs);
   if (!fir::isa_ref_type(lhsType) || !fir::isa_ref_type(rhsType))
     return false;
   mlir::Type lhsElemType = fir::unwrapRefType(lhsType);
