@@ -650,17 +650,15 @@ int accum_to_int(_Accum a) {
 // CIR-LABEL: cir.func{{.*}} @ufract_to_int
 // CIR: %[[ARG:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!u16i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(2) %[[ARG]] : !cir.ptr<!u16i>, !u16i
-// CIR-NEXT: %[[SHIFT_AMOUNT:.*]] = cir.const #cir.int<16> : !u16i
-// CIR-NEXT: %[[SHIFT:.*]] = cir.shift(right, %[[LOAD_ARG]] : !u16i, %[[SHIFT_AMOUNT]] : !u16i) -> !u16i
-// CIR-NEXT: %[[CAST:.*]] = cir.cast integral %[[SHIFT]] : !u16i -> !s32i
-// CIR-NEXT: cir.store %[[CAST]], %[[RET:.*]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: cir.store %[[ZERO]], %[[RET:.*]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: cir.return %[[LOAD_RET]] : !s32i
 // LLVM-LABEL: @ufract_to_int
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
-// LLVMCIR: %[[SHIFT:.*]] = lshr i16 %[[LOAD_ARG]], 16
-// LLVMCIR: %[[CAST:.*]] = zext i16 %[[SHIFT]] to i32
-// LLVMCIR: ret i32 %{{.*}}
+// LLVMCIR: store i32 0, ptr %[[RET_ADDR:.*]], align 4
+// LLVMCIR: %[[RET:.*]] = load i32, ptr %[[RET_ADDR]], align 4
+// LLVMCIR: ret i32 %[[RET]]
 // OGCG: ret i32 0
 int ufract_to_int(unsigned _Fract f) {
   return f;
@@ -787,17 +785,15 @@ unsigned int accum_to_uint(_Accum a) {
 // CIR-LABEL: cir.func{{.*}} @ufract_to_uint
 // CIR: %[[ARG:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!u16i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(2) %[[ARG]] : !cir.ptr<!u16i>, !u16i
-// CIR-NEXT: %[[SHIFT_AMOUNT:.*]] = cir.const #cir.int<16> : !u16i
-// CIR-NEXT: %[[SHIFT:.*]] = cir.shift(right, %[[LOAD_ARG]] : !u16i, %[[SHIFT_AMOUNT]] : !u16i) -> !u16i
-// CIR-NEXT: %[[CAST:.*]] = cir.cast integral %[[SHIFT]] : !u16i -> !u32i
-// CIR-NEXT: cir.store %[[CAST]], %[[RET:.*]] : !u32i, !cir.ptr<!u32i>
+// CIR-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
+// CIR-NEXT: cir.store %[[ZERO]], %[[RET:.*]] : !u32i, !cir.ptr<!u32i>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: cir.return %[[LOAD_RET]] : !u32i
 // LLVM-LABEL: @ufract_to_uint
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
-// LLVMCIR: %[[SHIFT:.*]] = lshr i16 %[[LOAD_ARG]], 16
-// LLVMCIR: %[[CAST:.*]] = zext i16 %[[SHIFT]] to i32
-// LLVMCIR: ret i32 %{{.*}}
+// LLVMCIR: store i32 0, ptr %[[RET_ADDR:.*]], align 4
+// LLVMCIR: %[[RET:.*]] = load i32, ptr %[[RET_ADDR]], align 4
+// LLVMCIR: ret i32 %[[RET]]
 // OGCG: ret i32 0
 unsigned int ufract_to_uint(unsigned _Fract f) {
   return f;

@@ -295,7 +295,12 @@ private:
         mlir::Value rounded = builder.createAdd(loc, result, lowBits);
         result = builder.createSelect(loc, isNegative, rounded, result);
       }
-      result = builder.createShiftRight(loc, result, srcScale - dstScale);
+      unsigned shift = srcScale - dstScale;
+      assert(shift <= resultWidth && "Shift cannot exceed result width");
+      if (shift < resultWidth)
+        result = builder.createShiftRight(loc, result, shift);
+      else
+        result = builder.getNullValue(result.getType(), loc);
     }
 
     cir::IntType dstIntTy = getIntType(dstSema);
