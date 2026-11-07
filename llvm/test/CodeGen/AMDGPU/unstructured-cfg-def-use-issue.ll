@@ -36,36 +36,23 @@ define hidden void @widget() #0 {
 ; GCN-NEXT:    s_and_b64 s[20:21], s[20:21], exec
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GCN-NEXT:  .LBB0_3: ; %bb9
-; GCN-NEXT:    buffer_store_dword v31, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    ; implicit-def: $vgpr41 : SGPR spill to VGPR lane
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, wibble@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, wibble@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v41, s4, 0
 ; GCN-NEXT:    v_writelane_b32 v41, s5, 1
-; GCN-NEXT:    v_readlane_b32 s4, v41, 0
-; GCN-NEXT:    v_readlane_b32 s5, v41, 1
 ; GCN-NEXT:    v_writelane_b32 v41, s6, 2
 ; GCN-NEXT:    v_writelane_b32 v41, s7, 3
-; GCN-NEXT:    v_readlane_b32 s6, v41, 2
-; GCN-NEXT:    v_readlane_b32 s7, v41, 3
 ; GCN-NEXT:    v_writelane_b32 v41, s8, 4
 ; GCN-NEXT:    v_writelane_b32 v41, s9, 5
-; GCN-NEXT:    v_readlane_b32 s8, v41, 4
-; GCN-NEXT:    v_readlane_b32 s9, v41, 5
 ; GCN-NEXT:    v_writelane_b32 v41, s10, 6
 ; GCN-NEXT:    v_writelane_b32 v41, s11, 7
-; GCN-NEXT:    v_readlane_b32 s10, v41, 6
-; GCN-NEXT:    v_readlane_b32 s11, v41, 7
 ; GCN-NEXT:    v_writelane_b32 v41, s12, 8
-; GCN-NEXT:    v_readlane_b32 s12, v41, 8
 ; GCN-NEXT:    v_writelane_b32 v41, s13, 9
-; GCN-NEXT:    v_readlane_b32 s13, v41, 9
 ; GCN-NEXT:    v_writelane_b32 v41, s14, 10
-; GCN-NEXT:    v_readlane_b32 s14, v41, 10
 ; GCN-NEXT:    v_writelane_b32 v41, s15, 11
-; GCN-NEXT:    v_readlane_b32 s15, v41, 11
+; GCN-NEXT:    buffer_store_dword v31, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 s[34:35], s[18:19]
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 ; 4-byte Folded Reload

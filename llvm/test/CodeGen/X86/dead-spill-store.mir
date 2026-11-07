@@ -1,0 +1,45 @@
+# RUN: llc -mtriple=x86_64 -passes=greedy -stress-regalloc=3 -o - %s \
+# RUN:   | FileCheck %s
+
+# Forward the adjacent reload before updating a copy of the value. The save
+# remains necessary for a later ADDPS folded read of the original value.
+# The input contains no stack accesses.
+--- |
+  define void @folded_read() { ret void }
+...
+---
+name: folded_read
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: folded_read
+    ; CHECK: MOVAPSmr [[SLOT:%stack\.[0-9]+]], 1, $noreg, 0, $noreg, $xmm10
+    ; CHECK-NEXT: [[INITIAL:%[0-9]+]]:vr128 = MOVAPSrm [[SLOT]], 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: [[INITIAL]]:vr128 = ADDPSrr [[INITIAL]], $xmm11
+    ; CHECK-NEXT: MOVAPSmr [[SLOT]], 1, $noreg, 0, $noreg, [[INITIAL]]
+    ; CHECK-NEXT: [[UPDATED:%[0-9]+]]:vr128 = COPY [[INITIAL]]
+    ; CHECK-NEXT: [[UPDATED]]:vr128 = ADDPSrr [[UPDATED]], $xmm11
+    ; CHECK: ADDPSrm {{%[0-9]+}}, [[SLOT]], 1, $noreg, 0, $noreg
+    liveins: $xmm10, $xmm11
+
+    %0:vr128 = COPY $xmm10
+    %0:vr128 = ADDPSrr %0, $xmm11, implicit $mxcsr
+    %1:vr128 = COPY $xmm10
+    %1:vr128 = ADDPSrr %1, $xmm11, implicit $mxcsr
+    %2:vr128 = COPY $xmm10
+    %2:vr128 = ADDPSrr %2, $xmm11, implicit $mxcsr
+    %1:vr128 = ADDPSrr %1, $xmm11, implicit $mxcsr
+    %2:vr128 = ADDPSrr %2, $xmm11, implicit $mxcsr
+    %2:vr128 = ADDPSrr %2, $xmm11, implicit $mxcsr
+    %1:vr128 = ADDPSrr %1, $xmm11, implicit $mxcsr
+    %3:vr128 = COPY $xmm10
+    %3:vr128 = ADDPSrr %3, $xmm11, implicit $mxcsr
+    %4:vr128 = COPY %3
+    %4:vr128 = ADDPSrr %4, $xmm11, implicit $mxcsr
+    %0:vr128 = ADDPSrr %0, %1, implicit $mxcsr
+    %0:vr128 = ADDPSrr %0, %2, implicit $mxcsr
+    %0:vr128 = ADDPSrr %0, %3, implicit $mxcsr
+    %0:vr128 = ADDPSrr %0, %4, implicit $mxcsr
+    $xmm0 = COPY %0
+    RET 0, implicit $xmm0
+...
