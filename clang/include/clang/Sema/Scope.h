@@ -270,6 +270,8 @@ public:
 
   void setFlags(unsigned F) { setFlags(getParent(), F); }
 
+  void EnterTemplateParameterScope();
+
   /// Get the label that precedes this scope.
   LabelDecl *getPrecedingLabel() const { return PrecedingLabel; }
 
