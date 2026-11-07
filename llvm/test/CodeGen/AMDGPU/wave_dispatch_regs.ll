@@ -15,6 +15,7 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .cs:
+; GCN-NEXT:         .backend_stack_size: 0
 ; GCN-NEXT:         .entry_point:    _amdgpu_cs_main
 ; GCN-NEXT:         .entry_point_symbol:    _amdgpu_cs_main
 ; GCN-NEXT:         .scratch_memory_size: 0

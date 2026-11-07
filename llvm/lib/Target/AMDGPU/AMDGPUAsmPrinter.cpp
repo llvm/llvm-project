@@ -1766,6 +1766,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(
                                   MCConstantExpr::create(16, Ctx), Ctx),
       Ctx);
 
+  MD->setBackendStackSize(CC, CurrentProgramInfo.ScratchSize);
+
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
     unsigned ExtraLDSSize = STM.getGeneration() >= AMDGPUSubtarget::GFX11
                                 ? divideCeil(CurrentProgramInfo.LDSBlocks, 2)

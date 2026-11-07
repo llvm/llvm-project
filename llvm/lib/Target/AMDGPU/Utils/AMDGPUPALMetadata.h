@@ -103,6 +103,11 @@ public:
   void setScratchSize(unsigned CC, unsigned Val);
   void setScratchSize(unsigned CC, const MCExpr *Val, MCContext &Ctx);
 
+  // Set the backend stack size metadata, including the frames of the known
+  // non-chain callees. Recursion and indirect/external calls must be handled by
+  // the consumer.
+  void setBackendStackSize(unsigned CC, const MCExpr *Val);
+
   // Set the stack frame size of a function in the metadata. This only covers
   // the frame of the function itself, not the frames of any of its callees.
   void setFunctionStackFrameSize(StringRef FnName, unsigned Val);
