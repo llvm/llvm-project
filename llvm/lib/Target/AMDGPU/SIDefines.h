@@ -129,6 +129,9 @@ enum : uint64_t {
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
 
+  // A load or store pseudo of the VGPR "as memory" address space (13).
+  VGPRAsMem = UINT64_C(1) << 44,
+
   // Is a clamp on FP type.
   FPClamp = UINT64_C(1) << 45,
 
@@ -321,6 +324,9 @@ template <typename... T> constexpr bool hasVOP3OpSel(const T &...O) {
 }
 template <typename... T> constexpr bool isMaybeAtomic(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::maybeAtomic;
+}
+template <typename... T> constexpr bool isVGPRAsMem(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VGPRAsMem;
 }
 template <typename... T> constexpr bool hasFPClamp(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::FPClamp;
@@ -1377,6 +1383,7 @@ enum SyntheticAperture {
   None = 0x00000000,
 
   BARRIER = 0x00000001,
+  VGPR = 0x00000003,
 };
 } // namespace SyntheticAperture
 

@@ -251,6 +251,11 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     return;
   }
 
+  if (Opcode == AMDGPU::V_MOVRELS_B32_as_mem)
+    Opcode = AMDGPU::V_MOVRELS_B32_e32;
+  else if (Opcode == AMDGPU::V_MOVRELD_B32_as_mem)
+    Opcode = AMDGPU::V_MOVRELD_B32_e32;
+
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);
   if (MCOpcode == -1) {
     LLVMContext &C = MI->getMF()->getFunction().getContext();
