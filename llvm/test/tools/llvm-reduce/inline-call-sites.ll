@@ -1,4 +1,4 @@
-; RUN: llvm-reduce --delta-passes=inline-call-sites -reduce-callsite-inline-threshold=-1 --test FileCheck --test-arg --check-prefixes=CHECK,INTERESTING --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=inline-call-sites -reduce-callsite-inline-threshold=-1 --test FileCheck --test-arg --check-prefixes=CHECK,INTERESTING --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck -check-prefixes=RESULT,CHECK %s < %t
 
 ; RESULT: @gv = global [2 x ptr] [ptr @only_gv_user, ptr @simple_callee]
@@ -519,10 +519,10 @@ define void @callee_uses_branch_funnel(...) {
 }
 
 ; CHECK-LABEL: define void @callee_branch_funnel_musttail_caller(
-; RESULT-NEXT: call void (...) @callee_uses_branch_funnel()
+; RESULT-NEXT: musttail call void (...) @llvm.icall.branch.funnel(...)
 ; RESULT-NEXT: ret void
-define void @callee_branch_funnel_musttail_caller() {
-  call void (...) @callee_uses_branch_funnel()
+define void @callee_branch_funnel_musttail_caller(...) {
+  musttail call void (...) @callee_uses_branch_funnel(...)
   ret void
 }
 
