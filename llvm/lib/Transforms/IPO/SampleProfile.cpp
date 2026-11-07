@@ -43,6 +43,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -335,6 +336,11 @@ static cl::opt<bool> AnnotateSampleProfileInlinePhase(
     cl::desc("Annotate LTO phase (prelink / postlink), or main (no LTO) for "
              "sample-profile inline pass name."));
 
+static cl::opt<bool> SampleProfileCoroMassage(
+    "sample-profile-coro-massage", cl::Hidden, cl::init(false),
+    cl::desc("Adapt the samples of the post-CoroSplit ramp and .resume clones "
+             "of a coroutine to its pre-split function."));
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 }
@@ -490,6 +496,14 @@ protected:
   bool runOnFunction(Function &F, ModuleAnalysisManager &AM);
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I) override;
+  FunctionSamples *prepareCoroutineSamples(Function &F);
+  bool isKnownZeroNonFinalCoroSuspendFor(const BasicBlock *SuspendEntryBB,
+                                         const BasicBlock *ReadyBB) const;
+  ErrorOr<uint64_t> getCoroSuspendWeight(const IntrinsicInst &CSI) const;
+  uint64_t queryCoroWrapperSamples(const CallBase &AwaitSuspendCB,
+                                   const Function &WrapperFn) const;
+  const FunctionSamples *lookupCoroCloneSamples(const Function &F,
+                                                StringRef CloneSuffix) const;
   const FunctionSamples *findCalleeFunctionSamples(const CallBase &I) const;
   const FunctionSamples *
   findFunctionSamples(const Instruction &I) const override;
@@ -589,6 +603,16 @@ protected:
   // A helper to implement the sample profile matching algorithm.
   std::unique_ptr<SampleProfileMatcher> MatchingManager;
 
+  // Per-function state for adapting post-CoroSplit (.ramp / .resume) sample
+  // profiles onto a presplitcoroutine function.
+  std::optional<FunctionSamples> SyntheticCoroSamples;
+
+  const FunctionSamples *CoroRampSamples = nullptr;
+
+  const FunctionSamples *CoroResumeSamples = nullptr;
+
+  bool IsAdaptingPresplitCoro = false;
+
 private:
   const char *getAnnotatedRemarkPassName() const {
     return AnnotatedPassName.c_str();
@@ -645,6 +669,23 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (FunctionSamples::ProfileIsProbeBased)
     return getProbeWeight(Inst);
 
+  if (IsAdaptingPresplitCoro) {
+    if (const auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+      if (II->getIntrinsicID() == Intrinsic::coro_suspend)
+        return getCoroSuspendWeight(*II);
+      if (II->getIntrinsicID() == Intrinsic::coro_id &&
+          Inst.getParent() == &Inst.getFunction()->getEntryBlock())
+        return Samples->getHeadSamples() + 1;
+    }
+    // Ignore the suspend switch because its source line records the co_await
+    // count, not the suspend count.
+    if (const auto *SW = dyn_cast<SwitchInst>(&Inst)) {
+      if (const auto *CSI = dyn_cast<IntrinsicInst>(SW->getCondition()))
+        if (CSI->getIntrinsicID() == Intrinsic::coro_suspend)
+          return std::error_code();
+    }
+  }
+
   const DebugLoc &DLoc = Inst.getDebugLoc();
   if (!DLoc)
     return std::error_code();
@@ -667,6 +708,195 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
         return 0;
 
   return getInstWeightImpl(Inst);
+}
+
+/// FunctionSamples::getCanonicalFnName keeps ".__uniq.<hash>" whenever
+/// FunctionSamples::HasUniqSuffix is set, which is always the case for text
+/// profiles since only the extbinary reader records whether the profile names
+/// carry that suffix. Profiles may still have dropped it, so callers also try
+/// the name without it. Returns an empty StringRef if there is nothing to drop.
+static StringRef getNameWithoutUniqSuffix(StringRef CanonName) {
+  if (!FunctionSamples::HasUniqSuffix)
+    return StringRef();
+  size_t Pos = CanonName.rfind(FunctionSamples::UniqSuffix);
+  return Pos == StringRef::npos ? StringRef() : CanonName.substr(0, Pos);
+}
+
+const FunctionSamples *
+SampleProfileLoader::lookupCoroCloneSamples(const Function &F,
+                                            StringRef CloneSuffix) const {
+  // Sample profiles name coroutine functions as "<pre-split
+  // name><CloneSuffix>", so append the suffix to the canonical name of F. An
+  // empty CloneSuffix looks up the ramp, which keeps the pre-split name.
+  StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+  return Reader->getSamplesFor((CanonName + CloneSuffix).str());
+}
+
+FunctionSamples *SampleProfileLoader::prepareCoroutineSamples(Function &F) {
+  CoroRampSamples = lookupCoroCloneSamples(F, "");
+  CoroResumeSamples = lookupCoroCloneSamples(F, ".resume");
+
+  bool HasRampProfile = CoroRampSamples && !CoroRampSamples->empty();
+  bool HasResumeProfile = CoroResumeSamples && !CoroResumeSamples->empty();
+  if (!HasRampProfile && !HasResumeProfile)
+    // No coroutine profile to adapt. Return here to avoid creating a wrong
+    // Known-Zero synthetic profile.
+    return nullptr;
+
+  SyntheticCoroSamples.emplace();
+  FunctionSamples &Merged = *SyntheticCoroSamples;
+
+  // Function entry comes from the .ramp function, never from .resume function
+  // because .resume entry count represents the number of coroutine suspend and
+  // resume dispatches rather than coroutine invocations.
+  if (CoroRampSamples) {
+    Merged.merge(*CoroRampSamples, 1);
+  } else {
+    Merged.setFunction(CoroResumeSamples->getFunction());
+  }
+
+  if (CoroResumeSamples) {
+    for (const auto &[Loc, Rec] : CoroResumeSamples->getBodySamples()) {
+      // Skip the record at (0, 0). This record counts the switch that
+      // CoroSplit adds at the entry of .resume to select the resume point. The
+      // pre-split function does not have this switch. If the merged profile
+      // keeps this record, the entry block and the initial suspend point get
+      // the number of resumes, not the number of calls.
+      if (Loc.LineOffset == 0 && Loc.Discriminator == 0)
+        continue;
+      // Skip a record that has 0 samples and no call targets. .resume has a
+      // copy of the code after each suspend point. If the coroutine never
+      // suspends at a point, the copy of the code after it gets 0 samples. The
+      // pre-split function also runs this code when co_await does not suspend.
+      // If the merged profile keeps the record, this code becomes Known-Zero.
+      if (Rec.getSamples() == 0 && Rec.getCallTargetSum() == 0)
+        continue;
+      if (Rec.getSamples() > 0)
+        Merged.addBodySamples(Loc.LineOffset, Loc.Discriminator,
+                              Rec.getSamples());
+      for (const auto &[Target, Count] : Rec.getCallTargets()) {
+        if (Count > 0)
+          Merged.addCalledTargetSamples(Loc.LineOffset, Loc.Discriminator,
+                                        Target, Count);
+      }
+    }
+
+    Merged.updateTotalSamples();
+  }
+
+  // Return the merged profile. The caller sets Samples to it. Set
+  // IsAdaptingPresplitCoro so that getInstWeight applies the coroutine rules
+  // to this function.
+  IsAdaptingPresplitCoro = true;
+  return &Merged;
+}
+
+uint64_t
+SampleProfileLoader::queryCoroWrapperSamples(const CallBase &AwaitSuspendCB,
+                                             const Function &WrapperFn) const {
+  StringRef WrapperName = WrapperFn.getName();
+
+  static constexpr StringLiteral WrapperMarker(".__await_suspend_wrapper");
+  size_t MarkerPos = WrapperName.find(WrapperMarker);
+  if (MarkerPos == StringRef::npos)
+    return 0;
+  StringRef Prefix = WrapperName.substr(0, MarkerPos);
+  StringRef WrapperSuffix = WrapperName.substr(MarkerPos);
+  StringRef CanonPrefix = FunctionSamples::getCanonicalFnName(Prefix);
+  StringRef NoUniqPrefix = getNameWithoutUniqSuffix(CanonPrefix);
+  if (!NoUniqPrefix.empty())
+    CanonPrefix = NoUniqPrefix;
+  std::string CandidateName = (CanonPrefix + WrapperSuffix).str();
+
+  uint64_t InlineSamples = 0;
+  if (const DILocation *DIL = AwaitSuspendCB.getDebugLoc()) {
+    LineLocation CallSiteLoc = FunctionSamples::getCallSiteIdentifier(DIL);
+    // A suspend point can run in both the ramp and the resume functions.
+    // Add the wrapper samples from both profiles.
+    for (const FunctionSamples *ParentFS :
+         {CoroRampSamples, CoroResumeSamples}) {
+      if (!ParentFS)
+        continue;
+      const FunctionSamples *MatchedFS = ParentFS->findFunctionSamplesAt(
+          CallSiteLoc, CandidateName, /*Remapper=*/nullptr,
+          /*FuncNameToProfNameMap=*/nullptr);
+      if (MatchedFS)
+        InlineSamples += MatchedFS->getHeadSamplesEstimate();
+    }
+  }
+
+  return InlineSamples;
+}
+
+ErrorOr<uint64_t>
+SampleProfileLoader::getCoroSuspendWeight(const IntrinsicInst &CSI) const {
+  bool IsFinal = false;
+  if (const auto *CI = dyn_cast<ConstantInt>(CSI.getArgOperand(1)))
+    IsFinal = CI->isOne();
+
+  uint64_t WrapperSamples = 0;
+  for (const Instruction &I : *CSI.getParent()) {
+    const auto *CB = dyn_cast<CallBase>(&I);
+    if (!CB)
+      continue;
+    const Function *Callee = CB->getCalledFunction();
+    if (!Callee)
+      continue;
+    if (Callee->getIntrinsicID() != Intrinsic::coro_await_suspend_void)
+      continue;
+    const auto *WrapperFn = dyn_cast<Function>(CB->getArgOperand(2));
+    if (!WrapperFn)
+      continue;
+    uint64_t Count = queryCoroWrapperSamples(*CB, *WrapperFn);
+    WrapperSamples = std::max(WrapperSamples, Count);
+  }
+
+  if (WrapperSamples > 0)
+    return WrapperSamples;
+
+  if (IsFinal)
+    return std::error_code();
+  return 0;
+}
+
+// In this pattern, the wrapper profile gives the suspend block a known
+// zero weight:
+//
+// cleanupBB:
+//   br i1 %call, label %ReadyBB, label %SuspendEntryBB
+//
+// SuspendEntryBB:        ; Visited, BlockWeights[SuspBB] == 0
+//   %1 = call token @llvm.coro.save(ptr null)
+//   call void @llvm.coro.await.suspend.void(..., ptr @__await_suspend_wrapper)
+//   %2 = call i8 @llvm.coro.suspend(token %1, i1 false)
+//   switch i8 %2, label %coro.ret [
+//     i8 0, label %ReadyBB
+//     i8 1, label %...
+//   ]
+//
+// ReadyBB:
+//
+// Return true if SuspendEntryBB has a known zero weight and ends with a
+// non-final coro.suspend switch whose case 0 jumps to ReadyBB.
+bool SampleProfileLoader::isKnownZeroNonFinalCoroSuspendFor(
+    const BasicBlock *SuspendEntryBB, const BasicBlock *ReadyBB) const {
+  const BasicBlock *SuspBB = SuspendEntryBB;
+  const auto *SW = dyn_cast<SwitchInst>(SuspBB->getTerminator());
+  if (!SW)
+    return false;
+  if (!VisitedBlocks.count(SuspBB) || BlockWeights.lookup(SuspBB) != 0)
+    // Check the suspend block is visited and has a known zero weight.
+    return false;
+  const auto *CSI = dyn_cast<IntrinsicInst>(SW->getCondition());
+  if (!CSI || CSI->getIntrinsicID() != Intrinsic::coro_suspend)
+    return false;
+  if (const auto *FinalCI = dyn_cast<ConstantInt>(CSI->getArgOperand(1)))
+    if (FinalCI->isOne())
+      return false;
+  auto *CaseIndexZero =
+      ConstantInt::get(Type::getInt8Ty(SuspBB->getContext()), 0);
+  auto CaseZero = SW->findCaseValue(CaseIndexZero);
+  return CaseZero != SW->case_end() && CaseZero->getCaseSuccessor() == ReadyBB;
 }
 
 /// Get the FunctionSamples for a call instruction.
@@ -1685,7 +1915,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
                       << ".\n");
     SmallVector<uint32_t, 4> Weights;
     uint32_t MaxWeight = 0;
-    Instruction *MaxDestInst;
+    Instruction *MaxDestInst = nullptr;
     // Since profi treats multiple edges (multiway branches) as a single edge,
     // we need to distribute the computed weight among the branches. We do
     // this by evenly splitting the edge weight among destinations.
@@ -1734,10 +1964,30 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       }
     }
 
+    // The suspend wrapper samples show the true execution counts. When the
+    // wrapper sample count is 0 (evaluated by
+    // isKnownZeroNonFinalCoroSuspendFor), set the "suspend-then-ready" path
+    // weight to zero to send all profile flow to the "ready" path.
+    bool HasKnownZeroCoroFastPath = false;
+    if (IsAdaptingPresplitCoro && isa<CondBrInst>(TI) &&
+        TI->getNumSuccessors() == 2) {
+      const BasicBlock *Succ0 = TI->getSuccessor(0);
+      const BasicBlock *Succ1 = TI->getSuccessor(1);
+      if (Succ0 != Succ1) {
+        if (isKnownZeroNonFinalCoroSuspendFor(Succ1, Succ0)) {
+          if (Weights[0] == 0)
+            Weights[0] = 1;
+          Weights[1] = 0;
+          HasKnownZeroCoroFastPath = true;
+        }
+      }
+    }
+
     misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
     uint64_t TempWeight;
-    // Only set weights if there is at least one non-zero weight.
+    // Only set weights if there is at least one non-zero weight (or a branch
+    // around a coroutine suspend point that never suspended).
     // In any other case, let the analyzer set weights.
     // Do not set weights if the weights are present unless under
     // OverwriteExistingWeights. In ThinLTO, the profile annotation is done
@@ -1745,15 +1995,17 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     // does not need to set it. With OverwriteExistingWeights, Blocks with zero
     // weight should have their existing metadata (possibly annotated by LTO
     // prelink) cleared.
-    if (MaxWeight > 0 &&
+    if ((MaxWeight > 0 || HasKnownZeroCoroFastPath) &&
         (!TI->extractProfTotalWeight(TempWeight) || OverwriteExistingWeights)) {
       LLVM_DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
       setBranchWeights(*TI, Weights, /*IsExpected=*/false);
-      ORE->emit([&]() {
-        return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
-               << "most popular destination for conditional branches at "
-               << ore::NV("CondBranchesLoc", BranchLoc);
-      });
+      if (MaxDestInst) {
+        ORE->emit([&]() {
+          return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
+                 << "most popular destination for conditional branches at "
+                 << ore::NV("CondBranchesLoc", BranchLoc);
+        });
+      }
     } else {
       if (OverwriteExistingWeights) {
         TI->setMetadata(LLVMContext::MD_prof, nullptr);
@@ -1953,6 +2205,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
   }
   Reader = std::move(ReaderOrErr.get());
   Reader->setSkipFlatProf(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink);
+  Reader->setReadCoroutineProfiles(SampleProfileCoroMassage);
   // set module before reading the profile so reader may be able to only
   // read the function profiles which are used by the current module.
   Reader->setModule(&M);
@@ -2219,6 +2472,10 @@ bool SampleProfileLoader::runOnFunction(Function &F,
                                         ModuleAnalysisManager &AM) {
   LLVM_DEBUG(dbgs() << "\n\nProcessing Function " << F.getName() << "\n");
   DILocation2SampleMap.clear();
+  SyntheticCoroSamples.reset();
+  CoroRampSamples = nullptr;
+  CoroResumeSamples = nullptr;
+  IsAdaptingPresplitCoro = false;
   // By default the entry count is initialized to -1, which will be treated
   // conservatively by getEntryCount as the same as unknown (None). This is
   // to avoid newly added code to be treated as cold. If we have samples
@@ -2274,7 +2531,11 @@ bool SampleProfileLoader::runOnFunction(Function &F,
   if (FunctionSamples::ProfileIsCS)
     Samples = ContextTracker->getBaseSamplesFor(F);
   else {
-    Samples = Reader->getSamplesFor(F);
+    if (SampleProfileCoroMassage && !FunctionSamples::ProfileIsProbeBased &&
+        F.isPresplitCoroutine())
+      Samples = prepareCoroutineSamples(F);
+    else
+      Samples = Reader->getSamplesFor(F);
     // Try search in previously inlined functions that were split or duplicated
     // into base.
     if (!Samples) {
@@ -2292,7 +2553,7 @@ bool SampleProfileLoader::runOnFunction(Function &F,
     }
   }
 
-  if (Samples && !Samples->empty())
+  if (Samples && (!Samples->empty() || IsAdaptingPresplitCoro))
     return emitAnnotations(F);
   return false;
 }
