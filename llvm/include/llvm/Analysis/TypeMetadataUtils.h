@@ -80,6 +80,9 @@ LLVM_ABI Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
 LLVM_ABI std::pair<Function *, Constant *>
 getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset, Module &M);
 
+/// Returns true if the vtable slot at Offset in GV is a NULL function pointer.
+LLVM_ABI bool isNullVTableSlot(GlobalVariable *GV, uint64_t Offset, Module &M);
+
 /// Finds the same "relative pointer" pattern as described above, where the
 /// target is `C`, and replaces the entire pattern with a constant zero.
 LLVM_ABI void replaceRelativePointerUsersWithZero(Constant *C);
