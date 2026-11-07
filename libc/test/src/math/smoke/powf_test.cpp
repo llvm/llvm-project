@@ -291,7 +291,8 @@ public:
     LIBC_NAMESPACE::testing::ModifyMXCSR mxcsr(LIBC_NAMESPACE::testing::FTZ);
     volatile float x = -min_denormal;
     volatile float y = 0.5f;
-    EXPECT_FP_IS_NAN(func(x, y));
+    float funcRes = func(x, y);
+    EXPECT_FP_IS_NAN(funcRes);
     volatile float two = 2.0f;
     volatile float d = min_denormal;
     EXPECT_FP_EQ(1.0f, func(two, d));
