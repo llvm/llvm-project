@@ -44,6 +44,11 @@ end subroutine proc
 
 !CHECK: [[MALLOC_BB]]:
 !CHECK-NOT: omp.par.{{.*}}:
+!! ALLOCATE first reports an error if the object is already allocated.
+!CHECK:  %[[IS_NOT_ALLOCATED:.*]] = icmp eq i64 %{{.*}}, 0
+!CHECK:  br i1 %[[IS_NOT_ALLOCATED]], label %[[ALLOC_BB:.*]], label %{{.*}}
+
+!CHECK: [[ALLOC_BB]]:
 !POSIX: call ptr @aligned_alloc(i{{(32)|(64)}} 64, i{{(32)|(64)}} 128)
 !WINDOWS: call ptr @malloc(i{{(32)|(64)}} 80)
 !DARWIN: call i32 @posix_memalign(ptr %{{.*}}, i{{(32)|(64)}} 64, i{{(32)|(64)}} 80)

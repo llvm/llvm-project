@@ -290,6 +290,12 @@ static llvm::cl::opt<bool> initLocalZero(
         "initialization (alias for -finit-local=zero)"),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> noCheckAlreadyAllocated(
+    "fno-check-already-allocated",
+    llvm::cl::desc("Do not check whether an allocatable is already allocated "
+                   "before an inlined ALLOCATE"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool>
     reallocateLHS("frealloc-lhs",
                   llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
@@ -556,6 +562,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
       return mlir::failure();
     }
   }
+  if (noCheckAlreadyAllocated)
+    loweringOptions.setCheckAlreadyAllocated(false);
   loweringOptions.setReallocateLHS(reallocateLHS);
   loweringOptions.setSplitSumExpressionTree(fpSumReassociation);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
