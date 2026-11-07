@@ -9317,6 +9317,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N3.isUndef())
       return getUNDEF(VT);
 
+    // Index 0 is the only in-range index of a single-element vector.
+    if (!N3C && VT.isFixedLengthVector() && VT.getVectorNumElements() == 1) {
+      N3 = getConstant(0, DL, N3.getValueType());
+      N3C = cast<ConstantSDNode>(N3);
+    }
+
     // If inserting poison, just use the input vector.
     if (N2.getOpcode() == ISD::POISON)
       return N1;

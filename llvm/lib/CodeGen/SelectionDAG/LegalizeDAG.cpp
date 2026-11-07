@@ -1415,6 +1415,47 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   }
 }
 
+/// For a vector of elements narrower than a byte stored at VecPtr, return a
+/// pointer to the byte holding element Idx and the element's bit offset in it.
+static std::pair<SDValue, SDValue>
+getSubByteElementPointer(SelectionDAG &DAG, const TargetLowering &TLI,
+                         SDValue VecPtr, EVT VecVT, SDValue Idx,
+                         const SDLoc &DL) {
+  // The vector is stored as an integer with element 0 in its least significant
+  // bits, or for big-endian in its most significant bits after the padding up
+  // to a whole byte. Pos counts bits in memory order from the start.
+  unsigned EltBits = VecVT.getScalarSizeInBits();
+  assert(EltBits < 8 && 8 % EltBits == 0 &&
+         "Element must not straddle a byte boundary");
+  EVT PtrVT = VecPtr.getValueType();
+  bool IsBigEndian = DAG.getDataLayout().isBigEndian();
+  // Freeze the element index rather than letting getVectorElementPointer
+  // freeze the byte index, so the byte and bit computations still combine.
+  Idx = DAG.getZExtOrTrunc(DAG.getFreeze(Idx), DL, PtrVT);
+  SDValue Pos = DAG.getNode(ISD::MUL, DL, PtrVT, Idx,
+                            DAG.getConstant(EltBits, DL, PtrVT));
+  TypeSize PadBits = VecVT.getStoreSizeInBits() - VecVT.getSizeInBits();
+  if (IsBigEndian && !PadBits.isZero())
+    Pos = DAG.getNode(ISD::ADD, DL, PtrVT, Pos,
+                      DAG.getTypeSize(DL, PtrVT, PadBits));
+
+  TypeSize StoreSize = VecVT.getStoreSize();
+  EVT ByteVT =
+      EVT::getVectorVT(*DAG.getContext(), MVT::i8, StoreSize.getKnownMinValue(),
+                       StoreSize.isScalable());
+  SDValue Ptr = TLI.getVectorElementPointer(
+      DAG, VecPtr, ByteVT,
+      DAG.getNode(ISD::SRL, DL, PtrVT, Pos,
+                  DAG.getShiftAmountConstant(3, PtrVT, DL)));
+  // Big-endian bytes hold the earliest bits in their most significant bits.
+  SDValue BitOffset =
+      DAG.getNode(ISD::AND, DL, PtrVT, Pos, DAG.getConstant(7, DL, PtrVT));
+  if (IsBigEndian)
+    BitOffset = DAG.getNode(ISD::XOR, DL, PtrVT, BitOffset,
+                            DAG.getConstant(8 - EltBits, DL, PtrVT));
+  return {Ptr, BitOffset};
+}
+
 SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
   SDValue Vec = Op.getOperand(0);
   SDValue Idx = Op.getOperand(1);
@@ -1475,11 +1516,21 @@ SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
                DAG.getDataLayout().getPrefTypeAlign(
                    Op.getValueType().getTypeForEVT(*DAG.getContext())));
 
+  SDValue BitOffset;
   if (Op.getValueType().isVector()) {
     StackPtr = TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT,
                                           Op.getValueType(), Idx);
     NewLoad = DAG.getLoad(Op.getValueType(), dl, Ch, StackPtr,
                           MachinePointerInfo(), ElementAlignment);
+  } else if (!VecVT.getVectorElementType().isByteSized()) {
+    // Elements narrower than a byte are extracted from the byte holding them.
+    std::tie(StackPtr, BitOffset) =
+        getSubByteElementPointer(DAG, TLI, StackPtr, VecVT, Idx, dl);
+    EVT LoadVT = TLI.getTypeToTransformTo(*DAG.getContext(), MVT::i8);
+    NewLoad = DAG.getExtLoad(
+        ISD::EXTLOAD, dl, LoadVT, Ch, StackPtr,
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), MVT::i8,
+        Align(1));
   } else {
     StackPtr = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
     NewLoad = DAG.getExtLoad(ISD::EXTLOAD, dl, Op.getValueType(), Ch, StackPtr,
@@ -1496,6 +1547,14 @@ SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
   NewLoadOperands[0] = Ch;
   NewLoad =
       SDValue(DAG.UpdateNodeOperands(NewLoad.getNode(), NewLoadOperands), 0);
+  if (BitOffset) {
+    EVT LoadVT = NewLoad.getValueType();
+    NewLoad = DAG.getNode(
+        ISD::SRL, dl, LoadVT, NewLoad,
+        DAG.getZExtOrTrunc(BitOffset, dl,
+                           TLI.getShiftAmountTy(LoadVT, DAG.getDataLayout())));
+    NewLoad = DAG.getAnyExtOrTrunc(NewLoad, dl, Op.getValueType());
+  }
   return NewLoad;
 }
 
@@ -1527,6 +1586,8 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   Type *PartTy = PartVT.getTypeForEVT(*DAG.getContext());
   Align PartAlignment = DAG.getDataLayout().getPrefTypeAlign(PartTy);
 
+  bool IsSubByte = !VecVT.getVectorElementType().isByteSized();
+
   // Then store the inserted part.
   if (PartVT.isVector()) {
     SDValue SubStackPtr =
@@ -1537,6 +1598,35 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
         Ch, dl, Part, SubStackPtr,
         MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()),
         PartAlignment);
+  } else if (IsSubByte) {
+    // Elements narrower than a byte are inserted by rewriting the byte holding
+    // them.
+    auto [BytePtr, BitOffset] =
+        getSubByteElementPointer(DAG, TLI, StackPtr, VecVT, Idx, dl);
+    EVT EltVT = VecVT.getVectorElementType();
+    EVT WorkVT = TLI.getTypeToTransformTo(*DAG.getContext(), MVT::i8);
+    MachinePointerInfo BytePtrInfo =
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction());
+    SDValue Byte = DAG.getExtLoad(ISD::EXTLOAD, dl, WorkVT, Ch, BytePtr,
+                                  BytePtrInfo, MVT::i8, Align(1));
+    SDValue ShAmt = DAG.getZExtOrTrunc(
+        BitOffset, dl, TLI.getShiftAmountTy(WorkVT, DAG.getDataLayout()));
+    SDValue Mask = DAG.getNode(
+        ISD::SHL, dl, WorkVT,
+        DAG.getConstant(maskTrailingOnes<uint64_t>(VecVT.getScalarSizeInBits()),
+                        dl, WorkVT),
+        ShAmt);
+    SDValue NewBits =
+        DAG.getNode(ISD::SHL, dl, WorkVT,
+                    DAG.getZeroExtendInReg(
+                        DAG.getAnyExtOrTrunc(Part, dl, WorkVT), dl, EltVT),
+                    ShAmt);
+    SDValue NewByte = DAG.getNode(
+        ISD::OR, dl, WorkVT,
+        DAG.getNode(ISD::AND, dl, WorkVT, Byte, DAG.getNOT(dl, Mask, WorkVT)),
+        NewBits);
+    Ch = DAG.getTruncStore(Byte.getValue(1), dl, NewByte, BytePtr, BytePtrInfo,
+                           MVT::i8, Align(1));
   } else {
     SDValue SubStackPtr =
         TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
@@ -1548,7 +1638,7 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
         VecVT.getVectorElementType(), PartAlignment);
   }
 
-  assert(cast<StoreSDNode>(Ch)->getAlign() == PartAlignment &&
+  assert((IsSubByte || cast<StoreSDNode>(Ch)->getAlign() == PartAlignment) &&
          "ElementAlignment does not match!");
 
   // Finally, load the updated vector.
