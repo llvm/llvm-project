@@ -37,6 +37,25 @@ llvm.mlir.alias external @foo2 : i16 {
 
 // -----
 
+llvm.func @dso_target() attributes {dso_local} {
+  llvm.return
+}
+
+llvm.mlir.alias external @dso_alias {dso_local} : !llvm.func<void ()> {
+  %0 = llvm.mlir.addressof @dso_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.mlir.alias external @preemptible_alias : !llvm.func<void ()> {
+  %0 = llvm.mlir.addressof @dso_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: @dso_alias = dso_local alias void (), ptr @dso_target
+// CHECK: @preemptible_alias = alias void (), ptr @dso_target
+
+// -----
+
 llvm.mlir.global private constant @glob.private(dense<0> : tensor<32xi32>) {dso_local} : !llvm.array<32 x i32>
 
 llvm.mlir.alias linkonce_odr hidden @glob {dso_local} : !llvm.array<32 x i32> {
