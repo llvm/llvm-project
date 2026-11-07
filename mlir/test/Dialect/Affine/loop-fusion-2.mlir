@@ -20,15 +20,15 @@ func.func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4
     affine.for %i3 = 0 to 4 {
       affine.for %i4 = 0 to 16 {
         %v = affine.load %arg1[16 * %i3 - %i4 + 15, %i2] : memref<64x4xf32>
-        "op0"(%v) : (f32) -> ()
+        %unused0 = arith.addf %v, %v : f32
       }
       affine.for %i5 = 0 to 4 {
         affine.for %i6 = 0 to 16 {
           %v = affine.load %arg0[16 * %i5 - %i6 + 15, %i3] : memref<64x4xf32>
-          "op1"(%v) : (f32) -> ()
+          %unused1 = arith.addf %v, %v : f32
         }
         affine.for %i7 = 0 to 16 {
-          %r = "op2"() : () -> (f32)
+          %r = arith.constant 0.0 : f32
           %v = affine.load %out[16 * %i5 + %i7, %i2] : memref<64x4xf32>
           %s = arith.addf %v, %r : f32
           affine.store %s, %out[16 * %i5 + %i7, %i2] : memref<64x4xf32>
@@ -57,15 +57,15 @@ func.func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4
   // CHECK-NEXT:    affine.for %{{.*}} = 0 to 4 {
   // CHECK-NEXT:      affine.for %{{.*}} = 0 to 16 {
   // CHECK-NEXT:        affine.load %{{.*}}[%{{.*}} * 16 - %{{.*}} + 15, %{{.*}}] : memref<64x4xf32>
-  // CHECK-NEXT:        "op0"(%{{.*}}) : (f32) -> ()
+  // CHECK-NEXT:        arith.addf %{{.*}}, %{{.*}} : f32
   // CHECK-NEXT:      }
   // CHECK-NEXT:      affine.for %{{.*}} = 0 to 4 {
   // CHECK-NEXT:        affine.for %{{.*}} = 0 to 16 {
   // CHECK-NEXT:          affine.load %{{.*}}[%{{.*}} * 16 - %{{.*}} + 15, %{{.*}}] : memref<64x4xf32>
-  // CHECK-NEXT:          "op1"(%{{.*}}) : (f32) -> ()
+  // CHECK-NEXT:          arith.addf %{{.*}}, %{{.*}} : f32
   // CHECK-NEXT:        }
   // CHECK-NEXT:        affine.for %{{.*}} = 0 to 16 {
-  // CHECK-NEXT:          %{{.*}} = "op2"() : () -> f32
+  // CHECK-NEXT:          %{{.*}} = arith.constant {{.*}} : f32
   // CHECK:               affine.load %{{.*}}[%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<64x4xf32>
   // CHECK-NEXT:          arith.addf %{{.*}}, %{{.*}} : f32
   // CHECK:               affine.store %{{.*}}, %{{.*}}[%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<64x4xf32>
@@ -244,7 +244,7 @@ func.func @slice_tile(%arg0: memref<128x8xf32>, %arg1: memref<32x8xf32>, %0 : f3
       affine.for %k = 0 to 8 {
         affine.for %kk = 0 to 16 {
           %v = affine.load %arg0[16 * %k + %kk, %j] : memref<128x8xf32>
-          %r = "foo"(%v) : (f32) -> f32
+          %r = arith.addf %v, %v : f32
         }
         affine.for %ii = 0 to 16 {
           %v = affine.load %arg1[16 * %i + %ii, %j] : memref<32x8xf32>
@@ -264,7 +264,7 @@ func.func @slice_tile(%arg0: memref<128x8xf32>, %arg1: memref<32x8xf32>, %0 : f3
 // CHECK-NEXT:      affine.for %{{.*}} = 0 to 8 {
 // CHECK-NEXT:        affine.for %{{.*}} = 0 to 16 {
 // CHECK-NEXT:          affine.load %{{.*}}[%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<128x8xf32>
-// CHECK-NEXT:          "foo"(%{{.*}}) : (f32) -> f32
+// CHECK-NEXT:          arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:        }
 // CHECK-NEXT:        affine.for %{{.*}} = 0 to 16 {
 // CHECK-NEXT:          affine.load %{{.*}}[%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<32x8xf32>
@@ -463,26 +463,26 @@ func.func @should_not_slice_past_slice_barrier() {
   %0 = memref.alloc() : memref<100x16xf32>
   affine.for %i0 = 0 to 100 {
     affine.for %i1 = 0 to 16 {
-      %1 = "op1"() : () -> f32
+      %1 = arith.constant 0.0 : f32
       affine.store %1, %0[%i0, %i1] : memref<100x16xf32>
     } {slice_fusion_barrier = true}
   }
   affine.for %i2 = 0 to 100 {
     affine.for %i3 = 0 to 16 {
       %2 = affine.load %0[%i2, %i3] : memref<100x16xf32>
-      "op2"(%2) : (f32) -> ()
+      %unused = arith.addf %2, %2 : f32
     }
   }
   // The 'slice_fusion_barrier' attribute on '%i1' prevents slicing the
   // iteration space of '%i1' and any enclosing loop nests.
 // CHECK:        affine.for %{{.*}} = 0 to 100 {
 // CHECK-NEXT:     affine.for %{{.*}} = 0 to 16 {
-// CHECK-NEXT:       %{{.*}} = "op1"() : () -> f32
+// CHECK-NEXT:       %{{.*}} = arith.constant {{.*}} : f32
 // CHECK-NEXT:       affine.store %{{.*}}, %{{.*}}[0, %{{.*}}] : memref<1x16xf32>
 // CHECK-NEXT:     } {slice_fusion_barrier = true}
 // CHECK-NEXT:     affine.for %{{.*}} = 0 to 16 {
 // CHECK-NEXT:       affine.load %{{.*}}[0, %{{.*}}] : memref<1x16xf32>
-// CHECK-NEXT:       "op2"(%{{.*}}) : (f32) -> ()
+// CHECK-NEXT:       arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
   return
