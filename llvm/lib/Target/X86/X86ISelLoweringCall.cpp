@@ -49,7 +49,8 @@ static void errorUnsupported(SelectionDAG &DAG, const SDLoc &dl,
 /// Returns true if a CC can dynamically exclude a register from the list of
 /// callee-saved-registers (TargetRegistryInfo::getCalleeSavedRegs()) based on
 /// the return registers.
-static bool shouldDisableRetRegFromCSR(CallingConv::ID CC) {
+static bool shouldDisableRetRegFromCSR(CallingConv::ID CC,
+                                       const X86Subtarget &Subtarget) {
   switch (CC) {
   default:
     return false;
@@ -57,6 +58,12 @@ static bool shouldDisableRetRegFromCSR(CallingConv::ID CC) {
   case CallingConv::PreserveMost:
   case CallingConv::PreserveAll:
     return true;
+  case CallingConv::Cold:
+    // On x86-64, coldcc preserves most registers (CSR_64_MostRegs), including
+    // registers that are also used for return values, such as RDX and XMM0.
+    // On 32-bit x86, coldcc uses the default callee-saved registers, which must
+    // be left as is (e.g. CSR_32EHRet must keep EAX and EDX).
+    return Subtarget.is64Bit();
   }
 }
 
@@ -791,7 +798,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // For example, when they are used as return registers (preserve_* and X86's
   // regcall) or for argument passing (X86's regcall).
   bool ShouldDisableCalleeSavedRegister =
-      shouldDisableRetRegFromCSR(CallConv) ||
+      shouldDisableRetRegFromCSR(CallConv, Subtarget) ||
       MF.getFunction().hasFnAttribute("no_caller_saved_registers");
 
   if (CallConv == CallingConv::X86_INTR && !Outs.empty())
@@ -2687,7 +2694,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // RegMask for calling conventions that disable only return registers (e.g.
   // preserve_most) will be modified later in LowerCallResult.
   bool ShouldDisableArgRegs = shouldDisableArgRegFromCSR(CallConv) || HasNCSR;
-  if (ShouldDisableArgRegs || shouldDisableRetRegFromCSR(CallConv)) {
+  if (ShouldDisableArgRegs || shouldDisableRetRegFromCSR(CallConv, Subtarget)) {
     const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
     // Allocate a new Reg Mask and copy Mask.
