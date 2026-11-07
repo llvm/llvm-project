@@ -14925,6 +14925,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->setInvalidDecl();
         return;
       }
+      // Completing the element type may reveal that the array is too large.
+      if (Type->isConstantArrayType() &&
+          RequireCompleteType(Var->getLocation(), Type,
+                              diag::err_typecheck_decl_incomplete_type)) {
+        Var->setInvalidDecl();
+        return;
+      }
     } else {
       return;
     }
@@ -15443,9 +15450,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     // Apply the init_seg attribute if this has an initializer.  If the
     // initializer turns out to not be dynamic, we'll end up ignoring this
     // attribute.
-    if (CurInitSeg && var->getInit())
-      var->addAttr(InitSegAttr::CreateImplicit(Context, CurInitSeg->getString(),
-                                               CurInitSegLoc));
+    if (CurInitSeg.Segment && var->getInit())
+      var->addAttr(InitSegAttr::CreateImplicit(
+          Context, CurInitSeg.Segment->getString(), CurInitSeg.Func,
+          CurInitSeg.PragmaLocation));
   }
 
   // All the following checks are C++ only.

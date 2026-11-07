@@ -699,6 +699,7 @@ set(files
   __pstl/backends/statpart.h
   __pstl/backends/statpart/any_of.h
   __pstl/backends/statpart/basis.h
+  __pstl/backends/statpart/decoupled_lookback.h
   __pstl/backends/statpart/fill.h
   __pstl/backends/statpart/find_end.h
   __pstl/backends/statpart/find_if.h
@@ -714,6 +715,7 @@ set(files
   __pstl/backends/statpart/stable_sort.h
   __pstl/backends/statpart/swap_ranges.h
   __pstl/backends/statpart/transform.h
+  __pstl/backends/statpart/transform_inclusive_scan.h
   __pstl/backends/statpart/transform_reduce.h
   __pstl/backends/statpart/uninitialized_copy.h
   __pstl/backends/statpart/uninitialized_move.h
