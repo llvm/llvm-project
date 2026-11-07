@@ -228,3 +228,48 @@ define double @v2i32_build_vector(i32 %x, i32 %y) nounwind {
   %b = bitcast <2 x i32> %v1 to double
   ret double %b
 }
+
+define i32 @f64_to_v2i32_fadd(double %a, double %b) nounwind {
+; V9-LABEL: f64_to_v2i32_fadd:
+; V9:       ! %bb.0:
+; V9-NEXT:    add %sp, -144, %sp
+; V9-NEXT:    faddd %f0, %f2, %f0
+; V9-NEXT:    std %f0, [%sp+2183]
+; V9-NEXT:    ldx [%sp+2183], %o0
+; V9-NEXT:    srlx %o0, 32, %o1
+; V9-NEXT:    add %o1, %o0, %o0
+; V9-NEXT:    retl
+; V9-NEXT:    add %sp, 144, %sp
+;
+; VIS3-LABEL: f64_to_v2i32_fadd:
+; VIS3:       ! %bb.0:
+; VIS3-NEXT:    faddd %f0, %f2, %f0
+; VIS3-NEXT:    movdtox %f0, %o0
+; VIS3-NEXT:    srlx %o0, 32, %o1
+; VIS3-NEXT:    retl
+; VIS3-NEXT:    add %o1, %o0, %o0
+;
+; V8-LABEL: f64_to_v2i32_fadd:
+; V8:       ! %bb.0:
+; V8-NEXT:    add %sp, -120, %sp
+; V8-NEXT:    ! kill: def $o3 killed $o3 killed $o2_o3 def $o2_o3
+; V8-NEXT:    ! kill: def $o1 killed $o1 killed $o0_o1 def $o0_o1
+; V8-NEXT:    ! kill: def $o2 killed $o2 killed $o2_o3 def $o2_o3
+; V8-NEXT:    std %o2, [%sp+104]
+; V8-NEXT:    ! kill: def $o0 killed $o0 killed $o0_o1 def $o0_o1
+; V8-NEXT:    std %o0, [%sp+112]
+; V8-NEXT:    ldd [%sp+104], %f0
+; V8-NEXT:    ldd [%sp+112], %f2
+; V8-NEXT:    faddd %f2, %f0, %f0
+; V8-NEXT:    std %f0, [%sp+96]
+; V8-NEXT:    ldd [%sp+96], %o0
+; V8-NEXT:    add %o0, %o1, %o0
+; V8-NEXT:    retl
+; V8-NEXT:    add %sp, 120, %sp
+  %s = fadd double %a, %b
+  %v = bitcast double %s to <2 x i32>
+  %e0 = extractelement <2 x i32> %v, i32 0
+  %e1 = extractelement <2 x i32> %v, i32 1
+  %r = add i32 %e0, %e1
+  ret i32 %r
+}
