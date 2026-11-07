@@ -1642,6 +1642,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigpending
     libc.src.signal.sigprocmask
     libc.src.signal.sigsuspend
+    libc.src.signal.sigwaitinfo
+    libc.src.signal.sigtimedwait
 
     # spawn.h entrypoints
     libc.src.spawn.posix_spawn
