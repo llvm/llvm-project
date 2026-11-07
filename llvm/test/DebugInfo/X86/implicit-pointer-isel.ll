@@ -2,7 +2,7 @@
 
 ; Test that DW_OP_LLVM_implicit_pointer survives ISel.
 
-; CHECK: DBG_VALUE $edi, $noreg, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_implicit_pointer)
+; CHECK: DBG_INSTR_REF ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_implicit_pointer), dbg-instr-ref(1, 0)
 
 define internal i32 @foo(i32 noundef %p.0.val) !dbg !7 {
 entry:

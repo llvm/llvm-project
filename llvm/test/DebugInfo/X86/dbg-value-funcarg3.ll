@@ -28,9 +28,9 @@ define dso_local i32 @fn1(i64 %t1) local_unnamed_addr #0 !dbg !7 {
 ;
 ;; For instr-ref, no copies should be considered. Because argumenst are
 ;; Special, we don't label them in the same way, and currently emit a
-;; DBG_VALUE for the physreg.
+;; DBG_INSTR_REF to a DBG_PHI of the physreg.
 ; INSTRREF-LABEL: name:            fn1
-; INSTRREF: DBG_VALUE $rdi, $noreg, ![[T1]], !DIExpression(),
+; INSTRREF: DBG_INSTR_REF ![[T1]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0),
 ; INSTRREF-NEXT: %0:gr64 = COPY $rdi
 ; INSTRREF-NEXT: %1:gr32 = COPY %0.sub_32bit
 ; INSTRREF-NEXT: COPY

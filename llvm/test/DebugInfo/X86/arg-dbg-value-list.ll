@@ -13,8 +13,8 @@
 ; CHECK: ![[B:[0-9]+]] = !DILocalVariable(name: "b",
 ; CHECK: ![[C:[0-9]+]] = !DILocalVariable(name: "c",
 
-; CHECK: DBG_VALUE $ecx, $noreg, ![[A]], !DIExpression(), debug-location
-; CHECK: DBG_VALUE $edx, $noreg, ![[B]], !DIExpression(), debug-location
+; CHECK: {{DBG_VALUE \$ecx, \$noreg,|DBG_INSTR_REF}} ![[A]], !DIExpression({{.*}}debug-location
+; CHECK: {{DBG_VALUE \$edx, \$noreg,|DBG_INSTR_REF}} ![[B]], !DIExpression({{.*}}debug-location
 ; CHECK: DBG_VALUE $noreg, $noreg, ![[C]], !DIExpression(), debug-location
 
 target triple = "x86_64-pc-windows-msvc19.16.27034"

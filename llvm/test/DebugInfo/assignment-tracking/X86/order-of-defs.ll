@@ -8,10 +8,12 @@
 ; CHECK-DAG: ![[B:[0-9]+]] = !DILocalVariable(name: "b",
 ; CHECK-DAG: ![[C:[0-9]+]] = !DILocalVariable(name: "c",
 
-; CHECK:      DBG_VALUE $esi, $noreg, ![[B]], !DIExpression()
-; CHECK-NEXT: DBG_VALUE $edx, $noreg, ![[C]], !DIExpression()
-; CHECK-NEXT: DBG_VALUE $esi, $noreg, ![[A]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE $edx, $noreg, ![[A]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK:      DBG_PHI $edx, 2
+; CHECK-NEXT: DBG_PHI $esi, 1
+; CHECK-NEXT: DBG_INSTR_REF ![[B]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
+; CHECK-NEXT: DBG_INSTR_REF ![[C]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0)
+; CHECK-NEXT: DBG_INSTR_REF ![[A]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref(1, 0)
+; CHECK-NEXT: DBG_INSTR_REF ![[A]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 32, 32), dbg-instr-ref(2, 0)
 
 target triple = "x86_64-unknown-linux-gnu"
 

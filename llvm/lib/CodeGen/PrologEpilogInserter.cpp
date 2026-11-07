@@ -180,6 +180,19 @@ static void stashEntryDbgValues(MachineBasicBlock &MBB,
   for (auto &MI : MBB) {
     if (!MI.isDebugInstr())
       break;
+
+    // Stash all DBG_PHIs at the start of the block.
+    if (MI.isDebugPHI()) {
+      EntryDbgValues[&MBB].push_back(&MI);
+      continue;
+    }
+
+    // Stash any DBG_INSTR_REFs referring to parameters too.
+    if (MI.isDebugRef() && MI.getDebugVariable()->isParameter()) {
+      EntryDbgValues[&MBB].push_back(&MI);
+      continue;
+    }
+
     if (!MI.isDebugValue() || !MI.getDebugVariable()->isParameter())
       continue;
     if (any_of(MI.debug_operands(),

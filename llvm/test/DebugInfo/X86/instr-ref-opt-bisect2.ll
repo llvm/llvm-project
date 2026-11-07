@@ -10,7 +10,7 @@
 ; during opt-bisect's optimisation level change we won't run into an assert.
 ; This is simply testing different IR.
 
-; CHECK: DBG_VALUE
+; CHECK: DBG_{{VALUE|INSTR_REF}}
 
 target triple = "x86_64-pc-windows-msvc"
 

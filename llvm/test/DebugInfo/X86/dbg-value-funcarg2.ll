@@ -26,12 +26,12 @@ define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %
 ; In instr-ref mode, there'll be some DBG_PHIs in there too.
 ; COMMON-LABEL: name:            f
 ; COMMON-NOT: DBG_VALUE
-; INSTRREF-DAG: DBG_PHI $rcx, 2
-; INSTRREF-DAG: DBG_PHI $rdx, 1
-; COMMON-DAG: DBG_VALUE $rdi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; COMMON-DAG: DBG_VALUE $rsi, $noreg, ![[S1]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
-; COMMON-DAG: DBG_VALUE $rdx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 0, 64)
-; COMMON-DAG: DBG_VALUE $rcx, $noreg, ![[S2]], !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+; INSTRREF-DAG: DBG_PHI $rcx, 4
+; INSTRREF-DAG: DBG_PHI $rdx, 3
+; COMMON-DAG: {{DBG_VALUE \$rdi, \$noreg,|DBG_INSTR_REF}} ![[S1]], !DIExpression({{(DW_OP_LLVM_arg, 0, )?}}DW_OP_LLVM_fragment, 0, 64)
+; COMMON-DAG: {{DBG_VALUE \$rsi, \$noreg,|DBG_INSTR_REF}} ![[S1]], !DIExpression({{(DW_OP_LLVM_arg, 0, )?}}DW_OP_LLVM_fragment, 64, 64)
+; COMMON-DAG: {{DBG_VALUE \$rdx, \$noreg,|DBG_INSTR_REF}} ![[S2]], !DIExpression({{(DW_OP_LLVM_arg, 0, )?}}DW_OP_LLVM_fragment, 0, 64)
+; COMMON-DAG: {{DBG_VALUE \$rcx, \$noreg,|DBG_INSTR_REF}} ![[S2]], !DIExpression({{(DW_OP_LLVM_arg, 0, )?}}DW_OP_LLVM_fragment, 64, 64)
 ; COMMON-NOT: DBG_
 
 ; Then arguments are copied to virtual registers.
@@ -60,8 +60,8 @@ define dso_local i32 @f(i64 %s1.coerce0, i64 %s1.coerce1, i64 %s2.coerce0, i64 %
 ;; of the earlier DBG_PHIs.
 ; INSTRREF:     ADJCALLSTACKUP
 ; INSTRREF-NOT: DBG_
-; INSTRREF-DAG: DBG_INSTR_REF ![[S1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 64), dbg-instr-ref(1, 0)
-; INSTRREF-DAG: DBG_INSTR_REF ![[S1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(2, 0)
+; INSTRREF-DAG: DBG_INSTR_REF ![[S1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 64), dbg-instr-ref(3, 0)
+; INSTRREF-DAG: DBG_INSTR_REF ![[S1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(4, 0)
 
 ; And then no more DBG_ instructions before the add.
 ; COMMON-NOT: DBG_
