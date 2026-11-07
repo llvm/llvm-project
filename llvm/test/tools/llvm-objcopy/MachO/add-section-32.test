@@ -2,6 +2,7 @@
 ## --add-section is given.
 
 # RUN: yaml2obj %s -o %t
+# RUN: yaml2obj %s -DSEGNAME= -o %t.empty
 # RUN: echo -n abcdefg > %t.data
 
 ## Case 1: Add a new section into an existing segment.
@@ -9,15 +10,22 @@
 # RUN: llvm-readobj --sections --section-data %t.out1 \
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE1
 
-## Case 2: Add a new section into a nonexistent segment.
+## Case 2: Add a new section with a new segment name. The input is an object
+## file (MH_OBJECT), so the section goes into its only segment.
 # RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t %t.out2
 # RUN: llvm-readobj --sections --section-data %t.out2 \
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE2
+# RUN: llvm-readobj --macho-segment %t.out2 | FileCheck %s --check-prefix=ONESEG
 
 ## Case 3: Add a new section into an existing segment using /dev/null as an input.
 # RUN: llvm-objcopy --add-section __TEXT,__bar=/dev/null %t %t.out3
 # RUN: llvm-readobj --sections --section-data %t.out3 \
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE3
+
+## Case 4: Add a new section with a new segment name into an object file whose
+## only segment has an empty name, as object files from compilers do.
+# RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t.empty %t.out4
+# RUN: llvm-readobj --macho-segment %t.out4 | FileCheck %s --check-prefix=EMPTYSEG
 
 --- !mach-o
 IsLittleEndian:  true
@@ -32,7 +40,7 @@ FileHeader:
 LoadCommands:
   - cmd:             LC_SEGMENT
     cmdsize:         124
-    segname:         __TEXT
+    segname:         '[[SEGNAME=__TEXT]]'
     vmaddr:          0
     vmsize:          4
     fileoff:         184
@@ -85,9 +93,9 @@ LoadCommands:
 # CASE1-NEXT:     Offset: 224
 
 # CASE2-NEXT:     Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
-# CASE2-NEXT:     Address: 0x98
+# CASE2-NEXT:     Address: 0x4
 # CASE2-NEXT:     Size: 0x7
-# CASE2-NEXT:     Offset: 280
+# CASE2-NEXT:     Offset: 224
 
 # CASE3-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
 # CASE3-NEXT:     Address: 0x4
@@ -113,3 +121,15 @@ LoadCommands:
 
 # CASE3-NEXT:     SectionData (
 # CASE3-NEXT:     )
+
+# ONESEG:      Segment {
+# ONESEG-NEXT:   Cmd: LC_SEGMENT{{$}}
+# ONESEG-NEXT:   Name: __TEXT
+# ONESEG:        nsects: 2
+# ONESEG-NOT:  Segment {
+
+# EMPTYSEG:      Segment {
+# EMPTYSEG-NEXT:   Cmd: LC_SEGMENT{{$}}
+# EMPTYSEG-NEXT:   Name: {{$}}
+# EMPTYSEG:        nsects: 2
+# EMPTYSEG-NOT:  Segment {

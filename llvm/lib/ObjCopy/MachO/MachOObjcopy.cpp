@@ -11,6 +11,7 @@
 #include "MachOReader.h"
 #include "MachOWriter.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
@@ -346,10 +347,11 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
       Obj.NewSectionsContents.save(NewSection.SectionData->getBuffer());
   Sec.Size = Sec.Content.size();
 
-  // Add the a section into an existing segment.
+  // Add a section into an existing segment.
+  const bool IsObject = Obj.Header.FileType == MachO::MH_OBJECT;
   for (LoadCommand &LC : Obj.LoadCommands) {
     std::optional<StringRef> SegName = LC.getSegmentName();
-    if (SegName && SegName == TargetSegName) {
+    if (SegName && (IsObject || SegName == TargetSegName)) {
       uint64_t Addr = *LC.getSegmentVMAddr();
       for (const std::unique_ptr<Section> &S : LC.Sections)
         Addr = std::max(Addr, S->Addr + S->Size);
