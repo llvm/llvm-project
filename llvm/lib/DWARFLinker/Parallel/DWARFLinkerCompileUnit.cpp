@@ -1425,8 +1425,7 @@ std::pair<DIE *, TypeEntry *> CompileUnit::cloneDIE(
 
   bool NeedToClonePlainDIE = Info.needToKeepInPlainDwarf();
   bool NeedToCloneTypeDIE =
-      (InputDieEntry->getTag() != dwarf::DW_TAG_compile_unit) &&
-      Info.needToPlaceInTypeTable();
+      !isUnitRootDIE(InputDieIdx) && Info.needToPlaceInTypeTable();
   std::pair<DIE *, TypeEntry *> ClonedDIE;
 
   DIEGenerator PlainDIEGenerator(Allocator, *this);
@@ -1455,8 +1454,7 @@ std::pair<DIE *, TypeEntry *> CompileUnit::cloneDIE(
       (ClonedDIE.first && Info.getKeepPlainChildren());
 
   bool HasTypeChildrenToClone =
-      ((ClonedDIE.second ||
-        InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit) &&
+      ((ClonedDIE.second || isUnitRootDIE(InputDieIdx)) &&
        Info.getKeepTypeChildren());
 
   // Recursively clone children.
