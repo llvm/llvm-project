@@ -612,6 +612,7 @@ add_entrypoint_object(
     libc.hdr.types.pthread_attr_t
     libc.hdr.types.pthread_t
     libc.include.pthread
+    libc.src.__support.CPP.optional
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.threads.thread
