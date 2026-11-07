@@ -425,14 +425,13 @@ public:
     maxnum
   };
 
-  LLVM_ABI static KnownFPClass
-  minMaxLike(const KnownFPClass &LHS, const KnownFPClass &RHS, MinMaxKind Kind,
-             DenormalMode DenormMode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass minMaxLike(const KnownFPClass &LHS,
+                                          const KnownFPClass &RHS,
+                                          MinMaxKind Kind, DenormalMode Mode);
 
   /// Apply the canonicalize intrinsic to this value.
-  LLVM_ABI static KnownFPClass
-  canonicalize(const KnownFPClass &Src,
-               DenormalMode DenormMode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass canonicalize(const KnownFPClass &Src,
+                                            DenormalMode Mode);
 
   /// Report known values for a bitcast into a float with provided semantics.
   LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
@@ -442,28 +441,23 @@ public:
   LLVM_ABI KnownBits toKnownBits(const fltSemantics &FltSemantics) const;
 
   /// Report known values for fadd
-  LLVM_ABI static KnownFPClass
-  fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
-       DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fadd(const KnownFPClass &LHS,
+                                    const KnownFPClass &RHS, DenormalMode Mode);
 
   /// Report known values for fadd x, x
-  LLVM_ABI static KnownFPClass
-  fadd_self(const KnownFPClass &Src,
-            DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fadd_self(const KnownFPClass &Src,
+                                         DenormalMode Mode);
 
   /// Report known values for fsub
-  LLVM_ABI static KnownFPClass
-  fsub(const KnownFPClass &LHS, const KnownFPClass &RHS,
-       DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fsub(const KnownFPClass &LHS,
+                                    const KnownFPClass &RHS, DenormalMode Mode);
 
   /// Report known values for fmul
-  LLVM_ABI static KnownFPClass
-  fmul(const KnownFPClass &LHS, const KnownFPClass &RHS,
-       DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS,
+                                    const KnownFPClass &RHS, DenormalMode Mode);
 
   // Special case of fmul x, x.
-  static KnownFPClass square(const KnownFPClass &Src,
-                             DenormalMode Mode = DenormalMode::getDynamic()) {
+  static KnownFPClass square(const KnownFPClass &Src, DenormalMode Mode) {
     KnownFPClass Known = fmul(Src, Src, Mode);
 
     // X * X is always non-negative or a NaN.
@@ -472,51 +466,46 @@ public:
     return Known;
   }
 
-  LLVM_ABI static KnownFPClass
-  fmul(const KnownFPClass &LHS, const APFloat &RHS,
-       DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS, const APFloat &RHS,
+                                    DenormalMode Mode);
 
   /// Report known values for fdiv
-  LLVM_ABI static KnownFPClass
-  fdiv(const KnownFPClass &LHS, const KnownFPClass &RHS,
-       DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fdiv(const KnownFPClass &LHS,
+                                    const KnownFPClass &RHS, DenormalMode Mode);
 
   /// Report known values for fdiv x, x
-  LLVM_ABI static KnownFPClass
-  fdiv_self(const KnownFPClass &Src,
-            DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fdiv_self(const KnownFPClass &Src,
+                                         DenormalMode Mode);
 
   /// Report known values for frem
-  LLVM_ABI static KnownFPClass
-  frem(const KnownFPClass &LHS, const KnownFPClass &RHS,
-       DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass frem(const KnownFPClass &LHS,
+                                    const KnownFPClass &RHS, DenormalMode Mode);
 
   /// Report known values for frem x, x
-  LLVM_ABI static KnownFPClass
-  frem_self(const KnownFPClass &Src,
-            DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass frem_self(const KnownFPClass &Src,
+                                         DenormalMode Mode);
 
   /// Report known values for fma
-  LLVM_ABI static KnownFPClass
-  fma(const KnownFPClass &LHS, const KnownFPClass &RHS,
-      const KnownFPClass &Addend,
-      DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fma(const KnownFPClass &LHS,
+                                   const KnownFPClass &RHS,
+                                   const KnownFPClass &Addend,
+                                   DenormalMode Mode);
 
   /// Report known values for fmuladd
-  LLVM_ABI static KnownFPClass
-  fmuladd(const KnownFPClass &LHS, const KnownFPClass &RHS,
-          const KnownFPClass &Addend,
-          DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fmuladd(const KnownFPClass &LHS,
+                                       const KnownFPClass &RHS,
+                                       const KnownFPClass &Addend,
+                                       DenormalMode Mode);
 
   /// Report known values for fma squared, squared, addend
-  LLVM_ABI static KnownFPClass
-  fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
-             DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fma_square(const KnownFPClass &Squared,
+                                          const KnownFPClass &Addend,
+                                          DenormalMode Mode);
 
   /// Report known values for fmuladd squared, squared, addend
-  LLVM_ABI static KnownFPClass
-  fmuladd_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
-                 DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass fmuladd_square(const KnownFPClass &Squared,
+                                              const KnownFPClass &Addend,
+                                              DenormalMode Mode);
 
   /// Propagate known class for sqrt
   LLVM_ABI static KnownFPClass
@@ -563,8 +552,7 @@ public:
 
   /// Report known values for atan2
   LLVM_ABI static KnownFPClass
-  atan2(const KnownFPClass &LHS, const KnownFPClass &RHS,
-        DenormalMode Mode = DenormalMode::getDynamic());
+  atan2(const KnownFPClass &LHS, const KnownFPClass &RHS, DenormalMode Mode);
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
@@ -649,44 +637,41 @@ public:
   /// Propagate known class for rounding intrinsics (rint, nearbyint, round,
   /// roundeven). \p IsMultiUnitFPType if this is for a multi-unit
   /// floating-point type.
-  LLVM_ABI static KnownFPClass
-  roundToIntegral(const KnownFPClass &Src, bool IsMultiUnitFPType,
-                  DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass roundToIntegral(const KnownFPClass &Src,
+                                               bool IsMultiUnitFPType,
+                                               DenormalMode Mode);
 
   /// Propagate known class for trunc.
-  LLVM_ABI static KnownFPClass
-  trunc(const KnownFPClass &Src,
-        DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass trunc(const KnownFPClass &Src,
+                                     DenormalMode Mode);
 
   /// Propagate known class for floor. \p IsMultiUnitFPType if this is for a
   /// multi-unit floating-point type.
-  LLVM_ABI static KnownFPClass
-  floor(const KnownFPClass &Src, bool IsMultiUnitFPType,
-        DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass floor(const KnownFPClass &Src,
+                                     bool IsMultiUnitFPType, DenormalMode Mode);
 
   /// Propagate known class for ceil. \p IsMultiUnitFPType if this is for a
   /// multi-unit floating-point type.
-  LLVM_ABI static KnownFPClass
-  ceil(const KnownFPClass &Src, bool IsMultiUnitFPType,
-       DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass ceil(const KnownFPClass &Src,
+                                    bool IsMultiUnitFPType, DenormalMode Mode);
 
   /// Propagate known class for mantissa component of frexp
-  LLVM_ABI static KnownFPClass
-  frexp_mant(const KnownFPClass &Src,
-             DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass frexp_mant(const KnownFPClass &Src,
+                                          DenormalMode Mode);
 
   /// Propagate known class for ldexp, assuming the exponent is known to be
   /// within [\p ConstantRangeMin, \p ConstantRangeMax]
   ///
   // TODO: This really ought to use ConstantRange, but it's in IR not Support.
-  LLVM_ABI static KnownFPClass
-  ldexp(const KnownFPClass &Src, const APInt &ConstantRangeMin,
-        const APInt &ConstantRangeMax, const fltSemantics &Flt,
-        DenormalMode Mode = DenormalMode::getDynamic());
-  LLVM_ABI static KnownFPClass
-  ldexp(const KnownFPClass &Src, const KnownBits &ExpBits,
-        const fltSemantics &Flt,
-        DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass ldexp(const KnownFPClass &Src,
+                                     const APInt &ConstantRangeMin,
+                                     const APInt &ConstantRangeMax,
+                                     const fltSemantics &Flt,
+                                     DenormalMode Mode);
+  LLVM_ABI static KnownFPClass ldexp(const KnownFPClass &Src,
+                                     const KnownBits &ExpBits,
+                                     const fltSemantics &Flt,
+                                     DenormalMode Mode);
 
   /// Propagate known class for pow
   LLVM_ABI static KnownFPClass pow(const KnownFPClass &LHS,

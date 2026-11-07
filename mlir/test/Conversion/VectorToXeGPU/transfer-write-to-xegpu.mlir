@@ -457,6 +457,25 @@ gpu.func @no_store_addrspace3_out_of_bounds(%vec: vector<8xf32>,
 }
 
 // -----
+// The 1D vector is written along d0, so its elements are 64 apart in memory,
+// but store_matrix writes its payload along the innermost dimension of the
+// mem_desc. The store is left alone rather than writing the wrong elements.
+gpu.module @xevm_module {
+gpu.func @no_store_addrspace3_non_innermost_dim(%vec: vector<8xf32>,
+    %source: memref<32x64xf32, 3>, %i: index, %j: index) {
+  vector.transfer_write %vec, %source[%i, %j]
+    {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true]}
+    : vector<8xf32>, memref<32x64xf32, 3>
+  gpu.return
+}
+
+// CHECK-LABEL: @no_store_addrspace3_non_innermost_dim
+// CHECK-NOT: xegpu.create_mem_desc
+// CHECK-NOT: xegpu.store_matrix
+// CHECK: vector.transfer_write
+}
+
+// -----
 gpu.module @xevm_module {
 gpu.func @store_0D_vector_unsupported(%vec: vector<f32>,
     %source: memref<3xf32>, %offset: index) {
