@@ -5678,9 +5678,6 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   }
 
   // Control flow needs to be inserted if indexing with a VGPR.
-  if (Val->isReg())
-    MRI.clearKillFlags(Val->getReg());
-
   const DebugLoc &DL = MI.getDebugLoc();
 
   Register PhiReg = MRI.createVirtualRegister(VecRC);
@@ -7482,7 +7479,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineInstr *Setup = TII->getWholeWaveFunctionSetup(*BB->getParent());
     assert(Setup && "Couldn't find SI_SETUP_WHOLE_WAVE_FUNC");
     Register OriginalExec = Setup->getOperand(0).getReg();
-    MF->getRegInfo().clearKillFlags(OriginalExec);
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
   }
@@ -16537,6 +16533,22 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     unsigned IntrinsicID = Op.getConstantOperandVal(0);
     // TODO: Handle more intrinsics
     switch (IntrinsicID) {
+    case Intrinsic::amdgcn_update_dpp: {
+      enum UpdateDPPOperand {
+        Src = 2,
+        RowMask = 4,
+        BankMask = 5,
+        BoundCtrl = 6,
+      };
+
+      if (QueryVT == MVT::f32 && (VT == MVT::i32 || VT == MVT::f32) &&
+          Op.getConstantOperandVal(RowMask) == 0xf &&  // Enable all rows.
+          Op.getConstantOperandVal(BankMask) == 0xf && // Enable all banks.
+          Op.getConstantOperandVal(BoundCtrl) != 0)    // Zero-fill OOB lanes.
+        return isCanonicalized(DAG, Op.getOperand(2), QueryVT, UserFlags,
+                               MaxDepth - 1);
+      return false;
+    }
     case Intrinsic::amdgcn_cvt_pkrtz:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_frexp_mant:

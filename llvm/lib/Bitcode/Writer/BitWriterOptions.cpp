@@ -12,4 +12,4 @@
 #define OPTIONS_STRUCT_DEFS
 #include "BitWriterOptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::BitWriterOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::BitWriterOptions)

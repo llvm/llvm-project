@@ -3404,6 +3404,182 @@ let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001000110;
 }
+def AM_addw_aq : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_add($Rs32,$Rt32):aq",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_addw_rl : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_add($Rs32,$Rt32):rl",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_andw_aq : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_and($Rs32,$Rt32):aq",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_andw_rl : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_and($Rs32,$Rt32):rl",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_orw_aq : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_or($Rs32,$Rt32):aq",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010000110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_orw_rl : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_or($Rs32,$Rt32):rl",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010000110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_swapd_aq : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
+"$Rdd32 = atomd_swap($Rs32,$Rtt32):aq",
+tc_6f42bc60, TypeLD>, Enc_d9cf33, Requires<[HasV85]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010000110;
+let accessSize = DoubleWordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_swapd_rl : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
+"$Rdd32 = atomd_swap($Rs32,$Rtt32):rl",
+tc_6f42bc60, TypeLD>, Enc_d9cf33, Requires<[HasV85]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010000110;
+let accessSize = DoubleWordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_swapw_aq : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_swap($Rs32,$Rt32):aq",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010000110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_swapw_rl : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_swap($Rs32,$Rt32):rl",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010000110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_xorw_aq : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_xor($Rs32,$Rt32):aq",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b101;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010000110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
+def AM_xorw_rl : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = atomw_xor($Rs32,$Rt32):rl",
+tc_6f42bc60, TypeLD>, Enc_5ab2be, Requires<[HasV85]> {
+let Inst{7-5} = 0b110;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010000110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSoloAX = 1;
+let mayStore = 1;
+}
 def C2_all8 : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4),
@@ -42552,6 +42728,16 @@ let Inst{31-21} = 0b01101101100;
 let Uses = [SGP0, SGP1];
 let Defs = [SGP0, SGP1];
 let Constraints = "$Rxx32 = $Rxx32in";
+}
+def Y4_dcfetch_multi : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"dcfetch_multi($Rs32,$Rt32)",
+tc_2237d952, TypeLD>, Enc_9ceb20, Requires<[HasV85]> {
+let Inst{5-0} = 0b000000;
+let Inst{13-11} = 0b001;
+let Inst{31-21} = 0b10010100000;
+let isRestrictNoSlot1Store = 1;
 }
 def Y4_l2fetch : HInst<
 (outs),

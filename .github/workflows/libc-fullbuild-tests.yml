@@ -213,6 +213,7 @@ jobs:
 
         if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" || "${{ matrix.build_builtins }}" == "ON" ]]; then
           export RUNTIMES="$RUNTIMES;compiler-rt"
+          export CMAKE_FLAGS="$CMAKE_FLAGS -DRUNTIMES_USE_LIBC=llvm-libc"
         fi
 
         if [[ "${{ matrix.include_scudo }}" == "ON" ]]; then

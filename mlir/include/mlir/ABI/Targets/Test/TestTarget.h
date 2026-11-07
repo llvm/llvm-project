@@ -65,6 +65,9 @@ FunctionClassification classify(TypeRange argTypes, Type returnType,
 ///   coerced_type:  TypeAttr.  ABI-coerced type, if different from the
 ///                  original.
 ///   can_flatten:   BoolAttr.  Defaults to true.
+///   direct_align:  IntegerAttr.  Stack-slot alignment in bytes when the
+///                  ABI sets one apart from the type's.  When set, the
+///                  rewriter emits llvm.alignstack.
 ///
 /// For kind = "extend" (coerced_type required, sign_extend optional):
 ///   coerced_type:  TypeAttr.  Required; the extended integer type.

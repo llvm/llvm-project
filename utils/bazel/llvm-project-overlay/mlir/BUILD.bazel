@@ -15575,6 +15575,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
+        ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":IndexDialect",
