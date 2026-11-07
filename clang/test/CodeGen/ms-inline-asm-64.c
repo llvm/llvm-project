@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -Wno-strict-prototypes -fasm-blocks -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-apple-darwin10 -Wno-strict-prototypes -fasm-blocks -emit-llvm -o - | FileCheck %s %}
 
 void t1(void) {
   int var = 10;
@@ -80,7 +81,8 @@ void t5(void) {
 
 void t47(void) {
   // CHECK-LABEL: define{{.*}} void @t47
+  // CHECK: [[ARR:%.*]] = alloca [1000 x i32]
   int arr[1000];
   __asm movdir64b rax, zmmword ptr [arr]
-  // CHECK: call void asm sideeffect inteldialect "movdir64b rax, zmmword ptr $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([1000 x i32]) %arr)
+  // CHECK: call void asm sideeffect inteldialect "movdir64b rax, zmmword ptr $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([1000 x i32]) [[ARR]])
 }
