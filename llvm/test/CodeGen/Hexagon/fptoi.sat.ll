@@ -123,26 +123,26 @@ define i32 @fptosi.sat.i32.f32(float %x) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = convert_sf2w(r0):chop
-; CHECK-NEXT:     p1 = sfcmp.gt(r2,r0)
+; CHECK-NEXT:     p0 = sfcmp.gt(r2,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = sfcmp.uo(r2,r0)
+; CHECK-NEXT:     p1 = sfcmp.uo(r2,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = or(p2,p1)
-; CHECK-NEXT:     p0 = sfcmp.uo(r0,r3)
+; CHECK-NEXT:     p0 = or(p1,p0)
+; CHECK-NEXT:     p2 = sfcmp.uo(r0,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = sfcmp.gt(r0,r3)
-; CHECK-NEXT:     p1 = sfcmp.uo(r0,r0)
-; CHECK-NEXT:     if (p1) r1 = ##-2147483648
+; CHECK-NEXT:     p1 = sfcmp.gt(r0,r3)
+; CHECK-NEXT:     p0 = sfcmp.uo(r0,r0)
+; CHECK-NEXT:     if (p0) r1 = ##-2147483648
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = and(p2,!p0)
-; CHECK-NEXT:     if (p0.new) r1 = ##2147483647
+; CHECK-NEXT:     p1 = and(p1,!p2)
+; CHECK-NEXT:     if (p1.new) r1 = ##2147483647
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p1) r1 = #0
+; CHECK-NEXT:     if (p0) r1 = #0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = r1

@@ -65,6 +65,10 @@ public:
         unsigned SubReg, const TargetRegisterClass *DstRC, unsigned DstSubReg,
         const TargetRegisterClass *NewRC, LiveIntervals &LIS) const override;
 
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
+  }
+
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
   Register getFrameRegister() const;
