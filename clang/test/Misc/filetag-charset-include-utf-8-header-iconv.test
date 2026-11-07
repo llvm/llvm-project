@@ -1,0 +1,21 @@
+// Test that an included header whose bytes are invalid for its tagged encoding
+// triggers err_encoding_conversion_failed.
+
+// REQUIRES: system-zos
+// REQUIRES: iconv
+
+// RUN: rm -rf %t && mkdir -p %t/utf-8 %t/ibm-943c %t/ibm-eucjp
+
+// --- IBM-943C (CCSID 943) ---
+// RUN: cp %S/Inputs/utf-8/neither-sjis-nor-ujis.h %t/utf-8/neither-sjis-nor-ujis.h
+// RUN: chtag -tc 943 %t/utf-8/neither-sjis-nor-ujis.h
+// RUN: cp %S/Inputs/ibm-943c/include-utf-8-header.cc %t/ibm-943c/include-utf-8-header.cc
+// RUN: chtag -tc 1208 %t/ibm-943c/include-utf-8-header.cc
+// RUN: %clang_cc1 -verify -I %t %t/ibm-943c/include-utf-8-header.cc
+
+// --- IBM-eucJP (CCSID 954) ---
+// RUN: cp %S/Inputs/utf-8/neither-sjis-nor-ujis.h %t/utf-8/neither-sjis-nor-ujis.h
+// RUN: chtag -tc 954 %t/utf-8/neither-sjis-nor-ujis.h
+// RUN: cp %S/Inputs/ibm-eucjp/include-utf-8-header.cc %t/ibm-eucjp/include-utf-8-header.cc
+// RUN: chtag -tc 1208 %t/ibm-eucjp/include-utf-8-header.cc
+// RUN: %clang_cc1 -verify -I %t %t/ibm-eucjp/include-utf-8-header.cc
