@@ -775,6 +775,9 @@ public:
     return getGlobalAddress(GV, DL, VT, offset, true, TargetFlags);
   }
   LLVM_ABI SDValue getDeactivationSymbol(const GlobalValue *GV);
+  LLVM_ABI SDValue getTargetIndex(int Index, EVT VT, int64_t Offset = 0,
+                                  unsigned TargetFlags = 0);
+
   LLVM_ABI SDValue getFrameIndex(int FI, EVT VT, bool isTarget = false);
   SDValue getTargetFrameIndex(int FI, EVT VT) {
     return getFrameIndex(FI, VT, true);

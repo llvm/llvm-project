@@ -1960,6 +1960,23 @@ SDValue SelectionDAG::getDeactivationSymbol(const GlobalValue *GV) {
   return SDValue(N, 0);
 }
 
+SDValue SelectionDAG::getTargetIndex(int Index, EVT VT, int64_t Offset,
+                                     unsigned TargetFlags) {
+  SDVTList VTs = getVTList(VT);
+  SDNodeKey ID(ISD::TargetIndex, VTs, {});
+  ID.AddInteger(Index);
+  ID.AddInteger(Offset);
+  ID.AddInteger(TargetFlags);
+  FoldingSetInsertToken InsertToken;
+  if (SDNode *E = lookupNode(ID, InsertToken))
+    return SDValue(E, 0);
+
+  auto *N = newSDNode<TargetIndexSDNode>(Index, VTs, Offset, TargetFlags);
+  CSEMap.insert(N, InsertToken);
+  InsertNode(N);
+  return SDValue(N, 0);
+}
+
 SDValue SelectionDAG::getFrameIndex(int FI, EVT VT, bool isTarget) {
   unsigned Opc = isTarget ? ISD::TargetFrameIndex : ISD::FrameIndex;
   SDVTList VTs = getVTList(VT);

@@ -910,7 +910,9 @@ void MatcherGen::EmitResultInstructionAsOperand(
   // a node that is variadic, mark the generated node as variadic so that it
   // gets the excess operands from the input DAG.
   int NumFixedArityOperands = -1;
-  if (isRoot && Pattern.getSrcPattern().NodeHasProperty(SDNPVariadic, CGP))
+  if (isRoot && (Pattern.getSrcPattern().NodeHasProperty(SDNPVariadic, CGP) ||
+                 (II.Operands.isVariadic &&
+                  Pattern.getSrcPattern().getIntrinsicInfo(CGP))))
     NumFixedArityOperands = Pattern.getSrcPattern().getNumChildren();
 
   // If this is the root node and multiple matched nodes in the input pattern

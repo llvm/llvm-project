@@ -1279,6 +1279,8 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
   bit is_gfx940_xdl = 0;
   let isConvergent = 1;
   let PseudoInstr = NAME; // FIXME: Why is this not the default
+  // Optional standalone C/D policy operand; no hardware encoding.
+  let InOperandList = !con(P.Ins64, (ins variable_ops));
 }
 
 // FIXME: Intrinsic should probably not have op_sel operands, we can
@@ -1294,11 +1296,11 @@ class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   // [30:23] as the scale.
   // TODO: We may still be able to allow Inline Constants/SGPR, with a proper
   // shift, to obtain a potentially better performance.
-  let InOperandList = !con(BaseInst.InOperandList,
+  let InOperandList = !con(BaseInst.Pfl.Ins64,
     (ins VRegSrc_32:$scale_src0,
          VRegSrc_32:$scale_src1,
          op_sel0:$src0_modifiers,
-         op_sel_hi0:$src1_modifiers));
+         op_sel_hi0:$src1_modifiers, variable_ops));
   let AsmOperands =
     "$vdst, $src0, $src1, $src2, $scale_src0, $scale_src1"
     "$src0_modifiers$src1_modifiers$cbsz$blgp";

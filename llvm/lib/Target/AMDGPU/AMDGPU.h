@@ -666,7 +666,10 @@ enum TargetIndex {
   TI_SCRATCH_RSRC_DWORD0,
   TI_SCRATCH_RSRC_DWORD1,
   TI_SCRATCH_RSRC_DWORD2,
-  TI_SCRATCH_RSRC_DWORD3
+  TI_SCRATCH_RSRC_DWORD3,
+  // Standalone codegen operands carrying per-MFMA C/D constraints.
+  TI_MFMA_CD_AGPR,
+  TI_MFMA_CD_VGPR
 };
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
