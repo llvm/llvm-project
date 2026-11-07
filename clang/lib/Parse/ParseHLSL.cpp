@@ -31,16 +31,10 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
   // Only allow function, variable, record, and empty decls inside HLSLBuffer.
   for (DeclGroupRef::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
     Decl *D = *I;
-    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl>(D))
+    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl,
+            EnumDecl, UsingDecl, UsingDirectiveDecl, TypeAliasDecl,
+            TemplateDecl, TypedefDecl, ExportDecl, StaticAssertDecl>(D))
       continue;
-
-    // FIXME: support nested HLSLBuffer and namespace inside HLSLBuffer.
-    if (isa<HLSLBufferDecl, NamespaceDecl>(D)) {
-      P.Diag(D->getLocation(), diag::err_invalid_declaration_in_hlsl_buffer)
-          << IsCBuffer;
-      IsValid = false;
-      continue;
-    }
 
     IsValid = false;
     P.Diag(D->getLocation(), diag::err_invalid_declaration_in_hlsl_buffer)
@@ -88,14 +82,14 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd,
     if (!validateDeclsInsideHLSLBuffer(Result, IdentifierLoc, IsCBuffer,
                                        *this)) {
       T.skipToEnd();
-      DeclEnd = T.getCloseLocation();
-      BufferScope.Exit();
-      Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
-      return nullptr;
+      D->setInvalidDecl();
+      break;
     }
   }
 
-  T.consumeClose();
+  if (!D->isInvalidDecl())
+    T.consumeClose();
+
   DeclEnd = T.getCloseLocation();
   BufferScope.Exit();
   Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
