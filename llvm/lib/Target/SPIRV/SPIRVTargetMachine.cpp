@@ -63,6 +63,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
   initializeSPIRVEmitIntrinsicsLegacyPass(PR);
   initializeSPIRVPrepareFunctionsLegacyPass(PR);
+  initializeSPIRVRemoveAggregateTypesLegacyPass(PR);
   initializeSPIRVPrepareGlobalsLegacyPass(PR);
   initializeSPIRVLegalizeResourceBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
@@ -235,6 +236,10 @@ void SPIRVPassConfig::addISelPrepare() {
   }
   SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createStripConvergenceIntrinsicsPass());
+  // After the generic passes, which do not expect its i32 placeholders, and
+  // before any pass that records instructions in SPIRVGlobalRegistry, since it
+  // replaces functions by clones.
+  addPass(createSPIRVRemoveAggregateTypesPass(TM));
   addPass(createSPIRVLegalizeResourceBindingPass());
   addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
