@@ -2908,6 +2908,10 @@ Because this is expensive, it is cached in
 `UnsubstitutedConstraintSatisfactionCache`. Also we will cache the instantiation
 result of parameter mappings to avoid unnecessary semantic checking.
 
+Satisfied concept-ids are cached too, in `SatisfiedConceptIdCache`, with the
+same kind of key. This skips walking the constraints of a concept-id that was
+already satisfied for the same template arguments.
+
 Any error during satisfaction is recorded in `ConstraintSatisfaction`.
 for nested requirements, `ConstraintSatisfaction` is stored (including
 diagnostics) in the AST, which is something we might want to improve.
