@@ -246,3 +246,84 @@ TEST(ModuleListTest, AppendModuleWithoutObjectFile) {
 
   EXPECT_EQ(list.GetSize(), 2U);
 }
+
+namespace {
+/// Wraps another buffer's bytes and reports them stale on request, like a
+/// mapping of a file whose volume was force-unmounted.
+class StaleableDataBuffer : public DataBufferUnowned {
+public:
+  StaleableDataBuffer(const DataBuffer &data, std::shared_ptr<bool> stale)
+      : DataBufferUnowned(const_cast<uint8_t *>(data.GetBytes()),
+                          data.GetByteSize()),
+        m_stale(std::move(stale)) {}
+  bool IsStale() const override { return *m_stale; }
+
+private:
+  std::shared_ptr<bool> m_stale;
+};
+} // namespace
+
+// Test that GetSharedModule stops handing out a module once the data it was
+// created from is stale.
+TEST(ModuleListTest, GetSharedModuleSkipsModuleWithStaleData) {
+  SubsystemRAII<FileSystem, ObjectFileELF> subsystems;
+
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000004
+    Content:         040000001400000003000000474E5500C3A9B8F4D27E6015AB0D4C1E77F0921B3E5D8A46
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto stale = std::make_shared<bool>(false);
+  auto data_sp = std::make_shared<StaleableDataBuffer>(
+      *ExpectedFile->moduleSpec().GetExtractor()->GetSharedDataBuffer(), stale);
+  // Name the build ID, so this finds the module created from this file
+  // rather than any module already in the shared module list.
+  UUID build_id;
+  ASSERT_TRUE(
+      build_id.SetFromStringRef("c3a9b8f4d27e6015ab0d4c1e77f0921b3e5d8a46"));
+  ModuleSpec spec(FileSpec(), build_id,
+                  std::make_shared<DataExtractor>(data_sp));
+
+  ModuleSP module_sp;
+  ASSERT_TRUE(
+      ModuleList::GetSharedModule(spec, module_sp, nullptr, nullptr).Success());
+  ASSERT_TRUE(module_sp);
+  UUID uuid = module_sp->GetUUID();
+  ASSERT_TRUE(uuid.IsValid());
+
+  ModuleSpec uuid_spec;
+  uuid_spec.GetArchitecture() = ArchSpec("x86_64-pc-linux");
+  uuid_spec.GetUUID() = uuid;
+
+  ModuleSP found_sp;
+  ModuleList::GetSharedModule(uuid_spec, found_sp, nullptr, nullptr,
+                              /*invoke_locate_callback=*/false,
+                              /*invoke_symbol_locators=*/false);
+  EXPECT_EQ(found_sp, module_sp);
+
+  *stale = true;
+  EXPECT_TRUE(module_sp->IsDataStale());
+
+  ModuleSP stale_found_sp;
+  ModuleList::GetSharedModule(uuid_spec, stale_found_sp, nullptr, nullptr,
+                              /*invoke_locate_callback=*/false,
+                              /*invoke_symbol_locators=*/false);
+  EXPECT_NE(stale_found_sp, module_sp);
+  EXPECT_NE(ModuleList::FindSharedModule(uuid), module_sp);
+}

@@ -1095,17 +1095,18 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
            ++module_idx) {
         module_sp = matching_module_list.GetModuleAtIndex(module_idx);
 
-        // Make sure the file for the module hasn't been modified
-        if (module_sp->FileHasChanged()) {
+        // Make sure the file for the module hasn't been modified, and that
+        // the data it was created from is still there.
+        if (module_sp->FileHasChanged() || module_sp->IsDataStale()) {
           if (old_modules)
             old_modules->push_back(module_sp);
 
           Log *log = GetLog(LLDBLog::Modules);
-          LLDB_LOG(
-              log,
-              "{0:x} '{1}' module changed: removing from global module list",
-              static_cast<void *>(module_sp.get()),
-              module_sp->GetFileSpec().GetFilename());
+          LLDB_LOG(log,
+                   "{0:x} '{1}' module changed or its data is stale: "
+                   "removing from global module list",
+                   static_cast<void *>(module_sp.get()),
+                   module_sp->GetFileSpec().GetFilename());
 
           shared_module_list.Remove(module_sp);
           module_sp.reset();

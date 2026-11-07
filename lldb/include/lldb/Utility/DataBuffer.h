@@ -60,6 +60,12 @@ public:
     return llvm::ArrayRef<uint8_t>(GetBytes(), GetByteSize());
   }
 
+  /// Returns true if the backing storage is permanently unavailable. This can
+  /// happen when file mapping whose volume was force-unmounted. In such a case,
+  /// memory reads of the memory mapped may then fault. When this happens
+  /// objects built from it should not be handed out again.
+  virtual bool IsStale() const { return false; }
+
   /// LLVM RTTI support.
   /// {
   static char ID;
