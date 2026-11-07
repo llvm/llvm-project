@@ -750,9 +750,8 @@ Error CompileUnit::emitDebugAddrSection() {
   if (getVersion() < 5)
     return Error::success();
 
-  if (DebugAddrIndexMap.empty())
-    return Error::success();
-
+  // Every cloned unit root has DW_AT_addr_base, so emit the table even when it
+  // is empty.
   SectionDescriptor &OutAddrSection =
       getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr);
 

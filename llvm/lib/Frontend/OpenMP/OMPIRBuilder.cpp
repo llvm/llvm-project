@@ -425,11 +425,12 @@ BasicBlock *llvm::splitBB(IRBuilderBase::InsertPoint IP, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *Old = Builder.GetInsertBlock();
   BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+    Builder.SetInsertPoint(Old->getTerminator());
   else
-    Builder.SetInsertPoint(Builder.GetInsertBlock());
+    Builder.SetInsertPoint(Old);
   // SetInsertPoint also updates the Builder's debug location, but we want to
   // keep the one the Builder was configured to use.
   Builder.SetCurrentDebugLocation(DebugLoc);
@@ -439,11 +440,12 @@ BasicBlock *llvm::splitBB(IRBuilderBase &Builder, bool CreateBranch,
 BasicBlock *llvm::splitBB(IRBuilder<> &Builder, bool CreateBranch,
                           llvm::Twine Name) {
   DebugLoc DebugLoc = Builder.getCurrentDebugLocation();
+  BasicBlock *Old = Builder.GetInsertBlock();
   BasicBlock *New = splitBB(Builder.saveIP(), CreateBranch, DebugLoc, Name);
   if (CreateBranch)
-    Builder.SetInsertPoint(Builder.GetInsertBlock()->getTerminator());
+    Builder.SetInsertPoint(Old->getTerminator());
   else
-    Builder.SetInsertPoint(Builder.GetInsertBlock());
+    Builder.SetInsertPoint(Old);
   // SetInsertPoint also updates the Builder's debug location, but we want to
   // keep the one the Builder was configured to use.
   Builder.SetCurrentDebugLocation(DebugLoc);
@@ -1035,9 +1037,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   // The createTarget functions embeds user written code into
   // the target region which may inject allocas which need to
   // be moved to the entry block of our target or risk malformed
-  // optimisations by later passes, this is only relevant for
-  // the device pass which appears to be a little more delicate
-  // when it comes to optimisations (however, we do not block on
+  // optimisations by later passes (however, we do not block on
   // that here, it's up to the inserter to the list to do so).
   // This notbaly has to occur after the OutlinedInfo candidates
   // have been extracted so we have an end product that will not
@@ -1897,6 +1897,38 @@ hostParallelCallback(OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn,
   unsigned NumCapturedVars = OutlinedFn.arg_size() - /* tid & bounded tid */ 2;
 
   CallInst *CI = cast<CallInst>(OutlinedFn.user_back());
+
+  // CodeExtractor creates an alloca aggregate struct containing pointers to all
+  // the captured values. The address of this struct is then passed as a
+  // parameter to the outlined function. This parameter of the outlined function
+  // can be marked noalias because CodeExractor + this host OpenMP lowering
+  // maintains the following invariants:
+  // - The caller initializes the fields before starting any callbacks.
+  // - Neither the caller, OpenMP runtime, nor callbacks modify the structure
+  //   while callbacks are executing.
+  // - The callbacks only load captured values from the structure; they do not
+  //   use it to write results back to the caller. This is generated code; the
+  //   user has no way to modify the structure directly.
+  //
+  // Multiple callbacks may read the same structure. This is allowed by noalias,
+  // which permits aliasing accesses to memory that is not modified during the
+  // call.
+  //
+  // The synchronous fork keeps the structure alive until all callbacks return,
+  // which justifies nofreeobj. Neither attribute extends to the objects pointed
+  // to by the captured fields.
+  if (NumCapturedVars) {
+    assert(NumCapturedVars == 1 && "Expected an aggregate capture argument");
+    assert(isa<AllocaInst>(CI->getArgOperand(2)) &&
+           cast<AllocaInst>(CI->getArgOperand(2))
+               ->getAllocatedType()
+               ->isStructTy() &&
+           "Expected a stack-allocated capture structure");
+
+    OutlinedFn.addParamAttr(2, Attribute::NoAlias);
+    OutlinedFn.addParamAttr(2, Attribute::NoFreeObj);
+  }
+
   CI->getParent()->setName("omp_parallel");
   Builder.SetInsertPoint(CI);
 
@@ -2022,6 +2054,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   // Create an artificial insertion point that will also ensure the blocks we
   // are about to split are not degenerated.
   auto *UI = new UnreachableInst(Builder.getContext(), InsertBB);
+  UI->setDebugLoc(Loc.DL);
 
   BasicBlock *EntryBB = UI->getParent();
   BasicBlock *PRegEntryBB = EntryBB->splitBasicBlock(UI, "omp.par.entry");
@@ -2284,8 +2317,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     Builder.CreateBr(*FiniBBOrErr);
     // There's currently a branch to omp.par.exit. Delete it. We will get there
     // via the fini block
-    if (Instruction *Term = Builder.GetInsertBlock()->getTerminator())
-      Term->eraseFromParent();
+    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
   }
 
   // Register the outlined info.
@@ -2586,6 +2618,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   }
 
   llvm::CanonicalLoopInfo *CLI = result.get();
+  if (CLI->VirtualCollapse)
+    CLI->reportUnsupportedVirtualCollapse();
   auto OI = std::make_unique<OutlineInfo>();
   OI->EntryBB = TaskloopAllocaBB;
   OI->OuterAllocBB = AllocaIP.getNodeParent();
@@ -6125,8 +6159,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
   Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize, Flag);
 
   // Declare useful OpenMP runtime functions.
-  Value *IV = CLI->getIndVar();
-  Type *IVTy = IV->getType();
+  Type *IVTy = CLI->getIndVarType();
   FunctionCallee StaticInit =
       LoopType == WorksharingLoopType::DistributeForStaticLoop
           ? getKmpcDistForStaticInitForType(IVTy, M, *this)
@@ -6135,8 +6168,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.SetInsertPoint(
-      AllocaIP.getNodeParent()->getFirstNonPHIOrDbgOrAlloca());
+  Builder.SetInsertPoint(AllocaIP.getNodeParent()->getFirstNonPHIOrAlloca());
 
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
@@ -6196,18 +6228,26 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
   Value *InclusiveUpperBound = Builder.CreateLoad(IVTy, PUpperBound);
   Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
   Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One);
-  CLI->setTripCount(TripCount);
+  if (CLI->VirtualCollapse) {
+    bindCollapsedRange(CLI, LowerBound, TripCount);
+#ifndef NDEBUG
+    CLI->assertOK();
+#endif
+  } else {
+    CLI->setTripCount(TripCount);
+  }
 
   // Update all uses of the induction variable except the one in the condition
   // block that compares it with the actual upper bound, and the increment in
   // the latch block.
 
-  CLI->mapIndVar([&](Instruction *OldIV) -> Value * {
-    Builder.SetInsertPoint(CLI->getBody()->getFirstInsertionPt());
-    Builder.SetCurrentDebugLocation(DL);
-    return Builder.CreateAdd(OldIV, LowerBound, "", /*HasNUW=*/false,
-                             /*HasNSW=*/Config.hasNoSignedWrap());
-  });
+  if (!CLI->VirtualCollapse)
+    CLI->mapIndVar([&](Instruction *OldIV) -> Value * {
+      Builder.SetInsertPoint(CLI->getBody()->getFirstInsertionPt());
+      Builder.SetCurrentDebugLocation(DL);
+      return Builder.CreateAdd(OldIV, LowerBound, "", /*HasNUW=*/false,
+                               /*HasNSW=*/Config.hasNoSignedWrap());
+    });
 
   // In the "exit" block, call the "fini" function.
   Builder.SetInsertPoint(CLI->getExit()->getTerminator()->getIterator());
@@ -6224,6 +6264,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
   }
 
   InsertPointTy AfterIP = CLI->getAfterIP();
+  // TODO: Removing Virtual's outer bound requires another way to reject idle
+  // assignments whose raw count wraps. Keep it for correctness and trip-count
+  // information for analyses. The expected saving is small; investigate the
+  // effects on downstream optimizations before removing it.
   CLI->invalidate();
 
   return AfterIP;
@@ -6750,6 +6794,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool HasNonmonotonicModifier, bool HasOrderedClause,
     WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
     Value *DistScheduleChunkSize, bool NeedsLastIter) {
+  if (CLI->VirtualCollapse &&
+      (Config.isTargetDevice() ||
+       (SchedKind != omp::OMP_SCHEDULE_Static &&
+        SchedKind != omp::OMP_SCHEDULE_Default) ||
+       ChunkSize || HasOrderedClause || HasDistSchedule ||
+       DistScheduleChunkSize || LoopType != WorksharingLoopType::ForStaticLoop))
+    reportFatalInternalError(
+        "Virtual collapse requires unchunked static worksharing");
   if (Config.isTargetDevice())
     return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NeedsBarrier,
                                     NoLoop, NeedsLastIter);
@@ -6890,8 +6942,7 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   FunctionCallee DynamicNext = getKmpcForDynamicNextForType(IVTy, M, *this);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.SetInsertPoint(
-      AllocaIP.getNodeParent()->getFirstNonPHIOrDbgOrAlloca());
+  Builder.SetInsertPoint(AllocaIP.getNodeParent()->getFirstNonPHIOrAlloca());
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
@@ -7039,6 +7090,168 @@ static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
   DeleteDeadBlocks(BBsToDelete);
 }
 
+/// Physical handles captured before the source descriptors are invalidated.
+struct OpenMPIRBuilder::VirtualRowPlan {
+  SmallVector<PHINode *, 4> IndVars;
+  SmallVector<BasicBlock *, 4> Preheaders;
+  SmallVector<BasicBlock *, 4> Latches;
+  CmpInst *InnerCmp;
+};
+
+OpenMPIRBuilder::VirtualRowPlan
+OpenMPIRBuilder::planVirtualRowLoop(ArrayRef<CanonicalLoopInfo *> Loops) {
+  // The executor inserts a guard before the outer latch. An indirect jump
+  // by block address could bypass that guard.
+  if (isa<IndirectBrInst>(Loops.back()->getAfter()->getTerminator()))
+    reportFatalInternalError(
+        "Virtual collapse requires unobserved canonical loop controls");
+  // Save the original blocks and IVs before the executor changes the CFG.
+  VirtualRowPlan Plan;
+  Plan.Latches.push_back(Loops.front()->getLatch());
+  for (CanonicalLoopInfo *Loop : Loops) {
+    Plan.IndVars.push_back(cast<PHINode>(Loop->getIndVar()));
+    Plan.Preheaders.push_back(Loop->getPreheader());
+  }
+  // The inner loop must return directly to the latch where the guard is added.
+  if (Loops.front()->getBody()->getUniqueSuccessor() !=
+          Plan.Preheaders.back() ||
+      Loops.back()->getAfter()->getSingleSuccessor() != Plan.Latches.front())
+    reportFatalInternalError("Virtual collapse requires direct nesting");
+  Plan.InnerCmp = cast<CmpInst>(&Loops.back()->getCond()->front());
+  return Plan;
+}
+
+void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
+                                               const VirtualRowPlan &Plan,
+                                               ArrayRef<Value *> TripCounts,
+                                               Value *Begin, Value *Count,
+                                               BasicBlock *Entry) {
+  DebugLoc DL = Builder.getCurrentDebugLocation();
+  BasicBlock *OuterHeader = Plan.IndVars.front()->getParent();
+  Type *IVType = Begin->getType();
+  Constant *Zero = ConstantInt::get(IVType, 0);
+  // A row is one invocation of the inner loop. Decode the first logical
+  // iteration once, before entering the original loop nest.
+  Builder.SetInsertPoint(Entry);
+  Value *InnerBegin =
+      Builder.CreateURem(Begin, TripCounts.back(), "omp_collapsed.begin.1");
+  Value *OuterBegin =
+      Builder.CreateUDiv(Begin, TripCounts.back(), "omp_collapsed.begin.0");
+  // Include the skipped prefix of the first row so each completed row
+  // removes one full inner trip count from Remaining.
+  Value *InitialRemaining =
+      Builder.CreateAdd(Count, InnerBegin, "omp_collapsed.row.remaining");
+  Builder.CreateBr(OuterHeader);
+
+  Builder.SetInsertPoint(OuterHeader->getFirstNonPHIIt());
+  Builder.SetCurrentDebugLocation(DL);
+  PHINode *Remaining =
+      Builder.CreatePHI(IVType, 2, "omp_collapsed.row.remaining.0");
+  Remaining->addIncoming(InitialRemaining, Entry);
+  // Only the first row starts at InnerBegin; subsequent rows start at zero.
+  // For an inner trip count of one, the existing zero start is sufficient.
+  if (!cast<ConstantInt>(TripCounts.back())->isOne()) {
+    PHINode *Start =
+        Builder.CreatePHI(IVType, 2, "omp_collapsed.row.start.1.0");
+    Start->addIncoming(InnerBegin, Entry);
+    Start->addIncoming(Zero, Plan.Latches.front());
+    Plan.IndVars.back()->setIncomingValue(0, Start);
+  }
+  // Saved inner-preheader insertions must not change the IV PHI's entry edge.
+  // Keep the original branch as their anchor and give it a PHI-free successor.
+  auto *InnerBr = cast<UncondBrInst>(Plan.Preheaders.back()->getTerminator());
+  BasicBlock *InnerHeader = Plan.IndVars.back()->getParent();
+  BasicBlock *InnerEntry =
+      BasicBlock::Create(M.getContext(), "omp_collapsed.row.preheader",
+                         InnerHeader->getParent(), InnerHeader);
+  Builder.SetInsertPoint(InnerEntry);
+  Builder.SetCurrentDebugLocation(DL);
+  Builder.CreateBr(InnerHeader);
+  InnerBr->setSuccessor(InnerEntry);
+  Plan.IndVars.back()->setIncomingBlock(0, InnerEntry);
+  // The final row ends at Remaining; earlier rows keep their original bound.
+  Builder.SetInsertPoint(Plan.Preheaders.back()->getTerminator());
+  Builder.SetCurrentDebugLocation(DL);
+  Value *IsFinalRow = Builder.CreateICmpULE(Remaining, TripCounts.back(),
+                                            "omp_collapsed.row.is_final");
+  Value *InnerStop = Builder.CreateSelect(
+      IsFinalRow, Remaining, TripCounts.back(), "omp_collapsed.row.stop");
+  Plan.InnerCmp->setOperand(1, InnerStop);
+
+  // Only non-final rows reach the outer latch, so Remaining is greater than
+  // the inner trip count and this subtraction cannot underflow.
+  BasicBlock *Latch = Plan.Latches.front();
+  Builder.SetInsertPoint(Latch->getTerminator());
+  Builder.SetCurrentDebugLocation(DL);
+  Value *RemainingNext = Builder.CreateSub(Remaining, TripCounts.back(),
+                                           "omp_collapsed.row.remaining.next",
+                                           /*HasNUW=*/true);
+  Remaining->addIncoming(RemainingNext, Latch);
+  // Check completion after the inner loop and its continuation, before
+  // incrementing the outer IV. The final row exits the whole nest.
+  BasicBlock *Guard =
+      Latch->splitBasicBlockBefore(Latch->begin(), "omp_collapsed.row.done");
+  Guard->getTerminator()->eraseFromParent();
+  Builder.SetInsertPoint(Guard);
+  Builder.CreateCondBr(IsFinalRow, Result->getExit(), Latch);
+  Plan.IndVars.front()->setIncomingValue(0, OuterBegin);
+  Plan.IndVars.front()->setIncomingBlock(0, Entry);
+}
+
+CanonicalLoopInfo *OpenMPIRBuilder::createVirtualCollapsedLoop(
+    DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
+    const VirtualRowPlan &Plan, ArrayRef<Value *> TripCounts,
+    Value *CollapsedTripCount) {
+  // Reuse the outer loop's control blocks; the physical nest stays in place.
+  LoopInfos.emplace_front();
+  CanonicalLoopInfo *Result = &LoopInfos.front();
+  Result->Header = Loops.front()->getHeader();
+  Result->Cond = Loops.front()->getCond();
+  Result->Latch = Loops.front()->getLatch();
+  Result->Exit = Loops.front()->getExit();
+  BasicBlock *Preheader = Plan.Preheaders.front();
+  Function *F = Result->getFunction();
+  Type *IVType = CollapsedTripCount->getType();
+  Constant *Zero = ConstantInt::get(IVType, 0);
+  // Keep initialization separate from decoding so an empty range skips both
+  // division and the loop nest.
+  BasicBlock *Init = BasicBlock::Create(M.getContext(), "omp_collapsed.init", F,
+                                        Result->getHeader());
+  BasicBlock *Entry = BasicBlock::Create(M.getContext(), "omp_collapsed.decode",
+                                         F, Result->getHeader());
+  Builder.SetCurrentDebugLocation(DL);
+  Builder.SetInsertPoint(Init);
+  // Keep explicit range copies until scheduling replaces operand zero. Create
+  // the instructions directly so the initial constants are not folded away.
+  auto *Begin = Builder.Insert(BinaryOperator::CreateAdd(Zero, Zero),
+                               "omp_collapsed.range.begin");
+  auto *Count =
+      Builder.Insert(BinaryOperator::CreateAdd(CollapsedTripCount, Zero),
+                     "omp_collapsed.range.count");
+  Builder.CreateCondBr(Builder.CreateICmpNE(Count, Zero), Entry,
+                       Result->getExit());
+  Result->VirtualCollapse =
+      CanonicalLoopInfo::VirtualCollapseInfo{Begin, Count};
+  // Route the preheader through Init. The executor reconnects the outer IV
+  // PHI to the decode block.
+  cast<UncondBrInst>(Preheader->getTerminator())->setSuccessor(Init);
+  createVirtualRowExecutor(Result, Plan, TripCounts, Begin, Count, Entry);
+  // The transformed nest is now represented by Result, not the input loops.
+  for (CanonicalLoopInfo *Loop : Loops)
+    Loop->invalidate();
+#ifndef NDEBUG
+  Result->assertOK();
+#endif
+  return Result;
+}
+
+void OpenMPIRBuilder::bindCollapsedRange(CanonicalLoopInfo *Loop, Value *Begin,
+                                         Value *Count) {
+  // Update only the copied values; the range has no PHI predecessor to rebind.
+  Loop->VirtualCollapse->Begin->setOperand(0, Begin);
+  Loop->VirtualCollapse->Count->setOperand(0, Count);
+}
+
 CanonicalLoopInfo *
 OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
                                InsertPointTy ComputeIP) {
@@ -7048,6 +7261,28 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Nothing to do if there is already just one loop.
   if (NumLoops == 1)
     return Loops.front();
+
+  if (Config.CollapseMapping == CollapseIVMapping::Virtual) {
+    if (Loops.size() != 2)
+      reportFatalInternalError(
+          "Virtual collapse requires two constant-count loops");
+    SmallVector<Value *, 4> TripCounts;
+    for (CanonicalLoopInfo *Loop : Loops) {
+      if (Loop->VirtualCollapse)
+        Loop->reportUnsupportedVirtualCollapse();
+      Value *TC = Loop->getTripCount();
+      if (!isa<ConstantInt>(TC))
+        reportFatalInternalError(
+            "Virtual collapse requires two constant-count loops");
+      TripCounts.push_back(TC);
+    }
+    VirtualRowPlan Plan = planVirtualRowLoop(Loops);
+    // Constant counts fold the product without emitting instructions.
+    Value *CollapsedTripCount =
+        Builder.CreateNUWMul(TripCounts.front(), TripCounts.back());
+    return createVirtualCollapsedLoop(DL, Loops, Plan, TripCounts,
+                                      CollapsedTripCount);
+  }
 
   CanonicalLoopInfo *Outermost = Loops.front();
   CanonicalLoopInfo *Innermost = Loops.back();
@@ -7519,16 +7754,24 @@ OpenMPIRBuilder::fuseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops) {
   return fused;
 }
 
+void OpenMPIRBuilder::addUnrollMetadata(CanonicalLoopInfo *Loop,
+                                        ArrayRef<Metadata *> Properties) {
+  assert(Loop->isValid() && "Expecting a valid CanonicalLoopInfo");
+  if (Loop->VirtualCollapse)
+    reportFatalInternalError("unrolling must precede Virtual collapse");
+  addLoopMetadata(Loop, Properties);
+}
+
 void OpenMPIRBuilder::unrollLoopFull(DebugLoc, CanonicalLoopInfo *Loop) {
   LLVMContext &Ctx = Builder.getContext();
-  addLoopMetadata(
+  addUnrollMetadata(
       Loop, {MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.enable")),
              MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.full"))});
 }
 
 void OpenMPIRBuilder::unrollLoopHeuristic(DebugLoc, CanonicalLoopInfo *Loop) {
   LLVMContext &Ctx = Builder.getContext();
-  addLoopMetadata(
+  addUnrollMetadata(
       Loop, {
                 MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.unroll.enable")),
             });
@@ -7645,6 +7888,8 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
                                 MapVector<Value *, Value *> AlignedVars,
                                 Value *IfCond, OrderKind Order,
                                 ConstantInt *Simdlen, ConstantInt *Safelen) {
+  if (CanonicalLoop->VirtualCollapse)
+    CanonicalLoop->reportUnsupportedVirtualCollapse();
   LLVMContext &Ctx = Builder.getContext();
 
   Function *F = CanonicalLoop->getFunction();
@@ -7935,13 +8180,16 @@ void OpenMPIRBuilder::unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop,
           Ctx, {MDString::get(Ctx, "llvm.loop.unroll.count"), FactorConst}));
     }
 
-    addLoopMetadata(Loop, LoopMetadata);
+    addUnrollMetadata(Loop, LoopMetadata);
     return;
   }
 
   // Heuristically determine the unroll factor.
-  if (Factor == 0)
+  if (Factor == 0) {
+    if (Loop->VirtualCollapse)
+      Loop->reportUnsupportedVirtualCollapse();
     Factor = computeHeuristicUnrollFactor(Loop);
+  }
 
   // No change required with unroll factor 1.
   if (Factor == 1) {
@@ -8228,8 +8476,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::EmitOMPInlinedRegion(
   // for conditional creation
   BasicBlock *EntryBB = Builder.GetInsertBlock();
   Instruction *SplitPos = EntryBB->getTerminatorOrNull();
-  if (!isa_and_nonnull<UncondBrInst, CondBrInst>(SplitPos))
+  if (!isa_and_nonnull<UncondBrInst, CondBrInst>(SplitPos)) {
     SplitPos = new UnreachableInst(Builder.getContext(), EntryBB);
+    SplitPos->setDebugLoc(Builder.getCurrentDebugLocation());
+  }
   BasicBlock *ExitBB = EntryBB->splitBasicBlock(SplitPos, "omp_region.end");
   BasicBlock *FiniBB =
       EntryBB->splitBasicBlock(EntryBB->getTerminator(), "omp_region.finalize");
@@ -9368,9 +9618,8 @@ static Expected<Function *> createOutlinedFunction(
 
   // As we embed the user code in the middle of our target region after we
   // generate entry code, we must move what allocas we can into the entry
-  // block to avoid possible breaking optimisations for device
-  if (OMPBuilder.Config.isTargetDevice())
-    OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
+  // block to avoid possible breaking optimisations
+  OMPBuilder.ConstantAllocaRaiseCandidates.emplace_back(Func);
 
   BasicBlock *ExitBB = splitBB(Builder, /*CreateBranch=*/true, "target.exit");
   BasicBlock *OutlinedBodyBB =
@@ -9400,7 +9649,7 @@ static Expected<Function *> createOutlinedFunction(
   Builder.SetInsertPoint(EntryBB->getFirstNonPHIIt());
   auto AllocaIP = Builder.saveIP();
 
-  Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
+  Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrPseudoProbe());
 
   // Do not include the artificial dyn_ptr argument.
   const auto &ArgRange = make_range(Func->arg_begin(), Func->arg_end() - 1);
@@ -10683,8 +10932,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   auto *FnTy =
       FunctionType::get(Builder.getVoidTy(), Params, /* IsVarArg */ false);
 
-  SmallString<64> TyStr;
-  raw_svector_ostream Out(TyStr);
   Function *MapperFn =
       Function::Create(FnTy, GlobalValue::InternalLinkage, FuncName, M);
   MapperFn->addFnAttr(Attribute::NoInline);
@@ -11464,9 +11711,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
             XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
            "OMP atomic update expected a scalar or struct type");
-    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-           (RMWOp != AtomicRMWInst::UMax) && (RMWOp != AtomicRMWInst::UMin) &&
-           "OpenMP atomic does not support LT or GT operations");
   });
 
   Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
@@ -11494,18 +11738,28 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
     return Builder.CreateOr(Src1, Src2);
   case AtomicRMWInst::Xor:
     return Builder.CreateXor(Src1, Src2);
-  case AtomicRMWInst::Xchg:
-  case AtomicRMWInst::FAdd:
-  case AtomicRMWInst::FSub:
-  case AtomicRMWInst::BAD_BINOP:
   case AtomicRMWInst::Max:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smax, Src1, Src2);
   case AtomicRMWInst::Min:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smin, Src1, Src2);
   case AtomicRMWInst::UMax:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umax, Src1, Src2);
   case AtomicRMWInst::UMin:
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umin, Src1, Src2);
+  case AtomicRMWInst::FAdd:
+    return Builder.CreateFAdd(Src1, Src2);
+  case AtomicRMWInst::FSub:
+    return Builder.CreateFSub(Src1, Src2);
   case AtomicRMWInst::FMax:
+    return Builder.CreateMaxNum(Src1, Src2);
   case AtomicRMWInst::FMin:
+    return Builder.CreateMinNum(Src1, Src2);
   case AtomicRMWInst::FMaximum:
+    return Builder.CreateMaximum(Src1, Src2);
   case AtomicRMWInst::FMinimum:
+    return Builder.CreateMinimum(Src1, Src2);
+  case AtomicRMWInst::Xchg:
+  case AtomicRMWInst::BAD_BINOP:
   case AtomicRMWInst::FMaximumNum:
   case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
@@ -11546,15 +11800,26 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor:
   case AtomicRMWInst::Xchg:
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
     emitRMWOp = XElemTy;
     break;
   case AtomicRMWInst::Sub:
+  case AtomicRMWInst::FSub:
     emitRMWOp = (IsXBinopExpr && XElemTy);
     break;
   default:
     emitRMWOp = false;
   }
-  emitRMWOp &= XElemTy->isIntegerTy();
+  emitRMWOp &=
+      (XElemTy->isIntegerTy() || XElemTy->isFloatTy() || XElemTy->isDoubleTy());
 
   std::pair<Value *, Value *> Res;
   if (emitRMWOp) {
@@ -11716,8 +11981,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
             XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
            "OMP atomic capture expected a scalar or struct type");
-    assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
-           "OpenMP atomic does not support LT or GT operations");
   });
 
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',
@@ -13324,8 +13587,17 @@ void OffloadEntriesInfoManager::actOnDeviceGlobalVarEntriesInfo(
 // CanonicalLoopInfo
 //===----------------------------------------------------------------------===//
 
+void CanonicalLoopInfo::reportUnsupportedVirtualCollapse() const {
+  assert(isValid() && "Requires a valid canonical loop");
+  assert(VirtualCollapse && "Requires Virtual collapse state");
+  reportFatalInternalError(
+      "virtual collapse must be the final structural loop transformation");
+}
+
 void CanonicalLoopInfo::collectControlBlocks(
     SmallVectorImpl<BasicBlock *> &BBs) {
+  if (VirtualCollapse)
+    reportUnsupportedVirtualCollapse();
   // We only count those BBs as control block for which we do not need to
   // reverse the CFG, i.e. not the loop body which can contain arbitrary control
   // flow. For consistency, this also means we do not add the Body block, which
@@ -13334,8 +13606,15 @@ void CanonicalLoopInfo::collectControlBlocks(
   BBs.append({getPreheader(), Header, Cond, Latch, Exit, getAfter()});
 }
 
+BasicBlock *CanonicalLoopInfo::getVirtualCollapseInit() const {
+  return VirtualCollapse ? VirtualCollapse->Count->getParent() : nullptr;
+}
+
 BasicBlock *CanonicalLoopInfo::getPreheader() const {
   assert(isValid() && "Requires a valid canonical loop");
+  if (VirtualCollapse)
+    return getVirtualCollapseInit()->getSinglePredecessor();
+
   for (BasicBlock *Pred : predecessors(Header)) {
     if (Pred != Latch)
       return Pred;
@@ -13394,16 +13673,46 @@ void CanonicalLoopInfo::assertOK() const {
   if (!isValid())
     return;
 
+  bool IsVirtual = VirtualCollapse.has_value();
   BasicBlock *Preheader = getPreheader();
-  BasicBlock *Body = getBody();
+  BasicBlock *Init = getVirtualCollapseInit();
+  BasicBlock *IndVarEntry = Preheader;
+  if (IsVirtual) {
+    auto *Guard = cast<CondBrInst>(Init->getTerminator());
+    IndVarEntry = Guard->getSuccessor(0);
+    assert(IndVarEntry->getSinglePredecessor() == Init);
+    assert(IndVarEntry->getSingleSuccessor() == Header);
+    assert(Guard->getSuccessor(1) == Exit);
+    assert(VirtualCollapse->Begin->getParent() == Init);
+    for (BinaryOperator *Copy :
+         {VirtualCollapse->Begin, VirtualCollapse->Count}) {
+      auto *Zero = dyn_cast<ConstantInt>(Copy->getOperand(1));
+      assert(Copy->getOpcode() == Instruction::Add && Zero && Zero->isZero() &&
+             "Virtual range copies must add zero");
+    }
+    auto *NonEmpty = cast<ICmpInst>(Guard->getCondition());
+    assert(NonEmpty->getPredicate() == ICmpInst::ICMP_NE &&
+           NonEmpty->getOperand(0) == VirtualCollapse->Count &&
+           cast<ConstantInt>(NonEmpty->getOperand(1))->isZero() &&
+           "Collapsed guard must skip empty ranges with zero count");
+  }
+
+  // Validate the retained physical loop without exposing a logical body or IV.
+  BasicBlock *Body =
+      IsVirtual ? cast<CondBrInst>(Cond->getTerminator())->getSuccessor(0)
+                : getBody();
   BasicBlock *After = getAfter();
 
   // Verify standard control-flow we use for OpenMP loops.
   assert(Preheader);
   assert(isa<UncondBrInst>(Preheader->getTerminator()) &&
          "Preheader must terminate with unconditional branch");
-  assert(Preheader->getSingleSuccessor() == Header &&
-         "Preheader must jump to header");
+  if (IsVirtual)
+    assert(Preheader->getSingleSuccessor() == Init &&
+           "Preheader must jump to collapsed initialization");
+  else
+    assert(Preheader->getSingleSuccessor() == Header &&
+           "Preheader must jump to header");
 
   assert(Header);
   assert(isa<UncondBrInst>(Header->getTerminator()) &&
@@ -13447,15 +13756,16 @@ void CanonicalLoopInfo::assertOK() const {
          "After block only reachable from exit block");
   assert(After->empty() || !isa<PHINode>(After->front()));
 
-  Instruction *IndVar = getIndVar();
+  Instruction *IndVar = IsVirtual ? &Header->front() : getIndVar();
   assert(IndVar && "Canonical induction variable not found?");
   assert(isa<IntegerType>(IndVar->getType()) &&
          "Induction variable must be an integer");
   assert(cast<PHINode>(IndVar)->getParent() == Header &&
          "Induction variable must be a PHI in the loop header");
-  assert(cast<PHINode>(IndVar)->getIncomingBlock(0) == Preheader);
-  assert(
-      cast<ConstantInt>(cast<PHINode>(IndVar)->getIncomingValue(0))->isZero());
+  assert(cast<PHINode>(IndVar)->getIncomingBlock(0) == IndVarEntry);
+  if (!IsVirtual)
+    assert(cast<ConstantInt>(cast<PHINode>(IndVar)->getIncomingValue(0))
+               ->isZero());
   assert(cast<PHINode>(IndVar)->getIncomingBlock(1) == Latch);
 
   auto *NextIndVar = cast<PHINode>(IndVar)->getIncomingValue(1);
@@ -13465,7 +13775,8 @@ void CanonicalLoopInfo::assertOK() const {
   assert(cast<ConstantInt>(cast<BinaryOperator>(NextIndVar)->getOperand(1))
              ->isOne());
 
-  Value *TripCount = getTripCount();
+  Value *TripCount =
+      IsVirtual ? cast<CmpInst>(&Cond->front())->getOperand(1) : getTripCount();
   assert(TripCount && "Loop trip count not found?");
   assert(IndVar->getType() == TripCount->getType() &&
          "Trip count and induction variable must have the same type");
@@ -13485,4 +13796,5 @@ void CanonicalLoopInfo::invalidate() {
   Cond = nullptr;
   Latch = nullptr;
   Exit = nullptr;
+  VirtualCollapse.reset();
 }

@@ -63,6 +63,14 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %0 = spirv.CL.s_abs %arg0 : i32
     // CHECK: {{%.*}} = spirv.CL.clz {{%.*}} : i32
     %1 = spirv.CL.clz %arg0 : i32
+    // CHECK: {{%.*}} = spirv.CL.ctz {{%.*}} : i32
+    %2 = spirv.CL.ctz %arg0 : i32
+    spirv.Return
+  }
+
+  spirv.func @integer_vec_insts(%arg0 : vector<3xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ctz {{%.*}} : vector<3xi32>
+    %0 = spirv.CL.ctz %arg0 : vector<3xi32>
     spirv.Return
   }
 
@@ -95,6 +103,26 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %1 = spirv.CL.pown %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
     // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
     %2 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    spirv.Return
+  }
+
+  spirv.func @ilogb(%arg0 : f32, %arg1 : vector<3xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ilogb {{%.*}} : f32 -> i32
+    %0 = spirv.CL.ilogb %arg0 : f32 -> i32
+    // CHECK: {{%.*}} = spirv.CL.ilogb {{%.*}} : vector<3xf32> -> vector<3xi32>
+    %1 = spirv.CL.ilogb %arg1 : vector<3xf32> -> vector<3xi32>
+    spirv.Return
+  }
+
+  spirv.func @sincos(%arg0 : f32, %arg1 : vector<3xf32>) "None" {
+    // CHECK: [[COS:%.*]] = spirv.Variable : !spirv.ptr<f32, Function>
+    // CHECK: [[COSVEC:%.*]] = spirv.Variable : !spirv.ptr<vector<3xf32>, Function>
+    %cos = spirv.Variable : !spirv.ptr<f32, Function>
+    %cosvec = spirv.Variable : !spirv.ptr<vector<3xf32>, Function>
+    // CHECK: {{%.*}} = spirv.CL.sincos {{%.*}}, [[COS]] : f32, !spirv.ptr<f32, Function> -> f32
+    %0 = spirv.CL.sincos %arg0, %cos : f32, !spirv.ptr<f32, Function> -> f32
+    // CHECK: {{%.*}} = spirv.CL.sincos {{%.*}}, [[COSVEC]] : vector<3xf32>, !spirv.ptr<vector<3xf32>, Function> -> vector<3xf32>
+    %1 = spirv.CL.sincos %arg1, %cosvec : vector<3xf32>, !spirv.ptr<vector<3xf32>, Function> -> vector<3xf32>
     spirv.Return
   }
 

@@ -2620,3 +2620,22 @@ llvm.func @nvvm_duplicate_fp_modifier(%a: f32, %b: f32) {
   %0 = nvvm.addf %a, %b ftz = true ftz = true : f32
   llvm.return
 }
+
+// -----
+
+// expected-error@+1 {{expected '>'}}
+#loop_align_typed = #llvm.loop_annotation<align = 32 : i64>
+
+// -----
+
+// expected-error@+2 {{integer value too large}}
+// expected-error@+1 {{failed to parse LoopAnnotationAttr parameter 'align' which is to be a `uint32_t`}}
+#loop_align_too_large = #llvm.loop_annotation<align = 4294967296>
+
+// -----
+
+llvm.func @rocdl_asyncmark_unknown_stage() {
+  // expected-error@+1 {{custom op 'rocdl.asyncmark' expected string or keyword containing one of the following enum values for attribute 'stages' [all, tensor, global_load_async_to_lds, global_load_async_to_lds_mcast, global_store_async_from_lds, buffer_global_load]}}
+  rocdl.asyncmark stages = not_a_stage
+  llvm.return
+}
