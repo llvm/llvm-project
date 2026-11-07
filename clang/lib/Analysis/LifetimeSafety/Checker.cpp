@@ -251,6 +251,9 @@ public:
   /// an invalidated container's path (e.g., `v.*` extends `v`).
   void checkInvalidation(const InvalidateOriginFact *IOF) {
     OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
+    FunctionCallInfo CallInfo(IOF->getInvalidationExpr());
+    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CallInfo.FD);
+    const bool InvalidatesContents = MD && isInvalidationMethod(*MD);
     /// Get loans directly pointing to the invalidated container
     LoanSet DirectlyInvalidatedLoans =
         LoanPropagation.getLoans(InvalidatedOrigin, IOF);
@@ -266,9 +269,21 @@ public:
     LiveOriginSet Origins = LiveOrigins.getLiveOriginsAt(IOF);
     for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
       for (auto &[OID, LiveInfo] : Live) {
+        const Origin &O = FactMgr.getOriginMgr().getOrigin(OID);
         LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
         for (LoanID LiveLoanID : HeldLoans)
           if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
+            // The extending reference still refers to the temporary after its
+            // contents change. Inner borrows and destruction are not exempt.
+            if (InvalidatesContents && O.getDecl() && O.Ty &&
+                O.Ty->isReferenceType()) {
+              const auto *MTE = FactMgr.getLoanMgr()
+                                    .getLoan(LiveLoanID)
+                                    ->getAccessPath()
+                                    .getAsMaterializeTemporaryExpr();
+              if (MTE && MTE->getExtendingDecl() == O.getDecl())
+                continue;
+            }
             bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
             bool LastDomination =
                 FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
