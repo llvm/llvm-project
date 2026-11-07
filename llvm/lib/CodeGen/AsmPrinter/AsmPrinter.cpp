@@ -2393,6 +2393,9 @@ void AsmPrinter::emitFunctionBody() {
       // handled separately by the function section.
       if (!MBB.sameSection(&MF->front())) {
         if (MAI.hasDotTypeDotSizeDirective()) {
+          if (MBB.getSectionID() == MBBSectionID::ColdSectionID)
+            OutStreamer->emitSymbolAttribute(CurrentSectionBeginSym,
+                                             MCSA_ELF_TypeFunction);
           // Emit the size directive for the basic block section.
           const MCExpr *SizeExp = MCBinaryExpr::createSub(
               MCSymbolRefExpr::create(MBB.getEndSymbol(), OutContext),
