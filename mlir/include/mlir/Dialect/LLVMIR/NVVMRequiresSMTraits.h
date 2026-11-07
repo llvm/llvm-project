@@ -15,6 +15,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StorageUniquerSupport.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <limits>
@@ -45,9 +46,15 @@ struct NVVMCheckSMVersion {
   NVVMCheckSMVersion(Versions... fullSmVersions)
       : fullSmVersionList({fullSmVersions...}) {}
 
-  bool isCompatibleWith(const unsigned &targetFullSmVersion) const {
+  explicit NVVMCheckSMVersion(llvm::ArrayRef<unsigned> fullSmVersions)
+      : fullSmVersionList(fullSmVersions.begin(), fullSmVersions.end()) {}
+
+  bool isCompatibleWith(const unsigned &fullSmVersion) const {
+    unsigned targetFullSmVersion = canonicalizeFullSmVersion(fullSmVersion);
     return llvm::any_of(
-        fullSmVersionList, [&](const unsigned &requiredFullSmVersion) {
+        fullSmVersionList, [&](unsigned requiredFullSmVersion) {
+          requiredFullSmVersion =
+              canonicalizeFullSmVersion(requiredFullSmVersion);
           if (hasArchAcceleratedFeatures(requiredFullSmVersion))
             return hasArchAcceleratedFeatures(targetFullSmVersion) &&
                    (getSMVersion(targetFullSmVersion) ==
@@ -109,6 +116,15 @@ private:
 
   static unsigned getSMFamily(unsigned fullSmVersion) {
     return fullSmVersion / 100;
+  }
+
+  // sm_101 is the name PTX 8.6 through 8.8 used for what PTX 9.0 renamed to
+  // sm_110. The NVPTX backend treats the two as aliases, so compare sm_101
+  // and its variants as sm_110.
+  static unsigned canonicalizeFullSmVersion(unsigned fullSmVersion) {
+    if (getSMVersion(fullSmVersion) == 101)
+      return 1100 + fullSmVersion % 10;
+    return fullSmVersion;
   }
 };
 
