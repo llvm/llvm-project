@@ -56,9 +56,11 @@ void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
                        [&]() { return fir::createCodeGenRewrite(options); });
 }
 
-void addTargetRewritePass(mlir::PassManager &pm) {
+void addTargetRewritePass(mlir::PassManager &pm, bool filterHostFunctions) {
+  fir::TargetRewritePassOptions options;
+  options.filterHostFunctions = filterHostFunctions;
   addPassConditionally(pm, disableTargetRewrite,
-                       []() { return fir::createTargetRewritePass(); });
+                       [&]() { return fir::createTargetRewritePass(options); });
 }
 
 mlir::LLVM::DIEmissionKind
@@ -455,7 +457,13 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config, inputFilename);
-  fir::addTargetRewritePass(pm);
+  bool runOMPNonSimdPasses = config.EnableOpenMP && !config.EnableOpenMPSimd;
+  if (runOMPNonSimdPasses) {
+    // Identify device callees before target ABI rewriting. Host-only functions
+    // may use types unsupported by the device and are filtered out later.
+    pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+  }
+  fir::addTargetRewritePass(pm, runOMPNonSimdPasses);
   fir::addCompilerGeneratedNamesConversionPass(pm);
 
   if (config.VScaleMin != 0)
@@ -495,13 +503,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
         flangomp::createLowerNontemporalPass());
   }
 
-  bool runOMPNonSimdPasses = config.EnableOpenMP && !config.EnableOpenMPSimd;
-  if (runOMPNonSimdPasses) {
-    // Propagate implicit declare target information early in order to diagnose
-    // target device not-yet-implemented cases based on FIR.
-    pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+  if (runOMPNonSimdPasses)
     pm.addPass(flangomp::createUnimplementedDeviceCheckPass());
-  }
 
   fir::addFIRToLLVMPass(pm, config);
   pm.addPass(fir::createEmitMIFGlobalCtors());

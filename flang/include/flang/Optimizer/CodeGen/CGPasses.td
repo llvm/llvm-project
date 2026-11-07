@@ -98,6 +98,11 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
   let description = [{
       Certain abstractions in the FIR dialect need to be rewritten to reflect
       representations that may differ based on the target machine.
+
+      In OpenMP target device modules, host-only functions retain their
+      signatures until function filtering removes them. Run
+      omp-mark-declare-target before this pass to identify device callees and
+      enable host function filtering only when function filtering will run.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::func::FuncDialect",
                             "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect" ];
@@ -120,7 +125,11 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
            "Disable target-specific conversion of COMPLEX.">,
     Option<"noStructConversion", "no-struct-conversion",
            "bool", /*default=*/"false",
-           "Disable target-specific conversion of derived type value.">
+           "Disable target-specific conversion of derived type value.">,
+    Option<"filterHostFunctions", "filter-host-functions", "bool",
+           /*default=*/"false",
+           "Avoid target ABI rewriting for host-only code in an OpenMP "
+           "device module when host function filtering will remove it.">
   ];
 }
 
