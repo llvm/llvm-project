@@ -3,7 +3,7 @@
 // expected-no-diagnostics
 
 // Check code generation
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -std=c++20 -fclang-abi-compat=latest -fopenmp -fopenmp-version=60 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
+// RUN: %clang_cc1 -fno-module-local-hints -verify -triple x86_64-pc-linux-gnu -std=c++20 -fclang-abi-compat=latest -fopenmp -fopenmp-version=60 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
 
 // Check same results after serialization round-trip
 // FIXME: They should be exactly the same but currently differ in function order

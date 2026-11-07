@@ -10,7 +10,7 @@
 // RUN:  -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc \
 // RUN:  -o - | FileCheck %s --check-prefix CHECK
 
-// RUN: %clang_cc1 -verify -fopenmp -x c++ \
+// RUN: %clang_cc1 -fno-module-local-hints -verify -fopenmp -x c++ \
 // RUN:   -triple powerpc64le-unknown-unknown -DDIAG\
 // RUN:   -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm \
 // RUN:   %s -o - | FileCheck  %s \
