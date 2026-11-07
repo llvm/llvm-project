@@ -50,6 +50,14 @@ public:
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
 
+  // The default assumes that the frame pointer is at the opposite end of the
+  // frame from SP, and allocates the slot near the incoming SP. Here the frame
+  // pointer equals SP after the prologue, so that slot could be out of reach.
+  bool allocateScavengingFrameIndexesNearIncomingSP(
+      const MachineFunction &MF) const override {
+    return false;
+  }
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 };
