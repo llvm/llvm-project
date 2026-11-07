@@ -90,5 +90,25 @@ define <4 x i32> @vec_across_call() nounwind {
   ret <4 x i32> %w
 }
 
+; Both calls must receive the same value.
+define void @other_block(<2 x i32> %v) nounwind {
+; CHECK-LABEL: other_block:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %u = extractelement <2 x i32> %v, i32 5
+  br label %next
+
+next:
+  %f = freeze i32 %u
+  call void @use(i32 %f)
+  call void @use(i32 %f)
+  ret void
+}
+
 declare void @use(i32)
 declare void @usev(<4 x i32>)
