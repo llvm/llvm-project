@@ -29,9 +29,6 @@ class TestInlineStepping(TestBase):
 
     @add_test_categories(["pyapi"])
     @expectedFailureAll(
-        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr32343"
-    )
-    @expectedFailureAll(
         oslist=["windows"],
         archs=["aarch64"],
     )

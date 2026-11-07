@@ -44,7 +44,9 @@ class TargetAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.find_compile_units(self.getBuildArtifact("b.out"))
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr149498", oslist=["windows"], debug_info="pdb"
+    )
     def test_find_functions(self):
         """Exercise SBTarget.FindFunctions() API."""
         d = {"EXE": "b.out"}
@@ -57,9 +59,6 @@ class TargetAPITestCase(TestBase):
         self.build()
         self.get_description()
 
-    @expectedFailureAll(
-        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr21765"
-    )
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()

@@ -16,6 +16,9 @@ class CategoriesDataFormatterTestCase(TestBase):
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
     @expectedFlakeyNetBSD
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr239769", oslist=["windows"], debug_info="dwarf"
+    )
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

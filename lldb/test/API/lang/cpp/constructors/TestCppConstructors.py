@@ -7,6 +7,9 @@ from lldbsuite.test import lldbutil
 @requireExpressionEvaluation
 class TestCase(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr239769", oslist=["windows"], debug_info="dwarf"
+    )
     def test_constructors(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

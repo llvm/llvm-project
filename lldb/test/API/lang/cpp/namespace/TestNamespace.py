@@ -52,7 +52,7 @@ class NamespaceBreakpointTestCase(TestBase):
         (no namespaces)."""
         self.build()
 
-        names = ["func()", "func(int)"]
+        names = ["func()", "func(int)", "int func(void)", "int func(int)"]
 
         # Create a target by the debugger.
         exe = self.getBuildArtifact("a.out")
