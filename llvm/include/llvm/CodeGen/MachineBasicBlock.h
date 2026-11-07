@@ -747,6 +747,11 @@ public:
   /// Returns true if it is legal to hoist instructions into this block.
   LLVM_ABI bool isLegalToHoistInto() const;
 
+  /// Returns true if this block's first terminator is direct and unconditional
+  /// and it is thus safe to hoist instructions before it, or if the block
+  /// has no terminator.
+  LLVM_ABI bool hasNoIndirectOrConditionalTerminator() const;
+
   // Code Layout methods.
 
   /// Move 'this' block before or after the specified block.  This only moves

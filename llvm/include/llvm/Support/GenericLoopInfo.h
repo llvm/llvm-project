@@ -303,8 +303,9 @@ public:
 
   /// If there is a preheader for this loop, return it. A loop has a preheader
   /// if there is only one edge to the header of the loop from outside of the
-  /// loop. If this is the case, the block branching to the header of the loop
-  /// is the preheader node.
+  /// loop, and that edge is represented by a direct, unconditional branch
+  /// or fallthrough. If this is the case, the block branching to the header
+  /// of the loop is the preheader node.
   ///
   /// This method returns null if there is no preheader for the loop.
   BlockT *getLoopPreheader() const;
