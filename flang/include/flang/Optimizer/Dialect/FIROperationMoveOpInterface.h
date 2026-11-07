@@ -13,7 +13,6 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIR_OPERATION_MOVE_OP_INTERFACE_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIR_OPERATION_MOVE_OP_INTERFACE_H
 
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/LogicalResult.h"
 
