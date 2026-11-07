@@ -1,0 +1,45 @@
+
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+// IDs are taken from the Renesas C ABI Specification.
+// See: https://www.renesas.com/en/document/mat/superh-cc-compiler-package-v904-users-manual?r=1169516
+
+ELF_RELOC(R_SH_NONE,                0)
+ELF_RELOC(R_SH_DIR32,               1)
+ELF_RELOC(R_SH_REL32,               2)
+ELF_RELOC(R_SH_DIR8WPN,             3)
+ELF_RELOC(R_SH_IND12W,              4)
+ELF_RELOC(R_SH_DIR8WPL,             5)
+ELF_RELOC(R_SH_DIR8WPZ,             6)
+ELF_RELOC(R_SH_DIR8BP,              7)
+ELF_RELOC(R_SH_DIR8W,               8)
+ELF_RELOC(R_SH_DIR8L,               9)
+ELF_RELOC(R_SH_SWITCH16,            25)
+ELF_RELOC(R_SH_SWITCH32,            26)
+ELF_RELOC(R_SH_USES,                27)
+ELF_RELOC(R_SH_COUNT,               28)
+ELF_RELOC(R_SH_ALIGN,               29)
+ELF_RELOC(R_SH_CODE,                30)
+ELF_RELOC(R_SH_DATA,                31)
+ELF_RELOC(R_SH_LABEL,               32)
+ELF_RELOC(R_SH_SWITCH8,             33)
+ELF_RELOC(R_SH_GNU_VTINHERIT,       34)
+ELF_RELOC(R_SH_GNU_VTENTRY,         35)
+ELF_RELOC(R_SH_TLS_GD_32,           144)
+ELF_RELOC(R_SH_TLS_LD_32,           145)
+ELF_RELOC(R_SH_TLS_LDO_32,          146)
+ELF_RELOC(R_SH_TLS_IE_32,           147)
+ELF_RELOC(R_SH_TLS_LE_32,           148)
+ELF_RELOC(R_SH_TLS_DTPMOD32,        149)
+ELF_RELOC(R_SH_TLS_DTPOFF32,        150)
+ELF_RELOC(R_SH_TLS_TPOFF32,         151)
+ELF_RELOC(R_SH_GOT32,               160)
+ELF_RELOC(R_SH_PLT32,               161)
+ELF_RELOC(R_SH_COPY,                162)
+ELF_RELOC(R_SH_GLOB_DAT,            163)
+ELF_RELOC(R_SH_JMP_SLOT,            164)
+ELF_RELOC(R_SH_RELATIVE,            165)
+ELF_RELOC(R_SH_GOTOFF,              166)
+ELF_RELOC(R_SH_GOTPC,               167)
