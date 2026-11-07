@@ -1,0 +1,33 @@
+# Probes for the linked size report of the math functions.
+#
+# Each prototype adds a probe that calls the function. A line of the form
+# f+g[+...] adds a probe that calls several functions, which shows how much
+# code and data they share. Functions that are not part of the build are
+# skipped.
+
+float logf(float);
+float log2f(float);
+float log10f(float);
+float expf(float);
+float exp2f(float);
+float exp10f(float);
+float powf(float, float);
+float sinf(float);
+float cosf(float);
+float tanf(float);
+float atanf(float);
+float atan2f(float, float);
+float sqrtf(float);
+double log(double);
+double log2(double);
+double exp(double);
+double exp2(double);
+double pow(double, double);
+double sin(double);
+double cos(double);
+double atan(double);
+double atan2(double, double);
+
+logf+expf+powf
+sinf+cosf
+log+exp+pow
