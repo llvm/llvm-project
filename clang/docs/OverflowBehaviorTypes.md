@@ -828,10 +828,12 @@ function with it.
   `__finally` blocks, `__except` filters, `defer` statements, and OpenMP and
   OpenACC regions.
 - Operands that are not evaluated, such as that of `sizeof`, never branch.
-- Arithmetic checks branch: `+`, `-`, `*`, unary `-`, `++`, `--`, and
-  compound assignment.
+- Every check a `trap` type performs branches: arithmetic (`+`, `-`, `*`,
+  unary `-`, `++`, `--`, and compound assignment) and truncation or sign
+  change when converting to or from a `trap` type.
 - When the matching sanitizer (for example
-  `-fsanitize=signed-integer-overflow`) is in recoverable mode, the
+  `-fsanitize=signed-integer-overflow` or
+  `-fsanitize=implicit-integer-truncation`) is in recoverable mode, the
   overflow is reported and then the branch is taken. With `-fsanitize-trap`,
   the branch replaces the trap. With `-fno-sanitize-recover`, the program
   aborts after the report.

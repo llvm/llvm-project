@@ -23,10 +23,54 @@ IdentifierInfo *clang::getOverflowHandlerName(ASTContext &Ctx) {
   return &Ctx.Idents.get(Ctx.getLangOpts().OverflowBehaviorLabel);
 }
 
+static unsigned getCheckedIntWidth(ASTContext &Ctx, QualType T) {
+  if (const auto *OBT = T->getAs<OverflowBehaviorType>())
+    T = OBT->getUnderlyingType();
+  return Ctx.getIntWidth(T);
+}
+
+bool clang::isOverflowHandlerCheckedConversion(ASTContext &Ctx, QualType Src,
+                                               QualType Dst) {
+  if (!Ctx.hasTrapOverflowBehaviorType())
+    return false;
+  if (!Src->isIntegerType() || !Dst->isIntegerType() || Dst->isBooleanType())
+    return false;
+  // Mirrors CodeGen: a wrap type on either side suppresses the check, and a
+  // trap type on either side forces it.
+  if (Src.isWrapType() || Dst.isWrapType())
+    return false;
+  if (!Src.isTrapType() && !Dst.isTrapType())
+    return false;
+
+  unsigned SrcBits = getCheckedIntWidth(Ctx, Src);
+  unsigned DstBits = getCheckedIntWidth(Ctx, Dst);
+  bool SrcSigned = Src->isSignedIntegerOrEnumerationType();
+  bool DstSigned = Dst->isSignedIntegerOrEnumerationType();
+
+  // Truncation check.
+  if (SrcBits > DstBits)
+    return true;
+  // Sign change check.
+  if (SrcSigned == DstSigned)
+    return false;
+  return !(DstBits > SrcBits && DstSigned);
+}
+
 bool clang::isOverflowHandlerCheckedOp(ASTContext &Ctx, const Expr *E) {
   if (!Ctx.hasTrapOverflowBehaviorType() || E->isTypeDependent() ||
       E->isValueDependent())
     return false;
+
+  if (const auto *CAO = dyn_cast<CompoundAssignOperator>(E)) {
+    // Any compound assignment converts its LHS to the computation type and
+    // the result back to the LHS type; either conversion may be checked.
+    QualType LHSTy = CAO->getLHS()->getType();
+    if (isOverflowHandlerCheckedConversion(Ctx, LHSTy,
+                                           CAO->getComputationLHSType()) ||
+        isOverflowHandlerCheckedConversion(Ctx, CAO->getComputationResultType(),
+                                           LHSTy))
+      return true;
+  }
 
   if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
     switch (BO->getOpcode()) {
@@ -46,6 +90,13 @@ bool clang::isOverflowHandlerCheckedOp(ASTContext &Ctx, const Expr *E) {
     if (const auto *CAO = dyn_cast<CompoundAssignOperator>(BO))
       Ty = CAO->getComputationResultType();
     return Ty->isIntegerType() && Ty.isTrapType();
+  }
+
+  if (const auto *CE = dyn_cast<CastExpr>(E)) {
+    if (CE->getCastKind() != CK_IntegralCast)
+      return false;
+    return isOverflowHandlerCheckedConversion(Ctx, CE->getSubExpr()->getType(),
+                                              CE->getType());
   }
 
   if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
