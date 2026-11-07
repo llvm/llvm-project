@@ -365,6 +365,10 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   // The header is not an EH pad; preheader insertion should ensure this.
   assert(!Header->isEHPad() && "Can't insert backedge to EH pad");
 
+  // Only keep llvm.loop metadata that is shared by all backedges. Backedges
+  // with different metadata may come from different source loops.
+  MDNode *LoopMD = L->getLoopID();
+
   // Figure out which basic blocks contain back-edges to the loop header.
   std::vector<BasicBlock*> BackedgeBlocks;
   for (BasicBlock *P : predecessors(Header)) {
@@ -440,13 +444,9 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 
   // Now that all of the PHI nodes have been inserted and adjusted, modify the
   // backedge blocks to jump to the BEBlock instead of the header.
-  // If one of the backedges has llvm.loop metadata attached, we remove
-  // it from the backedge and add it to BEBlock.
-  MDNode *LoopMD = nullptr;
+  // The llvm.loop metadata is moved from the backedges to BEBlock.
   for (BasicBlock *BB : BackedgeBlocks) {
     Instruction *TI = BB->getTerminator();
-    if (!LoopMD)
-      LoopMD = TI->getMetadata(LLVMContext::MD_loop);
     TI->setMetadata(LLVMContext::MD_loop, nullptr);
     TI->replaceSuccessorWith(Header, BEBlock);
   }
