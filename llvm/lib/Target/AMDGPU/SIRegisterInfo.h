@@ -377,6 +377,14 @@ public:
                             unsigned NumAllocatedVGPRs,
                             unsigned &MaxVGPRsForCurrentOccupancy) const;
 
+  /// Returns the number of registers in class \p RC the function currently
+  /// needs i.e., one past the highest hardware index of a used non-reserved
+  /// register, or 0 if none are used.
+  unsigned getNumNeededRegs(const TargetRegisterClass &RC,
+                            const RegisterClassInfo &RCI,
+                            const LiveRegMatrix &LRM,
+                            const MachineRegisterInfo &MRI) const;
+
   void filterAndSortForAntiHintedRegs(
       Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
       const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
