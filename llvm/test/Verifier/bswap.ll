@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 ; Check handling of bswap with unsupported sizes.
 
 declare i8 @llvm.bswap.i8(i8)

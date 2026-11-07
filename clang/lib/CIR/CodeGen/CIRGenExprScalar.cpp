@@ -2940,6 +2940,20 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   case CK_FunctionToPointerDecay:
     return cgf.emitLValue(subExpr).getPointer();
 
+  case CK_HLSLVectorTruncation: {
+    assert((destTy->isVectorType() || destTy->isBuiltinType()) &&
+           "Destination type must be a vector or builtin type.");
+    mlir::Value vec = Visit(subExpr);
+    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
+    if (auto *vecTy = destTy->getAs<VectorType>()) {
+      unsigned numElts = vecTy->getNumElements();
+      llvm::SmallVector<int64_t, 4> mask(numElts);
+      std::iota(mask.begin(), mask.end(), 0);
+      return builder.createVecShuffle(loc, vec, mask);
+    }
+    return builder.createExtractElement(loc, vec, /*idx=*/0);
+  }
+
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
                                    "CastExpr: ", ce->getCastKindName());
