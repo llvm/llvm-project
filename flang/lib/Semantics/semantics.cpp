@@ -26,6 +26,7 @@
 #include "check-io.h"
 #include "check-namelist.h"
 #include "check-nullify.h"
+#include "check-omp-device.h"
 #include "check-omp-structure.h"
 #include "check-purity.h"
 #include "check-return.h"
@@ -256,6 +257,7 @@ static bool PerformStatementSemantics(
   }
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenMP)) {
     SemanticsVisitor<OmpStructureChecker>{context}.Walk(program);
+    SemanticsVisitor<OmpDeviceChecker>{context}.Walk(program);
   }
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
     SemanticsVisitor<CUDAChecker>{context}.Walk(program);

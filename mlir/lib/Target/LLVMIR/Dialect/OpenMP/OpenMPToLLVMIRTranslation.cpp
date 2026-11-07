@@ -7192,6 +7192,15 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
     return opInst.emitError("Addressing symbol not found");
   LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
 
+  // Threadprivate variables are host thread-local storage, which the device
+  // runtime does not provide. Host-only code never reaches this point when
+  // compiling for the device, so this is an access from device code (e.g. a
+  // procedure called from a target region).
+  if (ompBuilder->Config.isTargetDevice())
+    return opInst.emitError()
+           << "threadprivate variable '" << addressOfOp.getGlobalName()
+           << "' cannot be accessed in device code";
+
   LLVM::GlobalOp global =
       addressOfOp.getGlobal(moduleTranslation.symbolTable());
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
