@@ -10369,6 +10369,8 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   const MCInstrDesc &Desc = getMCOpcodeFromPseudo(Opc);
   unsigned DescSize = Desc.getSize();
+  if (Opc == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay)
+    return DescSize + 12; // Three scalar moves around the load.
 
   // If we have a definitive size, we can use it. Otherwise we need to inspect
   // the operands to know the size.

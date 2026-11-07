@@ -1865,13 +1865,11 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
       for (MachineOperand &Op :
            make_early_inc_range(MRI.reg_operands(ReservedRegForExecCopy))) {
         MachineInstr &MI = *Op.getParent();
-        if (MI.getOpcode() == LMC.OrSaveExecOpc ||
-            (MI.getOpcode() == LMC.MovOpc &&
-             (MI.getOperand(0).getReg() == LMC.ExecReg ||
-              (MI.getOperand(1).isReg() &&
-               MI.getOperand(1).getReg() == LMC.ExecReg)))) {
+        if (MI.getOpcode() != LMC.OrSaveExecOpc && MI.getOpcode() != LMC.MovOpc)
+          continue;
+        if (MI.readsRegister(LMC.ExecReg, TRI) ||
+            MI.modifiesRegister(LMC.ExecReg, TRI))
           Op.setReg(UnusedScratchReg);
-        }
       }
       LiveUnits.addReg(UnusedScratchReg);
     } else {
