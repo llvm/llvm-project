@@ -1,0 +1,72 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler \
+# RUN:   -verify-misched -o - %s | FileCheck %s
+
+# Test that the WMMA scheduling DAG mutation handles DS loads with mixed users.
+# %cyclic feeds a non-WMMA COPY consumed by the first WMMA and directly feeds
+# the tenth WMMA. Delaying those loads until after the first WMMA would create a
+# cycle. The mutation must leave them unconstrained and continue processing
+# %safe, whose loads can still be scheduled after the first WMMA rather than
+# after the third WMMA.
+
+--- |
+  target triple = "amdgcn"
+  define amdgpu_kernel void @wmma_cycle_safety() #0 { ret void }
+  attributes #0 = { "target-cpu"="gfx1250" "amdgpu-wmma-schedule" }
+...
+---
+name:            wmma_cycle_safety
+alignment:       4
+tracksRegLiveness: true
+isSSA:           false
+noPhis:          true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: wmma_cycle_safety
+    ; CHECK:       undef %cyclic.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 256
+    ; CHECK:       %path:vreg_128 = COPY %cyclic.sub0_sub1_sub2_sub3
+    ; CHECK:       V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %blocker, %rhs{{.*}}implicit %path
+    ; CHECK:       undef %safe.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 384
+    ; CHECK-NEXT:  %safe.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 416
+    ; CHECK:       %safe.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 448
+    ; CHECK-NEXT:  %safe.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 480
+    ; CHECK:       V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %safe, %rhs
+    ; CHECK:       %cyclic.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 320
+    ; CHECK-NEXT:  %cyclic.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 352
+    ; CHECK:       V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %cyclic, %rhs
+    %ptr:vgpr_32 = IMPLICIT_DEF
+    %scale:vreg_64_lo256_align2 = IMPLICIT_DEF
+    %rhs:vreg_512_align2 = IMPLICIT_DEF
+    %acc:vreg_256_align2 = IMPLICIT_DEF
+    undef %blocker.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %blocker.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %blocker.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %blocker.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %blocker8.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_READ_B128_gfx9 %ptr, 128, 0, implicit $exec :: (load (s128), addrspace 3)
+    %blocker8.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_READ_B128_gfx9 %ptr, 160, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %background.sub0_sub1_sub2_sub3:vreg_256_align2 = DS_READ_B128_gfx9 %ptr, 192, 0, implicit $exec :: (load (s128), addrspace 3)
+    %background.sub4_sub5_sub6_sub7:vreg_256_align2 = DS_READ_B128_gfx9 %ptr, 224, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %cyclic.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 256, 0, implicit $exec :: (load (s128), addrspace 3)
+    %cyclic.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 288, 0, implicit $exec :: (load (s128), addrspace 3)
+    %cyclic.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 320, 0, implicit $exec :: (load (s128), addrspace 3)
+    %cyclic.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 352, 0, implicit $exec :: (load (s128), addrspace 3)
+    %path:vreg_128 = COPY %cyclic.sub0_sub1_sub2_sub3
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %blocker, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec, implicit %blocker8, implicit %path
+    undef %safe.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 384, 0, implicit $exec :: (load (s128), addrspace 3)
+    %safe.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 416, 0, implicit $exec :: (load (s128), addrspace 3)
+    %safe.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 448, 0, implicit $exec :: (load (s128), addrspace 3)
+    %safe.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptr, 480, 0, implicit $exec :: (load (s128), addrspace 3)
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %rhs, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %rhs, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec, implicit %background
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %rhs, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %rhs, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %rhs, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %safe, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %rhs, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %rhs, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %acc:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %cyclic, %rhs, 8, %acc, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
