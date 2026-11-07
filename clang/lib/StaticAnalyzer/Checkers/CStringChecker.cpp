@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterCheckerAPI.h"
+#include "UninitializedObject/UninitializedObject.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -30,6 +31,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <optional>
@@ -323,10 +325,11 @@ public:
   // Re-usable checks
   ProgramStateRef checkNonNull(CheckerContext &C, ProgramStateRef State,
                                AnyArgExpr Arg, SVal l) const;
-  // Check whether the origin region behind \p Element (like the actual array
-  // region \p Element is from) is initialized.
+  // Check whether the source buffer or its backing array contains
+  // uninitialized data.
   ProgramStateRef checkInit(CheckerContext &C, ProgramStateRef state,
-                            AnyArgExpr Buffer, SVal Element, SVal Size) const;
+                            AnyArgExpr Buffer, SVal Element, SVal Size,
+                            CharKind CK) const;
   ProgramStateRef CheckLocation(CheckerContext &C, ProgramStateRef state,
                                 AnyArgExpr Buffer, SVal Element,
                                 AccessKind Access,
@@ -447,16 +450,105 @@ static void printIdxWithOrdinalSuffix(llvm::raw_ostream &Os, unsigned Idx) {
   Os << Idx << llvm::getOrdinalSuffix(Idx);
 }
 
+static const FieldRegion *findUninitializedField(ProgramStateRef State,
+                                                 const TypedValueRegion *R) {
+  QualType Ty = R->getValueType();
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  ASTContext &Ctx = SVB.getContext();
+  MemRegionManager &MRMgr = SVB.getRegionManager();
+
+  if (R->getValueType()->isUnionType())
+    return nullptr;
+
+  if (Ty->isArrayType()) {
+    const auto *First = R;
+    const auto *Last = R;
+
+    while (const auto *AT = Ctx.getAsConstantArrayType(Ty)) {
+      if (AT->getSize().isZero())
+        return nullptr;
+
+      Ty = AT->getElementType();
+      First = MRMgr.getElementRegion(Ty, SVB.makeZeroArrayIndex(), First, Ctx);
+      Last = MRMgr.getElementRegion(
+          Ty, SVB.makeArrayIndex(AT->getSize().getZExtValue() - 1), Last, Ctx);
+    }
+
+    if (!Ty->isStructureType())
+      return nullptr;
+
+    if (const auto *FR = findUninitializedField(State, First))
+      return FR;
+
+    return First == Last ? nullptr : findUninitializedField(State, Last);
+  }
+
+  if (!Ty->isStructureType())
+    return nullptr;
+
+  UninitObjCheckerOptions Opts;
+  Opts.IsPedantic = true;
+
+  FindUninitializedFields Finder(State, R, Opts);
+  const auto &UninitFields = Finder.getResults().second;
+  return UninitFields.empty() ? nullptr : UninitFields.begin()->first;
+}
+
 ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
                                           ProgramStateRef State,
                                           AnyArgExpr Buffer, SVal Element,
-                                          SVal Size) const {
+                                          SVal Size, CharKind CK) const {
 
   // If a previous check has failed, propagate the failure.
   if (!State)
     return nullptr;
 
   SVal BufVal = C.getSVal(Buffer.Expression);
+  SValBuilder &SVB = C.getSValBuilder();
+  ASTContext &Ctx = SVB.getContext();
+
+  // Field initialization is meaningful only when the entire source object is
+  // read.
+  if (UninitializedRead.isEnabled()) {
+    const auto *BufR = BufVal.getAsRegion();
+    const auto *Length = SVB.getKnownValue(State, Size);
+    CharUnits CharSize = Ctx.getTypeSizeInChars(
+        CK == CharKind::Regular ? Ctx.CharTy : Ctx.WideCharTy);
+    const std::optional<int64_t> LengthValue =
+        Length ? Length->tryExtValue() : std::nullopt;
+    const std::optional<int64_t> CopySize =
+        LengthValue ? llvm::checkedMul(*LengthValue, CharSize.getQuantity())
+                    : std::nullopt;
+
+    const auto IsWholeStructObject = [&](const TypedValueRegion *R) {
+      if (!R || !CopySize)
+        return false;
+
+      QualType Ty = R->getValueType();
+      return Ctx.getBaseElementType(Ty)->isStructureType() &&
+             !Ty->isIncompleteType() && !Ty->isVariablyModifiedType() &&
+             *CopySize == Ctx.getTypeSizeInChars(Ty).getQuantity();
+    };
+
+    const auto *Object = llvm::dyn_cast_or_null<TypedValueRegion>(BufR);
+    if (!IsWholeStructObject(Object))
+      Object = llvm::dyn_cast_or_null<TypedValueRegion>(
+          BufR ? BufR->StripCasts(false) : nullptr);
+
+    if (IsWholeStructObject(Object)) {
+      if (const auto *FR = findUninitializedField(State, Object)) {
+        SmallString<128> Buf;
+        llvm::raw_svector_ostream OS(Buf);
+        OS << "The ";
+        printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
+        OS << " argument contains uninitialized data (e.g., field: '"
+           << FR->getDecl()->getName() << "')";
+        emitUninitializedReadBug(C, State, Buffer.Expression, FR, OS.str());
+        return nullptr;
+      }
+    }
+  }
+
   const auto *ER = dyn_cast_or_null<ElementRegion>(BufVal.getAsRegion());
   if (!ER)
     return State;
@@ -465,13 +557,8 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!SuperR)
     return State;
 
-  // FIXME: We ought to able to check objects as well. Maybe
-  // UninitializedObjectChecker could help?
   if (!SuperR->getValueType()->isArrayType())
     return State;
-
-  SValBuilder &SVB = C.getSValBuilder();
-  ASTContext &Ctx = SVB.getContext();
 
   const QualType ElemTy = Ctx.getBaseElementType(SuperR->getValueType());
 
@@ -670,7 +757,7 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
         svalBuilder.evalBinOpLN(State, BO_Add, *BufLoc, LastOffset, PtrTy);
     State = CheckLocation(C, State, Buffer, BufEnd, Access, CK);
     if (Access == AccessKind::read)
-      State = checkInit(C, State, Buffer, BufStart, *Length);
+      State = checkInit(C, State, Buffer, BufStart, *Length, CK);
 
     // If the buffer isn't large enough, abort.
     if (!State)
