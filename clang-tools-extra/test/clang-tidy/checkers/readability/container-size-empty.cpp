@@ -3,6 +3,7 @@
 // RUN: -- -fno-delayed-template-parsing
 #include <string>
 #include <memory>
+#include <regex>
 
 namespace std {
 template <typename T> struct vector {
@@ -1089,4 +1090,220 @@ bool testDependentValidContainer(TemplatedContainer<T> c) {
   // CHECK-FIXES:  return c.empty();
 }
 template bool testDependentValidContainer<int>(TemplatedContainer<int>);
+}
+
+void testRegexMatchResults() {
+  std::smatch sm;
+  std::cmatch cm;
+  std::wsmatch wsm;
+  std::wcmatch wcm;
+
+  if (sm.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (!sm.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:8: warning:
+  if (sm.length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (sm.length() != 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (sm.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!sm.empty()) {}
+  if (!sm.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (sm.empty()) {}
+  if (sm.size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (sm.empty()) {}
+  if (sm.size() != 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!sm.empty()) {}
+
+  if (sm.length() > 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (sm.size() > 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!sm.empty()) {}
+  if (sm.length() < 1) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (sm.size() < 1) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (sm.empty()) {}
+  if (sm.empty()) {}
+
+  const std::smatch *sm_ptr = &sm;
+  if (sm_ptr->length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (sm_ptr->length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (sm_ptr->size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!sm_ptr->empty()) {}
+  if (sm_ptr->size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (sm_ptr->empty()) {}
+
+  std::smatch &sm_ref = sm;
+  if (sm_ref.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (sm_ref.length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (sm_ref.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!sm_ref.empty()) {}
+  if (sm_ref.size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (sm_ref.empty()) {}
+
+  if (cm.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (cm.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!cm.empty()) {}
+  if (cm.empty()) {}
+
+  if (wsm.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (wsm.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!wsm.empty()) {}
+  if (wsm.empty()) {}
+
+  if (wcm.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (wcm.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!wcm.empty()) {}
+  if (wcm.empty()) {}
+
+  std::match_results<const char *> mr;
+  if (mr.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (!mr.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:8: warning:
+  if (mr.length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (mr.length() != 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (mr.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!mr.empty()) {}
+  if (!mr.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (mr.empty()) {}
+  if (mr.size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (mr.empty()) {}
+  if (mr.size() != 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!mr.empty()) {}
+
+  if (mr.length() > 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (mr.size() > 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!mr.empty()) {}
+  if (mr.length() < 1) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (mr.size() < 1) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (mr.empty()) {}
+
+  const std::match_results<const char *> *mr_ptr = &mr;
+  if (mr_ptr->length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (mr_ptr->length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (mr_ptr->size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!mr_ptr->empty()) {}
+  if (mr_ptr->size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (mr_ptr->empty()) {}
+
+  std::match_results<const char *> &mr_ref = mr;
+  if (mr_ref.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (mr_ref.length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (mr_ref.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!mr_ref.empty()) {}
+  if (mr_ref.size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (mr_ref.empty()) {}
+
+  using my_match = std::smatch;
+  my_match my_match_var;
+  if (my_match_var.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (my_match_var.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!my_match_var.empty()) {}
+
+  const my_match *my_match_ptr = &my_match_var;
+  if (my_match_ptr->length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (my_match_ptr->length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (my_match_ptr->size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!my_match_ptr->empty()) {}
+  if (my_match_ptr->size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (my_match_ptr->empty()) {}
+
+  my_match &my_match_ref = my_match_var;
+  if (my_match_ref.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (my_match_ref.length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (my_match_ref.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!my_match_ref.empty()) {}
+  if (my_match_ref.size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (my_match_ref.empty()) {}
+
+  typedef std::smatch match_typedef;
+  match_typedef match_typedef_var;
+  if (match_typedef_var.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (match_typedef_var.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!match_typedef_var.empty()) {}
+
+  const match_typedef *match_typedef_ptr = &match_typedef_var;
+  if (match_typedef_ptr->length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (match_typedef_ptr->length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (match_typedef_ptr->size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!match_typedef_ptr->empty()) {}
+  if (match_typedef_ptr->size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (match_typedef_ptr->empty()) {}
+
+  match_typedef &match_typedef_ref = match_typedef_var;
+  if (match_typedef_ref.length()) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+  if (match_typedef_ref.length() == 0) {}
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:7: warning:
+
+  if (match_typedef_ref.size()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!match_typedef_ref.empty()) {}
+  if (match_typedef_ref.size() == 0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (match_typedef_ref.empty()) {}
 }
