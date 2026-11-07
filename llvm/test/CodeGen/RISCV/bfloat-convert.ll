@@ -958,8 +958,8 @@ define bfloat @fcvt_bf16_w(i32 %a) nounwind {
 ; RV32ID:       # %bb.0:
 ; RV32ID-NEXT:    addi sp, sp, -16
 ; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ID-NEXT:    fcvt.s.w fa0, a0
-; RV32ID-NEXT:    call __truncsfbf2
+; RV32ID-NEXT:    fcvt.d.w fa0, a0
+; RV32ID-NEXT:    call __truncdfbf2
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    lui a1, 1048560
 ; RV32ID-NEXT:    or a0, a0, a1
@@ -978,8 +978,8 @@ define bfloat @fcvt_bf16_w(i32 %a) nounwind {
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ID-NEXT:    fcvt.s.w fa0, a0
-; RV64ID-NEXT:    call __truncsfbf2
+; RV64ID-NEXT:    fcvt.d.w fa0, a0
+; RV64ID-NEXT:    call __truncdfbf2
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    lui a1, 1048560
 ; RV64ID-NEXT:    or a0, a0, a1
@@ -1004,8 +1004,8 @@ define bfloat @fcvt_bf16_w_load(ptr %p) nounwind {
 ; RV32ID-NEXT:    addi sp, sp, -16
 ; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ID-NEXT:    lw a0, 0(a0)
-; RV32ID-NEXT:    fcvt.s.w fa0, a0
-; RV32ID-NEXT:    call __truncsfbf2
+; RV32ID-NEXT:    fcvt.d.w fa0, a0
+; RV32ID-NEXT:    call __truncdfbf2
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    lui a1, 1048560
 ; RV32ID-NEXT:    or a0, a0, a1
@@ -1026,8 +1026,8 @@ define bfloat @fcvt_bf16_w_load(ptr %p) nounwind {
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64ID-NEXT:    lw a0, 0(a0)
-; RV64ID-NEXT:    fcvt.s.w fa0, a0
-; RV64ID-NEXT:    call __truncsfbf2
+; RV64ID-NEXT:    fcvt.d.w fa0, a0
+; RV64ID-NEXT:    call __truncdfbf2
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    lui a1, 1048560
 ; RV64ID-NEXT:    or a0, a0, a1
@@ -1051,8 +1051,8 @@ define bfloat @fcvt_bf16_wu(i32 %a) nounwind {
 ; RV32ID:       # %bb.0:
 ; RV32ID-NEXT:    addi sp, sp, -16
 ; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ID-NEXT:    fcvt.s.wu fa0, a0
-; RV32ID-NEXT:    call __truncsfbf2
+; RV32ID-NEXT:    fcvt.d.wu fa0, a0
+; RV32ID-NEXT:    call __truncdfbf2
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    lui a1, 1048560
 ; RV32ID-NEXT:    or a0, a0, a1
@@ -1071,8 +1071,8 @@ define bfloat @fcvt_bf16_wu(i32 %a) nounwind {
 ; RV64ID:       # %bb.0:
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ID-NEXT:    fcvt.s.wu fa0, a0
-; RV64ID-NEXT:    call __truncsfbf2
+; RV64ID-NEXT:    fcvt.d.wu fa0, a0
+; RV64ID-NEXT:    call __truncdfbf2
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    lui a1, 1048560
 ; RV64ID-NEXT:    or a0, a0, a1
@@ -1097,8 +1097,8 @@ define bfloat @fcvt_bf16_wu_load(ptr %p) nounwind {
 ; RV32ID-NEXT:    addi sp, sp, -16
 ; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ID-NEXT:    lw a0, 0(a0)
-; RV32ID-NEXT:    fcvt.s.wu fa0, a0
-; RV32ID-NEXT:    call __truncsfbf2
+; RV32ID-NEXT:    fcvt.d.wu fa0, a0
+; RV32ID-NEXT:    call __truncdfbf2
 ; RV32ID-NEXT:    fmv.x.w a0, fa0
 ; RV32ID-NEXT:    lui a1, 1048560
 ; RV32ID-NEXT:    or a0, a0, a1
@@ -1119,8 +1119,8 @@ define bfloat @fcvt_bf16_wu_load(ptr %p) nounwind {
 ; RV64ID-NEXT:    addi sp, sp, -16
 ; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64ID-NEXT:    lw a0, 0(a0)
-; RV64ID-NEXT:    fcvt.s.wu fa0, a0
-; RV64ID-NEXT:    call __truncsfbf2
+; RV64ID-NEXT:    fcvt.d.wu fa0, a0
+; RV64ID-NEXT:    call __truncdfbf2
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    lui a1, 1048560
 ; RV64ID-NEXT:    or a0, a0, a1
@@ -1476,8 +1476,8 @@ define signext i32 @fcvt_bf16_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV32ID-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32ID-NEXT:    mv s0, a1
 ; RV32ID-NEXT:    addi s1, a0, 1
-; RV32ID-NEXT:    fcvt.s.w fa0, s1
-; RV32ID-NEXT:    call __truncsfbf2
+; RV32ID-NEXT:    fcvt.d.w fa0, s1
+; RV32ID-NEXT:    call __truncdfbf2
 ; RV32ID-NEXT:    fmv.x.w a1, fa0
 ; RV32ID-NEXT:    mv a0, s1
 ; RV32ID-NEXT:    sh a1, 0(s0)
@@ -1503,8 +1503,8 @@ define signext i32 @fcvt_bf16_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64ID-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64ID-NEXT:    mv s0, a1
 ; RV64ID-NEXT:    addiw s1, a0, 1
-; RV64ID-NEXT:    fcvt.s.w fa0, s1
-; RV64ID-NEXT:    call __truncsfbf2
+; RV64ID-NEXT:    fcvt.d.w fa0, s1
+; RV64ID-NEXT:    call __truncdfbf2
 ; RV64ID-NEXT:    fmv.x.w a1, fa0
 ; RV64ID-NEXT:    mv a0, s1
 ; RV64ID-NEXT:    sh a1, 0(s0)
@@ -1536,8 +1536,8 @@ define signext i32 @fcvt_bf16_wu_demanded_bits(i32 signext %0, ptr %1) nounwind 
 ; RV32ID-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32ID-NEXT:    mv s0, a1
 ; RV32ID-NEXT:    addi s1, a0, 1
-; RV32ID-NEXT:    fcvt.s.wu fa0, s1
-; RV32ID-NEXT:    call __truncsfbf2
+; RV32ID-NEXT:    fcvt.d.wu fa0, s1
+; RV32ID-NEXT:    call __truncdfbf2
 ; RV32ID-NEXT:    fmv.x.w a1, fa0
 ; RV32ID-NEXT:    mv a0, s1
 ; RV32ID-NEXT:    sh a1, 0(s0)
@@ -1563,8 +1563,8 @@ define signext i32 @fcvt_bf16_wu_demanded_bits(i32 signext %0, ptr %1) nounwind 
 ; RV64ID-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64ID-NEXT:    mv s0, a1
 ; RV64ID-NEXT:    addiw s1, a0, 1
-; RV64ID-NEXT:    fcvt.s.wu fa0, s1
-; RV64ID-NEXT:    call __truncsfbf2
+; RV64ID-NEXT:    fcvt.d.wu fa0, s1
+; RV64ID-NEXT:    call __truncdfbf2
 ; RV64ID-NEXT:    fmv.x.w a1, fa0
 ; RV64ID-NEXT:    mv a0, s1
 ; RV64ID-NEXT:    sh a1, 0(s0)
