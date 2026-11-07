@@ -483,6 +483,33 @@ void AArch64PrologueEmitter::verifyPrologueClobbers() const {
   // Check if any of the newly instructions clobber any of the live registers.
   for (MachineInstr &MI :
        make_range(MBB.instr_begin(), PrologueEndI->getIterator())) {
+
+    const AArch64FunctionInfo &MFI = *MF.getInfo<AArch64FunctionInfo>();
+    if (MFI.hasStackProbing()) {
+      // Darwin stack probing may spill some live registers and restore them
+      // later. Update their liveness here accordingly.
+      auto StackProbeSpilledReg = [](Register Reg) {
+        return Reg == AArch64::X9 || Reg == AArch64::X10 ||
+               Reg == AArch64::X11 || Reg == AArch64::X12 ||
+               Reg == AArch64::X16 || Reg == AArch64::X17;
+      };
+      if (MI.getOpcode() == AArch64::STPXpre) {
+        Register R1 = MI.getOperand(1).getReg();
+        Register R2 = MI.getOperand(2).getReg();
+        if (StackProbeSpilledReg(R1))
+          LiveRegs.removeReg(R1);
+        if (StackProbeSpilledReg(R2))
+          LiveRegs.removeReg(R2);
+      } else if (MI.getOpcode() == AArch64::LDPXpre) {
+        Register R1 = MI.getOperand(1).getReg();
+        Register R2 = MI.getOperand(2).getReg();
+        if (StackProbeSpilledReg(R1))
+          LiveRegs.addReg(R1);
+        if (StackProbeSpilledReg(R2))
+          LiveRegs.addReg(R2);
+      }
+    }
+
     for (auto &Op : MI.operands())
       if (Op.isReg() && Op.isDef())
         assert(!LiveRegs.contains(Op.getReg()) &&
@@ -712,6 +739,14 @@ void AArch64PrologueEmitter::emitPrologue() {
   else
     AFI->setTaggedBasePointerOffset(MFI.getStackSize());
 
+  int StackProbeSize = 4096;
+  if (F.hasFnAttribute("stack-probe-size"))
+    F.getFnAttribute("stack-probe-size")
+        .getValueAsString()
+        .getAsInteger(0, StackProbeSize);
+  StringRef ProbeSym =
+      Subtarget.getTargetLowering()->getStackProbeSymbolName(MF);
+
   // getStackSize() includes all the locals in its size calculation. We don't
   // include these locals when computing the stack size of a funclet, as they
   // are allocated in the parent's stack frame and accessed via the frame
@@ -721,7 +756,8 @@ void AArch64PrologueEmitter::emitPrologue() {
   int64_t NumBytes =
       IsFunclet ? AFL.getWinEHFuncletFrameSize(MF) : MFI.getStackSize();
   if (!AFI->hasStackFrame() && !AFL.windowsRequiresStackProbe(MF, NumBytes))
-    return emitEmptyStackFramePrologue(NumBytes, PrologueBeginI, DL);
+    return emitEmptyStackFramePrologue(NumBytes, PrologueBeginI, DL,
+                                       StackProbeSize, ProbeSym);
 
   bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   unsigned FixedObject = AFL.getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
@@ -848,7 +884,15 @@ void AArch64PrologueEmitter::emitPrologue() {
   // stack as necessary.
   assert(!(AFL.canUseRedZone(MF) && NeedsRealignment) &&
          "Cannot use redzone with stack realignment");
-  if (!AFL.canUseRedZone(MF)) {
+  if (NumBytes >= StackProbeSize && ProbeSym != "" &&
+      ProbeSym != "inline-asm") {
+    // We need to emit a call to the stack probe function. Note that we still
+    // need to adjust SP, the probing doesn't modify it.
+    emitDarwinStackProbe(AfterSVESavesI, DL, NumBytes);
+    allocateStackSpace(AfterSVESavesI, RealignmentPadding, SVEAllocs.AfterZPRs,
+                       EmitAsyncCFI && !HasFP, CFAOffset,
+                       MFI.hasVarSizedObjects());
+  } else if (!AFL.canUseRedZone(MF)) {
     // FIXME: in the case of dynamic re-alignment, NumBytes doesn't have the
     // correct value here, as NumBytes also includes padding bytes, which
     // shouldn't be counted here.
@@ -994,7 +1038,7 @@ void AArch64PrologueEmitter::emitSwiftAsyncContextFramePointer(
 
 void AArch64PrologueEmitter::emitEmptyStackFramePrologue(
     int64_t NumBytes, MachineBasicBlock::iterator MBBI,
-    const DebugLoc &DL) const {
+    const DebugLoc &DL, int StackProbeSize, StringRef ProbeSym) const {
   assert(!HasFP && "unexpected function without stack frame but with FP");
   assert(!AFL.getSVEStackSize(MF) &&
          "unexpected function without stack frame but with SVE objects");
@@ -1013,6 +1057,10 @@ void AArch64PrologueEmitter::emitEmptyStackFramePrologue(
     AFI->setHasRedZone(true);
     ++NumRedZoneFunctions;
   } else {
+    if (NumBytes >= StackProbeSize && ProbeSym != "" &&
+        ProbeSym != "inline-asm")
+      emitDarwinStackProbe(MBBI, DL, NumBytes);
+
     emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(-NumBytes), TII,
                     MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI);
@@ -1097,6 +1145,131 @@ void AArch64PrologueEmitter::emitDefineCFAWithFP(
   Register FramePtr = RegInfo.getFrameRegister(MF);
   CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
       .buildDefCFA(FramePtr, FixedObject - OffsetToFirstCalleeSaveFromFP);
+}
+
+static bool isRegLiveIn(MachineBasicBlock &MBB, unsigned PhysReg) {
+  for (MachineBasicBlock::RegisterMaskPair RegMask : MBB.liveins()) {
+    unsigned Reg = RegMask.PhysReg;
+    if (Reg == PhysReg)
+      return true;
+  }
+  return false;
+}
+
+// Emit a stack probing function call at the specified location.
+void AArch64PrologueEmitter::emitDarwinStackProbe(
+    MachineBasicBlock::iterator MBBI, DebugLoc DL, unsigned NumBytes) const {
+  const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+
+  // If the LR has already been saved we don't need to save it before calling
+  // the probe function. However if it hasn't then the probe will clobber it.
+  bool LRIsSaved =
+      std::any_of(CSI.begin(), CSI.end(), [](const CalleeSavedInfo &SI) {
+        return SI.getReg() == AArch64::LR;
+      });
+  if (!LRIsSaved) {
+    // LR wasn't saved as a CSR, so we need to save it ourselves. We don't
+    // bother updating SP, as we know the probe function won't modify any
+    // memory.
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXpre))
+        .addReg(AArch64::SP, RegState::Define)
+        .addReg(AArch64::LR)
+        .addReg(AArch64::SP)
+        .addImm(-16) // Keep SP 16 byte aligned.
+        .setMIFlags(MachineInstr::FrameSetup);
+  }
+
+  bool SaveScratchRegs = false;
+  // Shrink wrapping may change our insertion block for the prolog code, so the
+  // X9, X10, X11, X12, X16 or X17 registers may be live at this point.
+  bool X16Live = false;
+  bool X17Live = false;
+  if (&MBB != &MF.front()) {
+    bool X9Live =
+        isRegLiveIn(MBB, AArch64::W9) || isRegLiveIn(MBB, AArch64::X9);
+    bool X10Live =
+        isRegLiveIn(MBB, AArch64::W10) || isRegLiveIn(MBB, AArch64::X10);
+    bool X11Live =
+        isRegLiveIn(MBB, AArch64::W11) || isRegLiveIn(MBB, AArch64::X11);
+    bool X12Live =
+        isRegLiveIn(MBB, AArch64::W12) || isRegLiveIn(MBB, AArch64::X12);
+    X16Live = isRegLiveIn(MBB, AArch64::W16) || isRegLiveIn(MBB, AArch64::X16);
+    X17Live = isRegLiveIn(MBB, AArch64::W17) || isRegLiveIn(MBB, AArch64::X17);
+    SaveScratchRegs = true;
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::STPXpre))
+        .addReg(AArch64::SP, RegState::Define)
+        .addReg(AArch64::X9, X9Live ? RegState::NoFlags : RegState::Undef)
+        .addReg(AArch64::X10, X10Live ? RegState::NoFlags : RegState::Undef)
+        .addReg(AArch64::SP)
+        .addImm(-2)
+        .setMIFlags(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::STPXpre))
+        .addReg(AArch64::SP, RegState::Define)
+        .addReg(AArch64::X11, X11Live ? RegState::NoFlags : RegState::Undef)
+        .addReg(AArch64::X12, X12Live ? RegState::NoFlags : RegState::Undef)
+        .addReg(AArch64::SP)
+        .addImm(-2)
+        .setMIFlags(MachineInstr::FrameSetup);
+    if (X16Live || X17Live)
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::STPXpre))
+          .addReg(AArch64::SP, RegState::Define)
+          .addReg(AArch64::X16, X16Live ? RegState::NoFlags : RegState::Undef)
+          .addReg(AArch64::X17, X17Live ? RegState::NoFlags : RegState::Undef)
+          .addReg(AArch64::SP)
+          .addImm(-2)
+          .setMIFlags(MachineInstr::FrameSetup);
+  }
+
+  // We pass the number of bytes to check to the probe function in register
+  // W9, a temporary register that we can use in places like the prolog. The
+  // probe function should preserve all registers except X9, X10, X11 and LR.
+
+  // To materalize the probe size, we emit a MOVi32imm pseudo-instruction which
+  // will later get expanded into either an ORR Wd, Wzr, #bimm32 or into a
+  // sequence of MOV instructions depending on the value.
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVi32imm))
+      .addReg(AArch64::W9, RegState::Define)
+      .addImm(NumBytes)
+      .setMIFlags(MachineInstr::FrameSetup);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::StkChkIndirectCall))
+    .addRegMask(RegInfo->getDarwinStackProbePreservedMask())
+    .setMIFlags(MachineInstr::FrameSetup);
+
+  if (SaveScratchRegs) {
+    if (X16Live || X17Live)
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDPXpost))
+          .addReg(AArch64::SP, RegState::Define)
+          .addReg(AArch64::X16, RegState::Define)
+          .addReg(AArch64::X17, RegState::Define)
+          .addReg(AArch64::SP)
+          .addImm(2)
+          .setMIFlags(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDPXpost))
+        .addReg(AArch64::SP, RegState::Define)
+        .addReg(AArch64::X11, RegState::Define)
+        .addReg(AArch64::X12, RegState::Define)
+        .addReg(AArch64::SP)
+        .addImm(2)
+        .setMIFlags(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDPXpost))
+        .addReg(AArch64::SP, RegState::Define)
+        .addReg(AArch64::X9, RegState::Define)
+        .addReg(AArch64::X10, RegState::Define)
+        .addReg(AArch64::SP)
+        .addImm(2)
+        .setMIFlags(MachineInstr::FrameSetup);
+  }
+  if (!LRIsSaved) {
+    // Restore LR.
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXpost))
+        .addReg(AArch64::SP, RegState::Define)
+        .addReg(AArch64::LR, RegState::Define)
+        .addReg(AArch64::SP)
+        .addImm(16)
+        .setMIFlags(MachineInstr::FrameSetup);
+  }
 }
 
 void AArch64PrologueEmitter::emitWindowsStackProbe(

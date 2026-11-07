@@ -549,6 +549,8 @@ public:
   /// Used for exception handling on Win64.
   bool needsFixedCatchObjects() const override;
 
+  StringRef getStackProbeSymbolName(const MachineFunction &MF) const override;
+
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
   /// SVE code generation for fixed length vectors does not custom lower
@@ -815,6 +817,7 @@ private:
   SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerDarwinDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;

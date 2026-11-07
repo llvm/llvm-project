@@ -830,3 +830,10 @@ def CSR_AArch64_SVE_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_SVE_AAPCS, X18)>;
 def CSR_AArch64_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X18)>;
+
+// Darwin stack probing function CSRs. Registers X9-X11 are used, LR since it's
+// a call.
+def CSR_AArch64_StackProbe_Darwin
+    : CalleeSavedRegs<(add (sequence "X%u", 0, 8),
+                           (sequence "X%u", 12, 28), FP, SP,
+                           (sequence "Q%u", 0, 31))>;

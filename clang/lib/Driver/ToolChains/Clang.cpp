@@ -7452,6 +7452,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("-mstack-alignment=" + Value));
   }
 
+  bool UseStackChecking =
+      Args.hasFlag(options::OPT_fstack_check, options::OPT_fno_stack_check,
+                   getToolChain().useStackChecking(Args));
+  if (UseStackChecking)
+    CmdArgs.push_back("-fstack-check");
+
   if (Args.hasArg(options::OPT_mstack_probe_size)) {
     StringRef Size = Args.getLastArgValue(options::OPT_mstack_probe_size);
 
@@ -7459,7 +7465,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("-mstack-probe-size=" + Size));
     else
       CmdArgs.push_back("-mstack-probe-size=0");
+  } else if (UseStackChecking && RawTriple.isOSDarwin() &&
+             RawTriple.getArch() == llvm::Triple::aarch64) {
+    // 16k-page targets only need a probe every 16k to hit the guard page
+    if (RawTriple.isAppleFirmware()) {
+      // Firmware keeps the 4k default
+    } else if (KernelOrKext) {
+      // The kernel and kexts are 16k-paged, even if built with -ffreestanding
+      CmdArgs.push_back("-mstack-probe-size=16384");
+    } else if (Args.hasArg(options::OPT_ffreestanding)) {
+      // Firmware built against a non-firmware triple keeps the 4k default
+    } else {
+      // Darwin userspace is 16k-paged
+      CmdArgs.push_back("-mstack-probe-size=16384");
+    }
   }
+
+  if (TC.getTriple().isOSDarwin() &&
+      (Args.hasArg(options::OPT_mstack_arg_probe) ||
+       Args.hasArg(options::OPT_mno_stack_arg_probe)))
+    D.Diag(diag::err_stack_probe_unsupported_platform);
 
   Args.addOptOutFlag(CmdArgs, options::OPT_mstack_arg_probe,
                      options::OPT_mno_stack_arg_probe);

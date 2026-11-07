@@ -72,8 +72,8 @@ public:
 
   MCSymbol *getAuthPtrSlotSymbol(const TargetMachine &TM,
                                  MachineModuleInfo *MMI, const MCSymbol *RawSym,
-                                 AArch64PACKey::ID Key,
-                                 uint16_t Discriminator) const;
+                                 AArch64PACKey::ID Key, uint16_t Discriminator,
+                                 bool HasAddressDiversity = false) const;
 };
 
 /// This implementation is used for AArch64 COFF targets.

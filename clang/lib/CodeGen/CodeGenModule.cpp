@@ -158,6 +158,9 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     else if (Target.getABI() == "aapcs-soft")
       Kind = AArch64ABIKind::AAPCSSoft;
 
+    if (Triple.isOSDarwin())
+      return createDarwinAArch64TargetCodeGenInfo(CGM, Kind);
+
     return createAArch64TargetCodeGenInfo(CGM, Kind);
   }
 

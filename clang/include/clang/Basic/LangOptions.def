@@ -372,6 +372,7 @@ LANGOPT(HalfNoSemanticInterposition, 1, 0, Benign,
         "Like -fno-semantic-interposition but don't use local aliases")
 ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff, NotCompatible,
              "stack protector mode")
+LANGOPT(StackCheck, 1, 0, NotCompatible, "stack checking")
 ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKind::Uninitialized, Benign,
              "trivial automatic variable initialization")
 VALUE_LANGOPT(TrivialAutoVarInitStopAfter, 32, 0, Benign,

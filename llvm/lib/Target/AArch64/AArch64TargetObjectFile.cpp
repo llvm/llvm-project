@@ -126,13 +126,14 @@ template <typename MachineModuleInfoTarget>
 static MCSymbol *getAuthPtrSlotSymbolHelper(
     MCContext &Ctx, const TargetMachine &TM, MachineModuleInfo *MMI,
     MachineModuleInfoTarget &TargetMMI, const MCSymbol *RawSym,
-    AArch64PACKey::ID Key, uint16_t Discriminator) {
+    AArch64PACKey::ID Key, uint16_t Discriminator,
+    bool HasAddressDiversity = false) {
   const DataLayout &DL = MMI->getModule()->getDataLayout();
 
   MCSymbol *StubSym = Ctx.getOrCreateSymbol(
       DL.getLinkerPrivateGlobalPrefix() + RawSym->getName() +
       Twine("$auth_ptr$") + AArch64PACKeyIDToString(Key) + Twine('$') +
-      Twine(Discriminator));
+      Twine(Discriminator) + (HasAddressDiversity ? "$addr" : ""));
 
   const MCExpr *&StubAuthPtrRef = TargetMMI.getAuthPtrStubEntry(StubSym);
 
@@ -141,9 +142,8 @@ static MCSymbol *getAuthPtrSlotSymbolHelper(
 
   const MCExpr *Sym = MCSymbolRefExpr::create(RawSym, Ctx);
 
-  StubAuthPtrRef =
-      AArch64AuthMCExpr::create(Sym, Discriminator, Key,
-                                /*HasAddressDiversity=*/false, Ctx);
+  StubAuthPtrRef = AArch64AuthMCExpr::create(Sym, Discriminator, Key,
+                                             HasAddressDiversity, Ctx);
   return StubSym;
 }
 
@@ -157,10 +157,11 @@ MCSymbol *AArch64_ELFTargetObjectFile::getAuthPtrSlotSymbol(
 
 MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
     const TargetMachine &TM, MachineModuleInfo *MMI, const MCSymbol *RawSym,
-    AArch64PACKey::ID Key, uint16_t Discriminator) const {
+    AArch64PACKey::ID Key, uint16_t Discriminator,
+    bool HasAddressDiversity) const {
   auto &MachOMMI = MMI->getObjFileInfo<MachineModuleInfoMachO>();
   return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, MachOMMI, RawSym,
-                                    Key, Discriminator);
+                                    Key, Discriminator, HasAddressDiversity);
 }
 
 static bool isExecuteOnlyFunction(const GlobalObject *GO, SectionKind Kind,
