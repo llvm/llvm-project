@@ -33,12 +33,6 @@ class MCInstrDesc;
 class MCTargetOptions;
 class InstrItineraryData;
 
-namespace cl {
-class OptionCategory;
-}
-
-extern LLVM_ABI cl::OptionCategory MCScheduleOptions;
-
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
   const char *Name;
