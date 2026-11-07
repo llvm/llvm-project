@@ -561,3 +561,73 @@ define i32 @test_reduce_idempotent_equivalent_bitcast_sources_overlap(<2 x i64> 
   %r = extractelement <4 x i32> %or1, i64 0
   ret i32 %r
 }
+
+define i32 @test_vector_splitting_reduce_add_v16i32(<16 x i32> %w) {
+; CHECK-LABEL: define i32 @test_vector_splitting_reduce_add_v16i32(
+; CHECK-SAME: <16 x i32> [[W:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[W]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %l8 = shufflevector <16 x i32> %w, <16 x i32> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %h8 = shufflevector <16 x i32> %w, <16 x i32> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s8 = add <8 x i32> %l8, %h8
+  %l4 = shufflevector <8 x i32> %s8, <8 x i32> %s8, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %h4 = shufflevector <8 x i32> %s8, <8 x i32> %s8, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %s4 = add <4 x i32> %l4, %h4
+  %l2 = shufflevector <4 x i32> %s4, <4 x i32> %s4, <2 x i32> <i32 0, i32 1>
+  %h2 = shufflevector <4 x i32> %s4, <4 x i32> %s4, <2 x i32> <i32 2, i32 3>
+  %s2 = add <2 x i32> %l2, %h2
+  %l1 = shufflevector <2 x i32> %s2, <2 x i32> %s2, <1 x i32> zeroinitializer
+  %h1 = shufflevector <2 x i32> %s2, <2 x i32> %s2, <1 x i32> <i32 1>
+  %s1 = add <1 x i32> %l1, %h1
+  %r = extractelement <1 x i32> %s1, i64 0
+  ret i32 %r
+}
+
+define float @test_vector_splitting_reduce_fadd_v4f32(<4 x float> %w) {
+; CHECK-LABEL: define float @test_vector_splitting_reduce_fadd_v4f32(
+; CHECK-SAME: <4 x float> [[W:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[W]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %l2 = shufflevector <4 x float> %w, <4 x float> %w, <2 x i32> <i32 0, i32 1>
+  %h2 = shufflevector <4 x float> %w, <4 x float> %w, <2 x i32> <i32 2, i32 3>
+  %s2 = fadd reassoc <2 x float> %l2, %h2
+  %l1 = shufflevector <2 x float> %s2, <2 x float> %s2, <1 x i32> zeroinitializer
+  %h1 = shufflevector <2 x float> %s2, <2 x float> %s2, <1 x i32> <i32 1>
+  %s1 = fadd reassoc <1 x float> %l1, %h1
+  %r = extractelement <1 x float> %s1, i64 0
+  ret float %r
+}
+
+define i32 @test_vector_splitting_reduce_smin_v4i32(<4 x i32> %w) {
+; CHECK-LABEL: define i32 @test_vector_splitting_reduce_smin_v4i32(
+; CHECK-SAME: <4 x i32> [[W:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[W]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %l2 = shufflevector <4 x i32> %w, <4 x i32> %w, <2 x i32> <i32 0, i32 1>
+  %h2 = shufflevector <4 x i32> %w, <4 x i32> %w, <2 x i32> <i32 2, i32 3>
+  %s2 = call <2 x i32> @llvm.smin.v2i32(<2 x i32> %l2, <2 x i32> %h2)
+  %l1 = shufflevector <2 x i32> %s2, <2 x i32> %s2, <1 x i32> zeroinitializer
+  %h1 = shufflevector <2 x i32> %s2, <2 x i32> %s2, <1 x i32> <i32 1>
+  %s1 = call <1 x i32> @llvm.smin.v1i32(<1 x i32> %l1, <1 x i32> %h1)
+  %r = extractelement <1 x i32> %s1, i64 0
+  ret i32 %r
+}
+
+define i32 @test_vector_splitting_poison_op1_v4i32(<4 x i32> %w) {
+; CHECK-LABEL: define i32 @test_vector_splitting_poison_op1_v4i32(
+; CHECK-SAME: <4 x i32> [[W:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[W]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %l2 = shufflevector <4 x i32> %w, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %h2 = shufflevector <4 x i32> %w, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %s2 = add <2 x i32> %l2, %h2
+  %l1 = shufflevector <2 x i32> %s2, <2 x i32> poison, <1 x i32> zeroinitializer
+  %h1 = shufflevector <2 x i32> %s2, <2 x i32> poison, <1 x i32> <i32 1>
+  %s1 = add <1 x i32> %l1, %h1
+  %r = extractelement <1 x i32> %s1, i64 0
+  ret i32 %r
+}
