@@ -25,6 +25,13 @@
 TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 0, 0, 0};
     int ib[] = {0, 1, 1, 0};
+
+    assert(!satisfies_heap_property(std::begin(ia), std::end(ia), std::greater<int>()));
+    assert(!satisfies_heap_property(std::begin(ib), std::end(ib), std::greater<int>()));
+
+    assert(satisfies_heap_property(std::begin(ia), ia + 4, std::greater<int>()));
+    assert(satisfies_heap_property(std::begin(ib), ib + 3, std::greater<int>()));
+
     return    (std::is_heap_until(std::begin(ia), std::end(ia), std::greater<int>()) == ia+1)
            && (std::is_heap_until(std::begin(ib), std::end(ib), std::greater<int>()) == ib+3);
     }
