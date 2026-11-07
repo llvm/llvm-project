@@ -139,9 +139,18 @@ def : WriteRes<WriteSys, [A53UnitB]>;
 def : WriteRes<WriteBarrier, [A53UnitB]>;
 def : WriteRes<WriteHint, [A53UnitB]>;
 
+// The FP/ASIMD pipeline does not write its results back in program order: a
+// later, shorter operation is not held back by an earlier, longer one (an
+// independent ADD issues right behind an FMLA on hardware). Every FP/ASIMD
+// write is therefore RetireOOO, so that llvm-mca's in-order write-back check
+// does not delay the instructions that follow a long-latency operation.
+
 // FP ALU. Scalar floating-point arithmetic and conversion have a 4-cycle
 // latency on Cortex-A53.
-def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 4; }
+def : WriteRes<WriteF, [A53UnitFPALU]> {
+  let Latency = 4;
+  let RetireOOO = 1;
+}
 // A compare pairs with an independent FP/ASIMD or integer operation, but only
 // as the older instruction of the pair, so not with another compare.
 // A dependent NZCV consumer only pays a single cycle in practice, but the
@@ -149,54 +158,82 @@ def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 4; }
 // keeps the 3-cycle result latency the rest of the family uses.
 def : WriteRes<WriteFCmp, [A53UnitFPALU]> {
   let Latency = 3;
+  let RetireOOO = 1;
   let BeginGroup = 1;
 }
-def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
+def : WriteRes<WriteFCvt, [A53UnitFPALU]> {
+  let Latency = 4;
+  let RetireOOO = 1;
+}
 // Register transfers between a GPR and an FP/SIMD register (FMOV). The
 // generic class only covers what the A53WriteF2R/A53WriteR2F overrides below
 // do not; see those for the measured behaviour.
-def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 2; }
-def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 2; }
-def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteFCopy, [A53UnitFPALU]> {
+  let Latency = 2;
+  let RetireOOO = 1;
+}
+def : WriteRes<WriteFImm, [A53UnitFPALU]> {
+  let Latency = 2;
+  let RetireOOO = 1;
+}
+def : WriteRes<WriteVd, [A53UnitFPALU]> {
+  let Latency = 6;
+  let RetireOOO = 1;
+}
 // A 128-bit (Q-form) operation fills the whole 128-bit datapath, so it takes
 // both lanes.
-def : WriteRes<WriteVq, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteVq, [A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 6;
+  let RetireOOO = 1;
+}
 
 // FP Mul, Div, Sqrt. Divide and square root are not pipelined and block their
 // whole unit, so they hold it for their full occupancy.
-def : WriteRes<WriteFMul, [A53UnitFPALU]> { let Latency = 4; }
+def : WriteRes<WriteFMul, [A53UnitFPALU]> {
+  let Latency = 4;
+  let RetireOOO = 1;
+}
 // The scalar and 64-bit by-element multiplies only issue as the younger
 // instruction of a pair, so at most one per cycle, and their Q-forms take both
 // lanes like any other Q-form operation.
 def A53WriteFMulIdx : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 4;
+  let RetireOOO = 1;
   let EndGroup = 1;
 }
 def A53WriteFMulIdxQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 4;
+  let RetireOOO = 1;
 }
 // The other 4-cycle floating-point operations that only issue as the younger
 // instruction of a pair.
 def A53WriteVecYng_4 : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 4;
+  let RetireOOO = 1;
   let EndGroup = 1;
 }
 def : WriteRes<WriteFDiv, [A53UnitFPDS, A53UnitFPDS]> {
   let Latency = 33;
   let ReleaseAtCycles = [29, 29];
+  let RetireOOO = 1;
 }
 // FP multiply-accumulate has an 8-cycle result latency, but the MAC pipe reads
 // the addend late and has a dedicated forwarding path that feeds one MAC's
 // result into the next MAC's addend, so a dependent MAC chain recurs every 4
 // cycles. Only the addend forwards; the multiplicands do not.
-def A53WriteFMAC : SchedWriteRes<[A53UnitFPALU]> { let Latency = 8; }
+def A53WriteFMAC : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 8;
+  let RetireOOO = 1;
+}
 def A53WriteFMACIdx : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 8;
+  let RetireOOO = 1;
   let EndGroup = 1;
 }
 // Q-form multiply-accumulate fills the datapath and takes both lanes.
 def A53WriteFMACQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 8;
+  let RetireOOO = 1;
 }
 def A53ReadFPM   : SchedReadAdvance<0>;
 def A53ReadFPMA4 : SchedReadAdvance<4, [A53WriteFMAC, A53WriteFMACIdx,
@@ -207,69 +244,107 @@ def A53ReadFPMA4 : SchedReadAdvance<4, [A53WriteFMAC, A53WriteFMACIdx,
 def A53WriteFDivSP : SchedWriteRes<[A53UnitFPDS, A53UnitFPDS]> {
   let Latency = 13;
   let ReleaseAtCycles = [10, 10];
+  let RetireOOO = 1;
 }
 def A53WriteFDivDP : SchedWriteRes<[A53UnitFPDS, A53UnitFPDS]> {
   let Latency = 22;
   let ReleaseAtCycles = [19, 19];
+  let RetireOOO = 1;
 }
 def A53WriteFSqrtSP : SchedWriteRes<[A53UnitFPDS, A53UnitFPDS]> {
   let Latency = 12;
   let ReleaseAtCycles = [9, 9];
+  let RetireOOO = 1;
 }
 def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPDS, A53UnitFPDS]> {
   let Latency = 22;
   let ReleaseAtCycles = [19, 19];
+  let RetireOOO = 1;
 }
 // Reciprocal / reciprocal-square-root Newton-Raphson step (FRECPS/FRSQRTS) and
 // estimate (FRECPE/FRSQRTE). Measured on Cortex-A53: the step is 8 cycles and
 // the estimate 4, not the flat 6 of WriteVd. These run on the FP/ASIMD ALU pipe,
 // so the Q-form variants take both lanes.
-def A53WriteFRecpStep  : SchedWriteRes<[A53UnitFPALU]> { let Latency = 8; }
+def A53WriteFRecpStep  : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 8;
+  let RetireOOO = 1;
+}
 def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 8;
+  let RetireOOO = 1;
 }
-def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 4;
+  let RetireOOO = 1;
+}
 def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 4;
+  let RetireOOO = 1;
 }
 // Integer Advanced SIMD multiply-accumulate. The result latency is 4, but the
 // MAC unit forwards one accumulate result straight into the next MAC's
 // accumulator with no interlock, so a dependent accumulator chain recurs every
 // cycle. Only the accumulator forwards; the multiplicands do not. The
 // saturating doubling forms (SQDML[AS]L) do not use this path.
-def A53WriteIMACD : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteIMACD : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 4;
+  let RetireOOO = 1;
+}
 def A53WriteIMACQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 4;
+  let RetireOOO = 1;
 }
 def A53ReadIMACM  : SchedReadAdvance<0>;
 def A53ReadIMACA3 : SchedReadAdvance<3, [A53WriteIMACD, A53WriteIMACQ]>;
 
 // Bitwise Advanced SIMD logic forwards in a single cycle.
-def A53WriteLogicD : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1; }
+def A53WriteLogicD : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 1;
+  let RetireOOO = 1;
+}
 def A53WriteLogicQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 1;
+  let RetireOOO = 1;
 }
 // Scalar floating-point select, and the float-to-float register move.
-def A53WriteFSel : SchedWriteRes<[A53UnitFPALU]> { let Latency = 2; }
-def A53WriteFMov : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1; }
+def A53WriteFSel : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 2;
+  let RetireOOO = 1;
+}
+def A53WriteFMov : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 1;
+  let RetireOOO = 1;
+}
 // Advanced SIMD arithmetic that runs at the same 4-cycle latency as its scalar
 // counterpart: floating-point arithmetic and conversion, and the integer vector
 // multiply. Q-form takes both datapath lanes.
-def A53WriteVecD_4 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteVecD_4 : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 4;
+  let RetireOOO = 1;
+}
 def A53WriteVecQ_4 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 4;
+  let RetireOOO = 1;
 }
 // Integer Advanced SIMD ALU. Measured on Cortex-A53, and matching the sibling
 // Cortex-A55 model: simple arithmetic (ADD/SUB/NEG, halving add/sub) is 2
 // cycles and the wider ALU ops (ABS, pairwise, reduce, saturating, abs-diff)
 // 3, not the flat 6 of WriteVd. Q-form takes both datapath lanes.
-def A53WriteIVecD_2 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 2; }
+def A53WriteIVecD_2 : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 2;
+  let RetireOOO = 1;
+}
 def A53WriteIVecQ_2 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 2;
+  let RetireOOO = 1;
 }
-def A53WriteIVecD_3 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 3; }
+def A53WriteIVecD_3 : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 3;
+  let RetireOOO = 1;
+}
 def A53WriteIVecQ_3 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 3;
+  let RetireOOO = 1;
 }
 
 // Register transfers between a GPR and an FP/SIMD register (FMOV). Their

@@ -280,10 +280,10 @@ fmul s23, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      900
-# CHECK-NEXT: Total Cycles:      1304
+# CHECK-NEXT: Total Cycles:      998
 # CHECK-NEXT: Total uOps:        900
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.69
-# CHECK-NEXT: IPC:               0.69
+# CHECK-NEXT: uOps Per Cycle:    0.90
+# CHECK-NEXT: IPC:               0.90
 # CHECK-NEXT: Block RThroughput: 10.0
