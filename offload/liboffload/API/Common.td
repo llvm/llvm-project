@@ -229,3 +229,34 @@ def olShutDown : Function {
     ]>
   ];
 }
+
+def ol_shutdown_cb_t : FptrTypedef {
+  let desc = "Cleanup routine for use by `olRegisterShutdownCallback`.";
+  let params = [
+    Param<"void *", "UserData", "user specified data passed into `olRegisterShutdownCallback`.", PARAM_IN>,
+  ];
+  let return = "void";
+}
+
+def olRegisterShutdownCallback : Function {
+  let desc = "Register a cleanup routine to run when the library shuts down.";
+  let details = [
+    "The callback runs when the library is torn down, either by the final call "
+    "to `olShutDown` or at process exit, and always before any platform is "
+    "deinitialized. Devices, queues, allocations and other objects are still "
+    "valid inside the callback.",
+    "Callbacks run in the reverse order of registration. A callback may "
+    "register further callbacks, which run before the remaining ones. A "
+    "callback may call liboffload functions other than `olInit` and "
+    "`olShutDown`.",
+    "Registrations belong to the current initialization of the library. If "
+    "the library is shut down and initialized again, callbacks that already "
+    "ran are not run a second time.",
+    "`olRegisterShutdownCallback` is thread safe."
+  ];
+  let params = [
+    Param<"ol_shutdown_cb_t", "Callback", "the cleanup routine to call", PARAM_IN>,
+    Param<"void *", "UserData", "a pointer that will be passed verbatim to the callback", PARAM_IN_OPTIONAL>,
+  ];
+  let returns = [];
+}
