@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
-  TargetParser
   Core
+  FrontendOpenACC
+  FrontendOpenMP
+  TargetParser
 )
 
 add_flang_unittest(FlangFrontendTests

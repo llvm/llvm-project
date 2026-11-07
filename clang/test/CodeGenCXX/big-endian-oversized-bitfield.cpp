@@ -81,3 +81,22 @@ bool get(const B *p) {
 void set(B *p, bool v) {
   p->value = v;
 }
+
+// GH119207: a 2^15-bit width used to wrap to zero. The value bits come first,
+// at the most-significant end of the i32768 storage.
+struct H {
+  int value : 32768;
+};
+
+// LAYOUT: BitFields:[
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:32736 Size:32 IsSigned:1 StorageSize:32768 StorageOffset:0
+// LAYOUT-NEXT: ]>
+
+// IR-LABEL: define {{.*}} @_Z3getPK1H(
+// IR: [[HP:%.*]] = load ptr, ptr %p.addr
+// IR: [[HLOAD:%.*]] = load i32768, ptr [[HP]]
+// IR-NEXT: [[HSHR:%.*]] = ashr i32768 [[HLOAD]], 32736
+// IR-NEXT: trunc i32768 [[HSHR]] to i32
+int get(const H *p) {
+  return p->value;
+}
