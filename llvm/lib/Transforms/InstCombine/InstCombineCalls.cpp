@@ -2877,7 +2877,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     // See if we can deduce non-null.
-    if (!CI.hasRetAttr(Attribute::NonNull) &&
+    if (CI.getType()->isPointerTy() && !CI.hasRetAttr(Attribute::NonNull) &&
         (Known.isNonZero() ||
          isKnownNonZero(II, getSimplifyQuery().getWithInstruction(II)))) {
       CI.addRetAttr(Attribute::NonNull);
