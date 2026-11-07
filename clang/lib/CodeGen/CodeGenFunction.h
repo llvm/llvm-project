@@ -2820,6 +2820,9 @@ public:
     PtrPhi->addIncoming(RHS.getBasePointer(), RHSBlock);
     LHS.replaceBasePointer(PtrPhi);
     LHS.setAlignment(std::min(LHS.getAlignment(), RHS.getAlignment()));
+    LHS.setInvariant(LHS.isInvariant() && RHS.isInvariant()
+                         ? KnownInvariant
+                         : NotKnownInvariant);
     return LHS;
   }
 
@@ -2848,6 +2851,8 @@ public:
 
   LValue MakeAddrLValue(Address Addr, QualType T, LValueBaseInfo BaseInfo,
                         TBAAAccessInfo TBAAInfo) {
+    if (CGM.isInvariantAddressSpace(T.getAddressSpace()))
+      Addr.setInvariant(KnownInvariant);
     return LValue::MakeAddr(Addr, T, getContext(), BaseInfo, TBAAInfo);
   }
 
