@@ -128,6 +128,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2f128
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.canonicalizef128
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.copysign
@@ -285,6 +286,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lroundl
     libc.src.math.modf
     libc.src.math.modff
+    libc.src.math.modff128
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
@@ -306,6 +308,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remainder
     libc.src.math.remainderl
     libc.src.math.remquof
+    libc.src.math.remquof128
     libc.src.math.remquo
     libc.src.math.remquol
     libc.src.math.rint
@@ -554,7 +557,6 @@ endif()
 if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2l
-    libc.src.math.canonicalizef128
     libc.src.math.canonicalizef80
     libc.src.math.daddf128
     libc.src.math.ddivf128
@@ -571,12 +573,10 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fromfpxf128
     libc.src.math.fsqrtf128
     libc.src.math.fsubf128
-    libc.src.math.modff128
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
     libc.src.math.remainderf128
-    libc.src.math.remquof128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
   )
