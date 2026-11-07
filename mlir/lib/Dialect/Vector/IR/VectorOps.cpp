@@ -7198,22 +7198,6 @@ public:
   }
 };
 
-// vector.broadcast has two distinct semantic modes: duplication across leading
-// dimensions, and stretching across inner dimensions. This helper returns the
-// product of the inner-dimension stretching factors.
-int64_t getBroadcastStretchingFactor(ArrayRef<int64_t> srcShape,
-                                     ArrayRef<int64_t> dstShape) {
-  int stretchingFactor = 1;
-  int numLeadingDims = dstShape.size() - srcShape.size();
-  for (int i = 0, e = srcShape.size(); i < e; i++) {
-    int64_t dstDim = dstShape[numLeadingDims + i];
-    if (srcShape[i] == 1 && dstDim != 1) {
-      stretchingFactor *= dstDim;
-    }
-  }
-  return stretchingFactor;
-}
-
 /// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as Y = Broadcast(X)
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
@@ -7226,37 +7210,73 @@ public:
     if (!broadcastOp)
       return failure();
 
-    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
-    bool srcIsScalar = !srcVectorType;
-
     // Replace Y = ShapeCast(Broadcast(X)) with Y = Broadcast(X)
     // Example
     // %0 = vector.broadcast %in : vector<3xf32> to vector<2x4x3xf32>
     // %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
     // to
     // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
+    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    bool srcIsScalar = !srcVectorType;
     VectorType dstVectorType = shapeCastOp.getResultVectorType();
-    ArrayRef<int64_t> dstShape = dstVectorType.getShape();
-    ArrayRef<int64_t> srcShape =
-        srcIsScalar ? ArrayRef<int64_t>{} : srcVectorType.getShape();
-    ArrayRef<int64_t> broadcastShape =
-        broadcastOp.getResultVectorType().getShape();
 
     if (!srcIsScalar) {
       if (isBroadcastableTo(srcVectorType, dstVectorType) !=
           BroadcastableToResult::Success) {
         return failure();
       }
-      // Avoid folding if this would result in switching between the two
-      // distinct semantic modes of vector.broadcast (duplication vs
-      // stretching). See https://github.com/llvm/llvm-project/issues/190614.
-      // This is detected by a change in the stretching factor. However if the
-      // source has a single element, there is no ambiguity.
-      if (srcVectorType.getNumElements() != 1) {
-        if (getBroadcastStretchingFactor(srcShape, dstShape) !=
-            getBroadcastStretchingFactor(srcShape, broadcastShape)) {
+      // For a fixed source shape, the result strides determine which source
+      // element supplies each linear position in the broadcast result (see the
+      // `BroadcastOp` documentation for the closed-form mapping). Since
+      // `shape_cast` preserves the flattened 1-D (row-major) element order,
+      // folding `shape_cast(broadcast(src, bcastShape), dstShape)` into
+      // `broadcast(src, dstShape)` is valid when every non-unit source
+      // dimension has the same corresponding result stride in both `bcastShape`
+      // and `dstShape`.
+      //
+      // For scalable vectors, a dimension's runtime stride is
+      // `staticStride * (vscale ^ numTrailingScalableDims)`. Note that scalable
+      // dimensions may still move across leading or unit source dimensions
+      // (e.g. `2x[4]x4 -> [8]x4` or `2x1x[4]x3 -> 2x[2]x2x3`), as long as both
+      // the static stride product and the number of trailing scalable
+      // dimensions match at every non-unit source dimension.
+      VectorType broadcastVectorType = broadcastOp.getResultVectorType();
+      int64_t srcRank = srcVectorType.getRank();
+      int64_t bcastRank = broadcastVectorType.getRank();
+      int64_t dstRank = dstVectorType.getRank();
+      ArrayRef<int64_t> srcShape = srcVectorType.getShape();
+      ArrayRef<int64_t> bcastShape = broadcastVectorType.getShape();
+      ArrayRef<int64_t> dstShape = dstVectorType.getShape();
+      ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
+      ArrayRef<bool> bcastScalable = broadcastVectorType.getScalableDims();
+      ArrayRef<bool> dstScalable = dstVectorType.getScalableDims();
+
+      // Iterate from the innermost (trailing) dimension outward, aligning each
+      // `src` dimension with the corresponding trailing dimension of
+      // `broadcast` and `dst`.
+      int64_t bcastStride = 1, dstStride = 1;
+      int64_t bcastTrailingScalableDims = 0, dstTrailingScalableDims = 0;
+      for (int64_t i = 0; i < srcRank; ++i) {
+        int64_t srcDim = srcRank - 1 - i;
+        int64_t bcastDim = bcastRank - 1 - i;
+        int64_t dstDim = dstRank - 1 - i;
+
+        // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
+        // not unit) always map to source coordinate 0, so their stride is
+        // irrelevant.
+        bool isUnitDim = srcShape[srcDim] == 1 && !srcScalable[srcDim];
+        if (!isUnitDim &&
+            (bcastStride != dstStride ||
+             bcastTrailingScalableDims != dstTrailingScalableDims)) {
           return failure();
         }
+
+        bcastStride *= bcastShape[bcastDim];
+        dstStride *= dstShape[dstDim];
+        if (bcastScalable[bcastDim])
+          ++bcastTrailingScalableDims;
+        if (dstScalable[dstDim])
+          ++dstTrailingScalableDims;
       }
     }
 
