@@ -84,7 +84,7 @@ bool PPCLinuxToolChain::supportIBMLongDouble(
 bool PPCLinuxToolChain::SupportIEEEFloat128(
     const Driver &D, const llvm::Triple &Triple,
     const llvm::opt::ArgList &Args) const {
-  if (!Triple.isLittleEndian() || !Triple.isPPC64())
+  if (!Triple.isPPC64())
     return false;
 
   if (Args.hasArg(options::OPT_nostdlib, options::OPT_nostdlibxx))

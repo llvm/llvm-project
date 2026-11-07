@@ -73,7 +73,7 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    stfd 2, -8(1)
 ; PPC64-NEXT:    fctidz 2, 1
 ; PPC64-NEXT:    stfd 2, -16(1)
-; PPC64-NEXT:    blt 0, .LBB2_2
+; PPC64-NEXT:    bc 12, 0, .LBB2_2
 ; PPC64-NEXT:  # %bb.1: # %entry
 ; PPC64-NEXT:    ld 3, -8(1)
 ; PPC64-NEXT:    li 4, 1
@@ -86,7 +86,7 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    sradi 4, 3, 53
 ; PPC64-NEXT:    addi 4, 4, 1
 ; PPC64-NEXT:    cmpldi 4, 1
-; PPC64-NEXT:    bgt 0, .LBB2_5
+; PPC64-NEXT:    bc 12, 1, .LBB2_5
 ; PPC64-NEXT:  # %bb.4: # %entry
 ; PPC64-NEXT:    mr 4, 3
 ; PPC64-NEXT:    b .LBB2_6
@@ -103,7 +103,7 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    cmpldi 5, 1
 ; PPC64-NEXT:    rldicl 5, 3, 63, 1
 ; PPC64-NEXT:    or 4, 6, 5
-; PPC64-NEXT:    ble 0, .LBB2_8
+; PPC64-NEXT:    bc 4, 1, .LBB2_8
 ; PPC64-NEXT:  # %bb.7:
 ; PPC64-NEXT:    clrldi 4, 4, 53
 ; PPC64-NEXT:    addi 4, 4, 2047
@@ -154,7 +154,7 @@ define double @fooudl(double %X) #0 {
 ; PPC64-NEXT:    stfd 2, -8(1)
 ; PPC64-NEXT:    fctidz 2, 1
 ; PPC64-NEXT:    stfd 2, -16(1)
-; PPC64-NEXT:    blt 0, .LBB3_2
+; PPC64-NEXT:    bc 12, 0, .LBB3_2
 ; PPC64-NEXT:  # %bb.1: # %entry
 ; PPC64-NEXT:    ld 3, -8(1)
 ; PPC64-NEXT:    li 4, 1
