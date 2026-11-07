@@ -368,9 +368,9 @@ int main()
 // IR-GPU-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // IR-GPU:       omp.inner.for.cond:
 // IR-GPU-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// IR-GPU-NEXT:    [[CONV7:%.*]] = sext i32 [[TMP13]] to i64
 // IR-GPU-NEXT:    [[TMP14:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[CMP8:%.*]] = icmp ule i64 [[CONV7]], [[TMP14]]
+// IR-GPU-NEXT:    [[CONV7:%.*]] = trunc i64 [[TMP14]] to i32
+// IR-GPU-NEXT:    [[CMP8:%.*]] = icmp sle i32 [[TMP13]], [[CONV7]]
 // IR-GPU-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // IR-GPU:       omp.inner.for.body:
 // IR-GPU-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -742,7 +742,7 @@ int main()
 // IR-GPU:       omp.inner.for.cond:
 // IR-GPU-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTOMP_IV_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP17:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[CMP13:%.*]] = icmp ule i64 [[TMP16]], [[TMP17]]
+// IR-GPU-NEXT:    [[CMP13:%.*]] = icmp sle i64 [[TMP16]], [[TMP17]]
 // IR-GPU-NEXT:    br i1 [[CMP13]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // IR-GPU:       omp.inner.for.body:
 // IR-GPU-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTOMP_IV_ASCAST]], align 8
@@ -1126,9 +1126,9 @@ int main()
 // IR-GPU-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // IR-GPU:       omp.inner.for.cond:
 // IR-GPU-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// IR-GPU-NEXT:    [[CONV7:%.*]] = sext i32 [[TMP13]] to i64
 // IR-GPU-NEXT:    [[TMP14:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[CMP8:%.*]] = icmp ule i64 [[CONV7]], [[TMP14]]
+// IR-GPU-NEXT:    [[CONV7:%.*]] = trunc i64 [[TMP14]] to i32
+// IR-GPU-NEXT:    [[CMP8:%.*]] = icmp sle i32 [[TMP13]], [[CONV7]]
 // IR-GPU-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // IR-GPU:       omp.inner.for.body:
 // IR-GPU-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -3273,7 +3273,7 @@ int main()
 // IR-GPU-NESTED:       omp.inner.for.cond:
 // IR-GPU-NESTED-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTOMP_IV_ASCAST]], align 8
 // IR-GPU-NESTED-NEXT:    [[TMP17:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8
-// IR-GPU-NESTED-NEXT:    [[CMP13:%.*]] = icmp ule i64 [[TMP16]], [[TMP17]]
+// IR-GPU-NESTED-NEXT:    [[CMP13:%.*]] = icmp sle i64 [[TMP16]], [[TMP17]]
 // IR-GPU-NESTED-NEXT:    br i1 [[CMP13]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // IR-GPU-NESTED:       omp.inner.for.body:
 // IR-GPU-NESTED-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTOMP_IV_ASCAST]], align 8
