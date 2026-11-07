@@ -1,0 +1,25 @@
+//===--- MlirOptFuzzerPipelines.def --------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// The fuzz target's closed pipeline vocabulary: one row per pipeline,
+// slug first, then the pipeline text relative to the module anchor
+// (inner text only — never re-anchor 'builtin.module', the target
+// rejects that at startup). The target looks the slug up at startup;
+// an unknown slug is a startup error. Adding a pipeline is one row
+// here — no other file changes.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MLIR_OPT_FUZZER_PIPELINE
+#error "Define MLIR_OPT_FUZZER_PIPELINE(slug, pipeline) before including this file"
+#endif
+
+MLIR_OPT_FUZZER_PIPELINE("cse", "func.func(cse)")
+MLIR_OPT_FUZZER_PIPELINE("canonicalize", "func.func(canonicalize)")
+MLIR_OPT_FUZZER_PIPELINE("remove-dead-values", "remove-dead-values")
+MLIR_OPT_FUZZER_PIPELINE("rdv-privatize-cse", "symbol-privatize,remove-dead-values,func.func(cse)")
