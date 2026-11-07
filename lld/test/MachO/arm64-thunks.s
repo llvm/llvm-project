@@ -199,12 +199,12 @@
 # CHECK:  bl 0x[[#%x, G]] <_g>
 # CHECK:  bl 0x[[#%x, H]] <_h>
 # CHECK:  bl 0x[[#%x, FOLD_LOW_THUNK_0:]] <_fold_func_low_addr.thunk.0>
-# CHECK:  bl 0x[[#%x, FOLD_HIGH:]] <_fold_func_high_addr>
+# CHECK:  bl 0x[[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>
 # CHECK:  bl 0x[[#%x, NAN]]
 # CHECK:  bl 0x[[#%x, FOO:]] <_objc_msgSend$foo>
 # CHECK:  bl 0x[[#%x, BAR:]] <_objc_msgSend$bar>
 
-# CHECK: [[#%x, FOLD_HIGH]] <_fold_func_high_addr>:
+# CHECK: [[#%x, FOLD_HIGH:]] <_fold_func_high_addr>:
 # CHECK:  b 0x[[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>
 
 # CHECK: [[#%x, C_THUNK_0]] <_c.thunk.0>:
