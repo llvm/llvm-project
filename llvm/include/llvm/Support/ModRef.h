@@ -112,7 +112,7 @@ public:
                               force_iteration_on_noniterable_enum);
   }
   /// Returns iterator over floating-point state locations.
-  static auto fpenvLocations() {
+  static auto fpEnvLocations() {
     return enum_seq_inclusive(Location::FPControl, Location::FPStatus,
                               force_iteration_on_noniterable_enum);
   }
@@ -170,8 +170,8 @@ public:
   }
 
   /// Create MemoryEffectsBase that can only access floating-point state
-  /// register.
-  static MemoryEffectsBase fpenvOnly(ModRefInfo ControlMR = ModRefInfo::ModRef,
+  /// registers.
+  static MemoryEffectsBase fpEnvOnly(ModRefInfo ControlMR = ModRefInfo::ModRef,
                                      ModRefInfo StatusMR = ModRefInfo::ModRef) {
     MemoryEffectsBase Result = none();
     Result.setModRef(Location::FPControl, ControlMR);
@@ -181,7 +181,7 @@ public:
 
   /// Create MemoryEffectsBase that can only access floating-point
   /// control modes.
-  static MemoryEffectsBase fpcontrolOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+  static MemoryEffectsBase fpControlOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     MemoryEffectsBase Result = none();
     Result.setModRef(Location::FPControl, MR);
     return Result;
@@ -189,7 +189,7 @@ public:
 
   /// Create MemoryEffectsBase that can only access floating-point
   /// status bits.
-  static MemoryEffectsBase fpstatusOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+  static MemoryEffectsBase fpStatusOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     MemoryEffectsBase Result = none();
     Result.setModRef(Location::FPStatus, MR);
     return Result;
@@ -301,13 +301,12 @@ public:
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
-  /// Whether this function only (at most) accesses inaccessible or target
-  /// memory or floating-point environment.
-  bool onlyAccessesNonaddressableMem() const {
+  /// Whether this function only (at most) accesses pseudo memory locations.
+  bool onlyAccessesPseudoMem() const {
     MemoryEffectsBase ME = *this;
     for (auto Loc : MemoryEffectsBase::targetMemLocations())
       ME &= ME.getWithoutLoc(Loc);
-    for (auto Loc : MemoryEffectsBase::fpenvLocations())
+    for (auto Loc : MemoryEffectsBase::fpEnvLocations())
       ME &= ME.getWithoutLoc(Loc);
     return ME.getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
@@ -334,13 +333,13 @@ public:
 
   /// Whether location represents floating-point environment.
   static bool isFPEnvMemLoc(IRMemLocation Loc) {
-    return llvm::any_of(fpenvLocations(),
+    return llvm::any_of(fpEnvLocations(),
                         [=](IRMemLocation L) { return L == Loc; });
   }
 
   /// Whether all floating-point locations are not accessed.
   bool doesNotAccessFPEnv() const {
-    return llvm::all_of(fpenvLocations(), [=](IRMemLocation L) {
+    return llvm::all_of(fpEnvLocations(), [=](IRMemLocation L) {
       return getModRef(L) == ModRefInfo::NoModRef;
     });
   }

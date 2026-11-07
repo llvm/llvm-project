@@ -2776,7 +2776,7 @@ static SmallVector<MemoryEffects::Location, 2> keywordToLoc(lltok::Kind Tok) {
     return {Loc::FPStatus};
   case lltok::kw_fpenv: {
     SmallVector<MemoryEffects::Location, 2> FPLocs;
-    for (auto Loc : MemoryEffects::fpenvLocations())
+    for (auto Loc : MemoryEffects::fpEnvLocations())
       FPLocs.push_back(Loc);
     return FPLocs;
   }
