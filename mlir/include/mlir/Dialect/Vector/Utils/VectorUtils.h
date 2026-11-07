@@ -44,6 +44,11 @@ namespace vector {
 /// the type of `source`.
 Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 
+/// Returns the conjunction of `mask` and `optionalMask`, or `mask` when the
+/// latter is null.
+Value combineMasks(OpBuilder &builder, Location loc, Value mask,
+                   Value optionalMask);
+
 /// Returns two dims that are greater than one if the transposition is applied
 /// on a 2D slice. Otherwise, returns a failure.
 FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
