@@ -163,9 +163,9 @@ int rethrow_from_block(int a, int b) {
   return a / b;
 }
 
+// CIR:  %[[RES_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:  %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR:  %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
-// CIR:  %[[RES_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:  cir.store %{{.*}}, %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  cir.store %{{.*}}, %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  cir.scope {
@@ -184,21 +184,19 @@ int rethrow_from_block(int a, int b) {
 // CIR:  %[[RESULT:.*]] = cir.load %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.return %[[RESULT]] : !s32i
 
+// LLVM: %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM: %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
-// LLVM: %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM: store i32 %{{.*}}, ptr %[[A_ADDR]], align 4
 // LLVM: store i32 %{{.*}}, ptr %[[B_ADDR]], align 4
 // LLVM: br label %[[CHECK_COND:.*]]
 // LLVM: [[CHECK_COND]]:
 // LLVM:  %[[TMP_B:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:  %[[IS_B_ZERO:.*]] = icmp eq i32 %[[TMP_B]], 0
-// LLVM:  br i1 %[[IS_B_ZERO]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+// LLVM:  br i1 %[[IS_B_ZERO]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // LLVM: [[IF_THEN]]:
 // LLVM:  call void @__cxa_rethrow()
 // LLVM:  unreachable
-// LLVM: [[IF_ELSE]]:
-// LLVM:  br label %[[IF_END:.*]]
 // LLVM: [[IF_END]]:
 // LLVM:  %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM:  %[[TMP_B:.*]] = load i32, ptr %[[B_ADDR]], align 4

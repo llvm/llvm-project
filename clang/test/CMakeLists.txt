@@ -107,29 +107,21 @@ list(APPEND CLANG_TEST_DEPS
   clang-ssaf-analyzer
   clang-ssaf-format
   clang-ssaf-linker
-  clang-ssaf-merge-conflict-report
-  clang-ssaf-merge-transformation-report
   clang-ssaf-src-edit-merge
   clang-sycl-linker
   diagtool
   hmaptool
   )
 
-if(NOT WIN32)
-  list(APPEND CLANG_TEST_DEPS
-    clang-ssaf-driver
-    clang-ssaf-orchestrator-make
-    )
-  if(TARGET clang-apply-replacements)
-    list(APPEND CLANG_TEST_DEPS clang-apply-replacements)
-  endif()
-endif()
-
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
     cir-translate
+    llvm-strings
     )
+  if(NOT CLANG_BUILT_STANDALONE)
+    list(APPEND CLANG_TEST_DEPS llvm-strings)
+  endif()
   add_subdirectory(CIR/lib)
 endif()
 

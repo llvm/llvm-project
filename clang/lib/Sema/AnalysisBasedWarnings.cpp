@@ -1276,11 +1276,13 @@ public:
         continue; // Switch statement, good.
 
       const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
-      if (SW && SW->getSubStmt() == B.getLabel() && P->begin() == P->end())
+      if (SW && stripAttributedStmt(SW->getSubStmt()) == B.getLabel() &&
+          P->begin() == P->end())
         continue; // Previous case label has no statements, good.
 
       const LabelStmt *L = dyn_cast_or_null<LabelStmt>(P->getLabel());
-      if (L && L->getSubStmt() == B.getLabel() && P->begin() == P->end())
+      if (L && stripAttributedStmt(L->getSubStmt()) == B.getLabel() &&
+          P->begin() == P->end())
         continue; // Case label is preceded with a normal label, good.
 
       if (!ReachableBlocks.count(P)) {
@@ -1354,6 +1356,13 @@ public:
     }
 
   private:
+    static const Stmt *stripAttributedStmt(const Stmt *S) {
+      if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S)) {
+        assert(!isa<AttributedStmt>(AS->getSubStmt()));
+        return AS->getSubStmt();
+      }
+      return S;
+    }
 
     static const AttributedStmt *asFallThroughAttr(const Stmt *S) {
       if (const AttributedStmt *AS = dyn_cast_or_null<AttributedStmt>(S)) {
@@ -2742,6 +2751,11 @@ public:
     return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
   }
 
+  bool
+  ignoreUnsafeBufferInFormatAttrCall(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_format_attr_call, Loc);
+  }
+
   bool ignoreUnsafeBufferInStaticSizedArray(
       const SourceLocation &Loc) const override {
     return S.Diags.isIgnored(
@@ -3058,8 +3072,9 @@ static bool shouldRunUnsafeBufferUsageAnalysis(const Sema &S,
   return !Diags.isIgnored(diag::warn_unsafe_buffer_operation, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_variable, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc) ||
-         (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc) &&
-          S.getLangOpts().CPlusPlus);
+         (S.getLangOpts().CPlusPlus &&
+          (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc) ||
+           !Diags.isIgnored(diag::warn_unsafe_buffer_format_attr_call, Loc)));
 }
 
 /// \return true iff fix-its should be emitted along with -Wunsafe-buffer-usage

@@ -90,15 +90,15 @@ __device__ void nvvm_min_max_sm80() {
 // CHECK-LABEL: nvvm_fma_f16_f16x2_sm80
 __device__ void nvvm_fma_f16_f16x2_sm80() {
 #if __CUDA_ARCH__ >= 800
-  // CHECK_PTX70_SM80: call half @llvm.nvvm.fma.rn.relu.f16
+  // CHECK_PTX70_SM80: call half @llvm.nvvm.fma.relu.f16({{.*}}i32 1)
   __nvvm_fma_rn_relu_f16(0.1f16, 0.1f16, 0.1f16);
-  // CHECK_PTX70_SM80: call half @llvm.nvvm.fma.rn.ftz.relu.f16
+  // CHECK_PTX70_SM80: call half @llvm.nvvm.fma.ftz.relu.f16({{.*}}i32 1)
   __nvvm_fma_rn_ftz_relu_f16(0.1f16, 0.1f16, 0.1f16);
 
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fma.rn.relu.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fma.relu.v2f16({{.*}}i32 1)
   __nvvm_fma_rn_relu_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16},
                            {0.1f16, 0.7f16});
-  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fma.rn.ftz.relu.f16x2
+  // CHECK_PTX70_SM80: call <2 x half> @llvm.nvvm.fma.ftz.relu.v2f16({{.*}}i32 1)
   __nvvm_fma_rn_ftz_relu_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16},
                                {0.1f16, 0.7f16});
 #endif
@@ -108,25 +108,25 @@ __device__ void nvvm_fma_f16_f16x2_sm80() {
 // CHECK-LABEL: nvvm_fma_f16_f16x2_sm53
 __device__ void nvvm_fma_f16_f16x2_sm53() {
 #if __CUDA_ARCH__ >= 530
-  // CHECK_PTX65_SM53: call half @llvm.nvvm.fma.rn.f16
+  // CHECK_PTX65_SM53: call half @llvm.nvvm.fma.f16({{.*}}i32 1)
   __nvvm_fma_rn_f16(0.1f16, 0.1f16, 0.1f16);
-  // CHECK_PTX65_SM53: call half @llvm.nvvm.fma.rn.ftz.f16
+  // CHECK_PTX65_SM53: call half @llvm.nvvm.fma.ftz.f16({{.*}}i32 1)
   __nvvm_fma_rn_ftz_f16(0.1f16, 0.1f16, 0.1f16);
-  // CHECK_PTX65_SM53: call half @llvm.nvvm.fma.rn.sat.f16
+  // CHECK_PTX65_SM53: call half @llvm.nvvm.fma.sat.f16({{.*}}i32 1)
   __nvvm_fma_rn_sat_f16(0.1f16, 0.1f16, 0.1f16);
-  // CHECK_PTX65_SM53: call half @llvm.nvvm.fma.rn.ftz.sat.f16
+  // CHECK_PTX65_SM53: call half @llvm.nvvm.fma.ftz.sat.f16({{.*}}i32 1)
   __nvvm_fma_rn_ftz_sat_f16(0.1f16, 0.1f16, 0.1f16);
 
-  // CHECK_PTX65_SM53: call <2 x half> @llvm.nvvm.fma.rn.f16x2
+  // CHECK_PTX65_SM53: call <2 x half> @llvm.nvvm.fma.v2f16({{.*}}i32 1)
   __nvvm_fma_rn_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16},
                       {0.1f16, 0.7f16});
-  // CHECK_PTX65_SM53: call <2 x half> @llvm.nvvm.fma.rn.ftz.f16x2
+  // CHECK_PTX65_SM53: call <2 x half> @llvm.nvvm.fma.ftz.v2f16({{.*}}i32 1)
   __nvvm_fma_rn_ftz_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16},
                           {0.1f16, 0.7f16});
-  // CHECK_PTX65_SM53: call <2 x half> @llvm.nvvm.fma.rn.sat.f16x2
+  // CHECK_PTX65_SM53: call <2 x half> @llvm.nvvm.fma.sat.v2f16({{.*}}i32 1)
   __nvvm_fma_rn_sat_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16},
                           {0.1f16, 0.7f16});
-  // CHECK_PTX65_SM53: call <2 x half> @llvm.nvvm.fma.rn.ftz.sat.f16x2
+  // CHECK_PTX65_SM53: call <2 x half> @llvm.nvvm.fma.ftz.sat.v2f16({{.*}}i32 1)
   __nvvm_fma_rn_ftz_sat_f16x2({0.1f16, 0.7f16}, {0.1f16, 0.7f16},
                               {0.1f16, 0.7f16});
 #endif

@@ -23,6 +23,7 @@ using namespace mlir;
 
 namespace mlir {
 void registerToLLVMIRTranslation() {
+  registerOpenMPTranslationCLOptions();
   TranslateFromMLIRRegistration registration(
       "mlir-to-llvmir", "Translate MLIR to LLVMIR",
       [](Operation *op, raw_ostream &output) {

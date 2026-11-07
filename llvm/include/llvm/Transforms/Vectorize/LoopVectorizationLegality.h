@@ -35,7 +35,6 @@
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
-class BlockFrequencyInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -44,7 +43,6 @@ class LoopInfo;
 class Metadata;
 class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
-class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
@@ -132,8 +130,7 @@ public:
   /// Mark the loop L as already vectorized by setting the width to 1.
   LLVM_ABI void setAlreadyVectorized();
 
-  LLVM_ABI bool allowVectorization(Function *F, Loop *L,
-                                   bool VectorizeOnlyWhenForced) const;
+  LLVM_ABI bool allowVectorization(Loop *L, bool VectorizeOnlyWhenForced) const;
 
   /// Dumps all the hint information.
   LLVM_ABI void emitRemarkWithHints() const;
@@ -255,6 +252,13 @@ struct HistogramInfo {
       : Load(Load), Update(Update), Store(Store), UpdateKind(UpdateKind) {}
 };
 
+/// Holds details about a "compressed" pointer: the conditional induction PHI
+/// used to derive the pointer and the SCEV expression for the pointer.
+struct CompressedPtrInfo {
+  PHINode *ConditionalInductionPHI;
+  const SCEVAddRecExpr *PtrSCEV;
+};
+
 /// Indicates the characteristics of a loop with an uncountable exit.
 /// * None      -- No uncountable exit present.
 /// * ReadOnly  -- At least one uncountable exit in a readonly loop.
@@ -297,6 +301,11 @@ public:
   /// InductionList saves induction variables and maps them to the
   /// induction descriptor.
   using InductionList = MapVector<PHINode *, InductionDescriptor>;
+
+  /// ConditionalInductionList saves conditional inductions and maps them to
+  /// their descriptors.
+  using ConditionalInductionList =
+      MapVector<PHINode *, ConditionalInductionDescriptor>;
 
   /// RecurrenceSet contains the phi nodes that are recurrences other than
   /// inductions and reductions.
@@ -341,6 +350,15 @@ public:
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
+  /// Returns the conditional inductions found in the loop.
+  const ConditionalInductionList &getConditionalInductions() const {
+    return ConditionalInductions;
+  }
+
+  bool hasConditionalInductions() const {
+    return !ConditionalInductions.empty();
+  }
+
   /// Return the fixed-order recurrences found in the loop.
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
@@ -381,7 +399,7 @@ public:
   /// 1 - Address is consecutive.
   /// -1 - Address is consecutive, and decreasing.
   /// NOTE: This method must only be used before modifying the original scalar
-  /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
+  /// loop. Do not use after executing a VPlan (PR34965).
   LLVM_ABI int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
   /// Returns true if \p V is invariant across all loop iterations according to
@@ -467,16 +485,32 @@ public:
   /// Returns a HistogramInfo* for the given instruction if it was determined
   /// to be part of a load -> update -> store sequence where multiple lanes
   /// may be working on the same memory address.
-  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+  const HistogramInfo *getHistogramInfo(Instruction *I) const {
     for (const HistogramInfo &HGram : Histograms)
       if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
         return &HGram;
 
-    return std::nullopt;
+    return nullptr;
   }
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
+
+  /// Returns the CompressedPtrInfo for \p Ptr if the pointer is defined via
+  /// a conditional induction PHI, otherwise std::nullopt.
+  std::optional<CompressedPtrInfo> getCompressedPtrInfo(Value *Ptr) const {
+    auto It = CompressedPtrs.find(Ptr);
+    if (It != CompressedPtrs.end())
+      return It->second;
+    return std::nullopt;
+  }
+
+  /// Returns true for \p I if it corresponds to a compressed load or store
+  /// (which can map to an llvm.masked.expandload or llvm.masked.compressstore).
+  bool isCompressedLoadOrStore(Instruction *I) {
+    return isa<LoadInst, StoreInst>(I) &&
+           getCompressedPtrInfo(getLoadStorePointerOperand(I)).has_value();
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -491,6 +525,8 @@ public:
   ScalarEvolution *getScalarEvolution() const { return PSE.getSE(); }
 
   DominatorTree *getDominatorTree() const { return DT; }
+
+  AAResults *getAA() const { return AA; }
 
   /// Returns all exiting blocks with a countable exit, i.e. the
   /// exit-not-taken count is known exactly at compile time.
@@ -509,9 +545,15 @@ private:
   bool canVectorizeLoopNestCFG(Loop *Lp, bool UseVPlanNativePath);
 
   /// Set up outer loop inductions by checking Phis in outer loop header for
-  /// supported inductions (int inductions). Return false if any of these Phis
-  /// is not a supported induction or if we fail to find an induction.
+  /// supported inductions (int and pointer inductions). Return false if any of
+  /// these Phis is not a supported induction or if we fail to find any
+  /// induction.
   bool setupOuterLoopInductions();
+
+  /// Return true if the widest induction type, used for the canonical IV and
+  /// trip count, can be determined, i.e. there is at least one integer or
+  /// pointer induction. Otherwise report the reason and return false.
+  bool canDetermineWidestInductionType();
 
   /// Return true if the pre-header, exiting and latch blocks of \p Lp
   /// (non-recursive) are considered legal for vectorization.
@@ -556,7 +598,8 @@ private:
   ///   2. The loop has only one early uncountable exit
   ///   3. The early exit block dominates the latch block.
   ///   4. The latch block has an exact exit count.
-  ///   5. The loop does not contain reductions or recurrences.
+  ///   5. The loop does not contain fixed-order recurrences or reductions where
+  ///   the live-out value is used from a non-latch exit..
   ///   6. We can prove at compile-time that loops will not contain faulting
   ///      loads, or that any faulting loads would also occur in a purely
   ///      scalar loop.
@@ -648,6 +691,12 @@ private:
   /// better choice for the main induction than the existing one.
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID);
 
+  /// Adds \p Phi to the conditional induction list and collects load/store
+  /// users of the PHI. Returns true if all users of \p Phi are legal for
+  /// vectorization.
+  bool addConditionalInduction(PHINode *Phi,
+                               const ConditionalInductionDescriptor &CondID);
+
   const VectorizeOptions &Opts;
 
   /// The loop that we evaluate.
@@ -694,6 +743,9 @@ private:
   /// variables can be pointers.
   InductionList Inductions;
 
+  /// Holds all of the conditional inductions found in the loop.
+  ConditionalInductionList ConditionalInductions;
+
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;
 
@@ -724,6 +776,11 @@ private:
   /// load -> update -> store instructions where multiple lanes in a vector
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
+
+  /// Contains all pointers used in the loop that are defined using an index
+  /// derived from a conditional induction PHI. Loads/stores to these pointers
+  /// map to expandloads or compressstores.
+  SmallDenseMap<const Value *, CompressedPtrInfo> CompressedPtrs;
 
   /// Whether or not creating SCEV predicates is allowed.
   bool AllowRuntimeSCEVChecks;

@@ -225,3 +225,17 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     spirv.Return
   }
 }
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Int8, Int64, Linkage], []> {
+  // CHECK: spirv.func @cpacked_struct(%{{.*}}: !spirv.ptr<!spirv.struct<(i8, i64, i32), CPacked>, CrossWorkgroup>)
+  spirv.func @cpacked_struct(%arg0: !spirv.ptr<!spirv.struct<(i8, i64, i32), CPacked>, CrossWorkgroup>) "None" {
+    spirv.Return
+  }
+
+  // CHECK: spirv.func @cpacked_identified_struct(%{{.*}}: !spirv.ptr<!spirv.struct<packed, (i8, i64, i32), CPacked>, CrossWorkgroup>)
+  spirv.func @cpacked_identified_struct(%arg0: !spirv.ptr<!spirv.struct<packed, (i8, i64, i32), CPacked>, CrossWorkgroup>) "None" {
+    spirv.Return
+  }
+}
