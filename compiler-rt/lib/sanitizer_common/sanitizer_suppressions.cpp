@@ -75,18 +75,15 @@ void SuppressionContext::ParseFromFile(const char *filename) {
   // Read the file.
   VPrintf(1, "%s: reading suppressions file at %s\n",
           SanitizerToolName, filename);
-  char *file_contents;
-  uptr buffer_size;
-  uptr contents_size;
-  if (!ReadFileToBuffer(filename, &file_contents, &buffer_size,
-                        &contents_size)) {
+  InternalMmapVector<char> file_contents;
+  if (!ReadFileToVector(filename, &file_contents)) {
     Printf("%s: failed to read suppressions file '%s'\n", SanitizerToolName,
            filename);
     Die();
   }
-
-  Parse(file_contents);
-  UnmapOrDie(file_contents, buffer_size);
+  // Make sure the file contents are null-terminated.
+  file_contents.push_back('\0');
+  Parse(file_contents.data());
 }
 
 bool SuppressionContext::Match(const char *str, const char *type,
