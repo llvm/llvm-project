@@ -2169,11 +2169,10 @@ define amdgpu_kernel void @v_ctlz_i8_sel_eq_neg1(ptr addrspace(1) noalias %out, 
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX10-GISEL-NEXT:    s_flbit_i32_b32 s3, s2
-; GFX10-GISEL-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX10-GISEL-NEXT:    s_min_u32 s3, s3, 32
 ; GFX10-GISEL-NEXT:    s_add_i32 s3, s3, 0xfff0
-; GFX10-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
-; GFX10-GISEL-NEXT:    s_cselect_b32 s2, 0xffff, s3
+; GFX10-GISEL-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX10-GISEL-NEXT:    s_cselect_b32 s2, s3, 0xffff
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm

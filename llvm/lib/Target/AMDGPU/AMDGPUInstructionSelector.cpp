@@ -1585,12 +1585,57 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
     int Opcode = getS_CMPOpcode(Pred, Size);
     if (Opcode == -1)
       return false;
-    MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode))
-            .add(I.getOperand(2))
-            .add(I.getOperand(3));
-    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), CCReg)
-      .addReg(AMDGPU::SCC);
-    constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
+
+    // Emits the S_CMP, which defines SCC, before InsertPt.
+    auto EmitCmp = [&](MachineBasicBlock::iterator InsertPt) {
+      MachineInstr *Cmp = BuildMI(*BB, InsertPt, DL, TII.get(Opcode))
+                              .add(I.getOperand(2))
+                              .add(I.getOperand(3));
+      constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
+    };
+
+    // Users were selected before I and read the result through
+    // "$scc = COPY CCReg". Replace those copies in this block with the compare
+    // instead of saving SCC to an SGPR.
+    auto IsSCCRestore = [&](const MachineInstr &MI) {
+      return MI.isCopy() && MI.getParent() == BB &&
+             MI.getOperand(0).getReg() == AMDGPU::SCC &&
+             MI.getOperand(1).getReg() == CCReg;
+    };
+
+    // Bounds the walk at the last restore.
+    unsigned NumRestores =
+        count_if(MRI->use_nodbg_instructions(CCReg), IsSCCRestore);
+    // True while SCC holds the compare result.
+    bool SCCValid = false;
+    bool ReadsMode = TII.get(Opcode).hasImplicitUseOfPhysReg(AMDGPU::MODE);
+    for (auto It = std::next(MachineBasicBlock::iterator(I)); NumRestores;) {
+      MachineInstr &MI = *It++;
+      // An FP compare is not repeatable once the FP mode changes.
+      if (ReadsMode && MI.modifiesRegister(AMDGPU::MODE, &TRI))
+        break;
+      if (IsSCCRestore(MI)) {
+        // Recompare only if SCC changed since the last compare.
+        if (!SCCValid)
+          EmitCmp(MI);
+        SCCValid = true;
+        MI.eraseFromParent();
+        --NumRestores;
+      } else if (MI.modifiesRegister(AMDGPU::SCC, &TRI)) {
+        SCCValid = false;
+      }
+    }
+
+    // No users left, so the original compare is not needed.
+    if (MRI->use_nodbg_empty(CCReg)) {
+      salvageDebugInfo(*MRI, I);
+      I.eraseFromParent();
+      return true;
+    }
+
+    // The remaining users need the result saved in CCReg.
+    EmitCmp(I.getIterator());
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), CCReg).addReg(AMDGPU::SCC);
     bool Ret =
         RBI.constrainGenericRegister(CCReg, AMDGPU::SReg_32RegClass, *MRI);
     I.eraseFromParent();

@@ -139,13 +139,11 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, i32 %x.size, ptr ad
 ; GFX10-NEXT:    s_lshl_b64 s[6:7], s[4:5], 2
 ; GFX10-NEXT:    s_add_u32 s12, s0, s6
 ; GFX10-NEXT:    s_addc_u32 s13, s1, s7
+; GFX10-NEXT:    s_andn2_b32 s10, s10, exec_lo
 ; GFX10-NEXT:    global_load_dword v4, v3, s[12:13]
+; GFX10-NEXT:    s_or_b32 s10, s10, exec_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s5, v4
-; GFX10-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX10-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX10-NEXT:    s_andn2_b32 s10, s10, exec_lo
-; GFX10-NEXT:    s_or_b32 s10, s10, exec_lo
 ; GFX10-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX10-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX10-NEXT:  ; %bb.4: ; in Loop: Header=BB2_3 Depth=1

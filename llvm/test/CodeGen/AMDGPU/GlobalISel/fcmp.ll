@@ -130,38 +130,7 @@ define void @fcmp_f16_uniform(half inreg %a, half inreg %b, ptr %p) {
 ; GFX12-NEXT:    s_cmp_u_f16 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
-; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s8, 0
-; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s9, 0
-; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s10, 0
-; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s11, 0
-; GFX12-NEXT:    s_cselect_b32 s10, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s12, 0
-; GFX12-NEXT:    s_cselect_b32 s11, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s13, 0
-; GFX12-NEXT:    s_cselect_b32 s12, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s14, 0
-; GFX12-NEXT:    s_cselect_b32 s13, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s2
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s3
+; GFX12-NEXT:    s_add_co_i32 s1, s2, s3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, s4
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -182,6 +151,8 @@ define void @fcmp_f16_uniform(half inreg %a, half inreg %b, ptr %p) {
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, s12
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, s13
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_i32 s1, s1, s14
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s0, s1, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -515,38 +486,7 @@ define void @fcmp_f32_uniform(float inreg %a, float inreg %b, ptr %p) {
 ; GFX12-NEXT:    s_cmp_u_f32 s0, s1
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX12-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX12-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX12-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s7, 0
-; GFX12-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s8, 0
-; GFX12-NEXT:    s_cselect_b32 s7, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s9, 0
-; GFX12-NEXT:    s_cselect_b32 s8, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s10, 0
-; GFX12-NEXT:    s_cselect_b32 s9, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s11, 0
-; GFX12-NEXT:    s_cselect_b32 s10, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s12, 0
-; GFX12-NEXT:    s_cselect_b32 s11, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s13, 0
-; GFX12-NEXT:    s_cselect_b32 s12, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s14, 0
-; GFX12-NEXT:    s_cselect_b32 s13, 1, 0
-; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s2
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_i32 s1, s1, s3
+; GFX12-NEXT:    s_add_co_i32 s1, s2, s3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, s4
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -567,6 +507,8 @@ define void @fcmp_f32_uniform(float inreg %a, float inreg %b, ptr %p) {
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, s12
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, s13
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_add_co_i32 s1, s1, s14
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_add_co_i32 s0, s1, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
