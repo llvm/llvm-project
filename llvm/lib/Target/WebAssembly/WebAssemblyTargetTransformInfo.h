@@ -94,6 +94,14 @@ public:
                  TTI::VectorInstrContext VIC =
                      TTI::VectorInstrContext::None) const override;
 
+  using BaseT::getScalarizationOverhead;
+  InstructionCost
+  getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override;
   using BaseT::getVectorInstrCost;
   InstructionCost
   getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
