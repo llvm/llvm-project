@@ -25,14 +25,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl::__statpart {
 
+// Assumptions that need to hold for this implementation
+static_assert(std::atomic_size_t::is_always_lock_free);
+static_assert(std::atomic<std::thread::id>::is_always_lock_free);
+
 struct Task;
 
 // Implementation of "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev, but with a fixed-size buffer.
 // The element type is a pointer to Task, nullptr is not a valid value.
-struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
-  SPMCQueue() noexcept                   = default;
-  SPMCQueue(const SPMCQueue&)            = delete;
-  SPMCQueue& operator=(const SPMCQueue&) = delete;
+struct alignas(std::hardware_destructive_interference_size) TaskQueue {
+  TaskQueue() noexcept                   = default;
+  TaskQueue(const TaskQueue&)            = delete;
+  TaskQueue& operator=(const TaskQueue&) = delete;
 
   // Allocates the buffer, must be called before the queue is used by any thread.
   // The capacity is rounded up to the next power of two.
@@ -111,7 +115,6 @@ private:
     std::atomic_ref<Task*>(elements[index & mask]).store(task, std::memory_order_relaxed);
   }
 
-  static_assert(std::atomic_size_t::is_always_lock_free);
   std::atomic_size_t bottom{0};
   std::atomic_size_t top{0};
   std::unique_ptr<Task*[]> elements;
@@ -132,82 +135,27 @@ struct Task {
 
 // QueueID represents the ownership of a queue and the number of nested acquisitions.
 struct QueueID {
-  static_assert(std::atomic<std::thread::id>::is_always_lock_free);
   std::atomic<std::thread::id> id = {};
   std::atomic_size_t aquire_count = 0;
 };
 
 // Sched is the scheduler that manages the worker threads and the queues.
-struct Sched {
+class Sched {
+public:
+  Sched();
+  void apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept;
+
 private:
   std::unique_ptr<std::thread[]> m_workers;
-  std::unique_ptr<SPMCQueue[]> m_queues;
+  std::unique_ptr<TaskQueue[]> m_queues;
   std::unique_ptr<QueueID[]> m_queue_ids;
   size_t m_workers_count;
   size_t m_queues_count;
   std::atomic_unsigned_lock_free m_epoch{0}; // Wait-wake mechanism
 
+  TaskQueue* acquire_queue(std::thread::id thread_id);
+  void release_queue(TaskQueue* queue);
   void worker_thread(size_t worker_num) noexcept;
-
-public:
-  Sched() {
-    size_t cpu_threads = std::thread::hardware_concurrency();
-    if (cpu_threads == 0)
-      cpu_threads = 1; // safe fallback
-
-    m_queues_count = cpu_threads * 2;
-    m_queues       = std::make_unique<SPMCQueue[]>(m_queues_count);
-    for (size_t i = 0; i < m_queues_count; ++i)
-      m_queues[i].init(cpu_threads * 2);
-    m_queue_ids = std::make_unique<QueueID[]>(m_queues_count);
-
-    m_workers_count = cpu_threads - 1;
-    m_workers       = std::make_unique<std::thread[]>(m_workers_count);
-
-    for (size_t i = 0; i < m_workers_count; ++i) {
-      std::thread worker(&Sched::worker_thread, this, i);
-      m_queue_ids[i].id.store(worker.get_id());
-      m_queue_ids[i].aquire_count.store(1);
-      m_workers[i] = std::move(worker);
-    }
-  }
-
-  void apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept;
-
-  SPMCQueue* acquire_queue(std::thread::id thread_id) {
-    for (size_t i = 0; i < m_queues_count; ++i) {
-      std::thread::id id = m_queue_ids[i].id.load();
-      if (id == thread_id) {
-        bool is_guest = i >= m_workers_count;
-        if (is_guest) {
-          m_queue_ids[i].aquire_count.fetch_add(1);
-        }
-        return &m_queues[i];
-      }
-    }
-    for (size_t i = 0; i < m_queues_count; ++i) {
-      std::thread::id id = m_queue_ids[i].id.load();
-      if (id == std::thread::id()) {
-        std::thread::id expected;
-        if (m_queue_ids[i].id.compare_exchange_strong(expected, thread_id)) {
-          // Acquired by a new guest thread => set aquire_count to 1
-          m_queue_ids[i].aquire_count.store(1);
-          return &m_queues[i];
-        }
-      }
-    }
-    return nullptr;
-  }
-
-  void release_queue(SPMCQueue* queue) {
-    size_t idx    = static_cast<size_t>(queue - m_queues.get());
-    bool is_guest = idx >= m_workers_count;
-    if (is_guest) {
-      if (m_queue_ids[idx].aquire_count.fetch_sub(1) == 1) {
-        m_queue_ids[idx].id.store(std::thread::id());
-      }
-    }
-  }
 };
 
 // For cases when the number of iterations is less than 2 or when there are no worker threads available,
@@ -233,6 +181,28 @@ inline void process_request(Task* task) noexcept {
   task->requests.count_down();
 }
 
+inline Sched::Sched() {
+  size_t cpu_threads = std::thread::hardware_concurrency();
+  if (cpu_threads == 0)
+    cpu_threads = 1; // safe fallback
+
+  m_queues_count = cpu_threads * 2;
+  m_queues       = std::make_unique<TaskQueue[]>(m_queues_count);
+  for (size_t i = 0; i < m_queues_count; ++i)
+    m_queues[i].init(cpu_threads * 2);
+  m_queue_ids = std::make_unique<QueueID[]>(m_queues_count);
+
+  m_workers_count = cpu_threads - 1;
+  m_workers       = std::make_unique<std::thread[]>(m_workers_count);
+
+  for (size_t i = 0; i < m_workers_count; ++i) {
+    std::thread worker(&Sched::worker_thread, this, i);
+    m_queue_ids[i].id.store(worker.get_id());
+    m_queue_ids[i].aquire_count.store(1);
+    m_workers[i] = std::move(worker);
+  }
+}
+
 inline void Sched::worker_thread(size_t worker_index) noexcept {
   while (true) {
     std::atomic_unsigned_lock_free::value_type epoch = m_epoch.load(); // Load the epoch before looking for work
@@ -255,6 +225,41 @@ inline void Sched::worker_thread(size_t worker_index) noexcept {
   }
 }
 
+inline TaskQueue* Sched::acquire_queue(std::thread::id thread_id) {
+  for (size_t i = 0; i < m_queues_count; ++i) {
+    std::thread::id id = m_queue_ids[i].id.load();
+    if (id == thread_id) {
+      bool is_guest = i >= m_workers_count;
+      if (is_guest) {
+        m_queue_ids[i].aquire_count.fetch_add(1);
+      }
+      return &m_queues[i];
+    }
+  }
+  for (size_t i = 0; i < m_queues_count; ++i) {
+    std::thread::id id = m_queue_ids[i].id.load();
+    if (id == std::thread::id()) {
+      std::thread::id expected;
+      if (m_queue_ids[i].id.compare_exchange_strong(expected, thread_id)) {
+        // Acquired by a new guest thread => set aquire_count to 1
+        m_queue_ids[i].aquire_count.store(1);
+        return &m_queues[i];
+      }
+    }
+  }
+  return nullptr;
+}
+
+inline void Sched::release_queue(TaskQueue* queue) {
+  size_t idx    = static_cast<size_t>(queue - m_queues.get());
+  bool is_guest = idx >= m_workers_count;
+  if (is_guest) {
+    if (m_queue_ids[idx].aquire_count.fetch_sub(1) == 1) {
+      m_queue_ids[idx].id.store(std::thread::id());
+    }
+  }
+}
+
 // The entrypoint to parallel execution.
 // Apply the function to the range of iterations in parallel using worker threads.
 // The caller thread also participates in processing the workload.
@@ -270,7 +275,7 @@ inline void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*,
   std::thread::id thread_id = std::this_thread::get_id();
 
   // Acquire a queue for this thread.
-  SPMCQueue* queue = acquire_queue(thread_id);
+  TaskQueue* queue = acquire_queue(thread_id);
   if (queue == nullptr) {
     // If we cannot acquire a queue, fallback to serial execution.
     apply_serial(iterations, ctxt, func);
