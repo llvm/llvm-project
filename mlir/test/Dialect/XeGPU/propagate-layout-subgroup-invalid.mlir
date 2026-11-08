@@ -120,6 +120,10 @@ gpu.module @test {
         : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32>
       scf.yield %after : vector<256x128xf32>
     }
+    // The values the before region passes to the after region are laid out by
+    // a consumer after the scf.while.
+    xegpu.store_nd %0, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>}>
+      : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32>
     return
   }
 }

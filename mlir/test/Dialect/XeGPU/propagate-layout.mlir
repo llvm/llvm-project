@@ -606,6 +606,7 @@ gpu.module @test {
 // CHECK-NEXT: ^bb0(%{{.*}}: vector<16xf32>, %{{.*}}: i32):
 // CHECK:     scf.yield {{.*}} : vector<16xf32>, i32
 // CHECK-NEXT: } attributes {layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>, layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+// CHECK-NEXT: xegpu.store %{{.*}}#0, %[[ARG1]][%{{.*}}], %{{.*}} <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}>
 func.func @scf_while_and_condition(%arg0: memref<256xf32>, %arg1: memref<256xf32>) {
   %c0 = arith.constant 0 : i32
   %c16 = arith.constant 16 : i32
@@ -628,7 +629,9 @@ func.func @scf_while_and_condition(%arg0: memref<256xf32>, %arg1: memref<256xf32
     %6 = xegpu.load %arg0[%offset], %mask : memref<256xf32>, vector<16xindex>, vector<16xi1> -> vector<16xf32>
     scf.yield %6, %4 : vector<16xf32>, i32
   }
-
+  // The values the before region passes to the after region are laid out by
+  // a consumer after the scf.while, not by one in the after region.
+  xegpu.store %3#0, %arg1[%offset], %mask : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
   return
 }
 }

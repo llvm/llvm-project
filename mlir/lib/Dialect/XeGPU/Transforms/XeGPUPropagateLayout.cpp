@@ -64,9 +64,12 @@ namespace {
 /// single backward scan of the IR, writing each decision directly into the IR
 /// (anchor layouts, temporary layouts and tensor_desc types).
 ///
-/// Ops are visited in reverse program order, nested regions before their
-/// parent op, so an op is reached only after every consumer of its results,
-/// except a consumer reached through a loop back edge (yield -> iter_arg).
+/// Ops are visited backward by xegpu::walkBackward, shared with the layout
+/// recovery: in reverse program order, nested regions before their parent op.
+/// So an op is reached only after every consumer of its results, except a
+/// consumer reached through a loop back edge (scf.for's yield -> iter_arg) or,
+/// for scf.while, whose before region is walked first, through scf.condition ->
+/// after region.
 /// Each op therefore makes a one-time decision:
 ///   - each result takes the layout demanded by its nearest consumer in
 ///     program order. Consumers are visited from the farthest to the nearest,
@@ -79,10 +82,11 @@ namespace {
 ///   - a terminator operand can feed both a region argument (the next
 ///     iteration or the next region) and a region result (on exit). It takes
 ///     the region argument's layout when that is known, i.e. when the
-///     argument's region has already been walked (e.g. scf.condition feeding
-///     scf.while's "after" region). Otherwise it falls back to the region
-///     result's layout (e.g. scf.for's yield, whose iter_arg is reached only
-///     through the back edge);
+///     argument's region has already been walked (e.g. scf.while's "after"
+///     region yield, feeding the "before" region). Otherwise it falls back to
+///     the region result's layout (e.g. scf.for's yield, whose iter_arg is
+///     reached only through the back edge, or scf.condition, whose "after"
+///     region has not been walked yet);
 ///   - a region op's init operand takes the layout of the region argument it
 ///     feeds.
 ///
@@ -90,7 +94,7 @@ namespace {
 /// constrained only through the back edge) are filled afterwards by the
 /// forward walk in `xegpu::propagateLayouts`; remaining producer/consumer
 /// mismatches are resolved by ResolveLayoutConflicts.
-class LayoutPropagation {
+class LayoutPropagation final : public xegpu::BackwardLayoutVisitor {
 public:
   LayoutPropagation(Operation *scopeRoot, xegpu::LayoutKind layoutKind)
       : scopeRoot(scopeRoot), layoutKind(layoutKind) {}
@@ -122,16 +126,15 @@ private:
   // Backward scan
   //===--------------------------------------------------------------------===//
 
-  void walkRegionBackward(Region &region);
   // Records the layout a consumer demands of `val`, overriding the demand of
   // any consumer visited earlier (i.e. farther from the definition).
   void recordDemand(Value val, xegpu::DistributeLayoutAttr layout) {
     if (layout)
       valueLayouts[val] = layout;
   }
-  void visitRegularOp(Operation *op);
-  void visitTerminator(RegionBranchTerminatorOpInterface terminator);
-  void visitRegionOp(RegionBranchOpInterface regionOp);
+  void visitRegularOp(Operation *op) override;
+  void visitTerminator(RegionBranchTerminatorOpInterface terminator) override;
+  void visitRegionOp(RegionBranchOpInterface regionOp) override;
 
   //===--------------------------------------------------------------------===//
   // Transfer functions: given the layouts the consumers demand of an op's
@@ -1233,17 +1236,16 @@ updateFunctionSignature(FunctionOpInterface funcOp,
 }
 
 LogicalResult LayoutPropagation::run() {
-  SmallVector<FunctionOpInterface> funcOps;
-  scopeRoot->walk([&](FunctionOpInterface funcOp) {
-    if (funcOp.isExternal())
-      return;
-    walkRegionBackward(funcOp.getFunctionBody());
-    funcOps.push_back(funcOp);
-  });
+  xegpu::walkBackward(scopeRoot, *this);
   // An anchor op with no determinable layout cannot be lowered; stop before
   // the forward fill fabricates degenerate layouts from unlabeled values.
   if (propagationFailed)
     return failure();
+  SmallVector<FunctionOpInterface> funcOps;
+  scopeRoot->walk([&](FunctionOpInterface funcOp) {
+    if (!funcOp.isExternal())
+      funcOps.push_back(funcOp);
+  });
   for (FunctionOpInterface funcOp : funcOps) {
     if (failed(updateFunctionSignature(
             funcOp, [&](Value val) { return getLayout(val); }))) {
@@ -1252,30 +1254,6 @@ LogicalResult LayoutPropagation::run() {
     }
   }
   return success();
-}
-
-void LayoutPropagation::walkRegionBackward(Region &region) {
-  if (region.empty())
-    return;
-  llvm::ReversePostOrderTraversal<Region *> rpot(&region);
-  SmallVector<Block *> blocks(rpot.begin(), rpot.end());
-  for (Block *block : llvm::reverse(blocks)) {
-    for (Operation &op : llvm::reverse(*block)) {
-      // Regions are walked in reverse, as the reverse of program order: a
-      // later region's consumers are visited before the earlier region that
-      // feeds them (scf.while's "after" region before the "before" region's
-      // scf.condition).
-      for (Region &nested : llvm::reverse(op.getRegions()))
-        walkRegionBackward(nested);
-      auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(&op);
-      if (terminator && isa<RegionBranchOpInterface>(op.getParentOp()))
-        visitTerminator(terminator);
-      else if (auto regionOp = dyn_cast<RegionBranchOpInterface>(&op))
-        visitRegionOp(regionOp);
-      else
-        visitRegularOp(&op);
-    }
-  }
 }
 
 void LayoutPropagation::visitRegularOp(Operation *op) {
@@ -1324,11 +1302,11 @@ void LayoutPropagation::visitTerminator(
     // layout of the operand feeding it, is done by visitRegionOp.) An operand
     // may feed both a region argument (the next iteration or the next region)
     // and a region result (on exit); the region argument wins when it has a
-    // layout, e.g. scf.condition feeding scf.while's "after" region, whose
-    // consumers are inside the loop. Otherwise the region result's layout,
+    // layout, e.g. scf.while's "after" region yield feeding the "before"
+    // region, which is walked first. Otherwise the region result's layout,
     // decided by its consumers after the region op, is used, e.g. for scf.for's
-    // yield, whose iter_arg is reached only through the back edge and has no
-    // layout yet.
+    // yield, whose iter_arg is reached only through the back edge, or for
+    // scf.condition, whose "after" region has not been walked yet.
     xegpu::DistributeLayoutAttr layout;
     for (Value input : successorInputs)
       if (isa<BlockArgument>(input) && (layout = getLayout(input)))

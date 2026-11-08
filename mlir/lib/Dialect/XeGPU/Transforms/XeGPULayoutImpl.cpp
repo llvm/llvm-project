@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -89,35 +90,42 @@ static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {
   val.setType(typeWithLayout);
 }
 
-// the walkRegionBackward() is a recursive function
-// the input rootOp is the function operation, which is also a region op.
-// it recursively processes the region op in reverse topological order.
+/// Visits the ops of `region` backward; see xegpu::walkBackward.
 static void walkRegionBackward(Region &region,
-                               llvm::function_ref<void(Operation *)> visit) {
-
-  // Use post-order traversal to process blocks in reverse topological order.
-  // This ensures that use blocks are visited before def blocks, which is
-  // required for backward layout propagation.
+                               xegpu::BackwardLayoutVisitor &visitor) {
   if (region.empty())
     return;
+  // Blocks in reverse of reverse post-order, so that the blocks using a value
+  // are visited before the block defining it.
   llvm::ReversePostOrderTraversal<Region *> rpot(&region);
   SmallVector<Block *> blocks(rpot.begin(), rpot.end());
   for (Block *block : llvm::reverse(blocks)) {
-    // ops: back -> front
     for (Operation &op : llvm::reverse(*block)) {
-      // make sure we first visit inside the region op (so yield op first)
-      // and then move to region op itself
-      // Regions are iterated in forward order so that for multi-region ops
-      // like scf.while, earlier regions (e.g., "before/cond") are processed
-      // first. This ensures that when a later region's terminator (e.g., "do"
-      // yield) needs the layout of an earlier region's block args, those
-      // layouts are already available from use points.
-      for (Region &nested : op.getRegions())
-        walkRegionBackward(nested, visit);
-
-      visit(&op);
+      // The regions of an op are walked before the op, in reverse program
+      // order, except for scf.while's (see xegpu::walkBackward).
+      if (isa<scf::WhileOp>(op)) {
+        for (Region &nested : op.getRegions())
+          walkRegionBackward(nested, visitor);
+      } else {
+        for (Region &nested : llvm::reverse(op.getRegions()))
+          walkRegionBackward(nested, visitor);
+      }
+      auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(&op);
+      if (terminator && isa<RegionBranchOpInterface>(op.getParentOp()))
+        visitor.visitTerminator(terminator);
+      else if (auto regionOp = dyn_cast<RegionBranchOpInterface>(&op))
+        visitor.visitRegionOp(regionOp);
+      else
+        visitor.visitRegularOp(&op);
     }
   }
+}
+
+void xegpu::walkBackward(Operation *root, BackwardLayoutVisitor &visitor) {
+  root->walk([&](FunctionOpInterface funcOp) {
+    if (!funcOp.isExternal())
+      walkRegionBackward(funcOp.getFunctionBody(), visitor);
+  });
 }
 
 static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
@@ -311,28 +319,28 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
 //       - This ensures that layouts are consistently propagated
 //       across region boundaries while preserving a single well-defined use for
 //       each definition at the region-op level.
-bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
-  auto processFunc = [&](Region &body, StringRef funcName) {
-    walkRegionBackward(body, [&](Operation *op) {
-      if (auto regionOp = dyn_cast<mlir::RegionBranchOpInterface>(op)) {
-        (void)xegpu::propagateRegionArgsToInits(regionOp,
-                                                getLayoutFromUsePoints);
-      } else if (auto yieldOp =
-                     dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
-        propagateRegionResultsToYieldOperands(yieldOp);
-      } else if (!dyn_cast<xegpu::AnchorLayoutInterface>(op)) {
-        propagateResultsToRegularOperands(op);
-      }
-    });
-  };
-  removeTemporaryLayoutAttrs(rootOp);
-  rootOp->walk([&](func::FuncOp func) {
-    processFunc(func.getBody(), func.getSymName());
-  });
-  rootOp->walk([&](gpu::GPUFuncOp func) {
-    processFunc(func.getBody(), func.getName());
-  });
+namespace {
+/// Recovers the temporary layouts from the anchor layouts, re-deriving each
+/// non-anchor op's result layout from its uses and its operand layouts from its
+/// result layout.
+struct LayoutRecovery final : public xegpu::BackwardLayoutVisitor {
+  void visitTerminator(RegionBranchTerminatorOpInterface terminator) override {
+    propagateRegionResultsToYieldOperands(terminator);
+  }
+  void visitRegionOp(RegionBranchOpInterface regionOp) override {
+    (void)xegpu::propagateRegionArgsToInits(regionOp, getLayoutFromUsePoints);
+  }
+  void visitRegularOp(Operation *op) override {
+    if (!isa<xegpu::AnchorLayoutInterface>(op))
+      propagateResultsToRegularOperands(op);
+  }
+};
+} // namespace
 
+bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
+  removeTemporaryLayoutAttrs(rootOp);
+  LayoutRecovery recovery;
+  walkBackward(rootOp, recovery);
   return true;
 }
 

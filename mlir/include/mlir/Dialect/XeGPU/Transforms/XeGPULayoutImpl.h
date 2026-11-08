@@ -57,6 +57,35 @@ using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
                                          GetLayoutFnTy getLayoutOfValue);
 
+/// Callbacks of a backward layout walk; see walkBackward.
+class BackwardLayoutVisitor {
+public:
+  virtual ~BackwardLayoutVisitor() = default;
+  /// A terminator forwarding values out of the regions of a region branch op
+  /// (e.g. scf.yield, scf.condition).
+  virtual void
+  visitTerminator(RegionBranchTerminatorOpInterface terminator) = 0;
+  /// A region branch op (e.g. scf.for), visited after all of its regions.
+  virtual void visitRegionOp(RegionBranchOpInterface regionOp) = 0;
+  /// Any other op.
+  virtual void visitRegularOp(Operation *op) = 0;
+};
+
+/// Walks the body of every function under `root` backward, so that an op is
+/// visited after all of its consumers except those reached through a loop back
+/// edge: blocks in reverse of reverse post-order, ops back to front, and the
+/// regions of an op, in reverse order, before the op itself.
+///
+/// scf.while is the exception: its before region is walked before its after
+/// region. Its regions feed each other (before -> scf.condition -> after ->
+/// scf.yield -> before), so any order cuts one edge of that cycle. This order
+/// keeps the after region's scf.yield -> before region edge, and cuts the
+/// scf.condition -> after region one: what the before region passes to the
+/// after region is laid out from its uses in the before region and after the
+/// scf.while (e.g. a store of the scf.while result), not from its uses in the
+/// after region.
+void walkBackward(Operation *root, BackwardLayoutVisitor &visitor);
+
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
 /// lacks a layout attribute.
