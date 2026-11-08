@@ -181,6 +181,7 @@ class REPL;
 class RealpathPrefixes;
 class RecognizedStackFrame;
 class RegisterCheckpoint;
+class RegisterContext;
 class ThreadRegisterContext;
 class RegisterTypeBuilder;
 class RegisterValue;
