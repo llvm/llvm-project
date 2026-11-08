@@ -815,6 +815,15 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "MCToolOptionsTableGen",
+    strip_include_prefix = "lib/MC",
+    tbl_outs = {"lib/MC/MCToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/MC/MCToolOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "MC",
     srcs = glob([
@@ -831,6 +840,7 @@ cc_library(
         ":DebugInfoCodeView",
         ":DebugInfoDWARFLowLevel",
         ":MCCLOptionsTableGen",
+        ":MCToolOptionsTableGen",
         ":Option",
         ":Support",
         ":TargetParser",

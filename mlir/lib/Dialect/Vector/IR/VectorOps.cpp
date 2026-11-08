@@ -4055,7 +4055,7 @@ static Value foldInsertUseChain(InsertOp insertOp) {
     return {};
 
   insertOp.setOperand(1, destInsert.getDest());
-  return insertOp.getDest();
+  return insertOp.getResult();
 }
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,

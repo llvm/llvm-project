@@ -661,7 +661,8 @@ static void emitInitWithReductionInitializer(CodeGenFunction &CGF,
 /// \param DestAddr Address of the array.
 /// \param Type Type of array.
 /// \param Init Initial expression of array.
-/// \param SrcAddr Address of the original array.
+/// \param SrcAddr Address of the original array, required only if the declare
+/// reduction has an initializer.
 static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
                                  QualType Type, bool EmitDeclareReductionInit,
                                  const Expr *Init,
@@ -670,14 +671,19 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   // Perform element-by-element initialization.
   QualType ElementTy;
 
+  // Only the initializer of a declare reduction reads the original item.
+  bool UseSrc = DRD && DRD->getInitializer();
+  assert((!UseSrc || SrcAddr.isValid()) &&
+         "Declare reduction initializer requires the original item address.");
+
   // Drill down to the base element type on both arrays.
   const ArrayType *ArrayTy = Type->getAsArrayTypeUnsafe();
   llvm::Value *NumElements = CGF.emitArrayLength(ArrayTy, ElementTy, DestAddr);
-  if (DRD)
+  if (UseSrc)
     SrcAddr = SrcAddr.withElementType(DestAddr.getElementType());
 
   llvm::Value *SrcBegin = nullptr;
-  if (DRD)
+  if (UseSrc)
     SrcBegin = SrcAddr.emitRawPointer(CGF);
   llvm::Value *DestBegin = DestAddr.emitRawPointer(CGF);
   // Cast from pointer to array type to pointer to single element.
@@ -698,7 +704,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
 
   llvm::PHINode *SrcElementPHI = nullptr;
   Address SrcElementCurrent = Address::invalid();
-  if (DRD) {
+  if (UseSrc) {
     SrcElementPHI = CGF.Builder.CreatePHI(SrcBegin->getType(), 2,
                                           "omp.arraycpy.srcElementPast");
     SrcElementPHI->addIncoming(SrcBegin, EntryBB);
@@ -724,7 +730,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
                            /*IsInitializer=*/false);
   }
 
-  if (DRD) {
+  if (UseSrc) {
     // Shift the address forward by one element.
     llvm::Value *SrcElementNext = CGF.Builder.CreateConstGEP1_32(
         SrcAddr.getElementType(), SrcElementPHI, /*Idx0=*/1,

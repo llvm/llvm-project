@@ -49,7 +49,7 @@
 
 using namespace llvm;
 
-static mc::RegisterMCTargetOptionsFlags MOF;
+static mc::RegisterMCToolOptions MOF;
 
 static cl::OptionCategory MCCategory("MC Options");
 
@@ -413,7 +413,7 @@ int main(int argc, char **argv) {
     timeTraceProfilerCleanup();
   });
 
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = mc::getMCTargetOptions(LibraryOptions);
   MCOptions.LibraryOptions = &LibraryOptions;
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
