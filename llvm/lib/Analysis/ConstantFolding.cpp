@@ -188,10 +188,17 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     return Res;
 
   if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
-    // Handle a vector->scalar integer/fp cast.
-    if (isa<IntegerType>(DestTy) || DestTy->isFloatingPointTy()) {
+    // Handle a vector->scalar integer/fp/byte cast.
+    if (isa<IntegerType>(DestTy) || DestTy->isFloatingPointTy() ||
+        DestTy->isByteTy()) {
       unsigned NumSrcElts = cast<FixedVectorType>(VTy)->getNumElements();
       Type *SrcEltTy = VTy->getElementType();
+
+      // A byte constant can't represent partial poison values and pointer
+      // provenance.
+      if (DestTy->isByteTy() &&
+          (C->containsUndefOrPoisonElement() || SrcEltTy->isPointerTy()))
+        return ConstantExpr::getBitCast(C, DestTy);
 
       // Bitcasting a byte containing any poison bit to an integer or fp type
       // yields poison.
@@ -200,6 +207,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
       // If the vector is a vector of floating point or bytes, convert it to a
       // vector of int to simplify things.
+      Constant *OrigC = C;
       if (SrcEltTy->isFloatingPointTy() || SrcEltTy->isByteTy()) {
         unsigned Width = SrcEltTy->getPrimitiveSizeInBits();
         auto *SrcIVTy = FixedVectorType::get(
@@ -209,12 +217,19 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       }
 
       APInt Result(DL.getTypeSizeInBits(DestTy), 0);
-      if (Constant *CE = foldConstVectorToAPInt(Result, DestTy, C,
-                                                SrcEltTy, NumSrcElts, DL))
-        return CE;
+      if (Constant *CE = foldConstVectorToAPInt(Result, DestTy, C, SrcEltTy,
+                                                NumSrcElts, DL)) {
+        // Keep the original constant. CE reads the byte elements as integers,
+        // so it would drop the provenance of any pointer they hold.
+        return DestTy->isByteTy() ? ConstantExpr::getBitCast(OrigC, DestTy)
+                                  : CE;
+      }
 
       if (isa<IntegerType>(DestTy))
         return ConstantInt::get(DestTy, Result);
+
+      if (DestTy->isByteTy())
+        return ConstantByte::get(DestTy->getContext(), Result);
 
       APFloat FP(DestTy->getFltSemantics(), Result);
       return ConstantFP::get(DestTy->getContext(), FP);

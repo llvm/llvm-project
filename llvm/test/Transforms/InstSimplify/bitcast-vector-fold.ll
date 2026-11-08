@@ -807,32 +807,44 @@ define ptr @bitcast_constexpr_allones_2b16_ptr() {
 }
 
 define b64 @bitcast_constexpr_2i32_b64() {
-; CHECK-LABEL: @bitcast_constexpr_2i32_b64(
-; CHECK-NEXT:    ret b64 bitcast (<2 x i32> <i32 1, i32 2> to b64)
+; LE-LABEL: @bitcast_constexpr_2i32_b64(
+; LE-NEXT:    ret b64 8589934593
+;
+; BE-LABEL: @bitcast_constexpr_2i32_b64(
+; BE-NEXT:    ret b64 4294967298
 ;
   %res = bitcast <2 x i32> <i32 1, i32 2> to b64
   ret b64 %res
 }
 
 define b64 @bitcast_constexpr_2b32_b64() {
-; CHECK-LABEL: @bitcast_constexpr_2b32_b64(
-; CHECK-NEXT:    ret b64 bitcast (<2 x b32> <b32 1, b32 2> to b64)
+; LE-LABEL: @bitcast_constexpr_2b32_b64(
+; LE-NEXT:    ret b64 8589934593
+;
+; BE-LABEL: @bitcast_constexpr_2b32_b64(
+; BE-NEXT:    ret b64 4294967298
 ;
   %res = bitcast <2 x b32> <b32 1, b32 2> to b64
   ret b64 %res
 }
 
 define b64 @bitcast_constexpr_2f32_b64() {
-; CHECK-LABEL: @bitcast_constexpr_2f32_b64(
-; CHECK-NEXT:    ret b64 bitcast (<2 x float> <float 1.000000e+00, float 2.000000e+00> to b64)
+; LE-LABEL: @bitcast_constexpr_2f32_b64(
+; LE-NEXT:    ret b64 4611686019492741120
+;
+; BE-LABEL: @bitcast_constexpr_2f32_b64(
+; BE-NEXT:    ret b64 4575657222482165760
 ;
   %res = bitcast <2 x float> <float 1.0, float 2.0> to b64
   ret b64 %res
 }
 
 define b32 @bitcast_constexpr_4i8_b32() {
-; CHECK-LABEL: @bitcast_constexpr_4i8_b32(
-; CHECK-NEXT:    ret b32 bitcast (<4 x i8> <i8 1, i8 2, i8 3, i8 4> to b32)
+; LE-LABEL: @bitcast_constexpr_4i8_b32(
+; LE-NEXT:    ret b32 67305985
+;
+; BE-LABEL: @bitcast_constexpr_4i8_b32(
+; BE-NEXT:    ret b32 16909060
 ;
   %res = bitcast <4 x i8> <i8 1, i8 2, i8 3, i8 4> to b32
   ret b32 %res
