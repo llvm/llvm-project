@@ -17,32 +17,13 @@
 #  include <bit>
 #  include <latch>
 #  include <memory>
-#  include <mutex>
 #  include <new>
 #  include <thread>
 #  include <type_traits>
 
-// #define WITH_LOGGING 1
-#  ifdef WITH_LOGGING
-#    include <stdio.h>
-#  endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl::__statpart {
-
-#  ifdef WITH_LOGGING
-[[clang::no_destroy]] static std::mutex LOG_MUTEX;
-#    define LOG(...)                                                                                                   \
-      do {                                                                                                             \
-        std::lock_guard lock{LOG_MUTEX};                                                                               \
-        fprintf(stderr, __VA_ARGS__);                                                                                  \
-      } while (0)
-#  else
-#    define LOG(...)                                                                                                   \
-      do {                                                                                                             \
-      } while (0)
-#  endif
 
 struct Task;
 
@@ -252,35 +233,24 @@ inline void process_request(Task* task) noexcept {
   task->requests.count_down();
 }
 
-inline void Sched::worker_thread(size_t worker_num) noexcept {
-  const size_t queues_count = m_queues_count;
-
+inline void Sched::worker_thread(size_t worker_index) noexcept {
   while (true) {
-    auto epoch = m_epoch.load();
-    Task* task = nullptr;
+    std::atomic_unsigned_lock_free::value_type epoch = m_epoch.load(); // Load the epoch before looking for work
+    Task* task                                       = nullptr;
 
-    // 1st - try to pop from own queue
-    if ((task = m_queues[worker_num].pop())) {
-      LOG("Worker %zu popped task %p from own queue\n", worker_num, task);
-    } else {
-      // 2nd - try to steal from other queues
-      for (size_t i = 0; i != queues_count; ++i) {
-        size_t idx = (worker_num + i) % queues_count;
-        if ((task = m_queues[idx].steal())) {
-          LOG("Worker %zu stole task %p from queue %zu\n", worker_num, task, idx);
+    // Try to pop from own queue
+    if (!(task = m_queues[worker_index].pop())) {
+      // If there's no tasks in our queue - try to steal from other queues in a staggared manner
+      for (size_t i = 1; i != m_queues_count; ++i) // Loop over each queue but the one owned by the worker
+        if ((task = m_queues[(worker_index + i) % m_queues_count].steal())) {
           break;
         }
-      }
     }
 
     if (task) {
-      // Do the work
-      process_request(task);
+      process_request(task); // Participate in working on the task we've just found
     } else {
-      // Wait for the epoch to change
-      LOG("Worker %zu is going to sleep\n", worker_num);
-      m_epoch.wait(epoch);
-      LOG("Worker %zu woke up\n", worker_num);
+      m_epoch.wait(epoch); // No work to do, thus wait until the epoch changes
     }
   }
 }
@@ -319,8 +289,6 @@ inline void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*,
       .requests{static_cast<ptrdiff_t>(num_requests)} //
   };
 
-  LOG("New root task %p of %zu iterations with %zu requests\n", &root_task, iterations, num_requests);
-
   // Push all but one request to the queue, and process the last one directly in this thread.
   // If the queue is full (e.g. due to deep nested parallelism), the caller thread will process all remaining requests
   // directly.
@@ -337,7 +305,6 @@ inline void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*,
 
   // Process the last request directly in this thread.
   while (num_requests > 0) {
-    LOG("Guest thread is directly processing task %p, num_requests left: %zu\n", &root_task, num_requests);
     process_request(&root_task);
     --num_requests;
   }
@@ -348,14 +315,11 @@ inline void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*,
   while (!root_task.requests.try_wait()) {
     Task* task = nullptr;
 
-    // 1st - try to pop from own queue
-    if ((task = queue->pop())) {
-      LOG("Guest thread popped task %p from own queue\n", task);
-    } else {
-      // 2nd - try to steal from other queues
+    // Try to pop from own queue
+    if (!(task = queue->pop())) {
+      // Try to steal from other queues
       for (size_t i = 0; i != m_queues_count; ++i) {
         if (&m_queues[i] != queue && (task = m_queues[i].steal())) {
-          LOG("Guest stole task %p from queue %zu\n", task, i);
           break;
         }
       }
