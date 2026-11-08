@@ -204,6 +204,13 @@ LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
 LLVM_ABI Intrinsic::ID
 getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI);
 
+/// Returns true if the vector llvm.sincos with \p ScalarTy elements and \p EC
+/// element count has no vector library mapping, but both llvm.sin and llvm.cos
+/// have, so it is split into the separate vector sin and cos library calls.
+LLVM_ABI bool shouldSplitVectorSinCos(const TargetLibraryInfo &TLI,
+                                      Type *ScalarTy, ElementCount EC,
+                                      Module *M);
+
 /// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
 LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
 

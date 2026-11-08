@@ -6,94 +6,30 @@ define void @sin_plus_cos(ptr %a) {
 ; AMDLIBM-LABEL: define void @sin_plus_cos(
 ; AMDLIBM-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AMDLIBM-NEXT:  [[ENTRY:.*:]]
-; AMDLIBM-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; AMDLIBM-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
-; AMDLIBM-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
-; AMDLIBM-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; AMDLIBM-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 40
-; AMDLIBM-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 48
-; AMDLIBM-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 56
 ; AMDLIBM-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr [[A]], align 8
 ; AMDLIBM-NEXT:    [[TMP1:%.*]] = call fast { <8 x double>, <8 x double> } @llvm.sincos.v8f64(<8 x double> [[TMP0]])
 ; AMDLIBM-NEXT:    [[TMP2:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 0
 ; AMDLIBM-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x double>, <8 x double> } [[TMP1]], 1
 ; AMDLIBM-NEXT:    [[TMP4:%.*]] = fadd fast <8 x double> [[TMP2]], [[TMP3]]
-; AMDLIBM-NEXT:    [[TMP5:%.*]] = extractelement <8 x double> [[TMP4]], i64 0
-; AMDLIBM-NEXT:    store double [[TMP5]], ptr [[A]], align 8
-; AMDLIBM-NEXT:    [[TMP6:%.*]] = extractelement <8 x double> [[TMP4]], i64 1
-; AMDLIBM-NEXT:    store double [[TMP6]], ptr [[ARRAYIDX_1]], align 8
-; AMDLIBM-NEXT:    [[TMP7:%.*]] = extractelement <8 x double> [[TMP4]], i64 2
-; AMDLIBM-NEXT:    store double [[TMP7]], ptr [[ARRAYIDX_2]], align 8
-; AMDLIBM-NEXT:    [[TMP8:%.*]] = extractelement <8 x double> [[TMP4]], i64 3
-; AMDLIBM-NEXT:    store double [[TMP8]], ptr [[ARRAYIDX_3]], align 8
-; AMDLIBM-NEXT:    [[TMP9:%.*]] = extractelement <8 x double> [[TMP4]], i64 4
-; AMDLIBM-NEXT:    store double [[TMP9]], ptr [[ARRAYIDX_4]], align 8
-; AMDLIBM-NEXT:    [[TMP10:%.*]] = extractelement <8 x double> [[TMP4]], i64 5
-; AMDLIBM-NEXT:    store double [[TMP10]], ptr [[ARRAYIDX_5]], align 8
-; AMDLIBM-NEXT:    [[TMP11:%.*]] = extractelement <8 x double> [[TMP4]], i64 6
-; AMDLIBM-NEXT:    store double [[TMP11]], ptr [[ARRAYIDX_6]], align 8
-; AMDLIBM-NEXT:    [[TMP12:%.*]] = extractelement <8 x double> [[TMP4]], i64 7
-; AMDLIBM-NEXT:    store double [[TMP12]], ptr [[ARRAYIDX_7]], align 8
+; AMDLIBM-NEXT:    store <8 x double> [[TMP4]], ptr [[A]], align 8
 ; AMDLIBM-NEXT:    ret void
 ;
 ; LIBMVEC-LABEL: define void @sin_plus_cos(
 ; LIBMVEC-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; LIBMVEC-NEXT:  [[ENTRY:.*:]]
-; LIBMVEC-NEXT:    [[TMP0:%.*]] = load double, ptr [[A]], align 8
-; LIBMVEC-NEXT:    [[SINCOS:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP0]])
-; LIBMVEC-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
-; LIBMVEC-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
-; LIBMVEC-NEXT:    [[ADD:%.*]] = fadd fast double [[SIN]], [[COS]]
-; LIBMVEC-NEXT:    store double [[ADD]], ptr [[A]], align 8
-; LIBMVEC-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; LIBMVEC-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX_1]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_1:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP1]])
-; LIBMVEC-NEXT:    [[SIN_1:%.*]] = extractvalue { double, double } [[SINCOS_1]], 0
-; LIBMVEC-NEXT:    [[COS_1:%.*]] = extractvalue { double, double } [[SINCOS_1]], 1
-; LIBMVEC-NEXT:    [[ADD_1:%.*]] = fadd fast double [[SIN_1]], [[COS_1]]
-; LIBMVEC-NEXT:    store double [[ADD_1]], ptr [[ARRAYIDX_1]], align 8
-; LIBMVEC-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
-; LIBMVEC-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX_2]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_2:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP2]])
-; LIBMVEC-NEXT:    [[SIN_2:%.*]] = extractvalue { double, double } [[SINCOS_2]], 0
-; LIBMVEC-NEXT:    [[COS_2:%.*]] = extractvalue { double, double } [[SINCOS_2]], 1
-; LIBMVEC-NEXT:    [[ADD_2:%.*]] = fadd fast double [[SIN_2]], [[COS_2]]
-; LIBMVEC-NEXT:    store double [[ADD_2]], ptr [[ARRAYIDX_2]], align 8
-; LIBMVEC-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
-; LIBMVEC-NEXT:    [[TMP3:%.*]] = load double, ptr [[ARRAYIDX_3]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_3:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP3]])
-; LIBMVEC-NEXT:    [[SIN_3:%.*]] = extractvalue { double, double } [[SINCOS_3]], 0
-; LIBMVEC-NEXT:    [[COS_3:%.*]] = extractvalue { double, double } [[SINCOS_3]], 1
-; LIBMVEC-NEXT:    [[ADD_3:%.*]] = fadd fast double [[SIN_3]], [[COS_3]]
-; LIBMVEC-NEXT:    store double [[ADD_3]], ptr [[ARRAYIDX_3]], align 8
+; LIBMVEC-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A]], align 8
+; LIBMVEC-NEXT:    [[TMP1:%.*]] = call fast { <4 x double>, <4 x double> } @llvm.sincos.v4f64(<4 x double> [[TMP0]])
+; LIBMVEC-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP1]], 0
+; LIBMVEC-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP1]], 1
+; LIBMVEC-NEXT:    [[TMP4:%.*]] = fadd fast <4 x double> [[TMP2]], [[TMP3]]
+; LIBMVEC-NEXT:    store <4 x double> [[TMP4]], ptr [[A]], align 8
 ; LIBMVEC-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
-; LIBMVEC-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARRAYIDX_4]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_4:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP4]])
-; LIBMVEC-NEXT:    [[SIN_4:%.*]] = extractvalue { double, double } [[SINCOS_4]], 0
-; LIBMVEC-NEXT:    [[COS_4:%.*]] = extractvalue { double, double } [[SINCOS_4]], 1
-; LIBMVEC-NEXT:    [[ADD_4:%.*]] = fadd fast double [[SIN_4]], [[COS_4]]
-; LIBMVEC-NEXT:    store double [[ADD_4]], ptr [[ARRAYIDX_4]], align 8
-; LIBMVEC-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 40
-; LIBMVEC-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX_5]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_5:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP5]])
-; LIBMVEC-NEXT:    [[SIN_5:%.*]] = extractvalue { double, double } [[SINCOS_5]], 0
-; LIBMVEC-NEXT:    [[COS_5:%.*]] = extractvalue { double, double } [[SINCOS_5]], 1
-; LIBMVEC-NEXT:    [[ADD_5:%.*]] = fadd fast double [[SIN_5]], [[COS_5]]
-; LIBMVEC-NEXT:    store double [[ADD_5]], ptr [[ARRAYIDX_5]], align 8
-; LIBMVEC-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 48
-; LIBMVEC-NEXT:    [[TMP6:%.*]] = load double, ptr [[ARRAYIDX_6]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_6:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP6]])
-; LIBMVEC-NEXT:    [[SIN_6:%.*]] = extractvalue { double, double } [[SINCOS_6]], 0
-; LIBMVEC-NEXT:    [[COS_6:%.*]] = extractvalue { double, double } [[SINCOS_6]], 1
-; LIBMVEC-NEXT:    [[ADD_6:%.*]] = fadd fast double [[SIN_6]], [[COS_6]]
-; LIBMVEC-NEXT:    store double [[ADD_6]], ptr [[ARRAYIDX_6]], align 8
-; LIBMVEC-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 56
-; LIBMVEC-NEXT:    [[TMP7:%.*]] = load double, ptr [[ARRAYIDX_7]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_7:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP7]])
-; LIBMVEC-NEXT:    [[SIN_7:%.*]] = extractvalue { double, double } [[SINCOS_7]], 0
-; LIBMVEC-NEXT:    [[COS_7:%.*]] = extractvalue { double, double } [[SINCOS_7]], 1
-; LIBMVEC-NEXT:    [[ADD_7:%.*]] = fadd fast double [[SIN_7]], [[COS_7]]
-; LIBMVEC-NEXT:    store double [[ADD_7]], ptr [[ARRAYIDX_7]], align 8
+; LIBMVEC-NEXT:    [[TMP5:%.*]] = load <4 x double>, ptr [[ARRAYIDX_4]], align 8
+; LIBMVEC-NEXT:    [[TMP6:%.*]] = call fast { <4 x double>, <4 x double> } @llvm.sincos.v4f64(<4 x double> [[TMP5]])
+; LIBMVEC-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP6]], 0
+; LIBMVEC-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP6]], 1
+; LIBMVEC-NEXT:    [[TMP9:%.*]] = fadd fast <4 x double> [[TMP7]], [[TMP8]]
+; LIBMVEC-NEXT:    store <4 x double> [[TMP9]], ptr [[ARRAYIDX_4]], align 8
 ; LIBMVEC-NEXT:    ret void
 ;
 entry:
@@ -156,54 +92,16 @@ entry:
 }
 
 define void @sin_cos_stores(ptr noalias %a, ptr noalias %s, ptr noalias %c) {
-; AMDLIBM-LABEL: define void @sin_cos_stores(
-; AMDLIBM-SAME: ptr noalias [[A:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; AMDLIBM-NEXT:  [[ENTRY:.*:]]
-; AMDLIBM-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A]], align 8
-; AMDLIBM-NEXT:    [[TMP1:%.*]] = call fast { <4 x double>, <4 x double> } @llvm.sincos.v4f64(<4 x double> [[TMP0]])
-; AMDLIBM-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP1]], 0
-; AMDLIBM-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP1]], 1
-; AMDLIBM-NEXT:    store <4 x double> [[TMP2]], ptr [[S]], align 8
-; AMDLIBM-NEXT:    store <4 x double> [[TMP3]], ptr [[C]], align 8
-; AMDLIBM-NEXT:    ret void
-;
-; LIBMVEC-LABEL: define void @sin_cos_stores(
-; LIBMVEC-SAME: ptr noalias [[A:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; LIBMVEC-NEXT:  [[ENTRY:.*:]]
-; LIBMVEC-NEXT:    [[TMP0:%.*]] = load double, ptr [[A]], align 8
-; LIBMVEC-NEXT:    [[SINCOS:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP0]])
-; LIBMVEC-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
-; LIBMVEC-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
-; LIBMVEC-NEXT:    store double [[SIN]], ptr [[S]], align 8
-; LIBMVEC-NEXT:    store double [[COS]], ptr [[C]], align 8
-; LIBMVEC-NEXT:    [[A_1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; LIBMVEC-NEXT:    [[S_1:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 8
-; LIBMVEC-NEXT:    [[C_1:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 8
-; LIBMVEC-NEXT:    [[TMP1:%.*]] = load double, ptr [[A_1]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_1:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP1]])
-; LIBMVEC-NEXT:    [[SIN_1:%.*]] = extractvalue { double, double } [[SINCOS_1]], 0
-; LIBMVEC-NEXT:    [[COS_1:%.*]] = extractvalue { double, double } [[SINCOS_1]], 1
-; LIBMVEC-NEXT:    store double [[SIN_1]], ptr [[S_1]], align 8
-; LIBMVEC-NEXT:    store double [[COS_1]], ptr [[C_1]], align 8
-; LIBMVEC-NEXT:    [[A_2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
-; LIBMVEC-NEXT:    [[S_2:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
-; LIBMVEC-NEXT:    [[C_2:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 16
-; LIBMVEC-NEXT:    [[TMP2:%.*]] = load double, ptr [[A_2]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_2:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP2]])
-; LIBMVEC-NEXT:    [[SIN_2:%.*]] = extractvalue { double, double } [[SINCOS_2]], 0
-; LIBMVEC-NEXT:    [[COS_2:%.*]] = extractvalue { double, double } [[SINCOS_2]], 1
-; LIBMVEC-NEXT:    store double [[SIN_2]], ptr [[S_2]], align 8
-; LIBMVEC-NEXT:    store double [[COS_2]], ptr [[C_2]], align 8
-; LIBMVEC-NEXT:    [[A_3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
-; LIBMVEC-NEXT:    [[S_3:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 24
-; LIBMVEC-NEXT:    [[C_3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 24
-; LIBMVEC-NEXT:    [[TMP3:%.*]] = load double, ptr [[A_3]], align 8
-; LIBMVEC-NEXT:    [[SINCOS_3:%.*]] = tail call fast { double, double } @llvm.sincos.f64(double [[TMP3]])
-; LIBMVEC-NEXT:    [[SIN_3:%.*]] = extractvalue { double, double } [[SINCOS_3]], 0
-; LIBMVEC-NEXT:    [[COS_3:%.*]] = extractvalue { double, double } [[SINCOS_3]], 1
-; LIBMVEC-NEXT:    store double [[SIN_3]], ptr [[S_3]], align 8
-; LIBMVEC-NEXT:    store double [[COS_3]], ptr [[C_3]], align 8
-; LIBMVEC-NEXT:    ret void
+; CHECK-LABEL: define void @sin_cos_stores(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast { <4 x double>, <4 x double> } @llvm.sincos.v4f64(<4 x double> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP1]], 1
+; CHECK-NEXT:    store <4 x double> [[TMP2]], ptr [[S]], align 8
+; CHECK-NEXT:    store <4 x double> [[TMP3]], ptr [[C]], align 8
+; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = load double, ptr %a, align 8
@@ -243,5 +141,3 @@ entry:
 }
 
 declare { double, double } @llvm.sincos.f64(double)
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}

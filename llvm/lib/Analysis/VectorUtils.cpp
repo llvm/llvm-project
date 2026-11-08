@@ -20,6 +20,7 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
@@ -284,6 +285,28 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
       ID == Intrinsic::sideeffect || ID == Intrinsic::pseudoprobe)
     return ID;
   return Intrinsic::not_intrinsic;
+}
+
+bool llvm::shouldSplitVectorSinCos(const TargetLibraryInfo &TLI, Type *ScalarTy,
+                                   ElementCount EC, Module *M) {
+  auto HasIntrinsicMapping = [&](Intrinsic::ID ID) {
+    return TLI.isFunctionVectorizable(Intrinsic::getName(ID, ScalarTy, M), EC);
+  };
+  // If a vector sincos mapping exists for the intrinsic name (e.g.
+  // "llvm.sincos.f32") or for the scalar libcall name ("sincos"/"sincosf"),
+  // SelectionDAG legalization handles it via expandMultipleResultFPLibCall
+  // when the runtime libcall impl is enabled.
+  if (HasIntrinsicMapping(Intrinsic::sincos))
+    return false;
+  LibFunc LF = NotLibFunc;
+  if (ScalarTy->isFloatTy())
+    LF = LibFunc_sincosf;
+  else if (ScalarTy->isDoubleTy())
+    LF = LibFunc_sincos;
+  if (LF != NotLibFunc && TLI.isFunctionVectorizable(TLI.getName(LF), EC))
+    return false;
+  return HasIntrinsicMapping(Intrinsic::sin) &&
+         HasIntrinsicMapping(Intrinsic::cos);
 }
 
 unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
