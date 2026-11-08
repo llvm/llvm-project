@@ -31,7 +31,6 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
@@ -869,6 +868,16 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
   if (extractOp.getIndices().size() != 1 && !vectorizeNDExtract)
     return failure();
 
+  // Gathers need a representable flattened extent. Reject static
+  // ND sources whose element count overflows without classifying the access.
+  RankedTensorType sourceType = extractOp.getTensor().getType();
+  if (extractOp.getIndices().size() > 1 && sourceType.hasStaticShape() &&
+      !ShapedType::tryGetNumElements(sourceType.getShape())) {
+    LDBG() << "Tensor extract source element count overflows int64: "
+           << extractOp;
+    return failure();
+  }
+
   // Check the index type, but only for non 0-d tensors (for which we do need
   // access indices).
   if (not extractOp.getIndices().empty()) {
@@ -1220,8 +1229,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
       mask = maskConstantOp;
 
     Operation *gatherOp = vector::GatherOp::create(
-        rewriter, loc, resultType, source, ValueRange{baseIndex}, offset,
-        mask, passThruConstantOp);
+        rewriter, loc, resultType, source, ValueRange{baseIndex}, offset, mask,
+        passThruConstantOp);
 
     LDBG() << "Vectorised as gather load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp, gatherOp};
@@ -2278,64 +2287,6 @@ static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
   return success();
 }
 
-/// Converts affine.apply Ops to arithmetic operations.
-static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
-  OpBuilder::InsertionGuard g(rewriter);
-  auto toReplace = linalgOp.getBlock()->getOps<affine::AffineApplyOp>();
-
-  for (auto op : make_early_inc_range(toReplace)) {
-    rewriter.setInsertionPoint(op);
-    auto expanded = affine::expandAffineExpr(
-        rewriter, op->getLoc(), op.getAffineMap().getResult(0),
-        op.getOperands().take_front(op.getAffineMap().getNumDims()),
-        op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
-    rewriter.replaceOp(op, expanded);
-  }
-}
-
-/// Rejects gathers from static sources whose element count overflows int64:
-/// the gather path flattens its source.
-static LogicalResult
-vectorizeGatherSourcePrecondition(LinalgOp linalgOp,
-                                  ArrayRef<int64_t> inputVectorSizes) {
-  auto hasOverflowingSource = [](tensor::ExtractOp extractOp) {
-    auto sourceType = extractOp.getTensor().getType();
-    return sourceType.hasStaticShape() &&
-           !ShapedType::tryGetNumElements(sourceType.getShape());
-  };
-  if (!llvm::any_of(linalgOp.getBlock()->getOps<tensor::ExtractOp>(),
-                    hasOverflowingSource))
-    return success();
-
-  SmallVector<int64_t> vectorShape(inputVectorSizes);
-  if (vectorShape.empty())
-    vectorShape = linalgOp.getStaticLoopRanges();
-  if (ShapedType::isDynamicShape(vectorShape))
-    return failure();
-  auto vectorType =
-      VectorType::get(vectorShape, IndexType::get(linalgOp.getContext()));
-
-  // Reject before initializing vectorization state or expanding affine.apply
-  // in the original IR: a failed rewrite must leave it unchanged. Classify
-  // accesses on a normalized copy only when a source extent overflows.
-  OwningOpRef<Operation *> normalizedOp(linalgOp->clone());
-  auto normalizedLinalgOp = cast<LinalgOp>(normalizedOp.get());
-  IRRewriter rewriter(linalgOp.getContext());
-  convertAffineApply(rewriter, normalizedLinalgOp);
-  for (auto extractOp :
-       normalizedLinalgOp.getBlock()->getOps<tensor::ExtractOp>()) {
-    // Only gathers need a flattened source extent that fits in int64.
-    if (hasOverflowingSource(extractOp) &&
-        getTensorExtractMemoryAccessPattern(extractOp, normalizedLinalgOp,
-                                            vectorType) ==
-            VectorMemoryAccessKind::Gather) {
-      LDBG() << "Gather source element count overflows int64: " << extractOp;
-      return failure();
-    }
-  }
-  return success();
-}
-
 static LogicalResult vectorizeLinalgOpPrecondition(
     LinalgOp linalgOp, ArrayRef<int64_t> inputVectorSizes,
     bool vectorizeNDExtract, bool flatten1DDepthwiseConv) {
@@ -2643,6 +2594,21 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
       .Default(failure());
 }
 
+/// Converts affine.apply Ops to arithmetic operations.
+static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
+  OpBuilder::InsertionGuard g(rewriter);
+  auto toReplace = linalgOp.getBlock()->getOps<affine::AffineApplyOp>();
+
+  for (auto op : make_early_inc_range(toReplace)) {
+    rewriter.setInsertionPoint(op);
+    auto expanded = affine::expandAffineExpr(
+        rewriter, op->getLoc(), op.getAffineMap().getResult(0),
+        op.getOperands().take_front(op.getAffineMap().getNumDims()),
+        op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
+    rewriter.replaceOp(op, expanded);
+  }
+}
+
 bool mlir::linalg::hasVectorizationImpl(Operation *op) {
   return isa<linalg::LinalgOp, tensor::PadOp, linalg::PackOp, linalg::UnPackOp,
              tensor::InsertSliceOp>(op);
@@ -2668,13 +2634,6 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
   // Initialize vectorization state.
   VectorizationState state(rewriter);
   if (auto linalgOp = dyn_cast<linalg::LinalgOp>(op)) {
-    // Only the generic path lowers tensor.extract to gathers.
-    bool vectorizeAsGeneric =
-        !isaConvolutionOpInterface(linalgOp) &&
-        !(createNamedContraction && isa<ContractionOpInterface>(op));
-    if (vectorizeAsGeneric &&
-        failed(vectorizeGatherSourcePrecondition(linalgOp, inputVectorSizes)))
-      return failure();
     if (failed(state.initState(rewriter, linalgOp, inputVectorSizes,
                                inputScalableVecDims,
                                assumeDynamicDimsMatchVecSizes))) {
