@@ -1506,7 +1506,7 @@ void not_vulnerable(void) {
   scanf("%zu", &size);
   if (1024 < size)
     return;
-  int *p = malloc(size); // No warning expected as the the user input is bound
+  int *p = malloc(size); // No warning expected as the user input is bound
   free(p);
 }
 
@@ -1589,8 +1589,8 @@ int *test_dynamic() {
 ```
 
 In uncertain situations (when the checker can neither prove nor disprove that
-overflow occurs), the checker assumes that the the index (more precisely, the
-memory offeset) is within bounds.
+overflow occurs), the checker assumes that the index (more precisely, the
+memory offset) is within bounds.
 
 However, if {ref}`optin-taint-GenericTaint` is enabled and the index/offset is
 tainted (i.e. it is influenced by an untrusted source), then this checker
