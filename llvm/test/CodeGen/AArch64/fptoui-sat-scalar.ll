@@ -719,12 +719,13 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: test_unsigned_i100_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzu x8, h0
-; CHECK-GI-FP16-NEXT:    mvni v1.4h, #132, lsl #8
-; CHECK-GI-FP16-NEXT:    mov x9, #68719476735 // =0xfffffffff
+; CHECK-GI-FP16-NEXT:    fcvtzu x9, h0
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI28_0
 ; CHECK-GI-FP16-NEXT:    fcmp h0, #0.0
-; CHECK-GI-FP16-NEXT:    csel x8, xzr, x8, lt
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-FP16-NEXT:    csel x8, xzr, x9, lt
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h1
+; CHECK-GI-FP16-NEXT:    mov x9, #68719476735 // =0xfffffffff
 ; CHECK-GI-FP16-NEXT:    csinv x0, x8, xzr, le
 ; CHECK-GI-FP16-NEXT:    csel x1, x9, xzr, gt
 ; CHECK-GI-FP16-NEXT:    ret
@@ -768,10 +769,11 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: test_unsigned_i128_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzu x8, h0
-; CHECK-GI-FP16-NEXT:    mvni v1.4h, #132, lsl #8
+; CHECK-GI-FP16-NEXT:    fcvtzu x9, h0
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI29_0
 ; CHECK-GI-FP16-NEXT:    fcmp h0, #0.0
-; CHECK-GI-FP16-NEXT:    csel x8, xzr, x8, lt
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
+; CHECK-GI-FP16-NEXT:    csel x8, xzr, x9, lt
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h1
 ; CHECK-GI-FP16-NEXT:    csinv x0, x8, xzr, le
 ; CHECK-GI-FP16-NEXT:    csetm x1, gt
