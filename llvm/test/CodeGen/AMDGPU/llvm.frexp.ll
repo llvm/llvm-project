@@ -511,7 +511,6 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-GISEL-NEXT:    v_bfe_u32 v3, v4, 0, 16
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX6-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX6-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-GISEL-NEXT:    v_or_b32_e32 v0, v3, v0
 ; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -521,13 +520,11 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_frexp_mant_f16_e32 v3, v0
 ; GFX8-GISEL-NEXT:    v_frexp_exp_i16_f16_e32 v1, v0
-; GFX8-GISEL-NEXT:    v_frexp_mant_f16_sdwa v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_frexp_mant_f16_sdwa v4, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX8-GISEL-NEXT:    v_frexp_exp_i16_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX8-GISEL-NEXT:    v_bfe_i32 v2, v0, 0, 16
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, 16
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX8-GISEL-NEXT:    v_bfe_i32 v1, v1, 0, 16
-; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_bfe_i32 v2, v0, 0, 16
+; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_frexp_v2f16_v2i32:
@@ -698,9 +695,8 @@ define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) {
 ; GFX6-GISEL-NEXT:    v_frexp_mant_f32_e32 v3, v0
 ; GFX6-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v2
 ; GFX6-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
-; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX6-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
+; GFX6-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX6-GISEL-NEXT:    v_bfe_u32 v1, v1, 0, 16
 ; GFX6-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -710,9 +706,7 @@ define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) {
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_frexp_mant_f16_e32 v1, v0
-; GFX8-GISEL-NEXT:    v_frexp_mant_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, 16
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-GISEL-NEXT:    v_frexp_mant_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;

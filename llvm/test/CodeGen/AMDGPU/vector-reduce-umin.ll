@@ -1262,10 +1262,10 @@ define i16 @test_vector_reduce_umin_v2i16(<2 x i16> %v) {
 ; GFX8-GISEL-LABEL: test_vector_reduce_umin_v2i16:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX8-GISEL-NEXT:    v_min_u16_sdwa v1, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX8-GISEL-NEXT:    v_min_u16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s4
+; GFX8-GISEL-NEXT:    v_min_u16_sdwa v1, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_min_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_umin_v2i16:
@@ -1516,10 +1516,10 @@ define i16 @test_vector_reduce_umin_v4i16(<4 x i16> %v) {
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_min_u16_e32 v2, v0, v1
 ; GFX8-GISEL-NEXT:    v_min_u16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-GISEL-NEXT:    v_min_u16_e32 v1, v2, v0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX8-GISEL-NEXT:    v_min_u16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s4
+; GFX8-GISEL-NEXT:    v_min_u16_sdwa v1, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_min_u16_e32 v0, v2, v0
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_umin_v4i16:
@@ -1679,10 +1679,10 @@ define i16 @test_vector_reduce_umin_v8i16(<8 x i16> %v) {
 ; GFX8-GISEL-NEXT:    v_min_u16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-GISEL-NEXT:    v_min_u16_e32 v2, v4, v2
 ; GFX8-GISEL-NEXT:    v_min_u16_e32 v0, v0, v1
-; GFX8-GISEL-NEXT:    v_min_u16_e32 v1, v2, v0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX8-GISEL-NEXT:    v_min_u16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s4
+; GFX8-GISEL-NEXT:    v_min_u16_sdwa v1, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_min_u16_e32 v0, v2, v0
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_umin_v8i16:
@@ -1909,10 +1909,10 @@ define i16 @test_vector_reduce_umin_v16i16(<16 x i16> %v) {
 ; GFX8-GISEL-NEXT:    v_min_u16_e32 v1, v1, v3
 ; GFX8-GISEL-NEXT:    v_min_u16_e32 v2, v5, v2
 ; GFX8-GISEL-NEXT:    v_min_u16_e32 v0, v0, v1
-; GFX8-GISEL-NEXT:    v_min_u16_e32 v1, v2, v0
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GFX8-GISEL-NEXT:    v_min_u16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s4
+; GFX8-GISEL-NEXT:    v_min_u16_sdwa v1, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_min_u16_e32 v0, v2, v0
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_umin_v16i16:

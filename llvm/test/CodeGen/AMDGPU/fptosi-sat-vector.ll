@@ -2866,28 +2866,26 @@ define <4 x i16> @test_signed_v4f16_v4i16(<4 x half> %f) {
 ; GFX7-GI:       ; %bb.0:
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-GI-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX7-GI-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v4, 0xffff8000
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v1, v1
-; GFX7-GI-NEXT:    v_med3_i32 v2, v2, v4, s4
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v4, s4
-; GFX7-GI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX7-GI-NEXT:    v_med3_i32 v2, v2, v4, s4
+; GFX7-GI-NEXT:    v_med3_i32 v1, v1, v4, s4
 ; GFX7-GI-NEXT:    v_med3_i32 v3, v3, v4, s4
 ; GFX7-GI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX7-GI-NEXT:    v_med3_i32 v1, v1, v4, s4
 ; GFX7-GI-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX7-GI-NEXT:    v_and_b32_e32 v2, 0xffff, v3
 ; GFX7-GI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX7-GI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3769,10 +3767,8 @@ define <4 x i16> @test_s_signed_v4f16_v4i16(<4 x half> inreg %f) {
 ; GFX7-GI-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v3, v1, s4
 ; GFX7-GI-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX7-GI-NEXT:    s_and_b32 s6, 0xffff, s6
 ; GFX7-GI-NEXT:    s_and_b32 s5, 0xffff, s5
 ; GFX7-GI-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX7-GI-NEXT:    s_and_b32 s4, 0xffff, s4
 ; GFX7-GI-NEXT:    s_or_b32 s5, s5, s6
 ; GFX7-GI-NEXT:    s_and_b32 s6, 0xffff, s7
 ; GFX7-GI-NEXT:    s_lshl_b32 s4, s4, 16
@@ -4662,50 +4658,46 @@ define <8 x i16> @test_signed_v8f16_v8i16(<8 x half> %f) {
 ; GFX7-GI:       ; %bb.0:
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; GFX7-GI-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; GFX7-GI-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v4, v4
-; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v5, v5
 ; GFX7-GI-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v5, v5
+; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v4, v4
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v1, v1
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v5, v5
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v6, v6
 ; GFX7-GI-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v8, 0xffff8000
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v1, v1
-; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; GFX7-GI-NEXT:    v_med3_i32 v4, v4, v8, s4
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v6, v6
-; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v8, s4
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v2, v2
-; GFX7-GI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX7-GI-NEXT:    v_med3_i32 v5, v5, v8, s4
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v7, v7
+; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v8, s4
+; GFX7-GI-NEXT:    v_med3_i32 v4, v4, v8, s4
+; GFX7-GI-NEXT:    v_med3_i32 v1, v1, v8, s4
+; GFX7-GI-NEXT:    v_med3_i32 v5, v5, v8, s4
 ; GFX7-GI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX7-GI-NEXT:    v_med3_i32 v1, v1, v8, s4
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v3, v3
-; GFX7-GI-NEXT:    v_or_b32_e32 v0, v0, v4
-; GFX7-GI-NEXT:    v_and_b32_e32 v4, 0xffff, v5
-; GFX7-GI-NEXT:    v_med3_i32 v6, v6, v8, s4
-; GFX7-GI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX7-GI-NEXT:    v_med3_i32 v2, v2, v8, s4
-; GFX7-GI-NEXT:    v_or_b32_e32 v1, v1, v4
-; GFX7-GI-NEXT:    v_and_b32_e32 v4, 0xffff, v6
-; GFX7-GI-NEXT:    v_med3_i32 v7, v7, v8, s4
-; GFX7-GI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX7-GI-NEXT:    v_med3_i32 v6, v6, v8, s4
+; GFX7-GI-NEXT:    v_or_b32_e32 v0, v0, v4
+; GFX7-GI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v4, 16, v5
 ; GFX7-GI-NEXT:    v_med3_i32 v3, v3, v8, s4
+; GFX7-GI-NEXT:    v_med3_i32 v7, v7, v8, s4
+; GFX7-GI-NEXT:    v_or_b32_e32 v1, v1, v4
+; GFX7-GI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v4, 16, v6
 ; GFX7-GI-NEXT:    v_or_b32_e32 v2, v2, v4
-; GFX7-GI-NEXT:    v_and_b32_e32 v4, 0xffff, v7
 ; GFX7-GI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v4, 16, v7
 ; GFX7-GI-NEXT:    v_or_b32_e32 v3, v3, v4
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6191,11 +6183,9 @@ define <8 x i16> @test_s_signed_v8f16_v8i16(<8 x half> inreg %f) {
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v1
 ; GFX7-GI-NEXT:    v_med3_i32 v1, v3, v2, s4
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v3, v4
-; GFX7-GI-NEXT:    s_and_b32 s5, 0xffff, s5
-; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v2, s4
 ; GFX7-GI-NEXT:    s_and_b32 s8, 0xffff, s8
+; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v2, s4
 ; GFX7-GI-NEXT:    s_lshl_b32 s5, s5, 16
-; GFX7-GI-NEXT:    s_and_b32 s6, 0xffff, s6
 ; GFX7-GI-NEXT:    v_readfirstlane_b32 s10, v1
 ; GFX7-GI-NEXT:    v_readfirstlane_b32 s11, v0
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v3, v2, s4
@@ -6204,10 +6194,8 @@ define <8 x i16> @test_s_signed_v8f16_v8i16(<8 x half> inreg %f) {
 ; GFX7-GI-NEXT:    s_lshl_b32 s6, s6, 16
 ; GFX7-GI-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX7-GI-NEXT:    s_or_b32 s6, s8, s6
-; GFX7-GI-NEXT:    s_and_b32 s8, 0xffff, s10
 ; GFX7-GI-NEXT:    s_and_b32 s7, 0xffff, s7
-; GFX7-GI-NEXT:    s_lshl_b32 s8, s8, 16
-; GFX7-GI-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX7-GI-NEXT:    s_lshl_b32 s8, s10, 16
 ; GFX7-GI-NEXT:    s_or_b32 s7, s7, s8
 ; GFX7-GI-NEXT:    s_and_b32 s8, 0xffff, s11
 ; GFX7-GI-NEXT:    s_lshl_b32 s4, s4, 16
@@ -6623,23 +6611,21 @@ define <4 x i16> @test_signed_v4f32_v4i16(<4 x float> %f) {
 ; GFX7-GI-LABEL: test_signed_v4f32_v4i16:
 ; GFX7-GI:       ; %bb.0:
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX7-GI-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v4, 0xffff8000
-; GFX7-GI-NEXT:    v_med3_i32 v1, v1, v4, s4
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v4, s4
-; GFX7-GI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX7-GI-NEXT:    v_med3_i32 v1, v1, v4, s4
 ; GFX7-GI-NEXT:    v_med3_i32 v2, v2, v4, s4
 ; GFX7-GI-NEXT:    v_med3_i32 v3, v3, v4, s4
 ; GFX7-GI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-GI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-GI-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX7-GI-NEXT:    v_and_b32_e32 v2, 0xffff, v3
-; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX7-GI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6721,10 +6707,8 @@ define <4 x i16> @test_s_signed_v4f32_v4i16(<4 x float> inreg %f) {
 ; GFX7-GI-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v3, v1, s4
 ; GFX7-GI-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX7-GI-NEXT:    s_and_b32 s6, 0xffff, s6
 ; GFX7-GI-NEXT:    s_and_b32 s5, 0xffff, s5
 ; GFX7-GI-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX7-GI-NEXT:    s_and_b32 s4, 0xffff, s4
 ; GFX7-GI-NEXT:    s_or_b32 s5, s5, s6
 ; GFX7-GI-NEXT:    s_and_b32 s6, 0xffff, s7
 ; GFX7-GI-NEXT:    s_lshl_b32 s4, s4, 16

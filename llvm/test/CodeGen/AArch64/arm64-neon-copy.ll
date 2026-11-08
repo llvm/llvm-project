@@ -1279,10 +1279,10 @@ define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    mov x8, sp
 ; CHECK-GI-NEXT:    str q0, [sp]
-; CHECK-GI-NEXT:    and x9, x9, #0x7
+; CHECK-GI-NEXT:    and x9, x0, #0x7
 ; CHECK-GI-NEXT:    ldr h1, [x8, x9, lsl #1]
 ; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
 ; CHECK-GI-NEXT:    mov v1.h[2], v0.h[2]

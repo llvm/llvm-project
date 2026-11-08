@@ -91,9 +91,7 @@ define float @v_fdot2_f32_bf16_neg_a_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX950-GISEL-LABEL: v_fdot2_f32_bf16_neg_a_hi:
 ; GFX950-GISEL:  ; %bb.0:
 ; GFX950-GISEL:    s_mov_b32 s0, 0x8000
-; GFX950-GISEL:    v_xor_b32_sdwa v3, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX950-GISEL:    v_mov_b32_e32 v4, 16
-; GFX950-GISEL:    v_lshlrev_b32_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX950-GISEL:    v_xor_b32_sdwa v3, s0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-GISEL:    v_mov_b32_e32 v4, 0xffff
 ; GFX950-GISEL:    v_and_or_b32 v0, v0, v4, v3
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
@@ -107,7 +105,6 @@ define float @v_fdot2_f32_bf16_neg_a_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX11-GISEL-LABEL: v_fdot2_f32_bf16_neg_a_hi:
 ; GFX11-GISEL:  ; %bb.0:
 ; GFX11-GISEL:    v_xor_b16 v3.l, 0x8000, v0.h
-; GFX11-GISEL:    v_bfe_u32 v3, v3, 0, 16
 ; GFX11-GISEL:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX11-GISEL:    v_and_or_b32 v0, v0, 0xffff, v3
 ; GFX11-GISEL:    v_dot2_f32_bf16 v0, v0, v1, v2
@@ -120,7 +117,6 @@ define float @v_fdot2_f32_bf16_neg_a_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX12-GISEL-LABEL: v_fdot2_f32_bf16_neg_a_hi:
 ; GFX12-GISEL:  ; %bb.0:
 ; GFX12-GISEL:    v_xor_b16 v3.l, 0x8000, v0.h
-; GFX12-GISEL:    v_bfe_u32 v3, v3, 0, 16
 ; GFX12-GISEL:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX12-GISEL:    v_and_or_b32 v0, v0, 0xffff, v3
 ; GFX12-GISEL:    v_dot2_f32_bf16 v0, v0, v1, v2
@@ -201,9 +197,7 @@ define float @v_fdot2_f32_bf16_neg_b_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX950-GISEL-LABEL: v_fdot2_f32_bf16_neg_b_hi:
 ; GFX950-GISEL:  ; %bb.0:
 ; GFX950-GISEL:    s_mov_b32 s0, 0x8000
-; GFX950-GISEL:    v_xor_b32_sdwa v3, s0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX950-GISEL:    v_mov_b32_e32 v4, 16
-; GFX950-GISEL:    v_lshlrev_b32_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX950-GISEL:    v_xor_b32_sdwa v3, s0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-GISEL:    v_mov_b32_e32 v4, 0xffff
 ; GFX950-GISEL:    v_and_or_b32 v1, v1, v4, v3
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
@@ -217,7 +211,6 @@ define float @v_fdot2_f32_bf16_neg_b_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX11-GISEL-LABEL: v_fdot2_f32_bf16_neg_b_hi:
 ; GFX11-GISEL:  ; %bb.0:
 ; GFX11-GISEL:    v_xor_b16 v3.l, 0x8000, v1.h
-; GFX11-GISEL:    v_bfe_u32 v3, v3, 0, 16
 ; GFX11-GISEL:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX11-GISEL:    v_and_or_b32 v1, v1, 0xffff, v3
 ; GFX11-GISEL:    v_dot2_f32_bf16 v0, v0, v1, v2
@@ -230,7 +223,6 @@ define float @v_fdot2_f32_bf16_neg_b_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX12-GISEL-LABEL: v_fdot2_f32_bf16_neg_b_hi:
 ; GFX12-GISEL:  ; %bb.0:
 ; GFX12-GISEL:    v_xor_b16 v3.l, 0x8000, v1.h
-; GFX12-GISEL:    v_bfe_u32 v3, v3, 0, 16
 ; GFX12-GISEL:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX12-GISEL:    v_and_or_b32 v1, v1, 0xffff, v3
 ; GFX12-GISEL:    v_dot2_f32_bf16 v0, v0, v1, v2
@@ -767,9 +759,7 @@ define float @v_fdot2_f32_bf16_neg_a_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX950-GISEL-LABEL: v_fdot2_f32_bf16_neg_a_hi_dual:
 ; GFX950-GISEL:  ; %bb.0:
 ; GFX950-GISEL:    s_mov_b32 s0, 0x8000
-; GFX950-GISEL:    v_xor_b32_sdwa v6, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX950-GISEL:    v_mov_b32_e32 v7, 16
-; GFX950-GISEL:    v_lshlrev_b32_sdwa v6, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX950-GISEL:    v_xor_b32_sdwa v6, s0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-GISEL:    v_mov_b32_e32 v7, 0xffff
 ; GFX950-GISEL:    v_and_or_b32 v0, v0, v7, v6
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
@@ -786,7 +776,6 @@ define float @v_fdot2_f32_bf16_neg_a_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX11-GISEL:  ; %bb.0:
 ; GFX11-GISEL:    v_xor_b16 v6.l, 0x8000, v0.h
 ; GFX11-GISEL:    v_dot2_f32_bf16 v5, v3, v4, v5
-; GFX11-GISEL:    v_bfe_u32 v6, v6, 0, 16
 ; GFX11-GISEL:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX11-GISEL:    v_and_or_b32 v0, v0, 0xffff, v6
 ; GFX11-GISEL:    v_dot2_f32_bf16 v2, v0, v1, v2
@@ -801,9 +790,7 @@ define float @v_fdot2_f32_bf16_neg_a_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX12-GISEL-LABEL: v_fdot2_f32_bf16_neg_a_hi_dual:
 ; GFX12-GISEL:  ; %bb.0:
 ; GFX12-GISEL:    v_xor_b16 v6.l, 0x8000, v0.h
-; GFX12-GISEL:    v_dot2_f32_bf16 v5, v3, v4, v5
-; GFX12-GISEL:    v_bfe_u32 v6, v6, 0, 16
-; GFX12-GISEL:    v_lshlrev_b32_e32 v6, 16, v6
+; GFX12-GISEL:    v_dual_dot2acc_f32_bf16 v5, v3, v4 :: v_dual_lshlrev_b32 v6, 16, v6
 ; GFX12-GISEL:    v_and_or_b32 v0, v0, 0xffff, v6
 ; GFX12-GISEL:    v_dot2_f32_bf16 v2, v0, v1, v2
 ; GFX12-GISEL:    v_add_f32_e32 v0, v2, v5
@@ -907,9 +894,7 @@ define float @v_fdot2_f32_bf16_neg_b_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX950-GISEL-LABEL: v_fdot2_f32_bf16_neg_b_hi_dual:
 ; GFX950-GISEL:  ; %bb.0:
 ; GFX950-GISEL:    s_mov_b32 s0, 0x8000
-; GFX950-GISEL:    v_xor_b32_sdwa v6, s0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX950-GISEL:    v_mov_b32_e32 v7, 16
-; GFX950-GISEL:    v_lshlrev_b32_sdwa v6, v7, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX950-GISEL:    v_xor_b32_sdwa v6, s0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-GISEL:    v_mov_b32_e32 v7, 0xffff
 ; GFX950-GISEL:    v_and_or_b32 v1, v1, v7, v6
 ; GFX950-GISEL:    v_dot2c_f32_bf16_e32 v2, v0, v1
@@ -926,7 +911,6 @@ define float @v_fdot2_f32_bf16_neg_b_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX11-GISEL:  ; %bb.0:
 ; GFX11-GISEL:    v_xor_b16 v6.l, 0x8000, v1.h
 ; GFX11-GISEL:    v_dot2_f32_bf16 v5, v3, v4, v5
-; GFX11-GISEL:    v_bfe_u32 v6, v6, 0, 16
 ; GFX11-GISEL:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX11-GISEL:    v_and_or_b32 v1, v1, 0xffff, v6
 ; GFX11-GISEL:    v_dot2_f32_bf16 v2, v0, v1, v2
@@ -941,9 +925,7 @@ define float @v_fdot2_f32_bf16_neg_b_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX12-GISEL-LABEL: v_fdot2_f32_bf16_neg_b_hi_dual:
 ; GFX12-GISEL:  ; %bb.0:
 ; GFX12-GISEL:    v_xor_b16 v6.l, 0x8000, v1.h
-; GFX12-GISEL:    v_dot2_f32_bf16 v5, v3, v4, v5
-; GFX12-GISEL:    v_bfe_u32 v6, v6, 0, 16
-; GFX12-GISEL:    v_lshlrev_b32_e32 v6, 16, v6
+; GFX12-GISEL:    v_dual_dot2acc_f32_bf16 v5, v3, v4 :: v_dual_lshlrev_b32 v6, 16, v6
 ; GFX12-GISEL:    v_and_or_b32 v1, v1, 0xffff, v6
 ; GFX12-GISEL:    v_dot2_f32_bf16 v2, v0, v1, v2
 ; GFX12-GISEL:    v_add_f32_e32 v0, v2, v5

@@ -596,7 +596,7 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v2
 ; GFX942-GISEL-NEXT:    v_or_b32_sdwa v3, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v3
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v4, 16, v4
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 16, v4
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, v6
@@ -817,7 +817,7 @@ define void @memset_p1_sz1055_align_4_varsetval(ptr addrspace(1) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v2
 ; GFX942-GISEL-NEXT:    v_or_b32_sdwa v3, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v3
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v4, 16, v4
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 16, v4
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, v6
@@ -1034,7 +1034,7 @@ define void @memset_p3_sz1055_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
 ; GFX942-GISEL-NEXT:    v_or_b32_sdwa v3, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v3
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v4, 16, v4
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 16, v4
 ; GFX942-GISEL-NEXT:    v_add_u32_e32 v5, 0x410, v0
 ; GFX942-GISEL-NEXT:    ds_write2_b32 v5, v4, v4 offset1:1
 ; GFX942-GISEL-NEXT:    ds_write_b32 v0, v2 offset:1048
@@ -1245,7 +1245,7 @@ define void @memset_p5_sz1055_align_4_varsetval(ptr addrspace(5) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
 ; GFX942-GISEL-NEXT:    v_or_b32_sdwa v3, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v3
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v4, 16, v4
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 16, v4
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX942-GISEL-NEXT:    scratch_store_dwordx2 v0, v[4:5], off offset:1040
 ; GFX942-GISEL-NEXT:    scratch_store_dword v0, v2, off offset:1048

@@ -60,8 +60,7 @@ define <2 x half> @fma_f16_hi_srcs_hi_dst(<2 x half> %a, <2 x half> %b, <2 x hal
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2 op_sel:[1,1,1,0]
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 16
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, v1, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -146,8 +145,7 @@ define <2 x half> @mad_f16_hi_srcs_fneg_hi_dst(<2 x half> %a, <2 x half> %b, <2 
 ; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX9-GISEL-NEXT:    v_mad_legacy_f16 v0, v0, -v1, v3
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 16
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v2, v1, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]

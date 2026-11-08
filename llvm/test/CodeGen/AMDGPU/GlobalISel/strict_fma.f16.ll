@@ -127,7 +127,6 @@ define void @v_constained_fma_v2f16_fpexcept_strict_uni(<2 x half> inreg %x, <2 
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s6
 ; GFX8-NEXT:    v_fma_f16 v2, s4, v2, v3
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX8-NEXT:    s_bfe_u32 s4, s4, 0x100000
 ; GFX8-NEXT:    s_bfe_u32 s5, s7, 0x100000
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
 ; GFX8-NEXT:    s_or_b32 s4, s5, s4
@@ -191,8 +190,7 @@ define void @v_constained_fma_v2f16_fpexcept_strict_div(<2 x half> %x, <2 x half
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX8-NEXT:    v_fma_f16 v1, v5, v6, v7
-; GFX8-NEXT:    v_mov_b32_e32 v2, 16
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    flat_store_dword v[3:4], v0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -331,8 +329,6 @@ define void @v_constained_fma_v4f16_fpexcept_strict_uni(<4 x half> inreg %x, <4 
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX8-NEXT:    v_fma_f16 v2, s5, v2, v3
 ; GFX8-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX8-NEXT:    s_bfe_u32 s4, s4, 0x100000
-; GFX8-NEXT:    s_bfe_u32 s5, s5, 0x100000
 ; GFX8-NEXT:    s_bfe_u32 s7, s10, 0x100000
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
 ; GFX8-NEXT:    s_bfe_u32 s6, s6, 0x100000
@@ -411,12 +407,11 @@ define void @v_constained_fma_v4f16_fpexcept_strict_div(<4 x half> %x, <4 x half
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX8-NEXT:    v_fma_f16 v2, v8, v10, v12
-; GFX8-NEXT:    v_mov_b32_e32 v4, 16
 ; GFX8-NEXT:    v_fma_f16 v1, v1, v3, v5
 ; GFX8-NEXT:    v_fma_f16 v3, v9, v11, v13
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v2, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX8-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    flat_store_dwordx2 v[6:7], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -811,7 +806,6 @@ define void @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni(<2 x half> inr
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s8
 ; GFX8-NEXT:    v_fma_f16 v2, s6, v2, v3
 ; GFX8-NEXT:    v_readfirstlane_b32 s5, v2
-; GFX8-NEXT:    s_bfe_u32 s5, s5, 0x100000
 ; GFX8-NEXT:    s_bfe_u32 s4, s4, 0x100000
 ; GFX8-NEXT:    s_lshl_b32 s5, s5, 16
 ; GFX8-NEXT:    s_or_b32 s4, s4, s5
@@ -879,8 +873,7 @@ define void @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_div(<2 x half> %x,
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX8-NEXT:    v_fma_f16 v1, v5, v6, v7
-; GFX8-NEXT:    v_mov_b32_e32 v2, 16
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    flat_store_dword v[3:4], v0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)

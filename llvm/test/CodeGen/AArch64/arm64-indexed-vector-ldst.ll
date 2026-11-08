@@ -14014,8 +14014,8 @@ define i8 @load_single_extract_variable_index_i8(ptr %A, i32 %idx) {
 ;
 ; CHECK-GI-LABEL: load_single_extract_variable_index_i8:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    mov w8, w1
-; CHECK-GI-NEXT:    and x8, x8, #0xf
+; CHECK-GI-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    and x8, x1, #0xf
 ; CHECK-GI-NEXT:    ldrb w0, [x0, x8]
 ; CHECK-GI-NEXT:    ret
   %lv = load <16 x i8>, ptr %A
@@ -14039,8 +14039,8 @@ define i16 @load_single_extract_variable_index_i16(ptr %A, i32 %idx) {
 ;
 ; CHECK-GI-LABEL: load_single_extract_variable_index_i16:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    mov w8, w1
-; CHECK-GI-NEXT:    and x8, x8, #0x7
+; CHECK-GI-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    and x8, x1, #0x7
 ; CHECK-GI-NEXT:    ldrh w0, [x0, x8, lsl #1]
 ; CHECK-GI-NEXT:    ret
   %lv = load <8 x i16>, ptr %A
@@ -14049,19 +14049,12 @@ define i16 @load_single_extract_variable_index_i16(ptr %A, i32 %idx) {
 }
 
 define i32 @load_single_extract_variable_index_i32(ptr %A, i32 %idx) {
-; CHECK-SD-LABEL: load_single_extract_variable_index_i32:
-; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-SD-NEXT:    and x8, x1, #0x3
-; CHECK-SD-NEXT:    ldr w0, [x0, x8, lsl #2]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: load_single_extract_variable_index_i32:
-; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    mov w8, w1
-; CHECK-GI-NEXT:    and x8, x8, #0x3
-; CHECK-GI-NEXT:    ldr w0, [x0, x8, lsl #2]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: load_single_extract_variable_index_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x8, x1, #0x3
+; CHECK-NEXT:    ldr w0, [x0, x8, lsl #2]
+; CHECK-NEXT:    ret
   %lv = load <4 x i32>, ptr %A
   %e = extractelement <4 x i32> %lv, i32 %idx
   ret i32 %e

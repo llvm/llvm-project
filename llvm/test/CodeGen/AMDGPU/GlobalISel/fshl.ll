@@ -4033,7 +4033,6 @@ define amdgpu_ps i32 @s_fshl_v2i16(<2 x i16> inreg %lhs, <2 x i16> inreg %rhs, <
 ; GFX6-NEXT:    s_lshl_b32 s2, s3, s2
 ; GFX6-NEXT:    s_lshr_b32 s1, s1, s4
 ; GFX6-NEXT:    s_or_b32 s1, s2, s1
-; GFX6-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX6-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX6-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX6-NEXT:    s_or_b32 s0, s0, s1
@@ -4056,9 +4055,8 @@ define amdgpu_ps i32 @s_fshl_v2i16(<2 x i16> inreg %lhs, <2 x i16> inreg %rhs, <
 ; GFX8-NEXT:    s_lshl_b32 s2, s3, s2
 ; GFX8-NEXT:    s_lshr_b32 s1, s1, s4
 ; GFX8-NEXT:    s_or_b32 s2, s2, s1
-; GFX8-NEXT:    s_and_b32 s1, 0xffff, s2
 ; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX8-NEXT:    s_lshl_b32 s1, s2, 16
 ; GFX8-NEXT:    s_or_b32 s0, s0, s1
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -4154,7 +4152,6 @@ define <2 x i16> @v_fshl_v2i16(<2 x i16> %lhs, <2 x i16> %rhs, <2 x i16> %amt) {
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v2, v2, v3
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v1, v4, v1
 ; GFX6-NEXT:    v_or_b32_e32 v1, v2, v1
-; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -4173,9 +4170,7 @@ define <2 x i16> @v_fshl_v2i16(<2 x i16> %lhs, <2 x i16> %rhs, <2 x i16> %amt) {
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 17, v1
 ; GFX8-NEXT:    v_lshlrev_b16_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_lshrrev_b16_e32 v1, v4, v1
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4222,13 +4217,12 @@ define <2 x i16> @v_fshl_v2i16_4_8(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX6-LABEL: v_fshl_v2i16_4_8:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX6-NEXT:    v_bfe_u32 v3, v1, 1, 15
+; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 11, v3
-; GFX6-NEXT:    v_alignbit_b32 v1, v2, v1, 24
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v3
-; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX6-NEXT:    v_alignbit_b32 v1, v2, v1, 24
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -4238,13 +4232,11 @@ define <2 x i16> @v_fshl_v2i16_4_8(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX8-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
-; GFX8-NEXT:    v_lshrrev_b16_e32 v3, 12, v1
-; GFX8-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v0, 4, v0
-; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX8-NEXT:    v_lshrrev_b16_e32 v3, 12, v1
+; GFX8-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
 ; GFX8-NEXT:    v_or_b32_e32 v0, v0, v3
-; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4295,7 +4287,6 @@ define amdgpu_ps float @v_fshl_v2i16_ssv(<2 x i16> inreg %lhs, <2 x i16> inreg %
 ; GFX6-NEXT:    v_lshl_b32_e32 v2, s2, v2
 ; GFX6-NEXT:    v_lshr_b32_e32 v1, s0, v1
 ; GFX6-NEXT:    v_or_b32_e32 v1, v2, v1
-; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -4316,9 +4307,7 @@ define amdgpu_ps float @v_fshl_v2i16_ssv(<2 x i16> inreg %lhs, <2 x i16> inreg %
 ; GFX8-NEXT:    s_lshr_b32 s0, s1, 17
 ; GFX8-NEXT:    v_lshlrev_b16_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_lshrrev_b16_e64 v2, v2, s0
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -4388,7 +4377,6 @@ define amdgpu_ps float @v_fshl_v2i16_svs(<2 x i16> inreg %lhs, <2 x i16> %rhs, <
 ; GFX6-NEXT:    s_lshl_b32 s0, s2, s0
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, s1, v0
 ; GFX6-NEXT:    v_or_b32_e32 v0, s0, v0
-; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -4406,12 +4394,11 @@ define amdgpu_ps float @v_fshl_v2i16_svs(<2 x i16> inreg %lhs, <2 x i16> %rhs, <
 ; GFX8-NEXT:    v_or_b32_e32 v1, s0, v1
 ; GFX8-NEXT:    s_and_b32 s0, s3, 15
 ; GFX8-NEXT:    s_xor_b32 s1, s3, -1
-; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
 ; GFX8-NEXT:    s_lshl_b32 s0, s2, s0
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
 ; GFX8-NEXT:    v_lshrrev_b16_e32 v0, s1, v0
-; GFX8-NEXT:    v_or_b32_e32 v0, s0, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -4478,7 +4465,6 @@ define amdgpu_ps float @v_fshl_v2i16_vss(<2 x i16> %lhs, <2 x i16> inreg %rhs, <
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, s1, v1
 ; GFX6-NEXT:    s_lshr_b32 s0, s0, s2
 ; GFX6-NEXT:    v_or_b32_e32 v1, s0, v1
-; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -4494,13 +4480,12 @@ define amdgpu_ps float @v_fshl_v2i16_vss(<2 x i16> %lhs, <2 x i16> inreg %rhs, <
 ; GFX8-NEXT:    s_lshr_b32 s1, s1, s3
 ; GFX8-NEXT:    v_or_b32_e32 v1, s1, v1
 ; GFX8-NEXT:    s_andn2_b32 s1, 15, s2
-; GFX8-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8-NEXT:    s_lshr_b32 s0, s0, 17
-; GFX8-NEXT:    v_lshlrev_b16_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8-NEXT:    s_lshr_b32 s0, s0, s1
-; GFX8-NEXT:    v_or_b32_e32 v0, s0, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    v_lshlrev_b16_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -4588,7 +4573,6 @@ define amdgpu_ps i48 @s_fshl_v3i16(<3 x i16> inreg %lhs, <3 x i16> inreg %rhs, <
 ; GFX6-NEXT:    s_bfe_u32 s3, s3, 0xf0001
 ; GFX6-NEXT:    s_lshl_b32 s1, s1, s4
 ; GFX6-NEXT:    s_lshr_b32 s3, s3, s5
-; GFX6-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX6-NEXT:    s_or_b32 s1, s1, s3
 ; GFX6-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
@@ -4620,9 +4604,8 @@ define amdgpu_ps i48 @s_fshl_v3i16(<3 x i16> inreg %lhs, <3 x i16> inreg %rhs, <
 ; GFX8-NEXT:    s_lshr_b32 s2, s2, 1
 ; GFX8-NEXT:    s_lshr_b32 s2, s2, s5
 ; GFX8-NEXT:    s_or_b32 s1, s1, s2
-; GFX8-NEXT:    s_and_b32 s2, 0xffff, s4
 ; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX8-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX8-NEXT:    s_lshl_b32 s2, s4, 16
 ; GFX8-NEXT:    s_or_b32 s0, s0, s2
 ; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -4961,14 +4944,12 @@ define amdgpu_ps <2 x i32> @s_fshl_v4i16(<4 x i16> inreg %lhs, <4 x i16> inreg %
 ; GFX6-NEXT:    s_lshr_b32 s3, s3, 1
 ; GFX6-NEXT:    s_lshl_b32 s4, s7, s4
 ; GFX6-NEXT:    s_lshr_b32 s3, s3, s5
-; GFX6-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX6-NEXT:    s_or_b32 s3, s4, s3
 ; GFX6-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX6-NEXT:    s_or_b32 s0, s0, s2
-; GFX6-NEXT:    s_and_b32 s2, 0xffff, s3
 ; GFX6-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX6-NEXT:    s_lshl_b32 s2, s3, 16
 ; GFX6-NEXT:    s_or_b32 s1, s1, s2
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -5004,10 +4985,8 @@ define amdgpu_ps <2 x i32> @s_fshl_v4i16(<4 x i16> inreg %lhs, <4 x i16> inreg %
 ; GFX8-NEXT:    s_lshl_b32 s2, s7, s2
 ; GFX8-NEXT:    s_lshr_b32 s3, s3, s5
 ; GFX8-NEXT:    s_or_b32 s2, s2, s3
-; GFX8-NEXT:    s_and_b32 s3, 0xffff, s4
-; GFX8-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX8-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX8-NEXT:    s_lshl_b32 s3, s4, 16
 ; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX8-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX8-NEXT:    s_or_b32 s0, s0, s3
@@ -5179,14 +5158,12 @@ define <4 x half> @v_fshl_v4i16(<4 x i16> %lhs, <4 x i16> %rhs, <4 x i16> %amt) 
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 1, v3
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v4, v4, v7
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v3, v5, v3
-; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX6-NEXT:    v_or_b32_e32 v3, v4, v3
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v3
 ; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX6-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5203,7 +5180,7 @@ define <4 x half> @v_fshl_v4i16(<4 x i16> %lhs, <4 x i16> %rhs, <4 x i16> %amt) 
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v2, 17, v2
 ; GFX8-NEXT:    v_lshlrev_b16_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_lshrrev_b16_e32 v2, v8, v2
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_xor_b32_e32 v2, -1, v5
 ; GFX8-NEXT:    v_lshrrev_b16_e32 v8, 1, v3
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v4, v5, v1
@@ -5213,11 +5190,7 @@ define <4 x half> @v_fshl_v4i16(<4 x i16> %lhs, <4 x i16> %rhs, <4 x i16> %amt) 
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 17, v3
 ; GFX8-NEXT:    v_lshlrev_b16_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_lshrrev_b16_e32 v3, v4, v3
-; GFX8-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-NEXT:    v_or_b32_sdwa v1, v1, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v6, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]

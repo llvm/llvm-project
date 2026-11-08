@@ -1981,7 +1981,6 @@ define amdgpu_kernel void @test_fmax_v2f16_v_ieee_on(ptr addrspace(1) %out, <2 x
 ; GFX8-GISEL-NEXT:    v_max_f16_e64 v0, s5, s5
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, v1, v0
 ; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; GFX8-GISEL-NEXT:    s_bfe_u32 s3, s3, 0x100000
 ; GFX8-GISEL-NEXT:    s_bfe_u32 s2, s2, 0x100000
 ; GFX8-GISEL-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX8-GISEL-NEXT:    s_or_b32 s2, s2, s3
@@ -2052,9 +2051,7 @@ define amdgpu_ps <2 x half> @test_fmax_v2f16_v_ieee_off(<2 x half> %a, <2 x half
 ; GFX8-GISEL-LABEL: test_fmax_v2f16_v_ieee_off:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v2, v0, v1
-; GFX8-GISEL-NEXT:    v_max_f16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 16
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-GISEL-NEXT:    v_max_f16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
@@ -2106,7 +2103,6 @@ define amdgpu_kernel void @test_fmax_v2f16_s_ieee_on(ptr addrspace(1) %out, <2 x
 ; GFX8-GISEL-NEXT:    v_max_f16_e64 v0, s5, s5
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, v1, v0
 ; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
-; GFX8-GISEL-NEXT:    s_bfe_u32 s3, s3, 0x100000
 ; GFX8-GISEL-NEXT:    s_bfe_u32 s2, s2, 0x100000
 ; GFX8-GISEL-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX8-GISEL-NEXT:    s_or_b32 s2, s2, s3
@@ -2191,7 +2187,6 @@ define amdgpu_ps <2 x half> @test_fmax_v2f16_s_ieee_off(<2 x half> inreg %a, <2 
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, s2, v0
 ; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v0
-; GFX8-GISEL-NEXT:    s_bfe_u32 s1, s1, 0x100000
 ; GFX8-GISEL-NEXT:    s_bfe_u32 s0, s0, 0x100000
 ; GFX8-GISEL-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX8-GISEL-NEXT:    s_or_b32 s0, s0, s1

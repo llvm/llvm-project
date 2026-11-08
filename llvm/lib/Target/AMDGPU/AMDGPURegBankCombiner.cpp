@@ -497,13 +497,13 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
     }
 
     // The shift discards the upper half of the sign-extending load.
+    auto SextLoadS16 = m_all_of(m_SpecificType(LLT::scalar(16)),
+                                m_OneUse(m_GSExtLoad(SextLoad, m_MMO(MMO))));
     if (mi_match(Load, MRI,
                  m_any_of(m_GSExtLoad(SextLoad, m_MMO(MMO)),
                           m_GAnd(m_OneUse(m_GSExtLoad(SextLoad, m_MMO(MMO))),
                                  m_Copy(m_SpecificICst(CleanHi16))),
-                          m_GZExt(m_all_of(
-                              m_SpecificType(LLT::scalar(16)),
-                              m_OneUse(m_GSExtLoad(SextLoad, m_MMO(MMO)))))))) {
+                          m_GZExt(SextLoadS16), m_GAnyExt(SextLoadS16)))) {
       unsigned LoadSize = MMO->getSizeInBits().getValue();
       if (LoadSize == 8)
         return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, SextLoad);
