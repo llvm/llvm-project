@@ -705,14 +705,29 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_unsigned_i100_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
-; CHECK-GI-CVT-NEXT:    fcvtzu x0, s0
+; CHECK-GI-CVT-NEXT:    mov w9, #57344 // =0xe000
+; CHECK-GI-CVT-NEXT:    movk w9, #18303, lsl #16
+; CHECK-GI-CVT-NEXT:    fmov s1, w9
+; CHECK-GI-CVT-NEXT:    mov x9, #68719476735 // =0xfffffffff
+; CHECK-GI-CVT-NEXT:    fcvtzu x8, s0
+; CHECK-GI-CVT-NEXT:    fcmp s0, #0.0
+; CHECK-GI-CVT-NEXT:    csel x8, xzr, x8, lt
+; CHECK-GI-CVT-NEXT:    fcmp s0, s1
+; CHECK-GI-CVT-NEXT:    csinv x0, x8, xzr, le
+; CHECK-GI-CVT-NEXT:    csel x1, x9, xzr, gt
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_unsigned_i100_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
+; CHECK-GI-FP16-NEXT:    fcvtzu x9, h0
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI28_0
+; CHECK-GI-FP16-NEXT:    fcmp h0, #0.0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-FP16-NEXT:    csel x8, xzr, x9, lt
+; CHECK-GI-FP16-NEXT:    fcmp h0, h1
+; CHECK-GI-FP16-NEXT:    mov x9, #68719476735 // =0xfffffffff
+; CHECK-GI-FP16-NEXT:    csinv x0, x8, xzr, le
+; CHECK-GI-FP16-NEXT:    csel x1, x9, xzr, gt
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i100 @llvm.fptoui.sat.i100.f16(half %f)
     ret i100 %x
@@ -741,14 +756,27 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_unsigned_i128_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
-; CHECK-GI-CVT-NEXT:    fcvtzu x0, s0
+; CHECK-GI-CVT-NEXT:    mov w8, #57344 // =0xe000
+; CHECK-GI-CVT-NEXT:    movk w8, #18303, lsl #16
+; CHECK-GI-CVT-NEXT:    fmov s1, w8
+; CHECK-GI-CVT-NEXT:    fcvtzu x9, s0
+; CHECK-GI-CVT-NEXT:    fcmp s0, #0.0
+; CHECK-GI-CVT-NEXT:    csel x8, xzr, x9, lt
+; CHECK-GI-CVT-NEXT:    fcmp s0, s1
+; CHECK-GI-CVT-NEXT:    csinv x0, x8, xzr, le
+; CHECK-GI-CVT-NEXT:    csetm x1, gt
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_unsigned_i128_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
+; CHECK-GI-FP16-NEXT:    fcvtzu x9, h0
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI29_0
+; CHECK-GI-FP16-NEXT:    fcmp h0, #0.0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
+; CHECK-GI-FP16-NEXT:    csel x8, xzr, x9, lt
+; CHECK-GI-FP16-NEXT:    fcmp h0, h1
+; CHECK-GI-FP16-NEXT:    csinv x0, x8, xzr, le
+; CHECK-GI-FP16-NEXT:    csetm x1, gt
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i128 @llvm.fptoui.sat.i128.f16(half %f)
     ret i128 %x

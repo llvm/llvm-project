@@ -877,14 +877,46 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_signed_i100_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
-; CHECK-GI-CVT-NEXT:    fcvtzs x0, s0
+; CHECK-GI-CVT-NEXT:    mov w9, #57344 // =0xe000
+; CHECK-GI-CVT-NEXT:    mov w10, #57344 // =0xe000
+; CHECK-GI-CVT-NEXT:    movk w9, #51071, lsl #16
+; CHECK-GI-CVT-NEXT:    movk w10, #18303, lsl #16
+; CHECK-GI-CVT-NEXT:    fmov s1, w9
+; CHECK-GI-CVT-NEXT:    fcvtzs x8, s0
+; CHECK-GI-CVT-NEXT:    fcmp s0, s1
+; CHECK-GI-CVT-NEXT:    fmov s1, w10
+; CHECK-GI-CVT-NEXT:    mov x10, #34359738368 // =0x800000000
+; CHECK-GI-CVT-NEXT:    asr x9, x8, #63
+; CHECK-GI-CVT-NEXT:    csel x8, xzr, x8, lt
+; CHECK-GI-CVT-NEXT:    csel x9, x10, x9, lt
+; CHECK-GI-CVT-NEXT:    fcmp s0, s1
+; CHECK-GI-CVT-NEXT:    mov x10, #34359738367 // =0x7ffffffff
+; CHECK-GI-CVT-NEXT:    csinv x8, x8, xzr, le
+; CHECK-GI-CVT-NEXT:    csel x9, x10, x9, gt
+; CHECK-GI-CVT-NEXT:    fcmp s0, s0
+; CHECK-GI-CVT-NEXT:    csel x0, xzr, x8, vs
+; CHECK-GI-CVT-NEXT:    csel x1, xzr, x9, vs
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_i100_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI28_1
+; CHECK-GI-FP16-NEXT:    fcvtzs x9, h0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI28_1]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI28_0
+; CHECK-GI-FP16-NEXT:    fcmp h0, h1
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-FP16-NEXT:    mov x8, #34359738368 // =0x800000000
+; CHECK-GI-FP16-NEXT:    asr x10, x9, #63
+; CHECK-GI-FP16-NEXT:    csel x9, xzr, x9, lt
+; CHECK-GI-FP16-NEXT:    csel x8, x8, x10, lt
+; CHECK-GI-FP16-NEXT:    fcmp h0, h1
+; CHECK-GI-FP16-NEXT:    mov x10, #34359738367 // =0x7ffffffff
+; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
+; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, gt
+; CHECK-GI-FP16-NEXT:    fcmp h0, h0
+; CHECK-GI-FP16-NEXT:    csel x0, xzr, x9, vs
+; CHECK-GI-FP16-NEXT:    csel x1, xzr, x8, vs
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i100 @llvm.fptosi.sat.i100.f16(half %f)
     ret i100 %x
@@ -919,14 +951,46 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_signed_i128_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
-; CHECK-GI-CVT-NEXT:    fcvtzs x0, s0
+; CHECK-GI-CVT-NEXT:    mov w9, #57344 // =0xe000
+; CHECK-GI-CVT-NEXT:    mov w10, #57344 // =0xe000
+; CHECK-GI-CVT-NEXT:    movk w9, #51071, lsl #16
+; CHECK-GI-CVT-NEXT:    movk w10, #18303, lsl #16
+; CHECK-GI-CVT-NEXT:    fmov s1, w9
+; CHECK-GI-CVT-NEXT:    fcvtzs x8, s0
+; CHECK-GI-CVT-NEXT:    fcmp s0, s1
+; CHECK-GI-CVT-NEXT:    fmov s1, w10
+; CHECK-GI-CVT-NEXT:    mov x10, #-9223372036854775808 // =0x8000000000000000
+; CHECK-GI-CVT-NEXT:    asr x9, x8, #63
+; CHECK-GI-CVT-NEXT:    csel x8, xzr, x8, lt
+; CHECK-GI-CVT-NEXT:    csel x9, x10, x9, lt
+; CHECK-GI-CVT-NEXT:    fcmp s0, s1
+; CHECK-GI-CVT-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-GI-CVT-NEXT:    csinv x8, x8, xzr, le
+; CHECK-GI-CVT-NEXT:    csel x9, x10, x9, gt
+; CHECK-GI-CVT-NEXT:    fcmp s0, s0
+; CHECK-GI-CVT-NEXT:    csel x0, xzr, x8, vs
+; CHECK-GI-CVT-NEXT:    csel x1, xzr, x9, vs
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_i128_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI29_1
+; CHECK-GI-FP16-NEXT:    fcvtzs x9, h0
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI29_1]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI29_0
+; CHECK-GI-FP16-NEXT:    fcmp h0, h1
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI29_0]
+; CHECK-GI-FP16-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-GI-FP16-NEXT:    asr x10, x9, #63
+; CHECK-GI-FP16-NEXT:    csel x9, xzr, x9, lt
+; CHECK-GI-FP16-NEXT:    csel x8, x8, x10, lt
+; CHECK-GI-FP16-NEXT:    fcmp h0, h1
+; CHECK-GI-FP16-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
+; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, gt
+; CHECK-GI-FP16-NEXT:    fcmp h0, h0
+; CHECK-GI-FP16-NEXT:    csel x0, xzr, x9, vs
+; CHECK-GI-FP16-NEXT:    csel x1, xzr, x8, vs
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i128 @llvm.fptosi.sat.i128.f16(half %f)
     ret i128 %x
