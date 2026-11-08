@@ -598,6 +598,11 @@ protected:
 LLVM_ABI Type *computeScalarTypeForInstruction(unsigned Opcode,
                                                ArrayRef<VPValue *> Operands);
 
+/// Compute the scalar result type for a recipe wrapping \p I with \p Operands
+/// (excluding any predicate mask).
+LLVM_ABI Type *computeScalarTypeForInstruction(const Instruction *I,
+                                               ArrayRef<VPValue *> Operands);
+
 /// VPSingleDefRecipe is a base class for recipes that model a sequence of one
 /// or more output IR that define a single result VPValue. Note that
 /// VPSingleDefRecipe must inherit from VPRecipeBase before VPSingleDefValue.
@@ -1832,26 +1837,33 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
                                         public VPIRMetadata {
   unsigned Opcode;
 
-public:
-  VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
-                DebugLoc DL = {})
-      : VPWidenRecipe(I.getOpcode(), Operands, Flags, Metadata, DL) {
-    setUnderlyingValue(&I);
-  }
-
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
-                DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands,
-                            computeScalarTypeForInstruction(Opcode, Operands),
-                            Flags, DL),
+  VPWidenRecipe(unsigned Opcode, Type *ResultTy, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags, const VPIRMetadata &Metadata,
+                DebugLoc DL)
+      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands, ResultTy, Flags,
+                            DL),
         VPIRMetadata(Metadata), Opcode(Opcode) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
     assert(hasRequiredFlagsForOpcode(Opcode, getScalarType()) &&
            "Opcode requires specific flags to be set");
   }
+
+public:
+  VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
+                DebugLoc DL = {})
+      : VPWidenRecipe(I.getOpcode(),
+                      computeScalarTypeForInstruction(&I, Operands), Operands,
+                      Flags, Metadata, DL) {
+    setUnderlyingValue(&I);
+  }
+
+  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
+                DebugLoc DL = {})
+      : VPWidenRecipe(Opcode, computeScalarTypeForInstruction(Opcode, Operands),
+                      Operands, Flags, Metadata, DL) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -3505,7 +3517,8 @@ public:
                     const VPIRFlags &Flags = {}, VPIRMetadata Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeWithIRFlags(VPRecipeBase::VPReplicateSC, Operands,
-                            computeScalarType(I, Operands), Flags, DL),
+                            computeScalarTypeForInstruction(I, Operands), Flags,
+                            DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
     assert((!IsSingleScalar || !I->isCast()) &&
@@ -3516,11 +3529,6 @@ public:
   }
 
   ~VPReplicateRecipe() override = default;
-
-  /// Compute the scalar result type for a VPReplicateRecipe wrapping \p I with
-  /// \p Operands (excluding any predicate mask).
-  static Type *computeScalarType(const Instruction *I,
-                                 ArrayRef<VPValue *> Operands);
 
   VPReplicateRecipe *clone() override { return cloneWithOperands(operands()); }
 
