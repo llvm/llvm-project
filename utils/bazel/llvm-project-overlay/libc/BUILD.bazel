@@ -19998,7 +19998,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_madvise",
         ":hdr_sys_mman_macros",
         ":types_size_t",
     ],
