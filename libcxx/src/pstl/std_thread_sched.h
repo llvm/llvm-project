@@ -250,9 +250,7 @@ inline void process_request(Task* task) noexcept {
 }
 
 inline void Sched::worker_thread(size_t worker_num) noexcept {
-  const size_t queues_count    = m_queues_count;
-  constexpr int max_spin_count = 16;
-  int spin_count               = 0;
+  const size_t queues_count = m_queues_count;
 
   while (true) {
     auto epoch = m_epoch.load();
@@ -275,18 +273,11 @@ inline void Sched::worker_thread(size_t worker_num) noexcept {
     if (task) {
       // Do the work
       process_request(task);
-      spin_count = 0;
     } else {
-      // Wait and sleep
-      if (spin_count < max_spin_count) {
-        ++spin_count;
-        std::this_thread::yield();
-      } else {
-        LOG("Worker %zu is going to sleep\n", worker_num);
-        m_epoch.wait(epoch);
-        spin_count = 0;
-        LOG("Worker %zu woke up\n", worker_num);
-      }
+      // Wait for the epoch to change
+      LOG("Worker %zu is going to sleep\n", worker_num);
+      m_epoch.wait(epoch);
+      LOG("Worker %zu woke up\n", worker_num);
     }
   }
 }
