@@ -161,8 +161,14 @@ template <typename TransferOpTy>
 static LogicalResult
 checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
                                       PatternRewriter &rewriter) {
-  // With a minor identity map, the mask has the same shape as the vector, so
-  // each tile of the vector has the tile of the mask at the same offsets.
+  // Extra dimensions from a vector element type are not represented in the
+  // transfer's mask.
+  if (xferOp.getVectorType().getRank() != xferOp.getTransferRank())
+    return rewriter.notifyMatchFailure(
+        xferOp, "masked transfer with a vector element type");
+  // With a minor identity map and a scalar element type, the mask has the same
+  // shape as the vector, so each tile of the vector has the tile of the mask at
+  // the same offsets.
   if (!xferOp.getPermutationMap().isMinorIdentity())
     return rewriter.notifyMatchFailure(
         xferOp, "masked transfer with a non-minor-identity map");
