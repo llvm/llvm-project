@@ -141,7 +141,7 @@ private:
     return nullptr;
   }
   FunctionSamples *getFlattenedSamplesFor(const Function &F) {
-    StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
+    StringRef CanonFName = Reader.getAttributes().getCanonicalFnName(F);
     return getFlattenedSamplesFor(FunctionId(CanonFName));
   }
   template <typename T> inline void freeContainer(T &C) {

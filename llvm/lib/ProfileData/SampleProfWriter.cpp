@@ -164,6 +164,12 @@ SampleProfileWriter::writeFuncProfiles(const SampleProfileMap &ProfileMap) {
 }
 
 std::error_code SampleProfileWriter::write(const SampleProfileMap &ProfileMap) {
+  ProfAttrs = ProfileMap.getAttributes();
+  // Currently only Text and Extended Binary format are supported for CSSPGO.
+  if ((ProfAttrs.ProfileIsCS || ProfAttrs.ProfileIsProbeBased) &&
+      Format == SPF_Binary)
+    return sampleprof_error::unsupported_writing_format;
+
   if (std::error_code EC = writeHeader(ProfileMap))
     return EC;
 
@@ -271,6 +277,7 @@ SampleProfileWriterExtBinaryBase::write(const SampleProfileMap &ProfileMap) {
   NameTable.clear();
   CSNameTable.clear();
   SecHdrTable.clear();
+  ProfAttrs = ProfileMap.getAttributes();
 
   if (std::error_code EC = writeHeader(ProfileMap))
     return EC;
@@ -319,7 +326,7 @@ SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(SecType Type,
   if (UseMD5IndexedTables) {
     // Eytzinger layout requires MD5 representation and does not support
     // multi-context Context-Sensitive profiles.
-    if (!UseMD5 || FunctionSamples::ProfileIsCS)
+    if (!UseMD5 || ProfAttrs.ProfileIsCS)
       return sampleprof_error::unsupported_writing_format;
     return writeEytzingerFuncOffsetTable(Type, IsNested);
   }
@@ -386,7 +393,7 @@ SampleProfileWriterExtBinaryBase::writeLegacyFuncOffsetTable(SecType Type) {
     return (std::error_code)sampleprof_error::success;
   };
 
-  if (FunctionSamples::ProfileIsCS) {
+  if (ProfAttrs.ProfileIsCS) {
     // Sort the contexts before writing them out. This is to help fast load all
     // context profiles for a function as well as their callee contexts which
     // can help profile-guided importing for ThinLTO.
@@ -414,13 +421,13 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncMetadata(
   if (std::error_code EC = writeContextIdx(FunctionProfile.getContext()))
     return EC;
 
-  if (FunctionSamples::ProfileIsProbeBased)
+  if (ProfAttrs.ProfileIsProbeBased)
     encodeULEB128(FunctionProfile.getFunctionHash(), OS);
-  if (FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsPreInlined) {
+  if (ProfAttrs.ProfileIsCS || ProfAttrs.ProfileIsPreInlined) {
     encodeULEB128(FunctionProfile.getContext().getAllAttributes(), OS);
   }
 
-  if (!FunctionSamples::ProfileIsCS) {
+  if (!ProfAttrs.ProfileIsCS) {
     // Recursively emit attributes for all callee samples.
     uint64_t NumCallsites = 0;
     for (const auto &J : FunctionProfile.getCallsiteSamples())
@@ -442,8 +449,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncMetadata(
 
 std::error_code SampleProfileWriterExtBinaryBase::writeFuncMetadata(
     const SampleProfileMap &Profiles) {
-  if (!FunctionSamples::ProfileIsProbeBased && !FunctionSamples::ProfileIsCS &&
-      !FunctionSamples::ProfileIsPreInlined)
+  if (!ProfAttrs.ProfileIsProbeBased && !ProfAttrs.ProfileIsCS &&
+      !ProfAttrs.ProfileIsPreInlined)
     return sampleprof_error::success;
   for (const auto &Entry : Profiles) {
     if (std::error_code EC = writeFuncMetadata(Entry.second))
@@ -496,7 +503,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
   // Original names are unavailable if using MD5, so this option has no use.
   if (!UseMD5) {
     for (const auto &I : NameTable) {
-      if (I.first.stringRef().contains(FunctionSamples::UniqSuffix)) {
+      if (I.first.stringRef().contains(SampleProfileAttributes::UniqSuffix)) {
         addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagUniqSuffix);
         break;
       }
@@ -505,8 +512,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
 
   if (UseMD5 && UseMD5IndexedTables) {
     // Eytzinger name tables do not support CSSPGO profiles
-    // (FunctionSamples::ProfileIsCS).
-    if (FunctionSamples::ProfileIsCS)
+    // (ProfAttrs.ProfileIsCS).
+    if (ProfAttrs.ProfileIsCS)
       return sampleprof_error::unsupported_writing_format;
     if (auto EC = writeEytzingerNameTableSection(ProfileMap))
       return EC;
@@ -682,16 +689,16 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   SecHdrTableEntry &Entry = SectionHdrLayout[LayoutIdx];
 
   // The setting of SecFlagCompress should happen before markSectionStart.
-  if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
+  if (Type == SecFuncMetadata && ProfAttrs.ProfileIsProbeBased)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
   if (Type == SecFuncMetadata &&
-      (FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsPreInlined))
+      (ProfAttrs.ProfileIsCS || ProfAttrs.ProfileIsPreInlined))
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagHasAttribute);
-  if (Type == SecProfSummary && FunctionSamples::ProfileIsCS)
+  if (Type == SecProfSummary && ProfAttrs.ProfileIsCS)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFullContext);
-  if (Type == SecProfSummary && FunctionSamples::ProfileIsPreInlined)
+  if (Type == SecProfSummary && ProfAttrs.ProfileIsPreInlined)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagIsPreInlined);
-  if (Type == SecProfSummary && FunctionSamples::ProfileIsFS)
+  if (Type == SecProfSummary && ProfAttrs.ProfileIsFS)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFSDiscriminator);
   if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
     addSectionFlag(SecProfSummary,
@@ -773,6 +780,8 @@ std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
 static void splitProfileMapToTwo(const SampleProfileMap &ProfileMap,
                                  SampleProfileMap &NestedProfileMap,
                                  SampleProfileMap &FlatProfileMap) {
+  NestedProfileMap.getAttributes() = ProfileMap.getAttributes();
+  FlatProfileMap.getAttributes() = ProfileMap.getAttributes();
   for (const auto &I : ProfileMap) {
     if (I.second.hasCallsiteSamples())
       NestedProfileMap.insert({I.first, I.second});
@@ -844,7 +853,7 @@ std::error_code SampleProfileWriterExtBinary::writeSections(
 /// it needs to be parsed by the SampleProfileReaderText class.
 std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   auto &OS = *OutputStream;
-  if (FunctionSamples::ProfileIsCS)
+  if (ProfAttrs.ProfileIsCS)
     OS << "[" << S.getContext().toString() << "]:" << S.getTotalSamples();
   else
     OS << S.getFunction() << ":" << S.getTotalSamples();
@@ -905,7 +914,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
 
   Indent -= 1;
 
-  if (FunctionSamples::ProfileIsProbeBased) {
+  if (ProfAttrs.ProfileIsProbeBased) {
     OS.indent(Indent + 1);
     OS << "!CFGChecksum: " << S.getFunctionHash() << "\n";
     LineCount++;
@@ -1338,11 +1347,6 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                             SampleProfileFormat Format) {
   std::error_code EC;
   std::unique_ptr<SampleProfileWriter> Writer;
-
-  // Currently only Text and Extended Binary format are supported for CSSPGO.
-  if ((FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsProbeBased) &&
-      Format == SPF_Binary)
-    return sampleprof_error::unsupported_writing_format;
 
   if (Format == SPF_Binary)
     Writer.reset(new SampleProfileWriterRawBinary(OS));

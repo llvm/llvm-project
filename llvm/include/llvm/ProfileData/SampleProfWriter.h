@@ -175,6 +175,9 @@ protected:
 
   /// Format version to write.
   uint64_t FormatVersion = sampleprof::DefaultVersion;
+
+  /// Profile metadata flags for the profile map being written.
+  SampleProfileAttributes ProfAttrs;
 };
 
 /// Sample-based profile writer (text format).

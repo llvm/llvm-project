@@ -139,7 +139,8 @@ ProfileGeneratorBase::create(ProfiledBinary *Binary,
     Generator.reset(new ProfileGenerator(Binary, SampleCounters));
   }
   ProfileGeneratorBase::UseFSDiscriminator = Binary->useFSDiscriminator();
-  FunctionSamples::ProfileIsFS = Binary->useFSDiscriminator();
+  Generator->ProfileMap.getAttributes().ProfileIsFS =
+      Binary->useFSDiscriminator();
 
   return Generator;
 }
@@ -154,7 +155,8 @@ ProfileGeneratorBase::create(ProfiledBinary *Binary, SampleProfileMap &Profiles,
     Generator.reset(new ProfileGenerator(Binary, std::move(Profiles)));
   }
   ProfileGeneratorBase::UseFSDiscriminator = Binary->useFSDiscriminator();
-  FunctionSamples::ProfileIsFS = Binary->useFSDiscriminator();
+  Generator->ProfileMap.getAttributes().ProfileIsFS =
+      Binary->useFSDiscriminator();
 
   return Generator;
 }
@@ -526,7 +528,7 @@ void ProfileGeneratorBase::markAllContextPreinlined(
     SampleProfileMap &ProfileMap) {
   for (auto &I : ProfileMap)
     I.second.setContextAttribute(ContextShouldBeInlined);
-  FunctionSamples::ProfileIsPreInlined = true;
+  ProfileMap.getAttributes().ProfileIsPreInlined = true;
 }
 
 void ProfileGenerator::postProcessProfiles() {
@@ -571,7 +573,7 @@ void ProfileGenerator::generateProbeBasedProfile() {
   assert(SampleCounters->size() == 1 &&
          "Must have one entry for profile generation.");
   // Enable pseudo probe functionalities in SampleProf
-  FunctionSamples::ProfileIsProbeBased = true;
+  ProfileMap.getAttributes().ProfileIsProbeBased = true;
   const SampleCounter &SC = SampleCounters->begin()->second;
   // Fill in function body samples
   populateBodySamplesWithProbesForAllFunctions(SC.RangeCounter);
@@ -741,10 +743,10 @@ ProfileGeneratorBase::getCalleeNameForAddress(uint64_t TargetAddress) {
   if (Binary->usePseudoProbes()) {
     auto FuncName = Binary->findPseudoProbeName(FRange->Func);
     if (FuncName.size())
-      return FunctionSamples::getCanonicalFnName(FuncName);
+      return ProfileMap.getAttributes().getCanonicalFnName(FuncName);
   }
 
-  return FunctionSamples::getCanonicalFnName(FRange->getFuncName());
+  return ProfileMap.getAttributes().getCanonicalFnName(FRange->getFuncName());
 }
 
 void ProfileGenerator::populateBoundarySamplesForAllFunctions(
@@ -925,7 +927,7 @@ CSProfileGenerator::getOrCreateContextNode(const SampleContextFrames Context,
 void CSProfileGenerator::generateProfile() {
   NamedRegionTimer T("generate", "Generate CS profile", "profgen",
                      "llvm-profgen", TimeProfGen);
-  FunctionSamples::ProfileIsCS = true;
+  ProfileMap.getAttributes().ProfileIsCS = true;
 
   collectProfiledFunctions();
 
@@ -948,6 +950,7 @@ void CSProfileGenerator::generateProfile() {
   if (Binary->getTrackFuncContextSize())
     computeSizeForProfiledFunctions();
 
+  ContextTracker.getAttributes() = ProfileMap.getAttributes();
   postProcessProfiles();
 }
 
@@ -1103,7 +1106,8 @@ void CSProfileGenerator::populateInferredFunctionSamples(
   FunctionSamples &CallerProfile = *getOrCreateFunctionSamples(CallerNode);
   // Since we don't have call count for inlined functions, we
   // estimate it from inlinee's profile using entry body sample.
-  uint64_t EstimatedCallCount = CalleeProfile->getHeadSamplesEstimate();
+  uint64_t EstimatedCallCount =
+      ProfileMap.getAttributes().getHeadSamplesEstimate(*CalleeProfile);
   // If we don't have samples with location, use 1 to indicate live.
   if (!EstimatedCallCount && !CalleeProfile->getBodySamples().size())
     EstimatedCallCount = 1;
@@ -1160,6 +1164,8 @@ void CSProfileGenerator::postProcessProfiles() {
   if (EnableCSPreInliner) {
     ContextTracker.populateFuncToCtxtMap();
     CSPreInliner(ContextTracker, *Binary, Summary.get()).run();
+    ProfileMap.getAttributes().ProfileIsPreInlined =
+        ContextTracker.getAttributes().ProfileIsPreInlined;
     // Turn off the profile merger by default unless it is explicitly enabled.
     if (!CSProfMergeColdContext.getNumOccurrences())
       CSProfMergeColdContext = false;
@@ -1178,7 +1184,7 @@ void CSProfileGenerator::postProcessProfiles() {
   if (GenCSNestedProfile) {
     ProfileConverter CSConverter(ProfileMap);
     CSConverter.convertCSProfiles();
-    FunctionSamples::ProfileIsCS = false;
+    ProfileMap.getAttributes().ProfileIsCS = false;
   }
   filterAmbiguousProfile(ProfileMap);
   if (MarkAllContextPreinlined)
@@ -1203,14 +1209,13 @@ void CSProfileGenerator::computeSummaryAndThreshold() {
 
   // Set the flag below to avoid merging the profile again in
   // computeSummaryAndThreshold
-  FunctionSamples::ProfileIsCS = false;
+  ContextLessProfiles.getAttributes() = ProfileMap.getAttributes();
+  ContextLessProfiles.getAttributes().ProfileIsCS = false;
   assert(
       (!UseContextLessSummary.getNumOccurrences() || UseContextLessSummary) &&
       "Don't set --profile-summary-contextless to false for profile "
       "generation");
   ProfileGeneratorBase::computeSummaryAndThreshold(ContextLessProfiles);
-  // Recover the old value.
-  FunctionSamples::ProfileIsCS = true;
 }
 
 void ProfileGeneratorBase::extractProbesFromRange(
@@ -1277,7 +1282,7 @@ static void extractPrefixContextStack(SampleContextFrameVector &ContextStack,
 
 void CSProfileGenerator::generateProbeBasedProfile() {
   // Enable pseudo probe functionalities in SampleProf
-  FunctionSamples::ProfileIsProbeBased = true;
+  ProfileMap.getAttributes().ProfileIsProbeBased = true;
   for (const auto &CI : *SampleCounters) {
     const AddrBasedCtxKey *CtxKey =
         dyn_cast<AddrBasedCtxKey>(CI.first.getPtr());

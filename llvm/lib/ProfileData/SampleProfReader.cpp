@@ -377,8 +377,7 @@ std::error_code SampleProfileReaderText::readImpl() {
 
   std::vector<SampleContext *> FlatSamples;
 
-  ProfileIsFS = ProfileIsFSDisciminator;
-  FunctionSamples::ProfileIsFS = ProfileIsFS;
+  getAttributes().ProfileIsFS = ProfileIsFSDisciminator;
   for (; !LineIt.is_at_eof(); ++LineIt) {
     size_t pos = LineIt->find_first_not_of(' ');
     if (pos == LineIt->npos || (*LineIt)[pos] == '#')
@@ -497,7 +496,7 @@ std::error_code SampleProfileReaderText::readImpl() {
         }
         FProfile.getContext().setAllAttributes(Attributes);
         if (Attributes & (uint32_t)ContextShouldBeInlined)
-          ProfileIsPreInlined = true;
+          getAttributes().ProfileIsPreInlined = true;
         DepthMetadata = Depth;
         if (IsFlat) {
           if (Depth == 1)
@@ -521,14 +520,11 @@ std::error_code SampleProfileReaderText::readImpl() {
 
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  ProfileIsCS = (CSProfileCount > 0);
+  getAttributes().ProfileIsCS = (CSProfileCount > 0);
   assert((TopLevelProbeProfileCount == 0 ||
           TopLevelProbeProfileCount == Profiles.size()) &&
          "Cannot have both probe-based profiles and regular profiles");
-  ProfileIsProbeBased = (TopLevelProbeProfileCount > 0);
-  FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
-  FunctionSamples::ProfileIsCS = ProfileIsCS;
-  FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined;
+  getAttributes().ProfileIsProbeBased = (TopLevelProbeProfileCount > 0);
 
   if (Result == sampleprof_error::success)
     computeSummary();
@@ -647,7 +643,7 @@ ErrorOr<std::pair<SampleContext, uint64_t>>
 SampleProfileReaderBinary::readSampleContextFromTable() {
   SampleContext Context;
   size_t Idx;
-  if (ProfileIsCS) {
+  if (profileIsCS()) {
     auto FContext(readContextFromTable(&Idx));
     if (std::error_code EC = FContext.getError())
       return EC;
@@ -698,7 +694,7 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
     // Without FS discriminators, the source profile should not have duplicate
     // vtable records at the same location. Emit a warning about duplicate
     // vtables and continue processing the profile.
-    if (!ProfileIsFS) {
+    if (!profileIsFS()) {
       Ctx.diagnose(DiagnosticInfoSampleProfile(
           Buffer->getBufferIdentifier(), 0,
           "Duplicate vtable type " + VTableType->str() +
@@ -969,8 +965,7 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
 }
 
 std::error_code SampleProfileReaderBinary::readImpl() {
-  ProfileIsFS = ProfileIsFSDisciminator;
-  FunctionSamples::ProfileIsFS = ProfileIsFS;
+  getAttributes().ProfileIsFS = ProfileIsFSDisciminator;
   while (Data < End) {
     if (std::error_code EC = readFuncProfile(Data))
       return EC;
@@ -990,11 +985,11 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
       Summary->setPartialProfile(true);
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
-      FunctionSamples::ProfileIsCS = ProfileIsCS = true;
+      getAttributes().ProfileIsCS = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsPreInlined))
-      FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined = true;
+      getAttributes().ProfileIsPreInlined = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
-      FunctionSamples::ProfileIsFS = ProfileIsFS = true;
+      getAttributes().ProfileIsFS = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagHasVTableTypeProf))
       ReadVTableProf = true;
     break;
@@ -1002,10 +997,10 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     bool FixedLengthMD5 =
         hasSecFlag(Entry, SecNameTableFlags::SecFlagFixedLengthMD5);
     bool UseMD5 = hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name);
-    // UseMD5 means if THIS section uses MD5, ProfileIsMD5 means if the entire
-    // profile uses MD5 for function name matching in IPO passes.
-    ProfileIsMD5 = ProfileIsMD5 || UseMD5;
-    FunctionSamples::HasUniqSuffix =
+    // UseMD5 means if THIS section uses MD5, getAttributes().UseMD5 means if
+    // the entire profile uses MD5 for function name matching in IPO passes.
+    getAttributes().UseMD5 = getAttributes().UseMD5 || UseMD5;
+    getAttributes().HasUniqSuffix =
         hasSecFlag(Entry, SecNameTableFlags::SecFlagUniqSuffix);
     bool IsEytzinger = hasSecFlag(Entry, SecNameTableFlags::SecFlagEytzinger);
     if (std::error_code EC =
@@ -1038,7 +1033,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       // An unflagged function offset table inherently indexes the primary
       // Nested symbol span.
       bool IsNested = !IsFlat;
-      assert((!ProfileIsCS ||
+      assert((!profileIsCS() ||
               hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered) ||
               IsEytzinger) &&
              "func offset table should always be sorted or in Eytzinger BFS "
@@ -1048,9 +1043,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     }
     break;
   case SecFuncMetadata: {
-    ProfileIsProbeBased =
+    getAttributes().ProfileIsProbeBased =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased);
-    FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
     ProfileHasAttribute =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute);
     if (std::error_code EC = readFuncMetadata())
@@ -1076,7 +1070,7 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
   // (e.g. [A, A:1 @ B, A:1 @ B:2.3 @ C] [D, D:1 @ E]), so that when a matched
   // context in the module is found, the profiles of all its callees are
   // recursively loaded. A list is needed since the order of profiles matters.
-  if (ProfileIsCS)
+  if (profileIsCS())
     return true;
 
   // If the profile is MD5, use the map container to lookup functions in
@@ -1126,7 +1120,7 @@ bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
     return false;
   FuncsToUse.clear();
   for (auto &F : *M)
-    FuncsToUse.insert(FunctionSamples::getCanonicalFnName(F));
+    FuncsToUse.insert(getAttributes().getCanonicalFnName(F));
   return true;
 }
 
@@ -1221,7 +1215,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     return sampleprof_error::success;
   }
 
-  if (ProfileIsCS) {
+  if (profileIsCS()) {
     assert(useFuncOffsetList());
     DenseSet<uint64_t> FuncGuidsToUse;
     if (useMD5()) {
@@ -1310,9 +1304,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
 std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   // Collect functions used by current module if the Reader has been
   // given a module.
-  // collectFuncsFromModule uses FunctionSamples::getCanonicalFnName
-  // which will query FunctionSamples::HasUniqSuffix, so it has to be
-  // called after FunctionSamples::HasUniqSuffix is set, i.e. after
+  // collectFuncsFromModule uses getAttributes().getCanonicalFnName
+  // which will query getAttributes().HasUniqSuffix, so it has to be
+  // called after getAttributes().HasUniqSuffix is set, i.e. after
   // NameTable section is read.
   bool LoadFuncsToBeUsed = collectFuncsFromModule();
 
@@ -1332,7 +1326,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  assert((!CSProfileCount || ProfileIsCS) &&
+  assert((!CSProfileCount || profileIsCS()) &&
          "Section flag should be consistent with actual profile");
   return sampleprof_error::success;
 }
@@ -1468,7 +1462,7 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
 
   std::vector<FunctionId> TableVec;
   TableVec.reserve(*Size);
-  if (!ProfileIsCS) {
+  if (!profileIsCS()) {
     MD5SampleContextTable.clear();
     if (UseMD5)
       MD5SampleContextTable.reserve(*Size);
@@ -1484,13 +1478,13 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
       return EC;
     if (UseMD5) {
       FunctionId FID(*Name);
-      if (!ProfileIsCS)
+      if (!profileIsCS())
         MD5SampleContextTable.emplace_back(FID.getHashCode());
       TableVec.emplace_back(FID);
     } else
       TableVec.push_back(FunctionId(*Name));
   }
-  if (!ProfileIsCS)
+  if (!profileIsCS())
     MD5SampleContextStart = MD5SampleContextTable.data();
   if (UseMD5)
     NameTable =
@@ -1543,7 +1537,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readNameTableSecEytzinger(
       reinterpret_cast<const support::ulittle64_t *>(Data), NumNested, NumFlat,
       NumInlinees);
 
-  if (!ProfileIsCS)
+  if (!profileIsCS())
     MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
   Data = Data + TotalEntries * sizeof(uint64_t);
   return sampleprof_error::success;
@@ -1579,7 +1573,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSecLegacy(bool IsMD5,
       NameTable =
           std::make_unique<MD5SampleProfileNameTable>(std::move(TableVec));
     }
-    if (!ProfileIsCS)
+    if (!profileIsCS())
       MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
     Data = Data + (*Size) * sizeof(uint64_t);
     return sampleprof_error::success;
@@ -1593,17 +1587,17 @@ SampleProfileReaderExtBinaryBase::readNameTableSecLegacy(bool IsMD5,
 
     std::vector<FunctionId> TableVec;
     TableVec.reserve(*Size);
-    if (!ProfileIsCS)
+    if (!profileIsCS())
       MD5SampleContextTable.resize(*Size);
     for (size_t I = 0; I < *Size; ++I) {
       auto FID = readNumber<uint64_t>();
       if (std::error_code EC = FID.getError())
         return EC;
-      if (!ProfileIsCS)
+      if (!profileIsCS())
         support::endian::write64le(&MD5SampleContextTable[I], *FID);
       TableVec.emplace_back(FunctionId(*FID));
     }
-    if (!ProfileIsCS)
+    if (!profileIsCS())
       MD5SampleContextStart = MD5SampleContextTable.data();
     NameTable =
         std::make_unique<MD5SampleProfileNameTable>(std::move(TableVec));
@@ -1624,7 +1618,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
 
   CSNameTable.clear();
   CSNameTable.reserve(*Size);
-  if (ProfileIsCS) {
+  if (profileIsCS()) {
     // Delay MD5 computation of CS context until they are needed. Use 0 to
     // indicate MD5 value is to be calculated as no known string has a MD5
     // value of 0.
@@ -1663,7 +1657,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
 std::error_code
 SampleProfileReaderExtBinaryBase::readFuncMetadata(FunctionSamples *FProfile) {
   if (Data < End) {
-    if (ProfileIsProbeBased) {
+    if (profileIsProbeBased()) {
       auto Checksum = readNumber<uint64_t>();
       if (std::error_code EC = Checksum.getError())
         return EC;
@@ -1679,7 +1673,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(FunctionSamples *FProfile) {
         FProfile->getContext().setAllAttributes(*Attributes);
     }
 
-    if (!ProfileIsCS) {
+    if (!profileIsCS()) {
       // Read all the attributes for inlined function calls.
       auto NumCallsites = readNumber<uint32_t>();
       if (std::error_code EC = NumCallsites.getError())

@@ -150,6 +150,8 @@ public:
       &getFuncToCtxtProfiles() {
     return FuncToCtxtProfiles;
   }
+  const SampleProfileAttributes &getAttributes() const { return ProfAttrs; }
+  SampleProfileAttributes &getAttributes() { return ProfAttrs; }
 
   class Iterator : public llvm::iterator_facade_base<
                        Iterator, std::forward_iterator_tag, ContextTrieNode *,
@@ -222,6 +224,8 @@ private:
 
   // Root node for context trie tree
   ContextTrieNode RootContext;
+
+  SampleProfileAttributes ProfAttrs;
 };
 
 } // end namespace llvm
