@@ -60,9 +60,9 @@ public:
   };
 
   enum class AMDGPUBufferOOBModel {
-    Gfx9 = 1,
-    Gfx10 = 2,
-    Gfx1250 = 3,
+    NoSelect = 1,
+    Select2Bit = 2,
+    Select1Bit = 3,
   };
 
 private:
@@ -94,7 +94,7 @@ protected:
   /// set from tablegen subtarget features, 0 is unknown.
   unsigned BufferResourceNumRecordsWidth = 0;
 
-  /// OOB range-check model, set from tablegen subtarget features. 0 is unknown.
+  /// The buffer OOB model, set from tablegen subtarget features. 0 is unknown.
   unsigned BufferOOBModel = 0;
 
   // Dynamically set bits that enable features.
@@ -365,8 +365,7 @@ public:
     return BufferResourceNumRecordsWidth;
   }
 
-  /// Return the OOB range-check model this hardware implements or nullopt if
-  /// unknown.
+  /// Returns the buffer OOB model, or std::nullopt if unknown.
   std::optional<AMDGPUBufferOOBModel> getBufferOOBModel() const {
     if (BufferOOBModel == 0)
       return std::nullopt;
