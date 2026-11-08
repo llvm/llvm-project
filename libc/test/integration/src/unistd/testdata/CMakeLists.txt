@@ -25,4 +25,3 @@ set(shebangless_file
 file(WRITE ${shebangless_file} "exit 42\n")
 file(CHMOD ${shebangless_file}
   PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
