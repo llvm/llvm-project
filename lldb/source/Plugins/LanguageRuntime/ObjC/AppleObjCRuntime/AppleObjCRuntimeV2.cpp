@@ -2888,20 +2888,15 @@ DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
   return m_decl_vendor_up.get();
 }
 
-lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
+lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(llvm::StringRef name) {
   lldb::addr_t ret = LLDB_INVALID_ADDRESS;
 
-  const char *name_cstr = name.AsCString(nullptr);
-
-  if (name_cstr) {
-    llvm::StringRef name_strref(name_cstr);
-
+  if (!name.empty()) {
     llvm::StringRef ivar_prefix("OBJC_IVAR_$_");
     llvm::StringRef class_prefix("OBJC_CLASS_$_");
 
-    if (name_strref.starts_with(ivar_prefix)) {
-      llvm::StringRef ivar_skipped_prefix =
-          name_strref.substr(ivar_prefix.size());
+    if (name.starts_with(ivar_prefix)) {
+      llvm::StringRef ivar_skipped_prefix = name.substr(ivar_prefix.size());
       std::pair<llvm::StringRef, llvm::StringRef> class_and_ivar =
           ivar_skipped_prefix.split('.');
 
@@ -2932,9 +2927,8 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
               ivar_func);
         }
       }
-    } else if (name_strref.starts_with(class_prefix)) {
-      llvm::StringRef class_skipped_prefix =
-          name_strref.substr(class_prefix.size());
+    } else if (name.starts_with(class_prefix)) {
+      llvm::StringRef class_skipped_prefix = name.substr(class_prefix.size());
       const ConstString class_name_cs(class_skipped_prefix);
       ClassDescriptorSP descriptor =
           GetClassDescriptorFromClassName(class_name_cs);

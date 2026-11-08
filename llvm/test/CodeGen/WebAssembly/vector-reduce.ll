@@ -791,13 +791,13 @@ define float @pairwise_max_v4f32(<4 x float> %arg) {
 ; SIMD128-LABEL: pairwise_max_v4f32:
 ; SIMD128:         .functype pairwise_max_v4f32 (v128) -> (f32)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 0
-; SIMD128-NEXT:    f32x4.extract_lane $push2=, $0, 1
-; SIMD128-NEXT:    call $push4=, fmaxf, $pop3, $pop2
-; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 2
-; SIMD128-NEXT:    call $push5=, fmaxf, $pop4, $pop1
-; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 3
-; SIMD128-NEXT:    call $push6=, fmaxf, $pop5, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 0
+; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 1
+; SIMD128-NEXT:    call $push2=, fmaxf, $pop1, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 2
+; SIMD128-NEXT:    call $push4=, fmaxf, $pop2, $pop3
+; SIMD128-NEXT:    f32x4.extract_lane $push5=, $0, 3
+; SIMD128-NEXT:    call $push6=, fmaxf, $pop4, $pop5
 ; SIMD128-NEXT:    return $pop6
   %res = tail call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
   ret float %res
@@ -822,13 +822,13 @@ define float @pairwise_max_v4f32_reassoc(<4 x float> %arg) {
 ; SIMD128-LABEL: pairwise_max_v4f32_reassoc:
 ; SIMD128:         .functype pairwise_max_v4f32_reassoc (v128) -> (f32)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 0
-; SIMD128-NEXT:    f32x4.extract_lane $push2=, $0, 1
-; SIMD128-NEXT:    call $push4=, fmaxf, $pop3, $pop2
-; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 2
-; SIMD128-NEXT:    call $push5=, fmaxf, $pop4, $pop1
-; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 3
-; SIMD128-NEXT:    call $push6=, fmaxf, $pop5, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 0
+; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 1
+; SIMD128-NEXT:    call $push2=, fmaxf, $pop1, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 2
+; SIMD128-NEXT:    call $push4=, fmaxf, $pop2, $pop3
+; SIMD128-NEXT:    f32x4.extract_lane $push5=, $0, 3
+; SIMD128-NEXT:    call $push6=, fmaxf, $pop4, $pop5
 ; SIMD128-NEXT:    return $pop6
   %res = tail call reassoc float @llvm.vector.reduce.fmax.v4f32(<4 x float> %arg)
   ret float %res
@@ -862,13 +862,13 @@ define float @pairwise_min_v4f32(<4 x float> %arg) {
 ; SIMD128-LABEL: pairwise_min_v4f32:
 ; SIMD128:         .functype pairwise_min_v4f32 (v128) -> (f32)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 0
-; SIMD128-NEXT:    f32x4.extract_lane $push2=, $0, 1
-; SIMD128-NEXT:    call $push4=, fminf, $pop3, $pop2
-; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 2
-; SIMD128-NEXT:    call $push5=, fminf, $pop4, $pop1
-; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 3
-; SIMD128-NEXT:    call $push6=, fminf, $pop5, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 0
+; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 1
+; SIMD128-NEXT:    call $push2=, fminf, $pop1, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 2
+; SIMD128-NEXT:    call $push4=, fminf, $pop2, $pop3
+; SIMD128-NEXT:    f32x4.extract_lane $push5=, $0, 3
+; SIMD128-NEXT:    call $push6=, fminf, $pop4, $pop5
 ; SIMD128-NEXT:    return $pop6
   %res = tail call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
   ret float %res
@@ -893,13 +893,13 @@ define float @pairwise_min_v4f32_reassoc(<4 x float> %arg) {
 ; SIMD128-LABEL: pairwise_min_v4f32_reassoc:
 ; SIMD128:         .functype pairwise_min_v4f32_reassoc (v128) -> (f32)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 0
-; SIMD128-NEXT:    f32x4.extract_lane $push2=, $0, 1
-; SIMD128-NEXT:    call $push4=, fminf, $pop3, $pop2
-; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 2
-; SIMD128-NEXT:    call $push5=, fminf, $pop4, $pop1
-; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 3
-; SIMD128-NEXT:    call $push6=, fminf, $pop5, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push1=, $0, 0
+; SIMD128-NEXT:    f32x4.extract_lane $push0=, $0, 1
+; SIMD128-NEXT:    call $push2=, fminf, $pop1, $pop0
+; SIMD128-NEXT:    f32x4.extract_lane $push3=, $0, 2
+; SIMD128-NEXT:    call $push4=, fminf, $pop2, $pop3
+; SIMD128-NEXT:    f32x4.extract_lane $push5=, $0, 3
+; SIMD128-NEXT:    call $push6=, fminf, $pop4, $pop5
 ; SIMD128-NEXT:    return $pop6
   %res = tail call reassoc float @llvm.vector.reduce.fmin.v4f32(<4 x float> %arg)
   ret float %res

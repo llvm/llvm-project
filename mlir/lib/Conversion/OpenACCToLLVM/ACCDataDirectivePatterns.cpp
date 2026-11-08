@@ -32,28 +32,21 @@ using namespace mlir::acc;
 
 /// Emits the call to the mapping entry point \p fn for \p mappingOperands, the
 /// data-clause operands of a data construct, paired with their type converted
-/// values in \p convertedOperands.
+/// values in \p convertedOperands. \p regionFlags describe the data region
+/// the call opens or closes.
 static LogicalResult emitDataRuntimeCall(
     Location loc, RuntimeFunction fn, ValueRange mappingOperands,
     ValueRange convertedOperands, ACCDataCallKind callKind,
     ConversionPatternRewriter &rewriter, OpenACCSupport &accSupport,
     Region &globalSymbolRegion, SymbolTable &symbolTable,
-    const ACCRuntimeCallConfig &config, ArrayRef<Value> trailingArguments) {
-  if (mappingOperands.empty())
-    return success();
-
-  Operation *firstMapOp = mappingOperands.front().getDefiningOp();
-  ACCDataRuntimeArgs runtimeArgs;
-  if (failed(emitACCDataRuntimeArgs(
-          loc, mappingOperands, convertedOperands, rewriter, globalSymbolRegion,
-          accSupport, config, runtimeArgs, callKind, &symbolTable)))
-    return rewriter.notifyMatchFailure(
-        firstMapOp, "unsupported OpenACC data-clause operand");
-
-  SmallVector<Value> arguments = runtimeArgs.getCallArgs();
-  arguments.append(trailingArguments.begin(), trailingArguments.end());
-  return createRuntimeCall(loc, rewriter, globalSymbolRegion, symbolTable, fn,
-                           config, arguments);
+    const ACCRuntimeCallConfig &config, ArrayRef<Value> trailingArguments,
+    ACCDataRegionFlags regionFlags = ACCDataRegionFlags::None) {
+  ACCDataCallOptions options;
+  options.callKind = callKind;
+  options.flags = static_cast<int64_t>(regionFlags);
+  return emitACCDataRuntimeCall(
+      loc, fn, mappingOperands, convertedOperands, rewriter, accSupport,
+      globalSymbolRegion, symbolTable, config, trailingArguments, options);
 }
 
 /// Returns the action that the declare-action recipe holding \p op carries
@@ -202,8 +195,9 @@ using UpdateOpLowering =
                         ACCDataCallKind::DataEnter>;
 
 /// Structured `acc.declare_enter` (token used by a matching exit) maps like
-/// `acc.data` enter. In a declare-action recipe the object the directive
-/// names is allocated by the host, so only the device mirror of it is
+/// `acc.data` enter, with the region flags telling the runtime that a declare
+/// directive opened the region. In a declare-action recipe the object the
+/// directive names is allocated by the host, so only the device mirror of it is
 /// allocated here. An unstructured enter registers the objects it names with
 /// `__tgt_acc_declare`.
 struct DeclareEnterOpLowering : public ConvertOpToLLVMPattern<DeclareEnterOp> {
@@ -234,7 +228,8 @@ struct DeclareEnterOpLowering : public ConvertOpToLLVMPattern<DeclareEnterOp> {
       emitted = emitDataRuntimeCall(
           loc, RuntimeFunction::ACCRTL_tgt_acc_data_begin, mappingOperands,
           convertedOperands, ACCDataCallKind::DataEnter, rewriter, accSupport,
-          globalSymbolRegion, symbolTable, config, {asyncQueue});
+          globalSymbolRegion, symbolTable, config, {asyncQueue},
+          ACCDataRegionFlags::Declare);
     } else {
       Value binaryDescriptor =
           config.createDeclareBinaryDescriptor(loc, rewriter);
@@ -266,7 +261,9 @@ struct DeclareEnterOpLowering : public ConvertOpToLLVMPattern<DeclareEnterOp> {
 
 /// A recipe that runs before the host object is deallocated frees the device
 /// mirror of it, as the mapping is torn down once the host storage is gone.
-/// Every other `acc.declare_exit` ends the mapping with `__tgt_acc_data_end`.
+/// Every other `acc.declare_exit` ends the mapping with `__tgt_acc_data_end`;
+/// a structured exit (one holding the token of its enter) carries the declare
+/// region flag, as its enter did.
 struct DeclareExitOpLowering : public ConvertOpToLLVMPattern<DeclareExitOp> {
   DeclareExitOpLowering(const LLVMTypeConverter &converter,
                         OpenACCSupport &accSupport, Region &globalSymbolRegion,
@@ -293,10 +290,13 @@ struct DeclareExitOpLowering : public ConvertOpToLLVMPattern<DeclareExitOp> {
           convertedOperands, ACCDataCallKind::DataEnter, rewriter, accSupport,
           globalSymbolRegion, symbolTable, config, {});
     } else {
+      ACCDataRegionFlags regionFlags = op.getToken()
+                                           ? ACCDataRegionFlags::Declare
+                                           : ACCDataRegionFlags::None;
       emitted = emitDataRuntimeCall(
           loc, RuntimeFunction::ACCRTL_tgt_acc_data_end, mappingOperands,
           convertedOperands, ACCDataCallKind::DataExit, rewriter, accSupport,
-          globalSymbolRegion, symbolTable, config, {asyncQueue});
+          globalSymbolRegion, symbolTable, config, {asyncQueue}, regionFlags);
     }
     if (failed(emitted))
       return failure();

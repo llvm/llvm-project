@@ -150,6 +150,33 @@ bool LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   bool FrameRegIsKill = false;
 
   int FixedOffset = Offset.getFixed();
+  // Frame index elimination may change a previously encodable displacement
+  // into one that does not fit si14 << 2. Use the equivalent unscaled
+  // instruction and let the existing si12 handling legalize the final offset.
+  if (!isShiftedInt<14, 2>(FixedOffset)) {
+    unsigned NewOpc = 0;
+    switch (MIOpc) {
+    default:
+      break;
+    case LoongArch::LDPTR_W:
+      NewOpc = LoongArch::LD_W;
+      break;
+    case LoongArch::LDPTR_D:
+      NewOpc = LoongArch::LD_D;
+      break;
+    case LoongArch::STPTR_W:
+      NewOpc = LoongArch::ST_W;
+      break;
+    case LoongArch::STPTR_D:
+      NewOpc = LoongArch::ST_D;
+      break;
+    }
+    if (NewOpc) {
+      MI.setDesc(TII->get(NewOpc));
+      MIOpc = NewOpc;
+    }
+  }
+
   bool OffsetLegal = true;
   // True only when the instruction's immediate field is si12.
   bool HasSimm12Field = false;
@@ -202,6 +229,18 @@ bool LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // Handle offsets that exceed the immediate range of the instruction.
   switch (MIOpc) {
+  case LoongArch::VLDREPL_H:
+  case LoongArch::XVLDREPL_H:
+    OffsetLegal = isShiftedInt<11, 1>(FixedOffset);
+    break;
+  case LoongArch::VLDREPL_W:
+  case LoongArch::XVLDREPL_W:
+    OffsetLegal = isShiftedInt<10, 2>(FixedOffset);
+    break;
+  case LoongArch::VLDREPL_D:
+  case LoongArch::XVLDREPL_D:
+    OffsetLegal = isShiftedInt<9, 3>(FixedOffset);
+    break;
   case LoongArch::VSTELM_B:
   case LoongArch::XVSTELM_B:
     OffsetLegal = isInt<8>(FixedOffset);

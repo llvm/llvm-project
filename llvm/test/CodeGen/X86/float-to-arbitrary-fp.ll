@@ -72,14 +72,13 @@ define i8 @to_f8e5m2_dynamic(float %x) {
 ; CHECK-NEXT:    leal (%rax,%r8,4), %r8d
 ; CHECK-NEXT:    orl %r10d, %r8d
 ; CHECK-NEXT:    shrl $21, %edi
-; CHECK-NEXT:    movl %edi, %r9d
-; CHECK-NEXT:    andl $1, %r9d
-; CHECK-NEXT:    xorl %r10d, %r10d
+; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    testl $1048575, %esi # imm = 0xFFFFF
-; CHECK-NEXT:    setne %r10b
-; CHECK-NEXT:    orl %r9d, %r10d
+; CHECK-NEXT:    setne %r9b
+; CHECK-NEXT:    orl %edi, %r9d
 ; CHECK-NEXT:    shrl $20, %esi
-; CHECK-NEXT:    andl %r10d, %esi
+; CHECK-NEXT:    andl %r9d, %esi
+; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    cmpl $4, %esi
@@ -455,14 +454,13 @@ define <2 x i8> @to_f8e5m2_v2f32(<2 x float> %x) {
 ; CHECK-NEXT:    leal (%r9,%r8,4), %r8d
 ; CHECK-NEXT:    orl %r13d, %r8d
 ; CHECK-NEXT:    shrl $21, %r12d
-; CHECK-NEXT:    movl %r12d, %r10d
-; CHECK-NEXT:    andl $1, %r10d
-; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    testl $1048575, %r15d # imm = 0xFFFFF
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    orl %r10d, %r11d
+; CHECK-NEXT:    setne %r10b
+; CHECK-NEXT:    orl %r12d, %r10d
 ; CHECK-NEXT:    shrl $20, %r15d
-; CHECK-NEXT:    andl %r11d, %r15d
+; CHECK-NEXT:    andl %r10d, %r15d
+; CHECK-NEXT:    andl $1, %r15d
 ; CHECK-NEXT:    addl %r12d, %r15d
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    cmpl $4, %r15d
@@ -515,14 +513,13 @@ define <2 x i8> @to_f8e5m2_v2f32(<2 x float> %x) {
 ; CHECK-NEXT:    leal (%rdi,%r10,4), %r10d
 ; CHECK-NEXT:    orl %ecx, %r10d
 ; CHECK-NEXT:    shrl $21, %esi
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testl $1048575, %edx # imm = 0xFFFFF
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    orl %ecx, %r11d
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    orl %esi, %ecx
 ; CHECK-NEXT:    shrl $20, %edx
-; CHECK-NEXT:    andl %r11d, %edx
+; CHECK-NEXT:    andl %ecx, %edx
+; CHECK-NEXT:    andl $1, %edx
 ; CHECK-NEXT:    addl %esi, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $4, %edx
@@ -687,14 +684,13 @@ define <2 x i8> @to_f8e4m3fn_v2f32(<2 x float> %x) {
 ; CHECK-NEXT:    leal (%r9,%r8,8), %r8d
 ; CHECK-NEXT:    orl %r13d, %r8d
 ; CHECK-NEXT:    shrl $20, %r12d
-; CHECK-NEXT:    movl %r12d, %r10d
-; CHECK-NEXT:    andl $1, %r10d
-; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    testl $524287, %r15d # imm = 0x7FFFF
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    orl %r10d, %r11d
+; CHECK-NEXT:    setne %r10b
+; CHECK-NEXT:    orl %r12d, %r10d
 ; CHECK-NEXT:    shrl $19, %r15d
-; CHECK-NEXT:    andl %r11d, %r15d
+; CHECK-NEXT:    andl %r10d, %r15d
+; CHECK-NEXT:    andl $1, %r15d
 ; CHECK-NEXT:    addl %r12d, %r15d
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    cmpl $8, %r15d
@@ -727,14 +723,13 @@ define <2 x i8> @to_f8e4m3fn_v2f32(<2 x float> %x) {
 ; CHECK-NEXT:    leal (%rdi,%r10,8), %r10d
 ; CHECK-NEXT:    orl %ecx, %r10d
 ; CHECK-NEXT:    shrl $20, %esi
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testl $524287, %edx # imm = 0x7FFFF
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    orl %ecx, %r11d
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    orl %esi, %ecx
 ; CHECK-NEXT:    shrl $19, %edx
-; CHECK-NEXT:    andl %r11d, %edx
+; CHECK-NEXT:    andl %ecx, %edx
+; CHECK-NEXT:    andl $1, %edx
 ; CHECK-NEXT:    addl %esi, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $8, %edx
@@ -912,7 +907,7 @@ define <3 x i8> @to_f8e4m3fn_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $8, %r14d
 ; CHECK-NEXT:    cmovgel %eax, %r14d
-; CHECK-NEXT:    movl $0, %ebp
+; CHECK-NEXT:    movl $0, %ebx
 ; CHECK-NEXT:    setge %cl
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movd %xmm1, %eax
@@ -922,19 +917,17 @@ define <3 x i8> @to_f8e4m3fn_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    orl %r14d, %ecx
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
 ; CHECK-NEXT:    shrl $20, %r11d
-; CHECK-NEXT:    movl %r11d, %edx
-; CHECK-NEXT:    movq %r11, %rbx
-; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    testl $524287, %r13d # imm = 0x7FFFF
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    orl %edx, %r11d
+; CHECK-NEXT:    setne %dl
+; CHECK-NEXT:    orl %r11d, %edx
 ; CHECK-NEXT:    shrl $19, %r13d
-; CHECK-NEXT:    andl %r11d, %r13d
-; CHECK-NEXT:    addl %ebx, %r13d
+; CHECK-NEXT:    andl %edx, %r13d
+; CHECK-NEXT:    andl $1, %r13d
+; CHECK-NEXT:    addl %r11d, %r13d
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    cmpl $8, %r13d
-; CHECK-NEXT:    cmovgel %ebp, %r13d
+; CHECK-NEXT:    cmovgel %ebx, %r13d
 ; CHECK-NEXT:    setge %dl
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; CHECK-NEXT:    leal (%rbx,%rdx), %r11d
@@ -953,8 +946,8 @@ define <3 x i8> @to_f8e4m3fn_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    addl (%rsp), %r12d # 4-byte Folded Reload
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $8, %r12d
-; CHECK-NEXT:    movl $0, %r13d
-; CHECK-NEXT:    cmovgel %r13d, %r12d
+; CHECK-NEXT:    movl $0, %ebp
+; CHECK-NEXT:    cmovgel %ebp, %r12d
 ; CHECK-NEXT:    setge %cl
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movd %xmm1, %edx
@@ -964,18 +957,18 @@ define <3 x i8> @to_f8e4m3fn_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    orl %r12d, %ecx
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Reload
 ; CHECK-NEXT:    shrl $20, %r14d
-; CHECK-NEXT:    movl %r14d, %ebx
-; CHECK-NEXT:    andl $1, %ebx
-; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    testl $524287, %r15d # imm = 0x7FFFF
-; CHECK-NEXT:    setne %bpl
-; CHECK-NEXT:    orl %ebx, %ebp
+; CHECK-NEXT:    setne %bl
+; CHECK-NEXT:    orl %r14d, %ebx
 ; CHECK-NEXT:    shrl $19, %r15d
-; CHECK-NEXT:    andl %ebp, %r15d
+; CHECK-NEXT:    andl %ebx, %r15d
+; CHECK-NEXT:    andl $1, %r15d
 ; CHECK-NEXT:    addl %r14d, %r15d
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    cmpl $8, %r15d
-; CHECK-NEXT:    cmovgel %r13d, %r15d
+; CHECK-NEXT:    cmovgel %ebp, %r15d
+; CHECK-NEXT:    movl $0, %r13d
 ; CHECK-NEXT:    setge %bl
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
 ; CHECK-NEXT:    leal (%r12,%rbx), %r14d
@@ -1001,14 +994,13 @@ define <3 x i8> @to_f8e4m3fn_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    leal (%rcx,%r9,8), %r9d
 ; CHECK-NEXT:    orl %r10d, %r9d
 ; CHECK-NEXT:    shrl $20, %r8d
-; CHECK-NEXT:    movl %r8d, %r10d
-; CHECK-NEXT:    andl $1, %r10d
-; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    testl $524287, %edi # imm = 0x7FFFF
-; CHECK-NEXT:    setne %bl
-; CHECK-NEXT:    orl %r10d, %ebx
+; CHECK-NEXT:    setne %r10b
+; CHECK-NEXT:    orl %r8d, %r10d
 ; CHECK-NEXT:    shrl $19, %edi
-; CHECK-NEXT:    andl %ebx, %edi
+; CHECK-NEXT:    andl %r10d, %edi
+; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    addl %r8d, %edi
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    cmpl $8, %edi
@@ -1235,16 +1227,14 @@ define <4 x i8> @to_f8e4m3fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    orl %ebx, %r8d
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
 ; CHECK-NEXT:    shrl $20, %r11d
-; CHECK-NEXT:    movl %r11d, %r10d
-; CHECK-NEXT:    movq %r11, %rbx
-; CHECK-NEXT:    andl $1, %r10d
-; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    testl $524287, %r12d # imm = 0x7FFFF
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    orl %r10d, %r11d
+; CHECK-NEXT:    setne %r10b
+; CHECK-NEXT:    orl %r11d, %r10d
 ; CHECK-NEXT:    shrl $19, %r12d
-; CHECK-NEXT:    andl %r11d, %r12d
-; CHECK-NEXT:    addl %ebx, %r12d
+; CHECK-NEXT:    andl %r10d, %r12d
+; CHECK-NEXT:    andl $1, %r12d
+; CHECK-NEXT:    addl %r11d, %r12d
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    cmpl $8, %r12d
 ; CHECK-NEXT:    cmovgel %eax, %r12d
@@ -1276,16 +1266,14 @@ define <4 x i8> @to_f8e4m3fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    orl %r14d, %r11d
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Reload
 ; CHECK-NEXT:    shrl $20, %r14d
-; CHECK-NEXT:    movl %r14d, %ebx
-; CHECK-NEXT:    movq %r14, %r12
-; CHECK-NEXT:    andl $1, %ebx
-; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    testl $524287, %r13d # imm = 0x7FFFF
-; CHECK-NEXT:    setne %r14b
-; CHECK-NEXT:    orl %ebx, %r14d
+; CHECK-NEXT:    setne %bl
+; CHECK-NEXT:    orl %r14d, %ebx
 ; CHECK-NEXT:    shrl $19, %r13d
-; CHECK-NEXT:    andl %r14d, %r13d
-; CHECK-NEXT:    addl %r12d, %r13d
+; CHECK-NEXT:    andl %ebx, %r13d
+; CHECK-NEXT:    andl $1, %r13d
+; CHECK-NEXT:    addl %r14d, %r13d
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    cmpl $8, %r13d
 ; CHECK-NEXT:    cmovgel %eax, %r13d
@@ -1298,10 +1286,10 @@ define <4 x i8> @to_f8e4m3fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    leal 6(%r12,%rbx), %ebx
 ; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    cmovlel %r11d, %r13d
-; CHECK-NEXT:    movzbl %r9b, %r11d
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm1
 ; CHECK-NEXT:    cmovnel %r13d, %r10d
 ; CHECK-NEXT:    cmovpl %r13d, %r10d
+; CHECK-NEXT:    movzbl %r9b, %r11d
 ; CHECK-NEXT:    cmovpl %r8d, %r10d
 ; CHECK-NEXT:    movzbl %r10b, %r9d
 ; CHECK-NEXT:    shll $8, %r9d
@@ -1319,14 +1307,13 @@ define <4 x i8> @to_f8e4m3fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    orl %ebp, %r11d
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Reload
 ; CHECK-NEXT:    shrl $20, %r14d
-; CHECK-NEXT:    movl %r14d, %ebx
-; CHECK-NEXT:    andl $1, %ebx
-; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    testl $524287, %r15d # imm = 0x7FFFF
-; CHECK-NEXT:    setne %bpl
-; CHECK-NEXT:    orl %ebx, %ebp
+; CHECK-NEXT:    setne %bl
+; CHECK-NEXT:    orl %r14d, %ebx
 ; CHECK-NEXT:    shrl $19, %r15d
-; CHECK-NEXT:    andl %ebp, %r15d
+; CHECK-NEXT:    andl %ebx, %r15d
+; CHECK-NEXT:    andl $1, %r15d
 ; CHECK-NEXT:    addl %r14d, %r15d
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    cmpl $8, %r15d
@@ -1359,14 +1346,13 @@ define <4 x i8> @to_f8e4m3fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    leal (%rdi,%r9,8), %r9d
 ; CHECK-NEXT:    orl %ecx, %r9d
 ; CHECK-NEXT:    shrl $20, %esi
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testl $524287, %edx # imm = 0x7FFFF
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    orl %ecx, %r11d
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    orl %esi, %ecx
 ; CHECK-NEXT:    shrl $19, %edx
-; CHECK-NEXT:    andl %r11d, %edx
+; CHECK-NEXT:    andl %ecx, %edx
+; CHECK-NEXT:    andl $1, %edx
 ; CHECK-NEXT:    addl %esi, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $8, %edx
@@ -1437,13 +1423,12 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    callq frexpf@PLT
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movl $8, %ebx
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    cmpl $31, %eax
 ; CHECK-NEXT:    movl $31, %ecx
 ; CHECK-NEXT:    cmovael %ecx, %eax
-; CHECK-NEXT:    movl $31, %r14d
+; CHECK-NEXT:    movl $31, %ebp
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    adcl $-1, %ecx
@@ -1451,26 +1436,26 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    movl %r12d, %edx
 ; CHECK-NEXT:    andl $8388607, %edx # imm = 0x7FFFFF
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    leal 8388608(%rdx), %r15d
-; CHECK-NEXT:    movl %r15d, %edx
+; CHECK-NEXT:    leal 8388608(%rdx), %ebx
+; CHECK-NEXT:    movl %ebx, %edx
 ; CHECK-NEXT:    shrl %cl, %edx
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %esi
 ; CHECK-NEXT:    decl %esi
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    testl %esi, %r15d
+; CHECK-NEXT:    testl %esi, %ebx
 ; CHECK-NEXT:    setne %dil
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shrl %cl, %r15d
-; CHECK-NEXT:    movl %r15d, (%rsp) # 4-byte Spill
-; CHECK-NEXT:    andl $1, %r15d
-; CHECK-NEXT:    orl %edi, %r15d
-; CHECK-NEXT:    andl %edx, %r15d
+; CHECK-NEXT:    shrl %cl, %ebx
+; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    andl $1, %ebx
+; CHECK-NEXT:    orl %edi, %ebx
+; CHECK-NEXT:    andl %edx, %ebx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    cmovbl %ecx, %r15d
-; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    cmovbl %ecx, %ebx
+; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    callq frexpf@PLT
@@ -1479,7 +1464,8 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    cmpl $31, %eax
-; CHECK-NEXT:    cmovael %r14d, %eax
+; CHECK-NEXT:    cmovael %ebp, %eax
+; CHECK-NEXT:    movl $31, %ebp
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    adcl $-1, %ecx
@@ -1504,7 +1490,7 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    orl %edi, %r13d
 ; CHECK-NEXT:    andl %edx, %r13d
 ; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    cmovbl %ebp, %r13d
+; CHECK-NEXT:    cmovbl %r15d, %r13d
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1515,14 +1501,12 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    cmpl $31, %eax
-; CHECK-NEXT:    movl $31, %ecx
-; CHECK-NEXT:    cmovael %ecx, %eax
+; CHECK-NEXT:    cmovael %ebp, %eax
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    adcl $-1, %ecx
-; CHECK-NEXT:    movd %xmm0, %edx
-; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
+; CHECK-NEXT:    movd %xmm0, %r15d
+; CHECK-NEXT:    movl %r15d, %edx
 ; CHECK-NEXT:    andl $8388607, %edx # imm = 0x7FFFFF
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leal 8388608(%rdx), %ebp
@@ -1551,12 +1535,14 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    callq frexpf@PLT
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    subl %eax, %ebx
-; CHECK-NEXT:    cmpl $31, %ebx
+; CHECK-NEXT:    movl $8, %edx
+; CHECK-NEXT:    subl %eax, %edx
+; CHECK-NEXT:    cmpl $31, %edx
 ; CHECK-NEXT:    movl $31, %eax
-; CHECK-NEXT:    cmovael %eax, %ebx
-; CHECK-NEXT:    cmpl $1, %ebx
-; CHECK-NEXT:    movl %ebx, %ecx
+; CHECK-NEXT:    cmovael %eax, %edx
+; CHECK-NEXT:    cmpl $1, %edx
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    adcl $-1, %ecx
 ; CHECK-NEXT:    movd %xmm0, %edx
 ; CHECK-NEXT:    movl %edx, %esi
@@ -1565,55 +1551,55 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    movl %edi, %r8d
 ; CHECK-NEXT:    shrl %cl, %r8d
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    movl $1, %r9d
+; CHECK-NEXT:    shll %cl, %r9d
+; CHECK-NEXT:    decl %r9d
+; CHECK-NEXT:    movl %r9d, %ecx
 ; CHECK-NEXT:    xorl %r9d, %r9d
-; CHECK-NEXT:    testl %eax, %edi
+; CHECK-NEXT:    testl %ecx, %edi
 ; CHECK-NEXT:    setne %r9b
-; CHECK-NEXT:    movl %ebx, %ecx
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl %cl, %edi
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    andl $1, %ecx
 ; CHECK-NEXT:    orl %r9d, %ecx
 ; CHECK-NEXT:    andl %r8d, %ecx
-; CHECK-NEXT:    cmpl $1, %ebx
+; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovbl %eax, %ecx
-; CHECK-NEXT:    addl (%rsp), %r15d # 4-byte Folded Reload
+; CHECK-NEXT:    addl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Folded Reload
 ; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    cmpl $4, %r15d
-; CHECK-NEXT:    cmovgel %eax, %r15d
+; CHECK-NEXT:    cmpl $4, %ebx
+; CHECK-NEXT:    cmovgel %eax, %ebx
 ; CHECK-NEXT:    setge %r8b
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
 ; CHECK-NEXT:    movd %xmm2, %r9d
 ; CHECK-NEXT:    shrl $24, %r9d
 ; CHECK-NEXT:    andl $-128, %r9d
 ; CHECK-NEXT:    leal (%r9,%r8,4), %r8d
-; CHECK-NEXT:    orl %r15d, %r8d
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
-; CHECK-NEXT:    shrl $21, %r11d
-; CHECK-NEXT:    movl %r11d, %r10d
-; CHECK-NEXT:    movq %r11, %rbx
-; CHECK-NEXT:    andl $1, %r10d
-; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    orl %ebx, %r8d
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    shrl $21, %eax
+; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    testl $1048575, %r12d # imm = 0xFFFFF
-; CHECK-NEXT:    setne %r11b
-; CHECK-NEXT:    orl %r10d, %r11d
+; CHECK-NEXT:    setne %r10b
+; CHECK-NEXT:    orl %eax, %r10d
 ; CHECK-NEXT:    shrl $20, %r12d
-; CHECK-NEXT:    andl %r11d, %r12d
-; CHECK-NEXT:    addl %ebx, %r12d
+; CHECK-NEXT:    andl %r10d, %r12d
+; CHECK-NEXT:    andl $1, %r12d
+; CHECK-NEXT:    addl %eax, %r12d
 ; CHECK-NEXT:    xorl %r11d, %r11d
 ; CHECK-NEXT:    cmpl $4, %r12d
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgel %eax, %r12d
 ; CHECK-NEXT:    setge %r11b
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r15 # 8-byte Reload
-; CHECK-NEXT:    leal (%r15,%r11), %r10d
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    leal (%rax,%r11), %r10d
 ; CHECK-NEXT:    leal 56(,%r10,4), %ebx
 ; CHECK-NEXT:    movl %r9d, %r10d
 ; CHECK-NEXT:    orl %r12d, %r10d
 ; CHECK-NEXT:    orl %ebx, %r10d
-; CHECK-NEXT:    leal 14(%r15,%r11), %r11d
+; CHECK-NEXT:    leal 14(%rax,%r11), %r11d
 ; CHECK-NEXT:    testl %r11d, %r11d
 ; CHECK-NEXT:    cmovlel %r8d, %r10d
 ; CHECK-NEXT:    cmpl $4, %r12d
@@ -1645,6 +1631,7 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    addl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Folded Reload
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    cmpl $4, %r13d
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgel %eax, %r13d
 ; CHECK-NEXT:    setge %r10b
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
@@ -1653,31 +1640,29 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    andl $-128, %r11d
 ; CHECK-NEXT:    leal (%r11,%r10,4), %r10d
 ; CHECK-NEXT:    orl %r13d, %r10d
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r15 # 8-byte Reload
-; CHECK-NEXT:    shrl $21, %r15d
-; CHECK-NEXT:    movl %r15d, %ebx
-; CHECK-NEXT:    movq %r15, %r12
-; CHECK-NEXT:    andl $1, %ebx
-; CHECK-NEXT:    xorl %r15d, %r15d
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
+; CHECK-NEXT:    shrl $21, %r12d
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    testl $1048575, %r14d # imm = 0xFFFFF
-; CHECK-NEXT:    setne %r15b
-; CHECK-NEXT:    orl %ebx, %r15d
+; CHECK-NEXT:    setne %bl
+; CHECK-NEXT:    orl %r12d, %ebx
 ; CHECK-NEXT:    shrl $20, %r14d
-; CHECK-NEXT:    andl %r15d, %r14d
+; CHECK-NEXT:    andl %ebx, %r14d
+; CHECK-NEXT:    andl $1, %r14d
 ; CHECK-NEXT:    addl %r12d, %r14d
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    cmpl $4, %r14d
 ; CHECK-NEXT:    cmovgel %eax, %r14d
 ; CHECK-NEXT:    setge %bl
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
-; CHECK-NEXT:    leal (%r13,%rbx), %r15d
-; CHECK-NEXT:    leal 56(,%r15,4), %r15d
-; CHECK-NEXT:    movl %r11d, %r12d
-; CHECK-NEXT:    orl %r14d, %r12d
-; CHECK-NEXT:    orl %r15d, %r12d
-; CHECK-NEXT:    leal 14(%r13,%rbx), %ebx
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    leal (%rax,%rbx), %r12d
+; CHECK-NEXT:    leal 56(,%r12,4), %r12d
+; CHECK-NEXT:    movl %r11d, %r13d
+; CHECK-NEXT:    orl %r14d, %r13d
+; CHECK-NEXT:    orl %r12d, %r13d
+; CHECK-NEXT:    leal 14(%rax,%rbx), %ebx
 ; CHECK-NEXT:    testl %ebx, %ebx
-; CHECK-NEXT:    cmovlel %r10d, %r12d
+; CHECK-NEXT:    cmovlel %r10d, %r13d
 ; CHECK-NEXT:    cmpl $4, %r14d
 ; CHECK-NEXT:    setge %r10b
 ; CHECK-NEXT:    cmpl $30, %ebx
@@ -1688,10 +1673,10 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    orb %r14b, %r10b
 ; CHECK-NEXT:    testb %r10b, %r10b
 ; CHECK-NEXT:    leal 124(%r11), %r10d
-; CHECK-NEXT:    cmovnel %r10d, %r12d
+; CHECK-NEXT:    cmovnel %r10d, %r13d
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm4
-; CHECK-NEXT:    cmovnel %r12d, %r11d
-; CHECK-NEXT:    cmovpl %r12d, %r11d
+; CHECK-NEXT:    cmovnel %r13d, %r11d
+; CHECK-NEXT:    cmovpl %r13d, %r11d
 ; CHECK-NEXT:    movaps %xmm4, %xmm3
 ; CHECK-NEXT:    andps %xmm1, %xmm3
 ; CHECK-NEXT:    ucomiss %xmm2, %xmm3
@@ -1702,6 +1687,7 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    addl {{[-0-9]+}}(%r{{[sb]}}p), %ebp # 4-byte Folded Reload
 ; CHECK-NEXT:    xorl %r11d, %r11d
 ; CHECK-NEXT:    cmpl $4, %ebp
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgel %eax, %ebp
 ; CHECK-NEXT:    setge %r11b
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
@@ -1712,33 +1698,28 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    orl %ebp, %r11d
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Reload
 ; CHECK-NEXT:    shrl $21, %r14d
-; CHECK-NEXT:    movl %r14d, %ebp
-; CHECK-NEXT:    movq %r14, %r15
-; CHECK-NEXT:    andl $1, %ebp
+; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    testl $1048575, %r15d # imm = 0xFFFFF
+; CHECK-NEXT:    setne %bpl
+; CHECK-NEXT:    orl %r14d, %ebp
+; CHECK-NEXT:    shrl $20, %r15d
+; CHECK-NEXT:    andl %ebp, %r15d
+; CHECK-NEXT:    andl $1, %r15d
+; CHECK-NEXT:    addl %r14d, %r15d
 ; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r12d # 4-byte Reload
-; CHECK-NEXT:    testl $1048575, %r12d # imm = 0xFFFFF
-; CHECK-NEXT:    setne %r14b
-; CHECK-NEXT:    orl %ebp, %r14d
-; CHECK-NEXT:    movl %r12d, %ebp
-; CHECK-NEXT:    shrl $20, %ebp
-; CHECK-NEXT:    andl %r14d, %ebp
-; CHECK-NEXT:    addl %r15d, %ebp
-; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    cmpl $4, %ebp
-; CHECK-NEXT:    cmovgel %eax, %ebp
-; CHECK-NEXT:    movl %ebp, %r13d
+; CHECK-NEXT:    cmpl $4, %r15d
+; CHECK-NEXT:    cmovgel %eax, %r15d
 ; CHECK-NEXT:    setge %r14b
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
-; CHECK-NEXT:    leal (%r12,%r14), %r15d
-; CHECK-NEXT:    leal 56(,%r15,4), %ebp
-; CHECK-NEXT:    movl %ebx, %r15d
-; CHECK-NEXT:    orl %r13d, %r15d
-; CHECK-NEXT:    orl %ebp, %r15d
-; CHECK-NEXT:    leal 14(%r12,%r14), %ebp
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
+; CHECK-NEXT:    leal (%r13,%r14), %r12d
+; CHECK-NEXT:    leal 56(,%r12,4), %ebp
+; CHECK-NEXT:    movl %ebx, %r12d
+; CHECK-NEXT:    orl %r15d, %r12d
+; CHECK-NEXT:    orl %ebp, %r12d
+; CHECK-NEXT:    leal 14(%r13,%r14), %ebp
 ; CHECK-NEXT:    testl %ebp, %ebp
-; CHECK-NEXT:    cmovlel %r11d, %r15d
-; CHECK-NEXT:    cmpl $4, %r13d
+; CHECK-NEXT:    cmovlel %r11d, %r12d
+; CHECK-NEXT:    cmpl $4, %r15d
 ; CHECK-NEXT:    setge %r11b
 ; CHECK-NEXT:    cmpl $30, %ebp
 ; CHECK-NEXT:    sete %r14b
@@ -1748,10 +1729,10 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    orb %r14b, %r11b
 ; CHECK-NEXT:    testb %r11b, %r11b
 ; CHECK-NEXT:    leal 124(%rbx), %r11d
-; CHECK-NEXT:    cmovnel %r11d, %r15d
+; CHECK-NEXT:    cmovnel %r11d, %r12d
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm4
-; CHECK-NEXT:    cmovnel %r15d, %ebx
-; CHECK-NEXT:    cmovpl %r15d, %ebx
+; CHECK-NEXT:    cmovnel %r12d, %ebx
+; CHECK-NEXT:    cmovpl %r12d, %ebx
 ; CHECK-NEXT:    movaps %xmm4, %xmm3
 ; CHECK-NEXT:    andps %xmm1, %xmm3
 ; CHECK-NEXT:    ucomiss %xmm2, %xmm3
@@ -1771,14 +1752,13 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    leal (%rdi,%rbx,4), %ebx
 ; CHECK-NEXT:    orl %ecx, %ebx
 ; CHECK-NEXT:    shrl $21, %esi
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testl $1048575, %edx # imm = 0xFFFFF
-; CHECK-NEXT:    setne %bpl
-; CHECK-NEXT:    orl %ecx, %ebp
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    orl %esi, %ecx
 ; CHECK-NEXT:    shrl $20, %edx
-; CHECK-NEXT:    andl %ebp, %edx
+; CHECK-NEXT:    andl %ecx, %edx
+; CHECK-NEXT:    andl $1, %edx
 ; CHECK-NEXT:    addl %esi, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $4, %edx
@@ -1887,30 +1867,28 @@ define <2 x i8> @to_f8e4m3fn_v2f16(<2 x half> %x) {
 ; CHECK-NEXT:    movl %r13d, %eax
 ; CHECK-NEXT:    andl $1023, %eax # imm = 0x3FF
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    leal 1024(%rax), %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    leal 1024(%rax), %r12d
+; CHECK-NEXT:    movl %r12d, %eax
 ; CHECK-NEXT:    movl %r14d, %ecx
 ; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    movl $1, %r15d
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    shll %cl, %edx
 ; CHECK-NEXT:    decl %edx
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    movl %edi, %r14d
-; CHECK-NEXT:    testw %dx, %r14w
-; CHECK-NEXT:    setne %sil
+; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    testw %dx, %r12w
+; CHECK-NEXT:    setne %r14b
 ; CHECK-NEXT:    movl %ebp, %ecx
-; CHECK-NEXT:    shrl %cl, %r14d
-; CHECK-NEXT:    movl %r14d, %r12d
-; CHECK-NEXT:    andl $1, %r12d
-; CHECK-NEXT:    orl %esi, %r12d
-; CHECK-NEXT:    andl %eax, %r12d
+; CHECK-NEXT:    shrl %cl, %r12d
+; CHECK-NEXT:    orl %r12d, %r14d
+; CHECK-NEXT:    andl %eax, %r14d
+; CHECK-NEXT:    andl $1, %r14d
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpw $1, %bp
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    cmovbl %eax, %r12d
+; CHECK-NEXT:    cmovbl %eax, %r14d
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
@@ -1928,36 +1906,35 @@ define <2 x i8> @to_f8e4m3fn_v2f16(<2 x half> %x) {
 ; CHECK-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    andl $1023, %edx # imm = 0x3FF
-; CHECK-NEXT:    leal 1024(%rdx), %esi
-; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    leal 1024(%rdx), %edi
+; CHECK-NEXT:    movl %edi, %r8d
 ; CHECK-NEXT:    movl %ebp, %ecx
-; CHECK-NEXT:    shrl %cl, %edi
+; CHECK-NEXT:    shrl %cl, %r8d
 ; CHECK-NEXT:    shll %cl, %r15d
 ; CHECK-NEXT:    decl %r15d
-; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    testw %r15w, %si
-; CHECK-NEXT:    setne %r8b
+; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    testw %r15w, %di
+; CHECK-NEXT:    setne %sil
 ; CHECK-NEXT:    movl %ebx, %ecx
-; CHECK-NEXT:    shrl %cl, %esi
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    orl %r8d, %ecx
-; CHECK-NEXT:    andl %edi, %ecx
+; CHECK-NEXT:    shrl %cl, %edi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    andl %r8d, %esi
+; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    cmpw $1, %bx
 ; CHECK-NEXT:    movl $0, %r8d
-; CHECK-NEXT:    cmovbl %r8d, %ecx
-; CHECK-NEXT:    addl %r14d, %r12d
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    cmpw $8, %r12w
-; CHECK-NEXT:    cmovgel %r8d, %r12d
+; CHECK-NEXT:    cmovbl %r8d, %esi
+; CHECK-NEXT:    addl %r12d, %r14d
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    cmpw $8, %r14w
+; CHECK-NEXT:    cmovgel %r8d, %r14d
 ; CHECK-NEXT:    movl $0, %r11d
-; CHECK-NEXT:    setge %dil
+; CHECK-NEXT:    setge %cl
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    pextrw $0, %xmm0, %r8d
 ; CHECK-NEXT:    shrl $8, %r8d
 ; CHECK-NEXT:    andl $128, %r8d
-; CHECK-NEXT:    leal (%r8,%rdi,8), %edi
-; CHECK-NEXT:    orl %r12d, %edi
+; CHECK-NEXT:    leal (%r8,%rcx,8), %ecx
+; CHECK-NEXT:    orl %r14d, %ecx
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
 ; CHECK-NEXT:    shrl $7, %r10d
 ; CHECK-NEXT:    movl %r10d, %r9d
@@ -1981,58 +1958,58 @@ define <2 x i8> @to_f8e4m3fn_v2f16(<2 x half> %x) {
 ; CHECK-NEXT:    orl %r10d, %r13d
 ; CHECK-NEXT:    leal 6(%rbx,%r9), %r9d
 ; CHECK-NEXT:    testw %r9w, %r9w
-; CHECK-NEXT:    cmovlel %edi, %r13d
+; CHECK-NEXT:    cmovlel %ecx, %r13d
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm1
 ; CHECK-NEXT:    cmovnel %r13d, %r8d
 ; CHECK-NEXT:    cmovpl %r13d, %r8d
-; CHECK-NEXT:    movl $127, %edi
-; CHECK-NEXT:    cmovpl %edi, %r8d
+; CHECK-NEXT:    movl $127, %ecx
+; CHECK-NEXT:    cmovpl %ecx, %r8d
 ; CHECK-NEXT:    movzbl %r8b, %r8d
-; CHECK-NEXT:    addl %esi, %ecx
+; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    xorl %r9d, %r9d
-; CHECK-NEXT:    cmpw $8, %cx
-; CHECK-NEXT:    cmovgel %r11d, %ecx
+; CHECK-NEXT:    cmpw $8, %si
+; CHECK-NEXT:    cmovgel %r11d, %esi
 ; CHECK-NEXT:    setge %r9b
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    pextrw $0, %xmm1, %esi
-; CHECK-NEXT:    shrl $8, %esi
-; CHECK-NEXT:    andl $128, %esi
-; CHECK-NEXT:    leal (%rsi,%r9,8), %r9d
-; CHECK-NEXT:    orl %ecx, %r9d
+; CHECK-NEXT:    pextrw $0, %xmm1, %edi
+; CHECK-NEXT:    shrl $8, %edi
+; CHECK-NEXT:    andl $128, %edi
+; CHECK-NEXT:    leal (%rdi,%r9,8), %r9d
+; CHECK-NEXT:    orl %esi, %r9d
 ; CHECK-NEXT:    shrl $7, %edx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    testb $63, %al
 ; CHECK-NEXT:    setne %r10b
-; CHECK-NEXT:    orl %ecx, %r10d
+; CHECK-NEXT:    orl %esi, %r10d
 ; CHECK-NEXT:    shrl $6, %eax
 ; CHECK-NEXT:    andl %r10d, %eax
 ; CHECK-NEXT:    addl %edx, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    cmpw $8, %ax
 ; CHECK-NEXT:    cmovgel %r11d, %eax
-; CHECK-NEXT:    setge %cl
+; CHECK-NEXT:    setge %dl
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
-; CHECK-NEXT:    leal (%r10,%rcx), %edx
-; CHECK-NEXT:    leal 48(,%rdx,8), %edx
+; CHECK-NEXT:    leal (%r10,%rdx), %esi
+; CHECK-NEXT:    leal 48(,%rsi,8), %esi
+; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    leal 6(%r10,%rcx), %ecx
-; CHECK-NEXT:    testw %cx, %cx
+; CHECK-NEXT:    leal 6(%r10,%rdx), %edx
+; CHECK-NEXT:    testw %dx, %dx
 ; CHECK-NEXT:    cmovlel %r9d, %eax
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm1
-; CHECK-NEXT:    cmovnel %eax, %esi
-; CHECK-NEXT:    cmovpl %eax, %esi
-; CHECK-NEXT:    cmovpl %edi, %esi
-; CHECK-NEXT:    shll $8, %esi
-; CHECK-NEXT:    orl %r8d, %esi
-; CHECK-NEXT:    movd %esi, %xmm0
+; CHECK-NEXT:    cmovnel %eax, %edi
+; CHECK-NEXT:    cmovpl %eax, %edi
+; CHECK-NEXT:    cmovpl %ecx, %edi
+; CHECK-NEXT:    shll $8, %edi
+; CHECK-NEXT:    orl %r8d, %edi
+; CHECK-NEXT:    movd %edi, %xmm0
 ; CHECK-NEXT:    addq $88, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
 ; CHECK-NEXT:    popq %rbx
@@ -2088,35 +2065,34 @@ define i8 @to_f8e5m2_from_f16(half %x) {
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    andl $1023, %edx # imm = 0x3FF
 ; CHECK-NEXT:    leal 1024(%rdx), %esi
-; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    movl %esi, %r8d
 ; CHECK-NEXT:    movl %ebp, %ecx
-; CHECK-NEXT:    shrl %cl, %edi
-; CHECK-NEXT:    movl $1, %r8d
-; CHECK-NEXT:    shll %cl, %r8d
-; CHECK-NEXT:    decl %r8d
-; CHECK-NEXT:    xorl %r9d, %r9d
-; CHECK-NEXT:    testw %r8w, %si
-; CHECK-NEXT:    setne %r9b
+; CHECK-NEXT:    shrl %cl, %r8d
+; CHECK-NEXT:    movl $1, %r9d
+; CHECK-NEXT:    shll %cl, %r9d
+; CHECK-NEXT:    decl %r9d
+; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    testw %r9w, %si
+; CHECK-NEXT:    setne %dil
 ; CHECK-NEXT:    movl %ebx, %ecx
 ; CHECK-NEXT:    shrl %cl, %esi
-; CHECK-NEXT:    movl %esi, %r8d
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    orl %r9d, %r8d
-; CHECK-NEXT:    andl %edi, %r8d
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    andl %r8d, %edi
+; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpw $1, %bx
-; CHECK-NEXT:    cmovbl %ecx, %r8d
-; CHECK-NEXT:    addl %esi, %r8d
+; CHECK-NEXT:    cmovbl %ecx, %edi
+; CHECK-NEXT:    addl %esi, %edi
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    cmpw $4, %r8w
-; CHECK-NEXT:    cmovgel %ecx, %r8d
+; CHECK-NEXT:    cmpw $4, %di
+; CHECK-NEXT:    cmovgel %ecx, %edi
 ; CHECK-NEXT:    setge %sil
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    pextrw $0, %xmm1, %ebx
 ; CHECK-NEXT:    shrl $8, %ebx
 ; CHECK-NEXT:    andl $128, %ebx
 ; CHECK-NEXT:    leal (%rbx,%rsi,4), %esi
-; CHECK-NEXT:    orl %r8d, %esi
+; CHECK-NEXT:    orl %edi, %esi
 ; CHECK-NEXT:    shrl $8, %edx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    andl $1, %edi
@@ -2235,14 +2211,13 @@ define i8 @to_f8e5m2_from_bf16(bfloat %x) {
 ; CHECK-NEXT:    leal (%rax,%r8,4), %r8d
 ; CHECK-NEXT:    orl %r10d, %r8d
 ; CHECK-NEXT:    shrl $21, %edi
-; CHECK-NEXT:    movl %edi, %r9d
-; CHECK-NEXT:    andl $1, %r9d
-; CHECK-NEXT:    xorl %r10d, %r10d
+; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    testl $1048575, %esi # imm = 0xFFFFF
-; CHECK-NEXT:    setne %r10b
-; CHECK-NEXT:    orl %r9d, %r10d
+; CHECK-NEXT:    setne %r9b
+; CHECK-NEXT:    orl %edi, %r9d
 ; CHECK-NEXT:    shrl $20, %esi
-; CHECK-NEXT:    andl %r10d, %esi
+; CHECK-NEXT:    andl %r9d, %esi
+; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    cmpl $4, %esi
@@ -2325,11 +2300,11 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrq %cl, %r10
 ; CHECK-NEXT:    movl %r10d, %ebx
-; CHECK-NEXT:    andl $1, %ebx
 ; CHECK-NEXT:    orl %r11d, %ebx
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shrq %cl, %r9
 ; CHECK-NEXT:    andl %ebx, %r9d
+; CHECK-NEXT:    andl $1, %r9d
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpq $1, %rax
 ; CHECK-NEXT:    cmovbq %rcx, %r9
@@ -2345,15 +2320,14 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-NEXT:    leal (%rax,%rdx,4), %edx
 ; CHECK-NEXT:    orq %r9, %rdx
 ; CHECK-NEXT:    shrq $50, %r8
-; CHECK-NEXT:    movl %r8d, %r9d
-; CHECK-NEXT:    andl $1, %r9d
-; CHECK-NEXT:    xorl %r10d, %r10d
-; CHECK-NEXT:    movq %rdi, %r11
-; CHECK-NEXT:    shlq $15, %r11
-; CHECK-NEXT:    setne %r10b
-; CHECK-NEXT:    orl %r9d, %r10d
+; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    movq %rdi, %r10
+; CHECK-NEXT:    shlq $15, %r10
+; CHECK-NEXT:    setne %r9b
+; CHECK-NEXT:    orl %r8d, %r9d
 ; CHECK-NEXT:    shrq $49, %rdi
-; CHECK-NEXT:    andl %r10d, %edi
+; CHECK-NEXT:    andl %r9d, %edi
+; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    addq %r8, %rdi
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    cmpq $4, %rdi
@@ -2451,14 +2425,13 @@ define i8 @to_f8e5m3fnu_dynamic(float %x) {
 ; CHECK-NEXT:    shll $3, %eax
 ; CHECK-NEXT:    orl %r10d, %eax
 ; CHECK-NEXT:    shrl $20, %edi
-; CHECK-NEXT:    movl %edi, %r8d
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    testl $524287, %esi # imm = 0x7FFFF
-; CHECK-NEXT:    setne %r9b
-; CHECK-NEXT:    orl %r8d, %r9d
+; CHECK-NEXT:    setne %r8b
+; CHECK-NEXT:    orl %edi, %r8d
 ; CHECK-NEXT:    shrl $19, %esi
-; CHECK-NEXT:    andl %r9d, %esi
+; CHECK-NEXT:    andl %r8d, %esi
+; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    cmpl $8, %esi
@@ -2535,14 +2508,13 @@ define i8 @to_f8e5m3fnu_saturate(float %x) {
 ; CHECK-NEXT:    shll $3, %eax
 ; CHECK-NEXT:    orl %r10d, %eax
 ; CHECK-NEXT:    shrl $20, %edi
-; CHECK-NEXT:    movl %edi, %r8d
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    testl $524287, %esi # imm = 0x7FFFF
-; CHECK-NEXT:    setne %r9b
-; CHECK-NEXT:    orl %r8d, %r9d
+; CHECK-NEXT:    setne %r8b
+; CHECK-NEXT:    orl %edi, %r8d
 ; CHECK-NEXT:    shrl $19, %esi
-; CHECK-NEXT:    andl %r9d, %esi
+; CHECK-NEXT:    andl %r8d, %esi
+; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    cmpl $8, %esi

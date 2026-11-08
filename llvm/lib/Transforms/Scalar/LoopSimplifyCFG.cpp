@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -25,7 +26,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -34,9 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplifycfg"
-
-static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
-                                       cl::init(true));
 
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
@@ -667,11 +664,12 @@ public:
 
 /// Turn branches and switches with known constant conditions into unconditional
 /// branches.
-static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI,
+static bool constantFoldTerminators(const ScalarOptions &Opts, Loop &L,
+                                    DominatorTree &DT, LoopInfo &LI,
                                     ScalarEvolution &SE,
                                     MemorySSAUpdater *MSSAU,
                                     bool &IsLoopDeleted) {
-  if (!EnableTermFolding)
+  if (!Opts.enable_loop_simplifycfg_term_folding)
     return false;
 
   // To keep things simple, only process loops with single latch. We
@@ -723,10 +721,11 @@ static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
 static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
                             ScalarEvolution &SE, MemorySSAUpdater *MSSAU,
                             bool &IsLoopDeleted) {
+  const ScalarOptions &Opts = getScalarOptions(L);
   bool Changed = false;
 
   // Constant-fold terminators with known constant conditions.
-  Changed |= constantFoldTerminators(L, DT, LI, SE, MSSAU, IsLoopDeleted);
+  Changed |= constantFoldTerminators(Opts, L, DT, LI, SE, MSSAU, IsLoopDeleted);
 
   if (IsLoopDeleted)
     return true;
