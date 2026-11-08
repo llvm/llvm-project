@@ -273,7 +273,7 @@ mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t) {
 static bool hasDynamicSize(fir::RecordType recTy) {
   if (recTy.getLenParamList().empty())
     return false;
-  for (auto field : recTy.getTypeList()) {
+  for (const auto &field : recTy.getTypeList()) {
     if (auto arr = mlir::dyn_cast<fir::SequenceType>(field.second)) {
       if (sequenceWithNonConstantShape(arr))
         return true;
@@ -426,8 +426,8 @@ bool isUnlimitedPolymorphicType(mlir::Type ty) {
 bool isRecordWithAllocatableMember(mlir::Type ty) {
   ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
-    for (auto [field, memTy] : recTy.getTypeList()) {
-      memTy = unwrapSequenceType(memTy);
+    for (const auto &component : recTy.getTypeList()) {
+      mlir::Type memTy = unwrapSequenceType(component.second);
       if (fir::isAllocatableType(memTy))
         return true;
       // A record type cannot recursively include itself as a direct member.
@@ -442,8 +442,8 @@ bool isRecordWithAllocatableMember(mlir::Type ty) {
 bool isRecordWithDescriptorMember(mlir::Type ty) {
   ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
-    for (auto [field, memTy] : recTy.getTypeList()) {
-      memTy = unwrapSequenceType(memTy);
+    for (const auto &component : recTy.getTypeList()) {
+      mlir::Type memTy = unwrapSequenceType(component.second);
       if (mlir::isa<fir::BaseBoxType>(memTy))
         return true;
       if (mlir::isa<fir::RecordType>(memTy) &&
@@ -1140,7 +1140,7 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
         printer << '<';
       }
       char ch = '{';
-      for (auto p : getTypeList()) {
+      for (const auto &p : getTypeList()) {
         printer << ch << p.first << ':';
         printer.printType(p.second);
         ch = ',';
@@ -1207,7 +1207,7 @@ llvm::LogicalResult fir::RecordType::verify(
 }
 
 mlir::Type fir::RecordType::getType(llvm::StringRef ident) {
-  for (auto f : getTypeList())
+  for (const auto &f : getTypeList())
     if (ident == f.first)
       return f.second;
   return {};
@@ -1675,7 +1675,7 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
       // store size 10 bytes but ABI alignment 16 bytes, so its allocation
       // size is 16 bytes; a packed {f80, i8} therefore occupies 17 bytes,
       // not 11.  The packed struct's own ABI alignment is always 1.
-      for (auto component : recTy.getTypeList()) {
+      for (const auto &component : recTy.getTypeList()) {
         auto result =
             getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
         if (!result)
@@ -1685,7 +1685,7 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
       }
       return std::pair{size, static_cast<unsigned short>(1)};
     }
-    for (auto component : recTy.getTypeList()) {
+    for (const auto &component : recTy.getTypeList()) {
       auto result = getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
       if (!result)
         return result;

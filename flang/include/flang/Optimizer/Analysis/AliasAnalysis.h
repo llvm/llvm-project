@@ -369,8 +369,8 @@ struct AliasAnalysis {
                                        const AliasAnalysis::Source &op);
 
   /// Given the values and their sources, return their aliasing behavior.
-  mlir::AliasResult alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
-                          mlir::Value rhs);
+  mlir::AliasResult alias(const Source &lhsSrc, const Source &rhsSrc,
+                          mlir::Value lhs, mlir::Value rhs);
 
   /// Given two values, return their aliasing behavior.
   mlir::AliasResult alias(mlir::Value lhs, mlir::Value rhs);
