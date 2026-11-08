@@ -2735,11 +2735,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const MemoryLocation &DstLoc = MemoryLocation::get(Dst);
   const MemoryLocation &SrcLoc = MemoryLocation::get(Src);
 
-  if (DstLoc.AATags.Scope || DstLoc.AATags.NoAlias || SrcLoc.AATags.Scope ||
-      SrcLoc.AATags.NoAlias) {
-    updateLoopAliasScopes(LI->getLoopFor(Src->getParent()));
-    updateLoopAliasScopes(LI->getLoopFor(Dst->getParent()));
-  }
+  updateLoopAliasScopes(LI->getLoopFor(Src->getParent()));
+  updateLoopAliasScopes(LI->getLoopFor(Dst->getParent()));
 
   switch (underlyingObjectsAlias(AA, F->getDataLayout(), DstLoc, SrcLoc,
                                  LoopAliasScopes)) {
