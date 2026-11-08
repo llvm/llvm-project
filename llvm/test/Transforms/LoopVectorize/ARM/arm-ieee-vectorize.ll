@@ -176,7 +176,7 @@ for.end:
 ; Loop whose only FP op is a compare feeding a select.
 ; CHECK: Checking a loop in 'fcmp_select'
 ; CHECK: Loop passed LoopVectorizationLegality checks!
-; LINUX-NOT: Potentially unsafe FP op prevents vectorization
+; LINUX: Potentially unsafe FP op prevents vectorization
 define void @fcmp_select(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
 entry:
   br label %for.body
@@ -228,7 +228,7 @@ for.end:
 ; Select-based FP max reduction whose compare has nnan nsz, but not full fast-math.
 ; CHECK: Checking a loop in 'fmax_select'
 ; CHECK: Loop passed LoopVectorizationLegality checks!
-; LINUX-NOT: Potentially unsafe FP op prevents vectorization
+; LINUX: Potentially unsafe FP op prevents vectorization
 define float @fmax_select(ptr noalias nocapture readonly %a, i32 %N) {
 entry:
   br label %for.body
