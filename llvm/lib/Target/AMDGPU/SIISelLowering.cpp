@@ -7915,9 +7915,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     SDLoc SL(Op);
     SDValue LHS = DAG.getBitcast(MVT::v2i32, Op.getOperand(0));
     SDValue RHS = DAG.getBitcast(MVT::v2i32, Op.getOperand(1));
-    return DAG.getBitcast(MVT::v4i16,
-                          DAG.getNode(Op.getOpcode(), SL, MVT::v2i32, LHS, RHS,
-                                      Op->getFlags()));
+    return DAG.getBitcast(
+        MVT::v4i16,
+        DAG.getNode(Op.getOpcode(), SL, MVT::v2i32, LHS, RHS, Op->getFlags()));
   }
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
