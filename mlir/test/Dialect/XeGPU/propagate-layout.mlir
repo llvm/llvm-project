@@ -1219,9 +1219,7 @@ func.func @broadcast_slice_expanded_dim(%dst: !xegpu.mem_desc<16x4xbf16>) {
   %bcasted = vector.broadcast %loaded : vector<1x4xf8E8M0FNU> to vector<1x16x4xf8E8M0FNU>
   %bcasted_shape_casted = vector.shape_cast %bcasted : vector<1x16x4xf8E8M0FNU> to vector<16x4xf8E8M0FNU>
 
-  %scaled = arith.scaling_extf %data, %bcasted_shape_casted {
-    layout_result_0 = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>
-  } : vector<16x4xf4E2M1FN>, vector<16x4xf8E8M0FNU> to vector<16x4xbf16>
+  %scaled = arith.scaling_extf %data, %bcasted_shape_casted : vector<16x4xf4E2M1FN>, vector<16x4xf8E8M0FNU> to vector<16x4xbf16>
 
   xegpu.store_matrix %scaled, %dst[0, 0] <{layout = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>}> : vector<16x4xbf16>, !xegpu.mem_desc<16x4xbf16>
   return

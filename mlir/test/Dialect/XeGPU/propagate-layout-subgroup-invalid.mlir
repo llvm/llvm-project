@@ -9,6 +9,9 @@ gpu.module @test {
     %cst = arith.constant dense<0.000000e+00> : vector<8x16xf16>
     %c0 = arith.constant 0 : index
     %tdesc = xegpu.create_nd_tdesc %arg0 : memref<2048x8192xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+    // The failed store leaves the load without a consumer layout; the block
+    // load's default layout fails for the same shape.
+    // expected-warning@+1 {{Failed to determine required layout for load_nd.}}
     %loaded = xegpu.load_nd %tdesc[%c0, %c0]  : !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<8x16xf16>
     %loaded_add = arith.addf %loaded, %cst : vector<8x16xf16>
     // 8 subgroups could load 1x16 each, but the current infra only considers the largest inst size (larger than 1x16) -> fail propagation.
@@ -86,6 +89,9 @@ gpu.module @entry_kernel {
     %block_id_y = gpu.block_id y
     %0 = affine.apply affine_map<()[s0] -> (s0 * 8)>()[%block_id_y]
     %1 = xegpu.create_nd_tdesc %arg0 : memref<1x24x1024x1xf16> -> !xegpu.tensor_desc<1x1x8x1xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+    // The failed store leaves the load without a consumer layout; the block
+    // load's default layout fails for the same shape.
+    // expected-warning@+1 {{Failed to determine required layout for load_nd.}}
     %2 = xegpu.load_nd %1[0, %block_id_x, %0, 0]  : !xegpu.tensor_desc<1x1x8x1xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<1x1x8x1xf16>
     %3 = arith.maximumf %2, %cst : vector<1x1x8x1xf16>
     %4 = xegpu.create_nd_tdesc %arg1 : memref<1x24x1024x1xf16> -> !xegpu.tensor_desc<1x1x8x1xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
@@ -106,8 +112,7 @@ gpu.module @test {
     %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32> -> !xegpu.tensor_desc<256x128xf32>
     %0 = scf.while (%before = %cst) : (vector<256x128xf32>) -> vector<256x128xf32> {
       %loaded = xegpu.load_nd %tdesc[0, 0] : !xegpu.tensor_desc<256x128xf32> -> vector<256x128xf32>
-      // expected-error@+2 {{unsupported region structure: the successor argument it feeds is not tied to an init operand, so its value must be passed through from predecessor region argument.}}
-      // expected-error@+1 {{Failed to update operation with the layout.}}
+      // expected-error@+1 {{unsupported region structure: the successor argument it feeds is not tied to an init operand, so its value must be passed through from predecessor region argument.}}
       scf.condition(%cond) %loaded : vector<256x128xf32>
     } do {
     ^bb0(%after: vector<256x128xf32>):

@@ -57,16 +57,6 @@ using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
                                          GetLayoutFnTy getLayoutOfValue);
 
-/// Propagate layouts from a region branch terminator's forwarded operands to
-/// the matching region results / successor block arguments. For each operand
-/// that a terminator (e.g. scf.yield) forwards to a successor input, the
-/// operand's layout is obtained via `getLayoutOfValue` and recorded on the
-/// successor input when it is an op result. Returns failure if a forwarded
-/// operand has no assigned layout.
-LogicalResult propagateYieldOperandsToRegionResults(
-    RegionBranchTerminatorOpInterface terminator,
-    GetLayoutFnTy getLayoutOfValue);
-
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
 /// lacks a layout attribute.
@@ -321,14 +311,18 @@ DistributeLayoutAttr setupInsertStridedSliceResultLayout(
 /// Sets up the anchor layout for a load gather operation.
 /// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
 /// the op's `contiguity` attribute (1 when it is absent).
+/// Without a `consumerLayout`, the load's own default scatter IO layout is
+/// used; `numSg` is only used then, for Subgroup-kind layouts.
 DistributeLayoutAttr setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
-    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+    DistributeLayoutAttr consumerLayout, int numSg, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for load matrix operation.
+/// Without a `consumerLayout`, the load's own default scatter IO layout is
+/// used; `numSg` is only used then, for Subgroup-kind layouts.
 DistributeLayoutAttr setupLoadMatrixAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
-    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+    DistributeLayoutAttr consumerLayout, int numSg, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
 /// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
@@ -409,8 +403,9 @@ DistributeLayoutAttr setupPrefetchNdAnchorLayout(LayoutKind layoutKind,
 /// (downstream) consumer layout and validates it against uArch constraints;
 /// when valid, the consumer's `inst_data` / `sg_layout` are honored.
 /// Otherwise defaults derived from uArch block parameters are used.
-/// `consumerLayout` must be presented. `numSg` is only used for Subgroup-kind
-/// layouts when the consumer does not already provide an sg_layout.
+/// Without a `consumerLayout`, the block load's default layout is used.
+/// `numSg` is only used for Subgroup-kind layouts when the consumer does not
+/// already provide an sg_layout.
 DistributeLayoutAttr
 setupLoadNdAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
                         DistributeLayoutAttr consumerLayout, int numSg,

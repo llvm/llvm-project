@@ -241,64 +241,6 @@ static void propagateRegionResultsToYieldOperands(
   }
 }
 
-/// Assign a layout to a region op's results (e.g. scf.for) using the layout of
-/// the terminator operands that the region forwards to them. For each operand a
-/// terminator (e.g. scf.yield) forwards to a successor input, if that input is
-/// a region op result, the operand's layout is written onto the result.
-/// clang-format off
-/// Example: scf.for ... iter_args(...) -> (out types) {
-///   ...
-///   scf.yield ... : (yield types)
-/// }
-/// clang-format on
-/// Having a layout on the region op result lets a later step attach a
-/// convert_layout as a use to resolve the region op's no-use case.
-/// Block-argument successors are left untouched.
-LogicalResult xegpu::propagateYieldOperandsToRegionResults(
-    mlir::RegionBranchTerminatorOpInterface terminator,
-    xegpu::GetLayoutFnTy getLayoutOfValue) {
-  // Only process if the terminator is inside a region branch op.
-  auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
-  if (!branchOp)
-    return success();
-
-  RegionBranchSuccessorMapping mapping;
-  branchOp.getSuccessorOperandInputMapping(mapping,
-                                           RegionBranchPoint(terminator));
-  for (const auto &[successorOperand, successorInputs] : mapping) {
-    for (Value successorInput : successorInputs) {
-      Type inputType = successorInput.getType();
-      // We only need to operate on vector types.
-      if (!isa<VectorType>(inputType))
-        continue;
-      xegpu::DistributeLayoutAttr successorOperandLayout =
-          getLayoutOfValue(successorOperand->get());
-
-      // The forwarded operand must carry a layout to propagate.
-      if (!successorOperandLayout)
-        return failure();
-      // Assign the yield operand's layout to the region op result it feeds.
-      if (auto result = dyn_cast<OpResult>(successorInput))
-        xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
-      // Restrict the input IR: a successor argument that is not tied to an init
-      // operand (scf.while's "after" arguments) must be fed by a pass-through,
-      // because nothing else identifies which value the region carries. Its
-      // layout is then that of the forwarded argument's init operand.
-      if (auto arg = dyn_cast<BlockArgument>(successorInput)) {
-        auto loop =
-            dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
-        bool tiedToInit = loop && loop.getTiedLoopInit(arg);
-        if (!tiedToInit && !isa<BlockArgument>(successorOperand->get()))
-          return terminator->emitError(
-              "unsupported region structure: the successor argument it feeds "
-              "is not tied to an init operand, so its value must be passed "
-              "through from predecessor region argument.");
-      }
-    }
-  }
-  return success();
-}
-
 // Propagate layout from region arguments to region op's init operands. This
 // sets the temporary layout for region arguments and init operands.
 LogicalResult
@@ -1721,6 +1663,54 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
   return std::nullopt;
 }
 
+/// Default layout of a 2D block IO op that has no consumer layout to honor (a
+/// store_nd or prefetch_nd, which produce no value, or a load_nd whose value no
+/// consumer constrains), picked from the block parameters of `uArchInstruction`
+/// without transpose or transform. `numSg` is only used for Subgroup-kind
+/// layouts.
+static xegpu::DistributeLayoutAttr setupDefault2DBlockIOLayout(
+    xegpu::LayoutKind layoutKind, ArrayRef<int64_t> dataShape, Type elemTy,
+    int numSg,
+    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
+    const xegpu::uArch::uArch *uArch) {
+  auto context = elemTy.getContext();
+  auto subgroupSize = uArch->getSubgroupSize();
+  assert(dataShape.size() >= 2 && "Expected at least 2D shape for ND op");
+
+  // Compute the default 2D block IO lane layout / lane data.
+  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
+  auto [laneLayout, laneData, order] =
+      compute2DBlockIOLaneLayout(dataShape, subgroupSize, bitwidth,
+                                 uArchInstruction->getPackedFormatBitSize());
+
+  if (layoutKind == xegpu::LayoutKind::Lane)
+    return buildLaneLayout(context, laneLayout, laneData);
+
+  auto instData =
+      get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
+  // Shape not realizable as a 2D-block instruction; let the caller report it.
+  if (!instData)
+    return nullptr;
+
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
+           "Expected the block IO layout to satisfy uArch block constraints");
+    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
+                                       laneData);
+  }
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    auto sgLayouts = getSgLayoutCandidates(dataShape, *instData, numSg);
+    if (sgLayouts.empty())
+      return nullptr;
+    return buildSgLayout(context, dataShape, sgLayouts.front(), /*dimK=*/-1);
+  }
+
+  return nullptr;
+}
+
 /// Sets up the anchor layout for a store_nd operation. StoreNd picks its
 /// own layout based on uArch block parameters (it does not take a consumer
 /// layout, since it is a data sink).
@@ -1734,46 +1724,9 @@ xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
               xegpu::uArch::InstructionKind::Subgroup2DBlockStore));
   if (!uArchInstruction)
     return nullptr;
-
-  auto context = srcVecTy.getContext();
-  Type elemTy = srcVecTy.getElementType();
-  auto subgroupSize = uArch->getSubgroupSize();
-  auto dataShape = srcVecTy.getShape();
-  [[maybe_unused]] int rank = srcVecTy.getRank();
-  assert(rank >= 2 && "Expected at least 2D shape for ND op");
-
-  // Compute the default 2D block IO lane layout / lane data.
-  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  auto [laneLayout, laneData, order] =
-      compute2DBlockIOLaneLayout(dataShape, subgroupSize, bitwidth,
-                                 uArchInstruction->getPackedFormatBitSize());
-
-  if (layoutKind == xegpu::LayoutKind::Lane)
-    return buildLaneLayout(context, laneLayout, laneData);
-
-  auto instData =
-      get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
-  // Shape not realizable as a 2D-block instruction; let the caller report it.
-  if (!instData)
-    return nullptr;
-
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
-           "Expected the store layout to satisfy uArch block constraints");
-    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
-                                       laneData);
-  }
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    auto sgLayouts = getSgLayoutCandidates(dataShape, *instData, numSg);
-    if (sgLayouts.empty())
-      return nullptr;
-    return buildSgLayout(context, dataShape, sgLayouts.front(), /*dimK=*/-1);
-  }
-
-  return nullptr;
+  return setupDefault2DBlockIOLayout(layoutKind, srcVecTy.getShape(),
+                                     srcVecTy.getElementType(), numSg,
+                                     uArchInstruction, uArch);
 }
 
 /// Sets up the anchor layout for a prefetch_nd operation. PrefetchNd has no
@@ -1783,53 +1736,15 @@ xegpu::DistributeLayoutAttr
 xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                    xegpu::TensorDescType tdescTy, int numSg,
                                    const xegpu::uArch::uArch *uArch) {
-
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
           uArch->getInstruction(
               xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch));
   if (!uArchInstruction)
     return nullptr;
-
-  auto context = tdescTy.getContext();
-  Type elemTy = tdescTy.getElementType();
-  auto subgroupSize = uArch->getSubgroupSize();
-  auto dataShape = tdescTy.getShape();
-  [[maybe_unused]] int rank = tdescTy.getRank();
-  assert(rank >= 2 && "Expected at least 2D shape for ND op");
-
-  // Compute the default 2D block IO lane layout / lane data.
-  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  auto [laneLayout, laneData, order] =
-      compute2DBlockIOLaneLayout(dataShape, subgroupSize, bitwidth,
-                                 uArchInstruction->getPackedFormatBitSize());
-
-  if (layoutKind == xegpu::LayoutKind::Lane)
-    return buildLaneLayout(context, laneLayout, laneData);
-
-  auto instData =
-      get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
-  // Shape not realizable as a 2D-block instruction; let the caller report it.
-  if (!instData)
-    return nullptr;
-
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
-           "Expected the prefetch layout to satisfy uArch block constraints");
-    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
-                                       laneData);
-  }
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    auto sgLayouts = getSgLayoutCandidates(dataShape, *instData, numSg);
-    if (sgLayouts.empty())
-      return nullptr;
-    return buildSgLayout(context, dataShape, sgLayouts.front(), /*dimK=*/-1);
-  }
-
-  return nullptr;
+  return setupDefault2DBlockIOLayout(layoutKind, tdescTy.getShape(),
+                                     tdescTy.getElementType(), numSg,
+                                     uArchInstruction, uArch);
 }
 
 /// Sets up the anchor layout for a load_nd operation. LoadNd takes a
@@ -1843,7 +1758,20 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                xegpu::DistributeLayoutAttr consumerLayout,
                                int numSg, const xegpu::uArch::uArch *uArch) {
 
-  assert(consumerLayout && "Expected a valid consumer layout");
+  // Without a consumer layout (e.g. the value is carried only through a loop
+  // back edge, or its consumer cannot take any layout), there is nothing to
+  // honor: take the block load's default layout.
+  if (!consumerLayout) {
+    const auto *uArchInstruction =
+        dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+            uArch->getInstruction(
+                xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
+    if (!uArchInstruction)
+      return nullptr;
+    return setupDefault2DBlockIOLayout(layoutKind, resVecTy.getShape(),
+                                       resVecTy.getElementType(), numSg,
+                                       uArchInstruction, uArch);
+  }
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(consumerLayout.isForWorkgroup() &&
            "Expected consumer layout to be a complete workgroup-level layout");
@@ -1958,6 +1886,50 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
   return nullptr;
 }
 
+/// Picks the default subgroup layout for a scatter-style IO op: the most
+/// balanced `numSg` factorization that divides `wgShape` with sg_data a
+/// multiple of `instData`.
+static xegpu::DistributeLayoutAttr
+getDefaultScatterIOSubgroupLayout(mlir::MLIRContext *context,
+                                  ArrayRef<int64_t> wgShape,
+                                  ArrayRef<int64_t> instData, int numSg) {
+  auto candidates = getSgLayoutCandidates(wgShape, instData, numSg);
+  if (candidates.empty())
+    return nullptr;
+  // Candidates are ordered most-balanced first.
+  return buildSgLayout(context, wgShape, candidates.front(), /*dimK=*/-1);
+}
+
+/// Default layout of a scatter-style IO op (store_scatter, store_matrix, and
+/// load_gather / load_matrix without a consumer layout), from the per-lane
+/// `maxChunkSize` of its instruction. Lane layout comes from
+/// `computeScatterIOLaneLayoutAndData`; inst_data is lane_layout * lane_data.
+static xegpu::DistributeLayoutAttr setupDefaultScatterIOLayout(
+    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context, int maxChunkSize,
+    ArrayRef<int64_t> srcShape, int subgroupSize, int numSg) {
+
+  auto [laneLayout, laneData] =
+      computeScatterIOLaneLayoutAndData(srcShape, subgroupSize, maxChunkSize);
+
+  SmallVector<int64_t> instData(srcShape.size());
+  for (size_t i = 0; i < srcShape.size(); ++i)
+    instData[i] = laneLayout[i] * laneData[i];
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    return getDefaultScatterIOSubgroupLayout(context, srcShape, instData,
+                                             numSg);
+  }
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
+  }
+  if (layoutKind == xegpu::LayoutKind::Lane) {
+    return buildLaneLayout(context, laneLayout, laneData);
+  }
+  return nullptr;
+}
+
 /// Sets up the anchor layout for load gather and load matrix operation.
 /// load matrix lowers to load gather and 1d block load. All of them share the
 /// same layout setup logic.
@@ -1973,15 +1945,22 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 /// `maxChunkSize` is not read yet: the consumer's lane_data already fixes the
 /// per-lane chunk.
 ///
-/// TODO: derive lane_layout/lane_data here when the consumer has none, capped
-/// by `maxChunkSize`, the way `setupGenericStoreAnchorLayout` does via
-/// `computeScatterIOLaneLayoutAndData`. That path is missing today, so the
-/// assert below stands in for it.
+/// Without a consumer layout (e.g. the value is carried only through a loop
+/// back edge, or its consumer cannot take any layout), there is nothing to
+/// honor: the default scatter IO layout is used, capped by `maxChunkSize`.
+/// `numSg` is only used then, for Subgroup-kind layouts.
+///
+/// TODO: derive lane_layout/lane_data here when the consumer layout has none,
+/// the same way. That path is missing today, so the assert below stands in for
+/// it.
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
-    ArrayRef<int64_t> resShape, int subgroupSize) {
+    ArrayRef<int64_t> resShape, int subgroupSize, int numSg) {
 
+  if (!consumerLayout)
+    return setupDefaultScatterIOLayout(layoutKind, context, maxChunkSize,
+                                       resShape, subgroupSize, numSg);
   if (layoutKind == xegpu::LayoutKind::Subgroup)
     return consumerLayout;
 
@@ -2015,9 +1994,11 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
 }
 
 /// Sets up the anchor layout for a load gather operation.
-xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
-    xegpu::LayoutKind layoutKind, VectorType resVecTy, int contigChunkSize,
-    xegpu::DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr
+xegpu::setupLoadGatherAnchorLayout(xegpu::LayoutKind layoutKind,
+                                   VectorType resVecTy, int contigChunkSize,
+                                   xegpu::DistributeLayoutAttr consumerLayout,
+                                   int numSg, const uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> resShape = resVecTy.getShape();
@@ -2031,16 +2012,16 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      maxChunkSize, resShape, subgroupSize);
+                                      maxChunkSize, resShape, subgroupSize,
+                                      numSg);
 }
 
 /// Sets up the anchor layout for load matrix operation.
 /// TODO: enhance load matrix to indicate lowering to chunked load or not.
-xegpu::DistributeLayoutAttr
-xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                   VectorType resVecTy, int contigChunkSize,
-                                   xegpu::DistributeLayoutAttr consumerLayout,
-                                   const xegpu::uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr xegpu::setupLoadMatrixAnchorLayout(
+    xegpu::LayoutKind layoutKind, VectorType resVecTy, int contigChunkSize,
+    xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+    const xegpu::uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> resShape = resVecTy.getShape();
@@ -2051,48 +2032,8 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   int maxChunkSize =
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      maxChunkSize, resShape, subgroupSize);
-}
-
-/// Picks the subgroup layout for a scatter-style store (store_scatter /
-/// store_matrix): the most balanced `numSg` factorization that divides
-/// `wgShape` with sg_data a multiple of `instData`. A store has no consumer.
-static xegpu::DistributeLayoutAttr
-getStoreSubgroupLayouts(mlir::MLIRContext *context, ArrayRef<int64_t> wgShape,
-                        ArrayRef<int64_t> instData, int numSg) {
-  auto candidates = getSgLayoutCandidates(wgShape, instData, numSg);
-  if (candidates.empty())
-    return nullptr;
-  // Candidates are ordered most-balanced first.
-  return buildSgLayout(context, wgShape, candidates.front(), /*dimK=*/-1);
-}
-
-/// Sets up the anchor layout for store scatter and store matrix operation,
-/// which share the same logic. Lane layout comes from
-/// `computeScatterIOLaneLayoutAndData`; inst_data is lane_layout * lane_data.
-static xegpu::DistributeLayoutAttr setupGenericStoreAnchorLayout(
-    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context, int maxChunkSize,
-    ArrayRef<int64_t> srcShape, int subgroupSize, int numSg) {
-
-  auto [laneLayout, laneData] =
-      computeScatterIOLaneLayoutAndData(srcShape, subgroupSize, maxChunkSize);
-
-  SmallVector<int64_t> instData(srcShape.size());
-  for (size_t i = 0; i < srcShape.size(); ++i)
-    instData[i] = laneLayout[i] * laneData[i];
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    return getStoreSubgroupLayouts(context, srcShape, instData, numSg);
-  }
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
-  }
-  if (layoutKind == xegpu::LayoutKind::Lane) {
-    return buildLaneLayout(context, laneLayout, laneData);
-  }
-  return nullptr;
+                                      maxChunkSize, resShape, subgroupSize,
+                                      numSg);
 }
 
 /// Sets up the anchor layout for a store scatter operation.
@@ -2112,8 +2053,8 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize =
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
-  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize, numSg);
+  return setupDefaultScatterIOLayout(layoutKind, context, maxChunkSize,
+                                     srcShape, subgroupSize, numSg);
 }
 
 /// Sets up the anchor layout for a store matrix operation.
@@ -2131,8 +2072,8 @@ xegpu::DistributeLayoutAttr xegpu::setupStoreMatrixAnchorLayout(
   int maxChunkSize =
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
 
-  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize, numSg);
+  return setupDefaultScatterIOLayout(layoutKind, context, maxChunkSize,
+                                     srcShape, subgroupSize, numSg);
 }
 
 /// Completes a scatter IO layout by deriving lane_layout and lane_data from
