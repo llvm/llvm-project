@@ -16,8 +16,8 @@
 //     simulation mode. Currently, only pthread mutexes and condition variables
 //     are supported; other synchronization primitives abort the simulation.
 //   - Support timed operations (pthread_cond_timedwait,
-//   pthread_mutex_timedlock,
-//     pthread_timedjoin_np) by treating them as their non-timed counterparts.
+//     pthread_mutex_timedlock, pthread_timedjoin_np) by treating them as their
+//     non-timed counterparts.
 //   - Support spinlocks (pthread_spin_lock/trylock/unlock) using the same
 //     trylock-loop pattern as pthread_mutex_lock.
 //   - Support rwlocks (pthread_rwlock_*) with reader/writer tracking in the
@@ -595,7 +595,7 @@ void SimulateCondBroadcastImpl(uptr cond_addr) {
   sim_sched->CondBroadcast(cond_addr);
 }
 
-int CheckForErors(int iter, int start_iter) {
+int CheckForErrors(int iter, int start_iter) {
   if (atomic_load_relaxed(&sim_unsupported_interceptor_called)) {
     Printf("ThreadSanitizer: unsupported interceptor at iteration %d\n", iter);
     Printf(
@@ -702,7 +702,7 @@ int SimulateRun(void (*callback)(void*), void* arg) {
   int prob = flags()->simulate_schedule_probability;
   if (prob < 0 || prob > 100) {
     Printf(
-        "ThreadSanitizer: simulate_schedule_probabilitymust be >=0 and <= 100 "
+        "ThreadSanitizer: simulate_schedule_probability must be >=0 and <= 100 "
         "(got %d)\n",
         prob);
     return -1;
@@ -741,7 +741,7 @@ int SimulateRun(void (*callback)(void*), void* arg) {
       return 0;
     }
 
-    if (int rc = CheckForErors(iter, start_iter); rc)
+    if (int rc = CheckForErrors(iter, start_iter); rc)
       return rc;
 
     sched_ptr->ThreadFinish(main_idx);
