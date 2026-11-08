@@ -9,37 +9,40 @@
 #define _LIBCPP_SRC_PSTL_STD_THREAD_SCHED_H
 
 #include <__config>
-#include <algorithm>
-#include <atomic>
-#include <bit>
-#include <latch>
-#include <memory>
-#include <mutex>
-#include <new>
-#include <thread>
-#include <type_traits>
+
+#if _LIBCPP_HAS_THREADS
+
+#  include <algorithm>
+#  include <atomic>
+#  include <bit>
+#  include <latch>
+#  include <memory>
+#  include <mutex>
+#  include <new>
+#  include <thread>
+#  include <type_traits>
 
 // #define WITH_LOGGING 1
-#ifdef WITH_LOGGING
-#  include <stdio.h>
-#endif
+#  ifdef WITH_LOGGING
+#    include <stdio.h>
+#  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl::__statpart {
 
-#ifdef WITH_LOGGING
+#  ifdef WITH_LOGGING
 [[clang::no_destroy]] static std::mutex LOG_MUTEX;
-#  define LOG(...)                                                                                                     \
-    do {                                                                                                               \
-      std::lock_guard lock{LOG_MUTEX};                                                                                 \
-      fprintf(stderr, __VA_ARGS__);                                                                                    \
-    } while (0)
-#else
-#  define LOG(...)                                                                                                     \
-    do {                                                                                                               \
-    } while (0)
-#endif
+#    define LOG(...)                                                                                                   \
+      do {                                                                                                             \
+        std::lock_guard lock{LOG_MUTEX};                                                                               \
+        fprintf(stderr, __VA_ARGS__);                                                                                  \
+      } while (0)
+#  else
+#    define LOG(...)                                                                                                   \
+      do {                                                                                                             \
+      } while (0)
+#  endif
 
 struct Task;
 
@@ -377,5 +380,7 @@ inline void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*,
 } // namespace __pstl::__statpart
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_HAS_THREADS
 
 #endif // _LIBCPP_SRC_PSTL_STD_THREAD_SCHED_H

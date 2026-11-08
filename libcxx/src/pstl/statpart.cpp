@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "std_thread_sched.h"
 #include <__config>
+#include <__mutex/once_flag.h>
 #include <__pstl/backends/statpart.h>
+#include <__utility/no_destroy.h>
 
 #if defined(__APPLE__)
 #  include <dispatch/dispatch.h>
-#else
-#  include "std_thread_sched.h"
-#  include <__mutex/once_flag.h>
-#  include <__utility/no_destroy.h>
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -23,12 +22,20 @@ namespace __pstl::__statpart {
 
 void __apply(size_t chunk_count, void* context, void (*func)(void* context, size_t chunk)) noexcept {
 #if defined(__APPLE__)
+  // On Apple platforms use libdispatch to provide the parallelism.
   ::dispatch_apply_f(chunk_count, DISPATCH_APPLY_AUTO, context, func);
-#else
+#elif _LIBCPP_HAS_THREADS
+  // Otherwise, if threading is enabled on the platform, use the task scheduler built on top of std::thread.
   static constinit std::once_flag once;
   static constinit std::__no_destroy<Sched> sched{std::__uninitialized_tag{}};
   std::call_once(once, []() { sched.__emplace(); });
   sched.__get().apply(chunk_count, context, func);
+#else
+  // In case there's no threading available on the platform, apply the functor serially.
+  // Calls like these should not happen in practice, but we need to preserve the semantics regardless.
+  for (std::size_t i = 0; i < chunk_count; ++i) {
+    func(context, i);
+  }
 #endif
 }
 
