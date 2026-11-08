@@ -96,18 +96,20 @@ struct alignas(std::hardware_destructive_interference_size) SPMCQueue {
   }
 
   // Steals a task from the top of the queue, can be called by any thread.
-  // Returns nullptr if the queue is empty or if the steal fails due to contention.
+  // Returns nullptr if the queue is empty. Retries when losing the race for the top element to another thread, which
+  // can only happen if that thread made progress, so the loop is lock-free.
   Task* steal() noexcept {
     std::size_t t = top.load();
-    std::size_t b = bottom.load();
-    if (distance(b, t) <= 0)
-      return nullptr;
+    while (true) {
+      std::size_t b = bottom.load();
+      if (distance(b, t) <= 0)
+        return nullptr;
 
-    Task* task = get(t);
-    if (top.compare_exchange_strong(t, t + 1))
-      return task;
-    else
-      return nullptr;
+      Task* task = get(t);
+      if (top.compare_exchange_strong(t, t + 1))
+        return task;
+      // The CAS failed and loaded the current top into t, retry with it.
+    }
   }
 
 private:
