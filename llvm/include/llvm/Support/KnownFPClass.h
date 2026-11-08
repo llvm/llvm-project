@@ -457,14 +457,8 @@ public:
                                     const KnownFPClass &RHS, DenormalMode Mode);
 
   // Special case of fmul x, x.
-  static KnownFPClass square(const KnownFPClass &Src, DenormalMode Mode) {
-    KnownFPClass Known = fmul(Src, Src, Mode);
-
-    // X * X is always non-negative or a NaN.
-    Known.knownNot(fcNegative);
-    Known.propagateNonNaN(Src);
-    return Known;
-  }
+  LLVM_ABI static KnownFPClass square(const KnownFPClass &Src,
+                                      DenormalMode Mode);
 
   LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS, const APFloat &RHS,
                                     DenormalMode Mode);
