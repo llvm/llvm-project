@@ -1949,7 +1949,7 @@ Expr<TO> FoldOperation(
     FoldingContext &context, Convert<TO, FROMCAT> &&convert) {
   const int toKind{convert.kind()};
   if (auto array{ApplyElementwise(context, convert)}) {
-    return *array;
+    return std::move(*array);
   }
   struct {
     FoldingContext &context;
@@ -2119,7 +2119,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   auto &operand{x.left()};
   if (auto *nn{std::get_if<Negate<T>>(&x.left().u)}; nn && nn->kind() == kind) {
@@ -2170,7 +2170,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2219,7 +2219,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2260,7 +2260,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2310,7 +2310,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2366,7 +2366,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2409,7 +2409,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   return common::visit(
       [&, kind](auto &y) -> Expr<T> {
@@ -2473,7 +2473,7 @@ Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
                 return Expr<T>{
                     Extremum<T>{ordering, std::move(l), std::move(r)}};
               }})}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
