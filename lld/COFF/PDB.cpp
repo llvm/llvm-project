@@ -1312,6 +1312,7 @@ void PDBLinker::addNatvisFiles() {
     std::unique_ptr<MemoryBuffer> data = std::move(*dataOrErr);
 
     // Can't use takeBuffer() here since addInjectedSource() takes ownership.
+    ctx.driver.addDependencyFile(file);
     if (ctx.driver.tar)
       ctx.driver.tar->append(relativeToRoot(data->getBufferIdentifier()),
                              data->getBuffer());
@@ -1333,6 +1334,7 @@ void PDBLinker::addNamedStreams() {
     }
     std::unique_ptr<MemoryBuffer> data = std::move(*dataOrErr);
     exitOnErr(builder.addNamedStream(stream, data->getBuffer()));
+    ctx.driver.addDependencyFile(file);
     ctx.driver.takeBuffer(std::move(data));
   }
 }

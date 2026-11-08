@@ -10,6 +10,7 @@
 #define LLD_COFF_CONFIG_H
 
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -299,6 +300,10 @@ struct Configuration {
 
   // Used for /print-symbol-order:
   StringRef printSymbolOrder;
+
+  // Used for /dependency-file:
+  StringRef dependencyFile;
+  llvm::SetVector<llvm::CachedHashString> dependencyFiles;
 
   // Used for /vfsoverlay:
   std::unique_ptr<llvm::vfs::FileSystem> vfs;

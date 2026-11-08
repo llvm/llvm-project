@@ -263,6 +263,15 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
   return mbref;
 }
 
+void LinkerDriver::addDependencyFile(StringRef path) {
+  if (ctx.config.dependencyFile.empty())
+    return;
+  SmallString<256> nativePath(path);
+  sys::path::native(nativePath);
+  sys::path::remove_dots(nativePath, /*remove_dot_dot=*/true);
+  ctx.config.dependencyFiles.insert(CachedHashString(nativePath));
+}
+
 InputFile *LinkerDriver::addObjectFile(COFFLinkerContext &ctx,
                                        MemoryBufferRef mb,
                                        StringRef archiveName,
@@ -464,6 +473,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
         Err(ctx) << msg << "; did you mean '" << nearest << "'";
     } else {
       handleReproFile(pathStr, inputOpt);
+      addDependencyFile(mb->getBufferIdentifier());
       ctx.driver.addBuffer(std::move(mb), inputOpt == InputOpt::WholeArchive,
                            lazy);
     }
@@ -548,6 +558,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       reportBufferError(errorCodeToError(mbOrErr.second));
     llvm::TimeTraceScope timeScope("Archive: ",
                                    mbOrErr.first->getBufferIdentifier());
+    ctx.driver.addDependencyFile(childName);
     ctx.driver.addThinArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
                                     toCOFFString(ctx, sym), false);
   });
@@ -1199,6 +1210,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
                                   /*RequiresNullTerminator=*/false,
                                   /*IsVolatile=*/true),
             "could not open " + path);
+  ctx.driver.addDependencyFile(path);
 
   // Parse a file. An order file contains one symbol per line.
   // All symbols that were not present in a given order file are
@@ -1227,6 +1239,7 @@ void LinkerDriver::parseCallGraphFile(StringRef path) {
                                   /*RequiresNullTerminator=*/false,
                                   /*IsVolatile=*/true),
             "could not open " + path);
+  addDependencyFile(path);
 
   // Build a map from symbol name to section.
   DenseMap<StringRef, Symbol *> map;
@@ -1590,6 +1603,7 @@ getVFS(COFFLinkerContext &ctx, const opt::InputArgList &args) {
     checkError(errorCodeToError(bufOrErr.getError()));
     return nullptr;
   }
+  ctx.driver.addDependencyFile(arg->getValue());
 
   if (auto ret = vfs::getVFSFromYAML(std::move(*bufOrErr),
                                      /*DiagHandler*/ nullptr, arg->getValue()))
@@ -1604,6 +1618,55 @@ static StringRef DllDefaultEntryPoint(MachineTypes machine, bool mingw) {
     return (machine == I386) ? "_DllMainCRTStartup@12" : "DllMainCRTStartup";
   } else {
     return (machine == I386) ? "__DllMainCRTStartup@12" : "_DllMainCRTStartup";
+  }
+}
+
+// Writes the files the link read, in the format of a compiler's -MD file,
+// which Make and Ninja accept. This follows ELF's --dependency-file.
+static void writeDependencyFile(COFFLinkerContext &ctx) {
+  std::error_code ec;
+  raw_fd_ostream os(ctx.config.dependencyFile, ec, sys::fs::OF_None);
+  if (ec) {
+    Err(ctx) << "cannot open " << ctx.config.dependencyFile << ": "
+             << ec.message();
+    return;
+  }
+
+  // We use the same escape rules as Clang/GCC which are accepted by Make/Ninja:
+  // * A space is escaped by a backslash which itself must be escaped.
+  // * A hash sign is escaped by a single backslash.
+  // * $ is escaped as $$.
+  auto printFilename = [](raw_fd_ostream &os, StringRef filename) {
+    SmallString<256> nativePath;
+    sys::path::native(filename.str(), nativePath);
+    sys::path::remove_dots(nativePath, /*remove_dot_dot=*/true);
+    for (unsigned i = 0, e = nativePath.size(); i != e; ++i) {
+      if (nativePath[i] == '#') {
+        os << '\\';
+      } else if (nativePath[i] == ' ') {
+        os << '\\';
+        unsigned j = i;
+        while (j > 0 && nativePath[--j] == '\\')
+          os << '\\';
+      } else if (nativePath[i] == '$') {
+        os << '$';
+      }
+      os << nativePath[i];
+    }
+  };
+
+  printFilename(os, ctx.config.outputFile);
+  os << ":";
+  for (StringRef path : ctx.config.dependencyFiles) {
+    os << " \\\n ";
+    printFilename(os, path);
+  }
+  os << "\n";
+
+  for (StringRef path : ctx.config.dependencyFiles) {
+    os << "\n";
+    printFilename(os, path);
+    os << ":\n";
   }
 }
 
@@ -1667,6 +1730,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       Err(ctx) << arg->getSpelling() << " number expected, but got " << s;
     ctx.e.errorLimit = n;
   }
+
+  // Handle /dependency-file early, before any input file is read.
+  config->dependencyFile = args.getLastArgValue(OPT_dependency_file);
 
   config->vfs = getVFS(ctx, args);
 
@@ -2281,6 +2347,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
   config->ltoSampleProfileName = args.getLastArgValue(OPT_lto_sample_profile);
+  // LTO reads the profiles itself.
+  if (!config->ltoCSProfileGenerate && !config->ltoCSProfileFile.empty())
+    addDependencyFile(config->ltoCSProfileFile);
+  if (!config->ltoSampleProfileName.empty())
+    addDependencyFile(config->ltoSampleProfileName);
   // Handle miscellaneous boolean flags.
   config->ltoPGOWarnMismatch = args.hasFlag(OPT_lto_pgo_warn_mismatch,
                                             OPT_lto_pgo_warn_mismatch_no, true);
@@ -3028,6 +3099,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Write the result.
   writeResult(ctx);
+
+  // Writing the PDB reads the last input files (/natvis:, /pdbstream:), so
+  // the set of files the link depends on is complete only now.
+  if (!config->dependencyFile.empty())
+    writeDependencyFile(ctx);
   // LTO cleanup may create time trace events. Wait for it to complete before
   // writing the time trace data.
   ctx.forEachSymtab([](SymbolTable &symtab) { symtab.waitForLTOCleanup(); });
