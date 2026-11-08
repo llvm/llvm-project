@@ -1453,14 +1453,12 @@ int **return_multilevel() {
 }
 } // namespace unary_plus
 
-// FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
-// information to be missed (local variable 'p' aliases the storage of local variable 'b').
 void simpleparen() {
   MyObj* p;
   {
     MyObj a;
     MyObj* b = &a;  // expected-warning {{local variable 'a' does not live long enough}}
-    p = (((b)));
+    p = (((b)));    // expected-note {{local variable 'b' aliases the storage of local variable 'a'}}
   }                 // expected-note {{local variable 'a' is destroyed here}}
   use(*p);          // expected-note {{later used here}}
 }
