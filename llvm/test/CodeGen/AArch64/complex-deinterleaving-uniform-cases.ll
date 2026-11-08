@@ -315,6 +315,10 @@ entry:
 define <4 x i32> @not_deinterleaving_splat_lanes(<4 x i32> %x) {
 ; CHECK-LABEL: not_deinterleaving_splat_lanes:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    dup v1.2s, v0.s[0]
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    ext v0.8b, v1.8b, v0.8b, #4
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %real = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 0>
@@ -328,8 +332,15 @@ entry:
 define <8 x float> @add_90_upper_lanes_not_deinterleaving(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: add_90_upper_lanes_not_deinterleaving:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcadd v1.4s, v3.4s, v1.4s, #90
-; CHECK-NEXT:    fcadd v0.4s, v2.4s, v0.4s, #90
+; CHECK-NEXT:    uzp1 v4.4s, v2.4s, v3.4s
+; CHECK-NEXT:    uzp1 v5.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp2 v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    mov v4.s[3], v3.s[0]
+; CHECK-NEXT:    fadd v1.4s, v1.4s, v5.4s
+; CHECK-NEXT:    fsub v2.4s, v4.4s, v0.4s
+; CHECK-NEXT:    zip1 v0.4s, v2.4s, v1.4s
+; CHECK-NEXT:    zip2 v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %a.real = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
