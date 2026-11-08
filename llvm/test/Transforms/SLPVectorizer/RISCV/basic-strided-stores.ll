@@ -813,3 +813,28 @@ define void @reversed_addr_data_reorder(ptr %pl, ptr %ps) {
   store i8 %v4, ptr %s7, align 1
   ret void
 }
+
+define void @reversed_constant_stride(ptr noalias %pl, ptr noalias %ps) {
+; CHECK-LABEL: define void @reversed_constant_stride(
+; CHECK-SAME: ptr noalias [[PL:%.*]], ptr noalias [[PS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[GS3:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 12
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[PL]], align 1
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> [[TMP1]], ptr align 1 [[GS3]], i64 -1, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    ret void
+;
+  %gl1 = getelementptr inbounds i8, ptr %pl, i64 1
+  %gl2 = getelementptr inbounds i8, ptr %pl, i64 2
+  %gl3 = getelementptr inbounds i8, ptr %pl, i64 3
+  %l0 = load i8, ptr %pl, align 1
+  %l1 = load i8, ptr %gl1, align 1
+  %l2 = load i8, ptr %gl2, align 1
+  %l3 = load i8, ptr %gl3, align 1
+  %gs1 = getelementptr inbounds i8, ptr %ps, i64 4
+  %gs2 = getelementptr inbounds i8, ptr %ps, i64 8
+  %gs3 = getelementptr inbounds i8, ptr %ps, i64 12
+  store i8 %l0, ptr %gs3, align 1
+  store i8 %l1, ptr %gs2, align 1
+  store i8 %l2, ptr %gs1, align 1
+  store i8 %l3, ptr %ps, align 1
+  ret void
+}
