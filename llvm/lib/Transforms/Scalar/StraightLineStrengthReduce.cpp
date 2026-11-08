@@ -76,6 +76,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -135,6 +136,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
@@ -154,8 +156,8 @@ class StraightLineStrengthReduce {
 public:
   StraightLineStrengthReduce(const ScalarOptions &Opts, const DataLayout *DL,
                              DominatorTree *DT, ScalarEvolution *SE,
-                             TargetTransformInfo *TTI)
-      : Opts(Opts), DL(DL), DT(DT), SE(SE), TTI(TTI) {}
+                             TargetTransformInfo *TTI, AssumptionCache *AC)
+      : Opts(Opts), DL(DL), DT(DT), SE(SE), TTI(TTI), AC(AC) {}
 
   // SLSR candidate. Such a candidate must be in one of the forms described in
   // the header comments.
@@ -413,6 +415,7 @@ private:
   DominatorTree *DT = nullptr;
   ScalarEvolution *SE;
   TargetTransformInfo *TTI = nullptr;
+  AssumptionCache *AC = nullptr;
   std::list<Candidate> Candidates;
 
   // Map from SCEV to instructions that represent the value,
@@ -629,6 +632,7 @@ char StraightLineStrengthReduceLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(StraightLineStrengthReduceLegacyPass, "slsr",
                       "Straight line strength reduction", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
@@ -1168,7 +1172,8 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForMul(
     // If LHS is in the form of "Base + Index", then I is in the form of
     // "(Base + Index) * RHS".
     allocateCandidatesAndFindBasis(Candidate::Mul, SE->getSCEV(B), Idx, RHS, I);
-  } else if (matchesOr(LHS, B, Idx) && haveNoCommonBitsSet(B, Idx, *DL)) {
+  } else if (matchesOr(LHS, B, Idx) &&
+             haveNoCommonBitsSet(B, Idx, SimplifyQuery(*DL, DT, AC, I))) {
     // If LHS is in the form of "Base | Index" and Base and Index have no common
     // bits set, then
     //   Base | Index = Base + Index
@@ -1406,8 +1411,9 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
   auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   const ScalarOptions &Opts = getScalarOptions(F);
-  return StraightLineStrengthReduce(Opts, DL, DT, SE, TTI).runOnFunction(F);
+  return StraightLineStrengthReduce(Opts, DL, DT, SE, TTI, AC).runOnFunction(F);
 }
 
 bool StraightLineStrengthReduce::runOnFunction(Function &F) {
@@ -1456,9 +1462,10 @@ StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
+  auto *AC = &AM.getResult<AssumptionAnalysis>(F);
 
   const ScalarOptions &Opts = getScalarOptions(F);
-  if (!StraightLineStrengthReduce(Opts, DL, DT, SE, TTI).runOnFunction(F))
+  if (!StraightLineStrengthReduce(Opts, DL, DT, SE, TTI, AC).runOnFunction(F))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
