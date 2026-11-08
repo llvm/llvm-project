@@ -148,6 +148,16 @@ func.func @trivially_all_true_case_fixed_size()
 
 // -----
 
+// ALL-LABEL: @all_true_rank_zero_case
+// ALL: %[[ALL_TRUE_MASK:.*]] = vector.create_mask %arg0 : vector<i1>
+// ALL: return %[[ALL_TRUE_MASK]]
+func.func @all_true_rank_zero_case(%n: index) -> vector<i1> {
+  %mask = vector.create_mask %n : vector<i1>
+  return %mask : vector<i1>
+}
+
+// -----
+
 // ALL-LABEL: @negative_constant_dim_not_all_true
 // ALL-NOT: vector.constant_mask
 // ALL: %[[MASK:.*]] = vector.create_mask
