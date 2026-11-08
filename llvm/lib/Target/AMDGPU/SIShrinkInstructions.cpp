@@ -21,6 +21,8 @@ STATISTIC(NumInstructionsShrunk,
           "Number of 64-bit instruction reduced to 32-bit.");
 STATISTIC(NumLiteralConstantsFolded,
           "Number of literal constants folded into 32-bit instructions.");
+STATISTIC(NumCndMaskConditionsInverted,
+          "Number of V_CMPs inverted to swap the sources of V_CNDMASKs.");
 
 using namespace llvm;
 
@@ -47,6 +49,7 @@ class SIShrinkInstructions {
   bool shrinkMadFma(MachineInstr &MI) const;
   ChangeKind shrinkScalarLogicOp(MachineInstr &MI) const;
   bool tryReplaceDeadSDST(MachineInstr &MI) const;
+  bool tryInvertCndMaskCondition(MachineInstr &MI) const;
   bool instAccessReg(MachineInstr::filtered_const_mop_range &&R, Register Reg,
                      unsigned SubReg) const;
   bool instReadsReg(const MachineInstr *MI, unsigned Reg,
@@ -874,6 +877,152 @@ bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
   return true;
 }
 
+/// Return true if \p Opc is a V_CNDMASK which reads its condition from src2
+/// and which has a VOP2 form.
+static bool isCndMaskE64(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_CNDMASK_B32_e64:
+  case AMDGPU::V_CNDMASK_B16_t16_e64:
+  case AMDGPU::V_CNDMASK_B16_fake16_e64:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Swap \p Src0 and \p Src1, which must each be a register or an immediate.
+static void swapRegOrImmOperands(MachineOperand &Src0, MachineOperand &Src1) {
+  if (Src0.isImm() && Src1.isImm()) {
+    int64_t Imm = Src0.getImm();
+    Src0.setImm(Src1.getImm());
+    Src1.setImm(Imm);
+    return;
+  }
+  if (Src0.isReg() && Src1.isReg()) {
+    Register Reg = Src0.getReg();
+    unsigned SubReg = Src0.getSubReg();
+    bool IsKill = Src0.isKill();
+    bool IsUndef = Src0.isUndef();
+    Src0.setReg(Src1.getReg());
+    Src0.setSubReg(Src1.getSubReg());
+    Src0.setIsKill(Src1.isKill());
+    Src0.setIsUndef(Src1.isUndef());
+    Src1.setReg(Reg);
+    Src1.setSubReg(SubReg);
+    Src1.setIsKill(IsKill);
+    Src1.setIsUndef(IsUndef);
+    return;
+  }
+  MachineOperand &RegOp = Src0.isReg() ? Src0 : Src1;
+  MachineOperand &ImmOp = Src0.isReg() ? Src1 : Src0;
+  assert(ImmOp.isImm());
+  Register Reg = RegOp.getReg();
+  unsigned SubReg = RegOp.getSubReg();
+  bool IsKill = RegOp.isKill();
+  bool IsUndef = RegOp.isUndef();
+  RegOp.ChangeToImmediate(ImmOp.getImm());
+  ImmOp.ChangeToRegister(Reg, /*isDef=*/false, /*isImp=*/false, IsKill,
+                         /*isDead=*/false, IsUndef);
+  ImmOp.setSubReg(SubReg);
+}
+
+/// V_CNDMASK is not commutable, but its sources can be swapped by inverting
+/// its condition. The VOPD and VOP2 forms of V_CNDMASK need src1 to be a VGPR,
+/// while src0 can also be a constant or an SGPR, so this increases the number
+/// of VOPD pairs that can be formed. If the condition of \p MI is
+/// computed by a V_CMP which can be inverted for free and whose only uses are
+/// V_CNDMASKs, invert it and swap the sources of all of those V_CNDMASKs,
+/// provided that this gives more of them a VGPR in src1.
+bool SIShrinkInstructions::tryInvertCndMaskCondition(MachineInstr &MI) const {
+  assert(!IsPostRA && MRI->isSSA() && isCndMaskE64(MI.getOpcode()));
+
+  const MachineOperand *Cond = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+  if (!Cond->isReg() || !Cond->getReg().isVirtual() || Cond->getSubReg())
+    return false;
+  Register CondReg = Cond->getReg();
+  MachineInstr *CmpMI = MRI->getUniqueVRegDef(CondReg);
+  if (!CmpMI)
+    return false;
+
+  MachineOperand *ClassMask = nullptr;
+  int64_t NewClassMask = 0;
+  int NewCmpOpc = -1;
+  switch (CmpMI->getOpcode()) {
+  case AMDGPU::V_CMP_CLASS_F16_e64:
+  case AMDGPU::V_CMP_CLASS_F16_t16_e64:
+  case AMDGPU::V_CMP_CLASS_F16_fake16_e64:
+  case AMDGPU::V_CMP_CLASS_F32_e64:
+  case AMDGPU::V_CMP_CLASS_F64_e64: {
+    // Invert a class test by complementing its mask. Do not turn an inline
+    // constant mask into a literal.
+    ClassMask = TII->getNamedOperand(*CmpMI, AMDGPU::OpName::src1);
+    if (!ClassMask->isImm())
+      return false;
+    int64_t OldClassMask = ClassMask->getImm();
+    NewClassMask = ~OldClassMask & ((SIInstrFlags::P_INFINITY << 1) - 1);
+    if (AMDGPU::isInlinableIntLiteral(OldClassMask) &&
+        !AMDGPU::isInlinableIntLiteral(NewClassMask))
+      return false;
+    break;
+  }
+  default:
+    NewCmpOpc = TII->getInvertedVCmpOpcode(CmpMI->getOpcode());
+    if (NewCmpOpc == -1)
+      return false;
+    break;
+  }
+
+  // Every use of the condition must be a V_CNDMASK whose sources can be
+  // swapped. Count how many of them gain or lose a VGPR in src1. Ignore those
+  // with source modifiers, which have no VOP2 or VOPD form either way.
+  auto IsVGPR = [this](const MachineOperand &MO) {
+    return MO.isReg() && TRI->isVGPR(*MRI, MO.getReg());
+  };
+  SmallVector<MachineInstr *, 4> CndMasks;
+  int Gain = 0;
+  for (MachineOperand &Use : MRI->use_operands(CondReg)) {
+    MachineInstr &UseMI = *Use.getParent();
+    unsigned Opc = UseMI.getOpcode();
+    if (!isCndMaskE64(Opc) || Use.getSubReg() ||
+        &Use != TII->getNamedOperand(UseMI, AMDGPU::OpName::src2))
+      return false;
+    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+    const MachineOperand &Src0 = UseMI.getOperand(Src0Idx);
+    const MachineOperand &Src1 = UseMI.getOperand(Src1Idx);
+    if ((!Src0.isReg() && !Src0.isImm()) || (!Src1.isReg() && !Src1.isImm()) ||
+        !TII->isLegalToSwap(UseMI, Src0Idx, Src1Idx))
+      return false;
+    if (!TII->hasModifiersSet(UseMI, AMDGPU::OpName::src0_modifiers) &&
+        !TII->hasModifiersSet(UseMI, AMDGPU::OpName::src1_modifiers))
+      Gain += IsVGPR(Src0) - IsVGPR(Src1);
+    CndMasks.push_back(&UseMI);
+  }
+  if (Gain <= 0)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Inverting " << *CmpMI);
+  if (ClassMask)
+    ClassMask->setImm(NewClassMask);
+  else
+    CmpMI->setDesc(TII->get(NewCmpOpc));
+
+  for (MachineInstr *CndMask : CndMasks) {
+    swapRegOrImmOperands(*TII->getNamedOperand(*CndMask, AMDGPU::OpName::src0),
+                         *TII->getNamedOperand(*CndMask, AMDGPU::OpName::src1));
+    MachineOperand *Src0Mods =
+        TII->getNamedOperand(*CndMask, AMDGPU::OpName::src0_modifiers);
+    MachineOperand *Src1Mods =
+        TII->getNamedOperand(*CndMask, AMDGPU::OpName::src1_modifiers);
+    int64_t Src0ModsVal = Src0Mods->getImm();
+    Src0Mods->setImm(Src1Mods->getImm());
+    Src1Mods->setImm(Src0ModsVal);
+    LLVM_DEBUG(dbgs() << "  and swapping sources of " << *CndMask);
+  }
+  ++NumCndMaskConditionsInverted;
+  return true;
+}
+
 bool SIShrinkInstructions::run(MachineFunction &MF) {
 
   this->MF = &MF;
@@ -1030,6 +1179,10 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       Changed |= tryReplaceDeadSDST(MI);
       if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
         continue;
+
+      if (!IsPostRA && isCndMaskE64(MI.getOpcode()) &&
+          !TII->canShrink(MI, *MRI))
+        Changed |= tryInvertCndMaskCondition(MI);
 
       if (!TII->canShrink(MI, *MRI)) {
         // Try commuting the instruction and see if that enables us to shrink

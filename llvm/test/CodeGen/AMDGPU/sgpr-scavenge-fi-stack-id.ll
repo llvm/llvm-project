@@ -19,7 +19,7 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    v_and_b32_e32 v6, 1, v6
 ; CHECK-NEXT:    v_and_b32_e32 v5, 1, v5
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[14:15], 1, v2
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v7
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], 1, v7
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[6:7], 1, v6
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[8:9], 1, v5
 ; CHECK-NEXT:    s_xor_b64 s[16:17], s[14:15], -1
@@ -142,8 +142,8 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_15
 ; CHECK-NEXT:  ; %bb.13: ; %inner_stack_loop.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=4
-; CHECK-NEXT:    v_cndmask_b32_e64 v4, v3, 0, s[4:5]
-; CHECK-NEXT:    v_cndmask_b32_e64 v7, v2, 0, s[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0, v3, s[4:5]
+; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0, v2, s[4:5]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v5, v4, 0, s[14:15]
 ; CHECK-NEXT:    v_cndmask_b32_e64 v4, v7, 0, s[14:15]
 ; CHECK-NEXT:    v_mul_f64 v[4:5], v[4:5], s[28:29]

@@ -747,9 +747,9 @@ define { float, i32 } @frexp_nan_clamp_both_f32(float %x) {
 ; GFX6-NEXT:    v_frexp_mant_f32_e32 v2, v0
 ; GFX6-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v2, v0, v2, vcc
-; GFX6-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
-; GFX6-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX6-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GFX6-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %x)
   %mant = extractvalue { float, i32 } %frexp, 0

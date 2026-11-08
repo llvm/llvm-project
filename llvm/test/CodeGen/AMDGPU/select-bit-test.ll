@@ -103,9 +103,9 @@ define i32 @select_trunc_bit5_inverted(i32 %x, i32 %y) {
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_and_b32_e32 v0, 32, v0
-; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX942-NEXT:    s_nop 1
-; GFX942-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
+; GFX942-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_trunc_bit5_inverted:
@@ -113,8 +113,8 @@ define i32 @select_trunc_bit5_inverted(i32 %x, i32 %y) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 32, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc_lo
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sh = lshr i32 %x, 5
   %t = trunc i32 %sh to i1
