@@ -537,16 +537,16 @@ define i64 @select_multi_use(i64 %c, i64 %a, ptr %out) {
 ; LA64-LABEL: select_multi_use:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltui $a3, $a0, 1
-; LA64-NEXT:    masknez $a0, $a1, $a0
+; LA64-NEXT:    maskeqz $a0, $a1, $a3
 ; LA64-NEXT:    st.b $a3, $a2, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32S-LABEL: select_multi_use:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    or $a1, $a0, $a1
-; LA32S-NEXT:    sltui $a5, $a1, 1
-; LA32S-NEXT:    masknez $a0, $a2, $a1
-; LA32S-NEXT:    masknez $a1, $a3, $a1
+; LA32S-NEXT:    or $a0, $a0, $a1
+; LA32S-NEXT:    sltui $a5, $a0, 1
+; LA32S-NEXT:    maskeqz $a0, $a2, $a5
+; LA32S-NEXT:    maskeqz $a1, $a3, $a5
 ; LA32S-NEXT:    st.b $a5, $a4, 0
 ; LA32S-NEXT:    ret
 ;
@@ -667,5 +667,110 @@ define i64 @select_slt(i64 %c, i64 %a, i64 %b) {
 ; LA32-NEXT:    ret
   %p = icmp slt i64 %c, %b
   %r = select i1 %p, i64 %a, i64 0
+  ret i64 %r
+}
+
+; Keep the normalized boolean shared across the call instead of extending the
+; live range of the original comparison operand for the select.
+declare void @g()
+
+define i64 @select_multi_use_across_call(i64 %c, i64 %a, i64 %b) nounwind {
+; LA64-LABEL: select_multi_use_across_call:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    addi.d $sp, $sp, -32
+; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s1, $sp, 0 # 8-byte Folded Spill
+; LA64-NEXT:    move $fp, $a2
+; LA64-NEXT:    move $s0, $a1
+; LA64-NEXT:    sltu $s1, $zero, $a0
+; LA64-NEXT:    pcaddu18i $ra, %call36(g)
+; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    masknez $a0, $fp, $s1
+; LA64-NEXT:    maskeqz $a1, $s0, $s1
+; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    add.d $a0, $a0, $s1
+; LA64-NEXT:    ld.d $s1, $sp, 0 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 32
+; LA64-NEXT:    ret
+;
+; LA32S-LABEL: select_multi_use_across_call:
+; LA32S:       # %bb.0: # %entry
+; LA32S-NEXT:    addi.w $sp, $sp, -32
+; LA32S-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
+; LA32S-NEXT:    st.w $fp, $sp, 24 # 4-byte Folded Spill
+; LA32S-NEXT:    st.w $s0, $sp, 20 # 4-byte Folded Spill
+; LA32S-NEXT:    st.w $s1, $sp, 16 # 4-byte Folded Spill
+; LA32S-NEXT:    st.w $s2, $sp, 12 # 4-byte Folded Spill
+; LA32S-NEXT:    st.w $s3, $sp, 8 # 4-byte Folded Spill
+; LA32S-NEXT:    move $fp, $a5
+; LA32S-NEXT:    move $s0, $a4
+; LA32S-NEXT:    move $s1, $a3
+; LA32S-NEXT:    move $s2, $a2
+; LA32S-NEXT:    or $a0, $a0, $a1
+; LA32S-NEXT:    sltu $s3, $zero, $a0
+; LA32S-NEXT:    bl g
+; LA32S-NEXT:    masknez $a0, $fp, $s3
+; LA32S-NEXT:    maskeqz $a1, $s1, $s3
+; LA32S-NEXT:    or $a1, $a1, $a0
+; LA32S-NEXT:    masknez $a0, $s0, $s3
+; LA32S-NEXT:    maskeqz $a2, $s2, $s3
+; LA32S-NEXT:    or $a2, $a2, $a0
+; LA32S-NEXT:    add.w $a0, $a2, $s3
+; LA32S-NEXT:    sltu $a2, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a1, $a2
+; LA32S-NEXT:    ld.w $s3, $sp, 8 # 4-byte Folded Reload
+; LA32S-NEXT:    ld.w $s2, $sp, 12 # 4-byte Folded Reload
+; LA32S-NEXT:    ld.w $s1, $sp, 16 # 4-byte Folded Reload
+; LA32S-NEXT:    ld.w $s0, $sp, 20 # 4-byte Folded Reload
+; LA32S-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
+; LA32S-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
+; LA32S-NEXT:    addi.w $sp, $sp, 32
+; LA32S-NEXT:    ret
+;
+; LA32-LABEL: select_multi_use_across_call:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    addi.w $sp, $sp, -32
+; LA32-NEXT:    st.w $ra, $sp, 28 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $fp, $sp, 24 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $s0, $sp, 20 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $s1, $sp, 16 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $s2, $sp, 12 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $s3, $sp, 8 # 4-byte Folded Spill
+; LA32-NEXT:    st.w $s4, $sp, 4 # 4-byte Folded Spill
+; LA32-NEXT:    move $s2, $a5
+; LA32-NEXT:    move $s1, $a4
+; LA32-NEXT:    move $fp, $a3
+; LA32-NEXT:    move $s0, $a2
+; LA32-NEXT:    or $s4, $a0, $a1
+; LA32-NEXT:    sltu $s3, $zero, $s4
+; LA32-NEXT:    bl g
+; LA32-NEXT:    bne $s4, $zero, .LBB22_2
+; LA32-NEXT:  # %bb.1: # %entry
+; LA32-NEXT:    move $fp, $s2
+; LA32-NEXT:    move $s0, $s1
+; LA32-NEXT:  .LBB22_2: # %entry
+; LA32-NEXT:    add.w $a0, $s0, $s3
+; LA32-NEXT:    sltu $a1, $a0, $s0
+; LA32-NEXT:    add.w $a1, $fp, $a1
+; LA32-NEXT:    ld.w $s4, $sp, 4 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $s3, $sp, 8 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $s2, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $s1, $sp, 16 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $s0, $sp, 20 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
+; LA32-NEXT:    addi.w $sp, $sp, 32
+; LA32-NEXT:    ret
+entry:
+  %p = icmp ne i64 %c, 0
+  call void @g()
+  %s = select i1 %p, i64 %a, i64 %b
+  %z = zext i1 %p to i64
+  %r = add i64 %s, %z
   ret i64 %r
 }
