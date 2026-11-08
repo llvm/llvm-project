@@ -229,6 +229,18 @@ bool LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // Handle offsets that exceed the immediate range of the instruction.
   switch (MIOpc) {
+  case LoongArch::VLDREPL_H:
+  case LoongArch::XVLDREPL_H:
+    OffsetLegal = isShiftedInt<11, 1>(FixedOffset);
+    break;
+  case LoongArch::VLDREPL_W:
+  case LoongArch::XVLDREPL_W:
+    OffsetLegal = isShiftedInt<10, 2>(FixedOffset);
+    break;
+  case LoongArch::VLDREPL_D:
+  case LoongArch::XVLDREPL_D:
+    OffsetLegal = isShiftedInt<9, 3>(FixedOffset);
+    break;
   case LoongArch::VSTELM_B:
   case LoongArch::XVSTELM_B:
     OffsetLegal = isInt<8>(FixedOffset);

@@ -228,6 +228,10 @@ class SPIRVEmitIntrinsicsImpl
   // a register of Instructions that were visited by deduceOperandElementType()
   // to validate operand types with an instruction
   SmallPtrSet<Instruction *, 0> TypeValidated;
+  // Type-validated PHIs and selects whose element type changed since, to be
+  // revalidated by the outermost deduceOperandElementType() call.
+  SmallVector<Instruction *> RetypedToRevalidate;
+  bool RevalidatingRetyped = false;
 
   // well known result types of builtins
   enum WellKnownTypes { Event };
@@ -1622,6 +1626,13 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
         DenseSet<std::pair<Value *, Value *>> VisitedSubst{
             std::make_pair(I, Op)};
         propagateElemTypeRec(Op, KnownElemTy, PrevElemTy, VisitedSubst);
+        // A PHI or select validated its operands against its previous element
+        // type. Null constants have no use list and are not revisited by
+        // postprocessing, so validate the operands against the new type.
+        if (auto *OpI = dyn_cast<Instruction>(Op);
+            OpI && (isa<PHINode>(OpI) || isa<SelectInst>(OpI)) &&
+            TypeValidated.contains(OpI))
+          RetypedToRevalidate.push_back(OpI);
       }
     } else {
       eraseTodoType(Op);
@@ -1634,6 +1645,16 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
     }
   }
   TypeValidated.insert(I);
+
+  // Revalidating one PHI can retype the next one in a chain. Use a worklist
+  // rather than recursion, as such chains can be long.
+  if (RevalidatingRetyped)
+    return;
+  RevalidatingRetyped = true;
+  while (!RetypedToRevalidate.empty())
+    deduceOperandElementType(RetypedToRevalidate.pop_back_val(), nullptr,
+                             nullptr, IsPostprocessing);
+  RevalidatingRetyped = false;
 }
 
 void SPIRVEmitIntrinsicsImpl::replaceMemInstrUses(Instruction *Old,
