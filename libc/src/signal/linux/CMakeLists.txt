@@ -110,6 +110,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
     libc.src.errno.errno
 )
+
 add_entrypoint_object(
   sigpending
   SRCS
@@ -147,6 +148,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigtimedwait
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(

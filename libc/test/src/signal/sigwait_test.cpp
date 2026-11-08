@@ -42,3 +42,9 @@ TEST(LlvmLibcSigwaitTest, WaitPendingSignal) {
   // Restore the original signal mask.
   ASSERT_EQ(LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &oldset, nullptr), 0);
 }
+
+TEST(LlvmLibcSigwaitTest, InvalidSetReturnsEfault) {
+  // We let the kernel verify the pointer value.
+  int sig = 0;
+  EXPECT_EQ(LIBC_NAMESPACE::sigwait(nullptr, &sig), EFAULT);
+}

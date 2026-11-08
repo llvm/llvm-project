@@ -19,11 +19,14 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigtimedwait.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sigwait,
                    (const sigset_t *__restrict set, int *__restrict sig)) {
+  LIBC_CRASH_ON_NULLPTR(sig);
+
   siginfo_t info;
   ErrorOr<int> result = 0;
   do {
