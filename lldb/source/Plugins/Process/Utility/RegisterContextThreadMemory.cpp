@@ -88,12 +88,29 @@ bool RegisterContextThreadMemory::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextThreadMemory::ReadAllRegisterValues(
-    lldb_private::RegisterCheckpoint &reg_checkpoint) {
+llvm::Expected<RegisterCheckpoint>
+RegisterContextThreadMemory::SaveCheckpoint() {
   UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->ReadAllRegisterValues(reg_checkpoint);
-  return false;
+  if (!m_reg_ctx_sp)
+    return llvm::createStringError("thread register source is unavailable");
+  auto saved = m_reg_ctx_sp->SaveCheckpoint();
+  if (!saved)
+    return saved.takeError();
+  auto checkpoint = std::make_shared<RegisterCheckpoint>(std::move(*saved));
+  return CreateCheckpoint(
+      [source = std::static_pointer_cast<RegisterContextThreadMemory>(
+           shared_from_this()),
+       checkpoint, backing = m_reg_ctx_sp]() -> llvm::Error {
+        auto &context = *source;
+        context.UpdateRegisterContext();
+        if (!context.m_reg_ctx_sp)
+          return llvm::createStringError(
+              "thread register source is unavailable");
+        if (auto error = context.m_reg_ctx_sp->RestoreCheckpoint(*checkpoint))
+          return error;
+        context.m_reg_ctx_sp = backing;
+        return llvm::Error::success();
+      });
 }
 
 bool RegisterContextThreadMemory::WriteAllRegisterValues(
@@ -101,14 +118,6 @@ bool RegisterContextThreadMemory::WriteAllRegisterValues(
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->WriteAllRegisterValues(data_sp);
-  return false;
-}
-
-bool RegisterContextThreadMemory::WriteAllRegisterValues(
-    const lldb_private::RegisterCheckpoint &reg_checkpoint) {
-  UpdateRegisterContext();
-  if (m_reg_ctx_sp)
-    return m_reg_ctx_sp->WriteAllRegisterValues(reg_checkpoint);
   return false;
 }
 

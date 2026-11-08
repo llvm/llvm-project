@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/NativeRegisterContext.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Register/RegisterValue.h"
 
@@ -269,4 +270,17 @@ llvm::Error NativeRegisterContext::WriteBankRegister(
   return GetLayout().Write(id, value, banks);
 }
 
-
+llvm::Expected<RegisterCheckpoint> NativeRegisterContext::SaveCheckpoint() {
+  WritableDataBufferSP data;
+  if (auto error = ReadAllRegisterValues(data); error.Fail())
+    return error.ToError();
+  auto description = GetDescription();
+  return CreateCheckpoint([this, data = std::move(data),
+                           description]() -> llvm::Error {
+    auto &context = *this;
+    if (context.GetDescription() != description)
+      return llvm::createStringError(
+          "native register configuration changed since checkpoint");
+    return context.WriteAllRegisterValues(data).ToError();
+  });
+}

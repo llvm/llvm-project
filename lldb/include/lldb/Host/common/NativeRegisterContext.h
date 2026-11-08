@@ -51,6 +51,8 @@ public:
   WriteRegister(lldb_private::RegisterID id,
                 const lldb_private::RegisterValue &reg_value) override = 0;
 
+  llvm::Expected<RegisterCheckpoint> SaveCheckpoint() override;
+
   virtual Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) = 0;
 
   virtual Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) = 0;

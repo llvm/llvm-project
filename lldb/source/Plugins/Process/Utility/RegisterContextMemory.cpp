@@ -152,3 +152,23 @@ void RegisterContextMemory::SetAllRegisterData(
   m_reg_data.SetData(data_sp);
   SetAllRegisterValid(true);
 }
+
+llvm::Expected<RegisterCheckpoint> RegisterContextMemory::SaveCheckpoint() {
+  WritableDataBufferSP data =
+      std::make_shared<DataBufferHeap>(m_reg_infos_sp->GetBankSize(0), 0);
+  if (!ReadAllRegisterValues(data))
+    return llvm::createStringError("could not capture register memory");
+  auto layout = m_reg_infos_sp;
+  return CreateCheckpoint(
+      [source =
+           std::static_pointer_cast<RegisterContextMemory>(shared_from_this()),
+       data = std::move(data), layout]() -> llvm::Error {
+        auto &context = *source;
+        if (!layout->HasSameStorage(*context.m_reg_infos_sp))
+          return llvm::createStringError(
+              "register memory format changed since checkpoint");
+        if (!context.WriteAllRegisterValues(data))
+          return llvm::createStringError("could not restore register memory");
+        return llvm::Error::success();
+      });
+}

@@ -14,6 +14,7 @@
 #ifndef LLDB_REGISTER_REGISTERCONTEXT_H
 #define LLDB_REGISTER_REGISTERCONTEXT_H
 
+#include "lldb/Register/RegisterCheckpoint.h"
 #include "lldb/Register/RegisterDescription.h"
 #include "lldb/Register/RegisterValue.h"
 
@@ -28,7 +29,10 @@ namespace lldb_private {
 /// confused with enumeration by a description or user-visible table index.
 class RegisterContext {
 public:
-  RegisterContext() = default;
+  /// Use a shared backend owner identity for checkpoints, or create an identity
+  /// unique to this adapter when no owner is supplied. The external owner is
+  /// observed weakly and must remain alive for checkpoint restoration.
+  explicit RegisterContext(std::shared_ptr<const void> owner = {});
   RegisterContext(const RegisterContext &) = delete;
   RegisterContext &operator=(const RegisterContext &) = delete;
   virtual ~RegisterContext() = default;
@@ -96,6 +100,26 @@ public:
   /// Discard cached state so subsequent reads reacquire it. The default
   /// implementation has no cache to invalidate.
   virtual void InvalidateAllRegisters() {}
+
+  /// Capture an opaque backend restore operation, or return an error when
+  /// checkpointing is unsupported. Backend-specific buffers, remote tokens, and
+  /// configuration restoration remain inside the returned operation.
+  virtual llvm::Expected<RegisterCheckpoint> SaveCheckpoint();
+
+  /// Restore a checkpoint only while its captured owner is alive and matches
+  /// this context. Return an owner error before invoking a foreign or expired
+  /// operation; otherwise propagate the backend restoration result.
+  llvm::Error RestoreCheckpoint(const RegisterCheckpoint &checkpoint);
+
+protected:
+  /// If an external owner can outlive this adapter, retain the adapter in the
+  /// restore operation. Uniquely owned adapters use the default owner identity.
+  RegisterCheckpoint
+  CreateCheckpoint(std::function<llvm::Error()> restore) const;
+
+private:
+  std::shared_ptr<const void> m_owned_identity;
+  std::weak_ptr<const void> m_checkpoint_owner;
 };
 
 } // namespace lldb_private

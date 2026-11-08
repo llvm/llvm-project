@@ -361,47 +361,72 @@ bool GDBRemoteRegisterContext::SetPrimordialRegister(
        reg_info->byte_size});
 }
 
-bool GDBRemoteRegisterContext::ReadAllRegisterValues(
-    RegisterCheckpoint &reg_checkpoint) {
-  ExecutionContext exe_ctx(CalculateThread());
-
-  Process *process = exe_ctx.GetProcessPtr();
-  Thread *thread = exe_ctx.GetThreadPtr();
-  if (process == nullptr || thread == nullptr)
-    return false;
-
-  GDBRemoteCommunicationClient &gdb_comm(
-      ((ProcessGDBRemote *)process)->GetGDBRemote());
-
+llvm::Expected<RegisterCheckpoint> GDBRemoteRegisterContext::SaveCheckpoint() {
+  auto process = std::static_pointer_cast<ProcessGDBRemote>(CalculateProcess());
+  if (!process)
+    return llvm::createStringError("process is unavailable");
   uint32_t save_id = 0;
-  if (gdb_comm.SaveRegisterState(thread->GetProtocolID(), save_id)) {
-    reg_checkpoint.SetID(save_id);
-    reg_checkpoint.GetData().reset();
-    return true;
-  } else {
-    reg_checkpoint.SetID(0); // Invalid save ID is zero
-    return ReadAllRegisterValues(reg_checkpoint.GetData());
+  if (!process->GetGDBRemote().SaveRegisterState(m_thread.GetProtocolID(),
+                                                 save_id)) {
+    WritableDataBufferSP data;
+    if (!ReadAllRegisterValues(data))
+      return llvm::createStringError(
+          "could not capture remote register values");
+    auto layout = m_register_layout_sp;
+    auto description = GetDescription();
+    std::vector<std::pair<RegisterID, RegisterValue>> controls;
+    for (const auto &reg : layout->GetDescription()->GetRegisters()) {
+      if (!RegisterWriteCausesReconfigure(reg.name))
+        continue;
+      auto value =
+          layout->Read(reg.id, {{0, {data->GetBytes(), data->GetByteSize()}}});
+      if (value)
+        controls.emplace_back(reg.id, std::move(*value));
+      else
+        llvm::consumeError(value.takeError());
+    }
+    return CreateCheckpoint(
+        [source = std::static_pointer_cast<GDBRemoteRegisterContext>(
+             shared_from_this()),
+         data = std::move(data), layout, description,
+         controls = std::move(controls)]() -> llvm::Error {
+          auto &context = *source;
+          if (!layout->HasSameStorage(*context.m_register_layout_sp))
+            for (const auto &[id, value] : controls)
+              if (auto error = context.WriteRegister(id, value))
+                return error;
+          if (!layout->HasSameStorage(*context.m_register_layout_sp))
+            return llvm::createStringError(
+                "remote register format changed since checkpoint");
+          if (!context.WriteAllRegisterValues(data))
+            return llvm::createStringError(
+                "could not restore remote register values");
+          context.SetRegisterDescription(description);
+          return llvm::Error::success();
+        });
   }
-}
-
-bool GDBRemoteRegisterContext::WriteAllRegisterValues(
-    const RegisterCheckpoint &reg_checkpoint) {
-  uint32_t save_id = reg_checkpoint.GetID();
-  if (save_id != 0) {
-    ExecutionContext exe_ctx(CalculateThread());
-
-    Process *process = exe_ctx.GetProcessPtr();
-    Thread *thread = exe_ctx.GetThreadPtr();
-    if (process == nullptr || thread == nullptr)
-      return false;
-
-    GDBRemoteCommunicationClient &gdb_comm(
-        ((ProcessGDBRemote *)process)->GetGDBRemote());
-
-    return gdb_comm.RestoreRegisterState(m_thread.GetProtocolID(), save_id);
-  } else {
-    return WriteAllRegisterValues(reg_checkpoint.GetData());
-  }
+  auto layout = m_register_layout_sp;
+  auto description = GetDescription();
+  return CreateCheckpoint(
+      [source = std::static_pointer_cast<GDBRemoteRegisterContext>(
+           shared_from_this()),
+       save_id, layout, description]() -> llvm::Error {
+        auto &context = *source;
+        auto process = std::static_pointer_cast<ProcessGDBRemote>(
+            context.CalculateProcess());
+        if (!process || !process->GetGDBRemote().RestoreRegisterState(
+                            context.m_thread.GetProtocolID(), save_id))
+          return llvm::createStringError(
+              "could not restore remote register state");
+        context.m_register_layout_sp = layout;
+        context.SetRegisterDescription(description);
+        context.m_reg_valid.resize(
+            layout->GetDescription()->GetRegisters().size());
+        context.m_reg_data.SetData(
+            std::make_shared<DataBufferHeap>(layout->GetBankSize(0), 0));
+        context.InvalidateAllRegisters();
+        return llvm::Error::success();
+      });
 }
 
 bool GDBRemoteRegisterContext::ReadAllRegisterValues(

@@ -1772,6 +1772,18 @@ void NativeRegisterContextLinux_arm64::SetRegisterLayoutState(SVEState state) {
   RebuildRegisterLayout();
 }
 
-
+llvm::Expected<RegisterCheckpoint>
+NativeRegisterContextLinux_arm64::SaveCheckpoint() {
+  WritableDataBufferSP data;
+  if (auto error = ReadAllRegisterValues(data); error.Fail())
+    return error.ToError();
+  return CreateCheckpoint(
+      [this, data = std::move(data)]() -> llvm::Error {
+        auto &context = *this;
+        // The saved SVE/SME headers reestablish vector sizes before value
+        // decoding.
+        return context.WriteAllRegisterValues(data).ToError();
+      });
+}
 
 #endif // defined (__arm64__) || defined (__aarch64__)

@@ -3638,10 +3638,9 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
   // Grab the register context for the thread.
   NativeRegisterContext& reg_context = thread->GetRegisterContext();
 
-  // Save registers to a buffer.
-  WritableDataBufferSP register_data_sp;
-  Status error = reg_context.ReadAllRegisterValues(register_data_sp);
-  if (error.Fail()) {
+  auto checkpoint = reg_context.SaveCheckpoint();
+  if (!checkpoint) {
+    auto error = Status::FromError(checkpoint.takeError());
     LLDB_LOG(log, "pid {0} failed to save all register values: {1}",
              m_current_process->GetID(), error);
     return SendErrorResponse(0x75);
@@ -3655,7 +3654,8 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
     auto saved_registers = m_saved_registers.Lock();
     assert((saved_registers->map.find(save_id) == saved_registers->map.end()) &&
            "GetNextRegisterSaveID() returned an existing register save id");
-    saved_registers->map[save_id] = register_data_sp;
+    saved_registers->map[save_id] =
+        std::make_shared<RegisterCheckpoint>(std::move(*checkpoint));
   }
 
   // Write the response.
@@ -3696,8 +3696,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
   // Grab the register context for the thread.
   NativeRegisterContext &reg_context = thread->GetRegisterContext();
 
-  // Retrieve register state buffer, then remove from the list.
-  DataBufferSP register_data_sp;
+  std::shared_ptr<RegisterCheckpoint> checkpoint;
   {
     auto saved_registers = m_saved_registers.Lock();
 
@@ -3709,13 +3708,13 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
                m_current_process->GetID(), save_id);
       return SendErrorResponse(0x77);
     }
-    register_data_sp = it->second;
+    checkpoint = it->second;
 
     // Remove it from the map.
     saved_registers->map.erase(it);
   }
 
-  Status error = reg_context.WriteAllRegisterValues(register_data_sp);
+  Status error = Status::FromError(reg_context.RestoreCheckpoint(*checkpoint));
   if (error.Fail()) {
     LLDB_LOG(log, "pid {0} failed to restore all register values: {1}",
              m_current_process->GetID(), error);

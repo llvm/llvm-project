@@ -522,14 +522,19 @@ bool Thread::ThreadStoppedForAReason() { return (bool)GetPrivateStopInfo(); }
 
 bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
   saved_state.register_backup_sp.reset();
+  saved_state.register_context_sp.reset();
   lldb::StackFrameSP frame_sp(GetStackFrameAtIndex(0));
   if (frame_sp) {
-    lldb::RegisterCheckpointSP reg_checkpoint_sp(
-        new RegisterCheckpoint(RegisterCheckpoint::Reason::eExpression));
-    if (reg_checkpoint_sp) {
-      lldb::ThreadRegisterContextSP reg_ctx_sp(frame_sp->GetRegisterContext());
-      if (reg_ctx_sp && reg_ctx_sp->ReadAllRegisterValues(*reg_checkpoint_sp))
-        saved_state.register_backup_sp = reg_checkpoint_sp;
+    auto context = frame_sp->GetRegisterContext();
+    if (context) {
+      auto checkpoint = context->SaveCheckpoint();
+      if (!checkpoint)
+        llvm::consumeError(checkpoint.takeError());
+      else {
+        saved_state.register_backup_sp =
+            std::make_shared<RegisterCheckpoint>(std::move(*checkpoint));
+        saved_state.register_context_sp = std::move(context);
+      }
     }
   }
   if (!saved_state.register_backup_sp)
@@ -549,24 +554,21 @@ bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
 
 bool Thread::RestoreRegisterStateFromCheckpoint(
     ThreadStateCheckpoint &saved_state) {
-  if (saved_state.register_backup_sp) {
-    lldb::StackFrameSP frame_sp(GetStackFrameAtIndex(0));
-    if (frame_sp) {
-      lldb::ThreadRegisterContextSP reg_ctx_sp(frame_sp->GetRegisterContext());
-      if (reg_ctx_sp) {
-        bool ret =
-            reg_ctx_sp->WriteAllRegisterValues(*saved_state.register_backup_sp);
-
-        // Clear out all stack frames as our world just changed.
-        ClearStackFrames();
-        reg_ctx_sp->InvalidateIfNeeded(true);
-        if (m_unwinder_up)
-          m_unwinder_up->Clear();
-        return ret;
-      }
-    }
-  }
-  return false;
+  auto context = saved_state.register_context_sp;
+  if (!saved_state.register_backup_sp || !context ||
+      context->GetThreadID() != GetID())
+    return false;
+  bool restored = !llvm::errorToBool(
+      context->RestoreCheckpoint(*saved_state.register_backup_sp));
+  // Expression execution can replace a context while changing vector lengths.
+  // Resume with the adapter and schema whose saved configuration was restored.
+  if (restored)
+    m_reg_context_sp = context;
+  ClearStackFrames();
+  context->InvalidateIfNeeded(true);
+  if (m_unwinder_up)
+    m_unwinder_up->Clear();
+  return restored;
 }
 
 void Thread::RestoreThreadStateFromCheckpoint(

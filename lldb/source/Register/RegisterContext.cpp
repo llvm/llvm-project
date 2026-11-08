@@ -117,3 +117,28 @@ llvm::Error RegisterContext::WriteRegisterFromUnsigned(RegisterID id,
     return llvm::createStringError("register cannot hold an unsigned value");
   return WriteRegister(id, encoded);
 }
+
+RegisterContext::RegisterContext(std::shared_ptr<const void> owner)
+    : m_owned_identity(owner ? nullptr : std::make_shared<int>(0)),
+      m_checkpoint_owner(owner ? std::move(owner) : m_owned_identity) {}
+
+llvm::Expected<RegisterCheckpoint> RegisterContext::SaveCheckpoint() {
+  return llvm::createStringError("register checkpoints are unavailable");
+}
+
+llvm::Error
+RegisterContext::RestoreCheckpoint(const RegisterCheckpoint &checkpoint) {
+  // Compare control-block ownership: different adapter handles can alias
+  // subobjects of the same backend owner.
+  auto owner = checkpoint.m_owner.lock();
+  auto current = m_checkpoint_owner.lock();
+  if (!owner || !current || owner.owner_before(current) ||
+      current.owner_before(owner))
+    return llvm::createStringError("register checkpoint belongs to another owner");
+  return checkpoint.m_restore();
+}
+
+RegisterCheckpoint
+RegisterContext::CreateCheckpoint(std::function<llvm::Error()> restore) const {
+  return RegisterCheckpoint(m_checkpoint_owner.lock(), std::move(restore));
+}

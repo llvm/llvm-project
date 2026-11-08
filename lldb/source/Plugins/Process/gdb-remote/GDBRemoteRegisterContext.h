@@ -48,9 +48,7 @@ public:
 
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  bool ReadAllRegisterValues(RegisterCheckpoint &reg_checkpoint) override;
-
-  bool WriteAllRegisterValues(const RegisterCheckpoint &reg_checkpoint) override;
+  llvm::Expected<RegisterCheckpoint> SaveCheckpoint() override;
 
   bool RegisterWriteCausesReconfigure(const llvm::StringRef name) override;
 
