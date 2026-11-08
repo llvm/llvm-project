@@ -4699,6 +4699,7 @@ add_header_library(
     .exp10_double_eval
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -4756,6 +4757,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(

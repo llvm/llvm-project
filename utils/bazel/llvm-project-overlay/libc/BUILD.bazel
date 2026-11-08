@@ -11753,6 +11753,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_macros_config",
+        ":__support_macros_optimization",
         ":__support_math_exp10_double_eval",
     ],
 )
@@ -11813,6 +11814,7 @@ libc_support_library(
         ":__support_common",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":__support_math_exp10f_double_eval",
         ":__support_math_exp10f_float_eval",
     ],
