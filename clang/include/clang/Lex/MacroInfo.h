@@ -329,10 +329,6 @@ protected:
   LLVM_PREFERRED_TYPE(Kind)
   unsigned MDKind : 2;
 
-  /// True if the macro directive was loaded from a PCH file.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsFromPCH : 1;
-
   // Used by VisibilityMacroDirective ----------------------------------------//
 
   /// Whether the macro has public visibility (when described in a
@@ -341,7 +337,7 @@ protected:
   unsigned IsPublic : 1;
 
   MacroDirective(Kind K, SourceLocation Loc)
-      : Loc(Loc), MDKind(K), IsFromPCH(false), IsPublic(true) {}
+      : Loc(Loc), MDKind(K), IsPublic(true) {}
 
 public:
   Kind getKind() const { return Kind(MDKind); }
@@ -356,11 +352,6 @@ public:
 
   /// Get previous definition of the macro with the same name.
   MacroDirective *getPrevious() { return Previous; }
-
-  /// Return true if the macro directive was loaded from a PCH file.
-  bool isFromPCH() const { return IsFromPCH; }
-
-  void setIsFromPCH() { IsFromPCH = true; }
 
   class DefInfo {
     DefMacroDirective *DefDirective = nullptr;
