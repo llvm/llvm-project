@@ -353,3 +353,206 @@ else:
 exit:
   ret void
 }
+
+define void @int_byte_merge(ptr %p, i1 %c, b16 %v, i16 %w) {
+; CHECK-LABEL: @int_byte_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b16 [[V:%.*]] to i16
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i16 [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %else
+
+then:
+  store b16 %v, ptr %p, align 2
+  br label %join
+
+else:
+  store i16 %w, ptr %p, align 2
+  br label %join
+
+join:
+  ret void
+}
+
+define void @int_byte_merge_byte_in_else(ptr %p, i1 %c, b16 %v, i16 %w) {
+; CHECK-LABEL: @int_byte_merge_byte_in_else(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16 [[W:%.*]] to b16
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi b16 [ [[V:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store b16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %else
+
+then:
+  store i16 %w, ptr %p, align 2
+  br label %join
+
+else:
+  store b16 %v, ptr %p, align 2
+  br label %join
+
+join:
+  ret void
+}
+
+define void @byte_vec_int_merge(ptr %p, i1 %c, <2 x b8> %v, i16 %w) {
+; CHECK-LABEL: @byte_vec_int_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x b8> [[V:%.*]] to i16
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i16 [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %else
+
+then:
+  store <2 x b8> %v, ptr %p, align 2
+  br label %join
+
+else:
+  store i16 %w, ptr %p, align 2
+  br label %join
+
+join:
+  ret void
+}
+
+define void @vec_merge_finer_lanes(ptr %p, i1 %c, <4 x i32> %v, <2 x i64> %w) {
+; CHECK-LABEL: @vec_merge_finer_lanes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[V:%.*]] to <2 x i64>
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi <2 x i64> [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store <2 x i64> [[STOREMERGE]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %else
+
+then:
+  store <4 x i32> %v, ptr %p, align 16
+  br label %join
+
+else:
+  store <2 x i64> %w, ptr %p, align 16
+  br label %join
+
+join:
+  ret void
+}
+
+define void @vec_merge_mismatched_lanes(ptr %p, i1 %c, <5 x i4> %v, <4 x i5> %w) {
+; CHECK-LABEL: @vec_merge_mismatched_lanes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <5 x i4> [[V:%.*]] to <4 x i5>
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi <4 x i5> [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store <4 x i5> [[STOREMERGE]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %else
+
+then:
+  store <5 x i4> %v, ptr %p, align 4
+  br label %join
+
+else:
+  store <4 x i5> %w, ptr %p, align 4
+  br label %join
+
+join:
+  ret void
+}
+
+define void @ptr_int_merge(ptr %p, i1 %c, ptr %v, i64 %w) {
+; CHECK-LABEL: @ptr_int_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[V:%.*]] to i64
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i64 [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store i64 [[STOREMERGE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %v, ptr %p, align 8
+  br label %join
+
+else:
+  store i64 %w, ptr %p, align 8
+  br label %join
+
+join:
+  ret void
+}
+
+define void @int_ptr_merge(ptr %p, i1 %c, i64 %v, ptr %w) {
+; CHECK-LABEL: @int_ptr_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[V:%.*]] to ptr
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi ptr [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store ptr [[STOREMERGE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %else
+
+then:
+  store i64 %v, ptr %p, align 8
+  br label %join
+
+else:
+  store ptr %w, ptr %p, align 8
+  br label %join
+
+join:
+  ret void
+}
