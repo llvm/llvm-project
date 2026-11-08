@@ -2429,7 +2429,7 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
 
 static unsigned getCorank(const Fortran::lower::SomeExpr &expr) {
   if (auto dataRef{Fortran::evaluate::ExtractDataRef(expr)}) {
-    const Fortran::semantics::Symbol sym = dataRef->GetLastSymbol();
+    const Fortran::semantics::Symbol &sym = dataRef->GetLastSymbol();
     if (const auto *object =
             sym.GetUltimate()
                 .detailsIf<Fortran::semantics::ObjectEntityDetails>())
