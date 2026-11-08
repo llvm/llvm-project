@@ -274,7 +274,7 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
   // so we do not report error in this case. We also do not error
   // if the symbol has a local version as it won't be in the dynamic
   // symbol table.
-  if (ctx.arg.shared && versionId != VER_NDX_LOCAL)
+  if (ctx.arg.shared)
     ErrAlways(ctx) << file << ": symbol " << s << " has undefined version "
                    << verstr;
 }
