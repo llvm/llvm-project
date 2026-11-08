@@ -231,6 +231,7 @@ public:
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
         return dropLeadingLoads(
+            Cur->getOuterOriginID(),
             buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan, Cfg));
 
     return {};
@@ -242,7 +243,8 @@ public:
     OriginID OID = OEF->getEscapedOriginID();
     if (!getLoans(OID, OEF).contains(TargetLoan))
       return {};
-    return dropLeadingLoads(buildOriginFlowChain(OEF, OID, TargetLoan, Cfg));
+    return dropLeadingLoads(OID,
+                            buildOriginFlowChain(OEF, OID, TargetLoan, Cfg));
   }
 
 private:
@@ -250,8 +252,13 @@ private:
   /// until the chain reaches a declaration it is inside the expression the
   /// chain starts from. Casts there just load its variable, so drop them.
   llvm::SmallVector<OriginID>
-  dropLeadingLoads(llvm::SmallVector<OriginID> Chain) const {
+  dropLeadingLoads(OriginID StartOID, llvm::SmallVector<OriginID> Chain) const {
     const OriginManager &OM = FactMgr.getOriginMgr();
+    // When the chain starts from a declaration, e.g. field `p_` read by a
+    // member call, the leading casts come from the write that stored the loan
+    // in it, such as `p` loaded in `p_ = p`. They name the alias, so keep them.
+    if (!OM.getOrigin(StartOID).getExpr())
+      return Chain;
     auto FirstDecl = llvm::find_if(
         Chain, [&](OriginID OID) { return !OM.getOrigin(OID).getExpr(); });
     Chain.erase(std::remove_if(Chain.begin(), FirstDecl,
