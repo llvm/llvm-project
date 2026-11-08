@@ -17,6 +17,8 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <atomic>
+
 namespace lld {
 namespace macho {
 
@@ -49,7 +51,10 @@ public:
 
   StringRef getName() const { return {nameData, nameSize}; }
 
-  bool isLive() const { return used; }
+  bool isLive() const {
+    return reinterpret_cast<const std::atomic<bool> &>(used).load(
+        std::memory_order_relaxed);
+  }
   bool isLazy() const {
     return symbolKind == LazyArchiveKind || symbolKind == LazyObjectKind;
   }
@@ -109,7 +114,7 @@ public:
   bool isUsedInRegularObj : 1;
 
   // True if this symbol is used from a live section.
-  bool used : 1;
+  bool used;
 };
 
 class Defined : public Symbol {
