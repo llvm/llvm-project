@@ -1024,7 +1024,7 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   // Heuristics to turn-down false positives. Skip member field expressions for
   // now. This is not a perfect filter and will still surface some false
   // positives (e.g. `auto& r = s.v`). Static data members are not fields.
-  const Expr *Obj = Args[0]->IgnoreImpCasts();
+  const Expr *Obj = ignoreParensAndImpCasts(Args[0]);
   if (const auto *ME = dyn_cast<MemberExpr>(Obj);
       !isa<DeclRefExpr>(Obj) && !(ME && isa<VarDecl>(ME->getMemberDecl())))
     return;
@@ -1053,7 +1053,7 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
     return;
 
   if (!isa_and_present<CXXThisExpr>(
-          MemberCall->getImplicitObjectArgument()->IgnoreImpCasts()))
+          ignoreParensAndImpCasts(MemberCall->getImplicitObjectArgument())))
     return;
 
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
