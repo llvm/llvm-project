@@ -12,6 +12,7 @@
 
 #if _LIBCPP_HAS_THREADS
 
+#  include <__verbose_abort>
 #  include <algorithm>
 #  include <atomic>
 #  include <bit>
@@ -142,7 +143,11 @@ struct QueueID {
 // Scheduler manages the worker threads and the queues.
 class Scheduler {
 public:
+  // Allocates internal data structures and starts the worker threads.
   Scheduler() noexcept;
+
+  // Destructor must never be called, this will cause a verbose abortion.
+  ~Scheduler();
 
   // No copying or moving is allowed.
   Scheduler(const Scheduler&)            = delete;
@@ -150,15 +155,16 @@ public:
   Scheduler& operator=(const Scheduler&) = delete;
   Scheduler& operator=(Scheduler&&)      = delete;
 
+  // The entrypoint of parallel execution.
+  // When worker threads are available, applies the function to each of the iteration indices in parallel.
+  // When hardware parallelism is no available or in case of initialization failures, applies the function serially.
   void apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept;
 
 private:
   // The actual number of running worker threads.
-  // This number may be lower than the desired thread pool sizee, in case of a thread startup failure.
-  // When this variable is zero, the scheduler doesn't enable its machinery.
+  // This number may be lower than the desired thread pool size, in case of a thread startup failure.
+  // When this variable is zero, the scheduler doesn't enable its machinery and processes the incoming requests serialy.
   size_t m_workers_count{0};
-
-  std::unique_ptr<std::thread[]> m_workers;
 
   std::unique_ptr<TaskQueue[]> m_queues;
 
@@ -214,8 +220,11 @@ inline Scheduler::Scheduler() noexcept {
   // This factor is chosen to allow some nested parallelism, specifically with depth=2.
   const size_t queue_capacity = cpu_threads * 2;
 
-  // We need a queue per each worker thread and a queue per cpu thread for the guest threads.
-  m_queues_count = max_workers_count + cpu_threads;
+  // Conservatively allow each cpu thread to come in as a guest and allocate tasks.
+  const size_t guest_queues = cpu_threads;
+
+  // We need a queue per each worker thread and a queue per each guest threads.
+  m_queues_count = max_workers_count + guest_queues;
 
   // Allocate the queues
   m_queues.reset(new (std::nothrow) TaskQueue[m_queues_count]);
@@ -233,11 +242,6 @@ inline Scheduler::Scheduler() noexcept {
   if (!m_queue_ids)
     return; // Failed to allocate the queue identifiers buffer, bail out.
 
-  // Allocate the array of worker threads
-  m_workers.reset(new (std::nothrow) std::thread[max_workers_count]);
-  if (!m_workers)
-    return; // Failed to allocate the threads array, bail out.
-
   size_t worker_idx = 0;
   for (; worker_idx < max_workers_count; ++worker_idx) {
     std::thread worker;
@@ -252,11 +256,15 @@ inline Scheduler::Scheduler() noexcept {
 #  endif // _LIBCPP_HAS_EXCEPTIONS
     m_queue_ids[worker_idx].id.store(worker.get_id());
     m_queue_ids[worker_idx].aquire_count.store(1);
-    m_workers[worker_idx] = std::move(worker);
+    worker.detach();
   }
 
   // Finally, enable parallelism by committing the number of workers that have started up.
   m_workers_count = worker_idx;
+}
+
+inline Scheduler::~Scheduler() {
+  _LIBCPP_VERBOSE_ABORT("The destructor of __pstl::__statpart::Scheduler was called, but it must never be called");
 }
 
 inline void Scheduler::worker_thread(size_t worker_index) noexcept {
