@@ -16,9 +16,9 @@ body: |
     ; CHECK-LABEL: name: tied_live_after
     ; CHECK: liveins: $q1, $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $q0 = LDRQui killed $x0, 0
+    ; CHECK-NEXT: renamable $q2 = LDRQui killed $x0, 0
     ; CHECK-NEXT: $q0 = COPY $q1
-    ; CHECK-NEXT: INLINEASM &"", attdialect, regdef-ec, implicit-def dead early-clobber $q0, reguse tiedto:$0, renamable $q0(tied-def 3), reguse:FPR128, killed renamable $q0
+    ; CHECK-NEXT: INLINEASM &"", attdialect, regdef-ec, implicit-def dead early-clobber $q0, reguse tiedto:$0, renamable $q0(tied-def 3), reguse:FPR128, killed renamable $q2
     ; CHECK-NEXT: RET_ReallyLR implicit killed $q1
     %0:fpr128 = COPY $q1
     %1:fpr128 = LDRQui $x0, 0
@@ -37,11 +37,11 @@ body: |
     ; CHECK-LABEL: name: tied_twice
     ; CHECK: liveins: $q2, $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $q0 = LDRQui $x0, 0
-    ; CHECK-NEXT: renamable $q1 = LDRQui killed $x0, 1
+    ; CHECK-NEXT: renamable $q3 = LDRQui $x0, 0
+    ; CHECK-NEXT: renamable $q4 = LDRQui killed $x0, 1
     ; CHECK-NEXT: $q0 = COPY $q2
     ; CHECK-NEXT: $q1 = COPY $q2
-    ; CHECK-NEXT: INLINEASM &"", attdialect, regdef-ec, implicit-def dead early-clobber $q0, regdef-ec, implicit-def dead early-clobber $q1, reguse tiedto:$0, killed renamable $q0(tied-def 3), reguse tiedto:$1, renamable $q1(tied-def 5), reguse:FPR128, killed renamable $q0, reguse:FPR128, killed renamable $q1
+    ; CHECK-NEXT: INLINEASM &"", attdialect, regdef-ec, implicit-def dead early-clobber $q0, regdef-ec, implicit-def dead early-clobber $q1, reguse tiedto:$0, killed renamable $q0(tied-def 3), reguse tiedto:$1, renamable $q1(tied-def 5), reguse:FPR128, killed renamable $q3, reguse:FPR128, killed renamable $q4
     ; CHECK-NEXT: RET_ReallyLR
     %0:fpr128 = COPY $q2
     %1:fpr128 = LDRQui $x0, 0
@@ -60,9 +60,9 @@ body: |
     ; CHECK-LABEL: name: untied_before_tied
     ; CHECK: liveins: $q1, $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $q0 = LDRQui killed $x0, 0
+    ; CHECK-NEXT: renamable $q2 = LDRQui killed $x0, 0
     ; CHECK-NEXT: $q0 = COPY $q1
-    ; CHECK-NEXT: INLINEASM &"", attdialect, regdef, implicit-def dead $q0, reguse:FPR128, killed renamable $q1, reguse tiedto:$0, renamable $q0(tied-def 3), reguse:FPR128, killed renamable $q0
+    ; CHECK-NEXT: INLINEASM &"", attdialect, regdef, implicit-def dead $q0, reguse:FPR128, killed renamable $q1, reguse tiedto:$0, renamable $q0(tied-def 3), reguse:FPR128, killed renamable $q2
     ; CHECK-NEXT: RET_ReallyLR
     %0:fpr128 = COPY $q1
     %1:fpr128 = LDRQui $x0, 0

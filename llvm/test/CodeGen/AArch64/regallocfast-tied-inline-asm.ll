@@ -10,10 +10,10 @@ define <4 x i32> @tied_live_after(<4 x i32> %z, ptr %p) {
 ; CHECK-LABEL: tied_live_after:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q3, [x0]
 ; CHECK-NEXT:    mov v2.16b, v1.16b
 ; CHECK-NEXT:    //APP
-; CHECK-NEXT:    // out=v0 q2=v2 a=v2
+; CHECK-NEXT:    // out=v0 q2=v2 a=v3
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
@@ -29,12 +29,12 @@ define <4 x i32> @tied_twice(<4 x i32> %z, ptr %p) {
 ; CHECK-LABEL: tied_twice:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ldr q2, [x0]
-; CHECK-NEXT:    ldr q3, [x0, #16]
+; CHECK-NEXT:    ldr q4, [x0]
+; CHECK-NEXT:    ldr q5, [x0, #16]
 ; CHECK-NEXT:    mov v2.16b, v1.16b
 ; CHECK-NEXT:    mov v3.16b, v1.16b
 ; CHECK-NEXT:    //APP
-; CHECK-NEXT:    // out=v0 q2=v2 q3=v3 a=v2 b=v3
+; CHECK-NEXT:    // out=v0 q2=v2 q3=v3 a=v4 b=v5
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %p
@@ -50,10 +50,10 @@ define <4 x i32> @untied_before_tied(<4 x i32> %z, ptr %p) {
 ; CHECK-LABEL: untied_before_tied:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q3, [x0]
 ; CHECK-NEXT:    mov v2.16b, v1.16b
 ; CHECK-NEXT:    //APP
-; CHECK-NEXT:    // out=v0 q2=v2 z=v1 a=v2
+; CHECK-NEXT:    // out=v0 q2=v2 z=v1 a=v3
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %p

@@ -1303,8 +1303,11 @@ bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
     }
   }
 
-  // The free-defs step skips tied defs, so DefReg still holds the def.
+  // The free-defs step skips tied defs, so DefReg still holds the def. MO now
+  // reads DefReg, so keep MI's other uses off it, as useVirtReg() does when the
+  // tied use takes DefReg over. A physreg def is not marked by the def phase.
   freePhysReg(DefReg);
+  markRegUsedInInstr(DefReg);
   return true;
 }
 
