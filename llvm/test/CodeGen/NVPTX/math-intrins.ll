@@ -243,6 +243,123 @@ define i32 @lround_i32_float(float %a) {
   ret i32 %b
 }
 
+define i64 @lround_i64_f16(half %x) {
+; CHECK-LABEL: lround_i64_f16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [lround_i64_f16_param_0];
+; CHECK-NEXT:    cvt.f32.f16 %r1, %rs1;
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147483648;
+; CHECK-NEXT:    or.b32 %r3, %r2, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r5, %r4;
+; CHECK-NEXT:    abs.f32 %r6, %r1;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r1;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs2, %r9;
+; CHECK-NEXT:    cvt.rzi.s64.f16 %rd1, %rs2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.lround.i64.f16(half %x)
+  ret i64 %r
+}
+
+define i64 @lround_i64_bf16(bfloat %x) {
+; CHECK-NOF16-LABEL: lround_i64_bf16(
+; CHECK-NOF16:       {
+; CHECK-NOF16-NEXT:    .reg .pred %p<4>;
+; CHECK-NOF16-NEXT:    .reg .b32 %r<17>;
+; CHECK-NOF16-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NOF16-EMPTY:
+; CHECK-NOF16-NEXT:  // %bb.0:
+; CHECK-NOF16-NEXT:    ld.param.b16 %r1, [lround_i64_bf16_param_0];
+; CHECK-NOF16-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NOF16-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NOF16-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-NOF16-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-NOF16-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-NOF16-NEXT:    abs.f32 %r7, %r2;
+; CHECK-NOF16-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-NOF16-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-NOF16-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-NOF16-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-NOF16-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-NOF16-NEXT:    bfe.u32 %r11, %r10, 16, 1;
+; CHECK-NOF16-NEXT:    add.s32 %r12, %r11, %r10;
+; CHECK-NOF16-NEXT:    add.s32 %r13, %r12, 32767;
+; CHECK-NOF16-NEXT:    setp.nan.f32 %p3, %r10, %r10;
+; CHECK-NOF16-NEXT:    or.b32 %r14, %r10, 4194304;
+; CHECK-NOF16-NEXT:    selp.b32 %r15, %r14, %r13, %p3;
+; CHECK-NOF16-NEXT:    and.b32 %r16, %r15, -65536;
+; CHECK-NOF16-NEXT:    cvt.rzi.s64.f32 %rd1, %r16;
+; CHECK-NOF16-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NOF16-NEXT:    ret;
+;
+; CHECK-F16-LABEL: lround_i64_bf16(
+; CHECK-F16:       {
+; CHECK-F16-NEXT:    .reg .pred %p<3>;
+; CHECK-F16-NEXT:    .reg .b16 %rs<2>;
+; CHECK-F16-NEXT:    .reg .b32 %r<13>;
+; CHECK-F16-NEXT:    .reg .b64 %rd<2>;
+; CHECK-F16-EMPTY:
+; CHECK-F16-NEXT:  // %bb.0:
+; CHECK-F16-NEXT:    ld.param.b16 %r1, [lround_i64_bf16_param_0];
+; CHECK-F16-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-F16-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-F16-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-F16-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-F16-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-F16-NEXT:    abs.f32 %r7, %r2;
+; CHECK-F16-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-F16-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-F16-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-F16-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-F16-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-F16-NEXT:    cvt.rn.bf16.f32 %rs1, %r10;
+; CHECK-F16-NEXT:    cvt.u32.u16 %r11, %rs1;
+; CHECK-F16-NEXT:    shl.b32 %r12, %r11, 16;
+; CHECK-F16-NEXT:    cvt.rzi.s64.f32 %rd1, %r12;
+; CHECK-F16-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-F16-NEXT:    ret;
+;
+; CHECK-SM80-NOF16-LABEL: lround_i64_bf16(
+; CHECK-SM80-NOF16:       {
+; CHECK-SM80-NOF16-NEXT:    .reg .pred %p<3>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<2>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %r<13>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b64 %rd<2>;
+; CHECK-SM80-NOF16-EMPTY:
+; CHECK-SM80-NOF16-NEXT:  // %bb.0:
+; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %r1, [lround_i64_bf16_param_0];
+; CHECK-SM80-NOF16-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-SM80-NOF16-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-SM80-NOF16-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-SM80-NOF16-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-SM80-NOF16-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-SM80-NOF16-NEXT:    abs.f32 %r7, %r2;
+; CHECK-SM80-NOF16-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-SM80-NOF16-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-SM80-NOF16-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-SM80-NOF16-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-SM80-NOF16-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-SM80-NOF16-NEXT:    cvt.rn.bf16.f32 %rs1, %r10;
+; CHECK-SM80-NOF16-NEXT:    cvt.u32.u16 %r11, %rs1;
+; CHECK-SM80-NOF16-NEXT:    shl.b32 %r12, %r11, 16;
+; CHECK-SM80-NOF16-NEXT:    cvt.rzi.s64.f32 %rd1, %r12;
+; CHECK-SM80-NOF16-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-SM80-NOF16-NEXT:    ret;
+  %r = call i64 @llvm.lround.i64.bf16(bfloat %x)
+  ret i64 %r
+}
+
 define i64 @lround_i64_float(float %a) {
 ; CHECK-LABEL: lround_i64_float(
 ; CHECK:       {
@@ -366,6 +483,124 @@ define i64 @cpu_lround_i64_double(double %a) {
   %b = call i64 @llvm.lround.i64.f64(double %a)
   ret i64 %b
 }
+
+define i64 @llround_i64_f16(half %x) {
+; CHECK-LABEL: llround_i64_f16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [llround_i64_f16_param_0];
+; CHECK-NEXT:    cvt.f32.f16 %r1, %rs1;
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147483648;
+; CHECK-NEXT:    or.b32 %r3, %r2, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r5, %r4;
+; CHECK-NEXT:    abs.f32 %r6, %r1;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r1;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs2, %r9;
+; CHECK-NEXT:    cvt.rzi.s64.f16 %rd1, %rs2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %r = call i64 @llvm.llround.i64.f16(half %x)
+  ret i64 %r
+}
+
+define i64 @llround_i64_bf16(bfloat %x) {
+; CHECK-NOF16-LABEL: llround_i64_bf16(
+; CHECK-NOF16:       {
+; CHECK-NOF16-NEXT:    .reg .pred %p<4>;
+; CHECK-NOF16-NEXT:    .reg .b32 %r<17>;
+; CHECK-NOF16-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NOF16-EMPTY:
+; CHECK-NOF16-NEXT:  // %bb.0:
+; CHECK-NOF16-NEXT:    ld.param.b16 %r1, [llround_i64_bf16_param_0];
+; CHECK-NOF16-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NOF16-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NOF16-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-NOF16-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-NOF16-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-NOF16-NEXT:    abs.f32 %r7, %r2;
+; CHECK-NOF16-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-NOF16-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-NOF16-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-NOF16-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-NOF16-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-NOF16-NEXT:    bfe.u32 %r11, %r10, 16, 1;
+; CHECK-NOF16-NEXT:    add.s32 %r12, %r11, %r10;
+; CHECK-NOF16-NEXT:    add.s32 %r13, %r12, 32767;
+; CHECK-NOF16-NEXT:    setp.nan.f32 %p3, %r10, %r10;
+; CHECK-NOF16-NEXT:    or.b32 %r14, %r10, 4194304;
+; CHECK-NOF16-NEXT:    selp.b32 %r15, %r14, %r13, %p3;
+; CHECK-NOF16-NEXT:    and.b32 %r16, %r15, -65536;
+; CHECK-NOF16-NEXT:    cvt.rzi.s64.f32 %rd1, %r16;
+; CHECK-NOF16-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NOF16-NEXT:    ret;
+;
+; CHECK-F16-LABEL: llround_i64_bf16(
+; CHECK-F16:       {
+; CHECK-F16-NEXT:    .reg .pred %p<3>;
+; CHECK-F16-NEXT:    .reg .b16 %rs<2>;
+; CHECK-F16-NEXT:    .reg .b32 %r<13>;
+; CHECK-F16-NEXT:    .reg .b64 %rd<2>;
+; CHECK-F16-EMPTY:
+; CHECK-F16-NEXT:  // %bb.0:
+; CHECK-F16-NEXT:    ld.param.b16 %r1, [llround_i64_bf16_param_0];
+; CHECK-F16-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-F16-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-F16-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-F16-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-F16-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-F16-NEXT:    abs.f32 %r7, %r2;
+; CHECK-F16-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-F16-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-F16-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-F16-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-F16-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-F16-NEXT:    cvt.rn.bf16.f32 %rs1, %r10;
+; CHECK-F16-NEXT:    cvt.u32.u16 %r11, %rs1;
+; CHECK-F16-NEXT:    shl.b32 %r12, %r11, 16;
+; CHECK-F16-NEXT:    cvt.rzi.s64.f32 %rd1, %r12;
+; CHECK-F16-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-F16-NEXT:    ret;
+;
+; CHECK-SM80-NOF16-LABEL: llround_i64_bf16(
+; CHECK-SM80-NOF16:       {
+; CHECK-SM80-NOF16-NEXT:    .reg .pred %p<3>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b16 %rs<2>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b32 %r<13>;
+; CHECK-SM80-NOF16-NEXT:    .reg .b64 %rd<2>;
+; CHECK-SM80-NOF16-EMPTY:
+; CHECK-SM80-NOF16-NEXT:  // %bb.0:
+; CHECK-SM80-NOF16-NEXT:    ld.param.b16 %r1, [llround_i64_bf16_param_0];
+; CHECK-SM80-NOF16-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-SM80-NOF16-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-SM80-NOF16-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-SM80-NOF16-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-SM80-NOF16-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-SM80-NOF16-NEXT:    abs.f32 %r7, %r2;
+; CHECK-SM80-NOF16-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-SM80-NOF16-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-SM80-NOF16-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-SM80-NOF16-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-SM80-NOF16-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-SM80-NOF16-NEXT:    cvt.rn.bf16.f32 %rs1, %r10;
+; CHECK-SM80-NOF16-NEXT:    cvt.u32.u16 %r11, %rs1;
+; CHECK-SM80-NOF16-NEXT:    shl.b32 %r12, %r11, 16;
+; CHECK-SM80-NOF16-NEXT:    cvt.rzi.s64.f32 %rd1, %r12;
+; CHECK-SM80-NOF16-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-SM80-NOF16-NEXT:    ret;
+  %r = call i64 @llvm.llround.i64.bf16(bfloat %x)
+  ret i64 %r
+}
+
 
 ; ---- nearbyint ----
 
