@@ -819,7 +819,7 @@ define void @reversed_constant_stride(ptr noalias %pl, ptr noalias %ps) {
 ; CHECK-SAME: ptr noalias [[PL:%.*]], ptr noalias [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[GS3:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 12
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[PL]], align 1
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> [[TMP1]], ptr align 1 [[GS3]], i64 -1, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> [[TMP1]], ptr align 1 [[GS3]], i64 -4, <4 x i1> splat (i1 true), i32 4)
 ; CHECK-NEXT:    ret void
 ;
   %gl1 = getelementptr inbounds i8, ptr %pl, i64 1
