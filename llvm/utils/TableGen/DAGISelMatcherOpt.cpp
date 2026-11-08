@@ -581,13 +581,12 @@ static void FactorNodes(MatcherList &ML) {
 
   // If all the options are CheckOpcode's, we can form the SwitchOpcode, woot.
   if (AllOpcodeChecks) {
-    StringSet<> Opcodes;
+    [[maybe_unused]] StringSet<> Opcodes;
     SmallVector<std::pair<const SDNodeInfo *, MatcherList>, 8> Cases;
     for (MatcherList &Optn : OptionsToMatch) {
       CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(Optn.front());
       assert(Opcodes.insert(COM->getOpcode().getEnumName()).second &&
              "Duplicate opcodes not factored?");
-      (void)Opcodes;
       const SDNodeInfo &Opcode = COM->getOpcode();
       Optn.erase_after(Optn.before_begin());
       Cases.emplace_back(&Opcode, std::move(Optn));
