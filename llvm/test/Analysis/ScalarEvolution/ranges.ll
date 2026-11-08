@@ -513,15 +513,15 @@ define void @select_of_constants_bound(i1 %c) {
 ; CHECK-LABEL: 'select_of_constants_bound'
 ; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound
 ; CHECK-NEXT:    %n = select i1 %c, i64 5, i64 2
-; CHECK-NEXT:    --> %n U: [0,8) S: [0,8)
+; CHECK-NEXT:    --> %n U: [2,6) S: [2,6)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,7) S: [0,7) Exits: (-1 + (1 umax %n))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,5) S: [0,5) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,8) S: [1,8) Exits: (1 umax %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,6) S: [1,6) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 umax %n))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 umax %n))<nsw>
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -543,15 +543,15 @@ define void @select_of_constants_bound_wraps_unsigned(i1 %c) {
 ; CHECK-LABEL: 'select_of_constants_bound_wraps_unsigned'
 ; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound_wraps_unsigned
 ; CHECK-NEXT:    %n = select i1 %c, i8 1, i8 -2
-; CHECK-NEXT:    --> %n U: [-2,2) S: [-2,2)
+; CHECK-NEXT:    --> %n U: [1,-1) S: [-2,2)
 ; CHECK-NEXT:    %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-1) S: [0,-1) Exits: (-1 + (1 umax %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-2) S: [0,-2) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i8 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (1 umax %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound_wraps_unsigned
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 umax %n))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -2
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 umax %n))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -3
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -572,16 +572,16 @@ define void @select_of_constants_bound_wraps_signed(i1 %c) {
 ; CHECK-LABEL: 'select_of_constants_bound_wraps_signed'
 ; CHECK-NEXT:  Classifying expressions for: @select_of_constants_bound_wraps_signed
 ; CHECK-NEXT:    %n = select i1 %c, i8 -100, i8 100
-; CHECK-NEXT:    --> %n U: [4,-3) S: [-128,125)
+; CHECK-NEXT:    --> %n U: [100,-99) S: [-100,101)
 ; CHECK-NEXT:    %iv = phi i8 [ -128, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {-128,+,1}<nsw><%loop> U: [-128,124) S: [-128,124) Exits: (-1 + (-127 smax %n))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-128,+,1}<nsw><%loop> U: [-128,100) S: [-128,100) Exits: (-1 + %n)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nsw i8 %iv, 1
-; CHECK-NEXT:    --> {-127,+,1}<nsw><%loop> U: [-127,125) S: [-127,125) Exits: (-127 smax %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-127,+,1}<nsw><%loop> U: [-127,101) S: [-127,101) Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @select_of_constants_bound_wraps_signed
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (127 + (-127 smax %n))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -5
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (127 + (-127 smax %n))
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (127 + %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -29
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (127 + %n)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 4
 ;
 entry:
   %n = select i1 %c, i8 -100, i8 100
