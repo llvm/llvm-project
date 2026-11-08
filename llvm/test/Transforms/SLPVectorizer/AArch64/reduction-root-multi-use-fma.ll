@@ -36,14 +36,15 @@ define double @fmul_reduction_root_multi_use(ptr %p, double %a, double %b) {
 define double @fmul_reduction_root_multi_use_no_contract(ptr %p, double %a, double %b) {
 ; CHECK-LABEL: define double @fmul_reduction_root_multi_use_no_contract(
 ; CHECK-SAME: ptr [[P:%.*]], double [[A:%.*]], double [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul reassoc nsz <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP4]])
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[P1]], align 8
 ; CHECK-NEXT:    [[U0:%.*]] = fmul reassoc nsz double [[TMP5]], [[A]]
-; CHECK-NEXT:    [[U1:%.*]] = fmul reassoc nsz double [[TMP5]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fdiv reassoc nsz double [[U0]], [[U1]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul reassoc nsz double [[L1]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz double [[U0]], [[M1]]
+; CHECK-NEXT:    [[U2:%.*]] = fmul reassoc nsz double [[R]], [[A]]
+; CHECK-NEXT:    [[U1:%.*]] = fmul reassoc nsz double [[R]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = fdiv reassoc nsz double [[U2]], [[U1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %p1 = getelementptr inbounds double, ptr %p, i64 1

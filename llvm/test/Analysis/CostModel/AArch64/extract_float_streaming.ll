@@ -5,7 +5,7 @@ define double @extract_case7(<4 x double> %a) "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: 'extract_case7'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %0 = extractelement <4 x double> %a, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %1 = extractelement <4 x double> %a, i32 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = fmul double %0, %1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = fmul double %0, %1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %res
 ;
 entry:

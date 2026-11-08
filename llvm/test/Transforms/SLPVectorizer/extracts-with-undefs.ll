@@ -33,24 +33,27 @@ define void @test() {
 ; AARCH64-NEXT:    br label [[BODY:%.*]]
 ; AARCH64:       body:
 ; AARCH64-NEXT:    [[PHI1:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ 0.000000e+00, [[BODY]] ]
-; AARCH64-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ zeroinitializer, [[BODY]] ]
-; AARCH64-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[PHI1]], i64 0
-; AARCH64-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> <double 0.000000e+00, double undef>, [[TMP8]]
-; AARCH64-NEXT:    [[ADD8_I_I:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP9]])
+; AARCH64-NEXT:    [[PHI2:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ 0.000000e+00, [[BODY]] ]
+; AARCH64-NEXT:    [[MUL_I478_I:%.*]] = fmul fast double [[PHI1]], 0.000000e+00
+; AARCH64-NEXT:    [[MUL7_I485_I:%.*]] = fmul fast double undef, 0.000000e+00
+; AARCH64-NEXT:    [[ADD8_I_I:%.*]] = fadd fast double [[MUL_I478_I]], [[MUL7_I485_I]]
 ; AARCH64-NEXT:    [[CMP42_I:%.*]] = fcmp fast ole double [[ADD8_I_I]], 0.000000e+00
 ; AARCH64-NEXT:    br i1 false, label [[BODY]], label [[EXIT:%.*]]
 ; AARCH64:       exit:
 ; AARCH64-NEXT:    br i1 false, label [[IF_THEN135_I:%.*]], label [[IF_END209_I:%.*]]
 ; AARCH64:       if.then135.i:
-; AARCH64-NEXT:    [[TMP1:%.*]] = fcmp fast olt <2 x double> [[TMP0]], zeroinitializer
-; AARCH64-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> <i1 poison, i1 false>, <2 x i1> [[TMP1]], <2 x i32> <i32 2, i32 1>
-; AARCH64-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> zeroinitializer
-; AARCH64-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> zeroinitializer, [[TMP3]]
-; AARCH64-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP4]], zeroinitializer
-; AARCH64-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP5]], zeroinitializer
+; AARCH64-NEXT:    [[CMP145_I:%.*]] = fcmp fast olt double [[PHI1]], 0.000000e+00
+; AARCH64-NEXT:    [[TMP0:%.*]] = select i1 false, double 0.000000e+00, double 0.000000e+00
+; AARCH64-NEXT:    [[CMP152_I:%.*]] = fcmp fast olt double [[PHI2]], 0.000000e+00
+; AARCH64-NEXT:    [[TMP1:%.*]] = select i1 [[CMP152_I]], double 0.000000e+00, double 0.000000e+00
+; AARCH64-NEXT:    [[OP_RDX1:%.*]] = fmul fast double 0.000000e+00, [[TMP0]]
+; AARCH64-NEXT:    [[ADD178_I:%.*]] = fadd fast double [[OP_RDX1]], 0.000000e+00
+; AARCH64-NEXT:    [[OP_RDX:%.*]] = fmul fast double 0.000000e+00, [[TMP1]]
+; AARCH64-NEXT:    [[ADD183_I:%.*]] = fadd fast double [[OP_RDX]], 0.000000e+00
 ; AARCH64-NEXT:    br label [[IF_END209_I]]
 ; AARCH64:       if.end209.i:
-; AARCH64-NEXT:    [[TMP7:%.*]] = phi <2 x double> [ [[TMP6]], [[IF_THEN135_I]] ], [ zeroinitializer, [[EXIT]] ]
+; AARCH64-NEXT:    [[DRDYS_1_I:%.*]] = phi double [ [[ADD183_I]], [[IF_THEN135_I]] ], [ 0.000000e+00, [[EXIT]] ]
+; AARCH64-NEXT:    [[DBDXS_1_I:%.*]] = phi double [ [[ADD178_I]], [[IF_THEN135_I]] ], [ 0.000000e+00, [[EXIT]] ]
 ; AARCH64-NEXT:    ret void
 ;
 entry:

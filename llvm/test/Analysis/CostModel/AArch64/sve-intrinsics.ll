@@ -514,11 +514,11 @@ define void @unsupported_fp_ops(<vscale x 4 x float> %vec, i32 %extraarg) {
 
 define void @powi(<vscale x 4 x float> %vec) {
 ; CHECK-VSCALE-1-LABEL: 'powi'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:21 SizeLat:7 for: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:21 SizeLat:7 for: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'powi'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:7 Lat:21 SizeLat:7 for: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:21 SizeLat:7 for: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> %vec, i32 42)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'powi'

@@ -23,11 +23,13 @@ define void @test(double %a, double %b, ptr %out0, ptr %out1, ptr %in) {
 ; CHECK-NEXT:    [[C3:%.*]] = fsub double 0.000000e+00, [[TMP8]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    store double [[TMP3]], ptr [[OUT1]], align 8
+; CHECK-NEXT:    [[S0:%.*]] = fmul double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[S1:%.*]] = fadd reassoc double [[S0]], 0.000000e+00
+; CHECK-NEXT:    [[S2:%.*]] = fmul double [[C0]], 0.000000e+00
+; CHECK-NEXT:    [[S3:%.*]] = fadd reassoc double [[S1]], [[S2]]
 ; CHECK-NEXT:    [[S4:%.*]] = fsub double [[B]], 0.000000e+00
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double poison, double 1.000000e+00>, double [[C0]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[S4]], i64 2
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP6]])
+; CHECK-NEXT:    [[S5:%.*]] = fmul double [[S4]], 0.000000e+00
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd reassoc double [[S3]], [[S5]]
 ; CHECK-NEXT:    store double [[TMP7]], ptr [[OUT0]], align 8
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
