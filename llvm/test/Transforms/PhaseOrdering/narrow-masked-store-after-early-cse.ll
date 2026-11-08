@@ -7,12 +7,9 @@ target datalayout = "e-p:64:64"
 ; sees the masked store.
 define void @restored_word(ptr %p, i32 %x, i32 %clobber) {
 ; CHECK-LABEL: define void @restored_word(
-; CHECK-SAME: ptr nofree captures(none) [[P:%.*]], i32 [[X:%.*]], i32 [[CLOBBER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[OLD:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[INSERT:%.*]] = and i32 [[X]], 255
-; CHECK-NEXT:    [[CLEAR:%.*]] = and i32 [[OLD]], -256
-; CHECK-NEXT:    [[NEW:%.*]] = or disjoint i32 [[CLEAR]], [[INSERT]]
-; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 4
+; CHECK-SAME: ptr nofree writeonly captures(none) initializes((0, 1)) [[P:%.*]], i32 [[X:%.*]], i32 [[CLOBBER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    store i8 [[TMP1]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %old = load i32, ptr %p, align 4
