@@ -15606,20 +15606,22 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
                "}",
                CustomMixed);
 
-  // Test with Other = true, Empty = false
+  // Test with Other = true, Empty = false.
   FormatStyle CustomOther = getLLVMStyle();
   CustomOther.AllowShortFunctionsOnASingleLine = {/*Empty=*/false,
                                                   /*Inline=*/false,
                                                   /*Other=*/true};
 
-  // Non-empty functions should be on a single line
+  // Non-empty functions are merged, except those defined in a class.
   verifyFormat("int f() { return 42; }", CustomOther);
   verifyFormat("class C {\n"
-               "  int f() { return 42; }\n"
+               "  int f() {\n"
+               "    return 42;\n"
+               "  }\n"
                "};",
                CustomOther);
 
-  // Empty functions should be multi-line
+  // Empty functions are not merged.
   verifyFormat("int f() {\n"
                "}",
                CustomOther);
@@ -15629,7 +15631,7 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
                "};",
                CustomOther);
 
-  // Test with AfterFunction = true
+  // Test with AfterFunction = true.
   CustomOther.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomOther.BraceWrapping.AfterFunction = true;
   verifyFormat("int f() { return 42; }", CustomOther);
@@ -15638,10 +15640,29 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
                "}",
                CustomOther);
 
-  // Inline = true still merges empty functions in a class
+  // Test with SplitEmptyFunction = false.
+  CustomOther.BraceWrapping.SplitEmptyFunction = false;
+  verifyFormat("int f() { return 42; }", CustomOther);
+  verifyFormat("int f()\n"
+               "{}",
+               CustomOther);
+  verifyFormat("class C {\n"
+               "  int f()\n"
+               "  {}\n"
+               "};",
+               CustomOther);
+  CustomOther.AllowShortFunctionsOnASingleLine.Empty = true;
+  verifyFormat("int f() {}", CustomOther);
+  CustomOther.AllowShortFunctionsOnASingleLine.Empty = false;
+  CustomOther.BraceWrapping.SplitEmptyFunction = true;
+
   CustomOther.AllowShortFunctionsOnASingleLine.Inline = true;
   verifyFormat("class C {\n"
                "  int f() {}\n"
+               "};",
+               CustomOther);
+  verifyFormat("class C {\n"
+               "  int f() { return 42; }\n"
                "};",
                CustomOther);
   verifyFormat("int f()\n"
