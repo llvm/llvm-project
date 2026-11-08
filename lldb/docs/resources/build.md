@@ -49,7 +49,6 @@ CMake configuration error.
 | Feature  | Description                                                | CMake Flag            |
 | -------- | ---------------------------------------------------------- | --------------------- |
 | Editline | Generic line editing, history, Emacs and Vi bindings       | `LLDB_ENABLE_LIBEDIT` |
-| Curses   | Text user interface                                        | `LLDB_ENABLE_CURSES`  |
 | Libxml2  | XML                                                        | `LLDB_ENABLE_LIBXML2` |
 | Python   | Python scripting. 3.8 or later (3.11 or later on Windows). | `LLDB_ENABLE_PYTHON`  |
 | Lua      | Lua scripting. Lua 5.3 and 5.4 are supported.              | `LLDB_ENABLE_LUA`     |
@@ -59,20 +58,12 @@ Depending on your platform and package manager, one might run any of the
 commands below.
 
 ```
-$ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
-$ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev libxml2-dev
+$ yum install libedit-devel libxml2-devel python-devel swig
+$ sudo apt-get install build-essential swig python3-dev libedit-dev libxml2-dev
 $ pkg install swig python libxml2
 $ pkgin install swig python38 cmake ninja-build
 $ brew install swig cmake ninja
 ```
-
-:::{note}
-Installing multiple versions of Curses, particularly when only one is built with
-wide character support, can cause lldb to be linked with an incorrect set of
-libraries. If your system already has Curses, we recommend you use that version.
-If you do install another one, use a tool like `ldd` to ensure only one version
-of Curses is being used in the final `lldb` executable.
-:::
 
 ### Windows
 
@@ -510,7 +501,6 @@ further by passing the appropriate cmake options, such as:
 ```
 -DLLDB_ENABLE_PYTHON=0
 -DLLDB_ENABLE_LIBEDIT=0
--DLLDB_ENABLE_CURSES=0
 ```
 
 (see {ref}`optional-dependencies` for more)
@@ -595,8 +585,7 @@ cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
   -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
   -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \
   -DLLDB_ENABLE_PYTHON=0 \
-  -DLLDB_ENABLE_LIBEDIT=0 \
-  -DLLDB_ENABLE_CURSES=0
+  -DLLDB_ENABLE_LIBEDIT=0
 ```
 
 During this build native tools will be built automatically when they are needed.
@@ -619,8 +608,7 @@ cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
   -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \
   -DLLVM_NATIVE_TOOL_DIR=<path-to-host>/bin/ \
   -DLLDB_ENABLE_PYTHON=0 \
-  -DLLDB_ENABLE_LIBEDIT=0 \
-  -DLLDB_ENABLE_CURSES=0
+  -DLLDB_ENABLE_LIBEDIT=0
 ```
 
 The only difference from example 1 is the addition of

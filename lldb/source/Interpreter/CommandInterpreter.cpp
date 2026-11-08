@@ -22,7 +22,6 @@
 #include "Commands/CommandObjectDisassemble.h"
 #include "Commands/CommandObjectExpression.h"
 #include "Commands/CommandObjectFrame.h"
-#include "Commands/CommandObjectGUI.h"
 #include "Commands/CommandObjectHelp.h"
 #include "Commands/CommandObjectLanguage.h"
 #include "Commands/CommandObjectLog.h"
@@ -583,7 +582,6 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("dwim-print", CommandObjectDWIMPrint);
   REGISTER_COMMAND_OBJECT("expression", CommandObjectExpression);
   REGISTER_COMMAND_OBJECT("frame", CommandObjectMultiwordFrame);
-  REGISTER_COMMAND_OBJECT("gui", CommandObjectGUI);
   REGISTER_COMMAND_OBJECT("help", CommandObjectHelp);
   REGISTER_COMMAND_OBJECT("log", CommandObjectLog);
   REGISTER_COMMAND_OBJECT("memory", CommandObjectMemory);

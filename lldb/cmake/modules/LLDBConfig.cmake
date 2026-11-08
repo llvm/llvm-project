@@ -58,7 +58,6 @@ mark_as_advanced(LLDB_LIBXML2_VERSION)
 
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit)
-add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig)
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 VERSION ${LLDB_LIBXML2_VERSION})
