@@ -399,6 +399,14 @@ public:
     return get(Opcode).TSFlags & PPCII::MemriOp;
   }
 
+  /// Return true if \p Opcode is a conditional return that
+  /// PredicateInstruction makes from BLR8.
+  static bool isPredicatedBLR8(unsigned Opcode) {
+    return Opcode == PPC::BCCLR || Opcode == PPC::BCLR ||
+           Opcode == PPC::BCLRn || Opcode == PPC::BDZLR8 ||
+           Opcode == PPC::BDNZLR8;
+  }
+
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
     unsigned CopyOpcodes[] = {PPC::OR,        PPC::OR8,   PPC::FMR,
                               PPC::VOR,       PPC::XXLOR, PPC::XXLORf,
