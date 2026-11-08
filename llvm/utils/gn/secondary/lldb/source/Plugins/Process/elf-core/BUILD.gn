@@ -5,8 +5,8 @@ static_library("elf-core") {
     "//lldb/source/Core",
     "//lldb/source/Plugins/DynamicLoader/POSIX-DYLD",
     "//lldb/source/Plugins/ObjectFile/ELF",
-    "//lldb/source/Plugins/Register/Core",
     "//lldb/source/Plugins/Process/Utility",
+    "//lldb/source/Register",
     "//lldb/source/Target",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Support",
@@ -16,7 +16,6 @@ static_library("elf-core") {
   include_dirs = [ "//lldb/source" ]
   sources = [
     "ProcessElfCore.cpp",
-    "RegisterContextLinuxCore_x86.cpp",
     "RegisterContextELFCore_arm.cpp",
     "RegisterContextELFCore_arm64.cpp",
     "RegisterContextELFCore_loongarch64.cpp",
@@ -26,6 +25,8 @@ static_library("elf-core") {
     "RegisterContextELFCore_riscv64.cpp",
     "RegisterContextELFCore_s390x.cpp",
     "RegisterContextELFCore_x86.cpp",
+    "RegisterLayoutOpenBSD_i386.cpp",
+    "RegisterLayoutOpenBSD_x86_64.cpp",
     "RegisterUtilities.cpp",
     "ThreadElfCore.cpp",
   ]

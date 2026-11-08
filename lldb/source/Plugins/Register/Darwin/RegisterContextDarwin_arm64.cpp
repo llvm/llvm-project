@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextDarwin_arm64.h"
-#include "lldb/Register/Arch/lldb-arm64-ehframe-register-enums.h"
 
 #include "lldb/Register/Arch/lldb-arm64-register-enums.h"
 #include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
+#include "lldb/Register/Common/RegisterInfo_arm64.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-types.h"
@@ -42,46 +42,91 @@
 
 #include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
 
-namespace dwarf_regs = lldb_private::registers::arm64::dwarf;
+
 namespace reg_ids = lldb_private::registers::arm64::id;
 using namespace lldb;
 using namespace lldb_private;
 
-#define GPR_OFFSET(idx) ((idx)*8)
-#define GPR_OFFSET_NAME(reg)                                                   \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_arm64::GPR, reg))
-
-#define FPU_OFFSET(idx) ((idx)*16 + sizeof(RegisterContextDarwin_arm64::GPR))
-#define FPU_OFFSET_NAME(reg)                                                   \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_arm64::FPU, reg))
-
-#define EXC_OFFSET_NAME(reg)                                                   \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_arm64::EXC, reg) +            \
-   sizeof(RegisterContextDarwin_arm64::GPR) +                                  \
-   sizeof(RegisterContextDarwin_arm64::FPU))
-#define DBG_OFFSET_NAME(reg)                                                   \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_arm64::DBG, reg) +            \
-   sizeof(RegisterContextDarwin_arm64::GPR) +                                  \
-   sizeof(RegisterContextDarwin_arm64::FPU) +                                  \
-   sizeof(RegisterContextDarwin_arm64::EXC))
-
-#define DEFINE_DBG(reg, i)                                                     \
-  #reg, NULL,                                                                  \
-      sizeof(((RegisterContextDarwin_arm64::DBG *) NULL)->reg[i]),             \
-              DBG_OFFSET_NAME(reg[i]), eEncodingUint, eFormatHex,              \
-                              {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
-                               LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
-                               LLDB_INVALID_REGNUM },                          \
-                               NULL, NULL, NULL
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterContextDarwin_arm64::GPR) +                                  \
    sizeof(RegisterContextDarwin_arm64::FPU) +                                  \
    sizeof(RegisterContextDarwin_arm64::EXC))
 
-// Include RegisterInfos_arm64 to declare our g_register_infos_arm64 structure.
-#define DECLARE_REGISTER_INFOS_ARM64_STRUCT
-#include "Register/Arch/RegisterInfos_arm64.h"
-#undef DECLARE_REGISTER_INFOS_ARM64_STRUCT
+static const RegisterLayout &RegisterMetadata() {
+  static const auto info = [] {
+    auto cpu = RegisterInfo_arm64::CreateDescription(0);
+    std::vector<RegisterDescriptor> regs(cpu->GetRegisters().begin(),
+                                         cpu->GetRegisters().end());
+    RegisterLayout layout(eByteOrderLittle);
+    llvm::cantFail(layout.AddBank(0, sizeof(RegisterContextDarwin_arm64::GPR)));
+    llvm::cantFail(layout.AddBank(1, sizeof(RegisterContextDarwin_arm64::FPU)));
+    llvm::cantFail(layout.AddBank(2, sizeof(RegisterContextDarwin_arm64::EXC)));
+    llvm::cantFail(layout.AddBank(3, sizeof(RegisterContextDarwin_arm64::DBG)));
+    auto location = [&](RegisterID id, RegisterBankID bank, uint32_t offset,
+                        uint32_t size) {
+      RegisterLocation loc;
+      loc.kind = RegisterLocation::Stored;
+      loc.pieces.push_back({bank, offset, size});
+
+      llvm::cantFail(layout.Add(id, std::move(loc)));
+    };
+    for (const auto &reg : regs) {
+      uint32_t offset;
+      RegisterBankID bank = reg.id <= reg_ids::gpr_w28 ? 0 : 1;
+      if (reg.id <= reg_ids::gpr_cpsr)
+        offset = 8 * reg.id;
+      else if (reg.id <= reg_ids::gpr_w28)
+        offset = 8 * (reg.id - reg_ids::gpr_w0);
+      else if (reg.id == reg_ids::fpu_fpsr)
+        offset = offsetof(RegisterContextDarwin_arm64::FPU, fpsr);
+      else if (reg.id == reg_ids::fpu_fpcr)
+        offset = offsetof(RegisterContextDarwin_arm64::FPU, fpcr);
+      else if (reg.id >= reg_ids::fpu_d0)
+        offset = 16 * (reg.id - reg_ids::fpu_d0);
+      else if (reg.id >= reg_ids::fpu_s0)
+        offset = 16 * (reg.id - reg_ids::fpu_s0);
+      else
+        offset = 16 * (reg.id - reg_ids::fpu_v0);
+
+      location(reg.id, bank, offset, reg.byte_size);
+    }
+    auto extra = [&](const std::string &name, RegisterID id,
+                     RegisterBankID bank, uint32_t offset, uint32_t size) {
+      RegisterDescriptor reg;
+      reg.id = id;
+      reg.name = name;
+      reg.byte_size = size;
+      reg.numbers[eRegisterKindLLDB] = id;
+      regs.push_back(std::move(reg));
+      location(id, bank, offset, size);
+    };
+
+    extra("far", reg_ids::exc_far, 2,
+          offsetof(RegisterContextDarwin_arm64::EXC, far), 8);
+    extra("esr", reg_ids::exc_esr, 2,
+          offsetof(RegisterContextDarwin_arm64::EXC, esr), 4);
+    extra("exception", reg_ids::exc_exception, 2,
+          offsetof(RegisterContextDarwin_arm64::EXC, exception), 4);
+
+    for (uint32_t i = 0; i < 16; ++i)
+      extra("bvr" + std::to_string(i), reg_ids::dbg_bvr0 + i, 3,
+            offsetof(RegisterContextDarwin_arm64::DBG, bvr) + 8 * i, 8);
+    for (uint32_t i = 0; i < 16; ++i)
+      extra("bcr" + std::to_string(i), reg_ids::dbg_bcr0 + i, 3,
+            offsetof(RegisterContextDarwin_arm64::DBG, bcr) + 8 * i, 8);
+    for (uint32_t i = 0; i < 16; ++i)
+      extra("wvr" + std::to_string(i), reg_ids::dbg_wvr0 + i, 3,
+            offsetof(RegisterContextDarwin_arm64::DBG, wvr) + 8 * i, 8);
+    for (uint32_t i = 0; i < 16; ++i)
+      extra("wcr" + std::to_string(i), reg_ids::dbg_wcr0 + i, 3,
+            offsetof(RegisterContextDarwin_arm64::DBG, wcr) + 8 * i, 8);
+    auto description = std::make_shared<RegisterDescription>(
+        llvm::cantFail(RegisterDescription::Create(std::move(regs))));
+    return llvm::cantFail(
+        RegisterLayout::Create(std::move(description), std::move(layout)));
+  }();
+  return info;
+}
 
 // General purpose registers
 static uint32_t g_gpr_regnums[] = {
@@ -112,11 +157,14 @@ static uint32_t g_fpu_regnums[] = {
 static uint32_t g_exc_regnums[] = {reg_ids::exc_far, reg_ids::exc_esr,
                                    reg_ids::exc_exception};
 
-static size_t k_num_register_infos = std::size(g_register_infos_arm64_le);
+static std::shared_ptr<const RegisterDescription> CreateContextDescription();
 
 RegisterContextDarwin_arm64::RegisterContextDarwin_arm64(
     Thread &thread, uint32_t concrete_frame_idx)
-    : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc(), dbg() {
+    : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc(),
+      dbg() {
+  SetRegisterDescription(CreateContextDescription());
+
   uint32_t i;
   for (i = 0; i < kNumErrors; i++) {
     gpr_errs[i] = -1;
@@ -131,27 +179,6 @@ void RegisterContextDarwin_arm64::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();
 }
 
-size_t RegisterContextDarwin_arm64::GetRegisterCount() {
-  assert(k_num_register_infos == reg_ids::k_num_registers);
-  return reg_ids::k_num_registers;
-}
-
-const RegisterInfo *
-RegisterContextDarwin_arm64::GetRegisterInfoAtIndex(size_t reg) {
-  assert(k_num_register_infos == reg_ids::k_num_registers);
-  if (reg < reg_ids::k_num_registers)
-    return &g_register_infos_arm64_le[reg];
-  return nullptr;
-}
-
-size_t RegisterContextDarwin_arm64::GetRegisterInfosCount() {
-  return k_num_register_infos;
-}
-
-const RegisterInfo *RegisterContextDarwin_arm64::GetRegisterInfos() {
-  return g_register_infos_arm64_le;
-}
-
 // Number of registers in each register set
 const size_t k_num_gpr_registers = std::size(g_gpr_regnums);
 const size_t k_num_fpu_registers = std::size(g_fpu_regnums);
@@ -160,23 +187,28 @@ const size_t k_num_exc_registers = std::size(g_exc_regnums);
 // Register set definitions. The first definitions at register set index of
 // zero is for all registers, followed by other registers sets. The register
 // information for the all register set need not be filled in.
-static const RegisterSet g_reg_sets[] = {
-    {
-        "General Purpose Registers", "gpr", k_num_gpr_registers, g_gpr_regnums,
-    },
-    {"Floating Point Registers", "fpu", k_num_fpu_registers, g_fpu_regnums},
-    {"Exception State Registers", "exc", k_num_exc_registers, g_exc_regnums}};
+static const RegisterGroup g_reg_sets[] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums,
+                             g_gpr_regnums + k_num_gpr_registers)},
+    {"Floating Point Registers", "fpu",
+     std::vector<RegisterID>(g_fpu_regnums,
+                             g_fpu_regnums + k_num_fpu_registers)},
+    {"Exception State Registers", "exc",
+     std::vector<RegisterID>(g_exc_regnums,
+                             g_exc_regnums + k_num_exc_registers)}};
 
-const size_t k_num_regsets = std::size(g_reg_sets);
-
-size_t RegisterContextDarwin_arm64::GetRegisterSetCount() {
-  return k_num_regsets;
-}
-
-const RegisterSet *RegisterContextDarwin_arm64::GetRegisterSet(size_t reg_set) {
-  if (reg_set < k_num_regsets)
-    return &g_reg_sets[reg_set];
-  return nullptr;
+static std::shared_ptr<const RegisterDescription> CreateContextDescription() {
+  static const auto description = [] {
+    auto registers = RegisterMetadata().GetDescription()->GetRegisters();
+    return std::make_shared<RegisterDescription>(
+        llvm::cantFail(RegisterDescription::Create(
+            {registers.begin(), registers.end()},
+            {std::begin(g_reg_sets), std::end(g_reg_sets)},
+            {RegisterMetadata().GetDescription()->GetOwnedTypes().begin(),
+             RegisterMetadata().GetDescription()->GetOwnedTypes().end()})));
+  }();
+  return description;
 }
 
 // Register information definitions for arm64
@@ -312,16 +344,21 @@ void RegisterContextDarwin_arm64::LogDBGRegisters(Log *log, const DBG &dbg) {
   }
 }
 
-bool RegisterContextDarwin_arm64::ReadRegister(const RegisterInfo *reg_info,
-                                               RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+llvm::Expected<RegisterValue>
+RegisterContextDarwin_arm64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
   int set = RegisterContextDarwin_arm64::GetSetForNativeRegNum(reg);
 
   if (set == -1)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   if (ReadRegisterSet(set, false) != KERN_SUCCESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   switch (reg) {
   case reg_ids::gpr_x0:
@@ -552,21 +589,26 @@ bool RegisterContextDarwin_arm64::ReadRegister(const RegisterInfo *reg_info,
 
   default:
     value.SetValueToInvalid();
-    return false;
+    return llvm::createStringError("register value is unavailable");
   }
-  return true;
+  return value;
 }
 
-bool RegisterContextDarwin_arm64::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error
+RegisterContextDarwin_arm64::WriteRegister(RegisterID id,
                                                 const RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
   int set = GetSetForNativeRegNum(reg);
 
   if (set == -1)
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
   if (ReadRegisterSet(set, false) != KERN_SUCCESS)
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
   switch (reg) {
   case reg_ids::gpr_x0:
@@ -661,9 +703,13 @@ bool RegisterContextDarwin_arm64::WriteRegister(const RegisterInfo *reg_info,
     break;
 
   default:
-    return false;
+    return llvm::createStringError("register write is unavailable");
   }
-  return WriteRegisterSet(set) == KERN_SUCCESS;
+  {
+    if (!(WriteRegisterSet(set) == KERN_SUCCESS))
+      return llvm::createStringError("register write failed");
+    return llvm::Error::success();
+  }
 }
 
 bool RegisterContextDarwin_arm64::ReadAllRegisterValues(
@@ -705,236 +751,6 @@ bool RegisterContextDarwin_arm64::WriteAllRegisterValues(
     return success_count == 3;
   }
   return false;
-}
-
-uint32_t RegisterContextDarwin_arm64::ConvertRegisterKindToRegisterNumber(
-    RegisterKind kind, uint32_t reg) {
-  if (kind == eRegisterKindGeneric) {
-    switch (reg) {
-    case LLDB_REGNUM_GENERIC_PC:
-      return reg_ids::gpr_pc;
-    case LLDB_REGNUM_GENERIC_SP:
-      return reg_ids::gpr_sp;
-    case LLDB_REGNUM_GENERIC_FP:
-      return reg_ids::gpr_fp;
-    case LLDB_REGNUM_GENERIC_RA:
-      return reg_ids::gpr_lr;
-    case LLDB_REGNUM_GENERIC_FLAGS:
-      return reg_ids::gpr_cpsr;
-    default:
-      break;
-    }
-  } else if (kind == eRegisterKindDWARF) {
-    switch (reg) {
-    case dwarf_regs::x0:
-      return reg_ids::gpr_x0;
-    case dwarf_regs::x1:
-      return reg_ids::gpr_x1;
-    case dwarf_regs::x2:
-      return reg_ids::gpr_x2;
-    case dwarf_regs::x3:
-      return reg_ids::gpr_x3;
-    case dwarf_regs::x4:
-      return reg_ids::gpr_x4;
-    case dwarf_regs::x5:
-      return reg_ids::gpr_x5;
-    case dwarf_regs::x6:
-      return reg_ids::gpr_x6;
-    case dwarf_regs::x7:
-      return reg_ids::gpr_x7;
-    case dwarf_regs::x8:
-      return reg_ids::gpr_x8;
-    case dwarf_regs::x9:
-      return reg_ids::gpr_x9;
-    case dwarf_regs::x10:
-      return reg_ids::gpr_x10;
-    case dwarf_regs::x11:
-      return reg_ids::gpr_x11;
-    case dwarf_regs::x12:
-      return reg_ids::gpr_x12;
-    case dwarf_regs::x13:
-      return reg_ids::gpr_x13;
-    case dwarf_regs::x14:
-      return reg_ids::gpr_x14;
-    case dwarf_regs::x15:
-      return reg_ids::gpr_x15;
-    case dwarf_regs::x16:
-      return reg_ids::gpr_x16;
-    case dwarf_regs::x17:
-      return reg_ids::gpr_x17;
-    case dwarf_regs::x18:
-      return reg_ids::gpr_x18;
-    case dwarf_regs::x19:
-      return reg_ids::gpr_x19;
-    case dwarf_regs::x20:
-      return reg_ids::gpr_x20;
-    case dwarf_regs::x21:
-      return reg_ids::gpr_x21;
-    case dwarf_regs::x22:
-      return reg_ids::gpr_x22;
-    case dwarf_regs::x23:
-      return reg_ids::gpr_x23;
-    case dwarf_regs::x24:
-      return reg_ids::gpr_x24;
-    case dwarf_regs::x25:
-      return reg_ids::gpr_x25;
-    case dwarf_regs::x26:
-      return reg_ids::gpr_x26;
-    case dwarf_regs::x27:
-      return reg_ids::gpr_x27;
-    case dwarf_regs::x28:
-      return reg_ids::gpr_x28;
-
-    case dwarf_regs::fp:
-      return reg_ids::gpr_fp;
-    case dwarf_regs::sp:
-      return reg_ids::gpr_sp;
-    case dwarf_regs::lr:
-      return reg_ids::gpr_lr;
-    case dwarf_regs::pc:
-      return reg_ids::gpr_pc;
-
-    case dwarf_regs::v0:
-      return reg_ids::fpu_v0;
-    case dwarf_regs::v1:
-      return reg_ids::fpu_v1;
-    case dwarf_regs::v2:
-      return reg_ids::fpu_v2;
-    case dwarf_regs::v3:
-      return reg_ids::fpu_v3;
-    case dwarf_regs::v4:
-      return reg_ids::fpu_v4;
-    case dwarf_regs::v5:
-      return reg_ids::fpu_v5;
-    case dwarf_regs::v6:
-      return reg_ids::fpu_v6;
-    case dwarf_regs::v7:
-      return reg_ids::fpu_v7;
-    case dwarf_regs::v8:
-      return reg_ids::fpu_v8;
-    case dwarf_regs::v9:
-      return reg_ids::fpu_v9;
-    case dwarf_regs::v10:
-      return reg_ids::fpu_v10;
-    case dwarf_regs::v11:
-      return reg_ids::fpu_v11;
-    case dwarf_regs::v12:
-      return reg_ids::fpu_v12;
-    case dwarf_regs::v13:
-      return reg_ids::fpu_v13;
-    case dwarf_regs::v14:
-      return reg_ids::fpu_v14;
-    case dwarf_regs::v15:
-      return reg_ids::fpu_v15;
-    case dwarf_regs::v16:
-      return reg_ids::fpu_v16;
-    case dwarf_regs::v17:
-      return reg_ids::fpu_v17;
-    case dwarf_regs::v18:
-      return reg_ids::fpu_v18;
-    case dwarf_regs::v19:
-      return reg_ids::fpu_v19;
-    case dwarf_regs::v20:
-      return reg_ids::fpu_v20;
-    case dwarf_regs::v21:
-      return reg_ids::fpu_v21;
-    case dwarf_regs::v22:
-      return reg_ids::fpu_v22;
-    case dwarf_regs::v23:
-      return reg_ids::fpu_v23;
-    case dwarf_regs::v24:
-      return reg_ids::fpu_v24;
-    case dwarf_regs::v25:
-      return reg_ids::fpu_v25;
-    case dwarf_regs::v26:
-      return reg_ids::fpu_v26;
-    case dwarf_regs::v27:
-      return reg_ids::fpu_v27;
-    case dwarf_regs::v28:
-      return reg_ids::fpu_v28;
-    case dwarf_regs::v29:
-      return reg_ids::fpu_v29;
-    case dwarf_regs::v30:
-      return reg_ids::fpu_v30;
-    case dwarf_regs::v31:
-      return reg_ids::fpu_v31;
-
-    default:
-      break;
-    }
-  } else if (kind == eRegisterKindEHFrame) {
-    switch (reg) {
-    case dwarf_regs::x0:
-      return reg_ids::gpr_x0;
-    case dwarf_regs::x1:
-      return reg_ids::gpr_x1;
-    case dwarf_regs::x2:
-      return reg_ids::gpr_x2;
-    case dwarf_regs::x3:
-      return reg_ids::gpr_x3;
-    case dwarf_regs::x4:
-      return reg_ids::gpr_x4;
-    case dwarf_regs::x5:
-      return reg_ids::gpr_x5;
-    case dwarf_regs::x6:
-      return reg_ids::gpr_x6;
-    case dwarf_regs::x7:
-      return reg_ids::gpr_x7;
-    case dwarf_regs::x8:
-      return reg_ids::gpr_x8;
-    case dwarf_regs::x9:
-      return reg_ids::gpr_x9;
-    case dwarf_regs::x10:
-      return reg_ids::gpr_x10;
-    case dwarf_regs::x11:
-      return reg_ids::gpr_x11;
-    case dwarf_regs::x12:
-      return reg_ids::gpr_x12;
-    case dwarf_regs::x13:
-      return reg_ids::gpr_x13;
-    case dwarf_regs::x14:
-      return reg_ids::gpr_x14;
-    case dwarf_regs::x15:
-      return reg_ids::gpr_x15;
-    case dwarf_regs::x16:
-      return reg_ids::gpr_x16;
-    case dwarf_regs::x17:
-      return reg_ids::gpr_x17;
-    case dwarf_regs::x18:
-      return reg_ids::gpr_x18;
-    case dwarf_regs::x19:
-      return reg_ids::gpr_x19;
-    case dwarf_regs::x20:
-      return reg_ids::gpr_x20;
-    case dwarf_regs::x21:
-      return reg_ids::gpr_x21;
-    case dwarf_regs::x22:
-      return reg_ids::gpr_x22;
-    case dwarf_regs::x23:
-      return reg_ids::gpr_x23;
-    case dwarf_regs::x24:
-      return reg_ids::gpr_x24;
-    case dwarf_regs::x25:
-      return reg_ids::gpr_x25;
-    case dwarf_regs::x26:
-      return reg_ids::gpr_x26;
-    case dwarf_regs::x27:
-      return reg_ids::gpr_x27;
-    case dwarf_regs::x28:
-      return reg_ids::gpr_x28;
-    case dwarf_regs::fp:
-      return reg_ids::gpr_fp;
-    case dwarf_regs::sp:
-      return reg_ids::gpr_sp;
-    case dwarf_regs::lr:
-      return reg_ids::gpr_lr;
-    case dwarf_regs::pc:
-      return reg_ids::gpr_pc;
-    }
-  } else if (kind == eRegisterKindLLDB) {
-    return reg;
-  }
-  return LLDB_INVALID_REGNUM;
 }
 
 uint32_t RegisterContextDarwin_arm64::NumSupportedHardwareWatchpoints() {

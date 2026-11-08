@@ -9,24 +9,25 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_S390X_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_S390X_H
 
-#include "Plugins/Register/Core/RegisterContextCore_s390x.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "lldb/Register/Arch/lldb-s390x-register-enums.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextELFCore_s390x : public RegisterContextCore_s390x {
+class RegisterContextELFCore_s390x
+    : public lldb_private::ThreadRegisterContext {
 public:
-  RegisterContextELFCore_s390x(
-      lldb_private::Thread &thread,
-      lldb_private::RegisterInfoInterface *register_info,
-      const lldb_private::DataExtractor &gpregset,
-      llvm::ArrayRef<lldb_private::CoreNote> notes);
+  RegisterContextELFCore_s390x(lldb_private::Thread &thread,
+                               lldb_private::RegisterLayout layout,
+                               const lldb_private::DataExtractor &gpregset,
+                               llvm::ArrayRef<lldb_private::CoreNote> notes);
 
   ~RegisterContextELFCore_s390x() override;
 
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
@@ -34,15 +35,6 @@ public:
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
   bool HardwareSingleStep(bool enable) override;
-
-protected:
-  bool ReadGPR() override;
-
-  bool ReadFPR() override;
-
-  bool WriteGPR() override;
-
-  bool WriteFPR() override;
 
 private:
   lldb::DataBufferSP m_gpr_buffer;

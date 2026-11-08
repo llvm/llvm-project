@@ -37,7 +37,6 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   Disassembler.cpp
   DumpDataExtractor.cpp
   DumpRegisterValue.cpp
-  DumpRegisterInfo.cpp
   DynamicLoader.cpp
   EmulateInstruction.cpp
   FileLineResolver.cpp

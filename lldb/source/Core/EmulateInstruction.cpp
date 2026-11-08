@@ -72,7 +72,7 @@ EmulateInstruction::FindPlugin(const ArchSpec &arch,
 EmulateInstruction::EmulateInstruction(const ArchSpec &arch) : m_arch(arch) {}
 
 std::optional<RegisterValue>
-EmulateInstruction::ReadRegister(const RegisterInfo &reg_info) {
+EmulateInstruction::ReadRegister(const RegisterDescriptor &reg_info) {
   if (m_read_reg_callback == nullptr)
     return {};
 
@@ -86,7 +86,8 @@ EmulateInstruction::ReadRegister(const RegisterInfo &reg_info) {
 bool EmulateInstruction::ReadRegister(lldb::RegisterKind reg_kind,
                                       uint32_t reg_num,
                                       RegisterValue &reg_value) {
-  std::optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  std::optional<RegisterDescriptor> reg_info =
+      GetRegisterInfo(reg_kind, reg_num);
   if (!reg_info)
     return false;
 
@@ -108,7 +109,8 @@ uint64_t EmulateInstruction::ReadRegisterUnsigned(lldb::RegisterKind reg_kind,
   return fail_value;
 }
 
-uint64_t EmulateInstruction::ReadRegisterUnsigned(const RegisterInfo &reg_info,
+uint64_t
+EmulateInstruction::ReadRegisterUnsigned(const RegisterDescriptor &reg_info,
                                                   uint64_t fail_value,
                                                   bool *success_ptr) {
   std::optional<RegisterValue> reg_value = ReadRegister(reg_info);
@@ -122,7 +124,7 @@ uint64_t EmulateInstruction::ReadRegisterUnsigned(const RegisterInfo &reg_info,
 }
 
 bool EmulateInstruction::WriteRegister(const Context &context,
-                                       const RegisterInfo &reg_info,
+                                       const RegisterDescriptor &reg_info,
                                        const RegisterValue &reg_value) {
   if (m_write_reg_callback != nullptr)
     return m_write_reg_callback(this, m_baton, context, &reg_info, reg_value);
@@ -133,7 +135,8 @@ bool EmulateInstruction::WriteRegister(const Context &context,
                                        lldb::RegisterKind reg_kind,
                                        uint32_t reg_num,
                                        const RegisterValue &reg_value) {
-  std::optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  std::optional<RegisterDescriptor> reg_info =
+      GetRegisterInfo(reg_kind, reg_num);
   if (reg_info)
     return WriteRegister(context, *reg_info, reg_value);
   return false;
@@ -143,7 +146,8 @@ bool EmulateInstruction::WriteRegisterUnsigned(const Context &context,
                                                lldb::RegisterKind reg_kind,
                                                uint32_t reg_num,
                                                uint64_t uint_value) {
-  std::optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  std::optional<RegisterDescriptor> reg_info =
+      GetRegisterInfo(reg_kind, reg_num);
   if (reg_info) {
     RegisterValue reg_value;
     if (reg_value.SetUInt(uint_value, reg_info->byte_size))
@@ -152,8 +156,8 @@ bool EmulateInstruction::WriteRegisterUnsigned(const Context &context,
   return false;
 }
 
-bool EmulateInstruction::WriteRegisterUnsigned(const Context &context,
-                                               const RegisterInfo &reg_info,
+bool EmulateInstruction::WriteRegisterUnsigned(
+    const Context &context, const RegisterDescriptor &reg_info,
                                                uint64_t uint_value) {
   RegisterValue reg_value;
   if (reg_value.SetUInt(uint_value, reg_info.byte_size))
@@ -289,24 +293,46 @@ size_t EmulateInstruction::WriteMemoryFrame(EmulateInstruction *instruction,
 
 bool EmulateInstruction::ReadRegisterFrame(EmulateInstruction *instruction,
                                            void *baton,
-                                           const RegisterInfo *reg_info,
+                                           const RegisterDescriptor *reg_info,
                                            RegisterValue &reg_value) {
-  if (baton == nullptr)
+  if (!baton || !reg_info)
     return false;
-
-  StackFrame *frame = (StackFrame *)baton;
-  return frame->GetRegisterContext()->ReadRegister(reg_info, reg_value);
+  auto *frame = static_cast<StackFrame *>(baton);
+  auto registers = frame->GetRegisterContext();
+  if (!registers)
+    return false;
+  lldb::RegisterKind kind;
+  uint32_t number;
+  if (!GetBestRegisterKindAndNumber(reg_info, kind, number))
+    return false;
+  auto id = registers->ResolveRegisterNumber(kind, number);
+  if (!id) {
+    llvm::consumeError(id.takeError());
+    return false;
+  }
+  return !llvm::errorToBool(registers->ReadRegister(*id).moveInto(reg_value));
 }
 
 bool EmulateInstruction::WriteRegisterFrame(EmulateInstruction *instruction,
                                             void *baton, const Context &context,
-                                            const RegisterInfo *reg_info,
+                                            const RegisterDescriptor *reg_info,
                                             const RegisterValue &reg_value) {
-  if (baton == nullptr)
+  if (!baton || !reg_info)
     return false;
-
-  StackFrame *frame = (StackFrame *)baton;
-  return frame->GetRegisterContext()->WriteRegister(reg_info, reg_value);
+  auto *frame = static_cast<StackFrame *>(baton);
+  auto registers = frame->GetRegisterContext();
+  if (!registers)
+    return false;
+  lldb::RegisterKind kind;
+  uint32_t number;
+  if (!GetBestRegisterKindAndNumber(reg_info, kind, number))
+    return false;
+  auto id = registers->ResolveRegisterNumber(kind, number);
+  if (!id) {
+    llvm::consumeError(id.takeError());
+    return false;
+  }
+  return !llvm::errorToBool(registers->WriteRegister(*id, reg_value));
 }
 
 size_t EmulateInstruction::ReadMemoryDefault(EmulateInstruction *instruction,
@@ -340,10 +366,10 @@ size_t EmulateInstruction::WriteMemoryDefault(EmulateInstruction *instruction,
 
 bool EmulateInstruction::ReadRegisterDefault(EmulateInstruction *instruction,
                                              void *baton,
-                                             const RegisterInfo *reg_info,
+                                             const RegisterDescriptor *reg_info,
                                              RegisterValue &reg_value) {
   StreamFile strm(stdout, false);
-  strm.Printf("  Read Register (%s)\n", reg_info->name);
+  strm.Printf("  Read Register (%s)\n", reg_info->name.c_str());
   lldb::RegisterKind reg_kind;
   uint32_t reg_num;
   if (GetBestRegisterKindAndNumber(reg_info, reg_kind, reg_num))
@@ -354,13 +380,12 @@ bool EmulateInstruction::ReadRegisterDefault(EmulateInstruction *instruction,
   return true;
 }
 
-bool EmulateInstruction::WriteRegisterDefault(EmulateInstruction *instruction,
-                                              void *baton,
-                                              const Context &context,
-                                              const RegisterInfo *reg_info,
-                                              const RegisterValue &reg_value) {
+bool EmulateInstruction::WriteRegisterDefault(
+    EmulateInstruction *instruction, void *baton, const Context &context,
+    const RegisterDescriptor *reg_info, const RegisterValue &reg_value) {
   StreamFile strm(stdout, false);
-  strm.Printf("    Write to Register (name = %s, value = ", reg_info->name);
+  strm.Printf("    Write to Register (name = %s, value = ",
+              reg_info->name.c_str());
   DumpRegisterValue(reg_value, strm, *reg_info, false, false, eFormatDefault);
   strm.PutCString(", context = ");
   context.Dump(strm, instruction);
@@ -451,34 +476,35 @@ void EmulateInstruction::Context::Dump(Stream &strm,
   switch (GetInfoType()) {
   case eInfoTypeRegisterPlusOffset:
     strm.Printf(" (reg_plus_offset = %s%+" PRId64 ")",
-                info.RegisterPlusOffset.reg.name,
+                info.RegisterPlusOffset.reg.name.c_str(),
                 info.RegisterPlusOffset.signed_offset);
     break;
 
   case eInfoTypeRegisterPlusIndirectOffset:
     strm.Printf(" (reg_plus_reg = %s + %s)",
-                info.RegisterPlusIndirectOffset.base_reg.name,
-                info.RegisterPlusIndirectOffset.offset_reg.name);
+                info.RegisterPlusIndirectOffset.base_reg.name.c_str(),
+                info.RegisterPlusIndirectOffset.offset_reg.name.c_str());
     break;
 
   case eInfoTypeRegisterToRegisterPlusOffset:
     strm.Printf(" (base_and_imm_offset = %s%+" PRId64 ", data_reg = %s)",
-                info.RegisterToRegisterPlusOffset.base_reg.name,
+                info.RegisterToRegisterPlusOffset.base_reg.name.c_str(),
                 info.RegisterToRegisterPlusOffset.offset,
-                info.RegisterToRegisterPlusOffset.data_reg.name);
+                info.RegisterToRegisterPlusOffset.data_reg.name.c_str());
     break;
 
   case eInfoTypeRegisterToRegisterPlusIndirectOffset:
-    strm.Printf(" (base_and_reg_offset = %s + %s, data_reg = %s)",
-                info.RegisterToRegisterPlusIndirectOffset.base_reg.name,
-                info.RegisterToRegisterPlusIndirectOffset.offset_reg.name,
-                info.RegisterToRegisterPlusIndirectOffset.data_reg.name);
+    strm.Printf(
+        " (base_and_reg_offset = %s + %s, data_reg = %s)",
+        info.RegisterToRegisterPlusIndirectOffset.base_reg.name.c_str(),
+        info.RegisterToRegisterPlusIndirectOffset.offset_reg.name.c_str(),
+        info.RegisterToRegisterPlusIndirectOffset.data_reg.name.c_str());
     break;
 
   case eInfoTypeRegisterRegisterOperands:
     strm.Printf(" (register to register binary op: %s and %s)",
-                info.RegisterRegisterOperands.operand1.name,
-                info.RegisterRegisterOperands.operand2.name);
+                info.RegisterRegisterOperands.operand1.name.c_str(),
+                info.RegisterRegisterOperands.operand2.name.c_str());
     break;
 
   case eInfoTypeOffset:
@@ -486,7 +512,7 @@ void EmulateInstruction::Context::Dump(Stream &strm,
     break;
 
   case eInfoTypeRegister:
-    strm.Printf(" (reg = %s)", info.reg.name);
+    strm.Printf(" (reg = %s)", info.reg.name.c_str());
     break;
 
   case eInfoTypeImmediate:
@@ -540,35 +566,35 @@ bool EmulateInstruction::SetInstruction(const Opcode &opcode,
 }
 
 bool EmulateInstruction::GetBestRegisterKindAndNumber(
-    const RegisterInfo *reg_info, lldb::RegisterKind &reg_kind,
+    const RegisterDescriptor *reg_info, lldb::RegisterKind &reg_kind,
     uint32_t &reg_num) {
   // Generic and DWARF should be the two most popular register kinds when
   // emulating instructions since they are the most platform agnostic...
-  reg_num = reg_info->kinds[eRegisterKindGeneric];
+  reg_num = reg_info->numbers[eRegisterKindGeneric];
   if (reg_num != LLDB_INVALID_REGNUM) {
     reg_kind = eRegisterKindGeneric;
     return true;
   }
 
-  reg_num = reg_info->kinds[eRegisterKindDWARF];
+  reg_num = reg_info->numbers[eRegisterKindDWARF];
   if (reg_num != LLDB_INVALID_REGNUM) {
     reg_kind = eRegisterKindDWARF;
     return true;
   }
 
-  reg_num = reg_info->kinds[eRegisterKindLLDB];
+  reg_num = reg_info->numbers[eRegisterKindLLDB];
   if (reg_num != LLDB_INVALID_REGNUM) {
     reg_kind = eRegisterKindLLDB;
     return true;
   }
 
-  reg_num = reg_info->kinds[eRegisterKindEHFrame];
+  reg_num = reg_info->numbers[eRegisterKindEHFrame];
   if (reg_num != LLDB_INVALID_REGNUM) {
     reg_kind = eRegisterKindEHFrame;
     return true;
   }
 
-  reg_num = reg_info->kinds[eRegisterKindProcessPlugin];
+  reg_num = reg_info->numbers[eRegisterKindProcessPlugin];
   if (reg_num != LLDB_INVALID_REGNUM) {
     reg_kind = eRegisterKindProcessPlugin;
     return true;
@@ -576,13 +602,13 @@ bool EmulateInstruction::GetBestRegisterKindAndNumber(
   return false;
 }
 
-uint32_t
-EmulateInstruction::GetInternalRegisterNumber(ThreadRegisterContext *reg_ctx,
-                                              const RegisterInfo &reg_info) {
+uint32_t EmulateInstruction::GetInternalRegisterNumber(
+    ThreadRegisterContext *reg_ctx, const RegisterDescriptor &reg_info) {
   lldb::RegisterKind reg_kind;
   uint32_t reg_num;
   if (reg_ctx && GetBestRegisterKindAndNumber(&reg_info, reg_kind, reg_num))
-    return reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
+    if (const auto *reg = reg_ctx->GetRegisterByNumber(reg_kind, reg_num))
+      return reg->numbers[eRegisterKindLLDB];
   return LLDB_INVALID_REGNUM;
 }
 

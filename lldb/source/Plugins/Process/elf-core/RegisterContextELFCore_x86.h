@@ -9,21 +9,23 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_X86_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_X86_H
 
-#include "Plugins/Register/Core/RegisterContextCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Common/RegisterInfo_x86.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
-class RegisterContextELFCore_x86 : public RegisterContextCore_x86 {
+class RegisterContextELFCore_x86
+    : public lldb_private::ThreadRegisterContext {
 public:
-  RegisterContextELFCore_x86(
-      lldb_private::Thread &thread,
-      lldb_private::RegisterInfoInterface *register_info,
-      const lldb_private::DataExtractor &gpregset,
-      llvm::ArrayRef<lldb_private::CoreNote> notes);
+  RegisterContextELFCore_x86(lldb_private::Thread &thread,
+                             lldb_private::RegisterLayout layout,
+                             const lldb_private::DataExtractor &gpregset,
+                             llvm::ArrayRef<lldb_private::CoreNote> notes);
 
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
@@ -31,15 +33,6 @@ public:
   bool WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
   bool HardwareSingleStep(bool enable) override;
-
-protected:
-  bool ReadGPR() override;
-
-  bool ReadFPR() override;
-
-  bool WriteGPR() override;
-
-  bool WriteFPR() override;
 
 private:
   std::unique_ptr<uint8_t[]> m_gpregset;

@@ -16,9 +16,9 @@
 #include "lldb/Register/RegisterValue.h"
 
 #include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
-#include "Register/Common/RegisterInfo_riscv32.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
 #include "lldb/Register/Arch/lldb-riscv-register-enums.h"
+#include "lldb/Register/Common/RegisterInfo_riscv32.h"
+#include "lldb/Register/Common/RegisterInfo_riscv64.h"
 
 
 namespace reg_ids = lldb_private::registers::riscv::id;
@@ -27,8 +27,13 @@ using namespace lldb;
 using namespace lldb_private;
 
 struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
-  RegisterInfo_riscv64::GPR gpr;
-  RegisterInfo_riscv64::FPR fpr;
+  struct {
+    uint64_t gpr[32];
+  } gpr;
+  struct {
+    uint64_t fpr[32];
+    uint32_t fcsr;
+  } fpr;
   uint8_t memory[1024] = {0};
 
   RISCVEmulatorTester(std::string triple = "riscv64-unknown-linux-gnu")
@@ -41,10 +46,10 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
   }
 
   static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
-                                   const RegisterInfo *reg_info,
+                                   const RegisterDescriptor *reg_info,
                                    RegisterValue &reg_value) {
     RISCVEmulatorTester *tester = (RISCVEmulatorTester *)instruction;
-    uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
     if (reg == reg_ids::gpr_x0)
       reg_value.SetUInt(0, reg_info->byte_size);
     if (reg >= reg_ids::gpr_pc && reg <= reg_ids::gpr_x31)
@@ -59,10 +64,10 @@ struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
 
   static bool WriteRegisterCallback(EmulateInstruction *instruction,
                                     void *baton, const Context &context,
-                                    const RegisterInfo *reg_info,
+                                    const RegisterDescriptor *reg_info,
                                     const RegisterValue &reg_value) {
     RISCVEmulatorTester *tester = (RISCVEmulatorTester *)instruction;
-    uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
     if (reg >= reg_ids::gpr_pc && reg <= reg_ids::gpr_x31)
       tester->gpr.gpr[reg] = reg_value.GetAsUInt64();
     if (reg >= reg_ids::fpr_f0 && reg <= reg_ids::fpr_f31)
@@ -815,7 +820,7 @@ TEST_F(RISCVEmulatorTester, TestGetRegisterInfoRV64) {
   auto reg_info = this->GetRegisterInfo(eRegisterKindLLDB, reg_ids::gpr_x1);
   ASSERT_TRUE(reg_info.has_value());
   ASSERT_EQ(reg_info->byte_size, 8u);
-  ASSERT_STREQ(reg_info->name, "ra");
+  ASSERT_STREQ(reg_info->name.c_str(), "ra");
 }
 
 TEST_F(RISCVEmulatorTester32, TestGetRegisterInfoRV32) {
@@ -823,5 +828,5 @@ TEST_F(RISCVEmulatorTester32, TestGetRegisterInfoRV32) {
   auto reg_info = this->GetRegisterInfo(eRegisterKindLLDB, reg_ids::gpr_x1);
   ASSERT_TRUE(reg_info.has_value());
   ASSERT_EQ(reg_info->byte_size, 4u);
-  ASSERT_STREQ(reg_info->name, "ra");
+  ASSERT_STREQ(reg_info->name.c_str(), "ra");
 }

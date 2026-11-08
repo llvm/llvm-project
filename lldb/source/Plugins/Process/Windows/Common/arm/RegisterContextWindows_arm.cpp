@@ -9,10 +9,10 @@
 #if defined(__arm__) || defined(_M_ARM)
 
 #include "lldb/Host/windows/HostThreadWindows.h"
-#include "lldb/Register/Arch/lldb-arm-ehframe-register-enums.h"
 
 #include "lldb/Register/Arch/lldb-arm-register-enums.h"
 #include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
+#include "lldb/Register/Common/RegisterInfo_arm.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
@@ -28,32 +28,13 @@
 #include "ProcessWindowsLog.h"
 #include "RegisterContextWindows_arm.h"
 #include "TargetThreadWindows.h"
+#include "lldb/Register/RegisterDescription.h"
 
 #include "llvm/ADT/STLExtras.h"
 
 namespace reg_ids = lldb_private::registers::arm::id;
 using namespace lldb;
 using namespace lldb_private;
-
-#define GPR_OFFSET(idx) 0
-#define FPU_OFFSET(idx) 0
-#define FPSCR_OFFSET 0
-#define TLS_OFFSET 0
-#define EXC_OFFSET(reg) 0
-#define DBG_OFFSET_NAME(reg) 0
-
-#define DEFINE_DBG(reg, i)                                                     \
-  #reg, nullptr, 0, DBG_OFFSET_NAME(reg[i]), eEncodingUint, eFormatHex,        \
-      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
-       LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},                              \
-      nullptr, nullptr, nullptr
-
-// Include RegisterInfos_arm to declare our g_register_infos_arm structure.
-#define DECLARE_REGISTER_INFOS_ARM_STRUCT
-#include "Register/Arch/RegisterInfos_arm.h"
-#undef DECLARE_REGISTER_INFOS_ARM_STRUCT
-
-static size_t k_num_register_infos = std::size(g_register_infos_arm);
 
 // Array of lldb register numbers used to define the set of all General Purpose
 // Registers
@@ -92,48 +73,49 @@ uint32_t g_fpu_reg_indices[] = {
     reg_ids::fpu_fpscr,
 };
 
-RegisterSet g_register_sets[] = {
-    {"General Purpose Registers", "gpr", std::size(g_gpr_reg_indices),
-     g_gpr_reg_indices},
-    {"Floating Point Registers", "fpu", std::size(g_fpu_reg_indices),
-     g_fpu_reg_indices},
-};
+RegisterGroup g_register_sets[] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_reg_indices,
+                             g_gpr_reg_indices + std::size(g_gpr_reg_indices))},
+    {"Floating Point Registers", "fpu",
+     std::vector<RegisterID>(
+         g_fpu_reg_indices, g_fpu_reg_indices + std::size(g_fpu_reg_indices))}};
 
 // Constructors and Destructors
+static std::shared_ptr<const RegisterDescription> RegisterMetadata() {
+  static const auto description = [] {
+    auto cpu = RegisterInfo_arm::CreateDescription();
+    return std::make_shared<RegisterDescription>(
+        llvm::cantFail(RegisterDescription::Create(
+            {cpu->GetRegisters().begin(), cpu->GetRegisters().end()},
+            {std::begin(g_register_sets), std::end(g_register_sets)},
+            {cpu->GetOwnedTypes().begin(), cpu->GetOwnedTypes().end()})));
+  }();
+  return description;
+}
+
 RegisterContextWindows_arm::RegisterContextWindows_arm(
     Thread &thread, uint32_t concrete_frame_idx)
-    : RegisterContextWindows(thread, concrete_frame_idx) {}
+    : RegisterContextWindows(thread, concrete_frame_idx) {
+  SetRegisterDescription(RegisterMetadata());
+}
 
 RegisterContextWindows_arm::~RegisterContextWindows_arm() = default;
 
-size_t RegisterContextWindows_arm::GetRegisterCount() {
-  return std::size(g_register_infos_arm);
-}
-
-const RegisterInfo *
-RegisterContextWindows_arm::GetRegisterInfoAtIndex(size_t reg) {
-  if (reg < k_num_register_infos)
-    return &g_register_infos_arm[reg];
-  return nullptr;
-}
-
-size_t RegisterContextWindows_arm::GetRegisterSetCount() {
-  return std::size(g_register_sets);
-}
-
-const RegisterSet *RegisterContextWindows_arm::GetRegisterSet(size_t reg_set) {
-  return &g_register_sets[reg_set];
-}
-
-bool RegisterContextWindows_arm::ReadRegister(const RegisterInfo *reg_info,
-                                              RegisterValue &reg_value) {
+llvm::Expected<RegisterValue>
+RegisterContextWindows_arm::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue reg_value;
   if (!CacheAllRegisterValues())
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   if (reg_info == nullptr)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
 
   switch (reg) {
   case reg_ids::gpr_r0:
@@ -286,21 +268,26 @@ bool RegisterContextWindows_arm::ReadRegister(const RegisterInfo *reg_info,
 
   default:
     reg_value.SetValueToInvalid();
-    return false;
+    return llvm::createStringError("register value is unavailable");
   }
-  return true;
+  return reg_value;
 }
 
-bool RegisterContextWindows_arm::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error
+RegisterContextWindows_arm::WriteRegister(RegisterID id,
                                                const RegisterValue &reg_value) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
   // Since we cannot only write a single register value to the inferior, we
   // need to make sure our cached copy of the register values are fresh.
   // Otherwise when writing EAX, for example, we may also overwrite some other
   // register with a stale value.
   if (!CacheAllRegisterValues())
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
 
   Log *log = GetLog(WindowsLog::Registers);
   switch (reg) {
@@ -452,11 +439,15 @@ bool RegisterContextWindows_arm::WriteRegister(const RegisterInfo *reg_info,
   default:
     LLDB_LOG(log, "Write value {0:x} to unknown register {1}",
              reg_value.GetAsUInt32(), reg);
-    return false;
+    return llvm::createStringError("register write is unavailable");
   }
 
   // Physically update the registers in the target process.
-  return ApplyAllRegisterValues();
+  {
+    if (!(ApplyAllRegisterValues()))
+      return llvm::createStringError("register write failed");
+    return llvm::Error::success();
+  }
 }
 
 #endif // defined(__arm__) || defined(_M_ARM)

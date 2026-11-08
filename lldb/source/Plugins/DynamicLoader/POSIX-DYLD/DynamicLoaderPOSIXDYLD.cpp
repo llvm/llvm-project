@@ -1045,13 +1045,15 @@ static void AddThreadLocalMemoryRegions(Process &process, ThreadSP &thread_sp,
   if (!reg_ctx)
     return;
 
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByNumber(
       lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_TP);
   if (!reg_info)
     return;
 
   lldb_private::RegisterValue thread_local_register_value;
-  bool success = reg_ctx->ReadRegister(reg_info, thread_local_register_value);
+  bool success = !llvm::errorToBool(
+      reg_ctx->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+          .moveInto(thread_local_register_value));
   if (!success)
     return;
 

@@ -16,8 +16,8 @@
 /// A memory thread with its own ID, optionally backed by a real thread.
 /// Most methods of this class dispatch to the real thread if it is not null.
 /// Notable exceptions are the methods calculating the StopInfo and
-/// ThreadRegisterContext of the thread, those may query the OS plugin that created
-/// the thread.
+/// ThreadRegisterContext of the thread, those may query the OS plugin that
+/// created the thread.
 class ThreadMemory : public lldb_private::Thread {
 public:
   ThreadMemory(lldb_private::Process &process, lldb::tid_t tid,

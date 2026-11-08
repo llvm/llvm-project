@@ -15,8 +15,8 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Opcode.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -225,40 +225,41 @@ public:
 
   public:
     enum InfoType GetInfoType() const { return info_type; }
-    union ContextInfo {
+    struct ContextInfo {
       struct RegisterPlusOffset {
-        RegisterInfo reg;      // base register
+        RegisterDescriptor reg; // base register
         int64_t signed_offset; // signed offset added to base register
       } RegisterPlusOffset;
 
       struct RegisterPlusIndirectOffset {
-        RegisterInfo base_reg;   // base register number
-        RegisterInfo offset_reg; // offset register kind
+        RegisterDescriptor base_reg;   // base register number
+        RegisterDescriptor offset_reg; // offset register kind
       } RegisterPlusIndirectOffset;
 
       struct RegisterToRegisterPlusOffset {
-        RegisterInfo data_reg; // source/target register for data
-        RegisterInfo base_reg; // base register for address calculation
+        RegisterDescriptor data_reg; // source/target register for data
+        RegisterDescriptor base_reg; // base register for address calculation
         int64_t offset;        // offset for address calculation
       } RegisterToRegisterPlusOffset;
 
       struct RegisterToRegisterPlusIndirectOffset {
-        RegisterInfo base_reg;   // base register for address calculation
-        RegisterInfo offset_reg; // offset register for address calculation
-        RegisterInfo data_reg;   // source/target register for data
+        RegisterDescriptor base_reg; // base register for address calculation
+        RegisterDescriptor
+            offset_reg;              // offset register for address calculation
+        RegisterDescriptor data_reg; // source/target register for data
       } RegisterToRegisterPlusIndirectOffset;
 
       struct RegisterRegisterOperands {
-        RegisterInfo
+        RegisterDescriptor
             operand1; // register containing first operand for binary op
-        RegisterInfo
+        RegisterDescriptor
             operand2; // register containing second operand for binary op
       } RegisterRegisterOperands;
 
       int64_t signed_offset; // signed offset by which to adjust self (for
                              // registers only)
 
-      RegisterInfo reg; // plain register
+      RegisterDescriptor reg; // plain register
 
       uint64_t unsigned_immediate; // unsigned immediate value
       int64_t signed_immediate;    // signed immediate value
@@ -277,26 +278,25 @@ public:
 
       uint32_t isa;
     } info;
-    static_assert(std::is_trivial<ContextInfo>::value,
-                  "ContextInfo must be trivial.");
 
     Context() = default;
 
-    void SetRegisterPlusOffset(RegisterInfo base_reg, int64_t signed_offset) {
+    void SetRegisterPlusOffset(RegisterDescriptor base_reg,
+                               int64_t signed_offset) {
       info_type = eInfoTypeRegisterPlusOffset;
       info.RegisterPlusOffset.reg = base_reg;
       info.RegisterPlusOffset.signed_offset = signed_offset;
     }
 
-    void SetRegisterPlusIndirectOffset(RegisterInfo base_reg,
-                                       RegisterInfo offset_reg) {
+    void SetRegisterPlusIndirectOffset(RegisterDescriptor base_reg,
+                                       RegisterDescriptor offset_reg) {
       info_type = eInfoTypeRegisterPlusIndirectOffset;
       info.RegisterPlusIndirectOffset.base_reg = base_reg;
       info.RegisterPlusIndirectOffset.offset_reg = offset_reg;
     }
 
-    void SetRegisterToRegisterPlusOffset(RegisterInfo data_reg,
-                                         RegisterInfo base_reg,
+    void SetRegisterToRegisterPlusOffset(RegisterDescriptor data_reg,
+                                         RegisterDescriptor base_reg,
                                          int64_t offset) {
       info_type = eInfoTypeRegisterToRegisterPlusOffset;
       info.RegisterToRegisterPlusOffset.data_reg = data_reg;
@@ -304,17 +304,17 @@ public:
       info.RegisterToRegisterPlusOffset.offset = offset;
     }
 
-    void SetRegisterToRegisterPlusIndirectOffset(RegisterInfo base_reg,
-                                                 RegisterInfo offset_reg,
-                                                 RegisterInfo data_reg) {
+    void SetRegisterToRegisterPlusIndirectOffset(RegisterDescriptor base_reg,
+                                                 RegisterDescriptor offset_reg,
+                                                 RegisterDescriptor data_reg) {
       info_type = eInfoTypeRegisterToRegisterPlusIndirectOffset;
       info.RegisterToRegisterPlusIndirectOffset.base_reg = base_reg;
       info.RegisterToRegisterPlusIndirectOffset.offset_reg = offset_reg;
       info.RegisterToRegisterPlusIndirectOffset.data_reg = data_reg;
     }
 
-    void SetRegisterRegisterOperands(RegisterInfo op1_reg,
-                                     RegisterInfo op2_reg) {
+    void SetRegisterRegisterOperands(RegisterDescriptor op1_reg,
+                                     RegisterDescriptor op2_reg) {
       info_type = eInfoTypeRegisterRegisterOperands;
       info.RegisterRegisterOperands.operand1 = op1_reg;
       info.RegisterRegisterOperands.operand2 = op2_reg;
@@ -325,7 +325,7 @@ public:
       info.signed_offset = signed_offset;
     }
 
-    void SetRegister(RegisterInfo reg) {
+    void SetRegister(RegisterDescriptor reg) {
       info_type = eInfoTypeRegister;
       info.reg = reg;
     }
@@ -378,12 +378,12 @@ public:
 
   typedef bool (*ReadRegisterCallback)(EmulateInstruction *instruction,
                                        void *baton,
-                                       const RegisterInfo *reg_info,
+                                       const RegisterDescriptor *reg_info,
                                        RegisterValue &reg_value);
 
   typedef bool (*WriteRegisterCallback)(EmulateInstruction *instruction,
                                         void *baton, const Context &context,
-                                        const RegisterInfo *reg_info,
+                                        const RegisterDescriptor *reg_info,
                                         const RegisterValue &reg_value);
 
   // Type to represent the condition of an instruction. The UINT32_MAX value is
@@ -415,7 +415,7 @@ public:
   virtual bool TestEmulation(Stream &out_stream, ArchSpec &arch,
                              OptionValueDictionary *test_data) = 0;
 
-  virtual std::optional<RegisterInfo>
+  virtual std::optional<RegisterDescriptor>
   GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num) = 0;
 
   // Optional overrides
@@ -427,17 +427,18 @@ public:
   static const char *TranslateRegister(lldb::RegisterKind reg_kind,
                                        uint32_t reg_num, std::string &reg_name);
 
-  // RegisterInfo variants
-  std::optional<RegisterValue> ReadRegister(const RegisterInfo &reg_info);
+  // RegisterDescriptor variants
+  std::optional<RegisterValue> ReadRegister(const RegisterDescriptor &reg_info);
 
-  uint64_t ReadRegisterUnsigned(const RegisterInfo &reg_info,
+  uint64_t ReadRegisterUnsigned(const RegisterDescriptor &reg_info,
                                 uint64_t fail_value, bool *success_ptr);
 
-  bool WriteRegister(const Context &context, const RegisterInfo &ref_info,
+  bool WriteRegister(const Context &context, const RegisterDescriptor &ref_info,
                      const RegisterValue &reg_value);
 
   bool WriteRegisterUnsigned(const Context &context,
-                             const RegisterInfo &reg_info, uint64_t reg_value);
+                             const RegisterDescriptor &reg_info,
+                             uint64_t reg_value);
 
   // Register kind and number variants
   bool ReadRegister(lldb::RegisterKind reg_kind, uint32_t reg_num,
@@ -485,12 +486,12 @@ public:
                                  const void *dst, size_t length);
 
   static bool ReadRegisterFrame(EmulateInstruction *instruction, void *baton,
-                                const RegisterInfo *reg_info,
+                                const RegisterDescriptor *reg_info,
                                 RegisterValue &reg_value);
 
   static bool WriteRegisterFrame(EmulateInstruction *instruction, void *baton,
                                  const Context &context,
-                                 const RegisterInfo *reg_info,
+                                 const RegisterDescriptor *reg_info,
                                  const RegisterValue &reg_value);
 
   static size_t ReadMemoryDefault(EmulateInstruction *instruction, void *baton,
@@ -502,12 +503,12 @@ public:
                                    const void *dst, size_t length);
 
   static bool ReadRegisterDefault(EmulateInstruction *instruction, void *baton,
-                                  const RegisterInfo *reg_info,
+                                  const RegisterDescriptor *reg_info,
                                   RegisterValue &reg_value);
 
   static bool WriteRegisterDefault(EmulateInstruction *instruction, void *baton,
                                    const Context &context,
-                                   const RegisterInfo *reg_info,
+                                   const RegisterDescriptor *reg_info,
                                    const RegisterValue &reg_value);
 
   void SetBaton(void *baton);
@@ -525,12 +526,12 @@ public:
 
   void SetWriteRegCallback(WriteRegisterCallback write_reg_callback);
 
-  static bool GetBestRegisterKindAndNumber(const RegisterInfo *reg_info,
+  static bool GetBestRegisterKindAndNumber(const RegisterDescriptor *reg_info,
                                            lldb::RegisterKind &reg_kind,
                                            uint32_t &reg_num);
 
   static uint32_t GetInternalRegisterNumber(ThreadRegisterContext *reg_ctx,
-                                            const RegisterInfo &reg_info);
+                                            const RegisterDescriptor &reg_info);
 
   static std::unique_ptr<SingleStepBreakpointLocationsPredictor>
   CreateBreakpointLocationPredictor(

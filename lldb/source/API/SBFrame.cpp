@@ -597,7 +597,8 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
 
   case eValueTypeRegister: { // stack frame register value
     if (ThreadRegisterContextSP reg_ctx = frame->GetRegisterContext()) {
-      if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name)) {
+      if (const RegisterDescriptor *reg_info =
+              reg_ctx->GetRegisterByName(name)) {
         value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_info);
         sb_value.SetSP(value_sp);
       }
@@ -607,9 +608,9 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
   case eValueTypeRegisterSet: { // A collection of stack frame register
                                 // values
     if (ThreadRegisterContextSP reg_ctx = frame->GetRegisterContext()) {
-      const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
+      const uint32_t num_sets = reg_ctx->GetRegisterGroupCount();
       for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx) {
-        const RegisterSet *reg_set = reg_ctx->GetRegisterSet(set_idx);
+        const RegisterGroup *reg_set = reg_ctx->GetRegisterGroup(set_idx);
         if (reg_set &&
             (llvm::StringRef(reg_set->name).equals_insensitive(name) ||
              llvm::StringRef(reg_set->short_name).equals_insensitive(name))) {
@@ -936,7 +937,7 @@ SBValueList SBFrame::GetRegisters() {
     return SBValueList();
 
   SBValueList value_list;
-  const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
+  const uint32_t num_sets = reg_ctx->GetRegisterGroupCount();
   for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx)
     value_list.Append(ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx));
 
@@ -962,7 +963,7 @@ SBValue SBFrame::FindRegister(const char *name) {
   if (!reg_ctx)
     return SBValue();
 
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(name);
   if (!reg_info)
     return SBValue();
 

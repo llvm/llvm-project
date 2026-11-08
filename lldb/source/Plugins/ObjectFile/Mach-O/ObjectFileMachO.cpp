@@ -22,6 +22,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -39,7 +40,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
-#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -171,12 +171,15 @@ static bool ReadMachOCommand(const DataExtractor &data, lldb::offset_t &offset,
 static void PrintRegisterValue(ThreadRegisterContext *reg_ctx, const char *name,
                                const char *alt_name, size_t reg_byte_size,
                                Stream &data) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(name);
   if (reg_info == nullptr)
-    reg_info = reg_ctx->GetRegisterInfoByName(alt_name);
+    reg_info = reg_ctx->GetRegisterByName(alt_name);
   if (reg_info) {
     lldb_private::RegisterValue reg_value;
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    if (!llvm::errorToBool(
+            reg_ctx
+                ->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value))) {
       if (reg_info->byte_size >= reg_byte_size)
         data.Write(reg_value.GetBytes(), reg_byte_size);
       else {
@@ -4923,12 +4926,11 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
   //
   // So we just keep reading the various register flavors till we find the GPR
   // one, then read the PC out of there.
-  // FIXME: We will need to have a "ThreadRegisterContext data provider" class at some
-  // point that can get all the registers
-  // out of data in this form & attach them to a given thread.  That should
-  // underlie the MacOS X User process plugin, and we'll also need it for the
-  // MacOS X Core File process plugin.  When we have that we can also use it
-  // here.
+  // FIXME: We will need to have a "ThreadRegisterContext data provider" class
+  // at some point that can get all the registers out of data in this form &
+  // attach them to a given thread.  That should underlie the MacOS X User
+  // process plugin, and we'll also need it for the MacOS X Core File process
+  // plugin.  When we have that we can also use it here.
   //
   // For now we hard-code the offsets and flavors we need:
   //

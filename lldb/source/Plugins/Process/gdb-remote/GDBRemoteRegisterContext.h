@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -31,26 +31,18 @@ class ProcessGDBRemote;
 class GDBRemoteRegisterContext : public ThreadRegisterContext {
 public:
   GDBRemoteRegisterContext(ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
-                           lldb::DynamicRegisterInfoSP reg_info_sp,
+                           std::shared_ptr<const RegisterLayout> layout_sp,
                            bool read_all_at_once, bool write_all_at_once);
 
   ~GDBRemoteRegisterContext() override;
 
   void InvalidateAllRegisters() override { SetAllRegistersUnfetched(); }
 
-  size_t GetRegisterCount() override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;
-
-  size_t GetRegisterSetCount() override;
-
-  const RegisterSet *GetRegisterSet(size_t reg_set) override;
-
-  bool ReadRegister(const RegisterInfo *reg_info,
-                    RegisterValue &value) override;
-
-  bool WriteRegister(const RegisterInfo *reg_info,
-                     const RegisterValue &value) override;
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
+                            const lldb_private::RegisterValue &value) override;
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
@@ -58,27 +50,20 @@ public:
 
   bool ReadAllRegisterValues(RegisterCheckpoint &reg_checkpoint) override;
 
-  bool
-  WriteAllRegisterValues(const RegisterCheckpoint &reg_checkpoint) override;
-
-  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                               uint32_t num) override;
+  bool WriteAllRegisterValues(const RegisterCheckpoint &reg_checkpoint) override;
 
   bool RegisterWriteCausesReconfigure(const llvm::StringRef name) override;
 
-  bool ReconfigureRegisterInfo() override;
+  bool ReconfigureRegisterLayout() override;
 
 protected:
   friend class ThreadGDBRemote;
 
-  bool ReadRegisterBytes(const RegisterInfo *reg_info);
+  bool ReadRegisterBytes(const RegisterDescriptor *reg_info);
 
-  bool WriteRegisterBytes(const RegisterInfo *reg_info, DataExtractor &data,
-                          uint32_t data_offset);
+  bool PrivateSetRegisterValue(RegisterID reg, llvm::ArrayRef<uint8_t> data);
 
-  bool PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data);
-
-  bool PrivateSetRegisterValue(uint32_t reg, uint64_t val);
+  bool PrivateSetRegisterValue(RegisterID reg, uint64_t val);
 
   void SetAllRegistersValid() { SetAllRegistersValidState(eLazyBoolYes); }
   void SetAllRegistersUnfetched() {
@@ -95,13 +80,13 @@ protected:
     return GetRegisterValidState(reg) == eLazyBoolCalculate;
   }
 
-  void SetRegisterIsValid(const RegisterInfo *reg_info) {
+  void SetRegisterIsValid(const RegisterDescriptor *reg_info) {
     SetRegisterIsValidState(reg_info, eLazyBoolYes);
   }
-  void SetRegisterIsUnavailable(const RegisterInfo *reg_info) {
+  void SetRegisterIsUnavailable(const RegisterDescriptor *reg_info) {
     SetRegisterIsValidState(reg_info, eLazyBoolNo);
   }
-  void SetRegisterIsUnfetched(const RegisterInfo *reg_info) {
+  void SetRegisterIsUnfetched(const RegisterDescriptor *reg_info) {
     SetRegisterIsValidState(reg_info, eLazyBoolCalculate);
   }
   void SetRegisterIsValid(uint32_t reg) {
@@ -114,7 +99,7 @@ protected:
     SetRegisterIsValidState(reg, eLazyBoolCalculate);
   }
 
-  lldb::DynamicRegisterInfoSP m_reg_info_sp;
+  std::shared_ptr<const RegisterLayout> m_register_layout_sp;
 
   /// eLazyBoolYes - we have the bytes for this register locally.
   /// eLazyBoolCalculate - we have not yet tried to get the bytes.
@@ -129,14 +114,15 @@ protected:
 private:
   LazyBool GetRegisterValidState(uint32_t reg) const;
   void SetAllRegistersValidState(LazyBool valid);
-  void SetRegisterIsValidState(const RegisterInfo *reg_info, LazyBool valid);
+  void SetRegisterIsValidState(const RegisterDescriptor *reg_info,
+                               LazyBool valid);
   void SetRegisterIsValidState(uint32_t reg, LazyBool valid);
 
   // Helper function for ReadRegisterBytes().
-  bool GetPrimordialRegister(const RegisterInfo *reg_info,
+  bool GetPrimordialRegister(const RegisterDescriptor *reg_info,
                              GDBRemoteCommunicationClient &gdb_comm);
-  // Helper function for WriteRegisterBytes().
-  bool SetPrimordialRegister(const RegisterInfo *reg_info,
+  // Send one primary value from the real packet image.
+  bool SetPrimordialRegister(const RegisterDescriptor *reg_info,
                              GDBRemoteCommunicationClient &gdb_comm);
 
   GDBRemoteRegisterContext(const GDBRemoteRegisterContext &) = delete;

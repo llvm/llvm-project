@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextDarwin_arm.h"
-#include "lldb/Register/Arch/lldb-arm-ehframe-register-enums.h"
 #include "RegisterContextDarwinConstants.h"
 
 #include "lldb/Utility/DataBufferHeap.h"
@@ -15,6 +14,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Register/RegisterValue.h"
+#include "lldb/Register/Common/RegisterInfo_arm.h"
 #include "lldb/Utility/Scalar.h"
 #include "llvm/Support/Compiler.h"
 
@@ -22,13 +22,9 @@
 
 #include <memory>
 
-#include "lldb/Register/Arch/lldb-arm-dwarf-register-enums.h"
 
 #include "llvm/ADT/STLExtras.h"
 
-
-namespace dwarf_regs = lldb_private::registers::arm::dwarf;
-namespace ehframe_regs = lldb_private::registers::arm::ehframe;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -163,727 +159,10 @@ enum {
   k_num_registers
 };
 
-#define GPR_OFFSET(idx) ((idx)*4)
-#define FPU_OFFSET(idx) ((idx)*4 + sizeof(RegisterContextDarwin_arm::GPR))
-#define EXC_OFFSET(idx)                                                        \
-  ((idx)*4 + sizeof(RegisterContextDarwin_arm::GPR) +                          \
-   sizeof(RegisterContextDarwin_arm::FPU))
-#define DBG_OFFSET(reg)                                                        \
-  ((LLVM_EXTENSION offsetof(RegisterContextDarwin_arm::DBG, reg) +             \
-    sizeof(RegisterContextDarwin_arm::GPR) +                                   \
-    sizeof(RegisterContextDarwin_arm::FPU) +                                   \
-    sizeof(RegisterContextDarwin_arm::EXC)))
-
-#define DEFINE_DBG(reg, i)                                                     \
-  #reg, NULL, sizeof(((RegisterContextDarwin_arm::DBG *) NULL)->reg[i]),       \
-                      DBG_OFFSET(reg[i]), eEncodingUint, eFormatHex,           \
-                                 {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
-                                  LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
-                                  LLDB_INVALID_REGNUM },                       \
-                                  nullptr, nullptr, nullptr,
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterContextDarwin_arm::GPR) +                                    \
    sizeof(RegisterContextDarwin_arm::FPU) +                                    \
    sizeof(RegisterContextDarwin_arm::EXC))
-
-static RegisterInfo g_register_infos[] = {
-    {"r0",
-     nullptr,
-     4,
-     GPR_OFFSET(0),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r0, dwarf_regs::r0, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r0},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r1",
-     nullptr,
-     4,
-     GPR_OFFSET(1),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r1, dwarf_regs::r1, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r1},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r2",
-     nullptr,
-     4,
-     GPR_OFFSET(2),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r2, dwarf_regs::r2, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r2},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r3",
-     nullptr,
-     4,
-     GPR_OFFSET(3),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r3, dwarf_regs::r3, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r3},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r4",
-     nullptr,
-     4,
-     GPR_OFFSET(4),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r4, dwarf_regs::r4, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r4},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r5",
-     nullptr,
-     4,
-     GPR_OFFSET(5),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r5, dwarf_regs::r5, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r5},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r6",
-     nullptr,
-     4,
-     GPR_OFFSET(6),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r6, dwarf_regs::r6, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r6},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r7",
-     nullptr,
-     4,
-     GPR_OFFSET(7),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r7, dwarf_regs::r7, LLDB_REGNUM_GENERIC_FP, LLDB_INVALID_REGNUM,
-      gpr_r7},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r8",
-     nullptr,
-     4,
-     GPR_OFFSET(8),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r8, dwarf_regs::r8, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r8},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r9",
-     nullptr,
-     4,
-     GPR_OFFSET(9),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r9, dwarf_regs::r9, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, gpr_r9},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r10",
-     nullptr,
-     4,
-     GPR_OFFSET(10),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r10, dwarf_regs::r10, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      gpr_r10},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r11",
-     nullptr,
-     4,
-     GPR_OFFSET(11),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r11, dwarf_regs::r11, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      gpr_r11},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r12",
-     nullptr,
-     4,
-     GPR_OFFSET(12),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::r12, dwarf_regs::r12, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      gpr_r12},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"sp",
-     "r13",
-     4,
-     GPR_OFFSET(13),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::sp, dwarf_regs::sp, LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM,
-      gpr_sp},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"lr",
-     "r14",
-     4,
-     GPR_OFFSET(14),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::lr, dwarf_regs::lr, LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM,
-      gpr_lr},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"pc",
-     "r15",
-     4,
-     GPR_OFFSET(15),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::pc, dwarf_regs::pc, LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM,
-      gpr_pc},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"cpsr",
-     "psr",
-     4,
-     GPR_OFFSET(16),
-     eEncodingUint,
-     eFormatHex,
-     {ehframe_regs::cpsr, dwarf_regs::cpsr, LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM,
-      gpr_cpsr},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-
-    {"s0",
-     nullptr,
-     4,
-     FPU_OFFSET(0),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s0, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s0},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s1",
-     nullptr,
-     4,
-     FPU_OFFSET(1),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s1, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s1},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s2",
-     nullptr,
-     4,
-     FPU_OFFSET(2),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s2, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s2},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s3",
-     nullptr,
-     4,
-     FPU_OFFSET(3),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s3, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s3},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s4",
-     nullptr,
-     4,
-     FPU_OFFSET(4),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s4, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s4},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s5",
-     nullptr,
-     4,
-     FPU_OFFSET(5),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s5, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s5},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s6",
-     nullptr,
-     4,
-     FPU_OFFSET(6),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s6, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s6},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s7",
-     nullptr,
-     4,
-     FPU_OFFSET(7),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s7, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s7},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s8",
-     nullptr,
-     4,
-     FPU_OFFSET(8),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s8, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s8},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s9",
-     nullptr,
-     4,
-     FPU_OFFSET(9),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s9, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s9},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s10",
-     nullptr,
-     4,
-     FPU_OFFSET(10),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s10, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s10},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s11",
-     nullptr,
-     4,
-     FPU_OFFSET(11),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s11, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s11},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s12",
-     nullptr,
-     4,
-     FPU_OFFSET(12),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s12, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s12},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s13",
-     nullptr,
-     4,
-     FPU_OFFSET(13),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s13, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s13},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s14",
-     nullptr,
-     4,
-     FPU_OFFSET(14),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s14, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s14},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s15",
-     nullptr,
-     4,
-     FPU_OFFSET(15),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s15, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s15},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s16",
-     nullptr,
-     4,
-     FPU_OFFSET(16),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s16, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s16},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s17",
-     nullptr,
-     4,
-     FPU_OFFSET(17),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s17, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s17},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s18",
-     nullptr,
-     4,
-     FPU_OFFSET(18),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s18, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s18},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s19",
-     nullptr,
-     4,
-     FPU_OFFSET(19),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s19, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s19},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s20",
-     nullptr,
-     4,
-     FPU_OFFSET(20),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s20, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s20},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s21",
-     nullptr,
-     4,
-     FPU_OFFSET(21),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s21, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s21},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s22",
-     nullptr,
-     4,
-     FPU_OFFSET(22),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s22, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s22},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s23",
-     nullptr,
-     4,
-     FPU_OFFSET(23),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s23, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s23},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s24",
-     nullptr,
-     4,
-     FPU_OFFSET(24),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s24, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s24},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s25",
-     nullptr,
-     4,
-     FPU_OFFSET(25),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s25, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s25},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s26",
-     nullptr,
-     4,
-     FPU_OFFSET(26),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s26, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s26},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s27",
-     nullptr,
-     4,
-     FPU_OFFSET(27),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s27, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s27},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s28",
-     nullptr,
-     4,
-     FPU_OFFSET(28),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s28, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s28},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s29",
-     nullptr,
-     4,
-     FPU_OFFSET(29),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s29, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s29},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s30",
-     nullptr,
-     4,
-     FPU_OFFSET(30),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s30, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s30},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"s31",
-     nullptr,
-     4,
-     FPU_OFFSET(31),
-     eEncodingIEEE754,
-     eFormatFloat,
-     {LLDB_INVALID_REGNUM, dwarf_regs::s31, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      fpu_s31},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"fpscr",
-     nullptr,
-     4,
-     FPU_OFFSET(32),
-     eEncodingUint,
-     eFormatHex,
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_fpscr},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-
-    {"exception",
-     nullptr,
-     4,
-     EXC_OFFSET(0),
-     eEncodingUint,
-     eFormatHex,
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_exception},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"fsr",
-     nullptr,
-     4,
-     EXC_OFFSET(1),
-     eEncodingUint,
-     eFormatHex,
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_fsr},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"far",
-     nullptr,
-     4,
-     EXC_OFFSET(2),
-     eEncodingUint,
-     eFormatHex,
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_far},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-
-    {DEFINE_DBG(bvr, 0)},
-    {DEFINE_DBG(bvr, 1)},
-    {DEFINE_DBG(bvr, 2)},
-    {DEFINE_DBG(bvr, 3)},
-    {DEFINE_DBG(bvr, 4)},
-    {DEFINE_DBG(bvr, 5)},
-    {DEFINE_DBG(bvr, 6)},
-    {DEFINE_DBG(bvr, 7)},
-    {DEFINE_DBG(bvr, 8)},
-    {DEFINE_DBG(bvr, 9)},
-    {DEFINE_DBG(bvr, 10)},
-    {DEFINE_DBG(bvr, 11)},
-    {DEFINE_DBG(bvr, 12)},
-    {DEFINE_DBG(bvr, 13)},
-    {DEFINE_DBG(bvr, 14)},
-    {DEFINE_DBG(bvr, 15)},
-
-    {DEFINE_DBG(bcr, 0)},
-    {DEFINE_DBG(bcr, 1)},
-    {DEFINE_DBG(bcr, 2)},
-    {DEFINE_DBG(bcr, 3)},
-    {DEFINE_DBG(bcr, 4)},
-    {DEFINE_DBG(bcr, 5)},
-    {DEFINE_DBG(bcr, 6)},
-    {DEFINE_DBG(bcr, 7)},
-    {DEFINE_DBG(bcr, 8)},
-    {DEFINE_DBG(bcr, 9)},
-    {DEFINE_DBG(bcr, 10)},
-    {DEFINE_DBG(bcr, 11)},
-    {DEFINE_DBG(bcr, 12)},
-    {DEFINE_DBG(bcr, 13)},
-    {DEFINE_DBG(bcr, 14)},
-    {DEFINE_DBG(bcr, 15)},
-
-    {DEFINE_DBG(wvr, 0)},
-    {DEFINE_DBG(wvr, 1)},
-    {DEFINE_DBG(wvr, 2)},
-    {DEFINE_DBG(wvr, 3)},
-    {DEFINE_DBG(wvr, 4)},
-    {DEFINE_DBG(wvr, 5)},
-    {DEFINE_DBG(wvr, 6)},
-    {DEFINE_DBG(wvr, 7)},
-    {DEFINE_DBG(wvr, 8)},
-    {DEFINE_DBG(wvr, 9)},
-    {DEFINE_DBG(wvr, 10)},
-    {DEFINE_DBG(wvr, 11)},
-    {DEFINE_DBG(wvr, 12)},
-    {DEFINE_DBG(wvr, 13)},
-    {DEFINE_DBG(wvr, 14)},
-    {DEFINE_DBG(wvr, 15)},
-
-    {DEFINE_DBG(wcr, 0)},
-    {DEFINE_DBG(wcr, 1)},
-    {DEFINE_DBG(wcr, 2)},
-    {DEFINE_DBG(wcr, 3)},
-    {DEFINE_DBG(wcr, 4)},
-    {DEFINE_DBG(wcr, 5)},
-    {DEFINE_DBG(wcr, 6)},
-    {DEFINE_DBG(wcr, 7)},
-    {DEFINE_DBG(wcr, 8)},
-    {DEFINE_DBG(wcr, 9)},
-    {DEFINE_DBG(wcr, 10)},
-    {DEFINE_DBG(wcr, 11)},
-    {DEFINE_DBG(wcr, 12)},
-    {DEFINE_DBG(wcr, 13)},
-    {DEFINE_DBG(wcr, 14)},
-    {DEFINE_DBG(wcr, 15)}};
 
 // General purpose registers
 static uint32_t g_gpr_regnums[] = {
@@ -905,11 +184,13 @@ static uint32_t g_exc_regnums[] = {
     exc_exception, exc_fsr, exc_far,
 };
 
-static size_t k_num_register_infos = std::size(g_register_infos);
+static std::shared_ptr<const RegisterDescription> CreateContextDescription();
 
 RegisterContextDarwin_arm::RegisterContextDarwin_arm(
     Thread &thread, uint32_t concrete_frame_idx)
     : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc() {
+  SetRegisterDescription(CreateContextDescription());
+
   uint32_t i;
   for (i = 0; i < kNumErrors; i++) {
     gpr_errs[i] = -1;
@@ -924,27 +205,6 @@ void RegisterContextDarwin_arm::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();
 }
 
-size_t RegisterContextDarwin_arm::GetRegisterCount() {
-  assert(k_num_register_infos == k_num_registers);
-  return k_num_registers;
-}
-
-const RegisterInfo *
-RegisterContextDarwin_arm::GetRegisterInfoAtIndex(size_t reg) {
-  assert(k_num_register_infos == k_num_registers);
-  if (reg < k_num_registers)
-    return &g_register_infos[reg];
-  return nullptr;
-}
-
-size_t RegisterContextDarwin_arm::GetRegisterInfosCount() {
-  return k_num_register_infos;
-}
-
-const RegisterInfo *RegisterContextDarwin_arm::GetRegisterInfos() {
-  return g_register_infos;
-}
-
 // Number of registers in each register set
 const size_t k_num_gpr_registers = std::size(g_gpr_regnums);
 const size_t k_num_fpu_registers = std::size(g_fpu_regnums);
@@ -953,23 +213,80 @@ const size_t k_num_exc_registers = std::size(g_exc_regnums);
 // Register set definitions. The first definitions at register set index of
 // zero is for all registers, followed by other registers sets. The register
 // information for the all register set need not be filled in.
-static const RegisterSet g_reg_sets[] = {
-    {
-        "General Purpose Registers", "gpr", k_num_gpr_registers, g_gpr_regnums,
-    },
-    {"Floating Point Registers", "fpu", k_num_fpu_registers, g_fpu_regnums},
-    {"Exception State Registers", "exc", k_num_exc_registers, g_exc_regnums}};
+static const RegisterGroup g_reg_sets[] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums,
+                             g_gpr_regnums + k_num_gpr_registers)},
+    {"Floating Point Registers", "fpu",
+     std::vector<RegisterID>(g_fpu_regnums,
+                             g_fpu_regnums + k_num_fpu_registers)},
+    {"Exception State Registers", "exc",
+     std::vector<RegisterID>(g_exc_regnums,
+                             g_exc_regnums + k_num_exc_registers)}};
 
-const size_t k_num_regsets = std::size(g_reg_sets);
-
-size_t RegisterContextDarwin_arm::GetRegisterSetCount() {
-  return k_num_regsets;
-}
-
-const RegisterSet *RegisterContextDarwin_arm::GetRegisterSet(size_t reg_set) {
-  if (reg_set < k_num_regsets)
-    return &g_reg_sets[reg_set];
-  return nullptr;
+static std::shared_ptr<const RegisterDescription> CreateContextDescription() {
+  static const auto description = [] {
+    auto cpu = RegisterInfo_arm::CreateDescription();
+    std::vector<RegisterDescriptor> registers;
+    // Mach selectors are an explicit projection of the CPU catalog. These
+    // contexts expose complete independent values, without the catalog's
+    // unexposed subregister aliases.
+    auto append = [&](uint32_t selector, const RegisterDescriptor &definition)
+        -> RegisterDescriptor & {
+      auto reg = definition;
+      reg.id = selector;
+      reg.numbers[eRegisterKindLLDB] = selector;
+      reg.numbers[eRegisterKindProcessPlugin] = LLDB_INVALID_REGNUM;
+      reg.value_registers.clear();
+      reg.invalidate_registers.clear();
+      reg.value_byte_offset = 0;
+      reg.zero_extend_parent = LLDB_INVALID_REGNUM;
+      registers.push_back(std::move(reg));
+      return registers.back();
+    };
+    for (uint32_t i = 0; i <= gpr_cpsr; ++i) {
+      auto &reg = append(i, *cpu->GetRegisterAtIndex(i));
+      // Mach uses r7 as its frame pointer and does not expose argument roles.
+      reg.numbers[eRegisterKindGeneric] =
+          i == gpr_r7 ? LLDB_REGNUM_GENERIC_FP
+          : i == gpr_sp ? LLDB_REGNUM_GENERIC_SP
+          : i == gpr_lr ? LLDB_REGNUM_GENERIC_RA
+          : i == gpr_pc ? LLDB_REGNUM_GENERIC_PC
+          : i == gpr_cpsr ? LLDB_REGNUM_GENERIC_FLAGS
+                          : LLDB_INVALID_REGNUM;
+    }
+    for (uint32_t i = 0; i < 32; ++i)
+      append(fpu_s0 + i, *cpu->Find("s" + std::to_string(i)));
+    append(fpu_fpscr, *cpu->Find("fpscr"));
+    for (auto entry : {std::make_pair(exc_exception, "exception"),
+                       std::make_pair(exc_fsr, "fsr"),
+                       std::make_pair(exc_far, "far")})
+      registers.emplace_back(
+          entry.first, entry.second, nullptr, 4, eEncodingUint, eFormatHex,
+          RegisterDescriptor::Numbering{LLDB_INVALID_REGNUM,
+                                       LLDB_INVALID_REGNUM,
+                                       LLDB_INVALID_REGNUM,
+                                       LLDB_INVALID_REGNUM,
+                                       static_cast<uint32_t>(entry.first)});
+    for (auto entry : {std::make_pair(dbg_bvr0, "bvr"),
+                       std::make_pair(dbg_bcr0, "bcr"),
+                       std::make_pair(dbg_wvr0, "wvr"),
+                       std::make_pair(dbg_wcr0, "wcr")})
+      for (uint32_t i = 0; i < 16; ++i)
+        registers.emplace_back(
+            entry.first + i, entry.second, nullptr, 4, eEncodingUint, eFormatHex,
+            RegisterDescriptor::Numbering{LLDB_INVALID_REGNUM,
+                                         LLDB_INVALID_REGNUM,
+                                         LLDB_INVALID_REGNUM,
+                                         LLDB_INVALID_REGNUM,
+                                         LLDB_INVALID_REGNUM});
+    return std::make_shared<RegisterDescription>(
+        llvm::cantFail(RegisterDescription::Create(
+            std::move(registers),
+            {std::begin(g_reg_sets), std::end(g_reg_sets)},
+            {cpu->GetOwnedTypes().begin(), cpu->GetOwnedTypes().end()})));
+  }();
+  return description;
 }
 
 // Register information definitions for 32 bit i386.
@@ -1108,16 +425,21 @@ void RegisterContextDarwin_arm::LogDBGRegisters(Log *log, const DBG &dbg) {
   }
 }
 
-bool RegisterContextDarwin_arm::ReadRegister(const RegisterInfo *reg_info,
-                                             RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+llvm::Expected<RegisterValue>
+RegisterContextDarwin_arm::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
   int set = RegisterContextDarwin_arm::GetSetForNativeRegNum(reg);
 
   if (set == -1)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   if (ReadRegisterSet(set, false) != KERN_SUCCESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   switch (reg) {
   case gpr_r0:
@@ -1192,21 +514,26 @@ bool RegisterContextDarwin_arm::ReadRegister(const RegisterInfo *reg_info,
 
   default:
     value.SetValueToInvalid();
-    return false;
+    return llvm::createStringError("register value is unavailable");
   }
-  return true;
+  return value;
 }
 
-bool RegisterContextDarwin_arm::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error
+RegisterContextDarwin_arm::WriteRegister(RegisterID id,
                                               const RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
   int set = GetSetForNativeRegNum(reg);
 
   if (set == -1)
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
   if (ReadRegisterSet(set, false) != KERN_SUCCESS)
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
   switch (reg) {
   case gpr_r0:
@@ -1279,9 +606,13 @@ bool RegisterContextDarwin_arm::WriteRegister(const RegisterInfo *reg_info,
     break;
 
   default:
-    return false;
+    return llvm::createStringError("register write is unavailable");
   }
-  return WriteRegisterSet(set) == KERN_SUCCESS;
+  {
+    if (!(WriteRegisterSet(set) == KERN_SUCCESS))
+      return llvm::createStringError("register write failed");
+    return llvm::Error::success();
+  }
 }
 
 bool RegisterContextDarwin_arm::ReadAllRegisterValues(
@@ -1323,171 +654,6 @@ bool RegisterContextDarwin_arm::WriteAllRegisterValues(
     return success_count == 3;
   }
   return false;
-}
-
-uint32_t RegisterContextDarwin_arm::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t reg) {
-  if (kind == eRegisterKindGeneric) {
-    switch (reg) {
-    case LLDB_REGNUM_GENERIC_PC:
-      return gpr_pc;
-    case LLDB_REGNUM_GENERIC_SP:
-      return gpr_sp;
-    case LLDB_REGNUM_GENERIC_FP:
-      return gpr_r7;
-    case LLDB_REGNUM_GENERIC_RA:
-      return gpr_lr;
-    case LLDB_REGNUM_GENERIC_FLAGS:
-      return gpr_cpsr;
-    default:
-      break;
-    }
-  } else if (kind == eRegisterKindDWARF) {
-    switch (reg) {
-    case dwarf_regs::r0:
-      return gpr_r0;
-    case dwarf_regs::r1:
-      return gpr_r1;
-    case dwarf_regs::r2:
-      return gpr_r2;
-    case dwarf_regs::r3:
-      return gpr_r3;
-    case dwarf_regs::r4:
-      return gpr_r4;
-    case dwarf_regs::r5:
-      return gpr_r5;
-    case dwarf_regs::r6:
-      return gpr_r6;
-    case dwarf_regs::r7:
-      return gpr_r7;
-    case dwarf_regs::r8:
-      return gpr_r8;
-    case dwarf_regs::r9:
-      return gpr_r9;
-    case dwarf_regs::r10:
-      return gpr_r10;
-    case dwarf_regs::r11:
-      return gpr_r11;
-    case dwarf_regs::r12:
-      return gpr_r12;
-    case dwarf_regs::sp:
-      return gpr_sp;
-    case dwarf_regs::lr:
-      return gpr_lr;
-    case dwarf_regs::pc:
-      return gpr_pc;
-    case dwarf_regs::spsr:
-      return gpr_cpsr;
-
-    case dwarf_regs::s0:
-      return fpu_s0;
-    case dwarf_regs::s1:
-      return fpu_s1;
-    case dwarf_regs::s2:
-      return fpu_s2;
-    case dwarf_regs::s3:
-      return fpu_s3;
-    case dwarf_regs::s4:
-      return fpu_s4;
-    case dwarf_regs::s5:
-      return fpu_s5;
-    case dwarf_regs::s6:
-      return fpu_s6;
-    case dwarf_regs::s7:
-      return fpu_s7;
-    case dwarf_regs::s8:
-      return fpu_s8;
-    case dwarf_regs::s9:
-      return fpu_s9;
-    case dwarf_regs::s10:
-      return fpu_s10;
-    case dwarf_regs::s11:
-      return fpu_s11;
-    case dwarf_regs::s12:
-      return fpu_s12;
-    case dwarf_regs::s13:
-      return fpu_s13;
-    case dwarf_regs::s14:
-      return fpu_s14;
-    case dwarf_regs::s15:
-      return fpu_s15;
-    case dwarf_regs::s16:
-      return fpu_s16;
-    case dwarf_regs::s17:
-      return fpu_s17;
-    case dwarf_regs::s18:
-      return fpu_s18;
-    case dwarf_regs::s19:
-      return fpu_s19;
-    case dwarf_regs::s20:
-      return fpu_s20;
-    case dwarf_regs::s21:
-      return fpu_s21;
-    case dwarf_regs::s22:
-      return fpu_s22;
-    case dwarf_regs::s23:
-      return fpu_s23;
-    case dwarf_regs::s24:
-      return fpu_s24;
-    case dwarf_regs::s25:
-      return fpu_s25;
-    case dwarf_regs::s26:
-      return fpu_s26;
-    case dwarf_regs::s27:
-      return fpu_s27;
-    case dwarf_regs::s28:
-      return fpu_s28;
-    case dwarf_regs::s29:
-      return fpu_s29;
-    case dwarf_regs::s30:
-      return fpu_s30;
-    case dwarf_regs::s31:
-      return fpu_s31;
-
-    default:
-      break;
-    }
-  } else if (kind == eRegisterKindEHFrame) {
-    switch (reg) {
-    case dwarf_regs::r0:
-      return gpr_r0;
-    case dwarf_regs::r1:
-      return gpr_r1;
-    case dwarf_regs::r2:
-      return gpr_r2;
-    case dwarf_regs::r3:
-      return gpr_r3;
-    case dwarf_regs::r4:
-      return gpr_r4;
-    case dwarf_regs::r5:
-      return gpr_r5;
-    case dwarf_regs::r6:
-      return gpr_r6;
-    case dwarf_regs::r7:
-      return gpr_r7;
-    case dwarf_regs::r8:
-      return gpr_r8;
-    case dwarf_regs::r9:
-      return gpr_r9;
-    case dwarf_regs::r10:
-      return gpr_r10;
-    case dwarf_regs::r11:
-      return gpr_r11;
-    case dwarf_regs::r12:
-      return gpr_r12;
-    case dwarf_regs::sp:
-      return gpr_sp;
-    case dwarf_regs::lr:
-      return gpr_lr;
-    case dwarf_regs::pc:
-      return gpr_pc;
-    case dwarf_regs::cpsr:
-      return gpr_cpsr;
-    }
-  } else if (kind == eRegisterKindLLDB) {
-    return reg;
-  }
-  return LLDB_INVALID_REGNUM;
 }
 
 uint32_t RegisterContextDarwin_arm::NumSupportedHardwareBreakpoints() {

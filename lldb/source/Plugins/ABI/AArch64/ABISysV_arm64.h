@@ -30,7 +30,8 @@ public:
   SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                        lldb::ValueObjectSP &new_value) override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   // The arm64 ABI requires that stack frames be 16 byte aligned.
   // When there is a trap handler on the stack, e.g. _sigtramp in userland

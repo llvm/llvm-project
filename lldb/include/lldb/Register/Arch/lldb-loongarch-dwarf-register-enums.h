@@ -241,7 +241,7 @@ enum : uint32_t {
   // mock pc regnum
   gpr_pc = 57005,
 
-  // fake registers are only used to define `RegisterInfo`
+  // fake registers are only used to define `RegisterDescriptor`
   gpr_orig_a0,
   gpr_badv,
 

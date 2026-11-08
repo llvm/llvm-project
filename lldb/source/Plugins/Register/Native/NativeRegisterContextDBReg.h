@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_NATIVE_NATIVEREGISTERCONTEXTDBREG_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_NATIVE_NATIVEREGISTERCONTEXTDBREG_H
 
-#include "NativeRegisterContextRegisterInfo.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
 
 #include <array>
 #include <optional>
@@ -19,8 +19,7 @@
 
 namespace lldb_private {
 
-class NativeRegisterContextDBReg
-    : public virtual NativeRegisterContextRegisterInfo {
+class NativeRegisterContextDBReg : public virtual NativeRegisterContext {
 public:
   explicit NativeRegisterContextDBReg(uint32_t enable_bit)
       : m_hw_dbg_enable_bit(enable_bit) {}

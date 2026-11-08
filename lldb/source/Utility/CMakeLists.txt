@@ -42,6 +42,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   ErrorMessages.cpp
   Event.cpp
   FileSpec.cpp
+  Format.cpp
   FileSpecList.cpp
   GDBRemote.cpp
   AcceleratorGDBRemotePackets.cpp

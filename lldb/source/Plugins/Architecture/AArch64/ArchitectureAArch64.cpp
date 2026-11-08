@@ -8,6 +8,7 @@
 
 #include "Plugins/Architecture/AArch64/ArchitectureAArch64.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -41,42 +42,40 @@ ArchitectureAArch64::Create(const ArchSpec &arch) {
 }
 
 static void
-UpdateARM64SVERegistersInfos(DynamicRegisterInfo::reg_collection_range regs,
+UpdateARM64SVERegisterSizes(llvm::MutableArrayRef<RegisterDescriptor> regs,
                              uint64_t vg) {
   // SVE Z register size is vg x 8 bytes.
   uint32_t z_reg_byte_size = vg * 8;
 
-  // SVE vector length has changed, accordingly set size of Z, P and FFR
-  // registers. Also invalidate register offsets it will be recalculated
-  // after SVE register size update.
+  // The adapter publishes the resized logical values and recalculates the
+  // packet layout together, after this callback finishes.
   for (auto &reg : regs) {
-    if (reg.value_regs == nullptr) {
-      if (reg.name[0] == 'z' && isdigit(reg.name[1]))
+    if (reg.value_registers.empty()) {
+      if (reg.name.size() > 1 && reg.name[0] == 'z' && isdigit(reg.name[1]))
         reg.byte_size = z_reg_byte_size;
-      else if (reg.name[0] == 'p' && isdigit(reg.name[1]))
+      else if (reg.name.size() > 1 && reg.name[0] == 'p' &&
+               isdigit(reg.name[1]))
         reg.byte_size = vg;
-      else if (strcmp(reg.name, "ffr") == 0)
+      else if (reg.name == "ffr")
         reg.byte_size = vg;
     }
-    reg.byte_offset = LLDB_INVALID_INDEX32;
   }
 }
 
 static void
-UpdateARM64SMERegistersInfos(DynamicRegisterInfo::reg_collection_range regs,
+UpdateARM64SMERegisterSizes(llvm::MutableArrayRef<RegisterDescriptor> regs,
                              uint64_t svg) {
   for (auto &reg : regs) {
-    if (strcmp(reg.name, "za") == 0) {
+    if (reg.name == "za") {
       // ZA is a register with size (svg*8) * (svg*8). A square essentially.
       reg.byte_size = (svg * 8) * (svg * 8);
     }
-    reg.byte_offset = LLDB_INVALID_INDEX32;
   }
 }
 
-bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
-                                                  DataExtractor &reg_data,
-                                                  ThreadRegisterContext &reg_context
+bool ArchitectureAArch64::ReconfigureRegisterLayout(
+    std::shared_ptr<const RegisterLayout> &layout, DataExtractor &reg_data,
+    ThreadRegisterContext &reg_context
 
 ) const {
   // Once we start to reconfigure registers, we cannot read any of them.
@@ -84,9 +83,9 @@ bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
 
   const uint64_t fail_value = LLDB_INVALID_ADDRESS;
   std::optional<uint64_t> vg_reg_value;
-  const RegisterInfo *vg_reg_info = reg_info.GetRegisterInfo("vg");
+  const RegisterDescriptor *vg_reg_info = layout->GetDescription()->Find("vg");
   if (vg_reg_info) {
-    uint32_t vg_reg_num = vg_reg_info->kinds[eRegisterKindLLDB];
+    uint32_t vg_reg_num = vg_reg_info->id;
     uint64_t reg_value =
         reg_context.ReadRegisterAsUnsigned(vg_reg_num, fail_value);
     if (reg_value != fail_value && reg_value <= 32)
@@ -94,21 +93,23 @@ bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
   }
 
   std::optional<uint64_t> svg_reg_value;
-  const RegisterInfo *svg_reg_info = reg_info.GetRegisterInfo("svg");
+  const RegisterDescriptor *svg_reg_info =
+      layout->GetDescription()->Find("svg");
   if (svg_reg_info) {
-    uint32_t svg_reg_num = svg_reg_info->kinds[eRegisterKindLLDB];
+    uint32_t svg_reg_num = svg_reg_info->id;
     uint64_t reg_value =
         reg_context.ReadRegisterAsUnsigned(svg_reg_num, fail_value);
     if (reg_value != fail_value && reg_value <= 32)
       svg_reg_value = reg_value;
   }
   if (!svg_reg_value) {
-    const RegisterInfo *darwin_svg_reg_info = reg_info.GetRegisterInfo("svl");
+    const RegisterDescriptor *darwin_svg_reg_info =
+        layout->GetDescription()->Find("svl");
     if (darwin_svg_reg_info) {
-      uint32_t svg_reg_num = darwin_svg_reg_info->kinds[eRegisterKindLLDB];
+      uint32_t svg_reg_num = darwin_svg_reg_info->id;
       uint64_t reg_value =
           reg_context.ReadRegisterAsUnsigned(svg_reg_num, fail_value);
-      // UpdateARM64SVERegistersInfos and UpdateARM64SMERegistersInfos
+      // UpdateARM64SVERegisterSizes and UpdateARM64SMERegisterSizes
       // expect the number of 8-byte granules; darwin provides number of
       // bytes.
       if (reg_value != fail_value && reg_value <= 256) {
@@ -130,20 +131,19 @@ bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
     vg_reg_value = svg_reg_value;
   }
 
-  auto regs = reg_info.registers<DynamicRegisterInfo::reg_collection_range>();
-  if (vg_reg_value)
-    UpdateARM64SVERegistersInfos(regs, *vg_reg_value);
-  if (svg_reg_value)
-    UpdateARM64SMERegistersInfos(regs, *svg_reg_value);
+  auto resized = ReconfigureRegisterImageLayout(*layout, [&](auto registers) {
+    if (vg_reg_value)
+      UpdateARM64SVERegisterSizes(registers, *vg_reg_value);
+    if (svg_reg_value)
+      UpdateARM64SMERegisterSizes(registers, *svg_reg_value);
+  });
+  if (!resized) {
+    llvm::consumeError(resized.takeError());
+    return false;
+  }
 
-  // At this point if we have updated any registers, their offsets will all be
-  // invalid. If we did, we need to update them all.
-  reg_info.ConfigureOffsets();
-  // From here we are able to read registers again.
-
-  // Make a heap based buffer that is big enough to store all registers
-  reg_data.SetData(
-      std::make_shared<DataBufferHeap>(reg_info.GetRegisterDataByteSize(), 0));
+  layout = std::make_shared<RegisterLayout>(std::move(*resized));
+  reg_data.SetData(std::make_shared<DataBufferHeap>(layout->GetBankSize(0), 0));
   reg_data.SetByteOrder(reg_context.GetByteOrder());
 
   return true;

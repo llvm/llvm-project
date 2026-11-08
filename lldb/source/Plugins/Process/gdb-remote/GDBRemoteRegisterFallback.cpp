@@ -12,7 +12,7 @@ namespace lldb_private {
 namespace process_gdb_remote {
 
 #define REG(name, size)                                                        \
-  DynamicRegisterInfo::Register {                                              \
+  RegisterDefinition {                                                         \
     ConstString(#name), empty_alt_name, reg_set, size, LLDB_INVALID_INDEX32,   \
         lldb::eEncodingUint, lldb::eFormatHex, LLDB_INVALID_REGNUM,            \
         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, {}, {}  \
@@ -21,11 +21,11 @@ namespace process_gdb_remote {
 #define R32(name) REG(name, 4)
 #define R16(name) REG(name, 2)
 
-static std::vector<DynamicRegisterInfo::Register> GetRegisters_aarch64() {
+static std::vector<RegisterDefinition> GetRegisters_aarch64() {
   ConstString empty_alt_name;
   ConstString reg_set{"general purpose registers"};
 
-  std::vector<DynamicRegisterInfo::Register> registers{
+  std::vector<RegisterDefinition> registers{
       R64(x0),  R64(x1),  R64(x2),  R64(x3),  R64(x4),  R64(x5),   R64(x6),
       R64(x7),  R64(x8),  R64(x9),  R64(x10), R64(x11), R64(x12),  R64(x13),
       R64(x14), R64(x15), R64(x16), R64(x17), R64(x18), R64(x19),  R64(x20),
@@ -36,11 +36,11 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_aarch64() {
   return registers;
 }
 
-static std::vector<DynamicRegisterInfo::Register> GetRegisters_msp430() {
+static std::vector<RegisterDefinition> GetRegisters_msp430() {
   ConstString empty_alt_name;
   ConstString reg_set{"general purpose registers"};
 
-  std::vector<DynamicRegisterInfo::Register> registers{
+  std::vector<RegisterDefinition> registers{
       R16(pc),  R16(sp),  R16(r2),  R16(r3), R16(fp),  R16(r5),
       R16(r6),  R16(r7),  R16(r8),  R16(r9), R16(r10), R16(r11),
       R16(r12), R16(r13), R16(r14), R16(r15)};
@@ -48,11 +48,11 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_msp430() {
   return registers;
 }
 
-static std::vector<DynamicRegisterInfo::Register> GetRegisters_x86() {
+static std::vector<RegisterDefinition> GetRegisters_x86() {
   ConstString empty_alt_name;
   ConstString reg_set{"general purpose registers"};
 
-  std::vector<DynamicRegisterInfo::Register> registers{
+  std::vector<RegisterDefinition> registers{
       R32(eax), R32(ecx), R32(edx), R32(ebx),    R32(esp), R32(ebp),
       R32(esi), R32(edi), R32(eip), R32(eflags), R32(cs),  R32(ss),
       R32(ds),  R32(es),  R32(fs),  R32(gs),
@@ -61,11 +61,11 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_x86() {
   return registers;
 }
 
-static std::vector<DynamicRegisterInfo::Register> GetRegisters_x86_64() {
+static std::vector<RegisterDefinition> GetRegisters_x86_64() {
   ConstString empty_alt_name;
   ConstString reg_set{"general purpose registers"};
 
-  std::vector<DynamicRegisterInfo::Register> registers{
+  std::vector<RegisterDefinition> registers{
       R64(rax), R64(rbx), R64(rcx), R64(rdx), R64(rsi), R64(rdi),
       R64(rbp), R64(rsp), R64(r8),  R64(r9),  R64(r10), R64(r11),
       R64(r12), R64(r13), R64(r14), R64(r15), R64(rip), R32(eflags),
@@ -79,7 +79,7 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_x86_64() {
 #undef R64
 #undef REG
 
-std::vector<DynamicRegisterInfo::Register>
+std::vector<RegisterDefinition>
 GetFallbackRegisters(const ArchSpec &arch_to_use) {
   switch (arch_to_use.GetMachine()) {
   case llvm::Triple::aarch64:

@@ -38,7 +38,8 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   // The SysV ppc ABI requires that stack frames be 16 byte aligned.
   // When there is a trap handler on the stack, e.g. _sigtramp in userland
@@ -66,7 +67,7 @@ public:
     return true;
   }
 
-  const lldb_private::RegisterInfo *
+  const lldb_private::RegisterDescriptor *
   GetRegisterInfoArray(uint32_t &count) override;
 
   // Static Functions
@@ -90,10 +91,11 @@ protected:
   GetReturnValueObjectSimple(lldb_private::Thread &thread,
                              lldb_private::CompilerType &ast_type) const;
 
-  bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
+  bool RegisterIsCalleeSaved(const lldb_private::RegisterDescriptor *reg_info);
 
 private:
-  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance
+                                                        // instead.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_POWERPC_ABISYSV_PPC_H

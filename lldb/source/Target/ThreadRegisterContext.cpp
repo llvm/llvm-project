@@ -10,6 +10,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
@@ -17,7 +18,6 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 
 using namespace lldb;
@@ -26,6 +26,58 @@ using namespace lldb_private;
 ThreadRegisterContext::ThreadRegisterContext(Thread &thread, uint32_t concrete_frame_idx)
     : m_thread(thread), m_concrete_frame_idx(concrete_frame_idx),
       m_stop_id(thread.GetProcess()->GetStopID()) {}
+
+ThreadRegisterContext::ThreadRegisterContext(Thread &thread, uint32_t frame,
+                                             RegisterLayout layout)
+    : ThreadRegisterContext(thread, frame) {
+  SetRegisterLayout(std::move(layout));
+}
+
+ThreadRegisterContext::ThreadRegisterContext(
+    Thread &thread, uint32_t frame,
+    std::shared_ptr<const RegisterDescription> description)
+    : ThreadRegisterContext(thread, frame) {
+  SetRegisterDescription(std::move(description));
+}
+
+void ThreadRegisterContext::SetRegisterDescription(
+    std::shared_ptr<const RegisterDescription> description) {
+  m_description = std::move(description);
+  m_layout.reset();
+}
+
+void ThreadRegisterContext::SetRegisterLayout(RegisterLayout layout) {
+  m_description = layout.GetDescription();
+  m_layout = std::make_shared<RegisterLayout>(std::move(layout));
+}
+
+std::shared_ptr<const RegisterDescription>
+ThreadRegisterContext::GetDescription() const {
+  return m_description;
+}
+
+const RegisterLayout &ThreadRegisterContext::GetLayout() const {
+  assert(m_layout && "context has no saved-register layout");
+  return *m_layout;
+}
+
+const ArchSpec &ThreadRegisterContext::GetTargetArchitecture() const {
+  return m_thread.GetProcess()->GetTarget().GetArchitecture();
+}
+
+size_t ThreadRegisterContext::GetBankSize(RegisterBankID id) const {
+  const auto *bank = m_layout ? m_layout->FindBank(id) : nullptr;
+  return bank ? bank->byte_size : 0;
+}
+
+llvm::Expected<RegisterValue> ThreadRegisterContext::ReadBankRegister(
+    RegisterID id, llvm::ArrayRef<RegisterData> candidates) const {
+  std::vector<RegisterData> banks;
+  for (const auto &bank : candidates)
+    if (GetLayout().FindBank(bank.bank))
+      banks.push_back(bank);
+  return GetLayout().Read(id, banks);
+}
 
 ThreadRegisterContext::~ThreadRegisterContext() = default;
 
@@ -48,53 +100,9 @@ void ThreadRegisterContext::InvalidateIfNeeded(bool force) {
   }
 }
 
-const RegisterInfo *
-ThreadRegisterContext::GetRegisterInfoByName(llvm::StringRef reg_name,
-                                       uint32_t start_idx) {
-  if (reg_name.empty())
-    return nullptr;
-
-  // Generic register names take precedence over specific register names.
-  // For example, on x86 we want "sp" to refer to the complete RSP/ESP register
-  // rather than the 16-bit SP pseudo-register.
-  uint32_t generic_reg = Args::StringToGenericRegister(reg_name);
-  if (generic_reg != LLDB_INVALID_REGNUM) {
-    const RegisterInfo *reg_info =
-        GetRegisterInfo(eRegisterKindGeneric, generic_reg);
-    if (reg_info)
-      return reg_info;
-  }
-
-  const uint32_t num_registers = GetRegisterCount();
-  for (uint32_t reg = start_idx; reg < num_registers; ++reg) {
-    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
-
-    if (reg_name.equals_insensitive(reg_info->name) ||
-        reg_name.equals_insensitive(reg_info->alt_name))
-      return reg_info;
-  }
-
-  return nullptr;
-}
-
-const RegisterInfo *ThreadRegisterContext::GetRegisterInfo(lldb::RegisterKind kind,
-                                                     uint32_t num) {
-  const uint32_t reg_num = ConvertRegisterKindToRegisterNumber(kind, num);
-  if (reg_num == LLDB_INVALID_REGNUM)
-    return nullptr;
-  return GetRegisterInfoAtIndex(reg_num);
-}
-
-const char *ThreadRegisterContext::GetRegisterName(uint32_t reg) {
-  const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
-  if (reg_info)
-    return reg_info->name;
-  return nullptr;
-}
-
 uint64_t ThreadRegisterContext::GetPC(uint64_t fail_value) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_PC);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   uint64_t pc = ReadRegisterAsUnsigned(reg, fail_value);
 
   if (pc != fail_value) {
@@ -106,15 +114,15 @@ uint64_t ThreadRegisterContext::GetPC(uint64_t fail_value) {
 }
 
 uint64_t ThreadRegisterContext::GetThreadPointer(uint64_t fail_value) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_TP);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_TP);
   return ReadRegisterAsUnsigned(reg, fail_value);
 }
 
 bool ThreadRegisterContext::SetPC(uint64_t pc) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_PC);
-  bool success = WriteRegisterFromUnsigned(reg, pc);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  bool success = !llvm::errorToBool(WriteRegisterFromUnsigned(reg, pc));
   if (success) {
     StackFrameSP frame_sp(
         m_thread.GetFrameWithConcreteFrameIndex(m_concrete_frame_idx));
@@ -152,104 +160,75 @@ bool ThreadRegisterContext::SetPC(Address addr) {
 }
 
 uint64_t ThreadRegisterContext::GetSP(uint64_t fail_value) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_SP);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
   return ReadRegisterAsUnsigned(reg, fail_value);
 }
 
 bool ThreadRegisterContext::SetSP(uint64_t sp) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_SP);
-  return WriteRegisterFromUnsigned(reg, sp);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  return !llvm::errorToBool(WriteRegisterFromUnsigned(reg, sp));
 }
 
 uint64_t ThreadRegisterContext::GetFP(uint64_t fail_value) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_FP);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FP);
   return ReadRegisterAsUnsigned(reg, fail_value);
 }
 
 bool ThreadRegisterContext::SetFP(uint64_t fp) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_FP);
-  return WriteRegisterFromUnsigned(reg, fp);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FP);
+  return !llvm::errorToBool(WriteRegisterFromUnsigned(reg, fp));
 }
 
 uint64_t ThreadRegisterContext::GetReturnAddress(uint64_t fail_value) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_RA);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
   return ReadRegisterAsUnsigned(reg, fail_value);
 }
 
 uint64_t ThreadRegisterContext::GetFlags(uint64_t fail_value) {
-  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
-                                                     LLDB_REGNUM_GENERIC_FLAGS);
+  uint32_t reg =
+      GetRegisterIDForNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
   return ReadRegisterAsUnsigned(reg, fail_value);
 }
 
-uint64_t ThreadRegisterContext::ReadRegisterAsUnsigned(uint32_t reg,
-                                                 uint64_t fail_value) {
-  if (reg != LLDB_INVALID_REGNUM)
-    return ReadRegisterAsUnsigned(GetRegisterInfoAtIndex(reg), fail_value);
-  return fail_value;
-}
-
-uint64_t ThreadRegisterContext::ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
-                                                 uint64_t fail_value) {
-  if (reg_info) {
-    RegisterValue value;
-    if (ReadRegister(reg_info, value))
-      return value.GetAsUInt64();
-  }
-  return fail_value;
-}
-
-bool ThreadRegisterContext::WriteRegisterFromUnsigned(uint32_t reg, uint64_t uval) {
-  if (reg == LLDB_INVALID_REGNUM)
-    return false;
-  return WriteRegisterFromUnsigned(GetRegisterInfoAtIndex(reg), uval);
-}
-
-bool ThreadRegisterContext::WriteRegisterFromUnsigned(const RegisterInfo *reg_info,
-                                                uint64_t uval) {
-  if (reg_info) {
-    RegisterValue value;
-    if (value.SetUInt(uval, reg_info->byte_size))
-      return WriteRegister(reg_info, value);
-  }
-  return false;
-}
-
-bool ThreadRegisterContext::CopyFromRegisterContext(lldb::ThreadRegisterContextSP context) {
-  uint32_t num_register_sets = context->GetRegisterSetCount();
+bool ThreadRegisterContext::CopyFromRegisterContext(
+    lldb::ThreadRegisterContextSP context) {
+  uint32_t num_register_sets = context->GetRegisterGroupCount();
   // We don't know that two threads have the same register context, so require
   // the threads to be the same.
   if (context->GetThreadID() != GetThreadID())
     return false;
 
-  if (num_register_sets != GetRegisterSetCount())
+  if (num_register_sets != GetRegisterGroupCount())
     return false;
 
   ThreadRegisterContextSP frame_zero_context = m_thread.GetRegisterContext();
 
   for (uint32_t set_idx = 0; set_idx < num_register_sets; ++set_idx) {
-    const RegisterSet *const reg_set = GetRegisterSet(set_idx);
+    const RegisterGroup *const reg_set = GetRegisterGroup(set_idx);
 
-    const uint32_t num_registers = reg_set->num_registers;
+    const uint32_t num_registers = reg_set->registers.size();
     for (uint32_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
       const uint32_t reg = reg_set->registers[reg_idx];
-      const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
-      if (!reg_info || reg_info->value_regs)
+      const RegisterDescriptor *reg_info = GetDescription()->Find(reg);
+      if (!reg_info || !reg_info->value_registers.empty())
         continue;
       RegisterValue reg_value;
 
       // If we can reconstruct the register from the frame we are copying from,
       // then do so, otherwise use the value from frame 0.
-      if (context->ReadRegister(reg_info, reg_value)) {
-        WriteRegister(reg_info, reg_value);
-      } else if (frame_zero_context->ReadRegister(reg_info, reg_value)) {
-        WriteRegister(reg_info, reg_value);
-      }
+      auto read = [&](ThreadRegisterContext &source) -> bool {
+        const auto *source_reg = source.GetRegisterByName(reg_info->name);
+        return source_reg &&
+               !llvm::errorToBool(
+                   source.ReadRegister(source_reg->id).moveInto(reg_value));
+      };
+      if (read(*context) || read(*frame_zero_context))
+        llvm::consumeError(WriteRegister(reg_info->id, reg_value));
     }
   }
   return true;
@@ -266,23 +245,10 @@ uint32_t ThreadRegisterContext::SetHardwareBreakpoint(lldb::addr_t addr,
 
 // Used when parsing DWARF and EH frame information and any other object file
 // sections that contain register numbers in them.
-uint32_t
-ThreadRegisterContext::ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                                     uint32_t num) {
-  const uint32_t num_regs = GetRegisterCount();
 
-  assert(kind < kNumRegisterKinds);
-  for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
-    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg_idx);
-
-    if (reg_info->kinds[kind] == num)
-      return reg_idx;
-  }
-
-  return LLDB_INVALID_REGNUM;
+bool ThreadRegisterContext::ClearHardwareBreakpoint(uint32_t hw_idx) {
+  return false;
 }
-
-bool ThreadRegisterContext::ClearHardwareBreakpoint(uint32_t hw_idx) { return false; }
 
 uint32_t ThreadRegisterContext::NumSupportedHardwareWatchpoints() { return 0; }
 
@@ -298,7 +264,7 @@ bool ThreadRegisterContext::ClearHardwareWatchpoint(uint32_t hw_index) {
 bool ThreadRegisterContext::HardwareSingleStep(bool enable) { return false; }
 
 Status ThreadRegisterContext::ReadRegisterValueFromMemory(
-    const RegisterInfo *reg_info, lldb::addr_t src_addr, uint32_t src_len,
+    const RegisterDescriptor *reg_info, lldb::addr_t src_addr, uint32_t src_len,
     RegisterValue &reg_value) {
   Status error;
   if (!reg_info)
@@ -325,7 +291,7 @@ Status ThreadRegisterContext::ReadRegisterValueFromMemory(
   if (src_len > dst_len) {
     return Status::FromErrorStringWithFormat(
         "%u bytes is too big to store in register %s (%u bytes)", src_len,
-        reg_info->name, dst_len);
+        reg_info->name.c_str(), dst_len);
     return error;
   }
 
@@ -362,7 +328,7 @@ Status ThreadRegisterContext::ReadRegisterValueFromMemory(
 }
 
 Status ThreadRegisterContext::WriteRegisterValueToMemory(
-    const RegisterInfo *reg_info, lldb::addr_t dst_addr, uint32_t dst_len,
+    const RegisterDescriptor *reg_info, lldb::addr_t dst_addr, uint32_t dst_len,
     const RegisterValue &reg_value) {
   Status error;
   ProcessSP process_sp(m_thread.GetProcess());
@@ -446,20 +412,4 @@ StackFrameSP ThreadRegisterContext::CalculateStackFrame() {
 
 void ThreadRegisterContext::CalculateExecutionContext(ExecutionContext &exe_ctx) {
   m_thread.CalculateExecutionContext(exe_ctx);
-}
-
-bool ThreadRegisterContext::ConvertBetweenRegisterKinds(lldb::RegisterKind source_rk,
-                                                  uint32_t source_regnum,
-                                                  lldb::RegisterKind target_rk,
-                                                  uint32_t &target_regnum) {
-  const uint32_t num_registers = GetRegisterCount();
-  for (uint32_t reg = 0; reg < num_registers; ++reg) {
-    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
-
-    if (reg_info->kinds[source_rk] == source_regnum) {
-      target_regnum = reg_info->kinds[target_rk];
-      return (target_regnum != LLDB_INVALID_REGNUM);
-    }
-  }
-  return false;
 }

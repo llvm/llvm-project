@@ -10,7 +10,9 @@
 #define LLDB_HOST_COMMON_NATIVEREGISTERCONTEXT_H
 
 #include "lldb/Host/common/NativeWatchpointList.h"
-#include "lldb/Utility/RegisterInfo.h"
+#include "lldb/Register/RegisterContext.h"
+#include "lldb/Register/RegisterLayout.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -19,45 +21,39 @@ class NativeThreadProtocol;
 
 enum class ExpeditedRegs { Minimal, Full };
 
-class NativeRegisterContext
-    : public std::enable_shared_from_this<NativeRegisterContext> {
+class NativeRegisterContext : public RegisterContext {
 public:
   // Constructors and Destructors
   NativeRegisterContext(NativeThreadProtocol &thread);
+  NativeRegisterContext(NativeThreadProtocol &thread, const ArchSpec &arch,
+                        RegisterLayout layout);
 
-  virtual ~NativeRegisterContext();
+  NativeRegisterContext(NativeThreadProtocol &thread,
+                        std::shared_ptr<const RegisterDescription> description);
 
-  // void
-  // InvalidateIfNeeded (bool force);
+  ~NativeRegisterContext() override;
 
-  // Subclasses must override these functions
-  // virtual void
-  // InvalidateAllRegisters () = 0;
+  /// Byte position of an alias within its parent value, in target byte order.
+  virtual uint32_t GetRegisterValueOffset(RegisterID id) const;
 
-  virtual uint32_t GetRegisterCount() const = 0;
+  std::shared_ptr<const RegisterDescription> GetDescription() const override;
+  const RegisterLayout &GetLayout() const;
+  const ArchSpec &GetTargetArchitecture() const { return m_arch; }
+  size_t GetBankSize(RegisterBankID bank) const;
+  void SetRegisterLayout(RegisterLayout layout);
 
-  virtual uint32_t GetUserRegisterCount() const = 0;
+  void InvalidateAllRegisters() override {}
 
-  virtual const RegisterInfo *GetRegisterInfoAtIndex(uint32_t reg) const = 0;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override = 0;
 
-  const char *GetRegisterSetNameForRegisterAtIndex(uint32_t reg_index) const;
-
-  virtual uint32_t GetRegisterSetCount() const = 0;
-
-  virtual const RegisterSet *GetRegisterSet(uint32_t set_index) const = 0;
-
-  virtual Status ReadRegister(const RegisterInfo *reg_info,
-                              RegisterValue &reg_value) = 0;
-
-  virtual Status WriteRegister(const RegisterInfo *reg_info,
-                               const RegisterValue &reg_value) = 0;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override = 0;
 
   virtual Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) = 0;
 
   virtual Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) = 0;
-
-  uint32_t ConvertRegisterKindToRegisterNumber(uint32_t kind,
-                                               uint32_t num) const;
 
   // Subclasses can override these functions if desired
   virtual uint32_t NumSupportedHardwareBreakpoints();
@@ -104,30 +100,15 @@ public:
 
   virtual bool HardwareSingleStep(bool enable);
 
-  virtual Status
-  ReadRegisterValueFromMemory(const lldb_private::RegisterInfo *reg_info,
-                              lldb::addr_t src_addr, size_t src_len,
-                              RegisterValue &reg_value);
-
-  virtual Status
-  WriteRegisterValueToMemory(const lldb_private::RegisterInfo *reg_info,
-                             lldb::addr_t dst_addr, size_t dst_len,
-                             const RegisterValue &reg_value);
-
   // Subclasses should not override these
   virtual lldb::tid_t GetThreadID() const;
 
   virtual NativeThreadProtocol &GetThread() { return m_thread; }
 
-  virtual std::vector<uint32_t>
+  virtual std::vector<RegisterID>
   GetExpeditedRegisters(ExpeditedRegs expType) const;
 
   virtual bool RegisterOffsetIsDynamic() const { return false; }
-
-  const RegisterInfo *GetRegisterInfoByName(llvm::StringRef reg_name,
-                                            uint32_t start_idx = 0);
-
-  const RegisterInfo *GetRegisterInfo(uint32_t reg_kind, uint32_t reg_num);
 
   lldb::addr_t GetPC(lldb::addr_t fail_value = LLDB_INVALID_ADDRESS);
 
@@ -144,34 +125,16 @@ public:
 
   Status SetFP(lldb::addr_t fp);
 
-  const char *GetRegisterName(uint32_t reg);
-
   lldb::addr_t GetReturnAddress(lldb::addr_t fail_value = LLDB_INVALID_ADDRESS);
 
   lldb::addr_t GetFlags(lldb::addr_t fail_value = 0);
 
-  lldb::addr_t ReadRegisterAsUnsigned(uint32_t reg, lldb::addr_t fail_value);
-
-  lldb::addr_t ReadRegisterAsUnsigned(const RegisterInfo *reg_info,
-                                      lldb::addr_t fail_value);
-
-  Status WriteRegisterFromUnsigned(uint32_t reg, uint64_t uval);
-
-  Status WriteRegisterFromUnsigned(const RegisterInfo *reg_info, uint64_t uval);
-
-  // uint32_t
-  // GetStopID () const
-  // {
-  //     return m_stop_id;
-  // }
-
-  // void
-  // SetStopID (uint32_t stop_id)
-  // {
-  //     m_stop_id = stop_id;
-  // }
-
 protected:
+  llvm::Expected<RegisterValue>
+  ReadBankRegister(RegisterID id, llvm::ArrayRef<RegisterData> banks) const;
+  llvm::Error
+  WriteBankRegister(RegisterID id, const RegisterValue &value,
+                    llvm::ArrayRef<MutableRegisterData> banks) const;
   // Classes that inherit from ThreadRegisterContext can see and modify these
   NativeThreadProtocol
       &m_thread; // The thread that this register context belongs to.
@@ -179,7 +142,9 @@ protected:
   // context is valid for
 
 private:
-  // For ThreadRegisterContext only
+  ArchSpec m_arch;
+  std::shared_ptr<const RegisterDescription> m_description;
+  std::shared_ptr<const RegisterLayout> m_layout;
   NativeRegisterContext(const NativeRegisterContext &) = delete;
   const NativeRegisterContext &
   operator=(const NativeRegisterContext &) = delete;

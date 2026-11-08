@@ -17,6 +17,5 @@ static_library("Native") {
     "NativeRegisterContextDBReg_arm64.cpp",
     "NativeRegisterContextDBReg_loongarch.cpp",
     "NativeRegisterContextDBReg_x86.cpp",
-    "NativeRegisterContextRegisterInfo.cpp",
   ]
 }

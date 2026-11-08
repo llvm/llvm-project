@@ -11,13 +11,13 @@
 
 #include <vector>
 
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Utility/ArchSpec.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
 
-std::vector<DynamicRegisterInfo::Register>
+std::vector<RegisterDefinition>
 GetFallbackRegisters(const ArchSpec &arch_to_use);
 
 } // namespace process_gdb_remote

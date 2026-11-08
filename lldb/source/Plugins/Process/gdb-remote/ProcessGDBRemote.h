@@ -23,15 +23,15 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/Locked.h"
-#include "lldb/Register/RegisterType.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"
@@ -297,7 +297,7 @@ protected:
   std::optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;
 
-  lldb::DynamicRegisterInfoSP m_register_info_sp;
+  std::shared_ptr<const RegisterLayout> m_register_layout_sp;
   Broadcaster m_async_broadcaster;
   lldb::ListenerSP m_async_listener_sp;
   HostThread m_async_thread;
@@ -375,7 +375,7 @@ protected:
 
   void KillDebugserverProcess();
 
-  void BuildDynamicRegisterInfo(bool force);
+  void BuildRegisterDescription(bool force);
 
   void SetLastStopPacket(const StringExtractorGDBRemote &response);
 
@@ -455,11 +455,11 @@ protected:
 
   bool GetGDBServerRegisterInfoXMLAndProcess(
     ArchSpec &arch_to_use, std::string xml_filename,
-    std::vector<DynamicRegisterInfo::Register> &registers);
+      std::vector<RegisterDefinition> &registers);
 
-  // Convert DynamicRegisterInfo::Registers into RegisterInfos and add
+  // Convert RegisterDefinitions into RegisterInfos and add
   // to the dynamic register list.
-  void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
+  void AddRemoteRegisters(std::vector<RegisterDefinition> &registers,
                           const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
   llvm::Error GetGDBServerRegisterInfo(ArchSpec &arch);
@@ -588,9 +588,10 @@ private:
   void ParseExpeditedRegisters(ExpeditedRegisterMap &expedited_register_map,
                                lldb::ThreadSP thread_sp);
 
-  // RegisterInfo and nested register types contain non-owning pointers to these
-  // objects. Keep every parsed type alive for the lifetime of this process.
-  std::vector<std::unique_ptr<RegisterType>> m_register_types;
+  // RegisterDescriptor and nested register types contain non-owning pointers to
+  // these objects. Keep every parsed type alive for the lifetime of this
+  // process.
+  RegisterDescription::OwnedTypes m_register_types;
 };
 
 } // namespace process_gdb_remote

@@ -1,13 +1,13 @@
 add_lldb_unittest(TargetTests
   ABITest.cpp
-  DynamicRegisterInfoTest.cpp
   ExecutableModuleTest.cpp
   ExecutionContextTest.cpp
+  FindFileTest.cpp
   LanguageTest.cpp
   LocateModuleCallbackTest.cpp
   MemoryRegionInfoTest.cpp
-  MemoryTest.cpp
   MemoryTagMapTest.cpp
+  MemoryTest.cpp
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
   ProcessPropertiesTest.cpp
@@ -22,7 +22,6 @@ add_lldb_unittest(TargetTests
   TargetAPIMutexTest.cpp
   TargetGroupTest.cpp
   ThreadPlanStackTest.cpp
-  FindFileTest.cpp
 
   LINK_COMPONENTS
       Option

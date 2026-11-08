@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDFRAME_H
 
 #include "ScriptedThread.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/Support/Error.h"
@@ -105,7 +105,7 @@ private:
   ScriptedFrame(const ScriptedFrame &) = delete;
   const ScriptedFrame &operator=(const ScriptedFrame &) = delete;
 
-  llvm::Expected<lldb::DynamicRegisterInfoSP> GetDynamicRegisterInfo();
+  llvm::Expected<std::shared_ptr<const RegisterLayout>> GetRegisterLayout();
 
   lldb::ScriptedFrameInterfaceSP m_scripted_frame_interface_sp;
   lldb_private::StructuredData::GenericSP m_script_object_sp;

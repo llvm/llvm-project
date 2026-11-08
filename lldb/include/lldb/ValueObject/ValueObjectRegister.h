@@ -60,7 +60,8 @@ protected:
   CompilerType GetCompilerTypeImpl() override;
 
   lldb::ThreadRegisterContextSP m_reg_ctx_sp;
-  const RegisterSet *m_reg_set;
+  std::shared_ptr<const RegisterDescription> m_description;
+  const RegisterGroup *m_reg_set;
   uint32_t m_reg_set_idx;
 
 private:
@@ -75,10 +76,11 @@ private:
     return nullptr;
   }
 
-  std::optional<std::pair<size_t, const RegisterInfo *>>
+  std::optional<std::pair<size_t, const RegisterDescriptor *>>
   LookupChildWithName(llvm::StringRef name);
 
-  static bool IsSameRegister(const RegisterInfo *a, const RegisterInfo *b);
+  static bool IsSameRegister(const RegisterDescriptor *a,
+                             const RegisterDescriptor *b);
 
   // For ValueObject only
   ValueObjectRegisterSet(const ValueObjectRegisterSet &) = delete;
@@ -92,7 +94,7 @@ public:
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     lldb::ThreadRegisterContextSP &reg_ctx_sp,
-                                    const RegisterInfo *reg_info);
+                                    const RegisterDescriptor *reg_info);
 
   llvm ::Expected<uint64_t> GetByteSize() override;
 
@@ -121,22 +123,27 @@ protected:
   CompilerType GetCompilerTypeImpl() override;
 
   lldb::ThreadRegisterContextSP m_reg_ctx_sp;
-  RegisterInfo m_reg_info;
+  std::shared_ptr<const RegisterDescription> m_description;
+  RegisterID m_register_id = LLDB_INVALID_REGNUM;
+  const RegisterDescriptor &GetDescriptor() const {
+    return *m_description->Find(m_register_id);
+  }
   RegisterValue m_reg_value;
   ConstString m_type_name;
   CompilerType m_compiler_type;
 
 private:
-  void ConstructObject(const RegisterInfo *reg_info);
+  void ConstructObject(const RegisterDescriptor *reg_info);
 
   friend class ValueObjectRegisterSet;
 
-  ValueObjectRegister(ValueObject &parent, lldb::ThreadRegisterContextSP &reg_ctx_sp,
-                      const RegisterInfo *reg_info);
+  ValueObjectRegister(ValueObject &parent,
+                      lldb::ThreadRegisterContextSP &reg_ctx_sp,
+                      const RegisterDescriptor *reg_info);
   ValueObjectRegister(ExecutionContextScope *exe_scope,
                       ValueObjectManager &manager,
                       lldb::ThreadRegisterContextSP &reg_ctx_sp,
-                      const RegisterInfo *reg_info);
+                      const RegisterDescriptor *reg_info);
 
   // For ValueObject only
   ValueObjectRegister(const ValueObjectRegister &) = delete;

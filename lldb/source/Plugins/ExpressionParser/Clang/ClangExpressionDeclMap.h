@@ -632,7 +632,8 @@ private:
   ///
   /// \param[in] reg_info
   ///     The information corresponding to that register.
-  void AddOneRegister(NameSearchContext &context, const RegisterInfo *reg_info);
+  void AddOneRegister(NameSearchContext &context,
+                      const RegisterDescriptor *reg_info);
 
   /// Use the NameSearchContext to generate a Decl for the given type.  (Types
   /// are not placed in the Tuple list.)

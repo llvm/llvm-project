@@ -23,11 +23,9 @@
 
 #include "lldb/Register/Arch/lldb-ppc64-register-enums.h"
 
-namespace lldb_private {
+#include "Plugins/Process/AIX/RegisterLayoutAIX_ppc64.h"
 
-#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Register/Arch/RegisterInfos_ppc64.h"
-#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
+namespace lldb_private {
 
 namespace process_aix {
 
@@ -38,17 +36,12 @@ public:
   NativeRegisterContextAIX_ppc64(const ArchSpec &target_arch,
                                  NativeThreadProtocol &native_thread);
 
-  uint32_t GetRegisterSetCount() const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  uint32_t GetUserRegisterCount() const override;
-
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
@@ -70,15 +63,15 @@ private:
 
   bool IsVSX(unsigned reg) const;
 
-  uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
+  uint32_t CalculateFprOffset(const RegisterDescriptor *reg_info) const;
 
-  uint32_t CalculateVmxOffset(const RegisterInfo *reg_info) const;
+  uint32_t CalculateVmxOffset(const RegisterDescriptor *reg_info) const;
 
-  uint32_t CalculateVsxOffset(const RegisterInfo *reg_info) const;
+  uint32_t CalculateVsxOffset(const RegisterDescriptor *reg_info) const;
 
   union GPRStorage {
-    GPR_PPC gpr32;   // 32-bit general purpose registers.
-    GPR_PPC64 gpr64; // 64-bit general purpose registers.
+    aix_ppc64::GPR_PPC gpr32;   // 32-bit general purpose registers.
+    aix_ppc64::GPR_PPC64 gpr64; // 64-bit general purpose registers.
   } m_gpr_storage;
 
   void *m_gpr = nullptr;

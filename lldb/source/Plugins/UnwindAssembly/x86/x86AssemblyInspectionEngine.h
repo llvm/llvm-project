@@ -76,10 +76,9 @@ public:
   ///
   /// The \p unwind_plan 's register numbers must be converted into the lldb
   /// register numbering
-  /// scheme OR a ThreadRegisterContext must be provided in \p reg_ctx.  If the \p
-  /// unwind_plan
-  /// register numbers are already in lldb register numbering, \p reg_ctx may be
-  /// null.
+  /// scheme OR a ThreadRegisterContext must be provided in \p reg_ctx.  If the
+  /// \p unwind_plan register numbers are already in lldb register numbering, \p
+  /// reg_ctx may be null.
   /// \returns true if the \p unwind_plan was updated, false if it was not.
   bool AugmentUnwindPlanFromCallSite(uint8_t *data, size_t size,
                                      lldb_private::AddressRange &func_range,

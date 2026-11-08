@@ -24,16 +24,21 @@ using namespace lldb;
 using namespace lldb_private;
 
 RegisterContextFreeBSDKernelCore_ppc64le::
-    RegisterContextFreeBSDKernelCore_ppc64le(
-        Thread &thread, lldb_private::RegisterInfoInterface *register_info,
-        lldb::addr_t pcb_addr)
-    : RegisterContextCore_ppc64le(thread, 0, register_info),
+    RegisterContextFreeBSDKernelCore_ppc64le(Thread &thread,
+                                             RegisterLayout layout,
+                                             lldb::addr_t pcb_addr)
+    : ThreadRegisterContext(thread, 0, std::move(layout)),
       m_pcb_addr(pcb_addr) {}
 
-bool RegisterContextFreeBSDKernelCore_ppc64le::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+llvm::Expected<RegisterValue>
+RegisterContextFreeBSDKernelCore_ppc64le::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   // https://cgit.freebsd.org/src/tree/sys/powerpc/include/pcb.h
   struct {
@@ -57,9 +62,9 @@ bool RegisterContextFreeBSDKernelCore_ppc64le::ReadRegister(
   size_t rd =
       m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
   if (rd != sizeof(pcb))
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
-  uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
   switch (reg) {
   case reg_ids::gpr_r1:
     // r1 is saved in the sp field
@@ -100,12 +105,12 @@ bool RegisterContextFreeBSDKernelCore_ppc64le::ReadRegister(
     value = pcb.cr;
     break;
   default:
-    return false;
+    return llvm::createStringError("register value is unavailable");
   }
-  return true;
+  return value;
 }
 
-bool RegisterContextFreeBSDKernelCore_ppc64le::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error RegisterContextFreeBSDKernelCore_ppc64le::WriteRegister(
+    RegisterID id, const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

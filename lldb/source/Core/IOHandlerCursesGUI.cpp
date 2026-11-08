@@ -6044,7 +6044,7 @@ public:
         m_stack_id = frame->GetStackID();
         ThreadRegisterContextSP reg_ctx(frame->GetRegisterContext());
         if (reg_ctx) {
-          const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
+          const uint32_t num_sets = reg_ctx->GetRegisterGroupCount();
           for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx) {
             value_list.Append(
                 ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx));

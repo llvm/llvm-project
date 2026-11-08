@@ -304,12 +304,12 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
         m_location_str = "invalid";
         break;
       case Value::ValueType::Scalar:
-        if (value.GetContextType() == Value::ContextType::RegisterInfo) {
-          RegisterInfo *reg_info = value.GetRegisterInfo();
+        if (value.GetContextType() == Value::ContextType::RegisterDescriptor) {
+          const RegisterDescriptor *reg_info = value.GetRegisterInfo();
           if (reg_info) {
-            if (reg_info->name)
+            if (!reg_info->name.empty())
               m_location_str = reg_info->name;
-            else if (reg_info->alt_name)
+            else if (!reg_info->alt_name.empty())
               m_location_str = reg_info->alt_name;
             if (m_location_str.empty())
               m_location_str = (reg_info->encoding == lldb::eEncodingVector)
@@ -1131,8 +1131,9 @@ const char *ValueObject::GetValueAsCString() {
         if (m_flags.m_is_bitfield_for_scalar)
           my_format = eFormatUnsigned;
         else {
-          if (m_value.GetContextType() == Value::ContextType::RegisterInfo) {
-            const RegisterInfo *reg_info = m_value.GetRegisterInfo();
+          if (m_value.GetContextType() ==
+              Value::ContextType::RegisterDescriptor) {
+            const RegisterDescriptor *reg_info = m_value.GetRegisterInfo();
             if (reg_info)
               my_format = reg_info->format;
           } else {

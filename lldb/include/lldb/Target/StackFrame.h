@@ -239,12 +239,13 @@ public:
 
   /// Get the ThreadRegisterContext for this frame, if possible.
   ///
-  /// Returns a shared pointer to the ThreadRegisterContext for this stack frame.
-  /// Only a live StackFrame object will be able to return a ThreadRegisterContext -
-  /// callers must be prepared for an empty shared pointer being returned.
+  /// Returns a shared pointer to the ThreadRegisterContext for this stack
+  /// frame. Only a live StackFrame object will be able to return a
+  /// ThreadRegisterContext - callers must be prepared for an empty shared
+  /// pointer being returned.
   ///
-  /// Even a live StackFrame ThreadRegisterContext may not be able to provide all
-  /// registers.  Only the currently executing frame (frame 0) can reliably
+  /// Even a live StackFrame ThreadRegisterContext may not be able to provide
+  /// all registers.  Only the currently executing frame (frame 0) can reliably
   /// provide every register in the register context.
   ///
   /// \return

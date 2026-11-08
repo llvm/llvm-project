@@ -17,20 +17,18 @@
 
 #include <memory>
 
-
-namespace reg_ids = lldb_private::registers::ppc64le::id;
 using namespace lldb_private;
 
 RegisterContextELFCore_ppc64le::RegisterContextELFCore_ppc64le(
-    Thread &thread, RegisterInfoInterface *register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCore_ppc64le(thread, 0, register_info) {
+    Thread &thread, RegisterLayout layout, const DataExtractor &gpregset,
+    llvm::ArrayRef<CoreNote> notes)
+    : ThreadRegisterContext(thread, 0, std::move(layout)) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
-  ArchSpec arch = register_info->GetTargetArchitecture();
+  ArchSpec arch = GetTargetArchitecture();
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
   m_fpr_buffer = std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
                                                   fpregset.GetByteSize());
@@ -50,86 +48,28 @@ RegisterContextELFCore_ppc64le::RegisterContextELFCore_ppc64le(
   m_vsx.SetByteOrder(vsxregset.GetByteOrder());
 }
 
-size_t RegisterContextELFCore_ppc64le::GetFPRSize() const {
-  return reg_ids::k_num_fpr_registers * sizeof(uint64_t);
+llvm::Expected<RegisterValue>
+RegisterContextELFCore_ppc64le::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  if (!reg_info)
+    return llvm::createStringError("register value is unavailable");
+  const auto *reg = GetDescription()->Find(reg_info->id);
+  if (!reg)
+    return llvm::createStringError("register value is unavailable");
+  auto result = ReadBankRegister(
+      reg->id, {{0, {m_gpr.GetDataStart(), m_gpr.GetByteSize()}},
+                {1, {m_fpr.GetDataStart(), m_fpr.GetByteSize()}},
+                {2, {m_vmx.GetDataStart(), m_vmx.GetByteSize()}},
+                {3, {m_vsx.GetDataStart(), m_vsx.GetByteSize()}}});
+  return result;
 }
 
-size_t RegisterContextELFCore_ppc64le::GetVMXSize() const {
-  return (reg_ids::k_num_vmx_registers - 1) * sizeof(uint64_t) * 2 +
-         sizeof(uint32_t);
-}
-
-size_t RegisterContextELFCore_ppc64le::GetVSXSize() const {
-  return reg_ids::k_num_vsx_registers * sizeof(uint64_t) * 2;
-}
-
-bool RegisterContextELFCore_ppc64le::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
-  lldb::offset_t offset = reg_info->byte_offset;
-
-  if (IsFPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    uint64_t v;
-    offset -= GetGPRSize();
-    offset = m_fpr.CopyData(offset, reg_info->byte_size, &v);
-
-    if (offset == reg_info->byte_size) {
-      value.SetBytes(&v, reg_info->byte_size, m_fpr.GetByteOrder());
-      return true;
-    }
-  } else if (IsVMX(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    uint32_t v[4];
-    offset -= GetGPRSize() + GetFPRSize();
-    offset = m_vmx.CopyData(offset, reg_info->byte_size, &v);
-
-    if (offset == reg_info->byte_size) {
-      value.SetBytes(v, reg_info->byte_size, m_vmx.GetByteOrder());
-      return true;
-    }
-  } else if (IsVSX(reg_info->kinds[lldb::eRegisterKindLLDB])) {
-    uint32_t v[4];
-    lldb::offset_t tmp_offset;
-    offset -= GetGPRSize() + GetFPRSize() + GetVMXSize();
-
-    if (offset < GetVSXSize() / 2) {
-      tmp_offset = m_vsx.CopyData(offset / 2, reg_info->byte_size / 2, &v);
-
-      if (tmp_offset != reg_info->byte_size / 2) {
-        return false;
-      }
-
-      uint8_t *dst = (uint8_t *)&v + sizeof(uint64_t);
-      tmp_offset = m_fpr.CopyData(offset / 2, reg_info->byte_size / 2, dst);
-
-      if (tmp_offset != reg_info->byte_size / 2) {
-        return false;
-      }
-
-      value.SetBytes(&v, reg_info->byte_size, m_vsx.GetByteOrder());
-      return true;
-    } else {
-      offset =
-          m_vmx.CopyData(offset - GetVSXSize() / 2, reg_info->byte_size, &v);
-      if (offset == reg_info->byte_size) {
-        value.SetBytes(v, reg_info->byte_size, m_vmx.GetByteOrder());
-        return true;
-      }
-    }
-  } else {
-    uint64_t v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
-
-    if (offset == reg_info->byte_offset + reg_info->byte_size) {
-      if (reg_info->byte_size < sizeof(v))
-        value = (uint32_t)v;
-      else
-        value = v;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool RegisterContextELFCore_ppc64le::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error
+RegisterContextELFCore_ppc64le::WriteRegister(RegisterID id,
+                                                const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }

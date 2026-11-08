@@ -297,10 +297,15 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
     if (frame && reg_name.consume_front("$")) {
       ThreadRegisterContextSP reg_ctx_sp = frame->GetRegisterContext();
       if (reg_ctx_sp) {
-        const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfoByName(reg_name);
+        const RegisterDescriptor *reg_info =
+            reg_ctx_sp->GetRegisterByName(reg_name);
         if (reg_info) {
           RegisterValue reg_val;
-          bool success = reg_ctx_sp->ReadRegister(reg_info, reg_val);
+          bool success = !llvm::errorToBool(
+              reg_ctx_sp
+                  ->ReadRegister(
+                      (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                  .moveInto(reg_val));
           if (success && reg_val.GetType() != RegisterValue::eTypeInvalid) {
             register_value = reg_val.GetAsUInt64(0, &success);
             if (!success)

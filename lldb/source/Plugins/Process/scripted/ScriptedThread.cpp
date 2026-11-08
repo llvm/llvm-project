@@ -146,7 +146,7 @@ ScriptedThread::CreateRegisterContextForFrame(StackFrame *frame) {
         LLVM_PRETTY_FUNCTION, "Failed to copy raw registers data.", error,
         LLDBLog::Thread);
 
-  DynamicRegisterInfoSP register_info_sp = GetDynamicRegisterInfo();
+  std::shared_ptr<const RegisterLayout> register_info_sp = GetRegisterLayout();
   if (!register_info_sp)
     return ScriptedInterface::ErrorWithMessage<lldb::ThreadRegisterContextSP>(
         LLVM_PRETTY_FUNCTION,
@@ -443,18 +443,19 @@ lldb::ScriptedThreadInterfaceSP ScriptedThread::GetInterface() const {
   return m_scripted_thread_interface_sp;
 }
 
-DynamicRegisterInfoSP ScriptedThread::GetDynamicRegisterInfo() {
+std::shared_ptr<const RegisterLayout> ScriptedThread::GetRegisterLayout() {
   CheckInterpreterAndScriptObject();
 
   StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
 
   Status error;
   if (!reg_info)
-    return ScriptedInterface::ErrorWithMessage<DynamicRegisterInfoSP>(
+    return ScriptedInterface::ErrorWithMessage<
+        std::shared_ptr<const RegisterLayout>>(
         LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
         error, LLDBLog::Thread);
 
-  return DynamicRegisterInfo::Create(
+  return CreateRegisterImageLayout(
       *reg_info, m_scripted_process.GetTarget().GetArchitecture());
 }
 

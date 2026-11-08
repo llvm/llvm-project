@@ -324,7 +324,7 @@ std::optional<uint32_t> RegisterTypeBuilderClang::GetExpectedByteSize(
 }
 
 CompilerType
-RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
+RegisterTypeBuilderClang::GetRegisterType(const RegisterDescriptor &reg_info) {
   lldb::TypeSystemClangSP type_system =
       ScratchTypeSystemClang::GetForTarget(m_target);
   assert(type_system);
@@ -334,28 +334,26 @@ RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
     m_cached_type_system = type_system;
   }
 
-  if (!reg_info.register_type)
+  if (!reg_info.type)
     return CompilerType();
 
   // Note that we do not check the type cache here because types can be nested.
   // There is a cache check in each of the Build<subtype> methods, and those
   // methods may call each other (Flags may use Enums for example).
 
-  switch (reg_info.register_type->getKind()) {
+  switch (reg_info.type->getKind()) {
   case RegisterType::eRegisterTypeKindBuiltin:
-    return BuildType(reg_info.register_type, reg_info.byte_size, type_system);
+    return BuildType(reg_info.type, reg_info.byte_size, type_system);
   case RegisterType::eRegisterTypeKindFlags:
-    return BuildFlagsType(
-        llvm::dyn_cast<RegisterTypeFlags>(reg_info.register_type),
+    return BuildFlagsType(llvm::dyn_cast<RegisterTypeFlags>(reg_info.type),
         reg_info.byte_size, type_system);
   case RegisterType::eRegisterTypeKindEnum:
-    return BuildEnumType(
-        llvm::dyn_cast<RegisterTypeEnum>(reg_info.register_type),
+    return BuildEnumType(llvm::dyn_cast<RegisterTypeEnum>(reg_info.type),
         reg_info.byte_size, type_system);
   case RegisterType::eRegisterTypeKindVector:
-    return BuildType(reg_info.register_type, reg_info.byte_size, type_system);
+    return BuildType(reg_info.type, reg_info.byte_size, type_system);
   case RegisterType::eRegisterTypeKindUnion:
-    return BuildType(reg_info.register_type, reg_info.byte_size, type_system);
+    return BuildType(reg_info.type, reg_info.byte_size, type_system);
   }
   llvm_unreachable("Unhandled RegisterType kind");
 }

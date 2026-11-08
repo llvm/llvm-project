@@ -18,6 +18,7 @@
 #include <variant>
 
 #include "GDBRemoteCommunicationServerLLGS.h"
+#include "RegisterPacketLayout.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/File.h"
@@ -30,6 +31,7 @@
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
+#include "lldb/Register/RegisterType.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/Args.h"
@@ -39,7 +41,6 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Register/RegisterType.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -71,6 +72,22 @@ enum GDBRemoteServerError {
   eErrorResume,
   eErrorExitStatus
 };
+}
+
+static llvm::Expected<RegisterPacketLayout>
+BuildRegisterPacketLayout(NativeRegisterContext &context) {
+  auto description = context.GetDescription();
+  if (!description ||
+      context.GetUserRegisterCount() > description->GetRegisters().size())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "missing native register description");
+  std::vector<RegisterID> order;
+  for (const auto &reg :
+       description->GetRegisters().take_front(context.GetUserRegisterCount()))
+    order.push_back(reg.id);
+  return RegisterPacketLayout::Create(
+      std::move(description), order,
+      context.GetTargetArchitecture().GetByteOrder());
 }
 
 // GDBRemoteCommunicationServerLLGS constructor
@@ -561,8 +578,8 @@ static void AppendHexValue(StreamString &response, const uint8_t *buf,
   }
 }
 
-static llvm::StringRef GetEncodingNameOrEmpty(const RegisterInfo &reg_info) {
-  switch (reg_info.encoding) {
+static llvm::StringRef GetEncodingNameOrEmpty(lldb::Encoding encoding) {
+  switch (encoding) {
   case eEncodingUint:
     return "uint";
   case eEncodingSint:
@@ -576,8 +593,8 @@ static llvm::StringRef GetEncodingNameOrEmpty(const RegisterInfo &reg_info) {
   }
 }
 
-static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
-  switch (reg_info.format) {
+static llvm::StringRef GetFormatNameOrEmpty(lldb::Format format) {
+  switch (format) {
   case eFormatDefault:
     return "";
   case eFormatBoolean:
@@ -665,8 +682,8 @@ static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
   };
 }
 
-static llvm::StringRef GetKindGenericOrEmpty(const RegisterInfo &reg_info) {
-  switch (reg_info.kinds[RegisterKind::eRegisterKindGeneric]) {
+static llvm::StringRef GetKindGenericOrEmpty(uint32_t generic) {
+  switch (generic) {
   case LLDB_REGNUM_GENERIC_PC:
     return "pc";
   case LLDB_REGNUM_GENERIC_SP:
@@ -700,41 +717,23 @@ static llvm::StringRef GetKindGenericOrEmpty(const RegisterInfo &reg_info) {
   }
 }
 
-static void CollectRegNums(const uint32_t *reg_num, StreamString &response,
-                           bool usehex) {
-  for (int i = 0; *reg_num != LLDB_INVALID_REGNUM; ++reg_num, ++i) {
+static void CollectRegNums(llvm::ArrayRef<uint32_t> numbers,
+                           StreamString &response, bool usehex) {
+  for (auto [i, number] : llvm::enumerate(numbers)) {
     if (i > 0)
       response.PutChar(',');
     if (usehex)
-      response.Printf("%" PRIx32, *reg_num);
+      response.Printf("%" PRIx32, number);
     else
-      response.Printf("%" PRIu32, *reg_num);
+      response.Printf("%" PRIu32, number);
   }
 }
 
-static void WriteRegisterValueInHexFixedWidth(
-    StreamString &response, NativeRegisterContext &reg_ctx,
-    const RegisterInfo &reg_info, const RegisterValue *reg_value_p,
+static void WriteRegisterValueInHexFixedWidth(StreamString &response,
+                                              const RegisterValue &value,
     lldb::ByteOrder byte_order) {
-  RegisterValue reg_value;
-  if (!reg_value_p) {
-    Status error = reg_ctx.ReadRegister(&reg_info, reg_value);
-    if (error.Success())
-      reg_value_p = &reg_value;
-    // else log.
-  }
-
-  if (reg_value_p) {
-    AppendHexValue(response, (const uint8_t *)reg_value_p->GetBytes(),
-                   reg_value_p->GetByteSize(),
-                   byte_order == lldb::eByteOrderLittle);
-  } else {
-    // Zero-out any unreadable values.
-    if (reg_info.byte_size > 0) {
-      std::vector<uint8_t> zeros(reg_info.byte_size, '\0');
-      AppendHexValue(response, zeros.data(), zeros.size(), false);
-    }
-  }
+  AppendHexValue(response, static_cast<const uint8_t *>(value.GetBytes()),
+                 value.GetByteSize(), byte_order == lldb::eByteOrderLittle);
 }
 
 static std::optional<json::Object>
@@ -755,35 +754,27 @@ GetRegistersAsJSON(NativeThreadProtocol &thread) {
   if (expedited_regs.empty())
     return std::nullopt;
 
-  for (auto &reg_num : expedited_regs) {
-    const RegisterInfo *const reg_info_p =
-        reg_ctx.GetRegisterInfoAtIndex(reg_num);
-    if (reg_info_p == nullptr) {
-      LLDB_LOGF(log,
-                "%s failed to get register info for register index %" PRIu32,
-                __FUNCTION__, reg_num);
+  auto packet_layout = BuildRegisterPacketLayout(reg_ctx);
+  if (!packet_layout) {
+    LLDB_LOG_ERROR(log, packet_layout.takeError(),
+                   "cannot project registers: {0}");
+    return std::nullopt;
+  }
+  const auto &description = packet_layout->GetDescription();
+  for (RegisterID id : expedited_regs) {
+    const auto *reg = description.Find(id);
+    auto wire_number = packet_layout->GetWireNumber(id);
+    if (!reg || !wire_number || !reg->value_registers.empty())
+      continue;
+    auto value = reg_ctx.ReadRegister(id);
+    if (!value) {
+      LLDB_LOG_ERROR(log, value.takeError(), "failed to read {1}: {0}",
+                     reg->name);
       continue;
     }
-
-    if (reg_info_p->value_regs != nullptr)
-      continue; // Only expedite registers that are not contained in other
-                // registers.
-
-    RegisterValue reg_value;
-    Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
-    if (error.Fail()) {
-      LLDB_LOGF(log, "%s failed to read register '%s' index %" PRIu32 ": %s",
-                __FUNCTION__,
-                reg_info_p->name ? reg_info_p->name : "<unnamed-register>",
-                reg_num, error.AsCString());
-      continue;
-    }
-
     StreamString stream;
-    WriteRegisterValueInHexFixedWidth(stream, reg_ctx, *reg_info_p,
-                                      &reg_value, lldb::eByteOrderBig);
-
-    register_object.try_emplace(llvm::to_string(reg_num),
+    WriteRegisterValueInHexFixedWidth(stream, *value, lldb::eByteOrderBig);
+    register_object.try_emplace(llvm::to_string(*wire_number),
                                 stream.GetString().str());
   }
 
@@ -994,25 +985,22 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     for (NativeThreadProtocol &thread : process.Threads()) {
       NativeRegisterContext &reg_ctx = thread.GetRegisterContext();
 
-      uint32_t reg_to_read = reg_ctx.ConvertRegisterKindToRegisterNumber(
-          eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-      const RegisterInfo *const reg_info_p =
-          reg_ctx.GetRegisterInfoAtIndex(reg_to_read);
-
-      RegisterValue reg_value;
-      Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
-      if (error.Fail()) {
-        LLDB_LOGF(log, "%s failed to read register '%s' index %" PRIu32 ": %s",
-                  __FUNCTION__,
-                  reg_info_p->name ? reg_info_p->name : "<unnamed-register>",
-                  reg_to_read, error.AsCString());
+      auto description = reg_ctx.GetDescription();
+      const auto *pc = description
+                           ? description->FindByNumber(eRegisterKindGeneric,
+                                                       LLDB_REGNUM_GENERIC_PC)
+                           : nullptr;
+      if (!pc)
+        continue;
+      auto value = reg_ctx.ReadRegister(pc->id);
+      if (!value) {
+        LLDB_LOG_ERROR(log, value.takeError(), "failed to read PC: {0}");
         continue;
       }
-
       response.PutChar(delimiter);
       delimiter = ',';
-      WriteRegisterValueInHexFixedWidth(response, reg_ctx, *reg_info_p,
-                                        &reg_value, endian::InlHostByteOrder());
+      WriteRegisterValueInHexFixedWidth(response, *value,
+                                        endian::InlHostByteOrder());
     }
 
     response.PutChar(';');
@@ -1027,26 +1015,25 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
   const auto expedited_regs =
       reg_ctx.GetExpeditedRegisters(ExpeditedRegs::Full);
 
-  for (auto &reg_num : expedited_regs) {
-    const RegisterInfo *const reg_info_p =
-        reg_ctx.GetRegisterInfoAtIndex(reg_num);
-    // Only expediate registers that are not contained in other registers.
-    if (reg_info_p != nullptr && reg_info_p->value_regs == nullptr) {
-      RegisterValue reg_value;
-      Status error = reg_ctx.ReadRegister(reg_info_p, reg_value);
-      if (error.Success()) {
-        response.Printf("%.02x:", reg_num);
-        WriteRegisterValueInHexFixedWidth(response, reg_ctx, *reg_info_p,
-                                          &reg_value, lldb::eByteOrderBig);
-        response.PutChar(';');
-      } else {
-        LLDB_LOGF(log,
-                  "GDBRemoteCommunicationServerLLGS::%s failed to read "
-                  "register '%s' index %" PRIu32 ": %s",
-                  __FUNCTION__,
-                  reg_info_p->name ? reg_info_p->name : "<unnamed-register>",
-                  reg_num, error.AsCString());
+  auto packet_layout = BuildRegisterPacketLayout(reg_ctx);
+  if (!packet_layout) {
+    LLDB_LOG_ERROR(log, packet_layout.takeError(),
+                   "cannot project registers: {0}");
+  } else {
+    for (RegisterID id : expedited_regs) {
+      const auto *reg = packet_layout->GetDescription().Find(id);
+      auto wire_number = packet_layout->GetWireNumber(id);
+      if (!reg || !wire_number || !reg->value_registers.empty())
+        continue;
+      auto value = reg_ctx.ReadRegister(id);
+      if (!value) {
+        LLDB_LOG_ERROR(log, value.takeError(), "failed to read {1}: {0}",
+                       reg->name);
+        continue;
       }
+      response.Printf("%.02x:", *wire_number);
+      WriteRegisterValueInHexFixedWidth(response, *value, lldb::eByteOrderBig);
+      response.PutChar(';');
     }
   }
 
@@ -2176,7 +2163,13 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
   if (reg_index >= reg_context.GetUserRegisterCount())
     return SendErrorResponse(69);
 
-  const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_index);
+  auto packet_layout = BuildRegisterPacketLayout(reg_context);
+  if (!packet_layout) {
+    llvm::consumeError(packet_layout.takeError());
+    return SendErrorResponse(69);
+  }
+  const auto &wire = packet_layout->GetEntries()[reg_index];
+  const auto *reg_info = packet_layout->GetDescription().Find(wire.id);
   if (!reg_info)
     return SendErrorResponse(69);
 
@@ -2187,7 +2180,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
   response.PutCString(reg_info->name);
   response.PutChar(';');
 
-  if (reg_info->alt_name && reg_info->alt_name[0]) {
+  if (!reg_info->alt_name.empty()) {
     response.PutCString("alt-name:");
     response.PutCString(reg_info->alt_name);
     response.PutChar(';');
@@ -2196,45 +2189,50 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
   response.Printf("bitsize:%" PRIu32 ";", reg_info->byte_size * 8);
 
   if (!reg_context.RegisterOffsetIsDynamic())
-    response.Printf("offset:%" PRIu32 ";", reg_info->byte_offset);
+    response.Printf("offset:%" PRIu32 ";", wire.byte_offset);
 
-  llvm::StringRef encoding = GetEncodingNameOrEmpty(*reg_info);
+  llvm::StringRef encoding = GetEncodingNameOrEmpty(reg_info->encoding);
   if (!encoding.empty())
     response << "encoding:" << encoding << ';';
 
-  llvm::StringRef format = GetFormatNameOrEmpty(*reg_info);
+  llvm::StringRef format = GetFormatNameOrEmpty(reg_info->format);
   if (!format.empty())
     response << "format:" << format << ';';
 
-  const char *const register_set_name =
-      reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
-  if (register_set_name)
-    response << "set:" << register_set_name << ';';
+  const auto *group =
+      packet_layout->GetDescription().FindGroupForRegister(wire.id);
+  if (group)
+    response << "set:" << group->name << ';';
   else
     response << "set:general;";
 
-  if (reg_info->kinds[RegisterKind::eRegisterKindEHFrame] !=
+  if (reg_info->numbers[RegisterKind::eRegisterKindEHFrame] !=
       LLDB_INVALID_REGNUM)
     response.Printf("ehframe:%" PRIu32 ";",
-                    reg_info->kinds[RegisterKind::eRegisterKindEHFrame]);
+                    reg_info->numbers[RegisterKind::eRegisterKindEHFrame]);
 
-  if (reg_info->kinds[RegisterKind::eRegisterKindDWARF] != LLDB_INVALID_REGNUM)
+  if (reg_info->numbers[RegisterKind::eRegisterKindDWARF] !=
+      LLDB_INVALID_REGNUM)
     response.Printf("dwarf:%" PRIu32 ";",
-                    reg_info->kinds[RegisterKind::eRegisterKindDWARF]);
+                    reg_info->numbers[RegisterKind::eRegisterKindDWARF]);
 
-  llvm::StringRef kind_generic = GetKindGenericOrEmpty(*reg_info);
+  llvm::StringRef kind_generic =
+      GetKindGenericOrEmpty(reg_info->numbers[lldb::eRegisterKindGeneric]);
   if (!kind_generic.empty())
     response << "generic:" << kind_generic << ';';
 
-  if (reg_info->value_regs && reg_info->value_regs[0] != LLDB_INVALID_REGNUM) {
+  auto values = packet_layout->GetWireNumbers(reg_info->value_registers);
+  if (!values.empty()) {
     response.PutCString("container-regs:");
-    CollectRegNums(reg_info->value_regs, response, true);
+    CollectRegNums(values, response, true);
     response.PutChar(';');
   }
 
-  if (reg_info->invalidate_regs && reg_info->invalidate_regs[0]) {
+  auto invalidates =
+      packet_layout->GetWireNumbers(reg_info->invalidate_registers);
+  if (!invalidates.empty()) {
     response.PutCString("invalidate-regs:");
-    CollectRegNums(reg_info->invalidate_regs, response, true);
+    CollectRegNums(invalidates, response, true);
     response.PutChar(';');
   }
 
@@ -2301,35 +2299,30 @@ GDBRemoteCommunicationServerLLGS::Handle_g(StringExtractorGDBRemote &packet) {
   // Get the thread's register context.
   NativeRegisterContext &reg_ctx = thread->GetRegisterContext();
 
-  std::vector<uint8_t> regs_buffer;
-  for (uint32_t reg_num = 0; reg_num < reg_ctx.GetUserRegisterCount();
-       ++reg_num) {
-    const RegisterInfo *reg_info = reg_ctx.GetRegisterInfoAtIndex(reg_num);
-
-    if (reg_info == nullptr) {
-      LLDB_LOG(log, "failed to get register info for register index {0}",
-               reg_num);
+  auto packet_layout = BuildRegisterPacketLayout(reg_ctx);
+  if (!packet_layout) {
+    llvm::consumeError(packet_layout.takeError());
+    return SendErrorResponse(0x15);
+  }
+  std::vector<uint8_t> regs_buffer(packet_layout->GetByteSize());
+  for (const auto &wire : packet_layout->GetEntries()) {
+    if (!wire.primary)
+      continue;
+    auto value = reg_ctx.ReadRegister(wire.id);
+    if (!value) {
+      LLDB_LOG_ERROR(log, value.takeError(), "failed to read register {1}: {0}",
+                     wire.id);
       return SendErrorResponse(0x15);
     }
-
-    if (reg_info->value_regs != nullptr)
-      continue; // skip registers that are contained in other registers
-
-    RegisterValue reg_value;
-    Status error = reg_ctx.ReadRegister(reg_info, reg_value);
-    if (error.Fail()) {
-      LLDB_LOG(log, "failed to read register at index {0}", reg_num);
+    if (reg_ctx.GetDescription().get() != &packet_layout->GetDescription())
       return SendErrorResponse(0x15);
-    }
-
-    if (reg_info->byte_offset + reg_info->byte_size >= regs_buffer.size())
-      // Resize the buffer to guarantee it can store the register offsetted
-      // data.
-      regs_buffer.resize(reg_info->byte_offset + reg_info->byte_size);
-
-    // Copy the register offsetted data to the buffer.
-    memcpy(regs_buffer.data() + reg_info->byte_offset, reg_value.GetBytes(),
-           reg_info->byte_size);
+    Status error;
+    if (value->GetAsMemoryData(
+            wire.byte_size, regs_buffer.data() + wire.byte_offset,
+            wire.byte_size, thread->GetProcess().GetByteOrder(), error,
+            packet_layout->GetDescription().Find(wire.id)->name) !=
+        wire.byte_size)
+      return SendErrorResponse(0x15);
   }
 
   // Write the response.
@@ -2370,12 +2363,21 @@ GDBRemoteCommunicationServerLLGS::Handle_p(StringExtractorGDBRemote &packet) {
   if (reg_index >= reg_context.GetUserRegisterCount()) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed, requested "
-              "register %" PRIu32 " beyond register count %" PRIu32,
+              "register %" PRIu32 " beyond register count %zu",
               __FUNCTION__, reg_index, reg_context.GetUserRegisterCount());
     return SendErrorResponse(0x15);
   }
 
-  const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_index);
+  auto packet_layout = BuildRegisterPacketLayout(reg_context);
+  if (!packet_layout) {
+    llvm::consumeError(packet_layout.takeError());
+    return SendErrorResponse(0x15);
+  }
+  const auto entries = packet_layout->GetEntries();
+  const auto *reg_info =
+      reg_index < entries.size()
+          ? packet_layout->GetDescription().Find(entries[reg_index].id)
+          : nullptr;
   if (!reg_info) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed, requested "
@@ -2388,18 +2390,16 @@ GDBRemoteCommunicationServerLLGS::Handle_p(StringExtractorGDBRemote &packet) {
   StreamGDBRemote response;
 
   // Retrieve the value
-  RegisterValue reg_value;
-  Status error = reg_context.ReadRegister(reg_info, reg_value);
-  if (error.Fail()) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s failed, read of "
-              "requested register %" PRIu32 " (%s) failed: %s",
-              __FUNCTION__, reg_index, reg_info->name, error.AsCString());
+  auto reg_value = reg_context.ReadRegister(reg_info->id);
+  if (!reg_value) {
+    LLDB_LOG_ERROR(log, reg_value.takeError(),
+                   "failed to read register {1} ({2}): {0}", reg_index,
+                   reg_info->name);
     return SendErrorResponse(0x15);
   }
 
   const uint8_t *const data =
-      static_cast<const uint8_t *>(reg_value.GetBytes());
+      static_cast<const uint8_t *>(reg_value->GetBytes());
   if (!data) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed to get data "
@@ -2409,7 +2409,7 @@ GDBRemoteCommunicationServerLLGS::Handle_p(StringExtractorGDBRemote &packet) {
   }
 
   // FIXME flip as needed to get data in big/little endian format for this host.
-  for (uint32_t i = 0; i < reg_value.GetByteSize(); ++i)
+  for (uint32_t i = 0; i < reg_value->GetByteSize(); ++i)
     response.PutHex8(data[i]);
 
   return SendPacketNoLock(response.GetString());
@@ -2455,7 +2455,16 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
 
   // Get the thread's register context.
   NativeRegisterContext &reg_context = thread->GetRegisterContext();
-  const RegisterInfo *reg_info = reg_context.GetRegisterInfoAtIndex(reg_index);
+  auto packet_layout = BuildRegisterPacketLayout(reg_context);
+  if (!packet_layout) {
+    llvm::consumeError(packet_layout.takeError());
+    return SendErrorResponse(0x15);
+  }
+  const auto entries = packet_layout->GetEntries();
+  const auto *reg_info =
+      reg_index < entries.size()
+          ? packet_layout->GetDescription().Find(entries[reg_index].id)
+          : nullptr;
   if (!reg_info) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed, requested "
@@ -2469,7 +2478,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   if (reg_index >= reg_context.GetUserRegisterCount()) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed, requested "
-              "register %" PRIu32 " beyond register count %" PRIu32,
+              "register %" PRIu32 " beyond register count %zu",
               __FUNCTION__, reg_index, reg_context.GetUserRegisterCount());
     return SendErrorResponse(0x47);
   }
@@ -2482,12 +2491,10 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
 
   RegisterValue reg_value(ArrayRef<uint8_t>(m_reg_bytes, reg_size),
                           m_current_process->GetArchitecture().GetByteOrder());
-  Status error = reg_context.WriteRegister(reg_info, reg_value);
-  if (error.Fail()) {
-    LLDB_LOGF(log,
-              "GDBRemoteCommunicationServerLLGS::%s failed, write of "
-              "requested register %" PRIu32 " (%s) failed: %s",
-              __FUNCTION__, reg_index, reg_info->name, error.AsCString());
+  if (auto error = reg_context.WriteRegister(reg_info->id, reg_value)) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "failed to write register {1} ({2}): {0}", reg_index,
+                   reg_info->name);
     return SendErrorResponse(0x32);
   }
 
@@ -3373,14 +3380,17 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   response.Format("<architecture>{}</architecture>\n", new_arch_name);
   response.Indent("<feature>\n");
 
+  auto packet_layout = BuildRegisterPacketLayout(reg_context);
+  if (!packet_layout)
+    return packet_layout.takeError();
   const int registers_count = reg_context.GetUserRegisterCount();
   if (registers_count)
     response.IndentMore();
 
   std::unordered_set<std::string> register_types_emitted;
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
-    const RegisterInfo *reg_info =
-        reg_context.GetRegisterInfoAtIndex(reg_index);
+    const auto &wire = packet_layout->GetEntries()[reg_index];
+    const auto *reg_info = packet_layout->GetDescription().Find(wire.id);
 
     if (!reg_info) {
       LLDB_LOGF(log,
@@ -3389,62 +3399,63 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       continue;
     }
 
-    if (reg_info->register_type)
-      reg_info->register_type->ToXML(response, register_types_emitted);
+    if (reg_info->type)
+      reg_info->type->ToXML(response, register_types_emitted);
 
     response.Indent();
-    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32
-                    "\" regnum=\"%d\" ",
-                    reg_info->name, reg_info->byte_size * 8, reg_index);
+    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32 "\" regnum=\"%d\" ",
+                    reg_info->name.c_str(), reg_info->byte_size * 8, reg_index);
 
     if (!reg_context.RegisterOffsetIsDynamic())
-      response.Printf("offset=\"%" PRIu32 "\" ", reg_info->byte_offset);
+      response.Printf("offset=\"%" PRIu32 "\" ", wire.byte_offset);
 
-    if (reg_info->alt_name && reg_info->alt_name[0])
-      response.Printf("altname=\"%s\" ", reg_info->alt_name);
+    if (!reg_info->alt_name.empty())
+      response.Printf("altname=\"%s\" ", reg_info->alt_name.c_str());
 
-    llvm::StringRef encoding = GetEncodingNameOrEmpty(*reg_info);
+    llvm::StringRef encoding = GetEncodingNameOrEmpty(reg_info->encoding);
     if (!encoding.empty())
       response << "encoding=\"" << encoding << "\" ";
 
-    llvm::StringRef format = GetFormatNameOrEmpty(*reg_info);
+    llvm::StringRef format = GetFormatNameOrEmpty(reg_info->format);
     if (!format.empty())
       response << "format=\"" << format << "\" ";
 
-    if (reg_info->register_type)
-      response << "type=\""
-               << XMLEncodeAttributeValue(reg_info->register_type->GetID())
+    if (reg_info->type)
+      response << "type=\"" << XMLEncodeAttributeValue(reg_info->type->GetID())
                << "\" ";
 
-    const char *const register_set_name =
-        reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
-    if (register_set_name)
-      response << "group=\"" << register_set_name << "\" ";
+    const auto *group =
+        packet_layout->GetDescription().FindGroupForRegister(wire.id);
+    if (group)
+      response << "group=\"" << group->name << "\" ";
 
-    if (reg_info->kinds[RegisterKind::eRegisterKindEHFrame] !=
+    if (reg_info->numbers[RegisterKind::eRegisterKindEHFrame] !=
         LLDB_INVALID_REGNUM)
       response.Printf("ehframe_regnum=\"%" PRIu32 "\" ",
-                      reg_info->kinds[RegisterKind::eRegisterKindEHFrame]);
+                      reg_info->numbers[RegisterKind::eRegisterKindEHFrame]);
 
-    if (reg_info->kinds[RegisterKind::eRegisterKindDWARF] !=
+    if (reg_info->numbers[RegisterKind::eRegisterKindDWARF] !=
         LLDB_INVALID_REGNUM)
       response.Printf("dwarf_regnum=\"%" PRIu32 "\" ",
-                      reg_info->kinds[RegisterKind::eRegisterKindDWARF]);
+                      reg_info->numbers[RegisterKind::eRegisterKindDWARF]);
 
-    llvm::StringRef kind_generic = GetKindGenericOrEmpty(*reg_info);
+    llvm::StringRef kind_generic =
+        GetKindGenericOrEmpty(reg_info->numbers[lldb::eRegisterKindGeneric]);
     if (!kind_generic.empty())
       response << "generic=\"" << kind_generic << "\" ";
 
-    if (reg_info->value_regs &&
-        reg_info->value_regs[0] != LLDB_INVALID_REGNUM) {
+    auto values = packet_layout->GetWireNumbers(reg_info->value_registers);
+    if (!values.empty()) {
       response.PutCString("value_regnums=\"");
-      CollectRegNums(reg_info->value_regs, response, false);
+      CollectRegNums(values, response, false);
       response.Printf("\" ");
     }
 
-    if (reg_info->invalidate_regs && reg_info->invalidate_regs[0]) {
+    auto invalidates =
+        packet_layout->GetWireNumbers(reg_info->invalidate_registers);
+    if (!invalidates.empty()) {
       response.PutCString("invalidate_regnums=\"");
-      CollectRegNums(reg_info->invalidate_regs, response, false);
+      CollectRegNums(invalidates, response, false);
       response.Printf("\" ");
     }
 

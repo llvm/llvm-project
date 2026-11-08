@@ -9,30 +9,25 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_PPC64LE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_PPC64LE_H
 
-#include "Plugins/Register/Core/RegisterContextCore_ppc64le.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "lldb/Register/Arch/lldb-ppc64le-dwarf-register-enums.h"
+#include "lldb/Register/Arch/lldb-ppc64le-register-enums.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextELFCore_ppc64le : public RegisterContextCore_ppc64le {
+class RegisterContextELFCore_ppc64le
+    : public lldb_private::ThreadRegisterContext {
 public:
-  RegisterContextELFCore_ppc64le(
-      lldb_private::Thread &thread,
-      lldb_private::RegisterInfoInterface *register_info,
-      const lldb_private::DataExtractor &gpregset,
-      llvm::ArrayRef<lldb_private::CoreNote> notes);
+  RegisterContextELFCore_ppc64le(lldb_private::Thread &thread,
+                                 lldb_private::RegisterLayout layout,
+                                 const lldb_private::DataExtractor &gpregset,
+                                 llvm::ArrayRef<lldb_private::CoreNote> notes);
 
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
-
-protected:
-  size_t GetFPRSize() const;
-
-  size_t GetVMXSize() const;
-
-  size_t GetVSXSize() const;
 
 private:
   lldb::DataBufferSP m_gpr_buffer;

@@ -12,12 +12,6 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/Log.h"
 
-#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
-#include "Register/Common/RegisterInfo_arm.h"
-#include "Register/Common/RegisterInfo_arm64.h"
-#include "Register/Common/RegisterInfo_ppc64le.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
 #include "ProcessFreeBSDKernelCore.h"
 #include "RegisterContextFreeBSDKernelCore_arm.h"
 #include "RegisterContextFreeBSDKernelCore_arm64.h"
@@ -25,6 +19,12 @@
 #include "RegisterContextFreeBSDKernelCore_ppc64le.h"
 #include "RegisterContextFreeBSDKernelCore_riscv64.h"
 #include "RegisterContextFreeBSDKernelCore_x86_64.h"
+#include "lldb/Register/Common/RegisterInfo_arm.h"
+#include "lldb/Register/Common/RegisterInfo_arm64.h"
+#include "lldb/Register/Common/RegisterInfo_ppc64le.h"
+#include "lldb/Register/Common/RegisterInfo_riscv64.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_i386.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_x86_64.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,34 +66,48 @@ ThreadFreeBSDKernelCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::aarch64:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_arm64>(
-              *this, std::make_unique<RegisterInfo_arm64>(arch, 0),
+              *this,
+              llvm::cantFail(RegisterLayout::Create(
+                  RegisterInfo_arm64::CreateDescription(0),
+                  RegisterLayout(arch.GetByteOrder()))),
               m_pcb_addr);
       break;
     case llvm::Triple::arm:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_arm>(
-              *this, std::make_unique<RegisterInfo_arm>(arch), m_pcb_addr);
+              *this,
+              llvm::cantFail(
+                  RegisterLayout::Create(RegisterInfo_arm::CreateDescription(),
+                                         RegisterLayout(arch.GetByteOrder()))),
+              m_pcb_addr);
       break;
     case llvm::Triple::ppc64le:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_ppc64le>(
-              *this, new RegisterInfo_ppc64le(arch), m_pcb_addr);
+              *this,
+              llvm::cantFail(RegisterLayout::Create(
+                  RegisterInfo_ppc64le::CreateDescription(arch),
+                  RegisterLayout(arch.GetByteOrder()))),
+              m_pcb_addr);
       break;
     case llvm::Triple::riscv64:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_riscv64>(
-              *this, std::make_unique<RegisterInfo_riscv64>(arch, 0),
+              *this,
+              llvm::cantFail(RegisterLayout::Create(
+                  RegisterInfo_riscv64::CreateDescription(0),
+                  RegisterLayout(arch.GetByteOrder()))),
               m_pcb_addr);
       break;
     case llvm::Triple::x86:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_i386>(
-              *this, new RegisterInfoFreeBSD_i386(arch), m_pcb_addr);
+              *this, CreateFreeBSDI386RegisterLayout(arch), m_pcb_addr);
       break;
     case llvm::Triple::x86_64:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_x86_64>(
-              *this, new RegisterInfoFreeBSD_x86_64(arch), m_pcb_addr);
+              *this, CreateFreeBSDX86_64RegisterLayout(arch), m_pcb_addr);
       break;
     default:
       assert(false &&

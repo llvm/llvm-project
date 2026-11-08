@@ -56,21 +56,6 @@ bool RegisterContextWindows::WriteAllRegisterValues(
   return ApplyAllRegisterValues();
 }
 
-uint32_t RegisterContextWindows::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t num) {
-  const uint32_t num_regs = GetRegisterCount();
-
-  assert(kind < kNumRegisterKinds);
-  for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
-    const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg_idx);
-
-    if (reg_info->kinds[kind] == num)
-      return reg_idx;
-  }
-
-  return LLDB_INVALID_REGNUM;
-}
-
 bool RegisterContextWindows::HardwareSingleStep(bool enable) { return false; }
 
 bool RegisterContextWindows::AddHardwareBreakpoint(uint32_t slot,

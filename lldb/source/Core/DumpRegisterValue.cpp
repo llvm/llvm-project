@@ -75,7 +75,7 @@ static void dump_type_value(lldb_private::CompilerType &type,
 }
 
 void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
-                                     const RegisterInfo &reg_info,
+                                     const RegisterDescriptor &reg_info,
                                      bool prefix_with_name,
                                      bool prefix_with_alt_name, Format format,
                                      uint32_t reg_name_right_align_at,
@@ -98,11 +98,11 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
     format_string.Printf("%%s");
   std::string fmt = std::string(format_string.GetString());
   if (prefix_with_name) {
-    if (reg_info.name) {
-      s.Printf(fmt.c_str(), reg_info.name);
+    if (!reg_info.name.empty()) {
+      s.Printf(fmt.c_str(), reg_info.name.c_str());
       name_printed = true;
-    } else if (reg_info.alt_name) {
-      s.Printf(fmt.c_str(), reg_info.alt_name);
+    } else if (!reg_info.alt_name.empty()) {
+      s.Printf(fmt.c_str(), reg_info.alt_name.c_str());
       prefix_with_alt_name = false;
       name_printed = true;
     }
@@ -110,13 +110,13 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
   if (prefix_with_alt_name) {
     if (name_printed)
       s.PutChar('/');
-    if (reg_info.alt_name) {
-      s.Printf(fmt.c_str(), reg_info.alt_name);
+    if (!reg_info.alt_name.empty()) {
+      s.Printf(fmt.c_str(), reg_info.alt_name.c_str());
       name_printed = true;
     } else if (!name_printed) {
       // No alternate name but we were asked to display a name, so show the
       // main name
-      s.Printf(fmt.c_str(), reg_info.name);
+      s.Printf(fmt.c_str(), reg_info.name.c_str());
       name_printed = true;
     }
   }
@@ -141,9 +141,9 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
     return;
 
   const RegisterTypeFlags *flags_type =
-      llvm::dyn_cast_if_present<RegisterTypeFlags>(reg_info.register_type);
+      llvm::dyn_cast_if_present<RegisterTypeFlags>(reg_info.type);
   if (!flags_type &&
-      !llvm::isa_and_present<RegisterTypeComposite>(reg_info.register_type))
+      !llvm::isa_and_present<RegisterTypeComposite>(reg_info.type))
     return;
   if (flags_type && reg_info.byte_size != 4 && reg_info.byte_size != 8)
     return;

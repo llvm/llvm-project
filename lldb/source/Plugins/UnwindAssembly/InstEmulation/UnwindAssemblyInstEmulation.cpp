@@ -363,7 +363,7 @@ llvm::StringRef UnwindAssemblyInstEmulation::GetPluginDescriptionStatic() {
 }
 
 uint64_t UnwindAssemblyInstEmulation::MakeRegisterKindValuePair(
-    const RegisterInfo &reg_info) {
+    const RegisterDescriptor &reg_info) {
   lldb::RegisterKind reg_kind;
   uint32_t reg_num;
   if (EmulateInstruction::GetBestRegisterKindAndNumber(&reg_info, reg_kind,
@@ -373,12 +373,12 @@ uint64_t UnwindAssemblyInstEmulation::MakeRegisterKindValuePair(
 }
 
 void UnwindAssemblyInstEmulation::SetRegisterValue(
-    const RegisterInfo &reg_info, const RegisterValue &reg_value) {
+    const RegisterDescriptor &reg_info, const RegisterValue &reg_value) {
   m_state.register_values[MakeRegisterKindValuePair(reg_info)] = reg_value;
 }
 
-bool UnwindAssemblyInstEmulation::GetRegisterValue(const RegisterInfo &reg_info,
-                                                   RegisterValue &reg_value) {
+bool UnwindAssemblyInstEmulation::GetRegisterValue(
+    const RegisterDescriptor &reg_info, RegisterValue &reg_value) {
   const uint64_t reg_id = MakeRegisterKindValuePair(reg_info);
   RegisterValueMap::const_iterator pos = m_state.register_values.find(reg_id);
   if (pos != m_state.register_values.end()) {
@@ -391,15 +391,15 @@ bool UnwindAssemblyInstEmulation::GetRegisterValue(const RegisterInfo &reg_info,
   return false;
 }
 
-uint64_t
-UnwindAssemblyInstEmulation::GetSentinelFor(const RegisterInfo &reg_info) {
+uint64_t UnwindAssemblyInstEmulation::GetSentinelFor(
+    const RegisterDescriptor &reg_info) {
   // The sentinel is the register's [register kind, register number] pair, which
   // is unique per register.
   return MakeRegisterKindValuePair(reg_info);
 }
 
 bool UnwindAssemblyInstEmulation::RegisterHoldsEntryValue(
-    const RegisterInfo &reg_info) {
+    const RegisterDescriptor &reg_info) {
   RegisterValue current;
   GetRegisterValue(reg_info, current);
   return current.GetAsUInt64() == GetSentinelFor(reg_info);
@@ -483,11 +483,11 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
     assert(context.GetInfoType() ==
                EmulateInstruction::eInfoTypeRegisterToRegisterPlusOffset &&
            "unhandled case, add code to handle this!");
-    const RegisterInfo &data_reg =
+    const RegisterDescriptor &data_reg =
         context.info.RegisterToRegisterPlusOffset.data_reg;
     const uint32_t unwind_reg_kind = m_unwind_plan_ptr->GetRegisterKind();
-    reg_num = data_reg.kinds[unwind_reg_kind];
-    generic_regnum = data_reg.kinds[eRegisterKindGeneric];
+    reg_num = data_reg.numbers[unwind_reg_kind];
+    generic_regnum = data_reg.numbers[eRegisterKindGeneric];
 
     // Only a register that still holds the value it had on entry to the
     // function should be saved, otherwise we would be recording the location of
@@ -509,18 +509,17 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
   return dst_len;
 }
 
-bool UnwindAssemblyInstEmulation::ReadRegister(EmulateInstruction *instruction,
-                                               void *baton,
-                                               const RegisterInfo *reg_info,
-                                               RegisterValue &reg_value) {
+bool UnwindAssemblyInstEmulation::ReadRegister(
+    EmulateInstruction *instruction, void *baton,
+    const RegisterDescriptor *reg_info, RegisterValue &reg_value) {
 
   if (baton && reg_info)
     return ((UnwindAssemblyInstEmulation *)baton)
         ->ReadRegister(instruction, reg_info, reg_value);
   return false;
 }
-bool UnwindAssemblyInstEmulation::ReadRegister(EmulateInstruction *instruction,
-                                               const RegisterInfo *reg_info,
+bool UnwindAssemblyInstEmulation::ReadRegister(
+    EmulateInstruction *instruction, const RegisterDescriptor *reg_info,
                                                RegisterValue &reg_value) {
   bool synthetic = GetRegisterValue(*reg_info, reg_value);
 
@@ -531,7 +530,7 @@ bool UnwindAssemblyInstEmulation::ReadRegister(EmulateInstruction *instruction,
     StreamString strm;
     strm.Printf("UnwindAssemblyInstEmulation::ReadRegister  (name = \"%s\") => "
                 "synthetic_value = %i, value = ",
-                reg_info->name, synthetic);
+                reg_info->name.c_str(), synthetic);
     DumpRegisterValue(reg_value, strm, *reg_info, false, false, eFormatDefault);
     log->PutString(strm.GetString());
   }
@@ -540,8 +539,8 @@ bool UnwindAssemblyInstEmulation::ReadRegister(EmulateInstruction *instruction,
 
 bool UnwindAssemblyInstEmulation::WriteRegister(
     EmulateInstruction *instruction, void *baton,
-    const EmulateInstruction::Context &context, const RegisterInfo *reg_info,
-    const RegisterValue &reg_value) {
+    const EmulateInstruction::Context &context,
+    const RegisterDescriptor *reg_info, const RegisterValue &reg_value) {
   if (baton && reg_info)
     return ((UnwindAssemblyInstEmulation *)baton)
         ->WriteRegister(instruction, context, reg_info, reg_value);
@@ -549,7 +548,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
 }
 bool UnwindAssemblyInstEmulation::WriteRegister(
     EmulateInstruction *instruction, const EmulateInstruction::Context &context,
-    const RegisterInfo *reg_info, const RegisterValue &reg_value) {
+    const RegisterDescriptor *reg_info, const RegisterValue &reg_value) {
   Log *log = GetLog(LLDBLog::Unwind);
 
   if (log && log->GetVerbose()) {
@@ -557,7 +556,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     StreamString strm;
     strm.Printf(
         "UnwindAssemblyInstEmulation::WriteRegister (name = \"%s\", value = ",
-        reg_info->name);
+        reg_info->name.c_str());
     DumpRegisterValue(reg_value, strm, *reg_info, false, false, eFormatDefault);
     strm.PutCString(", context = ");
     context.Dump(strm, instruction);
@@ -584,7 +583,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextRegisterLoad:
     //            {
     //                const uint32_t reg_num =
-    //                reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
+    //                reg_info->numbers[m_unwind_plan_ptr->GetRegisterKind()];
     //                if (reg_num != LLDB_INVALID_REGNUM)
     //                {
     //                    const bool can_replace_only_if_unspecified = true;
@@ -603,11 +602,11 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     // with the same amount.
     lldb::RegisterKind kind = m_unwind_plan_ptr->GetRegisterKind();
     if (m_state.fp_is_cfa &&
-        reg_info->kinds[kind] == m_state.cfa_reg_info.kinds[kind] &&
+        reg_info->numbers[kind] == m_state.cfa_reg_info.numbers[kind] &&
         context.GetInfoType() ==
             EmulateInstruction::eInfoTypeRegisterPlusOffset &&
-        context.info.RegisterPlusOffset.reg.kinds[kind] ==
-            m_state.cfa_reg_info.kinds[kind]) {
+        context.info.RegisterPlusOffset.reg.numbers[kind] ==
+            m_state.cfa_reg_info.numbers[kind]) {
       const int64_t offset = context.info.RegisterPlusOffset.signed_offset;
       m_state.row.GetCFAValue().IncOffset(-1 * offset);
       m_curr_row_modified = true;
@@ -618,7 +617,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextRelativeBranchImmediate: {
     // If the instruction writes to the return address register, this is a
     // function call.
-    if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA)
+    if (reg_info->numbers[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA)
       m_branch_is_call = true;
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
         context.info.ISAAndImmediate.unsigned_data32 != 0) {
@@ -640,8 +639,8 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
 
   case EmulateInstruction::eContextPopRegisterOffStack: {
     const uint32_t reg_num =
-        reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
-    const uint32_t generic_regnum = reg_info->kinds[eRegisterKindGeneric];
+        reg_info->numbers[m_unwind_plan_ptr->GetRegisterKind()];
+    const uint32_t generic_regnum = reg_info->numbers[eRegisterKindGeneric];
     if (reg_num != LLDB_INVALID_REGNUM &&
         generic_regnum != LLDB_REGNUM_GENERIC_SP) {
       switch (context.GetInfoType()) {
@@ -658,13 +657,13 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
             m_state.fp_is_cfa = false;
             lldb::RegisterKind sp_reg_kind = eRegisterKindGeneric;
             uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
-            RegisterInfo sp_reg_info =
+            RegisterDescriptor sp_reg_info =
                 *m_inst_emulator_up->GetRegisterInfo(sp_reg_kind, sp_reg_num);
             RegisterValue sp_reg_val;
             if (GetRegisterValue(sp_reg_info, sp_reg_val)) {
               m_state.cfa_reg_info = sp_reg_info;
               const uint32_t cfa_reg_num =
-                  sp_reg_info.kinds[m_unwind_plan_ptr->GetRegisterKind()];
+                  sp_reg_info.numbers[m_unwind_plan_ptr->GetRegisterKind()];
               assert(cfa_reg_num != LLDB_INVALID_REGNUM);
               m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
                   cfa_reg_num, m_initial_cfa - sp_reg_val.GetAsUInt64());
@@ -695,7 +694,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
       m_state.fp_is_cfa = true;
       m_state.cfa_reg_info = *reg_info;
       const uint32_t cfa_reg_num =
-          reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
+          reg_info->numbers[m_unwind_plan_ptr->GetRegisterKind()];
       assert(cfa_reg_num != LLDB_INVALID_REGNUM);
       m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
           cfa_reg_num, m_initial_cfa - reg_value.GetAsUInt64());
@@ -708,7 +707,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
       m_state.fp_is_cfa = false;
       m_state.cfa_reg_info = *reg_info;
       const uint32_t cfa_reg_num =
-          reg_info->kinds[m_unwind_plan_ptr->GetRegisterKind()];
+          reg_info->numbers[m_unwind_plan_ptr->GetRegisterKind()];
       assert(cfa_reg_num != LLDB_INVALID_REGNUM);
       m_state.row.GetCFAValue().SetIsRegisterPlusOffset(
           cfa_reg_num, m_initial_cfa - reg_value.GetAsUInt64());

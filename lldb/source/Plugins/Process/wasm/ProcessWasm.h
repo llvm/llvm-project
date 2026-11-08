@@ -11,7 +11,7 @@
 
 #include "Plugins/ObjectFile/wasm/WasmAddress.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
-#include "Utility/WasmVirtualRegisters.h"
+#include "lldb/Register/Arch/lldb-wasm-register-enums.h"
 
 namespace lldb_private {
 namespace wasm {
@@ -49,7 +49,7 @@ public:
   /// Query the value of a frame-scoped WebAssembly variable, which is a local
   /// or a value on the operand stack.
   llvm::Expected<lldb::DataBufferSP>
-  GetWasmVariable(WasmVirtualRegisterKinds kind, uint32_t frame_index,
+  GetWasmVariable(registers::wasm::id::WasmVirtualRegisterKinds kind, uint32_t frame_index,
                   uint32_t index);
 
   /// Query the value of the global at \a index in the global index space of the
@@ -93,7 +93,9 @@ private:
   /// module, which leaves its globals out of reach.
   llvm::Expected<uint32_t> GetFallbackFrameIndex(uint32_t module_id);
 
-  lldb::DynamicRegisterInfoSP &GetRegisterInfo() { return m_register_info_sp; }
+  std::shared_ptr<const RegisterLayout> &GetRegisterLayout() {
+    return m_register_layout_sp;
+  }
 
   ProcessWasm(const ProcessWasm &);
   const ProcessWasm &operator=(const ProcessWasm &) = delete;

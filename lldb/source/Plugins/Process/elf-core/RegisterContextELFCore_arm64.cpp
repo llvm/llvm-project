@@ -7,128 +7,200 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextELFCore_arm64.h"
-#include "Register/Common/RegisterInfo_arm64.h"
+#include "lldb/Register/Common/RegisterInfo_arm64.h"
+#include "lldb/Register/Arch/lldb-arm64-register-enums.h"
+#include "lldb/Register/Layouts/FreeBSD/RegisterLayoutFreeBSD_arm64.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_arm64.h"
+#include "llvm/Support/Endian.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
-#include "Register/Common/RegisterTypeDetector_arm64.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Register/RegisterValue.h"
 
+#include <algorithm>
+#include <cstddef>
 #include <memory>
 
+
+namespace reg_ids = lldb_private::registers::arm64::id;
 using namespace lldb_private;
 
-std::unique_ptr<RegisterContextELFCore_arm64>
+namespace {
+// NetBSD and OpenBSD append TPIDR to the general-register core note. Their
+// floating-point notes differ in the order of FPCR and FPSR.
+struct BSDArm64GPR {
+  uint64_t x[31];
+  uint64_t sp;
+  uint64_t pc;
+  uint64_t spsr;
+  uint64_t tpidr;
+};
+struct alignas(16) NetBSDArm64FPR {
+  uint8_t v[32][16];
+  uint32_t fpcr;
+  uint32_t fpsr;
+};
+struct alignas(16) OpenBSDArm64FPR {
+  uint8_t v[32][16];
+  uint32_t fpsr;
+  uint32_t fpcr;
+};
+static_assert(sizeof(BSDArm64GPR) == 280);
+static_assert(sizeof(NetBSDArm64FPR) == 528);
+static_assert(sizeof(OpenBSDArm64FPR) == 528);
+
+template <typename FPR>
+RegisterLayout CreateBSDArm64RegisterLayout(const ArchSpec &arch) {
+  auto description = RegisterInfo_arm64::CreateDescription(0);
+  RegisterLayout layout(arch.GetByteOrder());
+  llvm::cantFail(layout.AddBank(0, sizeof(BSDArm64GPR)));
+  llvm::cantFail(layout.AddBank(1, sizeof(FPR)));
+  const bool big_endian = arch.GetByteOrder() == lldb::eByteOrderBig;
+  for (const auto &reg : description->GetRegisters()) {
+    RegisterBankID bank = reg.id <= reg_ids::gpr_w28 ? 0 : 1;
+    uint32_t offset;
+    if (reg.id <= reg_ids::gpr_cpsr)
+      offset = reg.id * 8 + (reg.id == reg_ids::gpr_cpsr && big_endian ? 4 : 0);
+    else if (reg.id <= reg_ids::gpr_w28)
+      offset = (reg.id - reg_ids::gpr_w0) * 8 + (big_endian ? 4 : 0);
+    else if (reg.id == reg_ids::fpu_fpsr)
+      offset = offsetof(FPR, fpsr);
+    else if (reg.id == reg_ids::fpu_fpcr)
+      offset = offsetof(FPR, fpcr);
+    else {
+      uint32_t i = reg.id >= reg_ids::fpu_d0   ? reg.id - reg_ids::fpu_d0
+                   : reg.id >= reg_ids::fpu_s0 ? reg.id - reg_ids::fpu_s0
+                                               : reg.id - reg_ids::fpu_v0;
+      offset = i * 16 + (big_endian ? 16 - reg.byte_size : 0);
+    }
+    RegisterLocation location;
+    location.kind = RegisterLocation::Stored;
+    location.pieces.push_back({bank, offset, reg.byte_size});
+    llvm::cantFail(layout.Add(reg.id, std::move(location)));
+  }
+  return llvm::cantFail(
+      RegisterLayout::Create(std::move(description), std::move(layout)));
+}
+} // namespace
+
+llvm::Expected<std::unique_ptr<RegisterContextELFCore_arm64>>
 RegisterContextELFCore_arm64::Create(Thread &thread, const ArchSpec &arch,
-                                       const DataExtractor &gpregset,
-                                       llvm::ArrayRef<CoreNote> notes) {
-  Flags opt_regsets = RegisterInfo_arm64::eRegsetMaskDefault;
+                                     const DataExtractor &gpregset,
+                                     llvm::ArrayRef<CoreNote> notes) {
+  std::optional<RegisterLayout> layout;
+  std::optional<linux_arm64::RegisterConfig> config;
+  switch (arch.GetTriple().getOS()) {
+  case llvm::Triple::FreeBSD: {
+    auto &process = static_cast<ProcessElfCore &>(*thread.GetProcess());
+    AuxVector auxv(process.GetAuxvData());
+    layout = CreateFreeBSDArm64RegisterLayout(
+        arch, auxv.GetAuxValue(AuxVector::AUXV_FREEBSD_AT_HWCAP).value_or(0),
+        auxv.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0));
+    break;
+  }
+  case llvm::Triple::NetBSD:
+    layout = CreateBSDArm64RegisterLayout<NetBSDArm64FPR>(arch);
+    break;
+  case llvm::Triple::OpenBSD:
+    layout = CreateBSDArm64RegisterLayout<OpenBSDArm64FPR>(arch);
+    break;
+  case llvm::Triple::Linux: {
+    Flags opt_regsets = RegisterInfo_arm64::eRegsetMaskDefault;
 
-  DataExtractor ssve_data =
-      getRegset(notes, arch.GetTriple(), AARCH64_SSVE_Desc);
-  if (ssve_data.GetByteSize() >= sizeof(sve::user_sve_header))
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskSSVE);
+    DataExtractor ssve_data =
+        getRegset(notes, arch.GetTriple(), AARCH64_SSVE_Desc);
+    if (ssve_data.GetByteSize() >= sizeof(sve::user_sve_header))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskSSVE);
 
-  DataExtractor sve_data = getRegset(notes, arch.GetTriple(), AARCH64_SVE_Desc);
-  if (sve_data.GetByteSize() >= sizeof(sve::user_sve_header))
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskSVE);
+    DataExtractor sve_data =
+        getRegset(notes, arch.GetTriple(), AARCH64_SVE_Desc);
+    if (sve_data.GetByteSize() >= sizeof(sve::user_sve_header))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskSVE);
 
-  // Pointer Authentication register set data is based on struct
-  // user_pac_mask declared in ptrace.h. See reference implementation
-  // in Linux kernel source at arch/arm64/include/uapi/asm/ptrace.h.
-  DataExtractor pac_data = getRegset(notes, arch.GetTriple(), AARCH64_PAC_Desc);
-  if (pac_data.GetByteSize() >= sizeof(uint64_t) * 2)
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskPAuth);
+    // Pointer Authentication register set data is based on struct
+    // user_pac_mask declared in ptrace.h. See reference implementation
+    // in Linux kernel source at arch/arm64/include/uapi/asm/ptrace.h.
+    DataExtractor pac_data =
+        getRegset(notes, arch.GetTriple(), AARCH64_PAC_Desc);
+    if (pac_data.GetByteSize() >= sizeof(linux_arm64::PAuthMasks))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskPAuth);
 
-  DataExtractor tls_data = getRegset(notes, arch.GetTriple(), AARCH64_TLS_Desc);
-  // A valid note will always contain at least one register, "tpidr". It may
-  // expand in future.
-  if (tls_data.GetByteSize() >= sizeof(uint64_t))
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskTLS);
+    DataExtractor tls_data =
+        getRegset(notes, arch.GetTriple(), AARCH64_TLS_Desc);
+    // A valid note will always contain at least one register, "tpidr". It may
+    // expand in future.
+    if (tls_data.GetByteSize() >= sizeof(linux_arm64::TLSRegisters::tpidr))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskTLS);
 
-  DataExtractor za_data = getRegset(notes, arch.GetTriple(), AARCH64_ZA_Desc);
-  // Nothing if ZA is not present, just the header if it is disabled.
-  if (za_data.GetByteSize() >= sizeof(sve::user_za_header))
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskZA);
+    DataExtractor za_data = getRegset(notes, arch.GetTriple(), AARCH64_ZA_Desc);
+    // Nothing if ZA is not present, just the header if it is disabled.
+    if (za_data.GetByteSize() >= sizeof(sve::user_za_header))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskZA);
 
-  DataExtractor mte_data = getRegset(notes, arch.GetTriple(), AARCH64_MTE_Desc);
-  if (mte_data.GetByteSize() >= sizeof(uint64_t))
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskMTE);
+    DataExtractor mte_data =
+        getRegset(notes, arch.GetTriple(), AARCH64_MTE_Desc);
+    if (mte_data.GetByteSize() >= sizeof(linux_arm64::MTEControl))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskMTE);
 
-  DataExtractor zt_data = getRegset(notes, arch.GetTriple(), AARCH64_ZT_Desc);
-  // Although ZT0 can be in a disabled state like ZA can, the kernel reports
-  // its content as 0s in that state. Therefore even a disabled ZT0 will have
-  // a note containing those 0s. ZT0 is a 512 bit / 64 byte register.
-  if (zt_data.GetByteSize() >= 64)
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskZT);
+    DataExtractor zt_data = getRegset(notes, arch.GetTriple(), AARCH64_ZT_Desc);
+    // Although ZT0 can be in a disabled state like ZA can, the kernel reports
+    // its content as 0s in that state. Therefore even a disabled ZT0 will have
+    // a note containing those 0s. ZT0 is a 512 bit / 64 byte register.
+    if (zt_data.GetByteSize() >= sizeof(linux_arm64::ZTRegister))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskZT);
 
-  DataExtractor fpmr_data =
-      getRegset(notes, arch.GetTriple(), AARCH64_FPMR_Desc);
-  if (fpmr_data.GetByteSize() >= sizeof(uint64_t))
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskFPMR);
+    DataExtractor fpmr_data =
+        getRegset(notes, arch.GetTriple(), AARCH64_FPMR_Desc);
+    if (fpmr_data.GetByteSize() >= sizeof(linux_arm64::FPMRRegister))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskFPMR);
 
-  DataExtractor gcs_data = getRegset(notes, arch.GetTriple(), AARCH64_GCS_Desc);
-  struct __attribute__((packed)) gcs_regs {
-    uint64_t features_enabled;
-    uint64_t features_locked;
-    uint64_t gcspr_e0;
-  };
-  if (gcs_data.GetByteSize() >= sizeof(gcs_regs))
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskGCS);
+    DataExtractor gcs_data =
+        getRegset(notes, arch.GetTriple(), AARCH64_GCS_Desc);
+    if (gcs_data.GetByteSize() >= sizeof(linux_arm64::GCSRegisters))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskGCS);
 
-  DataExtractor poe_data = getRegset(notes, arch.GetTriple(), AARCH64_POE_Desc);
-  struct poe_regs {
-    uint64_t por_el0_reg;
-  };
-  if (poe_data.GetByteSize() >= sizeof(poe_regs))
-    opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskPOE);
+    DataExtractor poe_data =
+        getRegset(notes, arch.GetTriple(), AARCH64_POE_Desc);
+    if (poe_data.GetByteSize() >= sizeof(linux_arm64::POERegister))
+      opt_regsets.Set(RegisterInfo_arm64::eRegsetMaskPOE);
 
-  auto register_info_up =
-      std::make_unique<RegisterInfo_arm64>(arch, opt_regsets);
+    auto &process = static_cast<ProcessElfCore &>(*thread.GetProcess());
+    AuxVector auxv(process.GetAuxvData());
+    config.emplace();
+    config->features = opt_regsets;
+    config->hwcap = auxv.GetAuxValue(AuxVector::AUXV_AT_HWCAP).value_or(0);
+    config->hwcap2 = auxv.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0);
+    config->hwcap3 = auxv.GetAuxValue(AuxVector::AUXV_AT_HWCAP3).value_or(0);
+    layout = CreateLinuxArm64RegisterLayout(arch, *config);
+    break;
+  }
+  default:
+    return llvm::createStringError("unsupported OS for AArch64 ELF registers");
+  }
   return std::unique_ptr<RegisterContextELFCore_arm64>(
-      new RegisterContextELFCore_arm64(thread, std::move(register_info_up),
-                                         gpregset, notes));
+      new RegisterContextELFCore_arm64(thread, std::move(*layout), gpregset,
+                                       notes, std::move(config)));
 }
 
 RegisterContextELFCore_arm64::RegisterContextELFCore_arm64(
-    Thread &thread, std::unique_ptr<RegisterInfo_arm64> register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCore_arm64(thread, std::move(register_info)) {
+    Thread &thread, RegisterLayout layout, const DataExtractor &gpregset,
+    llvm::ArrayRef<CoreNote> notes,
+    std::optional<linux_arm64::RegisterConfig> config)
+    : ThreadRegisterContext(thread, 0, std::move(layout)),
+      m_register_config(std::move(config)) {
   ::memset(&m_sme_pseudo_regs, 0, sizeof(m_sme_pseudo_regs));
-
-  ProcessElfCore *process =
-      static_cast<ProcessElfCore *>(thread.GetProcess().get());
-  llvm::Triple::OSType os = process->GetArchitecture().GetTriple().getOS();
-  if ((os == llvm::Triple::Linux) || (os == llvm::Triple::FreeBSD)) {
-    AuxVector aux_vec(process->GetAuxvData());
-    bool is_freebsd = os == llvm::Triple::FreeBSD;
-    std::optional<uint64_t> auxv_at_hwcap =
-        aux_vec.GetAuxValue(is_freebsd ? AuxVector::AUXV_FREEBSD_AT_HWCAP
-                                       : AuxVector::AUXV_AT_HWCAP);
-    std::optional<uint64_t> auxv_at_hwcap2 =
-        aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
-    std::optional<uint64_t> auxv_at_hwcap3 =
-        is_freebsd ? std::nullopt
-                   : aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP3);
-
-    m_register_type_detector.DetectTypes(auxv_at_hwcap.value_or(0),
-                                         auxv_at_hwcap2.value_or(0),
-                                         auxv_at_hwcap3.value_or(0));
-    m_register_type_detector.UpdateRegisterInfo(GetRegisterInfo(),
-                                                GetRegisterCount());
-  }
 
   m_gpr_data.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                       gpregset.GetByteSize()));
   m_gpr_data.SetByteOrder(gpregset.GetByteOrder());
 
-  const llvm::Triple &target_triple =
-      m_register_info_up->GetTargetArchitecture().GetTriple();
+  const llvm::Triple &target_triple = GetTargetArchitecture().GetTriple();
   m_fpr_data = getRegset(notes, target_triple, FPR_Desc);
 
-  if (m_register_info_up->IsSSVEPresent()) {
+  if ((m_register_config && m_register_config->features.AnySet(
+                                RegisterInfo_arm64::eRegsetMaskSSVE))) {
     m_sve_data = getRegset(notes, target_triple, AARCH64_SSVE_Desc);
     lldb::offset_t flags_offset = 12;
     uint16_t flags = m_sve_data.GetU32(&flags_offset);
@@ -136,55 +208,47 @@ RegisterContextELFCore_arm64::RegisterContextELFCore_arm64(
       m_sve_state = SVEState::Streaming;
   }
 
-  if (m_sve_state != SVEState::Streaming && m_register_info_up->IsSVEPresent())
+  if (m_sve_state != SVEState::Streaming &&
+      (m_register_config &&
+       m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskSVE)))
     m_sve_data = getRegset(notes, target_triple, AARCH64_SVE_Desc);
 
-  if (m_register_info_up->IsPAuthPresent())
+  if ((m_register_config && m_register_config->features.AnySet(
+                                RegisterInfo_arm64::eRegsetMaskPAuth)))
     m_pac_data = getRegset(notes, target_triple, AARCH64_PAC_Desc);
 
-  if (m_register_info_up->IsTLSPresent())
+  if ((m_register_config &&
+       m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskTLS)))
     m_tls_data = getRegset(notes, target_triple, AARCH64_TLS_Desc);
 
-  if (m_register_info_up->IsZAPresent())
+  if ((m_register_config &&
+       m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskZA)))
     m_za_data = getRegset(notes, target_triple, AARCH64_ZA_Desc);
 
-  if (m_register_info_up->IsMTEPresent())
+  if ((m_register_config &&
+       m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskMTE)))
     m_mte_data = getRegset(notes, target_triple, AARCH64_MTE_Desc);
 
-  if (m_register_info_up->IsZTPresent())
+  if ((m_register_config &&
+       m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskZT)))
     m_zt_data = getRegset(notes, target_triple, AARCH64_ZT_Desc);
 
-  if (m_register_info_up->IsFPMRPresent())
+  if ((m_register_config &&
+       m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskFPMR)))
     m_fpmr_data = getRegset(notes, target_triple, AARCH64_FPMR_Desc);
 
-  if (m_register_info_up->IsGCSPresent())
+  if ((m_register_config &&
+       m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskGCS)))
     m_gcs_data = getRegset(notes, target_triple, AARCH64_GCS_Desc);
 
-  if (m_register_info_up->IsPOEPresent())
+  if ((m_register_config &&
+       m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskPOE)))
     m_poe_data = getRegset(notes, target_triple, AARCH64_POE_Desc);
 
   ConfigureRegisterContext();
 }
 
 RegisterContextELFCore_arm64::~RegisterContextELFCore_arm64() = default;
-
-bool RegisterContextELFCore_arm64::ReadGPR() { return true; }
-
-bool RegisterContextELFCore_arm64::ReadFPR() { return false; }
-
-bool RegisterContextELFCore_arm64::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_arm64::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-const uint8_t *RegisterContextELFCore_arm64::GetSVEBuffer(uint64_t offset) {
-  return m_sve_data.GetDataStart() + offset;
-}
 
 void RegisterContextELFCore_arm64::ConfigureRegisterContext() {
   if (m_sve_data.GetByteSize() > sizeof(sve::user_sve_header)) {
@@ -210,9 +274,11 @@ void RegisterContextELFCore_arm64::ConfigureRegisterContext() {
   } else
     m_sve_state = SVEState::Disabled;
 
-  if (m_sve_state != SVEState::Disabled)
-    m_register_info_up->ConfigureVectorLengthSVE(
-        sve::vq_from_vl(m_sve_vector_length));
+  if (m_register_config && m_sve_state != SVEState::Disabled) {
+    const uint32_t vq = sve::vq_from_vl(m_sve_vector_length);
+    if (RegisterInfo_arm64::VectorSizeIsValid(vq))
+      m_register_config->sve_vq = std::max(1u, vq);
+  }
 
   if (m_sve_state == SVEState::Streaming)
     m_sme_pseudo_regs.ctrl_reg |= 1;
@@ -221,7 +287,10 @@ void RegisterContextELFCore_arm64::ConfigureRegisterContext() {
     lldb::offset_t vlen_offset = 8;
     uint16_t svl = m_za_data.GetU16(&vlen_offset);
     m_sme_pseudo_regs.svg_reg = svl / 8;
-    m_register_info_up->ConfigureVectorLengthZA(svl / 16);
+    if (m_register_config &&
+        m_register_config->features.AnySet(RegisterInfo_arm64::eRegsetMaskSSVE) &&
+        RegisterInfo_arm64::VectorSizeIsValid(svl / 16))
+      m_register_config->za_vq = svl / 16;
 
     // If there is register data then ZA is active. The size of the note may be
     // misleading here so we use the size field of the embedded header.
@@ -230,180 +299,66 @@ void RegisterContextELFCore_arm64::ConfigureRegisterContext() {
     if (size > sizeof(sve::user_za_header))
       m_sme_pseudo_regs.ctrl_reg |= 1 << 1;
   }
+  if (m_register_config) {
+    m_register_config->sve_state = m_sve_state;
+    SetRegisterLayout(CreateLinuxArm64RegisterLayout(
+        GetTargetArchitecture(), *m_register_config, GetDescription().get()));
+  }
 }
 
-uint32_t RegisterContextELFCore_arm64::CalculateSVEOffset(
-    const RegisterInfo *reg_info) {
-  // Start of Z0 data is after GPRs plus 8 bytes of vg register
-  uint32_t sve_reg_offset = LLDB_INVALID_INDEX32;
-  if (m_sve_state == SVEState::FPSIMD) {
-    const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-    sve_reg_offset = sve::ptrace_fpsimd_offset + (reg - GetRegNumSVEZ0()) * 16;
-  } else if (m_sve_state == SVEState::Full ||
-             m_sve_state == SVEState::Streaming) {
-    uint32_t sve_z0_offset = GetGPRSize() + 16;
-    sve_reg_offset =
-        sve::SigRegsOffset() + reg_info->byte_offset - sve_z0_offset;
-  }
-
-  return sve_reg_offset;
-}
-
-bool RegisterContextELFCore_arm64::ReadRegister(const RegisterInfo *reg_info,
-                                                  RegisterValue &value) {
-  Status error;
-  lldb::offset_t offset;
-
-  offset = reg_info->byte_offset;
-  if (offset + reg_info->byte_size <= GetGPRSize()) {
-    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_gpr_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-    return error.Success();
-  }
-
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-  if (reg == LLDB_INVALID_REGNUM)
-    return false;
-
-  if (IsFPR(reg)) {
-    if (m_sve_state == SVEState::Disabled) {
-      // SVE is disabled take legacy route for FPU register access
-      offset -= GetGPRSize();
-      if (offset < m_fpr_data.GetByteSize()) {
-        value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_fpr_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-        return error.Success();
-      }
-    } else {
-      // FPSR and FPCR will be located right after Z registers in
-      // SVEState::FPSIMD while in SVEState::Full/SVEState::Streaming they will
-      // be located at the end of register data after an alignment correction
-      // based on currently selected vector length.
-      uint32_t sve_reg_num = LLDB_INVALID_REGNUM;
-      if (reg == GetRegNumFPSR()) {
-        sve_reg_num = reg;
-        if (m_sve_state == SVEState::Full || m_sve_state == SVEState::Streaming)
-          offset = sve::PTraceFPSROffset(sve::vq_from_vl(m_sve_vector_length));
-        else if (m_sve_state == SVEState::FPSIMD)
-          offset = sve::ptrace_fpsimd_offset + (32 * 16);
-      } else if (reg == GetRegNumFPCR()) {
-        sve_reg_num = reg;
-        if (m_sve_state == SVEState::Full || m_sve_state == SVEState::Streaming)
-          offset = sve::PTraceFPCROffset(sve::vq_from_vl(m_sve_vector_length));
-        else if (m_sve_state == SVEState::FPSIMD)
-          offset = sve::ptrace_fpsimd_offset + (32 * 16) + 4;
-      } else {
-        // Extract SVE Z register value register number for this reg_info
-        if (reg_info->value_regs &&
-            reg_info->value_regs[0] != LLDB_INVALID_REGNUM)
-          sve_reg_num = reg_info->value_regs[0];
-        offset = CalculateSVEOffset(GetRegisterInfoAtIndex(sve_reg_num));
-      }
-
-      assert(sve_reg_num != LLDB_INVALID_REGNUM);
-      assert(offset < m_sve_data.GetByteSize());
-      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, GetSVEBuffer(offset), reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-    }
-  } else if (IsSVE(reg)) {
-    if (IsSVEVG(reg)) {
-      value = GetSVERegVG();
-      return true;
-    }
-
-    switch (m_sve_state) {
-    case SVEState::FPSIMD: {
-      // In FPSIMD state SVE payload mirrors legacy fpsimd struct and so just
-      // copy 16 bytes of v register to the start of z register. All other
-      // SVE register will be set to zero.
-      uint64_t byte_size = 1;
-      uint8_t zeros = 0;
-      const uint8_t *src = &zeros;
-      if (IsSVEZ(reg)) {
-        byte_size = 16;
-        offset = CalculateSVEOffset(reg_info);
-        assert(offset < m_sve_data.GetByteSize());
-        src = GetSVEBuffer(offset);
-      }
-      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, src, byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-    } break;
-    case SVEState::Full:
-    case SVEState::Streaming:
-      offset = CalculateSVEOffset(reg_info);
-      assert(offset < m_sve_data.GetByteSize());
-      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, GetSVEBuffer(offset), reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-      break;
-    case SVEState::Disabled:
-    default:
-      return false;
-    }
-  } else if (IsPAuth(reg)) {
-    offset = reg_info->byte_offset - m_register_info_up->GetPAuthOffset();
-    assert(offset < m_pac_data.GetByteSize());
-    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_pac_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-  } else if (IsTLS(reg)) {
-    offset = reg_info->byte_offset - m_register_info_up->GetTLSOffset();
-    assert(offset < m_tls_data.GetByteSize());
-    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_tls_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-  } else if (IsMTE(reg)) {
-    offset = reg_info->byte_offset - m_register_info_up->GetMTEOffset();
-    assert(offset < m_mte_data.GetByteSize());
-    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_mte_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-  } else if (IsGCS(reg)) {
-    offset = reg_info->byte_offset - m_register_info_up->GetGCSOffset();
-    assert(offset < m_gcs_data.GetByteSize());
-    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_gcs_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-  } else if (IsSME(reg)) {
-    // If you had SME in the process, active or otherwise, there will at least
-    // be a ZA header. No header, no SME at all.
+llvm::Expected<RegisterValue>
+RegisterContextELFCore_arm64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  if (!reg_info)
+    return llvm::createStringError("register value is unavailable");
+  const auto *reg = GetDescription()->Find(reg_info->id);
+  if (!reg)
+    return llvm::createStringError("register value is unavailable");
+  std::vector<uint8_t> inactive_za;
+  llvm::ArrayRef<uint8_t> za(m_za_data.GetDataStart(), m_za_data.GetByteSize());
+  if (reg->name == "za") {
     if (m_za_data.GetByteSize() < sizeof(sve::user_za_header))
-      return false;
-
-    if (m_register_info_up->IsSMERegZA(reg)) {
-      // Don't use the size of the note to tell whether ZA is enabled. There may
-      // be non-register padding data after the header. Use the embedded
-      // header's size field instead.
-      lldb::offset_t size_offset = 0;
-      uint32_t size = m_za_data.GetU32(&size_offset);
-      bool za_enabled = size > sizeof(sve::user_za_header);
-
-      size_t za_note_size = m_za_data.GetByteSize();
-      // For a disabled ZA we fake a value of all 0s.
-      if (!za_enabled) {
-        uint64_t svl = m_sme_pseudo_regs.svg_reg * 8;
-        za_note_size = sizeof(sve::user_za_header) + (svl * svl);
-      }
-
-      const uint8_t *src = nullptr;
-      std::vector<uint8_t> disabled_za_data;
-
-      if (za_enabled)
-        src = m_za_data.GetDataStart();
-      else {
-        disabled_za_data.resize(za_note_size);
-        std::fill(disabled_za_data.begin(), disabled_za_data.end(), 0);
-        src = disabled_za_data.data();
-      }
-
-      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, src + sizeof(sve::user_za_header), reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-    } else if (m_register_info_up->IsSMERegZT(reg)) {
-      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_zt_data.GetDataStart(), reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-    } else {
-      offset = reg_info->byte_offset - m_register_info_up->GetSMEOffset();
-      assert(offset < sizeof(m_sme_pseudo_regs));
-      // Host endian since these values are derived instead of being read from a
-      // core file note.
-      value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset, reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error, reg_info->name);
+      return llvm::createStringError("register value is unavailable");
+    lldb::offset_t offset = 0;
+    if (m_za_data.GetU32(&offset) == sizeof(sve::user_za_header)) {
+      inactive_za.resize(sizeof(sve::user_za_header) + reg->byte_size, 0);
+      za = inactive_za;
     }
-  } else if (IsFPMR(reg)) {
-    offset = reg_info->byte_offset - m_register_info_up->GetFPMROffset();
-    assert(offset < m_fpmr_data.GetByteSize());
-    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_fpmr_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-  } else if (IsPOE(reg)) {
-    offset = reg_info->byte_offset - m_register_info_up->GetPOEOffset();
-    assert(offset < m_poe_data.GetByteSize());
-    value.SetFromMemoryData(reg_info->encoding, reg_info->byte_size, m_poe_data.GetDataStart() + offset, reg_info->byte_size, lldb::eByteOrderLittle, error, reg_info->name);
-  } else
-    return false;
-
-  return error.Success();
+  }
+  uint8_t pseudo[sizeof(linux_arm64::SMERegisters)];
+  auto order = GetTargetArchitecture().GetByteOrder() == lldb::eByteOrderBig
+                   ? llvm::endianness::big
+                   : llvm::endianness::little;
+  llvm::support::endian::write64(pseudo, m_sme_pseudo_regs.ctrl_reg, order);
+  llvm::support::endian::write64(
+      pseudo + offsetof(linux_arm64::SMERegisters, svg_reg),
+      m_sme_pseudo_regs.svg_reg, order);
+  auto result = ReadBankRegister(
+      reg->id,
+      {{linux_arm64::GP, {m_gpr_data.GetDataStart(), m_gpr_data.GetByteSize()}},
+       {linux_arm64::FP, {m_fpr_data.GetDataStart(), m_fpr_data.GetByteSize()}},
+       {linux_arm64::SVE,
+        {m_sve_data.GetDataStart(), m_sve_data.GetByteSize()}},
+       {linux_arm64::PAC,
+        {m_pac_data.GetDataStart(), m_pac_data.GetByteSize()}},
+       {linux_arm64::MTE,
+        {m_mte_data.GetDataStart(), m_mte_data.GetByteSize()}},
+       {linux_arm64::TLS,
+        {m_tls_data.GetDataStart(), m_tls_data.GetByteSize()}},
+       {linux_arm64::ZT, {m_zt_data.GetDataStart(), m_zt_data.GetByteSize()}},
+       {linux_arm64::FPMR,
+        {m_fpmr_data.GetDataStart(), m_fpmr_data.GetByteSize()}},
+       {linux_arm64::GCS,
+        {m_gcs_data.GetDataStart(), m_gcs_data.GetByteSize()}},
+       {linux_arm64::POE,
+        {m_poe_data.GetDataStart(), m_poe_data.GetByteSize()}},
+       {linux_arm64::SMEControl, pseudo},
+       {linux_arm64::ZA, za}});
+  return result;
 }
 
 bool RegisterContextELFCore_arm64::ReadAllRegisterValues(
@@ -411,9 +366,10 @@ bool RegisterContextELFCore_arm64::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextELFCore_arm64::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error
+RegisterContextELFCore_arm64::WriteRegister(RegisterID id,
                                                    const RegisterValue &value) {
-  return false;
+  return llvm::createStringError("register write is unavailable");
 }
 
 bool RegisterContextELFCore_arm64::WriteAllRegisterValues(

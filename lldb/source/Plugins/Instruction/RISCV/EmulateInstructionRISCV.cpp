@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionRISCV.h"
-#include "Register/RegisterInfoInterface.h"
-#include "Register/Common/RegisterInfo_riscv32.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
 #include "lldb/Register/Arch/lldb-riscv-register-enums.h"
 #include "RISCVCInstructions.h"
 #include "RISCVInstructions.h"
+#include "lldb/Register/Common/RegisterInfo_riscv32.h"
+#include "lldb/Register/Common/RegisterInfo_riscv64.h"
+#include "lldb/Register/RegisterDescription.h"
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
@@ -118,7 +118,7 @@ static uint32_t FPREncodingToLLDB(uint32_t reg_encode) {
 }
 
 // Helper function to get register info from GPR encoding
-static std::optional<RegisterInfo>
+static std::optional<RegisterDescriptor>
 GPREncodingToRegisterInfo(EmulateInstructionRISCV &emulator,
                           uint32_t reg_encode) {
   uint32_t lldb_reg = GPREncodingToLLDB(reg_encode);
@@ -254,7 +254,7 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   EmulateInstructionRISCV::Context context;
 
   // Get register info for base register
-  std::optional<RegisterInfo> reg_info_rs1 =
+  std::optional<RegisterDescriptor> reg_info_rs1 =
       GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
 
   if (!reg_info_rs1)
@@ -290,9 +290,9 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
   EmulateInstructionRISCV::Context context;
 
   // Get register info for source and base registers.
-  std::optional<RegisterInfo> reg_info_rs1 =
+  std::optional<RegisterDescriptor> reg_info_rs1 =
       GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
-  std::optional<RegisterInfo> reg_info_rs2 =
+  std::optional<RegisterDescriptor> reg_info_rs2 =
       GPREncodingToRegisterInfo(emulator, inst.rs2.rs);
 
   if (!reg_info_rs1 || !reg_info_rs2)
@@ -1814,7 +1814,7 @@ bool EmulateInstructionRISCV::SetAccruedExceptions(
   return WriteRegisterUnsigned(ctx, eRegisterKindLLDB, reg_ids::fpr_fcsr, fcsr);
 }
 
-std::optional<RegisterInfo>
+std::optional<RegisterDescriptor>
 EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
                                          uint32_t reg_index) {
   if (reg_kind == eRegisterKindGeneric) {
@@ -1842,28 +1842,25 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
     }
   }
 
-  std::unique_ptr<RegisterInfoInterface> reg_info;
-  switch (m_arch.GetTriple().getArch()) {
-  case llvm::Triple::riscv32:
-    reg_info = std::make_unique<RegisterInfo_riscv32>(
-        m_arch, RegisterInfo_riscv32::eRegsetMaskAll);
-    break;
-  case llvm::Triple::riscv64:
-    reg_info = std::make_unique<RegisterInfo_riscv64>(
-        m_arch, RegisterInfo_riscv64::eRegsetMaskAll);
-    break;
-  default:
-    assert(false && "unsupported triple");
-    return {};
+  auto &reg_info = m_register_info;
+  if (!reg_info) {
+    switch (m_arch.GetTriple().getArch()) {
+    case llvm::Triple::riscv32:
+      reg_info = RegisterInfo_riscv32::CreateDescription();
+      break;
+    case llvm::Triple::riscv64:
+      reg_info = RegisterInfo_riscv64::CreateDescription(
+          RegisterInfo_riscv64::eRegsetMaskAll);
+      break;
+    default:
+      assert(false && "unsupported triple");
+      return {};
+    }
   }
 
-  const RegisterInfo *array = reg_info->GetRegisterInfo();
-  const uint32_t length = reg_info->GetRegisterCount();
-
-  if (reg_index >= length || reg_kind != eRegisterKindLLDB)
-    return {};
-
-  return array[reg_index];
+  if (const auto *reg = reg_info->FindByNumber(reg_kind, reg_index))
+    return *reg;
+  return {};
 }
 
 bool EmulateInstructionRISCV::SetInstruction(const Opcode &opcode,

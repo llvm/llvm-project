@@ -17,6 +17,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Register/RegisterValue.h"
+#include "lldb/Register/Common/RegisterInfo_x86.h"
 #include "lldb/Utility/Scalar.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
@@ -100,360 +101,19 @@ enum {
   fpu_fooff = fpu_dp
 };
 
-enum ehframe_dwarf_regnums {
-  ehframe_dwarf_gpr_rax = 0,
-  ehframe_dwarf_gpr_rdx,
-  ehframe_dwarf_gpr_rcx,
-  ehframe_dwarf_gpr_rbx,
-  ehframe_dwarf_gpr_rsi,
-  ehframe_dwarf_gpr_rdi,
-  ehframe_dwarf_gpr_rbp,
-  ehframe_dwarf_gpr_rsp,
-  ehframe_dwarf_gpr_r8,
-  ehframe_dwarf_gpr_r9,
-  ehframe_dwarf_gpr_r10,
-  ehframe_dwarf_gpr_r11,
-  ehframe_dwarf_gpr_r12,
-  ehframe_dwarf_gpr_r13,
-  ehframe_dwarf_gpr_r14,
-  ehframe_dwarf_gpr_r15,
-  ehframe_dwarf_gpr_rip,
-  ehframe_dwarf_fpu_xmm0,
-  ehframe_dwarf_fpu_xmm1,
-  ehframe_dwarf_fpu_xmm2,
-  ehframe_dwarf_fpu_xmm3,
-  ehframe_dwarf_fpu_xmm4,
-  ehframe_dwarf_fpu_xmm5,
-  ehframe_dwarf_fpu_xmm6,
-  ehframe_dwarf_fpu_xmm7,
-  ehframe_dwarf_fpu_xmm8,
-  ehframe_dwarf_fpu_xmm9,
-  ehframe_dwarf_fpu_xmm10,
-  ehframe_dwarf_fpu_xmm11,
-  ehframe_dwarf_fpu_xmm12,
-  ehframe_dwarf_fpu_xmm13,
-  ehframe_dwarf_fpu_xmm14,
-  ehframe_dwarf_fpu_xmm15,
-  ehframe_dwarf_fpu_stmm0,
-  ehframe_dwarf_fpu_stmm1,
-  ehframe_dwarf_fpu_stmm2,
-  ehframe_dwarf_fpu_stmm3,
-  ehframe_dwarf_fpu_stmm4,
-  ehframe_dwarf_fpu_stmm5,
-  ehframe_dwarf_fpu_stmm6,
-  ehframe_dwarf_fpu_stmm7
-
-};
-
-#define GPR_OFFSET(reg)                                                        \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_x86_64::GPR, reg))
-#define FPU_OFFSET(reg)                                                        \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_x86_64::FPU, reg) +           \
-   sizeof(RegisterContextDarwin_x86_64::GPR))
-#define EXC_OFFSET(reg)                                                        \
-  (LLVM_EXTENSION offsetof(RegisterContextDarwin_x86_64::EXC, reg) +           \
-   sizeof(RegisterContextDarwin_x86_64::GPR) +                                 \
-   sizeof(RegisterContextDarwin_x86_64::FPU))
-
-// These macros will auto define the register name, alt name, register size,
-// register offset, encoding, format and native register. This ensures that the
-// register state structures are defined correctly and have the correct sizes
-// and offsets.
-#define DEFINE_GPR(reg, alt)                                                   \
-  #reg, alt, sizeof(((RegisterContextDarwin_x86_64::GPR *) NULL)->reg),        \
-                    GPR_OFFSET(reg), eEncodingUint, eFormatHex
-#define DEFINE_FPU_UINT(reg)                                                   \
-  #reg, NULL, sizeof(((RegisterContextDarwin_x86_64::FPU *) NULL)->reg),       \
-                     FPU_OFFSET(reg), eEncodingUint, eFormatHex
-#define DEFINE_FPU_VECT(reg, i)                                                \
-  #reg #i, NULL,                                                               \
-      sizeof(((RegisterContextDarwin_x86_64::FPU *) NULL)->reg[i].bytes),      \
-              FPU_OFFSET(reg[i]), eEncodingVector, eFormatVectorOfUInt8,       \
-                         {ehframe_dwarf_fpu_##reg##i,                          \
-                          ehframe_dwarf_fpu_##reg##i, LLDB_INVALID_REGNUM,     \
-                          LLDB_INVALID_REGNUM, fpu_##reg##i },                 \
-                          nullptr, nullptr, nullptr,
-#define DEFINE_EXC(reg)                                                        \
-  #reg, NULL, sizeof(((RegisterContextDarwin_x86_64::EXC *) NULL)->reg),       \
-                     EXC_OFFSET(reg), eEncodingUint, eFormatHex
-
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterContextDarwin_x86_64::GPR) +                                 \
    sizeof(RegisterContextDarwin_x86_64::FPU) +                                 \
    sizeof(RegisterContextDarwin_x86_64::EXC))
 
 // General purpose registers for 64 bit
-static RegisterInfo g_register_infos[] = {
-    {DEFINE_GPR(rax, nullptr),
-     {ehframe_dwarf_gpr_rax, ehframe_dwarf_gpr_rax, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rax},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rbx, nullptr),
-     {ehframe_dwarf_gpr_rbx, ehframe_dwarf_gpr_rbx, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rbx},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rcx, nullptr),
-     {ehframe_dwarf_gpr_rcx, ehframe_dwarf_gpr_rcx, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rcx},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rdx, nullptr),
-     {ehframe_dwarf_gpr_rdx, ehframe_dwarf_gpr_rdx, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rdx},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rdi, nullptr),
-     {ehframe_dwarf_gpr_rdi, ehframe_dwarf_gpr_rdi, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rdi},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rsi, nullptr),
-     {ehframe_dwarf_gpr_rsi, ehframe_dwarf_gpr_rsi, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_rsi},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rbp, "fp"),
-     {ehframe_dwarf_gpr_rbp, ehframe_dwarf_gpr_rbp, LLDB_REGNUM_GENERIC_FP,
-      LLDB_INVALID_REGNUM, gpr_rbp},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rsp, "sp"),
-     {ehframe_dwarf_gpr_rsp, ehframe_dwarf_gpr_rsp, LLDB_REGNUM_GENERIC_SP,
-      LLDB_INVALID_REGNUM, gpr_rsp},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r8, nullptr),
-     {ehframe_dwarf_gpr_r8, ehframe_dwarf_gpr_r8, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r8},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r9, nullptr),
-     {ehframe_dwarf_gpr_r9, ehframe_dwarf_gpr_r9, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r9},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r10, nullptr),
-     {ehframe_dwarf_gpr_r10, ehframe_dwarf_gpr_r10, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r10},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r11, nullptr),
-     {ehframe_dwarf_gpr_r11, ehframe_dwarf_gpr_r11, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r11},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r12, nullptr),
-     {ehframe_dwarf_gpr_r12, ehframe_dwarf_gpr_r12, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r12},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r13, nullptr),
-     {ehframe_dwarf_gpr_r13, ehframe_dwarf_gpr_r13, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r13},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r14, nullptr),
-     {ehframe_dwarf_gpr_r14, ehframe_dwarf_gpr_r14, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r14},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(r15, nullptr),
-     {ehframe_dwarf_gpr_r15, ehframe_dwarf_gpr_r15, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_r15},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rip, "pc"),
-     {ehframe_dwarf_gpr_rip, ehframe_dwarf_gpr_rip, LLDB_REGNUM_GENERIC_PC,
-      LLDB_INVALID_REGNUM, gpr_rip},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(rflags, "flags"),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_FLAGS,
-      LLDB_INVALID_REGNUM, gpr_rflags},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(cs, nullptr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_cs},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(fs, nullptr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_fs},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_GPR(gs, nullptr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, gpr_gs},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-
-    {DEFINE_FPU_UINT(fcw),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_fcw},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(fsw),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_fsw},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(ftw),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_ftw},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(fop),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_fop},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(ip),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_ip},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(cs),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_cs},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(dp),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_dp},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(ds),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_ds},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(mxcsr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_mxcsr},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_UINT(mxcsrmask),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, fpu_mxcsrmask},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_FPU_VECT(stmm, 0)},
-    {DEFINE_FPU_VECT(stmm, 1)},
-    {DEFINE_FPU_VECT(stmm, 2)},
-    {DEFINE_FPU_VECT(stmm, 3)},
-    {DEFINE_FPU_VECT(stmm, 4)},
-    {DEFINE_FPU_VECT(stmm, 5)},
-    {DEFINE_FPU_VECT(stmm, 6)},
-    {DEFINE_FPU_VECT(stmm, 7)},
-    {DEFINE_FPU_VECT(xmm, 0)},
-    {DEFINE_FPU_VECT(xmm, 1)},
-    {DEFINE_FPU_VECT(xmm, 2)},
-    {DEFINE_FPU_VECT(xmm, 3)},
-    {DEFINE_FPU_VECT(xmm, 4)},
-    {DEFINE_FPU_VECT(xmm, 5)},
-    {DEFINE_FPU_VECT(xmm, 6)},
-    {DEFINE_FPU_VECT(xmm, 7)},
-    {DEFINE_FPU_VECT(xmm, 8)},
-    {DEFINE_FPU_VECT(xmm, 9)},
-    {DEFINE_FPU_VECT(xmm, 10)},
-    {DEFINE_FPU_VECT(xmm, 11)},
-    {DEFINE_FPU_VECT(xmm, 12)},
-    {DEFINE_FPU_VECT(xmm, 13)},
-    {DEFINE_FPU_VECT(xmm, 14)},
-    {DEFINE_FPU_VECT(xmm, 15)},
-
-    {DEFINE_EXC(trapno),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_trapno},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_EXC(err),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_err},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {DEFINE_EXC(faultvaddr),
-     {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM, exc_faultvaddr},
-     nullptr,
-     nullptr,
-     nullptr,
-     }};
-
-static size_t k_num_register_infos = std::size(g_register_infos);
+static std::shared_ptr<const RegisterDescription> CreateContextDescription();
 
 RegisterContextDarwin_x86_64::RegisterContextDarwin_x86_64(
     Thread &thread, uint32_t concrete_frame_idx)
     : ThreadRegisterContext(thread, concrete_frame_idx), gpr(), fpu(), exc() {
+  SetRegisterDescription(CreateContextDescription());
+
   uint32_t i;
   for (i = 0; i < kNumErrors; i++) {
     gpr_errs[i] = -1;
@@ -466,28 +126,6 @@ RegisterContextDarwin_x86_64::~RegisterContextDarwin_x86_64() = default;
 
 void RegisterContextDarwin_x86_64::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();
-}
-
-size_t RegisterContextDarwin_x86_64::GetRegisterCount() {
-  assert(k_num_register_infos == k_num_registers);
-  return k_num_registers;
-}
-
-const RegisterInfo *
-RegisterContextDarwin_x86_64::GetRegisterInfoAtIndex(size_t reg) {
-  assert(k_num_register_infos == k_num_registers);
-  if (reg < k_num_registers)
-    return &g_register_infos[reg];
-  return nullptr;
-}
-
-size_t RegisterContextDarwin_x86_64::GetRegisterInfosCount() {
-  return k_num_register_infos;
-}
-
-const lldb_private::RegisterInfo *
-RegisterContextDarwin_x86_64::GetRegisterInfos() {
-  return g_register_infos;
 }
 
 static uint32_t g_gpr_regnums[] = {
@@ -513,24 +151,105 @@ const size_t k_num_exc_registers = std::size(g_exc_regnums);
 // Register set definitions. The first definitions at register set index of
 // zero is for all registers, followed by other registers sets. The register
 // information for the all register set need not be filled in.
-static const RegisterSet g_reg_sets[] = {
-    {
-        "General Purpose Registers", "gpr", k_num_gpr_registers, g_gpr_regnums,
-    },
-    {"Floating Point Registers", "fpu", k_num_fpu_registers, g_fpu_regnums},
-    {"Exception State Registers", "exc", k_num_exc_registers, g_exc_regnums}};
+static const RegisterGroup g_reg_sets[] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums,
+                             g_gpr_regnums + k_num_gpr_registers)},
+    {"Floating Point Registers", "fpu",
+     std::vector<RegisterID>(g_fpu_regnums,
+                             g_fpu_regnums + k_num_fpu_registers)},
+    {"Exception State Registers", "exc",
+     std::vector<RegisterID>(g_exc_regnums,
+                             g_exc_regnums + k_num_exc_registers)}};
 
-const size_t k_num_regsets = std::size(g_reg_sets);
-
-size_t RegisterContextDarwin_x86_64::GetRegisterSetCount() {
-  return k_num_regsets;
-}
-
-const RegisterSet *
-RegisterContextDarwin_x86_64::GetRegisterSet(size_t reg_set) {
-  if (reg_set < k_num_regsets)
-    return &g_reg_sets[reg_set];
-  return nullptr;
+static std::shared_ptr<const RegisterDescription> CreateContextDescription() {
+  static const auto description = [] {
+    auto cpu = RegisterInfo_x86::CreateDescription(
+        ArchSpec("x86_64-apple-darwin"));
+    std::vector<RegisterDescriptor> registers;
+    // Mach selectors are an explicit projection of the CPU catalog. These
+    // contexts expose complete independent values, without the catalog's
+    // unexposed subregister aliases.
+    auto append = [&](uint32_t selector, const RegisterDescriptor &definition)
+        -> RegisterDescriptor & {
+      auto reg = definition;
+      reg.id = selector;
+      reg.numbers[eRegisterKindLLDB] = selector;
+      reg.numbers[eRegisterKindProcessPlugin] = LLDB_INVALID_REGNUM;
+      reg.value_registers.clear();
+      reg.invalidate_registers.clear();
+      reg.value_byte_offset = 0;
+      reg.zero_extend_parent = LLDB_INVALID_REGNUM;
+      registers.push_back(std::move(reg));
+      return registers.back();
+    };
+    for (const char *name : {"rax", "rbx", "rcx", "rdx", "rdi", "rsi",
+                             "rbp", "rsp", "r8", "r9", "r10", "r11",
+                             "r12", "r13", "r14", "r15", "rip", "rflags",
+                             "cs", "fs", "gs"}) {
+      auto &reg = append(registers.size(), *cpu->Find(name));
+      if (reg.id == gpr_rbp)
+        reg.alt_name = "fp";
+      else if (reg.id == gpr_rsp)
+        reg.alt_name = "sp";
+      else if (reg.id == gpr_rip)
+        reg.alt_name = "pc";
+      else if (reg.id == gpr_rflags)
+        reg.alt_name = "flags";
+      uint32_t &generic = reg.numbers[eRegisterKindGeneric];
+      if (generic >= LLDB_REGNUM_GENERIC_ARG1 &&
+          generic <= LLDB_REGNUM_GENERIC_ARG8)
+        generic = LLDB_INVALID_REGNUM;
+      if (reg.id >= gpr_rflags) {
+        reg.numbers[eRegisterKindEHFrame] = LLDB_INVALID_REGNUM;
+        reg.numbers[eRegisterKindDWARF] = LLDB_INVALID_REGNUM;
+      }
+    }
+    // Preserve the Mach spelling, widths and absent external numbers for the
+    // x87 control words. Their logical definitions come from the CPU catalog.
+    for (auto names : {std::make_pair("fctrl", "fcw"),
+                       std::make_pair("fstat", "fsw"),
+                       std::make_pair("ftag", "ftw"),
+                       std::make_pair("fop", "fop"),
+                       std::make_pair("fioff", "ip"),
+                       std::make_pair("fiseg", "cs"),
+                       std::make_pair("fooff", "dp"),
+                       std::make_pair("foseg", "ds"),
+                       std::make_pair("mxcsr", "mxcsr"),
+                       std::make_pair("mxcsrmask", "mxcsrmask")}) {
+      auto &reg = append(registers.size(), *cpu->Find(names.first));
+      reg.name = names.second;
+      if (reg.id == fpu_ftw)
+        reg.byte_size = sizeof(RegisterContextDarwin_x86_64::FPU::ftw);
+      else if (reg.id == fpu_cs || reg.id == fpu_ds)
+        reg.byte_size = sizeof(RegisterContextDarwin_x86_64::FPU::cs);
+      reg.numbers[eRegisterKindEHFrame] = LLDB_INVALID_REGNUM;
+      reg.numbers[eRegisterKindDWARF] = LLDB_INVALID_REGNUM;
+    }
+    for (uint32_t i = 0; i < 8; ++i) {
+      auto &reg = append(fpu_stmm0 + i, *cpu->Find("st" + std::to_string(i)));
+      reg.name = "stmm" + std::to_string(i);
+    }
+    for (uint32_t i = 0; i < 16; ++i)
+      append(fpu_xmm0 + i, *cpu->Find("xmm" + std::to_string(i)));
+    for (auto entry : {std::make_pair(exc_trapno, "trapno"),
+                       std::make_pair(exc_err, "err"),
+                       std::make_pair(exc_faultvaddr, "faultvaddr")})
+      registers.emplace_back(
+          entry.first, entry.second, nullptr,
+          entry.first == exc_faultvaddr ? 8 : 4, eEncodingUint, eFormatHex,
+          RegisterDescriptor::Numbering{LLDB_INVALID_REGNUM,
+                                       LLDB_INVALID_REGNUM,
+                                       LLDB_INVALID_REGNUM,
+                                       LLDB_INVALID_REGNUM,
+                                       static_cast<uint32_t>(entry.first)});
+    return std::make_shared<RegisterDescription>(
+        llvm::cantFail(RegisterDescription::Create(
+            std::move(registers),
+            {std::begin(g_reg_sets), std::end(g_reg_sets)},
+            {cpu->GetOwnedTypes().begin(), cpu->GetOwnedTypes().end()})));
+  }();
+  return description;
 }
 
 int RegisterContextDarwin_x86_64::GetSetForNativeRegNum(int reg_num) {
@@ -629,15 +348,20 @@ int RegisterContextDarwin_x86_64::WriteRegisterSet(uint32_t set) {
   return -1;
 }
 
-bool RegisterContextDarwin_x86_64::ReadRegister(const RegisterInfo *reg_info,
-                                                RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+llvm::Expected<RegisterValue>
+RegisterContextDarwin_x86_64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
   int set = RegisterContextDarwin_x86_64::GetSetForNativeRegNum(reg);
   if (set == -1)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   if (ReadRegisterSet(set, false) != 0)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   switch (reg) {
   case gpr_rax:
@@ -749,21 +473,26 @@ bool RegisterContextDarwin_x86_64::ReadRegister(const RegisterInfo *reg_info,
     break;
 
   default:
-    return false;
+    return llvm::createStringError("register value is unavailable");
   }
-  return true;
+  return value;
 }
 
-bool RegisterContextDarwin_x86_64::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error
+RegisterContextDarwin_x86_64::WriteRegister(RegisterID id,
                                                  const RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  const uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
   int set = RegisterContextDarwin_x86_64::GetSetForNativeRegNum(reg);
 
   if (set == -1)
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
   if (ReadRegisterSet(set, false) != 0)
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
   switch (reg) {
   case gpr_rax:
@@ -860,7 +589,7 @@ bool RegisterContextDarwin_x86_64::WriteRegister(const RegisterInfo *reg_info,
   case fpu_xmm15:
     ::memcpy(fpu.xmm[reg - fpu_xmm0].bytes, value.GetBytes(),
              value.GetByteSize());
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
   case exc_trapno:
     exc.trapno = value.GetAsUInt32();
@@ -875,9 +604,13 @@ bool RegisterContextDarwin_x86_64::WriteRegister(const RegisterInfo *reg_info,
     break;
 
   default:
-    return false;
+    return llvm::createStringError("register write is unavailable");
   }
-  return WriteRegisterSet(set) == 0;
+  {
+    if (!(WriteRegisterSet(set) == 0))
+      return llvm::createStringError("register write failed");
+    return llvm::Error::success();
+  }
 }
 
 bool RegisterContextDarwin_x86_64::ReadAllRegisterValues(
@@ -918,115 +651,6 @@ bool RegisterContextDarwin_x86_64::WriteAllRegisterValues(
     return success_count == 3;
   }
   return false;
-}
-
-uint32_t RegisterContextDarwin_x86_64::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t reg) {
-  if (kind == eRegisterKindGeneric) {
-    switch (reg) {
-    case LLDB_REGNUM_GENERIC_PC:
-      return gpr_rip;
-    case LLDB_REGNUM_GENERIC_SP:
-      return gpr_rsp;
-    case LLDB_REGNUM_GENERIC_FP:
-      return gpr_rbp;
-    case LLDB_REGNUM_GENERIC_FLAGS:
-      return gpr_rflags;
-    case LLDB_REGNUM_GENERIC_RA:
-    default:
-      break;
-    }
-  } else if (kind == eRegisterKindEHFrame || kind == eRegisterKindDWARF) {
-    switch (reg) {
-    case ehframe_dwarf_gpr_rax:
-      return gpr_rax;
-    case ehframe_dwarf_gpr_rdx:
-      return gpr_rdx;
-    case ehframe_dwarf_gpr_rcx:
-      return gpr_rcx;
-    case ehframe_dwarf_gpr_rbx:
-      return gpr_rbx;
-    case ehframe_dwarf_gpr_rsi:
-      return gpr_rsi;
-    case ehframe_dwarf_gpr_rdi:
-      return gpr_rdi;
-    case ehframe_dwarf_gpr_rbp:
-      return gpr_rbp;
-    case ehframe_dwarf_gpr_rsp:
-      return gpr_rsp;
-    case ehframe_dwarf_gpr_r8:
-      return gpr_r8;
-    case ehframe_dwarf_gpr_r9:
-      return gpr_r9;
-    case ehframe_dwarf_gpr_r10:
-      return gpr_r10;
-    case ehframe_dwarf_gpr_r11:
-      return gpr_r11;
-    case ehframe_dwarf_gpr_r12:
-      return gpr_r12;
-    case ehframe_dwarf_gpr_r13:
-      return gpr_r13;
-    case ehframe_dwarf_gpr_r14:
-      return gpr_r14;
-    case ehframe_dwarf_gpr_r15:
-      return gpr_r15;
-    case ehframe_dwarf_gpr_rip:
-      return gpr_rip;
-    case ehframe_dwarf_fpu_xmm0:
-      return fpu_xmm0;
-    case ehframe_dwarf_fpu_xmm1:
-      return fpu_xmm1;
-    case ehframe_dwarf_fpu_xmm2:
-      return fpu_xmm2;
-    case ehframe_dwarf_fpu_xmm3:
-      return fpu_xmm3;
-    case ehframe_dwarf_fpu_xmm4:
-      return fpu_xmm4;
-    case ehframe_dwarf_fpu_xmm5:
-      return fpu_xmm5;
-    case ehframe_dwarf_fpu_xmm6:
-      return fpu_xmm6;
-    case ehframe_dwarf_fpu_xmm7:
-      return fpu_xmm7;
-    case ehframe_dwarf_fpu_xmm8:
-      return fpu_xmm8;
-    case ehframe_dwarf_fpu_xmm9:
-      return fpu_xmm9;
-    case ehframe_dwarf_fpu_xmm10:
-      return fpu_xmm10;
-    case ehframe_dwarf_fpu_xmm11:
-      return fpu_xmm11;
-    case ehframe_dwarf_fpu_xmm12:
-      return fpu_xmm12;
-    case ehframe_dwarf_fpu_xmm13:
-      return fpu_xmm13;
-    case ehframe_dwarf_fpu_xmm14:
-      return fpu_xmm14;
-    case ehframe_dwarf_fpu_xmm15:
-      return fpu_xmm15;
-    case ehframe_dwarf_fpu_stmm0:
-      return fpu_stmm0;
-    case ehframe_dwarf_fpu_stmm1:
-      return fpu_stmm1;
-    case ehframe_dwarf_fpu_stmm2:
-      return fpu_stmm2;
-    case ehframe_dwarf_fpu_stmm3:
-      return fpu_stmm3;
-    case ehframe_dwarf_fpu_stmm4:
-      return fpu_stmm4;
-    case ehframe_dwarf_fpu_stmm5:
-      return fpu_stmm5;
-    case ehframe_dwarf_fpu_stmm6:
-      return fpu_stmm6;
-    case ehframe_dwarf_fpu_stmm7:
-      return fpu_stmm7;
-    default:
-      break;
-    }
-  } else if (kind == eRegisterKindLLDB) {
-    return reg;
-  }
-  return LLDB_INVALID_REGNUM;
 }
 
 bool RegisterContextDarwin_x86_64::HardwareSingleStep(bool enable) {

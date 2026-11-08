@@ -8,13 +8,14 @@
 
 #if defined(__x86_64__) || defined(_M_X64)
 
-#include "NativeRegisterContextWindows_x86_64.h"
+#include <set>
 #include "lldb/Register/Arch/lldb-x86_64-register-enums.h"
+
+#include "NativeRegisterContextWindows_x86_64.h"
 #include "NativeRegisterContextWindows_WoW64.h"
 #include "NativeThreadWindows.h"
-#include "Register/Windows/RegisterInfoWindows_i386.h"
-#include "Register/Windows/RegisterInfoWindows_x86_64.h"
 #include "ProcessWindowsLog.h"
+#include "RegisterLayoutWindows_x86.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
@@ -49,21 +50,30 @@ static const uint32_t g_fpr_regnums_x86_64[] = {
     LLDB_INVALID_REGNUM // Register set must be terminated with this flag
 };
 
-static const RegisterSet g_reg_sets_x86_64[] = {
-    {"General Purpose Registers", "gpr", std::size(g_gpr_regnums_x86_64) - 1,
-     g_gpr_regnums_x86_64},
-    {"Floating Point Registers", "fpr", std::size(g_fpr_regnums_x86_64) - 1,
-     g_fpr_regnums_x86_64}};
+struct RegisterGroupNumbers {
+  const char *name;
+  const char *short_name;
+  std::vector<uint32_t> registers;
+};
+
+static const RegisterGroupNumbers g_reg_sets_x86_64[] = {
+    {"General Purpose Registers", "gpr",
+     std::vector<RegisterID>(g_gpr_regnums_x86_64,
+                             g_gpr_regnums_x86_64 +
+                                 std::size(g_gpr_regnums_x86_64) - 1)},
+    {"Floating Point Registers", "fpr",
+     std::vector<RegisterID>(g_fpr_regnums_x86_64,
+                             g_fpr_regnums_x86_64 +
+                                 std::size(g_fpr_regnums_x86_64) - 1)}};
 
 enum { k_num_register_sets = 2 };
 
 } // namespace
 
-static RegisterInfoInterface *
-CreateRegisterInfoInterface(const ArchSpec &target_arch) {
+static RegisterLayout CreateRegisterLayout(const ArchSpec &target_arch) {
   assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
          "Register setting path assumes this is a 64-bit host");
-  return new RegisterInfoWindows_x86_64(target_arch);
+  return CreateWindowsX86RegisterLayout(target_arch, X86RegisterMode::X86_64);
 }
 
 static Status GetThreadContextHelper(lldb::thread_t thread_handle,
@@ -112,8 +122,46 @@ NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
 
 NativeRegisterContextWindows_x86_64::NativeRegisterContextWindows_x86_64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, CreateRegisterInfoInterface(target_arch)) {}
+    : NativeRegisterContext(native_thread, target_arch,
+                            CreateRegisterLayout(target_arch)) {
+  // Bind native presentation policy to this schema generation once. The
+  // private definitions above use the backend's external numbering.
+  auto select_group = [&](uint32_t set_index) -> const RegisterGroupNumbers * {
+    if (set_index >= k_num_register_sets)
+      return nullptr;
+    return &g_reg_sets_x86_64[set_index];
+  };
+  auto previous = GetDescription();
+  std::vector<RegisterGroup> groups;
+  std::set<RegisterID> visible;
+  for (uint32_t index = 0; index < k_num_register_sets; ++index) {
+    const auto *input = select_group(index);
+    if (!input)
+      continue;
+    RegisterGroup group{input->name, input->short_name, {}};
+    for (uint32_t number : input->registers) {
+      const auto *reg = previous->FindByNumber(lldb::eRegisterKindLLDB, number);
+      assert(reg && "native presentation names an unknown register");
+      if (reg) {
+        group.registers.push_back(reg->id);
+        visible.insert(reg->id);
+      }
+    }
+    groups.push_back(std::move(group));
+  }
+  auto description = llvm::cantFail(RegisterDescription::Create(
+      {previous->GetRegisters().begin(), previous->GetRegisters().end()},
+      std::move(groups),
+      {previous->GetOwnedTypes().begin(), previous->GetOwnedTypes().end()}));
+  std::vector<RegisterID> order;
+  for (RegisterID id : previous->GetUserRegisters())
+    if (visible.count(id))
+      order.push_back(id);
+  auto presentation = llvm::cantFail(description.WithUserRegisters(order));
+  SetRegisterLayout(llvm::cantFail(RegisterLayout::Create(
+      std::make_shared<RegisterDescription>(std::move(presentation)),
+      GetLayout())));
+}
 
 bool NativeRegisterContextWindows_x86_64::IsGPR(uint32_t reg_index) const {
   return (reg_index >= reg_ids::k_first_gpr &&
@@ -126,17 +174,6 @@ bool NativeRegisterContextWindows_x86_64::IsFPR(uint32_t reg_index) const {
 
 bool NativeRegisterContextWindows_x86_64::IsDR(uint32_t reg_index) const {
   return (reg_index >= reg_ids::dr0 && reg_index <= reg_ids::dr7);
-}
-
-uint32_t NativeRegisterContextWindows_x86_64::GetRegisterSetCount() const {
-  return k_num_register_sets;
-}
-
-const RegisterSet *
-NativeRegisterContextWindows_x86_64::GetRegisterSet(uint32_t set_index) const {
-  if (set_index >= k_num_register_sets)
-    return nullptr;
-  return &g_reg_sets_x86_64[set_index];
 }
 
 Status NativeRegisterContextWindows_x86_64::GPRRead(const uint32_t reg,
@@ -519,68 +556,81 @@ NativeRegisterContextWindows_x86_64::DRWrite(const uint32_t reg,
   return SetThreadContextHelper(thread_handle, &tls_context);
 }
 
-Status
-NativeRegisterContextWindows_x86_64::ReadRegister(const RegisterInfo *reg_info,
-                                                  RegisterValue &reg_value) {
+llvm::Expected<RegisterValue>
+NativeRegisterContextWindows_x86_64::ReadRegister(RegisterID id) {
+  RegisterValue reg_value;
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
   Status error;
-  if (!reg_info) {
-    error = Status::FromErrorString("reg_info NULL");
-    return error;
+  if (!descriptor) {
+    error = Status::FromErrorString("unknown register");
+    return error.ToError();
   }
 
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  const uint32_t reg = descriptor->numbers[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
     error = Status::FromErrorStringWithFormat(
         "register \"%s\" is an internal-only lldb "
         "register, cannot read directly",
-        reg_info->name);
-    return error;
+        descriptor->name.c_str());
+    return error.ToError();
   }
 
-  if (IsGPR(reg))
-    return GPRRead(reg, reg_value);
+  if (IsGPR(reg)) {
+    if (Status status = GPRRead(reg, reg_value); status.Fail())
+      return status.ToError();
+    return reg_value;
+  }
 
-  if (IsFPR(reg))
-    return FPRRead(reg, reg_value);
+  if (IsFPR(reg)) {
+    if (Status status = FPRRead(reg, reg_value); status.Fail())
+      return status.ToError();
+    return reg_value;
+  }
 
-  if (IsDR(reg))
-    return DRRead(reg, reg_value);
+  if (IsDR(reg)) {
+    if (Status status = DRRead(reg, reg_value); status.Fail())
+      return status.ToError();
+    return reg_value;
+  }
 
-  return Status::FromErrorString("unimplemented");
+  return Status::FromErrorString("unimplemented").ToError();
 }
 
-Status NativeRegisterContextWindows_x86_64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &reg_value) {
+llvm::Error NativeRegisterContextWindows_x86_64::WriteRegister(
+    RegisterID id, const RegisterValue &reg_value) {
+  auto description = GetDescription();
+  const auto *descriptor = description ? description->Find(id) : nullptr;
   Status error;
 
-  if (!reg_info) {
-    error = Status::FromErrorString("reg_info NULL");
-    return error;
+  if (!descriptor) {
+    error = Status::FromErrorString("unknown register");
+    return error.ToError();
   }
 
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  const uint32_t reg = descriptor->numbers[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly written.
     error = Status::FromErrorStringWithFormat(
         "register \"%s\" is an internal-only lldb "
         "register, cannot write directly",
-        reg_info->name);
-    return error;
+        descriptor->name.c_str());
+    return error.ToError();
   }
 
   if (IsGPR(reg))
-    return GPRWrite(reg, reg_value);
+    return GPRWrite(reg, reg_value).ToError();
 
   if (IsFPR(reg))
-    return FPRWrite(reg, reg_value);
+    return FPRWrite(reg, reg_value).ToError();
 
   if (IsDR(reg))
-    return DRWrite(reg, reg_value);
+    return DRWrite(reg, reg_value).ToError();
 
-  return Status::FromErrorString("unimplemented");
+  return Status::FromErrorString("unimplemented").ToError();
 }
 
 Status NativeRegisterContextWindows_x86_64::ReadAllRegisterValues(

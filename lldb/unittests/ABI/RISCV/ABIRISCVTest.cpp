@@ -8,7 +8,7 @@
 
 #include "Plugins/ABI/RISCV/ABISysV_riscv.h"
 #include "lldb/Register/Arch/lldb-riscv-dwarf-register-enums.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
@@ -37,8 +37,8 @@ void ABIRISCVTestFixture::TearDownTestCase() {
   llvm::llvm_shutdown();
 }
 
-static DynamicRegisterInfo::Register MakeRegister(const char *name) {
-  DynamicRegisterInfo::Register reg;
+static RegisterDefinition MakeRegister(const char *name) {
+  RegisterDefinition reg;
   reg.name = ConstString(name);
   reg.set_name = ConstString("GPR");
   return reg;
@@ -48,8 +48,8 @@ TEST_P(ABIRISCVTestFixture, AugmentRegisterInfo) {
   ABISP abi_sp = ABI::FindPlugin(ProcessSP(), ArchSpec(GetParam()));
   ASSERT_TRUE(abi_sp);
 
-  std::vector<DynamicRegisterInfo::Register> regs{
-      MakeRegister("ra"), MakeRegister("sp"), MakeRegister("pc")};
+  std::vector<RegisterDefinition> regs{MakeRegister("ra"), MakeRegister("sp"),
+                                       MakeRegister("pc")};
   abi_sp->AugmentRegisterInfo(regs);
 
   ASSERT_EQ(regs.size(), 3U);
@@ -65,7 +65,7 @@ TEST_P(ABIRISCVTestFixture, AugmentRegisterInfoFloatingPoint) {
   ABISP abi_sp = ABI::FindPlugin(ProcessSP(), ArchSpec(GetParam()));
   ASSERT_TRUE(abi_sp);
 
-  std::vector<DynamicRegisterInfo::Register> regs{
+  std::vector<RegisterDefinition> regs{
       MakeRegister("ft0"), MakeRegister("fs0"), MakeRegister("fs1"),
       MakeRegister("fa0"), MakeRegister("fs2"), MakeRegister("fs11"),
       MakeRegister("ft11")};

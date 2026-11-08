@@ -14,6 +14,7 @@
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Target/RegisterRecoveryLocation.h"
 #include "lldb/Target/ThreadRegisterContext.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/lldb-public.h"
@@ -39,43 +40,6 @@ protected:
   friend class lldb_private::RegisterContextUnwind;
   friend class lldb_private::ArchitectureArm;
 
-  /// An UnwindPlan::Row::AbstractRegisterLocation, combined with the register
-  /// context and memory for a specific stop point, is used to create a
-  /// ConcreteRegisterLocation.
-  struct ConcreteRegisterLocation {
-    enum RegisterLocationTypes {
-      eRegisterNotSaved = 0, // register was not preserved by callee.  If
-                             // volatile reg, is unavailable
-      eRegisterSavedAtMemoryLocation, // register is saved at a specific word of
-                                      // target mem (target_memory_location)
-      eRegisterInRegister, // register is available in a (possible other)
-                           // register (register_number)
-      eRegisterIsRegisterPlusOffset, // register is available in a (possible
-                                     // other) register (register_number) with
-                                     // an offset applied
-      eRegisterSavedAtHostMemoryLocation, // register is saved at a word in
-                                          // lldb's address space
-      eRegisterValueInferred,        // register val was computed (and is in
-                                     // inferred_value)
-      eRegisterInLiveRegisterContext // register value is in a live (stack frame
-                                     // #0) register
-    };
-    int type;
-    union {
-      lldb::addr_t target_memory_location;
-      uint32_t
-          register_number; // in eRegisterKindLLDB register numbering system
-      void *host_memory_location;
-      uint64_t inferred_value; // eRegisterValueInferred - e.g. stack pointer ==
-                               // cfa + offset
-      struct {
-        uint32_t
-            register_number; // in eRegisterKindLLDB register numbering system
-        uint64_t offset;
-      } reg_plus_offset;
-    } location;
-  };
-
   void DoClear() override {
     m_frames.clear();
     m_candidate_frame.reset();
@@ -95,15 +59,14 @@ protected:
 
   // Needed to retrieve the "next" frame (e.g. frame 2 needs to retrieve frame
   // 1's RegisterContextUnwind)
-  // The ThreadRegisterContext for frame_num must already exist or this returns an
-  // empty shared pointer.
+  // The ThreadRegisterContext for frame_num must already exist or this returns
+  // an empty shared pointer.
   RegisterContextLLDBSP GetRegisterContextForFrameNum(uint32_t frame_num);
 
   // Iterate over the RegisterContextUnwind's in our m_frames vector, look for
   // the first one that has a saved location for this reg.
   bool SearchForSavedLocationForRegister(
-      uint32_t lldb_regnum,
-      lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc,
+      uint32_t lldb_regnum, lldb_private::RegisterRecoveryLocation &regloc,
       uint32_t starting_frame_num, bool pc_register);
 
   /// Provide the list of user-specified trap handler functions

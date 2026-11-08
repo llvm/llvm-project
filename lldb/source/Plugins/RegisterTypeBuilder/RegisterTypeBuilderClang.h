@@ -30,7 +30,7 @@ public:
   }
   static lldb::RegisterTypeBuilderSP CreateInstance(Target &target);
 
-  CompilerType GetRegisterType(const RegisterInfo &reg_info) override;
+  CompilerType GetRegisterType(const RegisterDescriptor &reg_info) override;
 
 private:
   CompilerType BuildBuiltinType(const RegisterTypeBuiltin *builtin_type,

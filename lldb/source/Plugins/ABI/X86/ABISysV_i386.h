@@ -40,7 +40,8 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override {
+  bool RegisterIsVolatile(
+      const lldb_private::RegisterDescriptor *reg_info) override {
     return !RegisterIsCalleeSaved(reg_info);
   }
 
@@ -91,7 +92,7 @@ protected:
   GetReturnValueObjectSimple(lldb_private::Thread &thread,
                              lldb_private::CompilerType &ast_type) const;
 
-  bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
+  bool RegisterIsCalleeSaved(const lldb_private::RegisterDescriptor *reg_info);
 
 private:
   using ABIX86_i386::ABIX86_i386; // Call CreateInstance instead.

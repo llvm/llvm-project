@@ -15,8 +15,8 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/Instruction/LoongArch/EmulateInstructionLoongArch.h"
-#include "Register/Common/RegisterInfo_loongarch64.h"
 #include "lldb/Register/Arch/lldb-loongarch-register-enums.h"
+#include "lldb/Register/Common/RegisterInfo_loongarch64.h"
 
 
 namespace reg_ids = lldb_private::registers::loongarch::id;
@@ -50,8 +50,8 @@ using namespace lldb_private;
 
 struct LoongArch64EmulatorTester : public EmulateInstructionLoongArch,
                                    testing::Test {
-  RegisterInfo_loongarch64::GPR gpr;
-  RegisterInfo_loongarch64::FPR fpr;
+  struct { uint64_t gpr[32]; uint64_t csr_era; uint64_t csr_badv; } gpr{};
+  struct { uint64_t fpr[32]; uint64_t fcc; uint32_t fcsr; } fpr{};
 
   LoongArch64EmulatorTester(
       std::string triple = "loongarch64-unknown-linux-gnu")
@@ -61,15 +61,13 @@ struct LoongArch64EmulatorTester : public EmulateInstructionLoongArch,
   }
 
   static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
-                                   const RegisterInfo *reg_info,
+                                   const RegisterDescriptor *reg_info,
                                    RegisterValue &reg_value) {
     LoongArch64EmulatorTester *tester =
         (LoongArch64EmulatorTester *)instruction;
-    uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
     if (reg >= reg_ids::gpr_r0 && reg <= reg_ids::gpr_r31)
       reg_value.SetUInt(tester->gpr.gpr[reg], reg_info->byte_size);
-    else if (reg == reg_ids::gpr_orig_a0)
-      reg_value.SetUInt(tester->gpr.orig_a0, reg_info->byte_size);
     else if (reg == reg_ids::gpr_pc)
       reg_value.SetUInt(tester->gpr.csr_era, reg_info->byte_size);
     else if (reg == reg_ids::gpr_badv)
@@ -82,15 +80,13 @@ struct LoongArch64EmulatorTester : public EmulateInstructionLoongArch,
 
   static bool WriteRegisterCallback(EmulateInstruction *instruction,
                                     void *baton, const Context &context,
-                                    const RegisterInfo *reg_info,
+                                    const RegisterDescriptor *reg_info,
                                     const RegisterValue &reg_value) {
     LoongArch64EmulatorTester *tester =
         (LoongArch64EmulatorTester *)instruction;
-    uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[eRegisterKindLLDB];
     if (reg >= reg_ids::gpr_r0 && reg <= reg_ids::gpr_r31)
       tester->gpr.gpr[reg] = reg_value.GetAsUInt64();
-    else if (reg == reg_ids::gpr_orig_a0)
-      tester->gpr.orig_a0 = reg_value.GetAsUInt64();
     else if (reg == reg_ids::gpr_pc)
       tester->gpr.csr_era = reg_value.GetAsUInt64();
     else if (reg == reg_ids::gpr_badv)

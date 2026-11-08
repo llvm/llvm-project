@@ -19,7 +19,7 @@
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Register/Native/NativeRegisterContextDBReg_arm64.h"
-#include "Register/Common/RegisterInfo_arm64.h"
+#include "lldb/Register/Common/RegisterInfo_arm64.h"
 
 #include <array>
 
@@ -35,17 +35,12 @@ public:
   NativeRegisterContextFreeBSD_arm64(const ArchSpec &target_arch,
                                      NativeThreadFreeBSD &native_thread);
 
-  uint32_t GetRegisterSetCount() const override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  uint32_t GetUserRegisterCount() const override;
-
-  const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
-
-  Status ReadRegister(const RegisterInfo *reg_info,
-                      RegisterValue &reg_value) override;
-
-  Status WriteRegister(const RegisterInfo *reg_info,
-                       const RegisterValue &reg_value) override;
+  llvm::Error
+  WriteRegister(lldb_private::RegisterID id,
+                const lldb_private::RegisterValue &reg_value) override;
 
   Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
@@ -59,7 +54,8 @@ private:
   // LLDB's GPR/FPU structs.  However, all fields have matching offsets
   // and sizes, so we do not have to worry about these (and we have
   // a unittest to assert that).
-  std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
+  reg m_gpr{};
+  fpreg m_fpr{};
   dbreg m_dbreg;
   bool m_read_dbreg;
 
@@ -68,8 +64,6 @@ private:
 
   llvm::Error ReadHardwareDebugInfo() override;
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
-
-  RegisterInfo_arm64 &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd

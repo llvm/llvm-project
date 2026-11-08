@@ -21,7 +21,6 @@ namespace lldb_private::registers::loongarch::id {
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
 enum : uint32_t {
   // General Purpose Registers.
-  // note: these enum values are used as byte_offset
   gpr_first = 0,
   gpr_r0 = gpr_first,
   gpr_r1,

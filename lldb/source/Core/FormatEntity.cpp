@@ -19,6 +19,7 @@
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -44,7 +45,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -74,7 +74,7 @@ namespace lldb_private {
 class ScriptInterpreter;
 }
 namespace lldb_private {
-struct RegisterInfo;
+struct RegisterDescriptor;
 }
 
 using namespace lldb;
@@ -655,13 +655,17 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
 
     if (reg_ctx) {
       const uint32_t lldb_reg_num =
-          reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
+          reg_ctx->GetRegisterIDForNumber(reg_kind, reg_num);
       if (lldb_reg_num != LLDB_INVALID_REGNUM) {
-        const RegisterInfo *reg_info =
-            reg_ctx->GetRegisterInfoAtIndex(lldb_reg_num);
+        const RegisterDescriptor *reg_info =
+            reg_ctx->GetDescription()->Find(lldb_reg_num);
         if (reg_info) {
           RegisterValue reg_value;
-          if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+          if (!llvm::errorToBool(
+                  reg_ctx
+                      ->ReadRegister(
+                          (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                      .moveInto(reg_value))) {
             DumpRegisterValue(reg_value, s, *reg_info, false, false, format);
             return true;
           }
@@ -1082,10 +1086,15 @@ static bool DumpRegister(Stream &s, StackFrame *frame, const char *reg_name,
     ThreadRegisterContext *reg_ctx = frame->GetRegisterContext().get();
 
     if (reg_ctx) {
-      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+      const RegisterDescriptor *reg_info =
+          reg_ctx->GetRegisterByName(reg_name);
       if (reg_info) {
         RegisterValue reg_value;
-        if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+        if (!llvm::errorToBool(
+                reg_ctx
+                    ->ReadRegister(
+                        (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(reg_value))) {
           DumpRegisterValue(reg_value, s, *reg_info, false, false, format);
           return true;
         }

@@ -419,11 +419,13 @@ Status MinidumpFileBuilder::AddModuleList() {
 
 uint16_t read_register_u16_raw(ThreadRegisterContext *reg_ctx,
                                llvm::StringRef reg_name) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(reg_name);
   if (!reg_info)
     return 0;
   lldb_private::RegisterValue reg_value;
-  bool success = reg_ctx->ReadRegister(reg_info, reg_value);
+  bool success = !llvm::errorToBool(
+      reg_ctx->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+          .moveInto(reg_value));
   if (!success)
     return 0;
   return reg_value.GetAsUInt16();
@@ -431,11 +433,13 @@ uint16_t read_register_u16_raw(ThreadRegisterContext *reg_ctx,
 
 uint32_t read_register_u32_raw(ThreadRegisterContext *reg_ctx,
                                llvm::StringRef reg_name) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(reg_name);
   if (!reg_info)
     return 0;
   lldb_private::RegisterValue reg_value;
-  bool success = reg_ctx->ReadRegister(reg_info, reg_value);
+  bool success = !llvm::errorToBool(
+      reg_ctx->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+          .moveInto(reg_value));
   if (!success)
     return 0;
   return reg_value.GetAsUInt32();
@@ -443,11 +447,13 @@ uint32_t read_register_u32_raw(ThreadRegisterContext *reg_ctx,
 
 uint64_t read_register_u64_raw(ThreadRegisterContext *reg_ctx,
                                llvm::StringRef reg_name) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(reg_name);
   if (!reg_info)
     return 0;
   lldb_private::RegisterValue reg_value;
-  bool success = reg_ctx->ReadRegister(reg_info, reg_value);
+  bool success = !llvm::errorToBool(
+      reg_ctx->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+          .moveInto(reg_value));
   if (!success)
     return 0;
   return reg_value.GetAsUInt64();
@@ -471,12 +477,15 @@ llvm::support::ulittle64_t read_register_u64(ThreadRegisterContext *reg_ctx,
       read_register_u64_raw(reg_ctx, reg_name));
 }
 
-void read_register_u128(ThreadRegisterContext *reg_ctx, llvm::StringRef reg_name,
-                        uint8_t *dst) {
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
+void read_register_u128(ThreadRegisterContext *reg_ctx,
+                        llvm::StringRef reg_name, uint8_t *dst) {
+  const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByName(reg_name);
   if (reg_info) {
     lldb_private::RegisterValue reg_value;
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+    if (!llvm::errorToBool(
+            reg_ctx
+                ->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value))) {
       Status error;
       uint32_t bytes_copied = reg_value.GetAsMemoryData(
           reg_info->byte_size, dst, 16, lldb::ByteOrder::eByteOrderLittle,

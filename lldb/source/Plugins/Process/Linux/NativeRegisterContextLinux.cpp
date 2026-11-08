@@ -53,12 +53,13 @@ lldb::ByteOrder NativeRegisterContextLinux::GetByteOrder() const {
 
 Status NativeRegisterContextLinux::ReadRegisterRaw(uint32_t reg_index,
                                                    RegisterValue &reg_value) {
-  const RegisterInfo *const reg_info = GetRegisterInfoAtIndex(reg_index);
+  const RegisterDescriptor *const reg_info =
+      GetRegisterByNumber(lldb::eRegisterKindLLDB, reg_index);
   if (!reg_info)
     return Status::FromErrorStringWithFormat("register %" PRIu32 " not found",
                                              reg_index);
 
-  return DoReadRegisterValue(GetPtraceOffset(reg_index), reg_info->name,
+  return DoReadRegisterValue(GetPtraceOffset(reg_index), reg_info->name.c_str(),
                              reg_info->byte_size, reg_value);
 }
 
@@ -69,28 +70,34 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
   RegisterValue value_to_write = reg_value;
 
   // Check if this is a subregister of a full register.
-  const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg_index);
+  const RegisterDescriptor *reg_info =
+      GetRegisterByNumber(lldb::eRegisterKindLLDB, reg_index);
   assert(reg_info && "Expected valid register info for reg_index.");
-  if (reg_info->invalidate_regs &&
-      (reg_info->invalidate_regs[0] != LLDB_INVALID_REGNUM)) {
+  if (reg_info->value_registers.size() == 1) {
     Status error;
 
-    RegisterValue full_value;
-    uint32_t full_reg = reg_info->invalidate_regs[0];
-    const RegisterInfo *full_reg_info = GetRegisterInfoAtIndex(full_reg);
+    auto description = GetDescription();
+    RegisterID parent = reg_info->value_registers.front();
+    const RegisterDescriptor *full_reg_info = description->Find(parent);
+    uint32_t full_reg = full_reg_info
+                            ? full_reg_info->numbers[lldb::eRegisterKindLLDB]
+                            : LLDB_INVALID_REGNUM;
 
     // Read the full register.
-    error = ReadRegister(full_reg_info, full_value);
-    if (error.Fail()) {
-      // full_reg_info was nullptr, or we couldn't read the register.
-      return error;
-    }
+    const auto *full = full_reg_info && description
+                           ? description->Find(full_reg_info->name)
+                           : nullptr;
+    if (!full)
+      return Status::FromErrorString("unknown parent register");
+    auto full_value = ReadRegister(full->id);
+    if (!full_value)
+      return Status::FromError(full_value.takeError());
 
     lldb::ByteOrder byte_order = GetByteOrder();
     RegisterValue::BytesContainer dst(full_reg_info->byte_size);
 
     // Get the bytes for the full register.
-    const uint32_t dest_size = full_value.GetAsMemoryData(
+    const uint32_t dest_size = full_value->GetAsMemoryData(
         full_reg_info->byte_size, dst.data(), dst.size(), byte_order, error,
         full_reg_info->name);
     if (error.Success() && dest_size) {
@@ -102,10 +109,10 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
                                     byte_order, error, reg_info->name);
       if (error.Success() && src_size && (src_size < dest_size)) {
         // Copy the src bytes to the destination.
-        memcpy(dst.data() + (reg_info->byte_offset & 0x1), src.data(),
+        memcpy(dst.data() + GetRegisterValueOffset(reg_info->id), src.data(),
                src_size);
         // Set this full register as the value to write.
-        value_to_write.SetBytes(dst.data(), full_value.GetByteSize(),
+        value_to_write.SetBytes(dst.data(), full_value->GetByteSize(),
                                 byte_order);
         value_to_write.SetType(full_reg_info->encoding,
                                full_reg_info->byte_size);
@@ -114,18 +121,19 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
     }
   }
 
-  const RegisterInfo *const register_to_write_info_p =
-      GetRegisterInfoAtIndex(reg_to_write);
+  const RegisterDescriptor *const register_to_write_info_p =
+      GetRegisterByNumber(lldb::eRegisterKindLLDB, reg_to_write);
   assert(register_to_write_info_p &&
-         "register to write does not have valid RegisterInfo");
+         "register to write does not have valid RegisterDescriptor");
   if (!register_to_write_info_p)
     return Status::FromErrorStringWithFormat(
-        "NativeRegisterContextLinux::%s failed to get RegisterInfo "
+        "NativeRegisterContextLinux::%s failed to get RegisterDescriptor "
         "for write register index %" PRIu32,
         __FUNCTION__, reg_to_write);
 
-  return DoWriteRegisterValue(GetPtraceOffset(reg_index), reg_info->name,
-                              reg_value);
+  return DoWriteRegisterValue(GetPtraceOffset(reg_to_write),
+                              register_to_write_info_p->name.c_str(),
+                              value_to_write);
 }
 
 Status NativeRegisterContextLinux::ReadGPR() {

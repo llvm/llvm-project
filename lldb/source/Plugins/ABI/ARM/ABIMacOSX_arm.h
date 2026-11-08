@@ -33,7 +33,8 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
     // Make sure the stack call frame addresses are 4 byte aligned
@@ -57,7 +58,7 @@ public:
     return pc & ~(lldb::addr_t)1;
   }
 
-  const lldb_private::RegisterInfo *
+  const lldb_private::RegisterDescriptor *
   GetRegisterInfoArray(uint32_t &count) override;
 
   bool IsArmv7kProcess() const;

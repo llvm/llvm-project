@@ -42,14 +42,8 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
   Log *log = GetLog(GDBRLog::Thread);
   LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2:x}", this, process.GetID(),
            GetID());
-  // At this point we can clone reg_info for architectures supporting
-  // run-time update to register sizes and offsets..
   auto &gdb_process = static_cast<ProcessGDBRemote &>(process);
-  if (!gdb_process.m_register_info_sp->IsReconfigurable())
-    m_reg_info_sp = gdb_process.m_register_info_sp;
-  else
-    m_reg_info_sp =
-        std::make_shared<DynamicRegisterInfo>(*gdb_process.m_register_info_sp);
+  m_register_layout_sp = gdb_process.m_register_layout_sp;
 }
 
 ThreadGDBRemote::~ThreadGDBRemote() {
@@ -315,8 +309,8 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
           !pSupported || gdb_process->m_use_g_packet_for_reading;
       bool write_all_registers_at_once = !pSupported;
       reg_ctx_sp = std::make_shared<GDBRemoteRegisterContext>(
-          *this, concrete_frame_idx, m_reg_info_sp, read_all_registers_at_once,
-          write_all_registers_at_once);
+          *this, concrete_frame_idx, m_register_layout_sp,
+          read_all_registers_at_once, write_all_registers_at_once);
     }
   } else {
     reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
@@ -324,7 +318,7 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
   return reg_ctx_sp;
 }
 
-bool ThreadGDBRemote::PrivateSetRegisterValue(uint32_t reg,
+bool ThreadGDBRemote::PrivateSetRegisterValue(RegisterID reg,
                                               llvm::ArrayRef<uint8_t> data) {
   GDBRemoteRegisterContext *gdb_reg_ctx =
       static_cast<GDBRemoteRegisterContext *>(GetRegisterContext().get());
@@ -332,7 +326,7 @@ bool ThreadGDBRemote::PrivateSetRegisterValue(uint32_t reg,
   return gdb_reg_ctx->PrivateSetRegisterValue(reg, data);
 }
 
-bool ThreadGDBRemote::PrivateSetRegisterValue(uint32_t reg, uint64_t regval) {
+bool ThreadGDBRemote::PrivateSetRegisterValue(RegisterID reg, uint64_t regval) {
   GDBRemoteRegisterContext *gdb_reg_ctx =
       static_cast<GDBRemoteRegisterContext *>(GetRegisterContext().get());
   assert(gdb_reg_ctx);

@@ -163,32 +163,18 @@ DWARFExpression::ReadRegisterValueAsScalar(ThreadRegisterContext *reg_ctx,
   if (reg_ctx == nullptr)
     return llvm::createStringError("no register context in frame");
 
-  const uint32_t native_reg =
-      reg_ctx->ConvertRegisterKindToRegisterNumber(reg_kind, reg_num);
-  if (native_reg == LLDB_INVALID_REGNUM)
+  auto id = reg_ctx->ResolveRegisterNumber(reg_kind, reg_num);
+  if (!id)
+    return id.takeError();
+  auto reg_value = reg_ctx->ReadRegister(*id);
+  if (!reg_value)
+    return reg_value.takeError();
+  if (!reg_value->GetScalarValue(value.GetScalar()))
     return llvm::createStringError(
-        "unable to convert register kind=%u reg_num=%u to a native "
-        "register number",
-        reg_kind, reg_num);
-
-  const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(native_reg);
-  RegisterValue reg_value;
-  if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-    if (reg_value.GetScalarValue(value.GetScalar())) {
-      value.SetValueType(Value::ValueType::Scalar);
-      value.SetContext(Value::ContextType::RegisterInfo,
-                       const_cast<RegisterInfo *>(reg_info));
-      return llvm::Error::success();
-    }
-
-    // If we get this error, then we need to implement a value buffer in
-    // the dwarf expression evaluation function...
-    return llvm::createStringError(
-        "register %s can't be converted to a scalar value", reg_info->name);
-  }
-
-  return llvm::createStringError("register %s is not available",
-                                 reg_info->name);
+        "register value cannot be converted to a scalar");
+  value.SetValueType(Value::ValueType::Scalar);
+  value.SetRegister(reg_ctx->GetDescription(), *id);
+  return llvm::Error::success();
 }
 
 /// Return the length in bytes of the set of operands for \p op. No guarantees
@@ -2511,21 +2497,21 @@ bool DWARFExpression::MatchesOperand(
   }
 
   bool dereference = false;
-  const RegisterInfo *reg = nullptr;
+  const RegisterDescriptor *reg = nullptr;
   int64_t offset = 0;
 
   if (opcode >= DW_OP_reg0 && opcode <= DW_OP_reg31) {
-    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, opcode - DW_OP_reg0);
+    reg = reg_ctx_sp->GetRegisterByNumber(m_reg_kind, opcode - DW_OP_reg0);
   } else if (opcode >= DW_OP_breg0 && opcode <= DW_OP_breg31) {
     offset = opcodes.GetSLEB128(&op_offset);
-    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, opcode - DW_OP_breg0);
+    reg = reg_ctx_sp->GetRegisterByNumber(m_reg_kind, opcode - DW_OP_breg0);
   } else if (opcode == DW_OP_regx) {
     uint32_t reg_num = static_cast<uint32_t>(opcodes.GetULEB128(&op_offset));
-    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
+    reg = reg_ctx_sp->GetRegisterByNumber(m_reg_kind, reg_num);
   } else if (opcode == DW_OP_bregx) {
     uint32_t reg_num = static_cast<uint32_t>(opcodes.GetULEB128(&op_offset));
     offset = opcodes.GetSLEB128(&op_offset);
-    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
+    reg = reg_ctx_sp->GetRegisterByNumber(m_reg_kind, reg_num);
   } else {
     return false;
   }

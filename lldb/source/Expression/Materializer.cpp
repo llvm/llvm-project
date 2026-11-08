@@ -1319,11 +1319,12 @@ uint32_t Materializer::AddSymbol(const Symbol &symbol_sp, Status &err) {
 
 class EntityRegister : public Materializer::Entity {
 public:
-  EntityRegister(const RegisterInfo &register_info)
-      : Entity(), m_register_info(register_info) {
+  EntityRegister(std::shared_ptr<const RegisterDescription> description,
+                 RegisterID id)
+      : Entity(), m_description(std::move(description)), m_register_id(id) {
     // Hard-coding alignment conservatively
-    m_size = m_register_info.byte_size;
-    m_alignment = m_register_info.byte_size;
+    m_size = GetDescriptor().byte_size;
+    m_alignment = GetDescriptor().byte_size;
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
@@ -1335,37 +1336,40 @@ public:
     LLDB_LOGF(log,
               "EntityRegister::Materialize [address = 0x%" PRIx64
               ", m_register_info = %s]",
-              (uint64_t)load_addr, m_register_info.name);
+              (uint64_t)load_addr, GetDescriptor().name.c_str());
 
     RegisterValue reg_value;
 
     if (!frame_sp.get()) {
       err = Status::FromErrorStringWithFormat(
           "couldn't materialize register %s without a stack frame",
-          m_register_info.name);
+          GetDescriptor().name.c_str());
       return;
     }
 
     lldb::ThreadRegisterContextSP reg_context_sp = frame_sp->GetRegisterContext();
 
-    if (!reg_context_sp->ReadRegister(&m_register_info, reg_value)) {
+    if (llvm::errorToBool(reg_context_sp->ReadRegister(GetDescriptor().id)
+                              .moveInto(reg_value))) {
       err = Status::FromErrorStringWithFormat(
-          "couldn't read the value of register %s", m_register_info.name);
+          "couldn't read the value of register %s",
+          GetDescriptor().name.c_str());
       return;
     }
 
-    if (reg_value.GetByteSize() != m_register_info.byte_size) {
+    if (reg_value.GetByteSize() != GetDescriptor().byte_size) {
       err = Status::FromErrorStringWithFormat(
           "data for register %s had size %llu but we expected %llu",
-          m_register_info.name, (unsigned long long)reg_value.GetByteSize(),
-          (unsigned long long)m_register_info.byte_size);
+          GetDescriptor().name.c_str(),
+          (unsigned long long)reg_value.GetByteSize(),
+          (unsigned long long)GetDescriptor().byte_size);
       return;
     }
 
     lldb_private::DataBufferHeap buf(reg_value.GetByteSize(), 0);
-    reg_value.GetAsMemoryData(m_register_info.byte_size, buf.GetBytes(),
+    reg_value.GetAsMemoryData(GetDescriptor().byte_size, buf.GetBytes(),
                               buf.GetByteSize(), map.GetByteOrder(), err,
-                              m_register_info.name);
+                              GetDescriptor().name);
     if (!err.Success())
       return;
 
@@ -1379,7 +1383,7 @@ public:
     if (!write_error.Success()) {
       err = Status::FromErrorStringWithFormat(
           "couldn't write the contents of register %s: %s",
-          m_register_info.name, write_error.AsCString());
+          GetDescriptor().name.c_str(), write_error.AsCString());
       return;
     }
   }
@@ -1394,7 +1398,7 @@ public:
     LLDB_LOGF(log,
               "EntityRegister::Dematerialize [address = 0x%" PRIx64
               ", m_register_info = %s]",
-              (uint64_t)load_addr, m_register_info.name);
+              (uint64_t)load_addr, GetDescriptor().name.c_str());
 
     Status extract_error;
 
@@ -1403,19 +1407,19 @@ public:
     if (!frame_sp.get()) {
       err = Status::FromErrorStringWithFormat(
           "couldn't dematerialize register %s without a stack frame",
-          m_register_info.name);
+          GetDescriptor().name.c_str());
       return;
     }
 
     lldb::ThreadRegisterContextSP reg_context_sp = frame_sp->GetRegisterContext();
 
-    map.GetMemoryData(register_data, load_addr, m_register_info.byte_size,
+    map.GetMemoryData(register_data, load_addr, GetDescriptor().byte_size,
                       extract_error);
 
     if (!extract_error.Success()) {
       err = Status::FromErrorStringWithFormat(
-          "couldn't get the data for register %s: %s", m_register_info.name,
-          extract_error.AsCString());
+          "couldn't get the data for register %s: %s",
+          GetDescriptor().name.c_str(), extract_error.AsCString());
       return;
     }
 
@@ -1433,9 +1437,11 @@ public:
     RegisterValue register_value(register_data.GetData(),
                                  register_data.GetByteOrder());
 
-    if (!reg_context_sp->WriteRegister(&m_register_info, register_value)) {
+    if (llvm::errorToBool(reg_context_sp->WriteRegister(GetDescriptor().id,
+                                                        register_value))) {
       err = Status::FromErrorStringWithFormat(
-          "couldn't write the value of register %s", m_register_info.name);
+          "couldn't write the value of register %s",
+          GetDescriptor().name.c_str());
       return;
     }
   }
@@ -1449,7 +1455,7 @@ public:
     const lldb::addr_t load_addr = process_address + m_offset;
 
     dump_stream.Printf("0x%" PRIx64 ": EntityRegister (%s)\n", load_addr,
-                       m_register_info.name);
+                       GetDescriptor().name.c_str());
 
     {
       dump_stream.PutCString("Value:\n");
@@ -1474,14 +1480,19 @@ public:
   void Wipe(IRMemoryMap &map, lldb::addr_t process_address) override {}
 
 private:
-  RegisterInfo m_register_info;
+  std::shared_ptr<const RegisterDescription> m_description;
+  RegisterID m_register_id;
+  const RegisterDescriptor &GetDescriptor() const {
+    return *m_description->Find(m_register_id);
+  }
   lldb::DataBufferSP m_register_contents;
 };
 
-uint32_t Materializer::AddRegister(const RegisterInfo &register_info,
+uint32_t Materializer::AddRegister(
+    std::shared_ptr<const RegisterDescription> description, RegisterID id,
                                    Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
-  *iter = std::make_unique<EntityRegister>(register_info);
+  *iter = std::make_unique<EntityRegister>(std::move(description), id);
   uint32_t ret = AddStructMember(**iter);
   (*iter)->SetOffset(ret);
   return ret;

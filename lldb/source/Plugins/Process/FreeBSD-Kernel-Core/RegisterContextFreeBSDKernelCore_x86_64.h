@@ -9,31 +9,22 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_X86_64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_X86_64_H
 
-#include "Plugins/Register/Core/RegisterContextCore_x86.h"
-#include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "lldb/Register/Arch/lldb-x86-register-enums.h"
+#include "lldb/Register/Common/RegisterInfo_x86.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
 class RegisterContextFreeBSDKernelCore_x86_64
-    : public RegisterContextCore_x86 {
+    : public lldb_private::ThreadRegisterContext {
 public:
-  RegisterContextFreeBSDKernelCore_x86_64(
-      lldb_private::Thread &thread,
-      lldb_private::RegisterInfoInterface *register_info,
-      lldb::addr_t pcb_addr);
+  RegisterContextFreeBSDKernelCore_x86_64(lldb_private::Thread &thread,
+                                          lldb_private::RegisterLayout layout,
+                                          lldb::addr_t pcb_addr);
 
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
-
-protected:
-  bool ReadGPR() override;
-
-  bool ReadFPR() override;
-
-  bool WriteGPR() override;
-
-  bool WriteFPR() override;
 
 private:
   lldb::addr_t m_pcb_addr;

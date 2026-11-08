@@ -99,7 +99,7 @@ private:
 
   std::optional<ProcessInfo> m_process_info;
   std::unique_ptr<StopReply> m_stop_reply;
-  std::vector<lldb_private::RegisterInfo> m_register_infos;
+  std::vector<lldb_private::RegisterDescriptor> m_register_infos;
   unsigned int m_pc_register = LLDB_INVALID_REGNUM;
 };
 

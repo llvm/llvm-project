@@ -17,16 +17,16 @@
 using namespace lldb_private;
 
 RegisterContextELFCore_s390x::RegisterContextELFCore_s390x(
-    Thread &thread, RegisterInfoInterface *register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCore_s390x(thread, 0, register_info) {
+    Thread &thread, RegisterLayout layout, const DataExtractor &gpregset,
+    llvm::ArrayRef<CoreNote> notes)
+    : ThreadRegisterContext(thread, 0, std::move(layout)) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
-  DataExtractor fpregset = getRegset(
-      notes, register_info->GetTargetArchitecture().GetTriple(), FPR_Desc);
+  DataExtractor fpregset =
+      getRegset(notes, GetTargetArchitecture().GetTriple(), FPR_Desc);
   m_fpr_buffer = std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
                                                   fpregset.GetByteSize());
   m_fpr.SetData(m_fpr_buffer);
@@ -35,45 +35,22 @@ RegisterContextELFCore_s390x::RegisterContextELFCore_s390x(
 
 RegisterContextELFCore_s390x::~RegisterContextELFCore_s390x() = default;
 
-bool RegisterContextELFCore_s390x::ReadGPR() { return true; }
-
-bool RegisterContextELFCore_s390x::ReadFPR() { return true; }
-
-bool RegisterContextELFCore_s390x::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_s390x::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextELFCore_s390x::ReadRegister(const RegisterInfo *reg_info,
-                                                  RegisterValue &value) {
-  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-  if (reg == LLDB_INVALID_REGNUM)
-    return false;
-
-  if (IsGPR(reg)) {
-    lldb::offset_t offset = reg_info->byte_offset;
-    uint64_t v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
-    if (offset == reg_info->byte_offset + reg_info->byte_size) {
-      value.SetUInt(v, reg_info->byte_size);
-      return true;
-    }
-  }
-
-  if (IsFPR(reg)) {
-    lldb::offset_t offset = reg_info->byte_offset;
-    uint64_t v = m_fpr.GetMaxU64(&offset, reg_info->byte_size);
-    if (offset == reg_info->byte_offset + reg_info->byte_size) {
-      value.SetUInt(v, reg_info->byte_size);
-      return true;
-    }
-  }
-
-  return false;
+llvm::Expected<RegisterValue>
+RegisterContextELFCore_s390x::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
+  if (!reg_info)
+    return llvm::createStringError("register value is unavailable");
+  const auto *reg = GetDescription()->Find(reg_info->id);
+  if (!reg)
+    return llvm::createStringError("register value is unavailable");
+  auto result = ReadBankRegister(
+      reg->id, {{0, {m_gpr.GetDataStart(), m_gpr.GetByteSize()}},
+                {1, {m_fpr.GetDataStart(), m_fpr.GetByteSize()}}});
+  return result;
 }
 
 bool RegisterContextELFCore_s390x::ReadAllRegisterValues(
@@ -81,9 +58,10 @@ bool RegisterContextELFCore_s390x::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextELFCore_s390x::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error
+RegisterContextELFCore_s390x::WriteRegister(RegisterID id,
                                                    const RegisterValue &value) {
-  return false;
+  return llvm::createStringError("register write is unavailable");
 }
 
 bool RegisterContextELFCore_s390x::WriteAllRegisterValues(

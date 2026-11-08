@@ -35,7 +35,7 @@ protected:
   uint32_t GetGenericNum(llvm::StringRef name) override;
 
   void AugmentRegisterInfo(
-      std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) override;
+      std::vector<lldb_private::RegisterDefinition> &regs) override;
 
   using lldb_private::MCBasedABI::MCBasedABI;
 };

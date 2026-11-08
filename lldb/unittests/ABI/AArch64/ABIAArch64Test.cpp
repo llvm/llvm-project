@@ -10,7 +10,7 @@
 #include "Plugins/ABI/AArch64/ABIMacOSX_arm64.h"
 #include "Plugins/ABI/AArch64/ABISysV_arm64.h"
 #include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
@@ -49,7 +49,7 @@ void ABIAArch64TestFixture::TearDownTestCase() {
 TEST_P(ABIAArch64TestFixture, AugmentRegisterInfo) {
   ABISP abi_sp = ABI::FindPlugin(ProcessSP(), ArchSpec(GetParam()));
   ASSERT_TRUE(abi_sp);
-  using Register = DynamicRegisterInfo::Register;
+  using Register = RegisterDefinition;
 
   Register pc;
   pc.name = ConstString("pc");
@@ -70,7 +70,7 @@ TEST_P(ABIAArch64TestFixture, AugmentRegisterInfo) {
 TEST_P(ABIAArch64TestFixture, AugmentRegisterInfoThreadPointer) {
   ABISP abi_sp = ABI::FindPlugin(ProcessSP(), ArchSpec(GetParam()));
   ASSERT_TRUE(abi_sp);
-  using Register = DynamicRegisterInfo::Register;
+  using Register = RegisterDefinition;
 
   Register tpidr;
   tpidr.name = ConstString("tpidr");

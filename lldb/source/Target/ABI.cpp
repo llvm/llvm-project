@@ -35,20 +35,20 @@ ABI::FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch) {
 ABI::~ABI() = default;
 
 bool RegInfoBasedABI::GetRegisterInfoByName(llvm::StringRef name,
-                                            RegisterInfo &info) {
+                                            RegisterDescriptor &info) {
   uint32_t count = 0;
-  const RegisterInfo *register_info_array = GetRegisterInfoArray(count);
+  const RegisterDescriptor *register_info_array = GetRegisterInfoArray(count);
   if (register_info_array) {
     uint32_t i;
     for (i = 0; i < count; ++i) {
-      const char *reg_name = register_info_array[i].name;
+      llvm::StringRef reg_name = register_info_array[i].name;
       if (reg_name == name) {
         info = register_info_array[i];
         return true;
       }
     }
     for (i = 0; i < count; ++i) {
-      const char *reg_alt_name = register_info_array[i].alt_name;
+      llvm::StringRef reg_alt_name = register_info_array[i].alt_name;
       if (reg_alt_name == name) {
         info = register_info_array[i];
         return true;
@@ -200,13 +200,13 @@ bool ABI::PrepareTrivialCall(Thread &thread, lldb::addr_t sp,
 }
 
 bool ABI::GetFallbackRegisterLocation(
-    const RegisterInfo *reg_info,
+    const RegisterDescriptor *reg_info,
     UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc) {
   // Did the UnwindPlan fail to give us the caller's stack pointer? The stack
   // pointer is defined to be the same as THIS frame's CFA, so return the CFA
   // value as the caller's stack pointer.  This is true on x86-32/x86-64 at
   // least.
-  if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_SP) {
+  if (reg_info->numbers[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_SP) {
     unwind_regloc.SetIsCFAPlusOffset(0);
     return true;
   }
@@ -240,28 +240,27 @@ std::unique_ptr<llvm::MCRegisterInfo> ABI::MakeMCRegisterInfo(const ArchSpec &ar
 }
 
 void RegInfoBasedABI::AugmentRegisterInfo(
-    std::vector<DynamicRegisterInfo::Register> &regs) {
-  for (DynamicRegisterInfo::Register &info : regs) {
+    std::vector<RegisterDefinition> &regs) {
+  for (RegisterDefinition &info : regs) {
     if (info.regnum_ehframe != LLDB_INVALID_REGNUM &&
         info.regnum_dwarf != LLDB_INVALID_REGNUM)
       continue;
 
-    RegisterInfo abi_info;
+    RegisterDescriptor abi_info;
     if (!GetRegisterInfoByName(info.name.GetStringRef(), abi_info))
       continue;
 
     if (info.regnum_ehframe == LLDB_INVALID_REGNUM)
-      info.regnum_ehframe = abi_info.kinds[eRegisterKindEHFrame];
+      info.regnum_ehframe = abi_info.numbers[eRegisterKindEHFrame];
     if (info.regnum_dwarf == LLDB_INVALID_REGNUM)
-      info.regnum_dwarf = abi_info.kinds[eRegisterKindDWARF];
+      info.regnum_dwarf = abi_info.numbers[eRegisterKindDWARF];
     if (info.regnum_generic == LLDB_INVALID_REGNUM)
-      info.regnum_generic = abi_info.kinds[eRegisterKindGeneric];
+      info.regnum_generic = abi_info.numbers[eRegisterKindGeneric];
   }
 }
 
-void MCBasedABI::AugmentRegisterInfo(
-    std::vector<DynamicRegisterInfo::Register> &regs) {
-  for (DynamicRegisterInfo::Register &info : regs) {
+void MCBasedABI::AugmentRegisterInfo(std::vector<RegisterDefinition> &regs) {
+  for (RegisterDefinition &info : regs) {
     uint32_t eh, dwarf;
     std::tie(eh, dwarf) = GetEHAndDWARFNums(info.name.GetStringRef());
 

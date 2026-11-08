@@ -21,8 +21,8 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
@@ -187,7 +187,8 @@ lldb::ScriptedFrameInterfaceSP ScriptedFrame::GetInterface() const {
   return m_scripted_frame_interface_sp;
 }
 
-llvm::Expected<DynamicRegisterInfoSP> ScriptedFrame::GetDynamicRegisterInfo() {
+llvm::Expected<std::shared_ptr<const RegisterLayout>>
+ScriptedFrame::GetRegisterLayout() {
   CheckInterpreterAndScriptObject();
 
   StructuredData::DictionarySP reg_info = GetInterface()->GetRegisterInfo();
@@ -203,8 +204,9 @@ llvm::Expected<DynamicRegisterInfoSP> ScriptedFrame::GetDynamicRegisterInfo() {
   if (!process_sp || !process_sp->IsValid())
     return llvm::createStringError("invalid process");
 
-  DynamicRegisterInfoSP register_info_sp = DynamicRegisterInfo::Create(
-      *reg_info, process_sp->GetTarget().GetArchitecture());
+  std::shared_ptr<const RegisterLayout> register_info_sp =
+      CreateRegisterImageLayout(*reg_info,
+                                process_sp->GetTarget().GetArchitecture());
   if (!register_info_sp)
     return llvm::createStringError(
         "failed to create scripted frame registers info");
@@ -233,8 +235,8 @@ llvm::Expected<lldb::ThreadRegisterContextSP> ScriptedFrame::CreateRegisterConte
   if (!data_sp->GetByteSize())
     return llvm::createStringError("failed to copy raw registers data");
 
-  llvm::Expected<DynamicRegisterInfoSP> register_info_or_err =
-      GetDynamicRegisterInfo();
+  llvm::Expected<std::shared_ptr<const RegisterLayout>> register_info_or_err =
+      GetRegisterLayout();
   if (!register_info_or_err)
     return register_info_or_err.takeError();
 

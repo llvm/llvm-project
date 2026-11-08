@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Symbol/ArmUnwindInfo.h"
 #include "lldb/Symbol/CallFrameInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
@@ -34,7 +35,6 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"
@@ -90,12 +90,11 @@ RegisterContextUnwind::RegisterContextUnwind(Thread &thread,
                                              SymbolContext &sym_ctx,
                                              uint32_t frame_number,
                                              UnwindLLDB &unwind_lldb)
-    : ThreadRegisterContext(thread, frame_number), m_thread(thread),
-      m_fast_unwind_plan_sp(), m_full_unwind_plan_sp(),
-      m_fallback_unwind_plan_sp(), m_all_registers_available(false),
-      m_frame_type(-1), m_cfa(LLDB_INVALID_ADDRESS),
-      m_afa(LLDB_INVALID_ADDRESS), m_start_pc(), m_current_pc(),
-      m_current_offset(), m_current_offset_backed_up_one(),
+    : ThreadRegisterContext(thread, frame_number), m_fast_unwind_plan_sp(),
+      m_full_unwind_plan_sp(), m_fallback_unwind_plan_sp(),
+      m_all_registers_available(false), m_frame_type(-1),
+      m_cfa(LLDB_INVALID_ADDRESS), m_afa(LLDB_INVALID_ADDRESS), m_start_pc(),
+      m_current_pc(), m_current_offset(), m_current_offset_backed_up_one(),
       m_behaves_like_zeroth_frame(false), m_sym_ctx(sym_ctx),
       m_sym_ctx_valid(false), m_frame_number(frame_number), m_registers(),
       m_parent_unwind(unwind_lldb) {
@@ -1146,73 +1145,68 @@ void RegisterContextUnwind::InvalidateAllRegisters() {
   m_frame_type = eNotAValidFrame;
 }
 
-size_t RegisterContextUnwind::GetRegisterCount() {
-  return m_thread.GetRegisterContext()->GetRegisterCount();
-}
-
-const RegisterInfo *RegisterContextUnwind::GetRegisterInfoAtIndex(size_t reg) {
-  return m_thread.GetRegisterContext()->GetRegisterInfoAtIndex(reg);
-}
-
-size_t RegisterContextUnwind::GetRegisterSetCount() {
-  return m_thread.GetRegisterContext()->GetRegisterSetCount();
-}
-
-const RegisterSet *RegisterContextUnwind::GetRegisterSet(size_t reg_set) {
-  return m_thread.GetRegisterContext()->GetRegisterSet(reg_set);
-}
-
-uint32_t RegisterContextUnwind::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t num) {
-  return m_thread.GetRegisterContext()->ConvertRegisterKindToRegisterNumber(
-      kind, num);
-}
-
 bool RegisterContextUnwind::ReadRegisterValueFromRegisterLocation(
-    lldb_private::UnwindLLDB::ConcreteRegisterLocation regloc,
-    const RegisterInfo *reg_info, RegisterValue &value) {
+    lldb_private::RegisterRecoveryLocation regloc,
+    const RegisterDescriptor *reg_info, RegisterValue &value) {
   if (!IsValid())
     return false;
   bool success = false;
 
   switch (regloc.type) {
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterInLiveRegisterContext: {
-    const RegisterInfo *other_reg_info =
-        GetRegisterInfoAtIndex(regloc.location.register_number);
+  case RegisterRecoveryLocation::eRegisterInLiveRegisterContext: {
+    const RegisterDescriptor *other_reg_info =
+        GetRegisterByNumber(eRegisterKindLLDB, regloc.location.register_number);
 
     if (!other_reg_info)
       return false;
 
-    success =
-        m_thread.GetRegisterContext()->ReadRegister(other_reg_info, value);
+    success = !llvm::errorToBool(
+        m_thread.GetRegisterContext()
+            ->ReadRegister(
+                (other_reg_info ? other_reg_info->id : LLDB_INVALID_REGNUM))
+            .moveInto(value));
   } break;
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterInRegister: {
-    const RegisterInfo *other_reg_info =
-        GetRegisterInfoAtIndex(regloc.location.register_number);
+  case RegisterRecoveryLocation::eRegisterInRegister: {
+    const RegisterDescriptor *other_reg_info =
+        GetRegisterByNumber(eRegisterKindLLDB, regloc.location.register_number);
 
     if (!other_reg_info)
       return false;
 
     if (IsFrameZero()) {
-      success =
-          m_thread.GetRegisterContext()->ReadRegister(other_reg_info, value);
+      success = !llvm::errorToBool(
+          m_thread.GetRegisterContext()
+              ->ReadRegister(
+                  (other_reg_info ? other_reg_info->id : LLDB_INVALID_REGNUM))
+              .moveInto(value));
     } else {
-      success = GetNextFrame()->ReadRegister(other_reg_info, value);
+      success = !llvm::errorToBool(
+          GetNextFrame()
+              ->ReadRegister(
+                  (other_reg_info ? other_reg_info->id : LLDB_INVALID_REGNUM))
+              .moveInto(value));
     }
   } break;
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterIsRegisterPlusOffset: {
+  case RegisterRecoveryLocation::eRegisterIsRegisterPlusOffset: {
     auto regnum = regloc.location.reg_plus_offset.register_number;
-    const RegisterInfo *other_reg_info =
-        GetRegisterInfoAtIndex(regloc.location.reg_plus_offset.register_number);
+    const RegisterDescriptor *other_reg_info = GetRegisterByNumber(
+        eRegisterKindLLDB, regloc.location.reg_plus_offset.register_number);
 
     if (!other_reg_info)
       return false;
 
     if (IsFrameZero()) {
-      success =
-          m_thread.GetRegisterContext()->ReadRegister(other_reg_info, value);
+      success = !llvm::errorToBool(
+          m_thread.GetRegisterContext()
+              ->ReadRegister(
+                  (other_reg_info ? other_reg_info->id : LLDB_INVALID_REGNUM))
+              .moveInto(value));
     } else {
-      success = GetNextFrame()->ReadRegister(other_reg_info, value);
+      success = !llvm::errorToBool(
+          GetNextFrame()
+              ->ReadRegister(
+                  (other_reg_info ? other_reg_info->id : LLDB_INVALID_REGNUM))
+              .moveInto(value));
     }
     if (success) {
       Log *log = GetLog(LLDBLog::Unwind);
@@ -1222,66 +1216,67 @@ bool RegisterContextUnwind::ReadRegisterValueFromRegisterLocation(
       UNWIND_LOG(log, "success {0}", success ? "yes" : "no");
     }
   } break;
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred:
+  case RegisterRecoveryLocation::eRegisterValueInferred:
     success =
         value.SetUInt(regloc.location.inferred_value, reg_info->byte_size);
     break;
 
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterNotSaved:
+  case RegisterRecoveryLocation::eRegisterNotSaved:
     break;
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterSavedAtHostMemoryLocation:
+  case RegisterRecoveryLocation::eRegisterSavedAtHostMemoryLocation:
     llvm_unreachable("FIXME debugger inferior function call unwind");
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterSavedAtMemoryLocation: {
+  case RegisterRecoveryLocation::eRegisterSavedAtMemoryLocation: {
     Status error(ReadRegisterValueFromMemory(
         reg_info, regloc.location.target_memory_location, reg_info->byte_size,
         value));
     success = error.Success();
   } break;
   default:
-    llvm_unreachable("Unknown ConcreteRegisterLocation type.");
+    llvm_unreachable("Unknown RegisterRecoveryLocation type.");
   }
   return success;
 }
 
 bool RegisterContextUnwind::WriteRegisterValueToRegisterLocation(
-    lldb_private::UnwindLLDB::ConcreteRegisterLocation regloc,
-    const RegisterInfo *reg_info, const RegisterValue &value) {
+    lldb_private::RegisterRecoveryLocation regloc,
+    const RegisterDescriptor *reg_info, const RegisterValue &value) {
   if (!IsValid())
     return false;
 
   bool success = false;
 
   switch (regloc.type) {
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterInLiveRegisterContext: {
-    const RegisterInfo *other_reg_info =
-        GetRegisterInfoAtIndex(regloc.location.register_number);
-    success =
-        m_thread.GetRegisterContext()->WriteRegister(other_reg_info, value);
+  case RegisterRecoveryLocation::eRegisterInLiveRegisterContext: {
+    const RegisterDescriptor *other_reg_info =
+        GetRegisterByNumber(eRegisterKindLLDB, regloc.location.register_number);
+    success = !llvm::errorToBool(m_thread.GetRegisterContext()->WriteRegister(
+        (other_reg_info ? other_reg_info->id : LLDB_INVALID_REGNUM), value));
   } break;
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterInRegister: {
-    const RegisterInfo *other_reg_info =
-        GetRegisterInfoAtIndex(regloc.location.register_number);
+  case RegisterRecoveryLocation::eRegisterInRegister: {
+    const RegisterDescriptor *other_reg_info =
+        GetRegisterByNumber(eRegisterKindLLDB, regloc.location.register_number);
     if (IsFrameZero()) {
-      success =
-          m_thread.GetRegisterContext()->WriteRegister(other_reg_info, value);
+      success = !llvm::errorToBool(m_thread.GetRegisterContext()->WriteRegister(
+          (other_reg_info ? other_reg_info->id : LLDB_INVALID_REGNUM), value));
     } else {
-      success = GetNextFrame()->WriteRegister(other_reg_info, value);
+      success = !llvm::errorToBool(GetNextFrame()->WriteRegister(
+          (other_reg_info ? other_reg_info->id : LLDB_INVALID_REGNUM), value));
     }
   } break;
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterIsRegisterPlusOffset:
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred:
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterNotSaved:
+  case RegisterRecoveryLocation::eRegisterIsRegisterPlusOffset:
+  case RegisterRecoveryLocation::eRegisterValueInferred:
+  case RegisterRecoveryLocation::eRegisterNotSaved:
     break;
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterSavedAtHostMemoryLocation:
+  case RegisterRecoveryLocation::eRegisterSavedAtHostMemoryLocation:
     llvm_unreachable("FIXME debugger inferior function call unwind");
-  case UnwindLLDB::ConcreteRegisterLocation::eRegisterSavedAtMemoryLocation: {
+  case RegisterRecoveryLocation::eRegisterSavedAtMemoryLocation: {
     Status error(WriteRegisterValueToMemory(
         reg_info, regloc.location.target_memory_location, reg_info->byte_size,
         value));
     success = error.Success();
   } break;
   default:
-    llvm_unreachable("Unknown ConcreteRegisterLocation type.");
+    llvm_unreachable("Unknown RegisterRecoveryLocation type.");
   }
   return success;
 }
@@ -1392,7 +1387,7 @@ bool RegisterContextUnwind::IsTrapHandler(Process *process) const {
 std::optional<UnwindPlan::Row::AbstractRegisterLocation>
 RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
                                                    lldb::RegisterKind &kind) {
-  RegisterNumber regnum(m_thread, eRegisterKindLLDB, lldb_regnum);
+  RegisterNumber regnum(eRegisterKindLLDB, lldb_regnum);
   Log *log = GetLog(LLDBLog::Unwind);
 
   kind = eRegisterKindLLDB;
@@ -1402,11 +1397,16 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
   if (m_fast_unwind_plan_sp) {
     const UnwindPlan::Row *active_row =
         m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
-    if (regnum.GetAsKind(kind) == LLDB_INVALID_REGNUM) {
-      UNWIND_LOG(log,
+    if (regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         kind) == LLDB_INVALID_REGNUM) {
+      UNWIND_LOG(
+          log,
                  "could not convert lldb regnum {0} ({1}) into {2} "
                  "RegisterKind reg numbering scheme",
-                 regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), kind);
+          regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                           eRegisterKindLLDB),
+          kind);
       return {};
     }
     kind = m_fast_unwind_plan_sp->GetRegisterKind();
@@ -1418,13 +1418,17 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     // to the Full UnwindPlan which may have more accurate information
     // about register locations of all registers.
     if (active_row &&
-        active_row->GetRegisterInfo(regnum.GetAsKind(kind),
+        active_row->GetRegisterInfo(
+            regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             kind),
                                     unwindplan_regloc) &&
         !unwindplan_regloc.IsUndefined()) {
       UNWIND_LOG(
           log,
           "supplying caller's saved {0} ({1})'s location using FastUnwindPlan",
-          regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+          regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                           eRegisterKindLLDB));
       return unwindplan_regloc;
     }
   }
@@ -1436,8 +1440,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     got_new_full_unwindplan = true;
   }
   if (m_full_unwind_plan_sp) {
-    RegisterNumber pc_regnum(m_thread, eRegisterKindGeneric,
-                             LLDB_REGNUM_GENERIC_PC);
+    RegisterNumber pc_regnum(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
 
     const UnwindPlan::Row *active_row =
         m_full_unwind_plan_sp->GetRowForFunctionOffset(
@@ -1454,23 +1457,31 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
       UNWIND_LOG(log, "active row: {0}", active_row_strm.GetString());
     }
 
-    if (regnum.GetAsKind(kind) == LLDB_INVALID_REGNUM) {
+    if (regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         kind) == LLDB_INVALID_REGNUM) {
       if (kind == eRegisterKindGeneric)
         UNWIND_LOG(log,
                    "could not convert lldb regnum {0} ({1}) into "
                    "eRegisterKindGeneric reg numbering scheme",
-                   regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+            regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+            regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             eRegisterKindLLDB));
       else
         UNWIND_LOG(log,
                    "could not convert lldb regnum {0} ({1}) into {2} "
                    "RegisterKind reg numbering scheme",
-                   regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), kind);
+            regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+            regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             eRegisterKindLLDB),
+            kind);
       if (active_row && active_row->GetUnspecifiedRegistersAreUndefined()) {
         UNWIND_LOG(
             log,
             "marking register {0} ({1}) as Undefined (volatile) in this "
             "stack frame because this row is UnspecifiedRegistersAreUndefined.",
-            regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+            regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+            regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             eRegisterKindLLDB));
         unwindplan_regloc.SetUndefined();
         return unwindplan_regloc;
       }
@@ -1478,12 +1489,16 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     }
 
     if (regnum.IsValid() && active_row &&
-        active_row->GetRegisterInfo(regnum.GetAsKind(kind),
+        active_row->GetRegisterInfo(
+            regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             kind),
                                     unwindplan_regloc)) {
       UNWIND_LOG(
           log,
           "supplying caller's saved {0} ({1})'s location using {2} UnwindPlan",
-          regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB),
+          regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                           eRegisterKindLLDB),
           m_full_unwind_plan_sp->GetSourceName());
       return unwindplan_regloc;
     }
@@ -1514,7 +1529,9 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     // The UnwindPlan for the sigtramp/trap handler will normally have
     // register loations for both pc and lr, and so we'll have already
     // fetched them above.
-    if (pc_regnum.IsValid() && pc_regnum == regnum) {
+    if (pc_regnum.IsValid() &&
+        pc_regnum.RefersToSameRegister(
+            *m_thread.GetRegisterContext()->GetDescription(), regnum)) {
       uint32_t return_address_regnum = LLDB_INVALID_REGNUM;
 
       // Get the return address register number from the UnwindPlan
@@ -1524,38 +1541,47 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
         return_address_regnum =
             m_full_unwind_plan_sp->GetReturnAddressRegister();
       } else {
-        RegisterNumber arch_default_ra_regnum(m_thread, eRegisterKindGeneric,
+        RegisterNumber arch_default_ra_regnum(eRegisterKindGeneric,
                                               LLDB_REGNUM_GENERIC_RA);
-        return_address_regnum = arch_default_ra_regnum.GetAsKind(kind);
+        return_address_regnum = arch_default_ra_regnum.GetAsKind(
+            *m_thread.GetRegisterContext()->GetDescription(), kind);
       }
 
       // This system is using a return address register.
       if (return_address_regnum != LLDB_INVALID_REGNUM) {
         RegisterNumber return_address_reg;
-        return_address_reg.init(m_thread,
-                                m_full_unwind_plan_sp->GetRegisterKind(),
-                                return_address_regnum);
+        return_address_reg = RegisterNumber(
+            m_full_unwind_plan_sp->GetRegisterKind(), return_address_regnum);
         UNWIND_LOG(log,
                    "requested caller's saved PC but this UnwindPlan uses a RA "
                    "reg; getting {0} ({1}) instead",
-                   return_address_reg.GetName(),
-                   return_address_reg.GetAsKind(eRegisterKindLLDB));
+                   return_address_reg.GetName(
+                       *m_thread.GetRegisterContext()->GetDescription()),
+                   return_address_reg.GetAsKind(
+                       *m_thread.GetRegisterContext()->GetDescription(),
+                       eRegisterKindLLDB));
 
         // Do we have a location for the ra register?
         if (active_row &&
-            active_row->GetRegisterInfo(return_address_reg.GetAsKind(kind),
+            active_row->GetRegisterInfo(
+                return_address_reg.GetAsKind(
+                    *m_thread.GetRegisterContext()->GetDescription(), kind),
                                         unwindplan_regloc)) {
           UNWIND_LOG(log,
                      "supplying caller's saved {0} ({1})'s location using {2} "
                      "UnwindPlan",
-                     return_address_reg.GetName(),
-                     return_address_reg.GetAsKind(eRegisterKindLLDB),
+                     return_address_reg.GetName(
+                         *m_thread.GetRegisterContext()->GetDescription()),
+                     return_address_reg.GetAsKind(
+                         *m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB),
                      m_full_unwind_plan_sp->GetSourceName());
           // If we have "ra=IsSame", rewrite to "ra=InRegister(ra)" because the
           // calling function thinks it is fetching "pc" and if we return an
           // IsSame register location, it will try to read pc.
           if (unwindplan_regloc.IsSame())
-            unwindplan_regloc.SetInRegister(return_address_reg.GetAsKind(kind));
+            unwindplan_regloc.SetInRegister(return_address_reg.GetAsKind(
+                *m_thread.GetRegisterContext()->GetDescription(), kind));
           return unwindplan_regloc;
         } else {
           // No unwind rule for the return address reg on frame 0, or an
@@ -1563,7 +1589,8 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
           // RA reg (0th frame) or the trap handler below this one (sigtramp
           // etc) has a save location for the RA reg.
           if (BehavesLikeZerothFrame()) {
-            unwindplan_regloc.SetInRegister(return_address_reg.GetAsKind(kind));
+            unwindplan_regloc.SetInRegister(return_address_reg.GetAsKind(
+                *m_thread.GetRegisterContext()->GetDescription(), kind));
             return unwindplan_regloc;
           }
         }
@@ -1574,7 +1601,9 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
           log,
           "marking register {0} ({1}) as Undefined (volatile) in this "
           "stack frame because this row is UnspecifiedRegistersAreUndefined.",
-          regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+          regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                           eRegisterKindLLDB));
       unwindplan_regloc.SetUndefined();
       return unwindplan_regloc;
     }
@@ -1592,15 +1621,19 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
   // the ABI willset volatile registers to the undefined state.
   ABI *abi = process ? process->GetABI().get() : nullptr;
   if (abi) {
-    const RegisterInfo *reg_info =
-        GetRegisterInfoAtIndex(regnum.GetAsKind(eRegisterKindLLDB));
+    const RegisterDescriptor *reg_info = GetRegisterByNumber(
+        eRegisterKindLLDB,
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB));
     if (reg_info &&
         abi->GetFallbackRegisterLocation(reg_info, unwindplan_regloc)) {
       if (!unwindplan_regloc.IsUndefined())
         UNWIND_LOG(
             log,
             "supplying caller's saved {0} ({1})'s location using ABI default",
-            regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+            regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+            regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             eRegisterKindLLDB));
       // ABI defined volatile registers with no register location
       // will be returned as IsUndefined, stopping the search down
       // the stack.
@@ -1617,8 +1650,11 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
     unwindplan_name += m_full_unwind_plan_sp->GetSourceName();
     unwindplan_name += "'";
   }
-  UNWIND_LOG(log, "no save location for {0} ({1}) {2}", regnum.GetName(),
-             regnum.GetAsKind(eRegisterKindLLDB), unwindplan_name);
+  UNWIND_LOG(log, "no save location for {0} ({1}) {2}",
+             regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+             regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                              eRegisterKindLLDB),
+             unwindplan_name);
 
   unwindplan_regloc.SetSame();
   return unwindplan_regloc;
@@ -1629,18 +1665,21 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
 
 enum UnwindLLDB::RegisterSearchResult
 RegisterContextUnwind::SavedLocationForRegister(
-    uint32_t lldb_regnum,
-    lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc) {
-  RegisterNumber regnum(m_thread, eRegisterKindLLDB, lldb_regnum);
+    uint32_t lldb_regnum, lldb_private::RegisterRecoveryLocation &regloc) {
+  RegisterNumber regnum(eRegisterKindLLDB, lldb_regnum);
   Log *log = GetLog(LLDBLog::Unwind);
 
   // Have we already found this register location?
   if (!m_registers.empty()) {
-    auto iterator = m_registers.find(regnum.GetAsKind(eRegisterKindLLDB));
+    auto iterator = m_registers.find(regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB));
     if (iterator != m_registers.end()) {
       regloc = iterator->second;
-      UNWIND_LOG(log, "supplying caller's saved {0} ({1})'s location, cached",
-                 regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+      UNWIND_LOG(
+          log, "supplying caller's saved {0} ({1})'s location, cached",
+          regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                           eRegisterKindLLDB));
       return UnwindLLDB::RegisterSearchResult::eRegisterFound;
     }
   }
@@ -1655,7 +1694,9 @@ RegisterContextUnwind::SavedLocationForRegister(
   if (abs_regloc->IsUndefined()) {
     UNWIND_LOG(
         log, "did not supply reg location for {0} ({1}) because it is volatile",
-        regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB));
     return UnwindLLDB::RegisterSearchResult::eRegisterIsVolatile;
   }
 
@@ -1663,25 +1704,34 @@ RegisterContextUnwind::SavedLocationForRegister(
   Process *process = exe_ctx.GetProcessPtr();
   // abs_regloc has valid contents about where to retrieve the register
   if (abs_regloc->IsUnspecified()) {
-    lldb_private::UnwindLLDB::ConcreteRegisterLocation new_regloc = {};
-    new_regloc.type = UnwindLLDB::ConcreteRegisterLocation::eRegisterNotSaved;
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = new_regloc;
-    UNWIND_LOG(log,
-               "save location for {0} ({1}) is unspecified, continue searching",
-               regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+    lldb_private::RegisterRecoveryLocation new_regloc = {};
+    new_regloc.type = RegisterRecoveryLocation::eRegisterNotSaved;
+    m_registers[regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB)] =
+        new_regloc;
+    UNWIND_LOG(
+        log, "save location for {0} ({1}) is unspecified, continue searching",
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB));
     return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
   }
 
   if (abs_regloc->IsSame()) {
     if (IsFrameZero()) {
-      regloc.type =
-          UnwindLLDB::ConcreteRegisterLocation::eRegisterInLiveRegisterContext;
-      regloc.location.register_number = regnum.GetAsKind(eRegisterKindLLDB);
-      m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-      UNWIND_LOG(log,
+      regloc.type = RegisterRecoveryLocation::eRegisterInLiveRegisterContext;
+      regloc.location.register_number = regnum.GetAsKind(
+          *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB);
+      m_registers[regnum.GetAsKind(
+          *m_thread.GetRegisterContext()->GetDescription(),
+          eRegisterKindLLDB)] = regloc;
+      UNWIND_LOG(
+          log,
                  "supplying caller's register {0} ({1}) from the live "
                  "ThreadRegisterContext at frame 0",
-                 regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+          regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                           eRegisterKindLLDB));
       return UnwindLLDB::RegisterSearchResult::eRegisterFound;
     }
     // PC/RA reg don't follow the usual "callee-saved aka non-volatile" versus
@@ -1690,50 +1740,70 @@ RegisterContextUnwind::SavedLocationForRegister(
     // never want to iterate further down the stack looking for it.
     // Defensively prevent iterating down the stack for these two.
     if (!BehavesLikeZerothFrame() &&
-        (regnum.GetAsKind(eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_PC ||
-         regnum.GetAsKind(eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_RA)) {
-      UNWIND_LOG(log,
+        (regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                          eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_PC ||
+         regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                          eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_RA)) {
+      UNWIND_LOG(
+          log,
                  "register {0} ({1}) is marked as 'IsSame' - it is a pc or "
                  "return address reg on a frame which does not have all "
                  "registers available -- treat as if we have no information",
-                 regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+          regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                           eRegisterKindLLDB));
       return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
     }
 
-    regloc.type = UnwindLLDB::ConcreteRegisterLocation::eRegisterInRegister;
-    regloc.location.register_number = regnum.GetAsKind(eRegisterKindLLDB);
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-    UNWIND_LOG(log,
+    regloc.type = RegisterRecoveryLocation::eRegisterInRegister;
+    regloc.location.register_number = regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB);
+    m_registers[regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB)] =
+        regloc;
+    UNWIND_LOG(
+        log,
                "supplying caller's register {0} ({1}) value is unmodified in "
                "this frame",
-               regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB));
     return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
   if (abs_regloc->IsCFAPlusOffset()) {
     int offset = abs_regloc->GetOffset();
-    regloc.type = UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred;
+    regloc.type = RegisterRecoveryLocation::eRegisterValueInferred;
     regloc.location.inferred_value = m_cfa + offset;
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-    UNWIND_LOG(log,
+    m_registers[regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB)] =
+        regloc;
+    UNWIND_LOG(
+        log,
                "supplying caller's register {0} ({1}), value is CFA plus "
                "offset {2} [value is {3:x}]",
-               regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), offset,
-               regloc.location.inferred_value);
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB),
+        offset, regloc.location.inferred_value);
     return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
   if (abs_regloc->IsAtCFAPlusOffset()) {
     int offset = abs_regloc->GetOffset();
-    regloc.type =
-        UnwindLLDB::ConcreteRegisterLocation::eRegisterSavedAtMemoryLocation;
+    regloc.type = RegisterRecoveryLocation::eRegisterSavedAtMemoryLocation;
     regloc.location.target_memory_location = m_cfa + offset;
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-    UNWIND_LOG(log,
+    m_registers[regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB)] =
+        regloc;
+    UNWIND_LOG(
+        log,
                "supplying caller's register {0} ({1}) from the stack, saved at "
                "CFA plus offset {2} [saved at {3:x}]",
-               regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), offset,
-               regloc.location.target_memory_location);
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB),
+        offset, regloc.location.target_memory_location);
     return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
@@ -1742,14 +1812,19 @@ RegisterContextUnwind::SavedLocationForRegister(
         return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
 
     int offset = abs_regloc->GetOffset();
-    regloc.type = UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred;
+    regloc.type = RegisterRecoveryLocation::eRegisterValueInferred;
     regloc.location.inferred_value = m_afa + offset;
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-    UNWIND_LOG(log,
+    m_registers[regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB)] =
+        regloc;
+    UNWIND_LOG(
+        log,
                "supplying caller's register {0} ({1}), value is AFA plus "
                "offset {2} [value is {3:x}]",
-               regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), offset,
-               regloc.location.inferred_value);
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB),
+        offset, regloc.location.inferred_value);
     return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
@@ -1758,36 +1833,50 @@ RegisterContextUnwind::SavedLocationForRegister(
         return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
 
     int offset = abs_regloc->GetOffset();
-    regloc.type =
-        UnwindLLDB::ConcreteRegisterLocation::eRegisterSavedAtMemoryLocation;
+    regloc.type = RegisterRecoveryLocation::eRegisterSavedAtMemoryLocation;
     regloc.location.target_memory_location = m_afa + offset;
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-    UNWIND_LOG(log,
+    m_registers[regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB)] =
+        regloc;
+    UNWIND_LOG(
+        log,
                "supplying caller's register {0} ({1}) from the stack, saved at "
                "AFA plus offset {2} [saved at {3:x}]",
-               regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), offset,
-               regloc.location.target_memory_location);
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB),
+        offset, regloc.location.target_memory_location);
     return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
   if (abs_regloc->IsInOtherRegister()) {
-    RegisterNumber row_regnum(m_thread, abs_regkind,
-                              abs_regloc->GetRegisterNumber());
-    if (row_regnum.GetAsKind(eRegisterKindLLDB) == LLDB_INVALID_REGNUM) {
-      UNWIND_LOG(log,
+    RegisterNumber row_regnum(abs_regkind, abs_regloc->GetRegisterNumber());
+    if (row_regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             eRegisterKindLLDB) == LLDB_INVALID_REGNUM) {
+      UNWIND_LOG(
+          log,
                  "could not supply caller's {0} ({1}) location - was saved in "
                  "another reg but couldn't convert that regnum",
-                 regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+          regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                           eRegisterKindLLDB));
       return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
     }
-    regloc.type = UnwindLLDB::ConcreteRegisterLocation::eRegisterInRegister;
-    regloc.location.register_number = row_regnum.GetAsKind(eRegisterKindLLDB);
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
+    regloc.type = RegisterRecoveryLocation::eRegisterInRegister;
+    regloc.location.register_number = row_regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB);
+    m_registers[regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB)] =
+        regloc;
     UNWIND_LOG(
         log,
         "supplying caller's register {0} ({1}), saved in register {2} ({3})",
-        regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB),
-        row_regnum.GetName(), row_regnum.GetAsKind(eRegisterKindLLDB));
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB),
+        row_regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        row_regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             eRegisterKindLLDB));
     return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
@@ -1810,45 +1899,62 @@ RegisterContextUnwind::SavedLocationForRegister(
       addr_t val;
       val = result->GetScalar().ULongLong();
       if (abs_regloc->IsDWARFExpression()) {
-        regloc.type =
-            UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred;
+        regloc.type = RegisterRecoveryLocation::eRegisterValueInferred;
         regloc.location.inferred_value = val;
-        m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-        UNWIND_LOG(log,
+        m_registers[regnum.GetAsKind(
+            *m_thread.GetRegisterContext()->GetDescription(),
+            eRegisterKindLLDB)] = regloc;
+        UNWIND_LOG(
+            log,
                    "supplying caller's register {0} ({1}) via DWARF expression "
                    "(IsDWARFExpression)",
-                   regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+            regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+            regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             eRegisterKindLLDB));
         return UnwindLLDB::RegisterSearchResult::eRegisterFound;
       } else {
-        regloc.type = UnwindLLDB::ConcreteRegisterLocation::
-            eRegisterSavedAtMemoryLocation;
+        regloc.type = RegisterRecoveryLocation::eRegisterSavedAtMemoryLocation;
         regloc.location.target_memory_location = val;
-        m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-        UNWIND_LOG(log,
+        m_registers[regnum.GetAsKind(
+            *m_thread.GetRegisterContext()->GetDescription(),
+            eRegisterKindLLDB)] = regloc;
+        UNWIND_LOG(
+            log,
                    "supplying caller's register {0} ({1}) via DWARF expression "
                    "(IsAtDWARFExpression)",
-                   regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+            regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+            regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                             eRegisterKindLLDB));
         return UnwindLLDB::RegisterSearchResult::eRegisterFound;
       }
     }
     UNWIND_LOG(log,
                "tried to use IsDWARFExpression or IsAtDWARFExpression for {0} "
                "({1}) but failed",
-               regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB));
     return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
   }
 
   if (abs_regloc->IsConstant()) {
-    regloc.type = UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred;
+    regloc.type = RegisterRecoveryLocation::eRegisterValueInferred;
     regloc.location.inferred_value = abs_regloc->GetConstant();
-    m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;
-    UNWIND_LOG(log, "supplying caller's register {0} ({1}) via constant value",
-               regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+    m_registers[regnum.GetAsKind(
+        *m_thread.GetRegisterContext()->GetDescription(), eRegisterKindLLDB)] =
+        regloc;
+    UNWIND_LOG(
+        log, "supplying caller's register {0} ({1}) via constant value",
+        regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB));
     return UnwindLLDB::RegisterSearchResult::eRegisterFound;
   }
 
   UNWIND_LOG(log, "no save location for {0} ({1}) in this stack frame",
-             regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+             regnum.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+             regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                              eRegisterKindLLDB));
 
   // FIXME UnwindPlan::Row types atDWARFExpression and isDWARFExpression are
   // unsupported.
@@ -1930,17 +2036,19 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
   // unwind plan, re-fetch the caller's pc value and CFA value. If they're the
   // same, then the fallback unwind plan provides no benefit.
 
-  RegisterNumber pc_regnum(m_thread, eRegisterKindGeneric,
-                           LLDB_REGNUM_GENERIC_PC);
+  RegisterNumber pc_regnum(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
 
   addr_t old_caller_pc_value = LLDB_INVALID_ADDRESS;
   addr_t new_caller_pc_value = LLDB_INVALID_ADDRESS;
-  UnwindLLDB::ConcreteRegisterLocation regloc = {};
-  if (SavedLocationForRegister(pc_regnum.GetAsKind(eRegisterKindLLDB),
-                               regloc) ==
-      UnwindLLDB::RegisterSearchResult::eRegisterFound) {
-    const RegisterInfo *reg_info =
-        GetRegisterInfoAtIndex(pc_regnum.GetAsKind(eRegisterKindLLDB));
+  RegisterRecoveryLocation regloc = {};
+  if (SavedLocationForRegister(
+          pc_regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                              eRegisterKindLLDB),
+          regloc) == UnwindLLDB::RegisterSearchResult::eRegisterFound) {
+    const RegisterDescriptor *reg_info = GetRegisterByNumber(
+        eRegisterKindLLDB,
+        pc_regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                            eRegisterKindLLDB));
     if (reg_info) {
       RegisterValue reg_value;
       if (ReadRegisterValueFromRegisterLocation(regloc, reg_info, reg_value)) {
@@ -1999,11 +2107,15 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
     ReadFrameAddress(m_fallback_unwind_plan_sp->GetRegisterKind(),
                      active_row->GetAFAValue(), m_afa);
 
-    if (SavedLocationForRegister(pc_regnum.GetAsKind(eRegisterKindLLDB),
-                                 regloc) ==
-        UnwindLLDB::RegisterSearchResult::eRegisterFound) {
-      const RegisterInfo *reg_info =
-          GetRegisterInfoAtIndex(pc_regnum.GetAsKind(eRegisterKindLLDB));
+    if (SavedLocationForRegister(
+            pc_regnum.GetAsKind(
+                *m_thread.GetRegisterContext()->GetDescription(),
+                eRegisterKindLLDB),
+            regloc) == UnwindLLDB::RegisterSearchResult::eRegisterFound) {
+      const RegisterDescriptor *reg_info = GetRegisterByNumber(
+          eRegisterKindLLDB,
+          pc_regnum.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                              eRegisterKindLLDB));
       if (reg_info) {
         RegisterValue reg_value;
         if (ReadRegisterValueFromRegisterLocation(regloc, reg_info,
@@ -2166,12 +2278,14 @@ bool RegisterContextUnwind::ReadFrameAddress(
   switch (fa.GetValueType()) {
   case UnwindPlan::Row::FAValue::isRegisterDereferenced: {
     UNWIND_LOG(log, "CFA value via dereferencing reg");
-    RegisterNumber regnum_to_deref(m_thread, row_register_kind,
-                                   fa.GetRegisterNumber());
+    RegisterNumber regnum_to_deref(row_register_kind, fa.GetRegisterNumber());
     addr_t reg_to_deref_contents;
     if (ReadGPRValue(regnum_to_deref, reg_to_deref_contents)) {
-      const RegisterInfo *reg_info =
-          GetRegisterInfoAtIndex(regnum_to_deref.GetAsKind(eRegisterKindLLDB));
+      const RegisterDescriptor *reg_info =
+          GetRegisterByNumber(eRegisterKindLLDB,
+                          regnum_to_deref.GetAsKind(
+                              *m_thread.GetRegisterContext()->GetDescription(),
+                              eRegisterKindLLDB));
       RegisterValue reg_value;
       if (reg_info) {
         Status error = ReadRegisterValueFromMemory(
@@ -2181,16 +2295,22 @@ bool RegisterContextUnwind::ReadFrameAddress(
           UNWIND_LOG(log,
                      "CFA value via dereferencing reg {0} ({1}): reg has val "
                      "{2:x}, CFA value is {3:x}",
-                     regnum_to_deref.GetName(),
-                     regnum_to_deref.GetAsKind(eRegisterKindLLDB),
+                     regnum_to_deref.GetName(
+                         *m_thread.GetRegisterContext()->GetDescription()),
+                     regnum_to_deref.GetAsKind(
+                         *m_thread.GetRegisterContext()->GetDescription(),
+                         eRegisterKindLLDB),
                      reg_to_deref_contents, address);
           return true;
         } else {
           UNWIND_LOG(
               log,
               "Tried to deref reg {0} ({1}) [{2:x}] but memory read failed.",
-              regnum_to_deref.GetName(),
-              regnum_to_deref.GetAsKind(eRegisterKindLLDB),
+              regnum_to_deref.GetName(
+                  *m_thread.GetRegisterContext()->GetDescription()),
+              regnum_to_deref.GetAsKind(
+                  *m_thread.GetRegisterContext()->GetDescription(),
+                  eRegisterKindLLDB),
               reg_to_deref_contents);
         }
       }
@@ -2199,14 +2319,15 @@ bool RegisterContextUnwind::ReadFrameAddress(
   }
   case UnwindPlan::Row::FAValue::isRegisterPlusOffset: {
     UNWIND_LOG(log, "CFA value via register plus offset");
-    RegisterNumber cfa_reg(m_thread, row_register_kind,
-                           fa.GetRegisterNumber());
+    RegisterNumber cfa_reg(row_register_kind, fa.GetRegisterNumber());
     if (ReadGPRValue(cfa_reg, cfa_reg_contents)) {
       if (!CallFrameAddressIsValid(abi_sp, cfa_reg_contents)) {
         UNWIND_LOG(
             log,
             "Got an invalid CFA register value - reg {0} ({1}), value {2:x}",
-            cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
+            cfa_reg.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+            cfa_reg.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                              eRegisterKindLLDB),
             cfa_reg_contents);
         return false;
       }
@@ -2214,12 +2335,18 @@ bool RegisterContextUnwind::ReadFrameAddress(
       UNWIND_LOG(
           log,
           "CFA is {0:x}: Register {1} ({2}) contents are {3:x}, offset is {4}",
-          address, cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
+          address,
+          cfa_reg.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+          cfa_reg.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                            eRegisterKindLLDB),
           cfa_reg_contents, fa.GetOffset());
       return true;
     }
-    UNWIND_LOG(log, "unable to read CFA register {0} ({1})", cfa_reg.GetName(),
-               cfa_reg.GetAsKind(eRegisterKindLLDB));
+    UNWIND_LOG(
+        log, "unable to read CFA register {0} ({1})",
+        cfa_reg.GetName(*m_thread.GetRegisterContext()->GetDescription()),
+        cfa_reg.GetAsKind(*m_thread.GetRegisterContext()->GetDescription(),
+                          eRegisterKindLLDB));
     break;
   }
   case UnwindPlan::Row::FAValue::isDWARFExpression: {
@@ -2324,9 +2451,9 @@ lldb::addr_t RegisterContextUnwind::GetReturnAddressHint(int32_t plan_offset) {
 //     frame 0 - foo
 //     frame 1 - bar
 //     frame 2 - main
-//  and this ThreadRegisterContext is for frame 1 (bar) - if we want to get the pc
-//  value for frame 1, we need to ask
-//  where frame 0 (the "next" frame) saved that and retrieve the value.
+//  and this ThreadRegisterContext is for frame 1 (bar) - if we want to get the
+//  pc value for frame 1, we need to ask where frame 0 (the "next" frame) saved
+//  that and retrieve the value.
 
 bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
                                          uint32_t regnum, addr_t &value) {
@@ -2341,12 +2468,13 @@ bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
     return false;
   }
 
-  const RegisterInfo *reg_info = GetRegisterInfoAtIndex(lldb_regnum);
+  const RegisterDescriptor *reg_info =
+      GetRegisterByNumber(eRegisterKindLLDB, lldb_regnum);
   assert(reg_info);
   if (!reg_info) {
-    UNWIND_LOG(
-        GetLog(LLDBLog::Unwind),
-        "Could not find RegisterInfo definition for lldb register number {0}",
+    UNWIND_LOG(GetLog(LLDBLog::Unwind),
+               "Could not find RegisterDescriptor definition for lldb register "
+               "number {0}",
         lldb_regnum);
     return false;
   }
@@ -2363,7 +2491,10 @@ bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
   // if this is frame 0 (currently executing frame), get the requested reg
   // contents from the actual thread registers
   if (IsFrameZero()) {
-    if (m_thread.GetRegisterContext()->ReadRegister(reg_info, reg_value)) {
+    if (!llvm::errorToBool(
+            m_thread.GetRegisterContext()
+                ->ReadRegister((reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(reg_value))) {
       value = reg_value.GetAsUInt64();
       if (abi_sp && generic_regnum != LLDB_INVALID_REGNUM) {
         if (generic_regnum == LLDB_REGNUM_GENERIC_PC ||
@@ -2381,7 +2512,7 @@ bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
        generic_regnum == LLDB_REGNUM_GENERIC_RA))
     pc_register = true;
 
-  lldb_private::UnwindLLDB::ConcreteRegisterLocation regloc;
+  lldb_private::RegisterRecoveryLocation regloc;
   if (!m_parent_unwind.SearchForSavedLocationForRegister(
           lldb_regnum, regloc, m_frame_number - 1, pc_register)) {
     return false;
@@ -2400,18 +2531,22 @@ bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
 
 bool RegisterContextUnwind::ReadGPRValue(const RegisterNumber &regnum,
                                          addr_t &value) {
-  return ReadGPRValue(regnum.GetRegisterKind(), regnum.GetRegisterNumber(),
-                      value);
+  return ReadGPRValue(regnum.kind, regnum.number, value);
 }
 
 // Find the value of a register in THIS frame
 
-bool RegisterContextUnwind::ReadRegister(const RegisterInfo *reg_info,
-                                         RegisterValue &value) {
+llvm::Expected<RegisterValue>
+RegisterContextUnwind::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
   if (!IsValid())
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
-  const uint32_t lldb_regnum = reg_info->kinds[eRegisterKindLLDB];
+  const uint32_t lldb_regnum = reg_info->numbers[eRegisterKindLLDB];
   Log *log = GetLog(LLDBLog::Unwind);
   UNWIND_LOG_VERBOSE(log, "looking for register saved location for reg {0}",
                      lldb_regnum);
@@ -2421,20 +2556,28 @@ bool RegisterContextUnwind::ReadRegister(const RegisterInfo *reg_info,
     UNWIND_LOG_VERBOSE(log,
                        "passing along to the live register context for reg {0}",
                        lldb_regnum);
-    return m_thread.GetRegisterContext()->ReadRegister(reg_info, value);
+    {
+      if (!(!llvm::errorToBool(
+              m_thread.GetRegisterContext()
+                  ->ReadRegister(
+                      (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                  .moveInto(value))))
+        return llvm::createStringError("register read failed");
+      return value;
+    }
   }
 
   bool is_pc_regnum = false;
-  if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC ||
-      reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA) {
+  if (reg_info->numbers[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC ||
+      reg_info->numbers[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA) {
     is_pc_regnum = true;
   }
 
-  lldb_private::UnwindLLDB::ConcreteRegisterLocation regloc;
+  lldb_private::RegisterRecoveryLocation regloc;
   // Find out where the NEXT frame saved THIS frame's register contents
   if (!m_parent_unwind.SearchForSavedLocationForRegister(
           lldb_regnum, regloc, m_frame_number - 1, is_pc_regnum))
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   bool result = ReadRegisterValueFromRegisterLocation(regloc, reg_info, value);
   if (result) {
@@ -2446,15 +2589,23 @@ bool RegisterContextUnwind::ReadRegister(const RegisterInfo *reg_info,
       }
     }
   }
-  return result;
+  {
+    if (!(result))
+      return llvm::createStringError("register read failed");
+    return value;
+  }
 }
 
-bool RegisterContextUnwind::WriteRegister(const RegisterInfo *reg_info,
+llvm::Error RegisterContextUnwind::WriteRegister(RegisterID id,
                                           const RegisterValue &value) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
   if (!IsValid())
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
-  const uint32_t lldb_regnum = reg_info->kinds[eRegisterKindLLDB];
+  const uint32_t lldb_regnum = reg_info->numbers[eRegisterKindLLDB];
   Log *log = GetLog(LLDBLog::Unwind);
   UNWIND_LOG_VERBOSE(log, "looking for register saved location for reg {0}",
                      lldb_regnum);
@@ -2464,16 +2615,25 @@ bool RegisterContextUnwind::WriteRegister(const RegisterInfo *reg_info,
     UNWIND_LOG_VERBOSE(log,
                        "passing along to the live register context for reg {0}",
                        lldb_regnum);
-    return m_thread.GetRegisterContext()->WriteRegister(reg_info, value);
+    {
+      if (!(!llvm::errorToBool(m_thread.GetRegisterContext()->WriteRegister(
+              (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), value))))
+        return llvm::createStringError("register write failed");
+      return llvm::Error::success();
+    }
   }
 
-  lldb_private::UnwindLLDB::ConcreteRegisterLocation regloc;
+  lldb_private::RegisterRecoveryLocation regloc;
   // Find out where the NEXT frame saved THIS frame's register contents
   if (!m_parent_unwind.SearchForSavedLocationForRegister(
           lldb_regnum, regloc, m_frame_number - 1, false))
-    return false;
+    return llvm::createStringError("register write is unavailable");
 
-  return WriteRegisterValueToRegisterLocation(regloc, reg_info, value);
+  {
+    if (!(WriteRegisterValueToRegisterLocation(regloc, reg_info, value)))
+      return llvm::createStringError("register write failed");
+    return llvm::Error::success();
+  }
 }
 
 // Don't need to implement this one
@@ -2563,4 +2723,10 @@ bool RegisterContextUnwind::ReadPC(addr_t &pc) {
   } else {
     return false;
   }
+}
+
+std::shared_ptr<const RegisterDescription>
+RegisterContextUnwind::GetDescription() const {
+  auto context = m_thread.GetRegisterContext();
+  return context ? context->GetDescription() : nullptr;
 }

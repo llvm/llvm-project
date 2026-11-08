@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Register/RegisterType.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -26,7 +27,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Register/RegisterType.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
@@ -55,8 +55,10 @@ Value::Value(const void *bytes, int len)
 
 Value::Value(const Value &v)
     : m_value(v.m_value), m_compiler_type(v.m_compiler_type),
-      m_context(v.m_context), m_value_type(v.m_value_type),
-      m_context_type(v.m_context_type), m_data_buffer() {
+      m_register_description(v.m_register_description),
+      m_register_id(v.m_register_id), m_context(v.m_context),
+      m_value_type(v.m_value_type), m_context_type(v.m_context_type),
+      m_data_buffer() {
   const uintptr_t rhs_value =
       (uintptr_t)v.m_value.ULongLong(LLDB_INVALID_ADDRESS);
   if ((rhs_value != 0) &&
@@ -72,6 +74,8 @@ Value &Value::operator=(const Value &rhs) {
   if (this != &rhs) {
     m_value = rhs.m_value;
     m_compiler_type = rhs.m_compiler_type;
+    m_register_description = rhs.m_register_description;
+    m_register_id = rhs.m_register_id;
     m_context = rhs.m_context;
     m_value_type = rhs.m_value_type;
     m_context_type = rhs.m_context_type;
@@ -140,9 +144,10 @@ Value::ValueType Value::GetValueTypeFromAddressType(AddressType address_type) {
   llvm_unreachable("Unexpected address type!");
 }
 
-RegisterInfo *Value::GetRegisterInfo() const {
-  if (m_context_type == ContextType::RegisterInfo)
-    return static_cast<RegisterInfo *>(m_context);
+const RegisterDescriptor *Value::GetRegisterInfo() const {
+  if (m_context_type == ContextType::RegisterDescriptor &&
+      m_register_description)
+    return m_register_description->Find(m_register_id);
   return nullptr;
 }
 
@@ -200,7 +205,7 @@ size_t Value::ResizeData(size_t len) {
 bool Value::ValueOf(ExecutionContext *exe_ctx) {
   switch (m_context_type) {
   case ContextType::Invalid:
-  case ContextType::RegisterInfo: // RegisterInfo *
+  case ContextType::RegisterDescriptor: // RegisterDescriptor *
   case ContextType::LLDBType:     // Type *
     break;
 
@@ -213,7 +218,7 @@ bool Value::ValueOf(ExecutionContext *exe_ctx) {
 
 uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
   switch (m_context_type) {
-  case ContextType::RegisterInfo: // RegisterInfo *
+  case ContextType::RegisterDescriptor: // RegisterDescriptor *
     if (GetRegisterInfo()) {
       if (error_ptr)
         error_ptr->Clear();
@@ -251,7 +256,7 @@ const CompilerType &Value::GetCompilerType() {
     case ContextType::Invalid:
       break;
 
-    case ContextType::RegisterInfo:
+    case ContextType::RegisterDescriptor:
       break; // TODO: Eventually convert into a compiler type?
 
     case ContextType::LLDBType: {
@@ -280,7 +285,7 @@ void Value::SetCompilerType(const CompilerType &compiler_type) {
 
 lldb::Format Value::GetValueDefaultFormat() {
   switch (m_context_type) {
-  case ContextType::RegisterInfo:
+  case ContextType::RegisterDescriptor:
     if (GetRegisterInfo())
       return GetRegisterInfo()->format;
     break;
@@ -496,9 +501,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
         // ValueObjectRegister stores structured register types in target byte
         // order and all other register buffers in host byte order.
-        if (m_context_type == ContextType::RegisterInfo &&
+        if (m_context_type == ContextType::RegisterDescriptor &&
             !llvm::isa_and_present<RegisterTypeComposite>(
-                GetRegisterInfo()->register_type))
+                GetRegisterInfo()->type))
           byte_order = endian::InlHostByteOrder();
         data.SetByteOrder(byte_order);
         data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
@@ -642,6 +647,8 @@ void Value::Clear() {
   m_value.Clear();
   m_compiler_type.Clear();
   m_value_type = ValueType::Scalar;
+  m_register_description.reset();
+  m_register_id = LLDB_INVALID_REGNUM;
   m_context = nullptr;
   m_context_type = ContextType::Invalid;
   m_data_buffer.Clear();
@@ -667,8 +674,8 @@ const char *Value::GetContextTypeAsCString(ContextType context_type) {
   switch (context_type) {
   case ContextType::Invalid:
     return "invalid";
-  case ContextType::RegisterInfo:
-    return "RegisterInfo *";
+  case ContextType::RegisterDescriptor:
+    return "RegisterDescriptor *";
   case ContextType::LLDBType:
     return "Type *";
   case ContextType::Variable:

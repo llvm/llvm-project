@@ -11,12 +11,13 @@
 
 #include "EmulateInstructionLoongArch.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Register/Common/RegisterInfo_loongarch64.h"
 #include "lldb/Register/Arch/lldb-loongarch-register-enums.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/OptionValueArray.h"
 #include "lldb/Interpreter/OptionValueDictionary.h"
+#include "lldb/Register/Common/RegisterInfo_loongarch64.h"
+#include "lldb/Register/RegisterDescription.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -135,7 +136,7 @@ bool EmulateInstructionLoongArch::ReadInstruction() {
   return true;
 }
 
-std::optional<RegisterInfo>
+std::optional<RegisterDescriptor>
 EmulateInstructionLoongArch::GetRegisterInfo(lldb::RegisterKind reg_kind,
                                              uint32_t reg_index) {
   if (reg_kind == eRegisterKindGeneric) {
@@ -163,14 +164,11 @@ EmulateInstructionLoongArch::GetRegisterInfo(lldb::RegisterKind reg_kind,
     }
   }
 
-  const RegisterInfo *array =
-      RegisterInfo_loongarch64::GetRegisterInfoPtr(m_arch);
-  const uint32_t length =
-      RegisterInfo_loongarch64::GetRegisterInfoCount(m_arch);
-
-  if (reg_index >= length || reg_kind != eRegisterKindLLDB)
-    return {};
-  return array[reg_index];
+  // Architecture IDs need not be dense indices in the exposed table.
+  static const auto registers = RegisterInfo_loongarch64::CreateDescription();
+  if (const auto *reg = registers->FindByNumber(reg_kind, reg_index))
+    return *reg;
+  return {};
 }
 
 bool EmulateInstructionLoongArch::SetTargetTriple(const ArchSpec &arch) {

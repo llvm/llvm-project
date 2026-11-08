@@ -109,14 +109,14 @@ protected:
       m_queue_serial_number; // Queue info from stop reply/stop info for thread
   lldb_private::LazyBool m_associated_with_libdispatch_queue;
 
-  lldb::DynamicRegisterInfoSP m_reg_info_sp;
+  std::shared_ptr<const RegisterLayout> m_register_layout_sp;
 
   std::vector<lldb::addr_t> m_added_binaries;
   lldb_private::StructuredData::ObjectSP m_detailed_binaries_info;
 
-  bool PrivateSetRegisterValue(uint32_t reg, llvm::ArrayRef<uint8_t> data);
+  bool PrivateSetRegisterValue(RegisterID reg, llvm::ArrayRef<uint8_t> data);
 
-  bool PrivateSetRegisterValue(uint32_t reg, uint64_t regval);
+  bool PrivateSetRegisterValue(RegisterID reg, uint64_t regval);
 
   void PrivateSetRegisterUnavailable(uint32_t reg);
 

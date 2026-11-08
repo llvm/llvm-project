@@ -44,70 +44,67 @@ LLDB_PLUGIN_DEFINE_ADV(ABISysV_s390x, ABISystemZ)
 
 // RegisterKind: EHFrame, DWARF, Generic, Process Plugin, LLDB
 
-#define DEFINE_REG(name, size, alt, generic)                                   \
-  {                                                                            \
-    #name, alt, size, 0, eEncodingUint, eFormatHex,                            \
-        {ehframe_regs::name, dwarf_regs::name, generic,                        \
-         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },                           \
-         nullptr, nullptr, nullptr,                                            \
-  }
+#define DEFINE_REG(reg_id, name, size, alt, generic)                           \
+  RegisterDescriptor(reg_id, #name, alt, size, eEncodingUint, eFormatHex,      \
+                     {ehframe_regs::name, dwarf_regs::name, generic,           \
+                      LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},               \
+                     {}, {}, nullptr)
 
-static const RegisterInfo g_register_infos[] = {
-    DEFINE_REG(r0, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r1, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r2, 8, nullptr, LLDB_REGNUM_GENERIC_ARG1),
-    DEFINE_REG(r3, 8, nullptr, LLDB_REGNUM_GENERIC_ARG2),
-    DEFINE_REG(r4, 8, nullptr, LLDB_REGNUM_GENERIC_ARG3),
-    DEFINE_REG(r5, 8, nullptr, LLDB_REGNUM_GENERIC_ARG4),
-    DEFINE_REG(r6, 8, nullptr, LLDB_REGNUM_GENERIC_ARG5),
-    DEFINE_REG(r7, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r8, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r9, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r10, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r11, 8, nullptr, LLDB_REGNUM_GENERIC_FP),
-    DEFINE_REG(r12, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r13, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r14, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(r15, 8, "sp", LLDB_REGNUM_GENERIC_SP),
-    DEFINE_REG(acr0, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr1, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr2, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr3, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr4, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr5, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr6, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr7, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr8, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr9, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr10, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr11, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr12, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr13, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr14, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(acr15, 4, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(pswm, 8, nullptr, LLDB_REGNUM_GENERIC_FLAGS),
-    DEFINE_REG(pswa, 8, nullptr, LLDB_REGNUM_GENERIC_PC),
-    DEFINE_REG(f0, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f1, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f2, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f3, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f4, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f5, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f6, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f7, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f8, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f9, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f10, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f11, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f12, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f13, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f14, 8, nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_REG(f15, 8, nullptr, LLDB_INVALID_REGNUM),
-};
+static const RegisterDescriptor g_register_infos[] = {
+    DEFINE_REG(536870912, r0, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870913, r1, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870914, r2, 8, nullptr, LLDB_REGNUM_GENERIC_ARG1),
+    DEFINE_REG(536870915, r3, 8, nullptr, LLDB_REGNUM_GENERIC_ARG2),
+    DEFINE_REG(536870916, r4, 8, nullptr, LLDB_REGNUM_GENERIC_ARG3),
+    DEFINE_REG(536870917, r5, 8, nullptr, LLDB_REGNUM_GENERIC_ARG4),
+    DEFINE_REG(536870918, r6, 8, nullptr, LLDB_REGNUM_GENERIC_ARG5),
+    DEFINE_REG(536870919, r7, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870920, r8, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870921, r9, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870922, r10, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870923, r11, 8, nullptr, LLDB_REGNUM_GENERIC_FP),
+    DEFINE_REG(536870924, r12, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870925, r13, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870926, r14, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870927, r15, 8, "sp", LLDB_REGNUM_GENERIC_SP),
+    DEFINE_REG(536870928, acr0, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870929, acr1, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870930, acr2, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870931, acr3, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870932, acr4, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870933, acr5, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870934, acr6, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870935, acr7, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870936, acr8, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870937, acr9, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870938, acr10, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870939, acr11, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870940, acr12, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870941, acr13, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870942, acr14, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870943, acr15, 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870944, pswm, 8, nullptr, LLDB_REGNUM_GENERIC_FLAGS),
+    DEFINE_REG(536870945, pswa, 8, nullptr, LLDB_REGNUM_GENERIC_PC),
+    DEFINE_REG(536870946, f0, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870947, f1, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870948, f2, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870949, f3, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870950, f4, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870951, f5, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870952, f6, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870953, f7, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870954, f8, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870955, f9, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870956, f10, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870957, f11, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870958, f12, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870959, f13, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870960, f14, 8, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_REG(536870961, f15, 8, nullptr, LLDB_INVALID_REGNUM)};
 
 static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
-const lldb_private::RegisterInfo *
+const lldb_private::RegisterDescriptor *
 ABISysV_s390x::GetRegisterInfoArray(uint32_t &count) {
   count = k_num_register_infos;
   return g_register_infos;
@@ -149,11 +146,12 @@ bool ABISysV_s390x::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx)
     return false;
 
-  const RegisterInfo *pc_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  const RegisterInfo *sp_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
-  const RegisterInfo *ra_reg_info = reg_ctx->GetRegisterInfoByName("r14", 0);
+  const RegisterDescriptor *pc_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  const RegisterDescriptor *sp_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  const RegisterDescriptor *ra_reg_info =
+      reg_ctx->GetRegisterByName("r14", 0);
   ProcessSP process_sp(thread.GetProcess());
 
   // Allocate a new stack frame and space for stack arguments if necessary
@@ -170,11 +168,12 @@ bool ABISysV_s390x::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   for (size_t i = 0; i < args.size(); ++i) {
     if (i < 5) {
-      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
+      const RegisterDescriptor *reg_info = reg_ctx->GetRegisterByNumber(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + i);
       LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
-                static_cast<uint64_t>(i + 1), args[i], reg_info->name);
-      if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
+                static_cast<uint64_t>(i + 1), args[i], reg_info->name.c_str());
+      if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+              (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), args[i])))
         return false;
     } else {
       Status error;
@@ -190,21 +189,24 @@ bool ABISysV_s390x::PrepareTrivialCall(Thread &thread, addr_t sp,
 
   LLDB_LOGF(log, "Writing RA: 0x%" PRIx64, (uint64_t)return_addr);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(ra_reg_info, return_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (ra_reg_info ? ra_reg_info->id : LLDB_INVALID_REGNUM), return_addr)))
     return false;
 
   // %r15 is set to the actual stack value.
 
   LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (sp_reg_info ? sp_reg_info->id : LLDB_INVALID_REGNUM), sp)))
     return false;
 
   // %pc is set to the address of the called function.
 
   LLDB_LOGF(log, "Writing PC: 0x%" PRIx64, (uint64_t)func_addr);
 
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (pc_reg_info ? pc_reg_info->id : LLDB_INVALID_REGNUM), func_addr)))
     return false;
 
   return true;
@@ -262,20 +264,20 @@ bool ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const {
   uint32_t argument_register_ids[5];
 
   argument_register_ids[0] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1)
+          ->id;
   argument_register_ids[1] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2)
+          ->id;
   argument_register_ids[2] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG3)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG3)
+          ->id;
   argument_register_ids[3] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG4)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG4)
+          ->id;
   argument_register_ids[4] =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG5)
-          ->kinds[eRegisterKindLLDB];
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG5)
+          ->id;
 
   unsigned int current_argument_register = 0;
 
@@ -331,7 +333,8 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
+    const RegisterDescriptor *reg_info =
+        reg_ctx->GetRegisterByName("r2", 0);
 
     DataExtractor data;
     Status data_error;
@@ -346,7 +349,8 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     if (num_bytes <= 8) {
       uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
 
-      if (reg_ctx->WriteRegisterFromUnsigned(reg_info, raw_value))
+      if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+              (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), raw_value)))
         set_it_simple = true;
     } else {
       error = Status::FromErrorString(
@@ -361,7 +365,8 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       return error;
     }
     if (*bit_width <= 64) {
-      const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
+      const RegisterDescriptor *f0_info =
+          reg_ctx->GetRegisterByName("f0", 0);
       RegisterValue f0_value;
       DataExtractor data;
       Status data_error;
@@ -378,7 +383,8 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
       data.CopyByteOrderedData(0, num_bytes, buffer, 8, byte_order);
       f0_value.SetBytes(buffer, 8, byte_order);
-      reg_ctx->WriteRegister(f0_info, f0_value);
+      llvm::consumeError(reg_ctx->WriteRegister(
+          (f0_info ? f0_info->id : LLDB_INVALID_REGNUM), f0_value));
       set_it_simple = true;
     } else {
       // FIXME - don't know how to do long doubles yet.
@@ -426,7 +432,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
-          reg_ctx->GetRegisterInfoByName("r2", 0), 0);
+          (reg_ctx->GetRegisterByName("r2", 0))->id, 0);
       const bool is_signed = (type_flags & eTypeIsSigned) != 0;
       switch (*byte_size) {
       default:
@@ -471,9 +477,14 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
         std::optional<uint64_t> byte_size =
             llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
         if (byte_size && *byte_size <= sizeof(long double)) {
-          const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
+          const RegisterDescriptor *f0_info =
+              reg_ctx->GetRegisterByName("f0", 0);
           RegisterValue f0_value;
-          if (reg_ctx->ReadRegister(f0_info, f0_value)) {
+          if (!llvm::errorToBool(
+                  reg_ctx
+                      ->ReadRegister(
+                          (f0_info ? f0_info->id : LLDB_INVALID_REGNUM))
+                      .moveInto(f0_value))) {
             DataExtractor data;
             if (f0_value.GetData(data)) {
               lldb::offset_t offset = 0;
@@ -496,8 +507,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
       return_valobj_sp = ValueObjectConstResult::Create(
           thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsPointer) {
-    unsigned r2_id =
-        reg_ctx->GetRegisterInfoByName("r2", 0)->kinds[eRegisterKindLLDB];
+    unsigned r2_id = reg_ctx->GetRegisterByName("r2", 0)->id;
     value.GetScalar() =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(r2_id, 0);
     value.SetValueType(Value::ValueType::Scalar);
@@ -532,8 +542,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectImpl(
     // instruction and if so stash away the return location.  Then we would
     // only return the memory return value if we know it is valid.
 
-    unsigned r2_id =
-        reg_ctx_sp->GetRegisterInfoByName("r2", 0)->kinds[eRegisterKindLLDB];
+    unsigned r2_id = reg_ctx_sp->GetRegisterByName("r2", 0)->id;
     lldb::addr_t storage_addr =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(r2_id, 0);
     return_valobj_sp = ValueObjectMemory::Create(
@@ -567,7 +576,7 @@ UnwindPlanSP ABISysV_s390x::CreateDefaultUnwindPlan() {
 }
 
 bool ABISysV_s390x::GetFallbackRegisterLocation(
-    const RegisterInfo *reg_info,
+    const RegisterDescriptor *reg_info,
     UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc) {
   // If a volatile register is being requested, we don't want to forward the
   // next frame's register contents up the stack -- the register is not
@@ -580,17 +589,17 @@ bool ABISysV_s390x::GetFallbackRegisterLocation(
   return false;
 }
 
-bool ABISysV_s390x::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABISysV_s390x::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   return !RegisterIsCalleeSaved(reg_info);
 }
 
-bool ABISysV_s390x::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
+bool ABISysV_s390x::RegisterIsCalleeSaved(const RegisterDescriptor *reg_info) {
   if (reg_info) {
     // Preserved registers are :
     //    r6-r13, r15
     //    f8-f15
 
-    const char *name = reg_info->name;
+    const char *name = reg_info->name.c_str();
     if (name[0] == 'r') {
       switch (name[1]) {
       case '6': // r6

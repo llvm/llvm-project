@@ -29,29 +29,19 @@ using namespace lldb;
 using namespace lldb_private;
 
 RegisterContextFreeBSDKernelCore_arm64::RegisterContextFreeBSDKernelCore_arm64(
-    Thread &thread, std::unique_ptr<RegisterInfo_arm64> register_info_up,
-    lldb::addr_t pcb_addr)
-    : RegisterContextCore_arm64(thread, std::move(register_info_up)),
+    Thread &thread, RegisterLayout layout, lldb::addr_t pcb_addr)
+    : ThreadRegisterContext(thread, 0, std::move(layout)),
       m_pcb_addr(pcb_addr) {}
 
-bool RegisterContextFreeBSDKernelCore_arm64::ReadGPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_arm64::ReadFPR() { return true; }
-
-bool RegisterContextFreeBSDKernelCore_arm64::WriteGPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_arm64::WriteFPR() {
-  assert(0);
-  return false;
-}
-
-bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+llvm::Expected<RegisterValue>
+RegisterContextFreeBSDKernelCore_arm64::ReadRegister(RegisterID id) {
+  auto description = GetDescription();
+  const auto *reg_info = description ? description->Find(id) : nullptr;
+  if (!reg_info)
+    return llvm::createStringError("unknown register ID");
+  RegisterValue value;
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
-    return false;
+    return llvm::createStringError("register value is unavailable");
 
   // https://cgit.freebsd.org/src/tree/sys/arm64/include/pcb.h
   struct {
@@ -95,9 +85,9 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
     size_t rd =
         m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
     if (rd != sizeof(pcb))
-      return false;
+      return llvm::createStringError("register value is unavailable");
 
-    uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
     switch (reg) {
     case reg_ids::gpr_x19:
     case reg_ids::gpr_x20:
@@ -124,15 +114,15 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
       value = pcb.x[reg_ids::gpr_lr - reg_ids::gpr_x19];
       break;
     default:
-      return false;
+      return llvm::createStringError("register value is unavailable");
     }
   } else {
     size_t rd = m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb13,
                                                   sizeof(pcb13), error);
     if (rd != sizeof(pcb13))
-      return false;
+      return llvm::createStringError("register value is unavailable");
 
-    uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+    uint32_t reg = reg_info->numbers[lldb::eRegisterKindLLDB];
     switch (reg) {
     case reg_ids::gpr_x0:
     case reg_ids::gpr_x1:
@@ -176,15 +166,15 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
       value = pcb13.lr;
       break;
     default:
-      return false;
+      return llvm::createStringError("register value is unavailable");
     }
   }
-  return true;
+  return value;
 }
 
-bool RegisterContextFreeBSDKernelCore_arm64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
-  return false;
+llvm::Error RegisterContextFreeBSDKernelCore_arm64::WriteRegister(
+    RegisterID id, const RegisterValue &value) {
+  return llvm::createStringError("register write is unavailable");
 }
 
 std::optional<int> RegisterContextFreeBSDKernelCore_arm64::GetOsreldate() {

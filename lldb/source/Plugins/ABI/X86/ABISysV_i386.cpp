@@ -89,16 +89,16 @@ bool ABISysV_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx)
     return false;
 
-  uint32_t pc_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  uint32_t sp_reg_num = reg_ctx->ConvertRegisterKindToRegisterNumber(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  uint32_t pc_reg_num = reg_ctx->GetRegisterIDForNumber(eRegisterKindGeneric,
+                                                        LLDB_REGNUM_GENERIC_PC);
+  uint32_t sp_reg_num = reg_ctx->GetRegisterIDForNumber(eRegisterKindGeneric,
+                                                        LLDB_REGNUM_GENERIC_SP);
 
   // While using register info to write a register value to memory, the
   // register info just needs to have the correct size of a 32 bit register,
   // the actual register it pertains to is not important, just the size needs
   // to be correct. "eax" is used here for this purpose.
-  const RegisterInfo *reg_info_32 = reg_ctx->GetRegisterInfoByName("eax");
+  const RegisterDescriptor *reg_info_32 = reg_ctx->GetRegisterByName("eax");
   if (!reg_info_32)
     return false; // TODO this should actually never happen
 
@@ -131,11 +131,12 @@ bool ABISysV_i386::PrepareTrivialCall(Thread &thread, addr_t sp,
     return false;
 
   // Setting %esp to the actual stack value.
-  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_num, sp))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(sp_reg_num, sp)))
     return false;
 
   // Setting %eip to the address of the called function.
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, func_addr))
+  if (llvm::errorToBool(
+          reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, func_addr)))
     return false;
 
   return true;
@@ -239,15 +240,18 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       return error;
     }
     lldb::offset_t offset = 0;
-    const RegisterInfo *eax_info = reg_ctx->GetRegisterInfoByName("eax", 0);
+    const RegisterDescriptor *eax_info =
+        reg_ctx->GetRegisterByName("eax", 0);
     uint32_t raw_value = data.GetMaxU32(&offset, num_bytes);
     register_write_successful =
-        reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value);
+        !llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+            (eax_info ? eax_info->id : LLDB_INVALID_REGNUM), raw_value));
   } else if ((type_flags & eTypeIsScalar) ||
              (type_flags & eTypeIsEnumeration)) //'Integral' + 'Floating Point'
   {
     lldb::offset_t offset = 0;
-    const RegisterInfo *eax_info = reg_ctx->GetRegisterInfoByName("eax", 0);
+    const RegisterDescriptor *eax_info =
+        reg_ctx->GetRegisterByName("eax", 0);
 
     if (type_flags & eTypeIsInteger) // 'Integral' except enum
     {
@@ -260,11 +264,16 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         break;
       case 8: {
         uint32_t raw_value_low = data.GetMaxU32(&offset, 4);
-        const RegisterInfo *edx_info = reg_ctx->GetRegisterInfoByName("edx", 0);
+        const RegisterDescriptor *edx_info =
+            reg_ctx->GetRegisterByName("edx", 0);
         uint32_t raw_value_high = data.GetMaxU32(&offset, num_bytes - offset);
         register_write_successful =
-            (reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value_low) &&
-             reg_ctx->WriteRegisterFromUnsigned(edx_info, raw_value_high));
+            (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                 (eax_info ? eax_info->id : LLDB_INVALID_REGNUM),
+                 raw_value_low)) &&
+             !llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                 (edx_info ? edx_info->id : LLDB_INVALID_REGNUM),
+                 raw_value_high)));
         break;
       }
       case 4:
@@ -272,7 +281,8 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       case 1: {
         uint32_t raw_value = data.GetMaxU32(&offset, num_bytes);
         register_write_successful =
-            reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value);
+            !llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                (eax_info ? eax_info->id : LLDB_INVALID_REGNUM), raw_value));
         break;
       }
       }
@@ -280,14 +290,17 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     {
       uint32_t raw_value = data.GetMaxU32(&offset, num_bytes);
       register_write_successful =
-          reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value);
+          !llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+              (eax_info ? eax_info->id : LLDB_INVALID_REGNUM), raw_value));
     } else if (type_flags & eTypeIsFloat) // 'Floating Point'
     {
       RegisterValue st0_value, fstat_value, ftag_value;
-      const RegisterInfo *st0_info = reg_ctx->GetRegisterInfoByName("st0", 0);
-      const RegisterInfo *fstat_info =
-          reg_ctx->GetRegisterInfoByName("fstat", 0);
-      const RegisterInfo *ftag_info = reg_ctx->GetRegisterInfoByName("ftag", 0);
+      const RegisterDescriptor *st0_info =
+          reg_ctx->GetRegisterByName("st0", 0);
+      const RegisterDescriptor *fstat_info =
+          reg_ctx->GetRegisterByName("fstat", 0);
+      const RegisterDescriptor *ftag_info =
+          reg_ctx->GetRegisterByName("ftag", 0);
 
       /* According to Page 3-12 of document
       System V Application Binary Interface, Intel386 Architecture Processor
@@ -328,9 +341,13 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         fstat_value.SetUInt32(value_fstat_u32);
         ftag_value.SetUInt32(value_ftag_u32);
         register_write_successful =
-            reg_ctx->WriteRegister(st0_info, st0_value) &&
-            reg_ctx->WriteRegister(fstat_info, fstat_value) &&
-            reg_ctx->WriteRegister(ftag_info, ftag_value);
+            !llvm::errorToBool(reg_ctx->WriteRegister(
+                (st0_info ? st0_info->id : LLDB_INVALID_REGNUM), st0_value)) &&
+            !llvm::errorToBool(reg_ctx->WriteRegister(
+                (fstat_info ? fstat_info->id : LLDB_INVALID_REGNUM),
+                fstat_value)) &&
+            !llvm::errorToBool(reg_ctx->WriteRegister(
+                (ftag_info ? ftag_info->id : LLDB_INVALID_REGNUM), ftag_value));
       } else if (num_bytes == 16) // handles __float128
       {
         error = Status::FromErrorString(
@@ -370,10 +387,8 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
 
   const uint32_t type_flags = return_compiler_type.GetTypeInfo();
 
-  unsigned eax_id =
-      reg_ctx->GetRegisterInfoByName("eax", 0)->kinds[eRegisterKindLLDB];
-  unsigned edx_id =
-      reg_ctx->GetRegisterInfoByName("edx", 0)->kinds[eRegisterKindLLDB];
+  unsigned eax_id = reg_ctx->GetRegisterByName("eax", 0)->id;
+  unsigned edx_id = reg_ctx->GetRegisterByName("edx", 0)->id;
 
   // Following "IF ELSE" block categorizes various 'Fundamental Data Types'.
   // The terminology 'Fundamental Data Types' used here is adopted from Table
@@ -467,10 +482,15 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
     {
       if (*byte_size <= 12) // handles float, double, long double, __float80
       {
-        const RegisterInfo *st0_info = reg_ctx->GetRegisterInfoByName("st0", 0);
+        const RegisterDescriptor *st0_info =
+            reg_ctx->GetRegisterByName("st0", 0);
         RegisterValue st0_value;
 
-        if (reg_ctx->ReadRegister(st0_info, st0_value)) {
+        if (!llvm::errorToBool(
+                reg_ctx
+                    ->ReadRegister(
+                        (st0_info ? st0_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(st0_value))) {
           DataExtractor data;
           if (st0_value.GetData(data)) {
             lldb::offset_t offset = 0;
@@ -520,9 +540,10 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
     std::optional<uint64_t> byte_size =
         llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
     if (byte_size && *byte_size > 0) {
-      const RegisterInfo *vec_reg = reg_ctx->GetRegisterInfoByName("xmm0", 0);
+      const RegisterDescriptor *vec_reg =
+          reg_ctx->GetRegisterByName("xmm0", 0);
       if (vec_reg == nullptr)
-        vec_reg = reg_ctx->GetRegisterInfoByName("mm0", 0);
+        vec_reg = reg_ctx->GetRegisterByName("mm0", 0);
 
       if (vec_reg) {
         if (*byte_size <= vec_reg->byte_size) {
@@ -532,7 +553,11 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
                 new DataBufferHeap(*byte_size, 0));
             const ByteOrder byte_order = process_sp->GetByteOrder();
             RegisterValue reg_value;
-            if (reg_ctx->ReadRegister(vec_reg, reg_value)) {
+            if (!llvm::errorToBool(
+                    reg_ctx
+                        ->ReadRegister(
+                            (vec_reg ? vec_reg->id : LLDB_INVALID_REGNUM))
+                        .moveInto(reg_value))) {
               Status error;
               if (reg_value.GetAsMemoryData(vec_reg->byte_size,
                                             heap_data_up->GetBytes(),
@@ -549,8 +574,8 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
             }
           }
         } else if (*byte_size <= vec_reg->byte_size * 2) {
-          const RegisterInfo *vec_reg2 =
-              reg_ctx->GetRegisterInfoByName("xmm1", 0);
+          const RegisterDescriptor *vec_reg2 =
+              reg_ctx->GetRegisterByName("xmm1", 0);
           if (vec_reg2) {
             ProcessSP process_sp(thread.GetProcess());
             if (process_sp) {
@@ -559,8 +584,16 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
               const ByteOrder byte_order = process_sp->GetByteOrder();
               RegisterValue reg_value;
               RegisterValue reg_value2;
-              if (reg_ctx->ReadRegister(vec_reg, reg_value) &&
-                  reg_ctx->ReadRegister(vec_reg2, reg_value2)) {
+              if (!llvm::errorToBool(
+                      reg_ctx
+                          ->ReadRegister(
+                              (vec_reg ? vec_reg->id : LLDB_INVALID_REGNUM))
+                          .moveInto(reg_value)) &&
+                  !llvm::errorToBool(
+                      reg_ctx
+                          ->ReadRegister(
+                              (vec_reg2 ? vec_reg2->id : LLDB_INVALID_REGNUM))
+                          .moveInto(reg_value2))) {
 
                 Status error;
                 if (reg_value.GetAsMemoryData(
@@ -609,10 +642,10 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectImpl(
     return return_valobj_sp;
 
   if (return_compiler_type.IsAggregateType()) {
-    unsigned eax_id =
-        reg_ctx_sp->GetRegisterInfoByName("eax", 0)->kinds[eRegisterKindLLDB];
-    lldb::addr_t storage_addr = (uint32_t)(
-        thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) &
+    unsigned eax_id = reg_ctx_sp->GetRegisterByName("eax", 0)->id;
+    lldb::addr_t storage_addr =
+        (uint32_t)(thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id,
+                                                                       0) &
         0xffffffff);
     return_valobj_sp = ValueObjectMemory::Create(
         &thread, "", Address(storage_addr), return_compiler_type);
@@ -673,12 +706,12 @@ UnwindPlanSP ABISysV_i386::CreateDefaultUnwindPlan() {
 // According to "Register Usage" in reference document (specified on top of
 // this source file) ebx, ebp, esi, edi and esp registers are preserved i.e.
 // non-volatile i.e. callee-saved on i386
-bool ABISysV_i386::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
+bool ABISysV_i386::RegisterIsCalleeSaved(const RegisterDescriptor *reg_info) {
   if (!reg_info)
     return false;
 
   // Saved registers are ebx, ebp, esi, edi, esp, eip
-  const char *name = reg_info->name;
+  const char *name = reg_info->name.c_str();
   if (name[0] == 'e') {
     switch (name[1]) {
     case 'b':

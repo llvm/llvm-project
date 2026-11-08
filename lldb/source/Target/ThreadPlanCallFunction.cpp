@@ -164,10 +164,15 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
 
     RegisterValue reg_value;
 
-    for (uint32_t reg_idx = 0, num_registers = reg_ctx->GetRegisterCount();
+    for (uint32_t reg_idx = 0, num_registers = reg_ctx->GetUserRegisterCount();
          reg_idx < num_registers; ++reg_idx) {
-      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
+      const RegisterDescriptor *reg_info =
+          reg_ctx->GetUserRegisterAtIndex(reg_idx);
+      if (!llvm::errorToBool(
+              reg_ctx
+                  ->ReadRegister(
+                      (reg_info ? reg_info->id : LLDB_INVALID_REGNUM))
+                  .moveInto(reg_value))) {
         DumpRegisterValue(reg_value, strm, *reg_info, true, false,
                           eFormatDefault);
         strm.EOL();

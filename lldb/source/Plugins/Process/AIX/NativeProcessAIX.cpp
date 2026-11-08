@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "NativeProcessAIX.h"
-#include "lldb/Register/Arch/lldb-ppc64-ehframe-register-enums.h"
 
 #include "lldb/Register/Arch/lldb-ppc64-register-enums.h"
 #include "lldb/Register/Arch/lldb-ppc64-dwarf-register-enums.h"
@@ -39,9 +38,8 @@
 
 using namespace lldb_private;
 
-#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Register/Arch/RegisterInfos_ppc64.h"
-#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
+#include "RegisterLayoutAIX_ppc64.h"
+using namespace lldb_private::aix_ppc64;
 
 using namespace lldb;
 using namespace lldb_private::process_aix;

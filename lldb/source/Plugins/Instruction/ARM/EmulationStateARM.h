@@ -47,16 +47,16 @@ public:
                     const lldb_private::EmulateInstruction::Context &context,
                     lldb::addr_t addr, const void *dst, size_t length);
 
-  static bool ReadPseudoRegister(lldb_private::EmulateInstruction *instruction,
-                                 void *baton,
-                                 const lldb_private::RegisterInfo *reg_info,
+  static bool
+  ReadPseudoRegister(lldb_private::EmulateInstruction *instruction, void *baton,
+                     const lldb_private::RegisterDescriptor *reg_info,
                                  lldb_private::RegisterValue &reg_value);
 
   static bool
   WritePseudoRegister(lldb_private::EmulateInstruction *instruction,
                       void *baton,
                       const lldb_private::EmulateInstruction::Context &context,
-                      const lldb_private::RegisterInfo *reg_info,
+                      const lldb_private::RegisterDescriptor *reg_info,
                       const lldb_private::RegisterValue &reg_value);
 
 private:

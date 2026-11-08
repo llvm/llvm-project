@@ -23,6 +23,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Materializer.h"
+#include "lldb/Register/RegisterValue.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
@@ -45,7 +46,6 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -414,8 +414,9 @@ bool ClangExpressionDeclMap::AddValueToStruct(const NamedDecl *decl,
     } else {
       if (const lldb_private::Symbol *sym = parser_vars->m_lldb_sym)
         offset = m_parser_vars->m_materializer->AddSymbol(*sym, err);
-      else if (const RegisterInfo *reg_info = var->GetRegisterInfo())
-        offset = m_parser_vars->m_materializer->AddRegister(*reg_info, err);
+      else if (const RegisterDescriptor *reg_info = var->GetRegisterInfo())
+        offset = m_parser_vars->m_materializer->AddRegister(
+            var->GetRegisterDescription(), reg_info->id, err);
       else if (parser_vars->m_lldb_var)
         offset = m_parser_vars->m_materializer->AddVariable(
             parser_vars->m_lldb_var, err);
@@ -1433,8 +1434,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     llvm::StringRef reg_name = name.GetStringRef().substr(1);
 
     if (m_parser_vars->m_exe_ctx.GetRegisterContext()) {
-      const RegisterInfo *reg_info(
-          m_parser_vars->m_exe_ctx.GetRegisterContext()->GetRegisterInfoByName(
+      const RegisterDescriptor *reg_info(
+          m_parser_vars->m_exe_ctx.GetRegisterContext()->GetRegisterByName(
               reg_name));
 
       if (reg_info) {
@@ -1782,8 +1783,8 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
            ClangUtil::DumpDecl(var_decl));
 }
 
-void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
-                                            const RegisterInfo *reg_info) {
+void ClangExpressionDeclMap::AddOneRegister(
+    NameSearchContext &context, const RegisterDescriptor *reg_info) {
   Log *log = GetLog(LLDBLog::Expressions);
 
   CompilerType clang_type =
@@ -1808,7 +1809,9 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
 
   std::string decl_name(context.m_decl_name.getAsString());
   entity->SetName(decl_name);
-  entity->SetRegisterInfo(reg_info);
+  entity->SetRegisterInfo(
+      m_parser_vars->m_exe_ctx.GetRegisterContext()->GetDescription(),
+      reg_info->id);
   entity->EnableParserVars(GetParserID());
   ClangExpressionVariable::ParserVars *parser_vars =
       entity->GetParserVars(GetParserID());

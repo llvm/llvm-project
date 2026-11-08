@@ -77,469 +77,164 @@ enum dwarf_regnums {
   dwarf_pc
 };
 
-static const RegisterInfo g_register_infos_mips64[] = {
-    {"r0",
-     "zero",
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r0, dwarf_r0, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r1",
-     "AT",
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r1, dwarf_r1, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-
-    },
-    {"r2",
-     "v0",
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r2, dwarf_r2, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r3",
-     "v1",
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r3, dwarf_r3, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r4",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r4, dwarf_r4, LLDB_REGNUM_GENERIC_ARG1, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r5",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r5, dwarf_r5, LLDB_REGNUM_GENERIC_ARG2, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r6",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r6, dwarf_r6, LLDB_REGNUM_GENERIC_ARG3, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r7",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r7, dwarf_r7, LLDB_REGNUM_GENERIC_ARG4, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r8",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r8, dwarf_r8, LLDB_REGNUM_GENERIC_ARG5, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r9",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r9, dwarf_r9, LLDB_REGNUM_GENERIC_ARG6, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r10",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r10, dwarf_r10, LLDB_REGNUM_GENERIC_ARG7, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r11",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r11, dwarf_r11, LLDB_REGNUM_GENERIC_ARG8, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r12",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r12, dwarf_r12, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r13",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r13, dwarf_r13, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r14",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r14, dwarf_r14, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r15",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r15, dwarf_r15, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r16",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r16, dwarf_r16, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r17",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r17, dwarf_r17, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r18",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r18, dwarf_r18, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r19",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r19, dwarf_r19, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r20",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r20, dwarf_r20, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r21",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r21, dwarf_r21, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r22",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r22, dwarf_r22, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r23",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r23, dwarf_r23, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r24",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r24, dwarf_r24, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r25",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r25, dwarf_r25, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r26",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r26, dwarf_r26, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r27",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r27, dwarf_r27, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r28",
-     "gp",
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r28, dwarf_r28, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r29",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r29, dwarf_r29, LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r30",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r30, dwarf_r30, LLDB_REGNUM_GENERIC_FP, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"r31",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_r31, dwarf_r31, LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"sr",
-     nullptr,
-     4,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_sr, dwarf_sr, LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"lo",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_lo, dwarf_lo, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"hi",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_hi, dwarf_hi, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"bad",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_bad, dwarf_bad, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"cause",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_cause, dwarf_cause, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-    {"pc",
-     nullptr,
-     8,
-     0,
-     eEncodingUint,
-     eFormatHex,
-     {dwarf_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM,
-      LLDB_INVALID_REGNUM},
-     nullptr,
-     nullptr,
-     nullptr,
-    },
-};
+static const RegisterDescriptor g_register_infos_mips64[] = {
+    RegisterDescriptor(536870912, "r0", "zero", 8, eEncodingUint, eFormatHex,
+                       {dwarf_r0, dwarf_r0, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870913, "r1", "AT", 8, eEncodingUint, eFormatHex,
+                       {dwarf_r1, dwarf_r1, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870914, "r2", "v0", 8, eEncodingUint, eFormatHex,
+                       {dwarf_r2, dwarf_r2, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870915, "r3", "v1", 8, eEncodingUint, eFormatHex,
+                       {dwarf_r3, dwarf_r3, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870916, "r4", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r4, dwarf_r4, LLDB_REGNUM_GENERIC_ARG1,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870917, "r5", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r5, dwarf_r5, LLDB_REGNUM_GENERIC_ARG2,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870918, "r6", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r6, dwarf_r6, LLDB_REGNUM_GENERIC_ARG3,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870919, "r7", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r7, dwarf_r7, LLDB_REGNUM_GENERIC_ARG4,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870920, "r8", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r8, dwarf_r8, LLDB_REGNUM_GENERIC_ARG5,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870921, "r9", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r9, dwarf_r9, LLDB_REGNUM_GENERIC_ARG6,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870922, "r10", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r10, dwarf_r10, LLDB_REGNUM_GENERIC_ARG7,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870923, "r11", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r11, dwarf_r11, LLDB_REGNUM_GENERIC_ARG8,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870924, "r12", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r12, dwarf_r12, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870925, "r13", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r13, dwarf_r13, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870926, "r14", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r14, dwarf_r14, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870927, "r15", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r15, dwarf_r15, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870928, "r16", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r16, dwarf_r16, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870929, "r17", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r17, dwarf_r17, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870930, "r18", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r18, dwarf_r18, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870931, "r19", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r19, dwarf_r19, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870932, "r20", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r20, dwarf_r20, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870933, "r21", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r21, dwarf_r21, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870934, "r22", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r22, dwarf_r22, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870935, "r23", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r23, dwarf_r23, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870936, "r24", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r24, dwarf_r24, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870937, "r25", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r25, dwarf_r25, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870938, "r26", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r26, dwarf_r26, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870939, "r27", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r27, dwarf_r27, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870940, "r28", "gp", 8, eEncodingUint, eFormatHex,
+                       {dwarf_r28, dwarf_r28, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870941, "r29", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r29, dwarf_r29, LLDB_REGNUM_GENERIC_SP,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870942, "r30", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r30, dwarf_r30, LLDB_REGNUM_GENERIC_FP,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870943, "r31", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_r31, dwarf_r31, LLDB_REGNUM_GENERIC_RA,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870944, "sr", nullptr, 4, eEncodingUint, eFormatHex,
+                       {dwarf_sr, dwarf_sr, LLDB_REGNUM_GENERIC_FLAGS,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870945, "lo", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_lo, dwarf_lo, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870946, "hi", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_hi, dwarf_hi, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870947, "bad", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_bad, dwarf_bad, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870948, "cause", nullptr, 8, eEncodingUint,
+                       eFormatHex,
+                       {dwarf_cause, dwarf_cause, LLDB_INVALID_REGNUM,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr),
+    RegisterDescriptor(536870949, "pc", nullptr, 8, eEncodingUint, eFormatHex,
+                       {dwarf_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC,
+                        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+                       {}, {}, nullptr)};
 
 static const uint32_t k_num_register_infos = std::size(g_register_infos_mips64);
 
-const lldb_private::RegisterInfo *
+const lldb_private::RegisterDescriptor *
 ABISysV_mips64::GetRegisterInfoArray(uint32_t &count) {
   count = k_num_register_infos;
   return g_register_infos_mips64;
@@ -580,17 +275,18 @@ bool ABISysV_mips64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx)
     return false;
 
-  const RegisterInfo *reg_info = nullptr;
+  const RegisterDescriptor *reg_info = nullptr;
 
   if (args.size() > 8) // TODO handle more than 8 arguments
     return false;
 
   for (size_t i = 0; i < args.size(); ++i) {
-    reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+    reg_info = reg_ctx->GetRegisterByNumber(eRegisterKindGeneric,
                                         LLDB_REGNUM_GENERIC_ARG1 + i);
     LLDB_LOGF(log, "About to write arg%zd (0x%" PRIx64 ") into %s", i + 1,
-              args[i], reg_info->name);
-    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
+              args[i], reg_info->name.c_str());
+    if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+            (reg_info ? reg_info->id : LLDB_INVALID_REGNUM), args[i])))
       return false;
   }
 
@@ -602,14 +298,14 @@ bool ABISysV_mips64::PrepareTrivialCall(Thread &thread, addr_t sp,
   sp &= ~(0xfull); // 16-byte alignment
 
   Status error;
-  const RegisterInfo *pc_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  const RegisterInfo *sp_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
-  const RegisterInfo *ra_reg_info =
-      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
-  const RegisterInfo *r25_info = reg_ctx->GetRegisterInfoByName("r25", 0);
-  const RegisterInfo *r0_info = reg_ctx->GetRegisterInfoByName("zero", 0);
+  const RegisterDescriptor *pc_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  const RegisterDescriptor *sp_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  const RegisterDescriptor *ra_reg_info =
+      reg_ctx->GetRegisterByNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
+  const RegisterDescriptor *r25_info = reg_ctx->GetRegisterByName("r25", 0);
+  const RegisterDescriptor *r0_info = reg_ctx->GetRegisterByName("zero", 0);
 
   LLDB_LOGF(log, "Writing R0: 0x%" PRIx64, (uint64_t)0);
 
@@ -617,32 +313,37 @@ bool ABISysV_mips64::PrepareTrivialCall(Thread &thread, addr_t sp,
    * such setting prevents automatic decrement of the PC.
    * This clears the bug 23659 for MIPS.
   */
-  if (!reg_ctx->WriteRegisterFromUnsigned(r0_info, (uint64_t)0))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (r0_info ? r0_info->id : LLDB_INVALID_REGNUM), (uint64_t)0)))
     return false;
 
   LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
   // Set "sp" to the requested value
-  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (sp_reg_info ? sp_reg_info->id : LLDB_INVALID_REGNUM), sp)))
     return false;
 
   LLDB_LOGF(log, "Writing RA: 0x%" PRIx64, (uint64_t)return_addr);
 
   // Set "ra" to the return address
-  if (!reg_ctx->WriteRegisterFromUnsigned(ra_reg_info, return_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (ra_reg_info ? ra_reg_info->id : LLDB_INVALID_REGNUM), return_addr)))
     return false;
 
   LLDB_LOGF(log, "Writing PC: 0x%" PRIx64, (uint64_t)func_addr);
 
   // Set pc to the address of the called function.
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (pc_reg_info ? pc_reg_info->id : LLDB_INVALID_REGNUM), func_addr)))
     return false;
 
   LLDB_LOGF(log, "Writing r25: 0x%" PRIx64, (uint64_t)func_addr);
 
   // All callers of position independent functions must place the address of
   // the called function in t9 (r25)
-  if (!reg_ctx->WriteRegisterFromUnsigned(r25_info, func_addr))
+  if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+          (r25_info ? r25_info->id : LLDB_INVALID_REGNUM), func_addr)))
     return false;
 
   return true;
@@ -691,20 +392,24 @@ Status ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       lldb::offset_t offset = 0;
 
       if (num_bytes <= 16) {
-        const RegisterInfo *r2_info = reg_ctx->GetRegisterInfoByName("r2", 0);
+        const RegisterDescriptor *r2_info =
+            reg_ctx->GetRegisterByName("r2", 0);
         if (num_bytes <= 8) {
           uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
 
-          if (!reg_ctx->WriteRegisterFromUnsigned(r2_info, raw_value))
+          if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                  (r2_info ? r2_info->id : LLDB_INVALID_REGNUM), raw_value)))
             error = Status::FromErrorString("failed to write register r2");
         } else {
           uint64_t raw_value = data.GetMaxU64(&offset, 8);
-          if (reg_ctx->WriteRegisterFromUnsigned(r2_info, raw_value)) {
-            const RegisterInfo *r3_info =
-                reg_ctx->GetRegisterInfoByName("r3", 0);
+          if (!llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                  (r2_info ? r2_info->id : LLDB_INVALID_REGNUM), raw_value))) {
+            const RegisterDescriptor *r3_info =
+                reg_ctx->GetRegisterByName("r3", 0);
             raw_value = data.GetMaxU64(&offset, num_bytes - offset);
 
-            if (!reg_ctx->WriteRegisterFromUnsigned(r3_info, raw_value))
+            if (llvm::errorToBool(reg_ctx->WriteRegisterFromUnsigned(
+                    (r3_info ? r3_info->id : LLDB_INVALID_REGNUM), raw_value)))
               error = Status::FromErrorString("failed to write register r3");
           } else
             error = Status::FromErrorString("failed to write register r2");
@@ -758,8 +463,8 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
   uint32_t fp_flag =
       target_arch.GetFlags() & lldb_private::ArchSpec::eMIPS_ABI_FP_mask;
 
-  const RegisterInfo *r2_info = reg_ctx->GetRegisterInfoByName("r2", 0);
-  const RegisterInfo *r3_info = reg_ctx->GetRegisterInfoByName("r3", 0);
+  const RegisterDescriptor *r2_info = reg_ctx->GetRegisterByName("r2", 0);
+  const RegisterDescriptor *r3_info = reg_ctx->GetRegisterByName("r3", 0);
   assert(r2_info && r3_info && "Basic registers should always be present.");
 
   if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {
@@ -770,7 +475,8 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       // Extract the register context so we can read arguments from registers
       // In MIPS register "r2" (v0) holds the integer function return values
 
-      uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_info, 0);
+      uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(
+          (r2_info ? r2_info->id : LLDB_INVALID_REGNUM), 0);
 
       const bool is_signed = (type_flags & eTypeIsSigned) != 0;
       switch (*byte_size) {
@@ -813,7 +519,8 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       if (type_flags & eTypeIsComplex) {
         // Don't handle complex yet.
       } else if (IsSoftFloat(fp_flag)) {
-        uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_info, 0);
+        uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(
+            (r2_info ? r2_info->id : LLDB_INVALID_REGNUM), 0);
         switch (*byte_size) {
         case 4:
           value.GetScalar() = *((float *)(&raw_value));
@@ -827,10 +534,12 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
           uint64_t result[2];
           if (target_byte_order == eByteOrderLittle) {
             result[0] = raw_value;
-            result[1] = reg_ctx->ReadRegisterAsUnsigned(r3_info, 0);
+            result[1] = reg_ctx->ReadRegisterAsUnsigned(
+                (r3_info ? r3_info->id : LLDB_INVALID_REGNUM), 0);
             value.GetScalar() = *((long double *)(result));
           } else {
-            result[0] = reg_ctx->ReadRegisterAsUnsigned(r3_info, 0);
+            result[0] = reg_ctx->ReadRegisterAsUnsigned(
+                (r3_info ? r3_info->id : LLDB_INVALID_REGNUM), 0);
             result[1] = raw_value;
             value.GetScalar() = *((long double *)(result));
           }
@@ -840,12 +549,16 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
       } else {
         if (*byte_size <= sizeof(long double)) {
-          const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
+          const RegisterDescriptor *f0_info =
+              reg_ctx->GetRegisterByName("f0", 0);
 
           RegisterValue f0_value;
           DataExtractor f0_data;
 
-          reg_ctx->ReadRegister(f0_info, f0_value);
+          llvm::consumeError(
+              reg_ctx
+                  ->ReadRegister((f0_info ? f0_info->id : LLDB_INVALID_REGNUM))
+                  .moveInto(f0_value));
 
           f0_value.GetData(f0_data);
 
@@ -857,11 +570,15 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
             value.GetScalar() = (double)f0_data.GetDouble(&offset);
             success = true;
           } else if (*byte_size == sizeof(long double)) {
-            const RegisterInfo *f2_info =
-                reg_ctx->GetRegisterInfoByName("f2", 0);
+            const RegisterDescriptor *f2_info =
+                reg_ctx->GetRegisterByName("f2", 0);
             RegisterValue f2_value;
             DataExtractor f2_data;
-            reg_ctx->ReadRegister(f2_info, f2_value);
+            llvm::consumeError(
+                reg_ctx
+                    ->ReadRegister(
+                        (f2_info ? f2_info->id : LLDB_INVALID_REGNUM))
+                    .moveInto(f2_value));
             DataExtractor *copy_from_extractor = nullptr;
             WritableDataBufferSP data_sp(new DataBufferHeap(16, 0));
             DataExtractor return_ext(
@@ -945,12 +662,21 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
           // We have one or two FP-only values in this structure. Get it from
           // f0/f2 registers.
           DataExtractor f0_data, f1_data, f2_data;
-          const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
-          const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
-          const RegisterInfo *f2_info = reg_ctx->GetRegisterInfoByName("f2", 0);
+          const RegisterDescriptor *f0_info =
+              reg_ctx->GetRegisterByName("f0", 0);
+          const RegisterDescriptor *f1_info =
+              reg_ctx->GetRegisterByName("f1", 0);
+          const RegisterDescriptor *f2_info =
+              reg_ctx->GetRegisterByName("f2", 0);
 
-          reg_ctx->ReadRegister(f0_info, f0_value);
-          reg_ctx->ReadRegister(f2_info, f2_value);
+          llvm::consumeError(
+              reg_ctx
+                  ->ReadRegister((f0_info ? f0_info->id : LLDB_INVALID_REGNUM))
+                  .moveInto(f0_value));
+          llvm::consumeError(
+              reg_ctx
+                  ->ReadRegister((f2_info ? f2_info->id : LLDB_INVALID_REGNUM))
+                  .moveInto(f2_value));
 
           f0_value.GetData(f0_data);
 
@@ -975,13 +701,21 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
                 // in fp0/fp1 registers.
                 if (target_byte_order == eByteOrderLittle) {
                   return_value[0] = f0_data.GetU64(&offset);
-                  reg_ctx->ReadRegister(f1_info, f1_value);
+                  llvm::consumeError(
+                      reg_ctx
+                          ->ReadRegister(
+                              (f1_info ? f1_info->id : LLDB_INVALID_REGNUM))
+                          .moveInto(f1_value));
                   f1_value.GetData(f1_data);
                   offset = 0;
                   return_value[1] = f1_data.GetU64(&offset);
                 } else {
                   return_value[1] = f0_data.GetU64(&offset);
-                  reg_ctx->ReadRegister(f1_info, f1_value);
+                  llvm::consumeError(
+                      reg_ctx
+                          ->ReadRegister(
+                              (f1_info ? f1_info->id : LLDB_INVALID_REGNUM))
+                          .moveInto(f1_value));
                   f1_value.GetData(f1_data);
                   offset = 0;
                   return_value[0] = f1_data.GetU64(&offset);
@@ -1086,7 +820,9 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       }
 
       if (use_r2) {
-        reg_ctx->ReadRegister(r2_info, r2_value);
+        llvm::consumeError(
+            reg_ctx->ReadRegister((r2_info ? r2_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(r2_value));
 
         const size_t bytes_copied = r2_value.GetAsMemoryData(
             r2_info->byte_size, data_sp->GetBytes(), r2_info->byte_size,
@@ -1096,7 +832,9 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         sucess = true;
       }
       if (use_r3) {
-        reg_ctx->ReadRegister(r3_info, r3_value);
+        llvm::consumeError(
+            reg_ctx->ReadRegister((r3_info ? r3_info->id : LLDB_INVALID_REGNUM))
+                .moveInto(r3_value));
         const size_t bytes_copied = r3_value.GetAsMemoryData(
             r3_info->byte_size, data_sp->GetBytes() + r2_info->byte_size,
             r3_info->byte_size, target_byte_order, error, r3_info->name);
@@ -1117,7 +855,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
     // Any structure/vector greater than 16 bytes in size is returned in
     // memory. The pointer to that memory is returned in r2.
     uint64_t mem_address = reg_ctx->ReadRegisterAsUnsigned(
-        reg_ctx->GetRegisterInfoByName("r2", 0), 0);
+        (reg_ctx->GetRegisterByName("r2", 0))->id, 0);
 
     // We have got the address. Create a memory object out of it
     return_valobj_sp = ValueObjectMemory::Create(
@@ -1160,7 +898,7 @@ UnwindPlanSP ABISysV_mips64::CreateDefaultUnwindPlan() {
   return plan_sp;
 }
 
-bool ABISysV_mips64::RegisterIsVolatile(const RegisterInfo *reg_info) {
+bool ABISysV_mips64::RegisterIsVolatile(const RegisterDescriptor *reg_info) {
   return !RegisterIsCalleeSaved(reg_info);
 }
 
@@ -1168,12 +906,12 @@ bool ABISysV_mips64::IsSoftFloat(uint32_t fp_flag) const {
   return (fp_flag == lldb_private::ArchSpec::eMIPS_ABI_FP_SOFT);
 }
 
-bool ABISysV_mips64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
+bool ABISysV_mips64::RegisterIsCalleeSaved(const RegisterDescriptor *reg_info) {
   if (reg_info) {
     // Preserved registers are :
     // r16-r23, r28, r29, r30, r31
 
-    int reg = ((reg_info->byte_offset) / 8);
+    uint32_t reg = reg_info->numbers[eRegisterKindDWARF];
 
     bool save = (reg >= 16) && (reg <= 23);
     save |= (reg >= 28) && (reg <= 31);

@@ -50,7 +50,8 @@ public:
 
   lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
-  bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
+  bool
+  RegisterIsVolatile(const lldb_private::RegisterDescriptor *reg_info) override;
 
   bool CallFrameAddressIsValid(lldb::addr_t cfa) override {
     // Make sure the stack call frame addresses are 8 byte aligned
@@ -67,7 +68,7 @@ public:
     return true;
   }
 
-  const lldb_private::RegisterInfo *
+  const lldb_private::RegisterDescriptor *
   GetRegisterInfoArray(uint32_t &count) override;
 
   // Static Functions
@@ -91,10 +92,11 @@ protected:
   GetReturnValueObjectSimple(lldb_private::Thread &thread,
                              lldb_private::CompilerType &ast_type) const;
 
-  bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
+  bool RegisterIsCalleeSaved(const lldb_private::RegisterDescriptor *reg_info);
 
 private:
-  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance
+                                                        // instead.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_HEXAGON_ABISYSV_HEXAGON_H

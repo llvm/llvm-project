@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProcessWasm.h"
+#include "lldb/Register/Arch/lldb-wasm-register-enums.h"
 #include "ThreadWasm.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -17,6 +18,8 @@
 
 #include "lldb/Target/UnixSignals.h"
 
+
+namespace reg_ids = lldb_private::registers::wasm::id;
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
@@ -227,18 +230,18 @@ ProcessWasm::SendWasmValueQuery(llvm::StringRef packet) {
 }
 
 llvm::Expected<lldb::DataBufferSP>
-ProcessWasm::GetWasmVariable(WasmVirtualRegisterKinds kind,
+ProcessWasm::GetWasmVariable(reg_ids::WasmVirtualRegisterKinds kind,
                              uint32_t frame_index, uint32_t index) {
   switch (kind) {
-  case eWasmTagLocal:
+  case reg_ids::eWasmTagLocal:
     return SendWasmValueQuery(
         llvm::formatv("qWasmLocal:{0};{1}", frame_index, index).str());
-  case eWasmTagOperandStack:
+  case reg_ids::eWasmTagOperandStack:
     return SendWasmValueQuery(
         llvm::formatv("qWasmStackValue:{0};{1}", frame_index, index).str());
-  case eWasmTagGlobal:
+  case reg_ids::eWasmTagGlobal:
     return llvm::createStringError("a Wasm global does not belong to a frame");
-  case eWasmTagNotAWasmLocation:
+  case reg_ids::eWasmTagNotAWasmLocation:
     return llvm::createStringError("not a Wasm location");
   }
   llvm_unreachable("unhandled Wasm virtual register kind");

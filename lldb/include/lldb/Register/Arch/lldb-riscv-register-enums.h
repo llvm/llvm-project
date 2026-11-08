@@ -21,8 +21,6 @@ namespace lldb_private::registers::riscv::id {
 // LLDB register codes (e.g. RegisterKind == eRegisterKindLLDB)
 enum : uint32_t {
   // General Purpose Registers.
-  // The same order as user_regs_struct in <asm/ptrace.h>
-  // note: these enum values are used as byte_offset
   gpr_first = 0,
   gpr_pc = gpr_first,
   gpr_x1,

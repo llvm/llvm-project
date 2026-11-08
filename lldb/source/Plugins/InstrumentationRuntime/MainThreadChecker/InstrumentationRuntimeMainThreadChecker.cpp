@@ -93,11 +93,12 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
   if (!regctx_sp)
     return StructuredData::ObjectSP();
 
-  const RegisterInfo *reginfo = regctx_sp->GetRegisterInfoByName("arg1");
+  const RegisterDescriptor *reginfo = regctx_sp->GetRegisterByName("arg1");
   if (!reginfo)
     return StructuredData::ObjectSP();
 
-  uint64_t apiname_ptr = regctx_sp->ReadRegisterAsUnsigned(reginfo, 0);
+  uint64_t apiname_ptr = regctx_sp->ReadRegisterAsUnsigned(
+      (reginfo ? reginfo->id : LLDB_INVALID_REGNUM), 0);
   if (!apiname_ptr)
     return StructuredData::ObjectSP();
 

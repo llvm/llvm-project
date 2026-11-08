@@ -19,7 +19,7 @@ public:
 
 protected:
   void AugmentRegisterInfo(
-      std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) override;
+      std::vector<lldb_private::RegisterDefinition> &regs) override;
 
   virtual bool Is64Bit() const = 0;
 

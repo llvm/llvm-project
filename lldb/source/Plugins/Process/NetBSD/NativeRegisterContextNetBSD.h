@@ -11,15 +11,14 @@
 
 #include "lldb/Host/common/NativeThreadProtocol.h"
 
-#include "Plugins/Register/Native/NativeRegisterContextRegisterInfo.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
 
 namespace lldb_private {
 namespace process_netbsd {
 
 class NativeProcessNetBSD;
 
-class NativeRegisterContextNetBSD
-    : public virtual NativeRegisterContextRegisterInfo {
+class NativeRegisterContextNetBSD : public virtual NativeRegisterContext {
 public:
   // This function is implemented in the NativeRegisterContextNetBSD_*
   // subclasses to create a new instance of the host specific

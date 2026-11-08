@@ -81,11 +81,15 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
 void NativeThreadWindows::SetSingleStepFlag() {
   Log *log = GetLog(LLDBLog::Thread);
 
-  uint32_t flags_index =
-      GetRegisterContext().ConvertRegisterKindToRegisterNumber(
-          eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
+  auto description = GetRegisterContext().GetDescription();
+  const auto *flags = description
+                          ? description->FindByNumber(eRegisterKindGeneric,
+                                                      LLDB_REGNUM_GENERIC_FLAGS)
+                          : nullptr;
+  if (!flags)
+    return;
   uint64_t flags_value =
-      GetRegisterContext().ReadRegisterAsUnsigned(flags_index, 0);
+      GetRegisterContext().ReadRegisterAsUnsigned(flags->id, 0);
   const ArchSpec &arch = GetProcess().GetArchitecture();
   switch (arch.GetMachine()) {
   case llvm::Triple::x86:
@@ -101,7 +105,9 @@ void NativeThreadWindows::SetSingleStepFlag() {
     LLDB_LOG(log, "single stepping unsupported on this architecture");
     break;
   }
-  GetRegisterContext().WriteRegisterFromUnsigned(flags_index, flags_value);
+  if (auto error = GetRegisterContext().WriteRegisterFromUnsigned(flags->id,
+                                                                  flags_value))
+    LLDB_LOG_ERROR(log, std::move(error), "cannot set single-step flag: {0}");
 }
 
 std::string NativeThreadWindows::GetName() {

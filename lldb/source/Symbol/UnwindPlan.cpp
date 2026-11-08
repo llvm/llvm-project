@@ -135,11 +135,11 @@ void UnwindPlan::Row::AbstractRegisterLocation::Dump(
   } break;
 
   case inOtherRegister: {
-    const RegisterInfo *other_reg_info = nullptr;
+    const RegisterDescriptor *other_reg_info = nullptr;
     if (unwind_plan)
       other_reg_info = unwind_plan->GetRegisterInfo(thread, m_location.reg_num);
     if (other_reg_info)
-      s.Printf("=%s", other_reg_info->name);
+      s.Printf("=%s", other_reg_info->name.c_str());
     else
       s.Printf("=reg(%u)", m_location.reg_num);
   } break;
@@ -163,7 +163,8 @@ void UnwindPlan::Row::AbstractRegisterLocation::Dump(
 
 static void DumpRegisterName(Stream &s, const UnwindPlan *unwind_plan,
                              Thread *thread, uint32_t reg_num) {
-  const RegisterInfo *reg_info = unwind_plan->GetRegisterInfo(thread, reg_num);
+  const RegisterDescriptor *reg_info =
+      unwind_plan->GetRegisterInfo(thread, reg_num);
   if (reg_info)
     s.PutCString(reg_info->name);
   else
@@ -568,19 +569,12 @@ void UnwindPlan::SetSourceName(const char *source) {
 
 llvm::StringRef UnwindPlan::GetSourceName() const { return m_source_name; }
 
-const RegisterInfo *UnwindPlan::GetRegisterInfo(Thread *thread,
-                                                uint32_t unwind_reg) const {
+const RegisterDescriptor *
+UnwindPlan::GetRegisterInfo(Thread *thread, uint32_t unwind_reg) const {
   if (thread) {
     ThreadRegisterContext *reg_ctx = thread->GetRegisterContext().get();
     if (reg_ctx) {
-      uint32_t reg;
-      if (m_register_kind == eRegisterKindLLDB)
-        reg = unwind_reg;
-      else
-        reg = reg_ctx->ConvertRegisterKindToRegisterNumber(m_register_kind,
-                                                           unwind_reg);
-      if (reg != LLDB_INVALID_REGNUM)
-        return reg_ctx->GetRegisterInfoAtIndex(reg);
+      return reg_ctx->GetRegisterByNumber(m_register_kind, unwind_reg);
     }
   }
   return nullptr;

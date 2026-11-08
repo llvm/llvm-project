@@ -571,7 +571,7 @@ const char *EmulateInstructionMIPS64::GetRegisterName(unsigned reg_num,
   return nullptr;
 }
 
-std::optional<RegisterInfo>
+std::optional<RegisterDescriptor>
 EmulateInstructionMIPS64::GetRegisterInfo(RegisterKind reg_kind,
                                           uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
@@ -602,9 +602,7 @@ EmulateInstructionMIPS64::GetRegisterInfo(RegisterKind reg_kind,
   }
 
   if (reg_kind == eRegisterKindDWARF) {
-    RegisterInfo reg_info;
-    ::memset(&reg_info, 0, sizeof(RegisterInfo));
-    ::memset(reg_info.kinds, LLDB_INVALID_REGNUM, sizeof(reg_info.kinds));
+    RegisterDescriptor reg_info;
 
     if (reg_num == registers::mips64::dwarf::sr ||
         reg_num == registers::mips64::dwarf::fcsr ||
@@ -629,24 +627,25 @@ EmulateInstructionMIPS64::GetRegisterInfo(RegisterKind reg_kind,
     }
 
     reg_info.name = GetRegisterName(reg_num, false);
-    reg_info.alt_name = GetRegisterName(reg_num, true);
-    reg_info.kinds[eRegisterKindDWARF] = reg_num;
+    if (const char *alternate = GetRegisterName(reg_num, true))
+      reg_info.alt_name = alternate;
+    reg_info.numbers[eRegisterKindDWARF] = reg_num;
 
     switch (reg_num) {
     case registers::mips64::dwarf::r30:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FP;
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FP;
       break;
     case registers::mips64::dwarf::ra:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_RA;
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_RA;
       break;
     case registers::mips64::dwarf::sp:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_SP;
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_SP;
       break;
     case registers::mips64::dwarf::pc:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_PC;
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_PC;
       break;
     case registers::mips64::dwarf::sr:
-      reg_info.kinds[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FLAGS;
+      reg_info.numbers[eRegisterKindGeneric] = LLDB_REGNUM_GENERIC_FLAGS;
       break;
     default:
       break;
@@ -1099,7 +1098,7 @@ bool EmulateInstructionMIPS64::Emulate_DADDiu(llvm::MCInst &insn) {
        * Assume 2's complement and rely on unsigned overflow here.
        */
       uint64_t result = src_opd_val + imm;
-      std::optional<RegisterInfo> reg_info_sp =
+      std::optional<RegisterDescriptor> reg_info_sp =
           GetRegisterInfo(eRegisterKindDWARF, registers::mips64::dwarf::sp);
       if (reg_info_sp)
         context.SetRegisterPlusOffset(*reg_info_sp, imm);
@@ -1135,9 +1134,9 @@ bool EmulateInstructionMIPS64::Emulate_SD(llvm::MCInst &insn) {
   src = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  std::optional<RegisterInfo> reg_info_base =
+  std::optional<RegisterDescriptor> reg_info_base =
       GetRegisterInfo(eRegisterKindDWARF, registers::mips64::dwarf::zero + base);
-  std::optional<RegisterInfo> reg_info_src =
+  std::optional<RegisterDescriptor> reg_info_src =
       GetRegisterInfo(eRegisterKindDWARF, registers::mips64::dwarf::zero + src);
   if (!reg_info_base || !reg_info_src)
     return false;
@@ -1210,7 +1209,7 @@ bool EmulateInstructionMIPS64::Emulate_LD(llvm::MCInst &insn) {
 
   if (nonvolatile_reg_p(src)) {
     RegisterValue data_src;
-    std::optional<RegisterInfo> reg_info_src =
+    std::optional<RegisterDescriptor> reg_info_src =
         GetRegisterInfo(eRegisterKindDWARF, registers::mips64::dwarf::zero + src);
     if (!reg_info_src)
       return false;
@@ -1277,7 +1276,7 @@ bool EmulateInstructionMIPS64::Emulate_DSUBU_DADDU(llvm::MCInst &insn) {
       result = src_opd_val + rt_opd_val;
 
     Context context;
-    std::optional<RegisterInfo> reg_info_sp =
+    std::optional<RegisterDescriptor> reg_info_sp =
         GetRegisterInfo(eRegisterKindDWARF, registers::mips64::dwarf::sp);
     if (reg_info_sp)
       context.SetRegisterPlusOffset(*reg_info_sp, rt_opd_val);

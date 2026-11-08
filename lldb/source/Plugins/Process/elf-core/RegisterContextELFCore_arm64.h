@@ -9,27 +9,29 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM64_H
 
-#include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
-#include "Plugins/Register/Core/RegisterContextCore_arm64.h"
-#include "Register/Common/RegisterTypeDetector_arm64.h"
+#include "lldb/Register/Common/RegisterInfo_arm64.h"
+#include "lldb/Register/Layouts/Linux/RegisterLayoutLinux_arm64.h"
+#include "lldb/Target/ThreadRegisterContext.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include <optional>
 
-class RegisterContextELFCore_arm64 : public RegisterContextCore_arm64 {
+class RegisterContextELFCore_arm64
+    : public lldb_private::ThreadRegisterContext {
 public:
-  static std::unique_ptr<RegisterContextELFCore_arm64>
+  static llvm::Expected<std::unique_ptr<RegisterContextELFCore_arm64>>
   Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,
          const lldb_private::DataExtractor &gpregset,
          llvm::ArrayRef<lldb_private::CoreNote> notes);
 
   ~RegisterContextELFCore_arm64() override;
 
-  bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
-                    lldb_private::RegisterValue &value) override;
+  llvm::Expected<lldb_private::RegisterValue>
+  ReadRegister(lldb_private::RegisterID id) override;
 
-  bool WriteRegister(const lldb_private::RegisterInfo *reg_info,
+  llvm::Error WriteRegister(lldb_private::RegisterID id,
                      const lldb_private::RegisterValue &value) override;
 
   bool ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
@@ -40,20 +42,13 @@ public:
 
 protected:
   RegisterContextELFCore_arm64(
-      lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfo_arm64> register_info,
+      lldb_private::Thread &thread, lldb_private::RegisterLayout layout,
       const lldb_private::DataExtractor &gpregset,
-      llvm::ArrayRef<lldb_private::CoreNote> notes);
-
-  bool ReadGPR() override;
-
-  bool ReadFPR() override;
-
-  bool WriteGPR() override;
-
-  bool WriteFPR() override;
+      llvm::ArrayRef<lldb_private::CoreNote> notes,
+      std::optional<lldb_private::linux_arm64::RegisterConfig> config);
 
 private:
+  std::optional<lldb_private::linux_arm64::RegisterConfig> m_register_config;
   lldb_private::DataExtractor m_gpr_data;
   lldb_private::DataExtractor m_fpr_data;
   lldb_private::DataExtractor m_sve_data;
@@ -66,25 +61,13 @@ private:
   lldb_private::DataExtractor m_gcs_data;
   lldb_private::DataExtractor m_poe_data;
 
-  SVEState m_sve_state = SVEState::Unknown;
+  lldb_private::SVEState m_sve_state = lldb_private::SVEState::Unknown;
   uint16_t m_sve_vector_length = 0;
 
   // These are pseudo registers derived from the values in SSVE and ZA data.
-  struct __attribute__((packed)) sme_pseudo_regs {
-    uint64_t ctrl_reg;
-    uint64_t svg_reg;
-  };
-  static_assert(sizeof(sme_pseudo_regs) == 16);
-
-  struct sme_pseudo_regs m_sme_pseudo_regs;
-
-  lldb_private::Arm64RegisterTypeDetector m_register_type_detector;
-
-  const uint8_t *GetSVEBuffer(uint64_t offset = 0);
+  lldb_private::linux_arm64::SMERegisters m_sme_pseudo_regs;
 
   void ConfigureRegisterContext();
-
-  uint32_t CalculateSVEOffset(const lldb_private::RegisterInfo *reg_info);
 
   uint64_t GetSVERegVG() { return m_sve_vector_length / 8; }
 };

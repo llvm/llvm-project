@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionARM64.h"
-#include "lldb/Register/Arch/lldb-arm64-ehframe-register-enums.h"
+#include "lldb/Register/RegisterDescription.h"
 
 #include "lldb/Register/Arch/lldb-arm64-register-enums.h"
 #include "lldb/Register/Arch/lldb-arm64-dwarf-register-enums.h"
@@ -35,26 +35,10 @@
 #include <cstdlib>
 #include <optional>
 
-#define GPR_OFFSET(idx) ((idx)*8)
-#define GPR_OFFSET_NAME(reg) 0
-#define FPU_OFFSET(idx) ((idx)*16)
-#define FPU_OFFSET_NAME(reg) 0
-#define EXC_OFFSET_NAME(reg) 0
-#define DBG_OFFSET_NAME(reg) 0
-#define DBG_OFFSET_NAME(reg) 0
-#define DEFINE_DBG(re, y)                                                      \
-  "na", nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                  \
-      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
-       LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},                              \
-      nullptr, nullptr, nullptr
-
 
 namespace reg_ids = lldb_private::registers::arm64::id;
 using namespace lldb_private;
-
-#define DECLARE_REGISTER_INFOS_ARM64_STRUCT
-
-#include "Register/Arch/RegisterInfos_arm64.h"
+#include "lldb/Register/Common/RegisterInfo_arm64.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
@@ -65,10 +49,12 @@ using namespace lldb;
 
 LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionARM64, InstructionARM64)
 
-static std::optional<RegisterInfo> LLDBTableGetRegisterInfo(uint32_t reg_num) {
-  if (reg_num >= std::size(g_register_infos_arm64_le))
-    return {};
-  return g_register_infos_arm64_le[reg_num];
+static std::optional<RegisterDescriptor>
+LLDBTableGetRegisterInfo(uint32_t reg_num) {
+  static const auto info = RegisterInfo_arm64::CreateDescription(0);
+  if (const auto *reg = info->FindByNumber(lldb::eRegisterKindLLDB, reg_num))
+    return *reg;
+  return {};
 }
 
 #define No_VFP 0
@@ -157,7 +143,7 @@ bool EmulateInstructionARM64::SetTargetTriple(const ArchSpec &arch) {
   return false;
 }
 
-std::optional<RegisterInfo>
+std::optional<RegisterDescriptor>
 EmulateInstructionARM64::GetRegisterInfo(RegisterKind reg_kind,
                                          uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
@@ -699,7 +685,7 @@ bool EmulateInstructionARM64::EmulateADDSUBImm(const uint32_t opcode) {
   }
 
   Context context;
-  std::optional<RegisterInfo> reg_info_Rn =
+  std::optional<RegisterDescriptor> reg_info_Rn =
       GetRegisterInfo(eRegisterKindLLDB, n);
   if (reg_info_Rn)
     context.SetRegisterPlusOffset(*reg_info_Rn, imm);
@@ -806,13 +792,13 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
   uint64_t address;
   uint64_t wb_address;
 
-  std::optional<RegisterInfo> reg_info_base =
+  std::optional<RegisterDescriptor> reg_info_base =
       GetRegisterInfo(eRegisterKindLLDB, reg_ids::gpr_x0 + n);
   if (!reg_info_base)
     return false;
 
-  std::optional<RegisterInfo> reg_info_Rt;
-  std::optional<RegisterInfo> reg_info_Rt2;
+  std::optional<RegisterDescriptor> reg_info_Rt;
+  std::optional<RegisterDescriptor> reg_info_Rt2;
 
   if (vector) {
     reg_info_Rt = GetRegisterInfo(eRegisterKindLLDB, reg_ids::fpu_d0 + t);
@@ -1030,12 +1016,12 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
   if (!postindex)
     address += offset;
 
-  std::optional<RegisterInfo> reg_info_base =
+  std::optional<RegisterDescriptor> reg_info_base =
       GetRegisterInfo(eRegisterKindLLDB, reg_ids::gpr_x0 + n);
   if (!reg_info_base)
     return false;
 
-  std::optional<RegisterInfo> reg_info_Rt =
+  std::optional<RegisterDescriptor> reg_info_Rt =
       vr ? GetRegisterInfo(eRegisterKindLLDB, reg_ids::fpu_d0 + t)
          : GetRegisterInfo(eRegisterKindLLDB, reg_ids::gpr_x0 + t);
   if (!reg_info_Rt)
@@ -1274,7 +1260,7 @@ bool EmulateInstructionARM64::EmulateMOVRegister(const uint32_t opcode) {
     context.type = EmulateInstruction::eContextImmediate;
     context.SetNoArgs();
   } else {
-    std::optional<RegisterInfo> source_reg =
+    std::optional<RegisterDescriptor> source_reg =
         GetRegisterInfo(eRegisterKindLLDB, m);
     if (!source_reg)
       return false;
@@ -1287,7 +1273,8 @@ bool EmulateInstructionARM64::EmulateMOVRegister(const uint32_t opcode) {
     context.SetRegisterPlusOffset(*source_reg, 0);
   }
 
-  std::optional<RegisterInfo> dest_reg = GetRegisterInfo(eRegisterKindLLDB, d);
+  std::optional<RegisterDescriptor> dest_reg =
+      GetRegisterInfo(eRegisterKindLLDB, d);
   if (!dest_reg)
     return false;
 
