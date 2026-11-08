@@ -997,6 +997,8 @@ unsigned GVNHoist::removeAndReplace(const SmallVecInsn &Candidates,
     // The definition of this ld/st will not change: ld/st hoisting is
     // legal when the ld/st is not moved past its current definition.
     MSSAUpdater->moveToPlace(NewMemAcc, DestBB, MemorySSA::BeforeTerminator);
+    if (isa<MemoryUse>(NewMemAcc))
+      MSSA->getWalker()->getClobberingMemoryAccess(NewMemAcc);
   }
 
   // Replace all other instructions with Repl with memory access NewMemAcc.
