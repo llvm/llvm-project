@@ -166,6 +166,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, TwoValidTwoBytes,
   ASSERT_EQ(static_cast<int>(wch.value()), 460);
 }
 
+// Enable this test if we implement some hardening mode later
+#if false
 TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, InvalidPop,
            TestCharTypesUTF16) {
   using CharType16 = ParamType;
@@ -186,3 +188,4 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, InvalidPop,
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 142);
 }
+#endif

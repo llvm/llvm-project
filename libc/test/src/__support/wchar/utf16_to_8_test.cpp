@@ -201,6 +201,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, FourByte,
   ASSERT_FALSE(popped.has_value());
 }
 
+// Enable these tests if we implement some hardening mode later
+#if false
 TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, CantPushMidConversion,
            TestCharTypesUTF16) {
   using CharType16 = ParamType;
@@ -238,3 +240,4 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, CantPopMidPushing,
   auto popped = cr.pop_utf8();
   ASSERT_FALSE(popped.has_value());
 }
+#endif

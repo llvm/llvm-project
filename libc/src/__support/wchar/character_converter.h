@@ -61,58 +61,19 @@ public:
 
   LIBC_INLINE void clear() {
     state->partial = 0;
+    state->conversion_state = MBConversionState::EMPTY;
     state->bytes_stored = 0;
     state->total_bytes = 0;
   }
   LIBC_INLINE bool isFull() {
-    return state->bytes_stored == state->total_bytes && state->total_bytes != 0;
+    return state->conversion_state == MBConversionState::FULL;
   }
-  LIBC_INLINE bool isEmpty() { return state->bytes_stored == 0; }
+  LIBC_INLINE bool isEmpty() {
+    return state->conversion_state == MBConversionState::EMPTY;
+  }
   bool isValidState();
-
-  /*
-   * When converting between UTF-16 and UTF-8, the converter might be in a state
-   * of either partially-pushing or partially-popping. For example consider the
-   * following sequence:
-   * *   push((char8_t)0xF0);
-   * *   push((char8_t)0xA4);
-   * *   [A](partial=0x24,bytes_stored=2,total_bytes=4)
-   * *   push((char8_t)0xAD);
-   * *   push((char8_t)0xA2);
-   * *   (partial=0x24B62,bytes_stored=4,total_bytes=4)
-   * *   pop_utf16(); -> 0xD852
-   * *   [B](partial=0x24B62,bytes_stored=2,total_bytes=4)
-   * *   pop_utf16(); -> 0xDF62
-   * At point [A] and point [B], the stored bytes would both be 2. But at [A] we
-   * must continue reading input, while at [B] we must write the output low
-   * surrogate and clear the state.
-   * Thus we must have some means to distinguish between pushing and popping.
-   * Notice that: When pushing, we do left-shifts on state->partial before each
-   * push. When popping, we keep state->partial at the complete code point.
-   * Since we disallow overlong encodings, the complete UTF-8 code point is
-   * always greater than
-   * *   MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 2]
-   * but at most
-   * *   MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 1]
-   * If we are partially through pushing, state->partial is at most
-   * *   char32 >> 6
-   * thus at most
-   * *   MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 1] >> 6
-   * Observe that, an item in MAX_VALUE_PER_UTF8_LEN right-shifted by 6 is
-   * always less than the preceding item. Based on these facts, we can determine
-   * if we are partially through pushing or popping, by comparing state->partial
-   * with MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 2]
-   * Also when converting UTF-16 -> UTF-8, in a partial state,
-   * *   bytes_stored=2
-   * *   total_bytes=4
-   * so the threshold 0xFFFF is also correct.
-   */
   LIBC_INLINE bool isPartiallyPopping() {
-    if (isEmpty() || isFull())
-      return false;
-    // When neither empty nor full, state->total_bytes is at least 2
-    const char32_t threshold = MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 2];
-    return state->partial > threshold;
+    return state->conversion_state == MBConversionState::POPPING;
   }
 
   template <typename CharType> size_t sizeAs();
@@ -140,8 +101,20 @@ LIBC_INLINE bool CharacterConverter::isValidState() {
   const char32_t max_utf32_value =
       state->total_bytes == 0 ? 0
                               : MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 1];
-  return state->bytes_stored <= state->total_bytes &&
-         state->partial <= max_utf32_value;
+  if (state->bytes_stored > state->total_bytes ||
+      state->partial > max_utf32_value)
+    return false;
+
+  switch (state->conversion_state) {
+  case MBConversionState::EMPTY:
+    return state->bytes_stored == 0;
+  case MBConversionState::FULL:
+    return state->total_bytes != 0 && state->bytes_stored == state->total_bytes;
+  case MBConversionState::PUSHING:
+  case MBConversionState::POPPING:
+    return state->bytes_stored != 0 && state->bytes_stored < state->total_bytes;
+  }
+  return false;
 }
 
 LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
@@ -150,10 +123,12 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
   if (isEmpty()) {
     // UTF-8 char has 1 byte total
     if (num_ones == 0) {
+      state->conversion_state = MBConversionState::FULL;
       state->total_bytes = 1;
     }
     // UTF-8 char has 2 through 4 bytes total
     else if (num_ones >= 2 && num_ones <= 4) {
+      state->conversion_state = MBConversionState::PUSHING;
       /* Since the format is 110xxxxx, 1110xxxx, and 11110xxx for 2, 3, and 4,
       we will make the base mask with 7 ones and right shift it as necessary. */
       constexpr size_t SIGNIFICANT_BITS = 7;
@@ -164,26 +139,24 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
     }
     // Invalid first byte
     else {
-      // bytes_stored and total_bytes will always be 0 here
-      state->partial = static_cast<char32_t>(0);
+      // state is already empty here
       return EILSEQ;
     }
     state->partial = static_cast<char32_t>(utf8_byte);
     state->bytes_stored++;
     return 0;
   }
-  // Pushing when partially popping is a misuse in the library
-  LIBC_ASSERT(!isPartiallyPopping());
   // Any subsequent push
   // Adding 6 more bits so need to left shift
   if (num_ones == 1 && !isFull()) {
+    LIBC_ASSERT(state->conversion_state == MBConversionState::PUSHING);
     const char32_t byte = utf8_byte & MASK_ENCODED_BITS;
     state->partial = state->partial << ENCODED_BITS_PER_UTF8;
     state->partial |= byte;
     state->bytes_stored++;
-    if (isFull()) {
+    if (state->bytes_stored == state->total_bytes) {
+      state->conversion_state = MBConversionState::FULL;
       // Detect and reject overlong encodings
-      // Needed for isPartiallyPopping to work
       if (state->partial <= MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 2]) {
         clear();
         return EILSEQ;
@@ -218,6 +191,7 @@ LIBC_INLINE int CharacterConverter::push(char16_t utf16) {
     if (is_high_surrogate) {
       // high surrogate
       // code point between 0x10000 and 0x10FFFF
+      state->conversion_state = MBConversionState::PUSHING;
       state->total_bytes = 4;
       state->bytes_stored = 2;
       constexpr char32_t ENCODED_BASE_PRESHIFT =
@@ -227,6 +201,7 @@ LIBC_INLINE int CharacterConverter::push(char16_t utf16) {
           ENCODED_BASE_PRESHIFT;
     } else {
       state->partial = static_cast<char32_t>(utf16);
+      state->conversion_state = MBConversionState::FULL;
       // determine number of utf-8 bytes needed to represent this utf16 value
       uint8_t i;
       for (i = 0; i < 2 && MAX_VALUE_PER_UTF8_LEN[i] < state->partial; i++)
@@ -236,8 +211,7 @@ LIBC_INLINE int CharacterConverter::push(char16_t utf16) {
     }
     return 0;
   }
-  // Pushing when partially popping is a misuse in the library
-  LIBC_ASSERT(!isFull() && !isPartiallyPopping());
+  LIBC_ASSERT(state->conversion_state == MBConversionState::PUSHING);
   if (!is_low_surrogate) {
     // unpaired surrogate -> reset the state
     clear();
@@ -246,7 +220,8 @@ LIBC_INLINE int CharacterConverter::push(char16_t utf16) {
   const char32_t low = utf16 & MASK_ENCODED_BITS_UTF16_SURROGATE;
   state->partial <<= 10;
   state->partial |= low;
-  state->bytes_stored += 2;
+  state->conversion_state = MBConversionState::FULL;
+  state->bytes_stored = 4;
   return 0;
 }
 
@@ -256,6 +231,7 @@ LIBC_INLINE int CharacterConverter::push(char32_t utf32) {
     return -1;
 
   state->partial = utf32;
+  state->conversion_state = MBConversionState::FULL;
 
   // determine number of utf-8 bytes needed to represent this utf32 value
   for (uint8_t i = 0; i < MAX_UTF8_LENGTH; i++) {
@@ -284,8 +260,10 @@ LIBC_INLINE ErrorOr<char32_t> CharacterConverter::pop_utf32() {
 }
 
 LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop_utf16() {
-  if (!isFull() && !isPartiallyPopping())
+  if (isEmpty())
     return Error(-1);
+  LIBC_ASSERT(state->conversion_state != MBConversionState::PUSHING);
+
   char32_t output;
   if (state->total_bytes <= 3) {
     // no surrogates needed
@@ -305,6 +283,7 @@ LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop_utf16() {
       output = ((state->partial - UTF16_SURROGATE_ENCODED_BASE) >>
                 ENCODED_BITS_PER_UTF16_SURROGATE) |
                UTF16_HIGH_SURROGATE_START;
+      state->conversion_state = MBConversionState::POPPING;
       state->bytes_stored = 2;
     } else {
       // low surrogate
@@ -318,8 +297,9 @@ LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop_utf16() {
 }
 
 LIBC_INLINE ErrorOr<char8_t> CharacterConverter::pop_utf8() {
-  if (!isFull() && !isPartiallyPopping())
+  if (isEmpty())
     return Error(-1);
+  LIBC_ASSERT(state->conversion_state != MBConversionState::PUSHING);
 
   constexpr char8_t FIRST_BYTE_HEADERS[] = {0, 0xC0, 0xE0, 0xF0};
   constexpr char8_t CONTINUING_BYTE_HEADER = 0x80;
@@ -345,6 +325,8 @@ LIBC_INLINE ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   state->bytes_stored--;
   if (state->bytes_stored == 0)
     clear();
+  else
+    state->conversion_state = MBConversionState::POPPING;
 
   return static_cast<char8_t>(output);
 }

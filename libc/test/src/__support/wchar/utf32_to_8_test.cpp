@@ -211,6 +211,7 @@ TYPED_TEST(LlvmLibcTypedCharacterConverterUTF32To8Test, CantPushMidConversion) {
 }
 
 TEST(LlvmLibcCharacterConverterUTF32To8Test, InvalidState) {
+  using LIBC_NAMESPACE::internal::MBConversionState;
   LIBC_NAMESPACE::internal::mbstate s1;
   LIBC_NAMESPACE::internal::CharacterConverter c1(&s1);
   ASSERT_TRUE(c1.isValidState());
@@ -221,28 +222,30 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, InvalidState) {
   LIBC_NAMESPACE::internal::CharacterConverter c2(&s2);
   ASSERT_FALSE(c2.isValidState());
 
-  LIBC_NAMESPACE::internal::mbstate s3{0x7f, 1, 1};
+  LIBC_NAMESPACE::internal::mbstate s3{0x7f, 1, 1, MBConversionState::FULL};
   LIBC_NAMESPACE::internal::CharacterConverter c3(&s3);
   ASSERT_TRUE(c3.isValidState());
   LIBC_NAMESPACE::internal::mbstate s4{0x80, 1, 1};
   LIBC_NAMESPACE::internal::CharacterConverter c4(&s4);
   ASSERT_FALSE(c4.isValidState());
 
-  LIBC_NAMESPACE::internal::mbstate s5{0x7ff, 1, 2};
+  LIBC_NAMESPACE::internal::mbstate s5{0x7ff, 1, 2, MBConversionState::POPPING};
   LIBC_NAMESPACE::internal::CharacterConverter c5(&s5);
   ASSERT_TRUE(c5.isValidState());
   LIBC_NAMESPACE::internal::mbstate s6{0x800, 1, 2};
   LIBC_NAMESPACE::internal::CharacterConverter c6(&s6);
   ASSERT_FALSE(c6.isValidState());
 
-  LIBC_NAMESPACE::internal::mbstate s7{0xffff, 1, 3};
+  LIBC_NAMESPACE::internal::mbstate s7{0xffff, 1, 3,
+                                       MBConversionState::POPPING};
   LIBC_NAMESPACE::internal::CharacterConverter c7(&s7);
   ASSERT_TRUE(c7.isValidState());
   LIBC_NAMESPACE::internal::mbstate s8{0x10000, 1, 3};
   LIBC_NAMESPACE::internal::CharacterConverter c8(&s8);
   ASSERT_FALSE(c8.isValidState());
 
-  LIBC_NAMESPACE::internal::mbstate s9{0x10ffff, 1, 4};
+  LIBC_NAMESPACE::internal::mbstate s9{0x10ffff, 1, 4,
+                                       MBConversionState::POPPING};
   LIBC_NAMESPACE::internal::CharacterConverter c9(&s9);
   ASSERT_TRUE(c9.isValidState());
   LIBC_NAMESPACE::internal::mbstate s10{0x110000, 1, 2};
