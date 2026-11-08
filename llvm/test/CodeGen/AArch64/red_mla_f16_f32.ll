@@ -65,25 +65,23 @@ define float @red_mla_f16_f32(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  // %bb.9: // %vec.epilog.iter.check
 ; CHECK-NEXT:    cbz x10, .LBB0_13
 ; CHECK-NEXT:  .LBB0_10: // %vec.epilog.ph
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    lsl x12, x9, #1
 ; CHECK-NEXT:    mov x10, x9
 ; CHECK-NEXT:    and x9, x8, #0xfffffffc
+; CHECK-NEXT:    lsl x12, x10, #1
 ; CHECK-NEXT:    sub x10, x10, x9
 ; CHECK-NEXT:    add x11, x1, x12
 ; CHECK-NEXT:    add x12, x0, x12
-; CHECK-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-NEXT:  .LBB0_11: // %vec.epilog.vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d0, [x12], #8
+; CHECK-NEXT:    ldr d1, [x12], #8
 ; CHECK-NEXT:    adds x10, x10, #4
 ; CHECK-NEXT:    ldr d2, [x11], #8
-; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NEXT:    fcvtl v2.4s, v2.4h
-; CHECK-NEXT:    fmla v1.4s, v0.4s, v2.4s
+; CHECK-NEXT:    fmla v0.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    b.ne .LBB0_11
 ; CHECK-NEXT:  // %bb.12: // %vec.epilog.middle.block
-; CHECK-NEXT:    faddp v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    b.eq .LBB0_15

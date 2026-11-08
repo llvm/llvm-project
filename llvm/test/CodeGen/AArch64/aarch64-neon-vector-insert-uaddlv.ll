@@ -147,13 +147,11 @@ define void @insert_vec_v6i64_uaddlv_from_v4i32(ptr %0) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    str xzr, [x0, #16]
-; CHECK-NEXT:    uaddlv.4s d1, v0
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    ucvtf s1, x8
-; CHECK-NEXT:    mov.s v0[0], v1[0]
+; CHECK-NEXT:    uaddlv.4s d0, v0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ucvtf s0, x8
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
-
 entry:
   %vaddlv = tail call i64 @llvm.aarch64.neon.uaddlv.i64.v4i32(<4 x i32> zeroinitializer)
   %1 = insertelement <6 x i64> zeroinitializer, i64 %vaddlv, i64 0
@@ -187,10 +185,9 @@ define void @insert_vec_v5i64_uaddlv_from_v4i32(ptr %0) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    str wzr, [x0, #16]
-; CHECK-NEXT:    uaddlv.4s d1, v0
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    ucvtf s1, x8
-; CHECK-NEXT:    mov.s v0[0], v1[0]
+; CHECK-NEXT:    uaddlv.4s d0, v0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ucvtf s0, x8
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
 
@@ -255,13 +252,11 @@ define void @insert_vec_v16i64_uaddlv_from_v4i16(ptr %0) {
 ; CHECK-NEXT:    uaddlv.4h s1, v0
 ; CHECK-NEXT:    stp q0, q0, [x0, #32]
 ; CHECK-NEXT:    mov.s v2[0], v1[0]
-; CHECK-NEXT:    fmov x8, d2
-; CHECK-NEXT:    mov.d x9, v2[1]
-; CHECK-NEXT:    movi.2d v2, #0000000000000000
+; CHECK-NEXT:    mov.d x8, v2[1]
+; CHECK-NEXT:    fmov x9, d2
+; CHECK-NEXT:    ucvtf s2, x9
 ; CHECK-NEXT:    ucvtf s1, x8
-; CHECK-NEXT:    ucvtf s3, x9
-; CHECK-NEXT:    mov.s v2[0], v1[0]
-; CHECK-NEXT:    mov.s v2[1], v3[0]
+; CHECK-NEXT:    mov.s v2[1], v1[0]
 ; CHECK-NEXT:    stp q2, q0, [x0]
 ; CHECK-NEXT:    ret
 

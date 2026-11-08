@@ -139,6 +139,8 @@ private:
   bool visitCSEL(MachineInstr &MI);
   bool visitINSERT(MachineInstr &MI);
   bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
+  bool visitINSveclane(MachineInstr &MI, const TargetRegisterClass *RC,
+                       unsigned SubReg);
   bool visitINSvi64lane(MachineInstr &MI);
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
@@ -722,17 +724,47 @@ bool AArch64MIPeepholeOptImpl::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
   return true;
 }
 
+// All instructions that set a FPR8/FPR16/FPR32/FPR64 will implicitly zero the
+// top bits of the register. Detect these cases, possibly by looking through PHI
+// nodes if all inputs clear bits.
+static bool isDefWithZeroHigh(MachineInstr *MI, const TargetRegisterClass *RC,
+                              MachineRegisterInfo *MRI, int Depth) {
+  if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
+    return false;
+  const TargetRegisterClass *DefRC =
+      MRI->getRegClass(MI->getOperand(0).getReg());
+  if (DefRC != RC)
+    return false;
+
+  if (MI->getOpcode() == TargetOpcode::PHI && Depth >= 1) {
+    for (unsigned I = 0; I < (MI->getNumOperands() - 1) / 2; I++) {
+      MachineInstr *Src = MRI->getVRegDef(MI->getOperand(1 + I * 2).getReg());
+      if (!Src || !isDefWithZeroHigh(Src, RC, MRI, Depth - 1))
+        return false;
+    }
+    return true;
+  }
+
+  // Any concrete instruction defining a register will clear the top bits of the
+  // defined register. The COALESCER_BARRIER's I'm unsure about so are excluded.
+  return MI->getOpcode() > TargetOpcode::GENERIC_OP_END &&
+         MI->getOpcode() != AArch64::COALESCER_BARRIER_FPR16 &&
+         MI->getOpcode() != AArch64::COALESCER_BARRIER_FPR32 &&
+         MI->getOpcode() != AArch64::COALESCER_BARRIER_FPR64;
+}
+
 // All instructions that set a FPR64 will implicitly zero the top bits of the
 // register. When the def is expressed as a COPY from a GPR, turn it into an
 // explicit FMOV so it cannot be elided later in further passes.
 static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
                                         MachineRegisterInfo *MRI,
                                         const AArch64InstrInfo *TII) {
-  if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
-    return false;
-  const TargetRegisterClass *RC = MRI->getRegClass(MI->getOperand(0).getReg());
-  if (RC != &AArch64::FPR64RegClass)
-    return false;
+  if (isDefWithZeroHigh(MI, &AArch64::FPR64RegClass, MRI, 1))
+    return true;
+
+  // For a copy we cannot rely on the top bits being clear after it has been
+  // lowered, unless it is from a LD2/LD3/LD4 subreg extract or we replace it
+  // with a concrete instruction that always sets upper bits (FMOVXDr).
   if (MI->getOpcode() == TargetOpcode::COPY) {
     MachineOperand &SrcOp = MI->getOperand(1);
     if (!SrcOp.isReg())
@@ -754,6 +786,7 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
       return RC == &AArch64::DDRegClass || RC == &AArch64::DDDRegClass ||
              RC == &AArch64::DDDDRegClass;
     }
+
     auto IsGPR64Like = [&]() -> bool {
       if (SrcReg.isVirtual())
         return AArch64::GPR64allRegClass.hasSubClassEq(
@@ -762,6 +795,7 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     };
     if (!IsGPR64Like())
       return false;
+
     assert(TII && "Expected InstrInfo when materializing COPYs");
     // FMOVXDr insists on strict GPR64 operands, so fix up the COPY source.
     MachineOperand &SrcMO = MI->getOperand(1);
@@ -779,6 +813,7 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     } else if (!AArch64::GPR64RegClass.contains(SrcReg)) {
       return false;
     }
+
     SrcMO.setReg(SrcReg);
     SrcMO.setSubReg(0);
     SrcMO.setIsKill(SrcKill);
@@ -787,7 +822,8 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     MI->setDesc(TII->get(AArch64::FMOVXDr));
     return true;
   }
-  return MI->getOpcode() > TargetOpcode::GENERIC_OP_END;
+
+  return false;
 }
 
 bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
@@ -840,6 +876,49 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   MRI->replaceRegWith(OldDef, NewDef);
   MI.eraseFromParent();
 
+  return true;
+}
+
+bool AArch64MIPeepholeOptImpl::visitINSveclane(MachineInstr &MI,
+                                               const TargetRegisterClass *RC,
+                                               unsigned SubReg) {
+  // Check that MI is inserting a value with the tops bits implicity known to be
+  // 0. We are expecting below case.
+  //
+  //  %SrcReg:fpr32 = FADDPv2i32p %0:fpr64
+  //  %ZeroReg = MOVIv2d_ns 0
+  //  %6:fpr128 = IMPLICIT_DEF
+  //  %InsReg:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %SrcReg:fpr32, ssub
+  //  %7:fpr128 = INSvi32lane %ZeroReg:fpr128(tied-def 0), 0, %InsReg:fpr128, 0
+  Register ZeroReg = MI.getOperand(1).getReg();
+  if (MI.getOperand(2).getImm() != 0)
+    return false;
+  Register InsReg = MI.getOperand(3).getReg();
+  if (MI.getOperand(4).getImm() != 0)
+    return false;
+
+  MachineInstr *InsMI = MRI->getVRegDef(InsReg);
+  if (!InsMI || InsMI->getOpcode() != AArch64::INSERT_SUBREG ||
+      InsMI->getOperand(3).getImm() != SubReg)
+    return false;
+  Register SrcReg = InsMI->getOperand(2).getReg();
+  MachineInstr *SrcMI = MRI->getUniqueVRegDef(SrcReg);
+  if (!SrcMI || !isDefWithZeroHigh(SrcMI, RC, MRI, 1))
+    return false;
+
+  MachineInstr *ZeroMI = MRI->getUniqueVRegDef(ZeroReg);
+  if (!ZeroMI || ZeroMI->getOpcode() != AArch64::MOVIv2d_ns ||
+      ZeroMI->getOperand(1).getImm() != 0)
+    return false;
+
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+          TII->get(AArch64::SUBREG_TO_REG), MI.getOperand(0).getReg())
+      .addReg(SrcReg)
+      .addImm(InsMI->getOperand(3).getImm());
+  LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
+  MI.eraseFromParent();
+  if (MRI->use_nodbg_empty(ZeroReg))
+    ZeroMI->eraseFromParent();
   return true;
 }
 
@@ -1075,6 +1154,15 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
         break;
       case AArch64::INSvi8gpr:
         Changed |= visitINSviGPR(MI, AArch64::INSvi8lane);
+        break;
+      case AArch64::INSvi8lane:
+        Changed |= visitINSveclane(MI, &AArch64::FPR8RegClass, AArch64::bsub);
+        break;
+      case AArch64::INSvi16lane:
+        Changed |= visitINSveclane(MI, &AArch64::FPR16RegClass, AArch64::hsub);
+        break;
+      case AArch64::INSvi32lane:
+        Changed |= visitINSveclane(MI, &AArch64::FPR32RegClass, AArch64::ssub);
         break;
       case AArch64::INSvi64lane:
         Changed |= visitINSvi64lane(MI);

@@ -3743,16 +3743,14 @@ entry:
 define <3 x float> @stofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-NOFP16-SD-LABEL: stofp_v3i64_v3f32:
 ; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP16-SD-NEXT:    fmov x8, d0
 ; CHECK-NOFP16-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NOFP16-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NOFP16-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NOFP16-SD-NEXT:    scvtf s3, x8
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NOFP16-SD-NEXT:    fmov x8, d1
+; CHECK-NOFP16-SD-NEXT:    fmov x9, d0
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NOFP16-SD-NEXT:    scvtf s1, x8
+; CHECK-NOFP16-SD-NEXT:    scvtf s0, x9
 ; CHECK-NOFP16-SD-NEXT:    fmov x8, d2
-; CHECK-NOFP16-SD-NEXT:    mov v0.s[0], v3.s[0]
 ; CHECK-NOFP16-SD-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NOFP16-SD-NEXT:    scvtf s1, x8
 ; CHECK-NOFP16-SD-NEXT:    mov v0.s[2], v1.s[0]
@@ -3760,16 +3758,14 @@ define <3 x float> @stofp_v3i64_v3f32(<3 x i64> %a) {
 ;
 ; CHECK-FP16-SD-LABEL: stofp_v3i64_v3f32:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-SD-NEXT:    fmov x8, d0
 ; CHECK-FP16-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-FP16-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-FP16-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-FP16-SD-NEXT:    scvtf s3, x8
+; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-FP16-SD-NEXT:    fmov x8, d1
+; CHECK-FP16-SD-NEXT:    fmov x9, d0
+; CHECK-FP16-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-FP16-SD-NEXT:    scvtf s1, x8
+; CHECK-FP16-SD-NEXT:    scvtf s0, x9
 ; CHECK-FP16-SD-NEXT:    fmov x8, d2
-; CHECK-FP16-SD-NEXT:    mov v0.s[0], v3.s[0]
 ; CHECK-FP16-SD-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-FP16-SD-NEXT:    scvtf s1, x8
 ; CHECK-FP16-SD-NEXT:    mov v0.s[2], v1.s[0]
@@ -3806,16 +3802,14 @@ entry:
 define <3 x float> @utofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-NOFP16-SD-LABEL: utofp_v3i64_v3f32:
 ; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP16-SD-NEXT:    fmov x8, d0
 ; CHECK-NOFP16-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NOFP16-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NOFP16-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NOFP16-SD-NEXT:    ucvtf s3, x8
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NOFP16-SD-NEXT:    fmov x8, d1
+; CHECK-NOFP16-SD-NEXT:    fmov x9, d0
+; CHECK-NOFP16-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NOFP16-SD-NEXT:    ucvtf s1, x8
+; CHECK-NOFP16-SD-NEXT:    ucvtf s0, x9
 ; CHECK-NOFP16-SD-NEXT:    fmov x8, d2
-; CHECK-NOFP16-SD-NEXT:    mov v0.s[0], v3.s[0]
 ; CHECK-NOFP16-SD-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NOFP16-SD-NEXT:    ucvtf s1, x8
 ; CHECK-NOFP16-SD-NEXT:    mov v0.s[2], v1.s[0]
@@ -3823,16 +3817,14 @@ define <3 x float> @utofp_v3i64_v3f32(<3 x i64> %a) {
 ;
 ; CHECK-FP16-SD-LABEL: utofp_v3i64_v3f32:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-SD-NEXT:    fmov x8, d0
 ; CHECK-FP16-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-FP16-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-FP16-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-FP16-SD-NEXT:    ucvtf s3, x8
+; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-FP16-SD-NEXT:    fmov x8, d1
+; CHECK-FP16-SD-NEXT:    fmov x9, d0
+; CHECK-FP16-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-FP16-SD-NEXT:    ucvtf s1, x8
+; CHECK-FP16-SD-NEXT:    ucvtf s0, x9
 ; CHECK-FP16-SD-NEXT:    fmov x8, d2
-; CHECK-FP16-SD-NEXT:    mov v0.s[0], v3.s[0]
 ; CHECK-FP16-SD-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-FP16-SD-NEXT:    ucvtf s1, x8
 ; CHECK-FP16-SD-NEXT:    mov v0.s[2], v1.s[0]
