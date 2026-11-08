@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: lld
 
-// Test HIP non-RDC linker wrapper behavior with new offload driver.
+// Test HIP non-RDC linker wrapper behavior.
 // The linker wrapper should output .hipfb files directly without using -r option.
 
 // An externally visible variable so static libraries extract.

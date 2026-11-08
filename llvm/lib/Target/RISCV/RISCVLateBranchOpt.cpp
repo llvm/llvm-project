@@ -12,8 +12,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
@@ -21,10 +25,10 @@ using namespace llvm;
 
 namespace {
 
-struct RISCVLateBranchOpt : public MachineFunctionPass {
+struct RISCVLateBranchOptLegacy : public MachineFunctionPass {
   static char ID;
 
-  RISCVLateBranchOpt() : MachineFunctionPass(ID) {}
+  RISCVLateBranchOptLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return RISCV_LATE_BRANCH_OPT_NAME; }
 
@@ -33,19 +37,15 @@ struct RISCVLateBranchOpt : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
-
-private:
-  bool runOnBasicBlock(MachineBasicBlock &MBB) const;
-
-  const RISCVInstrInfo *RII = nullptr;
 };
 } // namespace
 
-char RISCVLateBranchOpt::ID = 0;
-INITIALIZE_PASS(RISCVLateBranchOpt, "riscv-late-branch-opt",
+char RISCVLateBranchOptLegacy::ID = 0;
+INITIALIZE_PASS(RISCVLateBranchOptLegacy, "riscv-late-branch-opt",
                 RISCV_LATE_BRANCH_OPT_NAME, false, false)
 
-bool RISCVLateBranchOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
+static bool runLateBranchOptOnMBB(MachineBasicBlock &MBB,
+                                  const RISCVInstrInfo *RII) {
   MachineBasicBlock *TBB, *FBB;
   SmallVector<MachineOperand, 4> Cond;
   if (RII->analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
@@ -93,19 +93,29 @@ bool RISCVLateBranchOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
   return true;
 }
 
-bool RISCVLateBranchOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
+static bool runLateBranchOptOnMF(MachineFunction &Fn) {
   auto &ST = Fn.getSubtarget<RISCVSubtarget>();
-  RII = ST.getInstrInfo();
+  const RISCVInstrInfo *RII = ST.getInstrInfo();
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : Fn)
-    Changed |= runOnBasicBlock(MBB);
+    Changed |= runLateBranchOptOnMBB(MBB, RII);
   return Changed;
 }
 
-FunctionPass *llvm::createRISCVLateBranchOptPass() {
-  return new RISCVLateBranchOpt();
+FunctionPass *llvm::createRISCVLateBranchOptLegacyPass() {
+  return new RISCVLateBranchOptLegacy();
+}
+
+bool RISCVLateBranchOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runLateBranchOptOnMF(MF);
+}
+
+PreservedAnalyses
+RISCVLateBranchOptPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  return runLateBranchOptOnMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                  : PreservedAnalyses::all();
 }

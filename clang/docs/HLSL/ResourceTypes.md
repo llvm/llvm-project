@@ -1,8 +1,5 @@
 # HLSL Resource Types
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

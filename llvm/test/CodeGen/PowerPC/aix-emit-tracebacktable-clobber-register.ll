@@ -1,18 +1,18 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=+altivec -vec-extabi -xcoff-traceback-table=true < %s | \
+; RUN:     -mattr=+altivec -target-abi=vec-extabi -xcoff-traceback-table=true < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-ASM,COMMON %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -function-sections \
-; RUN:     -mcpu=pwr4 -mattr=+altivec -vec-extabi  < %s | \
+; RUN:     -mcpu=pwr4 -mattr=+altivec -target-abi=vec-extabi  < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-FUNC,COMMON %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=+altivec -vec-extabi -xcoff-traceback-table=true -filetype=obj -o %t.o  < %s
+; RUN:     -mattr=+altivec -target-abi=vec-extabi -xcoff-traceback-table=true -filetype=obj -o %t.o  < %s
 ; RUN: llvm-objdump -d --traceback-table --symbol-description %t.o | \
 ; RUN:   FileCheck --match-full-lines --strict-whitespace --check-prefixes=OBJ-DIS,NO-FUNC-SEC %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=+altivec -vec-extabi -xcoff-traceback-table=true -function-sections -filetype=obj -o %t_func.o  < %s
+; RUN:     -mattr=+altivec -target-abi=vec-extabi -xcoff-traceback-table=true -function-sections -filetype=obj -o %t_func.o  < %s
 ; RUN: llvm-objdump -d --traceback-table --symbol-description %t_func.o | \
 ; RUN:   FileCheck --match-full-lines --strict-whitespace --check-prefixes=OBJ-DIS,FUNC-SEC %s
 

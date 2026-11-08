@@ -12,26 +12,26 @@ gpu.module @test_module {
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] leadDimension 32 transpose : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
-    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i64
+    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : i64) : i64
     // CHECK: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
+    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : i64) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
     // CHECK:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f16
-    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK:  %[[FRAG:.*]] = nvvm.wmma.load %[[ADDRESS]], %[[LDM32]]
     // CHECK-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <f16>, fragment = a  : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  llvm.return %[[FRAG]] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 
-    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i32
+    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : i32) : i32
     // CHECK32: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
-    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32
     // CHECK32:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>, f16
-    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[FRAG:.*]] = nvvm.wmma.load %[[ADDRESS]], %[[LDM32]]
     // CHECK32-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <f16>, fragment = a  : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK32:  llvm.return %[[FRAG]] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
@@ -51,26 +51,26 @@ gpu.module @test_module {
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] leadDimension 32 transpose : memref<32x32xi8, 3> -> !gpu.mma_matrix<16x16xsi8, "AOp">
-    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i64
+    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : i64) : i64
     // CHECK: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
+    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : i64) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
     // CHECK:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i8
-    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK:  %[[FRAG:.*]] = nvvm.wmma.load %[[ADDRESS]], %[[LDM32]]
     // CHECK-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <s8>, fragment = a  : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
     // CHECK:  llvm.return %[[FRAG]] : !llvm.struct<(i32, i32)>
 
-    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i32
+    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : i32) : i32
     // CHECK32: %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
-    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]  : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32
     // CHECK32:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>, i8
-    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[FRAG:.*]] = nvvm.wmma.load %[[ADDRESS]], %[[LDM32]]
     // CHECK32-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <s8>, fragment = a  : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
     // CHECK32:  llvm.return %[[FRAG]] : !llvm.struct<(i32, i32)>
@@ -94,7 +94,7 @@ gpu.module @test_module {
     // CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} : i64
     // CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} : i64
     // CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f64
-    // CHECK: %[[C32_I32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK: %[[C32_I32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK: %[[LOAD:.*]] = nvvm.wmma.load %[[GEP]], %[[C32_I32]], m = 8, n = 8, k = 4, layout = <row>, element_type = <f64>, fragment = a : (!llvm.ptr<3>) -> f64
     // CHECK: llvm.return %[[LOAD]] : f64
   }
@@ -113,7 +113,7 @@ gpu.module @test_module {
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] leadDimension 32 transpose : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 3>
-    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i64
+    // CHECK:  %[[INX:.*]] = llvm.mlir.constant(16 : i64) : i64
     // CHECK:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
@@ -123,16 +123,16 @@ gpu.module @test_module {
     // CHECK:  %[[EL3:.*]] = llvm.extractvalue %[[D]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[EL4:.*]] = llvm.extractvalue %[[D]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK:  %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
-    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i64
+    // CHECK:  %[[LDM:.*]] = llvm.mlir.constant(32 : i64) : i64
     // CHECK:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]   : i64
     // CHECK:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i64
     // CHECK:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f16
-    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK:  nvvm.wmma.store %[[ADDRESS]], %[[LDM32]], %[[EL1]], %[[EL2]], %[[EL3]], %[[EL4]]
     // CHECK-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <f16> : !llvm.ptr<3>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>
     // CHECK:  llvm.return
 
-    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : index) : i32
+    // CHECK32:  %[[INX:.*]] = llvm.mlir.constant(16 : i32) : i32
     // CHECK32:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK32:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
     // CHECK32:  %{{.*}} = llvm.insertvalue %{{.*}}, %{{.*}}[{{.*}}, {{.*}}]
@@ -142,11 +142,11 @@ gpu.module @test_module {
     // CHECK32:  %[[EL3:.*]] = llvm.extractvalue %[[D]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK32:  %[[EL4:.*]] = llvm.extractvalue %[[D]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     // CHECK32:  %[[BASE:.*]] = llvm.extractvalue %[[MEMREF]][1] : !llvm.struct<(ptr<3>, ptr<3>, i32, array<2 x i32>, array<2 x i32>)>
-    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  %[[LI:.*]] = llvm.mul %[[INX]], %[[LDM]]   : i32
     // CHECK32:  %[[LIJ:.*]] = llvm.add %[[LI]], %[[INX]]  : i32
     // CHECK32:  %[[ADDRESS:.*]] = llvm.getelementptr %[[BASE]][%[[LIJ]]] : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>, f16
-    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : index) : i32
+    // CHECK32:  %[[LDM32:.*]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK32:  nvvm.wmma.store %[[ADDRESS]], %[[LDM32]], %[[EL1]], %[[EL2]], %[[EL3]], %[[EL4]]
     // CHECK32-SAME: m = 16, n = 16, k = 16, layout = <col>, element_type = <f16> : !llvm.ptr<3>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>
     // CHECK32:  llvm.return

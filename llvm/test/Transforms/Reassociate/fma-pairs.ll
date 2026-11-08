@@ -405,3 +405,132 @@ define double @const_addend(ptr %x, ptr %y) {
   %r = fadd reassoc nsz contract double %a0, 2.0
   ret double %r
 }
+
+define double @hidden_fadd_tree(double %acc, double %a, double %b, double %c, double %d, double %e, double %f) {
+; CHECK-LABEL: define double @hidden_fadd_tree(
+; CHECK-SAME: double [[ACC:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]], double [[E:%.*]], double [[F:%.*]]) {
+; CHECK-NEXT:    [[M0:%.*]] = fmul fast double [[F]], [[E]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast double [[B]], [[A]]
+; CHECK-NEXT:    [[REASS_ADD4:%.*]] = fadd fast double [[REASS_ADD]], [[C]]
+; CHECK-NEXT:    [[REASS_ADD5:%.*]] = fadd fast double [[REASS_ADD4]], [[D]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast double [[REASS_ADD5]], 2.000000e+00
+; CHECK-NEXT:    [[ACC7:%.*]] = fadd fast double [[M0]], [[ACC]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd fast double [[ACC7]], [[REASS_MUL]]
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %acc0 = fadd fast double %a, %b
+  %acc1 = fadd fast double %c, %d
+  %acc2 = fadd fast double %b, %c
+  %acc3 = fadd fast double %d, %a
+  %acc4 = fadd fast double %acc0, %acc1
+  %acc5 = fadd fast double %acc2, %acc3
+  %acc6 = fadd fast double %acc4, %acc5
+
+  %m0 = fmul fast double %e, %f
+  %acc7 = fadd fast double %m0, %acc6
+
+  %result = fadd fast double %acc, %acc7
+  ret double %result
+}
+
+define double @nested_fma_subtraction(double %acc, double %a, double %b, double %c, double %d, double %e, double %f) {
+; CHECK-LABEL: define double @nested_fma_subtraction(
+; CHECK-SAME: double [[ACC:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]], double [[E:%.*]], double [[F:%.*]]) {
+; CHECK-NEXT:    [[M0:%.*]] = fmul fast double [[B]], [[A]]
+; CHECK-NEXT:    [[M1_NEG_NEG:%.*]] = fmul fast double [[D]], [[C]]
+; CHECK-NEXT:    [[M2_NEG1:%.*]] = fmul fast double [[F]], [[E]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast double [[M2_NEG1]], [[M0]]
+; CHECK-NEXT:    [[M2_NEG:%.*]] = fmul fast double -1.000000e+00, [[REASS_ADD]]
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = fadd fast double [[ACC]], [[M1_NEG_NEG]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd fast double [[M2_NEG]], [[ADD_NEG]]
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %m0 = fmul fast double %a, %b
+  %m1 = fmul fast double %c, %d
+  %sub = fsub fast double %m0, %m1
+  %m2 = fmul fast double %e, %f
+  %add = fadd fast double %m2, %sub
+  %result = fsub fast double %acc, %add
+  ret double %result
+}
+
+
+define float @multi_use_fmul_addend(float %a, float %c, float %d, float %e, float %f) {
+; CHECK-LABEL: define float @multi_use_fmul_addend(
+; CHECK-SAME: float [[A:%.*]], float [[C:%.*]], float [[D:%.*]], float [[E:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[AC:%.*]] = fmul fast float [[C]], [[A]]
+; CHECK-NEXT:    [[AD:%.*]] = fmul fast float [[D]], [[A]]
+; CHECK-NEXT:    [[AE:%.*]] = fmul fast float [[E]], [[A]]
+; CHECK-NEXT:    [[E_SUM:%.*]] = fadd fast float [[AD]], [[AC]]
+; CHECK-NEXT:    [[T1:%.*]] = fmul fast float [[E_SUM]], [[E]]
+; CHECK-NEXT:    [[F_SUM0:%.*]] = fadd fast float [[AD]], [[AC]]
+; CHECK-NEXT:    [[F_SUM:%.*]] = fadd fast float [[F_SUM0]], [[AE]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul fast float [[F_SUM]], [[F]]
+; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[T2]], [[T1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %ac = fmul fast float %a, %c
+  %ad = fmul fast float %a, %d
+  %ae = fmul fast float %a, %e
+  %e.sum = fadd fast float %ad, %ac
+  %t1 = fmul fast float %e.sum, %e
+  %f.sum0 = fadd fast float %ae, %ad
+  %f.sum = fadd fast float %f.sum0, %ac
+  %t2 = fmul fast float %f.sum, %f
+  %r = fadd fast float %t1, %t2
+  ret float %r
+}
+
+define float @shared_addend_chain(float %b, float %c) {
+; CHECK-LABEL: define float @shared_addend_chain(
+; CHECK-SAME: float [[B:%.*]], float [[C:%.*]]) {
+; CHECK-NEXT:    [[CC:%.*]] = fmul fast float [[C]], [[C]]
+; CHECK-NEXT:    [[BB:%.*]] = fmul fast float [[B]], [[B]]
+; CHECK-NEXT:    [[B_CC:%.*]] = fadd fast float [[BB]], [[B]]
+; CHECK-NEXT:    [[SUM0:%.*]] = fadd fast float [[B_CC]], [[C]]
+; CHECK-NEXT:    [[SUM:%.*]] = fadd fast float [[SUM0]], [[CC]]
+; CHECK-NEXT:    ret float [[SUM]]
+;
+  %cc = fmul fast float %c, %c
+  %b.cc = fadd fast float %b, %cc
+  %bb = fmul fast float %b, %b
+  %sum0 = fadd fast float %b.cc, %bb
+  %sum = fadd fast float %sum0, %c
+  ret float %sum
+}
+
+define float @shared_addend_pairs(float %b, float %c) {
+; CHECK-LABEL: define float @shared_addend_pairs(
+; CHECK-SAME: float [[B:%.*]], float [[C:%.*]]) {
+; CHECK-NEXT:    [[BB:%.*]] = fmul fast float [[B]], [[B]]
+; CHECK-NEXT:    [[CC:%.*]] = fmul fast float [[C]], [[C]]
+; CHECK-NEXT:    [[B_CC:%.*]] = fadd fast float [[BB]], [[B]]
+; CHECK-NEXT:    [[C_BB:%.*]] = fadd fast float [[B_CC]], [[C]]
+; CHECK-NEXT:    [[SUM:%.*]] = fadd fast float [[C_BB]], [[CC]]
+; CHECK-NEXT:    ret float [[SUM]]
+;
+  %bb = fmul fast float %b, %b
+  %cc = fmul fast float %c, %c
+  %b.cc = fadd fast float %b, %cc
+  %c.bb = fadd fast float %c, %bb
+  %sum = fadd fast float %b.cc, %c.bb
+  ret float %sum
+}
+
+define float @shared_addend_non_square(float %b, float %c, float %d, float %e) {
+; CHECK-LABEL: define float @shared_addend_non_square(
+; CHECK-SAME: float [[B:%.*]], float [[C:%.*]], float [[D:%.*]], float [[E:%.*]]) {
+; CHECK-NEXT:    [[CD:%.*]] = fmul fast float [[D]], [[C]]
+; CHECK-NEXT:    [[BE:%.*]] = fmul fast float [[E]], [[B]]
+; CHECK-NEXT:    [[B_CD:%.*]] = fadd fast float [[C]], [[B]]
+; CHECK-NEXT:    [[SUM0:%.*]] = fadd fast float [[B_CD]], [[CD]]
+; CHECK-NEXT:    [[SUM:%.*]] = fadd fast float [[SUM0]], [[BE]]
+; CHECK-NEXT:    ret float [[SUM]]
+;
+  %cd = fmul fast float %c, %d
+  %b.cd = fadd fast float %b, %cd
+  %be = fmul fast float %b, %e
+  %sum0 = fadd fast float %b.cd, %be
+  %sum = fadd fast float %sum0, %c
+  ret float %sum
+}

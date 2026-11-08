@@ -459,9 +459,9 @@ TEST_F(CommandLineExtractorTest, AcceptOffloadingCompile) {
 TEST_F(CommandLineExtractorTest, AcceptOffloadingSyntaxOnly) {
   addFile("test.c", "int main() {}\n");
   const char *Args[] = {
-      "clang",     "-target",  "arm64-apple-macosx11.0.0", "-fsyntax-only",
-      "-x",        "hip",      "--no-offload-new-driver",  "test.c",
-      "-nogpulib", "-nogpuinc"};
+      "clang",         "-target",   "arm64-apple-macosx11.0.0",
+      "-fsyntax-only", "-x",        "hip",
+      "test.c",        "-nogpulib", "-nogpuinc"};
   EXPECT_NE(extractCC1Arguments(Args), nullptr);
 }
 
@@ -1096,7 +1096,7 @@ std::string runToolWithProgress(llvm::ArrayRef<TestCommand> Commands,
   OS << llvm::json::Value(std::move(Entries));
 
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(DatabaseContent, ErrorMessage,
+      JSONCompilationDatabase::loadFromBuffer("", DatabaseContent, ErrorMessage,
                                               JSONCommandLineSyntax::Gnu));
   if (!Database) {
     ADD_FAILURE() << "Failed to load compilation database: " << ErrorMessage;

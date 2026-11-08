@@ -100,7 +100,7 @@ public:
         // are also not subject to inlining.
         func.setInlineKind(cir::InlineKind::NoInline);
         if (fd->hasAttr<CUDAGlobalAttr>()) {
-          func.setCallingConv(cir::CallingConv::PTXKernel);
+          func.setCallingConv(getDeviceKernelCallingConv());
           assert(!cir::MissingFeatures::opFuncParameterAttributes());
         }
         if (const auto *attr = fd->getAttr<CUDALaunchBoundsAttr>())
@@ -109,11 +109,16 @@ public:
     }
   }
 
+  cir::CallingConv getDeviceKernelCallingConv() const override {
+    return cir::CallingConv::PTXKernel;
+  }
+
   mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const override {
-    // On the device side, surface reference is represented as an object handle
-    // in 64-bit integer.
-    return cir::IntType::get(&getABIInfo().cgt.getMLIRContext(), 64,
-                             /*isSigned=*/true);
+    return cir::CUDADeviceSurfaceType::get(&getABIInfo().cgt.getMLIRContext());
+  }
+
+  mlir::Type getCUDADeviceBuiltinTextureDeviceType() const override {
+    return cir::CUDADeviceTextureType::get(&getABIInfo().cgt.getMLIRContext());
   }
 };
 

@@ -526,6 +526,11 @@ define void @f_no_create_undef_or_poison() nocreateundeforpoison {
         ret void;
 }
 
+; CHECK: define void @hybrid_patchable() #57 {
+define void @hybrid_patchable() hybrid_patchable {
+  ret void
+}
+
 ; CHECK: define void @f_flatten() [[FLATTEN:#[0-9]+]]
 define void @f_flatten() flatten {
         ret void;
@@ -602,6 +607,16 @@ define nofreeobj ptr @nofreeobj(ptr nofreeobj %p) {
   ret ptr %p
 }
 
+; CHECK: define void @f_sanitize_concurrency() [[SANITIZE_CONCURRENCY:#[0-9]+]]
+define void @f_sanitize_concurrency() sanitize_concurrency {
+  ret void
+}
+
+; CHECK: define linkonce_odr void @likely_module_local() [[LIKELYMODULELOCAL:#[0-9]+]]
+define linkonce_odr void @likely_module_local() likely_module_local {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }
@@ -659,10 +674,13 @@ define nofreeobj ptr @nofreeobj(ptr nofreeobj %p) {
 ; CHECK: attributes #54 = { sanitize_realtime_blocking }
 ; CHECK: attributes #55 = { sanitize_alloc_token }
 ; CHECK: attributes #56 = { nocreateundeforpoison }
+; CHECK: attributes #57 = { hybrid_patchable }
 ; CHECK: attributes [[FLATTEN]] = { flatten }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
 ; CHECK: attributes [[NOIPA]] = { noipa }
+; CHECK: attributes [[SANITIZE_CONCURRENCY]] = { sanitize_concurrency }
+; CHECK: attributes [[LIKELYMODULELOCAL]] = { likely_module_local }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

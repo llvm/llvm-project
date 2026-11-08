@@ -564,7 +564,7 @@ def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get"
                    SparseTensorStorageSpecifierKindAttr:$specifierKind,
                    OptionalAttr<LevelAttr>:$level);
   let results = (outs Index:$result);
-  let assemblyFormat = "$specifier $specifierKind (`at` $level^)? attr-dict"
+  let assemblyFormat = "$specifier enum($specifierKind) (`at` $level^)? attr-dict"
                        "`:` qualified(type($specifier))";
 
   let hasVerifier = 1;
@@ -591,7 +591,7 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
                    OptionalAttr<LevelAttr>:$level,
                    Index:$value);
   let results = (outs SparseTensorStorageSpecifier:$result);
-  let assemblyFormat = "$specifier $specifierKind (`at` $level^)? `with` $value"
+  let assemblyFormat = "$specifier enum($specifierKind) (`at` $level^)? `with` $value"
                        " attr-dict `:` qualified(type($result))";
 
   let hasVerifier = 1;
@@ -627,11 +627,11 @@ def SparseTensor_LvlOp : SparseTensor_Op<"lvl", [ConditionallySpeculatable, NoMe
     %c0 = arith.constant 0 : index
     %x = sparse_tensor.lvl %A, %c0 : tensor<4x?xf32, #BSR>
 
-    // Return the dynamic dimension of %A computed by %j mod 3.
+    // Return the dynamic level size of %A computed by j floordiv 3.
     %c1 = arith.constant 1 : index
     %y = sparse_tensor.lvl %A, %c1 : tensor<4x?xf32, #BSR>
 
-    // Always return 3 (since j mod 3 < 3), can be constant fold
+    // Always return 3 (since j mod 3 < 3), can be constant folded.
     %c3 = arith.constant 3 : index
     %y = sparse_tensor.lvl %A, %c3 : tensor<4x?xf32, #BSR>
     ```
@@ -675,7 +675,8 @@ def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]> {
                    SparseTensorCrdTransDirectionAttr:$direction,
                    SparseTensorEncodingAttr:$encoder);
   let results = (outs Variadic<Index>:$out_crds);
-  let assemblyFormat = "$direction `[` $in_crds `]` `as` $encoder attr-dict `:` type($out_crds)";
+  let assemblyFormat = "enum($direction) `[` $in_crds `]` `as` $encoder "
+                       "attr-dict `:` type($out_crds)";
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -935,7 +936,7 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort"> {
                        Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
                        AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
                        SparseTensorSortKindAttr:$algorithm);
-  let assemblyFormat = "$algorithm $n"
+  let assemblyFormat = "enum($algorithm) $n"
                        "`,`$xy (`jointly` $ys^)? `perm_map` `=` $perm_map"
                        " (`ny` `=` $ny^)? attr-dict"
                        "`:` type($xy) (`jointly` type($ys)^)?";
@@ -965,7 +966,7 @@ def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]> {
   let arguments = (ins AnySparseTensor: $input_coo,
                        SparseTensorSortKindAttr:$algorithm);
   let results = (outs AnySparseTensor: $result_coo);
-  let assemblyFormat = "$algorithm $input_coo attr-dict"
+  let assemblyFormat = "enum($algorithm) $input_coo attr-dict"
                        "`:` type($input_coo) `to` type($result_coo)";
 
   let hasFolder = 1;

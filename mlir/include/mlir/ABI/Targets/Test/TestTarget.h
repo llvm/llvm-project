@@ -59,28 +59,37 @@ FunctionClassification classify(TypeRange argTypes, Type returnType,
 ///
 /// Per-arg/return dictionary keys:
 ///   kind: StringAttr.  One of "direct", "extend", "indirect",
-///         "ignore", "expand".
+///         "indirect_aliased", "ignore", "expand".
 ///
 /// For kind = "direct" (all optional):
 ///   coerced_type:  TypeAttr.  ABI-coerced type, if different from the
 ///                  original.
 ///   can_flatten:   BoolAttr.  Defaults to true.
+///   direct_align:  IntegerAttr.  Stack-slot alignment in bytes when the
+///                  ABI sets one apart from the type's.  When set, the
+///                  rewriter emits llvm.alignstack.
 ///
 /// For kind = "extend" (coerced_type required, sign_extend optional):
 ///   coerced_type:  TypeAttr.  Required; the extended integer type.
 ///   sign_extend:   BoolAttr.  Defaults to false (zero-extend).
 ///
-/// For kind = "indirect" (indirect_align required, byval optional):
-///   indirect_align: IntegerAttr.  Required; alignment of the pointed-to
-///                   object in bytes.
-///   byval:          BoolAttr.  Defaults to true.
+/// For kind = "indirect" (indirect_align required, byval and
+/// indirect_addr_space optional):
+///   indirect_align:      IntegerAttr.  Required; alignment of the
+///                        pointed-to object in bytes.
+///   byval:               BoolAttr.  Defaults to true.
+///   indirect_addr_space: IntegerAttr.  Target address space of the
+///                        pointer.  Defaults to 0.
+///
+/// For kind = "indirect_aliased": the same keys as "indirect" except byval,
+/// which it rejects.
 ///
 /// For kind = "ignore" / "expand": no extra keys.
 ///
 /// Future schema additions tracked in projects/daily_log.md (Step 0c
 /// field-mapping table).  When we add new fields to ArgClassification
-/// (e.g. direct_offset, extend_kind tristate, indirect_addr_space,
-/// indirect_realign), the corresponding optional keys go here.
+/// (e.g. direct_offset, extend_kind tristate, indirect_realign), the
+/// corresponding optional keys go here.
 ///
 /// Unknown keys cause a parse error (no silent ignore — keeps schema
 /// honest as it grows).

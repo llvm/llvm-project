@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_ALTERA_blocking_pipes %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_blocking_pipes %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_blocking_pipes %s -o - -filetype=obj | spirv-val %}
 
 %opencl.pipe_ro_t = type opaque
 %opencl.pipe_wo_t = type opaque

@@ -10,4 +10,7 @@ Alexey Bader \
 | alexey.bader@intel.com (email), bader (GitHub, Discord, Discourse)
 
 Kseniya Tikhomirova \
-| kseniya.tikhomirova@intel.com (email), KseniyaTikhomirova (GitHub, Discourse)
+| kseniya.tikhomirova@intel.com (email), KseniyaTikhomirova (GitHub, Discourse), kseniyat_38370 (Discord)
+
+Sergey Semenov \
+| sergey.semenov@intel.com (email), sergey-semenov (Github, Discourse)

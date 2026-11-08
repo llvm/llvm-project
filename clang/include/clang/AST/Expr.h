@@ -55,6 +55,7 @@ class NamedDecl;
 class ObjCPropertyRefExpr;
 class OpaqueValueExpr;
 class ParmVarDecl;
+class SemaProxy;
 class StringLiteral;
 class TargetInfo;
 class ValueDecl;
@@ -584,7 +585,7 @@ public:
   /// If \p AllowRelaxedEval is \c true, this will allow certain constructs that
   /// are not valid per the specification.
   // FIXME: Add proper documentation about the constructs we allow.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
+  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue &Result,
                            bool AllowRelaxedEval = false) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
@@ -681,6 +682,13 @@ public:
   bool EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
                         bool InConstantContext = false) const;
 
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression, and fold the resulting rvalue constant into Result. If the
+  /// expression is a glvalue, an lvalue-to-rvalue conversion will be applied.
+  bool EvaluateAsMandatedConstantRValue(EvalResult &Result,
+                                        const ASTContext &Ctx,
+                                        SemaProxy &SProxy) const;
+
   /// EvaluateAsBooleanCondition - Return true if this is a constant
   /// which we can fold and convert to a boolean condition using
   /// any crazy technique that we want to, even if the expression has
@@ -757,6 +765,13 @@ public:
                              EvalResult &Result,
                              bool IsConstantInitializer) const;
 
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression.
+  bool EvaluateAsMandatedConstantInitializer(EvalResult &Result,
+                                             const ASTContext &Ctx,
+                                             SemaProxy &SProxy,
+                                             const VarDecl *VD) const;
+
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
   /// of a call to the given function with the given arguments, inside an
   /// unevaluated context. Returns true if the expression could be folded to a
@@ -779,12 +794,22 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
+    /// The initializer of an object with static storage duration. The object
+    /// is not destroyed, and undefined behavior is folded through like
+    /// isConstantInitializer allows.
+    Initializer,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does
   /// not check the syntactic constraints for C and C++98 constant expressions.
   bool EvaluateAsConstantExpr(
       EvalResult &Result, const ASTContext &Ctx,
+      ConstantExprKind Kind = ConstantExprKind::Normal) const;
+
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression.
+  bool EvaluateAsMandatedConstantExpr(
+      EvalResult &Result, const ASTContext &Ctx, SemaProxy &SProxy,
       ConstantExprKind Kind = ConstantExprKind::Normal) const;
 
   /// If the current Expr is a pointer, this will try to statically
@@ -806,11 +831,11 @@ public:
   bool EvaluateCharRangeAsString(std::string &Result,
                                  const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
-                                 EvalResult &Status) const;
+                                 SemaProxy &SProxy, EvalResult &Status) const;
 
   bool EvaluateCharRangeAsString(APValue &Result, const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
-                                 EvalResult &Status) const;
+                                 SemaProxy &SProxy, EvalResult &Status) const;
 
   /// If the current Expr can be evaluated to a pointer to a null-terminated
   /// constant string, return the constant string (without the terminating
@@ -1095,8 +1120,8 @@ public:
 /// Describes the kind of result that can be tail-allocated.
 enum class ConstantResultStorageKind { None, Int64, APValue };
 
-/// ConstantExpr - An expression that occurs in a constant context and
-/// optionally the result of evaluating the expression.
+/// An expression that occurs in a constant context and
+/// the result of evaluating the expression.
 class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {
@@ -1897,17 +1922,21 @@ public:
     return StringRef(getStrDataAsChar(), getByteLength());
   }
 
+  /// Prints the contents of the string to \p OS.
   void outputString(raw_ostream &OS) const;
 
-  uint32_t getCodeUnit(size_t i) const {
-    assert(i < getLength() && "out of bounds access");
+  /// Return the code unit at the given position.
+  ///
+  /// \pre \p I < getLength()
+  uint32_t getCodeUnit(size_t I) const {
+    assert(I < getLength() && "out of bounds access");
     switch (getCharByteWidth()) {
     case 1:
-      return static_cast<unsigned char>(getStrDataAsChar()[i]);
+      return static_cast<unsigned char>(getStrDataAsChar()[I]);
     case 2:
-      return getStrDataAsUInt16()[i];
+      return getStrDataAsUInt16()[I];
     case 4:
-      return getStrDataAsUInt32()[i];
+      return getStrDataAsUInt32()[I];
     }
     llvm_unreachable("Unsupported character width!");
   }
@@ -1925,8 +1954,20 @@ public:
     return V;
   }
 
+  /// Scan the string literal contents for a code unit with value 0.
+  /// If \p StartIndex is outside of the length of the string, this returns \c
+  /// std::nullopt.
+  ///
+  /// Otherwise, returns the offset (in code units, not bytes) of the zero code
+  /// unit, starting at index \p StartIndex. If no such code unit could be
+  /// found, this returns `getLength() - StartIndex`.
+  UnsignedOrNone findZeroCodeUnit(unsigned StartIndex = 0) const;
+
+  /// \returns The length of the full string in bytes.
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
+  /// \returns The length of the full string in characters.
   unsigned getLength() const { return *getTrailingObjects<unsigned>(); }
+  /// \returns The size of one character in the string, in bytes.
   unsigned getCharByteWidth() const { return StringLiteralBits.CharByteWidth; }
 
   StringLiteralKind getKind() const {
@@ -1941,6 +1982,10 @@ public:
   bool isUnevaluated() const { return getKind() == StringLiteralKind::Unevaluated; }
   bool isPascal() const { return StringLiteralBits.IsPascal; }
 
+  /// Scans the string contents for any non-ascii characters.
+  ///
+  /// \pre isUnevaluated() || getCharByteWidth() == 1
+  /// \returns \c true if a non-ascii character was found, \c false otherwise.
   bool containsNonAscii() const {
     for (auto c : getString())
       if (!isASCII(c))
@@ -1948,6 +1993,11 @@ public:
     return false;
   }
 
+  /// Scans the string contents for any non-ascii or null characters.
+  ///
+  /// \pre isUnevaluated() || getCharByteWidth() == 1
+  /// \returns \c true if a non-ascii or null character was found, \c false
+  /// otherwise.
   bool containsNonAsciiOrNull() const {
     for (auto c : getString())
       if (!isASCII(c) || !c)
@@ -1955,7 +2005,7 @@ public:
     return false;
   }
 
-  /// getNumConcatenated - Get the number of string literal tokens that were
+  /// Get the number of string literal tokens that were
   /// concatenated in translation phase #6 to form this string literal.
   unsigned getNumConcatenated() const {
     return StringLiteralBits.NumConcatenated;
@@ -1967,13 +2017,12 @@ public:
     return getTrailingObjects<SourceLocation>()[TokNum];
   }
 
-  /// getLocationOfByte - Return a source location that points to the specified
+  /// Return a source location that points to the specified
   /// byte of this string literal.
   ///
   /// Strings are amazingly complex.  They can be formed from multiple tokens
   /// and can have escape sequences in them in addition to the usual trigraph
   /// and escaped newline business.  This routine handles this complexity.
-  ///
   SourceLocation
   getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                     const LangOptions &Features, const TargetInfo &Target,
@@ -5151,7 +5200,7 @@ struct EmbedDataStorage {
 ///  { {EE(9th and 10th element), { zeroinitializer }}}
 ///
 /// EmbedExpr inside of a semantic initializer list and referencing more than
-/// one element can only appear for arrays of scalars.
+/// one element can only appear for arrays of integer or floating-point type.
 class EmbedExpr final : public Expr {
   SourceLocation EmbedKeywordLoc;
   IntegerLiteral *FakeChildNode = nullptr;
@@ -5365,9 +5414,20 @@ public:
   unsigned getNumInitsWithEmbedExpanded() const {
     unsigned Sum = InitExprs.size();
     for (auto *IE : InitExprs)
-      if (auto *EE = dyn_cast<EmbedExpr>(IE))
+      if (auto *EE = dyn_cast<EmbedExpr>(cast<Expr>(IE)->IgnoreParenImpCasts()))
         Sum += EE->getDataElementCount() - 1;
     return Sum;
+  }
+
+  bool hasZeroInits() const { return InitExprs.empty(); }
+
+  /// Whether getNumInitsWithEmbedExpanded() is 1, without walking the list.
+  bool hasOneInit() const {
+    if (InitExprs.size() != 1)
+      return false;
+    auto *EE =
+        dyn_cast<EmbedExpr>(cast<Expr>(InitExprs[0])->IgnoreParenImpCasts());
+    return !EE || EE->getDataElementCount() == 1;
   }
 
   /// Retrieve the set of initializers.

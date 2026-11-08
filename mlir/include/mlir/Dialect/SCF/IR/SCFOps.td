@@ -27,7 +27,6 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
-  let useStrictPropertiesInAssemblyFormat = 1;
 
   let description = [{
     The `scf` (structured control flow) dialect contains operations that
@@ -42,7 +41,9 @@ def SCF_Dialect : Dialect {
     and then lowered to some final target like LLVM or SPIR-V.
   }];
 
-  let dependentDialects = ["arith::ArithDialect"];
+  // The canonicalization of a multi-block `scf.execute_region` materializes
+  // `cf.br` operations, so the ControlFlow dialect must always be loaded.
+  let dependentDialects = ["arith::ArithDialect", "cf::ControlFlowDialect"];
 }
 
 // Base class for SCF dialect ops.
@@ -834,9 +835,22 @@ def ParallelOp : SCF_Op<"parallel",
     region. These SSA values always have type index, which is the size of the
     machine word. The steps are values of type index, required to be positive.
     The lower and upper bounds specify a half-open range: the range includes
-    the lower bound but does not include the upper bound. The initial values
-    have the same types as results of `scf.parallel`. If there are no results,
-    the keyword `init` can be omitted.
+    the lower bound but does not include the upper bound. Lower bounds, upper
+    bounds and steps are interpreted as signed integers by default, or as
+    unsigned integers if the `unsignedCmp` unit attribute is present. The
+    initial values have the same types as results of `scf.parallel`. If there
+    are no results, the keyword `init` can be omitted.
+
+    More precisely, the iteration space of each dimension is governed by the
+    following two rules, where arithmetic is performed with arbitrary
+    precision:
+
+    1. The trip count `n` is `max(0, ceil((UB - LB) / Step))` and the induction
+       variable takes the values `LB + j*Step` for `j = 0, ..., n - 1`.
+    2. No-overflow condition: `LB + n*Step` must be representable in the type of
+       the induction variable. Otherwise the behavior is undefined. Leaving this
+       case undefined lets the loop be lowered to a plain increment-and-compare
+       on a single induction register without having to account for wraparound.
 
     Semantically we require that the iteration space can be iterated in any
     order, and the loop body can be executed in parallel. If there are data
@@ -882,7 +896,8 @@ def ParallelOp : SCF_Op<"parallel",
   let arguments = (ins Variadic<Index>:$lowerBound,
                        Variadic<Index>:$upperBound,
                        Variadic<Index>:$step,
-                       Variadic<AnyType>:$initVals);
+                       Variadic<AnyType>:$initVals,
+                       UnitAttr:$unsignedCmp);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
@@ -891,11 +906,13 @@ def ParallelOp : SCF_Op<"parallel",
     OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
       "ValueRange":$steps, "ValueRange":$initVals,
       CArg<"function_ref<void (OpBuilder &, Location, ValueRange, ValueRange)>",
-           "nullptr">:$bodyBuilderFn)>,
+           "nullptr">:$bodyBuilderFn,
+      CArg<"bool", "false">:$unsignedCmp)>,
     OpBuilder<(ins "ValueRange":$lowerBounds, "ValueRange":$upperBounds,
       "ValueRange":$steps,
       CArg<"function_ref<void (OpBuilder &, Location, ValueRange)>",
-           "nullptr">:$bodyBuilderFn)>,
+           "nullptr">:$bodyBuilderFn,
+      CArg<"bool", "false">:$unsignedCmp)>,
   ];
 
   let extraClassDeclaration = [{

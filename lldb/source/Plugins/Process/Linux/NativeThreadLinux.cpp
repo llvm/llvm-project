@@ -14,7 +14,6 @@
 #include "Plugins/Process/POSIX/CrashReason.h"
 #include "Plugins/Process/Utility/MemoryTagManagerAArch64MTE.h"
 #include "lldb/Host/HostNativeThread.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -25,7 +24,12 @@
 
 #include <csignal>
 #include <sstream>
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <sys/ptrace.h>
 #include <sys/syscall.h>
+
 // Try to define a macro to encapsulate the tgkill syscall
 #define tgkill(pid, tid, sig)                                                  \
   syscall(__NR_tgkill, static_cast<::pid_t>(pid), static_cast<::pid_t>(tid),   \

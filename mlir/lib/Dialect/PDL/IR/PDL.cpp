@@ -9,7 +9,6 @@
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <optional>
@@ -387,7 +386,8 @@ void PatternOp::build(OpBuilder &builder, OperationState &state,
                       std::optional<uint16_t> benefit,
                       std::optional<StringRef> name) {
   build(builder, state, builder.getI16IntegerAttr(benefit.value_or(0)),
-        name ? builder.getStringAttr(*name) : StringAttr());
+        name ? builder.getStringAttr(*name) : StringAttr(),
+        /*sym_visibility=*/nullptr);
   state.regions[0]->emplaceBlock();
 }
 

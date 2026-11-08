@@ -146,10 +146,6 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         ret { ptr, i64 } %[[VAL_44]]
 // CHECK:       }
 
-// The stack based trampolines request an executable stack via a module flag.
-// CHECK:       !llvm.module.flags = !{
-// CHECK:       = !{i32 7, !"executable-stack", i32 1}
-
 func.func @_QPtest_proc_dummy_char() {
   %c10 = arith.constant 10 : index
   %c0_i32 = arith.constant 0 : i32

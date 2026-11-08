@@ -180,7 +180,6 @@ raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
 
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
-  unsigned AddrSpace = std::numeric_limits<unsigned>::max();
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
@@ -206,11 +205,13 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   bool isPossible() const;
 
-  bool isPointer() const { return getValueTypeByHwMode().isPointer(); }
+  bool isPointer() const {
+    return PtrAddrSpace != std::numeric_limits<unsigned>::max();
+  }
 
   unsigned getPtrAddrSpace() const {
     assert(isPointer());
-    return getValueTypeByHwMode().PtrAddrSpace;
+    return PtrAddrSpace;
   }
 
   bool insert(const ValueTypeByHwMode &VVT);
@@ -739,7 +740,6 @@ public:
 
   bool hasProperTypeByHwMode() const;
   bool hasPossibleType() const;
-  bool setDefaultMode(unsigned Mode);
 
   bool hasAnyPredicate() const { return !PredicateCalls.empty(); }
 
@@ -1059,7 +1059,6 @@ class PatternToMatch {
   TreePatternNodePtr SrcPattern; // Source pattern to match.
   TreePatternNodePtr DstPattern; // Resulting pattern.
   std::vector<const Record *> Dstregs; // Physical register defs being matched.
-  std::string HwModeFeatures;
   int AddedComplexity;    // Add to matching pattern complexity.
   bool GISelShouldIgnore; // Should GlobalISel ignore importing this pattern.
   unsigned ID;            // Unique ID for the record.
@@ -1068,10 +1067,10 @@ public:
   PatternToMatch(const Record *srcrecord, const ListInit *preds,
                  TreePatternNodePtr src, TreePatternNodePtr dst,
                  ArrayRef<const Record *> dstregs, int complexity, unsigned uid,
-                 bool ignore, const Twine &hwmodefeatures = "")
+                 bool ignore)
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
-        DstPattern(dst), Dstregs(dstregs), HwModeFeatures(hwmodefeatures.str()),
-        AddedComplexity(complexity), GISelShouldIgnore(ignore), ID(uid) {}
+        DstPattern(dst), Dstregs(dstregs), AddedComplexity(complexity),
+        GISelShouldIgnore(ignore), ID(uid) {}
 
   const Record *getSrcRecord() const { return SrcRecord; }
   const ListInit *getPredicates() const { return Predicates; }
@@ -1080,7 +1079,6 @@ public:
   TreePatternNode &getDstPattern() const { return *DstPattern; }
   TreePatternNodePtr getDstPatternShared() const { return DstPattern; }
   ArrayRef<const Record *> getDstRegs() const { return Dstregs; }
-  StringRef getHwModeFeatures() const { return HwModeFeatures; }
   int getAddedComplexity() const { return AddedComplexity; }
   bool getGISelShouldIgnore() const { return GISelShouldIgnore; }
   unsigned getID() const { return ID; }
@@ -1128,7 +1126,7 @@ private:
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode = true);
+  CodeGenDAGPatterns(const RecordKeeper &R);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }
@@ -1239,7 +1237,6 @@ private:
   void ParseDefaultOperands();
   void ParseInstructions();
   void ParsePatterns();
-  void ExpandHwModeBasedTypes();
   void InferInstructionFlags();
   void GenerateVariants();
   void VerifyInstructionFlags();

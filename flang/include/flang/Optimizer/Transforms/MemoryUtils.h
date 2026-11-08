@@ -66,10 +66,13 @@ fir::AllocMemOp createAllocMemFromAlloca(mlir::OpBuilder &builder,
 /// user variables of \p func (automatic arrays and automatic character) to
 /// fir.allocmem/fir.freemem pairs marked for the unified/managed allocator.
 /// Compiler temporaries, fir.must_be_stack allocations, and device code, which
-/// keeps its stack allocations, are left alone. Returns true if the function
-/// was modified. This is what the cuda-heap-alloc-promotion pass runs.
+/// keeps its stack allocations, are left alone. With \p stackArrays,
+/// mem:unified keeps them on the stack too, which mem:managed cannot do.
+/// Returns true if the function was modified. This is what the
+/// cuda-heap-alloc-promotion pass runs.
 bool promoteDynamicVariableAllocasToCudaHeap(mlir::RewriterBase &rewriter,
-                                             mlir::Operation *func);
+                                             mlir::Operation *func,
+                                             bool stackArrays = false);
 
 } // namespace fir
 

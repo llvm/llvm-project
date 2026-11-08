@@ -50,6 +50,9 @@ add_mlir_library(MLIRIR
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
 
+  PRECOMPILE_HEADERS
+  [["mlir/IR/pch.h"]]
+
   DEPENDS
   MLIRBuiltinAttributesIncGen
   MLIRBuiltinAttributeInterfacesIncGen
@@ -71,6 +74,8 @@ add_mlir_library(MLIRIR
   MLIRSymbolInterfacesIncGen
   MLIRTensorEncodingIncGen
   MLIROpAsmDialectInterfaceIncGen
+  MLIRBytecodeDialectInterfaceIncGen
+  MLIRBytecodeOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRSupport

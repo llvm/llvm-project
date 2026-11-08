@@ -14,7 +14,7 @@ func.func @vector_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -34,7 +34,28 @@ func.func @gang_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
+  }
+  return
+}
+
+// -----
+
+// A negative width leaves the number of gangs to the launch, so no count is
+// reported.
+// CHECK: remark: [Passed] openacc | Category:acc-emit-remarks-loop | Function=gang_loop_launch_sized | Remark="!$acc loop gang ! blockidx.x"
+func.func @gang_loop_launch_sized(%n: index) {
+  %cm1 = arith.constant -1 : index
+  acc.kernel_environment {
+    %w0 = acc.par_width %cm1 par_dim(#acc.par_dim<block_x>)
+    acc.compute_region launch(%arg0 = %w0) ins(%arg1 = %n) : (index) {
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      scf.parallel (%iv) = (%c0) to (%arg1) step (%c1) {
+        scf.reduce
+      } {acc.par_dims = #acc<par_dims[block_x]>}
+      acc.yield
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -54,7 +75,7 @@ func.func @worker_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -72,7 +93,7 @@ func.func @sequential_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[sequential]>}
       acc.yield
-    } {origin = "acc.kernels"}
+    } <{origin = "acc.kernels"}>
   }
   return
 }
@@ -95,7 +116,7 @@ func.func @block_and_vector() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -112,7 +133,7 @@ func.func @scf_for_sequential() {
       scf.for %iv = %c0 to %c4 step %c1 {
       }
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -129,7 +150,7 @@ func.func @collapse_loop() {
       scf.for %iv = %c0 to %c4 step %c1 {
       } {acc.par_dims = #acc<par_dims[sequential]>, acc.collapse_count = 2 : i64}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -149,7 +170,7 @@ func.func @percent_separator() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -170,7 +191,29 @@ func.func @acc_routine_gang_vector_loop() attributes {acc.specialized_routine = 
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
+  }
+  return
+}
+
+// -----
+
+// An independent loop that was lowered as an unstructured region is reported
+// as not parallelized instead of being skipped silently.
+// CHECK: remark: [Passed] openacc | Category:acc-emit-remarks-loop | Function=unstructured_independent_loop | Remark="Loop is not parallelized: complex control flow prevents parallelization"
+func.func @unstructured_independent_loop() {
+  acc.kernel_environment {
+    acc.compute_region {
+      %flag = arith.constant true
+      scf.execute_region {
+        cf.cond_br %flag, ^bb1, ^bb2
+      ^bb1:
+        cf.br ^bb2
+      ^bb2:
+        scf.yield
+      } {acc.unstructured_independent_loop}
+      acc.yield
+    } <{origin = "acc.parallel"}>
   }
   return
 }

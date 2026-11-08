@@ -1022,9 +1022,7 @@ define float @fadd_fsub_chain_f16_f32(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = fpext <vscale x 8 x half> [[WIDE_LOAD2]] to <vscale x 8 x float>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul <vscale x 8 x float> [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    [[PARTIAL_REDUCE5:%.*]] = call reassoc contract <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv8f32(<vscale x 4 x float> [[VEC_PHI1]], <vscale x 8 x float> [[TMP14]])
-; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <vscale x 8 x half>, ptr [[GEP_A]], align 1
-; CHECK-NEXT:    [[TMP17:%.*]] = fpext <vscale x 8 x half> [[WIDE_LOAD7]] to <vscale x 8 x float>
-; CHECK-NEXT:    [[TMP18:%.*]] = fmul <vscale x 8 x float> [[TMP17]], [[TMP12]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul <vscale x 8 x float> [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = fneg <vscale x 8 x float> [[TMP18]]
 ; CHECK-NEXT:    [[PARTIAL_REDUCE9]] = call reassoc contract <vscale x 4 x float> @llvm.vector.partial.reduce.fadd.nxv4f32.nxv8f32(<vscale x 4 x float> [[PARTIAL_REDUCE5]], <vscale x 8 x float> [[TMP22]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]

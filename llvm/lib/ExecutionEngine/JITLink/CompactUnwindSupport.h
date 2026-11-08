@@ -478,6 +478,8 @@ private:
     SmallVector<CompactUnwindRecord> NonUniqued = std::move(Records);
     Records.reserve(NonUniqued.size());
 
+    // Retain the final raw record: merging may remove it.
+    LastFunction = NonUniqued.back().Fn;
     Records.push_back(NonUniqued.front());
     for (size_t I = 1; I != NonUniqued.size(); ++I) {
       auto &Next = NonUniqued[I];
@@ -557,13 +559,13 @@ private:
     // Write the index array terminator.
     {
       auto FnEndDelta =
-          Records.back().Fn->getRange().End - CompactUnwindBase->getAddress();
+          LastFunction->getRange().End - CompactUnwindBase->getAddress();
 
       if (LLVM_UNLIKELY(!isUInt<32>(FnEndDelta)))
         return make_error<JITLinkError>(
             "In " + G.getName() + " " + UnwindInfoSectionName +
             ", delta to end of functions  " +
-            formatv("{0:x}", Records.back().Fn->getRange().End) +
+            formatv("{0:x}", LastFunction->getRange().End) +
             " exceeds 32 bits");
 
       cantFail(W.writeInteger<uint32_t>(FnEndDelta));
@@ -688,6 +690,7 @@ private:
 
   size_t NumLSDAs = 0;
   size_t NumSecondLevelPages = 0;
+  Symbol *LastFunction = nullptr;
   SmallVector<Symbol *, MaxPersonalities> Personalities;
   SmallVector<CompactUnwindRecord> Records;
 };

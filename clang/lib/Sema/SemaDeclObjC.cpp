@@ -1054,7 +1054,8 @@ ObjCInterfaceDecl *SemaObjC::ActOnStartClassInterface(
   if (PrevIDecl) {
     // Class already seen. Was it a definition?
     if (ObjCInterfaceDecl *Def = PrevIDecl->getDefinition()) {
-      if (SkipBody && !SemaRef.hasVisibleDefinition(Def)) {
+      if (SkipBody && (!SemaRef.hasVisibleDefinition(Def) ||
+                       SemaRef.isFromSameSingleIncludeHeader(Def, ClassLoc))) {
         SkipBody->CheckSameAsPrevious = true;
         SkipBody->New = IDecl;
         SkipBody->Previous = Def;
@@ -1235,7 +1236,8 @@ ObjCProtocolDecl *SemaObjC::ActOnStartProtocolInterface(
                                      ProtocolLoc, AtProtoInterfaceLoc,
                                      /*PrevDecl=*/Def);
 
-    if (SkipBody && !SemaRef.hasVisibleDefinition(Def)) {
+    if (SkipBody && (!SemaRef.hasVisibleDefinition(Def) ||
+                     SemaRef.isFromSameSingleIncludeHeader(Def, ProtocolLoc))) {
       SkipBody->CheckSameAsPrevious = true;
       SkipBody->New = PDecl;
       SkipBody->Previous = Def;

@@ -30,7 +30,7 @@ func.func @gang_redundant_worker_private() {
         memref.store %c42, %loc[%c0] : memref<1xi32>
       }
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

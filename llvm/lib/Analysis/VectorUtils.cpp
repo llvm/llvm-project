@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/VectorUtils.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -26,18 +28,11 @@
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "vectorutils"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-/// Maximum factor for an interleaved memory access.
-static cl::opt<unsigned> MaxInterleaveGroupFactor(
-    "max-interleave-group-factor", cl::Hidden,
-    cl::desc("Maximum factor for an interleaved access group (default = 8)"),
-    cl::init(8));
 
 /// Return true if all of the intrinsic's arguments and return type are scalars
 /// for the scalar form of the intrinsic, and vectors for the vector form of the
@@ -123,6 +118,10 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
   case Intrinsic::clmul:
+  case Intrinsic::pdep:
+  case Intrinsic::pext:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
     return true;
   default:
     return false;
@@ -155,6 +154,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::is_fpclass:
   case Intrinsic::powi:
   case Intrinsic::vector_extract:
+  case Intrinsic::masked_compressstore:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
@@ -169,6 +169,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return ScalarOpdIdx == 0 || ScalarOpdIdx == 1;
   case Intrinsic::experimental_vp_strided_store:
     return ScalarOpdIdx == 1 || ScalarOpdIdx == 2;
+  case Intrinsic::masked_expandload:
+    return ScalarOpdIdx == 0;
   case Intrinsic::loop_dependence_war_mask:
     return true;
   default:
@@ -194,6 +196,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::scmp:
   case Intrinsic::vector_extract:
   case Intrinsic::loop_dependence_war_mask:
+  case Intrinsic::masked_expandload:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:
@@ -207,8 +210,48 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
     return OpdIdx == -1 || OpdIdx == 0 || OpdIdx == 1;
   case Intrinsic::experimental_vp_strided_store:
     return OpdIdx == 0 || OpdIdx == 1 || OpdIdx == 2;
+  case Intrinsic::masked_compressstore:
+    return OpdIdx == 0 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
+  }
+}
+
+std::optional<unsigned>
+llvm::getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::experimental_vp_strided_store:
+  case Intrinsic::masked_compressstore:
+    return 1;
+  case Intrinsic::experimental_vp_strided_load:
+  case Intrinsic::masked_expandload:
+    return 0;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<unsigned>
+llvm::getVectorStoreIntrinsicDataArgIdx(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::experimental_vp_strided_store:
+  case Intrinsic::masked_compressstore:
+    return 0;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<unsigned> llvm::getVectorIntrinsicMaskArgIdx(Intrinsic::ID ID) {
+  if (auto MaskPos = VPIntrinsic::getMaskParamPos(ID))
+    return MaskPos;
+  switch (ID) {
+  case Intrinsic::masked_compressstore:
+    return 2;
+  case Intrinsic::masked_expandload:
+    return 1;
+  default:
+    return std::nullopt;
   }
 }
 
@@ -1283,14 +1326,22 @@ APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
   return DemandedElts;
 }
 
-bool InterleavedAccessInfo::isStrided(int Stride) {
+InterleavedAccessInfo::InterleavedAccessInfo(PredicatedScalarEvolution &PSE,
+                                             Loop *L, DominatorTree *DT,
+                                             LoopInfo *LI,
+                                             const LoopAccessInfo *LAI,
+                                             bool OptForSize)
+    : Opts(getAnalysisOptions(*L)), PSE(PSE), TheLoop(L), DT(DT), LI(LI),
+      LAI(LAI), OptForSize(OptForSize) {}
+
+bool InterleavedAccessInfo::isStrided(int Stride) const {
   unsigned Factor = std::abs(Stride);
-  return Factor >= 2 && Factor <= MaxInterleaveGroupFactor;
+  return Factor >= 2 && Factor <= Opts.max_interleave_group_factor;
 }
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-    const DenseMap<Value *, const SCEV *> &Strides,
+    const SymbolicStrideMap &Strides,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   auto &DL = TheLoop->getHeader()->getDataLayout();
 
@@ -1326,7 +1377,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
 
-      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
+      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
                                               getLoadStoreAlignment(&I));
     }
@@ -1585,7 +1636,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
     if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+                     /*ShouldCheckWrap=*/true)
             .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "

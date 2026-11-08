@@ -7,9 +7,20 @@
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.logical<4> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init", uniq_name = ""}
-! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i1, !fir.heap<!fir.logical<4>>
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]] : (!fir.heap<!fir.logical<4>>) -> !fir.box<!fir.heap<!fir.logical<4>>>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
+! CHECK:           %[[BOX_ADDR_1:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_1]] : (!fir.heap<!fir.logical<4>>) -> i64
+! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ALLOCATED]] weights([1, 0]) -> (!fir.heap<!fir.logical<4>>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.logical<4> <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i1, !fir.heap<!fir.logical<4>>
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<!fir.logical<4>>
+! CHECK:           } else {
+! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<!fir.logical<4>>
+! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<!fir.logical<4>>
+! CHECK:           }
+! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[PRIVATE_ALLOC]] : (!fir.heap<!fir.logical<4>>) -> !fir.box<!fir.heap<!fir.logical<4>>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.logical<4>>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
@@ -30,7 +41,12 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.logical<4>>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.logical<4>>>) -> !fir.heap<!fir.logical<4>>
-! CHECK:           fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.logical<4>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.heap<!fir.logical<4>>) -> i64
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
+! CHECK:           fir.if %[[IS_ALLOCATED]] {
+! CHECK:             fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.logical<4>>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
@@ -43,7 +59,7 @@
 ! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1 : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1 : (index, index) -> !fir.shape<2>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[BOX_DIMS_0]]#1, %[[BOX_DIMS_1]]#1 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
@@ -129,22 +145,33 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_1]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init", uniq_name = ""}
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
-! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-! CHECK:           %[[SHAPE_2:.*]] = fir.shape %[[BOX_DIMS_1]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_3]] to %[[BOX_DIMS_1]]#1 step %[[CONSTANT_3]] unordered {
-! CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[EMBOX_0]] (%[[VAL_1]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : f32, !fir.ref<f32>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
+! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ASSOCIATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ASSOCIATED]] weights([1, 0]) -> (!fir.heap<!fir.array<?xf32>>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:             %[[CONSTANT_2:.*]] = arith.constant 0 : index
+! CHECK:             %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+! CHECK:             %[[SHAPE_2:.*]] = fir.shape %[[BOX_DIMS_1]]#1 : (index) -> !fir.shape<1>
+! CHECK:             %[[CONSTANT_3:.*]] = arith.constant 1 : index
+! CHECK:             fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_3]] to %[[BOX_DIMS_1]]#1 step %[[CONSTANT_3]] unordered {
+! CHECK:               %[[DESIGNATE_0:.*]] = hlfir.designate %[[EMBOX_0]] (%[[VAL_1]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+! CHECK:               hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : f32, !fir.ref<f32>
+! CHECK:             }
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           } else {
+! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:           }
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_4]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_5:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_3:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_5]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_2]]#0, %[[BOX_DIMS_3]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[PRIVATE_ALLOC]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:           fir.store %[[EMBOX_1]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -185,8 +212,13 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<!fir.array<?xf32>>) -> !fir.heap<!fir.array<?xf32>>
-! CHECK:           fir.freemem %[[CONVERT_0]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
+! CHECK:           fir.if %[[IS_ALLOCATED]] {
+! CHECK:             %[[CONVERT_1:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<!fir.array<?xf32>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK:             fir.freemem %[[CONVERT_1]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
@@ -198,22 +230,33 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init", uniq_name = ""}
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
-! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-! CHECK:           %[[SHAPE_2:.*]] = fir.shape %[[BOX_DIMS_1]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_3]] to %[[BOX_DIMS_1]]#1 step %[[CONSTANT_3]] unordered {
-! CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[EMBOX_0]] (%[[VAL_1]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : f32, !fir.ref<f32>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ALLOCATED]] weights([1, 0]) -> (!fir.heap<!fir.array<?xf32>>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:             %[[CONSTANT_2:.*]] = arith.constant 0 : index
+! CHECK:             %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+! CHECK:             %[[SHAPE_2:.*]] = fir.shape %[[BOX_DIMS_1]]#1 : (index) -> !fir.shape<1>
+! CHECK:             %[[CONSTANT_3:.*]] = arith.constant 1 : index
+! CHECK:             fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_3]] to %[[BOX_DIMS_1]]#1 step %[[CONSTANT_3]] unordered {
+! CHECK:               %[[DESIGNATE_0:.*]] = hlfir.designate %[[EMBOX_0]] (%[[VAL_1]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+! CHECK:               hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : f32, !fir.ref<f32>
+! CHECK:             }
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           } else {
+! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:           }
 ! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_4]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[CONSTANT_5:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_3:.*]]:3 = fir.box_dims %[[LOAD_0]], %[[CONSTANT_5]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_2]]#0, %[[BOX_DIMS_3]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[PRIVATE_ALLOC]](%[[SHAPE_SHIFT_0]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:           fir.store %[[EMBOX_1]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -254,13 +297,18 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-! CHECK:           fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
+! CHECK:           fir.if %[[IS_ALLOCATED]] {
+! CHECK:             fir.freemem %[[BOX_ADDR_0]] : !fir.heap<!fir.array<?xf32>>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_section_lb1.ub3_box_Uxi32 : !fir.box<!fir.array<?xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<3xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<3xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
@@ -331,7 +379,7 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_1]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xf32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
@@ -394,7 +442,7 @@
 ! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[VAL_0]], %[[CONSTANT_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init", uniq_name = ""}
+! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS_0]]#1 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
 ! CHECK:           %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[EMBOX_0]], %[[CONSTANT_2]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -448,7 +496,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_10x20xi32 : !fir.ref<!fir.array<10x20xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10x20xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10x20xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 20 : index
@@ -487,7 +535,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_section_lb10.ub19_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
@@ -546,9 +594,20 @@
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init", uniq_name = ""}
-! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i32, !fir.heap<i32>
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]] : (!fir.heap<i32>) -> !fir.box<!fir.ptr<i32>>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:           %[[BOX_ADDR_1:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_1]] : (!fir.ptr<i32>) -> i64
+! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ASSOCIATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ASSOCIATED]] weights([1, 0]) -> (!fir.heap<i32>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem i32 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i32, !fir.heap<i32>
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<i32>
+! CHECK:           } else {
+! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<i32>
+! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<i32>
+! CHECK:           }
+! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[PRIVATE_ALLOC]] : (!fir.heap<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
@@ -566,8 +625,13 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<i32>) -> !fir.heap<i32>
-! CHECK:           fir.freemem %[[CONVERT_0]] : !fir.heap<i32>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<i32>) -> i64
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
+! CHECK:           fir.if %[[IS_ALLOCATED]] {
+! CHECK:             %[[CONVERT_1:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.ptr<i32>) -> !fir.heap<i32>
+! CHECK:             fir.freemem %[[CONVERT_1]] : !fir.heap<i32>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
@@ -576,9 +640,20 @@
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init", uniq_name = ""}
-! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i32, !fir.heap<i32>
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[ALLOCMEM_0]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[BOX_ADDR_1:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_1]] : (!fir.heap<i32>) -> i64
+! CHECK:           %[[CONSTANT_I64:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_I64]] : i64
+! CHECK:           %[[PRIVATE_ALLOC:.*]] = fir.if %[[IS_ALLOCATED]] weights([1, 0]) -> (!fir.heap<i32>) {
+! CHECK:             %[[ALLOCMEM_0:.*]] = fir.allocmem i32 <{bindc_name = "acc.reduction.init", uniq_name = ""}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
+! CHECK:             hlfir.assign %[[CONSTANT_0]] to %[[ALLOCMEM_0]] temporary_lhs : i32, !fir.heap<i32>
+! CHECK:             fir.result %[[ALLOCMEM_0]] : !fir.heap<i32>
+! CHECK:           } else {
+! CHECK:             %[[ZERO_BITS:.*]] = fir.zero_bits !fir.heap<i32>
+! CHECK:             fir.result %[[ZERO_BITS]] : !fir.heap<i32>
+! CHECK:           }
+! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[PRIVATE_ALLOC]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[EMBOX_0]] to %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
@@ -596,13 +671,18 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_0]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:           fir.freemem %[[BOX_ADDR_0]] : !fir.heap<i32>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[BOX_ADDR_0]] : (!fir.heap<i32>) -> i64
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i64
+! CHECK:           %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[CONVERT_0]], %[[CONSTANT_0]] : i64
+! CHECK:           fir.if %[[IS_ALLOCATED]] {
+! CHECK:             fir.freemem %[[BOX_ADDR_0]] : !fir.heap<i32>
+! CHECK:           }
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_z32 : !fir.ref<complex<f32>> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<complex<f32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca complex<f32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca complex<f32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           %[[UNDEFINED_0:.*]] = fir.undefined complex<f32>
@@ -619,7 +699,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_z32 : !fir.ref<complex<f32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<complex<f32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca complex<f32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca complex<f32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           %[[UNDEFINED_0:.*]] = fir.undefined complex<f32>
@@ -636,7 +716,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_neqv_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <neqv> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i1, !fir.ref<!fir.logical<4>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.logical<4>>
@@ -652,7 +732,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_eqv_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <eqv> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant true
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i1, !fir.ref<!fir.logical<4>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.logical<4>>
@@ -668,7 +748,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_lor_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <lor> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant false
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i1, !fir.ref<!fir.logical<4>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.logical<4>>
@@ -684,7 +764,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_land_ref_l32 : !fir.ref<!fir.logical<4>> reduction_operator <land> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant true
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i1, !fir.ref<!fir.logical<4>>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.logical<4>>
@@ -700,7 +780,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_xor_ref_i32 : !fir.ref<i32> reduction_operator <xor> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
@@ -713,7 +793,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_ior_ref_i32 : !fir.ref<i32> reduction_operator <ior> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
@@ -726,7 +806,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_iand_ref_i32 : !fir.ref<i32> reduction_operator <iand> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -1 : i32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
@@ -739,7 +819,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -3.40282347E+38 : f32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
@@ -774,7 +854,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_f32 : !fir.ref<f32> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -3.40282347E+38 : f32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : f32, !fir.ref<f32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<f32>
@@ -791,7 +871,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100x10xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -2147483648 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
@@ -833,7 +913,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_max_ref_i32 : !fir.ref<i32> reduction_operator <max> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant -2147483648 : i32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
@@ -849,7 +929,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_min_ref_100x10xf32 : !fir.ref<!fir.array<100x10xf32>> reduction_operator <min> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100x10xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xf32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 3.40282347E+38 : f32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
@@ -892,7 +972,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_min_ref_f32 : !fir.ref<f32> reduction_operator <min> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 3.40282347E+38 : f32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : f32, !fir.ref<f32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<f32>
@@ -909,7 +989,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_min_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <min> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 2147483647 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
@@ -943,7 +1023,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_min_ref_i32 : !fir.ref<i32> reduction_operator <min> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 2147483647 : i32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
@@ -959,7 +1039,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
@@ -990,7 +1070,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_f32 : !fir.ref<f32> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : f32, !fir.ref<f32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<f32>
@@ -1003,7 +1083,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
@@ -1034,7 +1114,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_mul_ref_i32 : !fir.ref<i32> reduction_operator <mul> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
@@ -1047,7 +1127,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xf32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
@@ -1078,7 +1158,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_f32 : !fir.ref<f32> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<f32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca f32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : f32, !fir.ref<f32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<f32>
@@ -1091,7 +1171,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100x10x2xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10x2xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10x2xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
@@ -1138,7 +1218,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100x10xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100x10xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
@@ -1177,7 +1257,7 @@
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<100xi32>>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<100xi32> <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 100 : index
 ! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
@@ -1208,13 +1288,13 @@
 
 ! CHECK-LABEL:   acc.private.recipe @privatization_ref_i32 : !fir.ref<i32> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.private.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.private.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
 ! CHECK:         }
 
 ! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_i32 : !fir.ref<i32> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
+! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 <{bindc_name = "acc.reduction.init"}> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
 ! CHECK:           hlfir.assign %[[CONSTANT_0]] to %[[ALLOCA_0]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<i32>
@@ -1581,7 +1661,7 @@ subroutine acc_reduction_and()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_and()
-! CHECK: %[[L:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFacc_reduction_andEl"}
+! CHECK: %[[L:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "l", uniq_name = "_QFacc_reduction_andEl"}>
 ! CHECK: %[[DECLL:.*]]:2 = hlfir.declare %[[L]]
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLL]]#0 : !fir.ref<!fir.logical<4>>) recipe(@reduction_land_ref_l32) name("l") -> !fir.ref<!fir.logical<4>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.logical<4>>)
@@ -1644,7 +1724,7 @@ subroutine acc_reduction_add_alloc()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_alloc()
-! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "i", uniq_name = "_QFacc_reduction_add_allocEi"}
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>> <{bindc_name = "i", uniq_name = "_QFacc_reduction_add_allocEi"}>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOCA]]
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe(@reduction_add_ref_box_heap_i32) name("i") -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
@@ -1758,7 +1838,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_dynamic_extent_add_with_section(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_reduction_add_dynamic_extent_add_with_sectionEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFacc_reduction_add_dynamic_extent_add_with_sectionEa") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index) startIdx(%{{.*}} : index) strideInBytes(true)
 ! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL]]#0 : !fir.box<!fir.array<?xi32>>) bounds(%[[BOUND]]) recipe(@reduction_add_section_lb1.ub3_box_Uxi32) name("a(2:4)") -> !fir.box<!fir.array<?xi32>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?xi32>>)
@@ -1771,7 +1851,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_allocatable(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_reduction_add_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFacc_reduction_add_allocatableEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) recipe(@reduction_max_ref_box_heap_Uxf32) name("a") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 
@@ -1783,7 +1863,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_pointer_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "a"})
-! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFacc_reduction_add_pointer_arrayEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFacc_reduction_add_pointer_arrayEa") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) recipe(@reduction_max_ref_box_ptr_Uxf32) name("a") -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 
@@ -1796,7 +1876,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_max_dynamic_extent_max(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, %{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"})
-! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFacc_reduction_max_dynamic_extent_maxEa"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFacc_reduction_max_dynamic_extent_maxEa") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
 ! CHECK: %[[RED:.*]] = acc.reduction var(%[[DECL_A]]#0 : !fir.box<!fir.array<?x?xf32>>) recipe(@reduction_max_box_UxUxf32) name("a") -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?x?xf32>>)
 

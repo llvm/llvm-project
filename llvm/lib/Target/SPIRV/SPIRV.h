@@ -10,6 +10,9 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRV_H
 
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Target/TargetMachine.h"
@@ -39,6 +42,14 @@ public:
 
 FunctionPass *createSPIRVStructurizerPass();
 
+class SPIRVRemoveUnusedResourcesPass
+    : public RequiredPassInfoMixin<SPIRVRemoveUnusedResourcesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createSPIRVRemoveUnusedResourcesLegacyPass();
+
 class SPIRVCBufferAccessPass
     : public RequiredPassInfoMixin<SPIRVCBufferAccessPass> {
 public:
@@ -66,13 +77,13 @@ public:
 
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 
-class SPIRVLegalizeImplicitBindingPass
-    : public RequiredPassInfoMixin<SPIRVLegalizeImplicitBindingPass> {
+class SPIRVLegalizeResourceBindingPass
+    : public RequiredPassInfoMixin<SPIRVLegalizeResourceBindingPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-ModulePass *createSPIRVLegalizeImplicitBindingPass();
+ModulePass *createSPIRVLegalizeResourceBindingPass();
 
 class SPIRVLegalizeZeroSizeArraysPass
     : public RequiredPassInfoMixin<SPIRVLegalizeZeroSizeArraysPass> {
@@ -115,9 +126,43 @@ public:
 };
 
 FunctionPass *createSPIRVRegularizerPass();
-FunctionPass *createSPIRVPreLegalizerCombiner();
-FunctionPass *createSPIRVPreLegalizerPass();
-FunctionPass *createSPIRVPostLegalizerPass();
+
+class SPIRVPreLegalizerPass
+    : public RequiredPassInfoMixin<SPIRVPreLegalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createSPIRVPreLegalizerLegacyPass();
+
+class SPIRVPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<SPIRVPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createSPIRVPreLegalizerCombinerLegacyPass();
+
+class SPIRVPostLegalizerPass
+    : public RequiredPassInfoMixin<SPIRVPostLegalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createSPIRVPostLegalizerLegacyPass();
+
+/// Rewrites MIR into the form SPIRVModuleAnalysis expects.
+class SPIRVPrepareModuleAnalysisPass
+    : public RequiredPassInfoMixin<SPIRVPrepareModuleAnalysisPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createSPIRVPrepareModuleAnalysisLegacyPass();
 
 class SPIRVEmitIntrinsicsPass
     : public RequiredPassInfoMixin<SPIRVEmitIntrinsicsPass> {
@@ -151,14 +196,16 @@ createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                const SPIRVSubtarget &Subtarget,
                                const RegisterBankInfo &RBI);
 
-void initializeSPIRVModuleAnalysisPass(PassRegistry &);
+void initializeSPIRVModuleAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVAsmPrinterPass(PassRegistry &);
 void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
-void initializeSPIRVPreLegalizerPass(PassRegistry &);
-void initializeSPIRVPreLegalizerCombinerPass(PassRegistry &);
-void initializeSPIRVPostLegalizerPass(PassRegistry &);
+void initializeSPIRVPreLegalizerLegacyPass(PassRegistry &);
+void initializeSPIRVPreLegalizerCombinerLegacyPass(PassRegistry &);
+void initializeSPIRVPostLegalizerLegacyPass(PassRegistry &);
+void initializeSPIRVPrepareModuleAnalysisLegacyPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
+void initializeSPIRVRemoveUnusedResourcesLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);
@@ -166,7 +213,7 @@ void initializeSPIRVRegularizerLegacyPass(PassRegistry &);
 void initializeSPIRVMergeRegionExitTargetsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareFunctionsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareGlobalsLegacyPass(PassRegistry &);
-void initializeSPIRVLegalizeImplicitBindingLegacyPass(PassRegistry &);
+void initializeSPIRVLegalizeResourceBindingLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PassRegistry &);
 void initializeSPIRVFinalizeShaderLinkageLegacyPass(PassRegistry &);
 void initializeSPIRVCtorDtorLoweringLegacyPass(PassRegistry &);

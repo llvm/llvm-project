@@ -1,19 +1,5 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-
 include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
-include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
-
-# GCC, unlike clang, issues a warning when one virtual function is overridden
-# in a derived class but one or more other virtual functions with the same
-# name and different signature from a base class are not overridden. This
-# leads to many warnings in the MLIR and ClangIR code when using the
-# OpenConversionPattern<>::matchAndRewrite() function in the ordinary way.
-# The "hiding" behavior is what we want, so we're just disabling the warning
-# here.
-if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-overloaded-virtual")
-endif()
+include_directories(${LLVM_BINARY_DIR}/tools/mlir/include)
 
 if(CLANG_INCLUDE_TESTS)
   set(cir_opt_test_libs CIRTestAnalysis)
@@ -27,28 +13,24 @@ if(CLANG_INCLUDE_TESTS)
   target_compile_definitions(cir-opt PRIVATE CLANG_INCLUDE_TESTS)
 endif()
 
-clang_target_link_libraries(cir-opt
-  PRIVATE
-  clangCIR
-  clangCIRLoweringDirectToLLVM
-  CIRRegisterAllDialects
-  MLIRCIR
-  MLIRCIRTransforms
-  ${cir_opt_test_libs}
-)
-
 target_link_libraries(cir-opt
   PRIVATE
-  ${dialect_libs}
-  ${conversion_libs}
+  ${cir_opt_test_libs}
+  CIRRegisterAllDialects
+  clangCIR
+  clangCIRLoweringDirectToLLVM
   MLIRAnalysis
+  MLIRCIR
+  MLIRCIRTransforms
   MLIRDialect
   MLIRIR
+  MLIRLLVMDialect
   MLIRMemRefDialect
   MLIROpenMPTransforms
   MLIROptLib
   MLIRParser
   MLIRPass
+  MLIRReconcileUnrealizedCasts
   MLIRSideEffectInterfaces
   MLIRTransforms
   MLIRTransformUtils

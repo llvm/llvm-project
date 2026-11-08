@@ -7,16 +7,17 @@
 ; CHECK: declare void @f.5678()
 
 ;--- import.yaml
+---
 CfiFunctionDefs:
 - Name: f.5678
   GUID: 4670599147315008938
----
+...
 
 ;--- module.ll
 source_filename = "promoted-internal.ll"
 
 ; f.5678 GUID: 4670599147315008938
-@f.5678 = hidden alias ptr, ptr @f.llvm.1234
+@f.5678 = hidden alias void (), ptr @f.llvm.1234
 
 define void @f.llvm.1234() !type !0 !guid !{i64 1234} {
   ret void

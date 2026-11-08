@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*}}-apple-darwin
+
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: cd %t

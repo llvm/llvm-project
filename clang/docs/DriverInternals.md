@@ -1,8 +1,5 @@
 # Driver Design & Internals
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -19,9 +16,6 @@ interface which is compatible with the gcc driver.
 Although the driver is part of and driven by the Clang project, it is
 logically a separate tool which shares many of the same goals as Clang:
 
-```{contents} Features
-:local:
-```
 
 ### GCC Compatibility
 
@@ -66,10 +60,6 @@ monolithic task.
 
 ## Internal Design and Implementation
 
-```{contents}
-:depth: 1
-:local:
-```
 
 ### Internals Introduction
 

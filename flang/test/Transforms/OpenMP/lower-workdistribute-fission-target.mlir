@@ -2,11 +2,11 @@
 // Test lowering of workdistribute after fission on host device.
 
 // CHECK-LABEL:   func.func @x(
-// CHECK:           %[[VAL_0:.*]] = fir.alloca index {bindc_name = "lb"}
+// CHECK:           %[[VAL_0:.*]] = fir.alloca index <{bindc_name = "lb"}>
 // CHECK:           fir.store %[[ARG0:.*]] to %[[VAL_0]] : !fir.ref<index>
-// CHECK:           %[[VAL_1:.*]] = fir.alloca index {bindc_name = "ub"}
+// CHECK:           %[[VAL_1:.*]] = fir.alloca index <{bindc_name = "ub"}>
 // CHECK:           fir.store %[[ARG1:.*]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:           %[[VAL_2:.*]] = fir.alloca index {bindc_name = "step"}
+// CHECK:           %[[VAL_2:.*]] = fir.alloca index <{bindc_name = "step"}>
 // CHECK:           fir.store %[[ARG2:.*]] to %[[VAL_2]] : !fir.ref<index>
 // CHECK:           %[[VAL_3:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("lb") -> !fir.ref<index>
 // CHECK:           %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]] : !fir.ref<index>, index) map_clauses(to) capture(ByRef) name("ub") -> !fir.ref<index>
@@ -97,7 +97,7 @@ func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
   "omp.target"(%addr, %allocator, %lb_map, %ub_map, %step_map, %addr_map, %addr) <{
       allocate_private_indices = array<i64: 0>,
       allocate_alignments = array<i64: 64>,
-      kernel_type = #omp<kernel_type(generic)>,
+      kernel_type = #omp.kernel_type<generic>,
       operandSegmentSizes = array<i32: 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0>,
       private_syms = [@addr_private]
   }> ({
