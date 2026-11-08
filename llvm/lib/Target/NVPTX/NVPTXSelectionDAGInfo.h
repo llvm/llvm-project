@@ -30,8 +30,12 @@ enum NodeType : unsigned {
   /// ValLo, ValHi, OUTCHAIN = ATOMIC_CMP_SWAP_B128(INCHAIN, ptr, cmpLo, cmpHi,
   ///                                               swapLo, swapHi)
   /// ValLo, ValHi, OUTCHAIN = ATOMIC_SWAP_B128(INCHAIN, ptr, amtLo, amtHi)
+  /// ValLo, ValHi, OUTCHAIN = ATOMIC_LOAD_B128(INCHAIN, ptr)
+  /// OUTCHAIN = ATOMIC_STORE_B128(INCHAIN, ptr, valLo, valHi)
   ATOMIC_CMP_SWAP_B128 = FIRST_MEMORY_OPCODE,
   ATOMIC_SWAP_B128,
+  ATOMIC_LOAD_B128,
+  ATOMIC_STORE_B128,
 
   LoadV2,
   LoadV4,

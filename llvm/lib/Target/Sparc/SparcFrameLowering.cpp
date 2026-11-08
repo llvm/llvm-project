@@ -376,3 +376,22 @@ void SparcFrameLowering::processFunctionBeforeFrameFinalized(
                       << ") as the emergency spill slot.\n");
   }
 }
+
+void SparcFrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS) const {
+  if (!MF.getInfo<SparcMachineFunctionInfo>()->isLeafProc())
+    return;
+
+  // PEI takes the entry block's parameter DBG_VALUEs out of the function
+  // while determineCalleeSaves runs, so remapRegsForLeafProc missed them.
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  auto Remap = [&MRI](unsigned Reg, unsigned MappedReg) {
+    for (MachineOperand &MO : make_early_inc_range(MRI.reg_operands(Reg)))
+      if (MO.isDebug())
+        MO.setReg(MappedReg);
+  };
+  for (unsigned Reg = SP::I0; Reg <= SP::I7; ++Reg)
+    Remap(Reg, Reg - SP::I0 + SP::O0);
+  for (unsigned Reg = SP::I0_I1; Reg <= SP::I6_I7; ++Reg)
+    Remap(Reg, Reg - SP::I0_I1 + SP::O0_O1);
+}

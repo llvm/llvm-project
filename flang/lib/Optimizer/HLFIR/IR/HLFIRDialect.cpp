@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/SmallVector.h"
@@ -93,6 +92,8 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
 }
 
 bool hlfir::isFortranScalarCharacterType(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
   return isFortranScalarCharacterExprType(type) ||
          mlir::isa<fir::BoxCharType>(type) ||
          mlir::isa<fir::CharacterType>(

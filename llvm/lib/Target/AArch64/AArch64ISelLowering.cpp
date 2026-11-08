@@ -7741,12 +7741,17 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
       LoadNode->getMemoryVT(), LoadNode->getMemOperand(),
       LoadNode->getAddressingMode(), LoadNode->getExtensionType());
 
+  EVT ExpandVT = getSVEContainerType(VT);
+  SDValue ExpandSource = getSVESafeBitCast(ExpandVT, Load, DAG);
+
   // Expand instruction copies the low-numbered elements to active elements
   // in the original predicate and zeros all other lanes.
   SDValue Result = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, VT,
+      ISD::INTRINSIC_WO_CHAIN, DL, ExpandVT,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_expand, DL, MVT::i64), Mask,
-      Load);
+      ExpandSource);
+
+  Result = getSVESafeBitCast(VT, Result, DAG);
 
   // Copy the passthrough value unless zero/undef.
   if (!PassThru->isUndef() && !isZerosVector(PassThru.getNode()))
@@ -10121,7 +10126,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // SME Streaming functions are not eligible for TCO as they may require
   // the streaming mode or ZA/ZT0 to be restored after returning from the call.
   SMECallAttrs CallAttrs =
-      getSMECallAttrs(CallerF, getRuntimeLibcallsInfo(), CLI);
+      getSMECallAttrs(CallerF, DAG.getLibcalls().getRuntimeLibcallsInfo(), CLI);
   if (CallAttrs.requiresSMChange() || CallAttrs.requiresZASave() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.caller().hasStreamingBody() || CallAttrs.caller().isNewZA() ||
@@ -10560,8 +10565,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Determine whether we need any streaming mode changes.
-  SMECallAttrs CallAttrs =
-      getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
+  SMECallAttrs CallAttrs = getSMECallAttrs(
+      MF.getFunction(), DAG.getLibcalls().getRuntimeLibcallsInfo(), CLI);
   if (CallAttrs.requiresNonLazySaveZA())
     reportFatalUsageError(
         "Calls that require saving ZA non-lazily is not yet implemented");
@@ -18505,7 +18510,8 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
     return DAG.getMergeValues(Ops, DL);
   }
 
-  RTLIB::LibcallImpl ChkStkImpl = getLibcallImpl(RTLIB::STACK_PROBE);
+  RTLIB::LibcallImpl ChkStkImpl =
+      DAG.getLibcalls().getLibcallImpl(RTLIB::STACK_PROBE);
   if (ChkStkImpl == RTLIB::Unsupported)
     return SDValue();
 
@@ -23075,11 +23081,11 @@ static SDValue performConcatVectorsCombine(SDNode *N,
       SmallVector<int, 8> Mask(MidVT.getVectorNumElements());
       for (size_t i = 0; i < Mask.size(); ++i)
         Mask[i] = i * 2;
-      return DAG.getNode(ISD::TRUNCATE, DL, VT,
-                         DAG.getVectorShuffle(
-                             MidVT, DL,
-                             DAG.getNode(ISD::BITCAST, DL, MidVT, N00),
-                             DAG.getNode(ISD::BITCAST, DL, MidVT, N10), Mask));
+      return DAG.getNode(
+          ISD::TRUNCATE, DL, VT,
+          DAG.getVectorShuffle(
+              MidVT, DL, DAG.getNode(AArch64ISD::NVCAST, DL, MidVT, N00),
+              DAG.getNode(AArch64ISD::NVCAST, DL, MidVT, N10), Mask));
     }
 
     // Optimize two large shifts and a combine into a single combine and shift
@@ -26572,11 +26578,15 @@ static MVT getSVEContainerType(EVT ContentTy) {
   case MVT::nxv2i64:
   case MVT::nxv2f32:
   case MVT::nxv2f64:
+  case MVT::nxv2f16:
+  case MVT::nxv2bf16:
     return MVT::nxv2i64;
   case MVT::nxv4i8:
   case MVT::nxv4i16:
   case MVT::nxv4i32:
   case MVT::nxv4f32:
+  case MVT::nxv4f16:
+  case MVT::nxv4bf16:
     return MVT::nxv4i32;
   case MVT::nxv8i8:
   case MVT::nxv8i16:
@@ -29733,6 +29743,96 @@ static SDValue foldCSELofLASTB(SDNode *Op, SelectionDAG &DAG) {
                      AnyPred, Default, LastB.getOperand(1));
 }
 
+// Optimize CSEL of a CSEL with the same flags:
+// (CSEL (CSEL a b  cc F) d cc F) => (CSEL a d cc F)
+// (CSEL (CSEL a b !cc F) d cc F) => (CSEL b d cc F)
+// (CSEL d (CSEL a b  cc F) cc F) => (CSEL d b cc F)
+// (CSEL d (CSEL a b !cc F) cc F) => (CSEL d a cc F)
+// (CSEL (OP x.. (CSEL a b  cc F) y..) d cc F) => (CSEL (OP x.. a y..) d cc F)
+// (CSEL (OP x.. (CSEL a b !cc F) y..) d cc F) => (CSEL (OP x.. b y..) d cc F)
+// (CSEL d (OP x.. (CSEL a b  cc F) y..) cc F) => (CSEL d (OP x.. b y..) cc F)
+// (CSEL d (OP x.. (CSEL a b !cc F) y..) cc F) => (CSEL d (OP x.. a y..) cc F)
+// CSINC/CSINV/CSNEG absorb (ADD x 1), (XOR x -1), (SUB 0 x), respectively.
+static SDValue foldCSELOfCSELSameFlags(SDNode *N, SelectionDAG &DAG) {
+  SDValue Flags = N->getOperand(3);
+  auto CC = static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+  // AArch64CC::getInvertedCondCode for AL returns NV and vice versa. Which may
+  // select the wrong value. So ignore those cases entirely as they rarely used.
+  if (CC == AArch64CC::AL || CC == AArch64CC::NV)
+    return SDValue();
+
+  auto GetSelectedInnerCSELValue = [](SDValue Inner, unsigned ValNo,
+                                      AArch64CC::CondCode CC,
+                                      SDValue Flags) -> SDValue {
+    if (Inner.getOpcode() != AArch64ISD::CSEL || Inner.getOperand(3) != Flags)
+      return SDValue();
+    auto ICC =
+        static_cast<AArch64CC::CondCode>(Inner->getConstantOperandVal(2));
+    bool TakesTVal;
+    if (ICC == CC)
+      TakesTVal = (ValNo == 0);
+    else if (ICC == AArch64CC::getInvertedCondCode(CC))
+      TakesTVal = (ValNo != 0);
+    else
+      return SDValue();
+    return Inner.getOperand(TakesTVal ? 0 : 1);
+  };
+
+  for (unsigned OperandNo : {0, 1}) {
+    SDValue Val = N->getOperand(OperandNo);
+
+    // The expression is the inner CSEL itself, so directly substitute.
+    if (SDValue SelectedVal =
+            GetSelectedInnerCSELValue(Val, OperandNo, CC, Flags)) {
+      SmallVector<SDValue, 4> NewOps(N->op_values());
+      NewOps[OperandNo] = SelectedVal;
+      return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), N->getVTList(), NewOps);
+    }
+
+    unsigned Opc = Val.getOpcode();
+    if (Val->getNumValues() != 1 || Val.getNumOperands() == 0 ||
+        !DAG.isSafeToSpeculativelyExecuteNode(Val.getNode()) ||
+        any_of(Val->op_values(), [](SDValue Operand) {
+          EVT VT = Operand.getValueType();
+          return VT == MVT::Other || VT == MVT::Glue;
+        }))
+      continue;
+
+    // Only profitable to duplicate forms that can be folded back into the CSEL
+    // as CSINC/CSINV/CSNEG: (ADD x 1), (XOR x -1), and (SUB 0 x).
+    if (!Val.hasOneUse()) {
+      bool IsProfitableFormToFold =
+          Val.getNumOperands() == 2 &&
+          ((Opc == ISD::ADD && isOneConstant(Val.getOperand(1))) ||
+           (Opc == ISD::XOR && isAllOnesConstant(Val.getOperand(1))) ||
+           (Opc == ISD::SUB && isNullConstant(Val.getOperand(0))));
+      if (!IsProfitableFormToFold)
+        continue;
+    }
+
+    // The inner CSEL is an operand of the OP expression, so the expression has
+    // to be rebuilt around the substituted value.
+    for (unsigned InnerOperandNo = 0; InnerOperandNo != Val.getNumOperands();
+         ++InnerOperandNo) {
+      SDValue Inner = Val.getOperand(InnerOperandNo);
+      SDValue SelectedInner =
+          GetSelectedInnerCSELValue(Inner, OperandNo, CC, Flags);
+      if (!SelectedInner)
+        continue;
+      SmallVector<SDValue, 4> Ops(Val->op_values());
+      Ops[InnerOperandNo] = SelectedInner;
+      SDNodeFlags ValFlags =
+          Val->getFlags() & ~SDNodeFlags::PoisonGeneratingFlags;
+      SDValue NewVal =
+          DAG.getNode(Opc, SDLoc(Val), Val.getValueType(), Ops, ValFlags);
+      SmallVector<SDValue, 4> NewOps(N->op_values());
+      NewOps[OperandNo] = NewVal;
+      return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), N->getVTList(), NewOps);
+    }
+  }
+  return SDValue();
+}
+
 // Optimize CSEL instructions
 static SDValue performCSELCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -29740,6 +29840,9 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL x, x, cc -> x
   if (N->getOperand(0) == N->getOperand(1))
     return N->getOperand(0);
+
+  if (SDValue R = foldCSELOfCSELSameFlags(N, DAG))
+    return R;
 
   if (SDValue R = foldCSELOfCSEL(N, DAG))
     return R;
@@ -30343,9 +30446,8 @@ static SDValue performVselectPowCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   RTLIB::Libcall LC = RTLIB::getPOW(VT);
   SelectionDAG &DAG = DCI.DAG;
-  auto &TLI = DAG.getTargetLoweringInfo();
-  bool HasLibCall = TLI.getLibcallLoweringInfo().getVectorLibcallImplOrMasked(
-                        LC) != RTLIB::Unsupported;
+  bool HasLibCall =
+      DAG.getLibcalls().getVectorLibcallImplOrMasked(LC) != RTLIB::Unsupported;
   if (!HasLibCall)
     return SDValue();
 

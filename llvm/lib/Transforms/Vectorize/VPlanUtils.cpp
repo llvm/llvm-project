@@ -12,9 +12,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -511,8 +509,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
-          VPV))
+  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
+          VPConditionalInductionPHIRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isVectorToScalar();
@@ -975,6 +973,11 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   return nullptr;
 }
 
+bool VPSCEVExpander::canExpandInIR(const SCEV *S) {
+  return HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+         SE.isGuaranteedNotToCauseUB(S);
+}
+
 VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
   VPValue *Base = expand(SE.getPointerBase(S));
   VPValue *Offset = expand(SE.removePointerBase(S));
@@ -1013,8 +1016,7 @@ VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
 
-  if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
-      SE.isGuaranteedNotToCauseUB(S))
+  if (canExpandInIR(S))
     return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
                                                   /*ExpandInIR=*/true);
 

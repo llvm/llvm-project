@@ -2257,7 +2257,7 @@ bool VectorLegalizer::tryExpandVecMathCall(
       LCImpl = Libcalls.getVectorLibcallImplOrMasked(GetLibcall(CallVT));
   }
 
-  const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
 
   auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(
       Ctx, DAG.getSubtarget().getTargetTriple(), DAG.getDataLayout(), LCImpl);

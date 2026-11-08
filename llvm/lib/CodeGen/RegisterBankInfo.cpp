@@ -203,15 +203,15 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
       }
     }
 
-    TypeSize Size = getSizeInBits(Reg, MRI, TRI);
+    TypeSize Size = TRI.getRegSizeInBits(Reg, MRI);
     const ValueMapping *ValMapping =
         &getValueMapping(0, Size.getKnownMinValue(), *CurRegBank);
     if (IsCopyLike) {
       if (!OperandsMapping[0]) {
         if (MI.isRegSequence()) {
           // For reg_sequence, the result size does not match the input.
-          unsigned ResultSize = getSizeInBits(MI.getOperand(0).getReg(),
-                                              MRI, TRI);
+          unsigned ResultSize =
+              TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
           OperandsMapping[0] = &getValueMapping(0, ResultSize, *CurRegBank);
         } else {
           OperandsMapping[0] = ValMapping;
@@ -230,8 +230,8 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
           continue;
 
         const RegisterBank *AltRegBank = getRegBank(Reg, MRI, TRI);
-        if (AltRegBank &&
-            cannotCopy(*CurRegBank, *AltRegBank, getSizeInBits(Reg, MRI, TRI)))
+        if (AltRegBank && cannotCopy(*CurRegBank, *AltRegBank,
+                                     TRI.getRegSizeInBits(Reg, MRI)))
           return getInvalidInstructionMapping();
       }
 
@@ -485,20 +485,6 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
   }
 }
 
-TypeSize RegisterBankInfo::getSizeInBits(Register Reg,
-                                         const MachineRegisterInfo &MRI,
-                                         const TargetRegisterInfo &TRI) const {
-  if (Reg.isPhysical()) {
-    // The size is not directly available for physical registers.
-    // Instead, we need to access a register class that contains Reg and
-    // get the size of that register class.
-    auto *RC = TRI.getMinimalPhysRegClass(Reg);
-    assert(RC && "Expecting Register class");
-    return TRI.getRegSizeInBits(*RC);
-  }
-  return TRI.getRegSizeInBits(Reg, MRI);
-}
-
 //------------------------------------------------------------------------------
 // Helper classes implementation.
 //------------------------------------------------------------------------------
@@ -623,9 +609,9 @@ bool RegisterBankInfo::InstructionMapping::verify(
     (void)MOMapping;
     // Register size in bits.
     // This size must match what the mapping expects.
-    assert(MOMapping.verify(*RBI, RBI->getSizeInBits(
-                                      Reg, MF.getRegInfo(),
-                                      *MF.getSubtarget().getRegisterInfo())) &&
+    assert(MOMapping.verify(
+               *RBI, MF.getSubtarget().getRegisterInfo()->getRegSizeInBits(
+                         Reg, MRI)) &&
            "Value mapping is invalid");
   }
   return true;

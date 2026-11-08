@@ -1347,12 +1347,6 @@ public:
     return true;
   }
 
-  /// Returns true if the operation can trap for the value type.
-  ///
-  /// VT must be a legal type. By default, we optimistically assume most
-  /// operations don't trap except for integer divide and remainder.
-  virtual bool canOpTrap(unsigned Op, EVT VT) const;
-
   /// Similar to isShuffleMaskLegal. Targets can use this to indicate if there
   /// is a suitable VECTOR_SHUFFLE that can be used to replace a VAND with a
   /// constant pool entry.
@@ -3843,14 +3837,6 @@ public:
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
-
-  /// Get the CallingConv that should be used for the specified libcall
-  /// implementation.
-  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    return Libcalls.getLibcallImplCallingConv(Call);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall.
   // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
@@ -4415,10 +4401,7 @@ public:
                                           EVT RetVT, ArrayRef<SDValue> Ops,
                                           MakeLibCallOptions CallOptions,
                                           const SDLoc &dl,
-                                          SDValue Chain = SDValue()) const {
-    return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
-                       Chain);
-  }
+                                          SDValue Chain = SDValue()) const;
 
   /// Build a call argument list for \p FuncTy, taking the argument node values
   /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
