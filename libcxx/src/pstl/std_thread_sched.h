@@ -315,8 +315,7 @@ inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) {
   // This thread doesn't own a queue, try to find a free one.
   // This thread must be a guest, hence start looking after the queues owned by the workers.
   for (size_t i = m_workers_count; i < m_queues_count; ++i) {
-    std::thread::id id = m_queue_owners[i].id.load();
-    if (id == std::thread::id{}) {
+    if (m_queue_owners[i].id.load() == std::thread::id{}) {
       // Nobody owns this queue as of now, try to atomically acquire the ownership.
       std::thread::id expected;
       if (m_queue_owners[i].id.compare_exchange_strong(expected, thread_id)) {
@@ -365,13 +364,7 @@ inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(voi
   size_t num_requests = std::min(m_workers_count + 1, iterations);
 
   // Create a task that will be published in the queue and then stolen by the workers.
-  Task root_task{
-      .ctx        = ctx,         //
-      .func       = func,        //
-      .iterations = iterations,  //
-      .index      = 0,           //
-      .requests   = num_requests //
-  };
+  Task root_task{.ctx = ctx, .func = func, .iterations = iterations, .index = 0, .requests = num_requests};
 
   // Push all but one request to the queue, and process the last one directly in this thread.
   // If the queue is full (e.g. due to deep nested parallelism), the caller thread will process all remaining requests
