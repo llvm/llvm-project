@@ -528,7 +528,7 @@ checked:
   (but excluding move-safe ones) and smart pointers.
 - With option value `KnownsAndLocals` local variables (of any type) are
   additionally checked. The idea behind this is that local variables are
-  usually not tempting to be re-used so an use after move is more likely a bug
+  usually not tempting to be re-used so a use after move is more likely a bug
   than with member variables.
 - With option value `All` any use-after move condition is checked on all
   kinds of variables, excluding global variables and known move-safe cases.
@@ -854,7 +854,7 @@ void test2(int *p) {
 void test3() {
   int (*p_function)(char, char);
   p_function = (int (*)(char, char))0x04080;
-  int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+  int x = (*p_function)('x', 'y'); // NO warning yet at function pointer calls
 }
 ```
 
