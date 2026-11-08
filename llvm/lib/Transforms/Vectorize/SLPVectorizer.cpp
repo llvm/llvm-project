@@ -8070,6 +8070,9 @@ Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
       Entry.State == TreeEntry::StridedVectorize && Entry.isReverse() &&
       !isWidenedStridedLoad(&Entry))
     return dyn_cast<Instruction>(Entry.Scalars[Entry.ReorderIndices.front()]);
+  // The wide load of the copyable loads uses the pointer of the first load.
+  if (Entry.hasState() && Entry.getOpcode() == Instruction::Load)
+    return Entry.getFirstLoad();
   return Entry.hasState() ? Entry.getMainOp()
                           : dyn_cast<Instruction>(Entry.Scalars.front());
 }
