@@ -10,6 +10,7 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/FuzzMutate/Random.h"
@@ -41,10 +42,28 @@ void TopLevelOpDuplicationStrategy::mutate(ModuleOp module,
     ops.push_back(&op);
   if (ops.empty())
     return;
+  Operation *chosen = ops[std::uniform_int_distribution<size_t>(
+      0, ops.size() - 1)(IB.getRand())];
   OpBuilder b(module->getContext());
   b.setInsertionPointToStart(module.getBody());
-  b.clone(*ops[std::uniform_int_distribution<size_t>(0, ops.size() -
-                                                            1)(IB.getRand())]);
+  Operation *clone = b.clone(*chosen);
+  if (isa<SymbolOpInterface>(clone)) {
+    StringAttr oldName = SymbolTable::getSymbolName(clone);
+    if (oldName) {
+      SymbolTable moduleTable(module);
+      StringAttr newName;
+      for (unsigned i = 0;; ++i) {
+        std::string candidate = oldName.str() + "_" + std::to_string(i);
+        if (!moduleTable.lookup(candidate)) {
+          newName = b.getStringAttr(candidate);
+          break;
+        }
+      }
+      SymbolTable::setSymbolName(clone, newName);
+      if (failed(SymbolTable::replaceAllSymbolUses(oldName, newName, clone)))
+        clone->erase();
+    }
+  }
 }
 
 uint64_t PoisonAppendStrategy::getWeight(size_t CurrentSize, size_t MaxSize,
