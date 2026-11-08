@@ -26,7 +26,7 @@ void test_no_parameter_clause() {
   // CHECK-MESSAGES-BEFORE-CXX23: :[[@LINE-1]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
   // CHECK-MESSAGES-CXX23: :[[@LINE-2]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
   // CHECK-FIXES-BEFORE-CXX23: auto l3 = [&x]() -> int /* comment */ { return x; };
-  // CHECK-FIXES-CXX23: auto l3 = [&x] /* comment */ -> int { return x; };
+  // CHECK-FIXES-CXX23: auto l3 = [&x] -> int /* comment */ { return x; };
 
   // Specifiers would have to follow '()', so don't offer a fix before C++23.
   auto l4 = [x] mutable { return x; };

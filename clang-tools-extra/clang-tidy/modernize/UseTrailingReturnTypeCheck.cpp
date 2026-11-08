@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseTrailingReturnTypeCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
@@ -363,6 +365,26 @@ findReturnTypeAndCVSourceRange(const FunctionDecl &F, const TypeLoc &ReturnLoc,
   return ReturnTypeRange;
 }
 
+// Returns the end of the token before Loc, so that text inserted there can't
+// split a token or end up in a comment, or an invalid location if that token
+// can't be edited as part of the same lambda.
+static SourceLocation findEndOfPreviousToken(SourceLocation Loc,
+                                             const SourceManager &SM,
+                                             const LangOptions &LangOpts) {
+  if (Loc.isMacroID()) {
+    // What comes before a location at the start of a macro argument isn't
+    // necessarily next to it in the file.
+    if (!SM.isMacroArgExpansion(Loc) ||
+        SM.isAtStartOfImmediateMacroExpansion(Loc))
+      return {};
+    Loc = SM.getSpellingLoc(Loc);
+  }
+
+  const std::optional<Token> PreviousToken =
+      utils::lexer::getPreviousToken(Loc, SM, LangOpts);
+  return PreviousToken ? PreviousToken->getEndLoc() : SourceLocation();
+}
+
 static SourceLocation findLambdaTrailingReturnInsertLoc(
     const CXXMethodDecl *Method, const SourceManager &SM,
     const LangOptions &LangOpts, const ASTContext &Ctx) {
@@ -392,7 +414,7 @@ static SourceLocation findLambdaTrailingReturnInsertLoc(
       }
 
       if (Token.is(tok::kw_requires))
-        return Token.getLocation().getLocWithOffset(-1);
+        return findEndOfPreviousToken(Token.getLocation(), SM, LangOpts);
     }
 
     return {};
@@ -400,7 +422,7 @@ static SourceLocation findLambdaTrailingReturnInsertLoc(
 
   // If no requires clause, insert before the body
   if (const Stmt *Body = Method->getBody())
-    return Body->getBeginLoc().getLocWithOffset(-1);
+    return findEndOfPreviousToken(Body->getBeginLoc(), SM, LangOpts);
 
   return {};
 }
@@ -669,14 +691,19 @@ void UseTrailingReturnTypeCheck::diagOnLambda(
       findLambdaTrailingReturnInsertLoc(Method, *Result.SourceManager,
                                         getLangOpts(), *Result.Context);
 
-  if (TrailingReturnInsertLoc.isValid())
+  if (TrailingReturnInsertLoc.isValid()) {
+    // Don't merge the return type with a directly following 'requires'.
+    const char *NextChar =
+        Result.SourceManager->getCharacterData(TrailingReturnInsertLoc);
     diag(Lambda->getBeginLoc(), "use a trailing return type for this lambda")
         << FixItHint::CreateInsertion(
                TrailingReturnInsertLoc,
                " -> " +
-                   ReturnType.getAsString(Result.Context->getPrintingPolicy()));
-  else
+                   ReturnType.getAsString(Result.Context->getPrintingPolicy()) +
+                   (isAsciiIdentifierContinue(*NextChar) ? " " : ""));
+  } else {
     diag(Lambda->getBeginLoc(), ErrorMessageOnLambda);
+  }
 }
 
 } // namespace clang::tidy::modernize
