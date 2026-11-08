@@ -28,6 +28,7 @@ class MemCpyInst;
 class MemMoveInst;
 class MemSetInst;
 class MemSetPatternInst;
+class MemTransferInst;
 class ScalarEvolution;
 class TargetTransformInfo;
 class Value;
@@ -85,6 +86,14 @@ LLVM_ABI void expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
 LLVM_ABI void expandBoundedMemSetPattern(MemSetPatternInst *MemSetPattern,
                                          uint64_t MinCount, uint64_t MaxCount,
                                          const KnownBits &CountKnown);
+
+/// Expand \p MemTransfer (a memcpy or memmove), whose length is known to be in
+/// [\p MinLen, \p MaxLen] and to have the known bits \p LenKnown, into a tree
+/// of branches on the length leading to at most two overlapping loads and
+/// stores each. \p MemTransfer is not deleted.
+LLVM_ABI void expandBoundedMemTransfer(MemTransferInst *MemTransfer,
+                                       uint64_t MinLen, uint64_t MaxLen,
+                                       const KnownBits &LenKnown);
 
 /// Expand \p MemSetPattern as a loop. \p MemSetPattern is not deleted.
 /// If \p TTI is provided, the memset.pattern is expanded according to the

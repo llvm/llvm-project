@@ -276,6 +276,9 @@ public:
   uint64_t getMaxBoundedMemSetInlineSize() const override {
     return ST->requiresStrictAlign() || ST->hasMOPS() ? 0 : 64;
   }
+  uint64_t getMaxBoundedMemTransferInlineSize() const override {
+    return ST->requiresStrictAlign() || ST->hasMOPS() ? 0 : 64;
+  }
 
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,

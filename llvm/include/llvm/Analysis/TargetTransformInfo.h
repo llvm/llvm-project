@@ -494,6 +494,12 @@ public:
   /// expansion.
   LLVM_ABI uint64_t getMaxBoundedMemSetInlineSize() const;
 
+  /// Returns the maximum length in bytes for which a memcpy or memmove with a
+  /// non-constant length, known to be bounded by that value, is preferably
+  /// expanded inline instead of calling the library. Zero disables the
+  /// expansion.
+  LLVM_ABI uint64_t getMaxBoundedMemTransferInlineSize() const;
+
   /// \return The estimated number of case clusters when lowering \p 'SI'.
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.

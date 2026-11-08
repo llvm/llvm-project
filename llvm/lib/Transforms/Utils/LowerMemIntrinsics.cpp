@@ -1762,6 +1762,113 @@ void llvm::expandBoundedMemSetPattern(MemSetPatternInst *MemSet,
   MemSet->getParent()->setName("memset_pattern_done");
 }
 
+void llvm::expandBoundedMemTransfer(MemTransferInst *MemTransfer,
+                                    uint64_t MinLen, uint64_t MaxLen,
+                                    const KnownBits &LenKnown) {
+  assert(MinLen <= MaxLen && "Invalid length bounds");
+  assert(!MemTransfer->isVolatile() && "Cannot split a volatile memcpy");
+
+  // Known bits make the length a multiple of MinAccessSize, so no smaller
+  // access is needed, and a length below it can only be zero.
+  uint64_t MinAccessSize = uint64_t(1)
+                           << std::min(LenKnown.countMinTrailingZeros(), 63u);
+  if (MaxLen < MinAccessSize)
+    return;
+
+  Value *Dst = MemTransfer->getRawDest();
+  Value *Src = MemTransfer->getRawSource();
+  Value *Len = MemTransfer->getLength();
+  Type *LenTy = Len->getType();
+  Align DstAlign = MemTransfer->getDestAlign().valueOrOne();
+  Align SrcAlign = MemTransfer->getSourceAlign().valueOrOne();
+  Align DstTailAlign = commonAlignment(DstAlign, MinAccessSize);
+  Align SrcTailAlign = commonAlignment(SrcAlign, MinAccessSize);
+  StringRef Name = isa<MemMoveInst>(MemTransfer) ? "memmove" : "memcpy";
+
+  // The same branches as for a memset, but each size class loads the head and
+  // the tail of the source before storing either, so this is also correct for
+  // a memmove whose source and destination overlap. E.g. for a length in
+  // [0, 4]:
+  //
+  //     %len.ge4 = icmp uge i64 %len, 4
+  //     br i1 %len.ge4, label %memcpy_store4, label %memcpy_lt4
+  //   memcpy_store4:                 ; length 4, so no tail copy
+  //     %head = load i32, ptr %src
+  //     store i32 %head, ptr %dst
+  //     br label %memcpy_done
+  //   memcpy_lt4:
+  //     %len.ge2 = icmp uge i64 %len, 2
+  //     br i1 %len.ge2, label %memcpy_store2, label %memcpy_lt2
+  //   memcpy_store2:                 ; length 2 or 3
+  //     %head = load i16, ptr %src
+  //     %tail.off = sub i64 %len, 2
+  //     %src.tail = getelementptr inbounds i8, ptr %src, i64 %tail.off
+  //     %tail = load i16, ptr %src.tail
+  //     store i16 %head, ptr %dst
+  //     %dst.tail = getelementptr inbounds i8, ptr %dst, i64 %tail.off
+  //     store i16 %tail, ptr %dst.tail  ; <<< may overlap!
+  //     br label %memcpy_done
+  //   memcpy_lt2:
+  //     %len.ge1 = icmp uge i64 %len, 1
+  //     br i1 %len.ge1, label %memcpy_store1, label %memcpy_done
+  //   memcpy_store1:                 ; length 1
+  //     %head = load i8, ptr %src
+  //     store i8 %head, ptr %dst
+  //     br label %memcpy_done
+  uint64_t TopSize = llvm::bit_floor(MaxLen);
+  Instruction *InsertBefore = MemTransfer;
+  MDNode *Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
+      *MemTransfer->getFunction(), DEBUG_TYPE);
+  for (uint64_t Size = TopSize; Size >= MinAccessSize; Size /= 2) {
+    Instruction *StoreBefore = InsertBefore;
+    if (MinLen < Size) {
+      IRBuilder<> B(InsertBefore);
+      Value *Cond = B.CreateICmpUGE(Len, ConstantInt::get(LenTy, Size),
+                                    "len.ge" + Twine(Size));
+      if (Size == MinAccessSize) {
+        StoreBefore =
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, Weights);
+      } else {
+        Instruction *ElseTerm;
+        SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
+                                      &ElseTerm, Weights);
+        ElseTerm->getParent()->setName(Name + "_lt" + Twine(Size));
+        InsertBefore = ElseTerm;
+      }
+      StoreBefore->getParent()->setName(Name + "_store" + Twine(Size));
+    }
+
+    // Load the Size-sized head, and the possibly-overlapping "remainder" tail,
+    // before storing either.
+    IRBuilder<> B(StoreBefore);
+    Type *Ty = Size <= 8 ? cast<Type>(B.getIntNTy(Size * 8))
+                         : FixedVectorType::get(B.getInt8Ty(), Size);
+    Value *Head = B.CreateAlignedLoad(Ty, Src, SrcAlign, "head");
+    uint64_t MaxLenForSize =
+        Size == TopSize ? MaxLen : 2 * Size - MinAccessSize;
+    Value *TailOff = nullptr;
+    Value *Tail = nullptr;
+    if (MaxLenForSize > Size) {
+      TailOff = B.CreateSub(Len, ConstantInt::get(LenTy, Size), "tail.off");
+      Value *SrcTail =
+          B.CreateInBoundsGEP(B.getInt8Ty(), Src, TailOff, "src.tail");
+      Tail = B.CreateAlignedLoad(Ty, SrcTail, SrcTailAlign, "tail");
+    }
+
+    B.CreateAlignedStore(Head, Dst, DstAlign);
+    if (Tail) {
+      Value *DstTail =
+          B.CreateInBoundsGEP(B.getInt8Ty(), Dst, TailOff, "dst.tail");
+      B.CreateAlignedStore(Tail, DstTail, DstTailAlign);
+    }
+
+    if (MinLen >= Size)
+      break;
+  }
+
+  MemTransfer->getParent()->setName(Name + "_done");
+}
+
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset,
                                      const TargetTransformInfo *TTI) {
   createMemSetPatternLoop(
