@@ -21943,40 +21943,43 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // Do the cost estimation if shuffle beneficial than buildvector.
     SmallVector<int> SubMask(std::next(Mask.begin(), MaskBase),
                              std::next(Mask.begin(), MaskBase + VL.size()));
-    int MinElement = SubMask.front(), MaxElement = SubMask.front();
-    for (int Idx : make_filter_range(
-             SubMask, [](int Idx) { return Idx != PoisonMaskElem; })) {
-      if (MinElement == PoisonMaskElem || MinElement % VF > Idx % VF)
-        MinElement = Idx;
-      if (MaxElement == PoisonMaskElem || MaxElement % VF < Idx % VF)
-        MaxElement = Idx;
-    }
-    assert(MaxElement >= 0 && MinElement >= 0 &&
-           MaxElement % VF >= MinElement % VF &&
-           "Expected at least single element.");
-    // If the leading [0, MinIdx) range sits in its own register part(s),
-    // skip those whole parts when sizing the destination - everything below
-    // the register-aligned floor is unused and never indexed.
-    unsigned Offset = 0;
-    unsigned MinIdx = MinElement % VF;
-    if (MinIdx > 1) {
-      unsigned RegFloor = getFloorFullVectorNumberOfElements(
-          *TTI, VL.front()->getType(), MinIdx, Opts.slp_revec);
-      auto *RegFloorTy = getWidenedType(VL.front()->getType(), RegFloor);
-      unsigned RegFloorParts =
-          getNumberOfParts(RegFloorTy, VL.front()->getType(), RegFloor);
-      if (RegFloorParts > 1)
-        Offset = RegFloor;
-    }
-    unsigned NewVF =
-        std::max<unsigned>(VL.size(), (MaxElement % VF) - Offset + 1);
-    if (NewVF < VF) {
+    auto ShrinkMask = [&](MutableArrayRef<int> SrcMask, unsigned SrcVF) {
+      int MinElement = SrcMask.front(), MaxElement = SrcMask.front();
+      for (int Idx : make_filter_range(
+               SrcMask, [](int Idx) { return Idx != PoisonMaskElem; })) {
+        if (MinElement == PoisonMaskElem || MinElement % SrcVF > Idx % SrcVF)
+          MinElement = Idx;
+        if (MaxElement == PoisonMaskElem || MaxElement % SrcVF < Idx % SrcVF)
+          MaxElement = Idx;
+      }
+      assert(MaxElement >= 0 && MinElement >= 0 &&
+             MaxElement % SrcVF >= MinElement % SrcVF &&
+             "Expected at least single element.");
+      // If the leading [0, MinIdx) range sits in its own register part(s),
+      // skip those whole parts when sizing the destination - everything below
+      // the register-aligned floor is unused and never indexed.
+      unsigned Offset = 0;
+      unsigned MinIdx = MinElement % SrcVF;
+      if (MinIdx > 1) {
+        unsigned RegFloor = getFloorFullVectorNumberOfElements(
+            *TTI, VL.front()->getType(), MinIdx, Opts.slp_revec);
+        auto *RegFloorTy = getWidenedType(VL.front()->getType(), RegFloor);
+        unsigned RegFloorParts =
+            getNumberOfParts(RegFloorTy, VL.front()->getType(), RegFloor);
+        if (RegFloorParts > 1)
+          Offset = RegFloor;
+      }
+      unsigned NewVF =
+          std::max<unsigned>(VL.size(), (MaxElement % SrcVF) - Offset + 1);
+      if (NewVF >= SrcVF)
+        return SrcVF;
       for (int &Idx : make_filter_range(
-               SubMask, [](int Idx) { return Idx != PoisonMaskElem; }))
-        Idx = (Idx % VF) - Offset + (Idx >= static_cast<int>(VF) ? NewVF : 0);
-    } else {
-      NewVF = VF;
-    }
+               SrcMask, [](int Idx) { return Idx != PoisonMaskElem; }))
+        Idx = (Idx % SrcVF) - Offset +
+              (Idx >= static_cast<int>(SrcVF) ? NewVF : 0);
+      return NewVF;
+    };
+    unsigned NewVF = ShrinkMask(SubMask, VF);
 
     auto *VecTy =
         cast<VectorType>(getWidenedType(VL.front()->getType(), NewVF));
@@ -22057,20 +22060,40 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // A lane taken from another vectorized entry needs a shuffle, which a zero
     // insert price misses.
     APInt VectorizedElts = APInt::getZero(SubMask.size());
-    SmallVector<int> VectorizedMask(SubMask.size(), PoisonMaskElem);
+    SmallVector<const TreeEntry *, 2> VectorizedEntries;
+    SmallVector<std::pair<unsigned, const TreeEntry *>> VectorizedLanes;
     for (auto [I, Idx] : enumerate(SubMask)) {
-      if (Idx == PoisonMaskElem || !isVectorized(VL[I]))
+      if (Idx == PoisonMaskElem)
+        continue;
+      ArrayRef<TreeEntry *> VTEs = getTreeEntries(VL[I]);
+      const auto *It = find_if(VTEs, [&](const TreeEntry *E) {
+        return !DeletedNodes.contains(E) &&
+               !TransformedToGatherNodes.contains(E);
+      });
+      if (It == VTEs.end())
         continue;
       VectorizedElts.setBit(I);
-      VectorizedMask[I] = Idx;
+      VectorizedLanes.emplace_back(I, *It);
+      if (!is_contained(VectorizedEntries, *It))
+        VectorizedEntries.push_back(*It);
     }
-    if (!VectorizedElts.isZero() &&
+    if (!VectorizedElts.isZero() && VectorizedEntries.size() <= 2 &&
         getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
                                  MaskVecTy, VectorizedElts, /*Insert=*/true,
                                  /*Extract=*/false,
                                  CostKind) == TTI::TCC_Free) {
+      unsigned VectorizedVF = 0;
+      for (const TreeEntry *E : VectorizedEntries)
+        VectorizedVF = std::max(VectorizedVF, E->getVectorFactor());
+      SmallVector<int> VectorizedMask(SubMask.size(), PoisonMaskElem);
+      for (auto [I, E] : VectorizedLanes)
+        VectorizedMask[I] = E->findLaneForValue(VL[I]) +
+                            (E == VectorizedEntries.front() ? 0 : VectorizedVF);
+      unsigned VectorizedNewVF = ShrinkMask(VectorizedMask, VectorizedVF);
+      auto *VectorizedVecTy = cast<VectorType>(
+          getWidenedType(VL.front()->getType(), VectorizedNewVF));
       InstructionCost VectorizedShuffleCost =
-          GetShuffleCost(VectorizedMask, Entries, VecTy);
+          GetShuffleCost(VectorizedMask, VectorizedEntries, VectorizedVecTy);
       if (VectorizedShuffleCost.isValid())
         BuildVectorCost += VectorizedShuffleCost;
     }
