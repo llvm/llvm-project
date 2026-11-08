@@ -686,6 +686,8 @@ gpu.func @forward_fill_loop_carried(%arg0: memref<128x64xf16>, %arg1: memref<64x
     %sum = arith.addf %acc, %acc : vector<128xf32>
     scf.yield %11, %sum : vector<128x64xf32>, vector<128xf32>
   }
+  // The loop's second result, which has no consumer, takes the layout of %sum.
+  // CHECK: } {layout_operand_3 = {{.*}}, layout_result_1 = #xegpu.slice<#xegpu.layout<sg_layout = [1, 8], sg_data = [64, 16], order = [0, 1]>, dims = [0]>}
   %5 = xegpu.create_nd_tdesc %arg2 : memref<128x64xf32> -> !xegpu.tensor_desc<128x64xf32>
   xegpu.store_nd %4#0, %5[%c0, %c0] <{layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>}> : vector<128x64xf32>, !xegpu.tensor_desc<128x64xf32>
   gpu.return

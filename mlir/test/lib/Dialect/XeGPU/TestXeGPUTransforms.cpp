@@ -327,6 +327,9 @@ struct TestXeGPUPropagateLayouts
       signalPassFailure();
       return;
     }
+    // As in the xegpu-propagate-layout pass, temporary layouts in the input are
+    // stale and must not take part in the propagation.
+    xegpu::removeTemporaryLayoutAttrs(getOperation());
     if (failed(xegpu::propagateLayouts(builder, getOperation(), kind, 32))) {
       signalPassFailure();
     }

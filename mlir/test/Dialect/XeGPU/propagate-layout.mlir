@@ -1245,3 +1245,61 @@ func.func @broadcast_slice_expanded_dim(%dst: !xegpu.mem_desc<16x4xbf16>) {
 }
 }
 
+
+// -----
+// The loop carries the layout its in-loop consumer (the dpas accumulator)
+// requires; the loop result takes the layout of the yielded value, not the one
+// its consumer after the loop (the transpose) demands. The mismatch is left to
+// ResolveLayoutConflicts, which converts after the loop.
+gpu.module @test {
+// CHECK-LABEL: func.func @loop_result_layout_differs_from_consumer(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<8x16xf32>
+// CHECK: %[[LOOP:.*]] = scf.for {{.*}} iter_args(%[[ACC:.*]] = %[[CST]]) -> (vector<8x16xf32>) {
+// CHECK:   %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %{{.*}}, %[[ACC]] {{.*}}layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
+// CHECK:   scf.yield %[[DPAS]] : vector<8x16xf32>
+// CHECK: } {layout_operand_3 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK: vector.transpose %[[LOOP]], [1, 0] {layout_result_0 = #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 1]>} : vector<8x16xf32> to vector<16x8xf32>
+func.func @loop_result_layout_differs_from_consumer(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: !xegpu.tensor_desc<16x8xf32>) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
+    %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %cst) -> (vector<8x16xf32>) {
+      %a = xegpu.load_nd %arg0[0, 0] : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+      %b = xegpu.load_nd %arg1[0, 0] : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+      %d = xegpu.dpas %a, %b, %acc : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
+      scf.yield %d : vector<8x16xf32>
+    }
+    %1 = vector.transpose %0, [1, 0] : vector<8x16xf32> to vector<16x8xf32>
+    xegpu.store_nd %1, %arg2[0, 0] : vector<16x8xf32>, !xegpu.tensor_desc<16x8xf32>
+    return
+  }
+}
+
+// -----
+// A cross-iteration accumulation constrained only through the loop back edge:
+// no consumer demands a layout of %n, so the backward scan leaves the
+// loop-carried value without one. The forward pass infers %n from the load,
+// then carries it around the back edge to the init (and its splat constant)
+// and to the unused loop result.
+gpu.module @test {
+// CHECK-LABEL: func.func @cross_iteration_accumulation(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<8x16xf32>
+// CHECK: scf.for {{.*}} iter_args(%[[ACC:.*]] = %[[CST]]) -> (vector<8x16xf32>) {
+// CHECK:   %[[X:.*]] = xegpu.load_nd {{.*}} <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
+// CHECK:   %[[N:.*]] = arith.addf %[[ACC]], %[[X]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>
+// CHECK:   scf.yield %[[N]] : vector<8x16xf32>
+// CHECK: } {layout_operand_3 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+func.func @cross_iteration_accumulation(%arg0: !xegpu.tensor_desc<8x16xf32>) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
+    %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %cst) -> (vector<8x16xf32>) {
+      %x = xegpu.load_nd %arg0[0, 0] : !xegpu.tensor_desc<8x16xf32> -> vector<8x16xf32>
+      %n = arith.addf %acc, %x : vector<8x16xf32>
+      scf.yield %n : vector<8x16xf32>
+    }
+    return
+  }
+}
