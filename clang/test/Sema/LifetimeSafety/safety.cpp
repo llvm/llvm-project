@@ -106,6 +106,16 @@ void propagation_gsl() {
   v2.use();     // expected-note {{later used here}}
 }
 
+void assign_to_temporary_copy_of_dangling_view() {
+  View v;
+  {
+    MyObj s;
+    v = s;
+  }
+  // Writes to the temporary's storage, not to 's'.
+  View{v} = View();
+}
+
 void multiple_uses_one_warning() {
   MyObj* p;
   {
