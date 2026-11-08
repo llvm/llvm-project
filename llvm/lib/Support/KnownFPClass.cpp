@@ -605,6 +605,9 @@ struct UnroundedFMul {
   bool NeverPosUnderflow = false;
   bool NeverNegUnderflow = false;
 
+  bool NeverPosFiniteLargerEqFour = false;
+  bool NeverNegFiniteLargerEqFour = false;
+
   // Computes the unrounded result for fmul. Assumes IEEE denormal behavior.
   static UnroundedFMul compute(const KnownFPClass &LHS,
                                const KnownFPClass &RHS);
@@ -651,14 +654,21 @@ UnroundedFMul UnroundedFMul::compute(const KnownFPClass &LHS,
       (RHS.isKnownNever(fcNegZero) || LHS.isKnownNever(fcPosFinite));
 
   // Approximate conditions for ruling out overflow.
-  Mul.NeverPosOverflow = (LHS.isKnownNever(fcPosSubnormal | fcPosNormal) ||
-                          RHS.isKnownNever(fcPosSubnormal | fcPosNormal)) &&
-                         (LHS.isKnownNever(fcNegSubnormal | fcNegNormal) ||
-                          RHS.isKnownNever(fcNegSubnormal | fcNegNormal));
-  Mul.NeverNegOverflow = (LHS.isKnownNever(fcPosSubnormal | fcPosNormal) ||
-                          RHS.isKnownNever(fcNegSubnormal | fcNegNormal)) &&
-                         (LHS.isKnownNever(fcNegSubnormal | fcNegNormal) ||
-                          RHS.isKnownNever(fcPosSubnormal | fcPosNormal));
+  Mul.NeverPosOverflow =
+      (LHS.isKnownNever(fcPosNormal) || RHS.isKnownNever(fcPosNormal)) &&
+      (LHS.isKnownNever(fcNegNormal) || RHS.isKnownNever(fcNegNormal));
+  Mul.NeverNegOverflow =
+      (LHS.isKnownNever(fcPosNormal) || RHS.isKnownNever(fcNegNormal)) &&
+      (LHS.isKnownNever(fcNegNormal) || RHS.isKnownNever(fcPosNormal));
+
+  // max-subnormal * max-normal < 4.0 for IEEE and extended formats.
+  // max-subnormal * max-normal < 2.0 for m68_f80.
+  Mul.NeverPosFiniteLargerEqFour =
+      (LHS.isKnownNever(fcPosNormal) || RHS.isKnownNever(fcPosNormal)) &&
+      (LHS.isKnownNever(fcNegNormal) || RHS.isKnownNever(fcNegNormal));
+  Mul.NeverNegFiniteLargerEqFour =
+      (LHS.isKnownNever(fcPosNormal) || RHS.isKnownNever(fcNegNormal)) &&
+      (LHS.isKnownNever(fcNegNormal) || RHS.isKnownNever(fcPosNormal));
 
   // Approximate conditions for ruling out underflow.
   Mul.NeverPosUnderflow = (LHS.isKnownNever(fcPosSubnormal | fcPosNormal) ||
@@ -681,13 +691,16 @@ UnroundedFMul UnroundedFMul::computeSquare(const KnownFPClass &Src) {
   Mul.NeverExactNegZero = true;
   Mul.NeverNegOverflow = true;
   Mul.NeverNegUnderflow = true;
+  Mul.NeverNegFiniteLargerEqFour = false;
 
   Mul.NeverExactPosInf = Src.isKnownNever(fcInf);
   Mul.NeverExactPosZero = Src.isKnownNever(fcZero);
 
   // Approximate conditions for ruling out overflow and underflow.
-  Mul.NeverPosOverflow = Src.isKnownNever(fcSubnormal | fcNormal);
+  Mul.NeverPosOverflow = Src.isKnownNever(fcNormal);
   Mul.NeverPosUnderflow = Src.isKnownNever(fcSubnormal | fcNormal);
+
+  Mul.NeverPosFiniteLargerEqFour = Src.isKnownNever(fcNormal);
 
   return Mul;
 }
@@ -906,13 +919,42 @@ KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc_,
 }
 
 // Assumes that the rounding mode is Dynamic.
-static KnownFPClass fma_impl(const KnownFPClass &Product,
+static KnownFPClass fma_impl(const UnroundedFMul Mul,
+                             const KnownFPClass &Product,
                              const KnownFPClass &Addend) {
   KnownFPClass Known;
 
-  if (Product.cannotBeOrderedLessThanZero() &&
-      Addend.cannotBeOrderedLessThanZero()) {
-    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+  if (Mul.NeverExactPosInf && Addend.isKnownNever(fcPosInf)) {
+    // Overflow in the general case may occur when:
+    // * pos-overflow + finite
+    // * pos-large + pos-non-zero
+    // * pos-non-zero + pos-large
+    if (Mul.NeverPosOverflow &&
+        (Mul.NeverPosFiniteLargerEqFour ||
+         Addend.isKnownNever(fcPosSubnormal | fcPosNormal)) &&
+        ((Mul.NeverPosUnderflow &&
+          Product.isKnownNever(fcPosSubnormal | fcPosNormal)) ||
+         Addend.isKnownNever(fcPosNormal)))
+      Known.knownNot(fcPosInf);
+  }
+  if (Mul.NeverExactNegInf && Addend.isKnownNever(fcNegInf)) {
+    // Overflow in the general case may occur when:
+    // * neg-overflow + finite
+    // * neg-large + neg-non-zero
+    // * neg-non-zero + neg-large
+    if (Mul.NeverNegOverflow &&
+        (Mul.NeverNegFiniteLargerEqFour ||
+         Addend.isKnownNever(fcNegSubnormal | fcNegNormal)) &&
+        ((Mul.NeverNegUnderflow &&
+          Product.isKnownNever(fcNegSubnormal | fcNegNormal)) ||
+         Addend.isKnownNever(fcNegNormal)))
+      Known.knownNot(fcNegInf);
+  }
+
+  if (Mul.NeverNegOverflow &&
+      Product.isKnownNever(fcNegSubnormal | fcNegNormal) &&
+      Addend.isKnownNever(fcNegSubnormal | fcNegNormal)) {
+    Known.knownNot(fcNegSubnormal | fcNegNormal);
 
     // This can't underflow if one of the operands is known normal.
     if (Product.isKnownNever(fcZero | fcPosSubnormal) ||
@@ -920,9 +962,10 @@ static KnownFPClass fma_impl(const KnownFPClass &Product,
       Known.knownNot(fcZero | fcPosSubnormal);
   }
 
-  if (Product.cannotBeOrderedGreaterThanZero() &&
-      Addend.cannotBeOrderedGreaterThanZero()) {
-    Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+  if (Mul.NeverPosOverflow &&
+      Product.isKnownNever(fcPosSubnormal | fcPosNormal) &&
+      Addend.isKnownNever(fcPosSubnormal | fcPosNormal)) {
+    Known.knownNot(fcPosSubnormal | fcPosNormal);
 
     // This can't underflow if one of the operands is known normal.
     if (Product.isKnownNever(fcZero | fcNegSubnormal) ||
@@ -944,7 +987,7 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS_,
   KnownFPClass Product = fmul(KnownLHS, KnownRHS, DenormalMode::getIEEE());
   const UnroundedFMul Mul = UnroundedFMul::compute(KnownLHS, KnownRHS);
 
-  KnownFPClass Known = fma_impl(Product, KnownAddend);
+  KnownFPClass Known = fma_impl(Mul, Product, KnownAddend);
 
   // propagateNonSNaN for 3 arguments.
   if (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNever(fcSNan) &&
@@ -991,7 +1034,7 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared_,
   KnownFPClass Product = square(KnownSquared, DenormalMode::getIEEE());
   const UnroundedFMul Mul = UnroundedFMul::computeSquare(KnownSquared);
 
-  KnownFPClass Known = fma_impl(Product, KnownAddend);
+  KnownFPClass Known = fma_impl(Mul, Product, KnownAddend);
 
   Known.propagateNonSNaN(KnownSquared, KnownAddend);
 
