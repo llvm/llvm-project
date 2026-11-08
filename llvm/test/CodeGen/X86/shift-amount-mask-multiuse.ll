@@ -52,9 +52,9 @@ define i64 @lshr_i64_mask_multiuse(i64 %x, i64 %amt) nounwind {
 ; BMI2-LABEL: lshr_i64_mask_multiuse:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushq %rbx
-; BMI2-NEXT:    andl $63, %esi
 ; BMI2-NEXT:    shrxq %rsi, %rdi, %rbx
-; BMI2-NEXT:    movq %rsi, %rdi
+; BMI2-NEXT:    movl %esi, %edi
+; BMI2-NEXT:    andl $63, %edi
 ; BMI2-NEXT:    callq use64@PLT
 ; BMI2-NEXT:    movq %rbx, %rax
 ; BMI2-NEXT:    popq %rbx
@@ -108,9 +108,9 @@ define i64 @shl_i64_mask_multiuse(i64 %x, i64 %amt) nounwind {
 ; BMI2-LABEL: shl_i64_mask_multiuse:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushq %rbx
-; BMI2-NEXT:    andl $63, %esi
 ; BMI2-NEXT:    shlxq %rsi, %rdi, %rbx
-; BMI2-NEXT:    movq %rsi, %rdi
+; BMI2-NEXT:    movl %esi, %edi
+; BMI2-NEXT:    andl $63, %edi
 ; BMI2-NEXT:    callq use64@PLT
 ; BMI2-NEXT:    movq %rbx, %rax
 ; BMI2-NEXT:    popq %rbx
@@ -165,9 +165,9 @@ define i64 @ashr_i64_mask_multiuse(i64 %x, i64 %amt) nounwind {
 ; BMI2-LABEL: ashr_i64_mask_multiuse:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushq %rbx
-; BMI2-NEXT:    andl $63, %esi
 ; BMI2-NEXT:    sarxq %rsi, %rdi, %rbx
-; BMI2-NEXT:    movq %rsi, %rdi
+; BMI2-NEXT:    movl %esi, %edi
+; BMI2-NEXT:    andl $63, %edi
 ; BMI2-NEXT:    callq use64@PLT
 ; BMI2-NEXT:    movq %rbx, %rax
 ; BMI2-NEXT:    popq %rbx
@@ -239,8 +239,8 @@ define i32 @lshr_i32_mask_multiuse(i32 %x, i32 %amt) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    shrxl %eax, {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll use32@PLT
 ; X86-NEXT:    addl $4, %esp
@@ -264,8 +264,8 @@ define i32 @lshr_i32_mask_multiuse(i32 %x, i32 %amt) nounwind {
 ; BMI2-LABEL: lshr_i32_mask_multiuse:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushq %rbx
-; BMI2-NEXT:    andl $31, %esi
 ; BMI2-NEXT:    shrxl %esi, %edi, %ebx
+; BMI2-NEXT:    andl $31, %esi
 ; BMI2-NEXT:    movl %esi, %edi
 ; BMI2-NEXT:    callq use32@PLT
 ; BMI2-NEXT:    movl %ebx, %eax
@@ -321,9 +321,9 @@ define i64 @lshr_i64_load_mask_multiuse(ptr %p, i64 %amt) nounwind {
 ; BMI2-LABEL: lshr_i64_load_mask_multiuse:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushq %rbx
-; BMI2-NEXT:    andl $63, %esi
 ; BMI2-NEXT:    shrxq %rsi, (%rdi), %rbx
-; BMI2-NEXT:    movq %rsi, %rdi
+; BMI2-NEXT:    movl %esi, %edi
+; BMI2-NEXT:    andl $63, %edi
 ; BMI2-NEXT:    callq use64@PLT
 ; BMI2-NEXT:    movq %rbx, %rax
 ; BMI2-NEXT:    popq %rbx
@@ -413,8 +413,9 @@ define i64 @read61(ptr %base, i64 %pos) nounwind {
 ; BMI2:       # %bb.0: # %entry
 ; BMI2-NEXT:    movq %rsi, %rcx
 ; BMI2-NEXT:    shrq $6, %rcx
-; BMI2-NEXT:    andl $63, %esi
 ; BMI2-NEXT:    shrxq %rsi, (%rdi,%rcx,8), %rax
+; BMI2-NEXT:    # kill: def $esi killed $esi killed $rsi def $rsi
+; BMI2-NEXT:    andl $63, %esi
 ; BMI2-NEXT:    cmpq $4, %rsi
 ; BMI2-NEXT:    jb .LBB6_2
 ; BMI2-NEXT:  # %bb.1: # %hi
@@ -685,9 +686,9 @@ define i16 @lshr_i16_mask15_multiuse(i16 %x, i16 %amt) nounwind {
 define i32 @shl_i32_mask_xor(i32 %x, i32 %amt) nounwind {
 ; X86-LABEL: shl_i32_mask_xor:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $31, %ecx
-; X86-NEXT:    shlxl %ecx, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -702,8 +703,8 @@ define i32 @shl_i32_mask_xor(i32 %x, i32 %amt) nounwind {
 ;
 ; BMI2-LABEL: shl_i32_mask_xor:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    andl $31, %esi
 ; BMI2-NEXT:    shlxl %esi, %edi, %eax
+; BMI2-NEXT:    andl $31, %esi
 ; BMI2-NEXT:    xorl %esi, %eax
 ; BMI2-NEXT:    retq
   %m = and i32 %amt, 31
@@ -718,8 +719,8 @@ define i32 @shl_i32_trunc_i64_mask_multiuse(i32 %x, i64 %amt) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll use64@PLT
@@ -744,8 +745,8 @@ define i32 @shl_i32_trunc_i64_mask_multiuse(i32 %x, i64 %amt) nounwind {
 ; BMI2-LABEL: shl_i32_trunc_i64_mask_multiuse:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushq %rbx
-; BMI2-NEXT:    andl $31, %esi
 ; BMI2-NEXT:    shlxl %esi, %edi, %ebx
+; BMI2-NEXT:    andl $31, %esi
 ; BMI2-NEXT:    movq %rsi, %rdi
 ; BMI2-NEXT:    callq use64@PLT
 ; BMI2-NEXT:    movl %ebx, %eax
@@ -801,9 +802,9 @@ define i64 @shl_i64_zext_i32_mask_multiuse(i64 %x, i32 %amt) nounwind {
 ; BMI2-LABEL: shl_i64_zext_i32_mask_multiuse:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushq %rbx
-; BMI2-NEXT:    # kill: def $esi killed $esi def $rsi
+; BMI2-NEXT:    movl %esi, %eax
 ; BMI2-NEXT:    andl $63, %esi
-; BMI2-NEXT:    shlxq %rsi, %rdi, %rbx
+; BMI2-NEXT:    shlxq %rax, %rdi, %rbx
 ; BMI2-NEXT:    movl %esi, %edi
 ; BMI2-NEXT:    callq use32@PLT
 ; BMI2-NEXT:    movq %rbx, %rax
@@ -862,8 +863,9 @@ define i64 @lshr_i64_mask62_knownzero_multiuse(i64 %x, i64 %y) nounwind {
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushq %rbx
 ; BMI2-NEXT:    addl %esi, %esi
+; BMI2-NEXT:    movl %esi, %eax
 ; BMI2-NEXT:    andl $62, %esi
-; BMI2-NEXT:    shrxq %rsi, %rdi, %rbx
+; BMI2-NEXT:    shrxq %rax, %rdi, %rbx
 ; BMI2-NEXT:    movq %rsi, %rdi
 ; BMI2-NEXT:    callq use64@PLT
 ; BMI2-NEXT:    movq %rbx, %rax

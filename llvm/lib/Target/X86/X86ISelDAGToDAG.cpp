@@ -601,6 +601,11 @@ namespace {
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
     bool tryShiftAmountMod(SDNode *N);
+    bool selectBMI2ShiftAmount(SDValue N, unsigned Width, SDValue &Amt);
+    template <unsigned Width>
+    bool selectBMI2ShiftAmount(SDValue N, SDValue &Amt) {
+      return selectBMI2ShiftAmount(N, Width, Amt);
+    }
     bool tryShrinkShlLogicImm(SDNode *N);
     bool tryVPTERNLOG(SDNode *N);
     bool matchVPTERNLOG(SDNode *Root, SDNode *ParentA, SDNode *ParentB,
@@ -4703,6 +4708,45 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
   MachineSDNode *CNode = CurDAG->getMachineNode(ROpc, dl, VTs, Ops);
   InGlue = SDValue(CNode, 2);
   return CNode;
+}
+
+/// Select the amount of a SHLX/SHRX/SARX of \p Width bits. These read only the
+/// low 5 or 6 bits of the amount, so a mask on the amount can be dropped even
+/// if it has other users. Matches only when a mask is dropped, and returns the
+/// unmasked amount as an i32 or i64.
+///
+/// A mask directly on the i8 amount is always dropped, as the shiftMask*
+/// PatFrags do for legacy shifts. A wider mask behind a truncate is dropped
+/// only when this shift is the truncate's only user. Wide shift expansions
+/// share one truncated amount between several shifts, and dropping the mask
+/// there keeps both the masked and the unmasked values live.
+bool X86DAGToDAGISel::selectBMI2ShiftAmount(SDValue N, unsigned Width,
+                                            SDValue &Amt) {
+  if (N.getOpcode() != ISD::AND && !N.hasOneUse())
+    return false;
+
+  SDValue Src;
+  if (!selectShiftAmountMask(N, Width, Src))
+    return false;
+
+  MVT VT = Width == 64 ? MVT::i64 : MVT::i32;
+  MVT SrcVT = Src.getSimpleValueType();
+  SDLoc DL(N);
+  if (SrcVT == VT) {
+    Amt = Src;
+  } else if (SrcVT == MVT::i64) {
+    Amt = CurDAG->getTargetExtractSubreg(X86::sub_32bit, DL, VT, Src);
+  } else if (SrcVT == MVT::i8 || SrcVT == MVT::i16 || SrcVT == MVT::i32) {
+    unsigned SubIdx = SrcVT == MVT::i8    ? X86::sub_8bit
+                      : SrcVT == MVT::i16 ? X86::sub_16bit
+                                          : X86::sub_32bit;
+    SDValue Undef =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, VT), 0);
+    Amt = CurDAG->getTargetInsertSubreg(SubIdx, DL, VT, Undef, Src);
+  } else {
+    return false;
+  }
+  return true;
 }
 
 bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
