@@ -29,22 +29,34 @@ namespace __pstl::__statpart {
 static_assert(std::atomic_size_t::is_always_lock_free);
 static_assert(std::atomic<std::thread::id>::is_always_lock_free);
 
-struct Task;
+// Task represent the user request to apply a function to a range of iterations.
+// It is stored in the stack memory of the caller thread.
+// Multiple threads can participate in working on the same task by picking up the next iteration index and applying the
+// function to it.
+struct Task {
+  void* ctxt;                       // The context pointer to be passed to the function.
+  void (*func)(void*, std::size_t); // The function to be applied to each iteration.
+  std::size_t iterations;           // The total number of iterations to be processed.
+  std::atomic_size_t index;         // The next index of the iteration to be processed.
+  std::latch requests;              // Latch used to synchronize the caller with the worker threads.
+};
 
 // Implementation of "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev, but with a fixed-size buffer.
 // The element type is a pointer to Task, nullptr is not a valid value.
 struct alignas(std::hardware_destructive_interference_size) TaskQueue {
-  TaskQueue() noexcept                   = default;
+  constexpr TaskQueue() noexcept         = default;
   TaskQueue(const TaskQueue&)            = delete;
   TaskQueue& operator=(const TaskQueue&) = delete;
 
   // Allocates the buffer, must be called before the queue is used by any thread.
   // The capacity is rounded up to the next power of two.
-  void init(std::size_t capacity) {
-    // TODO: make this function nothrow and return a boolean to signal malloc failures
+  bool init(std::size_t capacity) noexcept {
     capacity = std::bit_ceil(std::max<std::size_t>(capacity, 1));
-    elements = std::make_unique<Task*[]>(capacity);
-    mask     = capacity - 1;
+    elements.reset(new (std::nothrow) Task*[capacity]());
+    if (!elements)
+      return false;
+    mask = capacity - 1;
+    return true;
   }
 
   // Pushes the new task at the bottom of the queue, only called by the owner.
@@ -121,18 +133,6 @@ private:
   std::size_t mask{0};
 };
 
-// Task represent the user request to apply a function to a range of iterations.
-// It is stored in the stack memory of the caller thread.
-// Multiple threads can participate in working on the same task by picking up the next iteration index and applying the
-// function to it.
-struct Task {
-  void* ctxt;                       // The context pointer to be passed to the function.
-  void (*func)(void*, std::size_t); // The function to be applied to each iteration.
-  std::size_t iterations;           // The total number of iterations to be processed.
-  std::atomic_size_t index;         // The next index of the iteration to be processed.
-  std::latch requests;              // Latch used to synchronize the caller with the worker threads.
-};
-
 // QueueID represents the ownership of a queue and the number of nested acquisitions.
 struct QueueID {
   std::atomic<std::thread::id> id = {};
@@ -142,20 +142,39 @@ struct QueueID {
 // Scheduler manages the worker threads and the queues.
 class Scheduler {
 public:
-  Scheduler();
+  Scheduler() noexcept;
+
+  // No copying or moving is allowed.
+  Scheduler(const Scheduler&)            = delete;
+  Scheduler(Scheduler&&)                 = delete;
+  Scheduler& operator=(const Scheduler&) = delete;
+  Scheduler& operator=(Scheduler&&)      = delete;
+
   void apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept;
 
 private:
+  // The actual number of running worker threads.
+  // This number may be lower than the desired thread pool sizee, in case of a thread startup failure.
+  // When this variable is zero, the scheduler doesn't enable its machinery.
+  size_t m_workers_count{0};
+
   std::unique_ptr<std::thread[]> m_workers;
+
   std::unique_ptr<TaskQueue[]> m_queues;
+
   std::unique_ptr<QueueID[]> m_queue_ids;
-  size_t m_workers_count;
-  size_t m_queues_count;
-  std::atomic_unsigned_lock_free m_epoch{0}; // Wait-wake mechanism
+
+  size_t m_queues_count{0};
+
+  // Wait-wake mechanism.
+  // The epoch is monotonically incremented after each time task invitations are pushed into a task queue.
+  // Wrapping is allowed and harmless.
+  std::atomic_unsigned_lock_free m_epoch{0};
 
   TaskQueue* acquire_queue(std::thread::id thread_id);
   void release_queue(TaskQueue* queue);
   void worker_thread(size_t worker_num) noexcept;
+  bool is_parallelism_enabled() const noexcept;
 };
 
 // For cases when the number of iterations is less than 2 or when there are no worker threads available,
@@ -181,26 +200,63 @@ inline void process_request(Task* task) noexcept {
   task->requests.count_down();
 }
 
-inline Scheduler::Scheduler() {
-  size_t cpu_threads = std::thread::hardware_concurrency();
-  if (cpu_threads == 0)
-    cpu_threads = 1; // safe fallback
-
-  m_queues_count = cpu_threads * 2;
-  m_queues       = std::make_unique<TaskQueue[]>(m_queues_count);
-  for (size_t i = 0; i < m_queues_count; ++i)
-    m_queues[i].init(cpu_threads * 2);
-  m_queue_ids = std::make_unique<QueueID[]>(m_queues_count);
-
-  m_workers_count = cpu_threads - 1;
-  m_workers       = std::make_unique<std::thread[]>(m_workers_count);
-
-  for (size_t i = 0; i < m_workers_count; ++i) {
-    std::thread worker(&Scheduler::worker_thread, this, i);
-    m_queue_ids[i].id.store(worker.get_id());
-    m_queue_ids[i].aquire_count.store(1);
-    m_workers[i] = std::move(worker);
+inline Scheduler::Scheduler() noexcept {
+  const size_t cpu_threads = std::thread::hardware_concurrency();
+  if (cpu_threads < 2) {
+    return; // Nothing to do, don't enable parallelism
   }
+
+  // Allocate `cpu_threads - 1` worker threads since the guest thread will also participate in the work, thus all cpu
+  // threads will be occupied.
+  const size_t max_workers_count = cpu_threads - 1;
+
+  // Allocate at least cpu_threads * 2 slots in the TaskQueue's buffer.
+  // This factor is chosen to allow some nested parallelism, specifically with depth=2.
+  const size_t queue_capacity = cpu_threads * 2;
+
+  // We need a queue per each worker thread and a queue per cpu thread for the guest threads.
+  m_queues_count = max_workers_count + cpu_threads;
+
+  // Allocate the queues
+  m_queues.reset(new (std::nothrow) TaskQueue[m_queues_count]);
+  if (!m_queues)
+    return; // Failed to allocate the queues array, bail out
+
+  // Allocate the queues' buffers
+  for (size_t i = 0; i < m_queues_count; ++i) {
+    if (!m_queues[i].init(queue_capacity))
+      return; // Failed to allocate a queue buffer, bail out.
+  }
+
+  // Allocate the queue identifiers array
+  m_queue_ids.reset(new (std::nothrow) QueueID[m_queues_count]);
+  if (!m_queue_ids)
+    return; // Failed to allocate the queue identifiers buffer, bail out.
+
+  // Allocate the array of worker threads
+  m_workers.reset(new (std::nothrow) std::thread[max_workers_count]);
+  if (!m_workers)
+    return; // Failed to allocate the threads array, bail out.
+
+  size_t worker_idx = 0;
+  for (; worker_idx < max_workers_count; ++worker_idx) {
+    std::thread worker;
+#  if _LIBCPP_HAS_EXCEPTIONS
+    try {
+#  endif // _LIBCPP_HAS_EXCEPTIONS
+      worker = std::thread(&Scheduler::worker_thread, this, worker_idx);
+#  if _LIBCPP_HAS_EXCEPTIONS
+    } catch (...) {
+      break; // Failed to start a worker thread, don't attempt to start any more
+    }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
+    m_queue_ids[worker_idx].id.store(worker.get_id());
+    m_queue_ids[worker_idx].aquire_count.store(1);
+    m_workers[worker_idx] = std::move(worker);
+  }
+
+  // Finally, enable parallelism by committing the number of workers that have started up.
+  m_workers_count = worker_idx;
 }
 
 inline void Scheduler::worker_thread(size_t worker_index) noexcept {
@@ -260,11 +316,13 @@ inline void Scheduler::release_queue(TaskQueue* queue) {
   }
 }
 
+inline bool Scheduler::is_parallelism_enabled() const noexcept { return m_workers_count != 0; }
+
 // The entrypoint to parallel execution.
 // Apply the function to the range of iterations in parallel using worker threads.
 // The caller thread also participates in processing the workload.
 inline void Scheduler::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept {
-  if (iterations < 2 || m_workers_count == 0) {
+  if (iterations < 2 || !is_parallelism_enabled()) {
     // No worker threads available or not enough iteration requested, fallback to serial execution
     apply_serial(iterations, ctxt, func);
     return;
@@ -282,7 +340,7 @@ inline void Scheduler::apply(std::size_t iterations, void* ctxt, void (*func)(vo
     return;
   }
 
-  // Split the workload for potentially (workers_count + 1) participants (workers + caller thread).
+  // Split the workload for potentially (m_workers_count + 1) participants (workers + caller thread).
   size_t num_requests = std::min(m_workers_count + 1, iterations);
 
   // Create a task that will be published in the queue and then stolen by the workers.
