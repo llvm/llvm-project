@@ -13,6 +13,7 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/config.h"
@@ -21,11 +22,15 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float16 roundevenf16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16 roundevenf16(float16 x) {
 #if defined(__LIBC_USE_BUILTIN_ROUNDEVEN) &&                                   \
     defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS) &&                           \
     !defined(LIBC_USE_CONSTEXPR)
-  return fputil::cast<float16>(__builtin_roundevenf(x));
+  if (cpp::is_constant_evaluated()) {
+    return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
+  } else {
+    return fputil::cast<float16>(__builtin_roundevenf(x));
+  }
 #else
   return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
 #endif

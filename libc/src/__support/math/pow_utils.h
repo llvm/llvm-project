@@ -271,8 +271,8 @@ constexpr uint64_t Y_LOWER_BOUND = 0x3bee'829f'39ae'f509;
 // Fast checks for special inputs:
 //   x = 0, +-1, 2^k, 10, +- inf
 //   y = 0, +-1, 2, 0.5
-LIBC_ALWAYS_INLINE cpp::optional<double> check_special_inputs(double x,
-                                                              double y) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT cpp::optional<double>
+check_special_inputs(double x, double y) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x), ybits(y);
 
@@ -355,7 +355,7 @@ LIBC_ALWAYS_INLINE cpp::optional<double> check_special_inputs(double x,
 // inputs, and handles negative bases. Returns a value if the result is
 // determined, or nullopt if regular evaluation should proceed (in which case x,
 // y, e_x, x_mant, is_neg, sign_d may be updated).
-LIBC_ALWAYS_INLINE cpp::optional<double>
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT cpp::optional<double>
 check_exceptional_cases(double &x, double &y, double &e_x, uint64_t &x_mant,
                         bool &is_neg, double &sign_d) {
   using FPBits = fputil::FPBits<double>;
@@ -509,8 +509,9 @@ check_exceptional_cases(double &x, double &y, double &e_x, uint64_t &x_mant,
 //      - The resulting significand (m^(2^f))^n <= 2^54.
 //
 // Returns true and sets exact_m and exact_exp if x^y is an exact boundary.
-LIBC_INLINE bool is_exact_rounding_boundary(double x, double y,
-                                            uint64_t &exact_m, int &exact_exp) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT bool
+is_exact_rounding_boundary(double x, double y, uint64_t &exact_m,
+                           int &exact_exp) {
   using FPBits = fputil::FPBits<double>;
 
   FPBits xbits(x);

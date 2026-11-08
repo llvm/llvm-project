@@ -80,7 +80,7 @@ using LIBC_NAMESPACE::fputil::Float128;
 // and relative errors bounded by:
 //   |(atan(u) - P(u)) / P(u)| < 2^-114.
 
-LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT Float128 atan2f128(Float128 y, Float128 x) {
   using DFloat128 = fputil::DyadicFloat<128>;
 
   constexpr DFloat128 ZERO = {Sign::POS, 0, 0_u128};

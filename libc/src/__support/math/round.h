@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ROUND_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ROUND_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -46,7 +47,7 @@ namespace math {
 // So we will only use `__builtin_round` with clang on x86-64 if we assume
 // default rounding mode (FE_TONEAREST) only.
 
-LIBC_INLINE LIBC_CONSTEXPR double round(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double round(double x) {
 #if __has_builtin(__builtin_round) && !defined(LIBC_USE_CONSTEXPR) &&          \
     (defined(__LIBC_USE_BUILTIN_ROUND) ||                                      \
      (defined(LIBC_COMPILER_IS_CLANG) &&                                       \
@@ -54,7 +55,11 @@ LIBC_INLINE LIBC_CONSTEXPR double round(double x) {
       (!defined(__ARM_ARCH) || (__ARM_ARCH >= 8)) &&                           \
       (!defined(LIBC_TARGET_ARCH_IS_X86) ||                                    \
        defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY))))
-  return __builtin_round(x);
+  if (cpp::is_constant_evaluated()) {
+    return fputil::round(x);
+  } else {
+    return __builtin_round(x);
+  }
 #else
   return fputil::round(x);
 #endif

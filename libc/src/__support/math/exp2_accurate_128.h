@@ -148,7 +148,8 @@ LIBC_INLINE_VAR constexpr ExpBase192 LOG2_10_192 = {
 
 // Evaluate 2^(idx * 2^-4 + u) in [1, 2) as Frac128 (lsb = 2^-127) for
 // idx in [0, 15] and u in [0, 2^-4) (lsb = 2^-128).
-LIBC_INLINE Frac128 exp2_eval_frac128(unsigned idx, const Frac128 &u) {
+LIBC_INLINE constexpr Frac128 exp2_eval_frac128(unsigned idx,
+                                                const Frac128 &u) {
   // p ~ (2^u - 1) / u
   Frac128 p = EXP2_POLY_128[14]; // lsb = 2^-128
   LIBC_LOOP_NOUNROLL
@@ -170,7 +171,8 @@ LIBC_INLINE Frac128 exp2_eval_frac128(unsigned idx, const Frac128 &u) {
 //   hi = k >> 4
 //   idx = k & 0x0f
 //   2^z = 2^hi * EXP2_MID_FRAC128[idx] * (1 + u * P(u)).
-LIBC_INLINE DFloat128 exp2_df128(const DFloat128 &z, uint64_t lo = 0) {
+LIBC_INLINE constexpr DFloat128 exp2_df128(const DFloat128 &z,
+                                           uint64_t lo = 0) {
   // z.mantissa has lsb = 2^z.exponent, so the 2^-4 bit of |z| is at bit
   // (-4 - z.exponent) of z.mantissa, leaving
   //   shift = 128 - (-4 - z.exponent) = z.exponent + 132 bits
@@ -179,7 +181,7 @@ LIBC_INLINE DFloat128 exp2_df128(const DFloat128 &z, uint64_t lo = 0) {
   // [-181, -117], so shift is in [-49, 15].
   int shift = z.exponent + 132;
   int k = 0;
-  UInt<128> frac;
+  UInt<128> frac{};
   if (LIBC_LIKELY(shift > 0)) {
     // |z| >= 2^-5 (all |z| >= 2^-4, plus 2^-5 <= |z| < 2^-4 with k = 0 when
     // bit 127 of z.mantissa is 0): split
@@ -246,7 +248,7 @@ LIBC_INLINE DFloat128 exp2_df128(const DFloat128 &z, uint64_t lo = 0) {
 // 192-bit fixed-point range reduction. Here log2_base->log2_b holds:
 //   round(log2(b) * 2^(191 - base_exp)),
 // or log2_base is nullptr when b = 2.
-LIBC_NOINLINE LIBC_INLINE double
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
 exp_accurate_128(double x, const ExpBase192 *log2_base = nullptr) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
