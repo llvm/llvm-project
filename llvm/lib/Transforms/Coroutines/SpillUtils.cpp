@@ -278,10 +278,9 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(I);
   }
 
-  void visitPtrToAddrInst(PtrToAddrInst &I) {
-    PI.setEscaped(&I);
-    handleAlias(I);
-  }
+  // Unlike ptrtoint, ptrtoaddr does not capture provenance, so the alloca
+  // cannot be written through it and it is not an escape.
+  void visitPtrToAddrInst(PtrToAddrInst &I) { handleAlias(I); }
 
   void visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     // The base visitor will adjust Offset accordingly.
