@@ -442,3 +442,61 @@ func.func @scf_for_unsigned_induction_var() {
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @if_break_then(
+// CHECK-SAME: %[[COND:.*]]: i1, %[[SIZE:.*]]: index
+// CHECK: "test.some_use"(%[[SIZE]])
+func.func @if_break_then(%cond: i1, %size: index) {
+  scf.loop token(%token) {
+    %r = scf.if %cond -> index {
+      scf.break [%token]
+    } else {
+      scf.yield %size : index
+    }
+    %bound = "test.reify_bound"(%r) {type = "LB"} : (index) -> index
+    "test.some_use"(%bound) : (index) -> ()
+    scf.break [%token]
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @if_break_else(
+// CHECK-SAME: %[[COND:.*]]: i1, %[[SIZE:.*]]: index
+// CHECK: "test.some_use"(%[[SIZE]])
+func.func @if_break_else(%cond: i1, %size: index) {
+  scf.loop token(%token) {
+    %r = scf.if %cond -> index {
+      scf.yield %size : index
+    } else {
+      scf.break [%token]
+    }
+    %bound = "test.reify_bound"(%r) {type = "LB"} : (index) -> index
+    "test.some_use"(%bound) : (index) -> ()
+    scf.break [%token]
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @if_break_shaped_result(
+// CHECK-SAME: %[[COND:.*]]: i1, %[[INPUT:.*]]: tensor<?xf32>
+// CHECK: %[[DIM:.*]] = tensor.dim %[[INPUT]], %{{.*}} : tensor<?xf32>
+// CHECK: "test.some_use"(%[[DIM]])
+func.func @if_break_shaped_result(%cond: i1, %input: tensor<?xf32>) {
+  scf.loop token(%token) {
+    %r = scf.if %cond -> tensor<?xf32> {
+      scf.break [%token]
+    } else {
+      scf.yield %input : tensor<?xf32>
+    }
+    %bound = "test.reify_bound"(%r) {type = "EQ", dim = 0} : (tensor<?xf32>) -> index
+    "test.some_use"(%bound) : (index) -> ()
+    scf.break [%token]
+  }
+  return
+}

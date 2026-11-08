@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/InliningUtils.h"
+#include "mlir/IR/RegionExitInterfaces.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -284,6 +285,13 @@ static LogicalResult inlineRegionImpl(
   auto *srcEntryBlock = &src->front();
   if (llvm::any_of(srcEntryBlock->getArguments(),
                    [&](BlockArgument arg) { return !mapper.contains(arg); }))
+    return failure();
+
+  // Block inlining only if breaks escape the region (propagate through the
+  // parent op toward an ancestor). Self-contained breaks that target ops
+  // within the region are fine.
+  if (mightHaveBreakingControlFlow(src) &&
+      hasEscapingBreakingControlFlow(src->getParentOp()))
     return failure();
 
   // Check that the operations within the source region are valid to inline.
