@@ -309,6 +309,24 @@ def mul_const : GICombineRule<
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def mul_one_zero_vector : GICombineRule<
+  (defs root:$dst),
+  (match
+    (G_BUILD_VECTOR $mask, (i32 1), (i32 0)),
+    (G_MUL v2i32:$dst, $src, $mask)),
+  (apply
+    (G_INSERT_VECTOR_ELT $dst, $src, (i32 0), (i64 1)))
+>;
+
+def mul_one_zero_vector_lhs : GICombineRule<
+  (defs root:$dst),
+  (match
+    (G_BUILD_VECTOR $mask, (i32 1), (i32 0)),
+    (G_MUL v2i32:$dst, $mask, $src)),
+  (apply
+    (G_INSERT_VECTOR_ELT $dst, $src, (i32 0), (i64 1)))
+>;
+
 def mull_matchdata : GIDefMatchData<"std::tuple<bool, Register, Register>">;
 def extmultomull : GICombineRule<
   (defs root:$root, mull_matchdata:$matchinfo),
@@ -476,7 +494,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_const, redundant_sext_inreg,
+                        mul_one_zero_vector, mul_one_zero_vector_lhs, mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
                         form_bitfield_extract, ubfx_sign_bit_to_lshr, rotate_out_of_range,
