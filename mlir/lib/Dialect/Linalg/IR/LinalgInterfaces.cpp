@@ -596,17 +596,24 @@ mlir::linalg::detail::isContractionInterfaceImpl(
   if (llvm::any_of(mapRange,
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
     return MatchContractionResult::NotProjectedPermutations;
-  // TODO: more fields than add/mul.
-  // clang-format off
-  if (!::isContractionBody<
-        arith::MulFOp, arith::AddFOp,
-        arith::MulIOp, arith::AddIOp,
-        complex::MulOp, complex::AddOp,
-        arith::AndIOp, arith::OrIOp>(
-      *linalgOp.getBlock())) {
+
+  // Inputs may be cast to the accumulator type inside the body (mixed
+  // precision, int<->float), so the init element type alone selects which
+  // mul/add pair the contraction must use.
+  Type accType =
+      getElementTypeOrSelf(linalgOp.getDpsInitOperand(0)->get().getType());
+  Block &body = *linalgOp.getBlock();
+  bool isContraction = false;
+  if (accType.isInteger(1))
+    isContraction = ::isContractionBody<arith::AndIOp, arith::OrIOp>(body);
+  else if (isa<IntegerType>(accType))
+    isContraction = ::isContractionBody<arith::MulIOp, arith::AddIOp>(body);
+  else if (isa<FloatType>(accType))
+    isContraction = ::isContractionBody<arith::MulFOp, arith::AddFOp>(body);
+  else if (isa<ComplexType>(accType))
+    isContraction = ::isContractionBody<complex::MulOp, complex::AddOp>(body);
+  if (!isContraction)
     return MatchContractionResult::NotAddMul;
-  }
-  // clang-format on
 
   if (dimensions) {
     FailureOr<ContractionDimensions> res = inferContractionDims(linalgOp);
