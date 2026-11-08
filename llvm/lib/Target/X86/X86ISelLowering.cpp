@@ -60853,10 +60853,6 @@ static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
   if (N0.getOpcode() != N1.getOpcode() || N0.getOpcode() != X86ISD::VPMADDWD)
     return SDValue();
 
-  // TODO: Add 256/512-bit support once VPMADDWD combines with shuffles.
-  if (VT.getSizeInBits() > 128)
-    return SDValue();
-
   unsigned NumElts = VT.getVectorNumElements();
   MVT OpVT = N0.getOperand(0).getSimpleValueType();
   APInt DemandedHiElts = APInt::getSplat(2 * NumElts, APInt(2, 2));
