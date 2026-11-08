@@ -13972,6 +13972,7 @@ libc_math_function(
 libc_math_function(
     name = "cos",
     additional_deps = [
+        ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_cos",
         ":__support_math_cos_integer_eval",
