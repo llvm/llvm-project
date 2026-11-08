@@ -3791,7 +3791,8 @@ defm module_local_hints : BoolFOption<"module-local-hints",
   CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Mark inline functions and template instantiations defined in the "
-          "main source file as likely_module_local">,
+          "main source file, or instantiated with a template argument "
+          "declared in it, as likely_module_local">,
   NegFlag<SetFalse>>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
