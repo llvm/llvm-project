@@ -20702,13 +20702,16 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
 
       bool SelfMultiply = LHS == RHS;
 
+      // For a self-multiply both operands are the same value, so RHSKnown also
+      // describes the LHS; avoid the duplicated query.
       KnownBits LHSKnown;
-      if (SelfMultiply) {
+      if (SelfMultiply)
         LHSKnown = RHSKnown;
-        SelfMultiply &= isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
-      } else {
+      else
         VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
-      }
+
+      if (SelfMultiply)
+        SelfMultiply &= isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
 
       Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
                                        IID == Intrinsic::amdgcn_mul_i24,

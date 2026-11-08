@@ -123,6 +123,14 @@ define i32 @mul_u24_self_square_freeze(i32 %x) {
 
 ; A self-multiply of a known odd value: x is odd so bit 0 is 1 and the square
 ; of an odd number has bits 1 and 2 clear, i.e. the low bits are 001.
+;
+; The mask is narrowed from 7 to 1 here, which shows that bits 1 and 2 are
+; known zero. SelectionDAG does not fold the remaining "and 1" to the constant
+; 1 because AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode does not
+; report the known bits of target opcodes during the demanded-bits recursion
+; (unlike the base implementation used by other targets), so the operand looks
+; unknown to the fold. The GlobalISel value tracking test checks the full
+; 001 result.
 define i32 @mul_i24_self_square_odd(i32 %x) {
 ; GCN-LABEL: mul_i24_self_square_odd:
 ; GCN:       ; %bb.0:
@@ -139,15 +147,15 @@ define i32 @mul_i24_self_square_odd(i32 %x) {
 }
 
 ; A 24x24 product needs at most 48 bits, so the upper 16 bits of the i64
-; result are known zero.
-define i64 @mul_u24_i64_upper_bits_zero(i32 %x) {
+; result are known zero even when both operands are unknown.
+define i64 @mul_u24_i64_upper_bits_zero(i32 %x, i32 %y) {
 ; GCN-LABEL: mul_u24_i64_upper_bits_zero:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %mul = call i64 @llvm.amdgcn.mul.u24.i64(i32 %x, i32 12)
+  %mul = call i64 @llvm.amdgcn.mul.u24.i64(i32 %x, i32 %y)
   %hi = lshr i64 %mul, 48
   ret i64 %hi
 }
