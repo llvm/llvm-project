@@ -136,8 +136,13 @@ private:
 
 // QueueOwnership represents the ownership of a queue by a thread and the number of nested acquisitions by this thread.
 struct QueueOwnership {
+  // Identification of a thread that owns a queue.
+  // Attempts to aquire an ownership must be synchronized by this variable.
   std::atomic<std::thread::id> id = {};
-  std::atomic_size_t aquire_count = 0;
+
+  // Support for nested parallelism, this variable increments with each acquisition and decrements with each release.
+  // Must be only touched by a thread that owns a queue.
+  int acquire_count = 0;
 };
 
 // Scheduler manages the worker threads and the queues.
@@ -260,7 +265,7 @@ inline Scheduler::Scheduler() noexcept {
     }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
     m_queue_owners[worker_idx].id.store(worker.get_id());
-    m_queue_owners[worker_idx].aquire_count.store(1);
+    m_queue_owners[worker_idx].acquire_count = 1;
     worker.detach();
   }
 
@@ -295,23 +300,25 @@ inline void Scheduler::worker_thread(size_t worker_index) noexcept {
 }
 
 inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) {
+  // First check if this thread already owns a queue and is coming in via a nested invocation.
   for (size_t i = 0; i < m_queues_count; ++i) {
-    std::thread::id id = m_queue_owners[i].id.load();
-    if (id == thread_id) {
-      bool is_guest = i >= m_workers_count;
-      if (is_guest) {
-        m_queue_owners[i].aquire_count.fetch_add(1);
-      }
+    if (m_queue_owners[i].id.load() == thread_id) {
+      // Yes, this thread already owns a queue, increment the acquire_count and return it.
+      m_queue_owners[i].acquire_count++;
       return &m_queues[i];
     }
   }
-  for (size_t i = 0; i < m_queues_count; ++i) {
+
+  // This thread doesn't own a queue, try to find a free one.
+  // This thread must be a guest, hence start looking after the queues owned by the workers.
+  for (size_t i = m_workers_count; i < m_queues_count; ++i) {
     std::thread::id id = m_queue_owners[i].id.load();
-    if (id == std::thread::id()) {
+    if (id == std::thread::id{}) {
+      // Nobody owns this queue as of now, try to atomically acquire the ownership.
       std::thread::id expected;
       if (m_queue_owners[i].id.compare_exchange_strong(expected, thread_id)) {
-        // Acquired by a new guest thread => set aquire_count to 1
-        m_queue_owners[i].aquire_count.store(1);
+        // Acquired by a new guest thread, set acquire count to 1 and return this queue.
+        m_queue_owners[i].acquire_count = 1;
         return &m_queues[i];
       }
     }
@@ -320,12 +327,10 @@ inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) {
 }
 
 inline void Scheduler::release_queue(TaskQueue* queue) {
-  size_t idx    = static_cast<size_t>(queue - m_queues.get());
-  bool is_guest = idx >= m_workers_count;
-  if (is_guest) {
-    if (m_queue_owners[idx].aquire_count.fetch_sub(1) == 1) {
-      m_queue_owners[idx].id.store(std::thread::id());
-    }
+  size_t idx = static_cast<size_t>(queue - m_queues.get());
+  m_queue_owners[idx].acquire_count--;
+  if (m_queue_owners[idx].acquire_count == 0) {
+    m_queue_owners[idx].id.store(std::thread::id{});
   }
 }
 
