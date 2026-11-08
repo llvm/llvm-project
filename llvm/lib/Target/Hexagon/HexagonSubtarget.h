@@ -232,6 +232,9 @@ public:
   bool useHVXV79Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V79;
   }
+  bool useHVXV79OpsOnly() const {
+    return HexagonHVXVersion == Hexagon::ArchEnum::V79;
+  }
   bool hasV81Ops() const {
     return getHexagonArchVersion() >= Hexagon::ArchEnum::V81;
   }
@@ -240,6 +243,24 @@ public:
   }
   bool useHVXV81Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V81;
+  }
+  bool hasV83Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V83;
+  }
+  bool hasV83OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V83;
+  }
+  bool useHVXV83Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V83;
+  }
+  bool hasV85Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V85;
+  }
+  bool hasV85OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V85;
+  }
+  bool useHVXV85Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V85;
   }
 
   bool useAudioOps() const { return UseAudioOps; }

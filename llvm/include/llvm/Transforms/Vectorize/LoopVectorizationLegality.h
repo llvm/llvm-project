@@ -35,7 +35,6 @@
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
-class BlockFrequencyInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -44,7 +43,6 @@ class LoopInfo;
 class Metadata;
 class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
-class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
@@ -132,8 +130,7 @@ public:
   /// Mark the loop L as already vectorized by setting the width to 1.
   LLVM_ABI void setAlreadyVectorized();
 
-  LLVM_ABI bool allowVectorization(Function *F, Loop *L,
-                                   bool VectorizeOnlyWhenForced) const;
+  LLVM_ABI bool allowVectorization(Loop *L, bool VectorizeOnlyWhenForced) const;
 
   /// Dumps all the hint information.
   LLVM_ABI void emitRemarkWithHints() const;
@@ -279,9 +276,7 @@ enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
 /// * Scalars checks - The code in canVectorizeInstrs and canVectorizeMemory
 /// checks for a number of different conditions, such as the availability of a
 /// single induction variable, that all types are supported and vectorize-able,
-/// etc. This code reflects the capabilities of InnerLoopVectorizer.
-/// This class is also used by InnerLoopVectorizer for identifying
-/// induction variable and the different reduction variables.
+/// etc. It also identifies the induction and reduction variables of the loop.
 class LoopVectorizationLegality {
 public:
   LoopVectorizationLegality(const VectorizeOptions &Opts, Loop *L,
@@ -352,6 +347,11 @@ public:
 
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
+
+  /// Returns the conditional inductions found in the loop.
+  const ConditionalInductionList &getConditionalInductions() const {
+    return ConditionalInductions;
+  }
 
   bool hasConditionalInductions() const {
     return !ConditionalInductions.empty();
@@ -483,16 +483,32 @@ public:
   /// Returns a HistogramInfo* for the given instruction if it was determined
   /// to be part of a load -> update -> store sequence where multiple lanes
   /// may be working on the same memory address.
-  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+  const HistogramInfo *getHistogramInfo(Instruction *I) const {
     for (const HistogramInfo &HGram : Histograms)
       if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
         return &HGram;
 
-    return std::nullopt;
+    return nullptr;
   }
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
+
+  /// Returns the CompressedPtrInfo for \p Ptr if the pointer is defined via
+  /// a conditional induction PHI, otherwise std::nullopt.
+  std::optional<CompressedPtrInfo> getCompressedPtrInfo(Value *Ptr) const {
+    auto It = CompressedPtrs.find(Ptr);
+    if (It != CompressedPtrs.end())
+      return It->second;
+    return std::nullopt;
+  }
+
+  /// Returns true for \p I if it corresponds to a compressed load or store
+  /// (which can map to an llvm.masked.expandload or llvm.masked.compressstore).
+  bool isCompressedLoadOrStore(Instruction *I) {
+    return isa<LoadInst, StoreInst>(I) &&
+           getCompressedPtrInfo(getLoadStorePointerOperand(I)).has_value();
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;

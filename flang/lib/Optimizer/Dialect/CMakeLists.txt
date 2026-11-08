@@ -8,6 +8,7 @@ add_flang_library(FIRDialect
   FIRAttr.cpp
   FIRBoxUtils.cpp
   FIRDialect.cpp
+  FIRMemRefOpsInterfaces.cpp
   FIROperationMoveOpInterface.cpp
   FIROps.cpp
   FIRType.cpp
@@ -40,8 +41,10 @@ add_flang_library(FIRDialect
   MLIR_LIBS
   MLIRArithDialect
   MLIRGPUDialect
+  MLIRMemRefDialect
   MLIROpenACCDialect
   MLIROpenACCUtils
+  MLIROpenMPDialect
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
