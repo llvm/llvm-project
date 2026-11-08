@@ -1770,30 +1770,41 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
 // select(C, Z, I(..., select(C, X, Y), ...)) -> select(C, Z, I(..., Y, ...))
 Instruction *
 InstCombinerImpl::foldInnerSelectOperandsOnSameCond(SelectInst &SI) {
-  Value *Cond = SI.getCondition();
-  for (unsigned OperandNo : {1, 2}) {
-    auto *I = dyn_cast<Instruction>(SI.getOperand(OperandNo));
+  for (Value *Arm : {SI.getTrueValue(), SI.getFalseValue()}) {
+    auto *I = dyn_cast<Instruction>(Arm);
     if (!I || !isSafeToSpeculativelyExecuteWithVariableReplaced(
                   I, /*IgnoreUBImplyingAttrs=*/false))
       continue;
 
-    if (Cond->getType()->isVectorTy() && !isNotCrossLaneOperation(I))
-      continue;
-
-    auto GetInnerSelectValue = [&](Value *Operand) -> Value * {
-      auto *InnerSI = dyn_cast<SelectInst>(Operand);
-      if (!InnerSI || InnerSI->getCondition() != Cond)
-        return nullptr;
-      return InnerSI->getOperand(OperandNo);
-    };
-
-    // Every use of I must be the same operand of a select on C.
+    // Every use of I must be an arm of a select, so I only matters when the
+    // condition of that select picks it.
     if (any_of(I->uses(), [&](Use &U) {
-          return U.getOperandNo() != OperandNo ||
-                 !match(U.getUser(),
-                        m_Select(m_Specific(Cond), m_Value(), m_Value()));
+          auto *UserSI = dyn_cast<SelectInst>(U.getUser());
+          return !UserSI || U.getOperandNo() == 0 ||
+                 (UserSI->getCondition()->getType()->isVectorTy() &&
+                  !isNotCrossLaneOperation(I));
         }))
       continue;
+
+    // An inner select folds to one arm if the conditions under which I is
+    // picked all imply the same value for its condition.
+    auto GetInnerSelectValue = [&](Value *Operand) -> Value * {
+      auto *InnerSI = dyn_cast<SelectInst>(Operand);
+      if (!InnerSI)
+        return nullptr;
+      std::optional<bool> InnerCondValue;
+      for (Use &U : I->uses()) {
+        std::optional<bool> Implied = isImpliedCondition(
+            cast<SelectInst>(U.getUser())->getCondition(),
+            InnerSI->getCondition(), DL,
+            /*LHSIsTrue=*/U.getOperandNo() == 1);
+        if (!Implied || (InnerCondValue && *InnerCondValue != *Implied))
+          return nullptr;
+        InnerCondValue = Implied;
+      }
+      return *InnerCondValue ? InnerSI->getTrueValue()
+                             : InnerSI->getFalseValue();
+    };
 
     bool Changed = false;
     for (Use &Operand : I->operands()) {

@@ -1083,8 +1083,7 @@ define i8 @sel_op_sel_implied_cond(i8 %p, i1 %c2, i8 %a, i8 %b, i8 %w, i8 %x) {
 ; CHECK-LABEL: @sel_op_sel_implied_cond(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[P:%.*]], 5
 ; CHECK-NEXT:    [[C:%.*]] = and i1 [[C1]], [[C2:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C1]], i8 [[A1:%.*]], i8 [[B:%.*]]
-; CHECK-NEXT:    [[I:%.*]] = add i8 [[A]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -1100,8 +1099,7 @@ define i8 @sel_op_sel_implied_cond_fval(i1 %c1, i8 %p, i8 %a, i8 %b, i8 %w, i8 %
 ; CHECK-LABEL: @sel_op_sel_implied_cond_fval(
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[P:%.*]], 4
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[C1:%.*]], [[C2]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C2]], i8 [[B:%.*]], i8 [[A1:%.*]]
-; CHECK-NEXT:    [[I:%.*]] = add i8 [[A]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[X:%.*]], i8 [[I]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -1117,9 +1115,7 @@ define i8 @sel_op_sel_implied_cond_fval(i1 %c1, i8 %p, i8 %a, i8 %b, i8 %w, i8 %
 define i8 @sel_op_sel_implied_range(i8 %p, i8 %a, i8 %b, i8 %w, i8 %x) {
 ; CHECK-LABEL: @sel_op_sel_implied_range(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[P:%.*]], 3
-; CHECK-NEXT:    [[D:%.*]] = icmp ult i8 [[P]], 7
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[D]], i8 [[A1:%.*]], i8 [[B:%.*]]
-; CHECK-NEXT:    [[I:%.*]] = add i8 [[A]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -1146,10 +1142,8 @@ define i8 @sel_op_sel_inverted_cond(i1 %c, i8 %a, i8 %b, i8 %w, i8 %x) {
 
 define i1 @sel_op_sel_inverted_cond_logical(i1 %c, i1 %y, i1 %z) {
 ; CHECK-LABEL: @sel_op_sel_inverted_cond_logical(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[I:%.*]] = or i1 [[S]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i1 [[I]], i1 false
+; CHECK-NEXT:    [[I:%.*]] = or i1 [[S:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[I]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %not_c = xor i1 %c, true
@@ -1164,8 +1158,7 @@ define i8 @sel_op_sel_implied_cond_multi_use(i8 %p, i1 %c2, i1 %c3, i8 %a, i8 %b
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[P:%.*]], 5
 ; CHECK-NEXT:    [[CA:%.*]] = and i1 [[C1]], [[C2:%.*]]
 ; CHECK-NEXT:    [[CB:%.*]] = and i1 [[C1]], [[C3:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C1]], i8 [[A1:%.*]], i8 [[B:%.*]]
-; CHECK-NEXT:    [[I:%.*]] = add i8 [[A]], [[W:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[A:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[R1:%.*]] = select i1 [[CA]], i8 [[I]], i8 [[X:%.*]]
 ; CHECK-NEXT:    [[R2:%.*]] = select i1 [[CB]], i8 [[I]], i8 [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[R1]], [[R2]]
