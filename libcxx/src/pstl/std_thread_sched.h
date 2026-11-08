@@ -134,8 +134,8 @@ private:
   std::size_t mask{0};
 };
 
-// QueueID represents the ownership of a queue and the number of nested acquisitions.
-struct QueueID {
+// QueueOwnership represents the ownership of a queue by a thread and the number of nested acquisitions by this thread.
+struct QueueOwnership {
   std::atomic<std::thread::id> id = {};
   std::atomic_size_t aquire_count = 0;
 };
@@ -161,26 +161,31 @@ public:
   void apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept;
 
 private:
+  TaskQueue* acquire_queue(std::thread::id thread_id);
+  void release_queue(TaskQueue* queue);
+  void worker_thread(size_t worker_num) noexcept;
+  bool is_parallelism_enabled() const noexcept;
+
   // The actual number of running worker threads.
   // This number may be lower than the desired thread pool size, in case of a thread startup failure.
   // When this variable is zero, the scheduler doesn't enable its machinery and processes the incoming requests serialy.
   size_t m_workers_count{0};
 
+  // Task queues.
+  // [0, m_workers_count) are owned by the worker threads,
+  // [m_workers_count, m_queues_count) can be used by the incoming guest threads.
   std::unique_ptr<TaskQueue[]> m_queues;
 
-  std::unique_ptr<QueueID[]> m_queue_ids;
+  // Ownership of the queues in m_queues, this array has the same size.
+  std::unique_ptr<QueueOwnership[]> m_queue_owners;
 
+  // The number of task queues, i.e. the sizes of m_queues and m_queue_owners.
   size_t m_queues_count{0};
 
   // Wait-wake mechanism.
   // The epoch is monotonically incremented after each time task invitations are pushed into a task queue.
   // Wrapping is allowed and harmless.
   std::atomic_unsigned_lock_free m_epoch{0};
-
-  TaskQueue* acquire_queue(std::thread::id thread_id);
-  void release_queue(TaskQueue* queue);
-  void worker_thread(size_t worker_num) noexcept;
-  bool is_parallelism_enabled() const noexcept;
 };
 
 // For cases when the number of iterations is less than 2 or when there are no worker threads available,
@@ -237,9 +242,9 @@ inline Scheduler::Scheduler() noexcept {
       return; // Failed to allocate a queue buffer, bail out.
   }
 
-  // Allocate the queue identifiers array
-  m_queue_ids.reset(new (std::nothrow) QueueID[m_queues_count]);
-  if (!m_queue_ids)
+  // Allocate the queue ownership array
+  m_queue_owners.reset(new (std::nothrow) QueueOwnership[m_queues_count]);
+  if (!m_queue_owners)
     return; // Failed to allocate the queue identifiers buffer, bail out.
 
   size_t worker_idx = 0;
@@ -254,8 +259,8 @@ inline Scheduler::Scheduler() noexcept {
       break; // Failed to start a worker thread, don't attempt to start any more
     }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
-    m_queue_ids[worker_idx].id.store(worker.get_id());
-    m_queue_ids[worker_idx].aquire_count.store(1);
+    m_queue_owners[worker_idx].id.store(worker.get_id());
+    m_queue_owners[worker_idx].aquire_count.store(1);
     worker.detach();
   }
 
@@ -291,22 +296,22 @@ inline void Scheduler::worker_thread(size_t worker_index) noexcept {
 
 inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) {
   for (size_t i = 0; i < m_queues_count; ++i) {
-    std::thread::id id = m_queue_ids[i].id.load();
+    std::thread::id id = m_queue_owners[i].id.load();
     if (id == thread_id) {
       bool is_guest = i >= m_workers_count;
       if (is_guest) {
-        m_queue_ids[i].aquire_count.fetch_add(1);
+        m_queue_owners[i].aquire_count.fetch_add(1);
       }
       return &m_queues[i];
     }
   }
   for (size_t i = 0; i < m_queues_count; ++i) {
-    std::thread::id id = m_queue_ids[i].id.load();
+    std::thread::id id = m_queue_owners[i].id.load();
     if (id == std::thread::id()) {
       std::thread::id expected;
-      if (m_queue_ids[i].id.compare_exchange_strong(expected, thread_id)) {
+      if (m_queue_owners[i].id.compare_exchange_strong(expected, thread_id)) {
         // Acquired by a new guest thread => set aquire_count to 1
-        m_queue_ids[i].aquire_count.store(1);
+        m_queue_owners[i].aquire_count.store(1);
         return &m_queues[i];
       }
     }
@@ -318,8 +323,8 @@ inline void Scheduler::release_queue(TaskQueue* queue) {
   size_t idx    = static_cast<size_t>(queue - m_queues.get());
   bool is_guest = idx >= m_workers_count;
   if (is_guest) {
-    if (m_queue_ids[idx].aquire_count.fetch_sub(1) == 1) {
-      m_queue_ids[idx].id.store(std::thread::id());
+    if (m_queue_owners[idx].aquire_count.fetch_sub(1) == 1) {
+      m_queue_owners[idx].id.store(std::thread::id());
     }
   }
 }
