@@ -83,6 +83,14 @@ using namespace llvm;
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
 STATISTIC(NumLocalSplits,  "Number of split local live ranges");
 STATISTIC(NumEvicted,      "Number of interferences evicted");
+STATISTIC(NumCopyHintMisses,
+          "Number of missed copy hints queued for hint recoloring");
+STATISTIC(NumHintRecolors,
+          "Number of live ranges recolored to repair broken hints");
+STATISTIC(NumHintPartnersQueued,
+          "Number of assigned copy partners queued for hint recoloring");
+STATISTIC(NumHintRecolorSwaps,
+          "Number of hint recolorings that moved interfering live ranges");
 
 static cl::opt<SplitEditor::ComplementSpillMode> SplitSpillMode(
     "split-spill-mode", cl::Hidden,
@@ -150,6 +158,31 @@ static cl::opt<unsigned> SplitThresholdForRegWithHint(
     cl::desc("The threshold for splitting a virtual register with a hint, in "
              "percentage"),
     cl::init(75), cl::Hidden);
+
+static cl::opt<bool> GreedyRecordCopyHintMisses(
+    "greedy-record-copy-hint-misses",
+    cl::desc("Queue a live range for hint recoloring when it is assigned a "
+             "register that matches none of its copy-derived hints"),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<bool> GreedyHintRecolorSwap(
+    "greedy-hint-recolor-swap",
+    cl::desc("During hint recoloring, move the live ranges occupying the "
+             "target register to other free registers when that removes "
+             "copies"),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<unsigned> GreedyHintRecolorSwapMaxInterf(
+    "greedy-hint-recolor-swap-max-interf",
+    cl::desc("Maximum number of live ranges moved out of the way for one "
+             "hint recoloring swap"),
+    cl::init(8), cl::Hidden);
+
+static cl::opt<bool> GreedyHintRecolorQueuePartners(
+    "greedy-hint-recolor-queue-partners",
+    cl::desc("When queuing a missed copy hint, also queue the assigned copy "
+             "partners so that recoloring is tried towards their registers"),
+    cl::init(false), cl::Hidden);
 
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);
@@ -581,6 +614,22 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
       // at the end if the surrounding allocation changed.
       SetOfBrokenHints.insert(&VirtReg);
     }
+
+  // Copy-derived hints are usually virtual registers, which the check above
+  // skips. Order.begin().isHint() is true iff Order has any hints.
+  if (GreedyRecordCopyHintMisses && Order.begin().isHint() &&
+      !Order.isHint(PhysReg)) {
+    if (SetOfBrokenHints.insert(&VirtReg))
+      ++NumCopyHintMisses;
+    // Recoloring only moves copy partners onto the queued live range's
+    // register, so queue the partners too to try their registers as well.
+    if (GreedyHintRecolorQueuePartners)
+      if (const auto *Hints = MRI->getRegAllocationHints(VirtReg.reg()))
+        for (Register Hint : Hints->second)
+          if (Hint.isVirtual() && VRM->hasPhys(Hint) &&
+              SetOfBrokenHints.insert(&LIS->getInterval(Hint)))
+            ++NumHintPartnersQueued;
+  }
 
   // Try to evict interference from a cheaper alternative.
   uint8_t Cost = RegCosts[PhysReg.id()];
@@ -2659,6 +2708,103 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg,
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
 
+  // Frequency of the non-identity copies touching any of Regs under the
+  // current assignment. A copy between two of Regs is counted once.
+  auto CopyCost = [&](ArrayRef<Register> Regs) {
+    BlockFrequency Cost(0);
+    for (auto [Idx, R] : enumerate(Regs)) {
+      HintsInfo RInfo;
+      collectHintInfo(R, RInfo);
+      MCRegister RPhys = VRM->getPhys(R);
+      for (const HintInfo &HI : RInfo)
+        if (HI.PhysReg != RPhys && !is_contained(Regs.take_front(Idx), HI.Reg))
+          Cost += MBFI->getBlockFreq(HI.MBB);
+    }
+    return Cost;
+  };
+
+  // Move every virtual live range occupying PhysReg over LI to another free
+  // register, possibly LI's current one, then move LI to PhysReg. Keep the
+  // result only if the copy cost of the moved live ranges strictly decreases.
+  auto TrySwap = [&](const LiveInterval &LI, MCRegister CurrPhys) {
+    SmallVector<const LiveInterval *, 4> Intfs;
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      LiveIntervalUnion::Query &Q = Matrix->query(LI, Unit);
+      const auto &UnitIntfs =
+          Q.interferingVRegs(GreedyHintRecolorSwapMaxInterf + 1);
+      if (UnitIntfs.size() > GreedyHintRecolorSwapMaxInterf)
+        return false;
+      for (const LiveInterval *Intf : UnitIntfs) {
+        // Live ranges already in this recoloring component stay put.
+        if (Visited.count(Intf->reg()))
+          return false;
+        if (!is_contained(Intfs, Intf))
+          Intfs.push_back(Intf);
+      }
+    }
+    if (Intfs.empty() || Intfs.size() > GreedyHintRecolorSwapMaxInterf)
+      return false;
+
+    SmallVector<Register, 4> Moved = {LI.reg()};
+    for (const LiveInterval *Intf : Intfs)
+      Moved.push_back(Intf->reg());
+    BlockFrequency OldCost = CopyCost(Moved);
+
+    Matrix->unassign(LI);
+    SmallVector<std::pair<const LiveInterval *, MCRegister>, 4> Undo;
+    auto Rollback = [&]() {
+      if (VRM->hasPhys(LI.reg()))
+        Matrix->unassign(LI);
+      for (auto &[MovedLI, OldPhys] : reverse(Undo)) {
+        Matrix->unassign(*MovedLI);
+        Matrix->assign(*MovedLI, OldPhys);
+      }
+      Matrix->assign(LI, CurrPhys);
+      return false;
+    };
+
+    for (const LiveInterval *Intf : Intfs) {
+      MCRegister OldPhys = VRM->getPhys(Intf->reg());
+      MCRegister NewPhys;
+      for (MCRegister R :
+           AllocationOrder::create(Intf->reg(), *VRM, *RegClassInfo, Matrix)) {
+        if (R == OldPhys || R == PhysReg ||
+            RegCosts[R.id()] > RegCosts[OldPhys.id()])
+          continue;
+        // Starting to use a callee-saved register adds a save and restore.
+        // CurrPhys was in use by LI.
+        if (R != CurrPhys && RegClassInfo->getLastCalleeSavedAlias(R) &&
+            !Matrix->isPhysRegUsed(R))
+          continue;
+        if (Matrix->checkInterference(*Intf, R) == LiveRegMatrix::IK_Free) {
+          NewPhys = R;
+          break;
+        }
+      }
+      if (!NewPhys)
+        return Rollback();
+      Matrix->unassign(*Intf);
+      Matrix->assign(*Intf, NewPhys);
+      Undo.push_back({Intf, OldPhys});
+    }
+
+    if (Matrix->checkInterference(LI, PhysReg) != LiveRegMatrix::IK_Free)
+      return Rollback();
+    Matrix->assign(LI, PhysReg);
+
+    BlockFrequency NewCost = CopyCost(Moved);
+    LLVM_DEBUG(
+        dbgs() << "Swap moving " << Intfs.size()
+               << " live range(s): Old Cost: " << printBlockFreq(*MBFI, OldCost)
+               << " New Cost: " << printBlockFreq(*MBFI, NewCost) << '\n');
+    if (!(NewCost < OldCost))
+      return Rollback();
+
+    ++NumHintRecolors;
+    ++NumHintRecolorSwaps;
+    return true;
+  };
+
   do {
     Reg = RecoloringCandidates.pop_back_val();
 
@@ -2675,10 +2821,20 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg,
     // to check for the interference with the new color.
     LiveInterval &LI = LIS->getInterval(Reg);
     // Check that the new color matches the register class constraints and
-    // that it is free for this live range.
-    if (CurrPhys != PhysReg && (!MRI->getRegClass(Reg)->contains(PhysReg) ||
-                                Matrix->checkInterference(LI, PhysReg)))
-      continue;
+    // that it is free for this live range, or can be freed by a swap.
+    bool Swapped = false;
+    if (CurrPhys != PhysReg) {
+      if (!MRI->getRegClass(Reg)->contains(PhysReg))
+        continue;
+      LiveRegMatrix::InterferenceKind IK =
+          Matrix->checkInterference(LI, PhysReg);
+      if (IK != LiveRegMatrix::IK_Free) {
+        if (IK != LiveRegMatrix::IK_VirtReg || !GreedyHintRecolorSwap ||
+            !TrySwap(LI, CurrPhys))
+          continue;
+        Swapped = true;
+      }
+    }
 
     LLVM_DEBUG(dbgs() << printReg(Reg, TRI) << '(' << printReg(CurrPhys, TRI)
                       << ") is recolorable.\n");
@@ -2686,9 +2842,13 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg,
     // Gather the hint info.
     Info.clear();
     collectHintInfo(Reg, Info);
-    // Check if recoloring the live-range will increase the cost of the
-    // non-identity copies.
-    if (CurrPhys != PhysReg) {
+    // A successful swap has already moved LI to PhysReg (and was checked for
+    // profitability inside TrySwap), so only a real recoloring is left here.
+    if (Swapped) {
+      Changed = true;
+    } else if (CurrPhys != PhysReg) {
+      // Check if recoloring the live-range will increase the cost of the
+      // non-identity copies.
       LLVM_DEBUG(dbgs() << "Checking profitability:\n");
       BlockFrequency OldCopiesCost = getBrokenHintFreq(Info, CurrPhys);
       BlockFrequency NewCopiesCost = getBrokenHintFreq(Info, PhysReg);
@@ -2706,6 +2866,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg,
       // Recolor the live-range.
       Matrix->unassign(LI);
       Matrix->assign(LI, PhysReg);
+      ++NumHintRecolors;
       Changed = true;
     } else {
       Reached.push_back(Reg);
