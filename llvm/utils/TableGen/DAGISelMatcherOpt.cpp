@@ -587,7 +587,6 @@ static void FactorNodes(MatcherList &ML) {
       CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(Optn.front());
       assert(Opcodes.insert(COM->getOpcode().getEnumName()).second &&
              "Duplicate opcodes not factored?");
-      (void)Opcodes;
       const SDNodeInfo &Opcode = COM->getOpcode();
       Optn.erase_after(Optn.before_begin());
       Cases.emplace_back(&Opcode, std::move(Optn));
