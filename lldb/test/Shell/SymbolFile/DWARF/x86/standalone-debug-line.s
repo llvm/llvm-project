@@ -18,8 +18,9 @@
 # RUN: %lldb %t.bad-body -b -o "image dump symfile" \
 # RUN:   -o "image lookup -a 0x201000 -v" | \
 # RUN:   FileCheck %s --check-prefix=BAD-BODY
-# RUN: lldb-test symbols %t.bad-body | \
-# RUN:   FileCheck %s --check-prefix=BAD-BODY-CU
+# RUN: %lldb -b -o "log enable dwarf info" \
+# RUN:   -o "target create %t.bad-body" 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-BODY-LOG
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
 # RUN:   --defsym BAD_LENGTH=1 %s -o %t.bad-length.o
 # RUN: ld.lld -e bad_length -Ttext=0x201000 %t.bad-length.o -o %t.bad-length
@@ -168,12 +169,11 @@ foo:
         .endif
         .endif
 
-# BAD-BODY: SymbolFile dwarf
+# BAD-BODY: SymbolFile symtab
 # BAD-BODY-LABEL: (lldb) image lookup -a 0x201000 -v
 # BAD-BODY-NOT: CompileUnit:
 # BAD-BODY: Symbol: {{.*}}name="bad_body"
-
-# BAD-BODY-CU: CompileUnit{{.*}}file = '/tmp/bad-body.c'
+# BAD-BODY-LOG: SymbolFileDWARF failed to parse standalone line table:
 
 # BAD-LENGTH: SymbolFile symtab
 
