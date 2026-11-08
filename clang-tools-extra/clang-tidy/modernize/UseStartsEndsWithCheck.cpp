@@ -69,8 +69,7 @@ struct NotLengthExprForStringNode {
           return true;
         }
 
-        if (const auto *OnNode =
-                dyn_cast<Expr>(MemberCallNode->getImplicitObjectArgument())) {
+        if (const Expr *OnNode = MemberCallNode->getImplicitObjectArgument()) {
           return !utils::areStatementsIdentical(OnNode->IgnoreParenImpCasts(),
                                                 ExprNode->IgnoreParenImpCasts(),
                                                 *Context);
@@ -89,7 +88,7 @@ private:
 
 AST_MATCHER_P(Expr, lengthExprForStringNode, std::string, ID) {
   return Builder->removeBindings(NotLengthExprForStringNode(
-      ID, DynTypedNode::create(Node), &(Finder->getASTContext())));
+      ID, DynTypedNode::create(Node), &Finder->getASTContext()));
 }
 
 } // namespace
@@ -246,8 +245,9 @@ void UseStartsEndsWithCheck::check(const MatchFinder::MatchResult &Result) {
       CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
       *Result.SourceManager, Result.Context->getLangOpts());
 
-  auto Diagnostic = diag(FindExpr->getExprLoc(), "use %0 instead of %1")
-                    << ReplacementFunction->getName() << FindFun->getName();
+  const auto Diagnostic = diag(FindExpr->getExprLoc(), "use %0 instead of %1")
+                          << ReplacementFunction->getName()
+                          << FindFun->getName();
 
   // Remove everything before the function call.
   Diagnostic << FixItHint::CreateRemoval(CharSourceRange::getCharRange(

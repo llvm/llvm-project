@@ -4,7 +4,7 @@
 define void @assume_align_dynamic(ptr %p, i32 %align) {
   call void @llvm.assume(i1 true) ["align"(ptr %p, i32 4)]
   call void @llvm.assume(i1 true) ["align"(ptr %p, i32 %align)]
-  call void @llvm.assume(i1 true) ["align"(ptr %p, i32 %align, i32 20)]
+  call void @llvm.assume(i1 true) ["align"(ptr %p, i32 %align, i32 0)]
   ret void
 }
 
@@ -20,6 +20,11 @@ define void @main() {
   call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr %alloc, i32 4)]
   call void @llvm.assume(i1 true) ["dereferenceable_or_null"(ptr null, i32 4)]
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %alloc, i32 4), "dereferenceable_or_null"(ptr %alloc, i32 4), "dereferenceable_or_null"(ptr null, i32 4)]
+  call void @llvm.assume(i1 true) ["ignore"(ptr poison)]
+  call void @llvm.assume(i1 true) ["noundef"(i32 1)]
+  call void @llvm.assume(i1 true) ["noundef"(<2 x ptr> zeroinitializer)]
+  call void @llvm.assume(i1 true) ["range"(i32 0, i32 0, i32 1)]
+  call void @llvm.assume(i1 true) ["range"(i32 -1, i32 -2, i32 0)]
   ret void
 }
 ; CHECK: Entering function: main
@@ -31,7 +36,7 @@ define void @main() {
 ; CHECK-NEXT:   i32 %align = i32 8
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 4) ]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 %align) ]
-; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 %align, i32 20) ]
+; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 %align, i32 0) ]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: assume_align_dynamic
 ; CHECK-NEXT:   call void @assume_align_dynamic(ptr %alloc, i32 8)
@@ -42,5 +47,10 @@ define void @main() {
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "dereferenceable_or_null"(ptr %alloc, i32 4) ]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "dereferenceable_or_null"(ptr null, i32 4) ]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %alloc, i32 4), "dereferenceable_or_null"(ptr %alloc, i32 4), "dereferenceable_or_null"(ptr null, i32 4) ]
+; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "ignore"(ptr poison) ]
+; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "noundef"(i32 1) ]
+; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "noundef"(<2 x ptr> splat (ptr null)) ]
+; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "range"(i32 0, i32 0, i32 1) ]
+; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "range"(i32 -1, i32 -2, i32 0) ]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

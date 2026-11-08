@@ -33,8 +33,8 @@ public:
 
 private:
   const MachineFunction *MFunc;
-  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
-  /// after a pass has run to facilitate dropped variable calculation for an
+  /// Populate DebugVariablesBefore or DebugVariablesAfter before or after a
+  /// pass has run to facilitate dropped variable calculation for an
   /// llvm::MachineFunction.
   void runOnMachineFunction(const MachineFunction *MF, bool Before);
   /// Iterate over all Instructions in a MachineFunction and report any dropped
@@ -44,14 +44,9 @@ private:
                                                  StringRef FuncOrModName);
   /// Override base class method to run on an llvm::MachineFunction
   /// specifically.
-  void visitEveryInstruction(unsigned &DroppedCount,
-                             DenseMap<VarID, DILocation *> &InlinedAtsMap,
-                             VarID Var) override;
+  void visitEveryInstruction(unsigned &DroppedCount, VarID Var) override;
   /// Override base class method to run on DBG_VALUEs specifically.
-  void visitEveryDebugRecord(
-      DenseSet<VarID> &VarIDSet,
-      DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-      StringRef FuncName, bool Before) override;
+  void visitEveryDebugRecord(DenseSet<VarID> &VarIDSet) override;
 };
 
 } // namespace llvm

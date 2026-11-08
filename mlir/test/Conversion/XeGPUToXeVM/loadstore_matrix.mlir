@@ -256,18 +256,18 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     //CHECK: %[[ptr:.*]] = llvm.inttoptr %[[final_ptr]] : i32 to !llvm.ptr<3>
     //CHECK: %[[blockload:.*]] = xevm.blockload %[[ptr]] : (!llvm.ptr<3>) -> vector<8xi16>
     //CHECK: %[[loaded:.*]] = vector.bitcast %[[blockload]] : vector<8xi16> to vector<8xf16>
-    
+
     %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>
 
     %c16 = arith.constant 16 : index
     %c48 = arith.constant 48 : index
 
-    %1 = xegpu.load_matrix %0[%c16, %c48] {subgroup_block_io}: !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index -> vector<8xf16>
+    %1 = xegpu.load_matrix %0[%c16, %c48] <{subgroup_block_io}>: !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index -> vector<8xf16>
 
     //CHECK: %[[storeDataI16:.*]] = vector.bitcast %[[loaded]] : vector<8xf16> to vector<8xi16>
     //CHECK: xevm.blockstore %[[ptr2:.*]], %[[storeDataI16]] : (!llvm.ptr<3>, vector<8xi16>)
 
-    xegpu.store_matrix %1, %0[%c16, %c48] {subgroup_block_io}: vector<8xf16>, !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index
+    xegpu.store_matrix %1, %0[%c16, %c48] <{subgroup_block_io}>: vector<8xf16>, !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>, index, index
 
     gpu.return %1: vector<8xf16>
   }
@@ -307,5 +307,84 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
 
   }
 
+  // f8E8M0FNU has no native LLVM representation. The load must use the integer
+  // storage type from the XeVM type converter (i8) and then materialize back
+  // to f8E8M0FNU, rather than emitting an illegal llvm.load of f8E8M0FNU.
+  //CHECK-LABEL: load_matrix_f8e8m0_scalar
+  gpu.func @load_matrix_f8e8m0_scalar(%arg0: memref<1024xi8, 3>) -> vector<1x1xf8E8M0FNU> {
+    %c0 = arith.constant 0 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<1024xi8, 3> -> !xegpu.mem_desc<32x32xf8E8M0FNU>
+    %tid_x = gpu.thread_id x
+    //CHECK: %[[LOADED:.*]] = llvm.load %{{.*}} : !llvm.ptr<3> -> i8
+    //CHECK: %[[BCAST:.*]] = arith.bitcast %[[LOADED]] : i8 to f8E8M0FNU
+    //CHECK: vector.broadcast %[[BCAST]] : f8E8M0FNU to vector<1x1xf8E8M0FNU>
+    %1 = xegpu.load_matrix %0[%c0, %tid_x]: !xegpu.mem_desc<32x32xf8E8M0FNU>, index, index -> vector<1x1xf8E8M0FNU>
+    gpu.return %1 : vector<1x1xf8E8M0FNU>
+  }
+
+  //CHECK-LABEL: load_matrix_f8e8m0_vector
+  gpu.func @load_matrix_f8e8m0_vector(%arg0: memref<1024xi8, 3>) -> vector<8xf8E8M0FNU> {
+    %c0 = arith.constant 0 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<1024xi8, 3> -> !xegpu.mem_desc<32x32xf8E8M0FNU>
+    //CHECK: %[[LOADEDV:.*]] = llvm.load %{{.*}} : !llvm.ptr<3> -> vector<8xi8>
+    //CHECK: vector.bitcast %[[LOADEDV]] : vector<8xi8> to vector<8xf8E8M0FNU>
+    %1 = xegpu.load_matrix %0[%c0, %c0]: !xegpu.mem_desc<32x32xf8E8M0FNU>, index, index -> vector<8xf8E8M0FNU>
+    gpu.return %1 : vector<8xf8E8M0FNU>
+  }
+
+  // A vector<2x1xf32> payload of a row-major 16x2 tile is two elements one row
+  // apart, so it cannot be moved by one flat access of two consecutive
+  // elements. Each element gets its own address instead.
+  //CHECK-LABEL: load_matrix_strided_payload
+  gpu.func @load_matrix_strided_payload(%arg0: memref<128xi8, 3>) -> vector<2x1xf32> {
+    %c1 = arith.constant 1 : index
+    %c3 = arith.constant 3 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<128xi8, 3> -> !xegpu.mem_desc<16x2xf32>
+    //CHECK: %[[ZERO:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
+    //CHECK-COUNT-2: llvm.load %{{.*}} : !llvm.ptr<3> -> f32
+    //CHECK-NOT: llvm.load %{{.*}} : !llvm.ptr<3> -> vector<2xf32>
+    %1 = xegpu.load_matrix %0[%c3, %c1] : !xegpu.mem_desc<16x2xf32>, index, index -> vector<2x1xf32>
+    gpu.return %1 : vector<2x1xf32>
+  }
+
+  //CHECK-LABEL: store_matrix_strided_payload
+  gpu.func @store_matrix_strided_payload(%arg0: memref<128xi8, 3>, %arg1: vector<2x1xf32>) {
+    %c1 = arith.constant 1 : index
+    %c3 = arith.constant 3 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<128xi8, 3> -> !xegpu.mem_desc<16x2xf32>
+    //CHECK-COUNT-2: llvm.store %{{.*}}, %{{.*}} : f32, !llvm.ptr<3>
+    //CHECK-NOT: llvm.store %{{.*}}, %{{.*}} : vector<2xf32>, !llvm.ptr<3>
+    xegpu.store_matrix %arg1, %0[%c3, %c1] : vector<2x1xf32>, !xegpu.mem_desc<16x2xf32>, index, index
+    gpu.return
+  }
+
+  // On a column-major 16x2 tile memory runs down a column, so a vector<4x1xf32>
+  // payload is four consecutive elements and still moves in one access.
+  //CHECK-LABEL: load_matrix_col_major_contiguous_payload
+  gpu.func @load_matrix_col_major_contiguous_payload(%arg0: memref<128xi8, 3>) -> vector<4x1xf32> {
+    %c1 = arith.constant 1 : index
+    %c4 = arith.constant 4 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<128xi8, 3> -> !xegpu.mem_desc<16x2xf32, #xegpu.mem_layout<stride = [1, 16]>>
+    //CHECK: llvm.load %{{.*}} : !llvm.ptr<3> -> vector<4xf32>
+    //CHECK-NOT: llvm.load
+    %1 = xegpu.load_matrix %0[%c4, %c1] : !xegpu.mem_desc<16x2xf32, #xegpu.mem_layout<stride = [1, 16]>>, index, index -> vector<4x1xf32>
+    //CHECK: gpu.return
+    gpu.return %1 : vector<4x1xf32>
+  }
+
+  // A vector<2x2xf32> payload of a column-major tile has its columns
+  // consecutive in memory but not in the row-major flattened vector, so each
+  // element gets its own access.
+  //CHECK-LABEL: store_matrix_col_major_strided_payload
+  gpu.func @store_matrix_col_major_strided_payload(%arg0: memref<128xi8, 3>, %arg1: vector<2x2xf32>) {
+    %c0 = arith.constant 0 : index
+    %c4 = arith.constant 4 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<128xi8, 3> -> !xegpu.mem_desc<16x2xf32, #xegpu.mem_layout<stride = [1, 16]>>
+    //CHECK-COUNT-4: llvm.store %{{.*}}, %{{.*}} : f32, !llvm.ptr<3>
+    //CHECK-NOT: llvm.store
+    xegpu.store_matrix %arg1, %0[%c4, %c0] : vector<2x2xf32>, !xegpu.mem_desc<16x2xf32, #xegpu.mem_layout<stride = [1, 16]>>, index, index
+    //CHECK: gpu.return
+    gpu.return
+  }
 
 }

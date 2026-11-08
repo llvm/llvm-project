@@ -420,12 +420,12 @@ define <vscale x 2 x i64> @load_frozen_before_sext_multiuse5_src_illegal(ptr %sr
 define <vscale x 4 x i64> @load_frozen_before_sext_multiuse5_both_illegal(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_frozen_before_sext_multiuse5_both_illegal:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, #3 // =0x3
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1sb { z1.d }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    str z2, [x1, #1, mul vl]
-; CHECK-NEXT:    str z2, [x1]
+; CHECK-NEXT:    mov z3.d, z2.d
+; CHECK-NEXT:    st2d { z2.d, z3.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x i8>, ptr %src, align 1
   %load.frozen = freeze <vscale x 4 x i8> %load

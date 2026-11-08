@@ -5,12 +5,12 @@ define void @test(ptr %ptr) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PTR]], align 8
-; CHECK-NEXT:    [[LD01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LD12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LD01:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LD12:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[GEP2]], align 8
 ; CHECK-NEXT:    [[LD23:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[LD34:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[LD34:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    ret void
 ;
   %ld0 = load i32, ptr %ptr, align 8

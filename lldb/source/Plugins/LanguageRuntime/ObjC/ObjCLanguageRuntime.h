@@ -51,7 +51,7 @@ public:
   typedef std::shared_ptr<ClassDescriptor> ClassDescriptorSP;
 
   // the information that we want to support retrieving from an ObjC class this
-  // needs to be pure virtual since there are at least 2 different
+  // needs to be pure virtual since there can be multiple
   // implementations of the runtime, and more might come
   class ClassDescriptor {
   public:
@@ -66,7 +66,7 @@ public:
     virtual std::unique_ptr<ClassDescriptor> GetMetaclass() const = 0;
 
     // virtual if any implementation has some other version-specific rules but
-    // for the known v1/v2 this is all that needs to be done
+    // for the known runtime versions this is all that needs to be done
     virtual bool IsKVO() {
       if (m_is_kvo == eLazyBoolCalculate) {
         const char *class_name = GetClassName().AsCString(nullptr);
@@ -78,7 +78,7 @@ public:
     }
 
     // virtual if any implementation has some other version-specific rules but
-    // for the known v1/v2 this is all that needs to be done
+    // for the known runtime versions this is all that needs to be done
     virtual bool IsCFType() {
       if (m_is_cf == eLazyBoolCalculate) {
         const char *class_name = GetClassName().AsCString(nullptr);
@@ -226,7 +226,14 @@ public:
         process.GetLanguageRuntime(lldb::eLanguageTypeObjC));
   }
 
+  /// Returns whether the architecture's object file format supports
+  /// Objective-C code generation. Generating Objective-C for a format that
+  /// does not aborts the compiler.
+  static bool IsSupportedForArchitecture(const ArchSpec &arch);
+
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
+
+  bool IsTaggedPointerValue(ValueObject &in_value);
 
   typedef std::shared_ptr<EncodingToType> EncodingToTypeSP;
 
@@ -302,6 +309,8 @@ public:
 
   virtual ObjCISA GetParentClass(ObjCISA isa);
 
+  virtual ObjCISA GetPointerISA(ObjCISA isa) { return isa; };
+
   // Finds the byte offset of the child_type ivar in parent_type.  If it can't
   // find the offset, returns LLDB_INVALID_IVAR_OFFSET.
 
@@ -328,7 +337,7 @@ public:
 
   /// Check whether the name is "self" or "_cmd" and should show up in
   /// "frame variable".
-  bool IsAllowedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(llvm::StringRef name) override;
 
 protected:
   // Classes that inherit from ObjCLanguageRuntime can see and modify these

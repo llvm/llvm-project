@@ -15,7 +15,7 @@ define i32 @earlycse_entry(ptr %p) {
 ; CHECK-NEXT:    [[L_2_I:%.*]] = load ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr i8, ptr [[L_2_I]], i64 4
 ; CHECK-NEXT:    store ptr [[GEP_I]], ptr [[P]], align 8
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP_I]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[L_2_I]], i64 4) ]
 ; CHECK-NEXT:    [[L_ASSUME_ALIGNED_I_I2:%.*]] = load i32, ptr [[GEP_I]], align 4
 ; CHECK-NEXT:    [[R_I_I3:%.*]] = tail call i32 @swap(i32 [[L_ASSUME_ALIGNED_I_I2]])
 ; CHECK-NEXT:    [[L_2_I4:%.*]] = load ptr, ptr [[P]], align 8

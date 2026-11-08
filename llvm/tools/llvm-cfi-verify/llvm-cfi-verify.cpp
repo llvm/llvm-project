@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This tool verifies Control Flow Integrity (CFI) instrumentation by static
-// binary analysis. See the design document in /docs/CFIVerify.rst for more
+// binary analysis. See the design document in /docs/CFIVerify.md for more
 // information.
 //
 // This tool is currently incomplete. It currently only does disassembly for
@@ -19,8 +19,6 @@
 #include "lib/FileAnalysis.h"
 #include "lib/GraphBuilder.h"
 
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"

@@ -1,14 +1,4 @@
-add_custom_target(libc-unit-tests)
-add_custom_target(libc-hermetic-tests)
-
-add_custom_target(exhaustive-check-libc)
-add_custom_target(libc-long-running-tests)
-
-# Build-only targets for lit (don't run tests, just build executables)
-add_custom_target(libc-unit-tests-build)
-add_custom_target(libc-hermetic-tests-build)
-add_custom_target(libc-integration-tests-build)
-add_custom_target(libc_include_tests-build)
+add_libc_testsuite(libc-tests ROOT)
 
 # Configure the site config file for lit
 configure_lit_site_cfg(
@@ -33,16 +23,11 @@ add_lit_testsuite(check-libc
 )
 add_dependencies(check-libc check-libc-build)
 
-if (TARGET check-hdrgen)
+if(TARGET check-hdrgen)
   add_dependencies(check-libc check-hdrgen)
 endif()
 
-if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
-  add_dependencies(check-libc-build libc-unit-tests-build)
-endif()
-if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
-  add_dependencies(check-libc-build libc-hermetic-tests-build)
-endif()
+add_dependencies(check-libc-build libc-tests-build)
 
 add_subdirectory(UnitTest)
 
@@ -67,7 +52,7 @@ endif()
 add_subdirectory(include)
 
 if(NOT ${LIBC_TARGET_OS} STREQUAL "linux" AND
-   NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
+  NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
   # Integration tests are currently only available for linux and the GPU.
   return()
 endif()

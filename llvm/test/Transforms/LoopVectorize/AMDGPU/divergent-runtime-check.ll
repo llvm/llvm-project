@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -passes=loop-vectorize < %s | FileCheck -check-prefixes=GCN %s
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 -passes=loop-vectorize -pass-remarks-analysis='loop-vectorize' < %s 2>&1 | FileCheck -check-prefixes=REMARK %s
+; RUN: opt -S -mtriple=amdgpu9.00-unknown-amdhsa -passes=loop-vectorize < %s | FileCheck -check-prefixes=GCN %s
+; RUN: opt -S -mtriple=amdgpu9.00-unknown-amdhsa -passes=loop-vectorize -pass-remarks-analysis='loop-vectorize' < %s 2>&1 | FileCheck -check-prefixes=REMARK %s
 
 ; GCN-LABEL: @runtime_check_divergent_target(
 ; GCN-NOT: load <2 x half>

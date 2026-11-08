@@ -65,7 +65,7 @@ public:
     return false;
   }
 
-  bool setCPU(const std::string &Name) override;
+  bool setCPU(StringRef Name) override;
 
   bool isValidCPUName(StringRef Name) const override;
 

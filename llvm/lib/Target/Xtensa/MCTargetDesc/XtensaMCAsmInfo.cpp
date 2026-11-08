@@ -13,12 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaMCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {{Xtensa::S_TPOFF, "TPOFF"}};
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"TPOFF"}, Xtensa::S_TPOFF},
+};
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
                                  const MCTargetOptions &Options)
@@ -32,7 +36,6 @@ XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
   GlobalDirective = "\t.global\t";
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
   AlignmentIsInBytes = false;
 
   initializeAtSpecifiers(atSpecifiers);

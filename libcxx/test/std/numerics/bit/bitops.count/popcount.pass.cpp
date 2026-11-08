@@ -151,7 +151,7 @@ int main(int, char**)
     // _BitInt tests. Width tiers follow C23 7.18.2.5: BITINT_MAXWIDTH is
     // guaranteed to be >= ULLONG_WIDTH (>= 64). Anything beyond that is
     // optional and must be guarded by __BITINT_MAXWIDTH__.
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
     {
       // Guaranteed widths (<= 64 bits).
       using T8  = unsigned _BitInt(8);
@@ -255,7 +255,7 @@ int main(int, char**)
       assert(std::popcount(mask1000) == 1000);
     }
 #  endif
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

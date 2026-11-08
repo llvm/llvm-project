@@ -7,15 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitReaderTestCode.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugProgramInstruction.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -431,6 +440,350 @@ TEST(BitReaderTest, AccessMetadataTypeInfo) {
   EXPECT_EQ(mdToString(M->getNamedMetadata("md2")->getOperand(0)),
             "!{!{ptr, !{!'function', !{0, i8}, !{2, !{0, i32}}}}, !{ptr, !{0, "
             "!{0, i32}}}}");
+}
+
+// A distributed ThinLTO index must not depend on the insertion order of the
+// per-module summary maps it is written from. That order follows the import
+// discovery order, which can change with unrelated modules in the link.
+TEST(BitWriterTest, DistributedIndexIgnoresSummaryInsertionOrder) {
+  // Pick GUIDs that collide in a DenseMap so that their iteration order
+  // depends on insertion order.
+  SmallVector<GlobalValue::GUID, 32> GUIDs;
+  for (uint64_t Candidate = 1; GUIDs.size() != 32; ++Candidate)
+    if ((DenseMapInfo<GlobalValue::GUID>::getHashValue(Candidate) & 255) == 0)
+      GUIDs.push_back(Candidate);
+
+  // GUIDs[0] calls GUIDs[1] and references the variable GUIDs[2]. GUIDs[3]
+  // aliases GUIDs[4]. GUIDs[5] and GUIDs[6] have callsites with different
+  // stack ids, so the stack id table also depends on the summary order.
+  std::string Assembly =
+      "^0 = module: (path: \"m.o\", hash: (0, 0, 0, 0, 0))\n";
+  auto AddGV = [&](unsigned I, StringRef Summary) {
+    Assembly += "^" + std::to_string(I + 1) +
+                " = gv: (guid: " + std::to_string(GUIDs[I]) + ", summaries: (" +
+                Summary.str() + "))\n";
+  };
+  auto Function = [](StringRef Extra = "") {
+    return "function: (module: ^0, flags: (linkage: external), insts: 1" +
+           Extra.str() + ")";
+  };
+  AddGV(0, Function(", calls: ((callee: ^2)), refs: (^3)"));
+  AddGV(1, Function());
+  AddGV(2, "variable: (module: ^0, flags: (linkage: external), varFlags: "
+           "(readonly: 1))");
+  AddGV(3, "alias: (module: ^0, flags: (linkage: external), aliasee: ^5)");
+  AddGV(4, Function());
+  AddGV(5, Function(", calls: ((callee: ^2)), callsites: ((callee: ^2, "
+                    "clones: (0), stackIds: (101))))"));
+  AddGV(6, Function(", calls: ((callee: ^2)), callsites: ((callee: ^2, "
+                    "clones: (0), stackIds: (202))))"));
+  for (unsigned I = 7; I != GUIDs.size(); ++I)
+    AddGV(I, Function());
+
+  SMDiagnostic Err;
+  std::unique_ptr<ModuleSummaryIndex> Index =
+      parseSummaryIndexAssemblyString(Assembly, Err);
+  ASSERT_TRUE(Index) << Err.getMessage().str();
+
+  SmallVector<SmallVector<GlobalValue::GUID, 32>, 3> InsertionOrders;
+  InsertionOrders.push_back(GUIDs);
+  InsertionOrders.emplace_back(GUIDs.rbegin(), GUIDs.rend());
+  auto &Strided = InsertionOrders.emplace_back();
+  for (unsigned I = 0; I != GUIDs.size(); ++I)
+    Strided.push_back(GUIDs[(I * 7 + 3) % GUIDs.size()]);
+
+  SmallVector<SmallVector<GlobalValue::GUID, 32>, 3> IterationOrders;
+  SmallVector<SmallString<0>, 3> Bitcodes;
+  for (ArrayRef<GlobalValue::GUID> Order : InsertionOrders) {
+    ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
+    GVSummaryMapTy &Summaries = ModuleToSummariesForIndex["m.o"];
+    for (GlobalValue::GUID GUID : Order)
+      Summaries[GUID] = Index->getGlobalValueSummary(GUID);
+    IterationOrders.emplace_back(make_first_range(Summaries));
+
+    raw_svector_ostream OS(Bitcodes.emplace_back());
+    writeIndexToFile(*Index, OS, &ModuleToSummariesForIndex);
+  }
+
+  // Make sure the inputs really iterate in different orders.
+  EXPECT_TRUE(any_of(drop_begin(IterationOrders), [&](const auto &Order) {
+    return Order != IterationOrders.front();
+  }));
+  for (const SmallString<0> &Bitcode : drop_begin(Bitcodes))
+    EXPECT_TRUE(Bitcode == Bitcodes.front())
+        << "index bytes depend on summary insertion order";
+
+  // The written index still has the expected edges.
+  Expected<std::unique_ptr<ModuleSummaryIndex>> Written =
+      getModuleSummaryIndex(MemoryBufferRef(Bitcodes.front(), "index"));
+  if (!Written)
+    FAIL() << toString(Written.takeError());
+  auto *Caller =
+      dyn_cast<FunctionSummary>((*Written)->getGlobalValueSummary(GUIDs[0]));
+  ASSERT_NE(Caller, nullptr);
+  ASSERT_EQ(Caller->calls().size(), 1u);
+  EXPECT_EQ(Caller->calls().front().first.getGUID(), GUIDs[1]);
+  ASSERT_EQ(Caller->refs().size(), 1u);
+  EXPECT_EQ(Caller->refs().front().getGUID(), GUIDs[2]);
+  auto *Alias =
+      dyn_cast<AliasSummary>((*Written)->getGlobalValueSummary(GUIDs[3]));
+  ASSERT_NE(Alias, nullptr);
+  EXPECT_EQ(Alias->getAliaseeGUID(), GUIDs[4]);
+  for (auto [I, StackId] : {std::pair<unsigned, uint64_t>{5, 101}, {6, 202}}) {
+    auto *FS =
+        dyn_cast<FunctionSummary>((*Written)->getGlobalValueSummary(GUIDs[I]));
+    ASSERT_NE(FS, nullptr);
+    ASSERT_EQ(FS->callsites().size(), 1u);
+    ASSERT_EQ(FS->callsites().front().StackIdIndices.size(), 1u);
+    EXPECT_EQ((*Written)->getStackIdAtIndex(
+                  FS->callsites().front().StackIdIndices.front()),
+              StackId);
+  }
+}
+
+// Counts calls to the given debug intrinsic in F.
+static unsigned countIntrinsicCalls(Function &F, Intrinsic::ID ID) {
+  unsigned Count = 0;
+  for (Instruction &I : instructions(F))
+    if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      if (II->getIntrinsicID() == ID)
+        Count++;
+  return Count;
+}
+
+// Per-kind tally of the non-instruction debug records.
+struct DebugRecordCounts {
+  unsigned Values = 0;
+  unsigned Declares = 0;
+  unsigned Assigns = 0;
+  unsigned Labels = 0;
+  unsigned total() const { return Values + Declares + Assigns + Labels; }
+};
+
+static DebugRecordCounts countDebugRecords(Function &F) {
+  DebugRecordCounts Counts;
+  for (Instruction &I : instructions(F)) {
+    for (DbgRecord &DR : I.getDbgRecordRange()) {
+      if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR)) {
+        if (DVR->isDbgAssign())
+          Counts.Assigns++;
+        else if (DVR->isDbgDeclare())
+          Counts.Declares++;
+        else if (DVR->isDbgValue())
+          Counts.Values++;
+      } else if (isa<DbgLabelRecord>(&DR)) {
+        Counts.Labels++;
+      }
+    }
+  }
+  return Counts;
+}
+
+// The custom metadata kind name and contents attached to the dbg.* calls
+// before serialization. The contents are checked back for integrity.
+static constexpr StringRef CustomMDKind = "custom.test";
+static constexpr StringRef CustomMDString = "preserved-by-skip";
+static constexpr uint64_t CustomMDInt = 42;
+
+static bool isLegacyDbgIntrinsic(const Instruction &I) {
+  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::dbg_value:
+  case Intrinsic::dbg_declare:
+  case Intrinsic::dbg_assign:
+  case Intrinsic::dbg_label:
+    return true;
+  }
+  return false;
+}
+
+// Attaches CustomMD (an MDString + an integer) to every dbg.* call in F.
+static void attachCustomMetadataToDbgInsts(Function &F) {
+  LLVMContext &Ctx = F.getContext();
+  MDNode *Custom = MDNode::get(Ctx, {MDString::get(Ctx, CustomMDString),
+                                     ConstantAsMetadata::get(ConstantInt::get(
+                                         Type::getInt32Ty(Ctx), CustomMDInt))});
+  for (Instruction &I : instructions(F))
+    if (isLegacyDbgIntrinsic(I))
+      I.setMetadata(CustomMDKind, Custom);
+}
+
+// Verifies the custom metadata survived round-tripping and still holds the
+// exact MDString + integer it was created with.
+static void checkDbgInstCustomMetadata(Function &F) {
+  for (Instruction &I : instructions(F)) {
+    if (!isLegacyDbgIntrinsic(I))
+      continue;
+
+    MDNode *MD = I.getMetadata(CustomMDKind);
+    ASSERT_NE(MD, nullptr);
+    ASSERT_EQ(MD->getNumOperands(), 2u);
+
+    auto *Str = dyn_cast<MDString>(MD->getOperand(0));
+    ASSERT_NE(Str, nullptr);
+    EXPECT_EQ(Str->getString(), CustomMDString);
+
+    auto *Int = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
+    ASSERT_NE(Int, nullptr);
+    EXPECT_EQ(Int->getZExtValue(), CustomMDInt);
+  }
+}
+
+// IR exercising every debug intrinsic kind: dbg.declare, dbg.value, dbg.assign
+// (linked to the alloca via DIAssignID) and dbg.label. parseAssembly leaves the
+// module in the new debug records format; the test below lowers it back to
+// intrinsic form before writing, so the resulting bitcode encodes the debug
+// info as @llvm.dbg.* intrinsic calls.
+static constexpr char DebugIntrinsicAssembly[] = R"(
+  define i32 @f(i32 %p) !dbg !6 {
+  entry:
+    %a = alloca i32, align 4, !DIAssignID !14
+    call void @llvm.dbg.declare(metadata ptr %a, metadata !9, metadata !DIExpression()), !dbg !13
+    call void @llvm.dbg.value(metadata i32 %p, metadata !10, metadata !DIExpression()), !dbg !13
+    call void @llvm.dbg.assign(metadata i32 %p, metadata !11, metadata !DIExpression(), metadata !14, metadata ptr %a, metadata !DIExpression()), !dbg !13
+    call void @llvm.dbg.label(metadata !15), !dbg !13
+    store i32 %p, ptr %a, align 4, !dbg !13
+    ret i32 %p, !dbg !13
+  }
+  declare void @llvm.dbg.declare(metadata, metadata, metadata)
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+  declare void @llvm.dbg.label(metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!5}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "t.ll", directory: "/")
+  !2 = !{}
+  !5 = !{i32 2, !"Debug Info Version", i32 3}
+  !6 = distinct !DISubprogram(name: "f", linkageName: "f", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+  !7 = !DISubroutineType(types: !2)
+  !8 = !{!9, !10, !11}
+  !9 = !DILocalVariable(name: "a", scope: !6, file: !1, line: 1, type: !12)
+  !10 = !DILocalVariable(name: "p", scope: !6, file: !1, line: 1, type: !12)
+  !11 = !DILocalVariable(name: "i", scope: !6, file: !1, line: 1, type: !12)
+  !12 = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_signed)
+  !13 = !DILocation(line: 1, column: 1, scope: !6)
+  !14 = distinct !DIAssignID()
+  !15 = !DILabel(scope: !6, name: "label", file: !1, line: 1)
+)";
+
+// Asserts F holds exactly the intrinsic-form debug info (one call of each
+// kind) and no debug records.
+static void expectIntrinsicForm(Function &F) {
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_declare), 1u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_value), 1u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_assign), 1u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_label), 1u);
+  EXPECT_EQ(countDebugRecords(F).total(), 0u);
+}
+
+// Asserts F holds exactly the record-form debug info (one record of each kind)
+// and no debug intrinsic calls.
+static void expectRecordForm(Function &F) {
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_declare), 0u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_value), 0u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_assign), 0u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_label), 0u);
+  DebugRecordCounts Counts = countDebugRecords(F);
+  EXPECT_EQ(Counts.Declares, 1u);
+  EXPECT_EQ(Counts.Values, 1u);
+  EXPECT_EQ(Counts.Assigns, 1u);
+  EXPECT_EQ(Counts.Labels, 1u);
+}
+
+// ParserCallbacks::SkipDebugIntrinsicUpgrade controls whether the bitcode
+// reader auto-upgrades debug intrinsic calls (llvm.dbg.*) to non-instruction
+// debug records. Read the same intrinsic-form bitcode both ways and check that
+// the flag toggles the upgrade for every debug intrinsic kind, and that custom
+// metadata attached to a preserved intrinsic survives intact.
+TEST(BitReaderTest, SkipDebugIntrinsicUpgrade) {
+  SmallString<1024> Mem;
+  {
+    LLVMContext Context;
+    std::unique_ptr<Module> M = parseAssembly(Context, DebugIntrinsicAssembly);
+    // Lower the debug records produced by the parser back to intrinsic calls so
+    // the bitcode we write out encodes llvm.dbg.* intrinsics.
+    M->convertFromNewDbgValues();
+    Function *F = M->getFunction("f");
+    ASSERT_NE(F, nullptr);
+    expectIntrinsicForm(*F);
+    // Attach a custom metadata node to the dbg.value call. Records carry no
+    // arbitrary attachments, so this only survives if the intrinsic does.
+    attachCustomMetadataToDbgInsts(*F);
+    writeModuleToBuffer(std::move(M), Mem);
+  }
+
+  // Default behavior: every debug intrinsic is upgraded to a debug record.
+  {
+    LLVMContext Context;
+    Expected<std::unique_ptr<Module>> ModuleOrErr =
+        parseBitcodeFile(MemoryBufferRef(Mem.str(), "test"), Context);
+    if (!ModuleOrErr)
+      report_fatal_error("Could not parse bitcode module");
+    std::unique_ptr<Module> M = std::move(ModuleOrErr.get());
+
+    Function *F = M->getFunction("f");
+    ASSERT_NE(F, nullptr);
+    expectRecordForm(*F);
+
+    bool BrokenDebugInfo = false;
+    EXPECT_FALSE(verifyModule(*M, &dbgs(), &BrokenDebugInfo));
+    EXPECT_FALSE(BrokenDebugInfo);
+  }
+
+  // When SkipDebugIntrinsicUpgrade is true, the intrinsic-form debug info is
+  // preserved for every kind and the caller is left responsible for upgrading
+  // it.
+  {
+    LLVMContext Context;
+    ParserCallbacks Callbacks;
+    Callbacks.SkipDebugIntrinsicUpgrade = true;
+    Expected<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(
+        MemoryBufferRef(Mem.str(), "test"), Context, Callbacks);
+    if (!ModuleOrErr)
+      report_fatal_error("Could not parse bitcode module");
+    std::unique_ptr<Module> M = std::move(ModuleOrErr.get());
+
+    Function *F = M->getFunction("f");
+    ASSERT_NE(F, nullptr);
+    expectIntrinsicForm(*F);
+    checkDbgInstCustomMetadata(*F);
+
+    bool BrokenDebugInfo = false;
+    EXPECT_FALSE(verifyModule(*M, &dbgs(), &BrokenDebugInfo));
+    EXPECT_FALSE(BrokenDebugInfo);
+
+    // Round-trip: writing the preserved intrinsic-form module back out and
+    // reading it again with the flag set must still yield intrinsic-form debug
+    // info, with the custom metadata intact. The reader must not silently
+    // change the format on the way through.
+    SmallString<1024> RoundTripMem;
+    writeModuleToBuffer(std::move(M), RoundTripMem);
+
+    LLVMContext RoundTripContext;
+    Expected<std::unique_ptr<Module>> RoundTripOrErr =
+        parseBitcodeFile(MemoryBufferRef(RoundTripMem.str(), "test"),
+                         RoundTripContext, Callbacks);
+    if (!RoundTripOrErr)
+      report_fatal_error("Could not parse bitcode module");
+    std::unique_ptr<Module> RoundTripM = std::move(RoundTripOrErr.get());
+
+    Function *RoundTripF = RoundTripM->getFunction("f");
+    ASSERT_NE(RoundTripF, nullptr);
+    expectIntrinsicForm(*RoundTripF);
+    checkDbgInstCustomMetadata(*RoundTripF);
+
+    EXPECT_FALSE(verifyModule(*RoundTripM, &dbgs(), &BrokenDebugInfo));
+    EXPECT_FALSE(BrokenDebugInfo);
+
+    // The caller can still upgrade manually, matching the default behavior.
+    RoundTripM->convertToNewDbgValues();
+    expectRecordForm(*RoundTripF);
+  }
 }
 
 } // end namespace

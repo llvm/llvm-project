@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx902 -mattr=+xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK,GFX9 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX9 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64,-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX10 %s
+# RUN: llc -mtriple=amdgpu9.02 --amdgpu-xnack=true -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK,GFX9 %s
+# RUN: llc -mtriple=amdgpu9.00 --amdgpu-xnack=false -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX9 %s
+# RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 --amdgpu-xnack=false -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX10 %s
 
 # GCN-LABEL: name: break_smem_clause_max_look_ahead_in_bundle
 # GCN:          S_LOAD_DWORDX2_IMM
@@ -12,6 +12,7 @@
 # GCN:          }
 ---
 name: break_smem_clause_max_look_ahead_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     BUNDLE implicit-def $sgpr6_sgpr7 {
@@ -33,6 +34,7 @@ body: |
 # GFX10:      V_CMP_EQ_F32
 ---
 name: hazard_smem_war_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
@@ -49,6 +51,7 @@ body: |
 # GFX9:      S_SENDMSG 3, implicit $exec, implicit $m0
 ---
 name: hazard_ignore_dbg_label_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     BUNDLE {
@@ -71,6 +74,7 @@ body: |
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 ---
 name: vmem_vcc_hazard_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     BUNDLE {

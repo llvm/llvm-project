@@ -10,6 +10,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
+
+@requireNotWasm("multithreaded C++ inferior; wasm has no threads or exceptions")
 class ScriptedFrameProviderTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -217,6 +219,33 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertEqual(frame2.GetFunctionName(), "custom_scripted_frame_2")
         self.assertEqual(frame2.GetPC(), 0x7000)
         self.assertTrue(frame2.IsSynthetic(), "Frame should be marked as synthetic")
+
+    def test_expression_at_frame_without_variables(self):
+        """Test evaluating an expression at a scripted frame whose
+        get_variables() returns None."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        error = lldb.SBError()
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.DefaultVariablesFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertSuccess(error)
+
+        frame = thread.GetFrameAtIndex(0)
+        self.assertEqual(frame.GetFunctionName(), "no_variables")
+        self.assertEqual(frame.GetVariables(True, True, True, True).GetSize(), 0)
+
+        value = frame.EvaluateExpression("1 + 1")
+        self.assertSuccess(value.GetError())
+        self.assertEqual(value.GetValueAsSigned(), 2)
 
     def test_applies_to_thread(self):
         """Test that applies_to_thread filters which threads get the provider."""
@@ -824,8 +853,62 @@ class ScriptedFrameProviderTestCase(TestBase):
         options = lldb.SBVariablesOptions()
         options.SetIncludeSynthetic(True)
         variables = frame0.GetVariables(options)
+        self.assertFalse(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 0)
+
+        options.SetIncludeLocals(True)
+        variables = frame0.GetVariables(options)
         self.assertTrue(variables.IsValid())
-        self.assertTrue(variables.GetValueAtIndex(0).name == "_handler_one")
+        self.assertEqual(variables.GetSize(), 2)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "variable_in_main")
+        self.assertEqual(variables.GetValueAtIndex(1).name, "_handler_one")
+
+        # Ensure that we get synthetic variables in the other overloads.
+        # (arguments, locals, statics, in_scope_only)
+        variables = frame0.GetVariables(False, False, False, False)
+        self.assertFalse(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 0)
+        variables = frame0.GetVariables(False, True, False, False)
+        self.assertTrue(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 2)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "variable_in_main")
+        self.assertEqual(variables.GetValueAtIndex(1).name, "_handler_one")
+
+        # (arguments, locals, statics, in_scope_only, use_dynamic)
+        variables = frame0.GetVariables(
+            False, True, False, False, lldb.eNoDynamicValues
+        )
+        self.assertTrue(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 2)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "variable_in_main")
+        self.assertEqual(variables.GetValueAtIndex(1).name, "_handler_one")
+
+        # Synthetic variables are always in scope.
+        variables = frame0.GetVariables(False, False, False, True)
+        self.assertFalse(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 0)
+        variables = frame0.GetVariables(False, True, False, True)
+        self.assertTrue(variables.IsValid())
+        # We don't see `variable_in_main` here, because it doesn't have the synthetic flag.
+        self.assertEqual(variables.GetSize(), 1)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "_handler_one")
+
+        # A variable reports the ValueType the frame classified it as, not the
+        # one that follows from how its ValueObject was built. `_handler_one`
+        # comes from an expression, so the two differ.
+        self.assertEqual(
+            variables.GetValueAtIndex(0).GetValueType(),
+            lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag,
+        )
+        # Classifying a variable must not cost its data or its type.
+        self.assertEqual(variables.GetValueAtIndex(0).GetValueAsUnsigned(), 1)
+        self.assertEqual(variables.GetValueAtIndex(0).GetTypeName(), "uint32_t")
+        # Reaching the same variable by name has to agree with the enumeration.
+        self.assertEqual(
+            frame0.FindVariable("_handler_one").GetValueType(),
+            lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag,
+        )
+        self.assertEqual(frame0.FindVariable("_handler_one").GetValueAsUnsigned(), 1)
 
         # Check the `frame variable` command(s) handle synthetic variables the
         # way we expect by printing them.

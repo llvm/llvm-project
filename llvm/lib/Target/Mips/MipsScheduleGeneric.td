@@ -285,7 +285,7 @@ def GenericWriteJumpAndLink : SchedWriteRes<[GenericIssueCTISTD]> {
 // jalr, jr.hb, jr, jalr.hb, jarlc, jialc
 def : InstRW<[GenericWriteJump], (instrs B, BAL, BAL_BR, BEQ, BNE, BGTZ, BGEZ,
                                   BLEZ, BLTZ, BLTZAL, J, JALX, JR, JR_HB, ERET,
-                                  ERet, ERETNC, DERET, NAL)>;
+                                  ERet, ERETNC, DERET, NAL, JR_HB_MM)>;
 
 def : InstRW<[GenericWriteJump], (instrs BEQL, BNEL, BGEZL, BGTZL, BLEZL,
                                   BLTZL)>;
@@ -296,7 +296,7 @@ def : InstRW<[GenericWriteJump], (instrs TAILCALL, TAILCALLREG,
                                   RetRA)>;
 
 def : InstRW<[GenericWriteJumpAndLink], (instrs BGEZAL, JAL, JALR, JALR_HB,
-                                         JALRHBPseudo, JALRPseudo)>;
+                                         JALRHBPseudo, JALRPseudo, JALR_HB_MM)>;
 
 def : InstRW<[GenericWriteJumpAndLink], (instrs BGEZALL, BLTZALL)>;
 
@@ -446,8 +446,8 @@ def GenericWriteCOP0Short : SchedWriteRes<[GenericIssueCOP0]>;
 def : InstRW<[GenericWriteCOP0TLB], (instrs TLBP, TLBR, TLBWI, TLBWR)>;
 def : InstRW<[GenericWriteCOP0TLB], (instrs TLBINV, TLBINVF)>;
 
-def : InstRW<[GenericReadCOP0], (instrs MFC0)>;
-def : InstRW<[GenericWriteCOP0], (instrs MTC0)>;
+def : InstRW<[GenericReadCOP0], (instrs MFC0, MFC0_MM)>;
+def : InstRW<[GenericWriteCOP0], (instrs MTC0, MTC0_MM)>;
 
 def : InstRW<[GenericWriteCOP0], (instrs EVP, DVP)>;
 
@@ -870,7 +870,8 @@ def : InstRW<[GenericWriteFPUMoveGPRFPU], (instrs BuildPairF64,
                                            ExtractElementF64_64, CFC1, CTC1,
                                            MFC1, MFC1_D64, MFHC1_D32,
                                            MFHC1_D64, MTC1, MTC1_D64,
-                                           MTHC1_D32, MTHC1_D64)>;
+                                           MTHC1_D32, MTHC1_D64,
+                                           BuildPairF64_FPR)>;
 
 // swc1, swxc1
 def : InstRW<[GenericWriteFPUStore], (instrs SDC1, SDC164, SDXC1, SDXC164,
@@ -1448,6 +1449,7 @@ def : InstRW<[GenericWriteMSAShortInt], (instregex "^INSERT_[BHWD]$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(SLD|SLDI)_[BHWD]$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(BSET|BSETI)_[BHWD]$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(BCLR|BCLRI)_[BHWD]$")>;
+def : InstRW<[GenericWriteMSAShortInt], (instregex "^FABS_(W|D)$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(BNEG|BNEGI)_[BHWD]$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^(BSEL_V|BSELI_B)$")>;
 def : InstRW<[GenericWriteMSAShortInt], (instregex "^BMN*Z.*$")>;
@@ -1507,7 +1509,6 @@ def : InstRW<[GenericWriteFPUS], (instregex "^FCULE_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FCULT_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FCUNE_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FCUN_(W|D)$")>;
-def : InstRW<[GenericWriteFPUS], (instregex "^FABS_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FFINT_(U|S)_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FFQL_(W|D)$")>;
 def : InstRW<[GenericWriteFPUS], (instregex "^FFQR_(W|D)$")>;
@@ -1600,9 +1601,7 @@ def : InstRW<[GenericWriteFPUMoveGPRFPU], (instregex "^COPY_U_[BHW]$")>;
 def : InstRW<[GenericWriteFPUMoveGPRFPU], (instregex "^COPY_S_[BHWD]$")>;
 
 def : InstRW<[GenericWriteFPUStore], (instregex "^ST_[BHWD]$")>;
-def : InstRW<[GenericWriteFPUStore], (instrs ST_F16)>;
 def : InstRW<[GenericWriteFPULoad], (instregex "^LD_[BHWD]$")>;
-def : InstRW<[GenericWriteFPULoad], (instrs LD_F16)>;
 
 // Atomic instructions
 

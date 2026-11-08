@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 declare i64 @llvm.amdgcn.dispatch.id() #1
 

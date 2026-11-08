@@ -56,6 +56,38 @@ int ThrowsCounted::count = 0;
 int ThrowsCounted::constructed = 0;
 int ThrowsCounted::throw_after = 0;
 
+struct NoMoveNoCopy {
+  constexpr explicit NoMoveNoCopy(int x) : value(x) {}
+  NoMoveNoCopy(const NoMoveNoCopy&)   = delete;
+  friend void operator&(NoMoveNoCopy) = delete;
+  int value;
+};
+
+class PrvalueIterator {
+public:
+  using iterator_category = std::input_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using reference         = NoMoveNoCopy;
+  using pointer           = void;
+  using value_type        = NoMoveNoCopy;
+
+  PrvalueIterator() = delete;
+  constexpr explicit PrvalueIterator(const int* ptr) : ptr_(ptr) {}
+
+  constexpr NoMoveNoCopy operator*() const { return NoMoveNoCopy(*ptr_); }
+
+  constexpr PrvalueIterator& operator++() {
+    ++ptr_;
+    return *this;
+  }
+
+  friend constexpr bool operator==(PrvalueIterator a, PrvalueIterator b) { return a.ptr_ == b.ptr_; }
+  friend constexpr bool operator!=(PrvalueIterator a, PrvalueIterator b) { return a.ptr_ != b.ptr_; }
+
+private:
+  const int* ptr_;
+};
+
 TEST_CONSTEXPR_CXX26 bool test() {
   const int n    = 3;
   MoveOnly in[n] = {1, 2, 3};
@@ -99,6 +131,35 @@ void test_ctor_throws()
 #endif
 }
 
+TEST_CONSTEXPR_CXX26 bool test_copy_elision() {
+  using It      = PrvalueIterator;
+  using FIt     = forward_iterator<NoMoveNoCopy*>;
+  const int N   = 5;
+  int values[N] = {1, 2, 3, 4, 5};
+  std::allocator<NoMoveNoCopy> alloc;
+  NoMoveNoCopy* p = alloc.allocate(N);
+  auto ret        = std::uninitialized_move_n(It(values), 1, FIt(p));
+  assert(ret.first == It(values + 1));
+  assert(ret.second == FIt(p + 1));
+  assert(p[0].value == 1);
+  assert(values[0] == 1);
+  ret = std::uninitialized_move_n(It(values + 1), N - 1, FIt(p + 1));
+  assert(ret.first == It(values + N));
+  assert(ret.second == FIt(p + N));
+  assert(p[1].value == 2);
+  assert(p[2].value == 3);
+  assert(p[3].value == 4);
+  assert(p[4].value == 5);
+  assert(values[1] == 2);
+  assert(values[2] == 3);
+  assert(values[3] == 4);
+  assert(values[4] == 5);
+  std::destroy(p, p + N);
+  alloc.deallocate(p, N);
+
+  return true;
+}
+
 void test_counted()
 {
     using It = cpp17_input_iterator<int*>;
@@ -135,6 +196,7 @@ int main(int, char**)
 {
     test_counted();
     test_ctor_throws();
+    test_copy_elision();
 
     // Test with an iterator that overloads operator== and operator!= as the input and output iterators
     {
@@ -168,6 +230,7 @@ int main(int, char**)
     test();
 #if TEST_STD_VER >= 26
     static_assert(test());
+    static_assert(test_copy_elision());
 #endif
 
     return 0;

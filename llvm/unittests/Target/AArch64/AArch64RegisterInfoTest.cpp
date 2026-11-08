@@ -2,6 +2,11 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -147,6 +152,85 @@ TEST(AArch64LaneBitmasks, SubRegs) {
   EXPECT_EQ(TRI.getSubReg(AArch64::X0_X1, AArch64::sub_32), AArch64::W0);
   EXPECT_EQ(TRI.getSubReg(AArch64::X0_X1, AArch64::subo64_then_sub_32),
             AArch64::W1);
+}
+
+TEST(AArch64ReservedRegs, ArtificialHIRegistersAreReserved) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine("");
+  ASSERT_TRUE(TM);
+
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  ASSERT_TRUE(II);
+
+  const AArch64RegisterInfo &TRI = II->getRegisterInfo();
+
+  // Create an empty machine function
+  LLVMContext Context;
+  Module M("", Context);
+  M.setDataLayout(TM->getTargetTriple().computeDataLayout());
+  Function *F = Function::Create(
+      FunctionType::get(Type::getVoidTy(Context), /*isVarArg=*/false),
+      GlobalValue::ExternalLinkage, "f", &M);
+
+  MachineModuleInfo MMI(TM.get());
+  const TargetSubtargetInfo *STI = TM->getSubtargetImpl(*F);
+  MachineFunction MF(*F, *TM, *STI, MMI.getContext(), /*FunctionNum=*/0);
+  MF.initTargetMachineFunctionInfo(*STI);
+
+  BitVector Reserved = TRI.getReservedRegs(MF);
+
+  EXPECT_TRUE(Reserved.test(AArch64::W30_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::WSP_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::WZR_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::B31_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::H31_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::S31_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::D31_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::Q31_HI));
+}
+
+TEST(AArch64RegAllocationHints, NoDuplicates) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine("");
+  ASSERT_TRUE(TM);
+
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  ASSERT_TRUE(II);
+
+  const AArch64RegisterInfo &TRI = II->getRegisterInfo();
+
+  LLVMContext Context;
+  Module M("", Context);
+  M.setDataLayout(TM->getTargetTriple().computeDataLayout());
+  Function *F = Function::Create(
+      FunctionType::get(Type::getVoidTy(Context), /*isVarArg=*/false),
+      GlobalValue::ExternalLinkage, "f", &M);
+
+  MachineModuleInfo MMI(TM.get());
+  const TargetSubtargetInfo *STI = TM->getSubtargetImpl(*F);
+  MachineFunction MF(*F, *TM, *STI, MMI.getContext(), /*FunctionNum=*/0);
+  MF.initTargetMachineFunctionInfo(*STI);
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MRI.freezeReservedRegs();
+
+  Register VirtReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  MRI.addRegAllocationHint(VirtReg, AArch64::X0);
+
+  ArrayRef<MCPhysReg> Order = AArch64::GPR64RegClass.getRegisters();
+  SmallSetVector<MCPhysReg, 16> Hints;
+
+  // Calling getRegAllocationHints once should not produce duplicate hints
+  // from fallthrough to TargetRegisterInfo::getRegAllocationHints.
+  TRI.getRegAllocationHints(VirtReg, Order, Hints, MF, /*VRM=*/nullptr,
+                            /*Matrix=*/nullptr);
+  EXPECT_EQ(Hints.size(), 1u);
+  EXPECT_EQ(Hints[0], MCPhysReg(AArch64::X0));
+
+  // Calling getRegAllocationHints a second time with Hints already populated
+  // should not append duplicate hints.
+  TRI.getRegAllocationHints(VirtReg, Order, Hints, MF, /*VRM=*/nullptr,
+                            /*Matrix=*/nullptr);
+  EXPECT_EQ(Hints.size(), 1u);
+  EXPECT_EQ(Hints[0], MCPhysReg(AArch64::X0));
 }
 
 } // namespace

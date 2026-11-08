@@ -61,6 +61,10 @@ TEST(ProtocolMCPTest, Notification) {
 TEST(ProtocolMCPTest, ServerCapabilities) {
   ServerCapabilities capabilities;
   capabilities.supportsToolsList = true;
+  capabilities.supportsResourcesList = true;
+  capabilities.supportsResourcesSubscribe = true;
+  capabilities.supportsCompletions = true;
+  capabilities.supportsLogging = true;
 
   llvm::Expected<ServerCapabilities> deserialized_capabilities =
       roundtripJSON(capabilities);
@@ -68,6 +72,14 @@ TEST(ProtocolMCPTest, ServerCapabilities) {
 
   EXPECT_EQ(capabilities.supportsToolsList,
             deserialized_capabilities->supportsToolsList);
+  EXPECT_EQ(capabilities.supportsResourcesList,
+            deserialized_capabilities->supportsResourcesList);
+  EXPECT_EQ(capabilities.supportsResourcesSubscribe,
+            deserialized_capabilities->supportsResourcesSubscribe);
+  EXPECT_EQ(capabilities.supportsCompletions,
+            deserialized_capabilities->supportsCompletions);
+  EXPECT_EQ(capabilities.supportsLogging,
+            deserialized_capabilities->supportsLogging);
 }
 
 TEST(ProtocolMCPTest, TextContent) {
@@ -294,6 +306,398 @@ TEST(ProtocolMCPTest, ReadResourceResultEmpty) {
   ASSERT_THAT_EXPECTED(deserialized_result, llvm::Succeeded());
 
   EXPECT_TRUE(deserialized_result->contents.empty());
+}
+
+TEST(ProtocolMCPTest, RequestWithStringId) {
+  Request request;
+  request.id = "request-1";
+  request.method = "foo";
+
+  llvm::Expected<Request> deserialized = roundtripJSON(request);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(request, *deserialized);
+}
+
+TEST(ProtocolMCPTest, RequestWithoutParams) {
+  Request request;
+  request.id = 7;
+  request.method = "bar";
+
+  llvm::Expected<Request> deserialized = roundtripJSON(request);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(request, *deserialized);
+  EXPECT_FALSE(deserialized->params.has_value());
+}
+
+TEST(ProtocolMCPTest, RequestMissingId) {
+  llvm::json::Value value =
+      llvm::json::Object{{"jsonrpc", "2.0"}, {"method", "foo"}};
+  Request request;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, request, root));
+}
+
+TEST(ProtocolMCPTest, RequestInvalidId) {
+  llvm::json::Value value =
+      llvm::json::Object{{"jsonrpc", "2.0"}, {"id", true}, {"method", "foo"}};
+  Request request;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, request, root));
+}
+
+TEST(ProtocolMCPTest, ResponseWithStringId) {
+  Response response;
+  response.id = "resp-1";
+  response.result = llvm::json::Value("ok");
+
+  llvm::Expected<Response> deserialized = roundtripJSON(response);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(response, *deserialized);
+}
+
+TEST(ProtocolMCPTest, ResponseResultAndErrorMutuallyExclusive) {
+  llvm::json::Value value = llvm::json::Object{
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"result", 1},
+      {"error", llvm::json::Object{{"code", 1}, {"message", "m"}}}};
+  Response response;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, response, root));
+}
+
+TEST(ProtocolMCPTest, ResponseRequiresResultOrError) {
+  llvm::json::Value value = llvm::json::Object{{"jsonrpc", "2.0"}, {"id", 1}};
+  Response response;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, response, root));
+}
+
+TEST(ProtocolMCPTest, ResponseExpectsObject) {
+  llvm::json::Value value(42);
+  Response response;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, response, root));
+}
+
+TEST(ProtocolMCPTest, ResponseInvalidError) {
+  llvm::json::Value value = llvm::json::Object{
+      {"jsonrpc", "2.0"}, {"id", 1}, {"error", "not-an-object"}};
+  Response response;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, response, root));
+}
+
+TEST(ProtocolMCPTest, ErrorWithData) {
+  Error error;
+  error.code = -32000;
+  error.message = "boom";
+  error.data = llvm::json::Object{{"detail", "stack"}};
+
+  llvm::Expected<Error> deserialized = roundtripJSON(error);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(error, *deserialized);
+  EXPECT_TRUE(deserialized->data.has_value());
+}
+
+TEST(ProtocolMCPTest, NotificationWithoutParams) {
+  Notification notification;
+  notification.method = "ping";
+
+  llvm::Expected<Notification> deserialized = roundtripJSON(notification);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(notification, *deserialized);
+  EXPECT_FALSE(deserialized->params.has_value());
+}
+
+TEST(ProtocolMCPTest, NotificationExpectsObject) {
+  llvm::json::Value value(42);
+  Notification notification;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, notification, root));
+}
+
+TEST(ProtocolMCPTest, NotificationMissingMethod) {
+  llvm::json::Value value = llvm::json::Object{{"jsonrpc", "2.0"}};
+  Notification notification;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, notification, root));
+}
+
+TEST(ProtocolMCPTest, ToolDefinitionMinimal) {
+  ToolDefinition tool_definition;
+  tool_definition.name = "tool";
+
+  llvm::Expected<ToolDefinition> deserialized = roundtripJSON(tool_definition);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(tool_definition.name, deserialized->name);
+  EXPECT_TRUE(deserialized->description.empty());
+  EXPECT_FALSE(deserialized->inputSchema.has_value());
+}
+
+TEST(ProtocolMCPTest, ToolDefinitionMissingName) {
+  llvm::json::Value value = llvm::json::Object{{"description", "d"}};
+  ToolDefinition tool_definition;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, tool_definition, root));
+}
+
+TEST(ProtocolMCPTest, MessageExpectsObject) {
+  llvm::json::Value value(42);
+  Message message;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, message, root));
+}
+
+TEST(ProtocolMCPTest, MessageRequiresJSONRPC) {
+  llvm::json::Value value = llvm::json::Object{{"id", 1}, {"method", "m"}};
+  Message message;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, message, root));
+}
+
+TEST(ProtocolMCPTest, MessageUnsupportedJSONRPCVersion) {
+  llvm::json::Value value =
+      llvm::json::Object{{"jsonrpc", "1.0"}, {"id", 1}, {"method", "m"}};
+  Message message;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, message, root));
+}
+
+TEST(ProtocolMCPTest, MessageUnrecognized) {
+  llvm::json::Value value = llvm::json::Object{{"jsonrpc", "2.0"}, {"id", 1}};
+  Message message;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, message, root));
+}
+
+TEST(ProtocolMCPTest, MessageInvalidNotification) {
+  // No "id" routes to a Notification, but a missing "method" is invalid.
+  llvm::json::Value value = llvm::json::Object{{"jsonrpc", "2.0"}};
+  Message message;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, message, root));
+}
+
+TEST(ProtocolMCPTest, MessageInvalidRequest) {
+  // Routed to a Request (it has a "method"), but the id is invalid.
+  llvm::json::Value value =
+      llvm::json::Object{{"jsonrpc", "2.0"}, {"id", true}, {"method", "m"}};
+  Message message;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, message, root));
+}
+
+TEST(ProtocolMCPTest, MessageInvalidResponse) {
+  // Routed to a Response (it has "result"/"error" but no "method"), but
+  // 'result' and 'error' are mutually exclusive.
+  llvm::json::Value value = llvm::json::Object{
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"result", 1},
+      {"error", llvm::json::Object{{"code", 1}, {"message", "m"}}}};
+  Message message;
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, message, root));
+}
+
+TEST(ProtocolMCPTest, ImplementationWithTitle) {
+  Implementation impl;
+  impl.name = "lldb-mcp";
+  impl.version = "0.1.0";
+  impl.title = "LLDB MCP";
+
+  llvm::Expected<Implementation> deserialized = roundtripJSON(impl);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(impl.name, deserialized->name);
+  EXPECT_EQ(impl.version, deserialized->version);
+  EXPECT_EQ(impl.title, deserialized->title);
+}
+
+TEST(ProtocolMCPTest, ImplementationWithoutTitle) {
+  Implementation impl;
+  impl.name = "lldb-mcp";
+  impl.version = "0.1.0";
+
+  llvm::Expected<Implementation> deserialized = roundtripJSON(impl);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(impl.name, deserialized->name);
+  EXPECT_TRUE(deserialized->title.empty());
+}
+
+TEST(ProtocolMCPTest, ServerCapabilitiesAllFields) {
+  ServerCapabilities caps;
+  caps.supportsToolsList = true;
+  caps.supportsResourcesList = true;
+  caps.supportsResourcesSubscribe = true;
+  caps.supportsCompletions = true;
+  caps.supportsLogging = true;
+
+  llvm::json::Value value = toJSON(caps);
+  const llvm::json::Object *obj = value.getAsObject();
+  ASSERT_NE(obj, nullptr);
+  EXPECT_NE(obj->get("tools"), nullptr);
+  EXPECT_NE(obj->get("completions"), nullptr);
+  EXPECT_NE(obj->get("logging"), nullptr);
+
+  const llvm::json::Object *resources = obj->getObject("resources");
+  ASSERT_NE(resources, nullptr);
+  EXPECT_EQ(resources->getBoolean("listChanged"), true);
+  EXPECT_EQ(resources->getBoolean("subscribe"), true);
+}
+
+TEST(ProtocolMCPTest, ServerCapabilitiesSubscribeOnly) {
+  ServerCapabilities caps;
+  caps.supportsResourcesSubscribe = true;
+
+  llvm::json::Value value = toJSON(caps);
+  const llvm::json::Object *resources =
+      value.getAsObject()->getObject("resources");
+  ASSERT_NE(resources, nullptr);
+  EXPECT_EQ(resources->getBoolean("subscribe"), true);
+  EXPECT_EQ(resources->get("listChanged"), nullptr);
+}
+
+TEST(ProtocolMCPTest, ServerCapabilitiesFromJSONWithoutTools) {
+  ServerCapabilities caps;
+  llvm::json::Value value = llvm::json::Object{};
+  llvm::json::Path::Root root;
+  ASSERT_TRUE(fromJSON(value, caps, root));
+  EXPECT_FALSE(caps.supportsToolsList);
+}
+
+TEST(ProtocolMCPTest, ServerCapabilitiesFromJSONExpectsObject) {
+  ServerCapabilities caps;
+  llvm::json::Value value(42);
+  llvm::json::Path::Root root;
+  EXPECT_FALSE(fromJSON(value, caps, root));
+}
+
+TEST(ProtocolMCPTest, ClientCapabilities) {
+  ClientCapabilities caps;
+  EXPECT_EQ(toJSON(caps), llvm::json::Value(llvm::json::Object{}));
+
+  llvm::json::Value value = llvm::json::Object{};
+  llvm::json::Path::Root root;
+  EXPECT_TRUE(fromJSON(value, caps, root));
+}
+
+TEST(ProtocolMCPTest, InitializeParams) {
+  InitializeParams params;
+  params.protocolVersion = "2024-11-05";
+  params.clientInfo.name = "client";
+  params.clientInfo.version = "1.0";
+
+  llvm::Expected<InitializeParams> deserialized = roundtripJSON(params);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(params.protocolVersion, deserialized->protocolVersion);
+  EXPECT_EQ(params.clientInfo.name, deserialized->clientInfo.name);
+  EXPECT_EQ(params.clientInfo.version, deserialized->clientInfo.version);
+}
+
+TEST(ProtocolMCPTest, InitializeResultWithInstructions) {
+  InitializeResult result;
+  result.protocolVersion = "2024-11-05";
+  result.capabilities.supportsToolsList = true;
+  result.serverInfo.name = "lldb-mcp";
+  result.serverInfo.version = "0.1.0";
+  result.instructions = "Use the tools wisely.";
+
+  llvm::Expected<InitializeResult> deserialized = roundtripJSON(result);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(result.protocolVersion, deserialized->protocolVersion);
+  EXPECT_EQ(result.instructions, deserialized->instructions);
+  EXPECT_TRUE(deserialized->capabilities.supportsToolsList);
+}
+
+TEST(ProtocolMCPTest, InitializeResultWithoutInstructions) {
+  InitializeResult result;
+  result.protocolVersion = "2024-11-05";
+  result.serverInfo.name = "lldb-mcp";
+  result.serverInfo.version = "0.1.0";
+
+  llvm::Expected<InitializeResult> deserialized = roundtripJSON(result);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_TRUE(deserialized->instructions.empty());
+}
+
+TEST(ProtocolMCPTest, ListToolsResult) {
+  ToolDefinition tool_definition;
+  tool_definition.name = "a";
+  tool_definition.description = "d";
+
+  ListToolsResult result;
+  result.tools = {tool_definition};
+
+  llvm::Expected<ListToolsResult> deserialized = roundtripJSON(result);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  ASSERT_EQ(deserialized->tools.size(), 1u);
+  EXPECT_EQ(deserialized->tools[0].name, "a");
+}
+
+TEST(ProtocolMCPTest, CallToolResultStructuredContent) {
+  CallToolResult result;
+  result.content = {TextContent{"text"}};
+  result.structuredContent = llvm::json::Object{{"k", "v"}};
+
+  llvm::Expected<CallToolResult> deserialized = roundtripJSON(result);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  ASSERT_TRUE(deserialized->structuredContent.has_value());
+  ASSERT_EQ(deserialized->content.size(), 1u);
+  EXPECT_EQ(deserialized->content[0].text, "text");
+}
+
+TEST(ProtocolMCPTest, CallToolParamsWithArguments) {
+  CallToolParams params;
+  params.name = "tool";
+  params.arguments = llvm::json::Object{{"a", 1}};
+
+  llvm::Expected<CallToolParams> deserialized = roundtripJSON(params);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(deserialized->name, "tool");
+  EXPECT_TRUE(deserialized->arguments.has_value());
+}
+
+TEST(ProtocolMCPTest, CallToolParamsWithoutArguments) {
+  CallToolParams params;
+  params.name = "tool";
+
+  llvm::Expected<CallToolParams> deserialized = roundtripJSON(params);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(deserialized->name, "tool");
+  EXPECT_FALSE(deserialized->arguments.has_value());
+}
+
+TEST(ProtocolMCPTest, ReadResourceParams) {
+  ReadResourceParams params;
+  params.uri = "lldb://debugger/0";
+
+  llvm::Expected<ReadResourceParams> deserialized = roundtripJSON(params);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  EXPECT_EQ(deserialized->uri, params.uri);
+}
+
+TEST(ProtocolMCPTest, ListResourcesResult) {
+  Resource resource;
+  resource.uri = "lldb://x";
+  resource.name = "x";
+
+  ListResourcesResult result;
+  result.resources = {resource};
+
+  llvm::Expected<ListResourcesResult> deserialized = roundtripJSON(result);
+  ASSERT_THAT_EXPECTED(deserialized, llvm::Succeeded());
+  ASSERT_EQ(deserialized->resources.size(), 1u);
+  EXPECT_EQ(deserialized->resources[0].uri, "lldb://x");
+}
+
+TEST(ProtocolMCPTest, Void) {
+  EXPECT_EQ(toJSON(Void{}), llvm::json::Value(llvm::json::Object{}));
+
+  Void value;
+  llvm::json::Value json = llvm::json::Object{};
+  llvm::json::Path::Root root;
+  EXPECT_TRUE(fromJSON(json, value, root));
 }
 
 #endif

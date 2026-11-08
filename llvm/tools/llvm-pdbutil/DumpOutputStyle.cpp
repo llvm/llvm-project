@@ -46,9 +46,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
-#include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
-#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -96,6 +94,12 @@ Error DumpOutputStyle::dump() {
 
   if (opts::dump::DumpStreams) {
     if (auto EC = dumpStreamSummary())
+      return EC;
+    P.NewLine();
+  }
+
+  if (opts::dump::DumpDXContainer) {
+    if (auto EC = dumpDXContainer())
       return EC;
     P.NewLine();
   }
@@ -497,15 +501,21 @@ Error DumpOutputStyle::dumpModules() {
                      Desc.getModuleStreamIndex(), Desc.getNumberOfFiles(),
                      Desc.hasECInfo());
 
-        auto PdbPathOrErr = Stream.getECName(Desc.getPdbFilePathNameIndex());
-        if (!PdbPathOrErr)
-          return PdbPathOrErr.takeError();
-        StringRef PdbFilePath = *PdbPathOrErr;
+        StringRef PdbFilePath;
+        if (Desc.getPdbFilePathNameIndex()) {
+          auto PdbPathOrErr = Stream.getECName(Desc.getPdbFilePathNameIndex());
+          if (!PdbPathOrErr)
+            return PdbPathOrErr.takeError();
+          PdbFilePath = *PdbPathOrErr;
+        }
 
-        auto SrcPathOrErr = Stream.getECName(Desc.getSourceFileNameIndex());
-        if (!SrcPathOrErr)
-          return SrcPathOrErr.takeError();
-        StringRef SrcFilePath = *SrcPathOrErr;
+        StringRef SrcFilePath;
+        if (Desc.getSourceFileNameIndex()) {
+          auto SrcPathOrErr = Stream.getECName(Desc.getSourceFileNameIndex());
+          if (!SrcPathOrErr)
+            return SrcPathOrErr.takeError();
+          SrcFilePath = *SrcPathOrErr;
+        }
 
         P.formatLine("pdb file ni: {0} `{1}`, src file ni: {2} `{3}`",
                      Desc.getPdbFilePathNameIndex(), PdbFilePath,
@@ -1565,7 +1575,6 @@ Error DumpOutputStyle::dumpGSIRecords() {
   Pipeline.addCallbackToPipeline(Dumper);
   CVSymbolVisitor Visitor(Pipeline);
 
-  BinaryStreamRef SymStream = Records.getSymbolArray().getUnderlyingStream();
   if (auto E = Visitor.visitSymbolStream(Records.getSymbolArray(), 0))
     return E;
   return Error::success();
@@ -1893,6 +1902,42 @@ Error DumpOutputStyle::dumpSectionMap() {
                      P.getIndentLevel() + 13,
                      static_cast<OMFSegDescFlags>(uint16_t(M.Flags))));
     ++I;
+  }
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpDXContainer() {
+  printHeader(P, "DirectX Container");
+  if (File.isObj()) {
+    printStreamNotValidForObj();
+    return Error::success();
+  }
+
+  AutoIndent Indent(P);
+  auto Dxc = getPdb().getDXContainerStream();
+  if (!Dxc) {
+    P.formatLine("Not present in file");
+    consumeError(Dxc.takeError());
+    return Error::success();
+  }
+
+  auto Header = Dxc->getHeader();
+  P.formatLine("Hash: ");
+  P << format_bytes(Header.FileHash.Digest, std::nullopt,
+                    sizeof(Header.FileHash), sizeof(Header.FileHash), 0, true);
+  P.formatLine("Version:");
+  {
+    AutoIndent Indent(P);
+    P.formatLine("Major: {0}", Header.Version.Major);
+    P.formatLine("Minor: {0}", Header.Version.Minor);
+  }
+  P.formatLine("FileSize: {0}", Header.FileSize);
+  P.formatLine("PartCount: {0}", Header.PartCount);
+  P.formatLine("Parts:");
+  for (auto &part : *Dxc) {
+    AutoIndent Indent(P);
+    P.formatLine("{0} | offset = {1}, size = {2}", part.Part.getName(),
+                 part.Offset, part.Part.Size);
   }
   return Error::success();
 }

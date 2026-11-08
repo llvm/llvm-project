@@ -10,7 +10,7 @@ declare i32 @__CxxFrameHandler3(...)
 declare void @external(ptr)
 declare void @reserve()
 
-define void @f() personality ptr @_except_handler3 {
+define void @f(ptr %start, ptr %end) personality ptr @_except_handler3 {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[THROW:%.*]]
@@ -26,9 +26,9 @@ define void @f() personality ptr @_except_handler3 {
 ; CHECK-NEXT:    [[CLEANUPPADI4_I_I_I:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    br label [[LOOP_BODY:%.*]]
 ; CHECK:       loop_body:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[ITER:%.*]] ], [ 0, [[BLAH2]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[ITER:%.*]] ], [ [[START:%.*]], [[BLAH2]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i32 1
+; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq ptr [[SCEVGEP]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP100]], label [[UNWIND_OUT:%.*]], label [[ITER]]
 ; CHECK:       iter:
 ; CHECK-NEXT:    br i1 true, label [[UNWIND_OUT]], label [[LOOP_BODY]]
@@ -39,7 +39,7 @@ entry:
   br label %throw
 
 throw:                                            ; preds = %throw, %entry
-  %tmp96 = getelementptr inbounds i8, ptr undef, i32 1
+  %tmp96 = getelementptr inbounds i8, ptr %start, i32 1
   invoke void @reserve()
   to label %throw unwind label %pad
 
@@ -57,7 +57,7 @@ blah2:
 
 loop_body:                                        ; preds = %iter, %pad
   %tmp99 = phi ptr [ %tmp101, %iter ], [ %phi2, %blah2 ]
-  %tmp100 = icmp eq ptr %tmp99, undef
+  %tmp100 = icmp eq ptr %tmp99, %end
   br i1 %tmp100, label %unwind_out, label %iter
 
 iter:                                             ; preds = %loop_body
@@ -68,7 +68,7 @@ unwind_out:                                       ; preds = %iter, %loop_body
   cleanupret from %cleanuppadi4.i.i.i unwind to caller
 }
 
-define void @g() personality ptr @_except_handler3 {
+define void @g(ptr %start, ptr %end) personality ptr @_except_handler3 {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[THROW:%.*]]
@@ -88,9 +88,9 @@ define void @g() personality ptr @_except_handler3 {
 ; CHECK:       leave:
 ; CHECK-NEXT:    ret void
 ; CHECK:       loop_body:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[ITER:%.*]] ], [ 0, [[BLAH]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[ITER:%.*]] ], [ [[START:%.*]], [[BLAH]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i32 1
+; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq ptr [[SCEVGEP]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP100]], label [[UNWIND_OUT:%.*]], label [[ITER]]
 ; CHECK:       iter:
 ; CHECK-NEXT:    br i1 true, label [[UNWIND_OUT]], label [[LOOP_BODY]]
@@ -99,7 +99,7 @@ entry:
   br label %throw
 
 throw:                                            ; preds = %throw, %entry
-  %tmp96 = getelementptr inbounds i8, ptr undef, i32 1
+  %tmp96 = getelementptr inbounds i8, ptr %start, i32 1
   invoke void @reserve()
   to label %throw unwind label %pad
 
@@ -123,7 +123,7 @@ leave:
 
 loop_body:                                        ; preds = %iter, %pad
   %tmp99 = phi ptr [ %tmp101, %iter ], [ %phi2, %blah ]
-  %tmp100 = icmp eq ptr %tmp99, undef
+  %tmp100 = icmp eq ptr %tmp99, %end
   br i1 %tmp100, label %unwind_out, label %iter
 
 iter:                                             ; preds = %loop_body
@@ -131,7 +131,7 @@ iter:                                             ; preds = %loop_body
   br i1 true, label %unwind_out, label %loop_body
 }
 
-define void @h() personality ptr @_except_handler3 {
+define void @h(ptr %start, ptr %end) personality ptr @_except_handler3 {
 ; CHECK-LABEL: @h(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[THROW:%.*]]
@@ -151,9 +151,9 @@ define void @h() personality ptr @_except_handler3 {
 ; CHECK:       leave:
 ; CHECK-NEXT:    ret void
 ; CHECK:       loop_body:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[ITER:%.*]] ], [ 0, [[BLUG]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[ITER:%.*]] ], [ [[START:%.*]], [[BLUG]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i32 1
+; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq ptr [[SCEVGEP]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP100]], label [[UNWIND_OUT:%.*]], label [[ITER]]
 ; CHECK:       iter:
 ; CHECK-NEXT:    br i1 true, label [[UNWIND_OUT]], label [[LOOP_BODY]]
@@ -162,7 +162,7 @@ entry:
   br label %throw
 
 throw:                                            ; preds = %throw, %entry
-  %tmp96 = getelementptr inbounds i8, ptr undef, i32 1
+  %tmp96 = getelementptr inbounds i8, ptr %start, i32 1
   invoke void @reserve()
   to label %throw unwind label %pad
 
@@ -186,7 +186,7 @@ leave:
 
 loop_body:                                        ; preds = %iter, %pad
   %tmp99 = phi ptr [ %tmp101, %iter ], [ %phi2, %blug ]
-  %tmp100 = icmp eq ptr %tmp99, undef
+  %tmp100 = icmp eq ptr %tmp99, %end
   br i1 %tmp100, label %unwind_out, label %iter
 
 iter:                                             ; preds = %loop_body
@@ -194,7 +194,7 @@ iter:                                             ; preds = %loop_body
   br i1 true, label %unwind_out, label %loop_body
 }
 
-define void @i() personality ptr @_except_handler3 {
+define void @i(ptr %start, ptr %end) personality ptr @_except_handler3 {
 ; CHECK-LABEL: @i(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[THROW:%.*]]
@@ -212,9 +212,9 @@ define void @i() personality ptr @_except_handler3 {
 ; CHECK:       loop_head:
 ; CHECK-NEXT:    br label [[LOOP_BODY:%.*]]
 ; CHECK:       loop_body:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[ITER:%.*]] ], [ 0, [[LOOP_HEAD]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[ITER:%.*]] ], [ [[START:%.*]], [[LOOP_HEAD]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i32 1
+; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq ptr [[SCEVGEP]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP100]], label [[UNWIND_OUT:%.*]], label [[ITER]]
 ; CHECK:       iter:
 ; CHECK-NEXT:    br i1 true, label [[UNWIND_OUT]], label [[LOOP_BODY]]
@@ -225,7 +225,7 @@ entry:
   br label %throw
 
 throw:                                            ; preds = %throw, %entry
-  %tmp96 = getelementptr inbounds i8, ptr undef, i32 1
+  %tmp96 = getelementptr inbounds i8, ptr %start, i32 1
   invoke void @reserve()
   to label %throw unwind label %catchpad
 
@@ -246,7 +246,7 @@ loop_head:
 
 loop_body:                                        ; preds = %iter, %catchpad
   %tmp99 = phi ptr [ %tmp101, %iter ], [ %phi2, %loop_head ]
-  %tmp100 = icmp eq ptr %tmp99, undef
+  %tmp100 = icmp eq ptr %tmp99, %end
   br i1 %tmp100, label %unwind_out, label %iter
 
 iter:                                             ; preds = %loop_body

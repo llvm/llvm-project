@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s
-// XFAIL: vg_leak
 
 include "llvm/IR/Intrinsics.td"
 

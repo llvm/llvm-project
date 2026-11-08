@@ -38,12 +38,10 @@ end:;
 // CIR:         cir.label "end"
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z19test_goto_only_exitb(i1 noundef %{{.*}})
+// LLVM-LABEL: define dso_local void @_Z19test_goto_only_exitb(i1 noundef zeroext %{{[^,)]+}})
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // LLVM:       [[IF_THEN]]:
-// LLVM:         br label %[[BODY:.*]]
-// LLVM:       [[BODY]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
 // LLVM:         br label %[[CLEANUP:.*]]
 // LLVM:       [[CLEANUP]]:
@@ -101,15 +99,13 @@ end:;
 // CIR:         cir.label "end"
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z27test_goto_among_other_exitsb(i1 noundef %{{.*}})
+// LLVM-LABEL: define dso_local void @_Z27test_goto_among_other_exitsb(i1 noundef zeroext %{{[^,)]+}})
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
 // LLVM:       [[GOTO_PATH]]:
 // LLVM:         store i32 1, ptr %{{.*}}
 // LLVM:         br label %[[CLEANUP:.*]]
 // LLVM:       [[NORMAL_PATH]]:
-// LLVM:         br label %[[FALL:.*]]
-// LLVM:       [[FALL]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
 // LLVM:         store i32 0, ptr %{{.*}}
 // LLVM:         br label %[[CLEANUP]]
@@ -186,7 +182,7 @@ skip:
 // CIR:         }
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z24test_goto_inner_to_outerb(i1 noundef %{{.*}})
+// LLVM-LABEL: define dso_local void @_Z24test_goto_inner_to_outerb(i1 noundef zeroext %{{[^,)]+}})
 // LLVM:         alloca %struct.StructWithDestructor
 // LLVM:         alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
@@ -194,8 +190,6 @@ skip:
 // LLVM:         store i32 1, ptr %{{.*}}
 // LLVM:         br label %[[INNER_CLEANUP:.*]]
 // LLVM:       [[NORMAL_PATH]]:
-// LLVM:         br label %[[USE_INNER:.*]]
-// LLVM:       [[USE_INNER]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[INNER_ADDR:.*]])
 // LLVM:         store i32 0, ptr %{{.*}}
 // LLVM:         br label %[[INNER_CLEANUP]]
@@ -205,10 +199,10 @@ skip:
 // LLVM:           i32 0, label %[[FALL_DEST:.*]]
 // LLVM:           i32 1, label %[[GOTO_DEST:.*]]
 // LLVM:         ]
-// LLVM:       [[FALL_DEST]]:
-// LLVM:         br label %{{.*}}
 // LLVM:       [[GOTO_DEST]]:
 // LLVM:         br label %[[USE_OUTER:.*]]
+// LLVM:       [[FALL_DEST]]:
+// LLVM:         br label %{{.*}}
 // LLVM:       [[USE_OUTER]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[OUTER_ADDR:.*]])
 // LLVM:         br label %[[OUTER_DTOR_BB:.*]]
@@ -285,7 +279,7 @@ end:;
 // CIR:         cir.label "end"
 // CIR:         cir.return
 
-// LLVM-LABEL: define dso_local void @_Z27test_goto_out_of_two_nestedb(i1 noundef %{{.*}})
+// LLVM-LABEL: define dso_local void @_Z27test_goto_out_of_two_nestedb(i1 noundef zeroext %{{[^,)]+}})
 // LLVM:         %[[OUTER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         %[[INNER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
@@ -293,19 +287,15 @@ end:;
 // LLVM:         store i32 1, ptr %{{.*}}
 // LLVM:         br label %[[INNER_CLEANUP:.*]]
 // LLVM:       [[NORMAL_PATH]]:
-// LLVM:         br label %[[USE_INNER:.*]]
-// LLVM:       [[USE_INNER]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[INNER_ADDR]])
 // LLVM:         store i32 0, ptr %{{.*}}
 // LLVM:         br label %[[INNER_CLEANUP]]
 // LLVM:       [[INNER_CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[INNER_ADDR]])
 // LLVM:         switch i32 %{{.*}}, label %[[INNER_DEFAULT:.*]] [
-// LLVM:           i32 0, label %[[INNER_FALL:.*]]
+// LLVM:           i32 0, label %[[USE_OUTER:.*]]
 // LLVM:           i32 1, label %[[INNER_GOTO:.*]]
 // LLVM:         ]
-// LLVM:       [[INNER_FALL]]:
-// LLVM:         br label %[[USE_OUTER:.*]]
 // LLVM:       [[INNER_GOTO]]:
 // LLVM:         store i32 1, ptr %{{.*}}
 // LLVM:         br label %[[OUTER_CLEANUP:.*]]

@@ -12,6 +12,7 @@
 
 #include "ASTPrint.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/OpenACCClause.h"
@@ -396,4 +397,52 @@ TEST(ASTExpr, IsKnownToHaveBooleanValue) {
   ExpectKnown("from_bitfield2", false, false);
   ExpectKnown("from_bitint1", false, true);
   ExpectKnown("from_bitint2", false, false);
+}
+
+TEST(ASTExpr, CXXDefaultInitExprHasRewrittenInit) {
+  auto AST = buildASTFromCodeWithArgs(R"cpp(
+    struct WithDtor {
+      int &r;
+      ~WithDtor();
+    };
+
+    struct Agg {
+      int &r;
+      const WithDtor &d = WithDtor{r};
+    };
+
+    struct Ctor {
+      int x = 1;
+      Ctor();
+    };
+    Ctor::Ctor() {}
+
+    void aggregate(int &i) { Agg{i}; }
+  )cpp",
+                                      {"-std=c++20", "-Wno-unused-value"});
+
+  struct Visitor : DynamicRecursiveASTVisitor {
+    llvm::StringMap<const CXXDefaultInitExpr *> ByField;
+    Visitor() { ShouldVisitImplicitCode = true; }
+    bool VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) override {
+      ByField.try_emplace(E->getField()->getName(), E);
+      return true;
+    }
+  } V;
+  V.TraverseDecl(AST->getASTContext().getTranslationUnitDecl());
+
+  // Used by aggregate initialization: rebuilt, so it owns its initializer.
+  const CXXDefaultInitExpr *AggDIE = V.ByField.lookup("d");
+  ASSERT_NE(AggDIE, nullptr);
+  EXPECT_TRUE(AggDIE->hasRewrittenInit());
+  EXPECT_NE(AggDIE->getRewrittenExpr(), nullptr);
+  EXPECT_EQ(AggDIE->getExpr(), AggDIE->getRewrittenExpr());
+  EXPECT_NE(AggDIE->getExpr(), AggDIE->getField()->getInClassInitializer());
+
+  // Used by a constructor with nothing to rebuild: shares the field's one, so
+  // getExpr() falls back to it.
+  const CXXDefaultInitExpr *CtorDIE = V.ByField.lookup("x");
+  ASSERT_NE(CtorDIE, nullptr);
+  EXPECT_FALSE(CtorDIE->hasRewrittenInit());
+  EXPECT_EQ(CtorDIE->getExpr(), CtorDIE->getField()->getInClassInitializer());
 }

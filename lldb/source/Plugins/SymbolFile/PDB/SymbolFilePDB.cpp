@@ -13,6 +13,8 @@
 
 #include "clang/Lex/Lexer.h"
 
+#include "Plugins/ObjectFile/PDB/ObjectFilePDB.h"
+#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Mangled.h"
@@ -221,6 +223,8 @@ llvm::StringRef SymbolFilePDB::GetPluginDescriptionStatic() {
 
 lldb_private::SymbolFile *
 SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
+  if (!llvm::isa_and_nonnull<ObjectFilePECOFF, ObjectFilePDB>(objfile_sp.get()))
+    return nullptr;
   if (UseNativePDB())
     return nullptr;
 
@@ -906,7 +910,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
         if (source_file.empty())
           continue;
         FileSpec this_spec(source_file, FileSpec::Style::windows);
-        bool need_full_match = !file_spec.GetDirectory().IsEmpty();
+        bool need_full_match = !file_spec.GetDirectory().empty();
         if (FileSpec::Compare(file_spec, this_spec, need_full_match) != 0)
           continue;
       }

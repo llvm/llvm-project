@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class DataFormatterOneIsSingularTestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_one_is_singular_with_run_command(self):
         """Test that 1 item is not as reported as 1 items."""
         self.build()

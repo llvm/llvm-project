@@ -35,7 +35,6 @@ def G3Itineraries : ProcessorItineraries<
   InstrItinData<IIC_BrCR        , [InstrStage<1, [G3_SRU]>]>,
   InstrItinData<IIC_BrMCR       , [InstrStage<1, [G3_SRU]>]>,
   InstrItinData<IIC_BrMCRX      , [InstrStage<1, [G3_SRU]>]>,
-  InstrItinData<IIC_LdStDCBA    , [InstrStage<2, [G3_SLU]>]>,
   InstrItinData<IIC_LdStDCBF    , [InstrStage<3, [G3_SLU]>]>,
   InstrItinData<IIC_LdStDCBI    , [InstrStage<3, [G3_SLU]>]>,
   InstrItinData<IIC_LdStLoad    , [InstrStage<2, [G3_SLU]>]>,

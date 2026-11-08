@@ -590,9 +590,9 @@ define i8 @test_atomic_load_min_i8(i8 signext %offset) nounwind {
 ; CHECK-NEXT: sxtb r[[OLDX:[0-9]+]], r[[OLD]]
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: cmp r[[OLDX]], r0
+; CHECK-NEXT: cmp {{r[0-9]+}}, r{{[0-9]+}}
 ; Thumb mode: it le
-; CHECK:      movle r[[OLDX]], r[[OLD]]
+; CHECK:      mov{{le|ge}} r[[OLDX]], r[[OLD]]
 ; CHECK-NEXT: strexb [[STATUS:r[0-9]+]], r[[OLDX]], {{.*}}[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
@@ -616,9 +616,9 @@ define i16 @test_atomic_load_min_i16(i16 signext %offset) nounwind {
 ; CHECK-NEXT: sxth r[[OLDX:[0-9]+]], r[[OLD]]
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: cmp r[[OLDX]], r0
+; CHECK-NEXT: cmp {{r[0-9]+}}, r{{[0-9]+}}
 ; Thumb mode: it le
-; CHECK:      movle r[[OLDX]], r[[OLD]]
+; CHECK:      mov{{le|ge}} r[[OLDX]], r[[OLD]]
 ; CHECK-NEXT: stlexh [[STATUS:r[0-9]+]], r[[OLDX]], {{.*}}[[ADDR]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
@@ -700,9 +700,9 @@ define i8 @test_atomic_load_max_i8(i8 signext %offset) nounwind {
 ; CHECK-NEXT: sxtb r[[OLDX:[0-9]+]], r[[OLD]]
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: cmp r[[OLDX]], r0
+; CHECK-NEXT: cmp {{r[0-9]+}}, r{{[0-9]+}}
 ; Thumb mode: it gt
-; CHECK:      movgt r[[OLDX]], r[[OLD]]
+; CHECK:      mov{{gt|lt}} r[[OLDX]], r[[OLD]]
 ; CHECK-NEXT: stlexb [[STATUS:r[0-9]+]], r[[OLDX]], {{.*}}[[ADDR]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
@@ -726,9 +726,9 @@ define i16 @test_atomic_load_max_i16(i16 signext %offset) nounwind {
 ; CHECK-NEXT: sxth r[[OLDX:[0-9]+]], r[[OLD]]
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: cmp r[[OLDX]], r0
+; CHECK-NEXT: cmp {{r[0-9]+}}, r{{[0-9]+}}
 ; Thumb mode: it gt
-; CHECK:      movgt r[[OLDX]], r[[OLD]]
+; CHECK:      mov{{gt|lt}} r[[OLDX]], r[[OLD]]
 ; CHECK-NEXT: strexh [[STATUS:r[0-9]+]], r[[OLDX]], [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
@@ -1025,23 +1025,19 @@ define i8 @test_atomic_cmpxchg_i8(i8 zeroext %wanted, i8 zeroext %new) nounwind 
 ; CHECK-NOT: mcr
 ; CHECK-DAG: movw r[[ADDR:[0-9]+]], :lower16:var8
 ; CHECK-DAG: movt r[[ADDR]], :upper16:var8
-; CHECK-THUMB-DAG: mov r[[WANTED:[0-9]+]], r0
+; CHECK-DAG: mov r[[WANTED:[0-9]+]], r0
 
 ; CHECK: .LBB{{[0-9]+}}_1:
 ; CHECK: ldaexb r[[OLD:[0-9]+]], [r[[ADDR]]]
-  ; r0 below is a reasonable guess but could change: it certainly comes into the
-  ;  function there.
-; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
-; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
+; CHECK-NEXT: cmp r[[OLD]], r[[WANTED]]
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_{{[0-9]}}
 ; CHECK-NEXT: %bb.2:
-  ; As above, r1 is a reasonable guess.
+  ; r1 below is a reasonable guess but could change: it certainly comes into the
+  ;  function there.
 ; CHECK: strexb [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
-; CHECK-ARM-NEXT: bne .LBB{{[0-9]+}}_{{[0-9]}}
 ; CHECK-THUMB-NEXT: it eq
-; CHECK-THUMB-NEXT: bxeq lr
-; CHECK-ARM: mov r0, r[[OLD]]
+; CHECK-NEXT: bxeq lr
 ; CHECK-ARM: clrex
 ; CHECK: bx lr
 ; CHECK-NOT: dmb
@@ -1057,31 +1053,25 @@ define i16 @test_atomic_cmpxchg_i16(i16 zeroext %wanted, i16 zeroext %new) nounw
 ; CHECK-NOT: mcr
 ; CHECK-DAG: movw r[[ADDR:[0-9]+]], :lower16:var16
 ; CHECK-DAG: movt r[[ADDR]], :upper16:var16
-; CHECK-THUMB-DAG: mov r[[WANTED:[0-9]+]], r0
+; CHECK-DAG: mov r[[WANTED:[0-9]+]], r0
 
 ; CHECK: .LBB{{[0-9]+}}_1:
 ; CHECK: ldaexh r[[OLD:[0-9]+]], [r[[ADDR]]]
-  ; r0 below is a reasonable guess but could change: it certainly comes into the
-  ;  function there.
-; CHECK-ARM-NEXT:   cmp r[[OLD]], r0
-; CHECK-THUMB-NEXT: cmp r[[OLD]], r[[WANTED]]
+; CHECK-NEXT: cmp r[[OLD]], r[[WANTED]]
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_{{[0-9]}}
 ; CHECK-NEXT: %bb.2:
-  ; As above, r1 is a reasonable guess.
+  ; r1 below is a reasonable guess but could change: it certainly comes into the
+  ;  function there.
 ; CHECK: stlexh [[STATUS:r[0-9]+]], r1, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
-; CHECK-ARM-NEXT: bne .LBB{{[0-9]+}}_{{[0-9]}}
 ; CHECK-THUMB-NEXT: it eq
-; CHECK-THUMB-NEXT: bxeq lr
-; CHECK-ARM: mov r0, r[[OLD]]
-; CHECK: bx lr
+; CHECK-NEXT: bxeq lr
+; CHECK-ARM-NEXT: b .LBB{{[0-9]+}}_{{[0-9]}}
 ; CHECK-ARM-NEXT: .LBB{{[0-9]+}}_{{[0-9]}}
 ; CHECK-ARM-NEXT: clrex
+; CHECK: bx lr
 ; CHECK-NOT: dmb
 ; CHECK-NOT: mcr
-
-; CHECK-ARM: mov r0, r[[OLD]]
-; CHECK-ARM-NEXT: bx lr
    ret i16 %old
 }
 

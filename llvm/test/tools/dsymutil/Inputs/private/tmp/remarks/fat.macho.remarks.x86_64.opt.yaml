@@ -1,5 +1,5 @@
 --- !Analysis
-Pass:            prologepilog
+Pass:            prolog-epilog
 Name:            StackSize
 DebugLoc:        { File: fat.macho.remarks.x86.c, Line: 14, Column: 0 }
 Function:        main

@@ -14,3 +14,17 @@ define void @test_byval_param(ptr %x) {
   call void @test_byval_arg(ptr byval(%byval.class) %x)
   ret void
 }
+
+define i128 @inline_asm_multi_reg_input(i128 %x) {
+; CHECK: remark: {{.*}} unable to translate instruction: call
+; CHECK-LABEL: warning: Instruction selection used fallback path for inline_asm_multi_reg_input
+  %r = call i128 asm sideeffect "/* $0 $1 */", "=&r,r"(i128 %x)
+  ret i128 %r
+}
+
+define i128 @inline_asm_multi_reg_tied_input(i128 %x) {
+; CHECK: remark: {{.*}} unable to translate instruction: call
+; CHECK-LABEL: warning: Instruction selection used fallback path for inline_asm_multi_reg_tied_input
+  %r = call i128 asm sideeffect "/* $0 $1 */", "=&r,0"(i128 %x)
+  ret i128 %r
+}

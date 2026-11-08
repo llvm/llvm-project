@@ -12,9 +12,6 @@
 
 #include "ResourceScriptParser.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 
 // Take an expression returning llvm::Error and forward the error if it exists.
@@ -33,8 +30,7 @@ namespace llvm {
 namespace rc {
 
 RCParser::ParserError::ParserError(const Twine &Expected, const LocIter CurLoc,
-                                   const LocIter End)
-    : ErrorLoc(CurLoc), FileEnd(End) {
+                                   const LocIter End) {
   CurMessage = "Error parsing file: expected " + Expected.str() + ", got " +
                (CurLoc == End ? "<EOF>" : CurLoc->value()).str();
 }

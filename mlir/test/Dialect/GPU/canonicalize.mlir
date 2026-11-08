@@ -14,7 +14,7 @@ func.func @fold_wait_op_test1() {
 // -----
 
 // CHECK-LABEL: func @erase_barriers
-//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: gpu.barrier{{ *}}{{$}}
 //       CHECK-NEXT: return
 func.func @erase_barriers() {
   gpu.barrier
@@ -23,7 +23,7 @@ func.func @erase_barriers() {
 }
 
 // CHECK-LABEL: func @erase_barriers_first_full_fence
-//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: gpu.barrier{{ *}}{{$}}
 //       CHECK-NEXT: return
 func.func @erase_barriers_first_full_fence() {
   gpu.barrier
@@ -32,7 +32,7 @@ func.func @erase_barriers_first_full_fence() {
 }
 
 // CHECK-LABEL: func @erase_barriers_second_full_fence
-//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: gpu.barrier{{ *}}{{$}}
 //       CHECK-NEXT: return
 func.func @erase_barriers_second_full_fence() {
   gpu.barrier memfence [#gpu.address_space<workgroup>]
@@ -247,6 +247,17 @@ func.func @gpu_dim_of_alloc(%size: index) -> index {
 func.func @out_of_bound_memref.dim(%arg : memref<?xi8>, %size: index) -> index {
   %c2 = arith.constant 2 : index
   %1 = memref.dim %arg, %c2 : memref<?xi8>
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_memref_dim
+//  CHECK:   %[[MEMREF:.*]] = memref.dim
+//  CHECK:   return %[[MEMREF]] : index
+func.func @negative_memref_dim(%arg: memref<?xi8>) -> index {
+  %c-2 = arith.constant -2 : index
+  %1 = memref.dim %arg, %c-2 : memref<?xi8>
   return %1 : index
 }
 

@@ -8,6 +8,8 @@
 // RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 // RUN: not ld.lld --be8 %t.o -o /dev/null 2>&1 | FileCheck %s
 
+// RUN: rm %t.o
+
 // CHECK: InputSection too large for range extension thunk
         .syntax unified
         .thumb

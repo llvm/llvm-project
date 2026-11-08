@@ -483,6 +483,24 @@ public:
     return (*this)[Idx];
   }
 
+  /// Returns true if all bits in the range [Begin, End) are set.
+  bool test_all(unsigned Begin, unsigned End) const {
+    for (unsigned i = Begin; i < End; ++i) {
+      if (!test(i))
+        return false;
+    }
+    return true;
+  }
+
+  /// Returns true if any of the bits in the range [Begin, End) are set.
+  bool test_any(unsigned Begin, unsigned End) const {
+    for (unsigned i = Begin; i < End; ++i) {
+      if (test(i))
+        return true;
+    }
+    return false;
+  }
+
   // Push single bit to end of bitvector.
   void push_back(bool Val) {
     unsigned OldSize = Size;

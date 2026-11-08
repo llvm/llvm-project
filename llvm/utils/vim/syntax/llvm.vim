@@ -109,6 +109,7 @@ syn keyword llvmKeyword
       \ inteldialect
       \ internal
       \ jumptable
+      \ likely_module_local
       \ linkonce
       \ linkonce_odr
       \ local_unnamed_addr
@@ -132,6 +133,7 @@ syn keyword llvmKeyword
       \ nofree
       \ noimplicitfloat
       \ noinline
+      \ noipa
       \ nomerge
       \ nooutline
       \ nonlazybind

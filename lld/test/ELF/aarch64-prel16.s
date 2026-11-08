@@ -14,7 +14,7 @@
 // RUN: llvm-objdump -s --section=.data a.be | FileCheck %s --check-prefixes=CHECK,BE
 
 // CHECK: Contents of section .data:
-// 202158: S = 0x100, A = 0x212157, P = 0x202158
+// 202158: S = 0x100, A = 0x202057, P = 0x202158
 //         S + A - P = 0xffff
 // 212a5a: S = 0x100, A = 0x1fa05a, P = 0x20215a
 //         S + A - P = 0x8000
@@ -22,13 +22,13 @@
 // BE-NEXT: 202158 ffff8000
 
 // RUN: not ld.lld -z max-page-size=4096 a.o --defsym foo=255 2>&1 | FileCheck %s --check-prefix=OVERFLOW1 --implicit-check-not=error:
-// OVERFLOW1: error: a.o:(.data+0x2): relocation R_AARCH64_PREL16 out of range: -32769 is not in [-32768, 65535]; references 'foo'
+// OVERFLOW1: error: a.o:(.data+0x2): relocation R_AARCH64_PREL16 out of range: -32769 is not in [-32768, 32767]; references 'foo'
 
-// RUN: not ld.lld -z max-page-size=4096 a.o --defsym foo=257 2>&1 | FileCheck %s --check-prefix=OVERFLOW2 --implicit-check-not=error:
-// OVERFLOW2: error: a.o:(.data+0x0): relocation R_AARCH64_PREL16 out of range: 65536 is not in [-32768, 65535]; references 'foo'
+// RUN: not ld.lld -z max-page-size=4096 a.o --defsym foo=33025 2>&1 | FileCheck %s --check-prefix=OVERFLOW2 --implicit-check-not=error:
+// OVERFLOW2: error: a.o:(.data+0x0): relocation R_AARCH64_PREL16 out of range: 32768 is not in [-32768, 32767]; references 'foo'
 
 .globl _start
 _start:
 .data
-  .hword foo - . + 0x212057
+  .hword foo - . + 0x202057
   .hword foo - . + 0x1fa05a

@@ -9,4 +9,4 @@ import os
 llvm_profile_file = os.environ.get('LLVM_PROFILE_FILE')
 print(llvm_profile_file)
 
-# CHECK: per-test-coverage[[INDEX]].profraw
+# CHECK: per-test-coverage.py-%p-%m[[INDEX]].profraw

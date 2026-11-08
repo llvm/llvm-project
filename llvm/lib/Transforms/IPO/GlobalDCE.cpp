@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/GlobalDCE.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
@@ -23,7 +24,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
@@ -59,10 +59,6 @@ INITIALIZE_PASS(GlobalDCELegacyPass, "globaldce", "Dead Global Elimination",
 // Public interface to the GlobalDCEPass.
 ModulePass *llvm::createGlobalDCEPass() { return new GlobalDCELegacyPass(); }
 
-static cl::opt<bool>
-    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
-                cl::desc("Enable virtual function elimination"));
-
 STATISTIC(NumAliases  , "Number of global aliases removed");
 STATISTIC(NumFunctions, "Number of functions removed");
 STATISTIC(NumIFuncs,    "Number of indirect functions removed");
@@ -76,7 +72,7 @@ static bool isEmptyFunction(Function *F) {
     return false;
   BasicBlock &Entry = F->getEntryBlock();
   for (auto &I : Entry) {
-    if (I.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
     if (auto *RI = dyn_cast<ReturnInst>(&I))
       return !RI->getReturnValue();
@@ -96,13 +92,17 @@ void GlobalDCEPass::ComputeDependencies(Value *V,
     Deps.insert(GV);
   } else if (auto *CE = dyn_cast<Constant>(V)) {
     // Avoid walking the whole tree of a big ConstantExprs multiple times.
-    auto [Where, Inserted] = ConstantDependenciesCache.try_emplace(CE);
-    SmallPtrSetImpl<GlobalValue *> &LocalDeps = Where->second;
-    if (Inserted) {
+    auto Where = ConstantDependenciesCache.find(CE);
+    if (Where == ConstantDependenciesCache.end()) {
+      // Compute into a local set first: the recursion can insert into the
+      // cache, which would invalidate references into it.
+      SmallPtrSet<GlobalValue *, 8> LocalDeps;
       for (User *CEUser : CE->users())
         ComputeDependencies(CEUser, LocalDeps);
+      Where =
+          ConstantDependenciesCache.try_emplace(CE, std::move(LocalDeps)).first;
     }
-    Deps.insert_range(LocalDeps);
+    Deps.insert_range(Where->second);
   }
 }
 
@@ -244,7 +244,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
 }
 
 void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
-  if (!ClEnableVFE)
+  if (!getIPOOptions(M).enable_vfe)
     return;
 
   // If the Virtual Function Elim module flag is present and set to zero, then

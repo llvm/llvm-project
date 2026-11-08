@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ConvertToEmitC/ConvertToEmitCPass.h"
 
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -78,14 +79,14 @@ public:
 
   void apply(MLIRContext *context,
              MutableArrayRef<Dialect *> dialects) const final {
-    LLVM_DEBUG(llvm::dbgs() << "Convert to EmitC extension load\n");
-    for (Dialect *dialect : dialects) {
-      auto *iface = dyn_cast<ConvertToEmitCPatternInterface>(dialect);
-      if (!iface)
-        continue;
-      LLVM_DEBUG(llvm::dbgs() << "Convert to EmitC found dialect interface for "
-                              << dialect->getNamespace() << "\n");
-    }
+    LLVM_DEBUG({
+      llvm::dbgs() << "Convert to EmitC extension load\n";
+      for (auto *iface :
+           llvm::make_isa_range<ConvertToEmitCPatternInterface>(dialects)) {
+        llvm::dbgs() << "Convert to EmitC found dialect interface for "
+                     << iface->getDialect()->getNamespace() << "\n";
+      }
+    });
   }
 
   /// Return a copy of this extension.
@@ -112,14 +113,7 @@ struct StaticConvertToEmitC : public ConvertToEmitCPassInterface {
   /// Configure the conversion to EmitC at pass initialization.
   LogicalResult initialize() final {
     auto target = std::make_shared<ConversionTarget>(*context);
-    auto typeConverter = std::make_shared<TypeConverter>();
-
-    // Add fallback identity converison.
-    typeConverter->addConversion([](Type type) -> std::optional<Type> {
-      if (emitc::isSupportedEmitCType(type))
-        return type;
-      return std::nullopt;
-    });
+    auto typeConverter = std::make_shared<EmitCTypeConverter>(context);
 
     RewritePatternSet tempPatterns(context);
     target->addLegalDialect<emitc::EmitCDialect>();
@@ -218,12 +212,10 @@ LogicalResult ConvertToEmitCPassInterface::visitInterfaces(
   } else {
     // Normal mode: Populate all patterns from all dialects that implement the
     // interface.
-    for (Dialect *dialect : context->getLoadedDialects()) {
-      auto *iface = dyn_cast<ConvertToEmitCPatternInterface>(dialect);
-      if (!iface)
-        continue;
+    std::vector<Dialect *> dialects = context->getLoadedDialects();
+    for (auto *iface :
+         llvm::make_isa_range<ConvertToEmitCPatternInterface>(dialects))
       visitor(iface);
-    }
   }
   return success();
 }

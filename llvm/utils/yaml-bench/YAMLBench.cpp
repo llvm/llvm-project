@@ -11,17 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include <system_error>
 
 using namespace llvm;
 
@@ -54,7 +52,7 @@ static cl::opt<unsigned>
 
 static cl::opt<cl::boolOrDefault>
     UseColor("use-color", cl::desc("Emit colored output (default=autodetect)"),
-             cl::init(cl::BOU_UNSET));
+             cl::init(cl::boolOrDefault::BOU_UNSET));
 
 /// Pretty print a tag by replacing tag:yaml.org,2002: with !!.
 static std::string prettyTag(yaml::Node *N) {
@@ -182,9 +180,9 @@ static std::string createJSONText(size_t MemoryMB, unsigned ValueSize) {
 
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
-  bool ShowColors = UseColor == cl::BOU_UNSET
+  bool ShowColors = UseColor == cl::boolOrDefault::BOU_UNSET
                         ? sys::Process::StandardOutHasColors()
-                        : UseColor == cl::BOU_TRUE;
+                        : UseColor == cl::boolOrDefault::BOU_TRUE;
   if (Input.getNumOccurrences()) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
         MemoryBuffer::getFileOrSTDIN(Input);

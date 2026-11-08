@@ -22,7 +22,8 @@ class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineInstr;
 class MachineLoopInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class HexagonPacketizerList : public VLIWPacketizerList {
   // Vector of instructions assigned to the packet that has just been created.
@@ -144,7 +145,6 @@ protected:
   bool arePredicatesComplements(MachineInstr &MI1, MachineInstr &MI2);
   bool restrictingDepExistInPacket(MachineInstr&, unsigned);
   bool isNewifiable(const MachineInstr &MI, const TargetRegisterClass *NewRC);
-  bool isCurifiable(MachineInstr &MI);
   bool cannotCoexist(const MachineInstr &MI, const MachineInstr &MJ);
 
   bool isPromotedToDotNew() const {

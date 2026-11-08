@@ -25,6 +25,7 @@ libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   math/clc_native_exp.cl
   math/clc_native_exp2.cl
   math/clc_native_log10.cl
+  math/clc_recip_fast.cl
   mem_fence/clc_mem_fence.cl
   subgroup/clc_subgroup.cl
   subgroup/clc_sub_group_broadcast.cl
@@ -51,4 +52,5 @@ libclc_set_source_options(-fapprox-func
   math/clc_native_exp.cl
   math/clc_native_exp2.cl
   math/clc_native_log10.cl
+  math/clc_recip_fast.cl
 )

@@ -254,6 +254,10 @@ public:
   void initializeWeakPtrFactory() const {
     auto &this_to_T = static_cast<const WeakPtrFactoryType&>(*this);
   }
+  void initializeWeakPtrFactoryReinterpret() const {
+    auto &this_to_T = reinterpret_cast<const SomeArrayClass&>(*this);
+    // expected-warning@-1{{Unsafe cast from type 'CanMakeWeakPtrBase' to an unrelated type 'SomeArrayClass'}}
+  }
 };
 
 template<typename T>
@@ -263,4 +267,5 @@ class EventLoop : public CanMakeWeakPtr<EventLoop> { };
 
 void test_this_to_template_ref(EventLoop *ptr) {
   ptr->initializeWeakPtrFactory();
+  ptr->initializeWeakPtrFactoryReinterpret();
 };

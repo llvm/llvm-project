@@ -1,8 +1,8 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=fiji -d - | FileCheck --check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx900 -d - | FileCheck --check-prefix=GCN %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=fiji -d - | FileCheck --check-prefix=GCN %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx900 -d - | FileCheck --check-prefix=GCN %s
-; XUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -filetype=obj < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=hawaii -d - | FileCheck --check-prefixes=GCN,CI %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.03-amd-amdhsa -filetype=obj < %s | llvm-objdump --triple=amdgpu8.03--amdhsa -d - | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu9.00-amd-amdhsa -filetype=obj < %s | llvm-objdump --triple=amdgpu9.00--amdhsa -d - | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.03-amd-amdhsa -filetype=obj < %s | llvm-objdump --triple=amdgpu8.03--amdhsa -d - | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00-amd-amdhsa -filetype=obj < %s | llvm-objdump --triple=amdgpu9.00--amdhsa -d - | FileCheck --check-prefix=GCN %s
+; XUN: llc -mtriple=amdgpu7.01-amd-amdhsa -filetype=obj < %s | llvm-objdump --triple=amdgpu7.01--amdhsa -d - | FileCheck --check-prefixes=GCN,CI %s
 
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT: s_setpc_b64

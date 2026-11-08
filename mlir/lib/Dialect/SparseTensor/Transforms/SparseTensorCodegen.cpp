@@ -554,7 +554,7 @@ private:
 /// Sparse tensor storage conversion rule for returns.
 class SparseReturnConverter : public OpConversionPattern<func::ReturnOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(func::ReturnOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -569,7 +569,7 @@ public:
 class SparseCallConverter : public OpConversionPattern<func::CallOp> {
 public:
   // The default CallOp converter can not handle 1:N type conversion.
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(func::CallOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -627,7 +627,7 @@ public:
 /// Sparse codegen rule for level accesses.
 class SparseLvlOpConverter : public OpConversionPattern<LvlOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(LvlOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -646,7 +646,7 @@ public:
 
 // TODO: use a new SortCOO operation here instead of reusing convert op.
 struct SparseReorderCOOConverter : public OpConversionPattern<ReorderCOOOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ReorderCOOOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -707,7 +707,7 @@ public:
 /// Sparse codegen rule for trivial tensor casts.
 class SparseCastConverter : public OpConversionPattern<tensor::CastOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(tensor::CastOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -723,7 +723,7 @@ public:
 
 class SparseReMapConverter : public OpConversionPattern<ReinterpretMapOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ReinterpretMapOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -737,7 +737,7 @@ public:
 class SparseTensorAllocConverter
     : public OpConversionPattern<bufferization::AllocTensorOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   SparseTensorAllocConverter(const TypeConverter &typeConverter,
                              MLIRContext *context, bool enableInit)
       : OpConversionPattern(typeConverter, context),
@@ -801,7 +801,7 @@ private:
 /// Sparse codegen rule for the empty tensor operator.
 class SparseTensorEmptyConverter : public OpConversionPattern<tensor::EmptyOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   SparseTensorEmptyConverter(const TypeConverter &typeConverter,
                              MLIRContext *context, bool enableInit)
       : OpConversionPattern(typeConverter, context),
@@ -843,7 +843,7 @@ private:
 class SparseTensorDeallocConverter
     : public OpConversionPattern<bufferization::DeallocTensorOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   SparseTensorDeallocConverter(const TypeConverter &typeConverter,
                                MLIRContext *context, bool createDeallocs)
       : OpConversionPattern(typeConverter, context),
@@ -879,7 +879,7 @@ private:
 /// Sparse codegen rule for tensor rematerialization.
 class SparseTensorLoadConverter : public OpConversionPattern<LoadOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(LoadOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -898,7 +898,7 @@ public:
 /// Sparse codegen rule for the expand op.
 class SparseExpandConverter : public OpConversionPattern<ExpandOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ExpandOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -912,7 +912,11 @@ public:
     Type boolType = rewriter.getIntegerType(1);
     Type idxType = rewriter.getIndexType();
     // All initialization should be done on entry of the loop nest.
-    rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    if (isa<BlockArgument>(op.getTensor())) {
+      rewriter.setInsertionPointToStart(op->getBlock());
+    } else {
+      rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    }
 
     // Determine the size for access expansion (always the innermost stored
     // level size).
@@ -950,7 +954,7 @@ public:
 /// Sparse codegen rule for the compress operator.
 class SparseCompressConverter : public OpConversionPattern<CompressOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(CompressOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1022,7 +1026,7 @@ public:
 /// Sparse codegen rule for the insert operator.
 class SparseInsertConverter : public OpConversionPattern<tensor::InsertOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(tensor::InsertOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1143,7 +1147,7 @@ public:
 /// Sparse codegen rule for the convert operator.
 class SparseConvertConverter : public OpConversionPattern<ConvertOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ConvertOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1236,7 +1240,7 @@ public:
 class SparseExtractSliceConverter
     : public OpConversionPattern<tensor::ExtractSliceOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(tensor::ExtractSliceOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1294,7 +1298,7 @@ public:
 class SparseNumberOfEntriesConverter
     : public OpConversionPattern<NumberOfEntriesOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(NumberOfEntriesOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1309,7 +1313,7 @@ public:
 };
 
 struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(AssembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1360,7 +1364,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
-      assert(ShapedType::isStatic(stt.getDimShape()[lvl]));
+      assert(ShapedType::isStatic(stt.getLvlShape()[lvl]));
 
       // Sets up the level size.
       auto lvlSize = constantIndex(rewriter, loc, stt.getLvlShape()[lvl]);
@@ -1424,7 +1428,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
 
 struct SparseDisassembleOpConverter
     : public OpConversionPattern<DisassembleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   SparseDisassembleOpConverter(const TypeConverter &typeConverter,
                                MLIRContext *context)
       : OpConversionPattern(typeConverter, context) {}
@@ -1495,7 +1499,7 @@ struct SparseDisassembleOpConverter
 };
 
 struct SparseNewConverter : public OpConversionPattern<NewOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(NewOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1601,7 +1605,7 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
 
 struct SparseHasRuntimeLibraryConverter
     : public OpConversionPattern<HasRuntimeLibraryOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(HasRuntimeLibraryOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

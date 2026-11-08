@@ -1,7 +1,7 @@
 ; Check the basic block sections labels option
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,ELF,UNIQ
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,ELF,NOUNIQ
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -split-machine-functions | FileCheck %s --check-prefixes=CHECK,ELF,UNIQ
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -function-splitting=all | FileCheck %s --check-prefixes=CHECK,ELF,UNIQ
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc -function-sections -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,COFF
 
 define void @_Z3bazb(i1 zeroext, i1 zeroext) personality ptr @__gxx_personality_v0 {
@@ -54,7 +54,7 @@ declare i32 @__gxx_personality_v0(...)
 ;; Verify that with -unique-section-names=false, the unique id of the text section gets assigned to the llvm_bb_addr_map section.
 ; NOUNIQ:		.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text,unique,1
 ; COFF:			.section	.llvm_bb_addr_map,"drD",associative,_Z3bazb,unique,0{{$}}
-; CHECK-NEXT:   .byte   5		# version
+; CHECK-NEXT:   .byte   6		# version
 ; CHECK-NEXT:   .short  32		# feature
 ; CHECK-NEXT:	.quad	.Lfunc_begin0	# function address
 ; CHECK-NEXT:	.byte	6		# number of basic blocks

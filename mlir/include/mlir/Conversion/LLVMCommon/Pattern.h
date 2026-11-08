@@ -88,6 +88,12 @@ LogicalResult decomposeValue(OpBuilder &builder, Location loc, Value src,
 Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
                    Type dstType);
 
+/// Creates an `llvm.mlir.constant` producing `value` as `resultType`, which is
+/// expected to be the converted index type. The value attribute is built from
+/// `resultType` so that the two agree.
+Value createIndexAttrConstant(OpBuilder &builder, Location loc, Type resultType,
+                              int64_t value);
+
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `memRefDesc`, using the layout map of `type`.
 /// The indices are linearized as:
@@ -162,9 +168,9 @@ protected:
   /// buffer size from these sizes.
   ///
   /// For example, memref<4x?xf32> with `sizeInBytes = true` emits:
-  /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
+  /// `sizes[0]`   = llvm.mlir.constant(4 : i64) : i64
   /// `sizes[1]`   = `dynamicSizes[0]`
-  /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
+  /// `strides[1]` = llvm.mlir.constant(1 : i64) : i64
   /// `strides[0]` = `sizes[0]`
   /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
   /// %nullptr     = llvm.mlir.zero : !llvm.ptr
@@ -173,9 +179,9 @@ protected:
   /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr to i64
   ///
   /// If `sizeInBytes = false`, memref<4x?xf32> emits:
-  /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
+  /// `sizes[0]`   = llvm.mlir.constant(4 : i64) : i64
   /// `sizes[1]`   = `dynamicSizes[0]`
-  /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
+  /// `strides[1]` = llvm.mlir.constant(1 : i64) : i64
   /// `strides[0]` = `sizes[0]`
   /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
   void getMemRefDescriptorSizes(Location loc, MemRefType memRefType,
@@ -338,8 +344,9 @@ public:
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(
-        op, TargetOp::getOperationName(), adaptor.getOperands(), op->getAttrs(),
-        /*propertiesAttr=*/Attribute{}, *this->getTypeConverter(), rewriter);
+        op, TargetOp::getOperationName(), adaptor.getOperands(),
+        op->getDiscardableAttrDictionary().getValue(),
+        op->getPropertiesAsAttribute(), *this->getTypeConverter(), rewriter);
   }
 };
 

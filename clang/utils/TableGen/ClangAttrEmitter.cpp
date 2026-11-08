@@ -905,8 +905,21 @@ namespace {
       OS << "I != E; ++I) {\n";
       OS << "      bool IsTarget = Record.readBool();\n";
       OS << "      bool IsTargetSync = Record.readBool();\n";
-      OS << "      " << getLowerName()
-         << ".emplace_back(IsTarget, IsTargetSync);\n";
+      OS << "      OMPInteropInfo Info(IsTarget, IsTargetSync);\n";
+      OS << "      Info.HasPreferAttrs = Record.readBool();\n";
+      OS << "      unsigned prefsSize = Record.readInt();\n";
+      OS << "      Info.Prefs.reserve(prefsSize);\n";
+      OS << "      for (unsigned J = 0; J < prefsSize; ++J) {\n";
+      OS << "        bool hasFr = Record.readBool();\n";
+      OS << "        Expr *Fr = hasFr ? Record.readExpr() : nullptr;\n";
+      OS << "        unsigned attrsSize = Record.readInt();\n";
+      OS << "        llvm::SmallVector<Expr *, 2> Attrs;\n";
+      OS << "        Attrs.reserve(attrsSize);\n";
+      OS << "        for (unsigned K = 0; K < attrsSize; ++K)\n";
+      OS << "          Attrs.push_back(Record.readExpr());\n";
+      OS << "        Info.Prefs.emplace_back(Fr, std::move(Attrs));\n";
+      OS << "      }\n";
+      OS << "      " << getLowerName() << ".push_back(Info);\n";
       OS << "    }\n";
     }
 
@@ -917,7 +930,136 @@ namespace {
          << getLowerName() << "_end(); I != E; ++I) {\n";
       OS << "      Record.writeBool(I->IsTarget);\n";
       OS << "      Record.writeBool(I->IsTargetSync);\n";
+      OS << "      Record.writeBool(I->HasPreferAttrs);\n";
+      OS << "      Record.push_back(I->Prefs.size());\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        Record.writeBool(P.Fr != nullptr);\n";
+      OS << "        if (P.Fr) Record.AddStmt(P.Fr);\n";
+      OS << "        Record.push_back(P.Attrs.size());\n";
+      OS << "        for (Expr *A : P.Attrs) Record.AddStmt(A);\n";
+      OS << "      }\n";
       OS << "    }\n";
+    }
+
+    void writeASTVisitorTraversal(raw_ostream &OS) const override {
+      OS << "  {\n";
+      OS << "    OMPInteropInfo *I = A->" << getLowerName() << "_begin();\n";
+      OS << "    " << getType() << " *E = A->" << getLowerName() << "_end();\n";
+      OS << "    for (; I != E; ++I) {\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        if (P.Fr && !getDerived().TraverseStmt(P.Fr))\n";
+      OS << "          return false;\n";
+      OS << "        for (Expr *A : P.Attrs)\n";
+      OS << "          if (!getDerived().TraverseStmt(A))\n";
+      OS << "            return false;\n";
+      OS << "      }\n";
+      OS << "    }\n";
+      OS << "  }\n";
+    }
+
+    void writeDumpChildren(raw_ostream &OS) const override {
+      OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
+         << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
+         << getLowerName() << "_end(); I != E; ++I) {\n";
+      OS << "      for (auto &P : I->Prefs) {\n";
+      OS << "        if (P.Fr) Visit(P.Fr);\n";
+      OS << "        for (Expr *A : P.Attrs) Visit(A);\n";
+      OS << "      }\n";
+      OS << "    }\n";
+    }
+  };
+
+  class VariadicOMPAdjustArgsDescriptorArgument : public VariadicArgument {
+  public:
+    VariadicOMPAdjustArgsDescriptorArgument(const Record &Arg, StringRef Attr)
+        : VariadicArgument(Arg, Attr, "OMPAdjustArgsDescriptor *") {}
+
+    void writeDump(raw_ostream &OS) const override {
+      OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
+         << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
+         << getLowerName() << "_end(); I != E; ++I)\n";
+      OS << "      OS << \" \" << getOpenMPSimpleClauseTypeName("
+            "llvm::omp::OMPC_adjust_args, (*I)->AdjustOp);\n";
+    }
+
+    void writePCHReadDecls(raw_ostream &OS) const override {
+      OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
+      OS << "    SmallVector<OMPAdjustArgsDescriptor *, 4> " << getLowerName()
+         << ";\n";
+      OS << "    " << getLowerName() << ".reserve(" << getLowerName()
+         << "Size);\n";
+      OS << "    for (unsigned I = 0, E = " << getLowerName()
+         << "Size; I != E; ++I) {\n";
+      OS << "      OpenMPAdjustArgsOpKind AdjustOp = "
+            "static_cast<OpenMPAdjustArgsOpKind>(Record.readInt());\n";
+      OS << "      OpenMPNeedDevicePtrModifier NeedDevicePtrModifier = "
+            "static_cast<OpenMPNeedDevicePtrModifier>(Record.readInt());\n";
+      OS << "      unsigned NumItems = Record.readInt();\n";
+      OS << "      SmallVector<OMPAdjustArgsItem, 4> Items;\n";
+      OS << "      Items.reserve(NumItems);\n";
+      OS << "      for (unsigned J = 0; J != NumItems; ++J) {\n";
+      OS << "        OMPAdjustArgsItem Item;\n";
+      OS << "        Item.Kind = static_cast<OMPAdjustArgsItem::ItemKind>("
+            "Record.readInt());\n";
+      OS << "        if (Record.readBool()) Item.E = Record.readExpr();\n";
+      for (StringRef Bound : {"Lower", "Upper"}) {
+        OS << "        Item." << Bound
+           << ".Kind = static_cast<OMPAdjustArgsItem::Bound::BoundKind>("
+              "Record.readInt());\n";
+        OS << "        if (Record.readBool()) Item." << Bound
+           << ".E = Record.readExpr();\n";
+        OS << "        Item." << Bound
+           << ".IsSubtraction = Record.readBool();\n";
+      }
+      OS << "        Items.push_back(Item);\n";
+      OS << "      }\n";
+      OS << "      " << getLowerName()
+         << ".push_back(OMPAdjustArgsDescriptor::Create("
+            "Context, AdjustOp, NeedDevicePtrModifier, Items));\n";
+      OS << "    }\n";
+    }
+
+    void writePCHWrite(raw_ostream &OS) const override {
+      OS << "    Record.push_back(SA->" << getLowerName() << "_size());\n";
+      OS << "    for (const OMPAdjustArgsDescriptor *Desc : SA->"
+         << getLowerName() << "()) {\n";
+      OS << "      Record.push_back(Desc->AdjustOp);\n";
+      OS << "      Record.push_back(Desc->NeedDevicePtrModifier);\n";
+      OS << "      Record.push_back(Desc->items().size());\n";
+      OS << "      for (const OMPAdjustArgsItem &Item : Desc->items()) {\n";
+      OS << "        Record.push_back(Item.Kind);\n";
+      OS << "        Record.writeBool(Item.E != nullptr);\n";
+      OS << "        if (Item.E) Record.AddStmt(Item.E);\n";
+      for (StringRef Bound : {"Lower", "Upper"}) {
+        OS << "        Record.push_back(Item." << Bound << ".Kind);\n";
+        OS << "        Record.writeBool(Item." << Bound << ".E != nullptr);\n";
+        OS << "        if (Item." << Bound << ".E) Record.AddStmt(Item."
+           << Bound << ".E);\n";
+        OS << "        Record.writeBool(Item." << Bound << ".IsSubtraction);\n";
+      }
+      OS << "      }\n";
+      OS << "    }\n";
+    }
+
+    void writeASTVisitorTraversal(raw_ostream &OS) const override {
+      OS << "  for (OMPAdjustArgsDescriptor *Desc : A->" << getLowerName()
+         << "())\n";
+      OS << "    for (const OMPAdjustArgsItem &Item : Desc->items()) {\n";
+      for (StringRef E : {"Item.E", "Item.Lower.E", "Item.Upper.E"}) {
+        OS << "      if (" << E << " && !getDerived().TraverseStmt(" << E
+           << "))\n";
+        OS << "        return false;\n";
+      }
+      OS << "    }\n";
+    }
+
+    void writeDumpChildren(raw_ostream &OS) const override {
+      OS << "    for (const OMPAdjustArgsDescriptor *Desc : SA->"
+         << getLowerName() << "())\n";
+      OS << "      for (const OMPAdjustArgsItem &Item : Desc->items()) {\n";
+      for (StringRef E : {"Item.E", "Item.Lower.E", "Item.Upper.E"})
+        OS << "        if (" << E << ") Visit(" << E << ");\n";
+      OS << "      }\n";
     }
   };
 
@@ -1610,6 +1752,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo *");
   else if (ArgName == "VariadicOMPInteropInfoArgument")
     Ptr = std::make_unique<VariadicOMPInteropInfoArgument>(Arg, Attr);
+  else if (ArgName == "VariadicOMPAdjustArgsDescriptorArgument")
+    Ptr = std::make_unique<VariadicOMPAdjustArgsDescriptorArgument>(Arg, Attr);
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
@@ -3275,8 +3419,8 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
       OS << "}\n\n";
     }
 
-    std::string ProfileSig = "Profile(llvm::FoldingSetNodeID &ID, "
-                             "const ASTContext &Ctx) const";
+    StringRef ProfileSig = "Profile(llvm::FoldingSetNodeID &ID, "
+                           "const ASTContext &Ctx) const";
     if (Header) {
       OS << "  void " << ProfileSig << ";\n";
     } else {
@@ -5257,6 +5401,9 @@ void EmitClangAttrTextNodeDump(const RecordKeeper &Records, raw_ostream &OS) {
     if (!R.getValueAsBit("ASTNode"))
       continue;
 
+    if (R.getValueAsBit("HasCustomTextNodeDump"))
+      continue;
+
     // If the attribute has a semantically-meaningful name (which is determined
     // by whether there is a Spelling enumeration for it), then write out the
     // spelling used for the attribute.
@@ -5437,7 +5584,7 @@ public:
 static void WriteCategoryHeader(const Record *DocCategory,
                                 raw_ostream &OS) {
   const StringRef Name = DocCategory->getValueAsString("Name");
-  OS << Name << "\n" << std::string(Name.size(), '=') << "\n";
+  OS << "## " << Name << "\n\n";
 
   // If there is content, print that as well.
   const StringRef ContentStr = DocCategory->getValueAsString("Content");
@@ -5512,18 +5659,24 @@ static void WriteDocumentation(const RecordKeeper &Records,
                                const DocumentationData &Doc, raw_ostream &OS) {
   if (StringRef Label = Doc.Documentation->getValueAsString("Label");
       !Label.empty())
-    OS << ".. _" << Label << ":\n\n";
-  OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
+    OS << "(" << Label << ")=\n\n";
+  OS << "### " << Doc.Heading << "\n\n";
 
   if (Doc.SupportedSpellings.hasSpelling()) {
     // List what spelling syntaxes the attribute supports.
     // Note: "#pragma clang attribute" is handled outside the spelling kinds
     // loop so it must be last.
-    OS << ".. csv-table:: Supported Syntaxes\n";
-    OS << "   :header: \"GNU\", \"C++11\", \"C23\", \"``__declspec``\",";
-    OS << " \"Keyword\", \"``#pragma``\", \"HLSL Annotation\", \"``#pragma "
-          "clang ";
-    OS << "attribute``\"\n\n   \"";
+    OS << ":::{list-table} Supported Syntaxes\n";
+    OS << ":header-rows: 1\n\n";
+    OS << "* - GNU\n";
+    OS << "  - C++11\n";
+    OS << "  - C23\n";
+    OS << "  - `__declspec`\n";
+    OS << "  - Keyword\n";
+    OS << "  - `#pragma`\n";
+    OS << "  - HLSL Annotation\n";
+    OS << "  - `#pragma clang attribute`\n";
+    OS << "*";
     for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
       SpellingKind K = (SpellingKind)Kind;
       // TODO: List Microsoft (IDL-style attribute) spellings once we fully
@@ -5531,21 +5684,23 @@ static void WriteDocumentation(const RecordKeeper &Records,
       if (K == SpellingKind::Microsoft)
         continue;
 
+      OS << " - ";
       bool PrintedAny = false;
       for (StringRef Spelling : Doc.SupportedSpellings[K]) {
         if (PrintedAny)
-          OS << " |br| ";
-        OS << "``" << Spelling << "``";
+          OS << " <br/> ";
+        OS << "`" << Spelling << "`";
         PrintedAny = true;
       }
 
-      OS << "\",\"";
+      OS << "\n ";
     }
 
+    OS << " - ";
     if (getPragmaAttributeSupport(Records).isAttributedSupported(
             *Doc.Attribute))
       OS << "Yes";
-    OS << "\"\n\n";
+    OS << "\n:::\n\n";
   }
 
   // If the attribute is deprecated, print a message about it, and possibly
@@ -5556,8 +5711,7 @@ static void WriteDocumentation(const RecordKeeper &Records,
     const Record &Deprecated = *Doc.Documentation->getValueAsDef("Deprecated");
     const StringRef Replacement = Deprecated.getValueAsString("Replacement");
     if (!Replacement.empty())
-      OS << "  This attribute has been superseded by ``" << Replacement
-         << "``.";
+      OS << "  This attribute has been superseded by `" << Replacement << "`.";
     OS << "\n\n";
   }
 
