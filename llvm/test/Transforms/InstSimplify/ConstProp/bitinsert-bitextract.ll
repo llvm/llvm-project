@@ -423,3 +423,23 @@ define <2 x b32> @bitinsert_vec_splat() {
   %r = bitinsert <2 x b32> splat (b32 305419896), <2 x i8> splat (i8 1), <2 x i32> splat (i32 8)
   ret <2 x b32> %r
 }
+
+define i8 @bitextract_vec_bitcast_src() {
+; CHECK-LABEL: define i8 @bitextract_vec_bitcast_src() {
+; CHECK-NEXT:    [[R:%.*]] = bitextract i8, b64 bitcast (<2 x i32> <i32 1, i32 2> to b64), i32 32
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = bitcast <2 x i32> <i32 1, i32 2> to b64
+  %r = bitextract i8, b64 %b, i32 32
+  ret i8 %r
+}
+
+define b64 @bitinsert_vec_bitcast_base() {
+; CHECK-LABEL: define b64 @bitinsert_vec_bitcast_base() {
+; CHECK-NEXT:    [[R:%.*]] = bitinsert b64 bitcast (<2 x i32> <i32 1, i32 2> to b64), i8 7, i32 0
+; CHECK-NEXT:    ret b64 [[R]]
+;
+  %b = bitcast <2 x i32> <i32 1, i32 2> to b64
+  %r = bitinsert b64 %b, i8 7, i32 0
+  ret b64 %r
+}

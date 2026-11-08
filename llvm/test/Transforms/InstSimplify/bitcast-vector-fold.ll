@@ -805,3 +805,75 @@ define ptr @bitcast_constexpr_allones_2b16_ptr() {
   %res = bitcast <2 x b16> splat (b16 -1) to ptr
   ret ptr %res
 }
+
+define b64 @bitcast_constexpr_2i32_b64() {
+; CHECK-LABEL: @bitcast_constexpr_2i32_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x i32> <i32 1, i32 2> to b64)
+;
+  %res = bitcast <2 x i32> <i32 1, i32 2> to b64
+  ret b64 %res
+}
+
+define b64 @bitcast_constexpr_2b32_b64() {
+; CHECK-LABEL: @bitcast_constexpr_2b32_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x b32> <b32 1, b32 2> to b64)
+;
+  %res = bitcast <2 x b32> <b32 1, b32 2> to b64
+  ret b64 %res
+}
+
+define b64 @bitcast_constexpr_2f32_b64() {
+; CHECK-LABEL: @bitcast_constexpr_2f32_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x float> <float 1.000000e+00, float 2.000000e+00> to b64)
+;
+  %res = bitcast <2 x float> <float 1.0, float 2.0> to b64
+  ret b64 %res
+}
+
+define b32 @bitcast_constexpr_4i8_b32() {
+; CHECK-LABEL: @bitcast_constexpr_4i8_b32(
+; CHECK-NEXT:    ret b32 bitcast (<4 x i8> <i8 1, i8 2, i8 3, i8 4> to b32)
+;
+  %res = bitcast <4 x i8> <i8 1, i8 2, i8 3, i8 4> to b32
+  ret b32 %res
+}
+
+; A byte constant can't be poison in only some of its bits.
+define b64 @neg_bitcast_constexpr_2i32_b64_poison() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2i32_b64_poison(
+; CHECK-NEXT:    ret b64 bitcast (<2 x i32> <i32 1, i32 poison> to b64)
+;
+  %res = bitcast <2 x i32> <i32 1, i32 poison> to b64
+  ret b64 %res
+}
+
+@g = external global i8
+
+; Pointer bits carry provenance.
+define b64 @neg_bitcast_constexpr_2ptr_b64() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2ptr_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x ptr> <ptr @g, ptr null> to b64)
+;
+  %res = bitcast <2 x ptr> <ptr @g, ptr null> to b64
+  ret b64 %res
+}
+
+; Pointer bits in a byte element carry provenance, so the element can't be read
+; as an integer.
+define b64 @neg_bitcast_constexpr_2b32_ptr_elt_b64() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2b32_ptr_elt_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x b32> <b32 bitcast (ptr @g to b32), b32 0> to b64)
+;
+  %res = bitcast <2 x b32> <b32 bitcast (ptr @g to b32), b32 0> to b64
+  ret b64 %res
+}
+
+define ptr @bitextract_ptr_bitcast_constexpr_2b32_ptr_elt() {
+; CHECK-LABEL: @bitextract_ptr_bitcast_constexpr_2b32_ptr_elt(
+; CHECK-NEXT:    [[RES:%.*]] = bitextract ptr, b64 bitcast (<2 x b32> <b32 bitcast (ptr @g to b32), b32 0> to b64), i32 0
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+  %b = bitcast <2 x b32> <b32 bitcast (ptr @g to b32), b32 0> to b64
+  %res = bitextract ptr, b64 %b, i32 0
+  ret ptr %res
+}
