@@ -14280,6 +14280,31 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo, Alignment);
 }
 
+SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  SDValue V = Node->getOperand(0);
+  SDValue Mask = Node->getOperand(1);
+
+  EVT VecVT = Node->getValueType(0);
+  EVT ScalarVT = VecVT.getScalarType();
+
+  // Needs to be handled by targets that have scalable vector types.
+  if (VecVT.isScalableVector())
+    reportFatalUsageError(
+        "Cannot expand vector_shuffle_var for scalable vectors.");
+
+  // Res[i] = V[Mask[i]]. Out-of-range extracts are undefined, as required.
+  MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
+  SmallVector<SDValue, 16> Elts;
+  DAG.ExtractVectorElements(Mask, Elts);
+  for (SDValue &Elt : Elts) {
+    SDValue Idx = DAG.getZExtOrTrunc(Elt, DL, IdxVT);
+    Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, V, Idx);
+  }
+  return DAG.getBuildVector(VecVT, DL, Elts);
+}
+
 SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
