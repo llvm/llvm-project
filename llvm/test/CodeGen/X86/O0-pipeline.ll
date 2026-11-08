@@ -12,8 +12,8 @@
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Library Function Lowering Analysis
-; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Assumption Cache Tracker
+; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT:   ModulePass Manager
@@ -50,6 +50,7 @@
 ; CHECK-NEXT:       X86 DynAlloca Expander
 ; CHECK-NEXT:       Fast Tile Register Preconfigure
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Fast Tile Register Configure
 ; CHECK-NEXT:       X86 Lower Tile Copy
