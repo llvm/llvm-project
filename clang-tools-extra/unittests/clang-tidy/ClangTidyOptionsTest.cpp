@@ -315,10 +315,6 @@ public:
     return Options.get(std::forward<Args>(Arguments)...);
   }
 
-  template <typename... Args> auto getGlobal(Args &&... Arguments) {
-    return Options.getLocalOrGlobal(std::forward<Args>(Arguments)...);
-  }
-
   template <typename IntType = int, typename... Args>
   auto getIntLocal(Args &&... Arguments) {
     return Options.get<IntType>(std::forward<Args>(Arguments)...);

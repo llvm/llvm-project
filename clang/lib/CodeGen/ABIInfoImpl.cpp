@@ -302,42 +302,10 @@ bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
   return true;
 }
 
-bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context,
-                                    const FieldDecl *FD) {
-  if (FD->isZeroLengthBitField())
-    return true;
-
-  if (FD->isUnnamedBitField())
-    return false;
-
-  return isEmptyRecordForLayout(Context, FD->getType());
-}
-
-bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
+static const Type *getSingleElement(QualType T, ASTContext &Context,
+                                    bool AllowUnions) {
   const auto *RD = T->getAsRecordDecl();
-  if (!RD)
-    return false;
-
-  // If this is a C++ record, check the bases first.
-  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (CXXRD->isDynamicClass())
-      return false;
-
-    for (const auto &I : CXXRD->bases())
-      if (!isEmptyRecordForLayout(Context, I.getType()))
-        return false;
-  }
-
-  for (const auto *I : RD->fields())
-    if (!isEmptyFieldForLayout(Context, I))
-      return false;
-
-  return true;
-}
-
-const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
-  const auto *RD = T->getAsRecordDecl();
-  if (!RD)
+  if (!RD || (!AllowUnions && RD->isUnion()))
     return nullptr;
 
   if (RD->hasFlexibleArrayMember())
@@ -358,7 +326,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
 
       // If this is non-empty and not a single element struct, the composite
       // cannot be a single element struct.
-      Found = isSingleElementStruct(I.getType(), Context);
+      Found = getSingleElement(I.getType(), Context, AllowUnions);
       if (!Found)
         return nullptr;
     }
@@ -387,7 +355,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
     if (!isAggregateTypeForABI(FT)) {
       Found = FT.getTypePtr();
     } else {
-      Found = isSingleElementStruct(FT, Context);
+      Found = getSingleElement(FT, Context, AllowUnions);
       if (!Found)
         return nullptr;
     }
@@ -399,6 +367,14 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
     return nullptr;
 
   return Found;
+}
+
+const Type *CodeGen::isSingleElementRecord(QualType T, ASTContext &Context) {
+  return getSingleElement(T, Context, /*AllowUnions=*/true);
+}
+
+const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
+  return getSingleElement(T, Context, /*AllowUnions=*/false);
 }
 
 Address CodeGen::EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr,

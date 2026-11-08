@@ -20,7 +20,7 @@ module attributes {test.versioned_cu = #versioned_cu} {
     llvm.return loc(#loc2)
   } loc(#loc8)
   llvm.func @loop_annotation_with_locs() {
-    llvm.br ^bb1 {loop_annotation = #loop_annotation} loc(#loc4)
+    llvm.br ^bb1 loop_annotation = #loop_annotation loc(#loc4)
   ^bb1:  // pred: ^bb0
     llvm.return loc(#loc5)
   } loc(#loc3)

@@ -145,6 +145,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   uint8_t hasVersionSuffix : 1;
 
+  // True if the symbol is in SymbolTable::getSymbols().
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t inserted : 1;
+
   // Symbol visibility. This is the computed minimum visibility of all
   // observed non-DSO symbols.
   uint8_t visibility() const { return stOther & 3; }
@@ -242,10 +246,10 @@ protected:
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
         binding(binding), stOther(stOther), symbolKind(k), isPreemptible(false),
         isUsedInRegularObj(false), isExported(false), ltoCanOmit(false),
-        traced(false), hasVersionSuffix(false), isInIplt(false),
-        gotInIgot(false), folded(false), archSpecificBit(false),
-        scriptDefined(false), dsoDefined(false), dsoProtected(false),
-        versionScriptAssigned(false), thunkAccessed(false),
+        traced(false), hasVersionSuffix(false), inserted(false),
+        isInIplt(false), gotInIgot(false), folded(false),
+        archSpecificBit(false), scriptDefined(false), dsoDefined(false),
+        dsoProtected(false), versionScriptAssigned(false), thunkAccessed(false),
         inDynamicList(false), referenced(false), referencedAfterWrap(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
@@ -343,6 +347,11 @@ public:
   // true for __wrap_foo if foo is referenced).
   LLVM_PREFERRED_TYPE(bool)
   uint8_t referencedAfterWrap : 1;
+
+  // True if this symbol is referenced by the embedded unoptimized part of
+  // dynamic debugging.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isDynDbgRef : 1;
 
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);

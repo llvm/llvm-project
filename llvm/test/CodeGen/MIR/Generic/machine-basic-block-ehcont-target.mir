@@ -1,0 +1,16 @@
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
+
+# Test ehcont-target machine basic block attribute
+
+---
+name:            test
+body: |
+  ; CHECK: bb.0 (ehcont-target):
+  bb.0 (ehcont-target):
+...
+---
+name:            withalign
+body: |
+  ; CHECK: bb.0 (ehcont-target, align 8):
+  bb.0 (align 8, ehcont-target):
+...

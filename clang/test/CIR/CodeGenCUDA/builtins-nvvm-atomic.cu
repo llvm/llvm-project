@@ -370,6 +370,22 @@ __device__ void test_atom_sys_add_gen_ll(long long *p, long long val) {
   __nvvm_atom_sys_add_gen_ll(p, val);
 }
 
+// CIR-LABEL: @_Z19test_atom_add_gen_fPff
+// CIR: cir.atomic.fetch add relaxed syncscope(system) fetch_first %{{.*}}, %{{.*}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// LLVM-LABEL: @_Z19test_atom_add_gen_fPff
+// LLVM: atomicrmw fadd ptr %{{.*}}, float %{{.*}} monotonic, align 4
+__device__ void test_atom_add_gen_f(float *p, float val) {
+  __nvvm_atom_add_gen_f(p, val);
+}
+
+// CIR-LABEL: @_Z19test_atom_add_gen_dPdd
+// CIR: cir.atomic.fetch add relaxed syncscope(system) fetch_first %{{.*}}, %{{.*}} : (!cir.ptr<!cir.double>, !cir.double) -> !cir.double
+// LLVM-LABEL: @_Z19test_atom_add_gen_dPdd
+// LLVM: atomicrmw fadd ptr %{{.*}}, double %{{.*}} monotonic, align 8
+__device__ void test_atom_add_gen_d(double *p, double val) {
+  __nvvm_atom_add_gen_d(p, val);
+}
+
 // CIR-LABEL: @_Z23test_atom_cta_add_gen_fPff
 // CIR: cir.atomic.fetch add relaxed syncscope(workgroup) fetch_first %{{.*}}, %{{.*}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
 // LLVM-LABEL: @_Z23test_atom_cta_add_gen_fPff

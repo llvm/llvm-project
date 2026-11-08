@@ -150,10 +150,15 @@
 #  define _LIBCPP_EXCEPTIONS_SIG e
 #endif
 
-#define _LIBCPP_ODR_SIGNATURE                                                                                          \
-  _LIBCPP_CONCAT(                                                                                                      \
-      _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_ASSERTION_SEMANTIC_SIG), _LIBCPP_EXCEPTIONS_SIG),   \
-      _LIBCPP_VERSION)
+// clang-format off
+#define _LIBCPP_ODR_SIGNATURE                                                                                           \
+  _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(                                                          \
+    _LIBCPP_HARDENING_SIG,                                                                                              \
+    _LIBCPP_VERSION),                                                                                                   \
+    _LIBCPP_ASSERTION_SEMANTIC_SIG),                                                                                    \
+    _LIBCPP_EXCEPTIONS_SIG),                                                                                            \
+    _LIBCPP_STD_VER)
+// clang-format on
 
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:
@@ -260,8 +265,7 @@
 #  define _LIBCPP_DIAGNOSE_WARNING(...)
 #endif
 
-#if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_APPLE_CLANG_VER) &&                                           \
-    (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2001)
+#if __has_attribute(__diagnose_if__)
 #  define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
 #else
 #  define _LIBCPP_DIAGNOSE_IF(...)

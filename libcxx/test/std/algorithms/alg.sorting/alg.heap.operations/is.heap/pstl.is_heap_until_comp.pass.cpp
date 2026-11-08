@@ -158,7 +158,7 @@ struct Test {
       int a[] = {0, 0, 0, 0, 0};
       assert(std::is_heap_until(policy, Iter(std::begin(a)), Iter(std::end(a)), comp) == Iter(std::end(a)));
     }
-    { // Size=5, not heap
+    { // Size=5, heap
       int a[] = {0, 0, 0, 0, 1};
       assert(std::is_heap_until(policy, Iter(std::begin(a)), Iter(std::end(a)), comp) == Iter(std::end(a)));
     }
@@ -370,7 +370,7 @@ struct Test {
       int a[] = {0, 1, 0, 1, 1, 0};
       assert(std::is_heap_until(policy, Iter(std::begin(a)), Iter(std::end(a)), comp) == Iter(std::end(a)));
     }
-    { // Size=6, not heap
+    { // Size=6, heap
       int a[] = {0, 1, 0, 1, 1, 1};
       assert(std::is_heap_until(policy, Iter(std::begin(a)), Iter(std::end(a)), comp) == Iter(std::end(a)));
     }

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGBuiltin.h"
+#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/TargetParser/AtomicScope.h"
@@ -362,8 +363,15 @@ static Value *MakeScopedAtomicRMW(CodeGenFunction &CGF, const CallExpr *E,
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
   llvm::SyncScope::ID SSID = CGF.getLLVMContext().getOrInsertSyncScopeID(
       *llvm::getAtomicScopeIRString(CGF.getTarget().getTriple(), Scope));
-  return CGF.Builder.CreateAtomicRMW(Kind, Ptr, Val,
-                                     llvm::AtomicOrdering::Monotonic, SSID);
+  llvm::AtomicRMWInst *RMW = CGF.Builder.CreateAtomicRMW(
+      Kind, Ptr, Val, llvm::AtomicOrdering::Monotonic, SSID);
+
+  // CUDA's atomicAdd_block()/atomicAdd_system() reach this through the scoped
+  // add builtins, and are defined in terms of the native atom.add just as the
+  // unscoped atomicAdd() is. The helper ignores everything that is not a
+  // floating-point add, so the other scoped operations are unaffected.
+  addAtomicIgnoreDenormalModeMetadata(CGF, *RMW, /*AllowHalf=*/true);
+  return RMW;
 }
 
 // `Scope` is AtomicScope::Workgroup for _cta builtins and AtomicScope::System
@@ -433,70 +441,114 @@ static Value *MakeFMAOOB(unsigned IntrinsicID, llvm::Type *Ty,
                                  CGF.EmitScalarExpr(E->getArg(2))});
 }
 
+static Value *MakeFPArith(unsigned IntrinsicID, APFloat::roundingMode RM,
+                          unsigned BuiltinID, const CallExpr *E,
+                          CodeGenFunction &CGF) {
+  llvm::Type *Ty = CGF.ConvertType(E->getType());
+  return MakeHalfType(CGF.CGM.getIntrinsic(IntrinsicID, Ty), BuiltinID, E, CGF,
+                      {CGF.Builder.getInt32(static_cast<int>(RM))});
+}
+
+static Value *MakeIdp2a(unsigned IntrinsicID, bool IsHi, const CallExpr *E,
+                        CodeGenFunction &CGF) {
+  return CGF.Builder.CreateCall(
+      CGF.CGM.getIntrinsic(IntrinsicID),
+      {CGF.EmitScalarExpr(E->getArg(0)), CGF.EmitScalarExpr(E->getArg(1)),
+       CGF.Builder.getInt1(IsHi), CGF.EmitScalarExpr(E->getArg(2))});
+}
+
 } // namespace
+
+static llvm::SyncScope::ID getDeviceSyncScope(CodeGenFunction &CGF) {
+  return CGF.getLLVMContext().getOrInsertSyncScopeID(
+      *llvm::getAtomicScopeIRString(CGF.getTarget().getTriple(),
+                                    llvm::AtomicScope::Device));
+}
 
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                              const CallExpr *E) {
   switch (BuiltinID) {
+  case NVPTX::BI__nvvm_mulhi_i:
+  case NVPTX::BI__nvvm_mulhi_ui:
+  case NVPTX::BI__nvvm_mulhi_ll:
+  case NVPTX::BI__nvvm_mulhi_ull:
+    return Builder.CreateBinaryIntrinsic(
+        E->getType()->hasSignedIntegerRepresentation() ? Intrinsic::smulh
+                                                       : Intrinsic::umulh,
+        EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)));
+
+  // Unscoped __nvvm_atom_*_gen_* builtins (CUDA's atomicAdd() etc.) have device
+  // scope, but LLVM's default sync scope is system, so request device
+  // explicitly.
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Add, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_sub_gen_i:
   case NVPTX::BI__nvvm_atom_sub_gen_l:
   case NVPTX::BI__nvvm_atom_sub_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Sub, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_and_gen_i:
   case NVPTX::BI__nvvm_atom_and_gen_l:
   case NVPTX::BI__nvvm_atom_and_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::And, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_or_gen_i:
   case NVPTX::BI__nvvm_atom_or_gen_l:
   case NVPTX::BI__nvvm_atom_or_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Or, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_xor_gen_i:
   case NVPTX::BI__nvvm_atom_xor_gen_l:
   case NVPTX::BI__nvvm_atom_xor_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xor, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_xchg_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xchg, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_max_gen_i:
   case NVPTX::BI__nvvm_atom_max_gen_l:
   case NVPTX::BI__nvvm_atom_max_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Max, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_max_gen_ui:
   case NVPTX::BI__nvvm_atom_max_gen_ul:
   case NVPTX::BI__nvvm_atom_max_gen_ull:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMax, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_min_gen_i:
   case NVPTX::BI__nvvm_atom_min_gen_l:
   case NVPTX::BI__nvvm_atom_min_gen_ll:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Min, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_min_gen_ui:
   case NVPTX::BI__nvvm_atom_min_gen_ul:
   case NVPTX::BI__nvvm_atom_min_gen_ull:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMin, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_cas_gen_us:
   case NVPTX::BI__nvvm_atom_cas_gen_i:
@@ -504,26 +556,36 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_cas_gen_ll:
     // __nvvm_atom_cas_gen_* should return the old value rather than the
     // success flag.
-    return MakeAtomicCmpXchgValue(*this, E, /*ReturnBool=*/false,
-                                  AtomicOrdering::Monotonic,
-                                  AtomicOrdering::Monotonic);
+    return MakeAtomicCmpXchgValue(
+        *this, E, /*ReturnBool=*/false, AtomicOrdering::Monotonic,
+        AtomicOrdering::Monotonic, getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d: {
     Address DestAddr = EmitPointerWithAlignment(E->getArg(0));
     Value *Val = EmitScalarExpr(E->getArg(1));
 
-    return Builder.CreateAtomicRMW(llvm::AtomicRMWInst::FAdd, DestAddr, Val,
-                                   AtomicOrdering::Monotonic);
+    llvm::AtomicRMWInst *RMW = Builder.CreateAtomicRMW(
+        llvm::AtomicRMWInst::FAdd, DestAddr, Val, AtomicOrdering::Monotonic,
+        getDeviceSyncScope(*this));
+
+    // CUDA's atomicAdd() is defined in terms of the native atom.add
+    // instruction, whose denormal behavior is fixed by the hardware and need
+    // not agree with the function's denormal mode. Without this the atomic is
+    // expanded into a CAS loop whenever the two disagree.
+    addAtomicIgnoreDenormalModeMetadata(*this, *RMW, /*AllowHalf=*/true);
+    return RMW;
   }
 
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UIncWrap, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_atom_dec_gen_ui:
     return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UDecWrap, E,
-                                 AtomicOrdering::Monotonic);
+                                 AtomicOrdering::Monotonic,
+                                 getDeviceSyncScope(*this));
 
   case NVPTX::BI__nvvm_ldg_c:
   case NVPTX::BI__nvvm_ldg_sc:
@@ -1020,36 +1082,206 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     PZO_CVT(f2bf16_rz_satfinite);
     PZO_CVT(f2bf16_rz_relu_satfinite);
 
+    PZO_CVT(ff_to_e4m3x2_rn);
+    PZO_CVT(ff_to_e4m3x2_rn_relu);
+    PZO_CVT(ff_to_e4m3x2_rz);
+    PZO_CVT(ff_to_e4m3x2_rz_relu);
+    PZO_CVT(ff_to_e5m2x2_rn);
+    PZO_CVT(ff_to_e5m2x2_rn_relu);
+    PZO_CVT(ff_to_e5m2x2_rz);
+    PZO_CVT(ff_to_e5m2x2_rz_relu);
+    PZO_CVT(f16x2_to_e4m3x2_rn);
+    PZO_CVT(f16x2_to_e4m3x2_rn_relu);
+    PZO_CVT(f16x2_to_e4m3x2_rz);
+    PZO_CVT(f16x2_to_e4m3x2_rz_relu);
+    PZO_CVT(f16x2_to_e5m2x2_rn);
+    PZO_CVT(f16x2_to_e5m2x2_rn_relu);
+    PZO_CVT(f16x2_to_e5m2x2_rz);
+    PZO_CVT(f16x2_to_e5m2x2_rz_relu);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_relu_satfinite);
+
+    PZO_CVT(ff_to_e4m3x2_rn_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e4m3x2_rn_relu_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e4m3x2_rz_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e4m3x2_rz_relu_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e5m2x2_rn_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e5m2x2_rn_relu_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e5m2x2_rz_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e5m2x2_rz_relu_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e4m3x2_rn_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e4m3x2_rn_relu_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e4m3x2_rz_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e4m3x2_rz_relu_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e5m2x2_rn_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e5m2x2_rn_relu_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e5m2x2_rz_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e5m2x2_rz_relu_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_relu_satfinite_scale_n1_ue8m0);
+
+    PZO_CVT(ff_to_e2m3x2_rn_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rz_satfinite);
+    PZO_CVT(ff_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rn_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rz_satfinite);
+    PZO_CVT(ff_to_e3m2x2_rz_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rn_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rz_satfinite);
+    PZO_CVT(f16x2_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rn_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rz_satfinite);
+    PZO_CVT(f16x2_to_e3m2x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_relu_satfinite);
+
+    PZO_CVT(ff_to_e2m3x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m3x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m3x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m3x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e3m2x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e3m2x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e3m2x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e3m2x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m3x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m3x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m3x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m3x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e3m2x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e3m2x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e3m2x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e3m2x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_relu_satfinite_scale_n1_ue8m0);
+
+    PZO_CVT(ff_to_e2m1x2_rn_satfinite);
+    PZO_CVT(ff_to_e2m1x2_rn_relu_satfinite);
+    PZO_CVT(ff_to_e2m1x2_rz_satfinite);
+    PZO_CVT(ff_to_e2m1x2_rz_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m1x2_rn_satfinite);
+    PZO_CVT(f16x2_to_e2m1x2_rn_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m1x2_rz_satfinite);
+    PZO_CVT(f16x2_to_e2m1x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m1x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e2m1x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m1x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e2m1x2_rz_relu_satfinite);
+
+    PZO_CVT(ff_to_e2m1x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m1x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m1x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m1x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m1x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m1x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m1x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m1x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m1x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m1x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m1x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m1x2_rz_relu_satfinite_scale_n1_ue8m0);
+
 #undef PZO_CVT
 
   case NVPTX::BI__nvvm_fma_rn_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_f16x2, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_bf16:
+  case NVPTX::BI__nvvm_fma_rn_bf16x2:
+  case NVPTX::BI__nvvm_fma_rn_f:
+  case NVPTX::BI__nvvm_fma_rn_d:
+    return MakeFPArith(Intrinsic::nvvm_fma, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rz_f:
+  case NVPTX::BI__nvvm_fma_rz_d:
+    return MakeFPArith(Intrinsic::nvvm_fma, APFloat::rmTowardZero, BuiltinID, E,
+                       *this);
+  case NVPTX::BI__nvvm_fma_rm_f:
+  case NVPTX::BI__nvvm_fma_rm_d:
+    return MakeFPArith(Intrinsic::nvvm_fma, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rp_f:
+  case NVPTX::BI__nvvm_fma_rp_d:
+    return MakeFPArith(Intrinsic::nvvm_fma, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_ftz_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_ftz_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_f16x2, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_relu_f16, BuiltinID, E,
-                        *this);
-  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_relu_f16x2, BuiltinID, E,
-                        *this);
-  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_sat_f16, BuiltinID, E,
-                        *this);
-  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_ftz_sat_f16x2, BuiltinID, E,
-                        *this);
-  case NVPTX::BI__nvvm_fma_rn_relu_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_relu_f16, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_relu_f16x2, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rz_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rm_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rp_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_sat_f16:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_sat_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_sat_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fma_rn_sat_f16x2, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_sat, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_sat, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rm_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_sat, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rp_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_sat, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_sat,
+                       APFloat::rmNearestTiesToEven, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rz_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_sat, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rm_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_sat, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rp_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_sat, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_relu_f16:
+  case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
+  case NVPTX::BI__nvvm_fma_rn_relu_bf16:
+  case NVPTX::BI__nvvm_fma_rn_relu_bf16x2:
+    return MakeFPArith(Intrinsic::nvvm_fma_relu, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
+  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
+    return MakeFPArith(Intrinsic::nvvm_fma_ftz_relu,
+                       APFloat::rmNearestTiesToEven, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_oob_f16:
     return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob, Builder.getHalfTy(), E,
                       *this);
@@ -1181,6 +1413,98 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_ex2_approx_ftz_f:
     return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_ex2_approx_ftz,
                                         EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_add_rn_f:
+  case NVPTX::BI__nvvm_add_rn_d:
+    return MakeFPArith(Intrinsic::nvvm_fadd, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rz_f:
+  case NVPTX::BI__nvvm_add_rz_d:
+    return MakeFPArith(Intrinsic::nvvm_fadd, APFloat::rmTowardZero, BuiltinID,
+                       E, *this);
+  case NVPTX::BI__nvvm_add_rm_f:
+  case NVPTX::BI__nvvm_add_rm_d:
+    return MakeFPArith(Intrinsic::nvvm_fadd, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rp_f:
+  case NVPTX::BI__nvvm_add_rp_d:
+    return MakeFPArith(Intrinsic::nvvm_fadd, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rn_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_ftz, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rz_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_ftz, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rm_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_ftz, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rp_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_ftz, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rn_sat_f:
+  case NVPTX::BI__nvvm_add_rn_sat_f16:
+  case NVPTX::BI__nvvm_add_rn_sat_v2f16:
+    return MakeFPArith(Intrinsic::nvvm_fadd_sat, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_sat, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rm_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_sat, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rp_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_sat, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_f:
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_f16:
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_v2f16:
+    return MakeFPArith(Intrinsic::nvvm_fadd_ftz_sat,
+                       APFloat::rmNearestTiesToEven, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rz_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_ftz_sat, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rm_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_ftz_sat, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_add_rp_ftz_sat_f:
+    return MakeFPArith(Intrinsic::nvvm_fadd_ftz_sat, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rn_f:
+  case NVPTX::BI__nvvm_mul_rn_d:
+    return MakeFPArith(Intrinsic::nvvm_fmul, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rz_f:
+  case NVPTX::BI__nvvm_mul_rz_d:
+    return MakeFPArith(Intrinsic::nvvm_fmul, APFloat::rmTowardZero, BuiltinID,
+                       E, *this);
+  case NVPTX::BI__nvvm_mul_rm_f:
+  case NVPTX::BI__nvvm_mul_rm_d:
+    return MakeFPArith(Intrinsic::nvvm_fmul, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rp_f:
+  case NVPTX::BI__nvvm_mul_rp_d:
+    return MakeFPArith(Intrinsic::nvvm_fmul, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rn_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fmul_ftz, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rz_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fmul_ftz, APFloat::rmTowardZero,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rm_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fmul_ftz, APFloat::rmTowardNegative,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rp_ftz_f:
+    return MakeFPArith(Intrinsic::nvvm_fmul_ftz, APFloat::rmTowardPositive,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rn_sat_f16:
+  case NVPTX::BI__nvvm_mul_rn_sat_v2f16:
+    return MakeFPArith(Intrinsic::nvvm_fmul_sat, APFloat::rmNearestTiesToEven,
+                       BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_mul_rn_ftz_sat_f16:
+  case NVPTX::BI__nvvm_mul_rn_ftz_sat_v2f16:
+    return MakeFPArith(Intrinsic::nvvm_fmul_ftz_sat,
+                       APFloat::rmNearestTiesToEven, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
     return MakeLdg(*this, E);
@@ -1329,6 +1653,31 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
         Intrinsic::nvvm_barrier_cta_red_popc_aligned_all, {},
         {Builder.getInt32(0), Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
                                                    Builder.getInt32(0))});
+  case NVPTX::BI__nvvm_mbarrier_init:
+  case NVPTX::BI__nvvm_mbarrier_init_shared: {
+    // The intrinsic is overloaded on the pointer, so the two builtins differ
+    // only in the address space of their first argument.
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        Intrinsic::nvvm_mbarrier_init, {Ptr->getType()},
+        {Ptr, EmitScalarExpr(E->getArg(1)), Builder.getInt32(0)});
+  }
+  case NVPTX::BI__nvvm_idp2a_lo_s_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_s, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_s_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_u, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_u_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_s, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_lo_u_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_u, /*IsHi=*/false, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_s_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_s, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_s_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_s_u, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_u_s:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_s, /*IsHi=*/true, E, *this);
+  case NVPTX::BI__nvvm_idp2a_hi_u_u:
+    return MakeIdp2a(Intrinsic::nvvm_idp2a_u_u, /*IsHi=*/true, E, *this);
   default:
     return nullptr;
   }

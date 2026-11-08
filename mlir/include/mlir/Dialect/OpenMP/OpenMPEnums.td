@@ -200,12 +200,14 @@ def ClauseTaskDependAttr : OpenMP_EnumAttr<ClauseTaskDepend,
 def DataSharingTypePrivate : I32EnumAttrCase<"Private", 0, "private">;
 def DataSharingTypeFirstPrivate
     : I32EnumAttrCase<"FirstPrivate", 1, "firstprivate">;
+def DataSharingTypeLinear : I32EnumAttrCase<"Linear", 2, "linear">;
 
 def DataSharingClauseType : OpenMP_I32EnumAttr<
     "DataSharingClauseType",
     "Type of a data-sharing clause", [
       DataSharingTypePrivate,
-      DataSharingTypeFirstPrivate
+      DataSharingTypeFirstPrivate,
+      DataSharingTypeLinear
     ]>;
 
 def DataSharingClauseTypeAttr : OpenMP_EnumAttr<DataSharingClauseType,
@@ -376,6 +378,20 @@ def FallbackModifierAttr : OpenMP_EnumAttr<FallbackModifier,
                                             "fallback_modifier">;
 
 //===----------------------------------------------------------------------===//
+// threadset_policy enum.
+//===----------------------------------------------------------------------===//
+
+def ThreadsetOmpPool : I32EnumAttrCase<"omp_pool", 0>;
+def ThreadsetOmpTeam : I32EnumAttrCase<"omp_team", 1>;
+
+def ThreadsetPolicy : OpenMP_I32EnumAttr<
+    "ThreadsetPolicy",
+    "threadset policy", [
+      ThreadsetOmpPool,
+      ThreadsetOmpTeam
+    ]>;
+
+def ThreadsetPolicyAttr : OpenMP_EnumAttr<ThreadsetPolicy, "threadset_policy">;
 // interop_type for interop construct
 //===----------------------------------------------------------------------===//
 

@@ -76,6 +76,13 @@ spirv.func @cl_binary_float(%arg0: f32, %arg1: f32) "None" {
   spirv.Return
 }
 
+// CHECK-LABEL: @cl_ldexp
+spirv.func @cl_ldexp(%arg0: f32, %arg1: i32) "None" {
+  // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+  %0 = spirv.CL.ldexp %arg0, %arg1 : f32, i32 -> f32
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // Ternary FP OpenCL ops
 //===----------------------------------------------------------------------===//
@@ -101,6 +108,59 @@ spirv.func @cl_integer(%arg0: i32, %arg1: i32) "None" {
   %2 = spirv.CL.u_max %arg0, %arg1 : i32
   // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %3 = spirv.CL.u_min %arg0, %arg1 : i32
+  // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (i32) -> i32
+  %4 = spirv.CL.s_abs %arg0 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @cl_s_abs_vector
+spirv.func @cl_s_abs_vector(%arg0: vector<3xi16>) "None" {
+  // CHECK: "llvm.intr.abs"(%{{.*}}) <{is_int_min_poison = false}> : (vector<3xi16>) -> vector<3xi16>
+  %0 = spirv.CL.s_abs %arg0 : vector<3xi16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.rsqrt
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @rsqrt
+spirv.func @rsqrt(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%{{.*}}) : (f32) -> f32
+  // CHECK: llvm.fdiv %[[ONE]], %[[SQRT]] : f32
+  %0 = spirv.CL.rsqrt %arg0 : f32
+  // CHECK: %[[VONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf16>) : vector<3xf16>
+  // CHECK: %[[VSQRT:.*]] = llvm.intr.sqrt(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: llvm.fdiv %[[VONE]], %[[VSQRT]] : vector<3xf16>
+  %1 = spirv.CL.rsqrt %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+// CHECK-LABEL: @cl_count_zeros
+spirv.func @cl_count_zeros(%arg0: i32, %arg1: vector<3xi16>) "None" {
+  // CHECK: "llvm.intr.ctlz"(%{{.*}}) <{is_zero_poison = false}> : (i32) -> i32
+  %0 = spirv.CL.clz %arg0 : i32
+  // CHECK: "llvm.intr.cttz"(%{{.*}}) <{is_zero_poison = false}> : (vector<3xi16>) -> vector<3xi16>
+  %1 = spirv.CL.ctz %arg1 : vector<3xi16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// Clamp OpenCL ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @cl_clamp
+spirv.func @cl_clamp(%arg0: f32, %arg1: i16, %arg2: vector<3xi32>) "None" {
+  // CHECK: %[[FMAX:.*]] = llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  // CHECK: llvm.intr.minnum(%[[FMAX]], %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.CL.fclamp %arg0, %arg0, %arg0 : f32
+  // CHECK: %[[SMAX:.*]] = llvm.intr.smax(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  // CHECK: llvm.intr.smin(%[[SMAX]], %{{.*}}) : (i16, i16) -> i16
+  %1 = spirv.CL.s_clamp %arg1, %arg1, %arg1 : i16
+  // CHECK: %[[UMAX:.*]] = llvm.intr.umax(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  // CHECK: llvm.intr.umin(%[[UMAX]], %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
+  %2 = spirv.CL.u_clamp %arg2, %arg2, %arg2 : vector<3xi32>
   spirv.Return
 }
 
@@ -121,5 +181,28 @@ spirv.func @mix_vector(%x: vector<4xf32>, %y: vector<4xf32>, %a: vector<4xf32>) 
   // CHECK: %[[DIFF:.*]] = llvm.fsub %{{.*}}, %{{.*}} : vector<4xf32>
   // CHECK: llvm.intr.fma(%{{.*}}, %[[DIFF]], %{{.*}}) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
   %0 = spirv.CL.mix %x, %y, %a : vector<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.sincos
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sincos_scalar
+spirv.func @sincos_scalar(%x: f32, %p: !spirv.ptr<f32, Function>) "None" {
+  // CHECK: %[[SINCOS:.*]] = llvm.intr.sincos(%{{.*}}) : (f32) -> !llvm.struct<(f32, f32)>
+  // CHECK: %[[SIN:.*]] = llvm.extractvalue %[[SINCOS]][0] : !llvm.struct<(f32, f32)>
+  // CHECK: %[[COS:.*]] = llvm.extractvalue %[[SINCOS]][1] : !llvm.struct<(f32, f32)>
+  // CHECK: llvm.store %[[COS]], %{{.*}} : f32, !llvm.ptr
+  %0 = spirv.CL.sincos %x, %p : f32, !spirv.ptr<f32, Function> -> f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @sincos_vector
+spirv.func @sincos_vector(%x: vector<3xf16>, %p: !spirv.ptr<vector<3xf16>, CrossWorkgroup>) "None" {
+  // CHECK: %[[SINCOS:.*]] = llvm.intr.sincos(%{{.*}}) : (vector<3xf16>) -> !llvm.struct<(vector<3xf16>, vector<3xf16>)>
+  // CHECK: %[[COS:.*]] = llvm.extractvalue %[[SINCOS]][1] : !llvm.struct<(vector<3xf16>, vector<3xf16>)>
+  // CHECK: llvm.store %[[COS]], %{{.*}} : vector<3xf16>, !llvm.ptr
+  %0 = spirv.CL.sincos %x, %p : vector<3xf16>, !spirv.ptr<vector<3xf16>, CrossWorkgroup> -> vector<3xf16>
   spirv.Return
 }

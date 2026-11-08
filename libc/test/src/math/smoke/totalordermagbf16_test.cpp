@@ -11,4 +11,5 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/totalordermagbf16.h"
 
-LIST_TOTALORDERMAG_TESTS(bfloat16, LIBC_NAMESPACE::totalordermagbf16)
+LIST_TOTALORDERMAG_TESTS(Totalordermagbf16, bfloat16,
+                         LIBC_NAMESPACE::totalordermagbf16)

@@ -657,7 +657,16 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
       return false;
     if (B.getVectorElementType() != P.getVectorElementType())
       return false;
-    return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+    // If the subvector and vector are both fixed or both scalable, require
+    // the minimum element count to be smaller.
+    if (B.isScalableVector() == P.isScalableVector())
+      return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+
+    // If the subvector is fixed and the vector is scalable, allow the
+    // minimum number of elements to be less than or equal. Note, if vscale is
+    // known to be greater than 1, the subvector could have more than the
+    // minimum number of elements, but that would probably require custom isel.
+    return B.getVectorMinNumElements() <= P.getVectorMinNumElements();
   };
 
   /// Return true if S has no element (vector type) that T is a sub-vector of,
@@ -959,22 +968,25 @@ std::string TreePredicateFn::getPredCode() const {
         getAddressSpaces() == nullptr && getMinAlignment() < 1)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsStore cannot be used by itself");
-  } else {
-    if (isNonTruncStore())
+  } else if (!isAtomic()) {
+    if (isNonTruncStore()) {
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonTruncStore requires IsStore");
-    if (isTruncStore())
+                      "IsNonTruncStore requires IsStore or IsAtomic");
+    }
+
+    if (isTruncStore()) {
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsTruncStore requires IsStore");
+                      "IsTruncStore requires IsStore or IsAtomic");
+    }
   }
 
   if (isAtomic()) {
     if (getMemoryVT() == nullptr && getAddressSpaces() == nullptr &&
         // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
         !isNonExtLoad() && !isAnyExtLoad() && !isZeroExtLoad() &&
-        !isSignExtLoad() && !isAtomicOrderingMonotonic() &&
-        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
-        !isAtomicOrderingAcquireRelease() &&
+        !isSignExtLoad() && !isNonTruncStore() && !isTruncStore() &&
+        !isAtomicOrderingMonotonic() && !isAtomicOrderingAcquire() &&
+        !isAtomicOrderingRelease() && !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
         !isAtomicOrderingAcquireOrStronger() &&
         !isAtomicOrderingReleaseOrStronger() &&
@@ -1098,6 +1110,24 @@ std::string TreePredicateFn::getPredCode() const {
     if (isZeroExtLoad())
       Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::ZEXTLOAD) "
               "return false;\n";
+
+    if ((isNonTruncStore() + isTruncStore()) > 1) {
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonTruncStore, and IsTruncStore are mutually exclusive");
+    }
+
+    if (isNonTruncStore()) {
+      Code += "if (cast<AtomicSDNode>(N)->getMemoryVT().getSizeInBits() != "
+              "cast<AtomicSDNode>(N)->getVal().getValueSizeInBits()) "
+              "return false;\n";
+    }
+
+    if (isTruncStore()) {
+      Code += "if (cast<AtomicSDNode>(N)->getMemoryVT().getSizeInBits() == "
+              "cast<AtomicSDNode>(N)->getVal().getValueSizeInBits()) "
+              "return false;\n";
+    }
   }
 
   if (isLoad() || isStore()) {
@@ -1539,9 +1569,6 @@ std::string PatternToMatch::getPredicateCheck() const {
     OS << LS << '(' << CondString << ')';
   }
 
-  if (!HwModeFeatures.empty())
-    OS << LS << HwModeFeatures;
-
   return std::string(PredicateCheck);
 }
 
@@ -1883,19 +1910,6 @@ bool TreePatternNode::hasPossibleType() const {
       return false;
   for (const TreePatternNodePtr &C : Children)
     if (!C->hasPossibleType())
-      return false;
-  return true;
-}
-
-bool TreePatternNode::setDefaultMode(unsigned Mode) {
-  for (TypeSetByHwMode &S : Types) {
-    S.makeSimple(Mode);
-    // Check if the selected mode had a type conflict.
-    if (S.get(DefaultMode).empty())
-      return false;
-  }
-  for (const TreePatternNodePtr &C : Children)
-    if (!C->setDefaultMode(Mode))
       return false;
   return true;
 }
@@ -3342,7 +3356,7 @@ void TreePattern::dump() const { print(dbgs()); }
 // CodeGenDAGPatterns implementation
 //
 
-CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
+CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
       LegalPtrVTS(ComputeLegalPtrTypes()) {
@@ -3362,12 +3376,6 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
   // Generate variants.  For example, commutative patterns can match
   // multiple ways.  Add them to PatternsToMatch as well.
   GenerateVariants();
-
-  // Break patterns with parameterized types into a series of patterns,
-  // where each one has a fixed type and is predicated on the conditions
-  // of the associated HW mode.
-  if (ExpandHwMode)
-    ExpandHwModeBasedTypes();
 
   // Infer instruction flags.  For example, we can detect loads,
   // stores, and side effects in many cases by examining an
@@ -4002,8 +4010,12 @@ void CodeGenDAGPatterns::parseInstructionPattern(const CodeGenInstruction &CGI,
 
     // Check that it exists in InstResults.
     auto InstResultIter = InstResults.find(OpName);
-    if (InstResultIter == InstResults.end() || !InstResultIter->second)
-      I.error("Operand $" + OpName + " does not exist in operand list!");
+    if (InstResultIter == InstResults.end() || !InstResultIter->second) {
+      I.dump();
+      PrintFatalError(CGI.TheDef, "In " + CGI.TheDef->getName() +
+                                      ": Operand $" + OpName +
+                                      " does not exist in operand list!");
+    }
 
     TreePatternNodePtr RNode = InstResultIter->second;
     const Record *R = cast<DefInit>(RNode->getLeafValue())->getDef();
@@ -4544,93 +4556,6 @@ void CodeGenDAGPatterns::ParsePatterns() {
   }
 }
 
-static void collectModes(std::set<unsigned> &Modes, const TreePatternNode &N) {
-  for (const TypeSetByHwMode &VTS : N.getExtTypes())
-    for (const auto &I : VTS)
-      Modes.insert(I.first);
-
-  for (const TreePatternNode &Child : N.children())
-    collectModes(Modes, Child);
-}
-
-void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
-  const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
-  if (CGH.getNumModeIds() == 1)
-    return;
-
-  std::vector<PatternToMatch> Copy;
-  PatternsToMatch.swap(Copy);
-
-  auto AppendPattern = [this](PatternToMatch &P, unsigned Mode,
-                              StringRef Check) {
-    TreePatternNodePtr NewSrc = P.getSrcPattern().clone();
-    TreePatternNodePtr NewDst = P.getDstPattern().clone();
-    if (!NewSrc->setDefaultMode(Mode) || !NewDst->setDefaultMode(Mode)) {
-      return;
-    }
-
-    PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
-                                 std::move(NewSrc), std::move(NewDst),
-                                 P.getDstRegs(), P.getAddedComplexity(),
-                                 getNewUID(), P.getGISelShouldIgnore(), Check);
-  };
-
-  for (PatternToMatch &P : Copy) {
-    const TreePatternNode *SrcP = nullptr, *DstP = nullptr;
-    if (P.getSrcPattern().hasProperTypeByHwMode())
-      SrcP = &P.getSrcPattern();
-    if (P.getDstPattern().hasProperTypeByHwMode())
-      DstP = &P.getDstPattern();
-    if (!SrcP && !DstP) {
-      PatternsToMatch.push_back(P);
-      continue;
-    }
-
-    std::set<unsigned> Modes;
-    if (SrcP)
-      collectModes(Modes, *SrcP);
-    if (DstP)
-      collectModes(Modes, *DstP);
-
-    // The predicate for the default mode needs to be constructed for each
-    // pattern separately.
-    // Since not all modes must be present in each pattern, if a mode m is
-    // absent, then there is no point in constructing a check for m. If such
-    // a check was created, it would be equivalent to checking the default
-    // mode, except not all modes' predicates would be a part of the checking
-    // code. The subsequently generated check for the default mode would then
-    // have the exact same patterns, but a different predicate code. To avoid
-    // duplicated patterns with different predicate checks, construct the
-    // default check as a negation of all predicates that are actually present
-    // in the source/destination patterns.
-    SmallString<128> DefaultCheck;
-
-    for (unsigned M : Modes) {
-      if (M == DefaultMode)
-        continue;
-
-      // Fill the map entry for this mode.
-      const HwMode &HM = CGH.getMode(M);
-
-      SmallString<128> PredicateCheck;
-      raw_svector_ostream PS(PredicateCheck);
-      SubtargetFeatureInfo::emitPredicateCheck(PS, HM.Predicates);
-      AppendPattern(P, M, PredicateCheck);
-
-      // Add negations of the HM's predicates to the default predicate.
-      if (!DefaultCheck.empty())
-        DefaultCheck += " && ";
-      DefaultCheck += "!(";
-      DefaultCheck.append(PredicateCheck);
-      DefaultCheck += ")";
-    }
-
-    bool HasDefault = Modes.count(DefaultMode);
-    if (HasDefault)
-      AppendPattern(P, DefaultMode, DefaultCheck);
-  }
-}
-
 /// Dependent variable map for CodeGenDAGPattern variant generation
 using DepVarMap = StringMap<int>;
 
@@ -4906,9 +4831,6 @@ void CodeGenDAGPatterns::GenerateVariants() {
     GenerateVariantsOf(PatternsToMatch[i].getSrcPatternShared(), Variants,
                        *this, DepVars);
 
-    assert(PatternsToMatch[i].getHwModeFeatures().empty() &&
-           "HwModes should not have been expanded yet!");
-
     assert(!Variants.empty() && "Must create at least original variant!");
     if (Variants.size() == 1) // No additional variants for this pattern.
       continue;
@@ -4947,8 +4869,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), getNewUID(),
-          PatternsToMatch[i].getGISelShouldIgnore(),
-          PatternsToMatch[i].getHwModeFeatures());
+          PatternsToMatch[i].getGISelShouldIgnore());
     }
 
     LLVM_DEBUG(dbgs() << "\n");

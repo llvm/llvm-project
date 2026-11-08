@@ -1,4 +1,4 @@
-//===- Memory.cpp - POSIX system memory operations -------------*- C++ -*-===//
+//===- Memory.cpp - POSIX system memory operations ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implementation of orc-rt-internal/support/sys/Memory.h on POSIX
+// Implementation of orc-rt-internal/bedrock/sys/Memory.h on POSIX
 // systems, in terms of mmap / munmap / mprotect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-internal/support/sys/Memory.h"
+#include "orc-rt-internal/bedrock/sys/Memory.h"
 
 #include "orc-rt-internal/support/sys/CacheControl.h"
 #include "orc-rt-internal/support/sys/Errno.h"

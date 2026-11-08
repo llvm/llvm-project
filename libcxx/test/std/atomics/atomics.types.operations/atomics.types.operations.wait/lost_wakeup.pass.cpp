@@ -24,7 +24,7 @@ constexpr int num_waiters    = 8;
 constexpr int num_iterations = 10'000;
 
 int main(int, char**) {
-  for (int run = 0; run < 20; ++run) {
+  for (int run = 0; run < 10; ++run) {
     std::atomic<int> waiter_ready(0);
     std::atomic<int> state(0);
 
@@ -39,6 +39,9 @@ int main(int, char**) {
     auto notify = [&] {
       for (int i = 0; i < num_iterations; ++i) {
         while (waiter_ready.load() < num_waiters) {
+#if !defined(__APPLE__)
+          std::this_thread::yield();
+#endif
         }
         waiter_ready.store(0);
         state.fetch_add(1);

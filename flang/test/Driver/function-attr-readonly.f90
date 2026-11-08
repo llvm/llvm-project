@@ -31,17 +31,17 @@ contains
 end module
 
 ! O0-LABEL: func.func @_QMreadonly_pipeline_modPreadonly_pipeline(
-! O0-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "x", fir.read_only, llvm.noalias},
-! O0-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "y", llvm.noalias})
+! O0-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only, llvm.noalias},
+! O0-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "y", fir.fortran_attrs = #fir.var_attrs<intent_inout>, llvm.noalias})
 
 ! O1-LABEL: func.func @_QMreadonly_pipeline_modPreadonly_pipeline(
-! O1-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "x", fir.read_only, llvm.noalias, llvm.nocapture, llvm.readonly},
-! O1-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "y", llvm.noalias, llvm.nocapture})
+! O1-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only, llvm.noalias, llvm.nocapture, llvm.readonly},
+! O1-SAME:    %{{.*}}: !fir.ref<i32> {fir.bindc_name = "y", fir.fortran_attrs = #fir.var_attrs<intent_inout>, llvm.noalias, llvm.nocapture})
 
 ! LLVM-LABEL: define void @_QMreadonly_pipeline_modPreadonly_pipeline(
 ! LLVM-SAME:    ptr {{.*}}readonly{{.*}} %0,
 
-! O1-LABEL: func.func @_QMreadonly_pipeline_modPpointer_descriptor_readonly(%{{.*}}: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "p", fir.read_only, llvm.nocapture, llvm.readonly})
+! O1-LABEL: func.func @_QMreadonly_pipeline_modPpointer_descriptor_readonly(%{{.*}}: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "p", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only, llvm.nocapture, llvm.readonly})
 
 ! LLVM-LABEL: define void @_QMreadonly_pipeline_modPpointer_descriptor_readonly(
 ! LLVM-SAME:    ptr {{.*}}readonly{{.*}} %0

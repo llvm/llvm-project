@@ -49,6 +49,8 @@
 # NONSTREAMING-NEXT:  1      1     0.50                        add	wsp, wsp, w10
 # NONSTREAMING-NEXT:  1      1     0.50                        add	x25, x9, w25, uxtb
 # NONSTREAMING-NEXT:  1      1     0.50                        add	w3, w5, w7
+# NONSTREAMING-NEXT:  1      1     0.50                        add	w5, w3, w4, uxtb
+# NONSTREAMING-NEXT:  1      1     0.50                        add	w5, w3, w4, uxtw
 # NONSTREAMING-NEXT:  1      1     0.50                        add	wzr, w3, w5
 # NONSTREAMING-NEXT:  1      1     0.50                        add	w20, wzr, w4
 # NONSTREAMING-NEXT:  1      1     0.50                        add	w4, w6, wzr
@@ -102,6 +104,9 @@
 # NONSTREAMING-NEXT:  1      1     0.50                        adds	x2, x3, x4, asr #0
 # NONSTREAMING-NEXT:  1      1     0.50                        adds	x5, x6, x7, asr #21
 # NONSTREAMING-NEXT:  1      1     0.50                        adds	x8, x9, x10, asr #63
+# NONSTREAMING-NEXT:  1      1     0.50                        adds	w5, w3, w4, uxtb
+# NONSTREAMING-NEXT:  1      1     0.50                        adds	w5, w3, w4, uxtw
+# NONSTREAMING-NEXT:  1      1     0.50                        adds	x5, x3, x4, uxtx
 # NONSTREAMING-NEXT:  1      1     0.50                        sub	w3, w5, w7
 # NONSTREAMING-NEXT:  1      1     0.50                        sub	wzr, w3, w5
 # NONSTREAMING-NEXT:  1      1     0.50                        sub	w4, w6, wzr
@@ -127,6 +132,8 @@
 # NONSTREAMING-NEXT:  1      1     0.50                        sub	x5, x6, x7, asr #21
 # NONSTREAMING-NEXT:  1      1     0.50                        sub	x8, x9, x10, asr #63
 # NONSTREAMING-NEXT:  1      1     0.50                        sub	w13, wsp, w10
+# NONSTREAMING-NEXT:  1      1     0.50                        sub	w5, w3, w4, uxtb
+# NONSTREAMING-NEXT:  1      1     0.50                        sub	w5, w3, w4, uxtw
 # NONSTREAMING-NEXT:  1      1     0.50                        sub	x16, x2, w19, uxtb
 # NONSTREAMING-NEXT:  1      1     0.50                        subs	x13, x15, x14, sxtx #1
 # NONSTREAMING-NEXT:  1      1     0.50                        subs	w3, w5, w7
@@ -141,6 +148,9 @@
 # NONSTREAMING-NEXT:  1      1     0.50                        subs	w2, w3, w4, asr #0
 # NONSTREAMING-NEXT:  1      1     0.50                        subs	w5, w6, w7, asr #21
 # NONSTREAMING-NEXT:  1      1     0.50                        subs	w8, w9, w10, asr #31
+# NONSTREAMING-NEXT:  1      1     0.50                        subs	w5, w3, w4, uxtb
+# NONSTREAMING-NEXT:  1      1     0.50                        subs	w5, w3, w4, uxtw
+# NONSTREAMING-NEXT:  1      1     0.50                        subs	x5, x3, w4, uxtb
 # NONSTREAMING-NEXT:  1      1     0.50                        subs	x3, x5, x7
 # NONSTREAMING-NEXT:  1      1     0.50                        cmp	x3, x5
 # NONSTREAMING-NEXT:  1      1     0.50                        subs	x4, x6, xzr
@@ -813,15 +823,15 @@
 # NONSTREAMING-NEXT:  2      3     1.00    *      *      U     stlxp	wzr, x6, x7, [x1]
 # NONSTREAMING-NEXT:  2      2     1.00    *      *      U     ldaxp	w5, w18, [sp]
 # NONSTREAMING-NEXT:  2      2     1.00    *      *      U     ldaxp	x6, x19, [x22]
-# NONSTREAMING-NEXT:  1      1     1.00           *      U     stlrb	w24, [sp]
-# NONSTREAMING-NEXT:  1      1     1.00           *      U     stlrh	w25, [x30]
-# NONSTREAMING-NEXT:  1      1     1.00           *      U     stlr	w26, [x29]
-# NONSTREAMING-NEXT:  1      1     1.00           *      U     stlr	x27, [x28]
-# NONSTREAMING-NEXT:  1      2     0.50    *             U     ldarb	w16, [x21]
-# NONSTREAMING-NEXT:  1      2     0.50    *             U     ldarb	w23, [sp]
-# NONSTREAMING-NEXT:  1      2     0.50    *             U     ldarh	w22, [x30]
-# NONSTREAMING-NEXT:  1      2     0.50    *             U     ldar	wzr, [x29]
-# NONSTREAMING-NEXT:  1      2     0.50    *             U     ldar	x21, [x28]
+# NONSTREAMING-NEXT:  1      1     1.00           *            stlrb	w24, [sp]
+# NONSTREAMING-NEXT:  1      1     1.00           *            stlrh	w25, [x30]
+# NONSTREAMING-NEXT:  1      1     1.00           *            stlr	w26, [x29]
+# NONSTREAMING-NEXT:  1      1     1.00           *            stlr	x27, [x28]
+# NONSTREAMING-NEXT:  1      2     0.50    *                   ldarb	w16, [x21]
+# NONSTREAMING-NEXT:  1      2     0.50    *                   ldarb	w23, [sp]
+# NONSTREAMING-NEXT:  1      2     0.50    *                   ldarh	w22, [x30]
+# NONSTREAMING-NEXT:  1      2     0.50    *                   ldar	wzr, [x29]
+# NONSTREAMING-NEXT:  1      2     0.50    *                   ldar	x21, [x28]
 # NONSTREAMING-NEXT:  1      1     1.00           *            sturb	w9, [sp]
 # NONSTREAMING-NEXT:  1      1     1.00           *            sturh	wzr, [x12, #255]
 # NONSTREAMING-NEXT:  1      1     1.00           *            stur	w16, [x0, #-256]
@@ -1219,6 +1229,9 @@
 # NONSTREAMING-NEXT:  1      1     0.50                        orn	w2, w5, w29
 # NONSTREAMING-NEXT:  1      1     0.50                        ands	w7, wzr, w9, lsl #1
 # NONSTREAMING-NEXT:  1      1     0.50                        ands	x3, x5, x20, ror #63
+# NONSTREAMING-NEXT:  1      1     0.50                        ands	w5, w3, w4, lsr #0
+# NONSTREAMING-NEXT:  1      1     0.50                        ands	w5, w3, w4, asr #0
+# NONSTREAMING-NEXT:  1      1     0.50                        ands	x5, x3, x4, ror #0
 # NONSTREAMING-NEXT:  1      1     0.50                        bics	w3, w5, w7
 # NONSTREAMING-NEXT:  1      1     0.50                        bics	x3, xzr, x3, lsl #1
 # NONSTREAMING-NEXT:  1      1     0.50                        tst	w3, w7, lsl #31
@@ -1291,6 +1304,8 @@
 # STREAMING-NEXT:     1      1     0.50                        add	wsp, wsp, w10
 # STREAMING-NEXT:     1      1     0.50                        add	x25, x9, w25, uxtb
 # STREAMING-NEXT:     1      1     0.50                        add	w3, w5, w7
+# STREAMING-NEXT:     1      1     0.50                        add	w5, w3, w4, uxtb
+# STREAMING-NEXT:     1      1     0.50                        add	w5, w3, w4, uxtw
 # STREAMING-NEXT:     1      1     0.50                        add	wzr, w3, w5
 # STREAMING-NEXT:     1      1     0.50                        add	w20, wzr, w4
 # STREAMING-NEXT:     1      1     0.50                        add	w4, w6, wzr
@@ -1344,6 +1359,9 @@
 # STREAMING-NEXT:     1      1     0.50                        adds	x2, x3, x4, asr #0
 # STREAMING-NEXT:     1      1     0.50                        adds	x5, x6, x7, asr #21
 # STREAMING-NEXT:     1      1     0.50                        adds	x8, x9, x10, asr #63
+# STREAMING-NEXT:     1      1     0.50                        adds	w5, w3, w4, uxtb
+# STREAMING-NEXT:     1      1     0.50                        adds	w5, w3, w4, uxtw
+# STREAMING-NEXT:     1      1     0.50                        adds	x5, x3, x4, uxtx
 # STREAMING-NEXT:     1      1     0.50                        sub	w3, w5, w7
 # STREAMING-NEXT:     1      1     0.50                        sub	wzr, w3, w5
 # STREAMING-NEXT:     1      1     0.50                        sub	w4, w6, wzr
@@ -1369,6 +1387,8 @@
 # STREAMING-NEXT:     1      1     0.50                        sub	x5, x6, x7, asr #21
 # STREAMING-NEXT:     1      1     0.50                        sub	x8, x9, x10, asr #63
 # STREAMING-NEXT:     1      1     0.50                        sub	w13, wsp, w10
+# STREAMING-NEXT:     1      1     0.50                        sub	w5, w3, w4, uxtb
+# STREAMING-NEXT:     1      1     0.50                        sub	w5, w3, w4, uxtw
 # STREAMING-NEXT:     1      1     0.50                        sub	x16, x2, w19, uxtb
 # STREAMING-NEXT:     1      1     0.50                        subs	x13, x15, x14, sxtx #1
 # STREAMING-NEXT:     1      1     0.50                        subs	w3, w5, w7
@@ -1383,6 +1403,9 @@
 # STREAMING-NEXT:     1      1     0.50                        subs	w2, w3, w4, asr #0
 # STREAMING-NEXT:     1      1     0.50                        subs	w5, w6, w7, asr #21
 # STREAMING-NEXT:     1      1     0.50                        subs	w8, w9, w10, asr #31
+# STREAMING-NEXT:     1      1     0.50                        subs	w5, w3, w4, uxtb
+# STREAMING-NEXT:     1      1     0.50                        subs	w5, w3, w4, uxtw
+# STREAMING-NEXT:     1      1     0.50                        subs	x5, x3, w4, uxtb
 # STREAMING-NEXT:     1      1     0.50                        subs	x3, x5, x7
 # STREAMING-NEXT:     1      1     0.50                        cmp	x3, x5
 # STREAMING-NEXT:     1      1     0.50                        subs	x4, x6, xzr
@@ -2055,15 +2078,15 @@
 # STREAMING-NEXT:     2      3     1.00    *      *      U     stlxp	wzr, x6, x7, [x1]
 # STREAMING-NEXT:     2      2     1.00    *      *      U     ldaxp	w5, w18, [sp]
 # STREAMING-NEXT:     2      2     1.00    *      *      U     ldaxp	x6, x19, [x22]
-# STREAMING-NEXT:     1      1     1.00           *      U     stlrb	w24, [sp]
-# STREAMING-NEXT:     1      1     1.00           *      U     stlrh	w25, [x30]
-# STREAMING-NEXT:     1      1     1.00           *      U     stlr	w26, [x29]
-# STREAMING-NEXT:     1      1     1.00           *      U     stlr	x27, [x28]
-# STREAMING-NEXT:     1      2     0.50    *             U     ldarb	w16, [x21]
-# STREAMING-NEXT:     1      2     0.50    *             U     ldarb	w23, [sp]
-# STREAMING-NEXT:     1      2     0.50    *             U     ldarh	w22, [x30]
-# STREAMING-NEXT:     1      2     0.50    *             U     ldar	wzr, [x29]
-# STREAMING-NEXT:     1      2     0.50    *             U     ldar	x21, [x28]
+# STREAMING-NEXT:     1      1     1.00           *            stlrb	w24, [sp]
+# STREAMING-NEXT:     1      1     1.00           *            stlrh	w25, [x30]
+# STREAMING-NEXT:     1      1     1.00           *            stlr	w26, [x29]
+# STREAMING-NEXT:     1      1     1.00           *            stlr	x27, [x28]
+# STREAMING-NEXT:     1      2     0.50    *                   ldarb	w16, [x21]
+# STREAMING-NEXT:     1      2     0.50    *                   ldarb	w23, [sp]
+# STREAMING-NEXT:     1      2     0.50    *                   ldarh	w22, [x30]
+# STREAMING-NEXT:     1      2     0.50    *                   ldar	wzr, [x29]
+# STREAMING-NEXT:     1      2     0.50    *                   ldar	x21, [x28]
 # STREAMING-NEXT:     1      1     1.00           *            sturb	w9, [sp]
 # STREAMING-NEXT:     1      1     1.00           *            sturh	wzr, [x12, #255]
 # STREAMING-NEXT:     1      1     1.00           *            stur	w16, [x0, #-256]
@@ -2461,6 +2484,9 @@
 # STREAMING-NEXT:     1      1     0.50                        orn	w2, w5, w29
 # STREAMING-NEXT:     1      1     0.50                        ands	w7, wzr, w9, lsl #1
 # STREAMING-NEXT:     1      1     0.50                        ands	x3, x5, x20, ror #63
+# STREAMING-NEXT:     1      1     0.50                        ands	w5, w3, w4, lsr #0
+# STREAMING-NEXT:     1      1     0.50                        ands	w5, w3, w4, asr #0
+# STREAMING-NEXT:     1      1     0.50                        ands	x5, x3, x4, ror #0
 # STREAMING-NEXT:     1      1     0.50                        bics	w3, w5, w7
 # STREAMING-NEXT:     1      1     0.50                        bics	x3, xzr, x3, lsl #1
 # STREAMING-NEXT:     1      1     0.50                        tst	w3, w7, lsl #31
@@ -2584,11 +2610,11 @@
 
 # NONSTREAMING:      Resource pressure per iteration:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     261.00 261.00 27.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     64.00  178.50 328.50 89.00   -     136.50 136.50 8.50   8.50   67.00
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     267.50 267.50 27.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     64.00  178.50 328.50 89.00   -     136.50 136.50 8.50   8.50   67.00
 
 # STREAMING:         Resource pressure per iteration:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     261.00 261.00 27.00   -      -      -      -     153.00 105.00  -      -      -      -     43.00  405.00  -      -     127.00  -      -     64.00  161.00 373.00 89.00   -     22.50  22.50  1.00   1.00   67.00
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     267.50 267.50 27.00   -      -      -      -     153.00 105.00  -      -      -      -     43.00  405.00  -      -     127.00  -      -     64.00  161.00 373.00 89.00   -     22.50  22.50  1.00   1.00   67.00
 
 # NONSTREAMING:      Resource pressure by instruction:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
@@ -2622,6 +2648,8 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	wsp, wsp, w10
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	x25, x9, w25, uxtb
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w3, w5, w7
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w5, w3, w4, uxtb
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w5, w3, w4, uxtw
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	wzr, w3, w5
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w20, wzr, w4
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w4, w6, wzr
@@ -2675,6 +2703,9 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	x2, x3, x4, asr #0
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	x5, x6, x7, asr #21
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	x8, x9, x10, asr #63
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	w5, w3, w4, uxtb
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	w5, w3, w4, uxtw
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	x5, x3, x4, uxtx
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w3, w5, w7
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	wzr, w3, w5
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w4, w6, wzr
@@ -2700,6 +2731,8 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	x5, x6, x7, asr #21
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	x8, x9, x10, asr #63
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w13, wsp, w10
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w5, w3, w4, uxtb
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w5, w3, w4, uxtw
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	x16, x2, w19, uxtb
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	x13, x15, x14, sxtx #1
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w3, w5, w7
@@ -2714,6 +2747,9 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w2, w3, w4, asr #0
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w5, w6, w7, asr #21
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w8, w9, w10, asr #31
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w5, w3, w4, uxtb
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w5, w3, w4, uxtw
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	x5, x3, w4, uxtb
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	x3, x5, x7
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmp	x3, x5
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	x4, x6, xzr
@@ -3792,6 +3828,9 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     orn	w2, w5, w29
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	w7, wzr, w9, lsl #1
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	x3, x5, x20, ror #63
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	w5, w3, w4, lsr #0
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	w5, w3, w4, asr #0
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	x5, x3, x4, ror #0
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bics	w3, w5, w7
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bics	x3, xzr, x3, lsl #1
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     tst	w3, w7, lsl #31
@@ -3865,6 +3904,8 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	wsp, wsp, w10
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	x25, x9, w25, uxtb
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w3, w5, w7
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w5, w3, w4, uxtb
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w5, w3, w4, uxtw
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	wzr, w3, w5
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w20, wzr, w4
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     add	w4, w6, wzr
@@ -3918,6 +3959,9 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	x2, x3, x4, asr #0
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	x5, x6, x7, asr #21
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	x8, x9, x10, asr #63
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	w5, w3, w4, uxtb
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	w5, w3, w4, uxtw
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     adds	x5, x3, x4, uxtx
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w3, w5, w7
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	wzr, w3, w5
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w4, w6, wzr
@@ -3943,6 +3987,8 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	x5, x6, x7, asr #21
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	x8, x9, x10, asr #63
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w13, wsp, w10
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w5, w3, w4, uxtb
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	w5, w3, w4, uxtw
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sub	x16, x2, w19, uxtb
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	x13, x15, x14, sxtx #1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w3, w5, w7
@@ -3957,6 +4003,9 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w2, w3, w4, asr #0
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w5, w6, w7, asr #21
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w8, w9, w10, asr #31
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w5, w3, w4, uxtb
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	w5, w3, w4, uxtw
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	x5, x3, w4, uxtb
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	x3, x5, x7
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmp	x3, x5
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     subs	x4, x6, xzr
@@ -5035,6 +5084,9 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     orn	w2, w5, w29
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	w7, wzr, w9, lsl #1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	x3, x5, x20, ror #63
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	w5, w3, w4, lsr #0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	w5, w3, w4, asr #0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ands	x5, x3, x4, ror #0
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bics	w3, w5, w7
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bics	x3, xzr, x3, lsl #1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     tst	w3, w7, lsl #31

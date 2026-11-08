@@ -23,12 +23,9 @@ size_type size(unsigned long *_start, unsigned long *_finish) {
   // LLVM: ret i64 %[[RET]]
 
   // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr).
-  // Classic-codegen seems to have temporarily reverted that
-  // difference, but we should leave the TODO to make sure we
-  // don't lose it next time it comes back.
   // OGCG-LABEL: define dso_local {{.*}}i64 @_Z4sizePmS_(
-  // OGCG: %[[IA:.*]] = ptrtoint ptr %{{.*}} to i64
-  // OGCG: %[[IB:.*]] = ptrtoint ptr %{{.*}} to i64
+  // OGCG: %[[IA:.*]] = ptrtoaddr ptr %{{.*}} to i64
+  // OGCG: %[[IB:.*]] = ptrtoaddr ptr %{{.*}} to i64
   // OGCG: %[[SUB:.*]] = sub i64 %[[IA]], %[[IB]]
   // OGCG: %[[Q:.*]] = sdiv exact i64 %[[SUB]], 8
   // OGCG: ret i64 %[[Q]]

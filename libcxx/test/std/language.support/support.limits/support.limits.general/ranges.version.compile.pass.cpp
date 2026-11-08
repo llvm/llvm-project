@@ -24,12 +24,20 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges
 #    error "__cpp_lib_ranges should not be defined before c++20"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_const
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -66,6 +74,10 @@
 
 #  ifdef __cpp_lib_ranges_repeat
 #    error "__cpp_lib_ranges_repeat should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -94,12 +106,20 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges
 #    error "__cpp_lib_ranges should not be defined before c++20"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_const
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -136,6 +156,10 @@
 
 #  ifdef __cpp_lib_ranges_repeat
 #    error "__cpp_lib_ranges_repeat should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -164,12 +188,20 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges
 #    error "__cpp_lib_ranges should not be defined before c++20"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_const
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -206,6 +238,10 @@
 
 #  ifdef __cpp_lib_ranges_repeat
 #    error "__cpp_lib_ranges_repeat should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -234,6 +270,10 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges
 #    error "__cpp_lib_ranges should be defined in c++20"
 #  endif
@@ -243,6 +283,10 @@
 
 #  ifdef __cpp_lib_ranges_as_const
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -281,6 +325,10 @@
 #    error "__cpp_lib_ranges_repeat should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
@@ -307,6 +355,10 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_hardened_view_interface
+#    error "__cpp_lib_hardened_view_interface should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_ranges
 #    error "__cpp_lib_ranges should be defined in c++23"
 #  endif
@@ -327,6 +379,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should be defined in c++23"
+#    endif
+#    if __cpp_lib_ranges_as_input != 202502L
+#      error "__cpp_lib_ranges_as_input should have the value 202502L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should be defined in c++23"
 #  endif
@@ -336,6 +401,19 @@
 
 #  ifdef __cpp_lib_ranges_cache_latest
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should be defined in c++23"
+#    endif
+#    if __cpp_lib_ranges_cache_latest != 202411L
+#      error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -385,6 +463,10 @@
 #  endif
 #  if __cpp_lib_ranges_repeat != 202207L
 #    error "__cpp_lib_ranges_repeat should have the value 202207L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_reserve_hint
+#    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -440,6 +522,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_view_interface
+#      error "__cpp_lib_hardened_view_interface should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_view_interface != 202506L
+#      error "__cpp_lib_hardened_view_interface should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_view_interface
+#      error "__cpp_lib_hardened_view_interface should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_ranges
 #    error "__cpp_lib_ranges should be defined in c++26"
 #  endif
@@ -460,6 +555,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_as_input != 202502L
+#      error "__cpp_lib_ranges_as_input should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should be defined in c++26"
 #  endif
@@ -472,6 +580,19 @@
 #  endif
 #  if __cpp_lib_ranges_cache_latest != 202411L
 #    error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_cache_latest != 202411L
+#      error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -530,6 +651,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_reserve_hint
+#      error "__cpp_lib_ranges_reserve_hint should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_reserve_hint != 202502L
+#      error "__cpp_lib_ranges_reserve_hint should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_reserve_hint
+#      error "__cpp_lib_ranges_reserve_hint should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_slide
 #      error "__cpp_lib_ranges_slide should be defined in c++26"
 #    endif
@@ -582,6 +716,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_view_interface
+#      error "__cpp_lib_hardened_view_interface should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_view_interface != 202506L
+#      error "__cpp_lib_hardened_view_interface should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_view_interface
+#      error "__cpp_lib_hardened_view_interface should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_ranges
 #    error "__cpp_lib_ranges should be defined in c++29"
 #  endif
@@ -602,6 +749,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_as_input != 202502L
+#      error "__cpp_lib_ranges_as_input should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_as_input
+#      error "__cpp_lib_ranges_as_input should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should be defined in c++29"
 #  endif
@@ -614,6 +774,19 @@
 #  endif
 #  if __cpp_lib_ranges_cache_latest != 202411L
 #    error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_cache_latest != 202411L
+#      error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cache_latest
+#      error "__cpp_lib_ranges_cache_latest should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -669,6 +842,19 @@
 #  endif
 #  if __cpp_lib_ranges_repeat != 202207L
 #    error "__cpp_lib_ranges_repeat should have the value 202207L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_reserve_hint
+#      error "__cpp_lib_ranges_reserve_hint should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_reserve_hint != 202502L
+#      error "__cpp_lib_ranges_reserve_hint should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_reserve_hint
+#      error "__cpp_lib_ranges_reserve_hint should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

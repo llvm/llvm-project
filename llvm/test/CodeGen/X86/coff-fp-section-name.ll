@@ -32,11 +32,11 @@ entry:
   store fp128 0xL10000000000000003F66244CE242C556, ptr %g, align 16
   store float 0x3E212E0BE0000000, ptr %h, align 4
   store float 8.000000e+00, ptr %i, align 4
-  store float 0x7FF8000000000000, ptr %j, align 4
+  store float +qnan, ptr %j, align 4
   store float +inf, ptr %k, align 4
   store double 1.000000e+00, ptr %l, align 8
   store double 8.000000e+00, ptr %m, align 8
-  store double 0x7FF8000000000000, ptr %n, align 8
+  store double +qnan, ptr %n, align 8
   store double +inf, ptr %o, align 8
 
   ret i32 0
