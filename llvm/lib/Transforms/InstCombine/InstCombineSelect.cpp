@@ -3914,14 +3914,11 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
         impliesPoisonOrCond(FalseVal, B, /*Expected=*/false, SQ)) {
       // (A || B) || C --> A || (B | C)
       // CondVal is select A, true, B, so its weights describe A.
-      Instruction *MDFrom = nullptr;
-      if (!ProfcheckDisableMetadataFixes &&
-          cast<Instruction>(CondVal)->getMetadata(LLVMContext::MD_prof))
-        MDFrom = cast<Instruction>(CondVal);
-      Value *LOr =
-          Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal), "", MDFrom);
-      if (!ProfcheckDisableMetadataFixes && !MDFrom)
-        if (auto *I = dyn_cast<Instruction>(LOr))
+      Value *LOr = Builder.CreateLogicalOr(
+          A, Builder.CreateOr(B, FalseVal), "",
+          ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(CondVal));
+      if (auto *I = dyn_cast<Instruction>(LOr))
+        if (!I->getMetadata(LLVMContext::MD_prof))
           setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
       return replaceInstUsesWith(SI, LOr);
     }
@@ -3966,14 +3963,11 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
         impliesPoisonOrCond(TrueVal, B, /*Expected=*/true, SQ)) {
       // (A && B) && C --> A && (B & C)
       // CondVal is select A, B, false, so its weights describe A.
-      Instruction *MDFrom = nullptr;
-      if (!ProfcheckDisableMetadataFixes &&
-          cast<Instruction>(CondVal)->getMetadata(LLVMContext::MD_prof))
-        MDFrom = cast<Instruction>(CondVal);
-      Value *LAnd = Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal),
-                                             "", MDFrom);
-      if (!ProfcheckDisableMetadataFixes && !MDFrom)
-        if (auto *I = dyn_cast<Instruction>(LAnd))
+      Value *LAnd = Builder.CreateLogicalAnd(
+          A, Builder.CreateAnd(B, TrueVal), "",
+          ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(CondVal));
+      if (auto *I = dyn_cast<Instruction>(LAnd))
+        if (!I->getMetadata(LLVMContext::MD_prof))
           setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
       return replaceInstUsesWith(SI, LAnd);
     }
