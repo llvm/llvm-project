@@ -35124,7 +35124,7 @@ private:
     // All parts may be reduced in the tree already, leaving no vector value
     // to reduce.
     if (VecRes)
-      CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
+      CreateSingleOp(VecRes, /*Scale=*/1, VecResSignedness,
                      /*ReducedInTree=*/false, VecResNegated);
 
     return {ReducedSubTree, ResNegated};
