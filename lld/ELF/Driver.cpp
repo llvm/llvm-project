@@ -41,6 +41,7 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
@@ -3372,9 +3373,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
-  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/false);
-  });
+  {
+    llvm::TimeTraceScope timeScope("Initialize sections");
+    parallelForFineGrained(ctx.objectFiles.size(), [&](size_t i) {
+      initSectionsAndLocalSyms(ctx.objectFiles[i], /*ignoreComdats=*/false);
+    });
+  }
   parallelForEach(ctx.objectFiles, postParseObjectFile);
   parallelForEach(ctx.bitcodeFiles,
                   [](BitcodeFile *file) { file->postParse(); });
