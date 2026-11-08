@@ -804,6 +804,25 @@ func.func @vector_reduction_scalar(%arg0: memref<1024xf16>, %arg1: memref<16xf16
 }
 
 // -----
+// The scalar result of a reduction keeps the layout its reduction requires
+// even when it is the accumulator of another reduction, which demands the same
+// layout of it.
+gpu.module @test {
+// CHECK-LABEL: func.func @chained_scalar_multi_reductions(
+// CHECK: %[[R0:.*]] = vector.multi_reduction <add>, %{{.*}}, %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>} [0, 1] : vector<1x16xf32> to f32
+// CHECK: %[[R1:.*]] = vector.multi_reduction <add>, %{{.*}}, %[[R0]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>} [0, 1] : vector<1x16xf32> to f32
+// CHECK: memref.store %[[R1]]
+func.func @chained_scalar_multi_reductions(%arg0: vector<1x16xf32>, %arg1: vector<1x16xf32>, %arg2: memref<4xf32>) {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0.000000e+00 : f32
+    %0 = vector.multi_reduction <add>, %arg0, %cst [0, 1] : vector<1x16xf32> to f32
+    %1 = vector.multi_reduction <add>, %arg1, %0 [0, 1] : vector<1x16xf32> to f32
+    memref.store %1, %arg2[%c0] : memref<4xf32>
+    return
+  }
+}
+
+// -----
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size_1x1x4(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [4], lane_data = [1]>} dense<true> : vector<4xi1>

@@ -1279,10 +1279,8 @@ void LayoutPropagation::walkRegionBackward(Region &region) {
 }
 
 void LayoutPropagation::visitRegularOp(Operation *op) {
-  SmallVector<xegpu::DistributeLayoutAttr> consumerLayouts =
-      llvm::map_to_vector(op->getResults(),
-                          [&](Value result) { return getLayout(result); });
-  SmallVector<xegpu::DistributeLayoutAttr> resultLayouts(consumerLayouts);
+  SmallVector<xegpu::DistributeLayoutAttr> resultLayouts = llvm::map_to_vector(
+      op->getResults(), [&](Value result) { return getLayout(result); });
   SmallVector<xegpu::DistributeLayoutAttr> operandLayouts(op->getNumOperands());
   visitOperation(op, operandLayouts, resultLayouts);
 
@@ -1295,18 +1293,20 @@ void LayoutPropagation::visitRegularOp(Operation *op) {
   // A result takes its consumers' layout unless the transfer function replaced
   // it with the layout the op itself requires (e.g. a reduction's slice
   // layout). Vector results are recorded, and so is the scalar result of a
-  // reduction, whose layout only the transfer function provides:
+  // reduction, whose layout its transfer function sets (a consumer may demand
+  // the same one, as the accumulator of another reduction):
   // ResolveLayoutConflicts derives the reduction's operand layout from it and
   // anchors the scalar with a convert_layout.
   if (isa<xegpu::AnchorLayoutInterface>(op))
     return;
-  for (auto [result, consumerLayout, layout] :
-       llvm::zip_equal(op->getResults(), consumerLayouts, resultLayouts)) {
+  for (auto [result, layout] :
+       llvm::zip_equal(op->getResults(), resultLayouts)) {
     if (!layout)
       continue;
     if (isa<xegpu::TensorDescType>(result.getType()))
       setTensorDescLayout(result, layout);
-    else if (isa<VectorType>(result.getType()) || layout != consumerLayout)
+    else if (isa<VectorType>(result.getType()) ||
+             isa<vector::MultiDimReductionOp, vector::ReductionOp>(op))
       xegpu::setTemporaryLayout(result, layout);
   }
 }
