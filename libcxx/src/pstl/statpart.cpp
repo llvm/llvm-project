@@ -30,7 +30,7 @@ void __apply(size_t chunk_count, void* context, void (*func)(void* context, size
 #elif _LIBCPP_HAS_THREADS
   // Otherwise, if threading is enabled on the platform, use the task scheduler built on top of std::thread.
   static constinit std::once_flag once;
-  static constinit std::__no_destroy<Sched> sched{std::__uninitialized_tag{}};
+  static constinit std::__no_destroy<Scheduler> sched{std::__uninitialized_tag{}};
   std::call_once(once, []() { sched.__emplace(); });
   sched.__get().apply(chunk_count, context, func);
 #else

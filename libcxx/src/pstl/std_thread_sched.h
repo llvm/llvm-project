@@ -139,10 +139,10 @@ struct QueueID {
   std::atomic_size_t aquire_count = 0;
 };
 
-// Sched is the scheduler that manages the worker threads and the queues.
-class Sched {
+// Scheduler manages the worker threads and the queues.
+class Scheduler {
 public:
-  Sched();
+  Scheduler();
   void apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept;
 
 private:
@@ -181,7 +181,7 @@ inline void process_request(Task* task) noexcept {
   task->requests.count_down();
 }
 
-inline Sched::Sched() {
+inline Scheduler::Scheduler() {
   size_t cpu_threads = std::thread::hardware_concurrency();
   if (cpu_threads == 0)
     cpu_threads = 1; // safe fallback
@@ -196,14 +196,14 @@ inline Sched::Sched() {
   m_workers       = std::make_unique<std::thread[]>(m_workers_count);
 
   for (size_t i = 0; i < m_workers_count; ++i) {
-    std::thread worker(&Sched::worker_thread, this, i);
+    std::thread worker(&Scheduler::worker_thread, this, i);
     m_queue_ids[i].id.store(worker.get_id());
     m_queue_ids[i].aquire_count.store(1);
     m_workers[i] = std::move(worker);
   }
 }
 
-inline void Sched::worker_thread(size_t worker_index) noexcept {
+inline void Scheduler::worker_thread(size_t worker_index) noexcept {
   while (true) {
     std::atomic_unsigned_lock_free::value_type epoch = m_epoch.load(); // Load the epoch before looking for work
     Task* task                                       = nullptr;
@@ -225,7 +225,7 @@ inline void Sched::worker_thread(size_t worker_index) noexcept {
   }
 }
 
-inline TaskQueue* Sched::acquire_queue(std::thread::id thread_id) {
+inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) {
   for (size_t i = 0; i < m_queues_count; ++i) {
     std::thread::id id = m_queue_ids[i].id.load();
     if (id == thread_id) {
@@ -250,7 +250,7 @@ inline TaskQueue* Sched::acquire_queue(std::thread::id thread_id) {
   return nullptr;
 }
 
-inline void Sched::release_queue(TaskQueue* queue) {
+inline void Scheduler::release_queue(TaskQueue* queue) {
   size_t idx    = static_cast<size_t>(queue - m_queues.get());
   bool is_guest = idx >= m_workers_count;
   if (is_guest) {
@@ -263,7 +263,7 @@ inline void Sched::release_queue(TaskQueue* queue) {
 // The entrypoint to parallel execution.
 // Apply the function to the range of iterations in parallel using worker threads.
 // The caller thread also participates in processing the workload.
-inline void Sched::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept {
+inline void Scheduler::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept {
   if (iterations < 2 || m_workers_count == 0) {
     // No worker threads available or not enough iteration requested, fallback to serial execution
     apply_serial(iterations, ctxt, func);
