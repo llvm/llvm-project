@@ -16,7 +16,6 @@
 #  include <algorithm>
 #  include <atomic>
 #  include <bit>
-#  include <latch>
 #  include <memory>
 #  include <new>
 #  include <thread>
@@ -30,16 +29,19 @@ namespace __pstl::__statpart {
 static_assert(std::atomic_size_t::is_always_lock_free);
 static_assert(std::atomic<std::thread::id>::is_always_lock_free);
 
-// Task represent the user request to apply a function to a range of iterations.
+using ctx_t  = void*;
+using func_t = void (*)(void*, std::size_t);
+
+// Task represents the user request to apply a function to a range of iterations.
 // It is stored in the stack memory of the caller thread.
 // Multiple threads can participate in working on the same task by picking up the next iteration index and applying the
 // function to it.
 struct Task {
-  void* ctxt;                       // The context pointer to be passed to the function.
-  void (*func)(void*, std::size_t); // The function to be applied to each iteration.
-  std::size_t iterations;           // The total number of iterations to be processed.
-  std::atomic_size_t index;         // The next index of the iteration to be processed.
-  std::latch requests;              // Latch used to synchronize the caller with the worker threads.
+  const ctx_t ctx;              // The context pointer to be passed to the function.
+  const func_t func;            // The function to be applied to each iteration.
+  const std::size_t iterations; // The total number of iterations to be processed.
+  std::atomic_size_t index;     // The next index of the iteration to be processed.
+  std::atomic_size_t requests;  // The remaining number of requests to participate in working on this task.
 };
 
 // Implementation of "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev, but with a fixed-size buffer.
@@ -119,12 +121,12 @@ private:
   static std::ptrdiff_t distance(std::size_t a, std::size_t b) noexcept { return static_cast<std::ptrdiff_t>(a - b); }
 
   Task* get(std::size_t index) const noexcept {
-    // Chase-Lev is inherently racy with regards to the elements of the array, wrap access with atomic_ref to quiet TSAN
+    // Chase-Lev is inherently racy regarding the elements in the array, wrap access with atomic_ref to remove the UB
     return std::atomic_ref<Task*>(elements[index & mask]).load(std::memory_order_relaxed);
   }
 
   void put(std::size_t index, Task* task) noexcept {
-    // Chase-Lev is inherently racy with regards to the elements of the array, wrap access with atomic_ref to quiet TSAN
+    // Chase-Lev is inherently racy regarding the elements in the array, wrap access with atomic_ref to remove the UB
     std::atomic_ref<Task*>(elements[index & mask]).store(task, std::memory_order_relaxed);
   }
 
@@ -169,7 +171,7 @@ private:
   TaskQueue* acquire_queue(std::thread::id thread_id);
   void release_queue(TaskQueue* queue);
   void worker_thread(size_t worker_num) noexcept;
-  bool is_parallelism_enabled() const noexcept;
+  bool is_parallelism_disabled() const noexcept;
 
   // The actual number of running worker threads.
   // This number may be lower than the desired thread pool size, in case of a thread startup failure.
@@ -202,18 +204,19 @@ inline void apply_serial(std::size_t iterations, void* ctxt, void (*func)(void*,
 }
 
 // Participate in working on the task by picking up the next iteration index and applying the function to it.
-// When all iterations are processed, the latch is counted down to signal completion.
+// When all iterations are processed, the atomic counter is decremented to signal completion.
 inline void process_request(Task* task) noexcept {
-  size_t const iterations                = task->iterations;
-  void* const ctxt                       = task->ctxt;
-  void (*const func)(void*, std::size_t) = task->func;
+  const size_t iterations = task->iterations;
+  const ctx_t ctx         = task->ctx;
+  const func_t func       = task->func;
 
   size_t index;
   while ((index = task->index.fetch_add(1, std::memory_order_relaxed)) < iterations) {
-    func(ctxt, index);
+    func(ctx, index);
   }
 
-  task->requests.count_down();
+  // Signal that this request to participate in the task is finished.
+  task->requests.fetch_sub(1, std::memory_order_release);
 }
 
 inline Scheduler::Scheduler() noexcept {
@@ -334,15 +337,15 @@ inline void Scheduler::release_queue(TaskQueue* queue) {
   }
 }
 
-inline bool Scheduler::is_parallelism_enabled() const noexcept { return m_workers_count != 0; }
+inline bool Scheduler::is_parallelism_disabled() const noexcept { return m_workers_count == 0; }
 
 // The entrypoint to parallel execution.
 // Apply the function to the range of iterations in parallel using worker threads.
 // The caller thread also participates in processing the workload.
-inline void Scheduler::apply(std::size_t iterations, void* ctxt, void (*func)(void*, std::size_t)) noexcept {
-  if (iterations < 2 || !is_parallelism_enabled()) {
+inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(void*, std::size_t)) noexcept {
+  if (iterations < 2 || is_parallelism_disabled()) {
     // No worker threads available or not enough iteration requested, fallback to serial execution
-    apply_serial(iterations, ctxt, func);
+    apply_serial(iterations, ctx, func);
     return;
   }
 
@@ -354,7 +357,7 @@ inline void Scheduler::apply(std::size_t iterations, void* ctxt, void (*func)(vo
   TaskQueue* queue = acquire_queue(thread_id);
   if (queue == nullptr) {
     // If we cannot acquire a queue, fallback to serial execution.
-    apply_serial(iterations, ctxt, func);
+    apply_serial(iterations, ctx, func);
     return;
   }
 
@@ -363,11 +366,11 @@ inline void Scheduler::apply(std::size_t iterations, void* ctxt, void (*func)(vo
 
   // Create a task that will be published in the queue and then stolen by the workers.
   Task root_task{
-      .ctxt       = ctxt,                             //
-      .func       = func,                             //
-      .iterations = iterations,                       //
-      .index      = 0,                                //
-      .requests{static_cast<ptrdiff_t>(num_requests)} //
+      .ctx        = ctx,         //
+      .func       = func,        //
+      .iterations = iterations,  //
+      .index      = 0,           //
+      .requests   = num_requests //
   };
 
   // Push all but one request to the queue, and process the last one directly in this thread.
@@ -390,10 +393,8 @@ inline void Scheduler::apply(std::size_t iterations, void* ctxt, void (*func)(vo
     --num_requests;
   }
 
-  // Once the original task is completed, wait for all other requests to be completed by the workers.
-  // While waiting, the caller thread can also participate in processing other requests from the queue or steal from
-  // other queues.
-  while (!root_task.requests.try_wait()) {
+  // Loop and help out until all requests to participate in root_root are processed.
+  while (root_task.requests.load(std::memory_order_acquire) != 0) {
     Task* task = nullptr;
 
     // Try to pop from own queue
@@ -414,9 +415,6 @@ inline void Scheduler::apply(std::size_t iterations, void* ctxt, void (*func)(vo
       std::this_thread::yield();
     }
   }
-
-  // Synchronize with the workers to ensure nobody holds a reference to the task.
-  root_task.requests.wait();
 
   // Release the queue for this thread.
   release_queue(queue);
