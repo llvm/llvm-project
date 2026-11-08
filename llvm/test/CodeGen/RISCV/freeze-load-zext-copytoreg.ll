@@ -19,19 +19,19 @@ define i32 @freeze_i8_load_multi_bb(ptr %p, i64 %len) {
 ; CHECK-NEXT:  # %bb.3: # %for.body.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    mv a6, a5
-; CHECK-NEXT:    add a7, a0, a5
-; CHECK-NEXT:    addi a5, a5, 1
+; CHECK-NEXT:    add a5, a0, a5
+; CHECK-NEXT:    lbu a7, 0(a5)
+; CHECK-NEXT:    addi a5, a6, 1
 ; CHECK-NEXT:  .LBB0_4: # %for.body
 ; CHECK-NEXT:    # Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lbu t0, 0(a7)
-; CHECK-NEXT:    bltu t0, a2, .LBB0_1
+; CHECK-NEXT:    bltu a7, a2, .LBB0_1
 ; CHECK-NEXT:  # %bb.5: # %switch.test
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=2
-; CHECK-NEXT:    beq t0, a3, .LBB0_1
+; CHECK-NEXT:    beq a7, a3, .LBB0_1
 ; CHECK-NEXT:  # %bb.6: # %switch.test
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=2
-; CHECK-NEXT:    beq t0, a4, .LBB0_1
+; CHECK-NEXT:    beq a7, a4, .LBB0_1
 ; CHECK-NEXT:  # %bb.7: # %for.inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=2
 ; CHECK-NEXT:    bne a5, a1, .LBB0_4

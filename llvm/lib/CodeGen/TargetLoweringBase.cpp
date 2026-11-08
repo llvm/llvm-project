@@ -952,7 +952,9 @@ void TargetLoweringBase::initActions() {
                        Expand);
 
     // Only some target support these vector operations. Default them to Expand.
-    setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
+    setOperationAction(
+        {ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH, ISD::VECTOR_SHUFFLE_VAR}, VT,
+        Expand);
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                        Expand);
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Expand);
@@ -1055,19 +1057,6 @@ EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
   assert(ShiftVT.getSizeInBits() >= Log2_32_Ceil(LHSTy.getSizeInBits()) &&
          "ShiftVT is still too small!");
   return ShiftVT;
-}
-
-bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
-  assert(isTypeLegal(VT));
-  switch (Op) {
-  default:
-    return false;
-  case ISD::SDIV:
-  case ISD::UDIV:
-  case ISD::SREM:
-  case ISD::UREM:
-    return true;
-  }
 }
 
 bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,
