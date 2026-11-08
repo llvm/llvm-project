@@ -361,6 +361,12 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FP_TO_FP16,        MVT::f32,   Expand);
   setOperationAction(ISD::FP16_TO_FP,        MVT::f64,   Expand);
   setOperationAction(ISD::FP_TO_FP16,        MVT::f64,   Expand);
+  // The constrained f16 conversions default to Legal. Use libcalls for them,
+  // extending to f64 through f32.
+  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, LibCall);
+  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, LibCall);
+  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, LibCall);
 
   setOperationAction(ISD::EH_RETURN, MVT::Other, Custom);
 
