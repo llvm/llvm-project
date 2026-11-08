@@ -681,8 +681,8 @@ private:
   };
 
   struct GEPAccessDenseMapInfo {
-    static unsigned getHashValue(const Value *Ptr);
-    static bool isEqual(const Value *LHS, const Value *RHS);
+    LLVM_ABI static unsigned getHashValue(const Value *Ptr);
+    LLVM_ABI static bool isEqual(const Value *LHS, const Value *RHS);
   };
 
   /// Maps a pointer to its maximum fixed access size and safe alignment.
