@@ -627,8 +627,8 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   return Op0Ty;
 }
 
-Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
-                                           ArrayRef<VPValue *> Operands) {
+Type *llvm::computeScalarTypeForInstruction(const Instruction *I,
+                                            ArrayRef<VPValue *> Operands) {
   unsigned Opcode = I->getOpcode();
   if (Instruction::isCast(Opcode) ||
       is_contained(ArrayRef<unsigned>({Instruction::Load, Instruction::Alloca}),
