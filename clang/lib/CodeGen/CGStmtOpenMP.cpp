@@ -2202,6 +2202,9 @@ Address CodeGenFunction::OMPBuilderCBHelpers::getAddressOfLocalVariable(
   const VarDecl *CVD = VD->getCanonicalDecl();
   if (!isAllocatableDecl(CVD))
     return Address::invalid();
+  // Unreachable declaration: nothing can run the allocation.
+  if (!CGF.HaveInsertPoint())
+    return Address::invalid();
   llvm::Value *Size;
   CharUnits Align = CGM.getContext().getDeclAlign(CVD);
   if (CVD->getType()->isVariablyModifiedType()) {

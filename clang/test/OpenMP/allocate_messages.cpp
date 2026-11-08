@@ -149,3 +149,26 @@ label:
 #pragma omp parallel allocate(d) // expected-error {{the referenced item is not found in any private clause on the same directive}}
   ;
 }
+
+void gh140336(int i) {
+  switch (i) {
+    int j; // expected-note {{jump bypasses allocation of variable with '#pragma omp allocate'}}
+#pragma omp allocate(j)
+  case 1: // expected-error {{cannot jump from switch statement to this case label}}
+    j = 3;
+    break;
+  }
+  goto label2; // expected-error {{cannot jump from this goto statement to its label}}
+  int k; // expected-note {{jump bypasses allocation of variable with '#pragma omp allocate'}}
+#pragma omp allocate(k)
+label2:
+  k = 4;
+  void *p = &&label3;
+  {
+    int l; // expected-note {{jump exits scope of variable with '#pragma omp allocate'}}
+#pragma omp allocate(l)
+    goto *p; // expected-error {{cannot jump from this indirect goto statement to one of its possible targets}}
+  }
+label3: // expected-note {{possible target of indirect goto statement}}
+  ;
+}
