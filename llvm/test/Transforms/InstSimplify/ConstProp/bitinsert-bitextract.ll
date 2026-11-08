@@ -523,8 +523,7 @@ define <vscale x 2 x ptr> @neg_bitextract_scalable_vec_ptr() {
 
 define i8 @bitextract_vec_bitcast_src() {
 ; CHECK-LABEL: define i8 @bitextract_vec_bitcast_src() {
-; CHECK-NEXT:    [[R:%.*]] = bitextract i8, b64 bitcast (<2 x i32> <i32 1, i32 2> to b64), i32 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 2
 ;
   %b = bitcast <2 x i32> <i32 1, i32 2> to b64
   %r = bitextract i8, b64 %b, i32 32
@@ -533,8 +532,7 @@ define i8 @bitextract_vec_bitcast_src() {
 
 define b64 @bitinsert_vec_bitcast_base() {
 ; CHECK-LABEL: define b64 @bitinsert_vec_bitcast_base() {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b64 bitcast (<2 x i32> <i32 1, i32 2> to b64), i8 7, i32 0
-; CHECK-NEXT:    ret b64 [[R]]
+; CHECK-NEXT:    ret b64 8589934599
 ;
   %b = bitcast <2 x i32> <i32 1, i32 2> to b64
   %r = bitinsert b64 %b, i8 7, i32 0
