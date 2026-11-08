@@ -19,7 +19,6 @@
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -44,9 +43,12 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
       std::max(1u, (WorkGroupSize + WaveSize - 1) / WaveSize);
 
   const unsigned WorkGroupsPerCU =
-      std::max(1u, (NWaves * getEUsPerCU()) / WavesPerWorkgroup);
+      std::max(1u, (NWaves * getNumWorkGroupSIMDs()) / WavesPerWorkgroup);
 
-  return getLocalMemorySize() / WorkGroupsPerCU;
+  const unsigned Granularity = std::max(LDSAllocationGranularity, 1u);
+  return alignDown(std::min(getLocalMemorySize() / WorkGroupsPerCU,
+                            getAddressableLocalMemorySize()),
+                   Granularity);
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
@@ -88,7 +90,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
   if (MinWavesPerCU >= MaxWavesPerCU) {
     std::swap(MinWavesPerCU, MaxWavesPerCU);
   } else {
-    const unsigned WaveSlotsPerCU = WavesPerEU * getEUsPerCU();
+    const unsigned WaveSlotsPerCU = WavesPerEU * getNumWorkGroupSIMDs();
 
     // Look for a potential smaller group size than the maximum which decreases
     // the concurrent number of waves on the CU for the same number of
@@ -128,8 +130,9 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
 
   // Return the minimum/maximum number of waves on any EU, assuming that all
   // wavefronts are spread across all EUs as evenly as possible.
-  return {std::clamp(MinWavesPerCU / getEUsPerCU(), 1U, WavesPerEU),
-          std::clamp(divideCeil(MaxWavesPerCU, getEUsPerCU()), 1U, WavesPerEU)};
+  return {std::clamp(MinWavesPerCU / getNumWorkGroupSIMDs(), 1U, WavesPerEU),
+          std::clamp(divideCeil(MaxWavesPerCU, getNumWorkGroupSIMDs()), 1U,
+                     WavesPerEU)};
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
@@ -174,6 +177,10 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
     return Default;
 
   return Requested;
+}
+
+bool AMDGPUSubtarget::isSingleWavefrontWorkgroup(const Function &F) const {
+  return getFlatWorkGroupSizes(F).second <= getWavefrontSize();
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
@@ -231,7 +238,8 @@ AMDGPUSubtarget::getReqdWorkGroupSize(const Function &Kernel,
                                       unsigned Dim) const {
   auto *Node = Kernel.getMetadata("reqd_work_group_size");
   if (Node && Node->getNumOperands() == 3)
-    return mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue();
+    return static_cast<unsigned>(
+        mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue());
   return std::nullopt;
 }
 
@@ -240,16 +248,16 @@ bool AMDGPUSubtarget::hasWavefrontsEvenlySplittingXDim(
   auto *Node = F.getMetadata("reqd_work_group_size");
   if (!Node || Node->getNumOperands() != 3)
     return false;
-  unsigned XLen =
+  uint64_t XLen =
       mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
-  unsigned YLen =
+  uint64_t YLen =
       mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue();
-  unsigned ZLen =
+  uint64_t ZLen =
       mdconst::extract<ConstantInt>(Node->getOperand(2))->getZExtValue();
 
   bool Is1D = YLen <= 1 && ZLen <= 1;
   bool IsXLargeEnough =
-      isPowerOf2_32(XLen) && (!RequiresUniformYZ || XLen >= getWavefrontSize());
+      isPowerOf2_64(XLen) && (!RequiresUniformYZ || XLen >= getWavefrontSize());
   return Is1D || IsXLargeEnough;
 }
 
@@ -361,8 +369,8 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
   const Module *M = F.getParent();
   unsigned NBytes =
       AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
-  return F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes",
-                                         NBytes);
+  return static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes", NBytes));
 }
 
 uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
@@ -409,7 +417,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
   }
 
   // Being able to dereference past the end is useful for emitting scalar loads.
-  return alignTo(TotalSize, 4);
+  return static_cast<unsigned>(alignTo(TotalSize, 4));
 }
 
 AMDGPUDwarfFlavour AMDGPUSubtarget::getAMDGPUDwarfFlavour() const {

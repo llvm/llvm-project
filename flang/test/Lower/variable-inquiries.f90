@@ -13,7 +13,7 @@ subroutine use_associated_descriptor_inquiry()
   ! symbol).
 
   ! CHECK: %[[a:.*]] = fir.address_of(@_QMinquiredEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
-  ! CHECK: %[[adecl:.*]]:2 = hlfir.declare %[[a]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMinquiredEa"}
+  ! CHECK: %[[adecl:.*]]:2 = hlfir.declare %[[a]] uniq_name("_QMinquiredEa") fortran_attrs<allocatable>
   ! CHECK: %[[box_load:.*]] = fir.load %[[adecl]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   ! CHECK: %[[dim:.*]]:3 = fir.box_dims %[[box_load]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> (index, index, index)
   ! CHECK: %[[cast:.*]] = fir.convert %[[dim]]#1 : (index) -> i64

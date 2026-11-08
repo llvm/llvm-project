@@ -757,7 +757,7 @@ class TestCase(TestBase):
         self.assertIn("dwoErrorCount", debug_stats["modules"][0])
         self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 1)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_dsym_binary_has_symfile_in_stats(self):
         """
@@ -801,7 +801,7 @@ class TestCase(TestBase):
         # statistics.
         self.assertNotIn("symbolFileModuleIdentifiers", exe_stats)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_no_dsym_binary_has_symfile_identifiers_in_stats(self):
         """
@@ -860,7 +860,7 @@ class TestCase(TestBase):
             # Make sure each .o file has some debug info bytes.
             self.assertGreater(o_module["debugInfoByteSize"], 0)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_had_frame_variable_errors(self):
         """
@@ -1271,7 +1271,6 @@ class TestCase(TestBase):
                 f"The order of options '{options[0]}' and '{options[1]}' should not matter",
             )
 
-    @skipIfWindows
     def test_summary_statistics_providers(self):
         """
         Test summary timing statistics is included in statistics dump when
@@ -1311,7 +1310,6 @@ class TestCase(TestBase):
         self.assertIn("'totalTime':", summary_provider_str)
         self.assertIn("'type': 'python'", summary_provider_str)
 
-    @skipIfWindows
     def test_summary_statistics_providers_vec(self):
         """
         Test summary timing statistics is included in statistics dump when
@@ -1337,7 +1335,6 @@ class TestCase(TestBase):
         if "c++" in summary_provider_str:
             self.assertIn("std::vector", summary_provider_str)
 
-    @skipIfWindows
     def test_multiple_targets(self):
         """
         Test statistics dump only reports the stats from current target and

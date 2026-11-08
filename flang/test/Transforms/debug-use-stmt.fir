@@ -25,13 +25,13 @@ module {
     fir.use_stmt "testmod2" renames[[#fir.use_rename<"var_z", @_QMtestmod2Evar_y>]]
 
     %0 = fir.address_of(@_QMtestmodEvar_b) : !fir.ref<i32>
-    %1 = fircg.ext_declare %0 {uniq_name = "_QMtestmodEvar_b"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc_b)
+    %1 = fircg.ext_declare %0 uniq_name("_QMtestmodEvar_b") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc_b)
 
     %2 = fir.address_of(@_QMtestmodEvar_c) : !fir.ref<i32>
-    %3 = fircg.ext_declare %2 {uniq_name = "_QMtestmodEvar_c"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc_c)
+    %3 = fircg.ext_declare %2 uniq_name("_QMtestmodEvar_c") : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc_c)
 
     %4 = fir.address_of(@_QMtestmod2Evar_y) : !fir.ref<f32>
-    %5 = fircg.ext_declare %4 {uniq_name = "_QMtestmod2Evar_y"} : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc_y)
+    %5 = fircg.ext_declare %4 uniq_name("_QMtestmod2Evar_y") : (!fir.ref<f32>) -> !fir.ref<f32> loc(#loc_y)
 
     return
   } loc(#loc_main)
@@ -50,7 +50,7 @@ module {
 // CHECK-DAG: #[[GVAR_Y:.+]] = #llvm.di_global_variable<scope = #[[MOD_TESTMOD2]], name = "var_y", linkageName = "_QMtestmod2Evar_y"
 
 // DISubprogram placeholder (for recursive reference)
-// CHECK-DAG: #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct[[[RECID:[0-9]+]]]<>, isRecSelf = true{{.*}}name = "TEST_USE"
+// CHECK-DAG: #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct[[[RECID:[0-9]+]]]<>, isRecSelf = true{{.*}}name = "test_use"
 
 // 1. Imported declaration without rename (var_b) - has entity but NO name attribute
 // CHECK-DAG: #llvm.di_imported_entity<tag = DW_TAG_imported_declaration, scope = #[[SP_REC]], entity = #[[GVAR_B]],{{.*}}>
@@ -66,4 +66,4 @@ module {
 
 // Verify final DISubprogram has retainedNodes (non-empty)
 // We don't check the exact order since retainedNodes comes from an unordered collection
-// CHECK-DAG: #llvm.di_subprogram<recId = distinct[[[RECID]]]<>{{.*}}name = "TEST_USE"{{.*}}retainedNodes = {{.+}}>
+// CHECK-DAG: #llvm.di_subprogram<recId = distinct[[[RECID]]]<>{{.*}}name = "test_use"{{.*}}retainedNodes = {{.+}}>

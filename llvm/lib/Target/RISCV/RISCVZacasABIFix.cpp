@@ -72,6 +72,9 @@ bool RISCVZacasABIFixImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
 }
 
 bool RISCVZacasABIFixImpl::run(Function &F) {
+  if (!ST->hasStdExtZacas())
+    return false;
+
   bool MadeChange = false;
   for (auto &BB : F)
     for (Instruction &I : llvm::make_early_inc_range(BB))
@@ -85,7 +88,7 @@ bool RISCVZacasABIFixLegacy::runOnFunction(Function &F) {
   auto &TM = TPC.getTM<RISCVTargetMachine>();
   auto *ST = &TM.getSubtarget<RISCVSubtarget>(F);
 
-  if (skipFunction(F) || !ST->hasStdExtZacas())
+  if (skipFunction(F))
     return false;
 
   return RISCVZacasABIFixImpl(ST).run(F);
@@ -98,15 +101,13 @@ INITIALIZE_PASS_END(RISCVZacasABIFixLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 char RISCVZacasABIFixLegacy::ID = 0;
 
-FunctionPass *llvm::createRISCVZacasABIFixPass() {
+FunctionPass *llvm::createRISCVZacasABIFixLegacyPass() {
   return new RISCVZacasABIFixLegacy();
 }
 
 PreservedAnalyses RISCVZacasABIFixPass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
   auto *ST = &TM->getSubtarget<RISCVSubtarget>(F);
-  if (!ST->hasStdExtZacas())
-    return PreservedAnalyses::all();
 
   bool Changed = RISCVZacasABIFixImpl(ST).run(F);
   if (!Changed)

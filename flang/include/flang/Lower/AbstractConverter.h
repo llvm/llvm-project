@@ -209,16 +209,19 @@ public:
   /// expression value. The clean-up for this temporary is added to \p context.
   virtual fir::ExtendedValue genExprAddr(const SomeExpr &expr,
                                          StatementContext &context,
-                                         mlir::Location *locPtr = nullptr) = 0;
+                                         mlir::Location *locPtr = nullptr,
+                                         bool allowCoarray = false) = 0;
 
   /// Generate the address of the location holding the expression, \p expr.
   fir::ExtendedValue genExprAddr(mlir::Location loc, const SomeExpr *expr,
-                                 StatementContext &stmtCtx) {
-    return genExprAddr(*expr, stmtCtx, &loc);
+                                 StatementContext &stmtCtx,
+                                 bool allowCoarray = false) {
+    return genExprAddr(*expr, stmtCtx, &loc, allowCoarray);
   }
   fir::ExtendedValue genExprAddr(mlir::Location loc, const SomeExpr &expr,
-                                 StatementContext &stmtCtx) {
-    return genExprAddr(expr, stmtCtx, &loc);
+                                 StatementContext &stmtCtx,
+                                 bool allowCoarray = false) {
+    return genExprAddr(expr, stmtCtx, &loc, allowCoarray);
   }
 
   /// Generate the computations of the expression to produce a value.
@@ -241,7 +244,8 @@ public:
   /// storage without making a temporary.
   virtual fir::ExtendedValue genExprBox(mlir::Location loc,
                                         const SomeExpr &expr,
-                                        StatementContext &stmtCtx) = 0;
+                                        StatementContext &stmtCtx,
+                                        bool allowCoarray = false) = 0;
 
   /// Generate the address of the box describing the variable designated
   /// by the expression. The expression must be an allocatable or pointer
@@ -282,6 +286,13 @@ public:
   /// Returns the FunctionLikeUnit being lowered, if any.
   virtual const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const = 0;
+
+  /// Returns true if \p sym is the target of a Cray pointer association that
+  /// is visible in the procedure being lowered. Such symbols are given the
+  /// TARGET attribute in FIR so that the aliasing between the Cray pointee and
+  /// the target is visible to all FIR passes.
+  virtual bool
+  isVisibleCrayPointerTarget(const Fortran::semantics::Symbol &sym) const = 0;
 
   /// Check support of Multi-image features if -fcoarray is provided
   virtual void checkCoarrayEnabled() = 0;
@@ -376,6 +387,14 @@ public:
   /// Generate IR for Evaluation \p eval.
   virtual void genEval(pft::Evaluation &eval,
                        bool unstructuredContext = true) = 0;
+
+  /// Emit \p loopEval's evaluations, folding the body into an
+  /// scf.execute_region when the loop's branching is confined to that body.
+  /// The loop control statements are emitted outside any wrap, exactly as they
+  /// are for a structured loop. Used by directive lowering, which consumes the
+  /// DO itself and so never reaches genFIR(DoConstruct), where a plain loop's
+  /// body is wrapped.
+  virtual void genLoopBodyEvaluations(pft::Evaluation &loopEval) = 0;
 
   /// Return options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {

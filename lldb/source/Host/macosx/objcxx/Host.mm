@@ -1324,7 +1324,6 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
         cpu_type != 0 && cpu_type != static_cast<cpu_type_t>(UINT32_MAX) &&
         cpu_type != static_cast<cpu_type_t>(LLDB_INVALID_CPUTYPE);
     const bool set_cpu_subtype =
-        cpu_subtype != 0 &&
         cpu_subtype != static_cast<cpu_subtype_t>(UINT32_MAX) &&
         cpu_subtype != CPU_SUBTYPE_X86_64_H;
     if (set_cpu_type) {
@@ -1538,7 +1537,8 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec;
@@ -1594,9 +1594,8 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     bool run_in_shell = true;
     std::string error_output; // Pass stderr string arg so it is not mixed with
                               // stdout.
-    Status e =
-        RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                        &error_output, std::chrono::seconds(10), run_in_shell);
+    Status e = RunShellCommand(expand_command, cwd, &status, nullptr, &output,
+                               &error_output, timeout, run_in_shell);
 
     if (e.Fail())
       return e;

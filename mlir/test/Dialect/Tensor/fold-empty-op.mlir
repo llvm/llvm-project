@@ -89,7 +89,7 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.tensor.fold_tensor_empty
-          {fold_single_use_only = true}
+          fold_single_use_only = true
     } : !transform.op<"func.func">
     transform.yield
   }

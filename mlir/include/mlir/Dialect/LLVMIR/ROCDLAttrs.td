@@ -34,7 +34,6 @@ def ROCDL_BufferOOBModeAttr :
     Specifies the AMDGPU buffer out-of-bounds mode encoded in
     `amdgpu.buffer.oob.mode` or `amdgpu.tbuffer.oob.mode` LLVM module flags.
   }];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 class ROCDL_BufferOOBModeModuleFlagAttrBase<string attrName, string mnemonic>
@@ -85,6 +84,9 @@ def ROCDL_WMMACModifierAttr
 def ROCDL_SchedGroupMaskAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_SchedGroupMask,
                                      "sched_group_mask">;
+
+def ROCDL_AsyncStagesAttr
+    : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_AsyncStages, "async_stages">;
 
 def ROCDL_PreGfx12CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_PreGfx12CachePolicy,

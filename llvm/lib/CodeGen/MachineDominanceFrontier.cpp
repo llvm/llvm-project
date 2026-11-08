@@ -11,7 +11,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 
 using namespace llvm;
 
@@ -46,19 +45,27 @@ bool MachineDominanceFrontier::invalidate(
 bool MachineDominanceFrontierWrapperPass::runOnMachineFunction(
     MachineFunction &) {
   MDF.releaseMemory();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MDF.analyze(MDT);
+  PendingMDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   return false;
+}
+
+MachineDominanceFrontier &MachineDominanceFrontierWrapperPass::getMDF() {
+  if (PendingMDT) {
+    MDF.analyze(*PendingMDT);
+    PendingMDT = nullptr;
+  }
+  return MDF;
 }
 
 void MachineDominanceFrontierWrapperPass::releaseMemory() {
   MDF.releaseMemory();
+  PendingMDT = nullptr;
 }
 
 void MachineDominanceFrontierWrapperPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

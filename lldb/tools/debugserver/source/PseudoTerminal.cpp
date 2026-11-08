@@ -107,7 +107,7 @@ PseudoTerminal::Status PseudoTerminal::OpenSecondary(int oflag) {
 //
 // RETURNS:
 //  NULL if no valid primary pseudo terminal or if ptsname() fails.
-//  The name of the secondary pseudo terminal as a NULL terminated C string
+//  The name of the secondary pseudo terminal as a null-terminated C string
 //  that comes from static memory, so a copy of the string should be
 //  made as subsequent calls can change this value.
 const char *PseudoTerminal::SecondaryName() const {

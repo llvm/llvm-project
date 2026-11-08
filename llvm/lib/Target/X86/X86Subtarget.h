@@ -22,7 +22,12 @@
 #include "llvm/TargetParser/Triple.h"
 #include <bitset>
 #include <climits>
+#include <cstdint>
 #include <memory>
+#include <optional>
+
+#define OPTIONS_STRUCT_DECL
+#include "X86Options.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "X86GenSubtargetInfo.inc"
@@ -51,6 +56,8 @@ enum class Style {
 } // end namespace PICStyles
 
 class X86Subtarget final : public X86GenSubtargetInfo {
+  const X86Options &CLOpts;
+
   enum X86SSEEnum {
     NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512
   };
@@ -120,6 +127,8 @@ public:
                unsigned PreferVectorWidthOverride,
                unsigned RequiredVectorWidth);
   ~X86Subtarget() override;
+
+  const X86Options &getCLOpts() const { return CLOpts; }
 
   const X86TargetLowering *getTargetLowering() const override {
     return &TLInfo;

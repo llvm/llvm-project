@@ -58,7 +58,7 @@ two_floats test_aggregate_record(two_ints& ti) {
 //  CIR-NEXT:   %[[#SRC_VOID_PTR:]] = cir.cast bitcast %[[#SRC_PTR]] : !cir.ptr<!rec_two_ints> -> !cir.ptr<!void>
 //  CIR-NEXT:   %[[#DST_VOID_PTR:]] = cir.cast bitcast %{{.+}} : !cir.ptr<!rec_two_floats> -> !cir.ptr<!void>
 //  CIR-NEXT:   %[[#SIZE:]] = cir.const #cir.int<8> : !u64i
-//  CIR-NEXT:   cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] to %[[#DST_VOID_PTR]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+//  CIR-NEXT:   cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] align(4) to %[[#DST_VOID_PTR]] align(4) : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
 
 // LLVM-LABEL: define dso_local{{.*}} %struct.two_floats @_Z21test_aggregate_recordR8two_ints
 //       LLVM:   %[[DST_SLOT:.*]] = alloca %struct.two_floats{{.*}}, align 4
@@ -75,7 +75,7 @@ two_floats test_aggregate_array(int (&ary)[2]) {
 //  CIR-NEXT:   %[[#SRC_VOID_PTR:]] = cir.cast bitcast %[[#SRC_PTR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!void>
 //  CIR-NEXT:   %[[#DST_VOID_PTR:]] = cir.cast bitcast %{{.+}} : !cir.ptr<!rec_two_floats> -> !cir.ptr<!void>
 //  CIR-NEXT:   %[[#SIZE:]] = cir.const #cir.int<8> : !u64i
-//  CIR-NEXT:   cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] to %[[#DST_VOID_PTR]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+//  CIR-NEXT:   cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] align(4) to %[[#DST_VOID_PTR]] align(4) : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
 
 // LLVM-LABEL: define dso_local{{.*}} %struct.two_floats @_Z20test_aggregate_arrayRA2_i
 //       LLVM:   %[[DST_SLOT:.*]] = alloca %struct.two_floats{{.*}}, align 4
@@ -91,7 +91,7 @@ two_ints test_scalar_to_aggregate(unsigned long ul) {
 //       CIR:   %[[#SRC_VOID_PTR:]] = cir.cast bitcast %{{.+}} : !cir.ptr<!u64i> -> !cir.ptr<!void>
 //  CIR-NEXT:   %[[#DST_VOID_PTR:]] = cir.cast bitcast %{{.+}} : !cir.ptr<!rec_two_ints> -> !cir.ptr<!void>
 //  CIR-NEXT:   %[[#SIZE:]] = cir.const #cir.int<8> : !u64i
-//  CIR-NEXT:   cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] to %[[#DST_VOID_PTR]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+//  CIR-NEXT:   cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] align(8) to %[[#DST_VOID_PTR]] align(4) : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
 
 // LLVM-DIRECT-LABEL: define dso_local i64 @_Z24test_scalar_to_aggregatem
 // LLVM-VIA-CIR-LABEL: define dso_local %struct.two_ints @_Z24test_scalar_to_aggregatem
@@ -124,7 +124,7 @@ two_ints test_rvalue_aggregate() {
 //  CIR-NEXT:   %[[#SRC_VOID_PTR:]] = cir.cast bitcast %[[#TMP_SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!void>
 //  CIR-NEXT:   %[[#DST_VOID_PTR:]] = cir.cast bitcast %0 : !cir.ptr<!rec_two_ints> -> !cir.ptr<!void>
 //  CIR-NEXT:   %[[#SIZE:]] = cir.const #cir.int<8> : !u64i
-//  CIR-NEXT:   cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] to %[[#DST_VOID_PTR]] : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
+//  CIR-NEXT:   cir.libc.memcpy %[[#SIZE]] bytes from %[[#SRC_VOID_PTR]] align(8) to %[[#DST_VOID_PTR]] align(4) : !u64i, !cir.ptr<!void> -> !cir.ptr<!void>
 
 /// FIXME: The function signature below should be identical for both lowering
 /// paths, but CIR is still missing calling convention lowering. Update this

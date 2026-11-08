@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 
+from typing import Tuple
 from xml.sax.saxutils import quoteattr as quo
 
 import lit.Test
@@ -338,7 +339,7 @@ class WttReport(Report):
             base_dt.microsecond // 1000
         )
 
-        def times(test) -> tuple[int, int]:
+        def times(test) -> Tuple[int, int]:
             elapsed_time = test.result.elapsed or 0.0
             start_time = test.result.start - base if test.result.start else 0.0
             return int(start_time), int(start_time + elapsed_time)

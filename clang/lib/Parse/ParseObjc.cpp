@@ -2035,7 +2035,6 @@ Parser::ObjCImplParsingDataRAII::~ObjCImplParsingDataRAII() {
           << SemaObjC::OCK_Implementation;
     }
   }
-  P.CurParsedObjCImpl = nullptr;
   assert(LateParsedObjCMethods.empty());
 }
 
@@ -2061,6 +2060,10 @@ void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
     delete *I;
   LateParsedObjCMethods.clear();
 
+  // Parsing may go on in the enclosing frame before this object is destroyed
+  // (e.g. a nested @interface ended the @implementation early), so stop being
+  // the current @implementation now rather than in the destructor.
+  P.CurParsedObjCImpl = PrevParsedObjCImpl;
   Finished = true;
 }
 
@@ -2881,7 +2884,7 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
 
       ExprResult Expr;
       if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-        Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+        Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
         Expr = ParseBraceInitializer();
       } else
         Expr = ParseAssignmentExpression();
@@ -3278,11 +3281,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   assert(!LM.Toks.empty() && "ParseLexedObjCMethodDef - Empty body!");
   // Store an artificial EOF token to ensure that we don't run off the end of
   // the method's body when we come to parse it.
-  Token Eof;
-  Eof.startToken();
-  Eof.setKind(tok::eof);
-  Eof.setEofData(MCDecl);
-  Eof.setLocation(OrigLoc);
+  Token Eof = Token::createEof(OrigLoc, MCDecl);
   LM.Toks.push_back(Eof);
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
@@ -3306,15 +3305,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
     Actions.ObjC().ActOnStartOfObjCMethodDef(getCurScope(), MCDecl);
   else
     Actions.ActOnStartOfFunctionDef(getCurScope(), MCDecl);
-  if (Tok.is(tok::kw_try))
-    ParseFunctionTryBlock(MCDecl, BodyScope);
-  else {
-    if (Tok.is(tok::colon))
-      ParseConstructorInitializer(MCDecl);
-    else
-      Actions.ActOnDefaultCtorInitializers(MCDecl);
-    ParseFunctionStatementBody(MCDecl, BodyScope);
-  }
+  ParseFunctionBody(MCDecl, BodyScope);
 
   if (Tok.getLocation() != OrigLoc) {
     // Due to parsing error, we either went over the cached tokens or

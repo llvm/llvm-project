@@ -5,13 +5,9 @@ add_entrypoint_object(
   HDRS
     ../wait.h
   DEPENDS
-    libc.hdr.signal_macros
-    libc.hdr.sys_wait_macros
     libc.hdr.types.pid_t
-    libc.hdr.types.siginfo_t
     libc.hdr.types.struct_rusage
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
     libc.src.errno.errno
 )
 
@@ -22,13 +18,25 @@ add_entrypoint_object(
   HDRS
     ../wait4.h
   DEPENDS
-    libc.hdr.signal_macros
-    libc.hdr.sys_wait_macros
     libc.hdr.types.pid_t
-    libc.hdr.types.siginfo_t
     libc.hdr.types.struct_rusage
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  waitid
+  SRCS
+    waitid.cpp
+  HDRS
+    ../waitid.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.hdr.types.idtype_t
+    libc.hdr.types.siginfo_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.waitid
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -39,12 +47,8 @@ add_entrypoint_object(
   HDRS
     ../waitpid.h
   DEPENDS
-    libc.hdr.signal_macros
-    libc.hdr.sys_wait_macros
     libc.hdr.types.pid_t
-    libc.hdr.types.siginfo_t
     libc.hdr.types.struct_rusage
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
     libc.src.errno.errno
 )

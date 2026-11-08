@@ -63,9 +63,9 @@ func.func @test_2d_shape_sink() {
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %c32 = arith.constant 32 : index
-  %0 = cuf.alloc !fir.array<3x32xf32> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.array<3x32xf32>>
+  %0 = cuf.alloc !fir.array<3x32xf32> uniq_name("_QFEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.array<3x32xf32>>
   %shape = fir.shape %c3, %c32 : (index, index) -> !fir.shape<2>
-  %decl = fir.declare %0(%shape) {data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} : (!fir.ref<!fir.array<3x32xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<3x32xf32>>
+  %decl = fir.declare %0(%shape) uniq_name("_QFEa") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<3x32xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<3x32xf32>>
   %c1_i32 = arith.constant 1 : i32
   cuf.kernel<<<*, *>>> (%arg0 : index) = (%c1 : index) to (%c32 : index) step (%c1 : index) {
     %coor = fir.array_coor %decl(%shape) %c1, %arg0 : (!fir.ref<!fir.array<3x32xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
@@ -77,3 +77,44 @@ func.func @test_2d_shape_sink() {
 // CHECK-LABEL: @test_2d_shape_sink
 // CHECK: cuf.kernel
 // CHECK:   fir.shape
+
+// -----
+
+// Test fir.absent rematerialization.
+func.func @test_absent_sink_1() {
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  %0 = fir.absent !fir.boxchar<1>
+  cuf.kernel<<<*, *>>> (%arg0 : index) = (%c1 : index) to (%c32 : index) step (%c1 : index) {
+    fir.call @func_with_optional_boxchar_(%0) : (!fir.boxchar<1>) -> none
+    "fir.end"() : () -> ()
+  }
+  return
+}
+
+// CHECK-LABEL: @test_absent_sink_1
+// CHECK: cuf.kernel
+// CHECK: %[[BOX:.*]] = fir.absent !fir.boxchar<1>
+// CHECK: fir.call @func_with_optional_boxchar_(%[[BOX]]) : (!fir.boxchar<1>) -> none
+
+// -----
+
+// Test fir.absent rematerialization (used both inside and outside region).
+func.func @test_absent_sink_2() {
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  %0 = fir.absent !fir.boxchar<1>
+  fir.call @func_with_optional_boxchar_(%0) : (!fir.boxchar<1>) -> none
+  cuf.kernel<<<*, *>>> (%arg0 : index) = (%c1 : index) to (%c32 : index) step (%c1 : index) {
+    fir.call @func_with_optional_boxchar_(%0) : (!fir.boxchar<1>) -> none
+    "fir.end"() : () -> ()
+  }
+  return
+}
+
+// CHECK-LABEL: @test_absent_sink_2
+// CHECK: %[[BOX1:.*]] = fir.absent !fir.boxchar<1>
+// CHECK: fir.call @func_with_optional_boxchar_(%[[BOX1]]) : (!fir.boxchar<1>) -> none
+// CHECK: cuf.kernel
+// CHECK: %[[BOX2:.*]] = fir.absent !fir.boxchar<1>
+// CHECK: fir.call @func_with_optional_boxchar_(%[[BOX2]]) : (!fir.boxchar<1>) -> none

@@ -170,6 +170,8 @@ COMMON_FLAG(
 COMMON_FLAG(const char *, coverage_dir, ".",
             "Target directory for coverage dumps. Defaults to the current "
             "directory.")
+COMMON_FLAG(bool, print_coverage_summary, true,
+            "Print the SanitizerCoverage dump summary.")
 COMMON_FLAG(const char *, cov_8bit_counters_out, "",
     "If non-empty, write 8bit counters to this file. ")
 COMMON_FLAG(const char *, cov_pcs_out, "",

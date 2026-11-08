@@ -644,6 +644,9 @@ public:
 
   static bool Check(PyObject *py_obj);
 
+  static int TranslateFdToPython(int our_fd);
+  static int TranslateFdFromPython(int their_fd);
+
   static llvm::Expected<PythonFile> FromFile(File &file,
                                              const char *mode = nullptr);
 

@@ -1159,7 +1159,7 @@ ExprResult CheckGangDimExpr(SemaOpenACC &S, Expr *E) {
 
   if (!ICE || *ICE <= 0 || ICE > 3) {
     S.Diag(Res.get()->getBeginLoc(), diag::err_acc_gang_dim_value)
-        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        << ICE.has_value() << ICE.value_or(llvm::APSInt{});
     return ExprError();
   }
 
@@ -1937,10 +1937,14 @@ bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
     CurType = AT->getElementType();
   }
 
+  // Pointers of any kind (C/C++ pointers, ObjC object pointers, and block
+  // pointers) and fixed-point types are not valid reduction types: we cannot
+  // generate an initializer or combiner for them.
   auto IsValidMemberOfComposite = [](QualType Ty) {
     return !Ty->isAnyComplexType() &&
            (Ty->isDependentType() ||
-            (Ty->isScalarType() && !Ty->isPointerType()));
+            (Ty->isScalarType() && !Ty->isAnyPointerType() &&
+             !Ty->isBlockPointerType() && !Ty->isFixedPointType()));
   };
 
   // If the type is already scalar, or is dependent, just give up.
@@ -2045,7 +2049,7 @@ ExprResult SemaOpenACC::CheckTileSizeExpr(Expr *SizeExpr) {
   // where each tile size is a constant positive integer expression or asterisk.
   if (!ICE || *ICE <= 0) {
     Diag(SizeExpr->getBeginLoc(), diag::err_acc_size_expr_value)
-        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        << ICE.has_value() << ICE.value_or(llvm::APSInt{});
     return ExprError();
   }
 
@@ -2073,7 +2077,7 @@ ExprResult SemaOpenACC::CheckCollapseLoopCount(Expr *LoopCount) {
   // expression.
   if (!ICE || *ICE <= 0) {
     Diag(LoopCount->getBeginLoc(), diag::err_acc_collapse_loop_count)
-        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        << ICE.has_value() << ICE.value_or(llvm::APSInt{});
     return ExprError();
   }
 

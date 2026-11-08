@@ -1158,7 +1158,7 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
   //   name lookup. Instead, any conversion function templates visible in the
   //   context of the use are considered. [...]
   const CXXRecordDecl *Record = cast<CXXRecordDecl>(DC);
-  if (!Record->isCompleteDefinition())
+  if (!Record->isCompleteDefinition() && !R.isForRedeclaration())
     return Found;
 
   // For conversion operators, 'operator auto' should only match
@@ -1907,6 +1907,10 @@ bool LookupResult::isAcceptableSlow(Sema &SemaRef, NamedDecl *D,
         }
         DC = DC->getLexicalParent();
       } while (!IsEffectivelyFileContext(DC));
+    } else if (auto *FD = dyn_cast<FunctionDecl>(DC);
+               FD && !FD->getDefinition()) {
+      // This is possible as the definition are removed in reduced BMI.
+      AcceptableWithinParent = isAcceptable(SemaRef, FD, Kind);
     } else {
       AcceptableWithinParent =
           SemaRef.hasAcceptableDefinition(cast<NamedDecl>(DC), Kind);
@@ -2445,18 +2449,20 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     llvm_unreachable("Declaration context must already be complete!");
 #endif
 
+  // Inform the external source that we're looking for a qualified name.
   struct QualifiedLookupInScope {
-    bool oldVal;
-    DeclContext *Context;
-    // Set flag in DeclContext informing debugger that we're looking for qualified name
-    QualifiedLookupInScope(DeclContext *ctx)
-        : oldVal(ctx->shouldUseQualifiedLookup()), Context(ctx) {
-      ctx->setUseQualifiedLookup();
+    ExternalSemaSource *Source;
+    const DeclContext *Context;
+    QualifiedLookupInScope(ExternalSemaSource *Source, const DeclContext *Ctx)
+        : Source(Source), Context(Ctx) {
+      if (Source)
+        Source->StartedQualifiedLookup(Context);
     }
     ~QualifiedLookupInScope() {
-      Context->setUseQualifiedLookup(oldVal);
+      if (Source)
+        Source->FinishedQualifiedLookup(Context);
     }
-  } QL(LookupCtx);
+  } QL(ExternalSource.get(), LookupCtx);
 
   CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   // FIXME: Per [temp.dep.general]p2, an unqualified name is also dependent
@@ -2904,6 +2910,18 @@ namespace {
       return ClassesTransitive.insert(RD);
     }
 
+    // Record that 'RD' is being processed, so we don't re-visit this multiple.
+    // Return false if we've already seen this.
+    bool addClassVisited(CXXRecordDecl *RD) {
+      return ClassesVisited.insert(RD).second;
+    }
+
+    // Record that 'FnType' is being processed, so we don't re-visit this
+    // multiple. Return false if we've already seen this.
+    bool addFunctionTypeVisited(const Type *FnType) {
+      return FunctionTypesVisited.insert(FnType).second;
+    }
+
     Sema &S;
     Sema::AssociatedNamespaceSet &Namespaces;
     Sema::AssociatedClassSet &Classes;
@@ -2911,6 +2929,8 @@ namespace {
 
   private:
     Sema::AssociatedClassSet ClassesTransitive;
+    llvm::SmallPtrSet<CXXRecordDecl *, 16> ClassesVisited;
+    llvm::SmallPtrSet<const Type *, 16> FunctionTypesVisited;
   };
 } // end anonymous namespace
 
@@ -3052,6 +3072,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
 
   // Just silently ignore anything whose name is __va_list_tag.
   if (Class->getDeclName() == Result.S.VAListTagName)
+    return;
+
+  // Don't revisit a type if we've already seen it.
+  if (!Result.addClassVisited(Class))
     return;
 
   // C++ [basic.lookup.argdep]p2:
@@ -3220,6 +3244,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        classes are those associated with the function parameter
     //        types and those associated with the return type.
     case Type::FunctionProto: {
+      // Don't revisit a type if we've already seen it.
+      if (!Result.addFunctionTypeVisited(T))
+        break;
       const FunctionProtoType *Proto = cast<FunctionProtoType>(T);
       for (const auto &Arg : Proto->param_types())
         Queue.push_back(Arg.getTypePtr());
@@ -3383,6 +3410,19 @@ void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
   Functions.append(Operators.begin(), Operators.end());
 }
 
+static Sema::SpecialMemberCacheKey
+makeSpecialMemberCacheKey(const CXXRecordDecl *RD, CXXSpecialMemberKind SM,
+                          bool ConstArg, bool VolatileArg, bool RValueThis,
+                          bool ConstThis, bool VolatileThis) {
+  unsigned Flags = llvm::to_underlying(SM) << 5;
+  Flags |= ConstArg << 4;
+  Flags |= VolatileArg << 3;
+  Flags |= RValueThis << 2;
+  Flags |= ConstThis << 1;
+  Flags |= VolatileThis;
+  return {RD, Flags};
+}
+
 Sema::SpecialMemberOverloadResult
 Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
                           bool ConstArg, bool VolatileArg, bool RValueThis,
@@ -3402,27 +3442,14 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
   // FIXME: Get the caller to pass in a location for the lookup.
   SourceLocation LookupLoc = RD->getLocation();
 
-  llvm::FoldingSetNodeID ID;
-  ID.AddPointer(RD);
-  ID.AddInteger(llvm::to_underlying(SM));
-  ID.AddInteger(ConstArg);
-  ID.AddInteger(VolatileArg);
-  ID.AddInteger(RValueThis);
-  ID.AddInteger(ConstThis);
-  ID.AddInteger(VolatileThis);
+  SpecialMemberCacheKey Key = makeSpecialMemberCacheKey(
+      RD, SM, ConstArg, VolatileArg, RValueThis, ConstThis, VolatileThis);
 
-  void *InsertPoint;
-  SpecialMemberOverloadResultEntry *Result =
-    SpecialMemberCache.FindNodeOrInsertPos(ID, InsertPoint);
+  auto [It, Inserted] = SpecialMemberCache.try_emplace(Key);
+  if (!Inserted)
+    return It->second;
 
-  // This was already cached
-  if (Result)
-    return *Result;
-
-  Result = BumpAlloc.Allocate<SpecialMemberOverloadResultEntry>();
-  Result = new (Result) SpecialMemberOverloadResultEntry(ID);
-  SpecialMemberCache.InsertNode(Result, InsertPoint);
-
+  SpecialMemberOverloadResult Result;
   if (SM == CXXSpecialMemberKind::Destructor) {
     if (RD->needsImplicitDestructor()) {
       runWithSufficientStackSpace(RD->getLocation(), [&] {
@@ -3430,11 +3457,11 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
       });
     }
     CXXDestructorDecl *DD = RD->getDestructor();
-    Result->setMethod(DD);
-    Result->setKind(DD && !DD->isDeleted()
-                        ? SpecialMemberOverloadResult::Success
-                        : SpecialMemberOverloadResult::NoMemberOrDeleted);
-    return *Result;
+    Result.setMethod(DD);
+    Result.setKind(DD && !DD->isDeleted()
+                       ? SpecialMemberOverloadResult::Success
+                       : SpecialMemberOverloadResult::NoMemberOrDeleted);
+    return SpecialMemberCache[Key] = Result;
   }
 
   // Prepare for overload resolution. Here we construct a synthetic argument
@@ -3532,9 +3559,9 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
     // destructor.
     assert(SM == CXXSpecialMemberKind::DefaultConstructor &&
            "lookup for a constructor or assignment operator was empty");
-    Result->setMethod(nullptr);
-    Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
-    return *Result;
+    Result.setMethod(nullptr);
+    Result.setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
+    return SpecialMemberCache[Key] = Result;
   }
 
   // Copy the candidates as our processing of them may load new declarations
@@ -3582,27 +3609,27 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
   OverloadCandidateSet::iterator Best;
   switch (OCS.BestViableFunction(*this, LookupLoc, Best)) {
     case OR_Success:
-      Result->setMethod(cast<CXXMethodDecl>(Best->Function));
-      Result->setKind(SpecialMemberOverloadResult::Success);
+      Result.setMethod(cast<CXXMethodDecl>(Best->Function));
+      Result.setKind(SpecialMemberOverloadResult::Success);
       break;
 
     case OR_Deleted:
-      Result->setMethod(cast<CXXMethodDecl>(Best->Function));
-      Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
+      Result.setMethod(cast<CXXMethodDecl>(Best->Function));
+      Result.setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
       break;
 
     case OR_Ambiguous:
-      Result->setMethod(nullptr);
-      Result->setKind(SpecialMemberOverloadResult::Ambiguous);
+      Result.setMethod(nullptr);
+      Result.setKind(SpecialMemberOverloadResult::Ambiguous);
       break;
 
     case OR_No_Viable_Function:
-      Result->setMethod(nullptr);
-      Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
+      Result.setMethod(nullptr);
+      Result.setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
       break;
   }
 
-  return *Result;
+  return SpecialMemberCache[Key] = Result;
 }
 
 CXXConstructorDecl *Sema::LookupDefaultConstructor(CXXRecordDecl *Class) {
@@ -3880,6 +3907,17 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
   FindAssociatedClassesAndNamespaces(Loc, Args,
                                      AssociatedNamespaces,
                                      AssociatedClasses);
+
+  // Load the friend classes in case there are unloaded decls.
+  //
+  // FIXME: Currently this is inefficient if there are a lot of friends
+  // in the classes. We just expect the number of friends are limited
+  // in real world. In case we meet the case that the loading friends
+  // became a threshold, we can change the structure of friends from
+  // a list to a name lookup table.
+  for (CXXRecordDecl *Class : AssociatedClasses)
+    if (Class->hasDefinition() && Class->hasLazyFriends())
+      Class->loadLazyFriends();
 
   // C++ [basic.lookup.argdep]p3:
   //   Let X be the lookup set produced by unqualified lookup (3.4.1)
@@ -4251,7 +4289,10 @@ private:
             // there anyway.
             continue;
           }
-          const auto *TST = BaseType->getAs<TemplateSpecializationType>();
+          // Look through an alias template, whose TemplateName is a
+          // TypeAliasTemplateDecl rather than the ClassTemplateDecl we are
+          // after; otherwise the base is skipped entirely.
+          const auto *TST = BaseType->getAsNonAliasTemplateSpecializationType();
           if (!TST)
             continue;
           TemplateName TN = TST->getTemplateName();

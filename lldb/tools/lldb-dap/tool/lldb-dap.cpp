@@ -110,24 +110,11 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr llvm::opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Options.inc"
-#undef OPTION
-};
-class LLDBDAPOptTable : public llvm::opt::GenericOptTable {
+class LLDBDAPOptTable : public llvm::opt::OptTable {
 public:
-  LLDBDAPOptTable()
-      : llvm::opt::GenericOptTable(OptionStrTable, OptionPrefixesTable,
-                                   InfoTable, true) {}
+  LLDBDAPOptTable() : llvm::opt::OptTable(optionTables(), true) {}
 };
 } // anonymous namespace
 
@@ -567,34 +554,55 @@ static int DuplicateFileDescriptor(int fd) {
 #endif
 }
 
-static void
-ResetConnectionTimeout(std::mutex &connection_timeout_mutex,
-                       MainLoopBase::TimePoint &conncetion_timeout_time_point) {
-  std::scoped_lock<std::mutex> lock(connection_timeout_mutex);
-  conncetion_timeout_time_point = MainLoopBase::TimePoint();
-}
-
-static void
-TrackConnectionTimeout(MainLoop &loop, std::mutex &connection_timeout_mutex,
-                       MainLoopBase::TimePoint &conncetion_timeout_time_point,
-                       std::chrono::seconds ttl_seconds) {
-  MainLoopBase::TimePoint next_checkpoint =
-      std::chrono::steady_clock::now() + std::chrono::seconds(ttl_seconds);
-  {
-    std::scoped_lock<std::mutex> lock(connection_timeout_mutex);
-    // We don't need to take the max of `ttl_time_point` and `next_checkpoint`,
-    // because `next_checkpoint` must be the latest.
-    conncetion_timeout_time_point = next_checkpoint;
+namespace {
+/// Shutdown the `loop` when there is no connected client and
+/// the timeout has passed. It runs forever if the timeout is zero.
+class IdleShutdownTimer {
+public:
+  IdleShutdownTimer(MainLoop &loop, std::chrono::seconds timeout)
+      : m_loop(loop), m_timeout(timeout) {
+    ScheduleShutdown();
   }
-  loop.AddCallback(
-      [&connection_timeout_mutex, &conncetion_timeout_time_point,
-       next_checkpoint](MainLoopBase &loop) {
-        std::scoped_lock<std::mutex> lock(connection_timeout_mutex);
-        if (conncetion_timeout_time_point == next_checkpoint)
-          loop.RequestTermination();
-      },
-      next_checkpoint);
-}
+
+  void OnClientConnected() {
+    std::scoped_lock<std::mutex> lock(m_mutex);
+    ++m_clients;
+  }
+
+  void OnClientDisconnected() {
+    std::scoped_lock<std::mutex> lock(m_mutex);
+    m_clients--;
+    if (m_clients == 0)
+      ScheduleShutdown();
+  }
+
+private:
+  void ScheduleShutdown() {
+    if (m_timeout.count() == 0)
+      return;
+
+    m_latest_callback_id++;
+    const uint32_t callback_id = m_latest_callback_id;
+
+    m_loop.AddCallback(
+        [this, callback_id](MainLoopBase &loop) {
+          std::scoped_lock<std::mutex> lock(m_mutex);
+
+          // A client may have connected, or a disconnected client added
+          // a callback.
+          if (m_clients == 0 && m_latest_callback_id == callback_id)
+            loop.RequestTermination();
+        },
+        std::chrono::steady_clock::now() + m_timeout);
+  }
+
+  MainLoop &m_loop;
+  std::mutex m_mutex;
+  const std::chrono::seconds m_timeout;
+  uint32_t m_latest_callback_id = 0;
+  uint32_t m_clients = 0;
+};
+} // namespace
 
 static llvm::Expected<std::pair<Socket::SocketProtocol, std::string>>
 validateConnection(llvm::StringRef conn) {
@@ -628,11 +636,11 @@ validateConnection(llvm::StringRef conn) {
   return make_error();
 }
 
-static llvm::Error serveConnection(
-    const Socket::SocketProtocol &protocol, llvm::StringRef name, Log &log,
-    const ReplMode default_repl_mode,
-    const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
-    std::optional<std::chrono::seconds> connection_timeout_seconds) {
+static llvm::Error
+serveConnection(const Socket::SocketProtocol &protocol, llvm::StringRef name,
+                Log &log, const ReplMode default_repl_mode,
+                const std::vector<protocol::String> &pre_init_commands,
+                bool no_lldbinit, std::chrono::seconds connection_timeout) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
   if (status.Fail()) {
@@ -657,26 +665,21 @@ static llvm::Error serveConnection(
     g_loop.AddPendingCallback(
         [](MainLoopBase &loop) { loop.RequestTermination(); });
   });
-  static MainLoopBase::TimePoint g_connection_timeout_time_point;
-  static std::mutex g_connection_timeout_mutex;
-  if (connection_timeout_seconds)
-    TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
-                           g_connection_timeout_time_point,
-                           connection_timeout_seconds.value());
+  auto idle_timer =
+      std::make_shared<IdleShutdownTimer>(g_loop, connection_timeout);
   unsigned int clientCount = 0;
   auto handle = listener->Accept(g_loop, [=, &log, &clientCount](
                                              std::unique_ptr<Socket> sock) {
-    // Reset the keep alive timer, because we won't be killing the server
-    // while this connection is being served.
-    if (connection_timeout_seconds)
-      ResetConnectionTimeout(g_connection_timeout_mutex,
-                             g_connection_timeout_time_point);
+    // Keep the server alive while this connection is being served.
+    idle_timer->OnClientConnected();
     const std::string client_name = llvm::formatv("conn{0}", clientCount++);
     lldb::IOObjectSP io(std::move(sock));
 
     // Move the client into a background thread to unblock accepting the next
     // client.
     std::thread client([=, &log]() {
+      auto notify_disconnected =
+          llvm::scope_exit([&] { idle_timer->OnClientDisconnected(); });
       llvm::set_thread_name(client_name + ".runloop");
 
       Log client_log = log.WithPrefix("(" + client_name + ")");
@@ -708,11 +711,6 @@ static llvm::Error serveConnection(
       DAP_LOG(client_log, "client disconnected");
       // Unregister the DAP session from the global manager.
       DAPSessionManager::GetInstance().UnregisterSession(&loop);
-      // Start the countdown to kill the server at the end of each connection.
-      if (connection_timeout_seconds)
-        TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
-                               g_connection_timeout_time_point,
-                               connection_timeout_seconds.value());
     });
     client.detach();
   });
@@ -894,7 +892,7 @@ int main(int argc, char *argv[]) {
     connection.assign(path);
   }
 
-  std::optional<std::chrono::seconds> connection_timeout_seconds;
+  auto connection_timeout = std::chrono::seconds(0);
   if (llvm::opt::Arg *connection_timeout_arg =
           input_args.getLastArg(OPT_connection_timeout)) {
     if (!connection.empty()) {
@@ -909,8 +907,7 @@ int main(int argc, char *argv[]) {
       }
       // Ignore non-positive values.
       if (connection_timeout_int_value > 0)
-        connection_timeout_seconds =
-            std::chrono::seconds(connection_timeout_int_value);
+        connection_timeout = std::chrono::seconds(connection_timeout_int_value);
     } else {
       llvm::errs()
           << "\"--connection-timeout\" requires \"--connection\" to be "
@@ -990,7 +987,7 @@ int main(int argc, char *argv[]) {
     std::tie(protocol, name) = *maybeProtoclAndName;
     if (auto Err = serveConnection(protocol, name, log, default_repl_mode,
                                    pre_init_commands, no_lldbinit,
-                                   connection_timeout_seconds)) {
+                                   connection_timeout)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Connection failed: ");
       return EXIT_FAILURE;

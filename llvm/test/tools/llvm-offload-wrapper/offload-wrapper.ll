@@ -11,7 +11,7 @@
 ; OMP-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries", align 8
 ; OMP-NEXT: @llvm.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
 ; OMP-NEXT: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading", align 8
-; OMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr @.omp_offloading.device_image, ptr getelementptr ([[[SIZE]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 [[SIZE]]), ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }]
+; OMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr @.omp_offloading.device_image, ptr getelementptr (i8, ptr @.omp_offloading.device_image, i64 [[SIZE]]), ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }]
 ; OMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }
 ; OMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.omp_offloading.descriptor_reg, ptr null }]
 
@@ -55,6 +55,14 @@
 ; HIP-NEXT:   call void @__hipUnregisterFatBinary(ptr %0)
 ; HIP-NEXT:   ret void
 ; HIP-NEXT: }
+
+; RUN: llvm-offload-wrapper --triple=x86_64-pc-windows-msvc -kind=hip %s -o %t.coff.bc
+; RUN: llvm-dis %t.coff.bc -o - | FileCheck %s --check-prefix=HIP-COFF
+
+; HIP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+; HIP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
+; HIP-COFF: icmp ne ptr getelementptr inbounds ([1 x %struct.__tgt_offload_entry], ptr @__start_llvm_offload_entries, i32 0, i32 1), @__stop_llvm_offload_entries
+; HIP-COFF: phi ptr [ getelementptr inbounds ([1 x %struct.__tgt_offload_entry], ptr @__start_llvm_offload_entries, i32 0, i32 1), %entry ]
 
 ; RUN: llvm-offload-wrapper --triple=x86_64-apple-macosx10.15.0 -kind=hip %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=HIP-MACHO
@@ -117,12 +125,12 @@
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=SYCL
 
 ;      SYCL: @.sycl_offloading.binary = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading"
-; SYCL-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_reg, ptr null }]
-; SYCL-NEXT: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_unreg, ptr null }]
+; SYCL-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @sycl.descriptor_reg, ptr null }]
 
 ;      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
 ; SYCL-NEXT: entry:
 ; SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
+; SYCL-NEXT:   %0 = call i32 @atexit(ptr @sycl.descriptor_unreg)
 ; SYCL-NEXT:   ret void
 ; SYCL-NEXT: }
 
