@@ -906,6 +906,20 @@ declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
 
+declare void @aligned_i128(ptr, i128) nounwind
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$v$i8m16a16;
+; CHECK:          .seh_endprologue
+; CHECK:          sub     x1, x29, #16
+; CHECK-NEXT:     stp     x2, x3, [x29, #-16]
+; CHECK:          blr     x16
+
+declare void @pair_i64(ptr, [2 x i64]) nounwind
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$v$i8m16;
+; CHECK:          .seh_endprologue
+; CHECK:          stp     x1, x2, [x29, #-16]
+; CHECK-NEXT:     sub     x1, x29, #16
+; CHECK:          blr     x16
+
 declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 ; CHECK-LABEL:       .def    "??$exit_thunk@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@$$h@";
 ; CHECK-NEXT:        .scl    2;
@@ -1041,6 +1055,18 @@ declare void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
 ; CHECK-NEXT:     .symidx	"#large_vector$exit_thunk"
 ; CHECK-NEXT:     .symidx	large_vector
 ; CHECK-NEXT:     .word	0
+; CHECK-NEXT:     .symidx aligned_i128
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$v$i8m16a16
+; CHECK-NEXT:     .word   4
+; CHECK-NEXT:     .symidx "#aligned_i128$exit_thunk"
+; CHECK-NEXT:     .symidx aligned_i128
+; CHECK-NEXT:     .word   0
+; CHECK-NEXT:     .symidx pair_i64
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$v$i8m16
+; CHECK-NEXT:     .word   4
+; CHECK-NEXT:     .symidx "#pair_i64$exit_thunk"
+; CHECK-NEXT:     .symidx pair_i64
+; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx "??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"
 ; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$v$v
 ; CHECK-NEXT:     .word   4
@@ -1068,6 +1094,9 @@ define void @func_caller() nounwind {
   call %T2 @simple_struct(%T1 { i16 0 }, %T2 { i32 0, float 0.0 }, %T3 { i64 0, double 0.0 }, %T4 { i64 0, double 0.0, i8 0 })
   call <4 x i8> @small_vector(<4 x i8> <i8 0, i8 0, i8 0, i8 0>)
   call <8 x i16> @large_vector(<8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
+  call void @aligned_i128(ptr null, i128 0)
+  call void @pair_i64(ptr null, [2 x i64] zeroinitializer)
   call void @"??@md5mangleaaaaaaaaaaaaaaaaaaaaaaa@"()
   ret void
 }
+
