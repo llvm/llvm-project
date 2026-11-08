@@ -571,7 +571,8 @@ define i1 @fold_rem_into_icmp_eq_udiv(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_rem_into_icmp_eq_udiv(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[MUL]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
 ; CHECK-NEXT:    call void @use(i32 [[DIV]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -586,7 +587,8 @@ define i1 @fold_rem_into_icmp_ne_udiv(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_rem_into_icmp_ne_udiv(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A]], [[MUL]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CMP_REM]], 0
 ; CHECK-NEXT:    call void @use(i32 [[DIV]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -601,7 +603,8 @@ define i1 @fold_rem_into_icmp_eq_sdiv(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_rem_into_icmp_eq_sdiv(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[MUL]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = srem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
 ; CHECK-NEXT:    call void @use(i32 [[DIV]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -616,7 +619,8 @@ define i1 @fold_rem_into_icmp_commuted_mul(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_rem_into_icmp_commuted_mul(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[B]], [[DIV]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[MUL]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
 ; CHECK-NEXT:    call void @use(i32 [[DIV]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -631,7 +635,8 @@ define i1 @fold_rem_into_icmp_swapped_operands(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_rem_into_icmp_swapped_operands(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MUL]], [[A]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
 ; CHECK-NEXT:    call void @use(i32 [[DIV]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -648,7 +653,8 @@ define i1 @fold_rem_into_icmp_drops_samesign(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_rem_into_icmp_drops_samesign(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign eq i32 [[A]], [[MUL]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = srem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
 ; CHECK-NEXT:    call void @use(i32 [[DIV]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -666,11 +672,12 @@ define i32 @fold_rem_into_icmp_hoist(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_rem_into_icmp_hoist(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[CMP_DIV:%.*]] = icmp ugt i32 [[DIV]], 42
 ; CHECK-NEXT:    br i1 [[CMP_DIV]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[MUL]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
@@ -700,7 +707,8 @@ define i1 @fold_rem_into_icmp_mul_has_other_use(i32 %a, i32 %b) {
 ; CHECK-LABEL: @fold_rem_into_icmp_mul_has_other_use(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[DIV]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[MUL]]
+; CHECK-NEXT:    [[CMP_REM:%.*]] = urem i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_REM]], 0
 ; CHECK-NEXT:    call void @use(i32 [[DIV]])
 ; CHECK-NEXT:    call void @use(i32 [[MUL]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
