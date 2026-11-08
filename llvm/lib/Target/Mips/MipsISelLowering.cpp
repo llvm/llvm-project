@@ -582,7 +582,9 @@ static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
 // Creates and returns a CMovFPT/F node.
 static SDValue createCMovFP(SelectionDAG &DAG, SDValue Cond, SDValue True,
                             SDValue False, const SDLoc &DL) {
-  ConstantSDNode *CC = cast<ConstantSDNode>(Cond.getOperand(2));
+  // The condition code is the last operand of both FPCmp and STRICT_FPCmp.
+  ConstantSDNode *CC =
+      cast<ConstantSDNode>(Cond.getOperand(Cond.getNumOperands() - 1));
   bool invert = invertFPCondCodeUser((Mips::CondCode)CC->getSExtValue());
   SDValue FCC0 = DAG.getRegister(Mips::FCC0, MVT::i32);
 
@@ -2256,21 +2258,67 @@ SDValue MipsTargetLowering::lowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
-  assert(!Subtarget.hasMips32r6() && !Subtarget.hasMips64r6());
-
   SDLoc DL(Op);
   SDValue Chain = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   ISD::CondCode CC = Op.getOperandCondCode(3);
+  bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
 
-  SDValue Cond = DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
-                             DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
+  if (Subtarget.hasMips32r6()) {
+    // The patterns only cover the ordered and unordered condition codes.
+    // Treat the ones that do not care about NaN as ordered.
+    switch (CC) {
+    case ISD::SETGT:
+    case ISD::SETGE:
+      std::swap(LHS, RHS);
+      CC = CC == ISD::SETGT ? ISD::SETOLT : ISD::SETOLE;
+      break;
+    case ISD::SETEQ:
+      CC = ISD::SETOEQ;
+      break;
+    case ISD::SETLT:
+      CC = ISD::SETOLT;
+      break;
+    case ISD::SETLE:
+      CC = ISD::SETOLE;
+      break;
+    default:
+      break;
+    }
+
+    // CMP.cond.fmt writes an all-ones or all-zeros mask to an FPR. Its low
+    // word is the i32 result, as for SETCC.
+    EVT VT = LHS.getValueType();
+    SDValue Cmp = DAG.getNode(
+        IsSignaling ? MipsISD::STRICT_FPCmpsR6 : MipsISD::STRICT_FPCmpR6, DL,
+        DAG.getVTList(VT, MVT::Other), Chain, LHS, RHS, DAG.getCondCode(CC));
+    SDValue Mask = Cmp;
+    if (VT == MVT::f64)
+      Mask = DAG.getTargetExtractSubreg(Mips::sub_lo, DL, MVT::f32, Cmp);
+    SDValue Res = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Mask);
+    return DAG.getMergeValues({Res, Cmp.getValue(1)}, DL);
+  }
+
+  Mips::CondCode FCC = condCodeToFCC(CC);
+
+  // A signaling compare must raise invalid for a quiet NaN operand as well.
+  // c.cond.fmt does that for the conditions with cond<3> set, which are the
+  // quiet ones plus 8. The R5900 FPU does not implement them.
+  if (IsSignaling && !Subtarget.isR5900())
+    FCC = static_cast<Mips::CondCode>(FCC + (Mips::FCOND_SF - Mips::FCOND_F));
+
+  // Keep the compare on the chain so that it is not reordered with respect
+  // to other operations that access the FP environment, or removed when its
+  // result is unused.
+  SDValue Cmp = DAG.getNode(MipsISD::STRICT_FPCmp, DL,
+                            DAG.getVTList(MVT::Other, MVT::Glue), Chain, LHS,
+                            RHS, DAG.getConstant(FCC, DL, MVT::i32));
   SDValue True = DAG.getConstant(1, DL, MVT::i32);
   SDValue False = DAG.getConstant(0, DL, MVT::i32);
-  SDValue CMovFP = createCMovFP(DAG, Cond, True, False, DL);
+  SDValue CMovFP = createCMovFP(DAG, Cmp.getValue(1), True, False, DL);
 
-  return DAG.getMergeValues({CMovFP, Chain}, DL);
+  return DAG.getMergeValues({CMovFP, Cmp.getValue(0)}, DL);
 }
 
 SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
