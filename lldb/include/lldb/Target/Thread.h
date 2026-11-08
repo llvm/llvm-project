@@ -19,7 +19,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Target/RegisterCheckpoint.h"
+#include "lldb/Register/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
 #include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -149,6 +149,7 @@ public:
     size_t m_completed_plan_checkpoint;
     lldb::RegisterCheckpointSP
         register_backup_sp; // You need to restore the registers, of course...
+    lldb::ThreadRegisterContextSP register_context_sp;
     uint32_t current_inlined_depth;
     lldb::addr_t current_inlined_pc;
     lldb::addr_t stopped_at_unexecuted_bp;

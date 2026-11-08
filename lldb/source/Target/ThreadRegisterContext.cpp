@@ -16,6 +16,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Register/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
@@ -25,7 +26,8 @@ using namespace lldb_private;
 
 ThreadRegisterContext::ThreadRegisterContext(Thread &thread,
                                              uint32_t concrete_frame_idx)
-    : m_thread(thread), m_concrete_frame_idx(concrete_frame_idx),
+    : RegisterContext(thread.shared_from_this()), m_thread(thread),
+      m_concrete_frame_idx(concrete_frame_idx),
       m_stop_id(thread.GetProcess()->GetStopID()) {}
 
 ThreadRegisterContext::ThreadRegisterContext(Thread &thread, uint32_t frame,
@@ -388,14 +390,27 @@ lldb::ByteOrder ThreadRegisterContext::GetByteOrder() {
   return byte_order;
 }
 
-bool ThreadRegisterContext::ReadAllRegisterValues(
-    lldb_private::RegisterCheckpoint &reg_checkpoint) {
-  return ReadAllRegisterValues(reg_checkpoint.GetData());
-}
+llvm::Expected<RegisterCheckpoint> ThreadRegisterContext::SaveCheckpoint() {
+  WritableDataBufferSP data;
+  if (!ReadAllRegisterValues(data))
+    return llvm::createStringError("could not capture register state");
 
-bool ThreadRegisterContext::WriteAllRegisterValues(
-    const lldb_private::RegisterCheckpoint &reg_checkpoint) {
-  return WriteAllRegisterValues(reg_checkpoint.GetData());
+  auto description = GetDescription();
+
+  return CreateCheckpoint(
+      [source =
+           std::static_pointer_cast<ThreadRegisterContext>(shared_from_this()),
+       data = std::move(data), description]() -> llvm::Error {
+        auto &context = *source;
+        if (context.GetDescription() != description)
+          return llvm::createStringError(
+              "register configuration changed since checkpoint");
+
+        if (!context.WriteAllRegisterValues(data))
+          return llvm::createStringError("could not restore register state");
+
+        return llvm::Error::success();
+      });
 }
 
 TargetSP ThreadRegisterContext::CalculateTarget() {
