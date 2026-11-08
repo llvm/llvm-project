@@ -986,8 +986,9 @@ bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
   if (CallInst.getCalledFunction() == nullptr)
     return false;
 
-  InlineCost Cost = getInlineCost(CallInst, getInlineParams(),
-                                  GetTTI(*CallInst.getCaller()), GetAC, GetTLI);
+  InlineCost Cost =
+      getInlineCost(CallInst, getInlineParams(CallInst.getContext()),
+                    GetTTI(*CallInst.getCaller()), GetAC, GetTLI);
 
   if (Cost.isNever())
     return false;
@@ -1346,7 +1347,7 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   Function *Callee = Candidate.CallInstr->getCalledFunction();
   assert(Callee && "Expect a definition for inline candidate of direct call");
 
-  InlineParams Params = getInlineParams();
+  InlineParams Params = getInlineParams(Caller->getContext());
   // We will ignore the threshold from inline cost, so always get full cost.
   Params.ComputeFullInlineCost = true;
   Params.AllowRecursiveCall = AllowRecursiveInline;

@@ -168,12 +168,12 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\t.seh_save_preg\tp" << Reg << ", " << Offset << "\n";
   }
 
-  void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+  void emitAttribute(StringRef VendorName, unsigned Tag, uint64_t Value,
                      std::string String) override {
 
     // AArch64 build attributes for assembly attribute form:
     // .aeabi_attribute tag, value
-    if (unsigned(-1) == Value && "" == String) {
+    if (uint64_t(-1) == Value && "" == String) {
       assert(0 && "Arguments error");
       return;
     }
@@ -182,13 +182,13 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
 
     switch (VendorID) {
     case AArch64BuildAttributes::VENDOR_UNKNOWN:
-      if (unsigned(-1) != Value) {
+      if (uint64_t(-1) != Value) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
       }
       if ("" != String) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << String;
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1),
+        AArch64TargetStreamer::emitAttribute(VendorName, Tag, uint64_t(-1),
                                              String);
       }
       break;
@@ -210,7 +210,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
         break;
       }
       break;
-    // Note: AEABI_PAUTHABI takes only unsigned values
+    // Note: AEABI_PAUTHABI takes only uint64_t values
     case AArch64BuildAttributes::AEABI_PAUTHABI:
       switch (Tag) {
       default: // allow emitting any attribute by number
@@ -441,12 +441,12 @@ void AArch64TargetELFStreamer::emitAttributesSubsection(
 }
 
 void AArch64TargetELFStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
-                                             unsigned Value,
+                                             uint64_t Value,
                                              std::string String) {
-  if (unsigned(-1) != Value)
+  if (uint64_t(-1) != Value)
     AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
   if ("" != String)
-    AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1), String);
+    AArch64TargetStreamer::emitAttribute(VendorName, Tag, uint64_t(-1), String);
 }
 
 void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {

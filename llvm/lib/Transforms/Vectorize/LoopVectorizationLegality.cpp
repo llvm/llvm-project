@@ -137,7 +137,7 @@ void LoopVectorizeHints::reportDisallowedVectorization(
 }
 
 bool LoopVectorizeHints::allowVectorization(
-    Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
+    Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
     if (Force == LoopVectorizeHints::FK_Disabled) {
       reportDisallowedVectorization("#pragma vectorize disable",
@@ -847,8 +847,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   }
 
   // Now we know the widest induction type, check if our found induction
-  // is the same size. If it's not, unset it here and InnerLoopVectorizer
-  // will create another.
+  // is the same size. If it's not, unset it here.
   if (PrimaryInduction && WidestIndTy != PrimaryInduction->getType())
     PrimaryInduction = nullptr;
 
@@ -929,6 +928,14 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
         !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(Phi, ID);
       return true;
+    }
+
+    if (isDisallowedStridedPointerInduction(ID, Opts)) {
+      reportVectorizationFailure("Found a disallowed pointer induction",
+                                 "pointer induction with a non-constant step "
+                                 "could not be vectorized",
+                                 "StridedPointerInduction", ORE, TheLoop, Phi);
+      return false;
     }
 
     reportVectorizationFailure("Found an unidentified PHI",
@@ -2075,17 +2082,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
                                "to loop-invariant addresses",
                                "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
-  }
-
-  if (hasConditionalInductions()) {
-    reportVectorizationFailure(
-        "We can vectorize this loop with a compressstore or expandload, but "
-        "vectorization support is not implemented yet.",
-        "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
   }
 
   if (Result) {

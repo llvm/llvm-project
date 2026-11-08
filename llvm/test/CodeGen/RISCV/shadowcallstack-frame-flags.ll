@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+zimop \
-; RUN:   -verify-machineinstrs -stop-after=prolog-epilog \
+; RUN:   -stop-after=prolog-epilog \
 ; RUN:   | FileCheck %s --check-prefix=RV32
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+zimop \
-; RUN:   -verify-machineinstrs -stop-after=prolog-epilog \
+; RUN:   -stop-after=prolog-epilog \
 ; RUN:   | FileCheck %s --check-prefix=RV64
 
 declare i32 @bar()

@@ -10,25 +10,25 @@
 # RUN: ld.lld -shared %t/a.32.o -o %t/ld.32.so
 # RUN: llvm-readobj -r %t/ld.32.so | FileCheck --check-prefix=LD32-REL %s
 # RUN: llvm-readelf -x .got %t/ld.32.so | FileCheck --check-prefix=LD32-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/ld.32.so | FileCheck --check-prefixes=LD32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/ld.32.so | FileCheck --check-prefixes=LD32 %s
 
 ## LA32 LD -> LE
 # RUN: ld.lld %t/a.32.o %t/tga.32.o -o %t/le.32
 # RUN: llvm-readelf -r %t/le.32 | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-readelf -x .got %t/le.32 | FileCheck --check-prefix=LE32-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/le.32 | FileCheck --check-prefixes=LE32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/le.32 | FileCheck --check-prefixes=LE32 %s
 
 ## LA64 LD
 # RUN: ld.lld -shared %t/a.64.o -o %t/ld.64.so
 # RUN: llvm-readobj -r %t/ld.64.so | FileCheck --check-prefix=LD64-REL %s
 # RUN: llvm-readelf -x .got %t/ld.64.so | FileCheck --check-prefix=LD64-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/ld.64.so | FileCheck --check-prefixes=LD64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/ld.64.so | FileCheck --check-prefixes=LD64 %s
 
 ## LA64 LD -> LE
 # RUN: ld.lld %t/a.64.o %t/tga.64.o -o %t/le.64
 # RUN: llvm-readelf -r %t/le.64 | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-readelf -x .got %t/le.64 | FileCheck --check-prefix=LE64-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/le.64 | FileCheck --check-prefixes=LE64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/le.64 | FileCheck --check-prefixes=LE64 %s
 
 ## a@dtprel = st_value(a) = 0 is a link-time constant.
 # LD32-REL:      .rela.dyn {
