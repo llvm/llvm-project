@@ -47,6 +47,7 @@ add_math_entrypoint_object(acosf16)
 
 add_math_entrypoint_object(acosh)
 add_math_entrypoint_object(acoshf)
+add_math_entrypoint_object(acoshbf16)
 add_math_entrypoint_object(acoshf16)
 
 add_math_entrypoint_object(acospif)
@@ -592,6 +593,7 @@ add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
+add_math_entrypoint_object(sinbf16)
 add_math_entrypoint_object(sinf)
 add_math_entrypoint_object(sinf16)
 add_math_entrypoint_object(sinpif)

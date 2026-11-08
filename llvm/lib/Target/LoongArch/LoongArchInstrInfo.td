@@ -2147,6 +2147,10 @@ defm : StPat<store, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
 let Predicates = [IsLA64] in {
+// The sign-extension of LDPTR.W is also valid for an any-extending load.
+// Prefer LD.W for offsets that fit its signed 12-bit immediate.
+def : Pat<(i64 (extloadi32 (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),
+          (LDPTR_W BaseAddr:$rj, simm14_lsl2:$imm14)>;
 def : Pat<(i64 (sextloadi32 (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),
           (LDPTR_W BaseAddr:$rj, simm14_lsl2:$imm14)>;
 def : Pat<(i64 (load (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),

@@ -7,7 +7,6 @@
 //==-----------------------------------------------------------------------===//
 
 #include "SIFrameLowering.h"
-#include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"

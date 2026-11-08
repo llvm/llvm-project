@@ -306,6 +306,7 @@ add_entrypoint_object(
   HDRS
     ../cos.h
   DEPENDS
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.cos
     libc.src.__support.math.cos_integer_eval
@@ -358,9 +359,20 @@ add_entrypoint_object(
   HDRS
     ../sin.h
   DEPENDS
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.sin
     libc.src.__support.math.sin_integer_eval
+)
+
+add_entrypoint_object(
+  sinbf16
+  SRCS
+    sinbf16.cpp
+  HDRS
+    ../sinbf16.h
+  DEPENDS
+    libc.src.__support.math.sinbf16
 )
 
 add_entrypoint_object(
@@ -4006,6 +4018,16 @@ add_entrypoint_object(
     ../acoshf.h
   DEPENDS
     libc.src.__support.math.acoshf
+)
+
+add_entrypoint_object(
+  acoshbf16
+  SRCS
+    acoshbf16.cpp
+  HDRS
+    ../acoshbf16.h
+  DEPENDS
+    libc.src.__support.math.acoshbf16
 )
 
 add_entrypoint_object(

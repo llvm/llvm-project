@@ -2979,6 +2979,15 @@ fn -> other_fn -> other_fn ; fn is norecurse
     than `UINT_MAX`.  It's unspecified which threshold will be used when
     duplicate definitions are linked together with differing values.
 
+`"unsafe-stack-size"="<size>"`
+:   This attribute records the size in bytes of the static unsafe stack frame
+    of a function with the `safestack` attribute. The SafeStack pass sets it,
+    and code generation adds it to the frame size when reporting stack usage.
+    It is ignored on functions without `safestack`. It takes one required
+    integer value, which should be a non-negative integer, and less than
+    `UINT_MAX`. This attribute is only used internally by LLVM and should not
+    be set by frontends.
+
 `vscale_range(<min>[, <max>])`
 :   This function attribute indicates `vscale` is a power-of-two within a
     specified range. `min` must be a power-of-two that is greater than 0. When
@@ -21870,6 +21879,43 @@ VecT compress(VecT vec, VecT mask, VecT passthru) {
   return out;
 }
 ```
+
+(int_vector_shuffle)=
+
+#### '`llvm.vector.shuffle.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <8 x i32> @llvm.vector.shuffle.v8i32.v8i8(<8 x i32> %vec, <8 x i8> %mask)
+declare <vscale x 4 x float> @llvm.vector.shuffle.nxv4f32.nxv4i16(<vscale x 4 x float> %vec, <vscale x 4 x i16> %mask)
+```
+
+##### Overview:
+
+The '`llvm.vector.shuffle.*`' intrinsics permute the elements of a vector
+according to a mask that does not need to be a constant.
+
+For example:
+
+```text
+llvm.vector.shuffle(<A,B,C,D>, <3,0,0,7>) ==> <D,A,A,poison>
+```
+
+##### Arguments:
+
+The first operand is the vector to permute. The result has the same type. The
+second operand is the mask, a vector of integers with the same number of
+elements as the first operand.
+
+##### Semantics:
+
+Element `i` of the result is element `%mask[i]` of `%vec`, where `%mask[i]` is
+treated as an unsigned index. If `%mask[i]` is poison, or is greater than or
+equal to the number of elements in `%vec`, element `i` of the result is a
+{ref}`poison value <poisonvalues>`.
 
 #### '`llvm.experimental.vector.match.*`' Intrinsic
 
