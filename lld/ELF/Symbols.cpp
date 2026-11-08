@@ -425,13 +425,9 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     uint8_t v = visibility(), ov = other.visibility();
     setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));
   }
-  // An undefined symbol with non default visibility must be satisfied
-  // in the same DSO.
-  //
-  // If this is a non-weak defined symbol in a discarded section, override the
-  // existing undefined symbol for better error message later.
-  if (isPlaceholder() || (isShared() && other.visibility() != STV_DEFAULT) ||
-      (isUndefined() && other.binding != STB_WEAK && other.discardedSecIdx)) {
+  // An undefined symbol with non default visibility must be resolved
+  // within the component being linked. Demote SharedSymbol to Undefined.
+  if (isPlaceholder() || (isShared() && other.visibility() != STV_DEFAULT)) {
     other.overwrite(*this);
     return;
   }
