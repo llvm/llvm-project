@@ -199,7 +199,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __inner_iterator& operator=(__inner_iterator&&) = default;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_View> base() const& { return *__parent_->__current_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_View>& base() const& {
+    return *__parent_->__current_;
+  }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_reference_t<_View> operator*() const {
     _LIBCPP_ASSERT_PEDANTIC(*this != default_sentinel, "Trying to dereference past-the-end chunk_view iterator");
