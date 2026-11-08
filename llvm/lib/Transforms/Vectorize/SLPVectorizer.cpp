@@ -32989,17 +32989,6 @@ public:
     DenseMap<Value *, WeakTrackingVH> TrackedVals(ReducedVals.size() *
                                                   ReducedVals.front().size());
 
-    // The compare instruction of a min/max is the insertion point for new
-    // instructions and may be replaced with a new compare instruction.
-    auto &&GetCmpForMinMaxReduction = [](Instruction *RdxRootInst) {
-      assert(isa<SelectInst>(RdxRootInst) &&
-             "Expected min/max reduction to have select root instruction");
-      Value *ScalarCond = cast<SelectInst>(RdxRootInst)->getCondition();
-      assert(isa<Instruction>(ScalarCond) &&
-             "Expected min/max reduction to have compare condition");
-      return cast<Instruction>(ScalarCond);
-    };
-
     bool AnyBoolLogicOp = any_of(ReductionOps.back(), [](Value *V) {
       return isBoolLogicOp(cast<Instruction>(V));
     });
@@ -33666,12 +33655,7 @@ public:
         // one. An invalid reduction cost rejects the tree below anyway.
         const bool UseLoopAccForm =
             LoopAccCandidate && ReductionCost.isValid() && LoopAccDelta <= 0;
-        // If the root is a select (min/max idiom), the insert point is the
-        // compare condition of that select.
-        Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-        Instruction *InsertPt = RdxRootInst;
-        if (IsCmpSelMinMax)
-          InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
+        Instruction *InsertPt = cast<Instruction>(ReductionRoot);
         InstructionCost Cost =
             V.getTreeCost(TreeCost, VL, ReductionCost, InsertPt);
         if (UseLoopAccForm)
