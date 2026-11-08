@@ -173,19 +173,38 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
   void emitPreInitStmt(CodeGenFunction &CGF, const OMPLoopBasedDirective &S) {
     const Stmt *PreInits;
     CodeGenFunction::OMPMapVars PreCondVars;
+    SmallVector<const Decl *, 4> DoacrossOnlyDecls;
     if (auto *LD = dyn_cast<OMPLoopDirective>(&S)) {
+      // The pre-inits also use the bounds of the loops that an 'ordered(n)'
+      // clause counts beyond the collapsed ones.
+      unsigned NumLoops = LD->getLoopsNumber();
+      for (const auto *C : LD->getClausesOfKind<OMPOrderedClause>())
+        if (C->getNumForLoops() && C->getLoopNumIterations().size() > NumLoops)
+          NumLoops = C->getLoopNumIterations().size();
       // Emit init, __range, __begin and __end variables for C++ range loops.
+      // A loop that is not collapsed is emitted as a regular loop in the body
+      // and declares its own, so its copies only live until the pre-inits.
       (void)OMPLoopBasedDirective::doForAllLoops(
           LD->getInnermostCapturedStmt()->getCapturedStmt(),
-          /*TryImperfectlyNestedLoops=*/true, LD->getLoopsNumber(),
-          [&CGF](unsigned Cnt, const Stmt *CurStmt) {
-            if (const auto *CXXFor = dyn_cast<CXXForRangeStmt>(CurStmt)) {
-              if (const Stmt *Init = CXXFor->getInit())
-                CGF.EmitStmt(Init);
-              CGF.EmitStmt(CXXFor->getRangeStmt());
-              CGF.EmitStmt(CXXFor->getBeginStmt());
-              CGF.EmitStmt(CXXFor->getEndStmt());
-            }
+          /*TryImperfectlyNestedLoops=*/true, NumLoops,
+          [&CGF, LD, &DoacrossOnlyDecls](unsigned Cnt, const Stmt *CurStmt) {
+            const auto *CXXFor = dyn_cast<CXXForRangeStmt>(CurStmt);
+            if (!CXXFor)
+              return false;
+            const Stmt *Init = CXXFor->getInit();
+            if (Init)
+              CGF.EmitStmt(Init);
+            CGF.EmitStmt(CXXFor->getRangeStmt());
+            CGF.EmitStmt(CXXFor->getBeginStmt());
+            CGF.EmitStmt(CXXFor->getEndStmt());
+            if (Cnt < LD->getLoopsNumber())
+              return false;
+            for (const Stmt *Helper :
+                 {Init, static_cast<const Stmt *>(CXXFor->getRangeStmt()),
+                  static_cast<const Stmt *>(CXXFor->getBeginStmt()),
+                  static_cast<const Stmt *>(CXXFor->getEndStmt())})
+              if (const auto *DS = dyn_cast_or_null<DeclStmt>(Helper))
+                llvm::append_range(DoacrossOnlyDecls, DS->decls());
             return false;
           });
       llvm::DenseSet<const VarDecl *> EmittedAsPrivate;
@@ -234,6 +253,8 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
     doEmitPreinits(PreInits);
+    for (const Decl *D : DoacrossOnlyDecls)
+      CGF.eraseLocalDecl(D);
     PreCondVars.restore(CGF);
   }
 
