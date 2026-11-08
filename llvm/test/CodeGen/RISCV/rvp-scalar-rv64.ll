@@ -1650,9 +1650,8 @@ define i64 @test_usati_u64_w63(i64 %a) {
 define void @merge_wusers_v4i16(<4 x i16> %a, i16 %x, ptr %p) nounwind {
 ; CHECK-LABEL: merge_wusers_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a3, 65535
 ; CHECK-NEXT:    slli a1, a1, 16
-; CHECK-NEXT:    slli a3, a3, 4
+; CHECK-NEXT:    lui a3, 1048560
 ; CHECK-NEXT:    mvm a0, a1, a3
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret
@@ -1666,9 +1665,8 @@ define void @merge_wusers_v4i16(<4 x i16> %a, i16 %x, ptr %p) nounwind {
 define void @merge_wusers_v8i8(<8 x i8> %a, i8 %x, ptr %p) nounwind {
 ; CHECK-LABEL: merge_wusers_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a3, 255
 ; CHECK-NEXT:    slli a1, a1, 24
-; CHECK-NEXT:    slli a3, a3, 24
+; CHECK-NEXT:    lui a3, 1044480
 ; CHECK-NEXT:    mvm a0, a1, a3
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret

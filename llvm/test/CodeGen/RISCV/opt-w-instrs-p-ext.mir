@@ -293,8 +293,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x13
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[COPY]], 0
-    ; CHECK-NEXT: [[PseudoMERGE:%[0-9]+]]:gpr = PseudoMERGE [[ADDIW]], [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[PseudoMERGE:%[0-9]+]]:gpr = PseudoMERGE [[COPY]], [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: SW [[PseudoMERGE]], [[COPY3]], 0
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
