@@ -23380,11 +23380,8 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
   for (unsigned I = 0; I != NumElts; I += ChunkElts) {
     SDValue AC = A, BC = B;
     if (NumElts > ChunkElts) {
-
-      AC =
-          DAG.getExtractSubvector(dl, ChunkVT, A, DAG.getIntPtrConstant(I, Dl));
-      BC =
-          DAG.getExtractSubvector(Dl, ChunkVT, B, DAG.getIntPtrConstant(I, Dl));
+      AC = DAG.getExtractSubvector(Dl, ChunkVT, A, I);
+      BC = DAG.getExtractSubvector(Dl, ChunkVT, B, I);
     }
     SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, AC);
     SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, WideVT, BC);
