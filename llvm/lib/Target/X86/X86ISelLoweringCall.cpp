@@ -2183,7 +2183,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // own caller's stack.
     NumBytes = 0;
   else if (ShouldGuaranteeTCO && canGuaranteeTCO(CallConv))
-    NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
+    // The callee pops this amount, so compute it as LowerFormalArguments does.
+    NumBytes = GetAlignedArgumentStackSize(CCInfo.getStackSize(), DAG);
 
   // A sibcall is ABI-compatible and does not need to adjust the stack pointer.
   int FPDiff = 0;
@@ -2604,6 +2605,18 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
            "CFG Function load should not have an offset");
     Callee = DAG.getTargetGlobalAddress(
         GA->getGlobal(), dl, GA->getValueType(0), 0, X86II::MO_NO_FLAG);
+  }
+
+  if (Is64Bit && !Subtarget.isTarget64BitILP32() &&
+      Callee.getValueType() == MVT::i32) {
+    // On 64-bit targets, extend 32-bit MS __ptr32 callees before the call.
+    // Use sign-extension for __sptr and zero-extension for __uptr.
+    assert(CB && "CallBase expected for 32-bit callee");
+    ISD::NodeType ExtOpc = ISD::SIGN_EXTEND;
+    unsigned AS = CB->getCalledOperand()->getType()->getPointerAddressSpace();
+    if (AS == X86AS::PTR32_UPTR)
+      ExtOpc = ISD::ZERO_EXTEND;
+    Callee = DAG.getNode(ExtOpc, dl, MVT::i64, Callee);
   }
 
   SmallVector<SDValue, 8> Ops;

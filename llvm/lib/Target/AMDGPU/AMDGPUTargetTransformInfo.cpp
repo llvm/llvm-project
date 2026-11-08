@@ -1353,6 +1353,21 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
                                        VIC);
     }
 
+    // Packed f32 pair formation for v_pk_*_f32. A constant-index insert writes
+    // one subregister, so a lane holding a computed value costs at most one
+    // v_mov_b32 at any width. A loaded lane lands in place, and arguments and
+    // constants are already in a register, so both are free. SLP prices a
+    // buildvector root with the insertelements themselves as Op1, and those
+    // lanes need no packing either. Only throughput sees the move; size-based
+    // users such as the inliner and the unroller keep inserts free.
+    auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
+    const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
+    if (Opcode == Instruction::InsertElement && EltSize == 32 &&
+        CostKind == TTI::TCK_RecipThroughput && ST->hasAnyPackedFP32Ops() &&
+        InsertedInst && VecTy && VecTy->getElementType()->isFloatTy() &&
+        !isa<LoadInst, InsertElementInst>(InsertedInst))
+      return getFullRateInstrCost();
+
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
     // operations, and we don't have to copy into a different register class.
@@ -1576,6 +1591,7 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_make_buffer_rsrc:
+  case Intrinsic::amdgcn_flat_prefetch:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1632,6 +1648,20 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     II->setCalledFunction(NewDecl);
     return II;
   }
+  case Intrinsic::amdgcn_flat_prefetch: {
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (!AMDGPU::isExtendedGlobalAddrSpace(NewAS))
+      return nullptr;
+    // llvm.amdgcn.global.prefetch only takes a global pointer.
+    if (NewAS != AMDGPUAS::GLOBAL_ADDRESS)
+      NewV = IRBuilder<>(II).CreateAddrSpaceCast(
+          NewV, PointerType::get(II->getContext(), AMDGPUAS::GLOBAL_ADDRESS));
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        II->getModule(), Intrinsic::amdgcn_global_prefetch);
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
   default:
     return nullptr;
   }
@@ -1649,6 +1679,39 @@ InstructionCost GCNTTIImpl::getShuffleCost(
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
   TypeSize ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
+
+  // A v_pk_*_f32 operand is an aligned register pair. A lane already in its
+  // half of a source pair is read in place, and a splat of the low half is an
+  // op_sel_hi. Every other lane costs a v_mov_b32 to move it into place.
+  if (ScalarSize == 32 && CostKind == TTI::TCK_RecipThroughput &&
+      ST->hasAnyPackedFP32Ops() && SrcTy->getElementType()->isFloatTy() &&
+      !Mask.empty()) {
+    const int NumSrcElts = cast<FixedVectorType>(SrcTy)->getNumElements();
+    // Source pairs of the second operand are numbered after the first.
+    auto GetPair = [&](int Idx) {
+      return Idx < NumSrcElts ? Idx / 2 : NumSrcElts + (Idx - NumSrcElts) / 2;
+    };
+    auto GetHalf = [&](int Idx) {
+      return Idx < NumSrcElts ? Idx % 2 : (Idx - NumSrcElts) % 2;
+    };
+    unsigned Cost = 0;
+    for (unsigned DstIdx = 0; DstIdx < Mask.size(); DstIdx += 2) {
+      const int Lo = Mask[DstIdx];
+      const int Hi =
+          DstIdx + 1 < Mask.size() ? Mask[DstIdx + 1] : PoisonMaskElem;
+      const bool LoInPlace = Lo != PoisonMaskElem && GetHalf(Lo) == 0;
+      const bool HiInPlace = Hi != PoisonMaskElem && GetHalf(Hi) == 1;
+      if (Lo != PoisonMaskElem && Lo == Hi && LoInPlace)
+        continue;
+      if (LoInPlace && HiInPlace)
+        Cost += GetPair(Lo) != GetPair(Hi);
+      else
+        Cost += (Lo != PoisonMaskElem && !LoInPlace) +
+                (Hi != PoisonMaskElem && !HiInPlace);
+    }
+    return Cost;
+  }
+
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       (ScalarSize == 16 || ScalarSize == 8)) {
     // Larger vector widths may require additional instructions, but are
@@ -1799,7 +1862,9 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
     if (any_of(Ops, [&](Use *U) { return U->get() == Op.get(); }))
       continue;
 
-    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value()))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(&Op, m_FAbs(m_Value())) ||
+        match(&Op, m_FNegOrFSubNegZero(m_Value()))) {
       Ops.push_back(&Op);
       continue;
     }
@@ -1938,12 +2003,13 @@ static unsigned adjustInliningThresholdUsingCallee(const CallBase *CB,
 
   // The penalty cost is computed relative to the cost of instructions and does
   // not model any storage costs.
-  adjustThreshold += static_cast<unsigned>(
-      std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) * ArgStackCost.getValue() *
-      InlineConstants::getInstrCost());
-  adjustThreshold += static_cast<unsigned>(
-      std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) * ArgStackCost.getValue() *
-      InlineConstants::getInstrCost());
+  int InstrCost = InlineConstants::getInstrCost(CB->getContext());
+  adjustThreshold +=
+      static_cast<unsigned>(std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) *
+                            ArgStackCost.getValue() * InstrCost);
+  adjustThreshold +=
+      static_cast<unsigned>(std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) *
+                            ArgStackCost.getValue() * InstrCost);
   return adjustThreshold;
 }
 
@@ -2118,22 +2184,98 @@ GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
                                                : KnownIEEEMode::On;
 }
 
+static unsigned getNumMemoryInsts(unsigned Bytes, unsigned MaxBytes,
+                                  bool HasDwordx3) {
+  unsigned NumInsts = Bytes / MaxBytes;
+  unsigned Rem = Bytes % MaxBytes;
+  if (HasDwordx3 && Rem >= 12) {
+    ++NumInsts;
+    Rem -= 12;
+  }
+  return NumInsts + llvm::popcount(Rem);
+}
+
 InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             Align Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
-  if (VectorType *VecTy = dyn_cast<VectorType>(Src)) {
-    if ((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
-        CostKind != TTI::TCK_Latency &&
-        VecTy->getElementType()->isIntegerTy(8)) {
-      return divideCeil(DL.getTypeSizeInBits(VecTy) - 1,
+  Type *EltTy = Src->getScalarType();
+  if ((Opcode != Instruction::Load && Opcode != Instruction::Store) ||
+      CostKind == TTI::TCK_Latency || isa<ScalableVectorType>(Src) ||
+      (!EltTy->isIntOrPtrTy() && !EltTy->isFloatingPointTy()))
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
+  unsigned EltBits = std::max<unsigned>(8, DL.getTypeSizeInBits(EltTy));
+
+  if (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+      AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+      AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
+    if (Src->isVectorTy() && EltTy->isIntegerTy(8))
+      return divideCeil(DL.getTypeSizeInBits(Src) - 1,
                         getLoadStoreVecRegBitWidth(AddressSpace));
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+  }
+
+  auto *VecTy = dyn_cast<FixedVectorType>(Src);
+  if (VecTy && EltBits % 8 == 0 && !isPowerOf2_32(EltBits) &&
+      !TLI->shouldCombineMemoryType(TLI->getValueType(DL, Src))) {
+    Align EltAlign = commonAlignment(Alignment, EltBits / 8);
+    return VecTy->getNumElements() * getMemoryOpCost(Opcode, EltTy, EltAlign,
+                                                     AddressSpace, CostKind,
+                                                     OpInfo);
+  }
+
+  unsigned Bytes = DL.getTypeStoreSize(Src);
+  unsigned MaxBytes =
+      std::min(16u, getLoadStoreVecRegBitWidth(AddressSpace) / 8);
+  if (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+      !ST->hasMultiDwordFlatScratchAddressing())
+    MaxBytes = getLoadStoreVecRegBitWidth(AMDGPUAS::PRIVATE_ADDRESS) / 8;
+  bool IsDS = AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
+              AddressSpace == AMDGPUAS::REGION_ADDRESS;
+  bool HasDwordx3 = ST->hasDwordx3LoadStores();
+  bool HasUnalignedAccess = ST->hasUnalignedBufferAccessEnabled();
+  if (AddressSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+      AddressSpace == AMDGPUAS::FLAT_ADDRESS)
+    HasUnalignedAccess = ST->hasUnalignedScratchAccessEnabled();
+  else if (IsDS) {
+    HasUnalignedAccess = ST->hasUnalignedDSAccessEnabled();
+    if (Alignment >= 4 && Alignment < 8)
+      MaxBytes = 8;
+    HasDwordx3 = HasDwordx3 &&
+                 (Alignment >= 16 || (Alignment < 4 && HasUnalignedAccess));
+  }
+  if (Alignment < 4 && !HasUnalignedAccess)
+    MaxBytes = std::min<unsigned>(MaxBytes, Alignment.value());
+  bool MergesDwords = ST->hasFlatInstOffsets() &&
+                      (AMDGPU::isExtendedGlobalAddrSpace(AddressSpace) ||
+                       (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+                        !ST->hasFlatSegmentOffsetBug()));
+
+  if (Opcode == Instruction::Load) {
+    if (VecTy && Alignment >= PowerOf2Ceil(Bytes))
+      return divideCeil(Bytes, MaxBytes);
+    if (EltBits <= 16 && Alignment >= 4 && Bytes % 4) {
+      unsigned Piece = std::min(EltBits == 8 ? 8u : 16u, MaxBytes);
+      unsigned Granule = std::min<unsigned>(Alignment.value(), Piece);
+      if (!IsDS && !MergesDwords)
+        return Bytes / Piece + llvm::popcount(Bytes % Piece / Granule) +
+               (Bytes % Granule != 0);
+      unsigned Tail = Bytes % Granule;
+      if (Tail > EltBits / 8) {
+        Bytes += std::max<unsigned>(4, PowerOf2Ceil(Tail)) - Tail;
+        if (IsDS)
+          HasDwordx3 = false;
+      }
     }
   }
-  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
-                                OpInfo, I);
+  if (!MergesDwords && Bytes % MaxBytes > 12)
+    HasDwordx3 = false;
+  return getNumMemoryInsts(Bytes, MaxBytes, HasDwordx3);
 }
 
 unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {

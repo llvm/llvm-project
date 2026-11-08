@@ -317,12 +317,15 @@ filegroup(
 BUILTINS_LIBC_MATH_EXCLUDES = [
     # Sources requiring COMPILER_RT_USE_LIBC_MATH (e.g. LIBC_NAMESPACE::shared::*).
     "lib/builtins/adddf3.cpp",
-    "lib/builtins/addtf3.cpp",
     "lib/builtins/addsf3.cpp",
+    "lib/builtins/addtf3.cpp",
     "lib/builtins/divdf3.cpp",
     "lib/builtins/divsf3.cpp",
     "lib/builtins/divtf3.cpp",
     "lib/builtins/extenddftf2.cpp",
+    "lib/builtins/extendhfdf2.cpp",
+    "lib/builtins/extendhfsf2.cpp",
+    "lib/builtins/extendhftf2.cpp",
     "lib/builtins/extendsfdf2.cpp",
     "lib/builtins/extendsftf2.cpp",
     "lib/builtins/extendxftf2.cpp",
@@ -358,8 +361,11 @@ BUILTINS_LIBC_MATH_EXCLUDES = [
     "lib/builtins/subdf3.cpp",
     "lib/builtins/subsf3.cpp",
     "lib/builtins/subtf3.cpp",
+    "lib/builtins/truncdfhf2.cpp",
     "lib/builtins/truncdfsf2.cpp",
+    "lib/builtins/truncsfhf2.cpp",
     "lib/builtins/trunctfdf2.cpp",
+    "lib/builtins/trunctfhf2.cpp",
     "lib/builtins/trunctfsf2.cpp",
     "lib/builtins/trunctfxf2.cpp",
 ]
