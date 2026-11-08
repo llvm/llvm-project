@@ -872,36 +872,31 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
               if (const auto *name =
                       parser::GetDesignatorNameIfDataRef(designator)) {
                 if (!name->symbol) {
-                  context_.Say(GetContext().clauseSource,
-                      "'%s' is not an appropriate symbol for %s clause"_err_en_US,
-                      name->ToString().c_str(),
-                      parser::ToUpperCaseLetters(
-                          llvm::acc::getOpenACCClauseName(clause).str()));
-                } else {
-                  if (declareSymbols.contains(&name->symbol->GetUltimate())) {
-                    if (declareSymbols[&name->symbol->GetUltimate()] ==
-                        clause) {
-                      context_.Warn(common::UsageWarning::OpenAccUsage,
-                          GetContext().clauseSource,
-                          "'%s' in the %s clause is already present in the same clause in this module"_warn_en_US,
-                          name->symbol->name(),
-                          parser::ToUpperCaseLetters(
-                              llvm::acc::getOpenACCClauseName(clause).str()));
-                    } else {
-                      context_.Say(GetContext().clauseSource,
-                          "'%s' in the %s clause is already present in another "
-                          "%s clause in this module"_err_en_US,
-                          name->symbol->name(),
-                          parser::ToUpperCaseLetters(
-                              llvm::acc::getOpenACCClauseName(clause).str()),
-                          parser::ToUpperCaseLetters(
-                              llvm::acc::getOpenACCClauseName(
-                                  declareSymbols[&name->symbol->GetUltimate()])
-                                  .str()));
-                    }
-                  }
-                  declareSymbols.insert({&name->symbol->GetUltimate(), clause});
+                  // Name resolution has already reported the unresolved name.
+                  return;
                 }
+                if (declareSymbols.contains(&name->symbol->GetUltimate())) {
+                  if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
+                    context_.Warn(common::UsageWarning::OpenAccUsage,
+                        GetContext().clauseSource,
+                        "'%s' in the %s clause is already present in the same clause in this module"_warn_en_US,
+                        name->symbol->name(),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(clause).str()));
+                  } else {
+                    context_.Say(GetContext().clauseSource,
+                        "'%s' in the %s clause is already present in another "
+                        "%s clause in this module"_err_en_US,
+                        name->symbol->name(),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(clause).str()),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(
+                                declareSymbols[&name->symbol->GetUltimate()])
+                                .str()));
+                  }
+                }
+                declareSymbols.insert({&name->symbol->GetUltimate(), clause});
               }
             },
             [&](const parser::Name &name) {
