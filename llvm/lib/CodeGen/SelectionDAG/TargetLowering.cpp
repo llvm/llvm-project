@@ -222,6 +222,13 @@ TargetLowering::getArgListForFunctionType(FunctionType *FuncTy,
   return Args;
 }
 
+std::pair<SDValue, SDValue> TargetLowering::makeLibCall(
+    SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT, ArrayRef<SDValue> Ops,
+    MakeLibCallOptions CallOptions, const SDLoc &dl, SDValue Chain) const {
+  return makeLibCall(DAG, DAG.getLibcalls().getLibcallImpl(LC), RetVT, Ops,
+                     CallOptions, dl, Chain);
+}
+
 /// Generate a libcall taking the given operands as arguments and returning a
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
@@ -277,8 +284,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::LibcallImpl LibcallImpl,
 
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(getLibcallImplCallingConv(LibcallImpl), RetTy, OrigRetTy,
-                    Callee, std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl),
+                    RetTy, OrigRetTy, Callee, std::move(Args))
       .setNoReturn(CallOptions.DoesNotReturn)
       .setDiscardResult(!CallOptions.IsReturnValueUsed)
       .setIsPostTypeLegalization(CallOptions.IsPostTypeLegalization)
@@ -1010,7 +1017,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    ISD::CondCode CC = Op.getOperandCondCode(2);
     // If (1) we only need the sign-bit, (2) the setcc operands are the same
     // width as the setcc result, and (3) the result of a setcc conforms to 0 or
     // -1, we may be able to bypass the setcc.
@@ -2061,7 +2068,7 @@ bool TargetLowering::SimplifyDemandedBits(
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    ISD::CondCode CC = Op.getOperandCondCode(2);
     // If we're testing X < 0, X >= 0, X <= -1 or X > -1
     // (X is of integer type) then we only need the sign mask of the previous
     // result
@@ -2354,7 +2361,8 @@ bool TargetLowering::SimplifyDemandedBits(
           SDValue NewShiftAmt =
               TLO.DAG.getShiftAmountConstant(ShAmt, HalfVT, dl);
           SDValue NewShift =
-              TLO.DAG.getNode(ISD::SRL, dl, HalfVT, NewOp, NewShiftAmt);
+              TLO.DAG.getNode(ISD::SRL, dl, HalfVT, NewOp, NewShiftAmt,
+                              Op->getFlags() & SDNodeFlags::Exact);
           return TLO.CombineTo(
               Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, NewShift));
         }
@@ -5289,12 +5297,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           if (!Inverse)
             return TopSetCC;
 
-          ISD::CondCode InvCond = ISD::getSetCCInverse(
-              cast<CondCodeSDNode>(TopSetCC.getOperand(2))->get(),
-              TopSetCC.getOperand(0).getValueType());
+          ISD::CondCode InvCond =
+              ISD::getSetCCInverse(TopSetCC.getOperandCondCode(2),
+                                   TopSetCC.getOperand(0).getValueType());
           return DAG.getSetCC(dl, VT, TopSetCC.getOperand(0),
-                                      TopSetCC.getOperand(1),
-                                      InvCond);
+                              TopSetCC.getOperand(1), InvCond);
         }
       }
     }
@@ -5468,7 +5475,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           return DAG.getNode(ISD::TRUNCATE, dl, VT, N0);
         // Invert the condition.
         if (N0.getOpcode() == ISD::SETCC) {
-          ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+          ISD::CondCode CC = N0.getOperandCondCode(2);
           CC = ISD::getSetCCInverse(CC, N0.getOperand(0).getValueType());
           if (DCI.isBeforeLegalizeOps() ||
               isCondCodeLegal(CC, N0.getOperand(0).getSimpleValueType()))
@@ -8941,7 +8948,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   // UDIVREM can lower it instead.
   bool CanDecomposeUREMWithoutMulHi =
       Opcode == ISD::UREM &&
-      getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
+      DAG.getLibcalls().getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
           RTLIB::Unsupported &&
       isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT);
   if (!CanDecomposeUREMWithoutMulHi &&
@@ -12721,7 +12728,7 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
   assert((Op->getOpcode() == ISD::SETCC) && "Input has to be a SETCC node.");
   if (!isCtlzFast())
     return SDValue();
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   SDLoc dl(Op);
   if (isNullConstant(Op.getOperand(1)) && CC == ISD::SETEQ) {
     EVT VT = Op.getOperand(0).getValueType();
@@ -13107,7 +13114,7 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
   else if (WideVT == MVT::i128)
     LC = RTLIB::MUL_I128;
 
-  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
+  RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LibcallImpl == RTLIB::Unsupported) {
     forceExpandMultiply(DAG, dl, Signed, Lo, Hi, LHS, RHS);
     return;
@@ -14537,7 +14544,7 @@ bool TargetLowering::expandMultipleResultFPLibCall(
     return false;
 
   RTLIB::LibcallImpl LibcallImpl =
-      getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC);
+      DAG.getLibcalls().getVectorLibcallImplOrMasked(LC);
   if (LibcallImpl == RTLIB::Unsupported)
     return false;
 
@@ -14616,7 +14623,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      getLibcallImplCallingConv(LibcallImpl), RetType, Callee, std::move(Args));
+      DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl), RetType, Callee,
+      std::move(Args));
 
   auto [Call, CallChain] = LowerCallTo(CLI);
 

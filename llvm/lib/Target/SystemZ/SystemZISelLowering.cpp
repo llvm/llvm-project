@@ -4032,7 +4032,7 @@ SDValue SystemZTargetLowering::lowerSETCC(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDValue CmpOp0   = Op.getOperand(0);
   SDValue CmpOp1   = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   if (VT.isVector())
@@ -4049,7 +4049,7 @@ SDValue SystemZTargetLowering::lowerSTRICT_FSETCC(SDValue Op,
   SDValue Chain    = Op.getOperand(0);
   SDValue CmpOp0   = Op.getOperand(1);
   SDValue CmpOp1   = Op.getOperand(2);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(3);
   SDLoc DL(Op);
   EVT VT = Op.getNode()->getValueType(0);
   if (VT.isVector()) {
@@ -4067,7 +4067,7 @@ SDValue SystemZTargetLowering::lowerSTRICT_FSETCC(SDValue Op,
 }
 
 SDValue SystemZTargetLowering::lowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue CmpOp0   = Op.getOperand(2);
   SDValue CmpOp1   = Op.getOperand(3);
   SDValue Dest     = Op.getOperand(4);
@@ -4143,7 +4143,7 @@ SDValue SystemZTargetLowering::lowerSELECT_CC(SDValue Op,
   SDValue CmpOp1   = Op.getOperand(1);
   SDValue TrueOp   = Op.getOperand(2);
   SDValue FalseOp  = Op.getOperand(3);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDLoc DL(Op);
 
   // SELECT_CC involving f16 will not have the cmp-ops promoted by the
@@ -7863,7 +7863,7 @@ SDValue SystemZTargetLowering::combineZERO_EXTEND(
       N0.getOperand(0).getValueType() == VT) {
     SDValue Op0 = N0.getOperand(0);
     SDValue Op1 = N0.getOperand(1);
-    const ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+    const ISD::CondCode CC = N0.getOperandCondCode(2);
     switch (CC) {
     case ISD::SETULE:
       std::swap(Op0, Op1);
@@ -8811,7 +8811,7 @@ SDValue SystemZTargetLowering::combineBSWAP(
 SDValue SystemZTargetLowering::combineSETCC(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
-  const ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  const ISD::CondCode CC = N->getOperandCondCode(2);
   const SDValue LHS = N->getOperand(0);
   const SDValue RHS = N->getOperand(1);
   bool CmpNull = isNullConstant(RHS);

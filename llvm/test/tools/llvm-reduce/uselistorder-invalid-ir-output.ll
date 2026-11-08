@@ -7,7 +7,7 @@
 ; RUN:   --test-arg %s
 
 ; Check if the final output really parses
-; RUN: llvm-as -o /dev/null %t.reduced.ll
+; RUN: llvm-as -disable-output %t.reduced.ll
 ; RUN: FileCheck --check-prefix=RESULT %s < %t.reduced.ll
 
 

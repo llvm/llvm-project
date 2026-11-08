@@ -20,7 +20,7 @@ body:             |
     ; GFX8: liveins: $vgpr0
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX8-NEXT: %smask:sreg_32 = S_MOV_B32 65535
     ; GFX8-NEXT: %vmask:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
     ; GFX8-NEXT: $vgpr0 = COPY %op
@@ -31,7 +31,7 @@ body:             |
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX9-NEXT: %smask:sreg_32 = S_MOV_B32 65535
     ; GFX9-NEXT: %vmask:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
     ; GFX9-NEXT: $vgpr0 = COPY %op
@@ -42,7 +42,7 @@ body:             |
     ; GFX10: liveins: $vgpr0
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: %and0:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
     ; GFX10-NEXT: %and1:vgpr_32 = V_AND_B32_e64 65535, %op, implicit $exec
     ; GFX10-NEXT: %and2:vgpr_32 = V_AND_B32_e64 65535, %op, implicit $exec
@@ -50,7 +50,7 @@ body:             |
     ; GFX10-NEXT: $vgpr1 = COPY %and1
     ; GFX10-NEXT: $vgpr2 = COPY %and2
     %0:vgpr_32 = COPY $vgpr0
-    %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed %0, 0, 0, implicit $mode, implicit $exec
+    %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %and0:vgpr_32 = V_AND_B32_e32 65535, %op, implicit $exec
     %smask:sreg_32 = S_MOV_B32 65535
     %and1:vgpr_32 = V_AND_B32_e64 %smask, %op, implicit $exec
@@ -73,7 +73,7 @@ body:             |
     ; GFX8: liveins: $vgpr0
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX8-NEXT: %mask:sreg_32 = S_MOV_B32 65534
     ; GFX8-NEXT: %and:vgpr_32 = V_AND_B32_e64 %mask, %op, implicit $exec
     ; GFX8-NEXT: $vgpr0 = COPY %and
@@ -82,7 +82,7 @@ body:             |
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX9-NEXT: %mask:sreg_32 = S_MOV_B32 65534
     ; GFX9-NEXT: %and:vgpr_32 = V_AND_B32_e64 %mask, %op, implicit $exec
     ; GFX9-NEXT: $vgpr0 = COPY %and
@@ -91,11 +91,11 @@ body:             |
     ; GFX10: liveins: $vgpr0
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: %and:vgpr_32 = V_AND_B32_e64 65534, %op, implicit $exec
     ; GFX10-NEXT: $vgpr0 = COPY %and
     %0:vgpr_32 = COPY $vgpr0
-    %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, killed %0, 0, 0, implicit $mode, implicit $exec
+    %op:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, %0, 0, 0, implicit $mode, implicit $exec
     %mask:sreg_32 = S_MOV_B32 65534
     %and:vgpr_32 = V_AND_B32_e64 %mask, %op, implicit $exec
     $vgpr0 = COPY %and
