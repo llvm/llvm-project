@@ -24029,7 +24029,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     ArrayRef<Value *> Scalars = VL.empty() ? E->Scalars : VL;
     SmallSetVector<Value *, 4> UniqueInsts;
     for (Instruction *I : make_isa_range<Instruction>(Scalars)) {
-      if (E->hasCopyableElements() && E->isCopyableElement(I))
+      // The wide load also reads the memory of the copyable loads.
+      if (E->hasCopyableElements() && E->isCopyableElement(I) &&
+          E->getOpcode() != Instruction::Load)
         continue;
       UniqueInsts.insert(I);
     }
@@ -25246,9 +25248,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                   E->State == TreeEntry::BlendedLoadVectorize || HasUndefLanes)
                      ? NewLI
                      : PropagateIRFlags(NewLI);
-      // The wide load also reads the memory of the copyable loads.
-      if (E->hasCopyableElements() && !HasUndefLanes)
-        V = ::propagateMetadata(NewLI, E->Scalars);
 
       if (StridedLoadTy != VecTy)
         V = createWidenedStridedCast(Builder, V, VecTy, *DL);
