@@ -155,7 +155,8 @@ body:             |
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVID]], %subreg.dsub
-    ; CHECK-NEXT: $q0 = COPY [[INSERT_SUBREG]]
+    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG]], 0, [[INSERT_SUBREG1]], 0
+    ; CHECK-NEXT: $q0 = COPY [[INSvi64lane]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr128 = COPY $q0
     %1:fpr64 = ADDPv2i64p %0:fpr128
