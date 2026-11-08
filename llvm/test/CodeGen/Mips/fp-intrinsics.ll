@@ -988,141 +988,21 @@ define double @fpext_f32(float %x) #0 {
 }
 
 define float @sitofp_f32_i32(i32 %x) #0 {
-; R2-32-LABEL: sitofp_f32_i32:
-; R2-32:       # %bb.0:
-; R2-32-NEXT:    addiu $sp, $sp, -8
-; R2-32-NEXT:    .cfi_def_cfa_offset 8
-; R2-32-NEXT:    lui $1, 17200
-; R2-32-NEXT:    sw $1, 0($sp)
-; R2-32-NEXT:    lui $1, 32768
-; R2-32-NEXT:    xor $1, $4, $1
-; R2-32-NEXT:    sw $1, 4($sp)
-; R2-32-NEXT:    lui $1, %hi($CPI86_0)
-; R2-32-NEXT:    ldc1 $f0, %lo($CPI86_0)($1)
-; R2-32-NEXT:    ldc1 $f2, 0($sp)
-; R2-32-NEXT:    sub.d $f0, $f2, $f0
-; R2-32-NEXT:    cvt.s.d $f0, $f0
-; R2-32-NEXT:    jr $ra
-; R2-32-NEXT:    addiu $sp, $sp, 8
-;
-; CHECK-R6-LABEL: sitofp_f32_i32:
-; CHECK-R6:       # %bb.0:
-; CHECK-R6-NEXT:    addiu $sp, $sp, -8
-; CHECK-R6-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-R6-NEXT:    lui $1, 17200
-; CHECK-R6-NEXT:    sw $1, 0($sp)
-; CHECK-R6-NEXT:    lui $1, 32768
-; CHECK-R6-NEXT:    xor $1, $4, $1
-; CHECK-R6-NEXT:    sw $1, 4($sp)
-; CHECK-R6-NEXT:    lui $1, %hi($CPI86_0)
-; CHECK-R6-NEXT:    ldc1 $f0, %lo($CPI86_0)($1)
-; CHECK-R6-NEXT:    ldc1 $f1, 0($sp)
-; CHECK-R6-NEXT:    sub.d $f0, $f1, $f0
-; CHECK-R6-NEXT:    cvt.s.d $f0, $f0
-; CHECK-R6-NEXT:    jr $ra
-; CHECK-R6-NEXT:    addiu $sp, $sp, 8
-;
-; R2-FP64-LABEL: sitofp_f32_i32:
-; R2-FP64:       # %bb.0:
-; R2-FP64-NEXT:    addiu $sp, $sp, -8
-; R2-FP64-NEXT:    .cfi_def_cfa_offset 8
-; R2-FP64-NEXT:    lui $1, 17200
-; R2-FP64-NEXT:    sw $1, 0($sp)
-; R2-FP64-NEXT:    lui $1, 32768
-; R2-FP64-NEXT:    xor $1, $4, $1
-; R2-FP64-NEXT:    sw $1, 4($sp)
-; R2-FP64-NEXT:    lui $1, %hi($CPI86_0)
-; R2-FP64-NEXT:    ldc1 $f0, %lo($CPI86_0)($1)
-; R2-FP64-NEXT:    ldc1 $f1, 0($sp)
-; R2-FP64-NEXT:    sub.d $f0, $f1, $f0
-; R2-FP64-NEXT:    cvt.s.d $f0, $f0
-; R2-FP64-NEXT:    jr $ra
-; R2-FP64-NEXT:    addiu $sp, $sp, 8
-;
-; R2-64-LABEL: sitofp_f32_i32:
-; R2-64:       # %bb.0:
-; R2-64-NEXT:    addiu $sp, $sp, -8
-; R2-64-NEXT:    .cfi_def_cfa_offset 8
-; R2-64-NEXT:    lui $1, 17200
-; R2-64-NEXT:    sw $1, 0($sp)
-; R2-64-NEXT:    lui $1, 32768
-; R2-64-NEXT:    xor $1, $4, $1
-; R2-64-NEXT:    sw $1, 4($sp)
-; R2-64-NEXT:    lui $1, %hi($CPI86_0)
-; R2-64-NEXT:    ldc1 $f0, %lo($CPI86_0)($1)
-; R2-64-NEXT:    ldc1 $f1, 0($sp)
-; R2-64-NEXT:    sub.d $f0, $f1, $f0
-; R2-64-NEXT:    cvt.s.d $f0, $f0
-; R2-64-NEXT:    jr $ra
-; R2-64-NEXT:    addiu $sp, $sp, 8
+; CHECK-LABEL: sitofp_f32_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mtc1 $4, $f0
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    cvt.s.w $f0, $f0
   %val = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 define double @sitofp_f64_i32(i32 %x) #0 {
-; R2-32-LABEL: sitofp_f64_i32:
-; R2-32:       # %bb.0:
-; R2-32-NEXT:    addiu $sp, $sp, -8
-; R2-32-NEXT:    .cfi_def_cfa_offset 8
-; R2-32-NEXT:    lui $1, 17200
-; R2-32-NEXT:    sw $1, 0($sp)
-; R2-32-NEXT:    lui $1, 32768
-; R2-32-NEXT:    xor $1, $4, $1
-; R2-32-NEXT:    sw $1, 4($sp)
-; R2-32-NEXT:    lui $1, %hi($CPI87_0)
-; R2-32-NEXT:    ldc1 $f0, %lo($CPI87_0)($1)
-; R2-32-NEXT:    ldc1 $f2, 0($sp)
-; R2-32-NEXT:    sub.d $f0, $f2, $f0
-; R2-32-NEXT:    jr $ra
-; R2-32-NEXT:    addiu $sp, $sp, 8
-;
-; CHECK-R6-LABEL: sitofp_f64_i32:
-; CHECK-R6:       # %bb.0:
-; CHECK-R6-NEXT:    addiu $sp, $sp, -8
-; CHECK-R6-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-R6-NEXT:    lui $1, 17200
-; CHECK-R6-NEXT:    sw $1, 0($sp)
-; CHECK-R6-NEXT:    lui $1, 32768
-; CHECK-R6-NEXT:    xor $1, $4, $1
-; CHECK-R6-NEXT:    sw $1, 4($sp)
-; CHECK-R6-NEXT:    lui $1, %hi($CPI87_0)
-; CHECK-R6-NEXT:    ldc1 $f0, %lo($CPI87_0)($1)
-; CHECK-R6-NEXT:    ldc1 $f1, 0($sp)
-; CHECK-R6-NEXT:    sub.d $f0, $f1, $f0
-; CHECK-R6-NEXT:    jr $ra
-; CHECK-R6-NEXT:    addiu $sp, $sp, 8
-;
-; R2-FP64-LABEL: sitofp_f64_i32:
-; R2-FP64:       # %bb.0:
-; R2-FP64-NEXT:    addiu $sp, $sp, -8
-; R2-FP64-NEXT:    .cfi_def_cfa_offset 8
-; R2-FP64-NEXT:    lui $1, 17200
-; R2-FP64-NEXT:    sw $1, 0($sp)
-; R2-FP64-NEXT:    lui $1, 32768
-; R2-FP64-NEXT:    xor $1, $4, $1
-; R2-FP64-NEXT:    sw $1, 4($sp)
-; R2-FP64-NEXT:    lui $1, %hi($CPI87_0)
-; R2-FP64-NEXT:    ldc1 $f0, %lo($CPI87_0)($1)
-; R2-FP64-NEXT:    ldc1 $f1, 0($sp)
-; R2-FP64-NEXT:    sub.d $f0, $f1, $f0
-; R2-FP64-NEXT:    jr $ra
-; R2-FP64-NEXT:    addiu $sp, $sp, 8
-;
-; R2-64-LABEL: sitofp_f64_i32:
-; R2-64:       # %bb.0:
-; R2-64-NEXT:    addiu $sp, $sp, -8
-; R2-64-NEXT:    .cfi_def_cfa_offset 8
-; R2-64-NEXT:    lui $1, 17200
-; R2-64-NEXT:    sw $1, 0($sp)
-; R2-64-NEXT:    lui $1, 32768
-; R2-64-NEXT:    xor $1, $4, $1
-; R2-64-NEXT:    sw $1, 4($sp)
-; R2-64-NEXT:    lui $1, %hi($CPI87_0)
-; R2-64-NEXT:    ldc1 $f0, %lo($CPI87_0)($1)
-; R2-64-NEXT:    ldc1 $f1, 0($sp)
-; R2-64-NEXT:    sub.d $f0, $f1, $f0
-; R2-64-NEXT:    jr $ra
-; R2-64-NEXT:    addiu $sp, $sp, 8
+; CHECK-LABEL: sitofp_f64_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mtc1 $4, $f0
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    cvt.d.w $f0, $f0
   %val = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }

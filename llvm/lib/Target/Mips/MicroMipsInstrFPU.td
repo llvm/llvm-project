@@ -443,13 +443,13 @@ def : MipsPat<(f32 fpimm0), (MTC1_MM R0)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def : MipsPat<(f32 fpimm0neg), (FNEG_S_MM (MTC1_MM R0))>,
       ISA_MICROMIPS32_NOT_MIPS32R6;
 
-def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
+def : MipsPat<(f32 (any_fpround FGR64Opnd:$src)),
               (CVT_S_D64_MM FGR64Opnd:$src)>, ISA_MICROMIPS, FGR_64;
-def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
+def : MipsPat<(f64 (any_fpextend FGR32Opnd:$src)),
               (CVT_D64_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_64;
-def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
+def : MipsPat<(f32 (any_fpround AFGR64Opnd:$src)),
               (CVT_S_D32_MM AFGR64Opnd:$src)>, ISA_MICROMIPS, FGR_32;
-def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
+def : MipsPat<(f64 (any_fpextend FGR32Opnd:$src)),
               (CVT_D32_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_32;
 def : MipsPat<(MipsAnyTruncIntFP AFGR64Opnd:$src),
               (TRUNC_W_MM AFGR64Opnd:$src)>, ISA_MICROMIPS32_NOT_MIPS32R6,

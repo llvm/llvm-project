@@ -589,7 +589,10 @@ let DecoderNamespace = "MipsFP64", mayRaiseFPException = 1, Uses = [FCR31] in {
   }
 }
 
-let isPseudo = 1, isCodeGenOnly = 1 in {
+// These expand to an MTC1 or DMTC1 and a CVT, which uses the rounding mode
+// and may raise an exception.
+let isPseudo = 1, isCodeGenOnly = 1, mayRaiseFPException = 1,
+    Uses = [FCR31] in {
   def PseudoCVT_S_W : ABSS_FT<"", FGR32Opnd, GPR32Opnd>;
   let Predicates = [IsNotSingleFloat] in {
     def PseudoCVT_D32_W : ABSS_FT<"", AFGR64Opnd, GPR32Opnd>;

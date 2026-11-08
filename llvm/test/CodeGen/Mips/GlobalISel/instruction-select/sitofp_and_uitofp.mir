@@ -21,7 +21,7 @@ body:             |
     ; FP32: liveins: $r4
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
-    ; FP32-NEXT: [[PseudoCVT_S_W:%[0-9]+]]:fgr32 = PseudoCVT_S_W [[COPY]]
+    ; FP32-NEXT: [[PseudoCVT_S_W:%[0-9]+]]:fgr32 = nofpexcept PseudoCVT_S_W [[COPY]], implicit $fcr31
     ; FP32-NEXT: $f0 = COPY [[PseudoCVT_S_W]]
     ; FP32-NEXT: RetRA implicit $f0
     ;
@@ -29,7 +29,7 @@ body:             |
     ; FP64: liveins: $r4
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
-    ; FP64-NEXT: [[PseudoCVT_S_W:%[0-9]+]]:fgr32 = PseudoCVT_S_W [[COPY]]
+    ; FP64-NEXT: [[PseudoCVT_S_W:%[0-9]+]]:fgr32 = nofpexcept PseudoCVT_S_W [[COPY]], implicit $fcr31
     ; FP64-NEXT: $f0 = COPY [[PseudoCVT_S_W]]
     ; FP64-NEXT: RetRA implicit $f0
     %0:gprb(s32) = COPY $r4
@@ -51,7 +51,7 @@ body:             |
     ; FP32: liveins: $r4
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
-    ; FP32-NEXT: [[PseudoCVT_D32_W:%[0-9]+]]:afgr64 = PseudoCVT_D32_W [[COPY]]
+    ; FP32-NEXT: [[PseudoCVT_D32_W:%[0-9]+]]:afgr64 = nofpexcept PseudoCVT_D32_W [[COPY]], implicit $fcr31
     ; FP32-NEXT: $d0 = COPY [[PseudoCVT_D32_W]]
     ; FP32-NEXT: RetRA implicit $d0
     ;
@@ -59,7 +59,7 @@ body:             |
     ; FP64: liveins: $r4
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
-    ; FP64-NEXT: [[PseudoCVT_D64_W:%[0-9]+]]:fgr64 = PseudoCVT_D64_W [[COPY]]
+    ; FP64-NEXT: [[PseudoCVT_D64_W:%[0-9]+]]:fgr64 = nofpexcept PseudoCVT_D64_W [[COPY]], implicit $fcr31
     ; FP64-NEXT: $d0 = COPY [[PseudoCVT_D64_W]]
     ; FP64-NEXT: RetRA implicit $d0
     %0:gprb(s32) = COPY $r4
