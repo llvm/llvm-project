@@ -1,7 +1,7 @@
 !RUN: split-file %s %t
-!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %t/bare.f90 | FileCheck --check-prefix="UNPARSE" %s
+!RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %t/bare.f90 | FileCheck --check-prefixes=UNPARSE,UNPARSE5X %s
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %t/bare.f90 | FileCheck --check-prefix="PARSE-TREE" %s
-!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefixes=UNPARSE,CONDITIONAL %s
+!RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefixes=UNPARSE,UNPARSE60,CONDITIONAL %s
 !RUN: %flang_fc1 -fopenmp-version=60 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefixes=PARSE-TREE,CONDITIONAL-TREE %s
 
 !--- bare.f90
@@ -177,6 +177,27 @@ end subroutine assumes_parallelism
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpClauseList -> OmpClause -> NoParallelism
 !PARSE-TREE: | | OmpClause -> NoOpenmp
+
+subroutine assumes_absent
+  !$omp assumes absent(parallel, barrier)
+  !$omp assumes absent(target enter data)
+end subroutine assumes_absent
+
+!UNPARSE: SUBROUTINE assumes_absent
+!UNPARSE: !$OMP ASSUMES ABSENT(PARALLEL,BARRIER)
+!UNPARSE5X: !$OMP ASSUMES ABSENT(TARGET ENTER DATA)
+!UNPARSE60: !$OMP ASSUMES ABSENT(TARGET_ENTER_DATA)
+!UNPARSE: END SUBROUTINE assumes_absent
+
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = assumes
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Absent -> OmpAbsentClause -> llvm::omp::Directive = parallel
+!PARSE-TREE: | llvm::omp::Directive = barrier
+!PARSE-TREE: | Flags = {}
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = assumes
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Absent -> OmpAbsentClause -> llvm::omp::Directive = target enter data
+!PARSE-TREE: | Flags = {}
 
 !--- conditional.f90
 subroutine conditional_parallelism

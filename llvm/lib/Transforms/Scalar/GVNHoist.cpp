@@ -965,8 +965,7 @@ unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl,
         MSSAUpdater->removeMemoryAccess(OldMA);
       }
 
-      combineMetadataForCSE(Repl, I, true);
-      Repl->andIRFlags(I);
+      patchReplacementInstruction(I, Repl, /*DoesKMove=*/true);
       I->replaceAllUsesWith(Repl);
       I->eraseFromParent();
     }

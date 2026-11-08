@@ -406,7 +406,7 @@ struct MemRefDestructurableTypeExternalModel
 //===----------------------------------------------------------------------===//
 //  Register MemRefDestructurableTypeExternalModel
 //===----------------------------------------------------------------------===//
-void mlir::memref::registerDestructurableTypeExternalModels(
+void mlir::memref::registerDestructurableTypeInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
     MemRefType::attachInterface<MemRefDestructurableTypeExternalModel>(*ctx);
