@@ -5,14 +5,15 @@ define void @test(ptr %g, ptr %o) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[G:%.*]], ptr [[O:%.*]]) {
 ; CHECK-NEXT:    [[PG4:%.*]] = getelementptr i32, ptr [[G]], i64 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[G]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[PG4]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <2 x i32> [[TMP2]], splat (i32 10)
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <2 x i32> [[TMP11]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[G]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 2147483647, i32 10, i32 10, i32 10>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[TMP8]], <i32 10, i32 2147483647, i32 10, i32 10>
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i32> [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP11]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub <4 x i32> [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[O]], align 4
 ; CHECK-NEXT:    ret void
