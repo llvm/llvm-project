@@ -345,7 +345,7 @@ define i64 @exit_value_reuse_value_without_flags(i64 %a, i64 %b, i64 %n, ptr %p)
 ; CHECK-LABEL: define i64 @exit_value_reuse_value_without_flags(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]], i64 [[N:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[S_NSW:%.*]] = add i64 [[A]], [[B]]
+; CHECK-NEXT:    [[S_NSW:%.*]] = add nsw i64 [[A]], [[B]]
 ; CHECK-NEXT:    store i64 [[S_NSW]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[S:%.*]] = add i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
@@ -361,7 +361,7 @@ define i64 @exit_value_reuse_value_without_flags(i64 %a, i64 %b, i64 %n, ptr %p)
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[S_NSW]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[S]], [[TMP2]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
