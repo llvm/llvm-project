@@ -79,10 +79,16 @@ void NVVMAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
   SmallVector<StringRef> filesToLink(libs);
-  auto target = builder.getAttr<NVVMTargetAttr>(
-      optLevel, triple, chip, features, getFlags(builder),
+  // `getChecked` reports invalid options instead of asserting. It takes its
+  // arguments by value, hence the conversions: pass options are not copyable.
+  auto emitError = [op = getOperation()]() { return op->emitError(); };
+  auto target = NVVMTargetAttr::getChecked(
+      emitError, &getContext(), static_cast<int>(optLevel), StringRef(triple),
+      StringRef(chip), StringRef(features), getFlags(builder),
       filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink),
-      verifyTarget);
+      static_cast<bool>(verifyTarget));
+  if (!target)
+    return signalPassFailure();
   llvm::Regex matcher(moduleMatcher);
   for (Region &region : getOperation()->getRegions())
     for (Block &block : region.getBlocks())
