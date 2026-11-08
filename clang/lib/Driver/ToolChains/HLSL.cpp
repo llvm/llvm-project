@@ -525,7 +525,10 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
       continue;
     }
     if (A->getOption().getID() == options::OPT_dxc_gis) {
-      // Translate -Gis into -ffp_model_EQ=strict
+      // Translate -Gis into -fno-fast-math and -ffp_model_EQ=strict
+      // Apply -fno-fast-math first so it does not clear the
+      // -complex-range=full setting implied by -ffp-model=strict.
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fno_fast_math));
       DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_ffp_model_EQ),
                           "strict");
       A->claim();

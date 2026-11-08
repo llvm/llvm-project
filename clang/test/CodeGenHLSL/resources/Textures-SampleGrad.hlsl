@@ -227,8 +227,8 @@ float4 test_grad(COORD_TYPE loc : LOC, GRAD_TYPE ddx : DDX, GRAD_TYPE ddy : DDY)
 // CHECK: %[[COORD_VAL:.*]] = load [[COORD_LLVM]], ptr %[[COORD_ADDR]]
 // CHECK: %[[DDX_VAL:.*]] = load [[GRAD_LLVM]], ptr %[[DDX_ADDR]]
 // CHECK: %[[DDY_VAL:.*]] = load [[GRAD_LLVM]], ptr %[[DDY_ADDR]]
-// DXIL: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplegrad.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] [[OFFSET_ZERO]])
-// SPIRV: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplegrad.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] [[OFFSET_ZERO]])
+// DXIL: call fast <4 x float> @llvm.dx.resource.samplegrad.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] [[OFFSET_ZERO]])
+// SPIRV: call fast <4 x float> @llvm.spv.resource.samplegrad.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] [[OFFSET_ZERO]])
 
 // CHECK-OFFSET: @test_offset([[COORD_CXX]], [[GRAD_CXX]], [[GRAD_CXX]])
 // CHECK-OFFSET: %[[CALL_OFFSET:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleGrad(hlsl::SamplerState, [[COORD_CXX]], [[GRAD_CXX]], [[GRAD_CXX]], [[OFFSET_CXX]])(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, [[COORD_LLVM]] {{.*}} %{{.*}}, [[GRAD_LLVM]] {{.*}} %{{.*}}, [[GRAD_LLVM]] {{.*}} %{{.*}}, [[OFFSET_LLVM]] noundef [[OFFSET_CONST]])
@@ -262,8 +262,8 @@ float4 test_offset(COORD_TYPE loc : LOC, GRAD_TYPE ddx : DDX, GRAD_TYPE ddy : DD
 // CHECK-OFFSET: %[[DDX_VAL:.*]] = load [[GRAD_LLVM]], ptr %[[DDX_ADDR]]
 // CHECK-OFFSET: %[[DDY_VAL:.*]] = load [[GRAD_LLVM]], ptr %[[DDY_ADDR]]
 // CHECK-OFFSET: %[[OFFSET_VAL:.*]] = load [[OFFSET_LLVM]], ptr %[[OFFSET_ADDR]]
-// DXIL-OFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplegrad.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE2]], target("dx.Sampler", 0) %[[SAMPLER_H2]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]])
-// SPIRV-OFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplegrad.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE2]], target("spirv.Sampler") %[[SAMPLER_H2]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]])
+// DXIL-OFFSET: call fast <4 x float> @llvm.dx.resource.samplegrad.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE2]], target("dx.Sampler", 0) %[[SAMPLER_H2]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]])
+// SPIRV-OFFSET: call fast <4 x float> @llvm.spv.resource.samplegrad.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE2]], target("spirv.Sampler") %[[SAMPLER_H2]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]])
 
 // CHECK-OFFSET: @test_clamp([[COORD_CXX]], [[GRAD_CXX]], [[GRAD_CXX]])
 // CHECK-OFFSET: %[[CALL_CLAMP:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleGrad(hlsl::SamplerState, [[COORD_CXX]], [[GRAD_CXX]], [[GRAD_CXX]], [[OFFSET_CXX]], float)(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, [[COORD_LLVM]] {{.*}} %{{.*}}, [[GRAD_LLVM]] {{.*}} %{{.*}}, [[GRAD_LLVM]] {{.*}} %{{.*}}, [[OFFSET_LLVM]] noundef [[OFFSET_CONST]], float {{.*}} 1.000000e+00)
@@ -309,8 +309,8 @@ float4 test_clamp(COORD_TYPE loc : LOC, GRAD_TYPE ddx : DDX, GRAD_TYPE ddy : DDY
 // CHECK-OFFSET: %[[DDY_VAL:.*]] = load [[GRAD_LLVM]], ptr %[[DDY_ADDR]]
 // CHECK-OFFSET: %[[OFFSET_VAL:.*]] = load [[OFFSET_LLVM]], ptr %[[OFFSET_ADDR]]
 // CHECK-OFFSET: %[[CLAMP_VAL:.*]] = load float, ptr %[[CLAMP_ADDR]]
-// DXIL-OFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplegrad.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE3]], target("dx.Sampler", 0) %[[SAMPLER_H3]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]], float %[[CLAMP_VAL]])
-// SPIRV-OFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplegrad.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE3]], target("spirv.Sampler") %[[SAMPLER_H3]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]], float %[[CLAMP_VAL]])
+// DXIL-OFFSET: call fast <4 x float> @llvm.dx.resource.samplegrad.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE3]], target("dx.Sampler", 0) %[[SAMPLER_H3]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]], float %[[CLAMP_VAL]])
+// SPIRV-OFFSET: call fast <4 x float> @llvm.spv.resource.samplegrad.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE3]], target("spirv.Sampler") %[[SAMPLER_H3]], [[COORD_LLVM]] %[[COORD_VAL]], [[GRAD_LLVM]] %[[DDX_VAL]], [[GRAD_LLVM]] %[[DDY_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]], float %[[CLAMP_VAL]])
 
 // CHECK-NOOFFSET: define linkonce_odr hidden {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleGrad(hlsl::SamplerState, [[COORD_CXX]], [[GRAD_CXX]], [[GRAD_CXX]], float)(
 // CHECK-NOOFFSET: %[[THIS_VAL_NC:.*]] = load ptr, ptr %{{.*}}
@@ -320,5 +320,5 @@ float4 test_clamp(COORD_TYPE loc : LOC, GRAD_TYPE ddx : DDX, GRAD_TYPE ddy : DDY
 // CHECK-NOOFFSET: %[[SAMPLER_H_NC:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP_NC]]
 // CHECK-NOOFFSET: %[[COORD_VAL_NC:.*]] = load [[COORD_LLVM]], ptr %{{.*}}
 // CHECK-NOOFFSET: %[[CLAMP_VAL_NC:.*]] = load float, ptr %{{.*}}
-// DXIL-NOOFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplegrad.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE_NC]], target("dx.Sampler", 0) %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, [[GRAD_LLVM]] %{{.*}}, [[GRAD_LLVM]] %{{.*}}, [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
-// SPIRV-NOOFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplegrad.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE_NC]], target("spirv.Sampler") %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, [[GRAD_LLVM]] %{{.*}}, [[GRAD_LLVM]] %{{.*}}, [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
+// DXIL-NOOFFSET: call fast <4 x float> @llvm.dx.resource.samplegrad.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE_NC]], target("dx.Sampler", 0) %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, [[GRAD_LLVM]] %{{.*}}, [[GRAD_LLVM]] %{{.*}}, [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
+// SPIRV-NOOFFSET: call fast <4 x float> @llvm.spv.resource.samplegrad.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE_NC]], target("spirv.Sampler") %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, [[GRAD_LLVM]] %{{.*}}, [[GRAD_LLVM]] %{{.*}}, [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])

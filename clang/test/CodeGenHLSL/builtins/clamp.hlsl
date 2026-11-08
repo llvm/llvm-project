@@ -102,48 +102,48 @@ uint64_t3 test_clamp_ulong3(uint64_t3 p0, uint64_t3 p1) { return clamp(p0, p1,p1
 uint64_t4 test_clamp_ulong4(uint64_t4 p0, uint64_t4 p1) { return clamp(p0, p1,p1); }
 
 // NATIVE_HALF: define [[FNATTRS]] [[FFNATTRS]] half @_Z15test_clamp_half
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn half @llvm.[[TARGET]].nclamp.f16(
+// NATIVE_HALF: call fast half @llvm.[[TARGET]].nclamp.f16(
 // NO_HALF: define [[FNATTRS]] [[FFNATTRS]] float @_Z15test_clamp_half
-// NO_HALF: call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].nclamp.f32(
+// NO_HALF: call fast float @llvm.[[TARGET]].nclamp.f32(
 half test_clamp_half(half p0, half p1) { return clamp(p0, p1,p1); }
 // NATIVE_HALF: define [[FNATTRS]] [[FFNATTRS]] <2 x half> @_Z16test_clamp_half2
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.[[TARGET]].nclamp.v2f16
+// NATIVE_HALF: call fast <2 x half> @llvm.[[TARGET]].nclamp.v2f16
 // NO_HALF: define [[FNATTRS]] [[FFNATTRS]] <2 x float> @_Z16test_clamp_half2
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].nclamp.v2f32(
+// NO_HALF: call fast <2 x float> @llvm.[[TARGET]].nclamp.v2f32(
 half2 test_clamp_half2(half2 p0, half2 p1) { return clamp(p0, p1,p1); }
 // NATIVE_HALF: define [[FNATTRS]] [[FFNATTRS]] <3 x half> @_Z16test_clamp_half3
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.[[TARGET]].nclamp.v3f16
+// NATIVE_HALF: call fast <3 x half> @llvm.[[TARGET]].nclamp.v3f16
 // NO_HALF: define [[FNATTRS]] [[FFNATTRS]] <3 x float> @_Z16test_clamp_half3
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].nclamp.v3f32(
+// NO_HALF: call fast <3 x float> @llvm.[[TARGET]].nclamp.v3f32(
 half3 test_clamp_half3(half3 p0, half3 p1) { return clamp(p0, p1,p1); }
 // NATIVE_HALF: define [[FNATTRS]] [[FFNATTRS]] <4 x half> @_Z16test_clamp_half4
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.[[TARGET]].nclamp.v4f16
+// NATIVE_HALF: call fast <4 x half> @llvm.[[TARGET]].nclamp.v4f16
 // NO_HALF: define [[FNATTRS]] [[FFNATTRS]] <4 x float> @_Z16test_clamp_half4
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].nclamp.v4f32(
+// NO_HALF: call fast <4 x float> @llvm.[[TARGET]].nclamp.v4f32(
 half4 test_clamp_half4(half4 p0, half4 p1) { return clamp(p0, p1,p1); }
 
 // CHECK: define [[FNATTRS]] [[FFNATTRS]] float @_Z16test_clamp_float
-// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].nclamp.f32(
+// CHECK: call fast float @llvm.[[TARGET]].nclamp.f32(
 float test_clamp_float(float p0, float p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] [[FFNATTRS]] <2 x float> @_Z17test_clamp_float2
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].nclamp.v2f32
+// CHECK: call fast <2 x float> @llvm.[[TARGET]].nclamp.v2f32
 float2 test_clamp_float2(float2 p0, float2 p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] [[FFNATTRS]] <3 x float> @_Z17test_clamp_float3
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].nclamp.v3f32
+// CHECK: call fast <3 x float> @llvm.[[TARGET]].nclamp.v3f32
 float3 test_clamp_float3(float3 p0, float3 p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] [[FFNATTRS]] <4 x float> @_Z17test_clamp_float4
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].nclamp.v4f32
+// CHECK: call fast <4 x float> @llvm.[[TARGET]].nclamp.v4f32
 float4 test_clamp_float4(float4 p0, float4 p1) { return clamp(p0, p1,p1); }
 
 // CHECK: define [[FNATTRS]] [[FFNATTRS]] double @_Z17test_clamp_double
-// CHECK: call reassoc nnan ninf nsz arcp afn double @llvm.[[TARGET]].nclamp.f64(
+// CHECK: call fast double @llvm.[[TARGET]].nclamp.f64(
 double test_clamp_double(double p0, double p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] [[FFNATTRS]] <2 x double> @_Z18test_clamp_double2
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x double> @llvm.[[TARGET]].nclamp.v2f64
+// CHECK: call fast <2 x double> @llvm.[[TARGET]].nclamp.v2f64
 double2 test_clamp_double2(double2 p0, double2 p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] [[FFNATTRS]] <3 x double> @_Z18test_clamp_double3
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x double> @llvm.[[TARGET]].nclamp.v3f64
+// CHECK: call fast <3 x double> @llvm.[[TARGET]].nclamp.v3f64
 double3 test_clamp_double3(double3 p0, double3 p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] [[FFNATTRS]] <4 x double> @_Z18test_clamp_double4
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.[[TARGET]].nclamp.v4f64
+// CHECK: call fast <4 x double> @llvm.[[TARGET]].nclamp.v4f64
 double4 test_clamp_double4(double4 p0, double4 p1) { return clamp(p0, p1,p1); }

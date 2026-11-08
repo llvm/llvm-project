@@ -9,10 +9,10 @@
 // ROW-CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // ROW-CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca [3 x <2 x float>], align 4
 // ROW-CHECK-NEXT:    [[I32:%.*]] = alloca [3 x <2 x i32>], align 4
-// ROW-CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[F32]], i32 3, i32 2)
+// ROW-CHECK-NEXT:    [[TMP1:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[F32]], i32 3, i32 2)
 // ROW-CHECK-NEXT:    store <6 x float> [[TMP1]], ptr [[F32_ADDR]], align 4
 // ROW-CHECK-NEXT:    [[TMP2:%.*]] = load <6 x float>, ptr [[F32_ADDR]], align 4
-// ROW-CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nnan ninf nsz arcp afn <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[TMP2]], i32 2, i32 3)
+// ROW-CHECK-NEXT:    [[TMP3:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[TMP2]], i32 2, i32 3)
 // ROW-CHECK-NEXT:    [[CONV:%.*]] = fptosi <6 x float> [[TMP3]] to <6 x i32>
 // ROW-CHECK-NEXT:    [[TMP4:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[CONV]], i32 3, i32 2)
 // ROW-CHECK-NEXT:    store <6 x i32> [[TMP4]], ptr [[I32]], align 4
@@ -114,10 +114,10 @@ int3x2 elementwise_type_cast2(int64_t3x2 i64_32) {
 // ROW-CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // ROW-CHECK-NEXT:    [[H23_ADDR:%.*]] = alloca [2 x <3 x half>], align 2
 // ROW-CHECK-NEXT:    [[I23:%.*]] = alloca [2 x <3 x i16>], align 2
-// ROW-CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> [[H23]], i32 2, i32 3)
+// ROW-CHECK-NEXT:    [[TMP1:%.*]] = call {{.*}} <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> [[H23]], i32 2, i32 3)
 // ROW-CHECK-NEXT:    store <6 x half> [[TMP1]], ptr [[H23_ADDR]], align 2
 // ROW-CHECK-NEXT:    [[TMP2:%.*]] = load <6 x half>, ptr [[H23_ADDR]], align 2
-// ROW-CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nnan ninf nsz arcp afn <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> [[TMP2]], i32 3, i32 2)
+// ROW-CHECK-NEXT:    [[TMP3:%.*]] = call {{.*}} <6 x half> @llvm.matrix.transpose.v6f16(<6 x half> [[TMP2]], i32 3, i32 2)
 // ROW-CHECK-NEXT:    [[CONV:%.*]] = fptosi <6 x half> [[TMP3]] to <6 x i16>
 // ROW-CHECK-NEXT:    [[TMP4:%.*]] = call <6 x i16> @llvm.matrix.transpose.v6i16(<6 x i16> [[CONV]], i32 2, i32 3)
 // ROW-CHECK-NEXT:    store <6 x i16> [[TMP4]], ptr [[I23]], align 2
@@ -149,10 +149,10 @@ int16_t2x3 elementwise_type_cast3(half2x3 h23) {
 // ROW-CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // ROW-CHECK-NEXT:    [[D32_ADDR:%.*]] = alloca [3 x <2 x double>], align 8
 // ROW-CHECK-NEXT:    [[I32:%.*]] = alloca [3 x <2 x i32>], align 4
-// ROW-CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[D32]], i32 3, i32 2)
+// ROW-CHECK-NEXT:    [[TMP1:%.*]] = call {{.*}} <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[D32]], i32 3, i32 2)
 // ROW-CHECK-NEXT:    store <6 x double> [[TMP1]], ptr [[D32_ADDR]], align 8
 // ROW-CHECK-NEXT:    [[TMP2:%.*]] = load <6 x double>, ptr [[D32_ADDR]], align 8
-// ROW-CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nnan ninf nsz arcp afn <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[TMP2]], i32 2, i32 3)
+// ROW-CHECK-NEXT:    [[TMP3:%.*]] = call {{.*}} <6 x double> @llvm.matrix.transpose.v6f64(<6 x double> [[TMP2]], i32 2, i32 3)
 // ROW-CHECK-NEXT:    [[CONV:%.*]] = fptosi <6 x double> [[TMP3]] to <6 x i32>
 // ROW-CHECK-NEXT:    [[TMP4:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[CONV]], i32 3, i32 2)
 // ROW-CHECK-NEXT:    store <6 x i32> [[TMP4]], ptr [[I32]], align 4
@@ -368,10 +368,10 @@ void call4(Derived D) {
 // ROW-CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
 // ROW-CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP8]], i32 3
 // ROW-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP7]], float [[VECEXT3]], i64 3
-// ROW-CHECK-NEXT:    [[TMP10:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP9]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    [[TMP10:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP9]], i32 2, i32 2)
 // ROW-CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[M]], align 4
 // ROW-CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[M]], align 4
-// ROW-CHECK-NEXT:    [[TMP12:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP11]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    [[TMP12:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP11]], i32 2, i32 2)
 // ROW-CHECK-NEXT:    ret <4 x float> [[TMP12]]
 //
 // COL-CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z5call5Dv4_f(

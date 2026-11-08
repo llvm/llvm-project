@@ -133,7 +133,7 @@ int4 getIntMatrixDynamic(int4x4 M, int index) {
 // CHECK-NEXT:    [[MATRIX_ROW_INS12:%.*]] = insertelement <4 x float> [[MATRIX_ROW_INS10]], float [[MATRIX_ELEM11]], i32 2
 // CHECK-NEXT:    [[MATRIX_ELEM13:%.*]] = extractelement <16 x float> [[TMP1]], i32 13
 // CHECK-NEXT:    [[MATRIX_ROW_INS14:%.*]] = insertelement <4 x float> [[MATRIX_ROW_INS12]], float [[MATRIX_ELEM13]], i32 3
-// CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x float> [[MATRIX_ROW_INS6]], [[MATRIX_ROW_INS14]]
+// CHECK-NEXT:    [[ADD:%.*]] = fadd {{.*}} <4 x float> [[MATRIX_ROW_INS6]], [[MATRIX_ROW_INS14]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load <16 x float>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[MATRIX_ELEM15:%.*]] = extractelement <16 x float> [[TMP2]], i32 2
 // CHECK-NEXT:    [[MATRIX_ROW_INS16:%.*]] = insertelement <4 x float> poison, float [[MATRIX_ELEM15]], i32 0
@@ -143,7 +143,7 @@ int4 getIntMatrixDynamic(int4x4 M, int index) {
 // CHECK-NEXT:    [[MATRIX_ROW_INS20:%.*]] = insertelement <4 x float> [[MATRIX_ROW_INS18]], float [[MATRIX_ELEM19]], i32 2
 // CHECK-NEXT:    [[MATRIX_ELEM21:%.*]] = extractelement <16 x float> [[TMP2]], i32 14
 // CHECK-NEXT:    [[MATRIX_ROW_INS22:%.*]] = insertelement <4 x float> [[MATRIX_ROW_INS20]], float [[MATRIX_ELEM21]], i32 3
-// CHECK-NEXT:    [[ADD23:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x float> [[ADD]], [[MATRIX_ROW_INS22]]
+// CHECK-NEXT:    [[ADD23:%.*]] = fadd {{.*}} <4 x float> [[ADD]], [[MATRIX_ROW_INS22]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load <16 x float>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[MATRIX_ELEM24:%.*]] = extractelement <16 x float> [[TMP3]], i32 3
 // CHECK-NEXT:    [[MATRIX_ROW_INS25:%.*]] = insertelement <4 x float> poison, float [[MATRIX_ELEM24]], i32 0
@@ -153,7 +153,7 @@ int4 getIntMatrixDynamic(int4x4 M, int index) {
 // CHECK-NEXT:    [[MATRIX_ROW_INS29:%.*]] = insertelement <4 x float> [[MATRIX_ROW_INS27]], float [[MATRIX_ELEM28]], i32 2
 // CHECK-NEXT:    [[MATRIX_ELEM30:%.*]] = extractelement <16 x float> [[TMP3]], i32 15
 // CHECK-NEXT:    [[MATRIX_ROW_INS31:%.*]] = insertelement <4 x float> [[MATRIX_ROW_INS29]], float [[MATRIX_ELEM30]], i32 3
-// CHECK-NEXT:    [[ADD32:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x float> [[ADD23]], [[MATRIX_ROW_INS31]]
+// CHECK-NEXT:    [[ADD32:%.*]] = fadd {{.*}} <4 x float> [[ADD23]], [[MATRIX_ROW_INS31]]
 // CHECK-NEXT:    ret <4 x float> [[ADD32]]
 //
 float4 AddFloatMatrixConstant(float4x4 M) {

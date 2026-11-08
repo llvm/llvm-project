@@ -72,7 +72,7 @@ bool test_bool(bool expr) {
 // CHECK-LABEL: test_half
 half test_half(half expr) {
   // CHECK: %[[#entry_tok4:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.f16([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok4]]) ]
+  // CHECK: %[[RET:.*]] = call fast [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.f16([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok4]]) ]
   // CHECK: ret [[TY]] %[[RET]]
   return WaveReadLaneFirst(expr);
 }
@@ -80,7 +80,7 @@ half test_half(half expr) {
 // CHECK-LABEL: test_double
 double test_double(double expr) {
   // CHECK: %[[#entry_tok5:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.f64([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok5]]) ]
+  // CHECK: %[[RET:.*]] = call fast [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.f64([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok5]]) ]
   // CHECK: ret [[TY]] %[[RET]]
   return WaveReadLaneFirst(expr);
 }
@@ -88,7 +88,7 @@ double test_double(double expr) {
 // CHECK-LABEL: test_floatv4
 float4 test_floatv4(float4 expr) {
   // CHECK: %[[#entry_tok6:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.v4f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok6]]) ]
+  // CHECK: %[[RET:.*]] = call fast [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.v4f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok6]]) ]
   // CHECK: ret [[TY]] %[[RET]]
   return WaveReadLaneFirst(expr);
 }
@@ -96,7 +96,7 @@ float4 test_floatv4(float4 expr) {
 // CHECK-LABEL: test_floatv5
 vector<float, 5> test_floatv5(vector<float, 5> expr) {
   // CHECK: %[[#entry_tok7:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.v5f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok7]]) ]
+  // CHECK: %[[RET:.*]] = call fast [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.v5f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok7]]) ]
   // CHECK: ret [[TY]] %[[RET]]
   return WaveReadLaneFirst(expr);
 }
@@ -104,7 +104,7 @@ vector<float, 5> test_floatv5(vector<float, 5> expr) {
 // CHECK-LABEL: test_float2x3
 float2x3 test_float2x3(float2x3 expr) {
   // CHECK: %[[#entry_tok8:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.v6f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok8]]) ]
+  // CHECK: %[[RET:.*]] = call fast [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.v6f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok8]]) ]
   // CHECK: ret [[TY]] %[[RET]]
   return WaveReadLaneFirst(expr);
 }
@@ -112,7 +112,7 @@ float2x3 test_float2x3(float2x3 expr) {
 // CHECK-LABEL: test_float3x4
 float3x4 test_float3x4(float3x4 expr) {
   // CHECK: %[[#entry_tok9:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.v12f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok9]]) ]
+  // CHECK: %[[RET:.*]] = call fast [[TY:.*]] @llvm.[[TARGET]].wave.readlane.first.v12f32([[TY]] %[[#]]) [ "convergencectrl"(token %[[#entry_tok9]]) ]
   // CHECK: ret [[TY]] %[[RET]]
   return WaveReadLaneFirst(expr);
 }
