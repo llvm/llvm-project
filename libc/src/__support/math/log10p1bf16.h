@@ -101,7 +101,7 @@ LIBC_INLINE bfloat16 log10p1bf16(bfloat16 x) {
       return x;
 
     // log10p1(-inf) = NaN
-    if (x_abs == 0xff80U) {
+    if (x_u == 0xff80U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
