@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "IPOOptions.h"
 #include "llvm/IR/BundleAttributes.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
@@ -63,7 +64,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -83,32 +83,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "attributor"
-
-static cl::opt<bool> ManifestInternal(
-    "attributor-manifest-internal", cl::Hidden,
-    cl::desc("Manifest Attributor internal string attributes."),
-    cl::init(false));
-
-static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size", cl::init(128),
-                                       cl::Hidden);
-
-template <>
-unsigned llvm::PotentialConstantIntValuesState::MaxPotentialValues = 0;
-
-template <> unsigned llvm::PotentialLLVMValuesState::MaxPotentialValues = -1;
-
-static cl::opt<unsigned, true> MaxPotentialValues(
-    "attributor-max-potential-values", cl::Hidden,
-    cl::desc("Maximum number of potential values to be "
-             "tracked for each position."),
-    cl::location(llvm::PotentialConstantIntValuesState::MaxPotentialValues),
-    cl::init(7));
-
-static cl::opt<int> MaxPotentialValuesIterations(
-    "attributor-max-potential-values-iterations", cl::Hidden,
-    cl::desc(
-        "Maximum number of iterations we keep dismantling potential values."),
-    cl::init(64));
 
 STATISTIC(NumAAs, "Number of abstract attributes created");
 STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
@@ -5857,7 +5831,7 @@ struct AANoCaptureImpl : public AANoCapture {
     if (isArgumentPosition()) {
       if (isAssumedNoCapture())
         Attrs.emplace_back(Attribute::get(Ctx, Attribute::Captures));
-      else if (ManifestInternal)
+      else if (A.Opts.attributor_manifest_internal)
         Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
     }
   }
@@ -7159,14 +7133,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     }
 
     std::optional<APInt> Size = getSize(A, *this, AI);
-    if (!AI.IsGlobalizedLocal && MaxHeapToStackSize != -1) {
-      if (!Size || Size->ugt(MaxHeapToStackSize)) {
+    if (!AI.IsGlobalizedLocal && A.Opts.max_heap_to_stack_size != -1) {
+      if (!Size || Size->ugt(A.Opts.max_heap_to_stack_size)) {
         LLVM_DEBUG({
           if (!Size)
             dbgs() << "[H2S] Unknown allocation size: " << *AI.CB << "\n";
           else
             dbgs() << "[H2S] Allocation size too large: " << *AI.CB << " vs. "
-                   << MaxHeapToStackSize << "\n";
+                   << A.Opts.max_heap_to_stack_size << "\n";
         });
 
         AI.Status = AllocationInfo::INVALID;
@@ -9609,6 +9583,10 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
 
 /// ------------------ Potential Values Attribute -------------------------
 
+AAPotentialConstantValues::AAPotentialConstantValues(const IRPosition &IRP,
+                                                     Attributor &A)
+    : Base(IRP, true, A.Opts.attributor_max_potential_values) {}
+
 namespace {
 struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
   using StateType = PotentialConstantIntValuesState;
@@ -11368,7 +11346,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         continue;
 
       // Make sure we limit the compile time for complex expressions.
-      if (Iteration++ >= MaxPotentialValuesIterations) {
+      if (Iteration++ >= A.Opts.attributor_max_potential_values_iterations) {
         LLVM_DEBUG(dbgs() << "Generic value traversal reached iteration limit: "
                           << Iteration << "!\n");
         addValue(A, getState(), *V, CtxI, S, getAnchorScope());
