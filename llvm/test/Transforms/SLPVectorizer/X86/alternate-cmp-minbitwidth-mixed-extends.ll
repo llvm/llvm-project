@@ -4,8 +4,10 @@
 define <2 x i16> @test(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-LABEL: define <2 x i16> @test(
 ; CHECK-SAME: <2 x i16> [[A:%.*]], <2 x i16> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <2 x i16> [[A]], [[B]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <2 x i16> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i16> [[B]] to <2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <2 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP3]], <2 x i1> [[TMP4]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x i16> [[A]], <2 x i16> [[B]]
 ; CHECK-NEXT:    ret <2 x i16> [[TMP6]]
