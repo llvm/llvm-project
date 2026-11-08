@@ -3301,41 +3301,43 @@ define <4 x i100> @test_signed_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-GI-FP16-LABEL: test_signed_v4f16_v4i100:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mvni v1.4h, #4, lsl #8
-; CHECK-GI-FP16-NEXT:    fcvtzs x8, h0
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI64_1
+; CHECK-GI-FP16-NEXT:    fcvtzs x9, h0
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[1]
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI64_1]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI64_0
 ; CHECK-GI-FP16-NEXT:    mov x10, #34359738368 // =0x800000000
-; CHECK-GI-FP16-NEXT:    mvni v2.4h, #132, lsl #8
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[1]
+; CHECK-GI-FP16-NEXT:    ldr h3, [x8, :lo12:.LCPI64_0]
 ; CHECK-GI-FP16-NEXT:    mov x11, #34359738367 // =0x7ffffffff
 ; CHECK-GI-FP16-NEXT:    mov h4, v0.h[2]
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h1
-; CHECK-GI-FP16-NEXT:    asr x9, x8, #63
-; CHECK-GI-FP16-NEXT:    fcvtzs x12, h3
-; CHECK-GI-FP16-NEXT:    csel x8, xzr, x8, lt
-; CHECK-GI-FP16-NEXT:    csel x9, x10, x9, lt
-; CHECK-GI-FP16-NEXT:    fcmp h0, h2
-; CHECK-GI-FP16-NEXT:    csinv x8, x8, xzr, le
-; CHECK-GI-FP16-NEXT:    csel x9, x11, x9, gt
+; CHECK-GI-FP16-NEXT:    asr x8, x9, #63
+; CHECK-GI-FP16-NEXT:    fcvtzs x12, h2
+; CHECK-GI-FP16-NEXT:    csel x9, xzr, x9, lt
+; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, lt
+; CHECK-GI-FP16-NEXT:    fcmp h0, h3
+; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
+; CHECK-GI-FP16-NEXT:    csel x8, x11, x8, gt
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h0
 ; CHECK-GI-FP16-NEXT:    mov h0, v0.h[3]
-; CHECK-GI-FP16-NEXT:    csel x0, xzr, x8, vs
-; CHECK-GI-FP16-NEXT:    csel x1, xzr, x9, vs
-; CHECK-GI-FP16-NEXT:    fcmp h3, h1
+; CHECK-GI-FP16-NEXT:    csel x0, xzr, x9, vs
+; CHECK-GI-FP16-NEXT:    csel x1, xzr, x8, vs
+; CHECK-GI-FP16-NEXT:    fcmp h2, h1
 ; CHECK-GI-FP16-NEXT:    asr x8, x12, #63
 ; CHECK-GI-FP16-NEXT:    csel x9, xzr, x12, lt
 ; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, lt
-; CHECK-GI-FP16-NEXT:    fcmp h3, h2
+; CHECK-GI-FP16-NEXT:    fcmp h2, h3
 ; CHECK-GI-FP16-NEXT:    fcvtzs x12, h4
 ; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-GI-FP16-NEXT:    csel x8, x11, x8, gt
-; CHECK-GI-FP16-NEXT:    fcmp h3, h3
+; CHECK-GI-FP16-NEXT:    fcmp h2, h2
 ; CHECK-GI-FP16-NEXT:    csel x2, xzr, x9, vs
 ; CHECK-GI-FP16-NEXT:    csel x3, xzr, x8, vs
 ; CHECK-GI-FP16-NEXT:    fcmp h4, h1
 ; CHECK-GI-FP16-NEXT:    asr x8, x12, #63
 ; CHECK-GI-FP16-NEXT:    csel x9, xzr, x12, lt
 ; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, lt
-; CHECK-GI-FP16-NEXT:    fcmp h4, h2
+; CHECK-GI-FP16-NEXT:    fcmp h4, h3
 ; CHECK-GI-FP16-NEXT:    fcvtzs x12, h0
 ; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-GI-FP16-NEXT:    csel x8, x11, x8, gt
@@ -3346,7 +3348,7 @@ define <4 x i100> @test_signed_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-GI-FP16-NEXT:    asr x8, x12, #63
 ; CHECK-GI-FP16-NEXT:    csel x9, xzr, x12, lt
 ; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, lt
-; CHECK-GI-FP16-NEXT:    fcmp h0, h2
+; CHECK-GI-FP16-NEXT:    fcmp h0, h3
 ; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-GI-FP16-NEXT:    csel x8, x11, x8, gt
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h0
@@ -3525,41 +3527,43 @@ define <4 x i128> @test_signed_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-GI-FP16-LABEL: test_signed_v4f16_v4i128:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mvni v1.4h, #4, lsl #8
-; CHECK-GI-FP16-NEXT:    fcvtzs x8, h0
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI65_1
+; CHECK-GI-FP16-NEXT:    fcvtzs x9, h0
+; CHECK-GI-FP16-NEXT:    mov h2, v0.h[1]
+; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI65_1]
+; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI65_0
 ; CHECK-GI-FP16-NEXT:    mov x10, #-9223372036854775808 // =0x8000000000000000
-; CHECK-GI-FP16-NEXT:    mvni v2.4h, #132, lsl #8
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[1]
+; CHECK-GI-FP16-NEXT:    ldr h3, [x8, :lo12:.LCPI65_0]
 ; CHECK-GI-FP16-NEXT:    mov x11, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-GI-FP16-NEXT:    mov h4, v0.h[2]
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h1
-; CHECK-GI-FP16-NEXT:    asr x9, x8, #63
-; CHECK-GI-FP16-NEXT:    fcvtzs x12, h3
-; CHECK-GI-FP16-NEXT:    csel x8, xzr, x8, lt
-; CHECK-GI-FP16-NEXT:    csel x9, x10, x9, lt
-; CHECK-GI-FP16-NEXT:    fcmp h0, h2
-; CHECK-GI-FP16-NEXT:    csinv x8, x8, xzr, le
-; CHECK-GI-FP16-NEXT:    csel x9, x11, x9, gt
+; CHECK-GI-FP16-NEXT:    asr x8, x9, #63
+; CHECK-GI-FP16-NEXT:    fcvtzs x12, h2
+; CHECK-GI-FP16-NEXT:    csel x9, xzr, x9, lt
+; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, lt
+; CHECK-GI-FP16-NEXT:    fcmp h0, h3
+; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
+; CHECK-GI-FP16-NEXT:    csel x8, x11, x8, gt
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h0
 ; CHECK-GI-FP16-NEXT:    mov h0, v0.h[3]
-; CHECK-GI-FP16-NEXT:    csel x0, xzr, x8, vs
-; CHECK-GI-FP16-NEXT:    csel x1, xzr, x9, vs
-; CHECK-GI-FP16-NEXT:    fcmp h3, h1
+; CHECK-GI-FP16-NEXT:    csel x0, xzr, x9, vs
+; CHECK-GI-FP16-NEXT:    csel x1, xzr, x8, vs
+; CHECK-GI-FP16-NEXT:    fcmp h2, h1
 ; CHECK-GI-FP16-NEXT:    asr x8, x12, #63
 ; CHECK-GI-FP16-NEXT:    csel x9, xzr, x12, lt
 ; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, lt
-; CHECK-GI-FP16-NEXT:    fcmp h3, h2
+; CHECK-GI-FP16-NEXT:    fcmp h2, h3
 ; CHECK-GI-FP16-NEXT:    fcvtzs x12, h4
 ; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-GI-FP16-NEXT:    csel x8, x11, x8, gt
-; CHECK-GI-FP16-NEXT:    fcmp h3, h3
+; CHECK-GI-FP16-NEXT:    fcmp h2, h2
 ; CHECK-GI-FP16-NEXT:    csel x2, xzr, x9, vs
 ; CHECK-GI-FP16-NEXT:    csel x3, xzr, x8, vs
 ; CHECK-GI-FP16-NEXT:    fcmp h4, h1
 ; CHECK-GI-FP16-NEXT:    asr x8, x12, #63
 ; CHECK-GI-FP16-NEXT:    csel x9, xzr, x12, lt
 ; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, lt
-; CHECK-GI-FP16-NEXT:    fcmp h4, h2
+; CHECK-GI-FP16-NEXT:    fcmp h4, h3
 ; CHECK-GI-FP16-NEXT:    fcvtzs x12, h0
 ; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-GI-FP16-NEXT:    csel x8, x11, x8, gt
@@ -3570,7 +3574,7 @@ define <4 x i128> @test_signed_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-GI-FP16-NEXT:    asr x8, x12, #63
 ; CHECK-GI-FP16-NEXT:    csel x9, xzr, x12, lt
 ; CHECK-GI-FP16-NEXT:    csel x8, x10, x8, lt
-; CHECK-GI-FP16-NEXT:    fcmp h0, h2
+; CHECK-GI-FP16-NEXT:    fcmp h0, h3
 ; CHECK-GI-FP16-NEXT:    csinv x9, x9, xzr, le
 ; CHECK-GI-FP16-NEXT:    csel x8, x11, x8, gt
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h0
@@ -4512,27 +4516,29 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_v8f16_v8i128:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    mvni v1.4h, #4, lsl #8
-; CHECK-GI-FP16-NEXT:    fcvtzs x9, h0
-; CHECK-GI-FP16-NEXT:    mov x10, #-9223372036854775808 // =0x8000000000000000
-; CHECK-GI-FP16-NEXT:    mvni v2.4h, #132, lsl #8
+; CHECK-GI-FP16-NEXT:    adrp x9, .LCPI75_1
+; CHECK-GI-FP16-NEXT:    fcvtzs x11, h0
 ; CHECK-GI-FP16-NEXT:    mov h3, v0.h[1]
+; CHECK-GI-FP16-NEXT:    ldr h1, [x9, :lo12:.LCPI75_1]
+; CHECK-GI-FP16-NEXT:    adrp x9, .LCPI75_0
+; CHECK-GI-FP16-NEXT:    mov x10, #-9223372036854775808 // =0x8000000000000000
+; CHECK-GI-FP16-NEXT:    ldr h2, [x9, :lo12:.LCPI75_0]
 ; CHECK-GI-FP16-NEXT:    mov h4, v0.h[2]
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h1
-; CHECK-GI-FP16-NEXT:    asr x11, x9, #63
+; CHECK-GI-FP16-NEXT:    asr x9, x11, #63
 ; CHECK-GI-FP16-NEXT:    fcvtzs x13, h3
-; CHECK-GI-FP16-NEXT:    fcvtzs x15, h4
-; CHECK-GI-FP16-NEXT:    csel x12, xzr, x9, lt
-; CHECK-GI-FP16-NEXT:    csel x11, x10, x11, lt
+; CHECK-GI-FP16-NEXT:    csel x11, xzr, x11, lt
+; CHECK-GI-FP16-NEXT:    csel x12, x10, x9, lt
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h2
 ; CHECK-GI-FP16-NEXT:    mov x9, #9223372036854775807 // =0x7fffffffffffffff
-; CHECK-GI-FP16-NEXT:    csinv x12, x12, xzr, le
-; CHECK-GI-FP16-NEXT:    csel x11, x9, x11, gt
+; CHECK-GI-FP16-NEXT:    fcvtzs x15, h4
+; CHECK-GI-FP16-NEXT:    csinv x11, x11, xzr, le
+; CHECK-GI-FP16-NEXT:    csel x14, x9, x12, gt
 ; CHECK-GI-FP16-NEXT:    fcmp h0, h0
-; CHECK-GI-FP16-NEXT:    asr x14, x13, #63
-; CHECK-GI-FP16-NEXT:    csel x12, xzr, x12, vs
-; CHECK-GI-FP16-NEXT:    csel x11, xzr, x11, vs
+; CHECK-GI-FP16-NEXT:    csel x12, xzr, x11, vs
+; CHECK-GI-FP16-NEXT:    csel x11, xzr, x14, vs
 ; CHECK-GI-FP16-NEXT:    fcmp h3, h1
+; CHECK-GI-FP16-NEXT:    asr x14, x13, #63
 ; CHECK-GI-FP16-NEXT:    csel x13, xzr, x13, lt
 ; CHECK-GI-FP16-NEXT:    csel x14, x10, x14, lt
 ; CHECK-GI-FP16-NEXT:    fcmp h3, h2
