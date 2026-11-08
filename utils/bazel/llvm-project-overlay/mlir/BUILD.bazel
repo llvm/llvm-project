@@ -3711,8 +3711,14 @@ gentbl_cc_library(
 
 cc_library(
     name = "NVGPUUtils",
-    srcs = ["lib/Dialect/NVGPU/Utils/MMAUtils.cpp"],
-    hdrs = ["include/mlir/Dialect/NVGPU/Utils/MMAUtils.h"],
+    srcs = [
+        "lib/Dialect/NVGPU/Utils/MMAUtils.cpp",
+        "lib/Dialect/NVGPU/Utils/SwizzleUtils.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/NVGPU/Utils/MMAUtils.h",
+        "include/mlir/Dialect/NVGPU/Utils/SwizzleUtils.h",
+    ],
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -3721,6 +3727,7 @@ cc_library(
         ":NVGPUDialect",
         ":NVVMDialect",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -3741,6 +3748,7 @@ cc_library(
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUPassIncGen",
+        ":NVGPUUtils",
         ":Pass",
         ":SideEffectInterfaces",
         ":VectorDialect",
