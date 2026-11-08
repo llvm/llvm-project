@@ -442,18 +442,21 @@ int llvm::omp::getBestVariantMatchForContext(
   }
 
   // A strict subset of another tied variant is never best; otherwise the first
-  // one wins. Tied variants often share a superset, so try the last one first.
-  const VariantMatchInfo *Superset = nullptr;
+  // one wins. Tied variants often share a few supersets, so try the ones found
+  // so far before scanning all of them.
+  SmallVector<const VariantMatchInfo *, 4> Supersets;
   for (unsigned Idx : BestVMIIdxs) {
     const VariantMatchInfo &VMI = VMIs[Idx];
-    if (Superset && isStrictSubset(VMI, *Superset))
+    if (llvm::any_of(Supersets, [&](const VariantMatchInfo *Superset) {
+          return isStrictSubset(VMI, *Superset);
+        }))
       continue;
     auto *It = llvm::find_if(BestVMIIdxs, [&](unsigned OtherIdx) {
       return isStrictSubset(VMI, VMIs[OtherIdx]);
     });
     if (It == BestVMIIdxs.end())
       return Idx;
-    Superset = &VMIs[*It];
+    Supersets.push_back(&VMIs[*It]);
   }
   return -1;
 }

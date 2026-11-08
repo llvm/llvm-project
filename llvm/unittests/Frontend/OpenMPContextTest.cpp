@@ -777,4 +777,30 @@ TEST_F(OpenMPContextTest, StrictSubsetOfLaterTiedVariant) {
   EXPECT_EQ(Best({Subset, Superset, Other}), 1);
 }
 
+TEST_F(OpenMPContextTest, StrictSubsetsOfAlternatingTiedSupersets) {
+  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3);
+  VariantMatchInfo Host, CPU, HostSuperset, CPUSuperset;
+  Host.addTrait(TraitProperty::device_kind_host, "");
+  Host.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  CPU.addTrait(TraitProperty::device_kind_cpu, "");
+  CPU.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  HostSuperset = Host;
+  HostSuperset.addTrait(TraitProperty::user_condition_true, "");
+  CPUSuperset = CPU;
+  CPUSuperset.addTrait(TraitProperty::user_condition_true, "");
+
+  auto Best = [&](std::initializer_list<VariantMatchInfo> VMIs) {
+    return getBestVariantMatchForContext(SmallVector<VariantMatchInfo, 6>(VMIs),
+                                         HostLinux);
+  };
+
+  // All score 5. Host and CPU are strict subsets of different supersets, so
+  // the supersets they lose to alternate. The first variant that isn't a strict
+  // subset of another one wins.
+  EXPECT_EQ(Best({Host, CPU, Host, CPU, HostSuperset, CPUSuperset}), 4);
+  EXPECT_EQ(Best({Host, CPU, Host, CPU, CPUSuperset, HostSuperset}), 4);
+  EXPECT_EQ(Best({Host, CPU, Host, HostSuperset}), 1);
+}
+
 } // namespace
