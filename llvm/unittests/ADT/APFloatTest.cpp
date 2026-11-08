@@ -2694,6 +2694,81 @@ TEST(APFloatTest, roundToIntegral) {
   EXPECT_EQ(APFloat::opInexact, St);
 }
 
+TEST(APFloatTest, roundToIntegralSmallFormats) {
+  // Float8E3M4 and Float6E2M3FN cannot represent 2^(precision-1).
+  // Float4E2M1FN exercises the existing arithmetic path as a control.
+  for (const fltSemantics *Sem :
+       {&APFloat::Float8E3M4(), &APFloat::Float6E2M3FN(),
+        &APFloat::Float4E2M1FN()}) {
+    unsigned Width = APFloat::getSizeInBits(*Sem);
+    double Largest = APFloat::getLargest(*Sem).convertToDouble();
+    for (unsigned Bits = 0; Bits < (1u << Width); ++Bits) {
+      const APFloat Input(*Sem, APInt(Width, Bits));
+      // All finite inputs are exact multiples of 1/64. Use integer quotient
+      // and remainder to compute the expected rounding independently.
+      unsigned Units =
+          Input.isFinite()
+              ? static_cast<unsigned>(std::abs(Input.convertToDouble()) * 64)
+              : 0;
+      EXPECT_EQ(Input.isFinite() && Units % 64 == 0, Input.isInteger());
+      EXPECT_EQ(APInt(Width, Bits), Input.bitcastToAPInt());
+
+      for (APFloat::roundingMode RM :
+           {APFloat::rmNearestTiesToEven, APFloat::rmNearestTiesToAway,
+            APFloat::rmTowardZero, APFloat::rmTowardPositive,
+            APFloat::rmTowardNegative}) {
+        SCOPED_TRACE(formatv("width={0}, bits={1}, mode={2}", Width, Bits,
+                             static_cast<int>(RM))
+                         .str());
+        APFloat Actual = Input;
+        APFloat::opStatus Status = Actual.roundToIntegral(RM);
+        if (!Input.isFinite()) {
+          APFloat Expected = Input.isNaN() ? Input.makeQuiet() : Input;
+          EXPECT_EQ(Expected.bitcastToAPInt(), Actual.bitcastToAPInt());
+          EXPECT_EQ(Input.isSignaling() ? APFloat::opInvalidOp : APFloat::opOK,
+                    Status);
+          continue;
+        }
+
+        unsigned Rounded = Units / 64;
+        unsigned Remainder = Units % 64;
+        if (Remainder != 0) {
+          switch (RM) {
+          case APFloat::rmNearestTiesToEven:
+            Rounded += Remainder > 32 || (Remainder == 32 && (Rounded & 1));
+            break;
+          case APFloat::rmNearestTiesToAway:
+            Rounded += Remainder >= 32;
+            break;
+          case APFloat::rmTowardPositive:
+            Rounded += !Input.isNegative();
+            break;
+          case APFloat::rmTowardNegative:
+            Rounded += Input.isNegative();
+            break;
+          case APFloat::rmTowardZero:
+            break;
+          default:
+            llvm_unreachable("Unexpected rounding mode");
+          }
+        }
+
+        APFloat Expected(*Sem, std::to_string(Rounded));
+        Expected.copySign(Input);
+        unsigned ExpectedStatus =
+            Remainder != 0 ? APFloat::opInexact : APFloat::opOK;
+        // Rounding the largest fractional value can overflow to infinity or
+        // saturate back to that same fractional value in a finite-only format.
+        if (Rounded > Largest && APFloat::semanticsHasInf(*Sem))
+          ExpectedStatus |= APFloat::opOverflow;
+        EXPECT_EQ(Expected.bitcastToAPInt(), Actual.bitcastToAPInt());
+        EXPECT_EQ(ExpectedStatus, Status);
+        EXPECT_EQ(Input.isNegative(), Actual.isNegative());
+      }
+    }
+  }
+}
+
 TEST(APFloatTest, isInteger) {
   APFloat T(-0.0);
   EXPECT_TRUE(T.isInteger());
