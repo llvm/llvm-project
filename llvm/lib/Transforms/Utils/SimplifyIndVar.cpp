@@ -2122,12 +2122,34 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
   if (UsePostIncrementRanges)
     calculatePostIncRanges(OrigPhi);
 
+  // Expanding a start value that is a recurrence of another loop would
+  // materialize a new IV in that loop. Extend the narrow start value instead.
+  const SCEVAddRecExpr *ExpandAddRec = AddRec;
+  if (BasicBlock *Preheader = L->getLoopPreheader();
+      Preheader && SE->containsAddRecurrence(AddRec->getStart())) {
+    Value *NarrowStart = OrigPhi->getIncomingValueForBlock(Preheader);
+    IRBuilder<> Builder(Preheader->getTerminator());
+    Value *WideStart = getExtendKind(OrigPhi) == ExtendKind::Sign
+                           ? Builder.CreateSExt(NarrowStart, WideType)
+                           : Builder.CreateZExt(NarrowStart, WideType);
+    if (SE->getSCEV(WideStart) == AddRec->getStart()) {
+      ExpandAddRec = dyn_cast<SCEVAddRecExpr>(SE->getAddRecExpr(
+          SE->getUnknown(WideStart), AddRec->getStepRecurrence(*SE), L,
+          AddRec->getNoWrapFlags()));
+      if (!ExpandAddRec)
+        ExpandAddRec = AddRec;
+    } else if (auto *WideStartI = dyn_cast<Instruction>(WideStart)) {
+      SE->forgetValue(WideStartI);
+      WideStartI->eraseFromParent();
+    }
+  }
+
   // The rewriter provides a value for the desired IV expression. This may
   // either find an existing phi or materialize a new one. Either way, we
   // expect a well-formed cyclic phi-with-increments. i.e. any operand not part
   // of the phi-SCC dominates the loop entry.
   Instruction *InsertPt = &*L->getHeader()->getFirstInsertionPt();
-  Value *ExpandInst = Rewriter.expandCodeFor(AddRec, WideType, InsertPt);
+  Value *ExpandInst = Rewriter.expandCodeFor(ExpandAddRec, WideType, InsertPt);
   // If the wide phi is not a phi node, for example a cast node, like bitcast,
   // inttoptr, ptrtoint, just skip for now.
   if (!(WidePhi = dyn_cast<PHINode>(ExpandInst))) {
