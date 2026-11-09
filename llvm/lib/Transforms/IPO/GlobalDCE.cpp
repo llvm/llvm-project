@@ -203,7 +203,7 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
 
     LLVM_DEBUG(dbgs() << "vfunc dep " << Caller->getName() << " -> "
                       << Callee->getName() << "\n");
-    VFuncDependencies[Caller].emplace_back(VTable, Callee);
+    VFuncDependencies[Caller].insert({VTable, Callee});
   }
 }
 
@@ -345,20 +345,24 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     // A virtual call keeps a virtual function alive only if the vtable it is
     // loaded from is alive too. If the vtable is not live, defer the function:
     // the vtable may become live later.
-    if (auto It = VFuncDependencies.find(LGV); It != VFuncDependencies.end()) {
-      for (auto [VTable, VFunc] : It->second) {
-        if (AliveGlobals.count(VTable))
-          MarkLive(*VFunc, &NewLiveGVs);
-        else
-          PendingVFuncs[VTable].push_back(VFunc);
+    if (auto *F = dyn_cast<Function>(LGV)) {
+      if (auto It = VFuncDependencies.find(F); It != VFuncDependencies.end()) {
+        for (auto [VTable, VFunc] : It->second) {
+          if (AliveGlobals.count(VTable))
+            MarkLive(*VFunc, &NewLiveGVs);
+          else
+            PendingVFuncs[VTable].push_back(VFunc);
+        }
       }
     }
 
     // If LGV is a vtable that became alive later, mark its deferred functions
     // live.
-    if (auto It = PendingVFuncs.find(LGV); It != PendingVFuncs.end()) {
-      for (auto *VFunc : It->second)
-        MarkLive(*VFunc, &NewLiveGVs);
+    if (auto *VT = dyn_cast<GlobalVariable>(LGV)) {
+      if (auto It = PendingVFuncs.find(VT); It != PendingVFuncs.end()) {
+        for (auto *VFunc : It->second)
+          MarkLive(*VFunc, &NewLiveGVs);
+      }
     }
   }
 
