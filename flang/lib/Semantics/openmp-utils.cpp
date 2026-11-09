@@ -2650,7 +2650,8 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
       llvm::omp::VariantMatchInfo rawVMI;
       std::optional<DynamicUserCondition> dynamicCondition{
           MakeVariantMatchInfo(rawVMI, *ctxSel, context)};
-      // An omitted directive is ranked without its condition.
+      // An omitted directive is ranked without its condition, except for its
+      // unguarded match_any candidate below.
       if (dynamicCondition && isExplicit)
         rawVMI.UserCondition = getConditionKey(*dynamicCondition);
       if (llvm::any_of(
@@ -2718,12 +2719,17 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
           // Represent both outcomes: a guarded candidate with the condition's
           // score and an unguarded candidate with only the static traits. If
           // the WHEN clause omits its directive, only add the unguarded
-          // candidate.
+          // candidate. Either way, the unguarded candidate keeps the
+          // condition's key, so the strict-subset check still sees the
+          // condition.
           if (isExplicit) {
             llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
             addConditionTraitForRanking(conditionTrueVMI);
             result.candidates.push_back({spec, std::move(conditionTrueVMI),
                 isExplicit, dynamicCondition});
+          } else {
+            // The key was only set above for an explicit directive.
+            staticVMI.UserCondition = getConditionKey(*dynamicCondition);
           }
           result.candidates.push_back({spec, std::move(staticVMI), isExplicit});
           continue;
