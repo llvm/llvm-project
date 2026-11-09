@@ -7,62 +7,58 @@
 define void @vecaddr_straightline(i32 zeroext %a, ptr %p) {
 ; RV32-LABEL: vecaddr_straightline:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    addi a1, a1, 32
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    vadd.vi v8, v8, 1
+; RV32-NEXT:    li a2, 57
+; RV32-NEXT:    vse32.v v8, (a1)
+; RV32-NEXT:    beq a0, a2, .LBB0_2
+; RV32-NEXT:  # %bb.1: # %do_call
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    addi s0, a1, 32
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (s0)
-; RV32-NEXT:    vadd.vi v8, v8, 1
-; RV32-NEXT:    li a1, 57
-; RV32-NEXT:    vse32.v v8, (s0)
-; RV32-NEXT:    beq a0, a1, .LBB0_2
-; RV32-NEXT:  # %bb.1: # %do_call
+; RV32-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    call foo
+; RV32-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:  .LBB0_2: # %exit
-; RV32-NEXT:    vle32.v v8, (s0)
-; RV32-NEXT:    vadd.vi v8, v8, 1
-; RV32-NEXT:    vse32.v v8, (s0)
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:  .LBB0_2: # %exit
+; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    vadd.vi v8, v8, 1
+; RV32-NEXT:    vse32.v v8, (a1)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vecaddr_straightline:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    addi a1, a1, 32
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vle32.v v8, (a1)
+; RV64-NEXT:    vadd.vi v8, v8, 1
+; RV64-NEXT:    li a2, 57
+; RV64-NEXT:    vse32.v v8, (a1)
+; RV64-NEXT:    beq a0, a2, .LBB0_2
+; RV64-NEXT:  # %bb.1: # %do_call
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    addi s0, a1, 32
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vle32.v v8, (s0)
-; RV64-NEXT:    vadd.vi v8, v8, 1
-; RV64-NEXT:    li a1, 57
-; RV64-NEXT:    vse32.v v8, (s0)
-; RV64-NEXT:    beq a0, a1, .LBB0_2
-; RV64-NEXT:  # %bb.1: # %do_call
+; RV64-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    call foo
+; RV64-NEXT:    ld a1, 0(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:  .LBB0_2: # %exit
-; RV64-NEXT:    vle32.v v8, (s0)
-; RV64-NEXT:    vadd.vi v8, v8, 1
-; RV64-NEXT:    vse32.v v8, (s0)
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:  .LBB0_2: # %exit
+; RV64-NEXT:    vle32.v v8, (a1)
+; RV64-NEXT:    vadd.vi v8, v8, 1
+; RV64-NEXT:    vse32.v v8, (a1)
 ; RV64-NEXT:    ret
   %gep = getelementptr i8, ptr %p, i32 32
   %v1 = load <4 x i32>, ptr %gep

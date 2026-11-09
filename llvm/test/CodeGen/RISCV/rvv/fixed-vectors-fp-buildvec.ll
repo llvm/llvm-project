@@ -565,23 +565,11 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV32-NEXT:    .cfi_def_cfa_offset 256
 ; RV32-NEXT:    sw ra, 252(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 248(sp) # 4-byte Folded Spill
-; RV32-NEXT:    fsd fs0, 240(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs1, 232(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs2, 224(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs3, 216(sp) # 8-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    .cfi_offset fs0, -16
-; RV32-NEXT:    .cfi_offset fs1, -24
-; RV32-NEXT:    .cfi_offset fs2, -32
-; RV32-NEXT:    .cfi_offset fs3, -40
 ; RV32-NEXT:    addi s0, sp, 256
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    andi sp, sp, -128
-; RV32-NEXT:    flw ft0, 0(s0)
-; RV32-NEXT:    flw ft1, 4(s0)
-; RV32-NEXT:    flw ft2, 8(s0)
-; RV32-NEXT:    flw ft3, 12(s0)
 ; RV32-NEXT:    flw ft4, 16(s0)
 ; RV32-NEXT:    flw ft5, 20(s0)
 ; RV32-NEXT:    flw ft6, 24(s0)
@@ -590,26 +578,30 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV32-NEXT:    flw ft9, 52(s0)
 ; RV32-NEXT:    flw ft10, 56(s0)
 ; RV32-NEXT:    flw ft11, 60(s0)
-; RV32-NEXT:    flw fs0, 32(s0)
-; RV32-NEXT:    flw fs1, 36(s0)
-; RV32-NEXT:    flw fs2, 40(s0)
-; RV32-NEXT:    flw fs3, 44(s0)
+; RV32-NEXT:    flw ft0, 32(s0)
+; RV32-NEXT:    flw ft1, 36(s0)
+; RV32-NEXT:    flw ft2, 40(s0)
+; RV32-NEXT:    flw ft3, 44(s0)
 ; RV32-NEXT:    fsw ft8, 112(sp)
 ; RV32-NEXT:    fsw ft9, 116(sp)
 ; RV32-NEXT:    fsw ft10, 120(sp)
 ; RV32-NEXT:    fsw ft11, 124(sp)
-; RV32-NEXT:    fsw fs0, 96(sp)
-; RV32-NEXT:    fsw fs1, 100(sp)
-; RV32-NEXT:    fsw fs2, 104(sp)
-; RV32-NEXT:    fsw fs3, 108(sp)
+; RV32-NEXT:    fsw ft0, 96(sp)
+; RV32-NEXT:    fsw ft1, 100(sp)
+; RV32-NEXT:    fsw ft2, 104(sp)
+; RV32-NEXT:    fsw ft3, 108(sp)
 ; RV32-NEXT:    fsw ft4, 80(sp)
 ; RV32-NEXT:    fsw ft5, 84(sp)
 ; RV32-NEXT:    fsw ft6, 88(sp)
 ; RV32-NEXT:    fsw ft7, 92(sp)
+; RV32-NEXT:    flw ft0, 0(s0)
 ; RV32-NEXT:    fsw ft0, 64(sp)
-; RV32-NEXT:    fsw ft1, 68(sp)
-; RV32-NEXT:    fsw ft2, 72(sp)
-; RV32-NEXT:    fsw ft3, 76(sp)
+; RV32-NEXT:    flw ft0, 4(s0)
+; RV32-NEXT:    fsw ft0, 68(sp)
+; RV32-NEXT:    flw ft0, 8(s0)
+; RV32-NEXT:    fsw ft0, 72(sp)
+; RV32-NEXT:    flw ft0, 12(s0)
+; RV32-NEXT:    fsw ft0, 76(sp)
 ; RV32-NEXT:    sw a4, 48(sp)
 ; RV32-NEXT:    sw a5, 52(sp)
 ; RV32-NEXT:    sw a6, 56(sp)
@@ -634,16 +626,8 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV32-NEXT:    .cfi_def_cfa sp, 256
 ; RV32-NEXT:    lw ra, 252(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 248(sp) # 4-byte Folded Reload
-; RV32-NEXT:    fld fs0, 240(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs1, 232(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs2, 224(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs3, 216(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    .cfi_restore fs0
-; RV32-NEXT:    .cfi_restore fs1
-; RV32-NEXT:    .cfi_restore fs2
-; RV32-NEXT:    .cfi_restore fs3
 ; RV32-NEXT:    addi sp, sp, 256
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
@@ -658,28 +642,12 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV64-NEXT:    fsd fs1, 224(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    fsd fs2, 216(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    fsd fs3, 208(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs4, 200(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs5, 192(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs6, 184(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs7, 176(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs8, 168(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs9, 160(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs10, 152(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs11, 144(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    .cfi_offset fs0, -24
 ; RV64-NEXT:    .cfi_offset fs1, -32
 ; RV64-NEXT:    .cfi_offset fs2, -40
 ; RV64-NEXT:    .cfi_offset fs3, -48
-; RV64-NEXT:    .cfi_offset fs4, -56
-; RV64-NEXT:    .cfi_offset fs5, -64
-; RV64-NEXT:    .cfi_offset fs6, -72
-; RV64-NEXT:    .cfi_offset fs7, -80
-; RV64-NEXT:    .cfi_offset fs8, -88
-; RV64-NEXT:    .cfi_offset fs9, -96
-; RV64-NEXT:    .cfi_offset fs10, -104
-; RV64-NEXT:    .cfi_offset fs11, -112
 ; RV64-NEXT:    addi s0, sp, 256
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -128
@@ -687,42 +655,42 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV64-NEXT:    fmv.w.x ft1, a1
 ; RV64-NEXT:    fmv.w.x ft2, a2
 ; RV64-NEXT:    fmv.w.x ft3, a3
-; RV64-NEXT:    fmv.w.x ft4, a4
-; RV64-NEXT:    fmv.w.x ft5, a5
-; RV64-NEXT:    fmv.w.x ft6, a6
-; RV64-NEXT:    fmv.w.x ft7, a7
+; RV64-NEXT:    fmv.w.x fs3, a4
+; RV64-NEXT:    fmv.w.x ft6, a5
+; RV64-NEXT:    fmv.w.x fs2, a6
+; RV64-NEXT:    fmv.w.x ft5, a7
+; RV64-NEXT:    flw ft8, 96(s0)
+; RV64-NEXT:    flw fs0, 104(s0)
+; RV64-NEXT:    flw fs1, 112(s0)
+; RV64-NEXT:    flw ft10, 120(s0)
+; RV64-NEXT:    flw ft7, 64(s0)
+; RV64-NEXT:    flw ft11, 72(s0)
+; RV64-NEXT:    flw ft9, 80(s0)
+; RV64-NEXT:    flw ft4, 88(s0)
+; RV64-NEXT:    fsw ft8, 112(sp)
+; RV64-NEXT:    fsw fs0, 116(sp)
+; RV64-NEXT:    fsw fs1, 120(sp)
+; RV64-NEXT:    fsw ft10, 124(sp)
+; RV64-NEXT:    fsw ft7, 96(sp)
+; RV64-NEXT:    fsw ft11, 100(sp)
+; RV64-NEXT:    fsw ft9, 104(sp)
+; RV64-NEXT:    fsw ft4, 108(sp)
+; RV64-NEXT:    flw ft8, 32(s0)
+; RV64-NEXT:    fsw ft8, 80(sp)
+; RV64-NEXT:    flw ft8, 40(s0)
+; RV64-NEXT:    fsw ft8, 84(sp)
+; RV64-NEXT:    flw ft8, 48(s0)
+; RV64-NEXT:    fsw ft8, 88(sp)
+; RV64-NEXT:    flw ft8, 56(s0)
+; RV64-NEXT:    fsw ft8, 92(sp)
 ; RV64-NEXT:    flw ft8, 0(s0)
-; RV64-NEXT:    flw ft9, 8(s0)
-; RV64-NEXT:    flw ft10, 16(s0)
-; RV64-NEXT:    flw ft11, 24(s0)
-; RV64-NEXT:    flw fs0, 32(s0)
-; RV64-NEXT:    flw fs1, 40(s0)
-; RV64-NEXT:    flw fs2, 48(s0)
-; RV64-NEXT:    flw fs3, 56(s0)
-; RV64-NEXT:    flw fs4, 96(s0)
-; RV64-NEXT:    flw fs5, 104(s0)
-; RV64-NEXT:    flw fs6, 112(s0)
-; RV64-NEXT:    flw fs7, 120(s0)
-; RV64-NEXT:    flw fs8, 64(s0)
-; RV64-NEXT:    flw fs9, 72(s0)
-; RV64-NEXT:    flw fs10, 80(s0)
-; RV64-NEXT:    flw fs11, 88(s0)
-; RV64-NEXT:    fsw fs4, 112(sp)
-; RV64-NEXT:    fsw fs5, 116(sp)
-; RV64-NEXT:    fsw fs6, 120(sp)
-; RV64-NEXT:    fsw fs7, 124(sp)
-; RV64-NEXT:    fsw fs8, 96(sp)
-; RV64-NEXT:    fsw fs9, 100(sp)
-; RV64-NEXT:    fsw fs10, 104(sp)
-; RV64-NEXT:    fsw fs11, 108(sp)
-; RV64-NEXT:    fsw fs0, 80(sp)
-; RV64-NEXT:    fsw fs1, 84(sp)
-; RV64-NEXT:    fsw fs2, 88(sp)
-; RV64-NEXT:    fsw fs3, 92(sp)
 ; RV64-NEXT:    fsw ft8, 64(sp)
-; RV64-NEXT:    fsw ft9, 68(sp)
-; RV64-NEXT:    fsw ft10, 72(sp)
-; RV64-NEXT:    fsw ft11, 76(sp)
+; RV64-NEXT:    flw ft8, 8(s0)
+; RV64-NEXT:    fsw ft8, 68(sp)
+; RV64-NEXT:    flw ft8, 16(s0)
+; RV64-NEXT:    fsw ft8, 72(sp)
+; RV64-NEXT:    flw ft8, 24(s0)
+; RV64-NEXT:    fsw ft8, 76(sp)
 ; RV64-NEXT:    fsw fa4, 16(sp)
 ; RV64-NEXT:    fsw fa5, 20(sp)
 ; RV64-NEXT:    fsw fa6, 24(sp)
@@ -731,10 +699,10 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV64-NEXT:    fsw fa1, 4(sp)
 ; RV64-NEXT:    fsw fa2, 8(sp)
 ; RV64-NEXT:    fsw fa3, 12(sp)
-; RV64-NEXT:    fsw ft4, 48(sp)
-; RV64-NEXT:    fsw ft5, 52(sp)
-; RV64-NEXT:    fsw ft6, 56(sp)
-; RV64-NEXT:    fsw ft7, 60(sp)
+; RV64-NEXT:    fsw fs3, 48(sp)
+; RV64-NEXT:    fsw ft6, 52(sp)
+; RV64-NEXT:    fsw fs2, 56(sp)
+; RV64-NEXT:    fsw ft5, 60(sp)
 ; RV64-NEXT:    fsw ft0, 32(sp)
 ; RV64-NEXT:    fsw ft1, 36(sp)
 ; RV64-NEXT:    fsw ft2, 40(sp)
@@ -751,28 +719,12 @@ define <32 x float> @buildvec_v32f32(float %e0, float %e1, float %e2, float %e3,
 ; RV64-NEXT:    fld fs1, 224(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs2, 216(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    fld fs3, 208(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs4, 200(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs5, 192(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs6, 184(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs7, 176(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs8, 168(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs9, 160(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs10, 152(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs11, 144(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore fs0
 ; RV64-NEXT:    .cfi_restore fs1
 ; RV64-NEXT:    .cfi_restore fs2
 ; RV64-NEXT:    .cfi_restore fs3
-; RV64-NEXT:    .cfi_restore fs4
-; RV64-NEXT:    .cfi_restore fs5
-; RV64-NEXT:    .cfi_restore fs6
-; RV64-NEXT:    .cfi_restore fs7
-; RV64-NEXT:    .cfi_restore fs8
-; RV64-NEXT:    .cfi_restore fs9
-; RV64-NEXT:    .cfi_restore fs10
-; RV64-NEXT:    .cfi_restore fs11
 ; RV64-NEXT:    addi sp, sp, 256
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
@@ -1008,32 +960,8 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV32-NEXT:    .cfi_def_cfa_offset 512
 ; RV32-NEXT:    sw ra, 508(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 504(sp) # 4-byte Folded Spill
-; RV32-NEXT:    fsd fs0, 496(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs1, 488(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs2, 480(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs3, 472(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs4, 464(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs5, 456(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs6, 448(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs7, 440(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs8, 432(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs9, 424(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs10, 416(sp) # 8-byte Folded Spill
-; RV32-NEXT:    fsd fs11, 408(sp) # 8-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    .cfi_offset fs0, -16
-; RV32-NEXT:    .cfi_offset fs1, -24
-; RV32-NEXT:    .cfi_offset fs2, -32
-; RV32-NEXT:    .cfi_offset fs3, -40
-; RV32-NEXT:    .cfi_offset fs4, -48
-; RV32-NEXT:    .cfi_offset fs5, -56
-; RV32-NEXT:    .cfi_offset fs6, -64
-; RV32-NEXT:    .cfi_offset fs7, -72
-; RV32-NEXT:    .cfi_offset fs8, -80
-; RV32-NEXT:    .cfi_offset fs9, -88
-; RV32-NEXT:    .cfi_offset fs10, -96
-; RV32-NEXT:    .cfi_offset fs11, -104
 ; RV32-NEXT:    addi s0, sp, 512
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    andi sp, sp, -128
@@ -1049,46 +977,46 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV32-NEXT:    sw a6, 120(sp)
 ; RV32-NEXT:    sw a7, 124(sp)
 ; RV32-NEXT:    fld ft3, 120(sp)
+; RV32-NEXT:    fld ft8, 128(s0)
+; RV32-NEXT:    fld ft9, 136(s0)
+; RV32-NEXT:    fld ft10, 144(s0)
+; RV32-NEXT:    fld ft11, 96(s0)
+; RV32-NEXT:    fld ft4, 152(s0)
+; RV32-NEXT:    fld ft5, 104(s0)
+; RV32-NEXT:    fld ft6, 112(s0)
+; RV32-NEXT:    fld ft7, 120(s0)
+; RV32-NEXT:    fsd ft8, 224(sp)
+; RV32-NEXT:    fsd ft9, 232(sp)
+; RV32-NEXT:    fsd ft10, 240(sp)
+; RV32-NEXT:    fsd ft4, 248(sp)
+; RV32-NEXT:    fsd ft11, 192(sp)
+; RV32-NEXT:    fsd ft5, 200(sp)
+; RV32-NEXT:    fsd ft6, 208(sp)
+; RV32-NEXT:    fsd ft7, 216(sp)
+; RV32-NEXT:    fld ft4, 64(s0)
+; RV32-NEXT:    fsd ft4, 160(sp)
+; RV32-NEXT:    fld ft4, 72(s0)
+; RV32-NEXT:    fsd ft4, 168(sp)
+; RV32-NEXT:    fld ft4, 80(s0)
+; RV32-NEXT:    fsd ft4, 176(sp)
+; RV32-NEXT:    fld ft4, 88(s0)
+; RV32-NEXT:    fsd ft4, 184(sp)
+; RV32-NEXT:    fld ft4, 32(s0)
+; RV32-NEXT:    fsd ft4, 128(sp)
+; RV32-NEXT:    fld ft4, 40(s0)
+; RV32-NEXT:    fsd ft4, 136(sp)
+; RV32-NEXT:    fld ft4, 48(s0)
+; RV32-NEXT:    fsd ft4, 144(sp)
+; RV32-NEXT:    fld ft4, 56(s0)
+; RV32-NEXT:    fsd ft4, 152(sp)
 ; RV32-NEXT:    fld ft4, 0(s0)
-; RV32-NEXT:    fld ft5, 8(s0)
-; RV32-NEXT:    fld ft6, 16(s0)
-; RV32-NEXT:    fld ft7, 24(s0)
-; RV32-NEXT:    fld ft8, 32(s0)
-; RV32-NEXT:    fld ft9, 40(s0)
-; RV32-NEXT:    fld ft10, 48(s0)
-; RV32-NEXT:    fld ft11, 56(s0)
-; RV32-NEXT:    fld fs0, 64(s0)
-; RV32-NEXT:    fld fs1, 72(s0)
-; RV32-NEXT:    fld fs2, 80(s0)
-; RV32-NEXT:    fld fs3, 88(s0)
-; RV32-NEXT:    fld fs4, 128(s0)
-; RV32-NEXT:    fld fs5, 136(s0)
-; RV32-NEXT:    fld fs6, 144(s0)
-; RV32-NEXT:    fld fs7, 96(s0)
-; RV32-NEXT:    fld fs8, 152(s0)
-; RV32-NEXT:    fld fs9, 104(s0)
-; RV32-NEXT:    fld fs10, 112(s0)
-; RV32-NEXT:    fld fs11, 120(s0)
-; RV32-NEXT:    fsd fs4, 224(sp)
-; RV32-NEXT:    fsd fs5, 232(sp)
-; RV32-NEXT:    fsd fs6, 240(sp)
-; RV32-NEXT:    fsd fs8, 248(sp)
-; RV32-NEXT:    fsd fs7, 192(sp)
-; RV32-NEXT:    fsd fs9, 200(sp)
-; RV32-NEXT:    fsd fs10, 208(sp)
-; RV32-NEXT:    fsd fs11, 216(sp)
-; RV32-NEXT:    fsd fs0, 160(sp)
-; RV32-NEXT:    fsd fs1, 168(sp)
-; RV32-NEXT:    fsd fs2, 176(sp)
-; RV32-NEXT:    fsd fs3, 184(sp)
-; RV32-NEXT:    fsd ft8, 128(sp)
-; RV32-NEXT:    fsd ft9, 136(sp)
-; RV32-NEXT:    fsd ft10, 144(sp)
-; RV32-NEXT:    fsd ft11, 152(sp)
 ; RV32-NEXT:    fsd ft4, 352(sp)
-; RV32-NEXT:    fsd ft5, 360(sp)
-; RV32-NEXT:    fsd ft6, 368(sp)
-; RV32-NEXT:    fsd ft7, 376(sp)
+; RV32-NEXT:    fld ft4, 8(s0)
+; RV32-NEXT:    fsd ft4, 360(sp)
+; RV32-NEXT:    fld ft4, 16(s0)
+; RV32-NEXT:    fsd ft4, 368(sp)
+; RV32-NEXT:    fld ft4, 24(s0)
+; RV32-NEXT:    fsd ft4, 376(sp)
 ; RV32-NEXT:    fsd fa4, 288(sp)
 ; RV32-NEXT:    fsd fa5, 296(sp)
 ; RV32-NEXT:    fsd fa6, 304(sp)
@@ -1110,32 +1038,8 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV32-NEXT:    .cfi_def_cfa sp, 512
 ; RV32-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
-; RV32-NEXT:    fld fs0, 496(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs1, 488(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs2, 480(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs3, 472(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs4, 464(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs5, 456(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs6, 448(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs7, 440(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs8, 432(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs9, 424(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs10, 416(sp) # 8-byte Folded Reload
-; RV32-NEXT:    fld fs11, 408(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    .cfi_restore fs0
-; RV32-NEXT:    .cfi_restore fs1
-; RV32-NEXT:    .cfi_restore fs2
-; RV32-NEXT:    .cfi_restore fs3
-; RV32-NEXT:    .cfi_restore fs4
-; RV32-NEXT:    .cfi_restore fs5
-; RV32-NEXT:    .cfi_restore fs6
-; RV32-NEXT:    .cfi_restore fs7
-; RV32-NEXT:    .cfi_restore fs8
-; RV32-NEXT:    .cfi_restore fs9
-; RV32-NEXT:    .cfi_restore fs10
-; RV32-NEXT:    .cfi_restore fs11
 ; RV32-NEXT:    addi sp, sp, 512
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
@@ -1146,23 +1050,11 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV64-NEXT:    .cfi_def_cfa_offset 384
 ; RV64-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs0, 360(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs1, 352(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs2, 344(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fsd fs3, 336(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    .cfi_offset fs0, -24
-; RV64-NEXT:    .cfi_offset fs1, -32
-; RV64-NEXT:    .cfi_offset fs2, -40
-; RV64-NEXT:    .cfi_offset fs3, -48
 ; RV64-NEXT:    addi s0, sp, 384
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -128
-; RV64-NEXT:    fld ft0, 0(s0)
-; RV64-NEXT:    fld ft1, 8(s0)
-; RV64-NEXT:    fld ft2, 16(s0)
-; RV64-NEXT:    fld ft3, 24(s0)
 ; RV64-NEXT:    fld ft4, 32(s0)
 ; RV64-NEXT:    fld ft5, 40(s0)
 ; RV64-NEXT:    fld ft6, 48(s0)
@@ -1171,10 +1063,10 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV64-NEXT:    fld ft9, 72(s0)
 ; RV64-NEXT:    fld ft10, 80(s0)
 ; RV64-NEXT:    fld ft11, 88(s0)
-; RV64-NEXT:    fld fs0, 96(s0)
-; RV64-NEXT:    fld fs1, 104(s0)
-; RV64-NEXT:    fld fs2, 112(s0)
-; RV64-NEXT:    fld fs3, 120(s0)
+; RV64-NEXT:    fld ft0, 96(s0)
+; RV64-NEXT:    fld ft1, 104(s0)
+; RV64-NEXT:    fld ft2, 112(s0)
+; RV64-NEXT:    fld ft3, 120(s0)
 ; RV64-NEXT:    sd a4, 224(sp)
 ; RV64-NEXT:    sd a5, 232(sp)
 ; RV64-NEXT:    sd a6, 240(sp)
@@ -1191,10 +1083,10 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV64-NEXT:    fsd fa1, 136(sp)
 ; RV64-NEXT:    fsd fa2, 144(sp)
 ; RV64-NEXT:    fsd fa3, 152(sp)
-; RV64-NEXT:    fsd fs0, 96(sp)
-; RV64-NEXT:    fsd fs1, 104(sp)
-; RV64-NEXT:    fsd fs2, 112(sp)
-; RV64-NEXT:    fsd fs3, 120(sp)
+; RV64-NEXT:    fsd ft0, 96(sp)
+; RV64-NEXT:    fsd ft1, 104(sp)
+; RV64-NEXT:    fsd ft2, 112(sp)
+; RV64-NEXT:    fsd ft3, 120(sp)
 ; RV64-NEXT:    fsd ft8, 64(sp)
 ; RV64-NEXT:    fsd ft9, 72(sp)
 ; RV64-NEXT:    fsd ft10, 80(sp)
@@ -1203,10 +1095,14 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV64-NEXT:    fsd ft5, 40(sp)
 ; RV64-NEXT:    fsd ft6, 48(sp)
 ; RV64-NEXT:    fsd ft7, 56(sp)
-; RV64-NEXT:    fsd ft0, 0(sp)
-; RV64-NEXT:    fsd ft1, 8(sp)
-; RV64-NEXT:    fsd ft2, 16(sp)
-; RV64-NEXT:    fsd ft3, 24(sp)
+; RV64-NEXT:    fld fa5, 0(s0)
+; RV64-NEXT:    fsd fa5, 0(sp)
+; RV64-NEXT:    fld fa5, 8(s0)
+; RV64-NEXT:    fsd fa5, 8(sp)
+; RV64-NEXT:    fld fa5, 16(s0)
+; RV64-NEXT:    fsd fa5, 16(sp)
+; RV64-NEXT:    fld fa5, 24(s0)
+; RV64-NEXT:    fsd fa5, 24(sp)
 ; RV64-NEXT:    addi a0, sp, 128
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
@@ -1216,16 +1112,8 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
 ; RV64-NEXT:    .cfi_def_cfa sp, 384
 ; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs0, 360(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs1, 352(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs2, 344(sp) # 8-byte Folded Reload
-; RV64-NEXT:    fld fs3, 336(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    .cfi_restore fs0
-; RV64-NEXT:    .cfi_restore fs1
-; RV64-NEXT:    .cfi_restore fs2
-; RV64-NEXT:    .cfi_restore fs3
 ; RV64-NEXT:    addi sp, sp, 384
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret

@@ -492,24 +492,20 @@ define i32 @branch_with_immSFB_mul(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; RV32I-NEXT:    .cfi_def_cfa_offset 16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    .cfi_offset s0, -8
-; RV32I-NEXT:    .cfi_offset s1, -12
-; RV32I-NEXT:    mv s1, a3
-; RV32I-NEXT:    mv s0, a2
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    sw a2, 4(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    li a1, 1
-; RV32I-NEXT:    bltu a1, s1, .LBB20_2
+; RV32I-NEXT:    bltu a1, s0, .LBB20_2
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:  .LBB20_2: # %entry
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    .cfi_restore s0
-; RV32I-NEXT:    .cfi_restore s1
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret

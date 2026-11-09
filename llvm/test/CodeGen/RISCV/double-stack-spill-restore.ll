@@ -62,25 +62,20 @@ define double @func(double %d, i32 %n) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: func:
 ; RV32IZFINXZDINX:       # %bb.0: # %entry
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    fmv.d s0, a0
 ; RV32IZFINXZDINX-NEXT:    beqz a2, .LBB0_2
 ; RV32IZFINXZDINX-NEXT:  # %bb.1: # %if.else
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    addi a2, a2, -1
-; RV32IZFINXZDINX-NEXT:    fmv.d a0, s0
+; RV32IZFINXZDINX-NEXT:    sw a0, 4(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    call func
-; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, s0
-; RV32IZFINXZDINX-NEXT:    j .LBB0_3
-; RV32IZFINXZDINX-NEXT:  .LBB0_2: # %return
-; RV32IZFINXZDINX-NEXT:    fmv.d a0, s0
-; RV32IZFINXZDINX-NEXT:  .LBB0_3: # %return
+; RV32IZFINXZDINX-NEXT:    lw a2, 4(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw a3, 8(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:  .LBB0_2: # %return
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: func:
@@ -90,13 +85,13 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV64IZFINXZDINX-NEXT:  # %bb.1: # %if.else
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZFINXZDINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64IZFINXZDINX-NEXT:    addiw a1, a1, -1
-; RV64IZFINXZDINX-NEXT:    mv s0, a0
+; RV64IZFINXZDINX-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    call func
-; RV64IZFINXZDINX-NEXT:    fadd.d a0, a0, s0
+; RV64IZFINXZDINX-NEXT:    ld a1, 0(sp) # 8-byte Folded Reload
+; RV64IZFINXZDINX-NEXT:    fadd.d a0, a0, a1
 ; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZFINXZDINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV64IZFINXZDINX-NEXT:  .LBB0_2: # %return
 ; RV64IZFINXZDINX-NEXT:    ret

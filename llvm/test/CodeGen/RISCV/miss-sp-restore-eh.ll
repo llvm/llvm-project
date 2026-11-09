@@ -17,10 +17,8 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    addi s0, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    .cfi_remember_state
@@ -39,17 +37,16 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    bne a1, a2, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %catch
 ; CHECK-NEXT:    call __cxa_begin_catch
-; CHECK-NEXT:    lw s1, 0(a0)
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    sd a0, -24(s0) # 8-byte Folded Spill
 ; CHECK-NEXT:    call __cxa_end_catch
-; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    ld a0, -24(s0) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, s0, -32
 ; CHECK-NEXT:    .cfi_def_cfa sp, 32
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
-; CHECK-NEXT:    .cfi_restore s1
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret

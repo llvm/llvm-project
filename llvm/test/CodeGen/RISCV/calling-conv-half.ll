@@ -685,14 +685,12 @@ define i32 @callee_half_on_stack_exhausted_gprs_fprs(i32 %a, float %fa, i32 %b, 
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lw s0, 40(sp)
 ; RV32I-NEXT:    lhu a0, 48(sp)
 ; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    call __fixsfsi
-; RV32I-NEXT:    add a0, s0, a0
+; RV32I-NEXT:    lw a1, 40(sp)
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -700,14 +698,12 @@ define i32 @callee_half_on_stack_exhausted_gprs_fprs(i32 %a, float %fa, i32 %b, 
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lw s0, 64(sp)
 ; RV64I-NEXT:    lhu a0, 80(sp)
 ; RV64I-NEXT:    call __extendhfsf2
 ; RV64I-NEXT:    call __fixsfdi
-; RV64I-NEXT:    addw a0, s0, a0
+; RV64I-NEXT:    lw a1, 64(sp)
+; RV64I-NEXT:    addw a0, a1, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
@@ -715,15 +711,13 @@ define i32 @callee_half_on_stack_exhausted_gprs_fprs(i32 %a, float %fa, i32 %b, 
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    lw s0, 40(sp)
 ; RV32IF-NEXT:    lhu a0, 48(sp)
 ; RV32IF-NEXT:    call __extendhfsf2
 ; RV32IF-NEXT:    fmv.w.x fa5, a0
-; RV32IF-NEXT:    fcvt.w.s a0, fa5, rtz
-; RV32IF-NEXT:    add a0, s0, a0
+; RV32IF-NEXT:    fcvt.w.s a1, fa5, rtz
+; RV32IF-NEXT:    lw a0, 40(sp)
+; RV32IF-NEXT:    add a0, a0, a1
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
@@ -731,15 +725,13 @@ define i32 @callee_half_on_stack_exhausted_gprs_fprs(i32 %a, float %fa, i32 %b, 
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    lw s0, 64(sp)
 ; RV64IF-NEXT:    lhu a0, 80(sp)
 ; RV64IF-NEXT:    call __extendhfsf2
 ; RV64IF-NEXT:    fmv.w.x fa5, a0
-; RV64IF-NEXT:    fcvt.l.s a0, fa5, rtz
-; RV64IF-NEXT:    addw a0, s0, a0
+; RV64IF-NEXT:    fcvt.l.s a1, fa5, rtz
+; RV64IF-NEXT:    lw a0, 64(sp)
+; RV64IF-NEXT:    addw a0, a0, a1
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;

@@ -4,81 +4,70 @@
 define signext i32 @remat_const_across_call_in_loop(ptr %toks, ptr %pat, i32 signext %varid) nounwind {
 ; CHECK-LABEL: remat_const_across_call_in_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s5, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s6, 0(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    mv s0, a2
-; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    ld a0, 0(a0)
-; CHECK-NEXT:    beqz a0, .LBB0_11
+; CHECK-NEXT:    beqz a0, .LBB0_13
 ; CHECK-NEXT:  # %bb.1: # %if.end.preheader
-; CHECK-NEXT:    mv s1, a1
-; CHECK-NEXT:    addi s2, a2, 8
-; CHECK-NEXT:    li s3, 37
-; CHECK-NEXT:    li s4, 1
-; CHECK-NEXT:    li s5, -1
-; CHECK-NEXT:    li s6, 2
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, a3, 8
+; CHECK-NEXT:    li a3, 37
+; CHECK-NEXT:    sd a2, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lbu a1, 0(s1)
-; CHECK-NEXT:    bne a1, s3, .LBB0_7
+; CHECK-NEXT:    lbu a4, 0(a1)
+; CHECK-NEXT:    bne a4, a3, .LBB0_7
 ; CHECK-NEXT:  # %bb.3: # %if.then2
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    mv a2, s0
+; CHECK-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    call multi_compare
-; CHECK-NEXT:    beq a0, s4, .LBB0_9
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    beq a0, a1, .LBB0_9
 ; CHECK-NEXT:  # %bb.4: # %if.then2
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    beq a0, s5, .LBB0_11
+; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    beq a0, a1, .LBB0_12
 ; CHECK-NEXT:  # %bb.5: # %if.then2
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    bne a0, s6, .LBB0_10
+; CHECK-NEXT:    li a1, 2
+; CHECK-NEXT:    bne a0, a1, .LBB0_11
 ; CHECK-NEXT:  # %bb.6: # %if.then14
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    addi s1, s1, 2
-; CHECK-NEXT:    ld a0, 0(s2)
-; CHECK-NEXT:    addi s1, s1, 1
-; CHECK-NEXT:    addi s2, s2, 8
-; CHECK-NEXT:    bnez a0, .LBB0_2
-; CHECK-NEXT:    j .LBB0_11
+; CHECK-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi a1, a1, 2
+; CHECK-NEXT:    j .LBB0_10
 ; CHECK-NEXT:  .LBB0_7: # %if.else22
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    lbu a0, 0(a0)
-; CHECK-NEXT:    bne a0, a1, .LBB0_10
+; CHECK-NEXT:    bne a0, a4, .LBB0_11
 ; CHECK-NEXT:  # %bb.8: # %cleanup31
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    ld a0, 0(s2)
-; CHECK-NEXT:    addi s1, s1, 1
-; CHECK-NEXT:    addi s2, s2, 8
+; CHECK-NEXT:    ld a0, 0(s0)
+; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    addi s0, s0, 8
 ; CHECK-NEXT:    bnez a0, .LBB0_2
-; CHECK-NEXT:    j .LBB0_11
+; CHECK-NEXT:    j .LBB0_12
 ; CHECK-NEXT:  .LBB0_9: # %if.then17
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    addi s1, s1, 1
-; CHECK-NEXT:    ld a0, 0(s2)
-; CHECK-NEXT:    addi s1, s1, 1
-; CHECK-NEXT:    addi s2, s2, 8
+; CHECK-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:  .LBB0_10: # %cleanup31
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    ld a2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    li a3, 37
+; CHECK-NEXT:    ld a0, 0(s0)
+; CHECK-NEXT:    addi a1, a1, 1
+; CHECK-NEXT:    addi s0, s0, 8
 ; CHECK-NEXT:    bnez a0, .LBB0_2
-; CHECK-NEXT:    j .LBB0_11
-; CHECK-NEXT:  .LBB0_10:
+; CHECK-NEXT:    j .LBB0_12
+; CHECK-NEXT:  .LBB0_11:
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:  .LBB0_11: # %return
-; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s5, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s6, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:  .LBB0_12:
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:  .LBB0_13: # %return
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %toks, align 8
@@ -135,77 +124,70 @@ declare signext i32 @multi_compare(ptr, ptr, i32 signext)
 define i32 @evict_hoisted_consts(ptr %tok, ptr %p, i8 %c0, i1 %c1, i8 %c2, i1 %c3, i8 %c4, i1 %c5, i1 %c6) nounwind {
 ; CHECK-LABEL: evict_hoisted_consts:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    ld t3, 16(sp)
+; CHECK-NEXT:    ld t1, 0(sp)
 ; CHECK-NEXT:    zext.b a2, a2
 ; CHECK-NEXT:    li t0, 111
 ; CHECK-NEXT:    andi a3, a3, 1
 ; CHECK-NEXT:    andi a5, a5, 1
 ; CHECK-NEXT:    zext.b a6, a6
-; CHECK-NEXT:    li t1, 6
 ; CHECK-NEXT:    zext.b a4, a4
-; CHECK-NEXT:    li t2, 1
 ; CHECK-NEXT:    andi a7, a7, 1
-; CHECK-NEXT:    andi t3, t3, 1
+; CHECK-NEXT:    andi t3, t1, 1
 ; CHECK-NEXT:    li t4, 116
 ; CHECK-NEXT:    li t5, 118
 ; CHECK-NEXT:    li t6, 124
-; CHECK-NEXT:    li s0, 32
+; CHECK-NEXT:    li t1, 32
 ; CHECK-NEXT:  .LBB1_1: # %for.cond
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB1_4 Depth 2
-; CHECK-NEXT:    beq a2, t0, .LBB1_7
+; CHECK-NEXT:    # Child Loop BB1_5 Depth 2
+; CHECK-NEXT:    beq a2, t0, .LBB1_8
 ; CHECK-NEXT:  # %bb.2: # %for.cond
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    beq a2, t4, .LBB1_14
+; CHECK-NEXT:    beq a2, t4, .LBB1_15
 ; CHECK-NEXT:  # %bb.3: # %for.cond
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    beq a2, t5, .LBB1_14
-; CHECK-NEXT:  .LBB1_4: # %do.body
+; CHECK-NEXT:    beq a2, t5, .LBB1_15
+; CHECK-NEXT:  # %bb.4: # %for.cond.do.body_crit_edge
+; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    lbu t2, 0(a0)
+; CHECK-NEXT:  .LBB1_5: # %do.body
 ; CHECK-NEXT:    # Parent Loop BB1_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lbu s1, 0(a0)
-; CHECK-NEXT:    beqz s1, .LBB1_14
-; CHECK-NEXT:  # %bb.5: # %do.body
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=2
-; CHECK-NEXT:    beq s1, t6, .LBB1_1
+; CHECK-NEXT:    beqz t2, .LBB1_15
 ; CHECK-NEXT:  # %bb.6: # %do.body
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=2
-; CHECK-NEXT:    bne s1, s0, .LBB1_4
-; CHECK-NEXT:    j .LBB1_14
-; CHECK-NEXT:  .LBB1_7: # %sw.o
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=2
+; CHECK-NEXT:    beq t2, t6, .LBB1_1
+; CHECK-NEXT:  # %bb.7: # %do.body
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=2
+; CHECK-NEXT:    bne t2, t1, .LBB1_5
+; CHECK-NEXT:    j .LBB1_15
+; CHECK-NEXT:  .LBB1_8: # %sw.o
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    beqz a3, .LBB1_10
-; CHECK-NEXT:  # %bb.8: # %if.then
+; CHECK-NEXT:    beqz a3, .LBB1_11
+; CHECK-NEXT:  # %bb.9: # %if.then
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    beqz a5, .LBB1_12
-; CHECK-NEXT:  # %bb.9: # %if.then2
+; CHECK-NEXT:    beqz a5, .LBB1_13
+; CHECK-NEXT:  # %bb.10: # %if.then2
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    bgeu a6, t1, .LBB1_1
-; CHECK-NEXT:    j .LBB1_14
-; CHECK-NEXT:  .LBB1_10: # %if.else
+; CHECK-NEXT:    li t2, 6
+; CHECK-NEXT:    bgeu a6, t2, .LBB1_1
+; CHECK-NEXT:    j .LBB1_15
+; CHECK-NEXT:  .LBB1_11: # %if.else
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    beqz a7, .LBB1_1
-; CHECK-NEXT:  # %bb.11: # %if.else3
+; CHECK-NEXT:  # %bb.12: # %if.else3
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    beqz t3, .LBB1_1
-; CHECK-NEXT:    j .LBB1_14
-; CHECK-NEXT:  .LBB1_12: # %if.else2
+; CHECK-NEXT:    j .LBB1_15
+; CHECK-NEXT:  .LBB1_13: # %if.else2
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    li t2, 1
 ; CHECK-NEXT:    bne a4, t2, .LBB1_1
-; CHECK-NEXT:  # %bb.13: # %cold
+; CHECK-NEXT:  # %bb.14: # %cold
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    tail internal_error
-; CHECK-NEXT:  .LBB1_14: # %ret0
+; CHECK-NEXT:  .LBB1_15: # %ret0
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
   br label %for.cond
@@ -261,13 +243,9 @@ declare i32 @internal_error(ptr)
 define i64 @csr_only_in_cold_case(ptr %a, ptr %b, i64 %n, ptr %m) nounwind {
 ; CHECK-LABEL: csr_only_in_cold_case:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    li a4, 6
 ; CHECK-NEXT:    bltu a4, a2, .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -286,16 +264,17 @@ define i64 @csr_only_in_cold_case(ptr %a, ptr %b, i64 %n, ptr %m) nounwind {
 ; CHECK-NEXT:    addi a4, a0, 48
 ; CHECK-NEXT:    addi a5, a1, 48
 ; CHECK-NEXT:    addi a2, a2, -6
-; CHECK-NEXT:    mv s1, a0
+; CHECK-NEXT:    sd a0, 32(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    mv a0, a4
-; CHECK-NEXT:    mv s2, a1
+; CHECK-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    mv a1, a5
-; CHECK-NEXT:    mv s0, a3
+; CHECK-NEXT:    sd a3, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a3, 40(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    call csr_only_in_cold_case
-; CHECK-NEXT:    mv a1, s2
-; CHECK-NEXT:    mv a3, s0
-; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a3, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a0, 32(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    j .LBB2_7
 ; CHECK-NEXT:  .LBB2_4: # %sw.bb3
 ; CHECK-NEXT:    ld a2, 0(a0)
@@ -324,50 +303,63 @@ define i64 @csr_only_in_cold_case(ptr %a, ptr %b, i64 %n, ptr %m) nounwind {
 ; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    j .LBB2_8
 ; CHECK-NEXT:  .LBB2_6:
-; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    sd zero, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:  .LBB2_7: # %big
-; CHECK-NEXT:    ld a4, 0(a0)
-; CHECK-NEXT:    ld a5, 8(a0)
-; CHECK-NEXT:    ld a6, 16(a0)
+; CHECK-NEXT:    ld a2, 0(a0)
+; CHECK-NEXT:    sd a2, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a2, 8(a0)
+; CHECK-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a2, 16(a0)
+; CHECK-NEXT:    sd a2, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld a7, 24(a0)
-; CHECK-NEXT:    ld t0, 0(a1)
+; CHECK-NEXT:    ld a2, 0(a1)
+; CHECK-NEXT:    sd a2, 40(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld t1, 8(a1)
 ; CHECK-NEXT:    ld t2, 16(a1)
 ; CHECK-NEXT:    ld t3, 24(a1)
 ; CHECK-NEXT:    ld t4, 32(a1)
 ; CHECK-NEXT:    ld t5, 32(a0)
-; CHECK-NEXT:    ld a0, 40(a0)
+; CHECK-NEXT:    ld a6, 40(a0)
 ; CHECK-NEXT:    ld a1, 40(a1)
-; CHECK-NEXT:    xor t6, t0, a4
-; CHECK-NEXT:    xor s0, t1, a5
-; CHECK-NEXT:    xor s1, t2, a6
-; CHECK-NEXT:    xor s2, t3, a7
-; CHECK-NEXT:    xor s3, t4, t5
-; CHECK-NEXT:    xor s4, a1, a0
-; CHECK-NEXT:    add a2, t6, a2
-; CHECK-NEXT:    add s0, s0, s1
-; CHECK-NEXT:    add s2, s2, s3
-; CHECK-NEXT:    add a2, a2, s0
-; CHECK-NEXT:    add s2, s2, s4
-; CHECK-NEXT:    add a1, a1, a4
-; CHECK-NEXT:    add a5, t4, a5
-; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    srli a5, a5, 2
-; CHECK-NEXT:    add a6, t3, a6
-; CHECK-NEXT:    add a7, a7, t2
-; CHECK-NEXT:    srli a4, a6, 3
-; CHECK-NEXT:    srli a6, a7, 4
-; CHECK-NEXT:    add t1, t5, t1
-; CHECK-NEXT:    add a0, a0, t0
-; CHECK-NEXT:    srli a7, t1, 5
-; CHECK-NEXT:    srli a0, a0, 6
-; CHECK-NEXT:    add a4, a4, a6
-; CHECK-NEXT:    add a5, a7, a5
+; CHECK-NEXT:    ld a2, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a4, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    xor t6, a2, a4
+; CHECK-NEXT:    ld a2, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    xor a2, t1, a2
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    xor t0, t2, a0
+; CHECK-NEXT:    xor a4, t3, a7
+; CHECK-NEXT:    xor a5, t4, t5
+; CHECK-NEXT:    xor a0, a1, a6
+; CHECK-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    add t6, t6, s0
+; CHECK-NEXT:    add a2, a2, t0
 ; CHECK-NEXT:    add a4, a4, a5
+; CHECK-NEXT:    add t6, t6, a2
+; CHECK-NEXT:    add a4, a4, a0
+; CHECK-NEXT:    ld a2, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    add a2, a1, a2
+; CHECK-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    add a1, t4, a1
+; CHECK-NEXT:    srli a2, a2, 1
+; CHECK-NEXT:    srli a5, a1, 2
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    add a0, t3, a0
+; CHECK-NEXT:    add a7, a7, t2
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    srli a7, a7, 4
+; CHECK-NEXT:    add t1, t5, t1
+; CHECK-NEXT:    ld a1, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    add a1, a6, a1
+; CHECK-NEXT:    srli a6, t1, 5
+; CHECK-NEXT:    srli a1, a1, 6
+; CHECK-NEXT:    add a0, a0, a7
+; CHECK-NEXT:    add a5, a6, a5
+; CHECK-NEXT:    add a0, a0, a5
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    add a4, t6, a4
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    add a2, a2, s2
-; CHECK-NEXT:    add a0, a4, a0
-; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    xor a0, a0, a4
 ; CHECK-NEXT:  .LBB2_8: # %sw.epilog
 ; CHECK-NEXT:    ld a1, 8(a3)
 ; CHECK-NEXT:    ld a2, 0(a3)
@@ -378,13 +370,9 @@ define i64 @csr_only_in_cold_case(ptr %a, ptr %b, i64 %n, ptr %m) nounwind {
 ; CHECK-NEXT:    sub a2, a0, a1
 ; CHECK-NEXT:  .LBB2_9: # %cleanup
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
 entry:
   switch i64 %n, label %sw.default [
@@ -521,9 +509,6 @@ define i64 @spill_on_warm_call_path(ptr %c, i32 signext %idx) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    beq a1, a2, .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -535,18 +520,17 @@ define i64 @spill_on_warm_call_path(ptr %c, i32 signext %idx) nounwind {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ld a0, 8(a0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_3: # %if.then
 ; CHECK-NEXT:    ld a1, 0(a0)
 ; CHECK-NEXT:    ld a2, 0(a1)
 ; CHECK-NEXT:    li a1, 6
-; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    jalr a2
-; CHECK-NEXT:    ld a1, 0(s0)
+; CHECK-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a1, 0(a1)
 ; CHECK-NEXT:    lui a2, 24
 ; CHECK-NEXT:    and a3, a0, a2
 ; CHECK-NEXT:    xor a2, a3, a2
@@ -555,50 +539,48 @@ define i64 @spill_on_warm_call_path(ptr %c, i32 signext %idx) nounwind {
 ; CHECK-NEXT:    slli a1, a1, 63
 ; CHECK-NEXT:    or a2, a0, a1
 ; CHECK-NEXT:    li a1, 6
-; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    jalr a3
-; CHECK-NEXT:    ld a0, 0(s0)
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    ld t1, 0(a0)
 ; CHECK-NEXT:    li a1, 6
-; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    jr t1
 ; CHECK-NEXT:  .LBB3_4: # %if.then13
 ; CHECK-NEXT:    ld a1, 0(a0)
 ; CHECK-NEXT:    ld a2, 16(a1)
 ; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    mv s2, a0
+; CHECK-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    jalr a2
-; CHECK-NEXT:    ld a1, 0(s2)
+; CHECK-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a1, 0(a1)
 ; CHECK-NEXT:    ld a2, 16(a1)
-; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    sext.w a1, a0
-; CHECK-NEXT:    mv a0, s2
+; CHECK-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    lw a1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    jalr a2
-; CHECK-NEXT:    mv s1, a0
+; CHECK-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    li a1, 7
-; CHECK-NEXT:    mv a0, s2
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    call hpm
 ; CHECK-NEXT:    beqz a0, .LBB3_6
 ; CHECK-NEXT:  # %bb.5: # %if.then13
-; CHECK-NEXT:    add a0, s0, s1
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a1, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, 7
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_6:
-; CHECK-NEXT:    xor a0, s1, s0
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a1, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    xor a0, a1, a0
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 entry:
@@ -660,45 +642,48 @@ declare i64 @hpm(ptr, i32 signext)
 define signext i32 @frame_leaves_hot_path(ptr %b, i64 %now) nounwind {
 ; CHECK-LABEL: frame_leaves_hot_path:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    ld a3, 32(a0)
+; CHECK-NEXT:    ld a2, 32(a0)
 ; CHECK-NEXT:    lw a4, 24(a0)
 ; CHECK-NEXT:    lw a5, 28(a0)
-; CHECK-NEXT:    ld a2, 8(a0)
+; CHECK-NEXT:    ld a3, 8(a0)
 ; CHECK-NEXT:    ld a6, 16(a0)
 ; CHECK-NEXT:    slt a5, a5, a4
-; CHECK-NEXT:    slt a3, a3, a1
+; CHECK-NEXT:    slt a2, a2, a1
 ; CHECK-NEXT:    not a5, a5
-; CHECK-NEXT:    not a3, a3
-; CHECK-NEXT:    and a3, a5, a3
-; CHECK-NEXT:    snez s0, a4
-; CHECK-NEXT:    and s0, a3, s0
-; CHECK-NEXT:    beq a2, a6, .LBB4_3
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    and a2, a5, a2
+; CHECK-NEXT:    snez a4, a4
+; CHECK-NEXT:    and a2, a2, a4
+; CHECK-NEXT:    beq a3, a6, .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    ld a2, 0(a2)
-; CHECK-NEXT:    ld a2, 0(a2)
-; CHECK-NEXT:    slt a1, a1, a2
-; CHECK-NEXT:    xori s1, a1, 1
-; CHECK-NEXT:    and a1, s1, s0
-; CHECK-NEXT:    beqz a1, .LBB4_4
-; CHECK-NEXT:  # %bb.2: # %if.then15
+; CHECK-NEXT:    ld a3, 0(a3)
+; CHECK-NEXT:    ld a3, 0(a3)
+; CHECK-NEXT:    slt a1, a1, a3
+; CHECK-NEXT:    xori a1, a1, 1
+; CHECK-NEXT:    and a3, a1, a2
+; CHECK-NEXT:    bnez a3, .LBB4_4
+; CHECK-NEXT:  # %bb.2: # %if.end16
+; CHECK-NEXT:    addi a0, a2, -1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB4_3:
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    addi a0, a2, -1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB4_4: # %if.then15
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    li s1, 1
+; CHECK-NEXT:    sd a2, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    call schedule_event
-; CHECK-NEXT:    j .LBB4_4
-; CHECK-NEXT:  .LBB4_3:
-; CHECK-NEXT:    li s1, 1
-; CHECK-NEXT:  .LBB4_4: # %if.end16
-; CHECK-NEXT:    addi a0, s0, -1
-; CHECK-NEXT:    and a0, a0, s1
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    ld a2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    addi a0, a2, -1
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:
   %size = getelementptr inbounds nuw i8, ptr %b, i64 24
@@ -747,81 +732,66 @@ declare void @schedule_event(ptr, i64)
 define void @spill_on_throw_path(ptr %self, ptr %obj) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: spill_on_throw_path:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    .cfi_offset s1, -24
-; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    .cfi_offset s3, -40
 ; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    ld a2, 8(a1)
 ; CHECK-NEXT:    bne a2, a0, .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    lui a0, %hi(default_owner)
 ; CHECK-NEXT:    ld a0, %lo(default_owner)(a0)
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
-; CHECK-NEXT:    .cfi_restore s0
-; CHECK-NEXT:    .cfi_restore s1
-; CHECK-NEXT:    .cfi_restore s2
-; CHECK-NEXT:    .cfi_restore s3
-; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    tail owner_insert
 ; CHECK-NEXT:  .LBB5_2: # %if.then
 ; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:    mv s1, a0
+; CHECK-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    mv s2, a1
+; CHECK-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    call __cxa_allocate_exception
-; CHECK-NEXT:    ld a1, 0(s2)
+; CHECK-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld a1, 0(a1)
-; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:  .Ltmp0: # EH_LABEL
-; CHECK-NEXT:    mv s3, s2
-; CHECK-NEXT:    mv a0, s2
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    jalr a1
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .Ltmp1: # EH_LABEL
 ; CHECK-NEXT:  # %bb.3: # %invoke.cont
-; CHECK-NEXT:    mv s2, a0
-; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    ld a1, 0(s3)
-; CHECK-NEXT:    ld a1, 8(a1)
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a2, 0(a0)
+; CHECK-NEXT:    ld a2, 8(a2)
 ; CHECK-NEXT:  .Ltmp2: # EH_LABEL
-; CHECK-NEXT:    jalr a1
+; CHECK-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    jalr a2
+; CHECK-NEXT:    ld a3, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:  .Ltmp3: # EH_LABEL
 ; CHECK-NEXT:  # %bb.4: # %invoke.cont3
 ; CHECK-NEXT:  .Ltmp4: # EH_LABEL
 ; CHECK-NEXT:    mv a4, a0
 ; CHECK-NEXT:    lui a2, %hi(.L.str)
 ; CHECK-NEXT:    addi a2, a2, %lo(.L.str)
-; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    mv a1, s1
-; CHECK-NEXT:    mv a3, s2
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a1, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    call error_init
 ; CHECK-NEXT:  .Ltmp5: # EH_LABEL
 ; CHECK-NEXT:  # %bb.5: # %invoke.cont5
 ; CHECK-NEXT:    lui a1, %hi(_ZTI5Error)
 ; CHECK-NEXT:    addi a1, a1, %lo(_ZTI5Error)
-; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    call __cxa_throw
 ; CHECK-NEXT:  .LBB5_6: # %lpad
 ; CHECK-NEXT:  .Ltmp6: # EH_LABEL
-; CHECK-NEXT:    mv s1, a0
-; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    call __cxa_free_exception
-; CHECK-NEXT:    mv a0, s1
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    call _Unwind_Resume
 entry:
   %owner = getelementptr inbounds nuw i8, ptr %obj, i64 8
@@ -873,131 +843,132 @@ declare void @owner_insert(ptr, ptr)
 define fastcc signext i32 @no_presplit_around_call_in_loop(i32 signext %nKey1, ptr %pKey1, ptr %pPKey2, i1 %tobool.not.i, i8 %retval.0.i, i8 %narrow, i8 %0, i1 %cmp24, i64 %indvars.iv.next, i32 %add306, i32 %1, i32 %add309, i32 %idx1.1, i1 %cmp35, i1 %cmp.i137, i1 %cmp4.i, i32 %conv9) nounwind {
 ; CHECK-LABEL: no_presplit_around_call_in_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -128
-; CHECK-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    mv s0, t5
-; CHECK-NEXT:    mv s1, t4
-; CHECK-NEXT:    mv s6, a7
-; CHECK-NEXT:    mv s5, a4
-; CHECK-NEXT:    mv s2, a2
-; CHECK-NEXT:    mv s3, a1
-; CHECK-NEXT:    andi s8, a3, 1
-; CHECK-NEXT:    mv s7, a0
-; CHECK-NEXT:    bnez s8, .LBB6_2
+; CHECK-NEXT:    addi sp, sp, -112
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd t5, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a2, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a1, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    andi a3, a3, 1
+; CHECK-NEXT:    sd t4, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a3, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    bnez a3, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %if.end.i
-; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    jalr a0
+; CHECK-NEXT:    sd a0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    sd a4, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a7, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    jalr a1
+; CHECK-NEXT:    ld a3, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a7, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a4, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld t4, 96(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB6_2: # %cond.end
-; CHECK-NEXT:    beqz s8, .LBB6_4
+; CHECK-NEXT:    beqz a3, .LBB6_5
 ; CHECK-NEXT:  .LBB6_3: # %if.then26
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    j .LBB6_21
-; CHECK-NEXT:  .LBB6_4: # %do.body.preheader
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    li s4, 0
-; CHECK-NEXT:    lw a0, 160(sp)
-; CHECK-NEXT:    lw a1, 128(sp)
-; CHECK-NEXT:    ld a2, 152(sp)
-; CHECK-NEXT:    ld a3, 136(sp)
-; CHECK-NEXT:    ld s0, 144(sp)
-; CHECK-NEXT:    sext.w a4, s1
-; CHECK-NEXT:    andi s6, s6, 1
-; CHECK-NEXT:    sltu a4, s7, a4
-; CHECK-NEXT:    sltu a0, a0, a1
-; CHECK-NEXT:    not a1, a4
-; CHECK-NEXT:    andi s7, a3, 1
-; CHECK-NEXT:    and s9, a0, a1
-; CHECK-NEXT:    zext.b s5, s5
-; CHECK-NEXT:    li s10, 7
-; CHECK-NEXT:    li s11, 1
-; CHECK-NEXT:    andi s0, s0, 1
-; CHECK-NEXT:    andi s2, a2, 1
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    j .LBB6_6
-; CHECK-NEXT:  .LBB6_5: # %if.end270
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    beqz s9, .LBB6_3
-; CHECK-NEXT:  .LBB6_6: # %do.body
+; CHECK-NEXT:  .LBB6_4: # %do.end
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB6_5: # %do.body.preheader
+; CHECK-NEXT:    li a2, 0
+; CHECK-NEXT:    lw a5, 144(sp)
+; CHECK-NEXT:    lw a6, 112(sp)
+; CHECK-NEXT:    ld t2, 136(sp)
+; CHECK-NEXT:    ld t0, 120(sp)
+; CHECK-NEXT:    ld t3, 128(sp)
+; CHECK-NEXT:    sext.w t1, t4
+; CHECK-NEXT:    andi a1, a7, 1
+; CHECK-NEXT:    sltu a0, a0, t1
+; CHECK-NEXT:    sltu a6, a5, a6
+; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    andi a5, t0, 1
+; CHECK-NEXT:    and a0, a6, a0
+; CHECK-NEXT:    zext.b a6, a4
+; CHECK-NEXT:    li t0, 7
+; CHECK-NEXT:    li t1, 1
+; CHECK-NEXT:    andi a7, t3, 1
+; CHECK-NEXT:    andi a4, t2, 1
+; CHECK-NEXT:    li t2, 0
+; CHECK-NEXT:    j .LBB6_7
+; CHECK-NEXT:  .LBB6_6: # %if.end270
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    mv t2, t4
+; CHECK-NEXT:    beqz a0, .LBB6_4
+; CHECK-NEXT:  .LBB6_7: # %do.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    bnez s4, .LBB6_13
-; CHECK-NEXT:  # %bb.7: # %if.then32
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    bnez s8, .LBB6_20
-; CHECK-NEXT:  # %bb.8: # %if.else38
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    bne s5, s10, .LBB6_19
-; CHECK-NEXT:  # %bb.9: # %if.then45
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    sh s11, 0(zero)
-; CHECK-NEXT:    bnez s0, .LBB6_20
-; CHECK-NEXT:  # %bb.10: # %if.end.i138
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    bnez s2, .LBB6_20
-; CHECK-NEXT:  # %bb.11: # %if.end7.i
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    bnez s6, .LBB6_20
-; CHECK-NEXT:  # %bb.12: # %if.end11.i
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    beqz s8, .LBB6_5
-; CHECK-NEXT:    j .LBB6_20
-; CHECK-NEXT:  .LBB6_13: # %if.else68
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    bnez s8, .LBB6_5
-; CHECK-NEXT:  # %bb.14: # %if.then116
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    bnez s7, .LBB6_20
-; CHECK-NEXT:  # %bb.15: # %if.else130
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    bnez s6, .LBB6_20
-; CHECK-NEXT:  # %bb.16: # %if.else134
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    bnez s8, .LBB6_3
-; CHECK-NEXT:  # %bb.17: # %lor.lhs.false
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    beqz s8, .LBB6_3
-; CHECK-NEXT:  # %bb.18: # %if.else148
-; CHECK-NEXT:    # in Loop: Header=BB6_6 Depth=1
-; CHECK-NEXT:    slli a0, a0, 32
-; CHECK-NEXT:    srli a0, a0, 32
-; CHECK-NEXT:    add a0, s3, a0
+; CHECK-NEXT:    bnez a2, .LBB6_14
+; CHECK-NEXT:  # %bb.8: # %if.then32
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    bnez a3, .LBB6_21
+; CHECK-NEXT:  # %bb.9: # %if.else38
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    bne a6, t0, .LBB6_20
+; CHECK-NEXT:  # %bb.10: # %if.then45
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    sh t1, 0(zero)
+; CHECK-NEXT:    bnez a7, .LBB6_21
+; CHECK-NEXT:  # %bb.11: # %if.end.i138
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    bnez a4, .LBB6_21
+; CHECK-NEXT:  # %bb.12: # %if.end7.i
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    bnez a1, .LBB6_21
+; CHECK-NEXT:  # %bb.13: # %if.end11.i
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    beqz a3, .LBB6_6
+; CHECK-NEXT:    j .LBB6_21
+; CHECK-NEXT:  .LBB6_14: # %if.else68
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    bnez a3, .LBB6_6
+; CHECK-NEXT:  # %bb.15: # %if.then116
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    bnez a5, .LBB6_21
+; CHECK-NEXT:  # %bb.16: # %if.else130
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    bnez a1, .LBB6_21
+; CHECK-NEXT:  # %bb.17: # %if.else134
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    bnez a3, .LBB6_3
+; CHECK-NEXT:  # %bb.18: # %lor.lhs.false
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    beqz a3, .LBB6_3
+; CHECK-NEXT:  # %bb.19: # %if.else148
+; CHECK-NEXT:    # in Loop: Header=BB6_7 Depth=1
+; CHECK-NEXT:    slli t2, t2, 32
+; CHECK-NEXT:    srli t1, t2, 32
+; CHECK-NEXT:    ld t0, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    sd a5, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a6, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a0, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a7, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    add a0, t0, t1
+; CHECK-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a1, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    sd a2, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a3, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    jalr a3
+; CHECK-NEXT:    ld a4, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a7, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    li t1, 1
+; CHECK-NEXT:    li t0, 7
+; CHECK-NEXT:    ld a0, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a6, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a5, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    mv a2, s4
-; CHECK-NEXT:    jalr s4
-; CHECK-NEXT:    j .LBB6_5
-; CHECK-NEXT:  .LBB6_19: # %if.else38
-; CHECK-NEXT:    bnez s5, .LBB6_3
-; CHECK-NEXT:  .LBB6_20: # %if.then273.loopexit372
-; CHECK-NEXT:    lw a0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:  .LBB6_21: # %if.then26
-; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 128
+; CHECK-NEXT:    ld a3, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a2, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld t4, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    j .LBB6_6
+; CHECK-NEXT:  .LBB6_20: # %if.else38
+; CHECK-NEXT:    bnez a6, .LBB6_3
+; CHECK-NEXT:  .LBB6_21: # %if.then273.loopexit372
+; CHECK-NEXT:    lw a0, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:
   br i1 %tobool.not.i, label %if.then.i, label %if.end.i

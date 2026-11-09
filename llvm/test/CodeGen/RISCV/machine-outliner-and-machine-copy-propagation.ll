@@ -145,7 +145,6 @@ declare void @exit(i32 signext) noreturn
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call t0, OUTLINED_FUNCTION_0
 ; RV64I-NEXT:    call nge
 ; RV64I-NEXT:    bnez a0, .LBB4_9
@@ -163,25 +162,30 @@ declare void @exit(i32 signext) noreturn
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call ngt
-; RV64I-NEXT:    li s1, -1
-; RV64I-NEXT:    bne a0, s1, .LBB4_9
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    bne a0, a1, .LBB4_9
 ; RV64I-NEXT:  # %bb.4: # %if.end12
 ; RV64I-NEXT:    call t0, OUTLINED_FUNCTION_0
 ; RV64I-NEXT:    call nle
-; RV64I-NEXT:    bne a0, s1, .LBB4_9
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    bne a0, a1, .LBB4_9
 ; RV64I-NEXT:  # %bb.5: # %if.end16
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call nle
 ; RV64I-NEXT:    bnez a0, .LBB4_9
 ; RV64I-NEXT:  # %bb.6: # %if.end20
-; RV64I-NEXT:    call t0, OUTLINED_FUNCTION_0
+; RV64I-NEXT:    lui a0, 524288
+; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    lui a0, 524288
+; RV64I-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    call nlt
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    bne a0, a1, .LBB4_9
 ; RV64I-NEXT:  # %bb.7: # %if.end24
 ; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    call nlt
 ; RV64I-NEXT:    bnez a0, .LBB4_9
 ; RV64I-NEXT:  # %bb.8: # %if.end28
