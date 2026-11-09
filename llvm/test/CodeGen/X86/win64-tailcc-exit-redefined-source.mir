@@ -10,7 +10,7 @@
 # CHECK-LABEL: name: f
 # CHECK:       $[[TMP:r[0-9a-z]+]] = MOV64rr $r14
 # CHECK-NEXT:  $r14 = MOV64rm renamable $rdx
-# CHECK-NEXT:  MOV64mr $rsp, 1, $noreg, {{[0-9]+}}, $noreg, $[[TMP]] :: (volatile store (s64) into %fixed-stack.3)
+# CHECK-NEXT:  frame-destroy MOV64mr $rsp, 1, $noreg, {{[0-9]+}}, $noreg, $[[TMP]] :: (volatile store (s64) into %fixed-stack.3)
 # CHECK-NEXT:  SEH_BeginEpilogue
 
 --- |

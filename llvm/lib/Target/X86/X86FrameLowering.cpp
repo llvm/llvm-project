@@ -2703,9 +2703,11 @@ static bool storesToOldReturnAddress(const MachineInstr &MI,
                                      unsigned SlotSize) {
   if (!MI.mayStore())
     return false;
+  bool HasSizedStoreMMO = false;
   for (const MachineMemOperand *MMO : MI.memoperands()) {
     if (!MMO->isStore() || !MMO->getSize().hasValue())
       continue;
+    HasSizedStoreMMO = true;
     const auto *PSV =
         dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());
     if (!PSV || !MFI.isFixedObjectIndex(PSV->getFrameIndex()))
@@ -2715,7 +2717,32 @@ static bool storesToOldReturnAddress(const MachineInstr &MI,
     if (Lo < 0 && Hi > -(int64_t)SlotSize)
       return true;
   }
-  return false;
+  if (HasSizedStoreMMO)
+    return false;
+
+  // Without a usable memory operand we can't tell how many bytes are written,
+  // so a store to a fixed object below the incoming arguments can't be ruled
+  // out as one that overwrites the return address.
+  int Idx = X86::getFirstAddrOperandIdx(MI);
+  if (Idx < 0 || !MI.getOperand(Idx).isFI() ||
+      !MFI.isFixedObjectIndex(MI.getOperand(Idx).getIndex()))
+    return false;
+  int FI = MI.getOperand(Idx).getIndex();
+  int64_t ObjOffset = MFI.getObjectOffset(FI);
+  const MachineOperand &Disp = MI.getOperand(Idx + X86::AddrDisp);
+  // With an index register the address isn't known, so neither exit applies.
+  if (Disp.isImm() && !MI.getOperand(Idx + X86::AddrIndexReg).getReg()) {
+    // An access within an object that ends below the return address slot can't
+    // overlap it.
+    if (Disp.getImm() >= 0 && Disp.getImm() < (int64_t)MFI.getObjectSize(FI) &&
+        ObjOffset + (int64_t)MFI.getObjectSize(FI) <= -(int64_t)SlotSize)
+      return false;
+    if (ObjOffset + Disp.getImm() >= 0)
+      return false;
+  }
+  report_fatal_error("Can't tell whether a store to a fixed stack slot "
+                     "overwrites the caller's return address on win64: the "
+                     "store has no memory operand");
 }
 
 static MCRegister getStoreSourceReg(const MachineInstr &MI) {
@@ -2797,11 +2824,21 @@ static OldReturnAddressStores detachOldReturnAddressStores(
     const MachineFrameInfo &MFI, const TargetRegisterInfo *TRI,
     const TargetInstrInfo &TII, unsigned SlotSize) {
   OldReturnAddressStores Result;
+  // Only a tail call that needs more argument space than it was given can write
+  // over the return address.
+  if (!isTailCallOpcode(Terminator->getOpcode()) ||
+      getTCReturnStackAdjust(*Terminator).getImm() >= 0)
+    return Result;
   for (MachineInstr &MI : make_range(MBB.begin(), Terminator))
     if (storesToOldReturnAddress(MI, MFI, SlotSize))
       Result.Stores.push_back(&MI);
   if (Result.Stores.empty())
     return Result;
+
+  // Win64 gives each argument its own slot, so at most one store writes the
+  // return address slot; the scratch register choice below relies on that.
+  assert(Result.Stores.size() == 1 &&
+         "multiple stores to the old return address slot");
 
   MachineBasicBlock::iterator RestoreBegin =
       findCalleeSavedRestoreBegin(MBB, Terminator);
@@ -2990,8 +3027,10 @@ void X86FrameLowering::emitWin64ReserveExit(
       NumPopped != 0 && Off < NumPopped * (int64_t)SlotSize;
 
   auto EmitEpilogueStart = [&](MachineBasicBlock::iterator At) {
-    for (MachineInstr *MI : Deferred.Stores)
+    for (MachineInstr *MI : Deferred.Stores) {
+      MI->setFlag(MachineInstr::FrameDestroy);
       MBB.insert(At, MI);
+    }
     if (MF.hasWinCFI())
       BuildMI(MBB, At, DL, TII.get(X86::SEH_BeginEpilogue));
   };
@@ -3493,8 +3532,10 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       report_fatal_error("Can't find the start of the epilogue of a tail call "
                          "under win64");
     --Begin;
-    for (MachineInstr *MI : SunkStores.Stores)
+    for (MachineInstr *MI : SunkStores.Stores) {
+      MI->setFlag(MachineInstr::FrameDestroy);
       MBB.insert(Begin, MI);
+    }
   }
 
   if (NeedsWin64CFI && MF.hasWinCFI())
