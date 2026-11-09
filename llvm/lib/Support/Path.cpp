@@ -1338,10 +1338,11 @@ Error TempFile::keep(const Twine &Name) {
 #else
   std::error_code RenameEC = fs::rename(TmpName, Name);
   if (RenameEC) {
-    // If we can't rename, try to copy to work around cross-device link issues.
-    RenameEC = sys::fs::copy_file(TmpName, Name);
-    // Whether the copy succeeded or not, the temporary file is no longer
-    // needed.
+    // If rename failed because it's cross-device, copy instead.
+    if (RenameEC == std::errc::cross_device_link)
+      RenameEC = copy_file(TmpName, Name);
+    // Whether the rename or the copy failed or not, the temporary file is no
+    // longer needed.
     remove(TmpName);
   }
 #endif
