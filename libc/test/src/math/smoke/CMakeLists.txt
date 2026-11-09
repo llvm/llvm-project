@@ -1990,7 +1990,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.bfloat16
 )
 
-
 add_fp_unittest(
   ufromfp_test
   SUITE
@@ -6482,7 +6481,6 @@ add_fp_unittest(
     libc.src.math.fsqrt
 )
 
-
 add_fp_unittest(
   fsqrtl_test
   SUITE
@@ -7125,7 +7123,6 @@ add_fp_unittest(
     libc.src.math.bf16mulf128
     libc.src.__support.FPUtil.bfloat16
 )
-
 
 add_fp_unittest(
   bf16sub_test
