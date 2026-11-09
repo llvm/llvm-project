@@ -36,26 +36,48 @@ class Undefined;
  */
 class SymbolTable {
 public:
-  Defined *addDefined(StringRef name, InputFile *, InputSection *,
+  Defined *addDefined(llvm::CachedHashStringRef name, InputFile *,
+                      InputSection *, uint64_t value, uint64_t size,
+                      bool isWeakDef, bool isPrivateExtern,
+                      bool isReferencedDynamically, bool noDeadStrip,
+                      bool isWeakDefCanBeHidden, bool isCold = false,
+                      Symbol *known = nullptr);
+  Defined *addDefined(StringRef name, InputFile *file, InputSection *isec,
                       uint64_t value, uint64_t size, bool isWeakDef,
                       bool isPrivateExtern, bool isReferencedDynamically,
                       bool noDeadStrip, bool isWeakDefCanBeHidden,
-                      bool isCold = false, Symbol *known = nullptr);
+                      bool isCold = false, Symbol *known = nullptr) {
+    return addDefined(llvm::CachedHashStringRef(name), file, isec, value, size,
+                      isWeakDef, isPrivateExtern, isReferencedDynamically,
+                      noDeadStrip, isWeakDefCanBeHidden, isCold, known);
+  }
 
   Defined *aliasDefined(Defined *src, StringRef target, InputFile *newFile,
                         bool makePrivateExtern = false);
 
-  Symbol *addUndefined(StringRef name, InputFile *, bool isWeakRef);
+  Symbol *addUndefined(llvm::CachedHashStringRef name, InputFile *,
+                       bool isWeakRef);
+  Symbol *addUndefined(StringRef name, InputFile *file, bool isWeakRef) {
+    return addUndefined(llvm::CachedHashStringRef(name), file, isWeakRef);
+  }
 
-  Symbol *addCommon(StringRef name, InputFile *, uint64_t size, uint32_t align,
-                    bool isPrivateExtern);
+  Symbol *addCommon(llvm::CachedHashStringRef name, InputFile *, uint64_t size,
+                    uint32_t align, bool isPrivateExtern);
+  Symbol *addCommon(StringRef name, InputFile *file, uint64_t size,
+                    uint32_t align, bool isPrivateExtern) {
+    return addCommon(llvm::CachedHashStringRef(name), file, size, align,
+                     isPrivateExtern);
+  }
 
   Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef, bool isTlv);
   Symbol *addDynamicLookup(StringRef name);
 
   Symbol *addLazyArchive(StringRef name, ArchiveFile *file,
                          const llvm::object::Archive::Symbol &sym);
-  Symbol *addLazyObject(StringRef name, InputFile &file);
+  Symbol *addLazyObject(llvm::CachedHashStringRef name, InputFile &file);
+  Symbol *addLazyObject(StringRef name, InputFile &file) {
+    return addLazyObject(llvm::CachedHashStringRef(name), file);
+  }
 
   Defined *addSynthetic(StringRef name, InputSection *, uint64_t value,
                         bool isPrivateExtern, bool includeInSymtab,
@@ -66,7 +88,11 @@ public:
   Symbol *find(StringRef name) { return find(llvm::CachedHashStringRef(name)); }
 
 private:
-  std::pair<Symbol *, bool> insert(StringRef name, const InputFile *);
+  std::pair<Symbol *, bool> insert(llvm::CachedHashStringRef name,
+                                   const InputFile *);
+  std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file) {
+    return insert(llvm::CachedHashStringRef(name), file);
+  }
   llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
   std::vector<Symbol *> symVector;
 };
