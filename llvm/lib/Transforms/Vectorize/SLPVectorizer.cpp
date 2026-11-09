@@ -17271,7 +17271,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       ArrayRef<Value *> Cond = E->getOperand(0);
       auto *Ext = dyn_cast<ExtractElementInst>(Cond.front());
       auto *Cmp = Ext ? dyn_cast<CmpInst>(Ext->getVectorOperand()) : nullptr;
-      if (!Cmp || getNumElements(Cmp->getType()) != Cond.size() ||
+      if (!Cmp || isa<ScalableVectorType>(Cmp->getType()) ||
+          getNumElements(Cmp->getType()) != Cond.size() ||
           any_of(enumerate(Cond), [&](const auto &P) {
             return !match(P.value(), m_ExtractElt(m_Specific(Cmp),
                                                   m_SpecificInt(P.index())));
