@@ -2,7 +2,7 @@
 # are described in a concrete instance of a subprogram (an out-of-line
 # DW_TAG_subprogram or a DW_TAG_inlined_subroutine with DW_AT_abstract_origin)
 # instead of only in its abstract origin. Entities that refer to their abstract
-counterpart are fine.
+# counterpart are fine.
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t.o
 # RUN: llvm-dwarfdump -verify %t.o | FileCheck %s \
