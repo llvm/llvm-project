@@ -374,18 +374,11 @@ def shift_const_op : GICombinePatFrag<
   !foreach(op,
            [G_SHL, G_ASHR, G_LSHR],
            (pattern (op $dst, $shifted, $amt)))>;
-def shift_result_matchdata : GIDefMatchData<"std::optional<int64_t>">;
 def shifts_too_big : GICombineRule<
-  (defs root:$root, shift_result_matchdata:$matchinfo),
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (shift_const_op $root):$mi,
          [{ return Helper.matchShiftsTooBig(*${mi}, ${matchinfo}); }]),
-  (apply [{
-    if (${matchinfo}) {
-      Helper.replaceInstWithConstant(*${mi}, *${matchinfo});
-    } else {
-      Helper.replaceInstWithUndef(*${mi});
-    }
-  }])>;
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
 
 // Shared frag for the shift-chain rules below: all shift opcodes that have a
 // (dst, base, amount) shape.
@@ -897,7 +890,9 @@ def binop_with_neg : GICombineRule<
 def urem_pow2_to_mask : GICombineRule<
   (defs root:$root),
   (match (G_UREM $dst, $x, $y):$root,
-    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(${y}); }]),
+    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(${y},
+                                                       /*OrNegative=*/false,
+                                                       /*OrZero=*/true); }]),
   (apply [{ Helper.applySimplifyURemByPow2(*${root}); }])
 >;
 
@@ -980,9 +975,10 @@ def simplify_add_to_sub : GICombineRule <
 
 // Fold fp_op(cst) to the constant result of the floating point operation.
 class constant_fold_unary_fp_op_rule<Instruction opcode> : GICombineRule <
-  (defs root:$dst),
-  (match (opcode $dst, $src0):$root, (G_FCONSTANT $src0, $cst)),
-  (apply [{ Helper.applyCombineConstantFoldFpUnary(*${root}, ${cst}.getFPImm()); }])
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
+  (match (opcode $dst, $src0):$root,
+   [{ return Helper.matchConstantFoldFPUnary(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
 >;
 
 def constant_fold_fneg : constant_fold_unary_fp_op_rule<G_FNEG>;
@@ -1790,7 +1786,29 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2,
+// Fold (udiv x, (shl C, y)) -> (lshr x, (add y, log2(C))) for power-of-two C.
+def udiv_by_shifted_pow2 : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_UDIV $dst, $x, $y):$root,
+   [{ return Helper.matchUDivByShiftedPow2(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// Convert signed division or remainder of nonnegative operands to unsigned.
+class signed_divrem_to_unsigned<Instruction signedOpcode,
+                                Instruction unsignedOpcode> : GICombineRule<
+  (defs root:$root),
+  (match (signedOpcode $dst, $x, $y):$root,
+   [{ return Helper.matchSignedDivRemToUnsigned(*${root},
+                       TargetOpcode::}] # unsignedOpcode # [{); }]),
+  (apply (unsignedOpcode $dst, $x, $y, (MIFlags $root)))>;
+
+// Fold (sdiv x, y) -> (udiv x, y) when both operands are nonnegative.
+def sdiv_to_unsigned : signed_divrem_to_unsigned<G_SDIV, G_UDIV>;
+// Fold (srem x, y) -> (urem x, y) when both operands are nonnegative.
+def srem_to_unsigned : signed_divrem_to_unsigned<G_SREM, G_UREM>;
+
+def intdiv_combines : GICombineGroup<[udiv_by_pow2, udiv_by_shifted_pow2,
+                                      sdiv_by_pow2,
                                       udiv_by_const, sdiv_by_const,]>;
 
 def urem_by_const : GICombineRule<
@@ -1839,10 +1857,10 @@ def constant_fold_binop_frags : GICombinePatFrag<
            (pattern (op $dst, $src0, $src1)))>;
 
 def constant_fold_binop : GICombineRule<
-  (defs root:$d, apint_matchinfo:$matchinfo),
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
   (match (constant_fold_binop_frags $d):$mi,
    [{ return Helper.matchConstantFoldBinOp(*${mi}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${mi}, ${matchinfo}); }])> {
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])> {
   // 18 opcode alternatives exceed the default 16-permutation cap, so lift it.
   // A single frag (one rule id) keeps the rule name valid for --disable-rule.
   let MaxPermutations = -1;
@@ -1857,10 +1875,10 @@ def constant_fold_fp_binop_frags : GICombinePatFrag<
            (pattern (op $dst, $src0, $src1)))>;
 
 def constant_fold_fp_binop : GICombineRule<
-  (defs root:$d, constantfp_matchinfo:$matchinfo),
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
   (match (constant_fold_fp_binop_frags $d):$mi,
    [{ return Helper.matchConstantFoldFPBinOp(*${mi}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithFConstant(*${mi}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
 
 
 def constant_fold_fma_frags : GICombinePatFrag<
@@ -1868,20 +1886,20 @@ def constant_fold_fma_frags : GICombinePatFrag<
   !foreach(op, [G_FMAD, G_FMA], (pattern (op $dst, $src0, $src1, $src2)))>;
 
 def constant_fold_fma : GICombineRule<
-  (defs root:$dst, constantfp_matchinfo:$matchinfo),
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
   (match (constant_fold_fma_frags $dst):$d,
    [{ return Helper.matchConstantFoldFMA(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithFConstant(*${d}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
 def constant_fold_cast_op_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op, [G_ZEXT, G_SEXT, G_ANYEXT], (pattern (op $dst, $src)))>;
 
 def constant_fold_cast_op : GICombineRule<
-  (defs root:$dst, apint_matchinfo:$matchinfo),
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
   (match (constant_fold_cast_op_frags $dst):$d,
    [{ return Helper.matchConstantFoldCastOp(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
 def unary_int_op_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
@@ -3007,11 +3025,11 @@ def narrow_binop_xor : narrow_binop_opcode<G_XOR>;
 
 // Cast of integer.
 class integer_of_opcode<Instruction castOpcode> : GICombineRule <
-  (defs root:$root, apint_matchinfo:$matchinfo),
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (G_CONSTANT $int, $imm),
          (castOpcode $root, $int):$Cast,
          [{ return Helper.matchCastOfInteger(*${Cast}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${Cast}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
 
 def integer_of_truncate : integer_of_opcode<G_TRUNC>;
 
@@ -3167,7 +3185,7 @@ def known_bits_simplifications : GICombineGroup<[
   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
   redundant_zext_unmerge_sext_inreg, redundant_aext_unmerge_sext_inreg,
   redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
-  sext_inreg_to_zext_inreg]>;
+  sext_inreg_to_zext_inreg, sdiv_to_unsigned, srem_to_unsigned]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
                                                narrow_binop_feeding_and]>;

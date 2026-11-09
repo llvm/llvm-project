@@ -3,6 +3,7 @@
 # Configuration file for the 'lit' test runner.
 
 import os
+import platform
 import subprocess
 
 from lit.llvm import llvm_config
@@ -85,6 +86,10 @@ llvm_config.with_environment(
 )
 
 llvm_config.with_environment("PATH", config.libsycl_tools_dir, append_path=True)
+
+# On Windows, shared libraries (e.g. LLVMOffload.dll) are located via PATH.
+if platform.system() == "Windows":
+    llvm_config.with_environment("PATH", config.libsycl_libs_dir, append_path=True)
 
 if config.extra_environment:
     lit_config.note("Extra environment variables")
