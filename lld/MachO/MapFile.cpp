@@ -274,9 +274,8 @@ void macho::writeMapFile() {
                      osec->getSize());
       } else if (osec == in.got) {
         for (const Symbol *sym : in.got->getEntries())
-          printNonLazyPointer(
-              os, in.got->addr + sym->gotIndex * target->wordSize, sym);
-      } else if (in.authGot && osec == in.authGot) {
+          printNonLazyPointer(os, in.got->getVA(sym->gotIndex), sym);
+      } else if (osec == in.authGot) {
         for (const Symbol *sym : in.authGot->getEntries())
           printNonLazyPointer(os, in.authGot->getVA(sym), sym);
       } else if (osec == in.objcMethList) {
