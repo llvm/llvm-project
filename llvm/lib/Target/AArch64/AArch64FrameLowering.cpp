@@ -905,14 +905,6 @@ Register
 AArch64FrameLowering::findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
                                                        bool HasCall) const {
   MachineFunction *MF = MBB->getParent();
-
-  // If MBB is an entry block, use X9 as the scratch register
-  // preserve_none functions may be using X9 to pass arguments,
-  // so prefer to pick an available register below.
-  if (&MF->front() == MBB &&
-      MF->getFunction().getCallingConv() != CallingConv::PreserveNone)
-    return AArch64::X9;
-
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
   LivePhysRegs LiveRegs(TRI);
@@ -924,6 +916,9 @@ AArch64FrameLowering::findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
   }
 
   // Prefer X9 since it was historically used for the prologue scratch reg.
+  // X9 may still be unavailable in the entry block: it is an argument register
+  // for preserve_none and the Arm64EC thunk calling conventions, and it is
+  // callee-saved for preserve_most and preserve_all.
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   if (LiveRegs.available(MRI, AArch64::X9))
     return AArch64::X9;

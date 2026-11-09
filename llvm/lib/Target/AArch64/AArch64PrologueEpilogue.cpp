@@ -520,6 +520,7 @@ void AArch64PrologueEmitter::allocateStackSpace(
     Register TargetReg = RealignmentPadding
                              ? AFL.findScratchNonCalleeSaveRegister(&MBB)
                              : AArch64::SP;
+    assert(TargetReg.isValid());
     // SUB Xd/SP, SP, AllocSize
     emitFrameOffset(MBB, MBBI, DL, TargetReg, AArch64::SP, -AllocSize, TII,
                     MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI,
