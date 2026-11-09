@@ -362,6 +362,8 @@ private:
   llvm::Module &TheModule;
   DiagnosticsEngine &Diags;
   const TargetInfo &Target;
+  /// Canonical target features for functions without a target attribute.
+  std::optional<llvm::Attribute> DefaultTargetFeatures;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
