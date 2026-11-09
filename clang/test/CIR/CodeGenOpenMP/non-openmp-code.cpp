@@ -76,4 +76,4 @@ void complex_ops(float _Complex *c, float _Complex v) {
 // OGCG:   %[[INC:.*]] = fadd float %[[REAL]], 1.000000e+00
 
 int call(int (*fp)(int)) { return fp(1); }
-// LLVMCIR: call{{.*}}i32 %{{.*}}(i32 noundef 1)
+// LLVM: call{{.*}}i32 %{{.*}}(i32 noundef 1)
