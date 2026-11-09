@@ -559,16 +559,6 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
   return Plugin::success();
 }
 
-Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
-  return Plugin::error(ErrorCode::UNSUPPORTED,
-                       "device does not support VA Management");
-}
-
-Error GenericDeviceTy::memoryVAUnMap(void *VAddr, size_t Size) {
-  return Plugin::error(ErrorCode::UNSUPPORTED,
-                       "device does not support VA Management");
-}
-
 Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
   return Plugin::error(
       ErrorCode::UNIMPLEMENTED,

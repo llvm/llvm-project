@@ -2616,6 +2616,14 @@ private:
   /// opportunities.
   void reorderGatherNode(TreeEntry &TE);
 
+  /// Checks if \p V has a single use in the reduction operations. The reduced
+  /// bitcast and bit pack roots are emitted as scalars, so their lanes cannot
+  /// be extracted for other users.
+  bool hasSingleReductionUse(Value *V) const {
+    return UserIgnoreList && V->hasOneUse() &&
+           UserIgnoreList->contains(*V->user_begin());
+  }
+
   /// Checks if the tree represents disjoint or reduction of shl(zext, (0, 8,
   /// .., 56))-like pattern.
   /// If the int shifts unique, also strided, but not ordered, sets \p Order.
@@ -13928,7 +13936,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
       !TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty() ||
       MinBWs.contains(&TE) ||
-      any_of(TE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
+      any_of(TE.Scalars, [&](Value *V) { return !hasSingleReductionUse(V); }))
     return false;
   Type *ScalarTy = TE.getMainOp()->getType();
   // TODO: Check if same can be done for the vector types.
@@ -14214,7 +14222,7 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
            N->ReorderIndices.empty() && N->ReuseShuffleIndices.empty() &&
            !MinBWs.contains(N) && all_of(N->Scalars, [&](Value *V) {
              return (N->hasCopyableElements() && N->isCopyableElement(V)) ||
-                    V->hasOneUse();
+                    (N == &TE ? hasSingleReductionUse(V) : V->hasOneUse());
            });
   };
   if (!IsVectorizedOneUseNode(&TE))
@@ -14354,7 +14362,8 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
     return false;
   if (!UserIgnoreList || SelectTE.Idx != 0)
     return false;
-  if (any_of(SelectTE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
+  if (any_of(SelectTE.Scalars,
+             [&](Value *V) { return !hasSingleReductionUse(V); }))
     return false;
   // Check that all reduction operands are or instructions.
   if (any_of(*UserIgnoreList,
@@ -21268,7 +21277,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     return std::nullopt;
   auto *NodeUI = DT->getNode(TEInsertBlock);
   assert(NodeUI && "Should only process reachable instructions");
+#ifndef NDEBUG
   SmallPtrSet<Value *, 4> GatheredScalars(llvm::from_range, VL);
+#endif
   auto CheckOrdering = [&](const Instruction *InsertPt) {
     // Argument InsertPt is an instruction where vector code for some other
     // tree entry (one that shares one or more scalars with TE) is going to be
@@ -35122,7 +35133,7 @@ private:
     // All parts may be reduced in the tree already, leaving no vector value
     // to reduce.
     if (VecRes)
-      CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
+      CreateSingleOp(VecRes, /*Scale=*/1, VecResSignedness,
                      /*ReducedInTree=*/false, VecResNegated);
 
     return {ReducedSubTree, ResNegated};

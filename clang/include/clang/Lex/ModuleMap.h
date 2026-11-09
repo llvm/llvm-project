@@ -103,9 +103,6 @@ class ModuleMap {
   /// nullptr is stored for modules that are known to fail to load.
   llvm::DenseMap<const IdentifierInfo *, Module *> CachedModuleLoads;
 
-  /// Shadow modules created while building this module map.
-  llvm::SmallVector<Module*, 2> ShadowModules;
-
   /// The number of modules we have created in total.
   unsigned NumCreatedModules = 0;
 

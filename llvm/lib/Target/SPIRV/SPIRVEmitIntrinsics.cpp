@@ -32,7 +32,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -63,11 +62,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "spirv-emit-intrinsics"
-
-static cl::opt<bool>
-    SpirvEmitOpNames("spirv-emit-op-names",
-                     cl::desc("Emit OpName for all instructions"),
-                     cl::init(false));
 
 namespace llvm::SPIRV {
 #define GET_BuiltinGroup_DECL
@@ -153,7 +147,7 @@ public:
     propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
   }
 
-  using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
+  using FunctionSetType = decltype(GlobalIsUsedByFun)::mapped_type;
   const FunctionSetType &
   getTransitiveUserFunctions(const GlobalVariable &GV) const {
     auto It = GlobalIsUsedByFun.find(&GV);
@@ -506,14 +500,15 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
                        false);
 }
 
-static void emitAssignName(Instruction *I, IRBuilder<> &B) {
+static void emitAssignName(const SPIRVOptions &CLOpts, Instruction *I,
+                           IRBuilder<> &B) {
   if (!I->hasName() || I->getType()->isAggregateType() ||
       expectIgnoredInIRTranslation(I))
     return;
 
   // We want to be conservative when adding the names because they can interfere
   // with later optimizations.
-  bool KeepName = SpirvEmitOpNames;
+  bool KeepName = CLOpts.emit_op_names;
   if (!KeepName) {
     if (isa<AllocaInst>(I)) {
       KeepName = true;
@@ -557,7 +552,7 @@ void SPIRVEmitIntrinsicsImpl::replaceAllUsesWithAndErase(IRBuilder<> &B,
   if (!Name.empty()) {
     Dest->setName(Name);
     if (Named.insert(Dest).second)
-      emitAssignName(Dest, B);
+      emitAssignName(TM.getCLOpts(), Dest, B);
   }
 }
 
@@ -1702,6 +1697,8 @@ void SPIRVEmitIntrinsicsImpl::replaceMemInstrUses(Instruction *Old,
     }
   }
   New->copyMetadata(*Old);
+  GR->removeAssignPtrTypeInstr(Old); // Old's address could be re-used.
+  TypeValidated.erase(Old);
   Old->eraseFromParent();
 }
 
@@ -3185,7 +3182,7 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
   }
-  if (spirvPreserveAuxData(I->getModule()->getTargetTriple()) &&
+  if (spirvPreserveAuxData(TM.getCLOpts(), I->getModule()->getTargetTriple()) &&
       isa<AtomicRMWInst>(I)) {
     LLVMContext &Ctx = B.getContext();
     auto *AuxMD = ConstantAsMetadata::get(ConstantInt::get(
@@ -3458,7 +3455,7 @@ void SPIRVEmitIntrinsicsImpl::processInstrAfterVisit(Instruction *I,
       I->setOperand(OpNo, NewOp);
   }
   if (Named.insert(I).second)
-    emitAssignName(I, B);
+    emitAssignName(TM.getCLOpts(), I, B);
 }
 
 Type *SPIRVEmitIntrinsicsImpl::deduceFunParamElementType(Function *F,
