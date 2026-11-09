@@ -209,10 +209,42 @@ CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPMasterDirective");
   return mlir::failure();
 }
+
 mlir::LogicalResult
 CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPCriticalDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator item = queue.begin();
+
+  if (mlir::failed(checkSynthesizedClauses(*this, s, item)))
+    return mlir::failure();
+
+  OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin,
+                         item->clauses);
+  if (mlir::failed(ce.emitNYI(/*nyi=*/OpenMPNYIClauseList<OMPHintClause>{},
+                              llvm::omp::Directive::OMPD_critical)))
+    return mlir::failure();
+
+  if (!s.getDirectiveName().getAsString().empty()) {
+    getCIRGenModule().errorNYI(s.getBeginLoc(), "OpenMP named critical");
+    return mlir::failure();
+  }
+
+  auto criticalOp =
+      mlir::omp::CriticalOp::create(builder, begin, mlir::FlatSymbolRefAttr());
+  mlir::Block &block = criticalOp.getRegion().emplaceBlock();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
+
+  CIRGenFunction::LexicalScope ls{*this, begin, builder.getInsertionBlock()};
+
+  mlir::LogicalResult res =
+      emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
+  mlir::omp::TerminatorOp::create(builder, end);
+  return res;
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPParallelForDirective(const OMPParallelForDirective &s) {
