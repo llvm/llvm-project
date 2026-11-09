@@ -336,8 +336,10 @@ public:
 
 protected:
   bool isSupportedOffloadArch(OffloadArch Arch) const override {
-    // Chipstar, vulkan, and amdhsa triples shouldn't accept a -target-cpu.
-    if (getTriple().getOS() != llvm::Triple::UnknownOS)
+    // Chipstar, vulkan, and amdhsa triples shouldn't accept a -target-cpu, but
+    // OpenCL should be able to.
+    llvm::Triple::OSType OS = getTriple().getOS();
+    if (OS != llvm::Triple::UnknownOS && OS != llvm::Triple::OpenCL)
       return false;
 
     // Valid offload archs for SPIRV:
