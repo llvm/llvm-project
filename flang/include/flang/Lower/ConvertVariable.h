@@ -188,6 +188,18 @@ void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
 /// track the cray pointee as Fortran pointer.
 mlir::Type getCrayPointeeBoxType(mlir::Type);
 
+/// Update the base address of the descriptor of the Cray pointee \p pointee
+/// with the current value of its Cray pointer. Does nothing if the variables
+/// are not in the symbol map.
+void genCrayPointeeAssociation(AbstractConverter &converter, mlir::Location loc,
+                               const semantics::Symbol &pointee);
+
+/// True when the builder's insertion point is inside an OpenACC compute
+/// construct (acc.parallel, acc.kernels, acc.serial). References to Cray
+/// pointees there use the descriptor that was associated, on the host, before
+/// the construct so that the data clauses map the target of the pointer.
+bool isInsideAccComputeConstruct(fir::FirOpBuilder &builder);
+
 /// If the given array symbol must be repacked into contiguous
 /// memory, generate fir.pack_array for the given box array value.
 /// The returned extended value is a box with the same properties

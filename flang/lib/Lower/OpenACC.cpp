@@ -864,6 +864,13 @@ static void genDataOperandOperations(
 
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
 
+    // A Cray pointee is the memory at the address of its Cray pointer. Update
+    // its descriptor so that the clause maps that memory.
+    if (symbol.GetUltimate().test(
+            Fortran::semantics::Symbol::Flag::CrayPointee))
+      Fortran::lower::genCrayPointeeAssociation(converter, operandLocation,
+                                                symbol);
+
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
     if (dataClause == mlir::acc::DataClause::acc_reduction)
@@ -2850,6 +2857,43 @@ static void genDataOperandOperationsWithModifier(
                                setDeclareAttr, dataMap);
 }
 
+namespace {
+/// Collects the Cray pointees named in a parse tree.
+struct CrayPointeeCollector {
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> pointees;
+  bool Pre(const Fortran::parser::Name &name) {
+    if (name.symbol && name.symbol->GetUltimate().test(
+                           Fortran::semantics::Symbol::Flag::CrayPointee))
+      pointees.insert(&name.symbol->GetUltimate());
+    return true;
+  }
+  template <typename T>
+  bool Pre(const T &) {
+    return true;
+  }
+  template <typename T>
+  void Post(const T &) {}
+};
+} // namespace
+
+/// Associate, on the host, the descriptors of the Cray pointees used in an
+/// OpenACC construct with their Cray pointers. References inside compute
+/// constructs do not do it (see ConvertExprToHLFIR.cpp), so that the data
+/// clauses and the implicit data attributes map the memory that the pointers
+/// designate.
+static void
+genCrayPointeeAssociations(Fortran::lower::AbstractConverter &converter,
+                           mlir::Location loc,
+                           Fortran::lower::pft::Evaluation &eval) {
+  const auto *accConstruct = eval.getIf<Fortran::parser::OpenACCConstruct>();
+  if (!accConstruct)
+    return;
+  CrayPointeeCollector collector;
+  Fortran::parser::Walk(*accConstruct, collector);
+  for (const Fortran::semantics::Symbol *pointee : collector.pointees)
+    Fortran::lower::genCrayPointeeAssociation(converter, loc, *pointee);
+}
+
 template <typename Op>
 static Op createComputeOp(
     Fortran::lower::AbstractConverter &converter,
@@ -2886,6 +2930,12 @@ static Op createComputeOp(
   bool hasDefaultPresent = false;
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Associate, on the host, the descriptors of the Cray pointees used in the
+  // construct with their Cray pointers. References inside the construct do
+  // not do it (see ConvertExprToHLFIR.cpp), so that the data clauses and the
+  // implicit data attributes map the memory that the pointers designate.
+  genCrayPointeeAssociations(converter, currentLocation, eval);
 
   // device_type attribute is set to `none` until a device_type clause is
   // encountered.

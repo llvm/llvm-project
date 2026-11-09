@@ -34,6 +34,7 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
+#include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
@@ -3686,6 +3687,39 @@ void Fortran::lower::createRuntimeTypeInfoGlobal(
   auto var = Fortran::lower::pft::Variable(typeInfoSym, /*global=*/true);
   fir::LinkageAttr linkage = getLinkageAttribute(converter, var);
   defineGlobal(converter, var, globalName, linkage);
+}
+
+void Fortran::lower::genCrayPointeeAssociation(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &pointee) {
+  Fortran::lower::SymMap &symMap = converter.getSymbolMap();
+  Fortran::semantics::SymbolRef pointeeRef{pointee.GetUltimate()};
+  Fortran::semantics::SymbolRef pointerRef{
+      Fortran::semantics::GetCrayPointer(pointee.GetUltimate())};
+  auto pointeeVar = symMap.lookupVariableDefinition(pointeeRef);
+  auto pointerVar = symMap.lookupVariableDefinition(pointerRef);
+  if (!pointeeVar || !pointerVar)
+    return;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Value ptrAddr = pointerVar->getBase();
+  // Reinterpret the reference to the Cray pointer so that we have a
+  // pointer-compatible value after loading it.
+  mlir::Type refPtrType = builder.getRefType(
+      fir::PointerType::get(fir::dyn_cast_ptrEleTy(ptrAddr.getType())));
+  mlir::Value cast = builder.createConvert(loc, refPtrType, ptrAddr);
+  mlir::Value ptrVal = fir::LoadOp::create(builder, loc, cast);
+  fir::runtime::genPointerAssociateScalar(builder, loc, pointeeVar->getBase(),
+                                          ptrVal);
+}
+
+bool Fortran::lower::isInsideAccComputeConstruct(fir::FirOpBuilder &builder) {
+  mlir::Block *block = builder.getInsertionBlock();
+  mlir::Operation *op = block ? block->getParentOp() : nullptr;
+  return op && (mlir::isa<mlir::acc::ParallelOp, mlir::acc::KernelsOp,
+                          mlir::acc::SerialOp>(op) ||
+                op->getParentOfType<mlir::acc::ParallelOp>() ||
+                op->getParentOfType<mlir::acc::KernelsOp>() ||
+                op->getParentOfType<mlir::acc::SerialOp>());
 }
 
 mlir::Type Fortran::lower::getCrayPointeeBoxType(mlir::Type fortranType) {
