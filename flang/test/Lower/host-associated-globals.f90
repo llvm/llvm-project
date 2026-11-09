@@ -10,22 +10,28 @@ module test_mod_used_in_host
   equivalence (i,j_in_equiv)
 end module
 
+! The host and module EQUIVALENCE groups both start at offset zero.
 subroutine module_var()
   use test_mod_used_in_host
+  integer, save :: saved_a, saved_b
+  equivalence (saved_a, saved_b)
   call bar()
 contains
  subroutine bar()
-    print *, j_in_equiv, not_in_equiv
+    print *, j_in_equiv, not_in_equiv, saved_b
  end subroutine
 end subroutine
 ! CHECK-LABEL: func.func private @_QFmodule_varPbar()
-! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMtest_mod_used_in_hostEi) : !fir.ref<!fir.array<4xi8>>
+! CHECK-DAG: %[[HOST_EQ:.*]] = fir.address_of(@_QFmodule_varEsaved_a)
+! CHECK-DAG: %[[VAL_0:.*]] = fir.address_of(@_QMtest_mod_used_in_hostEi) : !fir.ref<!fir.array<4xi8>>
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<i8>) -> !fir.ptr<i32>
 ! CHECK:  %{{.*}}:2 = hlfir.declare %[[VAL_3]] storage(%[[VAL_0]][0]) uniq_name("_QMtest_mod_used_in_hostEj_in_equiv") : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
 ! CHECK:  %[[VAL_4:.*]] = fir.address_of(@_QMtest_mod_used_in_hostEnot_in_equiv) : !fir.ref<i32>
 ! CHECK:  %{{.*}}:2 = hlfir.declare %[[VAL_4]] uniq_name("_QMtest_mod_used_in_hostEnot_in_equiv") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[HOST_MEMBER:.*]]:2 = hlfir.declare {{.*}} storage(%[[HOST_EQ]][0]) uniq_name("_QFmodule_varEsaved_b")
+! CHECK: fir.load %[[HOST_MEMBER]]#0
 
 subroutine test_common()
   integer :: i(2)
@@ -119,3 +125,96 @@ contains
     end do
   end function
 end subroutine
+
+! Both entry points bind the EQUIVALENCE members used by the siblings.
+subroutine selected_stores()
+  integer, save :: a(2), b, u(2), v
+  equivalence (a(2), b), (u(2), v)
+entry selected_stores_alt()
+  a = [1, 2]
+  u = [3, 4]
+  call first()
+  call second()
+contains
+  subroutine first()
+    b = b + 1
+  end subroutine
+  subroutine second()
+    v = v + 2
+  end subroutine
+end subroutine
+! CHECK-LABEL: func.func @_QPselected_stores()
+! CHECK-DAG: %[[HOST_A:.*]] = fir.address_of(@_QFselected_storesEa)
+! CHECK-DAG: %[[HOST_U:.*]] = fir.address_of(@_QFselected_storesEu)
+! CHECK-DAG: hlfir.declare {{.*}} storage(%[[HOST_A]][4]) uniq_name("_QFselected_storesEb")
+! CHECK-DAG: hlfir.declare {{.*}} storage(%[[HOST_U]][4]) uniq_name("_QFselected_storesEv")
+! CHECK: fir.call @_QFselected_storesPfirst()
+! CHECK: fir.call @_QFselected_storesPsecond()
+! CHECK-LABEL: func.func @_QPselected_stores_alt()
+! CHECK-DAG: %[[ENTRY_A:.*]] = fir.address_of(@_QFselected_storesEa)
+! CHECK-DAG: %[[ENTRY_U:.*]] = fir.address_of(@_QFselected_storesEu)
+! CHECK-DAG: hlfir.declare {{.*}} storage(%[[ENTRY_A]][4]) uniq_name("_QFselected_storesEb")
+! CHECK-DAG: hlfir.declare {{.*}} storage(%[[ENTRY_U]][4]) uniq_name("_QFselected_storesEv")
+! CHECK: fir.call @_QFselected_storesPfirst()
+! CHECK: fir.call @_QFselected_storesPsecond()
+! CHECK-LABEL: func.func private @_QFselected_storesPfirst()
+! CHECK: %[[FIRST_STORE:.*]] = fir.address_of(@_QFselected_storesEa)
+! CHECK: %[[FIRST_ALIAS:.*]]:2 = hlfir.declare {{.*}} storage(%[[FIRST_STORE]][4]) uniq_name("_QFselected_storesEb")
+! CHECK: hlfir.assign {{.*}} to %[[FIRST_ALIAS]]#0
+! CHECK: return
+! CHECK-LABEL: func.func private @_QFselected_storesPsecond()
+! CHECK: %[[SECOND_STORE:.*]] = fir.address_of(@_QFselected_storesEu)
+! CHECK: %[[SECOND_ALIAS:.*]]:2 = hlfir.declare {{.*}} storage(%[[SECOND_STORE]][4]) uniq_name("_QFselected_storesEv")
+! CHECK: hlfir.assign {{.*}} to %[[SECOND_ALIAS]]#0
+! CHECK: return
+
+! MAIN's internal procedure accesses the saved alias through global storage.
+program main_stores
+  integer, save :: a(2), b, u(2), v
+  equivalence (a(2), b), (u(2), v)
+  a = [1, 2]
+  call child()
+contains
+  subroutine child()
+    b = b + 1
+  end subroutine
+end program
+! CHECK-LABEL: func.func private @_QFPchild()
+! CHECK: %[[MAIN_STORE:.*]] = fir.address_of(@_QFEa)
+! CHECK: %[[MAIN_ALIAS:.*]]:2 = hlfir.declare {{.*}} storage(%[[MAIN_STORE]][4]) uniq_name("_QFEb")
+! CHECK: hlfir.assign {{.*}} to %[[MAIN_ALIAS]]#0
+! CHECK: return
+
+! A zero-length local block must not replace a captured global's storage.
+subroutine zero_stores()
+  character(0), save :: a, b
+  character(0) :: u, v
+  equivalence (a,b), (u,v)
+  call child()
+contains
+  subroutine child()
+    call sink(a)
+  end subroutine
+end subroutine
+! CHECK-LABEL: func.func private @_QFzero_storesPchild()
+! CHECK: %[[ZERO_STORE:.*]] = fir.address_of(@_QFzero_storesE{{a|b}})
+! CHECK: %[[ZERO_ALIAS:.*]]:2 = hlfir.declare {{.*}} storage(%[[ZERO_STORE]][0]) uniq_name("_QFzero_storesEa")
+! CHECK: %[[ZERO_REF:.*]] = fir.convert %[[ZERO_ALIAS]]#0
+! CHECK: %[[ZERO_ARG:.*]] = fir.emboxchar %[[ZERO_REF]],
+! CHECK: fir.call @_QPsink(%[[ZERO_ARG]])
+
+! Bind the captured scalar even when no EQUIVALENCE member is captured.
+subroutine scalar_capture()
+  integer, save :: x, a, z
+  equivalence (a,z)
+  call child()
+contains
+  subroutine child()
+    x = 1
+  end subroutine
+end subroutine
+! CHECK-LABEL: func.func private @_QFscalar_capturePchild()
+! CHECK: %[[SCALAR_ADDR:.*]] = fir.address_of(@_QFscalar_captureEx)
+! CHECK: %[[SCALAR:.*]]:2 = hlfir.declare %[[SCALAR_ADDR]] uniq_name("_QFscalar_captureEx")
+! CHECK: hlfir.assign {{.*}} to %[[SCALAR]]#0
+! CHECK: return
