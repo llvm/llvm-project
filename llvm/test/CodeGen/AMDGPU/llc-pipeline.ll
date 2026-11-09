@@ -389,7 +389,6 @@
 ; GCN-O1-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        Register Allocation Pass Scoring
-; GCN-O1-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-NEXT:        Machine Loop Invariant Code Motion
@@ -422,6 +421,7 @@
 ; GCN-O1-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O1-NEXT:        Insert fentry calls
 ; GCN-O1-NEXT:        Insert XRay ops
+; GCN-O1-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-NEXT:        SI Memory Legalizer
 ; GCN-O1-NEXT:        SI post-RA 16bit Mov Folding
@@ -711,7 +711,6 @@
 ; GCN-O1-OPTS-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        Register Allocation Pass Scoring
-; GCN-O1-OPTS-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-OPTS-NEXT:        Machine Loop Invariant Code Motion
@@ -744,6 +743,7 @@
 ; GCN-O1-OPTS-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O1-OPTS-NEXT:        Insert fentry calls
 ; GCN-O1-OPTS-NEXT:        Insert XRay ops
+; GCN-O1-OPTS-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-OPTS-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-OPTS-NEXT:        SI Memory Legalizer
 ; GCN-O1-OPTS-NEXT:        SI post-RA 16bit Mov Folding
@@ -1038,7 +1038,6 @@
 ; GCN-O2-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        Register Allocation Pass Scoring
-; GCN-O2-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        Machine Copy Propagation Pass
 ; GCN-O2-NEXT:        Machine Loop Invariant Code Motion
@@ -1071,6 +1070,7 @@
 ; GCN-O2-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O2-NEXT:        Insert fentry calls
 ; GCN-O2-NEXT:        Insert XRay ops
+; GCN-O2-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O2-NEXT:        GCN Create VOPD Instructions
 ; GCN-O2-NEXT:        SI Memory Legalizer
 ; GCN-O2-NEXT:        SI post-RA 16bit Mov Folding
@@ -1380,7 +1380,6 @@
 ; GCN-O3-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        Register Allocation Pass Scoring
-; GCN-O3-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        Machine Copy Propagation Pass
 ; GCN-O3-NEXT:        Machine Loop Invariant Code Motion
@@ -1413,6 +1412,7 @@
 ; GCN-O3-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O3-NEXT:        Insert fentry calls
 ; GCN-O3-NEXT:        Insert XRay ops
+; GCN-O3-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O3-NEXT:        GCN Create VOPD Instructions
 ; GCN-O3-NEXT:        SI Memory Legalizer
 ; GCN-O3-NEXT:        SI post-RA 16bit Mov Folding
