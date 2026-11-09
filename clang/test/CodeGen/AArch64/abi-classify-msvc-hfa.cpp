@@ -69,6 +69,15 @@ struct NonTrivialDtor {
 void arg_non_trivial_dtor(NonTrivialDtor s) {}
 // CHECK: define{{.*}} void @arg_non_trivial_dtor([2 x i64] %{{.*}})
 
+// A polymorphic record has a non-trivial copy constructor, so it is passed
+// indirectly and is never classified as an HFA.
+struct Polymorphic {
+  double a, b;
+  virtual void f();
+};
+void arg_polymorphic(Polymorphic s) {}
+// CHECK: define{{.*}} void @arg_polymorphic(ptr {{.*}}dereferenceable(24) %{{.*}})
+
 struct PrivateMember {
   double a;
 
@@ -121,6 +130,15 @@ union EmptyBaseUnionMember {
 };
 void arg_empty_base_union_member(EmptyBaseUnionMember s) {}
 // CHECK: define{{.*}} void @arg_empty_base_union_member([2 x i64] %{{.*}})
+
+// Fields are not checked against the MSVC rules. An empty field that occupies
+// no storage adds no padding, so the record is an HFA.
+struct NoUniqueAddressEmpty {
+  [[msvc::no_unique_address]] Empty e;
+  double a, b;
+};
+void arg_no_unique_address_empty(NoUniqueAddressEmpty s) {}
+// CHECK: define{{.*}} void @arg_no_unique_address_empty([2 x double] %{{.*}})
 
 // A record whose only member is a zero-length array is not empty in the
 // std::is_empty sense, so it does not disqualify a derived record.
