@@ -1467,8 +1467,7 @@ public:
 
   bool ShouldStopSynchronous(Event *event_ptr) override {
     if (ThreadSP thread_sp = GetThread()) {
-      ProcessSP process_sp = thread_sp->GetProcess();
-      if (process_sp)
+      if (ProcessSP process_sp = thread_sp->GetProcess())
         return process_sp->GetStopOnSharedLibraryEvents();
     }
     return false;
