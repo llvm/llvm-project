@@ -4564,14 +4564,14 @@ func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi3
 
 // CHECK-LABEL: @fold_insert_use_chain(
 //  CHECK-SAME:   %[[ARG:.*]]: vector<4x4xf32>,
-//  CHECK-SAME:   %[[VAL:.*]]: f32,
+//  CHECK-SAME:   %[[VAL0:.*]]: f32, %[[VAL1:.*]]: f32, %[[VAL2:.*]]: f32,
 //  CHECK-SAME:   %[[POS:.*]]: index) -> vector<4x4xf32> {
-//  CHECK-NEXT:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] {{\[}}%[[POS]], 0] : f32 into vector<4x4xf32>
+//  CHECK-NEXT:   %[[RES:.*]] = vector.insert %[[VAL2]], %[[ARG]] {{\[}}%[[POS]], 0] : f32 into vector<4x4xf32>
 //  CHECK-NEXT:   return %[[RES]] : vector<4x4xf32>
-func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %val : f32, %pos: index) -> vector<4x4xf32> {
-  %v_0 = vector.insert %val, %arg[%pos, 0] : f32 into vector<4x4xf32>
-  %v_1 = vector.insert %val, %v_0[%pos, 0] : f32 into vector<4x4xf32>
-  %v_2 = vector.insert %val, %v_1[%pos, 0] : f32 into vector<4x4xf32>
+func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %val0 : f32, %val1 : f32, %val2 : f32, %pos: index) -> vector<4x4xf32> {
+  %v_0 = vector.insert %val0, %arg[%pos, 0] : f32 into vector<4x4xf32>
+  %v_1 = vector.insert %val1, %v_0[%pos, 0] : f32 into vector<4x4xf32>
+  %v_2 = vector.insert %val2, %v_1[%pos, 0] : f32 into vector<4x4xf32>
   return %v_2 : vector<4x4xf32>
 }
 
