@@ -3,33 +3,30 @@
 
 ; Constant masks of llvm.vector.shuffle that shufflevector can express.
 
-; TODO: Fold to shufflevector.
 define <4 x i32> @constant_mask(<4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @constant_mask(
 ; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> [[V]], <4 x i8> <i8 3, i8 0, i8 0, i8 1>)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> poison, <4 x i32> <i32 3, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> %v, <4 x i8> <i8 3, i8 0, i8 0, i8 1>)
   ret <4 x i32> %r
 }
 
-; TODO: Fold to shufflevector.
 define <4 x float> @constant_mask_fp(<4 x float> %v) {
 ; CHECK-LABEL: define <4 x float> @constant_mask_fp(
 ; CHECK-SAME: <4 x float> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> [[V]], <4 x i32> <i32 1, i32 1, i32 2, i32 3>)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[V]], <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %r = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %v, <4 x i32> <i32 1, i32 1, i32 2, i32 3>)
   ret <4 x float> %r
 }
 
-; TODO: Fold to shufflevector.
 define <4 x i32> @splat_mask(<4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @splat_mask(
 ; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i16(<4 x i32> [[V]], <4 x i16> splat (i16 2))
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i16(<4 x i32> %v, <4 x i16> splat (i16 2))
@@ -37,11 +34,10 @@ define <4 x i32> @splat_mask(<4 x i32> %v) {
 }
 
 ; Out-of-range indices produce poison lanes.
-; TODO: Fold to shufflevector.
 define <4 x i32> @out_of_range(<4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @out_of_range(
 ; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> [[V]], <4 x i8> <i8 2, i8 4, i8 7, i8 0>)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 0>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> %v, <4 x i8> <i8 2, i8 4, i8 7, i8 0>)
@@ -49,11 +45,10 @@ define <4 x i32> @out_of_range(<4 x i32> %v) {
 }
 
 ; Indices are unsigned: i8 -1 is 255, which is out of range.
-; TODO: Fold to shufflevector.
 define <4 x i32> @negative_is_unsigned(<4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @negative_is_unsigned(
 ; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> [[V]], <4 x i8> <i8 -1, i8 1, i8 -128, i8 3>)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> %v, <4 x i8> <i8 -1, i8 1, i8 -128, i8 3>)
@@ -61,34 +56,30 @@ define <4 x i32> @negative_is_unsigned(<4 x i32> %v) {
 }
 
 ; 2^32 and 2^32+1 must not be truncated to in-range indices.
-; TODO: Fold to shufflevector.
 define <4 x i32> @wide_index(<4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @wide_index(
 ; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i64(<4 x i32> [[V]], <4 x i64> <i64 4294967296, i64 4294967297, i64 1, i64 2>)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 2>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i64(<4 x i32> %v, <4 x i64> <i64 4294967296, i64 4294967297, i64 1, i64 2>)
   ret <4 x i32> %r
 }
 
-; TODO: Fold to shufflevector.
 define <4 x i32> @poison_lanes(<4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @poison_lanes(
 ; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> [[V]], <4 x i8> <i8 poison, i8 1, i8 poison, i8 3>)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %r = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> %v, <4 x i8> <i8 poison, i8 1, i8 poison, i8 3>)
   ret <4 x i32> %r
 }
 
-; TODO: Fold to poison.
 define <4 x i32> @poison_mask(<4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @poison_mask(
 ; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> [[V]], <4 x i8> poison)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> poison
 ;
   %r = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> %v, <4 x i8> poison)
   ret <4 x i32> %r
@@ -129,18 +120,16 @@ define <4 x i32> @constexpr_mask(<4 x i32> %v) {
 }
 
 ; A scalable all-zero mask is a splat of lane 0.
-; TODO: Fold to shufflevector.
 define <vscale x 4 x i32> @scalable_zero_mask(<vscale x 4 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @scalable_zero_mask(
 ; CHECK-SAME: <vscale x 4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.vector.shuffle.nxv4i32.nxv4i8(<vscale x 4 x i32> [[V]], <vscale x 4 x i8> zeroinitializer)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 4 x i32> [[V]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.vector.shuffle.nxv4i32.nxv4i8(<vscale x 4 x i32> %v, <vscale x 4 x i8> zeroinitializer)
   ret <vscale x 4 x i32> %r
 }
 
-; TODO: Fold to poison.
 define <vscale x 4 x i32> @scalable_poison_mask(<vscale x 4 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @scalable_poison_mask(
 ; CHECK-SAME: <vscale x 4 x i32> [[V:%.*]]) {
