@@ -106,6 +106,16 @@ void propagation_gsl() {
   v2.use();     // expected-note {{later used here}}
 }
 
+void assign_to_temporary_copy_of_dangling_view() {
+  View v;
+  {
+    MyObj s;
+    v = s;
+  }
+  // Writes to the temporary's storage, not to 's'.
+  View{v} = View();
+}
+
 void multiple_uses_one_warning() {
   MyObj* p;
   {
@@ -1453,14 +1463,12 @@ int **return_multilevel() {
 }
 } // namespace unary_plus
 
-// FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
-// information to be missed (local variable 'p' aliases the storage of local variable 'b').
 void simpleparen() {
   MyObj* p;
   {
     MyObj a;
     MyObj* b = &a;  // expected-warning {{local variable 'a' does not live long enough}}
-    p = (((b)));
+    p = (((b)));    // expected-note {{local variable 'b' aliases the storage of local variable 'a'}}
   }                 // expected-note {{local variable 'a' is destroyed here}}
   use(*p);          // expected-note {{later used here}}
 }
@@ -4140,6 +4148,14 @@ struct S {
     }
     this->p_ = &GLOBAL_INT;
     bar();
+  }
+  void parenthesized_this_call() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}}
+    }                  // expected-note {{local variable 'num' is destroyed here}}
+    (this)->bar();     // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
   }
 };
 

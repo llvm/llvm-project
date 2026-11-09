@@ -879,7 +879,7 @@ bool clang::needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_target || DKind == OMPD_target_parallel ||
          DKind == OMPD_target_parallel_for ||
          DKind == OMPD_target_parallel_for_simd || DKind == OMPD_target_simd ||
-         DKind == OMPD_target_parallel_loop;
+         DKind == OMPD_target_parallel_loop || DKind == OMPD_target_loop;
 }
 
 bool clang::isOpenMPExecutableDirective(OpenMPDirectiveKind DKind) {
@@ -1002,10 +1002,8 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_loop:
       // TODO: 'loop' may require different capture regions depending on the
       // bind clause or the parent directive when there is no bind clause.
-      // If any of the directives that push regions here are parents of 'loop',
-      // assume 'parallel'. Otherwise do nothing.
-      if (!CaptureRegions.empty() &&
-          !llvm::is_contained(CaptureRegions, OMPD_parallel))
+      // Only 'teams' parents get 'parallel'; 'target loop' is emitted as simd.
+      if (!CaptureRegions.empty() && CaptureRegions.back() == OMPD_teams)
         CaptureRegions.push_back(OMPD_parallel);
       else
         return true;

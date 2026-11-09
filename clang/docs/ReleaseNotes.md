@@ -801,6 +801,17 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wunsafe-buffer-usage-in-format-attr-call` now works when it is the only
   Safe Buffers warning enabled.
 
+- Added one diagnostic group per family of libc functions under
+  `-Wunsafe-buffer-usage-in-libc-call`, named by the suffixes
+  `-numeric-conversion`, `-string-manipulation`, `-string-examination`,
+  `-memory`, `-io`, `-printf` and `-scanf`. For example,
+  `-Wno-unsafe-buffer-usage-in-libc-call-string-examination` silences `strlen`
+  while `memcpy` is still diagnosed. (#GH127849)
+
+- Fixed the `no-` prefix being dropped when diagnosing an unknown
+  `-Wno-error=` or `-Wno-fatal-errors=` warning option. Clang now preserves
+  the no- prefix in the diagnostic and spelling suggestion.
+  (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
 ### Improvements to Clang's time-trace
@@ -1044,12 +1055,6 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   conversion function to a function pointer that was introduced into the class
   by a using-declaration (e.g. `using Base::operator auto;`). Such a conversion
   function is now also diagnosed if it is deleted. (#GH189146)
-
-- Fixed an assertion failure when an array whose element type was still
-  incomplete when the array type was formed (for example, an array of a class
-  template specialization that is only instantiated later) turned out to be too
-  large once the element type was completed. Clang now diagnoses the oversized
-  array instead of asserting. (#GH213855)
 
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
@@ -1392,6 +1397,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-mcpu` is present, the ISA will be selected from the host CPU and the tune
   CPU will be selected from `-mcpu`.
 
+- The handling of __int128 arguments with the LP64E ABI now matches gcc.
+
 #### CUDA/HIP Language Changes
 
 - HIP compilations now add the `include/libhipcxx` directory from the selected
@@ -1477,6 +1484,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Extend `IndentAccessModifiers` with `AfterFirstAccessModifier` to indent
   members before the first explicit access modifier by one level. Existing
   configuration values `true` and `false` remain supported.
+- Recognize `.mts` and `.cts` files as TypeScript, including in
+  `git-clang-format` and `clang-format-diff.py`. The latter also now includes
+  `.mjs` and `.cjs` files by default.
 
 ### libclang
 
@@ -1550,11 +1560,14 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 - Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
   semantic checks, which caused spurious `reverse_offload` errors.
+- Fixed a crash on `cancel taskgroup` inside a `masked taskloop` directive. (#GH154552)
 - Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
   `depth` clause. Flatten combines perfectly nested canonical loops into one
   loop. `depth(k)` selects how many outermost loops to combine (default 2).
 - Fixed a crash when the statement of an OpenMP `atomic` directive contains an
   invalid expression, such as `0--;`. (#GH107979)
+- Fixed a crash on a task reduction of an array whose `declare reduction` has
+  no `initializer` clause. (#GH141228)
 - Canonicalize intra-tiles in loop tiling. `#pragma omp tile` still emits a
   min-bounded inner loop, which vectorizes well. When a parent directive such as
   `for collapse(n)` needs a constant per-tile trip count, Clang rereads a
@@ -1586,6 +1599,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   the clause was parsed but its condition was discarded without effect.
 - Fixed a crash when the loop variable or a loop bound of an OpenMP loop has a
   `_BitInt` type wider than any standard integer type. (#GH140074)
+- Fixed a crash when a C++ range-based `for` loop is counted by `ordered(n)`
+  but not by `collapse`. (#GH199449)
 - Fixed a crash when a non-static data member appears in a `lastprivate` clause
   inside a member function template of a non-template class. (#GH144302)
 - Fixed a crash when a `linear` clause with the `uval` modifier names a
@@ -1622,6 +1637,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
   and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+
+- Added support for the combined `#pragma omp target loop` construct, which
+  previously crashed the compiler. It is lowered like `#pragma omp target simd`.
+
 - Fixed variables shared by an enclosing region (e.g. `parallel`) being
   captured by copy when a nested construct has `default(firstprivate)` or
   `default(private)`, which could silently lose writes such as the result of
