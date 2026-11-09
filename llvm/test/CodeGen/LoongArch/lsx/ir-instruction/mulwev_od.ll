@@ -3,6 +3,13 @@
 ; RUN: llc --mtriple=loongarch64 --mattr=+lsx < %s | FileCheck %s --check-prefixes=CHECK,LA64
 
 define void @vmulwev_h_b(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_h_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.h.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
@@ -16,6 +23,13 @@ entry:
 }
 
 define void @vmulwev_w_h(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_w_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.w.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
@@ -29,6 +43,13 @@ entry:
 }
 
 define void @vmulwev_d_w(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_d_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.d.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
@@ -75,6 +96,13 @@ entry:
 }
 
 define void @vmulwod_h_b(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_h_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.h.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
@@ -88,6 +116,13 @@ entry:
 }
 
 define void @vmulwod_w_h(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_w_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.w.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
@@ -101,6 +136,13 @@ entry:
 }
 
 define void @vmulwod_d_w(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_d_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.d.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
@@ -333,6 +375,13 @@ entry:
 }
 
 define void @vmulwev_h_bu_b(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_h_bu_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.h.bu.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
@@ -346,6 +395,13 @@ entry:
 }
 
 define void @vmulwev_w_hu_h(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_w_hu_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.w.hu.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
@@ -359,6 +415,13 @@ entry:
 }
 
 define void @vmulwev_d_wu_w(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_d_wu_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.d.wu.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
@@ -403,6 +466,13 @@ entry:
 }
 
 define void @vmulwod_h_bu_b(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_h_bu_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.h.bu.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
@@ -416,6 +486,13 @@ entry:
 }
 
 define void @vmulwod_w_hu_h(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_w_hu_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.w.hu.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
@@ -429,6 +506,13 @@ entry:
 }
 
 define void @vmulwod_d_wu_w(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_d_wu_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.d.wu.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
@@ -473,6 +557,13 @@ entry:
 }
 
 define void @vmulwev_h_bu_b_1(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_h_bu_b_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.h.bu.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
@@ -486,6 +577,13 @@ entry:
 }
 
 define void @vmulwev_w_hu_h_1(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_w_hu_h_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.w.hu.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
@@ -499,6 +597,13 @@ entry:
 }
 
 define void @vmulwev_d_wu_w_1(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwev_d_wu_w_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.d.wu.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
@@ -543,6 +648,13 @@ entry:
 }
 
 define void @vmulwod_h_bu_b_1(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_h_bu_b_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.h.bu.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i8>, ptr %a
   %vb = load <16 x i8>, ptr %b
@@ -556,6 +668,13 @@ entry:
 }
 
 define void @vmulwod_w_hu_h_1(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_w_hu_h_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.w.hu.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a
   %vb = load <8 x i16>, ptr %b
@@ -569,6 +688,13 @@ entry:
 }
 
 define void @vmulwod_d_wu_w_1(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: vmulwod_d_wu_w_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.d.wu.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
 entry:
   %va = load <4 x i32>, ptr %a
   %vb = load <4 x i32>, ptr %b
