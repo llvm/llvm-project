@@ -491,6 +491,61 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
   return Expr<T>{std::move(funcRef)};
 }
 
+Expr<Type<TypeCategory::Real>> ToReal(
+    int kind, FoldingContext &context, Expr<SomeType> &&expr) {
+  using Result = Type<TypeCategory::Real>;
+  std::optional<Expr<Result>> result;
+  common::visit(
+      [&](auto &&x) {
+        using From = std::decay_t<decltype(x)>;
+        if constexpr (std::is_same_v<From, BOZLiteralConstant>) {
+          constexpr int fromKind{BOZLiteralConstantKind};
+          // Move the bits without any integer->real conversion
+          From original{x};
+          result = ConvertToType<Result>(kind, std::move(x));
+          const auto *constant{UnwrapExpr<Constant<Result>>(kind, *result)};
+          CHECK(constant);
+          Scalar<Result> real{constant->GetScalarValue().value()};
+          From converted{From::ConvertUnsigned(fromKind, real.RawBits()).value};
+          if (original != converted) { // C1601
+            context.Warn(common::UsageWarning::FoldingValueChecks,
+                "Nonzero bits truncated from BOZ literal constant in REAL intrinsic"_warn_en_US);
+          }
+        } else if constexpr (IsNumericCategoryExpr<From>()) {
+          result = Fold(context, ConvertToType<Result>(kind, std::move(x)));
+        } else {
+          common::die("ToReal: bad argument expression");
+        }
+      },
+      std::move(expr.u));
+  return result.value();
+}
+
+// REAL(z) and AIMAG(z)
+Expr<Type<TypeCategory::Real>> FoldOperation(
+    FoldingContext &context, ComplexComponent &&x) {
+  const int kind{x.kind()};
+  using Operand = Type<TypeCategory::Complex>;
+  using Result = Type<TypeCategory::Real>;
+  if (auto array{ApplyElementwise(context, x,
+          std::function<Expr<Result>(Expr<Operand> &&)>{
+              [isImaginaryPart{x.isImaginaryPart}](Expr<Operand> &&operand) {
+                return Expr<Result>{
+                    ComplexComponent{isImaginaryPart, std::move(operand)}};
+              }})}) {
+    return *array;
+  }
+  auto &operand{x.left()};
+  if (auto value{GetScalarConstantValue<Operand>(kind, operand)}) {
+    if (x.isImaginaryPart) {
+      return Expr<Result>{Constant<Result>{kind, value->AIMAG()}};
+    } else {
+      return Expr<Result>{Constant<Result>{kind, value->REAL()}};
+    }
+  }
+  return Expr<Result>{std::move(x)};
+}
+
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif

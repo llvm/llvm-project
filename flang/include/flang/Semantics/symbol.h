@@ -947,7 +947,8 @@ public:
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
       AccCopy, AccCopyIn, AccCopyInReadOnly, AccCopyOut, AccCreate, AccDelete,
-      AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
+      AccNoCreate, AccPresent, AccLink, AccDeviceResident, AccDevicePtr,
+      AccUseDevice,
       // OpenACC declare
       AccDeclare,
       // OpenACC declare on allocatable/pointer needs cross-TU action recipes

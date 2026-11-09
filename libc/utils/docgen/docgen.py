@@ -7,8 +7,9 @@
 #
 # ===----------------------------------------------------------------------===##
 from argparse import ArgumentParser, Namespace
+import html
 from pathlib import Path
-from typing import Dict
+from typing import Callable, Dict
 import os
 import sys
 
@@ -95,102 +96,100 @@ def check_api(header: Header, api: Dict):
         raise DocgenAPIFormatError("\n".join(errors))
 
 
-def print_tbl_dir(name):
-    print(
-        f"""
-.. list-table::
-  :widths: auto
-  :align: center
-  :header-rows: 1
-
-  * - {name}
-    - Implemented
-    - C23 Standard Section
-    - POSIX Docs"""
+def _status_badge_html(implemented: bool) -> str:
+    if implemented:
+        return (
+            '<span class="hc-status-yes" title="Implemented">'
+            '<span aria-hidden="true">&#10003;</span>'
+            '<span class="hc-sr-only">Implemented</span></span>'
+        )
+    return (
+        '<span class="hc-status-no" title="Not Implemented">'
+        '<span aria-hidden="true">&ndash;</span>'
+        '<span class="hc-sr-only">Not Implemented</span></span>'
     )
 
 
-def print_functions_rst(header: Header, functions: Dict):
-    tbl_hdr = "Functions"
-    print(tbl_hdr)
-    print("=" * len(tbl_hdr))
-
-    print_tbl_dir("Function")
-
-    for name in sorted(functions.keys()):
-        print(f"  * - {name}")
-
-        if header.implements_fn(name):
-            print("    - |check|")
-        else:
-            print("    -")
-
-        if "c-definition" in functions[name]:
-            print(f'    - {functions[name]["c-definition"]}')
-        else:
-            print("    -")
-
-        if "in-latest-posix" in functions[name]:
-            print(
-                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/functions/{name}.html>`__"
-            )
-        elif "removed-in-posix-2008" in functions[name]:
-            print(
-                f"    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/{name}.html>`__"
-            )
-        elif "removed-in-posix-2024" in functions[name]:
-            print(
-                f"    - `removed in POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/{name}.html>`__"
-            )
-        else:
-            print("    -")
+def _c_section_html(item: Dict) -> str:
+    sec = item.get("c-definition")
+    if sec:
+        return f'<span class="hc-sec-badge">{html.escape(str(sec))}</span>'
+    return '<span class="hc-status-no" aria-label="Not in C23">&ndash;</span>'
 
 
-def posix_basedefs_url(header: Header) -> str:
-    """Return the Open Group basedefs URL for a header."""
-    posix_header_name = header.name.replace("/", "_")
-    return f"https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/{posix_header_name}.html"
+def _posix_link_html(header: Header, name: str, kind: str, item: Dict) -> str:
+    base = (
+        f"functions/{name}.html"
+        if kind == "function"
+        else f"basedefs/{header.name.replace('/', '_')}.html"
+    )
+    if "in-latest-posix" in item:
+        url = f"https://pubs.opengroup.org/onlinepubs/9799919799/{base}"
+        return f'<a class="hc-posix-link" href="{url}">POSIX.1-2024 &#8599;</a>'
+    if "removed-in-posix-2008" in item:
+        url = f"https://pubs.opengroup.org/onlinepubs/007904875/{base}"
+        return f'<a class="hc-posix-link" href="{url}">Removed (2008) &#8599;</a>'
+    if "removed-in-posix-2024" in item:
+        url = f"https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/{base}"
+        return f'<a class="hc-posix-link" href="{url}">Removed (2024) &#8599;</a>'
+    return '<span class="hc-status-no" aria-label="Not in POSIX">&ndash;</span>'
 
 
-def print_macros_rst(header: Header, macros: Dict):
-    tbl_hdr = "Macros"
-    print(tbl_hdr)
-    print("=" * len(tbl_hdr))
+def print_symbol_table_md(
+    header: Header,
+    section_title: str,
+    col_label: str,
+    items: Dict,
+    is_implemented_fn: Callable[[str], bool],
+    kind: str,
+):
+    print(
+        f"## {section_title}\n\n```{{raw}} html\n"
+        '<div class="hc-table-wrap"><table class="hc-table">\n'
+        f"  <thead><tr><th>{col_label}</th>"
+        '<th class="hc-center">Status</th>'
+        '<th class="hc-center">C23 Section</th>'
+        '<th class="hc-center">POSIX Docs</th></tr></thead>\n'
+        "  <tbody>"
+    )
+    for name in sorted(items.keys()):
+        obj = items[name] or {}
+        row_id = html.escape(f"{kind}-{name.replace(' ', '-')}", quote=True)
+        status = _status_badge_html(is_implemented_fn(name))
+        c_sec = _c_section_html(obj)
+        posix = _posix_link_html(header, name, kind, obj)
+        print(
+            f'    <tr id="{row_id}">'
+            f'<td><code class="hc-sym">{html.escape(name)}</code></td>'
+            f'<td class="hc-center">{status}</td>'
+            f'<td class="hc-center">{c_sec}</td>'
+            f'<td class="hc-center">{posix}</td></tr>'
+        )
+    print("  </tbody>\n</table></div>\n```\n")
 
-    print_tbl_dir("Macro")
 
-    for name in sorted(macros.keys()):
-        print(f"  * - {name}")
+def print_header_status_md(header: Header, api: Dict):
+    print(f"# {header.name}\n")
 
-        if header.implements_macro(name):
-            print("    - |check|")
-        else:
-            print("    -")
+    if api.get("macros"):
+        print_symbol_table_md(
+            header,
+            "Macros",
+            "Macro",
+            api["macros"],
+            header.implements_macro,
+            "macro",
+        )
 
-        if "c-definition" in macros[name]:
-            print(f'    - {macros[name]["c-definition"]}')
-        else:
-            print("    -")
-
-        if "in-latest-posix" in macros[name]:
-            print(f"    - `POSIX.1-2024 <{posix_basedefs_url(header)}>`__")
-        else:
-            print("    -")
-    print()
-
-
-def print_impl_status_rst(header: Header, api: Dict):
-    print("=" * len(header.name))
-    print(header.name)
-    print("=" * len(header.name))
-    print()
-
-    # the macro and function sections are both optional
-    if "macros" in api:
-        print_macros_rst(header, api["macros"])
-
-    if "functions" in api:
-        print_functions_rst(header, api["functions"])
+    if api.get("functions"):
+        print_symbol_table_md(
+            header,
+            "Functions",
+            "Function",
+            api["functions"],
+            header.implements_fn,
+            "function",
+        )
 
 
 # This code implicitly relies on docgen.py being in the same dir as the yaml
@@ -217,4 +216,4 @@ if __name__ == "__main__":
     header = Header(args.header_name)
     check_api(header, header.api)
 
-    print_impl_status_rst(header, header.api)
+    print_header_status_md(header, header.api)

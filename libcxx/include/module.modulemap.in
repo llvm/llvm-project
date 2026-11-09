@@ -2424,6 +2424,9 @@ module std {
         module basis {
           header "__pstl/backends/statpart/basis.h"
         }
+        module decoupled_lookback {
+          header "__pstl/backends/statpart/decoupled_lookback.h"
+        }
         module fill {
           header "__pstl/backends/statpart/fill.h"
         }
@@ -2468,6 +2471,9 @@ module std {
         }
         module transform {
           header "__pstl/backends/statpart/transform.h"
+        }
+        module transform_inclusive_scan {
+          header "__pstl/backends/statpart/transform_inclusive_scan.h"
         }
         module transform_reduce {
           header "__pstl/backends/statpart/transform_reduce.h"

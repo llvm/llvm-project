@@ -275,9 +275,9 @@ mlir::LogicalResult AllocationAnalysis::visitOperation(
     }
 
     auto retTy = allocmem.getAllocatedType();
-    if (!mlir::isa<fir::SequenceType>(retTy)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "--Allocation is not for an array: skipping\n");
+    if (!fir::isStackArraysCandidateType(retTy)) {
+      LLVM_DEBUG(llvm::dbgs() << "--Allocation is not for an array or a "
+                                 "constant-length character: skipping\n");
       return mlir::success();
     }
 
