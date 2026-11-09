@@ -25,6 +25,8 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
+#include "llvm/ADT/StringMap.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
@@ -725,7 +727,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::Update() {
 lldb::ValueObjectSP
 lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
-  static constexpr llvm::StringRef g_zero("[0]");
+  static ConstString g_zero("[0]");
 
   if (idx == 0) {
     TypeSystemClangSP scratch_ts_sp =
@@ -734,7 +736,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
       CompilerType id_type(scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
       return m_backend.GetSyntheticChildAtOffset(
           m_backend.GetProcessSP()->GetAddressByteSize(), id_type, true,
-          ConstString(g_zero));
+          g_zero);
     }
   }
   return lldb::ValueObjectSP();

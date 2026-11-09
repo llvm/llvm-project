@@ -19,6 +19,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 
 using namespace lldb;

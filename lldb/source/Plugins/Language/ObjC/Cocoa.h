@@ -17,6 +17,8 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
+#include "llvm/ADT/StringMap.h"
+
 namespace lldb_private {
 namespace formatters {
 bool NSIndexSetSummaryProvider(ValueObject &valobj, Stream &stream,
