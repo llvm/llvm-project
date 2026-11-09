@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 
 using namespace llvm;
 
@@ -32,7 +33,8 @@ public:
 
 private:
   bool processInstr(MachineInstr &MI);
-  bool replaceImageHandle(MachineOperand &Op, MachineFunction &MF);
+  bool replaceImageHandle(MachineOperand &Op, MachineFunction &MF,
+                          bool IsTexture = false);
 };
 } // namespace
 
@@ -65,11 +67,11 @@ bool NVPTXReplaceImageHandles::processInstr(MachineInstr &MI) {
     // This is a texture fetch, so operand 4 is a texref and operand 5 is
     // a samplerref
     MachineOperand &TexHandle = MI.getOperand(4);
-    bool Changed = replaceImageHandle(TexHandle, MF);
+    bool Changed = replaceImageHandle(TexHandle, MF, /*IsTexture=*/true);
 
     if (!(MCID.TSFlags & NVPTXII::IsTexModeUnifiedFlag)) {
       MachineOperand &SampHandle = MI.getOperand(5);
-      Changed |= replaceImageHandle(SampHandle, MF);
+      Changed |= replaceImageHandle(SampHandle, MF, /*IsTexture=*/true);
     }
 
     return Changed;
@@ -101,7 +103,8 @@ bool NVPTXReplaceImageHandles::processInstr(MachineInstr &MI) {
 }
 
 bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
-                                                  MachineFunction &MF) {
+                                                  MachineFunction &MF,
+                                                  bool IsTexture) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   NVPTXMachineFunctionInfo *MFI = MF.getInfo<NVPTXMachineFunctionInfo>();
 
@@ -137,15 +140,35 @@ bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
   }
   case NVPTX::nvvm_move_i64:
   case TargetOpcode::COPY: {
-    bool Res = replaceImageHandle(TexHandleDef.getOperand(1), MF);
+    bool Res = replaceImageHandle(TexHandleDef.getOperand(1), MF, IsTexture);
     if (Res)
       InstrsToRemove.insert(&TexHandleDef);
     return Res;
   }
-  default:
+  default: {
     // The handle is computed at runtime (e.g. returned by a call or merged by
-    // a phi), so there is no symbol to replace it with. Leave it in a register.
+    // a phi), so there is no symbol to replace it with. Leave it in a register
+    // where that is supported.
+    const Function &F = MF.getFunction();
+    const DebugLoc &DL = Op.getParent()->getDebugLoc();
+    if (MF.getSubtarget<NVPTXSubtarget>().getSmVersion() < 30) {
+      // Fermi has no bindless textures or surfaces.
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, "image handle must be a kernel parameter or a global on sm_2x",
+          DL));
+    } else if (IsTexture &&
+               static_cast<const NVPTXTargetMachine &>(MF.getTarget())
+                       .getDrvInterface() == NVPTX::NVCL) {
+      // PTX only allows texture and sampler handles in registers in unified
+      // texture mode.
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F,
+          "texture or sampler handle must be a kernel parameter or a global "
+          "in independent texture mode",
+          DL));
+    }
     return false;
+  }
   }
 }
 
