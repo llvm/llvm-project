@@ -10,6 +10,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  shmctl
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shmctl
+)
+
+add_entrypoint_object(
+  shmdt
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shmdt
+)
+
+add_entrypoint_object(
   shmget
   ALIAS
   DEPENDS

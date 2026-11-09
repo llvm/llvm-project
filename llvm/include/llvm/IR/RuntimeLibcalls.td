@@ -290,6 +290,7 @@ foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
 foreach IntTy = [TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
   def CTLZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
+  def CTTZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
   def CTPOP_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
 }
 
@@ -691,6 +692,7 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 
 // Exception handling
 def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_RAISE_EXCEPTION : RuntimeLibcall<Int, [Ptr]>;
 def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []> {
@@ -819,7 +821,8 @@ def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]>;
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;
 
 // Really a global variable, not a function
-def SAFESTACK_UNSAFE_STACK_PTR : RuntimeLibcall;
+def SAFESTACK_UNSAFE_STACK_PTR
+    : RuntimeLibcallVariable<AllocaPtr, /*threadLocal=*/true>;
 
 def STACK_PROBE : RuntimeLibcall<Void, []>;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall<Void, [Ptr]>;
@@ -1237,7 +1240,7 @@ def KMPC_FREE_SHARED : RuntimeLibcall<Void, [Ptr, SizeT]>;
 // in some way from callable functions.
 // --------------------------------------------------------------------
 
-def STACK_CHECK_GUARD : RuntimeLibcall;
+def STACK_CHECK_GUARD : RuntimeLibcallVariable<Ptr>;
 
 //--------------------------------------------------------------------
 // Define the implementation libcalls making up runtime libraries.
@@ -1297,6 +1300,10 @@ def __negdi2 : RuntimeLibcallImpl<NEG_I64>;
 def __clzsi2 : RuntimeLibcallImpl<CTLZ_I32>;
 def __clzdi2 : RuntimeLibcallImpl<CTLZ_I64>;
 def __clzti2 : RuntimeLibcallImpl<CTLZ_I128>;
+
+def __ctzsi2 : RuntimeLibcallImpl<CTTZ_I32>;
+def __ctzdi2 : RuntimeLibcallImpl<CTTZ_I64>;
+def __ctzti2 : RuntimeLibcallImpl<CTTZ_I128>;
 
 def __popcountsi2 : RuntimeLibcallImpl<CTPOP_I32>;
 def __popcountdi2 : RuntimeLibcallImpl<CTPOP_I64>;
@@ -2016,11 +2023,14 @@ def __bzero : RuntimeLibcallImpl<BZERO>;
 // Exception handling
 defset list<RuntimeLibcallImpl> DefaultExceptionHandlingLibcalls = {
   def _Unwind_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+  def _Unwind_RaiseException : RuntimeLibcallImpl<UNWIND_RAISE_EXCEPTION>;
   def __cxa_end_cleanup : RuntimeLibcallImpl<CXA_END_CLEANUP>;
 }
 
 defset list<RuntimeLibcallImpl> SjLjExceptionHandlingLibcalls = {
   def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+  def _Unwind_SjLj_RaiseException
+      : RuntimeLibcallImpl<UNWIND_RAISE_EXCEPTION>;
   def _Unwind_SjLj_Register : RuntimeLibcallImpl<UNWIND_REGISTER>;
   def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
 }
@@ -2130,7 +2140,7 @@ def __ssp_canary_word : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
 defvar ExceptionModelCalls = (add
   LibcallImpls<(add __cxa_end_cleanup),
                ExceptionModelIsNotNone>,
-  LibcallImpls<(add _Unwind_Resume),
+  LibcallImpls<(add _Unwind_Resume, _Unwind_RaiseException),
                ExceptionModelHasUnwindResume>,
   LibcallImpls<(add SjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
@@ -2487,7 +2497,7 @@ defset list<RuntimeLibcallImpl> WinArm64ECSjLjExceptionHandlingLibcalls = {
 defvar ExceptionModelCallsArm64EC = (add
   LibcallImpls<(add arm64ec___cxa_end_cleanup),
                ExceptionModelIsNotNone>,
-  LibcallImpls<(add arm64ec__Unwind_Resume),
+  LibcallImpls<(add arm64ec__Unwind_Resume, arm64ec__Unwind_RaiseException),
                ExceptionModelHasUnwindResume>,
   LibcallImpls<(add WinArm64ECSjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
@@ -4627,9 +4637,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_hypotdx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def Sleef_hypotfx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def Sleef_ilogbdx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV2F64>;
-  def Sleef_ilogbfx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV4F32>;
   def Sleef_ldexpdx_rvvm2 : RuntimeLibcallImpl<LDEXP_NXV2F64>;
-  def Sleef_ldexpfx_rvvm2 : RuntimeLibcallImpl<LDEXP_NXV4F32>;
   def Sleef_lgammadx_u10rvvm2 : RuntimeLibcallImpl<LGAMMA_NXV2F64>;
   def Sleef_lgammafx_u10rvvm2 : RuntimeLibcallImpl<LGAMMA_NXV4F32>;
   def Sleef_log10dx_u10rvvm2 : RuntimeLibcallImpl<LOG10_NXV2F64>;
