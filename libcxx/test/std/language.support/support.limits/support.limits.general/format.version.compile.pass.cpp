@@ -24,6 +24,10 @@
 #    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_format
 #    error "__cpp_lib_format should not be defined before c++20"
 #  endif
@@ -40,6 +44,10 @@
 
 #  ifdef __cpp_lib_constexpr_exceptions
 #    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_format
@@ -60,6 +68,10 @@
 #    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_format
 #    error "__cpp_lib_format should not be defined before c++20"
 #  endif
@@ -76,6 +88,10 @@
 
 #  ifdef __cpp_lib_constexpr_exceptions
 #    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
@@ -106,6 +122,10 @@
 
 #  ifdef __cpp_lib_constexpr_exceptions
 #    error "__cpp_lib_constexpr_exceptions should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
@@ -150,6 +170,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_format
+#      error "__cpp_lib_constexpr_format should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_format != 202511L
+#      error "__cpp_lib_constexpr_format should have the value 202511L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_format
+#      error "__cpp_lib_constexpr_format should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
 #    ifndef __cpp_lib_format
 #      error "__cpp_lib_format should be defined in c++26"
@@ -189,6 +222,19 @@
 #  else
 #    ifdef __cpp_lib_constexpr_exceptions
 #      error "__cpp_lib_constexpr_exceptions should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_format
+#      error "__cpp_lib_constexpr_format should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_format != 202511L
+#      error "__cpp_lib_constexpr_format should have the value 202511L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_format
+#      error "__cpp_lib_constexpr_format should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
