@@ -1,4 +1,4 @@
-; RUN: opt -passes='loop-mssa(licm),print<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='loop-mssa(licm),print<memoryssa-walker>' -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 @arr = global [12 x i8] [i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12], align 1

@@ -1,4 +1,4 @@
-; RUN: opt -passes='print<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<memoryssa-walker>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; FIXME: The %sel2 load should be MemoryUse(4), because it loads the value
 ; stored by the %sel1 store on the previous iteration.

@@ -329,9 +329,8 @@ public:
     setOperand(0, DMA);
   }
 
-  /// Whether the MemoryUse is optimized. If ensureOptimizedUses() was called,
-  /// uses will usually be optimized, but this is not guaranteed (e.g. due to
-  /// invalidation and optimization limits.)
+  /// Whether the MemoryUse is optimized. Uses are optimized lazily by the
+  /// walker; an update that changes the defining access clears this.
   bool isOptimized() const {
     return getDefiningAccess() && OptimizedID == getDefiningAccess()->getID();
   }
@@ -777,13 +776,6 @@ public:
   /// about the beginning or end of a block.
   enum InsertionPlace { Beginning, End, BeforeTerminator };
 
-  /// By default, uses are *not* optimized during MemorySSA construction.
-  /// Calling this method will attempt to optimize all MemoryUses, if this has
-  /// not happened yet for this MemorySSA instance. This should be done if you
-  /// plan to query the clobbering access for most uses, or if you walk the
-  /// def-use chain of uses.
-  LLVM_ABI void ensureOptimizedUses();
-
   AliasAnalysis &getAA() { return *AA; }
 
 protected:
@@ -826,7 +818,6 @@ private:
   class ClobberWalkerBase;
   class CachingWalker;
   class SkipSelfWalker;
-  class OptimizeUses;
 
   CachingWalker *getWalkerImpl();
   template <typename IterT>
@@ -886,7 +877,6 @@ private:
   std::unique_ptr<CachingWalker> Walker;
   std::unique_ptr<SkipSelfWalker> SkipWalker;
   unsigned NextID = 0;
-  bool IsOptimized = false;
 };
 
 /// Enables verification of MemorySSA.
@@ -937,11 +927,9 @@ public:
 class MemorySSAPrinterPass
     : public RequiredPassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
-  bool EnsureOptimizedUses;
 
 public:
-  explicit MemorySSAPrinterPass(raw_ostream &OS, bool EnsureOptimizedUses)
-      : OS(OS), EnsureOptimizedUses(EnsureOptimizedUses) {}
+  explicit MemorySSAPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

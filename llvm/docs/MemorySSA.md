@@ -87,7 +87,8 @@ run on, and implies that we've hit the top of the function. It's the only
 defined before the function begins.
 
 An example of all of this overlaid on LLVM IR (obtained by running `opt
--passes='print<memoryssa>' -disable-output` on an `.ll` file) is below. When
+-passes='print<memoryssa-walker>' -disable-output` on an `.ll` file, with the
+`- clobbered by` annotations removed) is below. When
 viewing this example, it may be helpful to view it in terms of clobbers.
 The operands of a given `MemoryAccess` are all (potential) clobbers of said
 `MemoryAccess`, and the value produced by a `MemoryAccess` can act as a clobber
@@ -262,10 +263,11 @@ second `MemoryUse` in `if.end` has an operand of `1`, which is a
 value numbering, etc, faster and easier.
 As of [this revision](https://reviews.llvm.org/D121381), the default was
 changed to not optimize uses at build time, in order to provide the option to
-reduce compile-time if the walking is not necessary in a pass. Most users call
-the new API `ensureOptimizedUses()` to keep the previous behavior and do a
-one-time optimization of `MemoryUse`s, if this was not done before.
-New pass users are recommended to call `ensureOptimizedUses()`.
+reduce compile-time if the walking is not necessary in a pass. Passes that
+need the clobber of a `MemoryUse` query the walker with
+`getClobberingMemoryAccess()`, which optimizes the use on demand and caches
+the result. The defining access of a `MemoryUse` is therefore only guaranteed
+to be its nearest dominating `MemoryDef` or `MemoryPhi`, not its clobber.
 
 Initially it was not possible to optimize `MemoryDef`s in the same way, as we
 restricted `MemorySSA` to one operand per access.

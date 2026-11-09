@@ -1,4 +1,4 @@
-; RUN: opt -aa-pipeline=basic-aa,tbaa -passes='print<memoryssa><no-ensure-optimized-uses>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa,tbaa -passes='print<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 
 define i8 @test1_yes(ptr %a, ptr %b) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
