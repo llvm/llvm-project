@@ -99,8 +99,13 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
 
     auto KernelTraceInfoRecord =
         GenericDevice.KernelLaunchTraces.getExclusiveAccessor();
+    // A synchronous launch uses the wrapper's stack-local async info, which
+    // must not outlive this call; record no async info in that case.
     (*KernelTraceInfoRecord)
-        .emplace(this, std::move(StackTrace), AsyncInfoWrapper);
+        .emplace(this, std::move(StackTrace),
+                 AsyncInfoWrapper.isSynchronous()
+                     ? nullptr
+                     : static_cast<__tgt_async_info *>(AsyncInfoWrapper));
   }
 
   uint32_t EffectiveNumThreads[3] = {LaunchArgs.UserThreadLimit[0],
