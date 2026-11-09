@@ -15,8 +15,10 @@ defm : OptionalBoolField<"combiner-global-alias-analysis",
   "Enable DAG combiner's use of IR alias analysis">;
 defm : BoolField<"combiner-use-tbaa", "true",
   "Enable DAG combiner's use of TBAA">;
-defm : ValueField<"combiner-aa-only-func", "std::optional<StringRef>", "std::nullopt",
-  "Only use DAG-combiner alias analysis in this function">;
+let Condition = AssertsOnly in {
+  defm : ValueField<"combiner-aa-only-func", "std::optional<StringRef>", "std::nullopt",
+    "Only use DAG-combiner alias analysis in this function">;
+}
 defm : BoolField<"combiner-stress-load-slicing", "false",
   "Bypass the profitability model of load slicing">;
 defm : BoolField<"combiner-split-load-index", "true",
