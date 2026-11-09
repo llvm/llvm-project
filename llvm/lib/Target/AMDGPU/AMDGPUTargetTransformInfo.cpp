@@ -2223,18 +2223,10 @@ static bool hasUniformPointerOperand(const Instruction *I) {
   if (!LI)
     return false;
   const Value *Ptr = LI->getPointerOperand();
-  SmallPtrSet<const Value *, 4> Visited;
-  while (Visited.insert(Ptr).second) {
-    if (const auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-      if (!GEP->hasAllConstantIndices())
-        break;
-      Ptr = GEP->getPointerOperand();
-    } else if (const auto *ASC = dyn_cast<AddrSpaceCastOperator>(Ptr)) {
-      Ptr = ASC->getPointerOperand();
-    } else {
-      break;
-    }
-  }
+  const DataLayout &DL = LI->getDataLayout();
+  APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
+                                               /*AllowNonInbounds=*/true);
   return AMDGPU::isTriviallyUniform(Ptr, LI);
 }
 
