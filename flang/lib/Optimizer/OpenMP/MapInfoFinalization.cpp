@@ -1336,12 +1336,23 @@ class MapInfoFinalizationPass
     }
   }
 
-  static bool hasADescriptor(mlir::Operation *varOp, mlir::Type varType) {
+  bool hasADescriptor(mlir::omp::MapInfoOp map) {
+    mlir::Type varType = fir::unwrapRefType(map.getVarPtrType());
     if (fir::isTypeWithDescriptor(varType) ||
-        mlir::isa<fir::BoxCharType>(varType) ||
-        mlir::isa_and_present<fir::BoxAddrOp>(varOp))
+        mlir::isa<fir::BoxCharType>(varType))
       return true;
-    return false;
+    if (!map.getVarPtr().getDefiningOp<fir::BoxAddrOp>())
+      return false;
+
+    // A synthesized partial scalar record map on enter/exit data already
+    // names the component storage to map. Recovering its descriptor here
+    // would introduce mappings for the descriptor and the whole record.
+    if (map.getPartialMap() && map.getBounds().empty() &&
+        mlir::isa<fir::RecordType>(varType) &&
+        mlir::isa<mlir::omp::TargetEnterDataOp, mlir::omp::TargetExitDataOp>(
+            getFirstTargetUser(map)))
+      return false;
+    return true;
   }
 
   mlir::Value genTgtGetMappedPtrCall(fir::FirOpBuilder &builder,
@@ -1538,8 +1549,7 @@ class MapInfoFinalizationPass
                "single users or up to two users when those users"
                "are a MapInfoOp and Target mapping directive");
 
-        if (hasADescriptor(op.getVarPtr().getDefiningOp(),
-                           fir::unwrapRefType(op.getVarPtrType()))) {
+        if (hasADescriptor(op)) {
           builder.setInsertionPoint(op);
           mlir::Operation *targetUser = getFirstTargetUser(op);
           assert(targetUser && "expected user of map operation was not found");

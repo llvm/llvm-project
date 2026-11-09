@@ -129,7 +129,8 @@ void insertChildMapInfoIntoParent(
     Fortran::lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<Object> &mapObjects);
+    llvm::SmallVectorImpl<Object> &mapObjects,
+    bool isTargetEnterExitData = false);
 
 void generateMemberPlacementIndices(
     const Object &object, llvm::SmallVectorImpl<int64_t> &indices,
