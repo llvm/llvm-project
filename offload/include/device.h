@@ -157,9 +157,11 @@ struct DeviceTy {
   ProgramTy &addProgram(const void *Key, ProgramTy Program);
 
   /// Destroy the program loaded for the library identified by \p Key, if any,
-  /// and forget the launch info of its kernels in \p Entries.
+  /// forget the launch info of its kernels in \p Entries, and drop the
+  /// mappings of its declare-target globals.
   void destroyProgram(const void *Key,
-                      llvm::ArrayRef<llvm::offloading::EntryTy> Entries);
+                      llvm::ArrayRef<llvm::offloading::EntryTy> Entries,
+                      llvm::ArrayRef<llvm::offloading::EntryTy> HostEntries);
 
   /// Enable kernel record (\p IsRecord) or replay on this device by reserving
   /// \p MemorySize bytes of device memory at \p VAddr. While active, device

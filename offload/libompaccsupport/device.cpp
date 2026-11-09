@@ -236,7 +236,8 @@ ProgramTy &DeviceTy::addProgram(const void *Key, ProgramTy Program) {
 }
 
 void DeviceTy::destroyProgram(
-    const void *Key, llvm::ArrayRef<llvm::offloading::EntryTy> Entries) {
+    const void *Key, llvm::ArrayRef<llvm::offloading::EntryTy> Entries,
+    llvm::ArrayRef<llvm::offloading::EntryTy> HostEntries) {
   std::unique_ptr<ProgramTy> Program;
   {
     auto Accessor = Programs.getExclusiveAccessor();
@@ -252,6 +253,34 @@ void DeviceTy::destroyProgram(
     for (const llvm::offloading::EntryTy &Entry : Entries)
       if (Entry.Kind == llvm::object::OffloadKind::OFK_OpenMP && !Entry.Size)
         Accessor->erase(Entry.Address);
+  }
+
+  // Declare-target globals were mapped (with an infinite reference count) to
+  // addresses inside this program; they dangle once it is destroyed.
+  {
+    auto HDTTMap = getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
+    for (size_t I = 0, E = std::min(Entries.size(), HostEntries.size()); I < E;
+         ++I) {
+      const llvm::offloading::EntryTy &Entry = Entries[I];
+      const llvm::offloading::EntryTy &HostEntry = HostEntries[I];
+      if (Entry.Kind != llvm::object::OffloadKind::OFK_OpenMP || !Entry.Size)
+        continue;
+      auto It = HDTTMap->find(HostEntry.Address);
+      if (It == HDTTMap->end())
+        continue;
+      HostDataToTargetTy *HDTT = It->HDTT;
+      // A weak symbol may have been mapped by another program; only drop the
+      // mapping if it points into this one. Indirect entries point at the
+      // pointee instead of the global, so they cannot be compared.
+      if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
+          HDTT->TgtPtrBegin != uintptr_t(Entry.Address))
+        continue;
+      void *Event = HDTT->getEvent();
+      HDTTMap->erase(It);
+      delete HDTT;
+      if (Event)
+        destroyEvent(Event);
+    }
   }
 
   if (ol_result_t Res = olDestroyProgram(Program->getHandle()))
