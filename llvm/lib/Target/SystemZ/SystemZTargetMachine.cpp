@@ -31,10 +31,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMachineCombinerPass(
-    "systemz-machine-combiner",
-    cl::desc("Enable the machine combiner pass"),
-    cl::init(true), cl::Hidden);
+cl::opt<bool>
+    EnableMachineCombinerPass("systemz-machine-combiner",
+                              cl::desc("Enable the machine combiner pass"),
+                              cl::init(true), cl::Hidden);
 
 static cl::opt<bool> GenericSched(
     "generic-sched", cl::Hidden, cl::init(false),
@@ -237,7 +237,8 @@ void SystemZPassConfig::addIRPasses() {
 }
 
 bool SystemZPassConfig::addInstSelector() {
-  addPass(createSystemZISelDag(getSystemZTargetMachine(), getOptLevel()));
+  addPass(
+      createSystemZISelDagLegacyPass(getSystemZTargetMachine(), getOptLevel()));
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createSystemZLDCleanupPass(getSystemZTargetMachine()));
