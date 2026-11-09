@@ -58,17 +58,14 @@ bool mayExitVia(Exits exits, Exits kinds) {
 
 class FallOffAnalyzer {
 public:
-  explicit FallOffAnalyzer(FuncOp func, bool tailOnly = false)
-      : func(func), tailOnly(tailOnly) {}
+  explicit FallOffAnalyzer(FuncOp func) : func(func) {}
 
   FallOffKind run();
 
-  /// Conservatively, whether `op` alone completes when entered at the top. A
-  /// label inside it, or dead code that may hold one, means yes.
-  bool mayCompleteFromTop(mlir::Operation *op) {
-    assert(tailOnly && "needs a tail-only analyzer");
-    return mayExitVia(visitStructured(op, /*entered=*/true), Exits::Normal) ||
-           unsure;
+  /// Whether `op` may complete normally when control enters it at its start.
+  /// Only exact if no goto can enter `op` through a label inside it.
+  bool mayCompleteWhenEntered(mlir::Operation *op) {
+    return mayExitVia(visitStructured(op, /*entered=*/true), Exits::Normal);
   }
 
 private:
@@ -93,8 +90,6 @@ private:
   }
 
   FuncOp func;
-  bool tailOnly;
-  bool unsure = false;
   bool abnormalEdge = false;
   bool fakeEdge = false;
   /// Labels control can reach through a goto or an indirect branch, and the
@@ -365,11 +360,8 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
           live = true;
           continue;
         }
-        if (!mustVisitDead(op)) {
-          if (tailOnly && (op.getNumRegions() != 0 || mlir::isa<LabelOp>(op)))
-            unsure = true;
+        if (!mustVisitDead(op))
           continue;
-        }
       }
 
       if (op.getNumRegions() != 0) {
@@ -391,8 +383,6 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
       } else if (&op == terminator) {
         visitTerminator(&op, exits, liveSuccessors);
         live = false;
-      } else if (tailOnly && mlir::isa<LabelOp>(op)) {
-        unsure = true;
       }
     }
 
@@ -403,8 +393,6 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
     for (mlir::Block *succ : liveSuccessors)
       worklist.push_back({succ, true});
   }
-  if (tailOnly && visited.size() != llvm::range_size(region))
-    unsure = true;
   return exits;
 }
 
@@ -618,15 +606,22 @@ static bool mayReachPast(FuncOp func, mlir::Block &block,
 }
 
 /// Conservatively, whether `op` may complete normally: a scope when a block of
-/// its body may reach its end, anything else analyzed on its own.
+/// its body may reach its end, anything else analyzed on its own unless it
+/// holds a label.
 static bool mayComplete(FuncOp func, mlir::Operation *op) {
   mlir::Region *body = nullptr;
   if (auto scope = mlir::dyn_cast<ScopeOp>(op))
     body = &scope.getScopeRegion();
   else if (auto cleanupScope = mlir::dyn_cast<CleanupScopeOp>(op))
     body = &cleanupScope.getBodyRegion();
-  if (!body)
-    return FallOffAnalyzer(func, /*tailOnly=*/true).mayCompleteFromTop(op);
+  if (!body) {
+    // A goto to a label inside `op` could revive code the analysis of `op`
+    // alone sees as dead.
+    bool hasLabel = op->walk([](LabelOp) {
+                        return mlir::WalkResult::interrupt();
+                      }).wasInterrupted();
+    return hasLabel || FallOffAnalyzer(func).mayCompleteWhenEntered(op);
+  }
   if (body->empty())
     return true;
   return llvm::any_of(*body, [&](mlir::Block &block) {
