@@ -387,6 +387,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/sendfile.h entrypoints
     libc.src.sys.sendfile.sendfile
 
+    # sys/shm.h entrypoints
+    libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmdt
+    libc.src.sys.shm.shmget
+
     # sys/socket.h entrypoints
     libc.src.sys.socket.accept
     libc.src.sys.socket.accept4
@@ -703,6 +708,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atanhf
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
+    libc.src.math.canonicalizef128
     libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
@@ -895,6 +901,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lroundl
     libc.src.math.modf
     libc.src.math.modff
+    libc.src.math.modff128
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
@@ -923,6 +930,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remainderl
     libc.src.math.remquo
     libc.src.math.remquof
+    libc.src.math.remquof128
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
@@ -1142,7 +1150,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2l
-    libc.src.math.canonicalizef128
     libc.src.math.canonicalizef80
     libc.src.math.daddf128
     libc.src.math.ddivf128
@@ -1159,12 +1166,10 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fromfpxf128
     libc.src.math.fsqrtf128
     libc.src.math.fsubf128
-    libc.src.math.modff128
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
     libc.src.math.remainderf128
-    libc.src.math.remquof128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
   )
@@ -1242,6 +1247,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sinbf16
   libc.src.math.sinhbf16
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
@@ -1354,6 +1360,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.diviulr
     libc.src.stdfix.diviuk
     libc.src.stdfix.diviulk
+    libc.src.stdfix.mulir
+    libc.src.stdfix.mulilr
+    libc.src.stdfix.mulik
+    libc.src.stdfix.mulilk
+    libc.src.stdfix.muliur
+    libc.src.stdfix.muliulr
+    libc.src.stdfix.muliuk
+    libc.src.stdfix.muliulk
   )
 endif()
 

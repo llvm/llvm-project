@@ -2185,7 +2185,7 @@ func.func @deinterleave_n_dim_rank_fail(%vec : vector<2x3x4xf32>) {
 // -----
 
 func.func @deinterleave_scalable_dim_size_fail(%vec : vector<2x[4]xf32>) {
-  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {res1, res2} have same type}}
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {resultEven, resultOdd} have same type}}
   %0, %1 = "vector.deinterleave" (%vec) : (vector<2x[4]xf32>) -> (vector<2x[2]xf32>, vector<2x[1]xf32>)
   return
 }
@@ -2193,7 +2193,7 @@ func.func @deinterleave_scalable_dim_size_fail(%vec : vector<2x[4]xf32>) {
 // -----
 
 func.func @deinterleave_scalable_rank_fail(%vec : vector<2x[4]xf32>) {
-  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {res1, res2} have same type}}
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {resultEven, resultOdd} have same type}}
   %0, %1 = "vector.deinterleave" (%vec) : (vector<2x[4]xf32>) -> (vector<2x[2]xf32>, vector<[2]xf32>)
   return
 }
@@ -2234,7 +2234,7 @@ func.func @from_elements_wrong_operand_type(%a: f32, %b: i32) {
 // -----
 
 func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
-  // expected-error @+1 {{'dest' must be fixed-length vector of any non-token type values, but got 'vector<[2]xf32>'}}
+  // expected-error @+1 {{'result' must be fixed-length vector of any non-token type values, but got 'vector<[2]xf32>'}}
   vector.from_elements %a, %b : vector<[2]xf32>
   return
 }

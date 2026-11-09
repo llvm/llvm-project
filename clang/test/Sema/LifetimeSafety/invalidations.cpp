@@ -708,6 +708,30 @@ void GlobalReassignedBeforeInvalidation() {
 }
 } // namespace InvalidatedGlobal
 
+namespace ownership_functions {
+
+__attribute__((ownership_returns(malloc))) int *myalloc(void);
+__attribute__((ownership_takes(malloc, 1))) void myfree(int *p);
+
+int *g_owned_ptr; // expected-note {{this global dangles}}
+
+void ownership_returns_escape_global() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the global variable 'g_owned_ptr' and is later invalidated}}
+  g_owned_ptr = p;
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+}
+
+struct OwnershipFieldHolder {
+  int *f; // expected-note {{this field dangles}}
+  void go() {
+    int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the field 'f' and is later invalidated}}
+    this->f = p;
+    myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  }
+};
+
+} // namespace ownership_functions
+
 namespace AssociativeContainers {
 void SetInsertDoesNotInvalidate() {
   std::set<int> s;
@@ -1029,6 +1053,21 @@ void via_destructor() {
   int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
   r = h;
   delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void ownership_free(int *p) __attribute__((ownership_takes(malloc, 1)));
+
+void via_destructor_ownership_takes() {
+  Ref r;
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  r = h;
+  ownership_free(h);   // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void via_destructor_ownership_takes_param(int *p) { // expected-warning {{parameter 'p' does not live long enough}}
+  Ref r;
+  r = p;
+  ownership_free(p);   // expected-note {{parameter 'p' is freed here}}
 }                      // expected-note {{later used by the destructor of 'r' at scope exit}}
 
 void via_cleanup() {
