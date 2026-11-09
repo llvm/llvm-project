@@ -831,6 +831,126 @@ start:
   ret <8 x i16> %0
 }
 
+%T16Byte = type { i64, i64 }
+; A 16-byte struct returned by value is returned in x0:x1 on the ARM64EC side,
+; but indirectly through a hidden pointer on the x64 side, so the thunk is the
+; mirror image of @has_aligned_sret: the first integer argument register holds
+; the hidden pointer, and the result is written through it on return.
+define %T16Byte @large_struct(i64 %0, i64 %1) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$m16$i8i8;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$i8i8
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     stp     q6, q7, [sp, #-192]!            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 192
+; CHECK-NEXT:     stp     q8, q9, [sp, #32]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     stp     q10, q11, [sp, #64]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     stp     q12, q13, [sp, #96]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Spill
+; CHECK-NEXT:     .seh_save_reg   x19, 160
+; CHECK-NEXT:     stp     x29, x30, [sp, #168]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  168
+; CHECK-NEXT:     add     x29, sp, #168
+; CHECK-NEXT:     .seh_add_fp     168
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     mov     x19, x0
+; CHECK-NEXT:     mov     x0, x1
+; CHECK-NEXT:     mov     x1, x2
+; CHECK-NEXT:     blr     x9
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     stp     x0, x1, [x19]
+; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     mov     x8, x19
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  168
+; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Reload
+; CHECK-NEXT:     .seh_save_reg   x19, 160
+; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     ldp     q12, q13, [sp, #96]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     ldp     q10, q11, [sp, #64]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     ldp     q8, q9, [sp, #32]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     ldp     q6, q7, [sp], #192              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 192
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x0
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+start:
+  ret %T16Byte zeroinitializer
+}
+
+; The variadic case: the x64 caller passes the hidden return pointer in the
+; first argument register, so only three arguments fit in registers and the
+; fourth one is taken from the stack.  The thunk must therefore shift the
+; arguments down by one, load the fourth argument from [x4, #32], and advance
+; x4 by 40 bytes (32-byte shadow store plus that argument) so it points at the
+; first variadic stack argument, matching MSVC output.
+define %T16Byte @large_struct_varargs(i64 %0, i64 %1, i64 %2, ...) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$m16$varargs;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$varargs
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     stp     q6, q7, [sp, #-192]!            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 192
+; CHECK-NEXT:     stp     q8, q9, [sp, #32]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     stp     q10, q11, [sp, #64]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     stp     q12, q13, [sp, #96]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Spill
+; CHECK-NEXT:     .seh_save_reg   x19, 160
+; CHECK-NEXT:     stp     x29, x30, [sp, #168]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  168
+; CHECK-NEXT:     add     x29, sp, #168
+; CHECK-NEXT:     .seh_add_fp     168
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     mov     x8, x3
+; CHECK-NEXT:     ldr     x3, [x4, #32]
+; CHECK-NEXT:     mov     x19, x0
+; CHECK-NEXT:     add     x4, x4, #40
+; CHECK-NEXT:     mov     x0, x1
+; CHECK-NEXT:     mov     x1, x2
+; CHECK-NEXT:     mov     x2, x8
+; CHECK-NEXT:     mov     x5, xzr
+; CHECK-NEXT:     blr     x9
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     stp     x0, x1, [x19]
+; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     mov     x8, x19
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  168
+; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Reload
+; CHECK-NEXT:     .seh_save_reg   x19, 160
+; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     ldp     q12, q13, [sp, #96]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     ldp     q10, q11, [sp, #64]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     ldp     q8, q9, [sp, #32]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     ldp     q6, q7, [sp], #192              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 192
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x0
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+start:
+  ret %T16Byte zeroinitializer
+}
+
 ; Verify the hybrid bitmap
 ; CHECK-LABEL:    .section        .hybmp$x,"yi"
 ; CHECK-NEXT:     .symidx "#no_op"
@@ -886,4 +1006,10 @@ start:
 ; CHECK-NEXT:     .word	1
 ; CHECK-NEXT:     .symidx	"#large_vector"
 ; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m16$m16
+; CHECK-NEXT:     .word	1
+; CHECK-NEXT:     .symidx	"#large_struct"
+; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m16$i8i8
+; CHECK-NEXT:     .word	1
+; CHECK-NEXT:     .symidx	"#large_struct_varargs"
+; CHECK-NEXT:     .symidx	$ientry_thunk$cdecl$m16$varargs
 ; CHECK-NEXT:     .word	1
