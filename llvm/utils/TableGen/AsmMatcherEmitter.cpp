@@ -643,7 +643,7 @@ struct MatchableInfo {
     if (int Cmp = Mnemonic.compare_insensitive(RHS.Mnemonic))
       return Cmp == -1;
 
-    // (Optionally) Order by the resultant instuctions size.
+    // (Optionally) Order by the resultant instructions size.
     // eg. for ARM thumb instructions smaller encodings should be preferred.
     if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
       return ResInstSize < RHS.ResInstSize;
@@ -1215,7 +1215,7 @@ ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
     // RegisterOperand may have an associated ParserMatchClass. If it does,
     // use it, else just fall back to the underlying register class.
     const RecordVal *R = Rec->getValue("ParserMatchClass");
-    if (!R || !R->getValue())
+    if (!R)
       PrintFatalError(Rec->getLoc(),
                       "Record `" + Rec->getName() +
                           "' does not have a ParserMatchClass!\n");
@@ -2509,8 +2509,10 @@ static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info,
       }))
     return;
 
+  StringRef AsmParserClassName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   OS << "static const char *getMatchKindDiag(" << Info.Target.getName()
-     << "AsmParser::" << Info.Target.getName()
+     << AsmParserClassName << "::" << Info.Target.getName()
      << "MatchResultTy MatchResult) {\n";
   OS << "  switch (MatchResult) {\n";
 
@@ -2518,8 +2520,8 @@ static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info,
     if (!CI.DiagnosticString.empty()) {
       assert(!CI.DiagnosticType.empty() &&
              "DiagnosticString set without DiagnosticType");
-      OS << "  case " << Info.Target.getName() << "AsmParser::Match_"
-         << CI.DiagnosticType << ":\n";
+      OS << "  case " << Info.Target.getName() << AsmParserClassName
+         << "::Match_" << CI.DiagnosticType << ":\n";
       OS << "    return \"" << CI.DiagnosticString << "\";\n";
     }
   }
@@ -2532,6 +2534,8 @@ static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info,
 }
 
 static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
+  StringRef AsmParserClassName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   OS << "static unsigned getDiagKindFromRegisterClass(MatchClassKind "
         "RegisterClass) {\n";
   if (none_of(Info.Classes, [](const ClassInfo &CI) {
@@ -2543,8 +2547,8 @@ static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
     for (const auto &CI : Info.Classes) {
       if (CI.isRegisterClass() && !CI.DiagnosticType.empty()) {
         OS << "  case " << CI.Name << ":\n";
-        OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
-           << CI.DiagnosticType << ";\n";
+        OS << "    return " << Info.Target.getName() << AsmParserClassName
+           << "::Match_" << CI.DiagnosticType << ";\n";
       }
     }
 
@@ -2563,11 +2567,13 @@ static void emitTokenDiagFunction(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "  switch (Kind) {\n";
   OS << "  default:\n";
   OS << "    return MCTargetAsmParser::Match_InvalidOperand;\n";
+  StringRef AsmParserClassName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   for (const auto &CI : Info.Classes) {
     if (CI.Kind == ClassInfo::Token && !CI.DiagnosticType.empty()) {
       OS << "  case " << CI.Name << ":\n";
-      OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
-         << CI.DiagnosticType << ";\n";
+      OS << "    return " << Info.Target.getName() << AsmParserClassName
+         << "::Match_" << CI.DiagnosticType << ";\n";
     }
   }
   OS << "  }\n";
@@ -2741,6 +2747,8 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   // actually matching against one of them.
   OS << "  switch (Kind) {\n"
         "  default: break;\n";
+  StringRef AsmParserClassName =
+      Info.AsmParser->getValueAsString("AsmParserClassName");
   for (const auto &CI : Info.Classes) {
     if (!CI.isUserClass())
       continue;
@@ -2752,8 +2760,8 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
     OS << "      return MCTargetAsmParser::Match_Success;\n";
     if (!CI.DiagnosticType.empty()) {
       OS << "    if (DP.isNearMatch())\n";
-      OS << "      return " << Info.Target.getName() << "AsmParser::Match_"
-         << CI.DiagnosticType << ";\n";
+      OS << "      return " << Info.Target.getName() << AsmParserClassName
+         << "::Match_" << CI.DiagnosticType << ";\n";
       OS << "    break;\n";
     } else {
       OS << "    break;\n";

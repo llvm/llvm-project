@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 declare b128 @llvm.speculative.load.b128.p0(ptr, i1, ...)
 declare i32 @llvm.speculative.load.i32.p0(ptr, i1, ...)

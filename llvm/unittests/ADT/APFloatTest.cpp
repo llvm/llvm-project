@@ -1842,6 +1842,267 @@ TEST(APFloatTest, toString) {
   }
 }
 
+static std::string convertToStringShortest(const APFloat &F, unsigned Pad = 3,
+                                           bool Tr = true) {
+  llvm::SmallVector<char, 100> Buffer;
+  F.toStringShortest(Buffer, Pad, Tr);
+  return std::string(Buffer.data(), Buffer.size());
+}
+
+TEST(APFloatTest, toStringRoundTrip) {
+  SmallString<32> Str;
+  // 6 digits: lossless for 3.14, lossy for pi/4; the string appends either way.
+  ASSERT_TRUE(APFloat(3.14).toStringRoundTrip(Str, 6, 0, false));
+  ASSERT_EQ("3.140000e+00", Str);
+  Str.clear();
+  ASSERT_FALSE(
+      APFloat(0.78539816339744830961).toStringRoundTrip(Str, 6, 0, false));
+  ASSERT_EQ("7.853980e-01", Str);
+  Str.clear();
+  // FormatPrecision = 0 (natural precision) always round-trips.
+  ASSERT_TRUE(APFloat(0.78539816339744830961).toStringRoundTrip(Str));
+  ASSERT_EQ("0.78539816339744828", Str);
+  Str.clear();
+  // "+Inf" parses back even though the IR and MLIR grammars reject it.
+  ASSERT_TRUE(APFloat::getInf(APFloat::IEEEdouble()).toStringRoundTrip(Str));
+  ASSERT_EQ("+Inf", Str);
+}
+
+TEST(APFloatTest, toStringShortest) {
+  ASSERT_EQ("3.14", convertToStringShortest(APFloat(3.14)));
+  ASSERT_EQ("-3.14", convertToStringShortest(APFloat(-3.14)));
+  ASSERT_EQ("4", convertToStringShortest(APFloat(4.0)));
+  ASSERT_EQ("0.5", convertToStringShortest(APFloat(0.5)));
+  ASSERT_EQ("0.1", convertToStringShortest(APFloat(0.1)));
+  ASSERT_EQ("873.1834", convertToStringShortest(APFloat(873.1834)));
+  ASSERT_EQ("1.0E+10", convertToStringShortest(APFloat(1e10)));
+  // A hex literal prints in decimal.
+  ASSERT_EQ("16.0625", convertToStringShortest(APFloat(0x10.1p0)));
+  // 0.1 + 0.2 and DBL_MAX need every natural-precision digit.
+  ASSERT_EQ("0.30000000000000004",
+            convertToStringShortest(APFloat(0.30000000000000004)));
+  ASSERT_EQ("1.7976931348623157E+308",
+            convertToStringShortest(APFloat(1.7976931348623157E+308)));
+  // The smallest denormal, the smallest normal, and the largest denormal.
+  ASSERT_EQ("5.0E-324",
+            convertToStringShortest(APFloat(4.9406564584124654e-324)));
+  ASSERT_EQ("2.2250738585072014E-308",
+            convertToStringShortest(APFloat(2.2250738585072014e-308)));
+  ASSERT_EQ("2.225073858507201E-308",
+            convertToStringShortest(APFloat(2.2250738585072009e-308)));
+  // 1e23 is not exactly representable; 1E23 is still the shortest form.
+  ASSERT_EQ("1.0E+23", convertToStringShortest(APFloat(1e23)));
+  // Significands that look like powers of five (Ryu's LooksLikePow5).
+  ASSERT_EQ("5.764607523034235E+39",
+            convertToStringShortest(
+                APFloat(APFloat::IEEEdouble(), APInt(64, 0x4830F0CF064DD592))));
+  ASSERT_EQ("1.152921504606847E+40",
+            convertToStringShortest(
+                APFloat(APFloat::IEEEdouble(), APInt(64, 0x4840F0CF064DD592))));
+  // Neighbors around 2^32 differ in the tenth digit.
+  ASSERT_EQ("4.294967295", convertToStringShortest(APFloat(4.294967295)));
+  ASSERT_EQ("4.294967296", convertToStringShortest(APFloat(4.294967296)));
+  ASSERT_EQ("4.294967297", convertToStringShortest(APFloat(4.294967297)));
+  // A power of two has a shorter gap below than above.
+  ASSERT_EQ("1.7800590868057611E-307",
+            convertToStringShortest(
+                APFloat(APFloat::IEEEdouble(), APInt(64, uint64_t(4) << 52))));
+  ASSERT_EQ("2.900835519859558E-216",
+            convertToStringShortest(APFloat(APFloat::IEEEdouble(),
+                                            APInt(64, uint64_t(307) << 52))));
+
+  // An integer in fixed notation keeps its digits; the shortest form would
+  // only trade them for scientific notation. More than FormatMaxPadding
+  // trailing zeros still switch to scientific notation, as in toString.
+  ASSERT_EQ("10", convertToStringShortest(APFloat(10.0)));
+  ASSERT_EQ("100", convertToStringShortest(APFloat(100.0)));
+  ASSERT_EQ("1200", convertToStringShortest(APFloat(1200.0)));
+  ASSERT_EQ("1.2E+5", convertToStringShortest(APFloat(120000.0)));
+  // 2^53 + 1 rounds to 2^53.
+  ASSERT_EQ("9007199254740992",
+            convertToStringShortest(APFloat(9007199254740993.0)));
+  // 17 digits fit the natural precision; 18 do not.
+  ASSERT_EQ("18014398509481984",
+            convertToStringShortest(APFloat(18014398509481984.0)));
+  ASSERT_EQ("1.2345678901234568E+17",
+            convertToStringShortest(APFloat(123456789012345680.0)));
+
+  // Single precision.
+  ASSERT_EQ("3.14", convertToStringShortest(APFloat(3.14f)));
+  ASSERT_EQ("0.1", convertToStringShortest(APFloat(0.1f)));
+  ASSERT_EQ("16.0625", convertToStringShortest(APFloat(0x10.1p0f)));
+  ASSERT_EQ("100", convertToStringShortest(APFloat(100.0f)));
+  ASSERT_EQ("3.4028235E+38", convertToStringShortest(APFloat(3.4028235e38f)));
+  ASSERT_EQ("1.0E-45", convertToStringShortest(APFloat(1.4e-45f)));
+  ASSERT_EQ("1.1754944E-38", convertToStringShortest(APFloat(1.1754944e-38f)));
+  // 2^24 + 1 rounds to 2^24.
+  ASSERT_EQ("16777216", convertToStringShortest(APFloat(16777217.0f)));
+  // The upper bound of the rounding interval parses back when the
+  // significand is even (Ryu's BoundaryRoundEven).
+  ASSERT_EQ("3.436672E+10", convertToStringShortest(APFloat(3.4366717e10f)));
+  ASSERT_EQ("1.5846086E+29", convertToStringShortest(APFloat(1.5846085e29f)));
+  ASSERT_EQ("6.7108864E+17",
+            convertToStringShortest(
+                APFloat(APFloat::IEEEsingle(), APInt(32, 0x5D1502F9))));
+  // FIXME: 9.0E+9 also parses back, but toString truncates the guard digit
+  // before it rounds and prints 8.0E+9 at precision 1.
+  ASSERT_EQ("8.999999E+9", convertToStringShortest(APFloat(8.999999e9f)));
+
+  // Half precision and bfloat.
+  ASSERT_EQ("0.1",
+            convertToStringShortest(APFloat(APFloat::IEEEhalf(), "0.1")));
+  ASSERT_EQ("65504",
+            convertToStringShortest(APFloat(APFloat::IEEEhalf(), "65504")));
+  // 16.0625 is exact, but 16.06 already parses back.
+  ASSERT_EQ("16.06",
+            convertToStringShortest(APFloat(APFloat::IEEEhalf(), "16.0625")));
+  ASSERT_EQ("6.0E-8", convertToStringShortest(APFloat(
+                          APFloat::IEEEhalf(), "5.9604644775390625e-8")));
+  ASSERT_EQ("0.1", convertToStringShortest(APFloat(APFloat::BFloat(), "0.1")));
+  ASSERT_EQ("3.39E+38", convertToStringShortest(APFloat(
+                            APFloat::BFloat(), "3.3895313892515355e38")));
+  // 99840 has more digits than bfloat's natural precision, so the integer
+  // rule does not apply and 1E5 is the shortest form.
+  ASSERT_EQ("1.0E+5",
+            convertToStringShortest(APFloat(APFloat::BFloat(), "99840")));
+
+  // 8-bit and smaller formats.
+  ASSERT_EQ("448",
+            convertToStringShortest(APFloat(APFloat::Float8E4M3FN(), "448")));
+  ASSERT_EQ("0.002", convertToStringShortest(
+                         APFloat(APFloat::Float8E4M3FN(), "0.001953125")));
+  // The largest Float8E5M2 has five digits; 6E4 rounds to it without
+  // overflow.
+  ASSERT_EQ("6.0E+4",
+            convertToStringShortest(APFloat(APFloat::Float8E5M2(), "57344")));
+  ASSERT_EQ("28",
+            convertToStringShortest(APFloat(APFloat::Float6E3M2FN(), "28")));
+  // "8" parses back to the largest Float6E2M3FN by saturation, not rounding.
+  ASSERT_EQ("7.5",
+            convertToStringShortest(APFloat(APFloat::Float6E2M3FN(), "7.5")));
+  ASSERT_EQ("6",
+            convertToStringShortest(APFloat(APFloat::Float4E2M1FN(), "6")));
+  ASSERT_EQ("1.5",
+            convertToStringShortest(APFloat(APFloat::Float4E2M1FN(), "1.5")));
+  ASSERT_EQ("0.5",
+            convertToStringShortest(APFloat(APFloat::Float8E8M0FNU(), "0.5")));
+  ASSERT_EQ("2.0E+38", convertToStringShortest(APFloat(
+                           APFloat::Float8E8M0FNU(), "1.7014118346046923e38")));
+  ASSERT_EQ("6.0E-39", convertToStringShortest(APFloat(
+                           APFloat::Float8E8M0FNU(), "5.877471754111438e-39")));
+  ASSERT_EQ("3.14",
+            convertToStringShortest(APFloat(APFloat::FloatTF32(), "3.14")));
+
+  // x87 extended, quad, and double-double. 1 + 2^-52 is exact in all three;
+  // the digit count follows the format's precision.
+  ASSERT_EQ("0.1", convertToStringShortest(
+                       APFloat(APFloat::x87DoubleExtended(), "0.1")));
+  ASSERT_EQ("1.0E+4000", convertToStringShortest(
+                             APFloat(APFloat::x87DoubleExtended(), "1e4000")));
+  ASSERT_EQ("1.189731495357231765E+4932",
+            convertToStringShortest(APFloat(APFloat::x87DoubleExtended(),
+                                            "1.18973149535723176502e+4932")));
+  ASSERT_EQ("4.0E-4951",
+            convertToStringShortest(APFloat(APFloat::x87DoubleExtended(),
+                                            "3.6451995318824746025e-4951")));
+  ASSERT_EQ("1.000000000000000222", convertToStringShortest(APFloat(
+                                        APFloat::x87DoubleExtended(),
+                                        "1.0000000000000002220446049250313")));
+  ASSERT_EQ("0.1",
+            convertToStringShortest(APFloat(APFloat::IEEEquad(), "0.1")));
+  ASSERT_EQ(
+      "1.189731495357231765085759326628007E+4932",
+      convertToStringShortest(APFloat(
+          APFloat::IEEEquad(), "1.18973149535723176508575932662800702e+4932")));
+  ASSERT_EQ("6.0E-4966", convertToStringShortest(APFloat(
+                             APFloat::IEEEquad(),
+                             "6.475175119438025110924438958227646552e-4966")));
+  ASSERT_EQ("1.0000000000000002220446049250313",
+            convertToStringShortest(APFloat(
+                APFloat::IEEEquad(), "1.0000000000000002220446049250313")));
+  ASSERT_EQ("0.1", convertToStringShortest(
+                       APFloat(APFloat::PPCDoubleDouble(), "0.1")));
+  ASSERT_EQ("3.14", convertToStringShortest(
+                        APFloat(APFloat::PPCDoubleDouble(), "3.14")));
+  ASSERT_EQ("100", convertToStringShortest(
+                       APFloat(APFloat::PPCDoubleDouble(), "100")));
+  ASSERT_EQ("1.7976931348623157E+308",
+            convertToStringShortest(
+                APFloat(APFloat::PPCDoubleDouble(), "1.7976931348623157e308")));
+  ASSERT_EQ("5.0E-324",
+            convertToStringShortest(APFloat(APFloat::PPCDoubleDouble(),
+                                            "4.9406564584124654e-324")));
+  ASSERT_EQ(
+      "1.0000000000000002220446049250313",
+      convertToStringShortest(APFloat(APFloat::PPCDoubleDouble(),
+                                      "1.0000000000000002220446049250313")));
+  // A negated double-double has a -0.0 low component; no decimal string
+  // parses back to it bitwise, so the natural-precision form is returned.
+  {
+    APFloat NegOne(APFloat::PPCDoubleDouble(), "1.0");
+    NegOne.changeSign();
+    ASSERT_EQ("-1", convertToStringShortest(NegOne));
+  }
+
+  // FormatMaxPadding and TruncateZero pass through to toString.
+  ASSERT_EQ("1.0E+1", convertToStringShortest(APFloat(10.0), 0));
+  ASSERT_EQ("1.0e+01", convertToStringShortest(APFloat(10.0), 0, false));
+
+  // Zero and non-finite values format exactly as toString.
+  ASSERT_EQ("0", convertToStringShortest(APFloat(0.0)));
+  ASSERT_EQ("-0", convertToStringShortest(APFloat(-0.0)));
+  ASSERT_EQ("+Inf",
+            convertToStringShortest(APFloat::getInf(APFloat::IEEEdouble())));
+  ASSERT_EQ("-Inf", convertToStringShortest(
+                        APFloat::getInf(APFloat::IEEEdouble(), true)));
+  ASSERT_EQ("NaN",
+            convertToStringShortest(APFloat::getNaN(APFloat::IEEEdouble())));
+}
+
+// Every finite value of the small formats: the string parses back bitwise
+// equal, and it is the first FormatPrecision that does so. An integer in
+// fixed notation and the largest value of a format that saturates keep the
+// natural-precision form.
+TEST(APFloatTest, toStringShortestExhaustive) {
+  const fltSemantics *Semantics[] = {
+      &APFloat::IEEEhalf(),       &APFloat::BFloat(),
+      &APFloat::Float8E5M2(),     &APFloat::Float8E5M2FNUZ(),
+      &APFloat::Float8E4M3(),     &APFloat::Float8E4M3FN(),
+      &APFloat::Float8E4M3FNUZ(), &APFloat::Float8E4M3B11FNUZ(),
+      &APFloat::Float8E3M4(),     &APFloat::Float8E8M0FNU(),
+      &APFloat::Float6E3M2FN(),   &APFloat::Float6E2M3FN(),
+      &APFloat::Float4E2M1FN(),   &APFloat::Float8E5M3FNU(),
+  };
+  for (const fltSemantics *Sem : Semantics) {
+    unsigned Bits = APFloat::getSizeInBits(*Sem);
+    for (uint64_t I = 0, E = uint64_t(1) << Bits; I != E; ++I) {
+      APFloat F(*Sem, APInt(Bits, I));
+      if (!F.isFiniteNonZero())
+        continue;
+      std::string Shortest = convertToStringShortest(F);
+      EXPECT_TRUE(APFloat(*Sem, Shortest).bitwiseIsEqual(F))
+          << Shortest << " bits 0x" << utohexstr(I);
+      SmallString<32> Str;
+      F.toString(Str);
+      bool Saturates = !APFloat::semanticsHasInf(*Sem) &&
+                       !APFloat::semanticsHasNaN(*Sem) &&
+                       abs(F).bitwiseIsEqual(APFloat::getLargest(*Sem));
+      if (Saturates || StringRef(Str).find_first_of(".Ee") == StringRef::npos) {
+        EXPECT_EQ(Str, Shortest) << "bits 0x" << utohexstr(I);
+        continue;
+      }
+      for (unsigned Precision = 1; Precision < 16; ++Precision) {
+        Str.clear();
+        F.toString(Str, Precision);
+        if (APFloat(*Sem, Str).bitwiseIsEqual(F)) {
+          EXPECT_EQ(Str, Shortest) << "bits 0x" << utohexstr(I);
+          break;
+        }
+      }
+    }
+  }
+}
+
 TEST(APFloatTest, toInteger) {
   bool isExact = false;
   APSInt result(5, /*isUnsigned=*/true);
@@ -2639,6 +2900,8 @@ TEST(APFloatTest, getLargest) {
   EXPECT_EQ(7.5,
             APFloat::getLargest(APFloat::Float6E2M3FN()).convertToDouble());
   EXPECT_EQ(6, APFloat::getLargest(APFloat::Float4E2M1FN()).convertToDouble());
+  EXPECT_EQ(APInt(128, "7ffeffffffffffffffffffffffffffff", 16),
+            APFloat::getLargest(APFloat::IEEEquad()).bitcastToAPInt());
 }
 
 TEST(APFloatTest, getSmallest) {
@@ -7789,7 +8052,7 @@ TEST(APFloatTest, x87Bits) {
   }
 
   // Test pseudoinfinity: exp=0x7fff, int_bit=0, significand=0
-  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  // Is treated as NaN in APFloat, see fltSemantics::hasExplicitIntegerBit
   {
     APFloat pseudoInf(S, APInt(80, {0x0000000000000000ull, 0x7fffull}));
     EXPECT_TRUE(pseudoInf.isNaN());
@@ -7798,7 +8061,7 @@ TEST(APFloatTest, x87Bits) {
   }
 
   // Test pseudoNaN: exp=0x7fff, int_bit=0, significand!=0
-  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  // Is treated as NaN in APFloat, see fltSemantics::hasExplicitIntegerBit
   {
     APFloat pseudoNan(S, APInt(80, {0x4000000000000000ull, 0x7fffull}));
     EXPECT_TRUE(pseudoNan.isNaN());
@@ -7806,7 +8069,7 @@ TEST(APFloatTest, x87Bits) {
   }
 
   // Test unnormal: exp!=0 and !=0x7fff, int_bit=0
-  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  // Is treated as NaN in APFloat, see fltSemantics::hasExplicitIntegerBit
   {
     APFloat unnormal(S, APInt(80, {0x4000000000000000ull, 0x4000ull}));
     EXPECT_TRUE(unnormal.isNaN());
@@ -11239,4 +11502,342 @@ TEST(APFloatTest, exp_exceptions) {
   EXPECT_FALSE(llvm::exp(APFloat::getZero(APFloat::IEEEhalf())).has_value());
 }
 
+namespace {
+static void initFloat16E6M9(FloatRepr &R, const APInt &api);
+static APInt bitcastFloat16E6M9(const FloatRepr &R);
+
+static const fltSemantics semFloat16E6M9 = {
+    31,  // maxExponent (bias = 31)
+    -30, // minExponent (1 - bias = 1 - 31 = -30)
+    10,  // precision (9 mantissa + 1 implicit integer bit)
+    16,  // sizeInBits
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,  // hasZero
+    true,  // hasSignedRepr
+    true,  // hasSignBitInMSB
+    true,  // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat16E6M9,
+    bitcastFloat16E6M9,
+};
+
+static void initFloat16E6M9(FloatRepr &R, const APInt &api) {
+  const fltSemantics &Sem = semFloat16E6M9;
+  uint16_t bits = api.getZExtValue();
+
+  // Extract fields
+  unsigned sign = (bits >> 15) & 1;
+  unsigned biasedExp = (bits >> 9) & 0x3F; // 6 bits
+  uint64_t mantissa = bits & 0x1FF;        // 9 bits
+
+  // Initialize the representation with our semantics
+  R.initialize(Sem);
+  R.setNegative(sign);
+
+  if (biasedExp == 0 && mantissa == 0) {
+    // Zero
+    R.setCategory(APFloat::fcZero);
+    R.setExponent(Sem.minExponent - 1);
+    R.setSignificand(APInt(Sem.precision, 0));
+  } else if (biasedExp == 0x3F) {
+    // Infinity or NaN
+    if (mantissa == 0) {
+      R.setCategory(APFloat::fcInfinity);
+      R.setExponent(Sem.maxExponent + 1);
+      R.setSignificand(APInt(Sem.precision, 0));
+    } else {
+      R.setCategory(APFloat::fcNaN);
+      R.setExponent(Sem.maxExponent + 1); // exponentNaN
+      // Set significand with the integer bit
+      R.setSignificand(APInt(Sem.precision, (1ULL << 9) | mantissa));
+    }
+  } else if (biasedExp == 0) {
+    // Denormal
+    R.setCategory(APFloat::fcNormal);
+    R.setExponent(Sem.minExponent);
+    R.setSignificand(APInt(Sem.precision, mantissa));
+  } else {
+    // Normal
+    R.setCategory(APFloat::fcNormal);
+    R.setExponent(biasedExp - 31); // unbias
+    // Set significand with the integer bit (bit 9)
+    R.setSignificand(APInt(Sem.precision, (1ULL << 9) | mantissa));
+  }
+}
+
+static APInt bitcastFloat16E6M9(const FloatRepr &R) {
+  uint16_t bits = 0;
+  const fltSemantics &Sem = semFloat16E6M9;
+  EXPECT_EQ(&R.getSemantics(), &Sem);
+
+  // Get sign
+  if (R.isNegative())
+    bits |= (1 << 15);
+
+  APFloat::fltCategory cat = R.getCategory();
+
+  if (cat == APFloat::fcZero) {
+    // Zero: exp=0, mantissa=0
+    return APInt(16, bits);
+  }
+
+  if (cat == APFloat::fcInfinity) {
+    // Infinity: exp=all 1s, mantissa=0
+    bits |= (0x3F << 9);
+    return APInt(16, bits);
+  }
+
+  if (cat == APFloat::fcNaN) {
+    // NaN: exp=all 1s, mantissa!=0
+    bits |= (0x3F << 9);
+    uint64_t sig = R.getSignificand().getZExtValue() & 0x1FF;
+    if (sig == 0)
+      sig = 1; // Ensure at least one bit set
+    bits |= sig;
+    return APInt(16, bits);
+  }
+
+  // Normal or denormal
+  APFloat::ExponentType exp = R.getExponent();
+  uint64_t sig = R.getSignificand().getZExtValue();
+
+  if (exp == Sem.minExponent && (sig & (1ULL << 9)) == 0) {
+    // Denormal: biasedExp = 0, store raw mantissa
+    bits |= (sig & 0x1FF);
+  } else {
+    // Normal
+    int biasedExp = exp + 31; // add bias
+    bits |= ((biasedExp & 0x3F) << 9);
+    bits |= (sig & 0x1FF); // mask off integer bit
+  }
+
+  return APInt(16, bits);
+}
+} // anonymous namespace
+
+TEST(APFloatTest, UserDefinedSemanticsConversion) {
+  const fltSemantics &Sem = semFloat16E6M9;
+
+  // Positive zero: 0x0000
+  APFloat PosZero(Sem, APInt(16, 0x0000));
+  EXPECT_TRUE(PosZero.isZero());
+  EXPECT_FALSE(PosZero.isNegative());
+  EXPECT_EQ(PosZero.bitcastToAPInt(), APInt(16, 0x0000));
+
+  // Negative zero: 0x8000
+  APFloat NegZero(Sem, APInt(16, 0x8000));
+  EXPECT_TRUE(NegZero.isZero());
+  EXPECT_TRUE(NegZero.isNegative());
+  EXPECT_EQ(NegZero.bitcastToAPInt(), APInt(16, 0x8000));
+
+  // Positive infinity: exp=0x3F (all 1s), mantissa=0 -> 0x7E00
+  APFloat PosInf(Sem, APInt(16, 0x7E00));
+  EXPECT_TRUE(PosInf.isInfinity());
+  EXPECT_FALSE(PosInf.isNegative());
+  EXPECT_EQ(PosInf.bitcastToAPInt(), APInt(16, 0x7E00));
+
+  // Negative infinity: 0xFE00
+  APFloat NegInf(Sem, APInt(16, 0xFE00));
+  EXPECT_TRUE(NegInf.isInfinity());
+  EXPECT_TRUE(NegInf.isNegative());
+  EXPECT_EQ(NegInf.bitcastToAPInt(), APInt(16, 0xFE00));
+
+  APFloat Nan(Sem, APInt(16, 0x7E01));
+  EXPECT_TRUE(Nan.isNaN());
+
+  APFloat One(Sem, APInt(16, 0x3E00));
+  EXPECT_TRUE(One.isFiniteNonZero());
+  EXPECT_FALSE(One.isNegative());
+  bool losesInfo;
+  APFloat OneCopy(One);
+  OneCopy.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &losesInfo);
+  EXPECT_NEAR(OneCopy.convertToDouble(), 1.0, 1e-6);
+
+  APFloat Two(Sem, APInt(16, 0x4000));
+  EXPECT_TRUE(Two.isFiniteNonZero());
+
+  APFloat TwoCopy(Two);
+  TwoCopy.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                  &losesInfo);
+  EXPECT_NEAR(TwoCopy.convertToDouble(), 2.0, 1e-6);
+}
+
+TEST(APFloatTest, UserDefinedSemanticsBitcastRoundtrip) {
+  const fltSemantics &Sem = semFloat16E6M9;
+
+  // Test various bit patterns for roundtrip
+  uint16_t testPatterns[] = {
+      0x0000, // +0
+      0x8000, // -0
+      0x3E00, // 1.0
+      0xBE00, // -1.0
+      0x4000, // 2.0
+      0x7E00, // +inf
+      0xFE00, // -inf
+  };
+
+  for (uint16_t pattern : testPatterns) {
+    APFloat F(Sem, APInt(16, pattern));
+    APInt result = F.bitcastToAPInt();
+    EXPECT_EQ(result, APInt(16, pattern))
+        << "Roundtrip failed for pattern 0x" << std::hex << pattern;
+  }
+}
+
+namespace {
+static void initFloat0NaN(FloatRepr &R, const APInt &API);
+static APInt bitcastFloat0NaN(const FloatRepr &R);
+
+// A type without any bits. Its only value is a quiet NaN.
+static const fltSemantics semFloat0NaN = {
+    0, // maxExponent
+    0, // minExponent
+    1, // precision
+    0, // sizeInBits
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::AllOnes,
+    false, // hasZero
+    false, // hasSignedRepr
+    false, // hasSignBitInMSB
+    false, // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat0NaN,
+    bitcastFloat0NaN,
+};
+
+static void initFloat0NaN(FloatRepr &R, const APInt &API) {
+  const fltSemantics &Sem = semFloat0NaN;
+  R.initialize(Sem);
+  R.setNegative(false);
+  R.setCategory(APFloat::fcNaN);
+  R.setExponent(Sem.maxExponent + 1);
+  R.setSignificand(APInt(Sem.precision, 1));
+}
+
+static APInt bitcastFloat0NaN(const FloatRepr &R) {
+  EXPECT_EQ(&R.getSemantics(), &semFloat0NaN);
+  EXPECT_EQ(R.getCategory(), APFloat::fcNaN);
+  return APInt::getZero(0);
+}
+} // anonymous namespace
+
+TEST(APFloatTest, UserDefinedSemanticsZeroBits) {
+  const fltSemantics &Sem = semFloat0NaN;
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  APFloat FromBits(Sem, APInt::getZero(0));
+  APFloat NaN = APFloat::getNaN(Sem);
+
+  auto ExpectQNaN = [](const APFloat &F) {
+    EXPECT_TRUE(F.isNaN());
+    EXPECT_FALSE(F.isSignaling());
+    EXPECT_FALSE(F.isNegative());
+    EXPECT_EQ(F.bitcastToAPInt(), APInt::getZero(0));
+  };
+
+  ExpectQNaN(FromBits);
+  ExpectQNaN(NaN);
+
+  APFloat Sum = FromBits;
+  EXPECT_EQ(Sum.add(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Sum);
+
+  APFloat Diff = FromBits;
+  EXPECT_EQ(Diff.subtract(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Diff);
+
+  APFloat Prod = FromBits;
+  EXPECT_EQ(Prod.multiply(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Prod);
+
+  APFloat Quot = FromBits;
+  EXPECT_EQ(Quot.divide(NaN, RM), APFloat::opOK);
+  ExpectQNaN(Quot);
+}
+
+namespace {
+static void initFloat1Inf(FloatRepr &R, const APInt &API);
+static APInt bitcastFloat1Inf(const FloatRepr &R);
+
+// A type with only a sign bit. Its only values are +inf and -inf.
+static const fltSemantics semFloat1Inf = {
+    0, // maxExponent
+    0, // minExponent
+    1, // precision
+    1, // sizeInBits
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    false, // hasZero
+    true,  // hasSignedRepr
+    true,  // hasSignBitInMSB
+    false, // hasDenormals
+    false, // hasExplicitIntegerBit
+    initFloat1Inf,
+    bitcastFloat1Inf,
+};
+
+static void initFloat1Inf(FloatRepr &R, const APInt &API) {
+  const fltSemantics &Sem = semFloat1Inf;
+  R.initialize(Sem);
+  R.setNegative(API[0]);
+  R.setCategory(APFloat::fcInfinity);
+  R.setExponent(Sem.maxExponent + 1);
+  R.setSignificand(APInt::getZero(Sem.precision));
+}
+
+static APInt bitcastFloat1Inf(const FloatRepr &R) {
+  EXPECT_EQ(&R.getSemantics(), &semFloat1Inf);
+  EXPECT_EQ(R.getCategory(), APFloat::fcInfinity);
+  return APInt(1, R.isNegative());
+}
+} // anonymous namespace
+
+TEST(APFloatTest, UserDefinedSemanticsOneBit) {
+  const fltSemantics &Sem = semFloat1Inf;
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  APFloat PInf(Sem, APInt(1, 0));
+  APFloat MInf(Sem, APInt(1, 1));
+  EXPECT_TRUE(PInf.bitwiseIsEqual(APFloat::getInf(Sem, false)));
+  EXPECT_TRUE(MInf.bitwiseIsEqual(APFloat::getInf(Sem, true)));
+
+  auto ExpectInf = [](const APFloat &F, bool Negative) {
+    EXPECT_TRUE(F.isInfinity());
+    EXPECT_EQ(F.isNegative(), Negative);
+    EXPECT_EQ(F.bitcastToAPInt(), APInt(1, Negative));
+  };
+
+  ExpectInf(PInf, false);
+  ExpectInf(MInf, true);
+
+  APFloat Sum = PInf;
+  EXPECT_EQ(Sum.add(PInf, RM), APFloat::opOK);
+  ExpectInf(Sum, false);
+
+  Sum = MInf;
+  EXPECT_EQ(Sum.add(MInf, RM), APFloat::opOK);
+  ExpectInf(Sum, true);
+
+  APFloat Diff = PInf;
+  EXPECT_EQ(Diff.subtract(MInf, RM), APFloat::opOK);
+  ExpectInf(Diff, false);
+
+  Diff = MInf;
+  EXPECT_EQ(Diff.subtract(PInf, RM), APFloat::opOK);
+  ExpectInf(Diff, true);
+
+  APFloat Prod = PInf;
+  EXPECT_EQ(Prod.multiply(PInf, RM), APFloat::opOK);
+  ExpectInf(Prod, false);
+
+  Prod = PInf;
+  EXPECT_EQ(Prod.multiply(MInf, RM), APFloat::opOK);
+  ExpectInf(Prod, true);
+
+  Prod = MInf;
+  EXPECT_EQ(Prod.multiply(MInf, RM), APFloat::opOK);
+  ExpectInf(Prod, false);
+}
 } // namespace
