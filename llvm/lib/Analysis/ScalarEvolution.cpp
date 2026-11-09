@@ -9373,6 +9373,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     }
   }
 
+  LoopGuards Guards = LoopGuards::collectOnDemand(L, *this);
   switch (Pred) {
   case ICmpInst::ICMP_NE: {                     // while (X != Y)
     // Convert to: while (X-Y != 0)
@@ -9425,7 +9426,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       APInt Max = IsSigned ? APInt::getSignedMaxValue(OldType->getBitWidth())
                            : APInt::getMaxValue(OldType->getBitWidth());
       auto IsLessThanMax = [&] {
-        const SCEV *GuardedRHS = applyLoopGuards(RHS, L);
+        const SCEV *GuardedRHS = applyLoopGuards(RHS, Guards);
         return IsSigned ? getSignedRangeMax(GuardedRHS).slt(Max)
                         : getUnsignedRangeMax(GuardedRHS).ult(Max);
       };
@@ -9435,7 +9436,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
         SCEVUse Next = getAddExpr(
             getOne(OldType), RHS,
             {SCEV::FlagNone, IsSigned ? SCEV::FlagNSW : SCEV::FlagNUW});
-        ExitLimit EL = howManyLessThans(LHS, Next, L, IsSigned,
+        ExitLimit EL = howManyLessThans(LHS, Next, L, Guards, IsSigned,
                                         /*Invert=*/false, ControlsOnlyExit,
                                         AllowPredicates);
         if (EL.hasFullInfo())
@@ -9458,8 +9459,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   case ICmpInst::ICMP_SLT:
   case ICmpInst::ICMP_ULT: { // while (X < Y)
     bool IsSigned = ICmpInst::isSigned(Pred);
-    ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, /*Invert=*/false,
-                                    ControlsOnlyExit, AllowPredicates);
+    ExitLimit EL =
+        howManyLessThans(LHS, RHS, L, Guards, IsSigned,
+                         /*Invert=*/false, ControlsOnlyExit, AllowPredicates);
     if (EL.hasAnyInfo())
       return EL;
     break;
@@ -9477,8 +9479,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   case ICmpInst::ICMP_UGT: { // while (X > Y)
     // "X > Y" is analyzed as the equivalent "~X < ~Y".
     bool IsSigned = ICmpInst::isSigned(Pred);
-    ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, /*Invert=*/true,
-                                    ControlsOnlyExit, AllowPredicates);
+    ExitLimit EL =
+        howManyLessThans(LHS, RHS, L, Guards, IsSigned,
+                         /*Invert=*/true, ControlsOnlyExit, AllowPredicates);
     if (EL.hasAnyInfo())
       return EL;
     break;
@@ -13309,13 +13312,10 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
   return getUDivCeilSCEV(getConstant(Delta), getConstant(StrideForMaxBECount));
 }
 
-ScalarEvolution::ExitLimit
-ScalarEvolution::howManyLessThans(const SCEV *LHS, SCEVUse RHS, const Loop *L,
-                                  bool IsSigned, bool Invert,
-                                  bool ControlsOnlyExit, bool AllowPredicates) {
+ScalarEvolution::ExitLimit ScalarEvolution::howManyLessThans(
+    const SCEV *LHS, SCEVUse RHS, const Loop *L, LoopGuards &Guards,
+    bool IsSigned, bool Invert, bool ControlsOnlyExit, bool AllowPredicates) {
   SmallVector<const SCEVPredicate *> Predicates;
-
-  LoopGuards Guards = LoopGuards::collectOnDemand(L, *this);
 
   // FIXME: Extend the non-invariant RHS analysis to greater-than comparisons.
   if (Invert && !isLoopInvariant(RHS, L))
