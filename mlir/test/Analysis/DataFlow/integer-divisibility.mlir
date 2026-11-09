@@ -150,3 +150,63 @@ func.func @affine_apply_mul_plus_const(%arg0 : index) -> index {
   %1 = "test.int_divisibility"(%0) : (index) -> index
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: @muli_wrapping
+func.func @muli_wrapping(%arg0 : i64) -> i64 {
+  %c6 = arith.constant 6 : i64
+  %0 = arith.muli %arg0, %c6 : i64
+  // 6 has power-of-two factor 2 only, so wrapping preserves just that.
+  // CHECK: divisibility = "udiv = 2, sdiv = 2"
+  %1 = "test.int_divisibility"(%0) : (i64) -> i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @muli_nuw
+func.func @muli_nuw(%arg0 : i64) -> i64 {
+  %c6 = arith.constant 6 : i64
+  %0 = arith.muli %arg0, %c6 overflow<nuw> : i64
+  // nuw preserves the full unsigned divisor 6; signed still wraps to 2.
+  // CHECK: divisibility = "udiv = 6, sdiv = 2"
+  %1 = "test.int_divisibility"(%0) : (i64) -> i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @muli_nsw
+func.func @muli_nsw(%arg0 : i64) -> i64 {
+  %c6 = arith.constant 6 : i64
+  %0 = arith.muli %arg0, %c6 overflow<nsw> : i64
+  // nsw preserves the full signed divisor 6; unsigned still wraps to 2.
+  // CHECK: divisibility = "udiv = 2, sdiv = 6"
+  %1 = "test.int_divisibility"(%0) : (i64) -> i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @muli_nuw_nsw
+func.func @muli_nuw_nsw(%arg0 : i64) -> i64 {
+  %c6 = arith.constant 6 : i64
+  %0 = arith.muli %arg0, %c6 overflow<nsw, nuw> : i64
+  // With both no-wrap flags the full divisor 6 survives in both interpretations.
+  // CHECK: divisibility = "udiv = 6, sdiv = 6"
+  %1 = "test.int_divisibility"(%0) : (i64) -> i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @muli_power_of_two
+func.func @muli_power_of_two(%arg0 : i64) -> i64 {
+  %c4 = arith.constant 4 : i64
+  %0 = arith.muli %arg0, %c4 : i64
+  // 4 is already a power of two, so wrapping preserves it unchanged.
+  // CHECK: divisibility = "udiv = 4, sdiv = 4"
+  %1 = "test.int_divisibility"(%0) : (i64) -> i64
+  return %1 : i64
+}
