@@ -1614,6 +1614,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
                                           Ctx.CostKind);
   }
+  case VPInstruction::NumActiveLanes: {
+    Type *ElementTy = getOperand(0)->getScalarType();
+    auto *MaskTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getExtendedReductionCost(
+        Instruction::Add, /*IsUnsigned=*/true, getScalarType(), MaskTy,
+        /*FMF=*/{}, Ctx.CostKind);
+  }
   case VPInstruction::BranchOnCount: {
     // If TC <= VF then this is just a branch.
     // FIXME: Removing the branch happens in simplifyBranchConditionForVFAndUF
