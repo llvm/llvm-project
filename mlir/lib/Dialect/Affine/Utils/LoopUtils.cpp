@@ -2335,6 +2335,29 @@ static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
   return true;
 }
 
+/// Determine whether an affine.if condition is always true or false without
+/// relying on enclosing loop bounds, which may not hold at the copy location.
+static std::optional<bool> getConstantAffineIfCondition(AffineIfOp ifOp) {
+  IntegerSet set = ifOp.getIntegerSet();
+  SmallVector<Value> operands(ifOp.getOperands());
+  canonicalizeSetAndOperands(&set, &operands);
+  set = simplifyIntegerSet(set);
+  if (set.isEmptyIntegerSet())
+    return false;
+
+  bool allConstant = true;
+  for (auto [expr, isEq] : llvm::zip(set.getConstraints(), set.getEqFlags())) {
+    auto constant = dyn_cast<AffineConstantExpr>(expr);
+    if (!constant) {
+      allConstant = false;
+      continue;
+    }
+    if (isEq ? constant.getValue() != 0 : constant.getValue() < 0)
+      return false;
+  }
+  return allConstant ? std::optional<bool>(true) : std::nullopt;
+}
+
 LogicalResult
 mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
                                      const AffineCopyOptions &copyOptions,
@@ -2369,6 +2392,9 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
   // replaced with.
   DenseMap<Value, Value> fastBufferMap;
 
+  // Cache condition values, including conditions that cannot be determined.
+  DenseMap<Operation *, std::optional<bool>> ifConditions;
+
   // To check for errors when walking the block.
   bool error = false;
 
@@ -2396,6 +2422,37 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
     if (!memref.getParentRegion()->isAncestor(block->getParent())) {
       LDBG() << "memref definition is inside of the depth at "
              << "which copy-in/copy-out would happen";
+      return;
+    }
+
+    // MemRefRegion does not account for affine.if conditions. Ignore accesses
+    // in provably unreachable branches, and otherwise require every enclosing
+    // condition within the copy range to be known. Conditions enclosing the
+    // range itself remain in place and need not be checked.
+    bool hasUnknownCondition = false;
+    for (Operation *parent = opInst->getParentOp();
+         parent != block->getParentOp(); parent = parent->getParentOp()) {
+      auto ifOp = dyn_cast<AffineIfOp>(parent);
+      if (!ifOp)
+        continue;
+      auto [it, inserted] = ifConditions.try_emplace(ifOp);
+      if (inserted)
+        it->second = getConstantAffineIfCondition(ifOp);
+      std::optional<bool> condition = it->second;
+      if (!condition) {
+        hasUnknownCondition = true;
+        // An outer condition may still make this access unreachable.
+        continue;
+      }
+      bool inThen = ifOp.getThenRegion().isAncestor(opInst->getParentRegion());
+      if (*condition != inThen)
+        return;
+    }
+    if (hasUnknownCondition) {
+      // Reject the entire range before rewriting any accesses, including those
+      // to the same memref outside the conditional.
+      LDBG() << "cannot generate copies across an unknown affine.if condition";
+      error = true;
       return;
     }
 
