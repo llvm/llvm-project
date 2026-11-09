@@ -41,7 +41,7 @@ define void @calls(i8 %x, i8 %y, i1 %c) {
 ; CHECK-NEXT:    call void @declaration(i8 zeroext [[X]], i8 signext [[Y]])
 ; CHECK-NEXT:    call void @interposable_definition(i8 zeroext [[X]], i8 signext [[Y]])
 ; CHECK-NEXT:    call void @inexact_definition(i8 zeroext [[X]], i8 signext [[Y]])
-; CHECK-NEXT:    call void @exact_definition(i8 zeroext [[X]], i8 signext [[Y]])
+; CHECK-NEXT:    call void @exact_definition(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    call void @exact_definition_with_ext(i8 zeroext [[X]], i8 signext [[Y]])
 ; CHECK-NEXT:    call void @exact_definition_with_ext(i8 signext [[X]], i8 zeroext [[Y]])
 ; CHECK-NEXT:    call void @exact_definition(i1 zeroext [[C]], i1 signext [[C]])
