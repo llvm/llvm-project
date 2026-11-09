@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
+#include <map>
 
 #define DEBUG_TYPE "gcn-create-vopd"
 STATISTIC(NumVOPDCreated, "Number of VOPD Insts Created.");
@@ -68,14 +69,6 @@ struct VOPDCandidate {
   bool isFeasible() const {
     return !needsMaterialization() || MaterializationReg;
   }
-};
-
-/// A scalar register which is known to hold an immediate, because \p Def
-/// wrote it with an S_MOV_B32 and nothing has written it since.
-struct KnownSGPRValue {
-  Register Reg;
-  int32_t Imm;
-  MachineInstr *Def;
 };
 
 } // namespace
@@ -122,6 +115,59 @@ namespace {
 class GCNCreateVOPD {
 public:
   const GCNSubtarget *ST = nullptr;
+  /// S_MOV_B32s which wrote a scalar register that still holds the immediate
+  /// at the current point in the block being processed, keyed by that
+  /// immediate. Entries with equal keys are in the order they became known.
+  using KnownImmMap = std::multimap<int32_t, MachineInstr *>;
+  KnownImmMap KnownImms;
+  /// The entry in KnownImms for each register which holds a known immediate.
+  DenseMap<Register, KnownImmMap::iterator> KnownRegs;
+
+  static int32_t getKnownImm(const MachineInstr &Def) {
+    return static_cast<int32_t>(Def.getOperand(1).getImm());
+  }
+
+  void addKnown(MachineInstr &Def) {
+    auto ImmIt = KnownImms.emplace(getKnownImm(Def), &Def);
+    [[maybe_unused]] bool Inserted =
+        KnownRegs.try_emplace(Def.getOperand(0).getReg(), ImmIt).second;
+    assert(Inserted && "register value should have been forgotten");
+  }
+
+  /// Forget the value of any known register which overlaps \p Reg.
+  void forgetOverlapping(MCRegister Reg) {
+    if (KnownRegs.empty())
+      return;
+    // Every register which overlaps an SGPR has an SGPR base class, so this
+    // cheaply skips vector registers and the few registers without a base
+    // class.
+    const SIRegisterInfo *TRI = ST->getRegisterInfo();
+    const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
+    if (!RC || !SIRegisterInfo::isSGPRClass(RC))
+      return;
+    for (MCRegister Alias : TRI->sub_and_superregs_inclusive(Reg)) {
+      auto It = KnownRegs.find(Alias);
+      if (It == KnownRegs.end())
+        continue;
+      KnownImms.erase(It->second);
+      KnownRegs.erase(It);
+    }
+  }
+
+  /// Forget the value of any known register which \p RegMask clobbers.
+  void forgetClobbered(const uint32_t *RegMask) {
+    KnownRegs.remove_if([&](const auto &Entry) {
+      if (!MachineOperand::clobbersPhysReg(RegMask, Entry.first))
+        return false;
+      KnownImms.erase(Entry.second);
+      return true;
+    });
+  }
+
+  void clearKnown() {
+    KnownRegs.clear();
+    KnownImms.clear();
+  }
 
   void
   assignMaterializationRegisters(MachineBasicBlock &MBB,
@@ -218,27 +264,26 @@ public:
     }
   }
 
-  /// Update \p Known for the instructions in [\p Begin, \p End).
+  /// Update the known register values for the instructions in
+  /// [\p Begin, \p End).
   void trackKnownValues(MachineBasicBlock::iterator Begin,
-                        MachineBasicBlock::iterator End,
-                        SmallVectorImpl<KnownSGPRValue> &Known) const {
-    const SIRegisterInfo *TRI = ST->getRegisterInfo();
+                        MachineBasicBlock::iterator End) {
     for (MachineInstr &MI : make_range(Begin, End)) {
       if (MI.isDebugInstr())
         continue;
-      erase_if(Known, [&](const KnownSGPRValue &K) {
-        return MI.modifiesRegister(K.Reg, TRI);
-      });
-      if (MI.getOpcode() == AMDGPU::S_MOV_B32 && MI.getOperand(1).isImm() &&
-          AMDGPU::SGPR_32RegClass.contains(MI.getOperand(0).getReg())) {
-        Known.push_back({MI.getOperand(0).getReg(),
-                         static_cast<int32_t>(MI.getOperand(1).getImm()), &MI});
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isRegMask())
+          forgetClobbered(MO.getRegMask());
+        else if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical())
+          forgetOverlapping(MO.getReg());
       }
+      if (MI.getOpcode() == AMDGPU::S_MOV_B32 && MI.getOperand(1).isImm() &&
+          AMDGPU::SGPR_32RegClass.contains(MI.getOperand(0).getReg()))
+        addKnown(MI);
     }
   }
 
-  void materializeLiteral(const SIInstrInfo &TII, VOPDCandidate &Candidate,
-                          SmallVectorImpl<KnownSGPRValue> &Known) {
+  void materializeLiteral(const SIInstrInfo &TII, VOPDCandidate &Candidate) {
     if (!Candidate.needsMaterialization())
       return;
 
@@ -252,30 +297,30 @@ public:
     const SIRegisterInfo *TRI = ST->getRegisterInfo();
     MachineInstr *InsertPt = Candidate.Match.InOrder[0];
     Register Reg;
-    auto Reusable = find_if(Known, [&](const KnownSGPRValue &K) {
-      return K.Imm == Imm && all_of(Fixups, [&](const VOPDLiteralFixup &F) {
-               return F.SlotRC->contains(K.Reg);
-             });
+    auto Range = KnownImms.equal_range(Imm);
+    auto Reusable = find_if(make_range(Range), [&](const auto &Entry) {
+      Register KnownReg = Entry.second->getOperand(0).getReg();
+      return all_of(Fixups, [&](const VOPDLiteralFixup &F) {
+        return F.SlotRC->contains(KnownReg);
+      });
     });
-    if (Reusable != Known.end()) {
+    if (Reusable != Range.second) {
       // Extend the live range of the register to this pair.
-      Reg = Reusable->Reg;
-      Reusable->Def->getOperand(0).setIsDead(false);
+      MachineInstr *Def = Reusable->second;
+      Reg = Def->getOperand(0).getReg();
+      Def->getOperand(0).setIsDead(false);
       for (MachineInstr &MI :
-           make_range(std::next(Reusable->Def->getIterator()),
-                      InsertPt->getIterator()))
+           make_range(std::next(Def->getIterator()), InsertPt->getIterator()))
         MI.clearRegisterKills(Reg, TRI);
       ++NumLiteralsReused;
     } else {
       // The move overwrites whatever value the register held.
       Reg = Candidate.MaterializationReg;
-      erase_if(Known, [&](const KnownSGPRValue &K) {
-        return TRI->regsOverlap(K.Reg, Reg);
-      });
+      forgetOverlapping(Reg);
       MachineInstr *Mov = BuildMI(*InsertPt->getParent(), InsertPt, DebugLoc(),
                                   TII.get(AMDGPU::S_MOV_B32), Reg)
                               .addImm(Imm);
-      Known.push_back({Reg, Imm, Mov});
+      addKnown(*Mov);
       ++NumLiteralsMaterialized;
     }
 
@@ -389,18 +434,18 @@ public:
 
       assignMaterializationRegisters(MBB, Candidates);
       SmallVector<VOPDCandidate *, 8> Selected = selectCandidates(Candidates);
-      SmallVector<KnownSGPRValue, 8> Known;
       MachineBasicBlock::iterator ScanPos = MBB.begin();
       for (VOPDCandidate *Candidate : Selected) {
         MachineBasicBlock::iterator PairBegin(Candidate->Match.InOrder[0]);
         MachineBasicBlock::iterator PairEnd =
             std::next(MachineBasicBlock::iterator(Candidate->Match.InOrder[1]));
-        trackKnownValues(ScanPos, PairBegin, Known);
+        trackKnownValues(ScanPos, PairBegin);
         applyCommutes(*SII, Candidate->Match);
-        materializeLiteral(*SII, *Candidate, Known);
+        materializeLiteral(*SII, *Candidate);
         Changed |= doReplace(SII, Candidate->Match);
         ScanPos = PairEnd;
       }
+      clearKnown();
     }
 
     return Changed;
