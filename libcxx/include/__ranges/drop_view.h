@@ -166,12 +166,6 @@ inline constexpr bool __is_passthrough_specialization<span<_Tp, _Extent>> = true
 template <class _CharT, class _Traits>
 inline constexpr bool __is_passthrough_specialization<basic_string_view<_CharT, _Traits>> = true;
 
-template <class _Tp>
-inline constexpr bool __is_string_view = false;
-
-template <class _CharT, class _Traits>
-inline constexpr bool __is_string_view<basic_string_view<_CharT, _Traits>> = true;
-
 template <class _Np, class _Bound>
 inline constexpr bool __is_passthrough_specialization<iota_view<_Np, _Bound>> = true;
 
@@ -230,7 +224,7 @@ struct __fn {
     requires(!__is_empty_view<_RawRange> && random_access_range<_RawRange> && sized_range<_RawRange> &&
              __is_passthrough_specialization<_RawRange>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __rng, _Np&& __n) const noexcept(
-      (__is_string_view<_RawRange> && is_nothrow_convertible_v<_Np, const _Dist&>) ||
+      (__is_std_string_view<_RawRange> && is_nothrow_convertible_v<_Np, const _Dist&>) ||
       noexcept(__passthrough_type_t<_RawRange>(
           ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)), ranges::end(__rng))))
       -> decltype(__passthrough_type_t<_RawRange>(

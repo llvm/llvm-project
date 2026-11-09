@@ -15,12 +15,30 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <span>
 #include <string_view>
 #include <utility>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "test_range.h"
+
+struct ThrowingCount {
+  operator std::ptrdiff_t() const noexcept(false) { return 1; }
+};
+
+// Converts to `std::ptrdiff_t` without throwing, but binding it to `const std::ptrdiff_t&` may throw.
+struct ThrowingReferenceCount {
+  operator std::ptrdiff_t() const noexcept { return 1; }
+  template <class T>
+    requires std::same_as<T, const std::ptrdiff_t>
+  operator T&() const noexcept(false) {
+    return value;
+  }
+
+  std::ptrdiff_t value = 1;
+};
 
 struct SizedView : std::ranges::view_base {
   int* begin_ = nullptr;
@@ -150,6 +168,11 @@ constexpr bool test() {
 
   // `views::drop(string_view, n)` returns a `string_view`.
   {
+    // libc++ extension: `views::drop(string_view, n)` is noexcept unless converting `n` may throw.
+    LIBCPP_STATIC_ASSERT(noexcept(std::views::drop(std::string_view{}, 1)));
+    LIBCPP_STATIC_ASSERT(!noexcept(std::views::drop(std::string_view{}, ThrowingCount{})));
+    LIBCPP_STATIC_ASSERT(!noexcept(std::views::drop(std::string_view{}, ThrowingReferenceCount{})));
+
     {
       std::string_view sv = "abcdef";
       std::same_as<decltype(sv)> decltype(auto) result = sv | std::views::drop(2);
