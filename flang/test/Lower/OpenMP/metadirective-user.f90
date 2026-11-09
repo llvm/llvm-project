@@ -799,6 +799,66 @@ subroutine test_same_condition_match_any(a)
   !$omp &      barrier)
 end subroutine
 
+! Both WHEN clauses score 3. The second also matches through `vendor(llvm)` when
+! `a` is false, and its selector still includes the condition, so the first is
+! its strict subset and TASKYIELD is always selected.
+! CHECK-LABEL: func.func @_QPtest_unconditional_and_runtime_condition_match_any(
+! CHECK-NOT:     {{fir.if|omp.taskwait}}
+! CHECK:         omp.taskyield
+! CHECK-NOT:     {{fir.if|omp.taskwait}}
+! CHECK:         return
+subroutine test_unconditional_and_runtime_condition_match_any(a)
+  logical, intent(in) :: a
+  !$omp metadirective &
+  !$omp & when(implementation={vendor(score(2): llvm), extension(match_any)}: &
+  !$omp &      taskwait) &
+  !$omp & when(user={condition(a)}, &
+  !$omp &      implementation={vendor(score(2): llvm), extension(match_any)}: &
+  !$omp &      taskyield)
+end subroutine
+
+! Both WHEN clauses score 5, and the second adds `kind(host)` to the same
+! condition but omits its directive. When `a` is false, the first still matches
+! through `vendor(llvm)`, but it's a strict subset of the second, so nothing is
+! selected. When `a` is true, TASKWAIT is still selected, although the first
+! selector is a strict subset of the second there as well. #231676 ranks the
+! original selectors and would select nothing in both cases.
+! CHECK-LABEL: func.func @_QPtest_omitted_directive_match_any(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECLA:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK:         %[[LOADA:.*]] = fir.load %[[DECLA]]#0
+! CHECK:         %[[CONDA:.*]] = fir.convert %[[LOADA]] : (!fir.logical<4>) -> i1
+! CHECK:         fir.if %[[CONDA]] {
+! CHECK-NEXT:      omp.taskwait
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:    }
+! CHECK-NEXT:    return
+subroutine test_omitted_directive_match_any(a)
+  logical, intent(in) :: a
+  !$omp metadirective &
+  !$omp & when(user={condition(a)}, &
+  !$omp &      implementation={vendor(score(4): llvm), extension(match_any)}: &
+  !$omp &      taskwait) &
+  !$omp & when(user={condition(a)}, device={kind(host)}, &
+  !$omp &      implementation={vendor(score(3): llvm), extension(match_any)}:)
+end subroutine
+
+! Under match_any, the omitted directive's selector includes its condition, so
+! the BARRIER selector is a strict subset of it and nothing is selected, as with
+! an explicit NOTHING. Without match_any, an omitted directive is ranked without
+! its condition, and BARRIER wins the tie (see
+! test_dynamic_implicit_nothing_tie_break).
+! CHECK-LABEL: func.func @_QPtest_omitted_directive_match_any_unconditional(
+! CHECK-NOT:     {{fir.if|omp.barrier}}
+! CHECK:         return
+subroutine test_omitted_directive_match_any_unconditional(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(implementation={vendor(llvm), extension(match_any)}, &
+  !$omp &      user={condition(flag)}:) &
+  !$omp & when(implementation={vendor(llvm), extension(match_any)}: barrier)
+end subroutine
+
 ! Constant conditions are compared by truth value, whatever their kind.
 ! CHECK-LABEL: func.func @_QPtest_constant_condition_kinds(
 ! CHECK-NOT:     omp.taskyield
