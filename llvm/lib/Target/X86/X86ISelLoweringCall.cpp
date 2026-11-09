@@ -2166,12 +2166,32 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     isTailCall = IsSibcall || IsMustTail || ShouldGuaranteeTCO;
   }
 
+  // Arguments passed indirectly (for example byval arguments on Win64) point
+  // at temporaries in this frame, which a tail call that isn't a sibcall
+  // discards.
+  // TODO: Forwarding an incoming byval pointer unchanged could be allowed,
+  // since it points into the caller's frame, which outlives the tail call. It
+  // would need to be a direct, non-duplicated use of the byval argument, no
+  // larger than the incoming one, and not captured.
+  const char *MustTailFailure = "failed to perform tail call elimination on a "
+                                "call site marked musttail";
+  if (isTailCall && !IsSibcall && any_of(ArgLocs, [](const CCValAssign &VA) {
+        return VA.getLocInfo() == CCValAssign::Indirect;
+      })) {
+    MustTailFailure = "cannot guarantee a tail call with arguments passed "
+                      "indirectly";
+    isTailCall = false;
+  }
+
   if (isTailCall)
     ++NumTailCalls;
 
-  if (IsMustTail && !isTailCall)
-    report_fatal_error("failed to perform tail call elimination on a call "
-                       "site marked musttail");
+  if (IsMustTail && !isTailCall) {
+    errorUnsupported(DAG, dl, MustTailFailure);
+    for (const ISD::InputArg &In : Ins)
+      InVals.push_back(DAG.getUNDEF(In.VT));
+    return Chain;
+  }
 
   // Unwinding through a callee that tail-calls with a different stack-arg size
   // only works on Win64 if this frame is found via a frame pointer.
