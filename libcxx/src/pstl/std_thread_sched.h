@@ -180,8 +180,8 @@ public:
   void apply(std::size_t iterations, void* ctx, void (*func)(void*, std::size_t)) noexcept;
 
 private:
-  TaskQueue* acquire_queue(std::thread::id thread_id);
-  void release_queue(TaskQueue* queue);
+  TaskQueue* acquire_queue(std::thread::id thread_id) noexcept;
+  void release_queue(TaskQueue* queue) noexcept;
   void worker_thread(size_t worker_index) noexcept;
   bool is_parallelism_disabled() const noexcept;
 
@@ -315,7 +315,7 @@ inline void Scheduler::worker_thread(size_t worker_index) noexcept {
   }
 }
 
-inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) {
+inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) noexcept {
   // First check if this thread already owns a queue and is coming in via a nested invocation.
   for (size_t i = 0; i < m_queues_count; ++i) {
     if (m_queue_owners[i].id.load() == thread_id) {
@@ -343,7 +343,7 @@ inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) {
   return nullptr;
 }
 
-inline void Scheduler::release_queue(TaskQueue* queue) {
+inline void Scheduler::release_queue(TaskQueue* queue) noexcept {
   size_t idx = static_cast<size_t>(queue - m_queues.get());
   m_queue_owners[idx].acquire_count--;
   if (m_queue_owners[idx].acquire_count == 0) {
