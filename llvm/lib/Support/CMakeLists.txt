@@ -46,9 +46,10 @@ if( WIN32 )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
   # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
-  set(system_libs ${system_libs} psapi ole32 uuid advapi32 ws2_32 ntdll)
-  if( NOT LLVM_WINDOWS_RESTRICTED_APIS )
-    list(APPEND system_libs shell32)
+  if( LLVM_WINDOWS_RESTRICTED_APIS )
+    set(system_libs ${system_libs} psapi ole32 uuid advapi32 ws2_32 ntdll)
+  else()
+    set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
   endif()
   if( HAVE_WINDOWS_ICU )
     list(APPEND system_libs icu)
