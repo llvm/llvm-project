@@ -55,7 +55,7 @@ void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     flushFPMsToMPM(PMW);
     addModulePass(SystemZAlignGlobalsPass(), PMW);
-    // TODO(boomanaiden154): Add SystemZTDCPass
+    addFunctionPass(SystemZTDCPass(getTM()), PMW);
     addFunctionPass(LoopDataPrefetchPass(), PMW);
   }
 
@@ -67,9 +67,8 @@ void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 Error SystemZCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   addMachineFunctionPass(SystemZISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
 
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZLDCleanupPass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZLDCleanupPass(), PMW);
 
   return Error::success();
 }
