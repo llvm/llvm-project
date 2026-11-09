@@ -7,6 +7,11 @@
 ; is not attributeless.
 
 ; Compiled with -O2 and reduced from the source below.
+; Note that although f() is not emitted as a separate or inlined function in
+; LLVM IR (compiled with high optimization level), its local type B leaks out
+; of the scope of subprogram f() when it is used as a template parameter in
+; use<B>(). Therefore, an abstract subprogram for f() must be emitted in DWARF
+; to serve as a container for B.
 ;
 ; template <typename T> void use() {}
 ; inline auto f() {

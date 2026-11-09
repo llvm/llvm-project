@@ -2041,6 +2041,10 @@ DIE *DwarfCompileUnit::getOrCreateSubprogramDIE(const DISubprogram *SP,
 
     // A subprogram that is neither emitted nor inlined in emitted code can
     // only be represented by an abstract DIE.
+    // Abstract DIE may be necessary for the subprogram when an IR function
+    // and all its inlined instances are optimized away, yet its local type
+    // leaks outside the subprogram's scope (e.g., when used as a template type
+    // parameter).
     if (DD->allFunctionsProcessed() && !DD->isProcessedSubprogram(SP))
       return &AbstractCU.getOrCreateAbstractSubprogramDIE(SP);
   }
