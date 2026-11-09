@@ -1087,7 +1087,8 @@ public:
 
   /// Return whether loads from an address space are invariant.
   bool isInvariantAddressSpace(LangAS AS) const {
-    return AS == LangAS::opencl_constant || AS == LangAS::cuda_constant;
+    return AS == LangAS::opencl_constant || AS == LangAS::cuda_constant ||
+           AS == LangAS::hlsl_constant;
   }
 
   /// Return whether loads from a global variable are invariant.

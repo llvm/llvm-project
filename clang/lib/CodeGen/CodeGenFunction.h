@@ -2788,15 +2788,14 @@ public:
   LValue MakeRawAddrLValue(llvm::Value *V, QualType T, CharUnits Alignment,
                            AlignmentSource Source = AlignmentSource::Type) {
     Address Addr(V, ConvertTypeForMem(T), Alignment);
-    return LValue::MakeAddr(Addr, T, getContext(), LValueBaseInfo(Source),
-                            CGM.getTBAAAccessInfo(T));
+    return MakeAddrLValue(Addr, T, LValueBaseInfo(Source),
+                          CGM.getTBAAAccessInfo(T));
   }
 
   LValue
   MakeAddrLValueWithoutTBAA(Address Addr, QualType T,
                             AlignmentSource Source = AlignmentSource::Type) {
-    return LValue::MakeAddr(Addr, T, getContext(), LValueBaseInfo(Source),
-                            TBAAAccessInfo());
+    return MakeAddrLValue(Addr, T, LValueBaseInfo(Source), TBAAAccessInfo());
   }
 
   /// Given a value of type T* that may not be to a complete object, construct

@@ -6356,11 +6356,12 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
 }
 
 bool CodeGenModule::isGlobalVarInvariant(const VarDecl *D) {
-  // Only OpenCL and CUDA device globals are handled here. On other targets,
-  // GetGlobalVarAddressSpace can emit duplicate declaration diagnostics.
-  if (!LangOpts.OpenCL && !(LangOpts.CUDA && LangOpts.CUDAIsDevice))
-    return false;
-  return isInvariantAddressSpace(GetGlobalVarAddressSpace(D));
+  if (isInvariantAddressSpace(D->getType().getAddressSpace()))
+    return true;
+  // CUDA and HIP assign constant storage from declaration attributes, not
+  // from the variable's type.
+  return LangOpts.CUDA && LangOpts.CUDAIsDevice &&
+         isInvariantAddressSpace(GetGlobalVarAddressSpace(D));
 }
 
 LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
