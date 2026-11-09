@@ -2208,6 +2208,12 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Emit);
   }
 
+  if (BuiltinID == clang::ARM::BI_ReadWriteBarrier ||
+      BuiltinID == clang::ARM::BI_ReadBarrier ||
+      BuiltinID == clang::ARM::BI_WriteBarrier)
+    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                               llvm::SyncScope::SingleThread);
+
   if (BuiltinID == clang::ARM::BI__builtin_arm_dbg) {
     Value *Option = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::arm_dbg), Option);
