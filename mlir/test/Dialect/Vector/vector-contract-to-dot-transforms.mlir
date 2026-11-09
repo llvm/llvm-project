@@ -406,6 +406,34 @@ func.func @batch_contract_fmf(%arg0: vector<2x2xf32>,
   return %0 : vector<2xf32>
 }
 
+// CHECK-LABEL: @negative_contract_to_dot_matvec_scalable
+//       CHECK: vector.contract
+func.func @negative_contract_to_dot_matvec_scalable(%arg0: vector<[2]x3xf32>,
+                        %arg1: vector<3xf32>,
+                        %arg2: vector<[2]xf32>) -> vector<[2]xf32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<[2]x3xf32>, vector<3xf32> into vector<[2]xf32>
+  return %0 : vector<[2]xf32>
+}
+
+// CHECK-LABEL: func @contract_to_dot_matvec_scalable_reduction
+//  CHECK-SAME:   %[[A:.*]]: vector<2x[8]xf32>, %[[B:.*]]: vector<[8]xf32>, %[[ACC:.*]]: vector<2xf32>
+//       CHECK:   %[[ROW0:.*]] = vector.extract %[[A]][0] : vector<[8]xf32> from vector<2x[8]xf32>
+//       CHECK:   %[[MUL0:.*]] = arith.mulf %[[ROW0]], %[[B]] : vector<[8]xf32>
+//       CHECK:   vector.reduction <add>, %[[MUL0]] : vector<[8]xf32> into f32
+//       CHECK:   %[[ROW1:.*]] = vector.extract %[[A]][1] : vector<[8]xf32> from vector<2x[8]xf32>
+//       CHECK:   %[[MUL1:.*]] = arith.mulf %[[ROW1]], %[[B]] : vector<[8]xf32>
+//       CHECK:   vector.reduction <add>, %[[MUL1]] : vector<[8]xf32> into f32
+//       CHECK:   %[[RES:.*]] = arith.addf %{{.*}}, %[[ACC]] : vector<2xf32>
+//       CHECK:   return %[[RES]] : vector<2xf32>
+func.func @contract_to_dot_matvec_scalable_reduction(%arg0: vector<2x[8]xf32>,
+                        %arg1: vector<[8]xf32>,
+                        %arg2: vector<2xf32>) -> vector<2xf32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<2x[8]xf32>, vector<[8]xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op

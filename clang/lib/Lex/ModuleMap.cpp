@@ -508,7 +508,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
     // Suppose we have a pair of files foo.cpp / foo.h.
     // Our build system may want to verify that foo.cpp only uses things
     // declared in the implementation_deps of foo, while foo.h only uses things
-    // declared in interface_deps. This requires them to be two seperate
+    // declared in interface_deps. This requires them to be two separate
     // modules, foo_Private and foo. This check is required to ensure that foo.h
     // is still checked. Otherwise, foo.h would never be checked, since it will
     // never be the top-level module.

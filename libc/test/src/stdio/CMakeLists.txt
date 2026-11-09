@@ -111,7 +111,9 @@ add_libc_test(
     setvbuf_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.stdio.clearerr
     libc.src.stdio.fclose
+    libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fwrite
@@ -177,8 +179,10 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.hdr.errno_macros
     libc.hdr.types.off_t
     libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
     libc.src.stdio.feof
