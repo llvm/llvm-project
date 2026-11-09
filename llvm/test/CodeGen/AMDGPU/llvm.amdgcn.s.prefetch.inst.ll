@@ -78,6 +78,43 @@ define amdgpu_ps void @prefetch_inst_sgpr_imm_base_imm_len(ptr addrspace(4) inre
   ret void
 }
 
+define amdgpu_ps void @prefetch_inst_sgpr_base_large_imm_len(ptr addrspace(4) inreg %ptr) {
+; GFX12-LABEL: prefetch_inst_sgpr_base_large_imm_len:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 8
+; GFX12-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: prefetch_inst_sgpr_base_large_imm_len:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 8
+; GFX1250-NEXT:    s_endpgm
+  tail call void @llvm.amdgcn.s.prefetch.inst.p4(ptr addrspace(4) %ptr, i32 40)
+  ret void
+}
+
+define amdgpu_ps void @prefetch_inst_sgpr_imm_base_large_imm_len(ptr addrspace(4) inreg %ptr) {
+; GFX12-LABEL: prefetch_inst_sgpr_imm_base_large_imm_len:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_prefetch_inst s[0:1], 0x200, null, 8
+; GFX12-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: prefetch_inst_sgpr_imm_base_large_imm_len:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_prefetch_inst s[0:1], 0x200, null, 8
+; GFX1250-NEXT:    s_endpgm
+  %gep = getelementptr i32, ptr addrspace(4) %ptr, i32 128
+  tail call void @llvm.amdgcn.s.prefetch.inst.p4(ptr addrspace(4) %gep, i32 40)
+  ret void
+}
+
 define amdgpu_ps void @prefetch_inst_vgpr_base_sgpr_len(ptr addrspace(4) %ptr, i32 inreg %len) {
 ; GFX12-LABEL: prefetch_inst_vgpr_base_sgpr_len:
 ; GFX12:       ; %bb.0:

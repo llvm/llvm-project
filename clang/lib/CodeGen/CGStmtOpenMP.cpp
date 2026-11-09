@@ -173,6 +173,7 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
   void emitPreInitStmt(CodeGenFunction &CGF, const OMPLoopBasedDirective &S) {
     const Stmt *PreInits;
     CodeGenFunction::OMPMapVars PreCondVars;
+    SmallVector<const Decl *, 4> DoacrossOnlyDecls;
     if (auto *LD = dyn_cast<OMPLoopDirective>(&S)) {
       // Emit init, __range, __begin and __end variables for C++ range loops.
       (void)OMPLoopBasedDirective::doForAllLoops(
@@ -214,6 +215,30 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
         }
       }
       (void)PreCondVars.apply(CGF);
+      // The pre-inits also use the bounds of the loops that an 'ordered(n)'
+      // clause counts beyond the collapsed ones. Such a loop is emitted as a
+      // regular loop in the body and declares its own helpers, so these copies
+      // only live until the pre-inits.
+      if (const auto *C = LD->getSingleClause<OMPOrderedClause>())
+        (void)OMPLoopBasedDirective::doForAllLoops(
+            LD->getInnermostCapturedStmt()->getCapturedStmt(),
+            /*TryImperfectlyNestedLoops=*/true,
+            C->getLoopNumIterations().size(),
+            [&CGF, LD, &DoacrossOnlyDecls](unsigned Cnt, const Stmt *CurStmt) {
+              const auto *CXXFor = dyn_cast<CXXForRangeStmt>(CurStmt);
+              if (!CXXFor || Cnt < LD->getLoopsNumber())
+                return false;
+              for (const Stmt *Helper : std::initializer_list<const Stmt *>{
+                       CXXFor->getInit(), CXXFor->getRangeStmt(),
+                       CXXFor->getBeginStmt(), CXXFor->getEndStmt()}) {
+                if (!Helper)
+                  continue;
+                CGF.EmitStmt(Helper);
+                if (const auto *DS = dyn_cast<DeclStmt>(Helper))
+                  llvm::append_range(DoacrossOnlyDecls, DS->decls());
+              }
+              return false;
+            });
       PreInits = LD->getPreInits();
     } else if (const auto *Tile = dyn_cast<OMPTileDirective>(&S)) {
       PreInits = Tile->getPreInits();
@@ -234,6 +259,8 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
     doEmitPreinits(PreInits);
+    for (const Decl *D : DoacrossOnlyDecls)
+      CGF.eraseLocalDecl(D);
     PreCondVars.restore(CGF);
   }
 
@@ -1063,8 +1090,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
   llvm::SmallVector<llvm::Value *, 16> CallArgs;
   assert(CD->getContextParamPosition() == 0 &&
          "Expected context param at position 0 for target regions");
-  assert(RD->getNumFields() + 1 == F->getNumOperands() &&
-         "Argument count mismatch");
+  assert(RD->getNumFields() + 1 == F->arg_size() && "Argument count mismatch");
 
   for (auto [FD, InnerParam, SlotIdx] : llvm::zip(
            RD->fields(), F->args(), llvm::seq<unsigned>(RD->getNumFields()))) {
@@ -2398,7 +2424,8 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPMetaDirective(const OMPMetaDirective &S) {
-  EmitStmt(S.getIfStmt());
+  // TODO: Select the variant at runtime.
+  EmitStmt(S.variants().front());
 }
 
 namespace {
@@ -3443,35 +3470,36 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
   emitOMPSimdDirective(S, *this, CGM);
 }
 
+/// Emit a loop-nest transformation followed by its loop variable finalization,
+/// which restores the loop-exit values as required by OpenMP 6.0.
+static void emitLoopNestTransformation(
+    CodeGenFunction &CGF,
+    const OMPCanonicalLoopNestTransformationDirective &S) {
+  OMPTransformDirectiveScopeRAII Scope(CGF, &S);
+  CGF.EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
+    CGF.EmitStmt(Finals);
+}
+
 void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII TileScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPStripeDirective(const OMPStripeDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII StripeScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII ReverseScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPSplitDirective(const OMPSplitDirective &S) {
-  // Emit the de-sugared statement (the split loops).
-  OMPTransformDirectiveScopeRAII SplitScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPInterchangeDirective(
     const OMPInterchangeDirective &S) {
-  // Emit the de-sugared statement.
-  OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
-  EmitStmt(S.getTransformedStmt());
+  emitLoopNestTransformation(*this, S);
 }
 
 void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
@@ -3484,7 +3512,10 @@ void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
 void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
   // Emit the de-sugared statement
   OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
+
   EmitStmt(S.getTransformedStmt());
+  if (Stmt *Finals = S.getFinals())
+    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
@@ -9102,6 +9133,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
     EmitOMPScanDirective(*SD);
     return;
   }
+  // A metadirective has no associated statement; emit its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(&D)) {
+    EmitOMPMetaDirective(*MD);
+    return;
+  }
   if (!D.hasAssociatedStmt() || !D.getAssociatedStmt())
     return;
   auto &&CodeGen = [&D](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -9165,8 +9201,8 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
       D.getDirectiveKind() == OMPD_section ||
       D.getDirectiveKind() == OMPD_master ||
       D.getDirectiveKind() == OMPD_masked ||
-      D.getDirectiveKind() == OMPD_unroll ||
-      D.getDirectiveKind() == OMPD_assume) {
+      D.getDirectiveKind() == OMPD_assume ||
+      isOpenMPLoopTransformationDirective(D.getDirectiveKind())) {
     EmitStmt(D.getAssociatedStmt());
   } else {
     auto LPCRegion =

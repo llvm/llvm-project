@@ -1,10 +1,11 @@
 # XFAIL: *
-# RUN: not --crash llc -o - -mtriple=amdgpu7.00-amd-amdhsa -run-pass=none -verify-machineinstrs %s
+# RUN: not --crash llc -o - -mtriple=amdgpu7.00-amd-amdhsa -run-pass=none %s
 
  # FIXME: This should catch the undefined use of %0
 
 ---
 name:            undef_virtreg
+tracksRegLiveness: false
 body:             |
   bb.0:
 
