@@ -6176,21 +6176,28 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
         // instead of querying the SchedModel.
         if (ST->getFixedLoadLatency())
           return (LT.first - 1) + ST->getFixedLoadLatency();
-        // Lookup the load opcode based on interleaving factor and element size
-        const unsigned Opcodes[3][4] = {
-            {AArch64::LD2Twov16b, AArch64::LD2Twov8h, AArch64::LD2Twov4s,
-             AArch64::LD2Twov2d},
-            {AArch64::LD3Threev16b, AArch64::LD3Threev8h, AArch64::LD3Threev4s,
-             AArch64::LD3Threev2d},
-            {AArch64::LD4Fourv16b, AArch64::LD4Fourv8h, AArch64::LD4Fourv4s,
-             AArch64::LD4Fourv2d},
-        };
+        // Lookup the load opcode based on whether we're using SVE, interleaving
+        // factor, and element size.
+        const unsigned Opcodes[2][3][4] = {
+            {
+                {AArch64::LD2Twov16b, AArch64::LD2Twov8h, AArch64::LD2Twov4s,
+                 AArch64::LD2Twov2d},
+                {AArch64::LD3Threev16b, AArch64::LD3Threev8h,
+                 AArch64::LD3Threev4s, AArch64::LD3Threev2d},
+                {AArch64::LD4Fourv16b, AArch64::LD4Fourv8h, AArch64::LD4Fourv4s,
+                 AArch64::LD4Fourv2d},
+            },
+            {
+                {AArch64::LD2B, AArch64::LD2H, AArch64::LD2W, AArch64::LD2D},
+                {AArch64::LD3B, AArch64::LD3H, AArch64::LD3W, AArch64::LD3D},
+                {AArch64::LD4B, AArch64::LD4H, AArch64::LD4W, AArch64::LD4D},
+            }};
         unsigned LogElemSize =
             Log2_32(DL.getTypeSizeInBits(SubVecTy->getElementType()));
         assert(LogElemSize >= 3 && LogElemSize <= 6 &&
                "Unexpected element size");
         assert(Factor <= 4 && "Unexpected interleaving factor");
-        unsigned Inst = Opcodes[Factor - 2][LogElemSize - 3];
+        unsigned Inst = Opcodes[UseScalable][Factor - 2][LogElemSize - 3];
         return getLatencyFromSchedModel(ST, Inst, Num, ST->getLoadLatency());
       }
       return Factor * Num;
