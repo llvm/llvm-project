@@ -182,6 +182,7 @@ jobs:
 
     # Configure libc fullbuild with scudo.
     - name: Configure CMake
+      shell: bash
       run: |
         export RUNTIMES="libc"
 
