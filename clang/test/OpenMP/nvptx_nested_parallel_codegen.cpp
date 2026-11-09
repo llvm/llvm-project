@@ -123,7 +123,7 @@ int main() {
 // CHECK1-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[TMP0]], i32 1 monotonic, align 4
+// CHECK1-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[TMP0]], i32 1 syncscope("device") monotonic, align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -235,7 +235,7 @@ int main() {
 // CHECK2-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[TMP0]], i32 1 monotonic, align 4
+// CHECK2-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[TMP0]], i32 1 syncscope("device") monotonic, align 4
 // CHECK2-NEXT:    ret void
 //
 //

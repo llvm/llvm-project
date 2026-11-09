@@ -38,10 +38,13 @@ namespace {
     bool UseLibcall;
     LValue LVal;
     CGBitFieldInfo BFI;
+    llvm::SyncScope::ID Scope;
+
   public:
-    AtomicInfo(CodeGenFunction &CGF, LValue &lvalue)
+    AtomicInfo(CodeGenFunction &CGF, LValue &lvalue,
+               llvm::SyncScope::ID Scope = llvm::SyncScope::System)
         : CGF(CGF), AtomicSizeInBits(0), ValueSizeInBits(0),
-          EvaluationKind(TEK_Scalar), UseLibcall(true) {
+          EvaluationKind(TEK_Scalar), UseLibcall(true), Scope(Scope) {
       assert(!lvalue.isGlobalReg());
       ASTContext &C = CGF.getContext();
       if (lvalue.isSimple()) {
@@ -1631,7 +1634,7 @@ llvm::Value *AtomicInfo::EmitAtomicLoadOp(llvm::AtomicOrdering AO,
   if (shouldCastToInt(Addr.getElementType(), CmpXchg))
     Addr = castToAtomicIntPointer(Addr);
   llvm::LoadInst *Load = CGF.Builder.CreateLoad(Addr, "atomic-load");
-  Load->setAtomic(AO);
+  Load->setAtomic(AO, Scope);
   CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Load);
 
   // Other decoration.
@@ -1705,8 +1708,9 @@ RValue AtomicInfo::EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
 /// we produce is an r-value of the atomic *value* type.
 RValue CodeGenFunction::EmitAtomicLoad(LValue src, SourceLocation loc,
                                        llvm::AtomicOrdering AO, bool IsVolatile,
-                                       AggValueSlot resultSlot) {
-  AtomicInfo Atomics(*this, src);
+                                       AggValueSlot resultSlot,
+                                       llvm::SyncScope::ID SSID) {
+  AtomicInfo Atomics(*this, src, SSID);
   return Atomics.EmitAtomicLoad(resultSlot, loc, /*AsValue=*/true, AO,
                                 IsVolatile);
 }
@@ -1796,7 +1800,7 @@ std::pair<llvm::Value *, llvm::Value *> AtomicInfo::EmitAtomicCompareExchangeOp(
   // Do the atomic store.
   Address Addr = getAtomicAddressAsAtomicIntPointer();
   auto *Inst = CGF.Builder.CreateAtomicCmpXchg(Addr, ExpectedVal, DesiredVal,
-                                               Success, Failure);
+                                               Success, Failure, Scope);
   // Other decoration.
   Inst->setVolatile(LVal.isVolatileQualified());
   Inst->setWeak(IsWeak);
@@ -2102,14 +2106,14 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue lvalue,
 /// storage for any padding that was necessary.
 void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
                                       llvm::AtomicOrdering AO, bool IsVolatile,
-                                      bool isInit) {
+                                      bool isInit, llvm::SyncScope::ID SSID) {
   // If this is an aggregate r-value, it should agree in type except
   // maybe for address-space qualification.
   assert(!rvalue.isAggregate() ||
          rvalue.getAggregateAddress().getElementType() ==
              dest.getAddress().getElementType());
 
-  AtomicInfo atomics(*this, dest);
+  AtomicInfo atomics(*this, dest, SSID);
   LValue LVal = atomics.getAtomicLValue();
 
   // If this is an initialization, just put the value there normally.
@@ -2157,7 +2161,7 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
       AO = llvm::AtomicOrdering::Release;
     // Initializations don't need to be atomic.
     if (!isInit) {
-      store->setAtomic(AO);
+      store->setAtomic(AO, SSID);
       getTargetHooks().setTargetAtomicMetadata(*this, *store);
     }
 
@@ -2212,8 +2216,9 @@ llvm::FenceInst *CodeGenFunction::emitAtomicFence(llvm::AtomicOrdering Order,
 
 void CodeGenFunction::EmitAtomicUpdate(
     LValue LVal, llvm::AtomicOrdering AO,
-    const llvm::function_ref<RValue(RValue)> &UpdateOp, bool IsVolatile) {
-  AtomicInfo Atomics(*this, LVal);
+    const llvm::function_ref<RValue(RValue)> &UpdateOp, bool IsVolatile,
+    llvm::SyncScope::ID SSID) {
+  AtomicInfo Atomics(*this, LVal, SSID);
   Atomics.EmitAtomicUpdate(AO, UpdateOp, IsVolatile);
 }
 
