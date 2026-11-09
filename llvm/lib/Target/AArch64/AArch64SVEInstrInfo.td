@@ -773,7 +773,7 @@ let Predicates = [HasSVE_or_SME] in {
 
 // Rewrites specific to selecting BIC_ZZZ.
 let Predicates = [HasSVE_or_SME] in {
-  multiclass SVEAndNotPats<ValueType VT, ValueType PT> {
+  multiclass sve_and_not_pats<ValueType VT, ValueType PT> {
     // Ordinary AND: NOT's undefined inactive lanes may take the value ~b.
     def : Pat<(and VT:$a,
                 (VT (int_aarch64_sve_not (VT (undef)), (PT srcvalue), VT:$b))),
@@ -808,12 +808,12 @@ let Predicates = [HasSVE_or_SME] in {
     def : Pat<(VT (AArch64and_p (PT srcvalue), VT:$a, VT:$b)),
               (AND_ZZZ $a, $b)>;
   }
-  defm : SVEAndNotPats<nxv16i8, nxv16i1>;
-  defm : SVEAndNotPats<nxv8i16, nxv8i1>;
-  defm : SVEAndNotPats<nxv4i32, nxv4i1>;
-  defm : SVEAndNotPats<nxv2i64, nxv2i1>;
+  defm : sve_and_not_pats<nxv16i8, nxv16i1>;
+  defm : sve_and_not_pats<nxv8i16, nxv8i1>;
+  defm : sve_and_not_pats<nxv4i32, nxv4i1>;
+  defm : sve_and_not_pats<nxv2i64, nxv2i1>;
 
-  multiclass SVEMergingAndNotPats<ValueType VT, ValueType PT,
+  multiclass sve_merging_and_not_pats<ValueType VT, ValueType PT,
                                 Instruction PredBic> {
     // Preserve A in inactive lanes. NOT must cover every active AND lane.
     def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
@@ -828,12 +828,12 @@ let Predicates = [HasSVE_or_SME] in {
                     (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
               (BIC_ZZZ $a, $b)>;
   }
-  defm : SVEMergingAndNotPats<nxv16i8, nxv16i1, BIC_ZPmZ_B>;
-  defm : SVEMergingAndNotPats<nxv8i16, nxv8i1, BIC_ZPmZ_H>;
-  defm : SVEMergingAndNotPats<nxv4i32, nxv4i1, BIC_ZPmZ_S>;
-  defm : SVEMergingAndNotPats<nxv2i64, nxv2i1, BIC_ZPmZ_D>;
+  defm : sve_merging_and_not_pats<nxv16i8, nxv16i1, BIC_ZPmZ_B>;
+  defm : sve_merging_and_not_pats<nxv8i16, nxv8i1, BIC_ZPmZ_H>;
+  defm : sve_merging_and_not_pats<nxv4i32, nxv4i1, BIC_ZPmZ_S>;
+  defm : sve_merging_and_not_pats<nxv2i64, nxv2i1, BIC_ZPmZ_D>;
 
-  multiclass SVEAndXorPats<ValueType VT, ValueType PT> {
+  multiclass sve_and_xor_pats<ValueType VT, ValueType PT> {
     // Lanes inactive in EOR may be replaced by a & ~b in result.
     def : Pat<(and VT:$a, (SVEEorU (PT srcvalue), VT:$a, VT:$b)),
               (BIC_ZZZ $a, $b)>;
@@ -869,12 +869,12 @@ let Predicates = [HasSVE_or_SME] in {
                     (VT (SVEEorZ (PT (SVEAllActive)), VT:$a, VT:$b)))),
               (BIC_ZZZ $a, $b)>;
   }
-  defm : SVEAndXorPats<nxv16i8, nxv16i1>;
-  defm : SVEAndXorPats<nxv8i16, nxv8i1>;
-  defm : SVEAndXorPats<nxv4i32, nxv4i1>;
-  defm : SVEAndXorPats<nxv2i64, nxv2i1>;
+  defm : sve_and_xor_pats<nxv16i8, nxv16i1>;
+  defm : sve_and_xor_pats<nxv8i16, nxv8i1>;
+  defm : sve_and_xor_pats<nxv4i32, nxv4i1>;
+  defm : sve_and_xor_pats<nxv2i64, nxv2i1>;
 
-  multiclass SVEXorAndPats<ValueType VT, ValueType PT> {
+  multiclass sve_xor_and_pats<ValueType VT, ValueType PT> {
     // Lanes inactive in AND may be replaced by a & ~b in result.
     def : Pat<(xor VT:$a, (SVEAndU (PT srcvalue), VT:$a, VT:$b)),
               (BIC_ZZZ $a, $b)>;
@@ -914,10 +914,10 @@ let Predicates = [HasSVE_or_SME] in {
     def : Pat<(VT (SVEEorU (PT srcvalue), VT:$a, VT:$b)),
               (EOR_ZZZ $a, $b)>;
   }
-  defm : SVEXorAndPats<nxv16i8, nxv16i1>;
-  defm : SVEXorAndPats<nxv8i16, nxv8i1>;
-  defm : SVEXorAndPats<nxv4i32, nxv4i1>;
-  defm : SVEXorAndPats<nxv2i64, nxv2i1>;
+  defm : sve_xor_and_pats<nxv16i8, nxv16i1>;
+  defm : sve_xor_and_pats<nxv8i16, nxv8i1>;
+  defm : sve_xor_and_pats<nxv4i32, nxv4i1>;
+  defm : sve_xor_and_pats<nxv2i64, nxv2i1>;
 } // End HasSVE_or_SME
 
 let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
