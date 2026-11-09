@@ -424,9 +424,9 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     Cand.RPDelta.Excess.setUnitInc(NewSGPRPressure - SGPRExcessLimit);
   }
 
-  // Banking caps each bank at its own limit, so a candidate can overflow the
-  // combined file without tripping either of the checks above. Track the larger
-  // excess.
+  // Because of alignment padding, the combined file can overflow when both
+  // banks are within limits. This check catches overflow that the others above
+  // miss.
   if (AVGPRBanking && UnifiedVGPRExcessLimit &&
       CandUnifiedVGPRPressure >= UnifiedVGPRExcessLimit) {
     HasHighPressure = true;
