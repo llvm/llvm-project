@@ -12,6 +12,7 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/ObjectFile/PDB/ObjectFilePDB.h"
+#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
@@ -374,6 +375,8 @@ llvm::StringRef SymbolFileNativePDB::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileNativePDB::CreateInstance(ObjectFileSP objfile_sp) {
+  if (!llvm::isa_and_nonnull<ObjectFilePECOFF, ObjectFilePDB>(objfile_sp.get()))
+    return nullptr;
   if (!SymbolFilePDB::UseNativePDB())
     return nullptr;
 
@@ -1662,8 +1665,10 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     SegmentOffsetLength sol = GetSegmentOffsetAndLength(func_record);
     addr_t file_vm_addr =
         m_index->MakeVirtualAddress(sol.so.segment, sol.so.offset);
-    if (file_vm_addr == LLDB_INVALID_ADDRESS)
+    if (file_vm_addr == LLDB_INVALID_ADDRESS) {
+      iter = syms.at(getScopeEndOffset(func_record));
       continue;
+    }
 
     Address func_base(file_vm_addr, comp_unit.GetModule()->GetSectionList());
     PdbCompilandSymId func_id{modi, record_offset};

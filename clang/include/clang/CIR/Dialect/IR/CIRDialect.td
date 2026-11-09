@@ -99,6 +99,11 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTrapFuncNameAttrName() { return "trap_func_name"; }
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
+    // Marks a runtime library function (classic codegen's
+    // CreateRuntimeFunction). Unlike every other function, it does not get the
+    // TU-wide default function attributes recorded in
+    // #cir.lowering_options.
+    static llvm::StringRef getRuntimeFuncAttrName() { return "runtime_func"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
     static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
@@ -119,10 +124,11 @@ def CIR_Dialect : Dialect {
     // unit imports, as #cir.cxx_module_init attributes in the order the global
     // init function calls them, precomputed by CIRGen for the same reason.
     static llvm::StringRef getCXXModuleImportedInitsAttrName() { return "cir.cxx_module_imported_inits"; }
-    // LangOptions facts that post-CIRGen lowering consumes, serialized by
-    // CIRGen so a reloaded .cir module is self-describing without a live
-    // clang::LangOptions. See #cir.lowering_lang_options.
-    static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
+    // LangOptions and CodeGenOptions facts that post-CIRGen lowering
+    // consumes, serialized by CIRGen so a reloaded .cir module is
+    // self-describing without a live clang::LangOptions or
+    // clang::CodeGenOptions. See #cir.lowering_options.
+    static llvm::StringRef getLoweringOptionsAttrName() { return "cir.lowering_options"; }
     // Platform SDK version from -target-sdk-version, as printed by
     // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
     static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }

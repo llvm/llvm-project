@@ -602,23 +602,13 @@ bool SDWADstOperand::canCombineSelections(const MachineInstr &MI,
 
 bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
                                            const SIInstrInfo *TII) {
-  // MI should be moved right before v_or_b32.
-  // For this we should clear all kill flags on uses of MI src-operands or else
-  // we can encounter problem with use of killed operand.
-  for (MachineOperand &MO : MI.uses()) {
-    if (!MO.isReg())
-      continue;
-    getMRI()->clearKillFlags(MO.getReg());
-  }
-
   // Move MI before v_or_b32
   MI.getParent()->remove(&MI);
   getParentInst()->getParent()->insert(getParentInst(), &MI);
 
   // Add Implicit use of preserved register
   MachineInstrBuilder MIB(*MI.getMF(), MI);
-  MIB.addReg(getPreservedOperand()->getReg(),
-             RegState::ImplicitKill,
+  MIB.addReg(getPreservedOperand()->getReg(), RegState::Implicit,
              getPreservedOperand()->getSubReg());
 
   // Tie dst to implicit use
@@ -1328,12 +1318,6 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
   }
 
   ConvertedInstructions.push_back(SDWAInst);
-  for (MachineOperand &MO : SDWAInst->uses()) {
-    if (!MO.isReg())
-      continue;
-
-    MRI->clearKillFlags(MO.getReg());
-  }
   LLVM_DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
   ++NumSDWAInstructionsPeepholed;
 
@@ -1442,7 +1426,6 @@ bool SIPeepholeSDWA::splitLshlOrForSDWA(MachineBasicBlock &MBB) {
         .addImm(DWORD)
         .addImm(WORD_0);
 
-    MRI->clearKillFlags(C.ValSrc->getReg());
     C.LshlOr->eraseFromParent();
     C.AndMI->eraseFromParent();
   }

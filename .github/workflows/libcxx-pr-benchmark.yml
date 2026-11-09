@@ -144,7 +144,8 @@ jobs:
     uses: $/.github/workflows/lnt-submit.yml
     with:
       artifacts: lnt-reports-*
-      test-suite: libcxx
+      project: libcxx
+      test-suite: microbenchmarks
     secrets:
       LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
 
@@ -180,7 +181,8 @@ jobs:
           RESULTS_DIR: ${{ runner.temp }}/results
           LNT_REPORTS_DIR: ${{ runner.temp }}/lnt-reports
           LNT_URL: https://lnt.llvm.org
-          LNT_TEST_SUITE: libcxx
+          LNT_PROJECT: libcxx
+          LNT_TEST_SUITE: microbenchmarks
           BASELINE: ${{ needs.extract-info.outputs.baseline }}
           CANDIDATE: ${{ needs.extract-info.outputs.candidate }}
         with:
@@ -192,6 +194,7 @@ jobs:
             // Return a link to the comparison of the baseline and the candidate on LNT, or nothing if there are no
             // results for that machine.
             function lnt_comparison(machine) {
+              const project = process.env.LNT_PROJECT;
               const suite = process.env.LNT_TEST_SUITE;
               const dir = path.join(process.env.LNT_REPORTS_DIR, `lnt-reports-${machine}`);
               if (!fs.existsSync(dir)) {
@@ -208,6 +211,7 @@ jobs:
               const url = new URL('/compare', process.env.LNT_URL);
               for (const [side, commit] of [['a', process.env.BASELINE], ['b', process.env.CANDIDATE]]) {
                 const runs = reports.filter(r => r.commit.value === commit);
+                url.searchParams.append(`project_${side}`, project);
                 url.searchParams.append(`suite_${side}`, suite);
                 url.searchParams.append(`machine_${side}`, reports[0].machine.name);
                 url.searchParams.append(`commit_${side}`, commit);

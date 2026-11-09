@@ -24,6 +24,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -32,39 +33,14 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-// OG has unordered comparison as a form of optimization in addition to
-// ordered comparison, while CIR doesn't.
-//
-// This means that we can't encode the comparison code of UGT (unordered
-// greater than), at least not at the CIR level.
-//
-// The boolean shouldInvert compensates for this.
-// For example: to get to the comparison code UGT, we pass in
-// emitVectorFCmp (OLE, shouldInvert = true) since OLE is the inverse of UGT.
-
-// There are several ways to support this otherwise:
-// - register extra CmpOpKind for unordered comparison types and build the
-// translation code for
-//    to go from CIR -> LLVM dialect. Notice we get this naturally with
-//    shouldInvert, benefiting from existing infrastructure, albeit having to
-//    generate an extra `not` at CIR).
-// - Just add extra comparison code to a new VecCmpOpKind instead of
-// cluttering CmpOpKind.
-// - Add a boolean in VecCmpOp to indicate if it's doing unordered or ordered
-// comparison
-// - Just emit the intrinsics call instead of calling this helper, see how the
-// LLVM lowering handles this.
 static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
                                   llvm::SmallVector<mlir::Value> &ops,
-                                  cir::CmpOpKind pred, bool shouldInvert) {
+                                  cir::FCmpOpKind pred, bool signaling) {
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &expr);
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Value cmp = builder.createVecCompare(cgf.getLoc(expr.getExprLoc()),
-                                             pred, ops[0], ops[1]);
-  // TODO(cir): Add dedicated predicates to avoid the need to invert this.
-  mlir::Value bitCast = builder.createBitcast(
-      shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
-  return bitCast;
+  mlir::Value cmp = builder.createVecFCompare(cgf.getLoc(expr.getExprLoc()),
+                                              pred, ops[0], ops[1], signaling);
+  return builder.createBitcast(cmp, ops[0].getType());
 }
 
 static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
@@ -1172,6 +1148,95 @@ mlir::Value CIRGenFunction::emitX86CpuInit(mlir::Location loc) {
   return builder.createCallOp(loc, initFunc, {}).getResult();
 }
 
+mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
+                                              const CallExpr *E) {
+  switch (builtinID) {
+  case MSVCIntrin::_BitScanForward:
+  case MSVCIntrin::_BitScanReverse: {
+    Address indexAddress(emitPointerWithAlignment(E->getArg(0)));
+    mlir::Value argValue = emitScalarExpr(E->getArg(1));
+
+    mlir::Location loc = getLoc(E->getExprLoc());
+    mlir::Type argType = argValue.getType();
+    mlir::Type indexType = indexAddress.getElementType();
+    mlir::Type resultType = convertType(E->getType());
+
+    mlir::Value argZero = builder.getNullValue(argType, loc);
+    mlir::Value isZero =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, argValue, argZero);
+    cir::IfOp::create(
+        builder, loc, isZero, /*withElseRegion=*/true,
+        [&](mlir::OpBuilder &b, mlir::Location) { builder.createYield(loc); },
+        [&](mlir::OpBuilder &b, mlir::Location) {
+          if (builtinID == MSVCIntrin::_BitScanForward) {
+            mlir::Value zeroCount =
+                cir::BitCtzOp::create(builder, loc, argValue, true);
+            mlir::Value castCount = builder.createCast(
+                loc, cir::CastKind::integral, zeroCount, indexType);
+            builder.createStore(loc, castCount, indexAddress, false);
+          } else {
+            unsigned argWidth = mlir::cast<cir::IntType>(argType).getWidth();
+            mlir::Value argTypeLastIndex =
+                builder.getConstantInt(loc, indexType, argWidth - 1);
+
+            mlir::Value zeroCount =
+                cir::BitClzOp::create(builder, loc, argValue, true);
+            mlir::Value castCount = builder.createCast(
+                loc, cir::CastKind::integral, zeroCount, indexType);
+            mlir::Value index =
+                builder.createNSWSub(loc, argTypeLastIndex, castCount);
+            builder.createStore(loc, index, indexAddress, false);
+          }
+          builder.createYield(loc);
+        });
+    mlir::Value notZero = builder.createNot(loc, isZero);
+    return builder.createCast(loc, cir::CastKind::bool_to_int, notZero,
+                              resultType);
+  }
+  case MSVCIntrin::_InterlockedAnd:
+  case MSVCIntrin::_InterlockedExchange:
+  case MSVCIntrin::_InterlockedExchangeAdd:
+  case MSVCIntrin::_InterlockedExchangeSub:
+  case MSVCIntrin::_InterlockedOr:
+  case MSVCIntrin::_InterlockedXor:
+  case MSVCIntrin::_InterlockedExchangeAdd_acq:
+  case MSVCIntrin::_InterlockedExchangeAdd_rel:
+  case MSVCIntrin::_InterlockedExchangeAdd_nf:
+  case MSVCIntrin::_InterlockedExchange_acq:
+  case MSVCIntrin::_InterlockedExchange_rel:
+  case MSVCIntrin::_InterlockedExchange_nf:
+  case MSVCIntrin::_InterlockedCompareExchange:
+  case MSVCIntrin::_InterlockedCompareExchange_acq:
+  case MSVCIntrin::_InterlockedCompareExchange_rel:
+  case MSVCIntrin::_InterlockedCompareExchange_nf:
+  case MSVCIntrin::_InterlockedCompareExchange128:
+  case MSVCIntrin::_InterlockedCompareExchange128_acq:
+  case MSVCIntrin::_InterlockedCompareExchange128_rel:
+  case MSVCIntrin::_InterlockedCompareExchange128_nf:
+  case MSVCIntrin::_InterlockedOr_acq:
+  case MSVCIntrin::_InterlockedOr_rel:
+  case MSVCIntrin::_InterlockedOr_nf:
+  case MSVCIntrin::_InterlockedXor_acq:
+  case MSVCIntrin::_InterlockedXor_rel:
+  case MSVCIntrin::_InterlockedXor_nf:
+  case MSVCIntrin::_InterlockedAnd_acq:
+  case MSVCIntrin::_InterlockedAnd_rel:
+  case MSVCIntrin::_InterlockedAnd_nf:
+  case MSVCIntrin::_InterlockedIncrement_acq:
+  case MSVCIntrin::_InterlockedIncrement_rel:
+  case MSVCIntrin::_InterlockedIncrement_nf:
+  case MSVCIntrin::_InterlockedDecrement_acq:
+  case MSVCIntrin::_InterlockedDecrement_rel:
+  case MSVCIntrin::_InterlockedDecrement_nf:
+  case MSVCIntrin::_InterlockedDecrement:
+  case MSVCIntrin::_InterlockedIncrement:
+  case MSVCIntrin::__fastfail:
+    cgm.errorNYI(E->getExprLoc(), "MSVC intrinsic");
+    return {};
+  }
+  llvm_unreachable("Incorrect MSVC intrinsic!");
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is)
@@ -1183,7 +1248,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
-  assert(!cir::MissingFeatures::msvcBuiltins());
+
+  if (std::optional<MSVCIntrin> MsvcIntId =
+          CodeGenUtils::translateX86ToMsvcIntrin(builtinID))
+    return emitX86MSVCIntrin(*MsvcIntId, expr);
 
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
@@ -2665,11 +2733,42 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_addcarryx_u32:
   case X86::BI__builtin_ia32_addcarryx_u64:
   case X86::BI__builtin_ia32_subborrow_u32:
-  case X86::BI__builtin_ia32_subborrow_u64:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case X86::BI__builtin_ia32_subborrow_u64: {
+    llvm::StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_addcarryx_u32:
+      intrinsicName = "x86.addcarry.32";
+      break;
+    case X86::BI__builtin_ia32_addcarryx_u64:
+      intrinsicName = "x86.addcarry.64";
+      break;
+    case X86::BI__builtin_ia32_subborrow_u32:
+      intrinsicName = "x86.subborrow.32";
+      break;
+    case X86::BI__builtin_ia32_subborrow_u64:
+      intrinsicName = "x86.subborrow.64";
+      break;
+    }
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Type carryTy = ops[0].getType();
+    mlir::Type valueTy = ops[1].getType();
+    llvm::SmallVector<mlir::Type, 2> resultTypes = {carryTy, valueTy};
+    cir::StructType resRecord =
+        builder.getAnonRecordTy(resultTypes, /*packed=*/false,
+                                cir::RecordType::getAllDataKinds(resultTypes));
+
+    mlir::Value call =
+        builder.emitIntrinsicCallOp(loc, intrinsicName, resRecord,
+                                    mlir::ValueRange{ops[0], ops[1], ops[2]});
+    mlir::Value result =
+        cir::ExtractMemberOp::create(builder, loc, valueTy, call, 1);
+    builder.CIRBaseBuilderTy::createStore(loc, result, ops[3]);
+
+    return cir::ExtractMemberOp::create(builder, loc, carryTy, call, 0);
+  }
   case X86::BI__builtin_ia32_fpclassps128_mask:
   case X86::BI__builtin_ia32_fpclassps256_mask:
   case X86::BI__builtin_ia32_fpclassps512_mask:
@@ -2752,36 +2851,36 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return {};
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::eq,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::oeq,
+                          /*signaling=*/false);
   case X86::BI__builtin_ia32_cmpltps:
   case X86::BI__builtin_ia32_cmpltpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::olt,
+                          /*signaling=*/true);
   case X86::BI__builtin_ia32_cmpleps:
   case X86::BI__builtin_ia32_cmplepd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::ole,
+                          /*signaling=*/true);
   case X86::BI__builtin_ia32_cmpunordps:
   case X86::BI__builtin_ia32_cmpunordpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::uno,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::uno,
+                          /*signaling=*/false);
   case X86::BI__builtin_ia32_cmpneqps:
   case X86::BI__builtin_ia32_cmpneqpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::ne,
-                          /*shouldInvert=*/false);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::une,
+                          /*signaling=*/false);
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
-                          /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::uge,
+                          /*signaling=*/true);
   case X86::BI__builtin_ia32_cmpnleps:
   case X86::BI__builtin_ia32_cmpnlepd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
-                          /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::ugt,
+                          /*signaling=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
-    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::uno,
-                          /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::FCmpOpKind::ord,
+                          /*signaling=*/false);
   case X86::BI__builtin_ia32_cmpph128_mask:
   case X86::BI__builtin_ia32_cmpph256_mask:
   case X86::BI__builtin_ia32_cmpph512_mask:

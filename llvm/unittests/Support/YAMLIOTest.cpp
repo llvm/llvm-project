@@ -1211,12 +1211,12 @@ TEST(YAMLIO, TestReadWriteMultilineStringType) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_EQ(map2.name.str, "An Item\n");
-    EXPECT_EQ(map2.description.str, "Hello\nWorld\n");
+    EXPECT_EQ(map2.name.str, "An Item");
+    EXPECT_EQ(map2.description.str, "Hello\nWorld");
     EXPECT_EQ(map2.ingredients.str, "SubItem 1\nSub Item 2\n\nSub Item 3\n");
-    EXPECT_EQ(map2.recipes.str, "\n\nTest 1\n");
+    EXPECT_EQ(map2.recipes.str, "\n\nTest 1\n\n\n");
     EXPECT_TRUE(map2.warningLabels.str.empty());
-    EXPECT_TRUE(map2.documentation.str.empty());
+    EXPECT_EQ(map2.documentation.str, "\n\n");
     EXPECT_EQ(map2.price, 350);
   }
 }
@@ -1248,7 +1248,7 @@ TEST(YAMLIO, TestReadWriteBlockScalarDocuments) {
 
     EXPECT_FALSE(yin.error());
     EXPECT_EQ(documents2.size(), size_t(1));
-    EXPECT_EQ(documents2[0].str, "Hello\nWorld\n");
+    EXPECT_EQ(documents2[0].str, "Hello\nWorld");
   }
 }
 
@@ -1268,7 +1268,7 @@ TEST(YAMLIO, TestReadWriteBlockScalarValue) {
     yin >> doc;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_EQ(doc.str, "Just a block\nscalar doc\n");
+    EXPECT_EQ(doc.str, "Just a block\nscalar doc");
   }
 }
 
@@ -1294,12 +1294,54 @@ TEST(YAMLIO, TestScalarAfterBlockScalar) {
   Output yout(ostr);
   yout << v;
   EXPECT_EQ(output, R"(---
-- block_scalac:     |
+- block_scalac:     |-
     AA
     BB
   scalar:          a
 ...
 )");
+}
+
+TEST(YAMLIO, TestBlockScalarFallsBackToQuoted) {
+  // A literal block scalar cannot hold these values, so they are written as
+  // double-quoted scalars instead.
+  std::vector<V> v{V{}};
+  v[0].doc.str = "AA\n\x01ZZ";
+  v[0].str = "a";
+  std::string output;
+  {
+    llvm::raw_string_ostream ostr(output);
+    Output yout(ostr);
+    yout << v;
+  }
+  EXPECT_EQ(output, R"(---
+- block_scalac:    "AA\n\x01ZZ"
+  scalar:          a
+...
+)");
+
+  // \u0085 (NEL) and \u2028 (LS) are line breaks to a YAML 1.1 reader, and
+  // \u0080 is a C1 control.
+  llvm::StringRef Vals[] = {"AA\n\x01ZZ",  "AA\r\nBB",     "  AA\nBB",
+                            "\n  AA\nBB",  "AA\n\u0085BB", "AA\n\u2028BB",
+                            "AA\n\u0080BB"};
+  for (llvm::StringRef Val : Vals) {
+    std::string intermediate;
+    {
+      MultilineStringType doc;
+      doc.str = Val.str();
+      llvm::raw_string_ostream ostr(intermediate);
+      Output yout(ostr);
+      yout << doc;
+    }
+    EXPECT_TRUE(llvm::StringRef(intermediate).starts_with("---\n\""))
+        << intermediate;
+    Input yin(intermediate);
+    MultilineStringType doc;
+    yin >> doc;
+    EXPECT_FALSE(yin.error()) << intermediate;
+    EXPECT_EQ(doc.str, Val) << intermediate;
+  }
 }
 
 //===----------------------------------------------------------------------===//
