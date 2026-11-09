@@ -198,6 +198,7 @@ namespace format {
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
   TYPE(TrailingAnnotation)                                                     \
+  TYPE(TrailingCommaVaOptRParen)                                               \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
   TYPE(TypeDeclarationParen)                                                   \
@@ -677,6 +678,10 @@ public:
   template <typename T> bool isNot(T Kind) const { return !is(Kind); }
   template <typename... Ts> bool isNoneOf(Ts... Ks) const {
     return !isOneOf(Ks...);
+  }
+
+  bool isCommaOrTrailingCommaVaOpt() const {
+    return isOneOf(tok::comma, TT_TrailingCommaVaOptRParen);
   }
 
   bool isIf(bool AllowConstexprMacro = true) const {
@@ -1164,6 +1169,7 @@ struct AdditionalKeywords {
     kw___except = &IdentTable.get("__except");
     kw___has_include = &IdentTable.get("__has_include");
     kw___has_include_next = &IdentTable.get("__has_include_next");
+    kw___va_opt__ = &IdentTable.get("__VA_OPT__");
 
     kw_mark = &IdentTable.get("mark");
     kw_region = &IdentTable.get("region");
@@ -1553,6 +1559,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw___except;
   IdentifierInfo *kw___has_include;
   IdentifierInfo *kw___has_include_next;
+  IdentifierInfo *kw___va_opt__;
 
   // JavaScript keywords.
   IdentifierInfo *kw_as;

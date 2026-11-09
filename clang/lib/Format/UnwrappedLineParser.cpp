@@ -2509,7 +2509,8 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
     const auto *PrevPrev = Previous->getPreviousNonComment();
     if (Previous->is(tok::star) && PrevPrev && PrevPrev->isTypeName(LangOpts))
       return false;
-    if (Previous->closesScope()) {
+    if (Previous->closesScope() &&
+        Previous->isNot(TT_TrailingCommaVaOptRParen)) {
       // Not a potential C-style cast.
       if (Previous->isNot(tok::r_paren))
         return false;
@@ -2651,6 +2652,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
           parseChildBlock();
         break;
       }
+      if (IsEnum && !Style.AllowShortEnumsOnASingleLine &&
+          FormatTok->Previous &&
+          FormatTok->Previous->is(TT_TrailingCommaVaOptRParen)) {
+        addUnwrappedLine();
+      }
       break;
     case tok::l_brace:
       // Assume there are no blocks inside a braced init list apart
@@ -2732,6 +2738,9 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
       break;
     case tok::r_paren: {
       auto *RParen = FormatTok;
+      const bool EndsInComma =
+          RParen->Previous && RParen->Previous->is(tok::comma) &&
+          !RParen->Previous->endsSequence(tok::comma, tok::kw_operator);
       nextToken();
       if (Prev) {
         auto OptionalParens = [&] {
@@ -2781,6 +2790,9 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
         } else if (Prev->is(TT_TypenameMacro)) {
           LParen->setFinalizedType(TT_TypeDeclarationParen);
           RParen->setFinalizedType(TT_TypeDeclarationParen);
+        } else if (Prev->is(Keywords.kw___va_opt__) && EndsInComma &&
+                   Style.isCpp()) {
+          RParen->setFinalizedType(TT_TrailingCommaVaOptRParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);
         } else if (FormatTok->is(tok::l_brace) && Prev->is(tok::amp) &&

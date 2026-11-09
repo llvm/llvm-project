@@ -4266,6 +4266,210 @@ TEST_F(FormatTest, FormatsTypedefEnum) {
                Style);
 }
 
+TEST_F(FormatTest, FormatsVaOptWithTrailingComma) {
+  verifyFormat("#define DEFINE_DESCRIPTOR(Name, ...) \\\n"
+               "  enum ParameterIndices {            \\\n"
+               "    kJSTarget = -1,                  \\\n"
+               "    __VA_OPT__(__VA_ARGS__, )        \\\n"
+               "    kNewTarget,                      \\\n"
+               "    kActualArgumentsCount,           \\\n"
+               "    kContext,                        \\\n"
+               "    kParameterCount,                 \\\n"
+               "  };",
+               getChromiumStyle(FormatStyle::LK_Cpp));
+
+  verifyFormat("enum E {\n"
+               "  __VA_OPT__(__VA_ARGS__, )\n"
+               "  kFirst = 1,\n"
+               "  kSecond = 2,\n"
+               "};");
+
+  // Nested parentheses: only a top-level trailing comma inside __VA_OPT__
+  // acts as an item separator.
+  verifyFormat("enum E {\n"
+               "  __VA_OPT__(FOO(a, b), )\n"
+               "  kFirst,\n"
+               "  kSecond,\n"
+               "};");
+  verifyFormat("enum E {\n"
+               "  __VA_OPT__(FOO(a, )) kFirst,\n"
+               "  kSecond,\n"
+               "};");
+
+  // Short single-line enums remain on one line when allowed.
+  verifyFormat("enum E { __VA_OPT__(__VA_ARGS__, ) kOnly };");
+  FormatStyle NoShortEnums = getLLVMStyle();
+  NoShortEnums.AllowShortEnumsOnASingleLine = false;
+  verifyFormat("enum E {\n"
+               "  __VA_OPT__(__VA_ARGS__, )\n"
+               "  kOnly\n"
+               "};",
+               NoShortEnums);
+
+  // Trailing-comma __VA_OPT__ at the end of a braced list, enum, or call.
+  verifyFormat("enum E {\n"
+               "  kFirst,\n"
+               "  __VA_OPT__(__VA_ARGS__, )\n"
+               "};");
+  verifyFormat("int x[] = {\n"
+               "    1,\n"
+               "    __VA_OPT__(__VA_ARGS__, )\n"
+               "    2,\n"
+               "};");
+  verifyFormat("void f(__VA_OPT__(__VA_ARGS__, )\n"
+               "       int first_arg,\n"
+               "       int second_arg);",
+               getLLVMStyleWithColumns(32));
+
+  // Leading-comma __VA_OPT__ stays attached to the preceding item, while
+  // lone-comma __VA_OPT__(,) acts as a conditional separator.
+  verifyFormat("enum E {\n"
+               "  kFirst __VA_OPT__(, __VA_ARGS__),\n"
+               "  kSecond,\n"
+               "};");
+  verifyFormat("void f(int a __VA_OPT__(, __VA_ARGS__));");
+  verifyFormat("enum E {\n"
+               "  kFirst __VA_OPT__(, )\n"
+               "  __VA_ARGS__\n"
+               "};",
+               "enum E { kFirst __VA_OPT__(,) __VA_ARGS__ };", NoShortEnums);
+
+  // Unary operators, designated initializers, lambdas, parens, and braces
+  // immediately following __VA_OPT__(..., ).
+  verifyFormat("int x[] = {\n"
+               "    __VA_OPT__(__VA_ARGS__, )\n"
+               "    -1,\n"
+               "    +2,\n"
+               "};");
+  verifyFormat("void f() {\n"
+               "  foo(__VA_OPT__(a, ) *b, &c, ++d);\n"
+               "  auto l = [__VA_OPT__(a, ) &b, &c]() {};\n"
+               "  foo(__VA_OPT__(a, ) [x]() { return x; });\n"
+               "  foo(__VA_OPT__(a, ) (b + c), {1, 2});\n"
+               "}");
+  verifyFormat("S s = {.a = 1, __VA_OPT__(.b = 2, ) .c = 3};");
+  verifyFormat("S s = {\n"
+               "    .a = 1,\n"
+               "    __VA_OPT__(__VA_ARGS__, )\n"
+               "    .b = 2,\n"
+               "};");
+  verifyFormat("int a[] = {[0] = 1, __VA_OPT__([1] = 2, ) [2] = 3};");
+
+  // Bin-packing parameters and constructor initializers after wrapping at
+  // __VA_OPT__(..., ).
+  verifyFormat("void f(__VA_OPT__(int very_long_first_param_here, )\n"
+               "       int a, int b, int c);",
+               getLLVMStyleWithColumns(55));
+  verifyFormat("class C {\n"
+               "  C()\n"
+               "      : a_(0), __VA_OPT__(b_(1), )\n"
+               "        c_(2), d_(3) {}\n"
+               "};",
+               getLLVMStyleWithColumns(40));
+
+  // Expressions, operand line-break tracking, consecutive __VA_OPT__, and
+  // conditional expressions.
+  verifyFormat("SomeFunction(x, a + b __VA_OPT__(, )\n"
+               "             ccccccccccccccc + ddddddddddddddd, y);",
+               getLLVMStyleWithColumns(55));
+  verifyFormat("SomeFunction(__VA_OPT__(a, )\n"
+               "             bbbbbbbbbbbbbbb + ccccccccccccccc,\n"
+               "             d);",
+               getLLVMStyleWithColumns(50));
+  verifyFormat("foo(!__VA_OPT__(a, ) __VA_OPT__(b, ) c);");
+  verifyFormat("int x = foo(cond ? a : __VA_OPT__(bbbbbbbbbbbb, )\n"
+               "            cccccccccccc, dddddddddddd);",
+               getLLVMStyleWithColumns(50));
+  verifyNoCrash("int x = foo(cond ? __VA_OPT__(a, ) b : c, d);");
+  verifyNoCrash("int x = foo(cond ? __VA_OPT__(a, ) : b + c, d);");
+  verifyNoCrash("int x = foo(__VA_OPT__(a, ) ? b : c + d, e);");
+
+  // Nested call indentation when AlignAfterOpenBracket is disabled.
+  FormatStyle DontAlign = getLLVMStyleWithColumns(50);
+  DontAlign.AlignAfterOpenBracket = false;
+  verifyFormat("void g() {\n"
+               "  foo(__VA_OPT__(a, ) bar(bbbbbbbbbbbbbbbbbb,\n"
+               "                          cccccccccccccccccc));\n"
+               "}",
+               DontAlign);
+
+  // Multi-column braced list layout and template parameter lists.
+  verifyFormat("int x[] = {__VA_OPT__(a, ) 1, 1000000000, 2000000000,\n"
+               "           3000000000,     4, 5000000000, 6000000000};");
+  verifyFormat("template <__VA_OPT__(typename T, )\n"
+               "          typename U, typename V>\n"
+               "struct S;",
+               getLLVMStyleWithColumns(42));
+
+  // Overloaded operator, inside __VA_OPT__ is not a trailing comma.
+  verifyFormat("#define CALL_COMMA(...)                \\\n"
+               "  foo(__VA_OPT__(x.operator, ) +       \\\n"
+               "      yyyyyyyyyyyyyyyyyyyy)",
+               getLLVMStyleWithColumns(40));
+
+  // EnumTrailingComma: Insert/Remove with trailing-comma __VA_OPT__.
+  FormatStyle InsertComma = NoShortEnums;
+  InsertComma.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("enum E {\n"
+               "  kFirst,\n"
+               "  __VA_OPT__(__VA_ARGS__, )\n"
+               "};",
+               InsertComma);
+  FormatStyle RemoveComma = NoShortEnums;
+  RemoveComma.EnumTrailingComma = FormatStyle::ETC_Remove;
+  verifyFormat("enum E {\n"
+               "  kFirst,\n"
+               "  __VA_OPT__(__VA_ARGS__, )\n"
+               "};",
+               RemoveComma);
+
+  // Parameter packing, function declaration heuristics, and Google-style
+  // left-aligned pointers / multi-variable declarations.
+  FormatStyle OnePerLine = getLLVMStyle();
+  OnePerLine.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("void f(__VA_OPT__(int a, )\n"
+               "       int b,\n"
+               "       int c);",
+               OnePerLine);
+  FormatStyle BreakDeclParams = getLLVMStyle();
+  BreakDeclParams.BreakFunctionDeclarationParameters = true;
+  verifyFormat("int __VA_OPT__(a, ) b;", BreakDeclParams);
+  FormatStyle AutoBinPack = getLLVMStyleWithColumns(50);
+  AutoBinPack.ExperimentalAutoDetectBinPacking = true;
+  verifyNoChange("void f() {\n"
+                 "  foo(__VA_OPT__(aaaaaaaaaaaa, ) bbbbbbbbbbbb,\n"
+                 "      cccccccccccc);\n"
+                 "}",
+                 AutoBinPack);
+  verifyGoogleFormat("void g() { foo(__VA_OPT__(a, ) *x = 1); }");
+  verifyGoogleFormat("int __VA_OPT__(a = 1, ) *b = nullptr;");
+  verifyGoogleFormat("int a = 1 __VA_OPT__(, ) *const b = nullptr;");
+  FormatStyle Google30 = getGoogleStyle();
+  Google30.ColumnLimit = 30;
+  verifyFormat("int __VA_OPT__(aaaa = 1, )\n"
+               "    *bbbb = nullptr;",
+               Google30);
+  verifyFormat("long int aa = 1 __VA_OPT__(, )\n"
+               "         *bb = nullptr;",
+               Google30);
+
+  // Comments inside and after __VA_OPT__, and non-C++ language guard.
+  verifyFormat("enum E {\n"
+               "  __VA_OPT__(__VA_ARGS__, /*comment*/)\n"
+               "  kFirst,\n"
+               "};");
+  verifyNoChange("void f() {\n"
+                 "  SomeFunction(__VA_OPT__(a, )\n"
+                 "               b, // comment\n"
+                 "               c);\n"
+                 "}");
+  verifyFormat("enum E {\n"
+               "  __VA_OPT__(a, ) kFirst,\n"
+               "  kSecond,\n"
+               "}",
+               getLLVMStyle(FormatStyle::LK_Java));
+}
+
 TEST_F(FormatTest, FormatsNSEnums) {
   verifyGoogleFormat("typedef NS_ENUM(NSInteger, SomeName) { AAA, BBB }");
   verifyGoogleFormat(
