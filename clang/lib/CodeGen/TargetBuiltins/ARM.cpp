@@ -186,6 +186,8 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   case clang::AArch64::BI_InterlockedDecrement_nf:
   case clang::AArch64::BI_InterlockedDecrement64_nf:
     return MSVCIntrin::_InterlockedDecrement_nf;
+  case clang::AArch64::BI_ReadWriteBarrier:
+    return MSVCIntrin::_ReadWriteBarrier;
   }
   llvm_unreachable("must return from switch");
 }
@@ -337,6 +339,10 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
   case clang::ARM::BI_InterlockedDecrement_nf:
   case clang::ARM::BI_InterlockedDecrement64_nf:
     return MSVCIntrin::_InterlockedDecrement_nf;
+  case clang::ARM::BI_ReadWriteBarrier:
+  case clang::ARM::BI_ReadBarrier:
+  case clang::ARM::BI_WriteBarrier:
+    return MSVCIntrin::_ReadWriteBarrier;
   }
   llvm_unreachable("must return from switch");
 }
@@ -2207,12 +2213,6 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateCall(Emit);
   }
-
-  if (BuiltinID == clang::ARM::BI_ReadWriteBarrier ||
-      BuiltinID == clang::ARM::BI_ReadBarrier ||
-      BuiltinID == clang::ARM::BI_WriteBarrier)
-    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
-                               llvm::SyncScope::SingleThread);
 
   if (BuiltinID == clang::ARM::BI__builtin_arm_dbg) {
     Value *Option = EmitScalarExpr(E->getArg(0));
@@ -4877,10 +4877,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_clrex);
     return Builder.CreateCall(F);
   }
-
-  if (BuiltinID == clang::AArch64::BI_ReadWriteBarrier)
-    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
-                               llvm::SyncScope::SingleThread);
 
   // CRC32
   Intrinsic::ID CRCIntrinsicID = Intrinsic::not_intrinsic;
