@@ -357,8 +357,9 @@ private:
   /// Determines whether the pressure of rematerialization candidate \p CandIdx
   /// covers the summed pressure of \p ExtendedDeps in every register class.
   /// Extended dependencies only become live in regions where the candidate was
-  /// live and no longer is after rematerialization, so when this holds the
-  /// rematerialization cannot increase RP in any of these regions.
+  /// live and no longer is after rematerialization. So when this function
+  /// returns true the rematerialization does notincrease RP in any of these
+  /// regions.
   bool
   candidateSaveCoversExtendedDeps(RegisterIdx CandIdx,
                                   ArrayRef<RegisterIdx> ExtendedDeps) const;

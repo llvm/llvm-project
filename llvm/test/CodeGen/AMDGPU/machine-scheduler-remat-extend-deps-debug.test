@@ -2,7 +2,7 @@
 # NOTE: utils/update_mir_test_checks.py does not generate.
 # REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu9.08 -run-pass=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -amdgpu-remat-extend-deps -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o /dev/null -debug-only=machine-scheduler,gcn-rematerialization-strategy 2>&1 | FileCheck -check-prefix=EXTEND %s
-# RUN: llc -mtriple=amdgpu9.08 -run-pass=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o /dev/null -debug-only=machine-scheduler,gcn-rematerialization-strategy 2>&1 | FileCheck -check-prefix=NOEXTEND %s
+# RUN: llc -mtriple=amdgpu9.08 -run-pass=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -amdgpu-remat-extend-deps=false -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o /dev/null -debug-only=machine-scheduler,gcn-rematerialization-strategy 2>&1 | FileCheck -check-prefix=NOEXTEND %s
 
 # Shows how the pre-RA rematerialization stage reaches its pressure target in
 # machine-scheduler-remat-extend-deps.mir. The final MIR only shows the

@@ -1,7 +1,7 @@
 # NOTE: Assertions are hand-written; do not regenerate them with
 # NOTE: utils/update_llc_test_checks.py.
-# RUN: llc -mtriple=amdgpu9.08 -start-before=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o - | FileCheck -check-prefix=NOEXTEND %s
-# RUN: llc -mtriple=amdgpu9.08 -start-before=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -amdgpu-remat-extend-deps -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o - | FileCheck -check-prefix=EXTEND %s
+# RUN: llc -mtriple=amdgpu9.08 -start-before=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -amdgpu-remat-extend-deps=false -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o - | FileCheck -check-prefix=NOEXTEND %s
+# RUN: llc -mtriple=amdgpu9.08 -start-before=machine-scheduler -amdgpu-disable-unclustered-high-rp-reschedule -verify-machineinstrs %S/machine-scheduler-remat-extend-deps.mir -o - | FileCheck -check-prefix=EXTEND %s
 
 # Runs the full pipeline from machine-scheduler-remat-extend-deps.mir to show
 # the effect of -amdgpu-remat-extend-deps on register allocation.

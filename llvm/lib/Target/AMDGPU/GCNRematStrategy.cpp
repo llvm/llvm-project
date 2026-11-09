@@ -34,7 +34,7 @@ static cl::opt<bool> RematExtendDeps(
     cl::desc("When reducing spilling, let Pre-RA rematerialization extend the "
              "live range of a rematerializable dependency up to the "
              "rematerialization points if its value still reaches them"),
-    cl::init(false));
+    cl::init(true));
 
 /// Determines whether the value of \p Reg at \p RefIdx is still the one
 /// reaching \p UseIdx, even though \p Reg may no longer be live there. Unlike
