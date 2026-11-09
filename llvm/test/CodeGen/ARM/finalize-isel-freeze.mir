@@ -39,8 +39,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK-NEXT: [[VMOVDRR:%[0-9]+]]:dpr = VMOVDRR [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:dpr = FREEZE [[VMOVDRR]]
-    ; CHECK-NEXT: $d0 = COPY [[FREEZE]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:dpr = COPY [[VMOVDRR]]
+    ; CHECK-NEXT: $d0 = COPY [[COPY2]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0:gpr = COPY $r0
     %1:gpr = COPY $r1
