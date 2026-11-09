@@ -10126,7 +10126,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // SME Streaming functions are not eligible for TCO as they may require
   // the streaming mode or ZA/ZT0 to be restored after returning from the call.
   SMECallAttrs CallAttrs =
-      getSMECallAttrs(CallerF, getRuntimeLibcallsInfo(), CLI);
+      getSMECallAttrs(CallerF, DAG.getLibcalls().getRuntimeLibcallsInfo(), CLI);
   if (CallAttrs.requiresSMChange() || CallAttrs.requiresZASave() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.caller().hasStreamingBody() || CallAttrs.caller().isNewZA() ||
@@ -10565,8 +10565,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Determine whether we need any streaming mode changes.
-  SMECallAttrs CallAttrs =
-      getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
+  SMECallAttrs CallAttrs = getSMECallAttrs(
+      MF.getFunction(), DAG.getLibcalls().getRuntimeLibcallsInfo(), CLI);
   if (CallAttrs.requiresNonLazySaveZA())
     reportFatalUsageError(
         "Calls that require saving ZA non-lazily is not yet implemented");
@@ -18510,7 +18510,8 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
     return DAG.getMergeValues(Ops, DL);
   }
 
-  RTLIB::LibcallImpl ChkStkImpl = getLibcallImpl(RTLIB::STACK_PROBE);
+  RTLIB::LibcallImpl ChkStkImpl =
+      DAG.getLibcalls().getLibcallImpl(RTLIB::STACK_PROBE);
   if (ChkStkImpl == RTLIB::Unsupported)
     return SDValue();
 
@@ -30445,9 +30446,8 @@ static SDValue performVselectPowCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   RTLIB::Libcall LC = RTLIB::getPOW(VT);
   SelectionDAG &DAG = DCI.DAG;
-  auto &TLI = DAG.getTargetLoweringInfo();
-  bool HasLibCall = TLI.getLibcallLoweringInfo().getVectorLibcallImplOrMasked(
-                        LC) != RTLIB::Unsupported;
+  bool HasLibCall =
+      DAG.getLibcalls().getVectorLibcallImplOrMasked(LC) != RTLIB::Unsupported;
   if (!HasLibCall)
     return SDValue();
 

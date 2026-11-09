@@ -369,3 +369,19 @@ define <2 x double> @fmin_fmin_v2f64(<2 x double> %a, <2 x double> %b, <2 x doub
   %r = fadd <2 x double> %v1, %d
   ret <2 x double> %r
 }
+
+;; Scalar and vector instructions should not be mixed
+
+; CHECK-LABEL: fmax_fmin_mixed_scalar_vector:
+; CHECK:      fmax.4s v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; CHECK-NEXT: fadd.4s v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; CHECK-NEXT: fmin s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+define float @fmax_fmin_mixed_scalar_vector(<4 x float> %a, <4 x float> %b, float %c, <4 x float> %x, <4 x float> %y) {
+  %v0 = call <4 x float> @llvm.maximum.v4f32(<4 x float> %a, <4 x float> %b)
+  %d = fadd <4 x float> %x, %y
+  %e = extractelement <4 x float> %v0, i32 0
+  %v1 = call float @llvm.minimum.f32(float %e, float %c)
+  %f = extractelement <4 x float> %d, i32 0
+  %r = fadd float %v1, %f
+  ret float %r
+}
