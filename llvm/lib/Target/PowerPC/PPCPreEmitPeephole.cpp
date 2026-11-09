@@ -80,6 +80,8 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
 }
 
   class PPCPreEmitPeephole : public MachineFunctionPass {
+    const PPCOptions *CLOpts = nullptr;
+
   public:
     static char ID;
     PPCPreEmitPeephole() : MachineFunctionPass(ID) {}
@@ -228,7 +230,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     bool addLinkerOpt(MachineBasicBlock &MBB, const TargetRegisterInfo *TRI) {
       MachineFunction *MF = MBB.getParent();
       // If the linker opt is disabled then just return.
-      if (!MF->getSubtarget<PPCSubtarget>().getCLOpts().pcrel_linker_opt)
+      if (!CLOpts->pcrel_linker_opt)
         return false;
 
       // Add this linker opt only if we are using PC Relative memops.
@@ -396,12 +398,12 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
-      const PPCOptions &CLOpts = MF.getSubtarget<PPCSubtarget>().getCLOpts();
+      CLOpts = &MF.getSubtarget<PPCSubtarget>().getCLOpts();
       // If the user wants to set the DSCR using command-line options,
       // load in the specified value at the start of main.
-      if (CLOpts.set_dscr && MF.getName() == "main" &&
+      if (CLOpts->set_dscr && MF.getName() == "main" &&
           MF.getFunction().hasExternalLinkage()) {
-        uint32_t DSCRValue = *CLOpts.set_dscr & 0x01FFFFFF; // 25-bit DSCR mask
+        uint32_t DSCRValue = *CLOpts->set_dscr & 0x01FFFFFF; // 25-bit DSCR mask
         RegScavenger RS;
         MachineBasicBlock &MBB = MF.front();
         // Find an unused GPR according to register liveness
@@ -429,7 +431,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
                     "requested";
       }
 
-      if (skipFunction(MF.getFunction()) || !CLOpts.late_peephole) {
+      if (skipFunction(MF.getFunction()) || !CLOpts->late_peephole) {
         // Remove UNENCODED_NOP even when this pass is disabled.
         // This needs to be done unconditionally so we don't emit zeros
         // in the instruction stream.

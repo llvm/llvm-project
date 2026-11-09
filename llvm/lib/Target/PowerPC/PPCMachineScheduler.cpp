@@ -12,6 +12,14 @@
 
 using namespace llvm;
 
+PPCPreRASchedStrategy::PPCPreRASchedStrategy(const MachineSchedContext *C)
+    : GenericScheduler(C),
+      CLOpts(C->MF->getSubtarget<PPCSubtarget>().getCLOpts()) {}
+
+PPCPostRASchedStrategy::PPCPostRASchedStrategy(const MachineSchedContext *C)
+    : PostGenericScheduler(C),
+      CLOpts(C->MF->getSubtarget<PPCSubtarget>().getCLOpts()) {}
+
 static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
   return Cand.SU->getInstr()->getOpcode() == PPC::ADDI ||
          Cand.SU->getInstr()->getOpcode() == PPC::ADDI8;
@@ -20,7 +28,7 @@ static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
 bool PPCPreRASchedStrategy::biasAddiLoadCandidate(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
                                                   SchedBoundary &Zone) const {
-  if (!DAG->MF.getSubtarget<PPCSubtarget>().getCLOpts().sched_addi_load)
+  if (!CLOpts.sched_addi_load)
     return false;
 
   SchedCandidate &FirstCand = Zone.isTop() ? TryCand : Cand;
@@ -158,7 +166,7 @@ bool PPCPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
 
 bool PPCPostRASchedStrategy::biasAddiCandidate(SchedCandidate &Cand,
                                                SchedCandidate &TryCand) const {
-  if (!DAG->MF.getSubtarget<PPCSubtarget>().getCLOpts().postra_bias_addi)
+  if (!CLOpts.postra_bias_addi)
     return false;
 
   if (isADDIInstr(TryCand) && !isADDIInstr(Cand)) {
