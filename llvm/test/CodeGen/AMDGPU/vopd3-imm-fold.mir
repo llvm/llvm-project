@@ -411,6 +411,54 @@ body:             |
     S_ENDPGM 0
 ...
 
+# The existing move is killed between two pairs which both reuse it, so the
+# kill is cleared.
+---
+name:            reuse_existing_move_killed_between_pairs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: reuse_existing_move_killed_between_pairs
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr3 = S_MOV_B32 100
+    ; CHECK-NEXT: $vgpr4, $vgpr5 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr3, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit $sgpr3
+    ; CHECK-NEXT: $vgpr6, $vgpr7 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr3, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $sgpr3 = S_MOV_B32 100
+    $vgpr4 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr5 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    S_NOP 0, implicit killed $sgpr3
+    $vgpr6 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr7 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
+# A pair kills the existing move, and a later pair reuses it, so the kill in
+# the first pair is cleared.
+---
+name:            reuse_existing_move_killed_in_pair
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: reuse_existing_move_killed_in_pair
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr3 = S_MOV_B32 100
+    ; CHECK-NEXT: $vgpr4, $vgpr5 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr3, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $exec, implicit $exec
+    ; CHECK-NEXT: $vgpr6, $vgpr7 = V_DUAL_SUB_U32_e32_X_SUB_U32_e32_e96_gfx1250 $sgpr3, $vgpr1, $vgpr0, $vgpr1, implicit $exec, implicit $mode, implicit $exec, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $sgpr3 = S_MOV_B32 100
+    $vgpr4 = V_SUB_U32_e32 killed $sgpr3, $vgpr1, implicit $exec
+    $vgpr5 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    $vgpr6 = V_SUB_U32_e32 100, $vgpr1, implicit $mode, implicit $exec
+    $vgpr7 = V_SUB_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
 # Program order is Y then X. The move still goes before the Y instruction,
 # while the VOPD operands and destinations use encoding order.
 ---

@@ -305,13 +305,21 @@ public:
       });
     });
     if (Reusable != Range.second) {
-      // Extend the live range of the register to this pair.
+      // Extend the live range of the register to this pair. Nothing redefines
+      // the register after Def, so only the last reader before the pair can
+      // kill it. Searching back from the pair stops there, which keeps the
+      // total cost of repeated reuses linear.
       MachineInstr *Def = Reusable->second;
       Reg = Def->getOperand(0).getReg();
       Def->getOperand(0).setIsDead(false);
       for (MachineInstr &MI :
-           make_range(std::next(Def->getIterator()), InsertPt->getIterator()))
-        MI.clearRegisterKills(Reg, TRI);
+           make_range(std::next(InsertPt->getReverseIterator()),
+                      Def->getReverseIterator())) {
+        if (!MI.isDebugInstr() && MI.readsRegister(Reg, TRI)) {
+          MI.clearRegisterKills(Reg, TRI);
+          break;
+        }
+      }
       ++NumLiteralsReused;
     } else {
       // The move overwrites whatever value the register held.
