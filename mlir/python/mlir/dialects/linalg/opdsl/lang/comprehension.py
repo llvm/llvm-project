@@ -299,6 +299,7 @@ class UnaryFn:
     square = UnaryFnType("square")
     tanh = UnaryFnType("tanh")
     erf = UnaryFnType("erf")
+    conj = UnaryFnType("conj")
 
 
 class BinaryFnType:
