@@ -2327,7 +2327,7 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     return emitTypeConversionError(baseClassOp, baseClassOp.getType());
   mlir::Value derivedAddr = adaptor.getSrcAddr();
   llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
-      adaptor.getOffset().getZExtValue()};
+      static_cast<int32_t>(adaptor.getOffset().getZExtValue())};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (adaptor.getOffset().getZExtValue() == 0) {
@@ -2368,7 +2368,8 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
     rewriter.replaceOp(derivedClassOp, baseAddr);
     return mlir::success();
   }
-  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {offsetVal};
+  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
+      static_cast<int32_t>(offsetVal)};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (derivedClassOp.getAssumeNotNull()) {
@@ -3132,7 +3133,8 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNakedAttrName() ||
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
-         attr.getName() == CIRDialect::getDontCallWarnAttrName();
+         attr.getName() == CIRDialect::getDontCallWarnAttrName() ||
+         attr.getName() == CIRDialect::getRuntimeFuncAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -3197,6 +3199,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
       attributes);
   aliasOp.setVisibility_(
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
+  if (op.getUnnamedAddr())
+    aliasOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Global);
   {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.createBlock(&aliasOp.getInitializerRegion());
@@ -3280,6 +3284,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
+  if (op.getUnnamedAddr())
+    fn.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Global);
+
   if (cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
     fn.setMemoryEffectsAttr(convertMemoryEffects(fn.getContext(), effects));
 
@@ -3328,6 +3335,24 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     if (auto diagnostic = op->getAttrOfType<mlir::StringAttr>(dontCallAttr))
       passthrough.push_back(rewriter.getArrayAttr(
           {rewriter.getStringAttr(dontCallAttr), diagnostic}));
+
+  // Every function but a runtime function gets the TU-wide default function
+  // attributes.
+  if (!op->hasAttr(CIRDialect::getRuntimeFuncAttrName())) {
+    if (auto langOpts = op->getParentOfType<mlir::ModuleOp>()
+                            ->getAttrOfType<cir::LoweringOptionsAttr>(
+                                CIRDialect::getLoweringOptionsAttrName())) {
+      // A strictfp function may use a pragma to observe FP exceptions locally,
+      // so the TU-wide default does not apply to it.
+      if (langOpts.getNoTrappingMath() &&
+          !op->hasAttr(CIRDialect::getStrictFPAttrName()))
+        passthrough.push_back(
+            rewriter.getStrArrayAttr({"no-trapping-math", "true"}));
+      passthrough.push_back(rewriter.getStrArrayAttr(
+          {"stack-protector-buffer-size",
+           llvm::utostr(langOpts.getSspBufferSize())}));
+    }
+  }
 
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
@@ -5618,7 +5643,8 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
     return emitTypeConversionError(op, op.getType());
   auto eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   llvm::SmallVector<mlir::LLVM::GEPArg> offsets =
-      llvm::SmallVector<mlir::LLVM::GEPArg>{op.getIndex()};
+      llvm::SmallVector<mlir::LLVM::GEPArg>{
+          static_cast<int32_t>(op.getIndex())};
   rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
       op, targetType, eltType, adaptor.getVptr(), offsets,
       mlir::LLVM::GEPNoWrapFlags::inbounds);

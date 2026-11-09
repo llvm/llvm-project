@@ -185,16 +185,12 @@ struct MachineVerifier {
     // that only are used by PHI nodes.
     RegMap vregsLiveIn;
 
-    // Regs killed in MBB. They may be defined again, and will then be in both
-    // regsKilled and regsLiveOut.
-    RegSet regsKilled;
-
     // Regs defined in MBB and live out. Note that vregs passing through may
     // be live out without being mentioned here.
     RegSet regsLiveOut;
 
     // Vregs that pass through MBB untouched. This set is disjoint from
-    // regsKilled and regsLiveOut.
+    // regsLiveOut.
     RegSet vregsPassed;
 
     // Vregs that must pass through MBB because they are needed by a successor
@@ -3082,7 +3078,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 
   // Both use and def operands can read a register.
   if (MO->readsReg()) {
-    if (MO->isKill())
+    if (MO->isKill() && Reg.isPhysical())
       addRegWithSubRegs(regsKilled, Reg);
 
     // Check LiveInts liveness and kill.
@@ -3179,14 +3175,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       } else if (MRI->def_empty(Reg)) {
         report("Reading virtual register without a def", MO, MONum);
       } else {
-        BBInfo &MInfo = MBBInfoMap[MI->getParent()];
-        // We don't know which virtual registers are live in, so only complain
-        // if vreg was killed in this MBB. Otherwise keep track of vregs that
-        // must be live in. PHI instructions are handled separately.
-        if (MInfo.regsKilled.count(Reg))
-          report("Using a killed virtual register", MO, MONum);
-        else if (!MI->isPHI())
-          MInfo.vregsLiveIn.insert(std::make_pair(Reg, MI));
+        // We don't know which virtual registers are live in, so keep track of
+        // vregs that must be live in. PHI instructions are handled separately.
+        if (!MI->isPHI())
+          MBBInfoMap[MI->getParent()].vregsLiveIn.insert(
+              std::make_pair(Reg, MI));
       }
     }
   }
@@ -3243,8 +3236,6 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 // Normal stand-alone instructions are also considered 'bundles', and this
 // function is called for all of them.
 void MachineVerifier::visitMachineBundleAfter(const MachineInstr *MI) {
-  BBInfo &MInfo = MBBInfoMap[MI->getParent()];
-  set_union(MInfo.regsKilled, regsKilled);
   set_subtract(regsLive, regsKilled); regsKilled.clear();
   // Kill any masked registers.
   while (!regMasks.empty()) {
@@ -3391,7 +3382,6 @@ void MachineVerifier::calcRegsPassed() {
     BBInfo &Info = MBBInfoMap[MB];
     assert(Info.reachable);
 
-    VRegs.addToFilter(Info.regsKilled);
     VRegs.addToFilter(Info.regsLiveOut);
     for (const MachineBasicBlock *Pred : MB->predecessors()) {
       const BBInfo &PredInfo = MBBInfoMap[Pred];
@@ -3553,17 +3543,6 @@ void MachineVerifier::visitMachineFunctionAfter() {
 
   // Now check liveness info if available
   calcRegsRequired();
-
-  // Check for killed virtual registers that should be live out.
-  for (const auto &MBB : *MF) {
-    BBInfo &MInfo = MBBInfoMap[&MBB];
-    for (Register VReg : MInfo.vregsRequired)
-      if (MInfo.regsKilled.count(VReg)) {
-        report("Virtual register killed in block, but needed live out.", &MBB);
-        OS << "Virtual register " << printReg(VReg)
-           << " is used after the block.\n";
-      }
-  }
 
   if (!MF->empty()) {
     BBInfo &MInfo = MBBInfoMap[&MF->front()];
@@ -3833,8 +3812,8 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     // The following checks only apply to virtual registers. Physreg liveness
     // is too weird to check.
     if (VRegOrUnit.isVirtualReg()) {
-      // A live segment can end with either a redefinition, a kill flag on a
-      // use, or a dead flag on a def.
+      // A live segment can end with either a redefinition, a use, or a dead
+      // flag on a def.
       bool hasRead = false;
       bool hasSubRegDef = false;
       bool hasDeadDef = false;

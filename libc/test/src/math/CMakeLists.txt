@@ -1867,6 +1867,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  modff128_test
+  SUITE
+    libc-math-tests
+  SRCS
+    modff128_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modff128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
   fdimf_test
   SUITE
     libc-math-tests
@@ -2209,6 +2224,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  remquof128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    remquof128_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquof128
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   hypotf_test
   NEED_MPFR
   SUITE
@@ -2441,8 +2473,10 @@ add_fp_unittest(
   SRCS
     logf_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.logf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.logf_double_eval
 )
 
 add_fp_unittest(
@@ -2501,8 +2535,10 @@ add_fp_unittest(
   SRCS
     log2f_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.log2f
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.log2f_double_eval
 )
 
 add_fp_unittest(
@@ -2536,8 +2572,10 @@ add_fp_unittest(
   SRCS
     log10f_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.log10f
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.log10f_double_eval
 )
 
 add_fp_unittest(
@@ -2593,8 +2631,10 @@ add_fp_unittest(
   SRCS
     log1pf_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.log1pf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.log1pf_double_eval
 )
 
 add_fp_unittest(

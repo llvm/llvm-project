@@ -1847,8 +1847,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
 // Try to fold an instruction into a simpler one
 bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
-  if (Opc != AMDGPU::V_CNDMASK_B32_e32 && Opc != AMDGPU::V_CNDMASK_B32_e64 &&
-      Opc != AMDGPU::V_CNDMASK_B64_PSEUDO)
+  if (Opc != AMDGPU::V_CNDMASK_B32_e32 && Opc != AMDGPU::V_CNDMASK_B32_e64)
     return false;
 
   MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);

@@ -978,6 +978,21 @@ bool VPSCEVExpander::canExpandInIR(const SCEV *S) {
          SE.isGuaranteedNotToCauseUB(S);
 }
 
+/// Returns the sums of the operands of \p S invariant in \p L and of the
+/// remaining operands, if there are at least 2 invariant and 1 variant
+/// operands.
+static std::pair<const SCEV *, const SCEV *>
+splitInvariantSum(const SCEVAddExpr *S, const Loop *L, ScalarEvolution &SE) {
+  if (!L)
+    return {nullptr, nullptr};
+  SmallVector<SCEVUse> InvOps, VarOps;
+  for (SCEVUse Op : S->operands())
+    (SE.isLoopInvariant(Op, L) ? InvOps : VarOps).push_back(Op);
+  if (InvOps.size() < 2 || VarOps.empty())
+    return {nullptr, nullptr};
+  return {SE.getAddExpr(InvOps), SE.getAddExpr(VarOps)};
+}
+
 VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
   VPValue *Base = expand(SE.getPointerBase(S));
   VPValue *Offset = expand(SE.removePointerBase(S));
@@ -985,6 +1000,41 @@ VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
                                 ? GEPNoWrapFlags::noUnsignedWrap()
                                 : GEPNoWrapFlags::none();
   return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
+}
+
+VPValue *VPSCEVExpander::expandAddOps(ArrayRef<const SCEV *> Operands,
+                                      VPIRFlags::WrapFlagsTy WrapFlags) {
+  // Non-constant-negative add operands are expanded negated and subtracted
+  // from the running result below, instead of being negated and added.
+  auto UseSubtract = [](const SCEV *Op) { return Op->isNonConstantNegative(); };
+  // Move the subtracted operands last, matching SCEVExpander's LoopCompare, so
+  // that they don't start the running result.
+  SmallVector<const SCEV *, 2> SCEVOps(Operands);
+  stable_sort(SCEVOps, [&](const SCEV *L, const SCEV *R) {
+    return !UseSubtract(L) && UseSubtract(R);
+  });
+  SmallVector<VPValue *, 2> Ops;
+  for (const SCEV *Op : SCEVOps) {
+    // The first operand starts the result, so it is never subtracted.
+    bool Negate = !Ops.empty() && UseSubtract(Op);
+    Ops.push_back(expand(Negate ? SE.getNegativeSCEV(Op) : Op));
+  }
+  VPValue *Result = Ops.front();
+  for (auto [Op, OpV] : drop_begin(zip_equal(SCEVOps, Ops))) {
+    if (UseSubtract(Op)) {
+      // Result + (-Op) == Result - Op, which saves the multiply for the
+      // negation. NSW only transfers if negating Op cannot overflow, see
+      // ScalarEvolution::getMinusSCEV.
+      bool HasNSW =
+          WrapFlags.HasNSW && !SE.getSignedRangeMin(Op).isMinSignedValue();
+      Result = Builder.createOverflowingOp(Instruction::Sub, {Result, OpV},
+                                           {/*HasNUW=*/false, HasNSW}, DL);
+      continue;
+    }
+    Result = Builder.createOverflowingOp(Instruction::Add, {Result, OpV},
+                                         WrapFlags, DL);
+  }
+  return Result;
 }
 
 #ifndef NDEBUG
@@ -1037,40 +1087,13 @@ VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
     if (S->getType()->isPointerTy())
       return expandAsPtrAdd(AddE);
 
-    // Non-constant-negative add operands are expanded negated and subtracted
-    // from the running result below, instead of being negated and added.
-    auto UseSubtract = [](const SCEV *Op) {
-      return Op->isNonConstantNegative();
-    };
-    // Iterate in reverse so that constants are emitted last, and move the
-    // subtracted operands last, matching SCEVExpander's LoopCompare, so that
-    // they don't start the running result.
+    // Iterate in reverse so that constants are emitted last.
     SmallVector<const SCEV *, 2> SCEVOps(reverse(AddE->operands()));
-    stable_sort(SCEVOps, [&](const SCEV *L, const SCEV *R) {
-      return !UseSubtract(L) && UseSubtract(R);
-    });
-    SmallVector<VPValue *, 2> Ops;
-    for (const SCEV *Op : SCEVOps) {
-      // The first operand starts the result, so it is never subtracted.
-      bool Negate = !Ops.empty() && UseSubtract(Op);
-      Ops.push_back(expand(Negate ? SE.getNegativeSCEV(Op) : Op));
-    }
-    VPValue *Result = Ops.front();
-    for (auto [Op, OpV] : drop_begin(zip_equal(SCEVOps, Ops))) {
-      if (UseSubtract(Op)) {
-        // Result + (-Op) == Result - Op, which saves the multiply for the
-        // negation. NSW only transfers if negating Op cannot overflow, see
-        // ScalarEvolution::getMinusSCEV.
-        bool HasNSW =
-            WrapFlags.HasNSW && !SE.getSignedRangeMin(Op).isMinSignedValue();
-        Result = Builder.createOverflowingOp(Instruction::Sub, {Result, OpV},
-                                             {/*HasNUW=*/false, HasNSW}, DL);
-        continue;
-      }
-      Result = Builder.createOverflowingOp(Instruction::Add, {Result, OpV},
-                                           WrapFlags, DL);
-    }
-    return Result;
+    // Sum the invariant operands separately, so the sum can be hoisted.
+    auto [InvS, VarS] = splitInvariantSum(AddE, HoistOutOf, SE);
+    if (InvS && canExpandInIR(InvS))
+      SCEVOps = {InvS, VarS};
+    return expandAddOps(SCEVOps, WrapFlags);
   }
   case scMulExpr: {
     auto *MulE = cast<SCEVMulExpr>(S);
