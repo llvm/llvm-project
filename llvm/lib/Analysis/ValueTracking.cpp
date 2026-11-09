@@ -8196,8 +8196,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
     [[fallthrough]];
   case Instruction::CallBr:
   case Instruction::Invoke: {
-    return !CB->hasRetAttr(Attribute::NoUndef) &&
-           !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
+    return !CBHasNoUndef && !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
   }
   case Instruction::InsertElement:
   case Instruction::ExtractElement: {
