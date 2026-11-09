@@ -1,0 +1,556 @@
+# RUN: llc -mtriple=riscv64 -mattr=+zbb -run-pass=riscv-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ZBB
+# RUN: llc -mtriple=riscv64 -mattr=-zbb -run-pass=riscv-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=NOZBB
+# RUN: llc -mtriple=riscv64 -mattr=+zbb -run-pass=riscv-postlegalizer-combiner -riscvpostlegalizercombiner-only-enable-rule=sub_shifts_to_orc_b -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ONLY
+
+# ONLY-LABEL: name: byte_bit_0
+# ONLY: G_INTRINSIC intrinsic(@llvm.riscv.orc.b)
+# ONLY-LABEL: name: byte_bit_7
+# ONLY: G_INTRINSIC intrinsic(@llvm.riscv.orc.b)
+
+---
+name: byte_bit_0
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: byte_bit_0
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: byte_bit_0
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 72340172838076673
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 8
+    %5:_(s64) = G_SHL %3, %4
+    %6:_(s64) = G_SUB %5, %3
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: byte_bit_1
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: byte_bit_1
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: byte_bit_1
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 144680345676153346
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 7
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 1
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: byte_bit_2
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: byte_bit_2
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: byte_bit_2
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 289360691352306692
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 6
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 2
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: byte_bit_3
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: byte_bit_3
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: byte_bit_3
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 578721382704613384
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 5
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 3
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: byte_bit_4
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: byte_bit_4
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: byte_bit_4
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 1157442765409226768
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 4
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 4
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: byte_bit_5
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: byte_bit_5
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: byte_bit_5
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 2314885530818453536
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 3
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 5
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: byte_bit_6
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: byte_bit_6
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: byte_bit_6
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 4629771061636907072
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 2
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 6
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: byte_bit_7
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: byte_bit_7
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: byte_bit_7
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 -9187201950435737472
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 1
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 7
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: unknown_byte_bits
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: unknown_byte_bits
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: unknown_byte_bits
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 -1
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 8
+    %5:_(s64) = G_SHL %3, %4
+    %6:_(s64) = G_SUB %5, %3
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: extra_byte_bit
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: extra_byte_bit
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: extra_byte_bit
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 217020518514230019
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 8
+    %5:_(s64) = G_SHL %3, %4
+    %6:_(s64) = G_SUB %5, %3
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: different_inputs
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: different_inputs
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: different_inputs
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 144680345676153346
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 7
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 1
+    %8:_(s64) = G_LSHR %1, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: mismatched_shifts
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: mismatched_shifts
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: mismatched_shifts
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 144680345676153346
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 7
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 2
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: arithmetic_right_shift
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: arithmetic_right_shift
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: arithmetic_right_shift
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 144680345676153346
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 7
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 1
+    %8:_(s64) = G_ASHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: variable_left_shift
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: variable_left_shift
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: variable_left_shift
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 72340172838076673
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 8
+    %5:_(s64) = G_SHL %3, %1
+    %6:_(s64) = G_SUB %5, %3
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: zero_left_shift
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: zero_left_shift
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_CONSTANT i64 0
+    ; NOZBB-LABEL: name: zero_left_shift
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_CONSTANT i64 0
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 72340172838076673
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 0
+    %5:_(s64) = G_SHL %3, %4
+    %6:_(s64) = G_SUB %5, %3
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: large_left_shift
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: large_left_shift
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: large_left_shift
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 72340172838076673
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 9
+    %5:_(s64) = G_SHL %3, %4
+    %6:_(s64) = G_SUB %5, %3
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name: both_shifts_multiuse
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: both_shifts_multiuse
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: both_shifts_multiuse
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 144680345676153346
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 7
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 1
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    $x11 = COPY %5(s64)
+    $x12 = COPY %8(s64)
+    PseudoRET implicit $x10, implicit $x11, implicit $x12
+...
+
+---
+name: left_shift_multiuse
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: left_shift_multiuse
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: left_shift_multiuse
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 144680345676153346
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 7
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 1
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    $x11 = COPY %5(s64)
+    PseudoRET implicit $x10, implicit $x11
+...
+
+---
+name: right_shift_multiuse
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: right_shift_multiuse
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: right_shift_multiuse
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 144680345676153346
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 7
+    %5:_(s64) = G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 1
+    %8:_(s64) = G_LSHR %3, %7
+    %6:_(s64) = G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    $x12 = COPY %8(s64)
+    PseudoRET implicit $x10, implicit $x12
+...
+
+---
+name: only_shift_multiuse
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: only_shift_multiuse
+    ; ZBB-NOT: G_INTRINSIC
+    ; ZBB: G_SUB
+    ; NOZBB-LABEL: name: only_shift_multiuse
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 72340172838076673
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 8
+    %5:_(s64) = G_SHL %3, %4
+    %6:_(s64) = G_SUB %5, %3
+    $x10 = COPY %6(s64)
+    $x11 = COPY %5(s64)
+    PseudoRET implicit $x10, implicit $x11
+...
+
+---
+name: poison_flags
+legalized: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; ZBB-LABEL: name: poison_flags
+    ; ZBB: [[SRC:%[0-9]+]]:_(s64) = G_AND
+    ; ZBB: G_INTRINSIC intrinsic(@llvm.riscv.orc.b), [[SRC]]
+    ; ZBB-NOT: G_SUB
+    ; NOZBB-LABEL: name: poison_flags
+    ; NOZBB-NOT: G_INTRINSIC
+    ; NOZBB: G_SUB
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s64) = G_CONSTANT i64 144680345676153346
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_CONSTANT i64 7
+    %5:_(s64) = nuw G_SHL %3, %4
+    %7:_(s64) = G_CONSTANT i64 1
+    %8:_(s64) = exact G_LSHR %3, %7
+    %6:_(s64) = nuw G_SUB %5, %8
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
