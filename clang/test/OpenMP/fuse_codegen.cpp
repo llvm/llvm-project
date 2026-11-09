@@ -2,11 +2,11 @@
 // expected-no-diagnostics
 
 // Check code generation
-// RUN: %clang_cc1 -fno-module-local-hints -verify -triple x86_64-pc-linux-gnu -std=c++20 -fclang-abi-compat=latest -fopenmp -fopenmp-version=60 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -std=c++20 -fclang-abi-compat=latest -fopenmp -fopenmp-version=60 -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK1
 
 // Check same results after serialization round-trip
-// RUN: %clang_cc1 -fno-module-local-hints -verify -triple x86_64-pc-linux-gnu -std=c++20 -fclang-abi-compat=latest -fopenmp -fopenmp-version=60 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fno-module-local-hints -verify -triple x86_64-pc-linux-gnu -std=c++20 -fclang-abi-compat=latest -fopenmp -fopenmp-version=60 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK2
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -std=c++20 -fclang-abi-compat=latest -fopenmp -fopenmp-version=60 -emit-pch -o %t %s
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -std=c++20 -fclang-abi-compat=latest -fopenmp -fopenmp-version=60 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK2
 
 #ifndef HEADER
 #define HEADER
@@ -295,7 +295,7 @@ extern "C" void foo5() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr void @_Z4foo2IiEvT_S0_S0_(
-// CHECK1-SAME: i32 noundef [[START:%.*]], i32 noundef [[END:%.*]], i32 noundef [[STEP:%.*]]) #[[ATTR0]] comdat {
+// CHECK1-SAME: i32 noundef [[START:%.*]], i32 noundef [[END:%.*]], i32 noundef [[STEP:%.*]]) #[[ATTR1:[0-9]+]] comdat {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[END_ADDR:%.*]] = alloca i32, align 4
