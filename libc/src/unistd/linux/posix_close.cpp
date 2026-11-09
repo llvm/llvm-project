@@ -13,6 +13,7 @@
 
 #include "src/unistd/posix_close.h"
 
+#include "hdr/errno_macros.h"
 #include "hdr/unistd_macros.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/common.h"
@@ -25,7 +26,15 @@ LLVM_LIBC_FUNCTION(int, posix_close, (int fd, int flag)) {
   auto result = linux_syscalls::close(fd);
 
   if (!result.has_value()) {
-    libc_errno = result.error();
+    int error = result.error();
+#if POSIX_CLOSE_RESTART == 0
+    // If POSIX_CLOSE_RESTART is zero, posix_close shall not return an EINTR
+    // error. On Linux, the descriptor is released immediately, but background
+    // state flush may be interrupted. Map EINTR to EINPROGRESS per POSIX.
+    if (error == EINTR)
+      error = EINPROGRESS;
+#endif
+    libc_errno = error;
     return -1;
   }
 
