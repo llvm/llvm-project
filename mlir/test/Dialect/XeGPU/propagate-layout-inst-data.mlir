@@ -791,17 +791,20 @@ func.func @reduction_keeps_consumer_blocking(%arg0: memref<16x64xf32>, %arg1: me
 // consumer sliced away, not against the source. The reused lane_layout is
 // capped to what the dim has to give, [1, 4], so the source stays
 // distributable; dim 0 still takes the parent's blocking of 8.
+// Use a constant source so its propagated layout is visible in the output.
 gpu.module @test {
 // CHECK-LABEL: func.func @reduction_narrow_dim_clamps_parent_lanes(
-// CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %{{.*}}, %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 4], lane_layout = [1, 4], lane_data = [1, 1]>, dims = [1]>} [1] : vector<16x4xf32> to vector<16xf32>
+// CHECK: %[[SRC:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 4], lane_layout = [1, 4], lane_data = [1, 1]>} dense<1.000000e+00> : vector<16x4xf32>
+// CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[SRC]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 4], lane_layout = [1, 4], lane_data = [1, 1]>, dims = [1]>} [1] : vector<16x4xf32> to vector<16xf32>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[RED]] {layout_result_0 = #xegpu.layout<inst_data = [8, 1], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf32> to vector<16x1xf32>
 // CHECK: vector.broadcast %[[CAST]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x1xf32> to vector<16x64xf32>
-func.func @reduction_narrow_dim_clamps_parent_lanes(%arg0: vector<16x4xf32>, %arg1: memref<16x64xf32>) {
+func.func @reduction_narrow_dim_clamps_parent_lanes(%arg0: memref<16x64xf32>) {
+  %src = arith.constant dense<1.000000e+00> : vector<16x4xf32>
   %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
-  %0 = vector.multi_reduction <add>, %arg0, %cst [1] : vector<16x4xf32> to vector<16xf32>
+  %0 = vector.multi_reduction <add>, %src, %cst [1] : vector<16x4xf32> to vector<16xf32>
   %1 = vector.shape_cast %0 : vector<16xf32> to vector<16x1xf32>
   %2 = vector.broadcast %1 : vector<16x1xf32> to vector<16x64xf32>
-  %o = xegpu.create_nd_tdesc %arg1 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
+  %o = xegpu.create_nd_tdesc %arg0 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
   xegpu.store_nd %2, %o[0, 0] : vector<16x64xf32>, !xegpu.tensor_desc<16x64xf32>
   return
 }
