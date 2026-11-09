@@ -59,11 +59,11 @@
 
 ; CHECK: declare <2 x double> @_ZGVnN2v_tgamma(<2 x double>) [[ATTRS]]
 
-; CHECK: declare <2 x double> @_ZGVnN2vl8_modf(<2 x double>, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG:#[0-9]+]]
+; CHECK: declare <2 x double> @_ZGVnN2vl8_modf(<2 x double>, ptr noalias nonnull writeonly align 8 dereferenceable(16)) [[ATTRS_PTR_ARG:#[0-9]+]]
 
-; CHECK: declare void @_ZGVnN2vl8l8_sincos(<2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVnN2vl8l8_sincos(<2 x double>, ptr noalias nonnull writeonly align 8 dereferenceable(16), ptr noalias nonnull writeonly align 8 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVnN2vl8l8_sincospi(<2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVnN2vl8l8_sincospi(<2 x double>, ptr noalias nonnull writeonly align 8 dereferenceable(16), ptr noalias nonnull writeonly align 8 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <2 x double> @_ZGVnN2vv_atan2(<2 x double>, <2 x double>) [[ATTRS]]
 
@@ -145,11 +145,11 @@
 
 ; CHECK: declare <4 x float> @_ZGVnN4v_tgammaf(<4 x float>) [[ATTRS]]
 
-; CHECK: declare <4 x float> @_ZGVnN4vl4_modff(<4 x float>, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
+; CHECK: declare <4 x float> @_ZGVnN4vl4_modff(<4 x float>, ptr noalias nonnull writeonly align 4 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVnN4vl4l4_sincosf(<4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVnN4vl4l4_sincosf(<4 x float>, ptr noalias nonnull writeonly align 4 dereferenceable(16), ptr noalias nonnull writeonly align 4 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare void @_ZGVnN4vl4l4_sincospif(<4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @_ZGVnN4vl4l4_sincospif(<4 x float>, ptr noalias nonnull writeonly align 4 dereferenceable(16), ptr noalias nonnull writeonly align 4 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <4 x float> @_ZGVnN4vv_atan2f(<4 x float>, <4 x float>) [[ATTRS]]
 

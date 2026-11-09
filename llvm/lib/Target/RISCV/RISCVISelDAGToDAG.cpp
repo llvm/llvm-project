@@ -4095,35 +4095,10 @@ bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
 
 bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
                                         SDValue &ShAmt) {
-  ShAmt = N;
-
-  // Peek through zext.
-  if (ShAmt->getOpcode() == ISD::ZERO_EXTEND)
-    ShAmt = ShAmt.getOperand(0);
-
   // Shift instructions on RISC-V only read the lower 5 or 6 bits of the shift
-  // amount. If there is an AND on the shift amount, we can bypass it if it
-  // doesn't affect any of those bits.
-  if (ShAmt.getOpcode() == ISD::AND &&
-      isa<ConstantSDNode>(ShAmt.getOperand(1))) {
-    const APInt &AndMask = ShAmt.getConstantOperandAPInt(1);
-
-    // Since the max shift amount is a power of 2 we can subtract 1 to make a
-    // mask that covers the bits needed to represent all shift amounts.
-    assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
-    APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
-
-    if (ShMask.isSubsetOf(AndMask)) {
-      ShAmt = ShAmt.getOperand(0);
-    } else {
-      // SimplifyDemandedBits may have optimized the mask so try restoring any
-      // bits that are known zero.
-      KnownBits Known = CurDAG->computeKnownBits(ShAmt.getOperand(0));
-      if (!ShMask.isSubsetOf(AndMask | Known.Zero))
-        return true;
-      ShAmt = ShAmt.getOperand(0);
-    }
-  }
+  // amount. Look through an AND that doesn't affect those bits.
+  if (!selectShiftAmountMask(N, ShiftWidth, ShAmt))
+    ShAmt = N;
 
   if (ShAmt.getOpcode() == ISD::ADD &&
       isa<ConstantSDNode>(ShAmt.getOperand(1))) {
@@ -4183,7 +4158,7 @@ bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
     return false;
 
   // Must be an equality comparison.
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CCVal = N->getOperandCondCode(2);
   if (CCVal != ExpectedCCVal)
     return false;
 
@@ -4740,6 +4715,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::SH1ADD:
     case RISCV::SH2ADD:
     case RISCV::SH3ADD:
+    case RISCV::PseudoMERGE:
     RecCheck:
       if (hasAllNBitUsers(User, Bits, Depth + 1))
         break;

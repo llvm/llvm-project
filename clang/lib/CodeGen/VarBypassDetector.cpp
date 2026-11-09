@@ -16,9 +16,9 @@
 using namespace clang;
 using namespace CodeGen;
 
-/// True if the body contains a goto, switch, or indirect goto. Lets Init()
-/// skip scope building for the common jump-free function, this is a minor
-/// optimization win.
+/// True if the body contains a goto, switch, indirect goto, or asm goto. Lets
+/// Init() skip scope building for the common jump-free function, this is a
+/// minor optimization win.
 static bool hasJumpStmts(const Stmt *Body) {
   llvm::SmallVector<const Stmt *, 32> Worklist;
   Worklist.push_back(Body);
@@ -31,6 +31,10 @@ static bool hasJumpStmts(const Stmt *Body) {
     case Stmt::SwitchStmtClass:
     case Stmt::IndirectGotoStmtClass:
       return true;
+    case Stmt::GCCAsmStmtClass:
+      if (cast<GCCAsmStmt>(S)->isAsmGoto())
+        return true;
+      break;
     default:
       break;
     }
@@ -162,6 +166,10 @@ bool VarBypassDetector::BuildScopeInformation(CodeGenModule &CGM, const Stmt *S,
     if (!Result)
       return false;
   }
+
+  if (const auto *GAS = dyn_cast<GCCAsmStmt>(S); GAS && GAS->isAsmGoto())
+    FromScopes.push_back({S, ParentScope});
+
   return true;
 }
 
@@ -180,8 +188,12 @@ void VarBypassDetector::Detect() {
            SC = SC->getNextSwitchCase()) {
         Detect(from, ToScopes[SC], SS);
       }
+    } else if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(St)) {
+      for (const AddrLabelExpr *L : GAS->labels())
+        if (const LabelStmt *LS = L->getLabel()->getStmt())
+          Detect(from, ToScopes[LS], GAS);
     } else {
-      llvm_unreachable("goto or switch was expected");
+      llvm_unreachable("goto, switch, or asm goto was expected");
     }
   }
 }

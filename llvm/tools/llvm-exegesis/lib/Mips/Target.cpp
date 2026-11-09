@@ -9,7 +9,6 @@
 #include "../Error.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
-#include "Mips.h"
 #include "MipsRegisterInfo.h"
 
 #define GET_AVAILABLE_OPCODE_CHECKER

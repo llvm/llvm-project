@@ -2,10 +2,12 @@
 // RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64le-unknown-unknown \
 // RUN: -target-feature +crypto -target-feature +power8-vector -target-feature +isa-v207-instructions \
 // RUN: -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -flax-vector-conversions=none -triple powerpc64le-unknown-unknown -target-feature +crypto -target-feature +power8-vector -target-feature +isa-v207-instructions -emit-llvm %s -o - | FileCheck %s %}
 
 // RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64-unknown-unknown \
 // RUN: -target-feature +crypto -target-feature +power8-vector -target-feature +isa-v207-instructions \
 // RUN: -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -flax-vector-conversions=none -triple powerpc64-unknown-unknown -target-feature +crypto -target-feature +power8-vector -target-feature +isa-v207-instructions -emit-llvm %s -o - | FileCheck %s %}
 #include <altivec.h>
 #define B_INIT1 { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, \
                   0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10 };
