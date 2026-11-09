@@ -3147,7 +3147,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
     auto operVecTy = mlir::cast<cir::VectorType>(oper.getType());
     mlir::Value zeroVec = builder.getNullValue(operVecTy, loc);
     auto resultTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-    if (cir::isFPOrVectorOfFPType(oper.getType())) {
+    if (cir::isFPOrVectorOfFPType(operVecTy.getElementType())) {
       CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
       return builder.createVecFCompare(loc, resultTy, cir::FCmpOpKind::oeq,
                                        oper, zeroVec);
