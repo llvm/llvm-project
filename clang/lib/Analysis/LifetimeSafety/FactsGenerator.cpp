@@ -460,7 +460,7 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
 void FactsGenerator::handleAssignment(const Expr *TargetExpr,
                                       const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
-  LHSExpr = LHSExpr->IgnoreParenImpCasts();
+  LHSExpr = ignoreParensAndImpCasts(LHSExpr);
   handleAccess(LHSExpr);
   OriginList *RHSList = readValue(RHSExpr);
   OriginList *LHSList = nullptr;
