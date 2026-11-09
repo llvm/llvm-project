@@ -943,8 +943,8 @@ define <2 x i32> @deinterleave3_v6i32_first_poison(<2 x i32> %b, <2 x i32> %c) {
 define <4 x i32> @deinterleave2_v8i32_all_poison(<8 x i16> %y, <4 x i32> %a) {
 ; CHECK-SD-LABEL: deinterleave2_v8i32_all_poison:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uaddlp v0.4s, v0.8h
-; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    uadalp v1.4s, v0.8h
+; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: deinterleave2_v8i32_all_poison:

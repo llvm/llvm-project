@@ -28286,9 +28286,14 @@ SDValue DAGCombiner::visitVECTOR_DEINTERLEAVE(SDNode *N) {
 
   // Canonicalize shuffle undef, undef -> {undef, undef, ..}
   // A result can take lanes from any operand, so all operands must be undef.
-  if (all_of(N->op_values(), [](SDValue Op) { return Op.isUndef(); })) {
+  bool AllPoison = true;
+  if (all_of(N->op_values(), [&AllPoison](SDValue Op) {
+        AllPoison &= Op.getOpcode() == ISD::POISON;
+        return Op.isUndef();
+      })) {
     SDLoc DL(N);
-    SmallVector<SDValue> Ops(N->getNumValues(), DAG.getUNDEF(VT));
+    SDValue Res = AllPoison ? DAG.getPOISON(VT) : DAG.getUNDEF(VT);
+    SmallVector<SDValue> Ops(N->getNumValues(), Res);
     return DAG.getMergeValues(Ops, DL);
   }
 
