@@ -307,6 +307,13 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                   RoundingMode RM, FastMathFlags FMF,
                                   FPClassTest DemandedMask, KnownFPClass &Known,
                                   const SimplifyQuery &SQ, unsigned Depth) {
+  // No support for multi-unit-fp-types (Such as PPCDoubleDouble).
+  if (I.getType()->getScalarType()->isMultiUnitFPType() ||
+      I.getOperand(0)->getType()->getScalarType()->isMultiUnitFPType()) {
+    Known.resetAll();
+    return nullptr;
+  }
+
   const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
   const fltSemantics &SrcTy =
       I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
@@ -871,6 +878,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         *this, *I, RoundingMode::NearestTiesToEven, FMF, DemandedMask, Known,
         SQ, Depth);
   case Instruction::FPExt: {
+    // No support for multi-unit-fp-types (Such as PPCDoubleDouble).
+    if (I->getType()->getScalarType()->isMultiUnitFPType() ||
+        I->getOperand(0)->getType()->getScalarType()->isMultiUnitFPType()) {
+      Known.resetAll();
+      return nullptr;
+    }
+
     const fltSemantics &DstTy = VTy->getScalarType()->getFltSemantics();
     const fltSemantics &SrcTy =
         I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
