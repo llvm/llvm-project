@@ -294,7 +294,7 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 }
 
 void X86::scanSection(InputSectionBase &sec, unsigned shard) {
-  elf::scanSection1<X86, ELF32LE>(*this, sec, shard);
+  elf::scanSection1<ELF32LE>(*this, sec, shard);
 }
 
 int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
