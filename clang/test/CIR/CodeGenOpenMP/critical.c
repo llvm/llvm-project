@@ -18,6 +18,11 @@ void named(void) {
   work();
 }
 
+void named_hint(void) {
+#pragma omp critical(fast) hint(2)
+  work();
+}
+
 // The same name in another function reuses the one declaration.
 void named_again(void) {
 #pragma omp critical(mylock)
@@ -56,6 +61,7 @@ void nested(void) {
 
 // Each name is declared once, at the start of the module.
 // CIR-DAG: omp.critical.declare @mylock
+// CIR-DAG: omp.critical.declare @fast hint(contended)
 // CIR-DAG: omp.critical.declare @outer
 // CIR-DAG: omp.critical.declare @inner
 
@@ -68,6 +74,12 @@ void nested(void) {
 
 // CIR-LABEL: cir.func {{.*}}@named()
 // CIR:         omp.critical(@mylock) {
+// CIR:           cir.call @work() : () -> ()
+// CIR:           omp.terminator
+// CIR:         }
+
+// CIR-LABEL: cir.func {{.*}}@named_hint()
+// CIR:         omp.critical(@fast) {
 // CIR:           cir.call @work() : () -> ()
 // CIR:           omp.terminator
 // CIR:         }
@@ -115,6 +127,7 @@ void nested(void) {
 // __kmpc_critical_with_hint, with a hint of 0 when none was given.
 // LLVM-DAG: @[[UNNAMED:.gomp_critical_user_.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[MYLOCK:.gomp_critical_user_mylock.var]] = {{.*}}global [8 x i32] zeroinitializer
+// LLVM-DAG: @[[FAST:.gomp_critical_user_fast.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[OUTER:.gomp_critical_user_outer.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[INNER:.gomp_critical_user_inner.var]] = {{.*}}global [8 x i32] zeroinitializer
 
@@ -127,6 +140,11 @@ void nested(void) {
 // LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
 // LLVM:         call void @work()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
+
+// LLVM-LABEL: define {{.*}}void @named_hint()
+// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[FAST]], i32 2)
+// LLVM:         call void @work()
+// LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[FAST]])
 
 // LLVM-LABEL: define {{.*}}void @named_again()
 // LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
@@ -157,6 +175,7 @@ void nested(void) {
 
 // OGCG-DAG: @[[UNNAMED:.gomp_critical_user_.var]] = {{.*}}global [8 x i32] zeroinitializer
 // OGCG-DAG: @[[MYLOCK:.gomp_critical_user_mylock.var]] = {{.*}}global [8 x i32] zeroinitializer
+// OGCG-DAG: @[[FAST:.gomp_critical_user_fast.var]] = {{.*}}global [8 x i32] zeroinitializer
 // OGCG-DAG: @[[OUTER:.gomp_critical_user_outer.var]] = {{.*}}global [8 x i32] zeroinitializer
 // OGCG-DAG: @[[INNER:.gomp_critical_user_inner.var]] = {{.*}}global [8 x i32] zeroinitializer
 
@@ -169,6 +188,11 @@ void nested(void) {
 // OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 // OGCG:         call void @work()
 // OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
+
+// OGCG-LABEL: define {{.*}}void @named_hint()
+// OGCG:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[FAST]], i32 2)
+// OGCG:         call void @work()
+// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[FAST]])
 
 // OGCG-LABEL: define {{.*}}void @named_again()
 // OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])

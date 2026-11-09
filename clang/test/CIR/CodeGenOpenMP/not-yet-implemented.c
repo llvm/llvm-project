@@ -37,8 +37,10 @@ void use_clash() {
   {}
 }
 
-void hint_nyi() {
-  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP CRITICAL 'hint' clause}}
-#pragma omp critical(hinted) hint(2)
+void conflicting_hint() {
+  // Sema accepts uncontended (1) together with contended (2), but the omp
+  // dialect rejects it.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP critical 'hint' combining conflicting sync hints}}
+#pragma omp critical(conflict) hint(3)
   {}
 }

@@ -212,7 +212,7 @@ CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
 
 /// Find or create the module-level declaration of the critical section \p name.
 /// Returns null, after emitting an error, if the name is already used by
-/// another symbol.
+/// another symbol or the hint cannot be represented.
 static mlir::omp::CriticalDeclareOp
 getOrCreateCriticalDeclare(CIRGenFunction &cgf, const OMPCriticalDirective &s,
                            llvm::StringRef name, mlir::Location loc) {
@@ -229,6 +229,22 @@ getOrCreateCriticalDeclare(CIRGenFunction &cgf, const OMPCriticalDirective &s,
 
   mlir::omp::CriticalDeclareOperands clauseOps;
   clauseOps.symName = mlir::StringAttr::get(&cgf.getMLIRContext(), name);
+  if (const auto *hint = s.getSingleClause<OMPHintClause>()) {
+    uint64_t value =
+        hint->getHint()->EvaluateKnownConstInt(cgf.getContext()).getZExtValue();
+    // Sema accepts hints that combine uncontended (1) with contended (2), or
+    // nonspeculative (4) with speculative (8), but the omp dialect rejects
+    // them. OpenMP 5.0 [2.17.12] forbids these combinations, so Sema should
+    // diagnose them; once it does, this check can become an assertion.
+    if ((value & 0x3) == 0x3 || (value & 0xC) == 0xC) {
+      cgm.errorNYI(hint->getBeginLoc(),
+                   "OpenMP critical 'hint' combining conflicting sync hints");
+      return nullptr;
+    }
+    clauseOps.hint = mlir::IntegerAttr::get(
+        mlir::IntegerType::get(&cgf.getMLIRContext(), 64), value);
+  }
+
   mlir::OpBuilder modBuilder(module.getBodyRegion());
   return mlir::omp::CriticalDeclareOp::create(modBuilder, loc, clauseOps);
 }
@@ -247,8 +263,10 @@ CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
 
   OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin,
                          item->clauses);
-  if (mlir::failed(ce.emitNYI(/*nyi=*/OpenMPNYIClauseList<OMPHintClause>{},
-                              llvm::omp::Directive::OMPD_critical)))
+  // The hint is consumed when the named critical section is declared.
+  if (mlir::failed(ce.emitNYI</*supported=*/OMPHintClause>(
+          /*nyi=*/OpenMPNYIClauseList<>{},
+          llvm::omp::Directive::OMPD_critical)))
     return mlir::failure();
 
   mlir::FlatSymbolRefAttr nameAttr;
