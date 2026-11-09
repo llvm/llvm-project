@@ -3164,6 +3164,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
 
 void FunctionDecl::setDefaultedOrDeletedInfo(
     DefaultedOrDeletedFunctionInfo *Info) {
+  assert(Info && "expected defaulted or deleted function info");
   assert(!FunctionDeclBits.HasDefaultedOrDeletedInfo && "already have this");
   assert(!Body && "can't replace function body with defaulted function info");
 

@@ -6266,11 +6266,11 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     // A function defaulted outside its class was not defaulted when its
     // declaration was instantiated, so transfer the unqualified lookups
-    // performed at its definition now. They were performed from namespace
-    // scope, so they don't need to be instantiated.
+    // performed at its definition now, if any. They were performed from
+    // namespace scope, so they don't need to be instantiated.
     if (!Function->getDefaultedOrDeletedInfo())
-      Function->setDefaultedOrDeletedInfo(
-          PatternDecl->getDefaultedOrDeletedInfo());
+      if (auto *DFI = PatternDecl->getDefaultedOrDeletedInfo())
+        Function->setDefaultedOrDeletedInfo(DFI);
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
     DeclContext *DC = Function->getLexicalDeclContext();
