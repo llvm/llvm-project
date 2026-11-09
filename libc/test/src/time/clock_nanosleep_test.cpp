@@ -38,6 +38,13 @@ TEST_F(LlvmLibcClockNanosleep, InvalidNsec) {
   EXPECT_EQ(ret, EINVAL);
 }
 
+TEST_F(LlvmLibcClockNanosleep, InvalidFlag) {
+  struct timespec tim = {0, 500};
+  // Invalid flags (bits other than TIMER_ABSTIME) should fail with EINVAL.
+  int ret = LIBC_NAMESPACE::clock_nanosleep(CLOCK_REALTIME, ~0, &tim, nullptr);
+  EXPECT_EQ(ret, EINVAL);
+}
+
 TEST_F(LlvmLibcClockNanosleep, SleepRealtime) {
   struct timespec tim = {0, 500};
   int ret = LIBC_NAMESPACE::clock_nanosleep(CLOCK_REALTIME, 0, &tim, nullptr);
@@ -47,5 +54,14 @@ TEST_F(LlvmLibcClockNanosleep, SleepRealtime) {
 TEST_F(LlvmLibcClockNanosleep, SleepMonotonic) {
   struct timespec tim = {0, 500};
   int ret = LIBC_NAMESPACE::clock_nanosleep(CLOCK_MONOTONIC, 0, &tim, nullptr);
+  EXPECT_EQ(ret, 0);
+}
+
+TEST_F(LlvmLibcClockNanosleep, SleepAbsTimePast) {
+  // If TIMER_ABSTIME is specified and the absolute time has already passed,
+  // clock_nanosleep should return immediately with 0.
+  struct timespec tim = {0, 0};
+  int ret = LIBC_NAMESPACE::clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tim,
+                                            nullptr);
   EXPECT_EQ(ret, 0);
 }
