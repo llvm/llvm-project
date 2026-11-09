@@ -1042,12 +1042,20 @@ static bool shouldStripSectionSuffix(SectionChunk *sc, StringRef name,
 
 void Writer::sortSections() {
   if (!ctx.config.callGraphProfile.empty()) {
+    // Sort by each section's own priority. The name-keyed config.order mixed
+    // up sections whose leaders have the same name. As before, only sections
+    // with a leader symbol move.
     DenseMap<const SectionChunk *, int> order =
         computeCallGraphProfileOrder(ctx);
-    for (auto it : order) {
-      if (DefinedRegular *sym = it.first->sym)
-        ctx.config.order[sym->getName()] = it.second;
-    }
+    auto priority = [&](const Chunk *c) {
+      auto *sc = dyn_cast<SectionChunk>(c);
+      return sc && sc->sym ? order.lookup(sc) : 0;
+    };
+    for (auto it : partialSections)
+      llvm::stable_sort(it.second->chunks, [&](const Chunk *a, const Chunk *b) {
+        return priority(a) < priority(b);
+      });
+    return;
   }
   if (!ctx.config.order.empty())
     for (auto it : partialSections)
