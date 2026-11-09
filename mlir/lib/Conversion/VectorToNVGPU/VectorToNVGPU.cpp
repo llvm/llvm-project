@@ -35,10 +35,10 @@
 
 #define DEBUG_TYPE "vector-to-nvgpu"
 
-#include "../VectorToGPUCommon/VectorToGPUUtils.h"
+#include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTONVGPU
+#define GEN_PASS_DEF_CONVERTVECTORTONVGPUPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -673,7 +673,7 @@ convertContractOpToMmaSync(RewriterBase &rewriter, vector::ContractionOp op,
 
 void mlir::populatePrepareVectorToNVMMAPatterns(RewritePatternSet &patterns) {
   vector::populateVectorContractCanonicalizeMatmulToMMT(patterns);
-  patterns.add<CombineTransferReadOpTranspose>(patterns.getContext());
+  populateVectorTransferReadTransposePatterns(patterns);
 }
 
 LogicalResult mlir::convertVectorToNVVMCompatibleMMASync(RewriterBase &rewriter,
@@ -720,7 +720,7 @@ LogicalResult mlir::convertVectorToNVVMCompatibleMMASync(RewriterBase &rewriter,
 
 namespace {
 struct ConvertVectorToNVGPUPass
-    : public impl::ConvertVectorToNVGPUBase<ConvertVectorToNVGPUPass> {
+    : public impl::ConvertVectorToNVGPUPassBase<ConvertVectorToNVGPUPass> {
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -734,7 +734,3 @@ struct ConvertVectorToNVGPUPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertVectorToNVGPUPass() {
-  return std::make_unique<ConvertVectorToNVGPUPass>();
-}

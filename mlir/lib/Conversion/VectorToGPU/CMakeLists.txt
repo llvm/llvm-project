@@ -13,4 +13,5 @@ add_mlir_conversion_library(MLIRVectorToGPU
   MLIRSCFDialect
   MLIRTransformUtils
   MLIRVectorDialect
+  MLIRVectorToGPUCommonConversion
   )

@@ -1614,10 +1614,9 @@ def UBToSPIRVConversionPass : Pass<"convert-ub-to-spirv"> {
 // VectorToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
+def ConvertVectorToGPUPass : Pass<"convert-vector-to-gpu"> {
   let summary = "Lower the operations from the vector dialect into the GPU "
                 "dialect";
-  let constructor = "mlir::createConvertVectorToGPUPass()";
   let dependentDialects = [
     "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
     "vector::VectorDialect"
@@ -1628,10 +1627,9 @@ def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
 // VectorToNVGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToNVGPU : Pass<"convert-vector-to-nvgpu"> {
+def ConvertVectorToNVGPUPass : Pass<"convert-vector-to-nvgpu"> {
   let summary = "Lower the operations from the vector dialect into the NVGPU "
                 "dialect";
-  let constructor = "mlir::createConvertVectorToNVGPUPass()";
   let dependentDialects = [
     "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
     "vector::VectorDialect", "nvgpu::NVGPUDialect"

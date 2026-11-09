@@ -17,7 +17,7 @@ class MLIRContext;
 class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTVECTORTONVGPU
+#define GEN_PASS_DECL_CONVERTVECTORTONVGPUPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Populate patterns that prepare vector operations for lowering to
@@ -30,9 +30,6 @@ void populatePrepareVectorToNVMMAPatterns(RewritePatternSet &patterns);
 /// the vector operations are left untouched.
 LogicalResult convertVectorToNVVMCompatibleMMASync(RewriterBase &rewriter,
                                                    Operation *rootOp);
-
-/// Convert from vector to NVGPU ops.
-std::unique_ptr<Pass> createConvertVectorToNVGPUPass();
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_VECTORTONVGPU_VECTORTONVGPU_H

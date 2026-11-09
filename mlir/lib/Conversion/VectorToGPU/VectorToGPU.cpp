@@ -34,7 +34,7 @@
 #include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOGPU
+#define GEN_PASS_DEF_CONVERTVECTORTOGPUPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -587,8 +587,8 @@ convertElementwiseOp(RewriterBase &rewriter, Operation *op,
 }
 
 void mlir::populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns) {
-  patterns.add<PrepareContractToGPUMMA, CombineTransferReadOpTranspose>(
-      patterns.getContext());
+  patterns.add<PrepareContractToGPUMMA>(patterns.getContext());
+  populateVectorTransferReadTransposePatterns(patterns);
 }
 
 LogicalResult mlir::convertVectorToMMAOps(RewriterBase &rewriter,
@@ -626,7 +626,7 @@ LogicalResult mlir::convertVectorToMMAOps(RewriterBase &rewriter,
 
 namespace {
 struct ConvertVectorToGPUPass
-    : public impl::ConvertVectorToGPUBase<ConvertVectorToGPUPass> {
+    : public impl::ConvertVectorToGPUPassBase<ConvertVectorToGPUPass> {
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -639,7 +639,3 @@ struct ConvertVectorToGPUPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertVectorToGPUPass() {
-  return std::make_unique<ConvertVectorToGPUPass>();
-}

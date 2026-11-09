@@ -12662,10 +12662,26 @@ cc_library(
 )
 
 cc_library(
+    name = "VectorToGPUCommonConversion",
+    srcs = glob(["lib/Conversion/VectorToGPUCommon/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/VectorToGPUCommon/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":GPUDialect",
+        ":IR",
+        ":SCFDialect",
+        ":Support",
+        ":VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "VectorToGPU",
     srcs = glob([
         "lib/Conversion/VectorToGPU/*.cpp",
-    ]) + ["lib/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"],
+    ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToGPU/*.h",
     ]),
@@ -12684,6 +12700,7 @@ cc_library(
         ":SCFDialect",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorToGPUCommonConversion",
         "//llvm:Support",
     ],
 )
@@ -12692,7 +12709,7 @@ cc_library(
     name = "VectorToNVGPU",
     srcs = glob([
         "lib/Conversion/VectorToNVGPU/*.cpp",
-    ]) + ["lib/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"],
+    ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToNVGPU/*.h",
     ]),
@@ -12713,6 +12730,7 @@ cc_library(
         ":SCFDialect",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorToGPUCommonConversion",
         ":VectorTransforms",
         "//llvm:Support",
     ],

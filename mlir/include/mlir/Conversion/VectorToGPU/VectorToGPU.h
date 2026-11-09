@@ -16,7 +16,7 @@ class MLIRContext;
 class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTVECTORTOGPU
+#define GEN_PASS_DECL_CONVERTVECTORTOGPUPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Populate patterns that prepare vector operations for lowering to
@@ -27,9 +27,6 @@ void populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns);
 /// convert slice of operations that can be legally converted to MMA operations.
 /// The rest of the vector operations are left untouched.
 LogicalResult convertVectorToMMAOps(RewriterBase &rewriter, Operation *rootOp);
-
-/// Convert from vector to GPU ops.
-std::unique_ptr<Pass> createConvertVectorToGPUPass();
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_VECTORTOGPU_VECTORTOGPU_H

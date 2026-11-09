@@ -1,5 +1,4 @@
-//===- VectorToGPUUtils.h - Shared vector-to-MMA helpers //------------*- C++
-////-*-===//
+//===- VectorToGPUUtils.cpp - Shared vector-to-MMA helpers ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LIB_CONVERSION_VECTORTOGPUCOMMON_VECTORTOGPUUTILS_H
-#define MLIR_LIB_CONVERSION_VECTORTOGPUCOMMON_VECTORTOGPUUTILS_H
-
+#include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -17,31 +14,30 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
-#include <optional>
+#include <cstddef>
+#include <tuple>
+#include <utility>
+
+#define DEBUG_TYPE "vector-to-gpu-common"
 
 namespace mlir {
-namespace {
-/// Return true if the constant is a splat to a 2D vector so that it can be
-/// converted to a MMA constant matrix op.
-static bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
+bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
   auto vecType = dyn_cast<VectorType>(constantOp.getType());
   if (!vecType || vecType.getRank() != 2)
     return false;
   return isa<SplatElementsAttr>(constantOp.getValue());
 }
 
-/// Return true if this is a broadcast from scalar to a 2D vector.
-static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
+bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
   return broadcastOp.getResultVectorType().getRank() == 2;
 }
 
-/// Return true if this integer extend op can be folded into a contract op.
 template <typename ExtOpTy>
-static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
+bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
   auto transferReadOp =
       extOp.getOperand().template getDefiningOp<vector::TransferReadOp>();
   if (!transferReadOp)
@@ -49,13 +45,17 @@ static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
   return llvm::all_of(extOp->getUsers(), llvm::IsaPred<vector::ContractionOp>);
 }
 
-static bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp) { return true; }
-static bool fpTruncSupportsMMAMatrixType(arith::TruncFOp extOp) { return true; }
+template bool
+    integerExtendSupportsMMAMatrixType<arith::ExtSIOp>(arith::ExtSIOp);
 
-/// Return the MMA elementwise enum associated with `op` if it is supported.
-/// Return `std::nullopt` otherwise.
-static std::optional<gpu::MMAElementwiseOp>
-convertElementwiseOpToMMA(Operation *op) {
+template bool
+    integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(arith::ExtUIOp);
+
+bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp) { return true; }
+
+bool fpTruncSupportsMMAMatrixType(arith::TruncFOp extOp) { return true; }
+
+std::optional<gpu::MMAElementwiseOp> convertElementwiseOpToMMA(Operation *op) {
   using MMAEwO = gpu::MMAElementwiseOp;
   return TypeSwitch<Operation *, std::optional<MMAEwO>>(op)
       .Case([](arith::AddFOp) { return MMAEwO::ADDF; })
@@ -75,8 +75,7 @@ convertElementwiseOpToMMA(Operation *op) {
       .Default(std::nullopt);
 }
 
-/// Return true if the op is supported as elementwise op on MMAMatrix type.
-static bool elementwiseSupportsMMAMatrixType(Operation *op) {
+bool elementwiseSupportsMMAMatrixType(Operation *op) {
   return convertElementwiseOpToMMA(op).has_value();
 }
 
@@ -86,7 +85,6 @@ static scf::ForOp replaceForOpWithNewSignature(RewriterBase &rewriter,
                                                scf::ForOp loop,
                                                ValueRange newInitArgs) {
   OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(loop);
 
   // Create a new loop before the existing one, with the extra operands.
   rewriter.setInsertionPoint(loop);
@@ -114,8 +112,8 @@ static scf::ForOp replaceForOpWithNewSignature(RewriterBase &rewriter,
   return newLoop;
 }
 
-static LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
-                                  llvm::DenseMap<Value, Value> &valueMapping) {
+LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
+                           llvm::DenseMap<Value, Value> &valueMapping) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
 
@@ -146,9 +144,8 @@ static LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
   return success();
 }
 
-static LogicalResult
-convertYieldOp(RewriterBase &rewriter, scf::YieldOp op,
-               llvm::DenseMap<Value, Value> &valueMapping) {
+LogicalResult convertYieldOp(RewriterBase &rewriter, scf::YieldOp op,
+                             llvm::DenseMap<Value, Value> &valueMapping) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
 
@@ -170,6 +167,7 @@ convertYieldOp(RewriterBase &rewriter, scf::YieldOp op,
   return success();
 }
 
+namespace {
 // Fold vector.transpose into vector.transfer_read, including through
 // arithmetic extension operations.
 struct CombineTransferReadOpTranspose final
@@ -235,6 +233,8 @@ struct CombineTransferReadOpTranspose final
   }
 };
 } // namespace
-} // namespace mlir
 
-#endif
+void populateVectorTransferReadTransposePatterns(RewritePatternSet &patterns) {
+  patterns.add<CombineTransferReadOpTranspose>(patterns.getContext());
+}
+} // namespace mlir
