@@ -115,7 +115,7 @@ struct InlineAsmIdentifierInfo;
 namespace clang {
 class ADLResult;
 class APValue;
-struct ASTConstraintSatisfaction;
+class ASTConstraintSatisfaction;
 class ASTConsumer;
 class ASTContext;
 class ASTDeclReader;
@@ -2136,9 +2136,13 @@ public:
     bool ShouldAct;
   };
 
-  /// Last section used with #pragma init_seg.
-  StringLiteral *CurInitSeg;
-  SourceLocation CurInitSegLoc;
+  /// Used for #pragma init_seg.
+  struct InitSegPragmaState {
+    SourceLocation PragmaLocation;
+    StringLiteral *Segment = nullptr;
+    FunctionDecl *Func = nullptr;
+  };
+  InitSegPragmaState CurInitSeg;
 
   /// Sections used with #pragma alloc_text.
   llvm::StringMap<std::tuple<StringRef, SourceLocation>> FunctionToSectionMap;
@@ -2309,8 +2313,10 @@ public:
                             StringLiteral *SegmentName);
 
   /// Called on well-formed \#pragma init_seg().
+  /// If a function name is provided (", func-name"), it is passed via Func.
   void ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
-                            StringLiteral *SegmentName);
+                            StringLiteral *SegmentName,
+                            IdentifierLoc *Func = nullptr);
 
   /// Called on well-formed \#pragma alloc_text().
   void ActOnPragmaMSAllocText(
@@ -6297,6 +6303,21 @@ public:
   void DefineDefaultedComparison(SourceLocation Loc, FunctionDecl *FD,
                                  DefaultedComparisonKind DCK);
 
+  /// Check a defaulted postfix increment or decrement operator function
+  /// (C++2d [over.inc.default]), defining it as deleted if necessary.
+  ///
+  /// \param S The scope in which the function is defaulted, used to perform
+  /// the unqualified name lookups needed by the implicit definition, or
+  /// \c nullptr if those lookups have already been performed.
+  ///
+  /// \returns \c true if the function is ill-formed.
+  bool CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
+                                               PostfixOperatorKind Kind);
+  /// Synthesize the body of a defaulted postfix increment or decrement
+  /// operator function (C++2d [over.inc.default]p3).
+  void DefineDefaultedPostfixOperator(SourceLocation Loc, FunctionDecl *FD,
+                                      PostfixOperatorKind Kind);
+
   void CheckExplicitObjectMemberFunction(Declarator &D, DeclarationName Name,
                                          QualType R, bool IsLambda,
                                          DeclContext *DC = nullptr);
@@ -6614,10 +6635,17 @@ public:
   void ActOnPureSpecifier(Decl *D, SourceLocation PureSpecLoc);
   void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc,
                       StringLiteral *Message = nullptr);
-  void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc);
+  /// Mark the given declaration as explicitly defaulted.
+  ///
+  /// \param S The scope in which the function is defaulted, if it is
+  /// available. It is used to perform the unqualified name lookups needed by
+  /// the implicit definition of an out-of-class defaulted function.
+  void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc,
+                        Scope *S = nullptr);
 
   void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
-                           StringLiteral *DeletedMessage = nullptr);
+                           StringLiteral *DeletedMessage = nullptr,
+                           Scope *S = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
   ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
@@ -9011,9 +9039,6 @@ public:
   concepts::TypeRequirement *BuildTypeRequirement(
       concepts::Requirement::SubstitutionDiagnostic *SubstDiag);
   concepts::NestedRequirement *BuildNestedRequirement(Expr *E);
-  concepts::NestedRequirement *
-  BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                         const ASTConstraintSatisfaction &Satisfaction);
   ExprResult ActOnRequiresExpr(SourceLocation RequiresKWLoc,
                                RequiresExprBodyDecl *Body,
                                SourceLocation LParenLoc,
@@ -15298,7 +15323,7 @@ private:
   /// The key is based on the unsubstituted expression and the parameter
   /// mapping. This lets us not substituting the mapping more than once,
   /// which is (very!) expensive.
-  llvm::DenseMap<llvm::FoldingSetNodeID,
+  llvm::DenseMap<llvm::FoldingSetNodeIDRef,
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
 
@@ -15306,7 +15331,7 @@ private:
   /// concepts. Substituting into normalized concepts can be extremely expensive
   /// due to the redundancy of template parameters. This cache is intended for
   /// use by TemplateInstantiator to avoid redundant semantic checking.
-  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+  llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc>
       *CurrentCachedTemplateArgs = nullptr;
 
   /// Caches pairs of template-like decls whose associated constraints were
@@ -15323,7 +15348,7 @@ private:
 
   /// Cache whether the associated constraint of a declaration
   /// is satisfied.
-  llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
+  llvm::DenseMap<llvm::FoldingSetNodeIDRef, ConstraintSatisfaction *>
       SatisfactionCache;
 
   // The current stack of constraint satisfactions, so we can exit-early.

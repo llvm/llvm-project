@@ -192,27 +192,36 @@ gpu.func @nested_scf(%arg0: memref<256x256xf16>, %arg1: memref<256x256xf16>, %ar
 // CHECK:           %[[C8:.*]] = arith.constant 8 : index
 // CHECK:           %[[CST:.*]] = arith.constant dense<0> : vector<32x16xi32>
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C16:.*]] = arith.constant 16 : index
 // CHECK:           %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG1]] : memref<256x256xf16>
 // CHECK:           %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] : memref<f16> -> index
 // CHECK:           %[[T2:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:           %[[T3:.*]] = xegpu.create_nd_tdesc %[[T2]], shape : [256, %[[C128]]], strides : [%[[C128]], 1] : i64
-// CHECK-SAME:        -> !xegpu.tensor_desc<32x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
+// CHECK-SAME:        -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
 // CHECK:           %{{.*}}:4 = scf.for %[[K:.*]] = %{{.*}} iter_args(%{{.*}}) -> (vector<8x16xf32>, vector<8x16xf32>, vector<8x16xf32>, vector<8x16xf32>) {
 // CHECK:             %[[T5:.*]] = arith.shrui %[[K]], %[[C1]] : index
-// CHECK:             %[[T6:.*]] = xegpu.load_nd %[[T3]][%{{.*}}, %[[T5]]]  <{layout = #xegpu.layout<lane_layout = [16, 1],
-// CHEKC-SAME:          lane_data = [1, 1], order = [0, 1]>}>
-// CHECK-SAME:          : !xegpu.tensor_desc<32x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1],
-// CHECK-SAME:          order = [0, 1]>> -> vector<32x8xi32>
+// CHECK:             %[[T6:.*]] = xegpu.load_nd %[[T3]][%{{.*}}, %[[T5]]]
+// CHECK-SAME:          <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}> :
+// CHECK-SAME:          !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
 // CHECK:             %[[T7:.*]] = vector.insert_strided_slice %[[T6]], %[[CST]]
-// CHECK-SAME:          offsets = [0, 0], strides = [1, 1] : vector<32x8xi32> into vector<32x16xi32>
+// CHECK-SAME:          offsets = [0, 0], strides = [1, 1] : vector<16x8xi32> into vector<32x16xi32>
 // CHECK:             %[[T8:.*]] = arith.addi %[[T5]], %[[C8]] : index
-// CHECK:             %[[T9:.*]] = xegpu.load_nd %[[T3]][%{{.*}}, %[[T8]]]  <{layout = #xegpu.layout<lane_layout = [16, 1],
-// CHECK-SAME:          lane_data = [1, 1], order = [0, 1]>}>
-// CHECK-SAME:          : !xegpu.tensor_desc<32x8xi32, #xegpu.layout<lane_layout = [16, 1],
-// CHECK-SAME:          lane_data = [1, 1], order = [0, 1]>> -> vector<32x8xi32>
+// CHECK:             %[[T9:.*]] = xegpu.load_nd %[[T3]][%{{.*}}, %[[T8]]]
+// CHECK-SAME:          <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}> :
+// CHECK-SAME:          !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
 // CHECK:             %[[T10:.*]] = vector.insert_strided_slice %[[T9]], %[[T7]]
-// CHECK-SAME:          offsets = [0, 8], strides = [1, 1] : vector<32x8xi32> into vector<32x16xi32>
-// CHECK:             %{{.*}} = vector.bitcast %[[T10]] : vector<32x16xi32> to vector<32x32xf16>
+// CHECK-SAME:          offsets = [0, 8], strides = [1, 1] : vector<16x8xi32> into vector<32x16xi32>
+// CHECK:             %[[T11:.*]] = xegpu.load_nd %[[T3]][%[[C16]], %[[T5]]]
+// CHECK-SAME:          <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}> :
+// CHECK-SAME:          !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
+// CHECK:             %[[T12:.*]] = vector.insert_strided_slice %[[T11]], %[[T10]]
+// CHECK-SAME:          offsets = [16, 0], strides = [1, 1] : vector<16x8xi32> into vector<32x16xi32>
+// CHECK:             %[[T13:.*]] = xegpu.load_nd %[[T3]][%[[C16]], %[[T8]]]
+// CHECK-SAME:          <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}> :
+// CHECK-SAME:          !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
+// CHECK:             %[[T14:.*]] = vector.insert_strided_slice %[[T13]], %[[T12]]
+// CHECK-SAME:          offsets = [16, 8], strides = [1, 1] : vector<16x8xi32> into vector<32x16xi32>
+// CHECK:             %{{.*}} = vector.bitcast %[[T14]] : vector<32x16xi32> to vector<32x32xf16>
 #a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
 #b = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>
 #bt = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>
@@ -259,28 +268,42 @@ gpu.func @large_loads(%arg0: vector<8x16xf16>, %arg1: memref<256x256xf16>, %arg2
 // CHECK-SAME:      %{{.*}}: vector<8x16xf16>, %[[ARG1:[a-zA-Z0-9]+]]: memref<256x256xf16>, %arg2: memref<256x256xf32>) {
 // CHECK:           %[[C128:.*]] = arith.constant 128 : index
 // CHECK:           %[[C8:.*]] = arith.constant 8 : index
+// CHECK:           %[[CST:.*]] = arith.constant dense<0> : vector<32x8xi32>
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C16:.*]] = arith.constant 16 : index
 // CHECK:           %[[BASE:.*]], %{{.+}}, %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata %[[ARG1]] : memref<256x256xf16>
 // CHECK:           %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]] :
 // CHECK-SAME:        memref<f16> -> index
 // CHECK:           %[[T2:.*]] = arith.index_cast %[[PTR]] : index to i64
 // CHECK:           %[[T3:.*]] = xegpu.create_nd_tdesc %[[T2]], shape : [256, %[[C128]]],
 // CHECK-SAME:        strides : [%[[C128]], 1] : i64 ->
-// CHECK-SAME:        !xegpu.tensor_desc<32x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
+// CHECK-SAME:        !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
 // CHECK:           %{{.*}}:4 = scf.for %[[K:.*]] = %{{.*}} iter_args(%{{.*}}) ->
 // CHECK-SAME:        (vector<8x16xf32>, vector<8x16xf32>, vector<8x16xf32>, vector<8x16xf32>) {
 // CHECK:             %[[T5:.*]] = arith.shrui %[[K]], %[[C1]] : index
 // CHECK:             %[[T6:.*]] = xegpu.load_nd %[[T3]][%{{.*}}, %[[T5]]]
 // CHECK-SAME:          <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}> :
-// CHECK-SAME:          !xegpu.tensor_desc<32x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<32x8xi32>
-// CHECK:             %[[T7:.*]] = vector.bitcast %[[T6]]
-// CHECK-SAME:          : vector<32x8xi32> to vector<32x16xf16>
-// CHECK:             %[[T8:.*]] = arith.addi %[[T5]], %[[C8]] : index
-// CHECK:             %[[T9:.*]] = xegpu.load_nd %[[T3]][%{{.*}}, %[[T8]]]
+// CHECK-SAME:          !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
+// CHECK:             %[[T7:.*]] = vector.insert_strided_slice %[[T6]], %[[CST]]
+// CHECK-SAME:          offsets = [0, 0], strides = [1, 1] : vector<16x8xi32> into vector<32x8xi32>
+// CHECK:             %[[T8:.*]] = xegpu.load_nd %[[T3]][%[[C16]], %[[T5]]]
 // CHECK-SAME:          <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}> :
-// CHECK-SAME:          !xegpu.tensor_desc<32x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<32x8xi32>
-// CHECK:             %[[T10:.*]] = vector.bitcast %[[T9]]
-// CHECK-SAME:          : vector<32x8xi32> to vector<32x16xf16>
+// CHECK-SAME:          !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
+// CHECK:             %[[T9:.*]] = vector.insert_strided_slice %[[T8]], %[[T7]]
+// CHECK-SAME:          offsets = [16, 0], strides = [1, 1] : vector<16x8xi32> into vector<32x8xi32>
+// CHECK:             %{{.*}} = vector.bitcast %[[T9]] : vector<32x8xi32> to vector<32x16xf16>
+// CHECK:             %[[T10:.*]] = arith.addi %[[T5]], %[[C8]] : index
+// CHECK:             %[[T11:.*]] = xegpu.load_nd %[[T3]][%{{.*}}, %[[T10]]]
+// CHECK-SAME:          <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}> :
+// CHECK-SAME:          !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
+// CHECK:             %[[T12:.*]] = vector.insert_strided_slice %[[T11]], %[[CST]]
+// CHECK-SAME:          offsets = [0, 0], strides = [1, 1] : vector<16x8xi32> into vector<32x8xi32>
+// CHECK:             %[[T13:.*]] = xegpu.load_nd %[[T3]][%[[C16]], %[[T10]]]
+// CHECK-SAME:          <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}> :
+// CHECK-SAME:          !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>> -> vector<16x8xi32>
+// CHECK:             %[[T14:.*]] = vector.insert_strided_slice %[[T13]], %[[T12]]
+// CHECK-SAME:          offsets = [16, 0], strides = [1, 1] : vector<16x8xi32> into vector<32x8xi32>
+// CHECK:             %{{.*}} = vector.bitcast %[[T14]] : vector<32x8xi32> to vector<32x16xf16>
 #a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
 #b = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>
 #bt = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>
@@ -563,4 +586,87 @@ gpu.func @transpose_dynamic_offset(%arg0: memref<64x64xf16, strided<[64, 1], off
   %2 = vector.transpose %1, [1, 0] { layout_result_0 = #bt } : vector<16x16xf16> to vector<16x16xf16>
   gpu.return %2 : vector<16x16xf16>
 }
+}
+
+// -----
+// The memref offset of an i4 source counts elements, two per byte.
+#l = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8], order = [0, 1]>
+// CHECK-LABEL: gpu.func @i4_transpose_memref_offset(
+// CHECK-DAG:     %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
+// CHECK:         %[[BASE:.*]], %[[OFFSET:.*]], %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]]
+// CHECK:         %[[BITS:.*]] = arith.muli %[[OFFSET]], %[[C4]] : index
+// CHECK:         %[[BYTES:.*]] = arith.divui %[[BITS]], %[[C8]] : index
+// CHECK:         arith.addi %[[PTR]], %[[BYTES]] : index
+// CHECK:         %[[DESC:.*]] = xegpu.create_nd_tdesc {{.*}} -> !xegpu.tensor_desc<16x8xi32
+// CHECK:         %[[L0:.*]] = xegpu.load_nd %[[DESC]][%[[I:.*]], %[[J:.*]]] {{.*}} -> vector<16x8xi32>
+// CHECK:         %[[V0:.*]] = vector.insert_strided_slice %[[L0]], %{{.*}} offsets = [0, 0], {{.*}} into vector<32x8xi32>
+// CHECK:         %[[I16:.*]] = arith.addi %[[I]], %[[C16]] : index
+// CHECK:         %[[L1:.*]] = xegpu.load_nd %[[DESC]][%[[I16]], %[[J]]] {{.*}} -> vector<16x8xi32>
+// CHECK:         vector.insert_strided_slice %[[L1]], %[[V0]] offsets = [16, 0], {{.*}} into vector<32x8xi32>
+gpu.module @xevm_module {
+gpu.func @i4_transpose_memref_offset(%src: memref<512x2048xi4, strided<[2048, 1], offset: ?>>, %i: index, %j: index) -> vector<32x64xi4> {
+  %t = xegpu.create_nd_tdesc %src : memref<512x2048xi4, strided<[2048, 1], offset: ?>> -> !xegpu.tensor_desc<32x64xi4, #l>
+  %v = xegpu.load_nd %t[%i, %j] <{layout = #l}> : !xegpu.tensor_desc<32x64xi4, #l> -> vector<32x64xi4>
+  gpu.return %v : vector<32x64xi4>
+}
+}
+
+// -----
+// CHECK-LABEL: gpu.func @vector_reduce_2d_fastmath(
+// CHECK:      %[[REDUCE_1:.*]] = vector.multi_reduction <maximumf>, %{{.*}}, %{{.*}} fastmath<nnan,nsz> [0] : vector<4x16xf32> to vector<16xf32>
+// CHECK:      vector.multi_reduction <maximumf>, %[[REDUCE_1]], %{{.*}} fastmath<nnan,nsz> [0] : vector<16xf32> to f32
+gpu.module @xevm_test {
+  gpu.func @vector_reduce_2d_fastmath(%src: memref<4x16xf32>, %dst: memref<256xf32>) {
+    %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>} 1.0 : f32
+    %tdesc = xegpu.create_nd_tdesc %src : memref<4x16xf32>
+      -> !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    %load =  xegpu.load_nd %tdesc[0, 0]
+      : !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<4x16xf32>
+    %reduce = vector.multi_reduction <maximumf>, %load, %cst fastmath<nnan,nsz>
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}
+     [0, 1] : vector<4x16xf32> to f32
+    %reduce_bcast = vector.broadcast %reduce
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+     : f32 to vector<16xf32>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<0> : vector<16xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1> : vector<16xi1>
+    xegpu.store %reduce_bcast, %dst[%offset], %mask <{layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
+    gpu.return
+  }
+}
+
+// -----
+// The neutral accumulator of the intra-lane reduction must be a value that the
+// flags allow: no NaN under `nnan`, no infinity under `ninf`.
+// CHECK-LABEL: gpu.func @vector_reduce_2d_fastmath_neutral(
+// CHECK-DAG:  %[[MIN_N:.*]] = arith.constant dense<3.40282347E+38> : vector<16xf32>
+// CHECK-DAG:  %[[MAX_N:.*]] = arith.constant dense<0xFF800000> : vector<16xf32>
+// CHECK:      vector.multi_reduction <maxnumf>, %{{.*}}, %[[MAX_N]] fastmath<nnan> [0] : vector<4x16xf32> to vector<16xf32>
+// CHECK:      vector.multi_reduction <minimumf>, %{{.*}}, %[[MIN_N]] fastmath<fast> [0] : vector<4x16xf32> to vector<16xf32>
+gpu.module @xevm_test {
+  gpu.func @vector_reduce_2d_fastmath_neutral(%src: memref<4x16xf32>, %dst: memref<256xf32>) {
+    %cst = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>} 1.0 : f32
+    %tdesc = xegpu.create_nd_tdesc %src : memref<4x16xf32>
+      -> !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    %load =  xegpu.load_nd %tdesc[0, 0]
+      : !xegpu.tensor_desc<4x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+      -> vector<4x16xf32>
+    %max = vector.multi_reduction <maxnumf>, %load, %cst fastmath<nnan>
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}
+     [0, 1] : vector<4x16xf32> to f32
+    %min = vector.multi_reduction <minimumf>, %load, %max fastmath<fast>
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}
+     [0, 1] : vector<4x16xf32> to f32
+    %reduce_bcast = vector.broadcast %min
+     {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+     : f32 to vector<16xf32>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<0> : vector<16xindex>
+    %mask = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1> : vector<16xi1>
+    xegpu.store %reduce_bcast, %dst[%offset], %mask <{layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
+    gpu.return
+  }
 }

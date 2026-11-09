@@ -274,7 +274,9 @@ TEST(ProtocolRequestsTest, CompileUnitsArguments) {
 
 TEST(ProtocolRequestsTest, CompileUnitsResponseBody) {
   CompileUnitsResponseBody body;
-  body.compileUnits = {{1, "main.cpp", "c++"}, {2, "util.cpp", std::nullopt}};
+  body.compileUnits = {{1, "main.cpp", "c++", false},
+                       {2, "util.cpp", std::nullopt, true},
+                       {3, "other.cpp", std::nullopt, std::nullopt}};
 
   // Check required keys.
   Expected<json::Value> expected = parse(R"({
@@ -282,11 +284,17 @@ TEST(ProtocolRequestsTest, CompileUnitsResponseBody) {
       {
         "id": 1,
         "compileUnitPath": "main.cpp",
-        "language": "c++"
+        "language": "c++",
+        "isOptimized": false
       },
       {
         "id": 2,
-        "compileUnitPath": "util.cpp"
+        "compileUnitPath": "util.cpp",
+        "isOptimized": true
+      },
+      {
+        "id": 3,
+        "compileUnitPath": "other.cpp"
       }
     ]
   })");
@@ -363,6 +371,18 @@ TEST(ProtocolRequestsTest, RestartArguments) {
       std::get_if<AttachRequestArguments>(&expected->arguments);
   EXPECT_NE(attach_args, nullptr);
   EXPECT_EQ(attach_args->pid, 123U);
+}
+
+TEST(ProtocolRequestsTest, LaunchRequestArgumentsDisableASLR) {
+  llvm::Expected<LaunchRequestArguments> expected =
+      parse<LaunchRequestArguments>(R"({"program": "main.exe"})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->disableASLR, std::nullopt);
+
+  expected = parse<LaunchRequestArguments>(
+      R"({"program": "main.exe", "disableASLR": false})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->disableASLR, false);
 }
 
 TEST(ProtocolRequestsTest, StackTraceArguments) {

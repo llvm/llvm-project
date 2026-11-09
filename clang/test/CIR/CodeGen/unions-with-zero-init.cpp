@@ -38,7 +38,7 @@
 // LLVM-DAG: %union.U = type { %struct.HasPtrToMember }
 
 // This gets promoted to a constant, so it is up here.
-// CIR-AFTER-DAG: cir.global "private" constant cir_private @__const._Z1fv.inner_a2 = #cir.const_record<{#cir.int<12> : !s32i}> : !rec_inner_aggregate2
+// CIR-AFTER-DAG: cir.global "private" constant cir_private unnamed_addr @__const._Z1fv.inner_a2 = #cir.const_record<{#cir.int<12> : !s32i}> : !rec_inner_aggregate2
 // LLVM-DAG: @__const._Z1fv.inner_a2 = private {{.*}}constant { i32, [4 x i8] } { i32 12, [4 x i8] {{.*}} }
 
 struct S { int x; };

@@ -334,7 +334,8 @@ static void annotateDereferenceableBytes(CallInst *CI,
 }
 
 static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
-                                         ArrayRef<unsigned> ArgNos) {
+                                                ArrayRef<unsigned> ArgNos,
+                                                uint64_t CharSize = 1) {
   Function *F = CI->getCaller();
   if (!F)
     return;
@@ -351,7 +352,7 @@ static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
       CI->addParamAttr(ArgNo, Attribute::NonNull);
     }
 
-    annotateDereferenceableBytes(CI, ArgNo, 1);
+    annotateDereferenceableBytes(CI, ArgNo, CharSize);
   }
 }
 
@@ -1109,12 +1110,16 @@ Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
   Module &M = *CI->getModule();
-  unsigned WCharSize = TLI->getWCharSize(M) * 8;
+  unsigned WCharSize = TLI->getWCharSize(M);
   // We cannot perform this optimization without wchar_size metadata.
   if (WCharSize == 0)
     return nullptr;
 
-  return optimizeStringLength(CI, B, WCharSize);
+  if (Value *V = optimizeStringLength(CI, B, WCharSize * 8))
+    return V;
+  // At least the terminating wide character is read.
+  annotateNonNullNoUndefBasedOnAccess(CI, 0, WCharSize);
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilderBase &B) {

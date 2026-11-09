@@ -296,6 +296,11 @@ struct SpecificIntrinsic {
 };
 
 struct ProcedureDesignator {
+  static int kind() {
+    DIE("This class has no kind");
+    return 0;
+  }
+
   EVALUATE_UNION_CLASS_BOILERPLATE(ProcedureDesignator)
   explicit ProcedureDesignator(SpecificIntrinsic &&i) : u{std::move(i)} {}
   explicit ProcedureDesignator(const Symbol &n) : u{n} {}
@@ -342,6 +347,11 @@ using Chevrons = std::vector<Expr<SomeType>>;
 
 class ProcedureRef {
 public:
+  static int kind() {
+    DIE("This class has no kind");
+    return 0;
+  }
+
   CLASS_BOILERPLATE(ProcedureRef)
   ProcedureRef(ProcedureDesignator &&p, ActualArguments &&a,
       bool hasAlternateReturns = false)
@@ -402,15 +412,23 @@ protected:
 
 template <typename A> class FunctionRef : public ProcedureRef {
 public:
+  constexpr int kind() const { return kind_; }
+
   using Result = A;
   CLASS_BOILERPLATE(FunctionRef)
-  explicit FunctionRef(ProcedureRef &&pr) : ProcedureRef{std::move(pr)} {}
-  FunctionRef(ProcedureDesignator &&p, ActualArguments &&a)
-      : ProcedureRef{std::move(p), std::move(a)} {}
+
+  explicit FunctionRef(int kind, ProcedureRef &&pr)
+      : ProcedureRef{std::move(pr)}, kind_{kind} {
+    CHECK_KIND(kind, A);
+  }
+  FunctionRef(int kind, ProcedureDesignator &&p, ActualArguments &&a)
+      : ProcedureRef{std::move(p), std::move(a)}, kind_{kind} {
+    CHECK_KIND(kind, A);
+  }
 
   std::optional<DynamicType> GetType() const {
     if constexpr (IsLengthlessIntrinsicType<A>) {
-      return A::GetType();
+      return DynamicType{A::category, kind_};
     } else if (auto type{proc_.GetType()}) {
       // TODO: Non constant explicit length parameters of PDTs result should
       // likely be dropped too. This is not as easy as for characters since some
@@ -422,6 +440,9 @@ public:
       return std::nullopt;
     }
   }
+
+private:
+  int kind_;
 };
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CALL_H_
