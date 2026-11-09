@@ -763,8 +763,8 @@ bool Pointer::isElementAlive(unsigned Index) const {
 Lifetime PtrView::getLifetime() const {
   if (Offset == 0) {
     if (Pointee->isLocal()) {
-      auto &LD = Pointee->getBlockDesc<InlineDescriptor>();
-      return LD.LifeState;
+      auto &LD = Pointee->getBlockDesc<LocalInlineDescriptor>();
+      return LD.getLifetime();
     }
     return Lifetime::Started;
   }
@@ -789,8 +789,8 @@ Lifetime PtrView::getLifetime() const {
 void PtrView::setLifeState(Lifetime L) const {
   if (Offset == 0) {
     if (Pointee->isLocal()) {
-      auto &LD = Pointee->getBlockDesc<InlineDescriptor>();
-      LD.LifeState = L;
+      auto &LD = Pointee->getBlockDesc<LocalInlineDescriptor>();
+      LD.setLifetime(L);
     }
     return;
   }
@@ -820,9 +820,9 @@ void PtrView::initialize() const {
       auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
       GD.InitState = GlobalInitState::Initialized;
     } else if (Pointee->isLocal()) {
-      auto &LD = Pointee->getBlockDesc<InlineDescriptor>();
+      auto &LD = Pointee->getBlockDesc<LocalInlineDescriptor>();
       LD.IsInitialized = true;
-      LD.LifeState = Lifetime::Started;
+      LD.setLifetime(Lifetime::Started);
     }
     return;
   }
@@ -1402,7 +1402,7 @@ OpaquePointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   for (const PointerPathEntry &Entry : path()) {
     switch (Entry.Kind) {
     case PointerPathEntry::Base: {
-      const CXXRecordDecl *RD = CurType->getAsCXXRecordDecl();
+      const CXXRecordDecl *RD = CurType->castAsCXXRecordDecl();
       if (!ASTContext::hasLayout(RD))
         return std::nullopt;
 

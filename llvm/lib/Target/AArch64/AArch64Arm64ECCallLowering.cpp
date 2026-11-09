@@ -600,7 +600,7 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
     // The EC thunk CC will assign any argument marked as InReg to x4.
     Thunk->addParamAttr(5, Attribute::InReg);
     Value *Arg = Thunk->getArg(5);
-    Arg = IRB.CreatePtrAdd(Arg, IRB.getInt64(0x20));
+    Arg = IRB.CreatePtrAddWithUnsignedOffset(Arg, 0x20);
     Args.push_back(Arg);
 
     // Pass in a zero variadic argument size (in x5).

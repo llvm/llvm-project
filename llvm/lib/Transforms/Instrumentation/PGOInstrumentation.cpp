@@ -298,9 +298,10 @@ createIRLevelProfileFlagVar(const InstrumentationOptions &Opts, Module &M,
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
-  IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
-
   Triple TT(M.getTargetTriple());
+  IRLevelVersionVariable->setVisibility(TT.isGPU()
+                                            ? GlobalValue::ProtectedVisibility
+                                            : GlobalValue::HiddenVisibility);
   if (TT.supportsCOMDAT()) {
     IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
     IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
