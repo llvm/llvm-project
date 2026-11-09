@@ -2446,6 +2446,17 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
           InsertValueInst::getInsertedValueOperandIndex(), B);
     return;
   }
+  // So must a pointer inserted into a vector.
+  if (auto *IEI = dyn_cast<InsertElementInst>(I)) {
+    Value *Op = IEI->getOperand(1);
+    if (isPointerTy(Op->getType())) {
+      Type *ElemTy = getPointeeType(IEI->getType()->getElementType());
+      replacePointerOperandWithPtrCast(
+          I, Op, ElemTy ? ElemTy : IntegerType::getInt8Ty(I->getContext()), 1,
+          B);
+    }
+    return;
+  }
 
   // TODO: review and merge with existing logics:
   // Handle calls to builtins (non-intrinsics):
