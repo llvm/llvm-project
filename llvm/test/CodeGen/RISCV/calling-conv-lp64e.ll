@@ -80,6 +80,8 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
 ; RV64I-LP64E-FPELIM-NEXT:    addi s0, sp, 16
 ; RV64I-LP64E-FPELIM-NEXT:    andi sp, sp, -16
 ; RV64I-LP64E-FPELIM-NEXT:    lw a0, 16(s0)
+; RV64I-LP64E-FPELIM-NEXT:    ld a1, 0(s0)
+; RV64I-LP64E-FPELIM-NEXT:    add a0, a1, a0
 ; RV64I-LP64E-FPELIM-NEXT:    addi sp, s0, -16
 ; RV64I-LP64E-FPELIM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-FPELIM-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -94,6 +96,8 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
 ; RV64I-LP64E-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64I-LP64E-WITHFP-NEXT:    andi sp, sp, -16
 ; RV64I-LP64E-WITHFP-NEXT:    lw a0, 16(s0)
+; RV64I-LP64E-WITHFP-NEXT:    ld a1, 0(s0)
+; RV64I-LP64E-WITHFP-NEXT:    add a0, a1, a0
 ; RV64I-LP64E-WITHFP-NEXT:    addi sp, s0, -16
 ; RV64I-LP64E-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -103,7 +107,7 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
   %2 = bitcast float %e to i32
   %3 = sext i32 %2 to i64
   %4 = add i64 %1, %3
-  ret i64 %3
+  ret i64 %4
 }
 
 define i64 @caller_float_on_stack() nounwind {

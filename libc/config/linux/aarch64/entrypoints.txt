@@ -346,6 +346,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/shm.h entrypoints
     libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmctl
     libc.src.sys.shm.shmdt
     libc.src.sys.shm.shmget
 
@@ -466,6 +467,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chroot
     libc.src.unistd.close
     libc.src.unistd.close_range
+    libc.src.unistd.copy_file_range
     libc.src.unistd.dup
     libc.src.unistd.dup2
     libc.src.unistd.dup3

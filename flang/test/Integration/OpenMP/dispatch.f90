@@ -6,7 +6,7 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-!RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s
+!RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s
 
 !CHECK-LABEL: define void @_QMfuncsPfoo_variant()
 !CHECK: call ptr @_FortranAioBeginExternalListOutput
