@@ -2244,8 +2244,7 @@ private:
   ///
   /// \p IsSigned specifies whether the less-than is signed.
   ///
-  /// \p IsSameSign specifies whether the comparison has the samesign flag,
-  /// i.e. it is poison if its operands have different signs.
+  /// \p IsSameSign specifies whether the comparison has the samesign flag.
   ///
   /// If \p Invert is set, analyze "LHS > RHS" as "~LHS < ~RHS".
   ///
@@ -2573,8 +2572,7 @@ private:
   /// permitted by Start, End, and Stride. This is for loops of the form
   /// {Start, +, Stride} LT End, or, if \p Invert is set, for the equivalent
   /// "~Start < ~End" form of {Start, +, -Stride} GT End. If \p IsSameSign is
-  /// set, the comparison has the samesign flag, so Start and End have the same
-  /// sign.
+  /// set, the comparison of \p IV against End has the samesign flag.
   ///
   /// Preconditions:
   /// * the induction variable is known to be positive.
@@ -2584,7 +2582,7 @@ private:
   const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
                                      const SCEV *End, unsigned BitWidth,
                                      bool IsSigned, bool IsSameSign,
-                                     bool Invert);
+                                     const SCEVAddRecExpr *IV, bool Invert);
 
   /// Verify if a linear IV with positive \p Stride can overflow when compared
   /// against the invariant \p RHS with a less-than. If \p Invert is true, both

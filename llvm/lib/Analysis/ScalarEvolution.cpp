@@ -13353,7 +13353,7 @@ const SCEV *ScalarEvolution::getUDivCeilSCEV(const SCEV *N, const SCEV *D) {
 
 const SCEV *ScalarEvolution::computeMaxBECountForLT(
     const SCEV *Start, const SCEV *Stride, const SCEV *End, unsigned BitWidth,
-    bool IsSigned, bool IsSameSign, bool Invert) {
+    bool IsSigned, bool IsSameSign, const SCEVAddRecExpr *IV, bool Invert) {
   // The logic in this function assumes we can represent a positive stride.
   // If we can't, the backedge-taken count must be zero.
   if (IsSigned && BitWidth == 1)
@@ -13376,15 +13376,19 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(
   // Refine range of IV using the samesign (i.e. top bit is the same for LHS
   // and RHS).
   if (IsSameSign) {
+    // Start is the IV on the first iteration only. That decides the sign of
+    // End if End is loop-invariant; otherwise the sign of the IV has to be
+    // known on every iteration.
+    const SCEV *LHS = isLoopInvariant(End, IV->getLoop()) ? Start : IV;
     APInt Zero = APInt::getZero(BitWidth);
-    if (isKnownNonNegative(Start) || isKnownNonNegative(End)) {
+    if (isKnownNonNegative(LHS) || isKnownNonNegative(End)) {
       // If either LHS or RHS is known to have no top bit, we can infer the
       // other potentially unknown side doesn't have top bit.
       ConstantRange NonNeg =
           ConstantRange::makeExactICmpRegion(ICmpInst::ICMP_SGE, Zero);
       StartRange = StartRange.intersectWith(NonNeg);
       EndRange = EndRange.intersectWith(NonNeg);
-    } else if (isKnownNegative(Start) || isKnownNegative(End)) {
+    } else if (isKnownNegative(LHS) || isKnownNegative(End)) {
       // Similarly, if they are known to have top bit set, refine the range of
       // the other side such that it has top bit set as well.
       ConstantRange Neg =
@@ -13937,7 +13941,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyLessThans(
   } else {
     ConstantMaxBECount = computeMaxBECountForLT(
         Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned,
-        IsSameSign, Invert);
+        IsSameSign, IV, Invert);
     // If we know exactly how many times the backedge will be taken if it's
     // taken at least once, then the backedge count will either be that or
     // zero. If that count exceeds the range-based bound, the backedge can
