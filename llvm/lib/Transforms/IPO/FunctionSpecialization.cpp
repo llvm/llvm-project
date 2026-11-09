@@ -632,7 +632,7 @@ bool FunctionSpecializer::run() {
     // to be larger than -funcspec-min-function-size, to prevent excessive
     // specialization.
     const bool RequireMinSize =
-        !Opts.force_specialization && (Opts.funcspec_for_literal_constant ||
+        !Opts.funcspec_force && (Opts.funcspec_for_literal_constant ||
                                        !F.hasFnAttribute(Attribute::NoInline));
 
     // If the code metrics reveal that we shouldn't duplicate the function,
@@ -916,7 +916,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
 
       auto IsProfitable = [&]() -> bool {
         // No check required.
-        if (Opts.force_specialization)
+        if (Opts.funcspec_force)
           return true;
 
         LLVM_DEBUG(

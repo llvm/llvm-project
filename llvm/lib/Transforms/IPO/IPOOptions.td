@@ -73,10 +73,10 @@ defm : ValueField<"summary-file", "StringRef", "",
   "The summary file to use for function importing">;
 
 // FunctionSpecialization.cpp
-defm : BoolField<"force-specialization", "false",
-  "Force function specialization for every call site with a constant argument">;
 defm : BoolField<"funcspec-for-literal-constant", "true",
   "Enable specialization of functions that take a literal constant as an argument">;
+defm : BoolField<"funcspec-force", "false",
+  "Force function specialization for every call site with a constant argument">;
 defm : ValueField<"funcspec-max-block-predecessors", "unsigned", "2",
   "The maximum number of predecessors a basic block can have to be considered during the estimation of dead code">;
 defm : ValueField<"funcspec-max-clones", "unsigned", "3",
@@ -97,6 +97,8 @@ defm : ValueField<"funcspec-min-latency-savings", "unsigned", "20",
   "Reject specializations whose latency savings are less than this much percent of the original function size">;
 defm : BoolField<"funcspec-on-address", "false",
   "Enable function specialization on the address of global values">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"force-specialization", "funcspec-force">;
 
 // GlobalDCE.cpp
 defm : BoolField<"enable-vfe", "true",
