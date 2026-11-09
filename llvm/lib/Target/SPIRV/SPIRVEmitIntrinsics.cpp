@@ -19,6 +19,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -152,7 +153,7 @@ public:
     propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
   }
 
-  using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
+  using FunctionSetType = decltype(GlobalIsUsedByFun)::mapped_type;
   const FunctionSetType &
   getTransitiveUserFunctions(const GlobalVariable &GV) const {
     auto It = GlobalIsUsedByFun.find(&GV);
@@ -197,7 +198,7 @@ class SPIRVEmitIntrinsicsImpl
   SmallPtrSet<Value *, 0> Named;
 
   // map of function declarations to <pointer arg index => element type>
-  DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
+  MapVector<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
 
   // a register of Instructions that don't have a complete type definition
   bool CanTodoType = true;
@@ -227,6 +228,10 @@ class SPIRVEmitIntrinsicsImpl
   // a register of Instructions that were visited by deduceOperandElementType()
   // to validate operand types with an instruction
   SmallPtrSet<Instruction *, 0> TypeValidated;
+  // Type-validated PHIs and selects whose element type changed since, to be
+  // revalidated by the outermost deduceOperandElementType() call.
+  SmallVector<Instruction *> RetypedToRevalidate;
+  bool RevalidatingRetyped = false;
 
   // well known result types of builtins
   enum WellKnownTypes { Event };
@@ -1621,6 +1626,13 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
         DenseSet<std::pair<Value *, Value *>> VisitedSubst{
             std::make_pair(I, Op)};
         propagateElemTypeRec(Op, KnownElemTy, PrevElemTy, VisitedSubst);
+        // A PHI or select validated its operands against its previous element
+        // type. Null constants have no use list and are not revisited by
+        // postprocessing, so validate the operands against the new type.
+        if (auto *OpI = dyn_cast<Instruction>(Op);
+            OpI && (isa<PHINode>(OpI) || isa<SelectInst>(OpI)) &&
+            TypeValidated.contains(OpI))
+          RetypedToRevalidate.push_back(OpI);
       }
     } else {
       eraseTodoType(Op);
@@ -1633,6 +1645,16 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
     }
   }
   TypeValidated.insert(I);
+
+  // Revalidating one PHI can retype the next one in a chain. Use a worklist
+  // rather than recursion, as such chains can be long.
+  if (RevalidatingRetyped)
+    return;
+  RevalidatingRetyped = true;
+  while (!RetypedToRevalidate.empty())
+    deduceOperandElementType(RetypedToRevalidate.pop_back_val(), nullptr,
+                             nullptr, IsPostprocessing);
+  RevalidatingRetyped = false;
 }
 
 void SPIRVEmitIntrinsicsImpl::replaceMemInstrUses(Instruction *Old,
@@ -1680,6 +1702,8 @@ void SPIRVEmitIntrinsicsImpl::replaceMemInstrUses(Instruction *Old,
     }
   }
   New->copyMetadata(*Old);
+  GR->removeAssignPtrTypeInstr(Old); // Old's address could be re-used.
+  TypeValidated.erase(Old);
   Old->eraseFromParent();
 }
 
@@ -3189,7 +3213,7 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
 
 static SPIRV::FPFastMathDefaultInfoVector &getOrCreateFPFastMathDefaultInfoVec(
     const Module &M,
-    DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+    MapVector<Function *, SPIRV::FPFastMathDefaultInfoVector>
         &FPFastMathDefaultInfoMap,
     Function *F) {
   auto it = FPFastMathDefaultInfoMap.find(F);
@@ -3263,7 +3287,7 @@ void SPIRVEmitIntrinsicsImpl::insertConstantsForFPFastMathDefault(Module &M) {
   // type. The first element is the smallest bit width, and the last element
   // is the largest bit width, therefore, we will have {half, float, double}
   // in the order of their bit widths.
-  DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+  MapVector<Function *, SPIRV::FPFastMathDefaultInfoVector>
       FPFastMathDefaultInfoMap;
 
   for (unsigned i = 0; i < Node->getNumOperands(); i++) {
@@ -3681,7 +3705,9 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
             B.SetCurrentDebugLocation(DebugLoc());
             GR->buildAssignPtr(B, ElemTy, Arg);
           }
-        } else if (isaGEP(Param)) {
+        } else if (isaGEP(Param) || isa<AllocaInst>(Param)) {
+          // The allocated type defines the size of an alloca, so cast at the
+          // call instead of overriding its pointee type.
           replaceUsesOfWithSpvPtrcast(
               Param, normalizeType(ElemTy, CanUseAnyVectorRank), CI, Ptrcasts);
         } else if (isa<Instruction>(Param)) {

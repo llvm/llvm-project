@@ -77,7 +77,7 @@ There are two types of passes: [Transformation Passes](#transformation-passes) t
 
 ### Transformation Passes
 
-|  **Pass Name**            | **(Aux Arguments)** | **<Arguments> **                      |         **File Name**       | **Type** |                     **Description**                     |
+|  **Pass Name**            | **(Aux Arguments)** | **\<Arguments\>**                     |         **File Name**       | **Type** |                     **Description**                     |
 |---------------------------|---------------------|---------------------------------------|-----------------------------|----------|---------------------------------------------------------|
 | `seed-collection`         | loads stores        | comma-separated list of region passes | SeedCollection.h            | Function | Collects the instructions to start vectorizing from, creates a region and runs the region-pass pipeline |
 | `bundle-vec`              | top-down bottom-up  |                                       | BundleVec.h                 | Region   | An SLP-style vectorizer that forms bundles by recursively walking the use-def (def-use) chains bottom-up (top-down). It can vectorize both scalars and vectors. Requires a `bottom-up` or `top-down` argument, e.g. `bundle-vec(bottom-up)` |

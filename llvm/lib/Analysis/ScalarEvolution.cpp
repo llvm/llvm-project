@@ -11937,40 +11937,13 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   CmpPredicate NonStrictPredicate = ICmpInst::getNonStrictCmpPredicate(Pred);
   const bool ProvingStrictComparison =
       Pred != NonStrictPredicate.dropSameSign();
-  bool ProvedNonStrictComparison = false;
-  bool ProvedNonEquality = false;
-
-  auto SplitAndProve = [&](std::function<bool(CmpPredicate)> Fn) -> bool {
-    if (!ProvedNonStrictComparison)
-      ProvedNonStrictComparison = Fn(NonStrictPredicate);
-    if (!ProvedNonEquality)
-      ProvedNonEquality = Fn(ICmpInst::ICMP_NE);
-    if (ProvedNonStrictComparison && ProvedNonEquality)
-      return true;
-    return false;
-  };
-
-  if (ProvingStrictComparison) {
-    auto ProofFn = [&](CmpPredicate P) {
-      return isKnownViaNonRecursiveReasoning(P, LHS, RHS);
-    };
-    if (SplitAndProve(ProofFn))
-      return true;
-  }
+  const Instruction *CtxI = &BB->front();
+  SmallVector<std::pair<const Value *, bool>> Conds;
 
   // Try to prove (Pred, LHS, RHS) using isImpliedCond.
   auto ProveViaCond = [&](const Value *Condition, bool Inverse) {
-    const Instruction *CtxI = &BB->front();
-    if (isImpliedCond(Pred, LHS, RHS, Condition, Inverse, CtxI))
-      return true;
-    if (ProvingStrictComparison) {
-      auto ProofFn = [&](CmpPredicate P) {
-        return isImpliedCond(P, LHS, RHS, Condition, Inverse, CtxI);
-      };
-      if (SplitAndProve(ProofFn))
-        return true;
-    }
-    return false;
+    Conds.emplace_back(Condition, Inverse);
+    return isImpliedCond(Pred, LHS, RHS, Condition, Inverse, CtxI);
   };
 
   // Starting at the block's predecessor, climb up the predecessor chain, as long
@@ -12015,7 +11988,18 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
         if (Guard->getFunction() == BB->getParent() && DT.dominates(Guard, BB))
           if (ProveViaCond(Guard->getArgOperand(0), false))
             return true;
-  return false;
+
+  // First try to prove conditions directly, then fall back to proving via the
+  // non-strict predicate and not-equal.
+  if (!ProvingStrictComparison)
+    return false;
+  auto ProveViaAll = [&](CmpPredicate P) {
+    return isKnownViaNonRecursiveReasoning(P, LHS, RHS) ||
+           any_of(Conds, [&](const auto &C) {
+             return isImpliedCond(P, LHS, RHS, C.first, C.second, CtxI);
+           });
+  };
+  return ProveViaAll(NonStrictPredicate) && ProveViaAll(ICmpInst::ICMP_NE);
 }
 
 bool ScalarEvolution::isLoopEntryGuardedByCond(const Loop *L, CmpPredicate Pred,
@@ -12303,9 +12287,8 @@ bool ScalarEvolution::isImpliedCondViaSignFlippedPred(
   CmpPredicate FoundPred = ICmpInst::getFlippedSignednessPredicate(Pred);
   // Unsigned comparison is the same as signed comparison when both the
   // operands are non-negative or negative.
-  if (haveSameSign(FoundLHS, FoundRHS) &&
-      isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
-    return true;
+  if (haveSameSign(FoundLHS, FoundRHS))
+    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
   // Canonicalize both conditions to "le/lt".
   if (ICmpInst::isGT(Pred) || ICmpInst::isGE(Pred)) {
     Pred = ICmpInst::getSwappedCmpPredicate(Pred);
@@ -12341,15 +12324,13 @@ bool ScalarEvolution::isImpliedCondViaSignFlippedPred(
     // Use implication:
     // x <u y && y >=s 0 --> x <s y.
     // If we can prove the left part, the right part is also proven.
-    if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS))
-      return true;
+    return isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS);
   }
   if (ICmpInst::isUnsigned(Pred) && isKnownNegative(RHS)) {
     // Use implication:
     // x <s y && y <s 0 --> x <u y.
     // If we can prove the left part, the right part is also proven.
-    if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS))
-      return true;
+    return isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS);
   }
   return false;
 }
@@ -15312,10 +15293,10 @@ bool SCEVComparePredicate::implies(const SCEVPredicate *N,
   if (!Op)
     return false;
 
-  if (Pred != ICmpInst::ICMP_EQ)
+  if (Op->LHS != LHS || Op->RHS != RHS)
     return false;
 
-  return Op->LHS == LHS && Op->RHS == RHS;
+  return ICmpInst::isImpliedByMatchingCmp(Pred, Op->Pred) == true;
 }
 
 bool SCEVComparePredicate::isAlwaysTrue() const { return false; }
