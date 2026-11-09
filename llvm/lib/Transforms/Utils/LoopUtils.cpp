@@ -41,6 +41,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
@@ -2170,16 +2171,10 @@ struct PointerBounds {
   Value *StrideToCheck;
 };
 
-/// Expand code for the lower and upper bound of the pointer group \p CG
-/// in \p TheLoop.  \return the values for the bounds.
-static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
-                                  Loop *TheLoop, Instruction *Loc,
-                                  SCEVExpander &Exp, bool HoistRuntimeChecks) {
-  LLVMContext &Ctx = Loc->getContext();
-  Type *PtrArithTy = PointerType::get(Ctx, CG->AddressSpace);
-
-  Value *Start = nullptr, *End = nullptr;
-  LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
+RuntimeCheckBounds
+llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
+                            const Loop *TheLoop, ScalarEvolution &SE,
+                            bool HoistRuntimeChecks) {
   const SCEV *Low = CG->Low, *High = CG->High, *Stride = nullptr;
 
   // If the Low and High values are themselves loop-variant, then we may want
@@ -2197,7 +2192,6 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
     auto *HighAR = cast<SCEVAddRecExpr>(High);
     auto *LowAR = cast<SCEVAddRecExpr>(Low);
     const Loop *OuterLoop = TheLoop->getParentLoop();
-    ScalarEvolution &SE = *Exp.getSE();
     const SCEV *Recur = LowAR->getStepRecurrence(SE);
     if (Recur == HighAR->getStepRecurrence(SE) &&
         HighAR->getLoop() == OuterLoop && LowAR->getLoop() == OuterLoop) {
@@ -2225,6 +2219,21 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
       }
     }
   }
+  return {Low, High, Stride};
+}
+
+/// Expand code for the lower and upper bound of the pointer group \p CG
+/// in \p TheLoop.  \return the values for the bounds.
+static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
+                                  Loop *TheLoop, Instruction *Loc,
+                                  SCEVExpander &Exp, bool HoistRuntimeChecks) {
+  LLVMContext &Ctx = Loc->getContext();
+  Type *PtrArithTy = PointerType::get(Ctx, CG->AddressSpace);
+
+  Value *Start = nullptr, *End = nullptr;
+  LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
+  auto [Low, High, Stride] =
+      getRuntimeCheckBounds(CG, TheLoop, *Exp.getSE(), HoistRuntimeChecks);
 
   Start = Exp.expandCodeFor(Low, PtrArithTy, Loc);
   End = Exp.expandCodeFor(High, PtrArithTy, Loc);
@@ -2600,8 +2609,8 @@ bool llvm::collectCompressedPtrs(
 
       Type *AccessTy = getLoadStoreType(UserI);
 
-      // Disallow loads/stores of irregular types (like i4).
-      if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+      // Disallow loads/stores of scalable or irregular types (like i4).
+      if (AccessTy->isScalableTy() || hasIrregularType(AccessTy, DL))
         return false;
 
       Value *Ptr = getLoadStorePointerOperand(UserI);

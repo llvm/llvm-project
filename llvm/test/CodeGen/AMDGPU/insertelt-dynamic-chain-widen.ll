@@ -8,10 +8,10 @@
 ;
 ; On gfx942 <9 x double> widens to <16 x double> and that insert is Promote. A
 ; per-lane index is lowered with v_cndmask; an index shared by the wave uses
-; s_set_gpr_idx. 
+; s_set_gpr_idx.
 ;
 ; <3 x half> widens to <4 x half>, whose insert is Custom,
-; <5 x half> widens to <8 x half>, whose insert is Expand, and  
+; <5 x half> widens to <8 x half>, whose insert is Expand, and
 ; <3 x i8> widens to <4 x i8>, which is split, so these still use scratch.
 
 define amdgpu_kernel void @v9f64_divergent_idx(ptr addrspace(1) %out, double %a, double %b) {
@@ -20,96 +20,96 @@ define amdgpu_kernel void @v9f64_divergent_idx(ptr addrspace(1) %out, double %a,
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 7, v1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v22, 7, v1
 ; CHECK-NEXT:    v_and_b32_e32 v0, 7, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[6:9], v4, s[0:1] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[10:13], v4, s[0:1] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[14:17], v4, s[0:1]
-; CHECK-NEXT:    global_load_dwordx4 v[18:21], v4, s[0:1] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[22:25], v4, s[0:1] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v22, s[0:1] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[6:9], v22, s[0:1] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[10:13], v22, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 v[14:17], v22, s[0:1] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[18:21], v22, s[0:1] offset:64
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
-; CHECK-NEXT:    v_mov_b32_e32 v2, s3
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
-; CHECK-NEXT:    v_add_u32_e32 v5, 1, v0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v24, s7
-; CHECK-NEXT:    v_mov_b32_e32 v25, s6
-; CHECK-NEXT:    v_cndmask_b32_e32 v26, v6, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v27, v7, v2, vcc
+; CHECK-NEXT:    v_mov_b32_e32 v21, s3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v0
+; CHECK-NEXT:    v_add_u32_e32 v20, 1, v0
+; CHECK-NEXT:    v_mov_b32_e32 v23, s7
+; CHECK-NEXT:    v_mov_b32_e32 v24, s6
+; CHECK-NEXT:    v_cndmask_b32_e32 v25, v2, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v26, v3, v21, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v0
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v28, v8, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v29, v9, v2, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v27, v4, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v28, v5, v21, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v0
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v10, v10, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v11, v11, v2, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v29, v6, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v30, v7, v21, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v0
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v12, v12, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v13, v13, v2, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v8, v8, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, v9, v21, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v6, v14, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v7, v15, v2, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v4, v10, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v5, v11, v21, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v8, v16, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v9, v17, v2, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, v12, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v7, v13, v21, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v14, v18, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v15, v19, v2, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v10, v14, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v11, v15, v21, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v0
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v16, v20, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, v21, v2, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, v16, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, v17, v21, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v0
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v22, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v23, v2, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v18, v1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v19, v21, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v19, v1, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v18, v0, v25, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v17, v1, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v16, v0, v24, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v2, v16, v25, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, v2, v24, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v15, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v14, v25, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v11, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v10, v24, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v9, v9, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v8, v8, v25, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v7, v7, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, v6, v24, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v7, v7, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v6, v6, v25, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v5, v5, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v4, v4, v24, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v13, v13, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v12, v12, v25, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v11, v9, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v10, v8, v24, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v11, v11, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v10, v10, v25, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, v30, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v8, v29, v24, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v17, v29, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v16, v28, v25, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v15, v28, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v14, v27, v24, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v20
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cndmask_b32_e32 v15, v27, v24, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v14, v26, v25, vcc
-; CHECK-NEXT:    global_store_dwordx2 v4, v[18:19], s[0:1] offset:64
-; CHECK-NEXT:    global_store_dwordx4 v4, v[14:17], s[0:1] offset:32
-; CHECK-NEXT:    global_store_dwordx4 v4, v[10:13], s[0:1] offset:48
-; CHECK-NEXT:    global_store_dwordx4 v4, v[6:9], s[0:1]
-; CHECK-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:16
+; CHECK-NEXT:    v_cndmask_b32_e32 v13, v26, v23, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v12, v25, v24, vcc
+; CHECK-NEXT:    global_store_dwordx2 v22, v[16:17], s[0:1] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v22, v[12:15], s[0:1] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v22, v[8:11], s[0:1] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v22, v[4:7], s[0:1]
+; CHECK-NEXT:    global_store_dwordx4 v22, v[0:3], s[0:1] offset:16
 ; CHECK-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <9 x double>, ptr addrspace(1) %out, i32 %tid

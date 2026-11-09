@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisOptions.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Option/LibraryOptions.h"
 
@@ -16,7 +20,7 @@
 
 using namespace llvm;
 
-static llvm::opt::RegisterLibraryOptions<llvm::AnalysisOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::AnalysisOptions)
 
 const AnalysisOptions &llvm::getAnalysisOptions(const Module &M) {
   return getAnalysisOptions(M.getContext());
