@@ -8677,9 +8677,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   BasicBlock *BB = SI->getParent();
 
   if (isValueEqualityComparison(SI)) {
-    // If we only have one predecessor, and if it is a branch on this value, try
-    // to simplify the comparison based on the conditions that predecessor jumps
-    // to this block.
+    // If we only have one predecessor, and the predecessor branches on the
+    // same value as this switch, try to simplify the switch based on the
+    // conditions under which the predecessor jumps to this block.
     if (BasicBlock *OnlyPred = BB->getSinglePredecessor())
       if (simplifyEqualityComparisonWithOnlyPredecessor(SI, OnlyPred, Builder))
         return requestResimplify();
@@ -9060,9 +9060,9 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
 
   // Conditional branch
   if (isValueEqualityComparison(BI)) {
-    // If we only have one predecessor, and if it is a branch on this value, try
-    // to simplify the comparison based on the conditions that predecessor jumps
-    // to this block.
+    // If we only have one predecessor, and the predecessor branches on the
+    // same value as this branch, try to simplify the branch based on the
+    // conditions under which the predecessor jumps to this block.
     if (BasicBlock *OnlyPred = BB->getSinglePredecessor())
       if (simplifyEqualityComparisonWithOnlyPredecessor(BI, OnlyPred, Builder))
         return requestResimplify();
