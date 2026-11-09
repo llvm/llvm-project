@@ -235,11 +235,11 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
-  // Start - StartPtr wraps if Start is below StartPtr. StartOffset then
-  // exceeds DerefBytes, so the final MaxOffset u<= DerefBytes check (or an
-  // earlier bail-out) rejects it.
-  const SCEV *StartOffset = SE.getNoopOrZeroExtend(
-      SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
+  // If Start u< StartPtr, StartOffset wraps to a value above DerefBytes, so
+  // the final MaxOffset u<= DerefBytes check rejects it.
+  const SCEV *Start = AR->getStart();
+  const SCEV *StartOffset =
+      SE.getNoopOrZeroExtend(SE.getMinusSCEV(Start, StartPtr), WiderTy);
 
   MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
 
