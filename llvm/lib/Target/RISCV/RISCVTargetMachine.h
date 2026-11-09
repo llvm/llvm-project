@@ -16,6 +16,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include <optional>
 
@@ -24,6 +25,8 @@ class RISCVTargetMachine : public CodeGenTargetMachineImpl {
   const RISCVOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<RISCVSubtarget>> SubtargetMap;
+  mutable AttributeSet LastSubtargetAttrs;
+  mutable const RISCVSubtarget *LastSubtarget = nullptr;
 
 public:
   RISCVTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
