@@ -21,3 +21,13 @@ define tailcc void @mem(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, 
   musttail call tailcc void %fp(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f)
   ret void
 }
+
+; An ordinary exit leaves incoming argument slots above RSP, so a target held
+; in one of them can still be jumped through directly.
+define void @incoming_arg(i64 %a, i64 %b, i64 %c, i64 %d, ptr %fp) {
+; CHECK-LABEL: incoming_arg:
+; CHECK-NOT:     movq 40(%rsp)
+; CHECK:         rex64 jmpq *40(%rsp) # TAILCALL
+  tail call void %fp(i64 %b, i64 %c, i64 %d, i64 %b)
+  ret void
+}

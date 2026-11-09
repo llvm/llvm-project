@@ -2920,7 +2920,9 @@ static OldReturnAddressStores detachOldReturnAddressStores(
 
 // A tail call through a stack slot (jmp [slot]) would read the slot after the
 // epilogue has moved RSP, and Win64 has no red zone. Load the target into a
-// register in the body instead, and jump through that.
+// register in the body instead, and jump through that. Slots among the
+// incoming arguments stay above RSP in an exit that doesn't change RSP, so
+// those are left alone.
 static MachineBasicBlock::iterator
 loadFrameIndexTailCallTarget(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator Terminator,
@@ -2930,10 +2932,19 @@ loadFrameIndexTailCallTarget(MachineFunction &MF, MachineBasicBlock &MBB,
   if (Old.getOpcode() != X86::TCRETURNmi64 &&
       Old.getOpcode() != X86::TCRETURN_WINmi64)
     return Terminator;
-  bool HasFrameIndex = false;
-  for (unsigned I = 0; I != X86::AddrNumOperands; ++I)
-    HasFrameIndex |= Old.getOperand(I).isFI();
-  if (!HasFrameIndex)
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  // Frame indices on a return are resolved relative to RSP at entry, but RSP
+  // is changed by the adjustment before the jump, so a slot can only be used
+  // in place if there is none.
+  bool IsOrdinaryExit = getTCReturnStackAdjust(Old).getImm() == 0;
+  bool NeedsLoad = false;
+  for (unsigned I = 0; I != X86::AddrNumOperands; ++I) {
+    const MachineOperand &MO = Old.getOperand(I);
+    if (MO.isFI())
+      NeedsLoad |= !IsOrdinaryExit || !MFI.isFixedObjectIndex(MO.getIndex()) ||
+                   MFI.getObjectOffset(MO.getIndex()) < 0;
+  }
+  if (!NeedsLoad)
     return Terminator;
 
   MCRegister Scratch =
