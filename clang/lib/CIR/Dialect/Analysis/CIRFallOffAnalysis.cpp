@@ -51,7 +51,10 @@ enum class Exits : uint8_t {
 constexpr Exits escapingExits = Exits::Break | Exits::Continue |
                                 Exits::ExplicitReturn | Exits::ImplicitReturn;
 
-bool has(Exits exits, Exits kinds) { return (exits & kinds) != Exits::None; }
+/// Whether control may leave through any of `kinds`.
+bool mayExitVia(Exits exits, Exits kinds) {
+  return (exits & kinds) != Exits::None;
+}
 
 class FallOffAnalyzer {
 public:
@@ -64,7 +67,8 @@ public:
   /// label inside it, or dead code that may hold one, means yes.
   bool mayCompleteFromTop(mlir::Operation *op) {
     assert(tailOnly && "needs a tail-only analyzer");
-    return has(visitStructured(op, /*entered=*/true), Exits::Normal) || unsure;
+    return mayExitVia(visitStructured(op, /*entered=*/true), Exits::Normal) ||
+           unsure;
   }
 
 private:
@@ -261,8 +265,8 @@ FallOffKind FallOffAnalyzer::run() {
     updateLabelAncestors();
   }
 
-  bool explicitReturn = has(exits, Exits::ExplicitReturn);
-  if (!has(exits, Exits::Normal | Exits::ImplicitReturn))
+  bool explicitReturn = mayExitVia(exits, Exits::ExplicitReturn);
+  if (!mayExitVia(exits, Exits::Normal | Exits::ImplicitReturn))
     return explicitReturn ? FallOffKind::Never : FallOffKind::NeverAndNoReturn;
   if (abnormalEdge || fakeEdge || explicitReturn)
     return FallOffKind::Maybe;
@@ -371,7 +375,7 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
       if (op.getNumRegions() != 0) {
         Exits opExits = visitStructured(&op, live);
         exits |= opExits & escapingExits;
-        live = has(opExits, Exits::Normal);
+        live = mayExitVia(opExits, Exits::Normal);
         continue;
       }
 
@@ -506,10 +510,10 @@ Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
         stepExits = Exits::None;
   auto visitBodyAndStep = [&]() {
     bodyExits = visitRegion(loop.getBody(), bodyEntered);
-    bool reachesLatch = has(bodyExits, Exits::Normal | Exits::Continue);
+    bool reachesLatch = mayExitVia(bodyExits, Exits::Normal | Exits::Continue);
     if (step) {
       stepExits = visitRegion(*step, reachesLatch);
-      reachesLatch = has(stepExits, Exits::Normal);
+      reachesLatch = mayExitVia(stepExits, Exits::Normal);
     }
     return reachesLatch;
   };
@@ -517,12 +521,12 @@ Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
     if (isDoWhile) {
       condEntered |= visitBodyAndStep();
       condExits = visitRegion(loop.getCond(), condEntered);
-      if (!has(condExits, Exits::CondTrue) || bodyEntered)
+      if (!mayExitVia(condExits, Exits::CondTrue) || bodyEntered)
         break;
       bodyEntered = true;
     } else {
       condExits = visitRegion(loop.getCond(), condEntered);
-      bodyEntered |= has(condExits, Exits::CondTrue);
+      bodyEntered |= mayExitVia(condExits, Exits::CondTrue);
       if (!visitBodyAndStep() || condEntered)
         break;
       condEntered = true;
@@ -532,7 +536,8 @@ Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
   // Breaks and continues stop at the loop; returns leave it.
   Exits exits = (condExits | bodyExits | stepExits) &
                 (Exits::ExplicitReturn | Exits::ImplicitReturn);
-  if (has(condExits, Exits::CondFalse) || has(bodyExits, Exits::Break))
+  if (mayExitVia(condExits, Exits::CondFalse) ||
+      mayExitVia(bodyExits, Exits::Break))
     exits |= Exits::Normal;
   return exits;
 }
@@ -549,7 +554,7 @@ Exits FallOffAnalyzer::visitSwitch(SwitchOp op, bool entered) {
   // Breaks stop at the switch; continues and returns leave it.
   Exits exits = bodyExits & (Exits::Continue | Exits::ExplicitReturn |
                              Exits::ImplicitReturn);
-  if (has(bodyExits, Exits::Normal | Exits::Break) ||
+  if (mayExitVia(bodyExits, Exits::Normal | Exits::Break) ||
       (entered && !hasDefault && !op.getAllEnumCasesCovered()))
     exits |= Exits::Normal;
   return exits;
@@ -562,9 +567,9 @@ Exits FallOffAnalyzer::visitCleanupScope(CleanupScopeOp op, bool entered) {
 
   // A cleanup that cannot complete (e.g. a noreturn destructor) stops every
   // path leaving the body.
-  bool leavesBody = has(bodyExits, Exits::Normal | escapingExits);
+  bool leavesBody = mayExitVia(bodyExits, Exits::Normal | escapingExits);
   Exits cleanupExits = visitRegion(op.getCleanupRegion(), leavesBody);
-  if (!leavesBody || has(cleanupExits, Exits::Normal))
+  if (!leavesBody || mayExitVia(cleanupExits, Exits::Normal))
     return bodyExits;
   abnormalEdge = true;
   return Exits::None;
