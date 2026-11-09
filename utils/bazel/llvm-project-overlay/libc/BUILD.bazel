@@ -4614,6 +4614,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_pipe",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/pipe.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_pkey_alloc",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/pkey_alloc.h"],
     target_compatible_with = select({
@@ -18937,7 +18952,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_pipe",
         ":errno",
     ],
 )
