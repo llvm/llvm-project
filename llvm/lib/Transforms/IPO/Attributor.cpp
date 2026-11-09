@@ -225,14 +225,11 @@ enum class SPIRVAddressSpace : unsigned {
 };
 } // namespace
 
-bool AA::isGPU(const Module &M) {
-  Triple T(M.getTargetTriple());
-  return T.isGPU();
-}
+bool AA::isGPU(const Module &M) { return M.getTargetTriple().isGPU(); }
 
 bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
   assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
+  const Triple &T = M.getTargetTriple();
 
   if (T.isSPIRV())
     return AS == static_cast<unsigned>(SPIRVAddressSpace::Shared);
@@ -242,7 +239,7 @@ bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
 
 bool AA::isGPUConstantAddressSpace(const Module &M, unsigned AS) {
   assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
+  const Triple &T = M.getTargetTriple();
 
   if (T.isSPIRV())
     return AS == static_cast<unsigned>(SPIRVAddressSpace::Constant);
@@ -252,7 +249,7 @@ bool AA::isGPUConstantAddressSpace(const Module &M, unsigned AS) {
 
 bool AA::isGPULocalAddressSpace(const Module &M, unsigned AS) {
   assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
+  const Triple &T = M.getTargetTriple();
 
   if (T.isSPIRV())
     return AS == static_cast<unsigned>(SPIRVAddressSpace::Local);
