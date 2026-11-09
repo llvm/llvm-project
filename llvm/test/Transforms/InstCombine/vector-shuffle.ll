@@ -133,8 +133,7 @@ define <vscale x 4 x i32> @scalable_zero_mask(<vscale x 4 x i32> %v) {
 define <vscale x 4 x i32> @scalable_poison_mask(<vscale x 4 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @scalable_poison_mask(
 ; CHECK-SAME: <vscale x 4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.vector.shuffle.nxv4i32.nxv4i8(<vscale x 4 x i32> [[V]], <vscale x 4 x i8> poison)
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = call <vscale x 4 x i32> @llvm.vector.shuffle.nxv4i32.nxv4i8(<vscale x 4 x i32> %v, <vscale x 4 x i8> poison)
   ret <vscale x 4 x i32> %r

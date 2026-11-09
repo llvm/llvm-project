@@ -6,8 +6,7 @@
 define <1 x i32> @one_element(<1 x i32> %v, <1 x i32> %m) {
 ; CHECK-LABEL: define <1 x i32> @one_element(
 ; CHECK-SAME: <1 x i32> [[V:%.*]], <1 x i32> [[M:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <1 x i32> @llvm.vector.shuffle.v1i32.v1i32(<1 x i32> [[V]], <1 x i32> [[M]])
-; CHECK-NEXT:    ret <1 x i32> [[R]]
+; CHECK-NEXT:    ret <1 x i32> [[V]]
 ;
   %r = call <1 x i32> @llvm.vector.shuffle.v1i32.v1i32(<1 x i32> %v, <1 x i32> %m)
   ret <1 x i32> %r
@@ -16,8 +15,7 @@ define <1 x i32> @one_element(<1 x i32> %v, <1 x i32> %m) {
 define <1 x double> @one_element_fp_i8_mask(<1 x double> %v, <1 x i8> %m) {
 ; CHECK-LABEL: define <1 x double> @one_element_fp_i8_mask(
 ; CHECK-SAME: <1 x double> [[V:%.*]], <1 x i8> [[M:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <1 x double> @llvm.vector.shuffle.v1f64.v1i8(<1 x double> [[V]], <1 x i8> [[M]])
-; CHECK-NEXT:    ret <1 x double> [[R]]
+; CHECK-NEXT:    ret <1 x double> [[V]]
 ;
   %r = call <1 x double> @llvm.vector.shuffle.v1f64.v1i8(<1 x double> %v, <1 x i8> %m)
   ret <1 x double> %r
@@ -49,8 +47,7 @@ define <vscale x 1 x i32> @scalable_one_element(<vscale x 1 x i32> %v, <vscale x
 define <4 x i32> @poison_mask(<4 x i32> %v) {
 ; CHECK-LABEL: define <4 x i32> @poison_mask(
 ; CHECK-SAME: <4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> [[V]], <4 x i8> poison)
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    ret <4 x i32> poison
 ;
   %r = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> %v, <4 x i8> poison)
   ret <4 x i32> %r
@@ -59,8 +56,7 @@ define <4 x i32> @poison_mask(<4 x i32> %v) {
 define <vscale x 4 x i32> @scalable_poison_mask(<vscale x 4 x i32> %v) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @scalable_poison_mask(
 ; CHECK-SAME: <vscale x 4 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.vector.shuffle.nxv4i32.nxv4i8(<vscale x 4 x i32> [[V]], <vscale x 4 x i8> poison)
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = call <vscale x 4 x i32> @llvm.vector.shuffle.nxv4i32.nxv4i8(<vscale x 4 x i32> %v, <vscale x 4 x i8> poison)
   ret <vscale x 4 x i32> %r
