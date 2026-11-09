@@ -445,28 +445,8 @@ void GCNRematStrategy::rematerializeFor(
       }
       Cand.rematerialize(Remater);
 
-      // Extended dependencies are now live in regions where they previously
-      // weren't. These are all within the candidate's original live range.
-      // Live-ins seed RP recomputation so they have to be updated, and the
-      // dependencies' pressure is added to RP targets in regions where they
-      // became live-in or live-out. This must happen before the save is
-      // applied below.
-      for (RegisterIdx DepRegIdx : Cand.ExtendedDeps) {
-        const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
-        Register DepDefReg = DepReg.getDefReg();
-        BitVector NewlyLive = Regions.refreshLiveMaps(DepDefReg, Cand.Live);
-        if (NewlyLive.none())
-          continue;
-        GCNRegPressure DepRP;
-        DepRP.inc(DepDefReg, LaneBitmask::getNone(), DepReg.Mask, MRI);
-        LLVM_DEBUG({
-          for (unsigned I : NewlyLive.set_bits())
-            dbgs() << "  [" << I << "] Extending "
-                   << printReg(DepDefReg, MRI.getTargetRegisterInfo(), 0, &MRI)
-                   << '\n';
-        });
-        Targets.addRP(NewlyLive, DepRP);
-      }
+      // Must happen before the save is applied below.
+      updateExtendedDeps(Cand, Targets);
 
       // Adjust RP targets. The save is guaranteed in regions in which the
       // register is live-through and unused but optimistic in all other regions
@@ -664,6 +644,31 @@ bool GCNRematStrategy::candidateSaveCoversExtendedDeps(
   return Save.getSGPRNum() >= Cost.getSGPRNum() &&
          Save.getArchVGPRNum() >= Cost.getArchVGPRNum() &&
          Save.getAGPRNum() >= Cost.getAGPRNum();
+}
+
+void GCNRematStrategy::updateExtendedDeps(const RematCandidate &Cand,
+                                          RematTargets &Targets) {
+  // Extended dependencies are now live in regions where they previously
+  // weren't. These are all within the candidate's original live range.
+  // Live-ins seed RP recomputation so they have to be updated, and the
+  // dependencies' pressure is added to RP targets in regions where they
+  // became live-in or live-out.
+  for (RegisterIdx DepRegIdx : Cand.ExtendedDeps) {
+    const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
+    Register DepDefReg = DepReg.getDefReg();
+    BitVector NewlyLive = Regions.refreshLiveMaps(DepDefReg, Cand.Live);
+    if (NewlyLive.none())
+      continue;
+    GCNRegPressure DepRP;
+    DepRP.inc(DepDefReg, LaneBitmask::getNone(), DepReg.Mask, MRI);
+    LLVM_DEBUG({
+      for (unsigned I : NewlyLive.set_bits())
+        dbgs() << "  [" << I << "] Extending "
+               << printReg(DepDefReg, MRI.getTargetRegisterInfo(), 0, &MRI)
+               << '\n';
+    });
+    Targets.addRP(NewlyLive, DepRP);
+  }
 }
 
 void GCNRematStrategy::rollbackRecordedRemats() {

@@ -363,6 +363,11 @@ private:
   bool
   candidateSaveCoversExtendedDeps(RegisterIdx CandIdx,
                                   ArrayRef<RegisterIdx> ExtendedDeps) const;
+
+  /// Refreshes live-ins/live-outs of \p Cand's extended dependencies in the
+  /// regions where \p Cand was live, and adds the dependencies' pressure to
+  /// \p Targets in regions where they became live-in or live-out.
+  void updateExtendedDeps(const RematCandidate &Cand, RematTargets &Targets);
 };
 
 } // namespace llvm
