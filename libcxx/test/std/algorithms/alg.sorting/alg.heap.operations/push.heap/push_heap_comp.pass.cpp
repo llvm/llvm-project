@@ -31,7 +31,7 @@ TEST_CONSTEXPR_CXX20 bool test()
         std::push_heap(Iter(work), Iter(work+i), std::greater<T>());
         assert(std::is_permutation(work, work+i, orig));
         assert(std::is_heap(work, work+i, std::greater<T>()));
-        assert(satisfies_heap_property(work, work+i, std::greater<T>()));
+        assert(satisfies_heap_property(work, work + i, std::greater<T>()));
     }
 
     {

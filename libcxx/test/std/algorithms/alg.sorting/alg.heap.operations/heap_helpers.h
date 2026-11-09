@@ -28,6 +28,6 @@ TEST_CONSTEXPR_CXX20 bool satisfies_heap_property(Iter a, Iter b, Comp cmp) {
 
 template <class Iter>
 TEST_CONSTEXPR_CXX20 bool satisfies_heap_property(Iter a, Iter b) {
-    typedef typename std::iterator_traits<Iter>::value_type value_type;
-    return satisfies_heap_property(a, b, std::less<value_type>());
+  typedef typename std::iterator_traits<Iter>::value_type value_type;
+  return satisfies_heap_property(a, b, std::less<value_type>());
 }
