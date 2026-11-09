@@ -8,6 +8,8 @@ declare nofpclass(nan pinf norm sub zero) float @returns_ninf_f32()
 declare nofpclass(nan norm sub zero) float @returns_inf_f32()
 declare nofpclass(norm sub zero) float @returns_inf_or_nan_f32()
 
+declare nofpclass(nan norm sub zero) ppc_fp128 @returns_inf_ppcf128()
+
 declare nofpclass(inf nan norm psub zero) float @returns_nsub_f32()
 declare nofpclass(inf nan norm nsub zero) float @returns_psub_f32()
 declare nofpclass(inf nan norm zero) float @returns_sub_f32()
@@ -663,6 +665,17 @@ define i1 @f32_normal_to_f16_can_be_normal(float nofpclass(nan inf sub zero) %x)
   %narrow = fptrunc float %x to half
   %normal = call i1 @llvm.is.fpclass.f16(half %narrow, i32 264)
   ret i1 %normal
+}
+
+define nofpclass(inf norm sub zero) double @ret_only_nan__fptrunc_ppcf128() {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) double @ret_only_nan__fptrunc_ppcf128() {
+; CHECK-NEXT:    [[INF:%.*]] = call ppc_fp128 @returns_inf_ppcf128()
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ppc_fp128 [[INF]] to double
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %inf = call ppc_fp128 @returns_inf_ppcf128()
+  %result = fptrunc ppc_fp128 %inf to double
+  ret double %result
 }
 
 ;-------------------------------------------------------------------------------
