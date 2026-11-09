@@ -998,6 +998,9 @@ public:
   LLVM_ABI bool matchShuffleDisjointMask(MachineInstr &MI,
                                          BuildFnTy &MatchInfo) const;
 
+  LLVM_ABI bool matchMulByZeroOneVector(MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) const;
+
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.
   LLVM_ABI void applyBuildFnMO(const MachineOperand &MO,
