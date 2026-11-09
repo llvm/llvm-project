@@ -7,6 +7,13 @@
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=CODE %s
 // RUN: llvm-objdump -s --section=.rodata %t | FileCheck --check-prefix=RODATA %s
 
+/// In a PIE, PC-relative and :lo12: references can use copy relocations, but
+/// absolute references cannot.
+// RUN: not ld.lld -pie --no-relax %t.o %t2.so -o /dev/null 2>&1 | FileCheck --check-prefix=PIE --implicit-check-not=error: %s
+// PIE:      error: relocation R_AARCH64_ABS32 cannot be used against symbol 'z'; recompile with -fPIC
+// PIE-NEXT: >>> defined in {{.*}}.so
+// PIE-NEXT: >>> referenced by {{.*}}.o:(.rodata+0x0)
+
 .text
 .globl _start
 _start:
