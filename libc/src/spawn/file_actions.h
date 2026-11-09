@@ -77,21 +77,17 @@ struct SpawnFileOpenAction : public BaseSpawnFileAction {
   LIBC_INLINE static CheckedPtr<SpawnFileOpenAction>
   create(const char *p, int fdesc, int flags, mode_t m) {
     size_t path_size = internal::string_length(p) + 1;
-    // As in make_unique, there is no need to inspect `ac`: operator new is
-    // noexcept, so if it fails, no object is constructed and the
-    // new-expression evaluates to nullptr.
     AllocChecker ac;
+    void *mem = ::operator new(sizeof(SpawnFileOpenAction) + path_size, ac);
+    if (!ac)
+      return nullptr;
     return CheckedPtr<SpawnFileOpenAction>(
-        new (ac, path_size) SpawnFileOpenAction(p, path_size, fdesc, flags, m));
+        new (mem) SpawnFileOpenAction(p, path_size, fdesc, flags, m));
   }
 
-  /// Allocates storage for the object, followed by `path_size` bytes for the
-  /// path. Declaring this also hides the global operator new, which would not
-  /// leave room for the path.
-  LIBC_INLINE static void *operator new(size_t size, AllocChecker &ac,
-                                        size_t path_size) noexcept {
-    return ::operator new(size + path_size, ac);
-  }
+  // A copy would not include the path.
+  SpawnFileOpenAction(const SpawnFileOpenAction &) = delete;
+  SpawnFileOpenAction &operator=(const SpawnFileOpenAction &) = delete;
 
 private:
   LIBC_INLINE SpawnFileOpenAction(const char *p, size_t path_size, int fdesc,
