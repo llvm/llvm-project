@@ -86,6 +86,8 @@ STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
+STATISTIC(NumConstArgs,
+          "Number of integer call arguments replaced by constants");
 STATISTIC(NumCmpIntr, "Number of llvm.[us]cmp intrinsics removed");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 STATISTIC(NumSMinMax,
@@ -786,7 +788,19 @@ bool CVPImpl::processCallSite(CallBase &CB) {
   SmallVector<unsigned, 4> ArgNos;
   unsigned ArgNo = 0;
 
-  for (Value *V : CB.args()) {
+  for (Use &U : CB.args()) {
+    Value *V = U.get();
+    // Replace an integer argument that is constant at this call, e.g. a memcmp
+    // size under a switch on that size, so the call can be folded later.
+    // fake.use operands must stay variables: they keep them alive for debug.
+    if (V->getType()->isIntegerTy() && !isa<Constant>(V) &&
+        CB.getIntrinsicID() != Intrinsic::fake_use)
+      if (Constant *C = getConstantAt(V, &CB)) {
+        U.set(C);
+        ++NumConstArgs;
+        Changed = true;
+      }
+
     PointerType *Type = dyn_cast<PointerType>(V->getType());
     // Try to mark pointer typed parameters as non-null.  We skip the
     // relatively expensive analysis for constants which are obviously either

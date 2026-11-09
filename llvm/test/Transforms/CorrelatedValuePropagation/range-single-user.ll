@@ -88,9 +88,9 @@ else:
   ret void
 }
 
-define i8 @no_refine_multiple_users(i8 %a) {
+define i8 @no_refine_multiple_users(i8 %a, ptr %p) {
 ; CHECK-LABEL: define i8 @no_refine_multiple_users(
-; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-SAME: i8 [[A:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -99,7 +99,7 @@ define i8 @no_refine_multiple_users(i8 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[C_EXT:%.*]] = zext nneg i8 [[C]] to i16
-; CHECK-NEXT:    call void @use.i16(i16 [[C_EXT]])
+; CHECK-NEXT:    store i16 [[C_EXT]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret i8 96
 ;
 entry:
@@ -112,7 +112,7 @@ loop:
 
 exit:
   %c.ext = zext i8 %c to i16
-  call void @use.i16(i16 %c.ext)
+  store i16 %c.ext, ptr %p
   ret i8 %c
 }
 
