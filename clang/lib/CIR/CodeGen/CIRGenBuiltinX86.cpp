@@ -43,6 +43,90 @@ static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
   return builder.createBitcast(cmp, ops[0].getType());
 }
 
+struct X86FCmpInfo {
+  cir::FCmpOpKind pred;
+  bool isSignaling;
+};
+
+/// Decodes comparison condition of x86 cmppps/cmppd* builtins which is an
+/// integer in the range [0, 31]. Predicates for 16-31 repeat the 0-15
+/// predicates and differ only in signaling behavior.
+static X86FCmpInfo getX86FCmpInfo(unsigned cc) {
+  X86FCmpInfo info;
+  switch (cc & 0xf) {
+  case 0x00:
+    info.pred = cir::FCmpOpKind::oeq;
+    info.isSignaling = false;
+    break;
+  case 0x01:
+    info.pred = cir::FCmpOpKind::olt;
+    info.isSignaling = true;
+    break;
+  case 0x02:
+    info.pred = cir::FCmpOpKind::ole;
+    info.isSignaling = true;
+    break;
+  case 0x03:
+    info.pred = cir::FCmpOpKind::uno;
+    info.isSignaling = false;
+    break;
+  case 0x04:
+    info.pred = cir::FCmpOpKind::une;
+    info.isSignaling = false;
+    break;
+  case 0x05:
+    info.pred = cir::FCmpOpKind::uge;
+    info.isSignaling = true;
+    break;
+  case 0x06:
+    info.pred = cir::FCmpOpKind::ugt;
+    info.isSignaling = true;
+    break;
+  case 0x07:
+    info.pred = cir::FCmpOpKind::ord;
+    info.isSignaling = false;
+    break;
+  case 0x08:
+    info.pred = cir::FCmpOpKind::ueq;
+    info.isSignaling = false;
+    break;
+  case 0x09:
+    info.pred = cir::FCmpOpKind::ult;
+    info.isSignaling = true;
+    break;
+  case 0x0a:
+    info.pred = cir::FCmpOpKind::ule;
+    info.isSignaling = true;
+    break;
+  case 0x0b:
+    info.pred = cir::FCmpOpKind::_false;
+    info.isSignaling = false;
+    break;
+  case 0x0c:
+    info.pred = cir::FCmpOpKind::one;
+    info.isSignaling = false;
+    break;
+  case 0x0d:
+    info.pred = cir::FCmpOpKind::oge;
+    info.isSignaling = true;
+    break;
+  case 0x0e:
+    info.pred = cir::FCmpOpKind::ogt;
+    info.isSignaling = true;
+    break;
+  case 0x0f:
+    info.pred = cir::FCmpOpKind::_true;
+    info.isSignaling = false;
+    break;
+  default:
+    llvm_unreachable("Unhandled cc");
+  }
+
+  if (cc & 0x10)
+    info.isSignaling = !info.isSignaling;
+  return info;
+}
+
 static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
                                    mlir::Value mask, unsigned numElems) {
   auto maskTy = cir::VectorType::getFixed(
@@ -2902,83 +2986,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_cmppd256: {
     mlir::Location loc = getLoc(expr->getExprLoc());
 
-    // The third argument is the comparison condition, an integer in the range
-    // [0, 31]. Predicates for 16-31 repeat the 0-15 predicates and differ only
-    // in signalling behavior.
+    // The third argument is the comparison condition.
     unsigned cc =
         ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
         0x1f;
 
-    cir::FCmpOpKind pred = cir::FCmpOpKind::oeq;
-    bool isTrue = false;
-    bool isFalse = false;
-    bool isSignaling = false;
-    switch (cc & 0xf) {
-    case 0x00:
-      pred = cir::FCmpOpKind::oeq;
-      break;
-    case 0x01:
-      pred = cir::FCmpOpKind::olt;
-      isSignaling = true;
-      break;
-    case 0x02:
-      pred = cir::FCmpOpKind::ole;
-      isSignaling = true;
-      break;
-    case 0x03:
-      pred = cir::FCmpOpKind::uno;
-      break;
-    case 0x04:
-      pred = cir::FCmpOpKind::une;
-      break;
-    case 0x05:
-      pred = cir::FCmpOpKind::uge;
-      isSignaling = true;
-      break;
-    case 0x06:
-      pred = cir::FCmpOpKind::ugt;
-      isSignaling = true;
-      break;
-    case 0x07:
-      pred = cir::FCmpOpKind::ord;
-      break;
-    case 0x08:
-      pred = cir::FCmpOpKind::ueq;
-      break;
-    case 0x09:
-      pred = cir::FCmpOpKind::ult;
-      isSignaling = true;
-      break;
-    case 0x0a:
-      pred = cir::FCmpOpKind::ule;
-      isSignaling = true;
-      break;
-    case 0x0b: // FALSE
-      pred = cir::FCmpOpKind::_false;
-      isFalse = true;
-      break;
-    case 0x0c:
-      pred = cir::FCmpOpKind::one;
-      break;
-    case 0x0d:
-      pred = cir::FCmpOpKind::oge;
-      isSignaling = true;
-      break;
-    case 0x0e:
-      pred = cir::FCmpOpKind::ogt;
-      isSignaling = true;
-      break;
-    case 0x0f: // TRUE
-      pred = cir::FCmpOpKind::_true;
-      isTrue = true;
-      break;
-    default:
-      llvm_unreachable("Unhandled cc");
-    }
-
-    // Invert the signalling behavior for 16-31.
-    if (cc & 0x10)
-      isSignaling = !isSignaling;
+    X86FCmpInfo cmpInfo = getX86FCmpInfo(cc);
 
     auto opsTy = cast<cir::VectorType>(ops[0].getType());
     unsigned numElts = opsTy.getFixedSize();
@@ -2986,7 +2999,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     // If the predicate is true or false, or the builtin is mask enabled, and
     // we're using constrained intrinsics, there is no compare operation we can
     // use. Just use the legacy X86 specific intrinsic.
-    if (builder.getIsFPConstrained() && (isTrue || isFalse || isMaskFCmp)) {
+    if (builder.getIsFPConstrained() &&
+        (cmpInfo.pred == cir::FCmpOpKind::_true ||
+         cmpInfo.pred == cir::FCmpOpKind::_false || isMaskFCmp)) {
       llvm::StringRef intrinsicName;
       switch (builtinID) {
       default:
@@ -3049,8 +3064,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     auto cmpTy = cir::VectorType::getFixed(cmpEltTy, numElts);
 
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
-    mlir::Value cmp = builder.createVecFCompare(loc, cmpTy, pred, ops[0],
-                                                ops[1], isSignaling);
+    mlir::Value cmp = builder.createVecFCompare(
+        loc, cmpTy, cmpInfo.pred, ops[0], ops[1], cmpInfo.isSignaling);
 
     if (isMaskFCmp)
       return emitX86MaskedCompareResult(builder, cmp, numElts, ops[3], loc);
