@@ -41,6 +41,18 @@ TEST_CONSTEXPR_CXX26 void test() {
     assert(l1 == List(a2, a2 + 8));
   }
 #endif
+
+  { // Check that inserting from the same vector works as expected
+    std::list<int> v;
+    v.push_back(1);
+    v.push_back(2);
+    v.push_back(3);
+    v.push_back(4);
+    v.insert(v.begin(), 2, v.back());
+    assert(v.size() == 6);
+    int expected[] = {4, 4, 1, 2, 3, 4};
+    assert(std::equal(v.begin(), v.end(), expected));
+  }
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
