@@ -1,0 +1,39 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+
+#direct_align = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", direct_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
+} {
+
+  cir.func @takes(%arg0: !s32i) requires_call_conv_lowering
+      attributes { test_classify = #direct_align } {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes(%arg0: !s32i {llvm.alignstack = 8 : i64})
+
+  cir.func @caller(%arg0: !s32i) requires_call_conv_lowering
+      attributes { test_classify = #direct_align } {
+    cir.call @takes(%arg0) : (!s32i) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.call @takes(%arg0) : (!s32i {llvm.alignstack = 8 : i64}) -> ()
+
+}
+
+// LLVM: define void @takes(i32 alignstack(8) %{{.+}})
+// LLVM: define void @caller(i32 alignstack(8) %{{.+}})
+// LLVM: call void @takes(i32 alignstack(8) %

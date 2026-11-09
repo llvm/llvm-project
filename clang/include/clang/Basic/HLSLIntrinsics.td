@@ -741,6 +741,7 @@ def hlsl_distance : HLSLBuiltin<"distance"> {
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1185,6 +1186,7 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1343,6 +1345,7 @@ Normalize is based on the following formula: x / length(x).
   let ParamNames = ["x"];
   let Body = "return x / length(x);";
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1880,6 +1883,56 @@ def hlsl_wave_is_first_lane :
   let ReturnType = BoolTy;
   let IsConvergent = 1;
   let Availability = SM6_0;
+}
+
+def hlsl_wave_multi_prefix_bit_and :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixBitAnd",
+                      "__builtin_hlsl_wave_multi_prefix_bit_and"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_bit_or :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixBitOr",
+                      "__builtin_hlsl_wave_multi_prefix_bit_or"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_bit_xor :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixBitXor",
+                      "__builtin_hlsl_wave_multi_prefix_bit_xor"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_product :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixProduct",
+                      "__builtin_hlsl_wave_multi_prefix_product"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllNumericTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
+}
+
+def hlsl_wave_multi_prefix_sum :
+    HLSLTwoArgBuiltin<"WaveMultiPrefixSum",
+                      "__builtin_hlsl_wave_multi_prefix_sum"> {
+  let Args = [Varying, VectorType<UIntTy, 4>];
+  let VaryingTypes = AllNumericTypes;
+  let VaryingLongVector = 1;
+  let IsConvergent = 1;
+  let Availability = SM6_5;
 }
 
 // Returns the count of bits set to 1 on prior lanes.

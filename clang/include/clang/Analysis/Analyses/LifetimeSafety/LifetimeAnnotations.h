@@ -143,6 +143,16 @@ bool isInvalidationMethod(const CXXMethodDecl &MD);
 // (e.g., destructors via implicit 'this', std::destroy_at).
 bool destructsFirstArg(const FunctionDecl &FD);
 
+/// Returns true if the function allocates memory that must be freed by the
+/// caller (e.g. functions annotated with `ownership_returns`, such as
+/// `__attribute__((ownership_returns(malloc)))`).
+bool isAllocatingFunction(const FunctionDecl &FD);
+
+/// Returns true if the function frees memory it takes ownership of (e.g.
+/// functions annotated with `ownership_takes`, such as
+/// `__attribute__((ownership_takes(malloc, 1)))`).
+bool isFreeingFunction(const FunctionDecl &FD);
+
 /// Returns true for standard library callable wrappers (e.g., std::function)
 /// that can propagate the stored lambda's origins.
 bool isStdCallableWrapperType(const CXXRecordDecl *RD);
@@ -151,6 +161,10 @@ bool isStdCallableWrapperType(const CXXRecordDecl *RD);
 /// refers to the same object as the argument, so all origins propagate from
 /// argument to result.
 bool isStdReferenceCast(const FunctionDecl *FD);
+
+/// Skips parentheses and implicit casts. Unlike IgnoreParenImpCasts(), stops at
+/// a MaterializeTemporaryExpr, which owns the storage of a temporary.
+const Expr *ignoreParensAndImpCasts(const Expr *E);
 
 } // namespace clang::lifetimes
 

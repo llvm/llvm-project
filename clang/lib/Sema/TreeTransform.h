@@ -1704,6 +1704,18 @@ public:
         Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
   }
 
+  /// Build a new OpenMP metadirective.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildOMPMetaDirective(SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     ArrayRef<OMPTraitInfo *> TraitInfos,
+                                     ArrayRef<Stmt *> Variants) {
+    return getSema().OpenMP().ActOnOpenMPMetaDirective(StartLoc, EndLoc,
+                                                       TraitInfos, Variants);
+  }
+
   /// Build a new OpenMP informational directive.
   StmtResult RebuildOMPInformationalDirective(OpenMPDirectiveKind Kind,
                                               DeclarationNameInfo DirName,
@@ -10071,12 +10083,45 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
-  // TODO: Fix This
-  llvm::omp::Version OMPVersion =
-      getDerived().getSema().getLangOpts().getOpenMPVersion();
-  SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
-  return StmtError();
+  // Every variant is a complete directive (or the plain associated statement),
+  // so it is transformed on its own.
+  SmallVector<Stmt *, 4> Variants;
+  for (Stmt *V : D->variants()) {
+    StmtResult NewV = getDerived().TransformStmt(V);
+    if (NewV.isInvalid())
+      return StmtError();
+    Variants.push_back(NewV.get());
+  }
+
+  // Copy the trait infos and transform their score and condition expressions.
+  // The implicit 'otherwise' trait info is added back by Sema.
+  ArrayRef<OMPTraitInfo *> OldTraitInfos = D->traitInfos();
+  if (D->hasImplicitOtherwise())
+    OldTraitInfos = OldTraitInfos.drop_back();
+  SmallVector<OMPTraitInfo *, 4> TraitInfos;
+  for (const OMPTraitInfo *OldTI : OldTraitInfos) {
+    OMPTraitInfo &TI = getSema().getASTContext().getNewOMPTraitInfo();
+    TI = *OldTI;
+    auto TransformScoreOrCondition = [&](Expr *&E, bool IsScore) {
+      if (!E)
+        return false;
+      EnterExpressionEvaluationContext Ctx(
+          getSema(),
+          IsScore ? Sema::ExpressionEvaluationContext::ConstantEvaluated
+                  : Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      ExprResult ER = getDerived().TransformExpr(E);
+      if (!ER.isUsable())
+        return true;
+      E = ER.get();
+      return false;
+    };
+    if (TI.anyScoreOrCondition(TransformScoreOrCondition))
+      return StmtError();
+    TraitInfos.push_back(&TI);
+  }
+
+  return getDerived().RebuildOMPMetaDirective(D->getBeginLoc(), D->getEndLoc(),
+                                              TraitInfos, Variants);
 }
 
 template <typename Derived>

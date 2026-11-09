@@ -11,7 +11,7 @@ body:             |
   ; CHECK:   liveins: $x1
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
   ; CHECK:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr killed [[DEF]], [[COPY]], implicit-def $nzcv
+  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
   ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
   ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
   ; CHECK:   B %bb.1
@@ -25,9 +25,9 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr64common = COPY $x1
     %2:gpr64 = IMPLICIT_DEF
-    %3:gpr64 = SUBSXrr killed %2:gpr64, %1:gpr64common, implicit-def $nzcv
+    %3:gpr64 = SUBSXrr %2:gpr64, %1:gpr64common, implicit-def $nzcv
     %4:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    %5:gpr32 = SUBSWri killed %4:gpr32common, 1, 0, implicit-def $nzcv
+    %5:gpr32 = SUBSWri %4:gpr32common, 1, 0, implicit-def $nzcv
     Bcc 1, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -49,7 +49,7 @@ body:             |
   ; CHECK:   liveins: $x1
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
   ; CHECK:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr killed [[DEF]], [[COPY]], implicit-def $nzcv
+  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
   ; CHECK:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
   ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
   ; CHECK:   B %bb.1
@@ -63,9 +63,9 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr64common = COPY $x1
     %2:gpr64 = IMPLICIT_DEF
-    %3:gpr64 = SUBSXrr killed %2:gpr64, %1:gpr64common, implicit-def $nzcv
+    %3:gpr64 = SUBSXrr %2:gpr64, %1:gpr64common, implicit-def $nzcv
     %4:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-    %5:gpr64 = SUBSXri killed %4:gpr64common, 0, 0, implicit-def $nzcv
+    %5:gpr64 = SUBSXri %4:gpr64common, 0, 0, implicit-def $nzcv
     Bcc 0, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -86,7 +86,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $nzcv
   ; CHECK:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-  ; CHECK:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri killed [[CSINCXr]], 0, 0, implicit-def $nzcv
+  ; CHECK:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri [[CSINCXr]], 0, 0, implicit-def $nzcv
   ; CHECK:   Bcc 0, %bb.2, implicit $nzcv
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
@@ -99,7 +99,7 @@ body:             |
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-    %2:gpr64 = ADDSXri killed %1:gpr64common, 0, 0, implicit-def $nzcv
+    %2:gpr64 = ADDSXri %1:gpr64common, 0, 0, implicit-def $nzcv
     Bcc 0, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -121,7 +121,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $nzcv
   ; CHECK:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-  ; CHECK:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri killed [[CSINCXr]], 0, 0, implicit-def $nzcv
+  ; CHECK:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri [[CSINCXr]], 0, 0, implicit-def $nzcv
   ; CHECK:   Bcc 4, %bb.2, implicit $nzcv
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
@@ -133,7 +133,7 @@ body:             |
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-    %2:gpr64 = ADDSXri killed %1:gpr64common, 0, 0, implicit-def $nzcv
+    %2:gpr64 = ADDSXri %1:gpr64common, 0, 0, implicit-def $nzcv
     Bcc 4, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -165,7 +165,7 @@ body:             |
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    %2:gpr32 = ADDSWri killed %1:gpr32common, 0, 0, implicit-def $nzcv
+    %2:gpr32 = ADDSWri %1:gpr32common, 0, 0, implicit-def $nzcv
     Bcc 1, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -186,7 +186,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $nzcv
   ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri killed [[CSINCWr]], 0, 0, implicit-def $nzcv
+  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[CSINCWr]], 0, 0, implicit-def $nzcv
   ; CHECK:   Bcc 2, %bb.2, implicit $nzcv
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
@@ -198,7 +198,7 @@ body:             |
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    %2:gpr32 = SUBSWri killed %1:gpr32common, 0, 0, implicit-def $nzcv
+    %2:gpr32 = SUBSWri %1:gpr32common, 0, 0, implicit-def $nzcv
     Bcc 2, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -219,7 +219,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $nzcv
   ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 4, implicit $nzcv
-  ; CHECK:   [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri killed [[CSINCWr]], 0, 0, implicit-def $nzcv
+  ; CHECK:   [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri [[CSINCWr]], 0, 0, implicit-def $nzcv
   ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
@@ -231,7 +231,7 @@ body:             |
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr32common = CSINCWr $wzr, $wzr, 4, implicit $nzcv
-    %2:gpr32 = ADDSWri killed %1:gpr32common, 0, 0, implicit-def $nzcv
+    %2:gpr32 = ADDSWri %1:gpr32common, 0, 0, implicit-def $nzcv
     Bcc 1, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -263,7 +263,7 @@ body:             |
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr32common = CSINCWr $wzr, $wzr, 5, implicit $nzcv
-    %2:gpr32 = SUBSWri killed %1:gpr32common, 1, 0, implicit-def $nzcv
+    %2:gpr32 = SUBSWri %1:gpr32common, 1, 0, implicit-def $nzcv
     Bcc 4, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -284,7 +284,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $nzcv
   ; CHECK:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 2, implicit $nzcv
-  ; CHECK:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri killed [[CSINCXr]], 1, 0, implicit-def $nzcv
+  ; CHECK:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[CSINCXr]], 1, 0, implicit-def $nzcv
   ; CHECK:   Bcc 0, %bb.2, implicit $nzcv
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
@@ -296,7 +296,7 @@ body:             |
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr64common = CSINCXr $xzr, $xzr, 2, implicit $nzcv
-    %2:gpr64 = SUBSXri killed %1:gpr64common, 1, 0, implicit-def $nzcv
+    %2:gpr64 = SUBSXri %1:gpr64common, 1, 0, implicit-def $nzcv
     Bcc 0, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -318,9 +318,9 @@ body:             |
   ; CHECK:   liveins: $x1
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
   ; CHECK:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr killed [[DEF]], [[COPY]], implicit-def $nzcv
+  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
   ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri killed [[CSINCWr]], 3, 0, implicit-def $nzcv
+  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[CSINCWr]], 3, 0, implicit-def $nzcv
   ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
@@ -333,9 +333,9 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     %1:gpr64common = COPY $x1
     %2:gpr64 = IMPLICIT_DEF
-    %3:gpr64 = SUBSXrr killed %2:gpr64, %1:gpr64common, implicit-def $nzcv
+    %3:gpr64 = SUBSXrr %2:gpr64, %1:gpr64common, implicit-def $nzcv
     %4:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    %5:gpr32 = SUBSWri killed %4:gpr32common, 3, 0, implicit-def $nzcv
+    %5:gpr32 = SUBSWri %4:gpr32common, 3, 0, implicit-def $nzcv
     Bcc 1, %bb.2, implicit $nzcv
     B %bb.1
 
