@@ -55,10 +55,12 @@ define void @vmulwev_q_d(ptr %res, ptr %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: vmulwev_q_d:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    vld $vr1, $a2, 0
-; LA64-NEXT:    vmulwev.q.d $vr0, $vr0, $vr1
-; LA64-NEXT:    vst $vr0, $a0, 0
+; LA64-NEXT:    ld.d $a1, $a1, 0
+; LA64-NEXT:    ld.d $a2, $a2, 0
+; LA64-NEXT:    mul.d $a3, $a1, $a2
+; LA64-NEXT:    mulh.d $a1, $a1, $a2
+; LA64-NEXT:    st.d $a1, $a0, 8
+; LA64-NEXT:    st.d $a3, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -125,10 +127,12 @@ define void @vmulwod_q_d(ptr %res, ptr %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: vmulwod_q_d:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    vld $vr1, $a2, 0
-; LA64-NEXT:    vmulwod.q.d $vr0, $vr0, $vr1
-; LA64-NEXT:    vst $vr0, $a0, 0
+; LA64-NEXT:    ld.d $a1, $a1, 8
+; LA64-NEXT:    ld.d $a2, $a2, 8
+; LA64-NEXT:    mul.d $a3, $a1, $a2
+; LA64-NEXT:    mulh.d $a1, $a1, $a2
+; LA64-NEXT:    st.d $a1, $a0, 8
+; LA64-NEXT:    st.d $a3, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -216,10 +220,12 @@ define void @vmulwev_q_du(ptr %res, ptr %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: vmulwev_q_du:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    vld $vr1, $a2, 0
-; LA64-NEXT:    vmulwev.q.du $vr0, $vr0, $vr1
-; LA64-NEXT:    vst $vr0, $a0, 0
+; LA64-NEXT:    ld.d $a1, $a1, 0
+; LA64-NEXT:    ld.d $a2, $a2, 0
+; LA64-NEXT:    mul.d $a3, $a1, $a2
+; LA64-NEXT:    mulh.du $a1, $a1, $a2
+; LA64-NEXT:    st.d $a1, $a0, 8
+; LA64-NEXT:    st.d $a3, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -307,10 +313,12 @@ define void @vmulwod_q_du(ptr %res, ptr %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: vmulwod_q_du:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    vld $vr1, $a2, 0
-; LA64-NEXT:    vmulwod.q.du $vr0, $vr0, $vr1
-; LA64-NEXT:    vst $vr0, $a0, 0
+; LA64-NEXT:    ld.d $a1, $a1, 8
+; LA64-NEXT:    ld.d $a2, $a2, 8
+; LA64-NEXT:    mul.d $a3, $a1, $a2
+; LA64-NEXT:    mulh.du $a1, $a1, $a2
+; LA64-NEXT:    st.d $a1, $a0, 8
+; LA64-NEXT:    st.d $a3, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a

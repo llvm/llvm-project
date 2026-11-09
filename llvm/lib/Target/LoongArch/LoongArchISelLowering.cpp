@@ -9182,9 +9182,14 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   if (ExtType < 0)
     return SDValue();
 
+  // Avoid the regressions on LA64 introduced by combining
+  // i128-type multiplications.
+  bool IsScalar = (ResTy == MVT::i128);
+  if (IsScalar && ExtType < 2 && Subtarget.is64Bit())
+    return SDValue();
+
   SDValue Src0 = N0.getOperand(0);
   SDValue Src1 = N1.getOperand(0);
-  bool IsScalar = (ResTy == MVT::i128);
   if (IsScalar && (Src0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
                    Src1.getOpcode() != ISD::EXTRACT_VECTOR_ELT))
     return SDValue();
