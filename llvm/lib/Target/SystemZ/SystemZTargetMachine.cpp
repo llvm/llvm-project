@@ -52,12 +52,12 @@ LLVMInitializeSystemZTarget() {
   initializeSystemZElimComparePass(PR);
   initializeSystemZShortenInstPass(PR);
   initializeSystemZLongBranchPass(PR);
-  initializeSystemZLDCleanupPass(PR);
+  initializeSystemZLDCleanupLegacyPass(PR);
   initializeSystemZShortenInstPass(PR);
-  initializeSystemZPostRewritePass(PR);
-  initializeSystemZTDCPassPass(PR);
+  initializeSystemZPostRewriteLegacyPass(PR);
+  initializeSystemZTDCLegacyPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
-  initializeSystemZCopyPhysRegsPass(PR);
+  initializeSystemZCopyPhysRegsLegacyPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -228,7 +228,7 @@ public:
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createSystemZAlignGlobalsLegacyPass());
-    addPass(createSystemZTDCPass());
+    addPass(createSystemZTDCLegacyPass());
     addPass(createLoopDataPrefetchPass());
   }
 
@@ -242,7 +242,7 @@ bool SystemZPassConfig::addInstSelector() {
       createSystemZISelDagLegacyPass(getSystemZTargetMachine(), getOptLevel()));
 
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZLDCleanupPass(getSystemZTargetMachine()));
+    addPass(createSystemZLDCleanupLegacyPass(getSystemZTargetMachine()));
 
   return false;
 }
@@ -257,18 +257,18 @@ bool SystemZPassConfig::addILPOpts() {
 }
 
 void SystemZPassConfig::addPreRegAlloc() {
-  addPass(createSystemZCopyPhysRegsPass(getSystemZTargetMachine()));
+  addPass(createSystemZCopyPhysRegsLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRewrite() {
-  addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+  addPass(createSystemZPostRewriteLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRegAlloc() {
   // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
   // is not called).
   if (getOptLevel() == CodeGenOptLevel::None)
-    addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+    addPass(createSystemZPostRewriteLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPreSched2() {

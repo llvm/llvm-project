@@ -55,7 +55,7 @@ void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     flushFPMsToMPM(PMW);
     addModulePass(SystemZAlignGlobalsPass(), PMW);
-    // TODO(boomanaiden154): Add SystemZTDCPass
+    addFunctionPass(SystemZTDCPass(getTM()), PMW);
     addFunctionPass(LoopDataPrefetchPass(), PMW);
   }
 
@@ -67,9 +67,8 @@ void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 Error SystemZCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   addMachineFunctionPass(SystemZISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
 
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZLDCleanupPass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZLDCleanupPass(), PMW);
 
   return Error::success();
 }
@@ -82,19 +81,18 @@ void SystemZCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
 }
 
 void SystemZCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZCopyPhysRegsPass
+  addMachineFunctionPass(SystemZCopyPhysRegsPass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPostRewrite(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZPostRewritePass
+  addMachineFunctionPass(SystemZPostRewritePass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
   // is not called).
-  if (getOptLevel() == CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZPostRewritePass
-  }
+  if (getOptLevel() == CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZPostRewritePass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
