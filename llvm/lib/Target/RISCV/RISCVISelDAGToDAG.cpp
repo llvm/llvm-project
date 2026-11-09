@@ -4715,6 +4715,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::SH1ADD:
     case RISCV::SH2ADD:
     case RISCV::SH3ADD:
+    case RISCV::PseudoMERGE:
     RecCheck:
       if (hasAllNBitUsers(User, Bits, Depth + 1))
         break;

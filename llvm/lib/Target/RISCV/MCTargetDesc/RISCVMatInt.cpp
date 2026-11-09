@@ -240,6 +240,31 @@ static unsigned extractRotateInfo(int64_t Val) {
   return 0;
 }
 
+// Returns the amount by which Val rotated left is a value LUI can load (a
+// sign-extended 32-bit value with zero low 12 bits), or 0 if there is none.
+// Such values are for example masks that wrap around bit 63 and the boxed
+// constants of JIT compilers.
+static unsigned extractLuiRotateInfo(int64_t Val) {
+  // Rotated left by the result, Val is 12 zero bits, 20 bits of payload and 32
+  // copies of the payload's top bit. Going upwards circularly, Val therefore
+  // contains either a run of at least 33 ones ending at bit 63 - Rotate or a
+  // run of at least 44 zeros ending at bit 11 - Rotate. A run that long
+  // contains bit 0 or bit 32, so its end is found by counting the trailing
+  // ones from one of those bits. Try both for each sign of the payload.
+  for (bool Negative : {true, false}) {
+    uint64_t Run = Negative ? Val : ~Val;
+    int RunTop = Negative ? 63 : 11;
+    for (int RunEnd :
+         {llvm::countr_one(Run) - 1, 31 + llvm::countr_one(Hi_32(Run))}) {
+      unsigned Rotate = (RunTop - RunEnd) & 63;
+      if (Rotate != 0 &&
+          isShiftedInt<20, 12>((int64_t)llvm::rotl<uint64_t>(Val, Rotate)))
+        return Rotate;
+    }
+  }
+  return 0;
+}
+
 static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
                                         RISCVMatInt::InstSeq &Res) {
   assert(Val > 0 && "Expected positive val");
@@ -489,15 +514,22 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
   // extension.
   if (Res.size() > 2 && (STI.hasFeature(RISCV::FeatureStdExtZbb) ||
                          STI.hasFeature(RISCV::FeatureVendorXTHeadBb))) {
+    unsigned RotateOpc =
+        STI.hasFeature(RISCV::FeatureStdExtZbb) ? RISCV::RORI : RISCV::TH_SRRI;
     if (unsigned Rotate = extractRotateInfo(Val)) {
       RISCVMatInt::InstSeq TmpSeq;
       uint64_t NegImm12 = llvm::rotl<uint64_t>(Val, Rotate);
       assert(isInt<12>(NegImm12));
       TmpSeq.emplace_back(RISCV::ADDI, NegImm12);
-      TmpSeq.emplace_back(STI.hasFeature(RISCV::FeatureStdExtZbb)
-                              ? RISCV::RORI
-                              : RISCV::TH_SRRI,
-                          Rotate);
+      TmpSeq.emplace_back(RotateOpc, Rotate);
+      Res = TmpSeq;
+    } else if (unsigned Rotate = extractLuiRotateInfo(Val)) {
+      // Val is a value LUI can load rotated right, so use LUI+RORI.
+      RISCVMatInt::InstSeq TmpSeq;
+      int64_t Hi32 = llvm::rotl<uint64_t>(Val, Rotate);
+      assert((isShiftedInt<20, 12>(Hi32)) && "Expected a value LUI can load");
+      TmpSeq.emplace_back(RISCV::LUI, (Hi32 >> 12) & 0xFFFFF);
+      TmpSeq.emplace_back(RotateOpc, Rotate);
       Res = TmpSeq;
     }
   }
