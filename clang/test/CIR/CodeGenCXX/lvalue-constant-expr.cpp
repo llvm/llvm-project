@@ -9,14 +9,12 @@ consteval const int &get_ref(const int &x) {
 
 static constexpr int val = 10;
 
-// CIR-LABEL: cir.func {{.*}} @_Z8test_refv
-// OGCG-LABEL: define {{.*}} @_Z8test_refv
-const int &test_ref() {
-  // CIR: %[[R_ADDR:.*]] = cir.alloca "r" align(8) init const : !cir.ptr<!cir.ptr<!s32i>>
+// CIR-LABEL: cir.func {{.*}} @_Z11test_returnv
+// OGCG-LABEL: define {{.*}} @_Z11test_returnv
+const int &test_return() {
   // CIR: %[[VAL_ADDR:.*]] = cir.const #cir.global_view<@_ZL3val> : !cir.ptr<!s32i>
-  // CIR: cir.store align(8) %[[VAL_ADDR]], %[[R_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // CIR: cir.store{{.*}} %[[VAL_ADDR]], %[[RET_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
-  // OGCG: store ptr @_ZL3val, ptr %{{.*}}, align 8
-  const int &r = get_ref(val);
-  return r;
+  // OGCG: ret ptr @_ZL3val
+  return get_ref(val);
 }
