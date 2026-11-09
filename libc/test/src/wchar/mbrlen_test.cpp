@@ -64,6 +64,7 @@ TEST_F(LlvmLibcMBRLenTest, ThreeByte) {
   ASSERT_ERRNO_SUCCESS();
 }
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST_F(LlvmLibcMBRLenTest, FourByte) {
   const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
                       static_cast<char>(0xA4),
@@ -89,6 +90,19 @@ TEST_F(LlvmLibcMBRLenTest, FourByte) {
   ASSERT_EQ(static_cast<int>(n), 1);
   ASSERT_ERRNO_SUCCESS();
 }
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+// UTF-16 mbrlen cannot process surrogate pair
+TEST_F(LlvmLibcMBRLenTest, RejectFourByte) {
+  const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
+                      static_cast<char>(0xA4),
+                      static_cast<char>(0xA1)}; // 🤡 clown emoji
+  mbstate_t mb;
+  LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
+  size_t n = LIBC_NAMESPACE::mbrlen(ch, 4, &mb);
+  ASSERT_EQ(static_cast<int>(n), -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+#endif
 
 TEST_F(LlvmLibcMBRLenTest, InvalidByte) {
   const char ch[1] = {static_cast<char>(0x80)};

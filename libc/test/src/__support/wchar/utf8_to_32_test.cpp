@@ -49,6 +49,7 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoBytes,
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[1]));
   auto wch = char_conv.pop<CharType32>();
 
@@ -68,7 +69,9 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, ThreeBytes,
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[2]));
   auto wch = char_conv.pop<CharType32>();
 
@@ -89,8 +92,11 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, FourBytes,
 
   LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
   char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[2]));
+  ASSERT_FALSE(char_conv.isPartiallyPopping());
   char_conv.push(static_cast<char8_t>(ch[3]));
   auto wch = char_conv.pop<CharType32>();
 
@@ -222,4 +228,137 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidPop,
   wch = char_conv.pop<CharType32>();
   ASSERT_TRUE(wch.has_value());
   ASSERT_EQ(static_cast<int>(wch.value()), 142);
+}
+
+TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, RejectOverlongTwoBytes,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
+  LIBC_NAMESPACE::internal::mbstate state;
+  state.bytes_stored = 0;
+  state.total_bytes = 0;
+  const char ch[4] = {static_cast<char>(0xC1), static_cast<char>(0xBF),
+                      static_cast<char>(0xC2), static_cast<char>(0x80)};
+
+  LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
+  // Overlong encoding should be rejected U+007F
+  int err = char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_EQ(err, EILSEQ);
+
+  // Not overlong, don't reject U+0080
+  err = char_conv.push(static_cast<char8_t>(ch[2]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[3]));
+  ASSERT_EQ(err, 0);
+  auto wch = char_conv.pop<CharType32>();
+  ASSERT_TRUE(wch.has_value());
+  ASSERT_EQ(static_cast<int>(wch.value()), 128);
+}
+
+TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, RejectOverlongThreeBytes,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
+  LIBC_NAMESPACE::internal::mbstate state;
+  state.bytes_stored = 0;
+  state.total_bytes = 0;
+  const char ch[6] = {static_cast<char>(0xE0), static_cast<char>(0x9F),
+                      static_cast<char>(0xBF), static_cast<char>(0xE0),
+                      static_cast<char>(0xA0), static_cast<char>(0x80)};
+
+  LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
+  // Overlong encoding should be rejected U+07FF
+  int err = char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[2]));
+  ASSERT_EQ(err, EILSEQ);
+
+  // Not overlong, don't reject U+0800
+  err = char_conv.push(static_cast<char8_t>(ch[3]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[4]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[5]));
+  ASSERT_EQ(err, 0);
+  auto wch = char_conv.pop<CharType32>();
+  ASSERT_TRUE(wch.has_value());
+  ASSERT_EQ(static_cast<int>(wch.value()), 2048);
+}
+
+TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, RejectOverlongFourBytes,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
+  LIBC_NAMESPACE::internal::mbstate state;
+  state.bytes_stored = 0;
+  state.total_bytes = 0;
+  const char ch[8] = {static_cast<char>(0xF0), static_cast<char>(0x8F),
+                      static_cast<char>(0xBF), static_cast<char>(0xBF),
+                      static_cast<char>(0xF0), static_cast<char>(0x90),
+                      static_cast<char>(0x80), static_cast<char>(0x80)};
+
+  LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
+  // Overlong encoding should be rejected U+FFFF
+  int err = char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[2]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[3]));
+  ASSERT_EQ(err, EILSEQ);
+
+  // Not overlong, don't reject U+10000
+  err = char_conv.push(static_cast<char8_t>(ch[4]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[5]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[6]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[7]));
+  ASSERT_EQ(err, 0);
+  auto wch = char_conv.pop<CharType32>();
+  ASSERT_TRUE(wch.has_value());
+  ASSERT_EQ(static_cast<int>(wch.value()), 65536);
+}
+
+TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, RejectOutOfRange,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
+  LIBC_NAMESPACE::internal::mbstate state;
+  state.bytes_stored = 0;
+  state.total_bytes = 0;
+  const char ch[8] = {static_cast<char>(0xF4), static_cast<char>(0x90),
+                      static_cast<char>(0x80), static_cast<char>(0x80),
+                      static_cast<char>(0xF4), static_cast<char>(0x8F),
+                      static_cast<char>(0xBF), static_cast<char>(0xBF)};
+
+  LIBC_NAMESPACE::internal::CharacterConverter char_conv(&state);
+  // Out of range code point should be rejected U+110000
+  int err = char_conv.push(static_cast<char8_t>(ch[0]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[1]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[2]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[3]));
+  ASSERT_EQ(err, EILSEQ);
+
+  // In range, don't reject U+10FFFF
+  err = char_conv.push(static_cast<char8_t>(ch[4]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[5]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[6]));
+  ASSERT_EQ(err, 0);
+  err = char_conv.push(static_cast<char8_t>(ch[7]));
+  ASSERT_EQ(err, 0);
+  auto wch = char_conv.pop<CharType32>();
+  ASSERT_TRUE(wch.has_value());
+  ASSERT_EQ(static_cast<int>(wch.value()), 1114111);
 }
