@@ -937,3 +937,27 @@ define <2 x i32> @deinterleave3_v6i32_first_poison(<2 x i32> %b, <2 x i32> %c) {
   %r = extractvalue {<2 x i32>, <2 x i32>, <2 x i32>} %d, 1
   ret <2 x i32> %r
 }
+
+; Every operand is poison, so the results are poison and the insertelement can
+; be dropped. An undef element would have to freeze the uaddlp, blocking uadalp.
+define <4 x i32> @deinterleave2_v8i32_all_poison(<8 x i16> %y, <4 x i32> %a) {
+; CHECK-SD-LABEL: deinterleave2_v8i32_all_poison:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uaddlp v0.4s, v0.8h
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: deinterleave2_v8i32_all_poison:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    uaddlp v0.4s, v0.8h
+; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    ret
+  %d = call {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v8i32(<8 x i32> poison)
+  %even = extractvalue {<4 x i32>, <4 x i32>} %d, 0
+  %e = extractelement <4 x i32> %even, i64 0
+  %u = call <4 x i32> @llvm.aarch64.neon.uaddlp.v4i32.v8i16(<8 x i16> %y)
+  %i = insertelement <4 x i32> %u, i32 %e, i64 0
+  %r = add <4 x i32> %i, %a
+  ret <4 x i32> %r
+}
