@@ -148,6 +148,10 @@ constexpr bool test() {
       assert(result_default_comp == in.begin() + 1);
       auto result_custom_comp = std::ranges::is_heap_until(in.begin(), in.end(), gt);
       assert(result_custom_comp == in.end());
+
+      assert(satisfies_heap_property(in.begin(), in.begin() + 1, ls));
+      assert(!satisfies_heap_property(in.begin(), in.begin() + 2, ls));
+      assert(satisfies_heap_property(in.begin(), in.end(), gt));
     }
 
     { // (range) overload.
@@ -172,6 +176,12 @@ constexpr bool test() {
       assert(result_default_comp == in.begin() + 1);
       auto result_custom_comp = std::ranges::is_heap_until(in.begin(), in.end(), {}, negate);
       assert(result_custom_comp == in.end());
+
+      std::ranges::less ls;
+      auto projected = [&](const A& x, const A& y) { return ls(negate(x), negate(y)); };
+      assert(satisfies_heap_property(in.begin(), in.begin() + 1, ls));
+      assert(!satisfies_heap_property(in.begin(), in.begin() + 2, ls));
+      assert(satisfies_heap_property(in.begin(), in.end(), projected));
     }
 
     { // (range) overload.
