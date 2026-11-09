@@ -633,7 +633,7 @@ bool FunctionSpecializer::run() {
     // specialization.
     const bool RequireMinSize =
         !Opts.funcspec_force && (Opts.funcspec_for_literal_constant ||
-                                       !F.hasFnAttribute(Attribute::NoInline));
+                                 !F.hasFnAttribute(Attribute::NoInline));
 
     // If the code metrics reveal that we shouldn't duplicate the function,
     // or if the code size implies that this function is easy to get inlined,
