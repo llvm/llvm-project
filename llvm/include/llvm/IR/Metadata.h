@@ -857,6 +857,10 @@ struct AAMDNodes {
     return Result;
   }
 
+  /// Like extendTo(ssize_t), extracting out the constant size if relevant,
+  /// otherwise using an unknown size.
+  LLVM_ABI AAMDNodes extendTo(Value *Size) const;
+
   /// Given two sets of AAMDNodes applying to potentially different locations,
   /// determine the best AAMDNodes that apply to both.
   LLVM_ABI AAMDNodes merge(const AAMDNodes &Other) const;

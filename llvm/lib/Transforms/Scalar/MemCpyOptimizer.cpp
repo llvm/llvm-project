@@ -468,8 +468,14 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     // Get the starting pointer of the block.
     StartPtr = Range.StartPtr;
 
-    AMemSet = Builder.CreateMemSet(StartPtr, ByteVal, Range.End - Range.Start,
-                                   Range.Alignment);
+    AAMDNodes AATags = Range.TheStores[0]->getAAMetadata();
+    for (Instruction *SI : ArrayRef(Range.TheStores).drop_front())
+      AATags = AATags.merge(SI->getAAMetadata());
+    AATags = AATags.extendTo(Range.End - Range.Start);
+
+    AMemSet =
+        Builder.CreateMemSet(StartPtr, ByteVal, Range.End - Range.Start,
+                             Range.Alignment, /*isVolatile=*/false, AATags);
     AMemSet->mergeDIAssignID(Range.TheStores);
 
     LLVM_DEBUG(dbgs() << "Replace stores:\n"; for (Instruction *SI
@@ -662,16 +668,21 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
         UseMemMove = true;
 
       IRBuilder<> Builder(P);
-      Value *Size =
-          Builder.CreateTypeSize(Builder.getInt64Ty(), DL.getTypeStoreSize(T));
+      TypeSize StoreSize = DL.getTypeStoreSize(T);
+      Value *Size = Builder.CreateTypeSize(Builder.getInt64Ty(), StoreSize);
+      AAMDNodes AATags = LI->getAAMetadata().merge(SI->getAAMetadata());
+      AATags = StoreSize.isScalable()
+                   ? AATags.extendTo(-1)
+                   : AATags.extendTo(StoreSize.getFixedValue());
       Instruction *M;
       if (UseMemMove)
         M = Builder.CreateMemMove(SI->getPointerOperand(), SI->getAlign(),
-                                  LI->getPointerOperand(), LI->getAlign(),
-                                  Size);
+                                  LI->getPointerOperand(), LI->getAlign(), Size,
+                                  /*isVolatile=*/false, AATags);
       else
         M = Builder.CreateMemCpy(SI->getPointerOperand(), SI->getAlign(),
-                                 LI->getPointerOperand(), LI->getAlign(), Size);
+                                 LI->getPointerOperand(), LI->getAlign(), Size,
+                                 /*isVolatile=*/false, AATags);
       M->copyMetadata(*SI, LLVMContext::MD_DIAssignID);
 
       LLVM_DEBUG(dbgs() << "Promoting " << *LI << " to " << *SI << " => " << *M
@@ -787,8 +798,9 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
     return false;
 
   IRBuilder<> Builder(SI);
+  AAMDNodes AATags = SI->getAAMetadata().extendTo(Size.getFixedValue());
   auto *M = Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size,
-                                 SI->getAlign());
+                                 SI->getAlign(), /*isVolatile=*/false, AATags);
   M->copyMetadata(*SI, LLVMContext::MD_DIAssignID);
 
   LLVM_DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
@@ -1231,20 +1243,26 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
 
   // TODO: Is this worth it if we're creating a less aligned memcpy? For
   // example we could be moving from movaps -> movq on x86.
+  AAMDNodes AATags =
+      M->getAAMetadata().merge(MDep->getAAMetadata().shift(MForwardOffset));
+  AATags = AATags.extendTo(CopyLength);
+
   Instruction *NewM;
   if (UseMemMove)
     NewM = Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
-                                 CopySourceAlign, CopyLength, M->isVolatile());
+                                 CopySourceAlign, CopyLength, M->isVolatile(),
+                                 AATags);
   else if (M->isForceInlined())
     // llvm.memcpy may be promoted to llvm.memcpy.inline, but the converse is
     // never allowed since that would allow the latter to be lowered as a call
     // to an external function.
     NewM = Builder.CreateMemCpyInline(M->getDest(), M->getDestAlign(),
                                       CopySource, CopySourceAlign, CopyLength,
-                                      M->isVolatile());
+                                      M->isVolatile(), AATags);
   else
     NewM = Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
-                                CopySourceAlign, CopyLength, M->isVolatile());
+                                CopySourceAlign, CopyLength, M->isVolatile(),
+                                AATags);
 
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
@@ -1358,9 +1376,15 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   // value profiling data about the 2 sizes.
   if (auto *SI = dyn_cast<SelectInst>(MemsetLen))
     setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
-  Instruction *NewMemSet =
-      Builder.CreateMemSet(Builder.CreatePtrAdd(Dest, SrcSize),
-                           MemSet->getOperand(1), MemsetLen, Alignment);
+  AAMDNodes AATags = MemSet->getAAMetadata();
+  if (auto *SrcSizeC = dyn_cast<ConstantInt>(SrcSize))
+    AATags = AATags.shift(SrcSizeC->getZExtValue());
+  else
+    AATags.TBAAStruct = nullptr;
+  AATags = AATags.extendTo(MemsetLen);
+  Instruction *NewMemSet = Builder.CreateMemSet(
+      Builder.CreatePtrAdd(Dest, SrcSize), MemSet->getOperand(1), MemsetLen,
+      Alignment, /*isVolatile=*/false, AATags);
 
   assert(isa<MemoryDef>(MSSA->getMemoryAccess(MemCpy)) &&
          "MemCpy must be a MemoryDef");
@@ -1478,14 +1502,17 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   IRBuilder<> Builder(MemCpy);
   Value *DestPtr = MemCpy->getRawDest();
   MaybeAlign Align = MemCpy->getDestAlign();
+  AAMDNodes AATags = MemCpy->getAAMetadata();
   if (MOffset < 0) {
     DestPtr = Builder.CreatePtrAddWithSignedOffset(DestPtr, -MOffset);
     if (Align)
       Align = commonAlignment(*Align, -MOffset);
+    AATags = AATags.shift(-MOffset);
   }
-
+  AATags = AATags.extendTo(CopySize);
   Instruction *NewM =
-      Builder.CreateMemSet(DestPtr, MemSet->getOperand(1), CopySize, Align);
+      Builder.CreateMemSet(DestPtr, MemSet->getOperand(1), CopySize, Align,
+                           /*isVolatile=*/false, AATags);
   auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
   auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
@@ -1824,7 +1851,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
                                            M->getDataLayout())) {
         IRBuilder<> Builder(M);
         Instruction *NewM = Builder.CreateMemSet(
-            M->getRawDest(), ByteVal, M->getLength(), M->getDestAlign(), false);
+            M->getRawDest(), ByteVal, M->getLength(), M->getDestAlign(),
+            /*isVolatile=*/false, M->getAAMetadata());
         auto *LastDef = cast<MemoryDef>(MA);
         auto *NewAccess =
             MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
