@@ -781,19 +781,39 @@ math_mpfr_test(
     ],
 )
 
-math_mpfr_test(name = "logf")
+math_mpfr_test(
+    name = "logf",
+    deps = [
+        "//libc:__support_math_logf_double_eval",
+    ],
+)
 
 math_mpfr_test(name = "log10")
 
-math_mpfr_test(name = "log10f")
+math_mpfr_test(
+    name = "log10f",
+    deps = [
+        "//libc:__support_math_log10f_double_eval",
+    ],
+)
 
 math_mpfr_test(name = "log1p")
 
-math_mpfr_test(name = "log1pf")
+math_mpfr_test(
+    name = "log1pf",
+    deps = [
+        "//libc:__support_math_log1pf_double_eval",
+    ],
+)
 
 math_mpfr_test(name = "log2")
 
-math_mpfr_test(name = "log2f")
+math_mpfr_test(
+    name = "log2f",
+    deps = [
+        "//libc:__support_math_log2f_double_eval",
+    ],
+)
 
 math_mpfr_test(
     name = "lrint",

@@ -2671,7 +2671,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
-      Defined(ctx, s->file, StringRef(), s->binding, s->stOther, s->type,
+      Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
               /*value=*/0, s->size, bss)
           .overwrite(*s);
     }
@@ -3201,44 +3201,6 @@ static void readSecurityNotes(Ctx &ctx) {
           << "dependencies have the GCS marking.";
 }
 
-static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
-
-static void postParseObjectFile(ELFFileBase *file) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->postParse();
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->postParse();
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->postParse();
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->postParse();
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
-
 // Objects that support Dynamic Debugging contain an ELF Dynamic Debugging
 // section that embeds an unoptimized ELF file with debug information. We
 // extract these embedded ELF files to make a consolidated unoptimized
@@ -3376,10 +3338,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   {
     llvm::TimeTraceScope timeScope("Initialize sections");
     parallelForFineGrained(ctx.objectFiles.size(), [&](size_t i) {
-      initSectionsAndLocalSyms(ctx.objectFiles[i], /*ignoreComdats=*/false);
+      cast<ObjFile<ELFT>>(ctx.objectFiles[i])->initSectionsAndLocalSyms();
     });
   }
-  parallelForEach(ctx.objectFiles, postParseObjectFile);
+  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->postParse();
+  });
   parallelForEach(ctx.bitcodeFiles,
                   [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx.nonPrevailingSyms) {
@@ -3470,10 +3434,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // compileBitcodeFiles may have produced lto.tmp object files. After this, no
   // more file will be added.
   auto newObjectFiles = ArrayRef(ctx.objectFiles).slice(numObjsBeforeLTO);
-  parallelForEach(newObjectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/true);
+  parallelForFineGrained(newObjectFiles.size(), [&](size_t i) {
+    cast<ObjFile<ELFT>>(newObjectFiles[i])->initSectionsAndLocalSyms();
   });
-  parallelForEach(newObjectFiles, postParseObjectFile);
+  parallelForEach(newObjectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->postParse();
+  });
   for (const DuplicateSymbol &d : ctx.duplicates)
     reportDuplicate(ctx, *d.sym, d.file, d.section, d.value);
 

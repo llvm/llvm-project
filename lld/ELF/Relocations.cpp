@@ -244,7 +244,7 @@ static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
 static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
                                uint64_t value, uint64_t size) {
   uint16_t versionId = sym.versionId;
-  Defined(ctx, sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
+  Defined(sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
           size, &sec)
       .overwrite(sym);
 
