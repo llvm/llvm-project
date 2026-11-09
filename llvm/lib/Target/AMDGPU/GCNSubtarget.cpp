@@ -463,6 +463,14 @@ bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16_e64) != -1;
 }
 
+// canReassign() walks the whole allocation order of the evictee on every
+// local eviction query. When the function is expected to spill, the register
+// file is full, so the walk rarely finds a free register and becomes very
+// expensive.
+bool GCNSubtarget::enableRALocalReassignment(const MachineFunction &MF) const {
+  return !MF.getInfo<SIMachineFunctionInfo>()->hasExcessRegPressure();
+}
+
 bool GCNSubtarget::useVGPRIndexMode() const {
   return hasVGPRIndexMode() && (!hasMovrel() || getCLOpts().vgpr_index_mode);
 }

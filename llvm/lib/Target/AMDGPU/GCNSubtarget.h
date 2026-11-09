@@ -480,6 +480,8 @@ public:
 
   bool enableSubRegLiveness() const override { return true; }
 
+  bool enableRALocalReassignment(const MachineFunction &MF) const override;
+
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
 
