@@ -356,8 +356,10 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
 
     // If LGV is a vtable that became alive later, mark its deferred functions
     // live.
-    for (auto *VFunc : PendingVFuncs.lookup(LGV))
-      MarkLive(*VFunc, &NewLiveGVs);
+    if (auto It = PendingVFuncs.find(LGV); It != PendingVFuncs.end()) {
+      for (auto *VFunc : It->second)
+        MarkLive(*VFunc, &NewLiveGVs);
+    }
   }
 
   // Now that all globals which are needed are in the AliveGlobals set, we loop
