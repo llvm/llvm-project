@@ -2586,6 +2586,15 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "SelectionDAGOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen/SelectionDAG",
+    tbl_outs = {"lib/CodeGen/SelectionDAG/SelectionDAGOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/SelectionDAG/SelectionDAGOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 copy_file(
     name = "generate_regalloc_model1_h",
     src = "lib/Analysis/models/regalloc-eviction-test-model.inc",
@@ -2657,6 +2666,7 @@ cc_library(
         ":CFGuard",
         ":CGData",
         ":CodeGenOptionsTableGen",
+        ":SelectionDAGOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
