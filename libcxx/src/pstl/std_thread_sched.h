@@ -8,6 +8,23 @@
 #ifndef _LIBCPP_SRC_PSTL_STD_THREAD_SCHED_H
 #define _LIBCPP_SRC_PSTL_STD_THREAD_SCHED_H
 
+// A PSTL parallelism backend for platforms that only provide the standard std::thread facilities.
+// Used by "std::__pstl::__statpart::__apply()" via "Scheduler::apply()".
+//
+// Design overview:
+// - A single Scheduler instance is created on first use and never destroyed.
+//   It starts `hardware_concurrency()-1` worker threads that live forever and sleep on an atomic epoch when idle.
+// - Each worker owns a fixed-capacity Chase-Lev work-stealing queue.
+//   Extra queues are reserved for "guest" threads, i.e. any non-worker thread that calls apply().
+// - apply() puts a Task on the caller's stack and pushes one request per potential participant into the caller's queue.
+//   Workers steal those requests and run the user function on indices taken from the Task's shared atomic counter.
+//   The caller also takes part and then waits for all participants to finish.
+// - Nested parallelism is supported up to a depth of 2.
+//   Deeper nesting gradually falls back to serial execution as the queues fill up.
+// - No dynamic memory is allocated or freed after initialization.
+//   If initialization fails or the machine has a single CPU core, everything runs serially.
+// - None of this code runs unless PSTL algorithms are used.
+
 #include <__config>
 
 #if _LIBCPP_HAS_THREADS
@@ -372,19 +389,19 @@ inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(voi
   }
 
   // Split the workload for potentially (m_workers_count + 1) participants (workers + caller thread).
-  size_t num_requests = std::min(m_workers_count + 1, iterations);
+  size_t requests = std::min(m_workers_count + 1, iterations);
 
   // Create a task whose requests will then be pushed in the queue and stolen by the workers.
-  Task root_task{.ctx = ctx, .func = func, .iterations = iterations, .index = 0, .requests = num_requests};
+  Task root_task{.ctx = ctx, .func = func, .iterations = iterations, .index = 0, .requests = requests};
 
   // Push all but one request to the queue, and process the last one directly in this thread.
   // If the queue is full (e.g. due to deep nested parallelism), the caller thread will process all remaining requests
   // directly.
-  while (num_requests > 1) {
+  while (requests > 1) {
     if (!queue->push(&root_task)) {
       break;
     }
-    --num_requests;
+    --requests;
   }
 
   // Potentially wake up the sleeping workers to process the requests in the queue.
@@ -392,9 +409,9 @@ inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(voi
   m_epoch.notify_all();
 
   // Process the remaining request(s) directly in this thread.
-  while (num_requests > 0) {
+  while (requests > 0) {
     process_request(&root_task);
-    --num_requests;
+    --requests;
   }
 
   // Wait until all requests to participate in root_task are processed.
