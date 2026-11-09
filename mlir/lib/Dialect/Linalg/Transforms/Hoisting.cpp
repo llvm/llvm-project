@@ -302,8 +302,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
                         << "\n");
 
       // Approximate aliasing by checking that:
-      //   1. indices, vector type and permutation map are the same (i.e., the
-      //      transfer_read/transfer_write ops are matching),
+      //   1. indices, vector type, permutation map and mask are the same
+      //      (i.e., the transfer_read/transfer_write ops are matching),
       //   2. source operands for transfer.{read|write} do not originate from
       //      nor have users that are Ops implementing ViewLikeOpInterface.
       //   3. no other operations in the loop access the same memref except
@@ -312,6 +312,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
 
       // Check 1.
       if (transferRead.getIndices() != transferWrite.getIndices() ||
+          transferRead.getMask() != transferWrite.getMask() ||
           transferRead.getVectorType() != transferWrite.getVectorType() ||
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();

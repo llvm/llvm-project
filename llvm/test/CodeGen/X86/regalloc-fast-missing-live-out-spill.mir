@@ -39,8 +39,8 @@ body:             |
 
     %4:gr64 = COPY $rsi
     %2:gr32 = COPY $edi
-    %3:gr32 = COPY killed %2
-    %5:gr64 = COPY killed %4
+    %3:gr32 = COPY %2
+    %5:gr64 = COPY %4
     %13:gr64 = COPY %5
     JMP_1 %bb.3
 
@@ -59,7 +59,7 @@ body:             |
 
     %1:gr64 = COPY %13
     %9:gr32 = MOV32r0 implicit-def dead $eflags
-    %8:gr64 = SUBREG_TO_REG killed %9, %subreg.sub_32bit
+    %8:gr64 = SUBREG_TO_REG %9, %subreg.sub_32bit
     %12:gr64 = COPY %8
     JMP64r %1
 

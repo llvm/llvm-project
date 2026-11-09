@@ -75,7 +75,7 @@ inline APInt operator-(APInt);
 ///     shifts are defined, but sign extension and ashr is not.  Zero bit values
 ///     compare and hash equal to themselves, and countLeadingZeros returns 0.
 ///
-class [[nodiscard]] APInt {
+class [[nodiscard]] LLVM_ATTRIBUTE_WARN_UNUSED APInt {
 public:
   using WordType = uint64_t;
 
@@ -2311,6 +2311,14 @@ LLVM_ABI APInt avgCeilS(const APInt &C1, const APInt &C2);
 
 /// Compute the ceil of the unsigned average of C1 and C2
 LLVM_ABI APInt avgCeilU(const APInt &C1, const APInt &C2);
+
+/// Compute floor((C1 - C2) / 2) where C1 and C2 are treated as signed, so the
+/// subtraction is performed without wrapping.
+LLVM_ABI APInt avgSubFloorS(const APInt &C1, const APInt &C2);
+
+/// Compute floor((C1 - C2) / 2) where C1 and C2 are treated as unsigned, so the
+/// subtraction is performed without wrapping.
+LLVM_ABI APInt avgSubFloorU(const APInt &C1, const APInt &C2);
 
 /// Performs (2*N)-bit multiplication on sign-extended operands.
 /// Returns the high N bits of the multiplication result.

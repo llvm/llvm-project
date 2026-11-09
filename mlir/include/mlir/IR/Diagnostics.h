@@ -299,6 +299,11 @@ public:
   /// Returns the current list of diagnostic metadata.
   SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
 
+  /// Returns a string argument that refers to a copy of `val` owned by this
+  /// diagnostic, so the argument remains valid for as long as the diagnostic
+  /// does. This is useful for adding a non-constant string to the metadata.
+  DiagnosticArgument getStringArgument(const Twine &val);
+
   /// Starts a new message part. This has no effect if the current message part
   /// is empty.
   void startNewMessagePart();
@@ -737,10 +742,15 @@ public:
   /// '1'; and so on and so forth. This provides a way for the handler to
   /// deterministically order the diagnostics that it receives given the thread
   /// that it is receiving on.
+  ///
+  /// Each set must be paired with an erase on the same thread before the
+  /// handler is destroyed. Nesting distinct handlers on one thread is
+  /// supported; reentrant use of one handler on one thread is not.
   void setOrderIDForThread(size_t orderID);
 
   /// Remove the order id for the current thread. This removes the thread from
-  /// diagnostics tracking.
+  /// diagnostics tracking. Must be called on the same thread that set it,
+  /// before the handler is destroyed.
   void eraseOrderIDForThread();
 
 private:

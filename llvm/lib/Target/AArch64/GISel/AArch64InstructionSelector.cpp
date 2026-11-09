@@ -877,38 +877,6 @@ static bool copySubReg(MachineInstr &I, MachineRegisterInfo &MRI,
   return true;
 }
 
-// FIXME: We need some sort of API in RBI/TRI to allow generic code to
-// constrain operands of simple instructions given a TargetRegisterClass
-// and LLT
-static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
-                             const RegisterBankInfo &RBI) {
-  for (MachineOperand &MO : I.operands()) {
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (!Reg)
-      continue;
-    if (Reg.isPhysical())
-      continue;
-    LLT Ty = MRI.getType(Reg);
-    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-    const TargetRegisterClass *RC =
-        dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
-    if (!RC) {
-      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-      RC = getRegClassForTypeOnBank(Ty, RB);
-      if (!RC) {
-        LLVM_DEBUG(
-            dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
-        break;
-      }
-    }
-    RBI.constrainGenericRegister(Reg, *RC, MRI);
-  }
-
-  return true;
-}
-
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
@@ -917,8 +885,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
-  TypeSize DstRegSize = RBI.getSizeInBits(DstReg, MRI, TRI);
-  TypeSize SrcRegSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+  TypeSize DstRegSize = TRI.getRegSizeInBits(DstReg, MRI);
+  TypeSize SrcRegSize = TRI.getRegSizeInBits(SrcReg, MRI);
 
   // Special casing for cross-bank copies of s1s. We can technically represent
   // a 1-bit value with any size of register. The minimum size for a GPR is 32
@@ -940,12 +908,12 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
   if (!DstRC) {
     LLVM_DEBUG(dbgs() << "Unexpected dest size "
-                      << RBI.getSizeInBits(DstReg, MRI, TRI) << '\n');
+                      << TRI.getRegSizeInBits(DstReg, MRI) << '\n');
     return false;
   }
 
   if (I.getOpcode() == TargetOpcode::G_BITCAST &&
-      RBI.getSizeInBits(DstReg, MRI, TRI) == TypeSize::getFixed(16)) {
+      TRI.getRegSizeInBits(DstReg, MRI) == TypeSize::getFixed(16)) {
     if (DstRegBank.getID() == AArch64::FPRRegBankID &&
         SrcRegBank.getID() == AArch64::GPRRegBankID) {
       if (!SrcReg.isPhysical() &&
@@ -2455,8 +2423,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
       // We model scalar compares using 32-bit destinations right now.
       // If it's a 64-bit compare, it'll have 64-bit sources.
       Register ZExt;
-      if (!mi_match(Reg, MRI,
-                    m_OneNonDBGUse(m_GZExt(m_OneNonDBGUse(m_Reg(ZExt))))))
+      if (!mi_match(Reg, MRI, m_OneUse(m_GZExt(m_OneUse(m_Reg(ZExt))))))
         return nullptr;
       auto *Cmp = getOpcodeDef(TargetOpcode::G_ICMP, ZExt, MRI);
       if (!Cmp ||
@@ -2503,10 +2470,9 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     int64_t ShiftImm;
     Register MaskSrc;
     int64_t MaskImm;
-    if (!mi_match(
-            Dst, MRI,
-            m_GOr(m_OneNonDBGUse(m_GShl(m_Reg(ShiftSrc), m_ICst(ShiftImm))),
-                  m_OneNonDBGUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm))))))
+    if (!mi_match(Dst, MRI,
+                  m_GOr(m_OneUse(m_GShl(m_Reg(ShiftSrc), m_ICst(ShiftImm))),
+                        m_OneUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm))))))
       return false;
 
     if (ShiftImm > Size || ((1ULL << ShiftImm) - 1ULL) != uint64_t(MaskImm))
@@ -2605,9 +2571,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     if (I.isCopy())
       return selectCopy(I, TII, MRI, TRI, RBI);
-
-    if (I.isDebugInstr())
-      return selectDebugInstr(I, MRI, RBI);
 
     return true;
   }
@@ -3441,10 +3404,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
   case TargetOpcode::G_BITCAST:
     // Imported SelectionDAG rules can handle every bitcast except those that
-    // bitcast from a type to the same type. Ideally, these shouldn't occur
-    // but we might not run an optimizer that deletes them. The other exception
-    // is bitcasts involving pointer types, as SelectionDAG has no knowledge
-    // of them.
+    // bitcast from a type to the same regbank. The other exception is bitcasts
+    // involving pointer types, as SelectionDAG has no knowledge of them.
     return selectCopy(I, TII, MRI, TRI, RBI);
 
   case TargetOpcode::G_SELECT: {
@@ -4816,7 +4777,14 @@ MachineInstr *AArch64InstructionSelector::emitCarryIn(MachineInstr &I,
   // instruction is deleted by the calling function, otherwise the previous
   // instruction might become dead and would get deleted.
   MachineInstr *SrcMI = MRI->getVRegDef(CarryReg);
-  if (SrcMI == I.getPrevNode()) {
+
+  // Debug instructions (e.g., DBG_VALUE) do not modify NZCV, so skip all that
+  // immediately precede I.
+  MachineInstr *PrevMI = I.getPrevNode();
+  while (PrevMI && PrevMI->isDebugInstr())
+    PrevMI = PrevMI->getPrevNode();
+
+  if (SrcMI == PrevMI) {
     if (auto *CarrySrcMI = dyn_cast<GAddSubCarryOut>(SrcMI)) {
       bool ProducesNegatedCarry = CarrySrcMI->isSub();
       if (NeedsNegatedCarry == ProducesNegatedCarry &&

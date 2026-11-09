@@ -126,11 +126,12 @@ public:
   template <typename T>
   explicit LibraryOptionsParser(std::in_place_type_t<T>)
       : LibraryOptions(T::PerContext), Table(T::optTable), Global(&T::Global),
+        Default(&T::Default),
         Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
           return static_cast<T *>(Opts)->apply(A, Alloc);
         }),
         Copy([](BumpPtrAllocator &Alloc) -> void * {
-          return new (Alloc) T(T::Global);
+          return new (Alloc) T(T::Default);
         }),
         Reset([] { T::Global = T(); }) {}
 
@@ -139,7 +140,8 @@ public:
   Error parse(void *Opts, ArrayRef<const char *> Args, unsigned &Consumed,
               BumpPtrAllocator &Alloc) override;
   void *global() override { return Global; }
-  void *copyGlobal(BumpPtrAllocator &Alloc) const override {
+  const void *getDefault() const override { return Default; }
+  void *copyDefault(BumpPtrAllocator &Alloc) const override {
     return Copy(Alloc);
   }
   void reset() override { Reset(); }
@@ -147,6 +149,7 @@ public:
 private:
   const OptTable &(*Table)();
   void *Global;
+  const void *Default;
   bool (*Apply)(void *Opts, const Arg &A, BumpPtrAllocator &Alloc);
   void *(*Copy)(BumpPtrAllocator &Alloc);
   void (*Reset)();
@@ -166,5 +169,21 @@ public:
 
 } // namespace opt
 } // namespace llvm
+
+/// Defines the file-scope registration of options struct T for a library that
+/// has no initialization function to register it from, exempting this static
+/// constructor from -Wglobal-constructors.
+// clang-format off
+#ifdef __clang__
+#define LLVM_REGISTER_LIBRARY_OPTIONS(T)                                       \
+  _Pragma("clang diagnostic push")                                             \
+  _Pragma("clang diagnostic ignored \"-Wglobal-constructors\"")                \
+  static llvm::opt::RegisterLibraryOptions<T> Registration;                    \
+  _Pragma("clang diagnostic pop")
+#else
+#define LLVM_REGISTER_LIBRARY_OPTIONS(T)                                       \
+  static llvm::opt::RegisterLibraryOptions<T> Registration;
+#endif
+// clang-format on
 
 #endif // LLVM_OPTION_LIBRARYOPTIONS_H

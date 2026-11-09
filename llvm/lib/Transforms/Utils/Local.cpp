@@ -327,6 +327,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         NewBr->setMetadata(LLVMContext::MD_prof,
                            MDBuilder(BB->getContext())
                                .createBranchWeights(CaseWeight, DefWeight));
+      } else {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewBr, DEBUG_TYPE);
       }
 
       // Update make.implicit metadata to the newly-created conditional branch.
@@ -1346,15 +1348,17 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
 
   if (BBKillable) {
+    // Clear the successor list of BB to match updates applying to DTU later.
+    // Run before replaceAllUsesWith() to not redundantly scan phi nodes in
+    // Succ for BB.
+    if (BB->hasTerminator())
+      BB->back().eraseFromParent();
+
     // Everything that jumped to BB now goes to Succ.
     BB->replaceAllUsesWith(Succ);
 
     if (!Succ->hasName())
       Succ->takeName(BB);
-
-    // Clear the successor list of BB to match updates applying to DTU later.
-    if (BB->hasTerminator())
-      BB->back().eraseFromParent();
 
     new UnreachableInst(BB->getContext(), BB);
     assert(succ_empty(BB) && "The successor list of BB isn't empty before "
@@ -1402,6 +1406,7 @@ EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB,
         continue;
       // A duplicate. Replace this PHI with the base PHI.
       ++NumPHICSEs;
+      PN->andIRFlags(DuplicatePN);
       DuplicatePN->replaceAllUsesWith(PN);
       ToRemove.insert(DuplicatePN);
       Changed = true;
@@ -1446,7 +1451,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     }
 
     static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
-      return LHS->isIdenticalTo(RHS);
+      return LHS->isIdenticalToWhenDefined(RHS);
     }
 
     static bool isEqual(PHINode *LHS, PHINode *RHS) {
@@ -1471,6 +1476,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     if (!Inserted.second) {
       // A duplicate. Replace this PHI with its duplicate.
       ++NumPHICSEs;
+      (*Inserted.first)->andIRFlags(PN);
       PN->replaceAllUsesWith(*Inserted.first);
       ToRemove.insert(PN);
       Changed = true;
@@ -1705,6 +1711,9 @@ void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
   auto *DIExpr = DVR->getExpression();
   DIExpr = dropInitialDeref(DIExpr);
   Value *DV = SI->getValueOperand();
+
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
 
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
@@ -3109,8 +3118,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   auto *JProf = J->getMetadata(LLVMContext::MD_prof);
   auto *KProf = K->getMetadata(LLVMContext::MD_prof);
   if (!AAOnly && (JProf || KProf)) {
-    K->setMetadata(LLVMContext::MD_prof,
-                   MDNode::getMergedProfMetadata(KProf, JProf, K, J));
+    // We do not need to merge metadata if we have select instructions and the
+    // one we're keeping (K) does not move (explicitly merging would drop the
+    // information in this case). Otherwise, explicitly handle the merging.
+    if (DoesKMove || (!isa<SelectInst>(J) || !isa<SelectInst>(K)) ||
+        ProfcheckDisableMetadataFixes)
+      K->setMetadata(LLVMContext::MD_prof,
+                     MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 }
 
@@ -3155,6 +3169,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_invariant_group:
+    case LLVMContext::MD_mmra:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;
@@ -3186,7 +3201,8 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   }
 }
 
-void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
+void llvm::patchReplacementInstruction(Instruction *I, Value *Repl,
+                                       bool DoesKMove) {
   auto *ReplInst = dyn_cast<Instruction>(Repl);
   if (!ReplInst)
     return;
@@ -3226,7 +3242,7 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   // In general, GVN unifies expressions over different control-flow
   // regions, and so we need a conservative combination of the noalias
   // scopes.
-  combineMetadataForCSE(ReplInst, I, false);
+  combineMetadataForCSE(ReplInst, I, DoesKMove);
 }
 
 template <typename ShouldReplaceFn>

@@ -135,7 +135,6 @@ class VectorLegalizer {
   SDValue ExpandVSELECT(SDNode *Node);
   SDValue ExpandVP_MERGE(SDNode *Node);
   SDValue ExpandVP_REM(SDNode *Node);
-  SDValue ExpandGET_ACTIVE_LANE_MASK(SDNode *N);
   SDValue ExpandLOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue ExpandMASK_BEFOREFIRST(SDNode *N);
   SDValue ExpandMaskedBinOp(SDNode *N);
@@ -329,7 +328,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     if (Op.getOpcode() == ISD::STRICT_FSETCC ||
         Op.getOpcode() == ISD::STRICT_FSETCCS) {
       MVT OpVT = Node->getOperand(1).getSimpleValueType();
-      ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(3))->get();
+      ISD::CondCode CCCode = Node->getOperandCondCode(3);
       Action = TLI.getCondCodeAction(CCCode, OpVT);
       if (Action == TargetLowering::Legal)
         Action = TLI.getOperationAction(Node->getOpcode(), OpVT);
@@ -386,6 +385,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   case ISD::BSWAP:
   case ISD::BITREVERSE:
   case ISD::CTLZ:
@@ -481,6 +482,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
   case ISD::VECTOR_COMPRESS:
+  case ISD::VECTOR_SHUFFLE_VAR:
   case ISD::SCMP:
   case ISD::UCMP:
   case ISD::GET_ACTIVE_LANE_MASK:
@@ -555,7 +557,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
   case ISD::SETCC: {
     MVT OpVT = Node->getOperand(0).getSimpleValueType();
-    ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
+    ISD::CondCode CCCode = Node->getOperandCondCode(2);
     Action = TLI.getCondCodeAction(CCCode, OpVT);
     if (Action == TargetLowering::Legal)
       Action = TLI.getOperationAction(Node->getOpcode(), OpVT);
@@ -782,11 +784,22 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     PromoteSETCC(Node, Results);
     return;
   case ISD::STRICT_FADD:
-  case ISD::STRICT_FSUB:
-  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FCEIL:
   case ISD::STRICT_FDIV:
-  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FFLOOR:
   case ISD::STRICT_FMA:
+  case ISD::STRICT_FMAXIMUM:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINIMUM:
+  case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FSUB:
+  case ISD::STRICT_FTRUNC:
     PromoteSTRICT(Node, Results);
     return;
   case ISD::VECREDUCE_FADD:
@@ -1325,6 +1338,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
     return;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Results.push_back(TLI.expandVECTOR_SHUFFLE_VAR(Node, DAG));
+    return;
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
     Results.push_back(TLI.expandCttzElts(Node, DAG));
@@ -1337,7 +1353,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     Results.push_back(TLI.expandCMP(Node, DAG));
     return;
   case ISD::GET_ACTIVE_LANE_MASK:
-    if (SDValue R = ExpandGET_ACTIVE_LANE_MASK(Node))
+    if (SDValue R = TLI.expandGetActiveLaneMask(Node, DAG))
       Results.push_back(R);
     return;
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
@@ -1766,47 +1782,6 @@ SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {
   return DAG.getNode(ISD::SUB, DL, VT, Dividend, Mul);
 }
 
-SDValue VectorLegalizer::ExpandGET_ACTIVE_LANE_MASK(SDNode *N) {
-  SDLoc DL(N);
-
-  SDValue Start = N->getOperand(0);
-  SDValue End = N->getOperand(1);
-  EVT VT = N->getValueType(0);
-  EVT OpVT = Start.getValueType();
-
-  if (VT.isScalableVector())
-    return SDValue();
-
-  // Try a promoted comparison type to simplify saturation.
-  EVT PromoteVT = VT.changeVectorElementType(*DAG.getContext(), OpVT);
-  if (TLI.isTypeLegal(PromoteVT) &&
-      isUIntN(OpVT.getScalarSizeInBits(), VT.getVectorNumElements())) {
-    SDValue StartV = DAG.getSplat(PromoteVT, DL, Start);
-    SDValue Seq = DAG.getStepVector(DL, PromoteVT);
-    Seq = DAG.getNode(ISD::UADDSAT, DL, PromoteVT, Seq, StartV);
-
-    EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                        PromoteVT);
-    SDValue EndV = DAG.getSplat(PromoteVT, DL, End);
-    SDValue Mask = DAG.getSetCC(DL, MaskVT, Seq, EndV, ISD::SETULT);
-    return DAG.getBoolExtOrTrunc(Mask, DL, VT, PromoteVT);
-  }
-
-  // Is VT's element type big enough to hold all rebased indices?
-  if (!isUIntN(VT.getScalarSizeInBits(), VT.getVectorNumElements()))
-    return SDValue();
-
-  // Rebase and saturate the termination value.
-  SDValue Max = DAG.getConstant(maxUIntN(VT.getScalarSizeInBits()), DL, OpVT);
-  End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
-  End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
-
-  // cmp <0, 1, 2, 3...>, End
-  SDValue EndV = DAG.getSplat(VT, DL, End);
-  SDValue StepVector = DAG.getStepVector(DL, VT);
-  return DAG.getSetCC(DL, VT, StepVector, EndV, ISD::SETULT);
-}
-
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   return TLI.expandLoopDependenceMask(N, DAG);
 }
@@ -2206,19 +2181,39 @@ void VectorLegalizer::ExpandFixedPointDiv(SDNode *Node,
 
 void VectorLegalizer::ExpandStrictFPOp(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
-  if (Node->getOpcode() == ISD::STRICT_UINT_TO_FP) {
+  switch (Node->getOpcode()) {
+  default:
+    break;
+  case ISD::STRICT_UINT_TO_FP:
     ExpandUINT_TO_FLOAT(Node, Results);
     return;
-  }
-  if (Node->getOpcode() == ISD::STRICT_FP_TO_UINT) {
+  case ISD::STRICT_FP_TO_UINT:
     ExpandFP_TO_UINT(Node, Results);
     return;
-  }
-
-  if (Node->getOpcode() == ISD::STRICT_FSETCC ||
-      Node->getOpcode() == ISD::STRICT_FSETCCS) {
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
     ExpandSETCC(Node, Results);
     return;
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FDIV:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FMA:
+  case ISD::STRICT_FMUL:
+  case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FRINT:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FROUNDEVEN:
+  case ISD::STRICT_FTRUNC:
+  case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FSUB: {
+    if (SDValue Expanded = TLI.expandVectorNaryOpBySplitting(Node, DAG)) {
+      Results.push_back(Expanded.getValue(0));
+      Results.push_back(Expanded.getValue(1));
+      return;
+    }
+    break;
+  }
   }
 
   UnrollStrictFPOp(Node, Results);
@@ -2266,7 +2261,7 @@ bool VectorLegalizer::tryExpandVecMathCall(
       LCImpl = Libcalls.getVectorLibcallImplOrMasked(GetLibcall(CallVT));
   }
 
-  const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
 
   auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(
       Ctx, DAG.getSubtarget().getTargetTriple(), DAG.getDataLayout(), LCImpl);

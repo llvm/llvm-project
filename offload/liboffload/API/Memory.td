@@ -37,6 +37,7 @@ def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
       "The allocation is scoped to `Context` and `Device` must belong to it.",
+      "The returned pointer is aligned to at least `alignof(std::max_align_t)` bytes, regardless of allocation size.",
       "This function can only be used to create device or managed allocations. To create a host allocation use `olMemAllocHost`."
   ];
   let params = [
@@ -62,7 +63,8 @@ def olMemAlloc : Function {
 def olMemAllocHost : Function {
   let desc = "Creates a host memory allocation accessible from the specified device.";
   let details = [
-      "The allocation is scoped to `Context` and `Device` must belong to it."
+      "The allocation is scoped to `Context` and `Device` must belong to it.",
+      "The returned pointer is aligned to at least `alignof(std::max_align_t)` bytes, regardless of allocation size."
   ];
   let params = [
     Param<"ol_context_handle_t", "Context", "handle of the context", PARAM_IN>,
@@ -215,16 +217,16 @@ def olGetMemInfoSize : Function {
 def olMemcpy : Function {
     let desc = "Enqueue a memcpy operation.";
     let details = [
-        "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform.",
+        "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform, or pass NULL.",
         "If both pointers are on the host and a queue is specified, the memcpy is ordered with other work in the queue.",
         "If a queue is not specified, the memcpy happens synchronously"
     ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue.", PARAM_IN_OPTIONAL>,
         Param<"void*", "DstPtr", "pointer to copy to", PARAM_IN>,
-        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to", PARAM_IN>,
+        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to, or NULL if DstPtr is host memory", PARAM_IN_OPTIONAL>,
         Param<"const void*", "SrcPtr", "pointer to copy from", PARAM_IN>,
-        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to", PARAM_IN>,
+        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to, or NULL if SrcPtr is host memory", PARAM_IN_OPTIONAL>,
         Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
     ];
     let returns = [];

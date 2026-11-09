@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -34,9 +35,12 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include <cmath>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -455,9 +459,28 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
   if (!Reg)
     return std::nullopt;
 
-  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
-                   Reg->Value);
-  return FPValueAndVReg{FloatVal, Reg->VReg};
+  unsigned Width = Reg->Value.getBitWidth();
+  LLT Ty = MRI.getType(VReg);
+  if (Ty.isValid())
+    Ty = Ty.getScalarType();
+  // An FP-typed VReg is the format its users read, which a looked-through
+  // G_ZEXT/G_TRUNC round trip can make differ from the G_FCONSTANT's.
+  if (Ty.isFloat() && Ty.getSizeInBits() == Width)
+    return FPValueAndVReg{APFloat(getFltSemanticForLLT(Ty), Reg->Value),
+                          Reg->VReg};
+
+  // Width alone can't tell half from bfloat, or identify x87/PPC formats.
+  const fltSemantics &CstSem =
+      getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF().getSemantics();
+  if (APFloat::getSizeInBits(CstSem) == Width)
+    return FPValueAndVReg{APFloat(CstSem, Reg->Value), Reg->VReg};
+
+  // Resized by a looked-through G_TRUNC/G_SEXT/G_ZEXT: only the width is left,
+  // and it only identifies IEEE formats.
+  if (Width != 16 && Width != 32 && Width != 64 && Width != 128)
+    return std::nullopt;
+  return FPValueAndVReg{
+      APFloat(getFltSemanticForLLT(LLT::scalar(Width)), Reg->Value), Reg->VReg};
 }
 
 const ConstantFP *
@@ -828,6 +851,31 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
   return FoldedElements;
 }
 
+SmallVector<APFloat>
+llvm::ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
+                                const Register Op2,
+                                const MachineRegisterInfo &MRI) {
+  // Unlike the integer fold, don't look through G_BITCAST: it may reinterpret
+  // the element bits in a different FP semantics format (e.g. bf16 to f16).
+  auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+  if (!SrcVec2)
+    return {};
+
+  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+  if (!SrcVec1)
+    return {};
+
+  SmallVector<APFloat> FoldedElements;
+  for (unsigned Idx = 0, E = SrcVec1->getNumSources(); Idx < E; ++Idx) {
+    auto MaybeCst = ConstantFoldFPBinOp(Opcode, SrcVec1->getSourceReg(Idx),
+                                        SrcVec2->getSourceReg(Idx), MRI);
+    if (!MaybeCst)
+      return {};
+    FoldedElements.push_back(*MaybeCst);
+  }
+  return FoldedElements;
+}
+
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
                                   const MachinePointerInfo &MPO) {
   auto PSV = dyn_cast_if_present<const PseudoSourceValue *>(MPO.V);
@@ -979,6 +1027,88 @@ llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
   return {};
 }
 
+SmallVector<APFloat>
+llvm::ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
+                            const MachineRegisterInfo &MRI) {
+  LLT DstEltTy = DstTy.getScalarType();
+  auto Fold = [Opcode, DstEltTy,
+               &MRI](const APFloat &V) -> std::optional<APFloat> {
+    APFloat Result(V);
+    bool Unused;
+    switch (Opcode) {
+    case TargetOpcode::G_FNEG:
+      Result.changeSign();
+      return Result;
+    case TargetOpcode::G_FABS:
+      Result.clearSign();
+      return Result;
+    case TargetOpcode::G_FCEIL:
+      Result.roundToIntegral(APFloat::rmTowardPositive);
+      return Result;
+    case TargetOpcode::G_FFLOOR:
+      Result.roundToIntegral(APFloat::rmTowardNegative);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_TRUNC:
+      Result.roundToIntegral(APFloat::rmTowardZero);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_ROUND:
+      Result.roundToIntegral(APFloat::rmNearestTiesToAway);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    case TargetOpcode::G_FRINT:
+    case TargetOpcode::G_FNEARBYINT:
+      Result.roundToIntegral(APFloat::rmNearestTiesToEven);
+      return Result;
+    case TargetOpcode::G_FPEXT:
+    case TargetOpcode::G_FPTRUNC:
+      Result.convert(getFltSemanticForLLT(DstEltTy),
+                     APFloat::rmNearestTiesToEven, &Unused);
+      return Result;
+    case TargetOpcode::G_FSQRT:
+    case TargetOpcode::G_FLOG2: {
+      // ConstantFoldFP only accepts IEEE-like formats up to double. fp128,
+      // x86_fp80, and ppc_fp128 are not supported.
+      const fltSemantics &FltSem = getFltSemanticForLLT(DstEltTy);
+      if (!APFloat::isIEEELikeFP(FltSem) || APFloat::getSizeInBits(FltSem) > 64)
+        return std::nullopt;
+      Type *Ty = Type::getFloatingPointTy(
+          MRI.getMF().getFunction().getContext(), FltSem);
+      Constant *C = Opcode == TargetOpcode::G_FSQRT
+                        ? ConstantFoldFP(sqrt, V, Ty)
+                        : ConstantFoldFP(log2, V, Ty);
+      if (!C)
+        return std::nullopt;
+      return cast<ConstantFP>(C)->getValueAPF();
+    }
+    default:
+      llvm_unreachable("unexpected opcode in ConstantFoldUnaryFPOp");
+    }
+  };
+
+  auto tryFoldScalar = [&](Register R) -> std::optional<APFloat> {
+    if (const ConstantFP *Cst = getConstantFPVRegVal(R, MRI))
+      return Fold(Cst->getValueAPF());
+    return std::nullopt;
+  };
+  if (MRI.getType(Src).isVector()) {
+    auto *BV = getOpcodeDef<GBuildVector>(Src, MRI);
+    if (!BV)
+      return {};
+    SmallVector<APFloat> Folded;
+    for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
+      if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
+        Folded.emplace_back(std::move(*MaybeFold));
+        continue;
+      }
+      return {};
+    }
+    return Folded;
+  }
+  if (auto MaybeCst = tryFoldScalar(Src))
+    return {std::move(*MaybeCst)};
+  return {};
+}
+
 std::optional<SmallVector<APInt>>
 llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
                        unsigned DstScalarSizeInBits, unsigned ExtOp,
@@ -1059,7 +1189,8 @@ llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 }
 
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
-                                  GISelValueTracking *VT, bool OrNegative) {
+                                  GISelValueTracking *VT, bool OrNegative,
+                                  bool OrZero) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   if (!DefSrcReg)
@@ -1068,8 +1199,9 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
   const MachineInstr &MI = *DefSrcReg->MI;
   const LLT Ty = MRI.getType(Reg);
 
-  auto IsPow2 = [OrNegative](const APInt &V) {
-    return V.isPowerOf2() || (OrNegative && V.isNegatedPowerOf2());
+  auto IsPow2 = [OrNegative, OrZero](const APInt &V) {
+    return V.isPowerOf2() || (OrNegative && V.isNegatedPowerOf2()) ||
+           (OrZero && V.isZero());
   };
 
   switch (MI.getOpcode()) {
@@ -1080,11 +1212,19 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
   }
   case TargetOpcode::G_SHL: {
     // A left-shift of a constant one will have exactly one bit set because
-    // shifting the bit off the end is undefined.
+    // shifting the bit off the end is undefined. Otherwise, shifting a power
+    // of two (or zero) yields a power of two, or zero, since the bit moves or
+    // is shifted off the end. That is sufficient with OrZero set, otherwise
+    // the result must also be known never to be zero.
 
     // TODO: Constant splat
     if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
       if (*ConstLHS == 1)
+        return true;
+    }
+    if (OrZero || (VT && VT->isKnownNeverZero(Reg))) {
+      if (isKnownToBeAPowerOfTwo(MI.getOperand(1).getReg(), MRI, VT, OrNegative,
+                                 OrZero))
         return true;
     }
 
@@ -1095,6 +1235,25 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
       if (ConstLHS->isSignMask())
         return true;
     }
+    // As with G_SHL, the set bit is either moved or shifted off the end.
+    // OrNegative is not propagated because a logical right shift fills with
+    // zeros and thus does not preserve negated powers of two.
+    if (OrZero || (VT && VT->isKnownNeverZero(Reg))) {
+      if (isKnownToBeAPowerOfTwo(MI.getOperand(1).getReg(), MRI, VT,
+                                 /*OrNegative=*/false, OrZero))
+        return true;
+    }
+
+    break;
+  }
+  case TargetOpcode::G_TRUNC: {
+    // Truncation preserves the lower bits of the operand, so the set bit either
+    // survives or is cut off, yielding zero.
+    if (OrZero || (VT && VT->isKnownNeverZero(Reg))) {
+      if (isKnownToBeAPowerOfTwo(MI.getOperand(1).getReg(), MRI, VT,
+                                 /*OrNegative=*/false, OrZero))
+        return true;
+    }
 
     break;
   }
@@ -1102,7 +1261,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // TODO: Probably should have a recursion depth guard since you could have
     // bitcasted vector elements.
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
-      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative))
+      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative, OrZero))
         return false;
 
     return true;
@@ -1649,6 +1808,7 @@ void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
   LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
   DeadInstChain.remove(&MI);
+  salvageDebugInfo(MRI, MI);
   MI.eraseFromParent();
   if (LocObserver)
     LocObserver->checkpoint(false);
@@ -1690,6 +1850,10 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     if (!DbgUsers.empty()) {
       salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
     }
+
+    // MI is about to go away, so whatever could not be salvaged would be left
+    // referring to a register without a definition.
+    MRI.markUsesInDebugValueAsUndef(Def.getReg());
   }
 }
 

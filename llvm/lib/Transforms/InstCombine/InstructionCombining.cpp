@@ -83,6 +83,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -1401,17 +1402,17 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 
   Value *Cond, *True = nullptr, *False = nullptr;
 
-  // If V is a select whose condition is implied by Cond, resolve it to the
-  // appropriate arm for this value of Cond.
-  auto simplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+  // If V is a select whose condition is implied by Cond, try to resolve it to
+  // the appropriate arm for this value of Cond.
+  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
                                            bool CondIsTrue) -> Value * {
     auto *InnerSI = dyn_cast<SelectInst>(V);
     if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
       return V;
 
-    if (std::optional<bool> Implied =
-            isImpliedCondition(Cond, InnerSI->getCondition(), DL, CondIsTrue))
-      return InnerSI->getOperand(*Implied ? 1 : 2);
+    if (Value *Arm =
+            simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond, CondIsTrue))
+      return Arm;
     return V;
   };
 
@@ -1450,8 +1451,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (LHSIsSelect && LHS->hasOneUse()) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
-    Value *TrueRHS = simplifySelectWithImpliedCond(RHS, Cond, true);
-    Value *FalseRHS = simplifySelectWithImpliedCond(RHS, Cond, false);
+    Value *TrueRHS = SimplifySelectWithImpliedCond(RHS, Cond, true);
+    Value *FalseRHS = SimplifySelectWithImpliedCond(RHS, Cond, false);
     True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
     False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
@@ -1459,8 +1460,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
-    Value *TrueLHS = simplifySelectWithImpliedCond(LHS, Cond, true);
-    Value *FalseLHS = simplifySelectWithImpliedCond(LHS, Cond, false);
+    Value *TrueLHS = SimplifySelectWithImpliedCond(LHS, Cond, true);
+    Value *FalseLHS = SimplifySelectWithImpliedCond(LHS, Cond, false);
     True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
@@ -2789,7 +2790,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   Instruction *Sel;
   Value *Cond;
   Constant *TrueC, *FalseC;
-  if (!match(GEP.getPointerOperand(), m_Instruction(Sel)) ||
+  if (!match(GEP.getPointerOperand(), m_OneUse(m_Instruction(Sel))) ||
       !match(Sel,
              m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
     return nullptr;
@@ -2816,7 +2817,7 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   auto &DL = IC.getDataLayout();
   Value *Base;
   const APInt *C1;
-  if (!match(Src, m_PtrAdd(m_Value(Base), m_APInt(C1))))
+  if (!match(Src, m_PtrAdd(DL, m_Value(Base), m_APInt(C1))))
     return nullptr;
   Value *VarIndex;
   const APInt *C2;
@@ -2824,8 +2825,7 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   unsigned IndexSizeInBits = DL.getIndexTypeSizeInBits(PtrTy);
   if (!match(GEP.getOperand(1), m_AddLike(m_Value(VarIndex), m_APInt(C2))))
     return nullptr;
-  if (C1->getBitWidth() != IndexSizeInBits ||
-      C2->getBitWidth() != IndexSizeInBits)
+  if (C2->getBitWidth() != IndexSizeInBits)
     return nullptr;
   Type *BaseType = GEP.getSourceElementType();
   if (isa<ScalableVectorType>(BaseType))
@@ -3176,9 +3176,17 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                          LocalDoesConsume, Depth);
       DoesConsume = LocalDoesConsume;
-      if (IsLogical)
-        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
-      return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
+      if (!Builder)
+        return NonNull;
+      if (IsLogical) {
+        Value *InvertedLogicalOp = Builder->CreateLogicalOp(
+            Opcode, NotA, NotB, "",
+            ProfcheckDisableMetadataFixes ? nullptr : dyn_cast<SelectInst>(V));
+        if (auto *SI = dyn_cast<SelectInst>(InvertedLogicalOp))
+          SI->swapProfMetadata();
+        return InvertedLogicalOp;
+      }
+      return Builder->CreateBinOp(Opcode, NotA, NotB);
     }
 
     return nullptr;
@@ -4754,7 +4762,8 @@ static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
 
   Value *NewSel = Builder.CreateSelectFMF(
       Cond, ConstIsTrue ? ConstantMantissa : NewEV,
-      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp");
+      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp",
+      ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
   return NewSel;
 }
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
@@ -4883,6 +4892,37 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   // and if again single-use then via load (gep (gep)) to load (gep).
   // However, double extracts from e.g. function arguments or return values
   // aren't handled yet.
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::visitBitInsertInst(BitInsertInst &BI) {
+  Value *Base = BI.getOperand(0);
+  Value *Val = BI.getOperand(1);
+  Value *Offset = BI.getOperand(2);
+  if (Value *V =
+          simplifyBitInsertInst(Base, Val, Offset, SQ.getWithInstruction(&BI)))
+    return replaceInstUsesWith(BI, V);
+
+  // bitinsert (bN x), (ty y), 0 -> bitcast y to bN, if ty is N bits wide
+  if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(Val->getType()) ==
+                                     DL.getTypeSizeInBits(Base->getType()))
+    return new BitCastInst(Val, Base->getType());
+
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::visitBitExtractInst(BitExtractInst &BE) {
+  Value *Src = BE.getOperand(0);
+  Value *Offset = BE.getOperand(1);
+  if (Value *V = simplifyBitExtractInst(BE.getType(), Src, Offset,
+                                        SQ.getWithInstruction(&BE)))
+    return replaceInstUsesWith(BE, V);
+
+  // bitextract ty, (bN x), 0 -> bitcast x to ty, if ty is N bits wide
+  if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(BE.getType()) ==
+                                     DL.getTypeSizeInBits(Src->getType()))
+    return new BitCastInst(Src, BE.getType());
+
   return nullptr;
 }
 
@@ -5376,8 +5416,7 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // replacement below is still necessary.
   BasicBlock::iterator MoveBefore;
   if (isa<Argument>(Op)) {
-    MoveBefore =
-        FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
   } else {
     auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
     if (!MoveBeforeOpt)
@@ -5863,7 +5902,7 @@ bool InstCombinerImpl::run() {
           // removed.
           auto II = dyn_cast<IntrinsicInst>(User);
           if (II->getIntrinsicID() != Intrinsic::assume ||
-              !II->getOperandBundle("dereferenceable"))
+              !II->hasOperandBundle(LLVMContext::OB_Dereferenceable))
             continue;
         }
 
@@ -6269,8 +6308,7 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
-  const auto &CLOpts =
-      F.getContext().getLibraryOptions().get<InstCombineCLOptions>();
+  const auto &CLOpts = getInstCombineCLOptions(F);
   bool MadeIRChange = false;
   if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);

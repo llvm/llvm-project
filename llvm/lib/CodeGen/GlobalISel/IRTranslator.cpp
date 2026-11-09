@@ -124,8 +124,6 @@ class IRTranslatorImpl {
 
     using const_vreg_iterator =
         DenseMap<const Value *, VRegListT *>::const_iterator;
-    using const_offset_iterator =
-        DenseMap<const Value *, OffsetListT *>::const_iterator;
 
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
@@ -192,6 +190,11 @@ class IRTranslatorImpl {
   // in once all MachineBasicBlocks have been created.
   SmallVector<std::pair<const PHINode *, SmallVector<MachineInstr *, 1>>, 4>
       PendingPHIs;
+
+  // Constant DbgValues that cannot be materialized as DBG_VALUEs
+  // because they are not an immediate or symbol reference.
+  SmallVector<std::pair<MachineInstr *, const Constant *>, 4>
+      PendingConstDbgValues;
 
   /// Record of what frame index has been allocated to specified allocas for
   /// this function.
@@ -385,6 +388,10 @@ class IRTranslatorImpl {
   /// Add remaining operands onto phis we've translated. Executed after all
   /// MachineBasicBlocks for the function have been created.
   void finishPendingPhis();
+
+  /// Describe any constants in PendingConstDbgValues that are
+  /// materialized as vregs.
+  void finishPendingConstDbgValues();
 
   /// Translate \p Inst into a unary operation \p Opcode.
   /// \pre \p U is a unary operation.
@@ -2063,8 +2070,8 @@ bool IRTranslatorImpl::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
     if (I == W.LastCluster) {
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
-      FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+      FallthroughUnreachable =
+          isa<UnreachableInst>(DefaultMBB->getBasicBlock()->getFirstNonPHIIt());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
@@ -3621,7 +3628,7 @@ bool IRTranslatorImpl::translateCall(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (F && (F->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
+            (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
              F->hasExternalWeakLinkage())))
     return false;
 
@@ -3841,8 +3848,8 @@ bool IRTranslatorImpl::translateInvoke(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (Fn && (Fn->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
-             Fn->hasExternalWeakLinkage())))
+             (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
+              Fn->hasExternalWeakLinkage())))
     return false;
 
   bool LowerInlineAsm = I.isInlineAsm();
@@ -4027,12 +4034,16 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
   if (AI.isStaticAlloca()) {
     Register Res = getOrCreateVReg(AI);
     int FI = getOrCreateFrameIndex(AI);
-    MIRBuilder.buildFrameIndex(Res, FI);
+    auto MIB = MIRBuilder.buildFrameIndex(Res, FI);
+    // The frame address may be materialized before the alloca's source line is
+    // reached. Clear its debug location to avoid reporting that line early.
+    if (AI.getDebugLoc())
+      MIB->setDebugLoc(DebugLoc::getDropped());
     return true;
   }
 
-  // FIXME: support stack probing for Windows.
-  if (MF->getTarget().getTargetTriple().isOSWindows())
+  // FIXME: support stack probing for Windows and UEFI.
+  if (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI())
     return false;
 
   // Now we're in the harder dynamic case.
@@ -4157,8 +4168,9 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
         InputType && InputType->getNumElements() == 1) {
       // We are inserting an illegal fixed vector into an illegal
       // fixed vector, use the scalar as it is not a legal vector type
-      // in LLT.
-      return translateCopy(U, Vec, MIRBuilder);
+      // in LLT. Since inserting a <1 x Ty> at index 0 replaces the whole
+      // destination, the result is the source operand.
+      return translateCopy(U, Elt, MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a legal fixed
@@ -4592,6 +4604,22 @@ bool IRTranslatorImpl::translateFreeze(const User &U,
   return true;
 }
 
+void IRTranslatorImpl::finishPendingConstDbgValues() {
+  for (auto [MI, C] : PendingConstDbgValues) {
+    auto VRegsIt = VMap.findVRegs(*C);
+    if (VRegsIt == VMap.vregs_end() || VRegsIt->second->size() != 1)
+      continue;
+    // Constants are materialized in the entry block, so the vreg dominates
+    // every debug value; where it is not live, the location is dropped later.
+    MachineIRBuilder Builder(*MI);
+    Builder.buildDirectDbgValue(VRegsIt->second->front(),
+                                MI->getDebugVariable(),
+                                MI->getDebugExpression());
+    MI->eraseFromParent();
+  }
+  PendingConstDbgValues.clear();
+}
+
 void IRTranslatorImpl::finishPendingPhis() {
 #ifndef NDEBUG
   DILocationVerifier Verifier;
@@ -4645,7 +4673,9 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
   }
 
   if (const auto *CI = dyn_cast<Constant>(V)) {
-    MIRBuilder.buildConstDbgValue(*CI, Variable, Expression);
+    MachineInstr *MI = MIRBuilder.buildConstDbgValue(*CI, Variable, Expression);
+    if (MI->getDebugOperand(0).isReg() && !isa<UndefValue>(CI))
+      PendingConstDbgValues.emplace_back(MI, CI);
     return;
   }
 
@@ -5022,14 +5052,20 @@ bool IRTranslatorImpl::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
     const Value *IRGuard = TLI->getSDagStackGuard(M, *Libcalls);
-    Register GuardPtr = getOrCreateVReg(*IRGuard);
+    if (IRGuard) {
+      Register GuardPtr = getOrCreateVReg(*IRGuard);
 
-    Guard = CurBuilder
-                ->buildLoad(PtrMemTy, GuardPtr,
-                            MachinePointerInfo::getFixedStack(*MF, FI), Align,
-                            MachineMemOperand::MOLoad |
-                                MachineMemOperand::MOVolatile)
-                .getReg(0);
+      Guard = CurBuilder
+                  ->buildLoad(PtrMemTy, GuardPtr,
+                              MachinePointerInfo::getFixedStack(*MF, FI), Align,
+                              MachineMemOperand::MOLoad |
+                                  MachineMemOperand::MOVolatile)
+                  .getReg(0);
+    } else {
+      LLVMContext &Ctx = CurBuilder->getContext();
+      Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+      Guard = CurBuilder->buildUndef(PtrMemTy).getReg(0);
+    }
   }
 
   // Perform the comparison.
@@ -5076,6 +5112,7 @@ void IRTranslatorImpl::finalizeFunction() {
   // Release the memory used by the different maps we
   // needed during the translation.
   PendingPHIs.clear();
+  PendingConstDbgValues.clear();
   VMap.reset();
   FrameIndices.clear();
   MachinePreds.clear();
@@ -5152,10 +5189,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   const TargetMachine &TM = MF->getTarget();
   EnableOpts = OptLevel != CodeGenOptLevel::None && !ShouldSkipOpts;
   FuncInfo.MF = MF;
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
   FuncInfo.ExceptionModel = F.getParent()->getExceptionModel();
-  if (FuncInfo.ExceptionModel == ExceptionHandling::Default)
-    FuncInfo.ExceptionModel = TM.getExceptionModel();
   if (EnableOpts) {
     AA = GetAAResults();
     FuncInfo.BPI = GetBPI();
@@ -5322,6 +5356,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   }
 
   finishPendingPhis();
+  finishPendingConstDbgValues();
 
   SwiftError.propagateVRegs();
 

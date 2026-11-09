@@ -8,8 +8,10 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def MCCLOptions : OptionsStruct<perContext = false>;
+def MCCLOptions : OptionsStruct;
 
+defm : ValueField<"asm-macro-max-nesting-depth", "unsigned", "100",
+  "The maximum nesting depth allowed for assembly macros">;
 defm : DefaultOnOffField<"dwarf-extended-loc",
   "Disable emission of the extended flags in .loc directives">;
 defm : BoolField<"lfi-enable-rewriter", "true",

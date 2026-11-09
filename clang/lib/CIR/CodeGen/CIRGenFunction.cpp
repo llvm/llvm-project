@@ -51,9 +51,29 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
   ehStack.setCGF(this);
   shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
+  setFastMathFlags(curFPFeatures);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
+
+void CIRGenFunction::setFastMathFlags(FPOptions fpFeatures) {
+  cir::FastMathFlags flags = cir::FastMathFlags::none;
+  if (fpFeatures.getAllowFPReassociate())
+    flags = flags | cir::FastMathFlags::reassoc;
+  if (fpFeatures.getNoHonorNaNs())
+    flags = flags | cir::FastMathFlags::nnan;
+  if (fpFeatures.getNoHonorInfs())
+    flags = flags | cir::FastMathFlags::ninf;
+  if (fpFeatures.getNoSignedZero())
+    flags = flags | cir::FastMathFlags::nsz;
+  if (fpFeatures.getAllowReciprocal())
+    flags = flags | cir::FastMathFlags::arcp;
+  if (fpFeatures.getAllowApproxFunc())
+    flags = flags | cir::FastMathFlags::afn;
+  if (fpFeatures.allowFPContractAcrossStatement())
+    flags = flags | cir::FastMathFlags::contract;
+  builder.setFastMathFlags(flags);
+}
 
 // This is copied from clang/lib/CodeGen/CodeGenFunction.cpp
 cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
@@ -412,15 +432,16 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
     if (shouldEmitUnreachable) {
       assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
-        cir::TrapOp::create(builder, localScope->endLoc);
+        cir::TrapOp::create(builder, localScope->endLoc, /*implicit=*/true);
       else
-        cir::UnreachableOp::create(builder, localScope->endLoc);
+        cir::UnreachableOp::create(builder, localScope->endLoc,
+                                   /*implicit=*/true);
       builder.clearInsertionPoint();
       return;
     }
   }
 
-  (void)emitReturn(localScope->endLoc);
+  emitReturn(localScope->endLoc).setImplicit(true);
 }
 
 cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
@@ -1316,9 +1337,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::ExtVectorElementExprClass:
     return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
   case Expr::MatrixElementExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: MatrixElementExpr");
-    return LValue();
+    return emitMatrixElementExpr(cast<MatrixElementExpr>(e));
   case Expr::CXXThisExprClass:
     return makeAddrLValue(loadCXXThisAddress(), e->getType());
   case Expr::MemberExprClass:
@@ -1353,11 +1372,9 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
   case Expr::CoawaitExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoawaitExpr");
-    return LValue();
+    return emitCoawaitLValue(cast<CoawaitExpr>(e));
   case Expr::CoyieldExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoyieldExpr");
-    return LValue();
+    return emitCoyieldLValue(cast<CoyieldExpr>(e));
   case Expr::PackIndexingExprClass:
     return emitLValue(cast<PackIndexingExpr>(e)->getSelectedExpr());
   case Expr::HLSLOutArgExprClass:
@@ -1456,8 +1473,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   if (oldFPFeatures == fpFeatures)
     return;
 
-  // TODO(cir): create guard to restore fast math configurations.
-  assert(!cir::MissingFeatures::fastMathGuard());
+  oldFastMathFlags = cgf.builder.getFastMathFlags();
 
   llvm::RoundingMode newRoundingMode = fpFeatures.getRoundingMode();
   LangOptions::FPExceptionModeKind newExceptionBehavior =
@@ -1466,8 +1482,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   cgf.builder.setDefaultConstrainedRounding(newRoundingMode);
   cgf.builder.setDefaultConstrainedExcept(newExceptionBehavior);
 
-  // TODO(cir): override FP flags once FM configs are guarded.
-  assert(!cir::MissingFeatures::fastMathFlags());
+  cgf.setFastMathFlags(fpFeatures);
 
   assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
           isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
@@ -1484,6 +1499,8 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   cgf.curFPFeatures = oldFPFeatures;
   cgf.builder.setDefaultConstrainedExcept(oldExcept);
   cgf.builder.setDefaultConstrainedRounding(oldRounding);
+  if (oldFastMathFlags)
+    cgf.builder.setFastMathFlags(*oldFastMathFlags);
 }
 
 cir::FastMathFlags CIRGenFunction::getCurrentFastMathFlags() const {

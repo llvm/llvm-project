@@ -36,6 +36,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
@@ -88,7 +90,11 @@ private:
   const clang::CodeGenOptions &codeGenOpts;
 
   /// A "module" matches a c/cpp source file: containing a list of functions.
-  mlir::ModuleOp theModule;
+  mlir::OwningOpRef<mlir::ModuleOp> theModule;
+
+  /// Cached data layout for the module. Built lazily: the layout spec is
+  /// attached after construction, in CIRGenerator::Initialize.
+  mutable std::optional<cir::CIRDataLayout> dataLayout;
 
   clang::DiagnosticsEngine &diags;
 
@@ -116,7 +122,29 @@ private:
   /// Accumulated record layout entries, materialized in release().
   llvm::SmallVector<mlir::NamedAttribute> recordLayoutEntries;
 
+  /// Whether C++20 named modules get their own module initializer function,
+  /// which requires the Itanium mangling of the initializer name.
+  bool cxx20ModuleInits = false;
+
+  /// The complete set of modules that have been imported.
+  llvm::SetVector<clang::Module *> importedModules;
+
+  /// The location of the first import declaration of each imported module.
+  llvm::DenseMap<clang::Module *, clang::SourceLocation> moduleImportLocs;
+
+  /// The set of modules for which the module initializers have been emitted.
+  llvm::SmallPtrSet<clang::Module *, 16> emittedModuleInitializers;
+
+  /// The Itanium-mangled name of the initializer function of a C++20 named
+  /// module.
+  std::string getModuleInitializerName(clang::Module *mod);
+
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
+
+  /// Symbols created as the target of a weakref. They are extern_weak until
+  /// something names them in a way that is not itself weak, such as an
+  /// ordinary declaration or definition of the target.
+  llvm::SmallPtrSet<mlir::Operation *, 4> weakRefReferences;
 
   /// -------
   /// Annotations
@@ -151,7 +179,7 @@ private:
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
   void constructFunctionArgumentAttributes(
-      const CIRGenFunctionInfo &info, const clang::Decl *targetDecl,
+      const CIRGenFunctionInfo &info, clang::GlobalDecl calleeDecl,
       bool isThunk, bool attrOnCallSite,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
@@ -165,7 +193,7 @@ private:
       materializedGlobalTemporaryMap;
 
 public:
-  mlir::ModuleOp getModule() const { return theModule; }
+  mlir::ModuleOp getModule() const { return *theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
 
   /// Queue a record layout entry for materialization in release().
@@ -188,10 +216,10 @@ public:
   CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
-  const cir::CIRDataLayout getDataLayout() const {
-    // FIXME(cir): instead of creating a CIRDataLayout every time, set it as an
-    // attribute for the CIRModule class.
-    return cir::CIRDataLayout(theModule);
+  const cir::CIRDataLayout &getDataLayout() const {
+    if (!dataLayout)
+      dataLayout.emplace(getModule());
+    return *dataLayout;
   }
 
   /// -------
@@ -266,11 +294,17 @@ public:
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
   cir::GlobalOp getOrCreateCIRGlobal(llvm::StringRef mangledName, mlir::Type ty,
-                                     LangAS langAS, const VarDecl *d,
+                                     LangAS langAS, mlir::Location loc,
+                                     const VarDecl *d,
                                      ForDefinition_t isForDefinition);
 
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
+
+  /// Return the symbol that a weakref declaration refers to: the cir.func or
+  /// cir.global named by its alias target, declared extern_weak if it did not
+  /// already exist.
+  mlir::Operation *getWeakRefReference(const clang::ValueDecl *vd);
 
   cir::GlobalOp
   createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
@@ -621,11 +655,20 @@ public:
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  cir::FuncOp getRawFunctionPointer(GlobalDecl GD);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  cir::FuncOp getFunctionPointer(GlobalDecl GD);
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
-    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             getTriple().isNVPTX());
+    return (forEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Emit type info if type of an expression is a variably modified
@@ -679,7 +722,7 @@ public:
                                 cir::FuncOp func, bool isThunk);
 
   /// Set extra attributes (inline, etc.) for a function.
-  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+  void setCIRFunctionAttributesForDefinition(const clang::Decl *decl,
                                              cir::FuncOp f);
 
   /// Generate OpenCL kernel argument metadata for a kernel function.

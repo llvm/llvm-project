@@ -20,13 +20,19 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -44,7 +50,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
 // TODO: Below are uArch dependent values, should move away from hardcoding
 static constexpr int32_t systolicDepth{8};
 static constexpr int32_t executionSize{16};
@@ -244,7 +249,7 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   // Checks the surface width and pitch against the target's 2D block memory
   // restrictions. Only these two are enforced: both are backed by the source's
@@ -1019,11 +1024,168 @@ public:
   }
 };
 
+/// Returns the shape of the largest piece of a matrix op payload that one LLVM
+/// access can move, as an access only moves consecutive elements.
+/// Examples:
+///   mem_desc<16x2xf32>                       (stride [2, 1], row-major)
+///     payload [1, 2] -> [1, 2]   one access of 2 elements
+///     payload [2, 1] -> [1, 1]   2 accesses of 1 element
+///   mem_desc<16x2xf32, stride = [1, 16]>     (column-major)
+///     payload [4, 1] -> [4, 1]   one access of 4 elements
+///     payload [2, 2] -> [1, 1]   4 accesses of 1 element; each column is
+///                                consecutive in memory but not in the
+///                                row-major flattened vector
+///
+/// TODO: On a blocked layout memory is only consecutive inside a block, so a
+/// piece that crosses a block boundary along the stride-1 dim is not
+/// contiguous. Blocks are not taken into account yet.
+static SmallVector<int64_t>
+getContiguousPayloadShape(ArrayRef<int64_t> payloadShape, size_t numOffsets,
+                          xegpu::MemDescType mdescTy) {
+  SmallVector<int64_t> shape(payloadShape);
+  int64_t rank = shape.size();
+  if (rank != static_cast<int64_t>(numOffsets))
+    return shape;
+
+  int64_t fastestDim = 0;
+  for (auto [dim, strideAttr] :
+       llvm::enumerate(mdescTy.getStrideAttr().getValue())) {
+    if (cast<IntegerAttr>(strideAttr).getInt() == 1) {
+      fastestDim = dim;
+      break;
+    }
+  }
+
+  // A slice that runs along fastestDim is only consecutive in the vector if
+  // every dim to its right has size 1.
+  bool spansFastestDim =
+      llvm::all_of(llvm::seq<int64_t>(fastestDim + 1, rank),
+                   [&](int64_t d) { return payloadShape[d] == 1; });
+  for (int64_t d = 0; d < rank; ++d)
+    shape[d] = spansFastestDim && d == fastestDim ? payloadShape[d] : 1;
+
+  return shape;
+}
+
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>::value>>
 class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
   using OpConversionPattern<OpType>::OpConversionPattern;
+
+  /// Lowers `op` to one LLVM access per `sliceShape`-sized piece of its
+  /// payload, each at its own address. `basePtrLLVM` already addresses the
+  /// first piece. A payload that is one contiguous piece, which is the common
+  /// case, gives a single access of the whole payload.
+  LogicalResult emitContiguousAccesses(
+      OpType op, typename OpType::Adaptor adaptor,
+      ConversionPatternRewriter &rewriter, xegpu::MemDescType mdescTy,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<int64_t> payloadShape,
+      ArrayRef<int64_t> sliceShape, Value baseAddr32, Value basePtrLLVM,
+      LLVM::LLVMPointerType ptrTypeLLVM, int64_t elemByteSize) const {
+    Location loc = op.getLoc();
+    int64_t rank = payloadShape.size();
+    SmallVector<int64_t> sliceGrid(rank);
+    for (int64_t d = 0; d < rank; ++d)
+      sliceGrid[d] = payloadShape[d] / sliceShape[d];
+    int64_t numSlices = computeProduct(sliceGrid);
+    int64_t sliceLen = computeProduct(sliceShape);
+    SmallVector<int64_t> payloadStrides = computeStrides(payloadShape);
+    SmallVector<int64_t> gridStrides = computeStrides(sliceGrid);
+
+    // The payload type LLVM load/store accepts: f8E8M0FNU and friends become
+    // same-width integers, vector<1> becomes a scalar. Operands arrive
+    // converted in the adaptor, results do not.
+    Type payloadTy;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      payloadTy =
+          this->getTypeConverter()->convertType(op.getResult().getType());
+    else
+      payloadTy = adaptor.getData().getType();
+    auto payloadVecTy = dyn_cast<VectorType>(payloadTy);
+
+    Type sliceTy = payloadTy;
+    if (numSlices != 1) {
+      if (!payloadVecTy)
+        return rewriter.notifyMatchFailure(
+            op, "Expected a vector payload to slice.");
+      sliceTy = sliceLen == 1 ? payloadVecTy.getElementType()
+                              : VectorType::get({sliceLen},
+                                                payloadVecTy.getElementType());
+    }
+
+    // Addresses the slice `delta` elements into the payload.
+    auto slicePtr = [&](ArrayRef<int64_t> delta) -> Value {
+      if (llvm::all_of(delta, [](int64_t d) { return d == 0; }))
+        return basePtrLLVM;
+      SmallVector<OpFoldResult> sliceOffsets;
+      for (auto [base, d] : llvm::zip_equal(offsets, delta)) {
+        if (d == 0)
+          sliceOffsets.push_back(base);
+        else if (auto attr = dyn_cast<Attribute>(base))
+          sliceOffsets.push_back(
+              rewriter.getIndexAttr(cast<IntegerAttr>(attr).getInt() + d));
+        else
+          sliceOffsets.push_back(
+              OpFoldResult(arith::AddIOp::create(
+                               rewriter, loc, cast<Value>(base),
+                               arith::ConstantIndexOp::create(rewriter, loc, d))
+                               .getResult()));
+      }
+      Value sliceOffset = mdescTy.getLinearOffsets(rewriter, loc, sliceOffsets);
+      sliceOffset = arith::IndexCastUIOp::create(
+          rewriter, loc, rewriter.getI32Type(), sliceOffset);
+      Value slicePtrI32 = addOffsetToBaseAddr(rewriter, loc, baseAddr32,
+                                              sliceOffset, elemByteSize);
+      return LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, slicePtrI32);
+    };
+
+    Value result;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      if (numSlices != 1)
+        result = arith::ConstantOp::create(rewriter, loc, payloadVecTy,
+                                           rewriter.getZeroAttr(payloadVecTy));
+
+    for (int64_t slice = 0; slice < numSlices; ++slice) {
+      SmallVector<int64_t> gridCoords = delinearize(slice, gridStrides);
+      SmallVector<int64_t> delta(rank);
+      for (int64_t d = 0; d < rank; ++d)
+        delta[d] = gridCoords[d] * sliceShape[d];
+      int64_t payloadOffset = linearize(delta, payloadStrides);
+      Value ptr = slicePtr(delta);
+
+      if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+        Value loaded = LLVM::LoadOp::create(rewriter, loc, sliceTy, ptr);
+        if (numSlices == 1)
+          result = loaded;
+        else if (sliceLen == 1)
+          result = vector::InsertOp::create(rewriter, loc, loaded, result,
+                                            ArrayRef<int64_t>{payloadOffset});
+        else
+          result = vector::InsertStridedSliceOp::create(
+              rewriter, loc, loaded, result, ArrayRef<int64_t>{payloadOffset},
+              ArrayRef<int64_t>{1});
+      } else {
+        Value data = adaptor.getData();
+        if (numSlices != 1) {
+          if (sliceLen == 1)
+            data = vector::ExtractOp::create(rewriter, loc, data,
+                                             ArrayRef<int64_t>{payloadOffset});
+          else
+            data = vector::ExtractStridedSliceOp::create(
+                rewriter, loc, data, ArrayRef<int64_t>{payloadOffset},
+                ArrayRef<int64_t>{sliceLen}, ArrayRef<int64_t>{1});
+        }
+        LLVM::StoreOp::create(rewriter, loc, data, ptr);
+      }
+    }
+
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      rewriter.replaceOp(op, result);
+    else
+      rewriter.eraseOp(op);
+    return success();
+  }
   LogicalResult
   matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1042,13 +1204,9 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       Type resType = op.getResult().getType();
       // Some transforms may leave unit dimension in the 2D vector, adaptors do
       // not catch it for results.
-      if (auto vecType = dyn_cast<VectorType>(resType)) {
-        assert(llvm::count_if(vecType.getShape(),
-                              [](int64_t d) { return d != 1; }) <= 1 &&
-               "Expected either 1D vector or nD with unit dimensions");
+      if (auto vecType = dyn_cast<VectorType>(resType))
         resType = VectorType::get({vecType.getNumElements()},
                                   vecType.getElementType());
-      }
       dataTy = resType;
     } else
       dataTy = adaptor.getData().getType();
@@ -1119,26 +1277,26 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       }
     }
 
-    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-      // The load result type is taken from the type converter. This maps
-      // element types that are not directly representable in LLVM (e.g.
-      // f8E8M0FNU) to an integer storage type of the same bit width, and
-      // collapses single-element vectors to a scalar, since LLVM load/store
-      // does not support vectors of size 1.
-      Type loadTy =
-          this->getTypeConverter()->convertType(op.getResult().getType());
-      auto loadOp = LLVM::LoadOp::create(rewriter, loc, loadTy, basePtrLLVM);
-      rewriter.replaceOp(op, loadOp);
-    } else {
-      LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
-      rewriter.eraseOp(op);
-    }
-    return success();
+    // The payload shape says where in the matrix each element lives, which the
+    // adaptor has already linearized away.
+    ArrayRef<int64_t> payloadShape;
+    Type opPayloadTy;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      opPayloadTy = op.getResult().getType();
+    else
+      opPayloadTy = op.getData().getType();
+    if (auto opPayloadVecTy = dyn_cast<VectorType>(opPayloadTy))
+      payloadShape = opPayloadVecTy.getShape();
+
+    return emitContiguousAccesses(
+        op, adaptor, rewriter, mdescTy, offsets, payloadShape,
+        getContiguousPayloadShape(payloadShape, offsets.size(), mdescTy),
+        baseAddr32, basePtrLLVM, ptrTypeLLVM, elemByteSize);
   }
 };
 
 class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::PrefetchOp op, xegpu::PrefetchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1205,7 +1363,7 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
 };
 
 class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::FenceOp op, xegpu::FenceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1278,7 +1436,7 @@ static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
 }
 
 class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::DpasOp op, xegpu::DpasOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1389,7 +1547,7 @@ matchSimpleAtomicOp(arith::AtomicRMWKind arithKind) {
 }
 
 class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::AtomicRMWOp op, xegpu::AtomicRMWOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1428,7 +1586,7 @@ class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
 };
 
 class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::DpasMxOp op, xegpu::DpasMxOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1565,7 +1723,7 @@ static bool isXeVMTruncf(arith::TruncFOp op) {
 }
 
 class ExtfToXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(arith::ExtFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1600,7 +1758,7 @@ class ExtfToXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
 };
 
 class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(arith::TruncFOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1658,6 +1816,104 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
   }
 };
 
+// Hoist the i4-to-i8 part of compatible extensions through a closed
+// data-movement graph and lane shuffle. Widening all the way to the extension's
+// result type could exceed the bitcast-shuffle lowering's 64-bit fragment
+// limit. Signed widening preserves the eventual signed interpretation of each
+// nibble; unsigned widening preserves its unsigned interpretation.
+template <typename ExtOp>
+class HoistI4ExtensionAboveLaneShuffle final : public OpRewritePattern<ExtOp> {
+public:
+  using OpRewritePattern<ExtOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtOp op,
+                                PatternRewriter &rewriter) const override {
+    auto srcTy = dyn_cast<VectorType>(op.getIn().getType());
+    auto dstTy = dyn_cast<VectorType>(op.getType());
+    if (!srcTy || !srcTy.getElementType().isInteger(4) || !dstTy ||
+        dstTy.getElementTypeBitWidth() < 8)
+      return failure();
+
+    auto isMover = [](Operation *def) {
+      return isa<vector::ShapeCastOp, vector::ExtractStridedSliceOp,
+                 vector::ExtractOp, vector::BroadcastOp, vector::TransposeOp>(
+          def);
+    };
+    Value source = op.getIn();
+    while (Operation *def = source.getDefiningOp()) {
+      if (isa<xegpu::LaneShuffleOp>(def))
+        break;
+      if (!isMover(def))
+        return failure();
+      source = def->getOperand(0);
+    }
+    auto shuffle = source.getDefiningOp<xegpu::LaneShuffleOp>();
+    if (!shuffle)
+      return failure();
+    VectorType fragmentTy = shuffle.getSourceType();
+    int64_t numElements = fragmentTy.getNumElements();
+    if (!fragmentTy.getElementType().isInteger(4) || numElements < 2 ||
+        numElements > 8 || !llvm::isPowerOf2_64(numElements))
+      return failure();
+
+    // Validate every use before changing IR. Widening a shared fragment is
+    // safe only when all paths end in extensions with the same signedness.
+    SmallVector<Operation *> movers;
+    SmallVector<ExtOp> extensions;
+    SmallPtrSet<Operation *, 16> visited;
+    auto visit = [&](auto &&visit, Value value) -> LogicalResult {
+      for (Operation *user : value.getUsers()) {
+        if (!visited.insert(user).second)
+          continue;
+        if (auto ext = dyn_cast<ExtOp>(user)) {
+          auto type = dyn_cast<VectorType>(ext.getType());
+          if (!type || type.getElementTypeBitWidth() < 8)
+            return failure();
+          extensions.push_back(ext);
+          continue;
+        }
+        if (!isMover(user) || user->getOperand(0) != value ||
+            user->getNumResults() != 1 ||
+            failed(visit(visit, user->getResult(0))))
+          return failure();
+        movers.push_back(user);
+      }
+      return success();
+    };
+    if (failed(visit(visit, shuffle.getResult())))
+      return failure();
+
+    rewriter.setInsertionPoint(shuffle);
+    VectorType wideTy = fragmentTy.clone(rewriter.getI8Type());
+    Value wide =
+        ExtOp::create(rewriter, op.getLoc(), wideTy, shuffle.getSource());
+    Value result = xegpu::LaneShuffleOp::create(
+        rewriter, shuffle.getLoc(), wideTy, wide, shuffle.getMode());
+    IRMapping mapping;
+    mapping.map(shuffle.getResult(), result);
+    for (Operation *mover : llvm::reverse(movers)) {
+      rewriter.setInsertionPoint(mover);
+      Operation *clone = rewriter.clone(*mover, mapping);
+      Type type = rewriter.getI8Type();
+      if (auto vectorTy = dyn_cast<VectorType>(mover->getResult(0).getType()))
+        type = vectorTy.clone(type);
+      clone->getResult(0).setType(type);
+    }
+    for (ExtOp ext : extensions) {
+      Value input = mapping.lookup(ext.getIn());
+      if (input.getType() == ext.getType())
+        rewriter.replaceOp(ext, input);
+      else
+        rewriter.modifyOpInPlace(ext,
+                                 [&] { ext.getInMutable().assign(input); });
+    }
+    for (Operation *mover : movers)
+      rewriter.eraseOp(mover);
+    rewriter.eraseOp(shuffle);
+    return success();
+  }
+};
+
 // Lowers `xegpu.lane_shuffle` to `xevm.bitcast_shuffle`.
 //
 // `xevm.bitcast_shuffle` concatenates the components of its operand across the
@@ -1679,7 +1935,7 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
 // same-width integer vector on the way in and back on the way out.
 class LaneShuffleToXeVMPattern
     : public OpConversionPattern<xegpu::LaneShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xegpu::LaneShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1734,6 +1990,42 @@ struct ConvertXeGPUToXeVMPass
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
+
+    // Restrict greedy rewriting to casts and newly generated operations so
+    // unrelated dead XeGPU ops still receive conversion diagnostics.
+    GreedyRewriteConfig config;
+    config.setStrictness(GreedyRewriteStrictness::ExistingAndNewOps);
+    // Preserve extension consumers until hoisting has finished: narrow-type
+    // legalization would otherwise obscure the chains this peephole matches.
+    {
+      RewritePatternSet patterns(context);
+      patterns.add<HoistI4ExtensionAboveLaneShuffle<arith::ExtUIOp>,
+                   HoistI4ExtensionAboveLaneShuffle<arith::ExtSIOp>>(context);
+      SmallVector<Operation *> extensions;
+      getOperation()->walk([&](Operation *op) {
+        if (isa<arith::ExtUIOp, arith::ExtSIOp>(op))
+          extensions.push_back(op);
+      });
+      if (failed(
+              applyOpPatternsGreedily(extensions, std::move(patterns), config)))
+        return signalPassFailure();
+    }
+    // Expand the new i4-to-i8 casts into byte-level masks and shifts before
+    // lowering. LLVM extensions on i4 vectors are not legal in the backend.
+    {
+      RewritePatternSet patterns(context);
+      vector::populateVectorNarrowTypeRewritePatterns(patterns);
+      vector::populateVectorInterleaveToShufflePatterns(patterns);
+      vector::populateVectorDeinterleaveToShufflePatterns(patterns);
+      SmallVector<Operation *> casts;
+      getOperation()->walk([&](Operation *op) {
+        if (isa<arith::ExtUIOp, arith::ExtSIOp, arith::TruncIOp,
+                vector::BitCastOp>(op))
+          casts.push_back(op);
+      });
+      if (failed(applyOpPatternsGreedily(casts, std::move(patterns), config)))
+        return signalPassFailure();
+    }
 
     // XeVM type converter is based on LLVM type converter with the
     // following customizations.
@@ -1829,17 +2121,9 @@ struct ConvertXeGPUToXeVMPass
         auto offsetCasted =
             arith::IndexCastUIOp::create(builder, loc, type, offset);
 
-        // Compute the final address: base address + byte offset
-        auto byteSize = arith::ConstantOp::create(
-            builder, loc, type,
-            builder.getIntegerAttr(type,
-                                   memrefTy.getElementTypeBitWidth() / 8));
-        auto byteOffset =
-            arith::MulIOp::create(builder, loc, offsetCasted, byteSize);
-        auto addrWithOffset =
-            arith::AddIOp::create(builder, loc, addrCasted, byteOffset);
-
-        return addrWithOffset.getResult();
+        // Compute the final address: base address + byte offset.
+        return xegpu::addElemOffsetInBytes(builder, loc, addrCasted,
+                                           offsetCasted, memrefTy);
       }
       return {};
     };
