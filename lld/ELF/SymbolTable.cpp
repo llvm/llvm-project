@@ -111,7 +111,7 @@ Symbol *SymbolTable::intern(CachedHashStringRef name) {
 
 // This variant of addSymbol is used by BinaryFile::parse to check duplicate
 // symbol errors.
-Symbol *SymbolTable::addAndCheckDuplicate(Ctx &ctx, const Defined &newSym) {
+Symbol *SymbolTable::addAndCheckDuplicate(const Defined &newSym) {
   Symbol *sym = insert(newSym.getName());
   if (sym->isDefined())
     sym->checkDuplicate(ctx, newSym);

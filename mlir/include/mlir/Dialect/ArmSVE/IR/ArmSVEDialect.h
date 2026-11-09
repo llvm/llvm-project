@@ -14,7 +14,6 @@
 #define MLIR_DIALECT_ARMSVE_ARMSVEDIALECT_H
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h.inc"
