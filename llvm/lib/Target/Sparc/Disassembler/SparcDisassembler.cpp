@@ -299,6 +299,15 @@ static DecodeStatus DecodeDisp(MCInst &MI, uint32_t ImmVal, uint64_t Address,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeLeonStbar(MCInst &MI, unsigned insn, uint64_t Address,
+                                    const MCDisassembler *Decoder) {
+  unsigned Mask = insn & 0x1fff;
+  if (Mask == 0 || (Mask & ~SparcBarrier::LeonStbarMask))
+    return MCDisassembler::Fail;
+  MI.addOperand(MCOperand::createImm(Mask));
+  return MCDisassembler::Success;
+}
+
 #include "SparcGenDisassemblerTables.inc"
 
 /// Read four bytes from the ArrayRef and return 32 bit word.
