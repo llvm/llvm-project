@@ -225,7 +225,8 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
            T == dwarf::DW_TAG_volatile_type ||
            T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type ||
            T == dwarf::DW_TAG_immutable_type ||
-           T == dwarf::DW_TAG_template_alias);
+           T == dwarf::DW_TAG_template_alias ||
+           T == dwarf::DW_TAG_LLVM_ptrauth_type);
     assert(DTy->getBaseType() && "Expected valid base type");
     return isUnsignedDIType(DTy->getBaseType());
   }
