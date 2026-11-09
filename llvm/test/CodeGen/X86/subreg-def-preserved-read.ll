@@ -6,12 +6,13 @@
 ; propagation takes away the only operand keeping the incoming value alive and
 ; X86FixupBWInsts widens the byte load, zero-extending and dropping bits 8..63.
 ;
-; Pre-commit test: CHECK pins today's zero-extending load, i.e. the miscompile.
+; CHECK pins the plain byte load that keeps bits 8..63.
 
 define i64 @f(i64 %x) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl 8(%rdi), %eax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movb 8(%rax), %al
 ; CHECK-NEXT:    retq
   %a = add i64 %x, 8
   %p = inttoptr i64 %a to ptr
