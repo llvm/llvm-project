@@ -1,4 +1,4 @@
-//===-- WasmEHPrepare - Prepare excepton handling for WebAssembly --------===//
+//===-- WasmEHPrepare - Prepare exception handling for WebAssembly --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,11 +25,12 @@
 //   catchpad ...
 //   exn = wasm.catch(WebAssembly::CPP_EXCEPTION);
 //   // Only add below in case it's not a single catch (...)
+//   wasm_lpad_context = _Unwind_GetWasmLPadContext();
 //   wasm.landingpad.index(index);
-//   __wasm_lpad_context.lpad_index = index;
-//   __wasm_lpad_context.lsda = wasm.lsda();
+//   wasm_lpad_context->lpad_index = index;
+//   wasm_lpad_context->lsda = wasm.lsda();
 //   personality_fn(exn);
-//   selector = __wasm_lpad_context.selector;
+//   selector = wasm_lpad_context->selector;
 //   ...
 //
 //
@@ -58,7 +59,7 @@
 //   uintptr_t lsda;
 //   uintptr_t selector;
 // };
-// struct _Unwind_LandingPadContext __wasm_lpad_context = ...;
+// struct _Unwind_LandingPadContext *_Unwind_GetWasmLPadContext(void);
 //
 // We pass a landing pad index, and the address of LSDA for the current function
 // to the personality function, and we retrieve the selector after it returns.
@@ -374,6 +375,7 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   }
   IRB.SetInsertPoint(CatchCI->getNextNode());
 
+  // Pseudocode: wasm_lpad_context = _Unwind_GetWasmLPadContext();
   CallInst *LPadContext =
       IRB.CreateCall(GetWasmLPadContextF, {}, OperandBundleDef("funclet", FPI));
   LPadContext->setCallingConv(GetWasmLPadContextF->getCallingConv());
@@ -389,13 +391,13 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   // Pseudocode: wasm.landingpad.index(Index);
   IRB.CreateCall(LPadIndexF, {FPI, IRB.getInt32(Index)});
 
-  // Pseudocode: __wasm_lpad_context.lpad_index = index;
+  // Pseudocode: wasm_lpad_context->lpad_index = index;
   IRB.CreateStore(IRB.getInt32(Index), LPadIndexField);
 
   // TODO Sometimes storing the LSDA address every time is not necessary, in
   // case it is already set in a dominating EH pad and there is no function call
   // between from that EH pad to here. Consider optimizing those cases.
-  // Pseudocode: __wasm_lpad_context.lsda = wasm.lsda();
+  // Pseudocode: wasm_lpad_context->lsda = wasm.lsda();
   IRB.CreateStore(IRB.CreateCall(LSDAF), LSDAField);
 
   // Pseudocode: personality_fn(exn);
@@ -403,12 +405,12 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
       IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", FPI));
   PersCI->setDoesNotThrow();
 
-  // Pseudocode: int selector = __wasm_lpad_context.selector;
+  // Pseudocode: int selector = wasm_lpad_context->selector;
   Instruction *Selector =
       IRB.CreateLoad(IRB.getInt32Ty(), SelectorField, "selector");
 
   // Replace the return value from wasm.get.ehselector() with the selector value
-  // loaded from __wasm_lpad_context.selector.
+  // loaded from wasm_lpad_context->selector.
   assert(GetSelectorCI && "wasm.get.ehselector() call does not exist");
   GetSelectorCI->replaceAllUsesWith(Selector);
   GetSelectorCI->eraseFromParent();
