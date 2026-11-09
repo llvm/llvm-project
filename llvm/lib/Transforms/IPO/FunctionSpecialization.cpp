@@ -63,7 +63,7 @@ static cl::opt<unsigned> MinFunctionSize(
              "instructions"));
 
 static cl::opt<unsigned>
-    MaxCodeSizeGrowth("funcspec-max-codesize-growth", cl::init(4), cl::Hidden,
+    MaxCodeSizeGrowth("funcspec-max-codesize-growth", cl::init(3), cl::Hidden,
                       cl::desc("Maximum codesize growth allowed per function"));
 
 static cl::opt<unsigned> MinCodeSizeSavings(
@@ -1107,6 +1107,10 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
   // would likely enable the called function to be inlined, specializing is a
   // good idea.
   int InliningBonus = 0;
+  // We apply a boost for performing indirect call promotion by increasing
+  // the default threshold by the threshold for indirect calls.
+  auto Params = getInlineParams(A->getContext());
+  Params.DefaultThreshold += InlineConstants::IndirectCallThreshold;
   for (User *U : A->users()) {
     if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
       continue;
@@ -1122,11 +1126,6 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
     // inlining looks profitable now. For example, one of its called
     // functions may be inlined into it, making the called function too large
     // to be inlined into this call site.
-    //
-    // We apply a boost for performing indirect call promotion by increasing
-    // the default threshold by the threshold for indirect calls.
-    auto Params = getInlineParams();
-    Params.DefaultThreshold += InlineConstants::IndirectCallThreshold;
     InlineCost IC =
         getInlineCost(*CS, CalledFunction, Params, CallerTTI, GetAC, GetTLI);
 

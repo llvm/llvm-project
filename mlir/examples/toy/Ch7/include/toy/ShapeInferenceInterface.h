@@ -14,8 +14,6 @@
 #ifndef MLIR_TUTORIAL_TOY_SHAPEINFERENCEINTERFACE_H_
 #define MLIR_TUTORIAL_TOY_SHAPEINFERENCEINTERFACE_H_
 
-#include "mlir/IR/OpDefinition.h"
-
 /// Include the auto-generated declarations.
 #include "toy/ShapeInferenceOpInterfaces.h.inc"
 

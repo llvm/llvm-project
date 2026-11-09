@@ -114,6 +114,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
   case VPExpandSCEVSC:
+  case VPConditionalInductionPHISC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -176,6 +177,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
   case VPExpandSCEVSC:
+  case VPConditionalInductionPHISC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -214,6 +216,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
   case VPExpandSCEVSC:
+  case VPConditionalInductionPHISC:
     return false;
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
@@ -1794,6 +1797,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
+  case VPInstruction::NumActiveLanes:
     return false;
   case VPInstruction::Intrinsic:
   case Instruction::Call:
@@ -5320,6 +5324,23 @@ bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
          "Blend should propagate first lane use");
   return vputils::onlyFirstLaneUsed(this);
 }
+
+InstructionCost
+VPConditionalInductionPHIRecipe::computeCost(ElementCount VF,
+                                             VPCostContext &Ctx) const {
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPConditionalInductionPHIRecipe::printRecipe(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "CONDITIONAL-INDUCTION-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   executePhiRecipe(this, *this, State, /*IsScalar=*/false, Name);

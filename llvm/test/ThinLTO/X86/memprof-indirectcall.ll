@@ -399,7 +399,10 @@ attributes #0 = { noinline optnone }
 
 ; REMARKS: call in clone main assigned to call function clone _Z3foov.memprof.1
 ; REMARKS: created clone _Z3foov.memprof.1
-; REMARKS: call in clone _Z3foov marked with memprof allocation attribute notcold
+;; The original foo is still reached through the indirect calls in bar, which
+;; carry both cold and not cold contexts that cannot be cloned apart, so its
+;; allocation keeps the ambiguous attribute.
+; REMARKS: call in clone _Z3foov marked with memprof allocation attribute ambiguous
 ; REMARKS: call in clone _Z3foov.memprof.1 marked with memprof allocation attribute cold
 
 
@@ -413,17 +416,17 @@ attributes #0 = { noinline optnone }
 ; IR:   call {{.*}} @_Z3barP1A(
 ; IR:   call {{.*}} @_Z3barP1A(
 ; IR: define internal {{.*}} @_Z3foov()
-; IR:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
+; IR:   call {{.*}} @_Znam(i64 0) #[[AMBIGUOUS:[0-9]+]]
 ; IR: define internal {{.*}} @_Z3foov.memprof.1()
 ; IR:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
-; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
+; IR: attributes #[[AMBIGUOUS]] = { "memprof"="ambiguous" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
 
 
+; STATS: 1 memprof-context-disambiguation - Number of ambiguous static allocations (possibly cloned)
+; STATS-BE: 1 memprof-context-disambiguation - Number of ambiguous static allocations (possibly cloned) during ThinLTO backend
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
-; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
-; STATS-BE: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
 ; STATS-BE: 2 memprof-context-disambiguation - Number of allocation versions (including clones) during ThinLTO backend
 ; STATS: 1 memprof-context-disambiguation - Number of function clones created during whole program analysis
 ; STATS-BE: 1 memprof-context-disambiguation - Number of function clones created during ThinLTO backend

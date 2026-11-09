@@ -7256,7 +7256,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::VECREDUCE_XOR:
   case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
-    if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
+    if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops, Flags))
       return Fold;
   }
   }
@@ -7785,7 +7785,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
   // foldCONCAT_VECTORS in getNode before this is called.
-  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
+  // VECTOR_SHUFFLE_VAR is not elementwise.
+  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS ||
+      Opcode == ISD::VECTOR_SHUFFLE_VAR)
     return SDValue();
 
   unsigned NumOps = Ops.size();
@@ -8417,6 +8419,22 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                     getBoolConstant(Overflow, DL, VTList.VTs[1], VT)},
                    Flags);
   }
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    // TODO: Support non-splat vector constants.
+    ConstantSDNode *C1 = isConstOrConstSplat(Ops[0]);
+    ConstantSDNode *C2 = isConstOrConstSplat(Ops[1]);
+    if (!C1 || !C2 || C1->isOpaque() || C2->isOpaque())
+      return SDValue();
+
+    const APInt &V1 = C1->getAPIntValue(), &V2 = C2->getAPIntValue();
+    APInt Lo = V1 * V2;
+    APInt Hi = (Opcode == ISD::SMUL_LOHI) ? APIntOps::mulhs(V1, V2)
+                                          : APIntOps::mulhu(V1, V2);
+    return getNode(ISD::MERGE_VALUES, DL, VTList,
+                   {getConstant(Lo, DL, VTList.VTs[0]),
+                    getConstant(Hi, DL, VTList.VTs[1])},
+                   Flags);
   }
   return SDValue();
 }
@@ -9039,6 +9057,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getConstant(Val.extractBits(ElementSize, Shift), DL, VT);
     }
     break;
+  case ISD::VECTOR_SHUFFLE_VAR: {
+    [[maybe_unused]] EVT MaskVT = N2.getValueType();
+    assert(VT == N1.getValueType() &&
+           "VECTOR_SHUFFLE_VAR result and source types don't match.");
+    assert(VT.isVector() && MaskVT.isVector() &&
+           "VECTOR_SHUFFLE_VAR operands must be vectors.");
+    assert(MaskVT.getVectorElementType().isInteger() &&
+           "VECTOR_SHUFFLE_VAR mask must be a vector of integers.");
+    assert(VT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "VECTOR_SHUFFLE_VAR mask has the wrong number of elements.");
+    break;
+  }
   case ISD::EXTRACT_SUBVECTOR: {
     EVT N1VT = N1.getValueType();
     assert(VT.isVector() && N1VT.isVector() &&
@@ -10400,7 +10430,7 @@ SDValue SelectionDAG::getMemcpy(
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
-  RTLIB::LibcallImpl MemCpyImpl = TLI->getMemcpyImpl();
+  RTLIB::LibcallImpl MemCpyImpl = Libcalls->getMemcpyImpl();
 
   if (OverrideTailCall.has_value()) {
     IsTailCall = *OverrideTailCall;
@@ -12281,28 +12311,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            VTList.VTs[0] == Ops[0].getValueType() &&
            VTList.VTs[0] == Ops[1].getValueType() &&
            "Binary operator types must match!");
-    // Constant fold.
-    ConstantSDNode *LHS = dyn_cast<ConstantSDNode>(Ops[0]);
-    ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Ops[1]);
-    if (LHS && RHS) {
-      unsigned Width = VTList.VTs[0].getScalarSizeInBits();
-      unsigned OutWidth = Width * 2;
-      APInt Val = LHS->getAPIntValue();
-      APInt Mul = RHS->getAPIntValue();
-      if (Opcode == ISD::SMUL_LOHI) {
-        Val = Val.sext(OutWidth);
-        Mul = Mul.sext(OutWidth);
-      } else {
-        Val = Val.zext(OutWidth);
-        Mul = Mul.zext(OutWidth);
-      }
-      Val *= Mul;
-
-      SDValue Hi =
-          getConstant(Val.extractBits(Width, Width), DL, VTList.VTs[0]);
-      SDValue Lo = getConstant(Val.trunc(Width), DL, VTList.VTs[0]);
-      return getNode(ISD::MERGE_VALUES, DL, VTList, {Lo, Hi}, Flags);
-    }
     break;
   }
   case ISD::FFREXP: {

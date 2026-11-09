@@ -2091,13 +2091,15 @@ public:
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",
                       GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    assert(Offset->getType()->isIntOrIntVectorTy(
+               getDataLayout().getIndexTypeSizeInBits(Ptr->getType())) &&
+           "Offset must match index type");
     return CreateGEP(getInt8Ty(), Ptr, Offset, Name, NW);
   }
 
   Value *CreateInBoundsPtrAdd(Value *Ptr, Value *Offset,
                               const Twine &Name = "") {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
-                     GEPNoWrapFlags::inBounds());
+    return CreatePtrAdd(Ptr, Offset, Name, GEPNoWrapFlags::inBounds());
   }
 
   /// Create a ptradd with an unsigned constant offset. The offset must fit into
@@ -2926,6 +2928,8 @@ public:
   /// Create an assume intrinsic call that represents a nonnull assumption on
   /// the provided pointer.
   LLVM_ABI CallInst *CreateNonnullAssumption(Value *PtrValue);
+
+  LLVM_ABI CallInst *CreateRangeAssumption(Value *Int, ConstantRange Range);
 };
 
 /// This provides a uniform API for creating instructions and inserting

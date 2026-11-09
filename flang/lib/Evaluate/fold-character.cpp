@@ -164,6 +164,6 @@ Expr<Type<TypeCategory::Character>> FoldOperation(
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif
-FOR_EACH_CHARACTER_KIND(template class ExpressionBase, )
+template class ExpressionBase<Type<TypeCategory::Character>>;
 template class ExpressionBase<SomeCharacter>;
 } // namespace Fortran::evaluate
