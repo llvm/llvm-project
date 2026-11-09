@@ -5943,9 +5943,10 @@ bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
 // reciprocal of the throughput). If the model has no information for this
 // instruction then we assume the reciprocal throughput is 1 and use
 // DefaultLatency for the latency.
-InstructionCost getLatencyFromSchedModel(const AArch64Subtarget *ST,
-                                         unsigned Inst, unsigned NumInst,
-                                         InstructionCost DefaultLatency) {
+static InstructionCost
+getLatencyFromSchedModel(const AArch64Subtarget *ST, unsigned Inst,
+                         unsigned NumInst, InstructionCost DefaultLatency) {
+  assert(NumInst != 0 && "Can't calculate latency of zero instructions");
   const MCSchedModel &Sched = ST->getSchedModel();
   const TargetInstrInfo *TII = ST->getInstrInfo();
   unsigned SchedClass = TII->get(Inst).getSchedClass();
@@ -6171,10 +6172,12 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
         // Latency doesn't make much sense for stores, so just return 1
         if (Opcode == Instruction::Store)
           return 1;
+        // If the subtarget has overridden the load latency then use that
+        // instead of querying the SchedModel.
+        if (ST->getFixedLoadLatency())
+          return (LT.first - 1) + ST->getFixedLoadLatency();
         // Lookup the load opcode based on interleaving factor and element size
-        const unsigned Opcodes[4][4] = {
-            {AArch64::LD1Onev16b, AArch64::LD1Onev8h, AArch64::LD1Onev4s,
-             AArch64::LD1Onev2d},
+        const unsigned Opcodes[3][4] = {
             {AArch64::LD2Twov16b, AArch64::LD2Twov8h, AArch64::LD2Twov4s,
              AArch64::LD2Twov2d},
             {AArch64::LD3Threev16b, AArch64::LD3Threev8h, AArch64::LD3Threev4s,
@@ -6187,7 +6190,7 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
         assert(LogElemSize >= 3 && LogElemSize <= 6 &&
                "Unexpected element size");
         assert(Factor <= 4 && "Unexpected interleaving factor");
-        unsigned Inst = Opcodes[Factor - 1][LogElemSize - 3];
+        unsigned Inst = Opcodes[Factor - 2][LogElemSize - 3];
         return getLatencyFromSchedModel(ST, Inst, Num, ST->getLoadLatency());
       }
       return Factor * Num;
