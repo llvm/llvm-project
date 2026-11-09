@@ -475,7 +475,10 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
 
     Block.PhysLiveRegsAtExit = getPhysLiveRegs(LiveUnits);
     auto FirstTerminatorInsertPt = MBB.getFirstTerminator();
-    auto FirstNonPhiInsertPt = MBB.getFirstNonPHI();
+    // Match the loop below, which skips debug instructions but not pseudo
+    // probes.
+    auto FirstNonPhiInsertPt = skipDebugInstructionsForward(
+        MBB.getFirstNonPHI(), MBB.end(), /*SkipPseudoOp=*/false);
     for (MachineInstr &MI : reverse(MBB)) {
       if (MI.isDebugInstr())
         continue;
