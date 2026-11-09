@@ -97,7 +97,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   ValueObject *m_real_child = nullptr;
@@ -133,7 +133,7 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::GetChildAtIndex(
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "Value")
     return 0;
   return llvm::createStringErrorV("type has no child named '{0}'", name);

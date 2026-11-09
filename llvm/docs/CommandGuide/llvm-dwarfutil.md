@@ -41,8 +41,26 @@ potentially significantly reducing the size of output debug info.
 That option is enabled by default.
 :::
 
+:::{option} --compress-debug-sections=<format>
+Compress the debug sections of the output using the specified format.
+\<format> can be one of the following values:
+
+- `none`: do not compress debug sections.
+- `zlib`: compress debug sections using zlib.
+- `zstd`: compress debug sections using zstd.
+
+`zlib` is used if `=<format>` is omitted. By default, the output debug sections
+are compressed only if the input debug sections are compressed, using the same
+format.
+:::
+
 :::{option} --help, -h
 Print a summary of command line options.
+:::
+
+:::{option} --no-compress-debug-sections
+Disable {option}`--compress-debug-sections`. Equivalent to
+`--compress-debug-sections=none`.
 :::
 
 :::{option} --no-garbage-collection

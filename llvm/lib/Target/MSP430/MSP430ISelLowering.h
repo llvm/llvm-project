@@ -20,7 +20,10 @@
 
 namespace llvm {
   class MSP430Subtarget;
+  struct MSP430Options;
   class MSP430TargetLowering : public TargetLowering {
+    const MSP430Options &CLOpts;
+
   public:
     explicit MSP430TargetLowering(const TargetMachine &TM,
                                   const MSP430Subtarget &STI);

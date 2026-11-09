@@ -66,7 +66,7 @@ mlir::makeOptimizingTransformer(unsigned optLevel, unsigned sizeLevel,
     tuningOptions.LoopVectorization = true;
     tuningOptions.SLPVectorization = true;
 
-    PassBuilder pb(targetMachine, tuningOptions);
+    PassBuilder pb(m->getContext(), targetMachine, tuningOptions);
 
     pb.registerModuleAnalyses(mam);
     pb.registerCGSCCAnalyses(cgam);

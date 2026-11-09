@@ -214,7 +214,7 @@ TEST(IntrinsicAttributes,
 TEST(IntrinsicAttributes, TestGetFnAttributesBug) {
   using namespace Intrinsic;
   LLVMContext Context;
-  AttributeSet AS = getFnAttributes(Context, experimental_guard);
+  AttributeSet AS = getFnAttributes(Context, coro_resume);
   EXPECT_FALSE(AS.hasAttributes());
 }
 
