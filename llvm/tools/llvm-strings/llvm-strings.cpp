@@ -18,6 +18,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -201,13 +202,19 @@ using char_t = char32_t;
 static size_t mbrtoc(char_t *Ch, const char *S, size_t N,
                      std::mbstate_t *MBState) {
   size_t Result = std::mbrtoc32(Ch, S, N, MBState);
+  // FIXME: Remove once MemorySanitizer intercepts mbrtoc32/c32rtomb.
+  if (S && Ch && Result != (size_t)-1 && Result != (size_t)-2)
+    __msan_unpoison(Ch, sizeof(*Ch));
   if (Result == 0 && *Ch)
     Result = (size_t)-3;
   return Result;
 }
 
 static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
-  return std::c32rtomb(S, Ch, MBState);
+  size_t Result = std::c32rtomb(S, Ch, MBState);
+  if (S && Result != (size_t)-1)
+    __msan_unpoison(S, Result);
+  return Result;
 }
 #endif
 
