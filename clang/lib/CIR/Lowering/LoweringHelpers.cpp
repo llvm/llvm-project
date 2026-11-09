@@ -195,11 +195,12 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
 /// \param currentDims the shpae of tensor we're going to convert to
 /// \param dimIndex the current dimension we're processing
 /// \param currentIndex the current index in the values array
+/// \param convertedElementType the lowered storage type of each element
 template <typename AttrTy, typename StorageTy>
 bool convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
-    const llvm::SmallVectorImpl<int64_t> &currentDims,
-    mlir::Type convertedElementType, int64_t dimIndex, int64_t currentIndex) {
+    const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
+    int64_t currentIndex, mlir::Type convertedElementType) {
   if (auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
     if (auto arrayType = mlir::dyn_cast<cir::ArrayType>(attr.getType())) {
       for (auto element : stringAttr) {
@@ -235,8 +236,8 @@ bool convertToDenseElementsAttrImpl(
 
     if (auto subArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(eltAttr)) {
       convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values, currentDims,
-                                             convertedElementType, dimIndex,
-                                             currentIndex);
+                                             dimIndex, currentIndex,
+                                             convertedElementType);
       currentIndex += elementsSizeInCurrentDim;
       continue;
     }
@@ -274,9 +275,9 @@ std::optional<mlir::DenseElementsAttr> convertToDenseElementsAttr(
   llvm::SmallVector<StorageTy> values(vectorSize, zero);
 
   if (!convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims,
-                                              convertedElementType,
-                                              /*currentDim=*/0,
-                                              /*initialIndex=*/0))
+                                              /*dimIndex=*/0,
+                                              /*currentIndex=*/0,
+                                              convertedElementType))
     return std::nullopt;
 
   return mlir::DenseElementsAttr::get(
