@@ -15,7 +15,9 @@
 #include "BPFCORE.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -34,6 +36,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <optional>
 
@@ -1043,9 +1046,18 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
 
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // Visit array element type.
-  uint32_t ElemTypeId;
-  const DIType *ElemType = CTy->getBaseType();
+  uint32_t ElemTypeId = 0;
+  const DIType *ElemType = tryRemoveAtomicType(CTy->getBaseType());
   visitTypeEntry(ElemType, ElemTypeId, false, false);
+  if (!ElemTypeId) {
+    SmallString<128> Message;
+    raw_svector_ostream Err(Message);
+    Err << "unsupported BTF array element type";
+    if (ElemType && !ElemType->getName().empty())
+      Err << " '" << ElemType->getName() << '\'';
+    OS.getContext().reportError({}, Message);
+    // Still register the array so enclosing types can resolve their references.
+  }
 
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
