@@ -18,6 +18,10 @@ void enabled(void *p, const void *q, size_t n) {
   memcpy(p, q, n); // expected-warning{{function 'memcpy' is unsafe}}
 }
 
+// A function is checked after the pragmas that follow it are read, so this
+// declaration makes ignored() the first function checked once they apply.
+void ignored(void *p, const void *q, size_t n);
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage-in-libc-call-memory"
 
