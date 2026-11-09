@@ -7,7 +7,7 @@
 
 int foo();
 
-// CIR:      cir.func {{.*}}@_Z3barv() cc(spir_function) attributes {convergent, mustprogress, norecurse, nothrow, nounwind, optnone} {
+// CIR:      cir.func {{.*}}@_Z3barv() cc(spir_function) requires_call_conv_lowering attributes {convergent, mustprogress, norecurse, nothrow, nounwind, optnone} {
 // CIR-NEXT:   %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[A_ASCAST:.*]] = cir.cast address_space %[[A]] : !cir.ptr<!s32i> -> !cir.ptr<!s32i, target_address_space(4)>
 // CIR-NEXT:   %[[CALL:.*]] = cir.call @_Z3foov() cc(spir_function) nothrow nounwind {convergent} : () -> (!s32i {llvm.noundef})
@@ -27,7 +27,7 @@ void bar() {
   int a = foo();
 }
 
-// CIR:      cir.func {{.*}}@_Z3foov() -> (!s32i {llvm.noundef}) cc(spir_function) attributes {convergent, mustprogress, norecurse, nothrow, nounwind, optnone} {
+// CIR:      cir.func {{.*}}@_Z3foov() -> (!s32i {llvm.noundef}) cc(spir_function) requires_call_conv_lowering attributes {convergent, mustprogress, norecurse, nothrow, nounwind, optnone} {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT:   cir.store %[[ONE]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
@@ -62,8 +62,5 @@ int main() {
   return 0;
 }
 
-// ClangIR does not yet emit the "no-trapping-math" and
-// "stack-protector-buffer-size" default function attributes.
-// LLVM-CIR: attributes #[[ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone }
-// OGCG: attributes #[[ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// LLVM: attributes #[[ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // LLVM: attributes #[[ATTR1]] = { convergent nounwind }

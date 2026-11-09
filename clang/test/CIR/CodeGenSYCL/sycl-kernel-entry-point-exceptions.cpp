@@ -151,11 +151,8 @@ namespace ns4 {
 // CIR: cir.call @_ZN3ns418sycl_kernel_launchI2KNILi4EEJ2KTILi4ELi0EEEEEvPKcDpT0_(%{{.*}}) nothrow : (
 // CIR: cir.eh.terminate
 
-// The terminate scope lowers to no EH instructions, but ClangIR still attaches
-// a personality function.
 // LLVM: ; Function Attrs: mustprogress noinline nounwind optnone
-// LLVM-CIR-NEXT: define dso_local void @_ZN3ns44skepE2KTILi4ELi0EE() #{{[0-9]+}} personality ptr @__gxx_personality_v0 {
-// OGCG-NEXT: define dso_local void @_ZN3ns44skepE2KTILi4ELi0EE() #{{[0-9]+}} {
+// LLVM-NEXT: define dso_local void @_ZN3ns44skepE2KTILi4ELi0EE() #{{[0-9]+}} {
 // LLVM-NOT: invoke
 // LLVM: call void @_ZN3ns418sycl_kernel_launchI2KNILi4EEJ2KTILi4ELi0EEEEEvPKcDpT0_(ptr noundef @.str.3) #{{[0-9]+}}
 // LLVM: ret void
