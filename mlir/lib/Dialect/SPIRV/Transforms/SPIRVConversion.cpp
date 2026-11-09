@@ -1103,9 +1103,9 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       auto origVecType = dyn_cast<VectorType>(origType);
       if (!origVecType) {
         // We need a placeholder for the old argument that will be erased later.
-        Value result = UnrealizedConversionCastOp::create(
-                           rewriter, loc, origType, ValueRange())
-                           .getResult(0);
+        auto castOp = UnrealizedConversionCastOp::create(
+            rewriter, loc, origType, ValueRange());
+        Value result = castOp.getResult(0);
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
@@ -1117,9 +1117,9 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       auto targetShape = getTargetShape(origVecType);
       if (!targetShape) {
         // We need a placeholder for the old argument that will be erased later.
-        Value result = UnrealizedConversionCastOp::create(
-                           rewriter, loc, origType, ValueRange())
-                           .getResult(0);
+        auto castOp = UnrealizedConversionCastOp::create(
+            rewriter, loc, origType, ValueRange());
+        Value result = castOp.getResult(0);
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
