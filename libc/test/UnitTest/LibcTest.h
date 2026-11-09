@@ -44,17 +44,42 @@ namespace testing {
 // conditions for such cases.
 enum class TestCond { EQ, NE, LT, LE, GT, GE };
 
+// Source-compatible with GoogleMock's ::testing::MatchResultListener so custom
+// matchers work unchanged under both LibcTest and GoogleTest.
+class MatchResultListener {
+  TestLogger *logger;
+
+public:
+  LIBC_INLINE explicit MatchResultListener(TestLogger *logger)
+      : logger(logger) {}
+
+  LIBC_INLINE TestLogger *stream() { return logger; }
+  LIBC_INLINE bool IsInterested() const { return logger != nullptr; }
+
+  template <typename T>
+  LIBC_INLINE MatchResultListener &operator<<(const T &val) {
+    if (logger != nullptr)
+      *logger << val;
+    return *this;
+  }
+};
+
 struct MatcherBase {
-  virtual ~MatcherBase() {}
-  virtual void explainError() { tlog << "unknown error\n"; }
-  // Override and return true to skip `explainError` step.
-  virtual bool is_silent() const { return false; }
+  using is_gtest_matcher = void;
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  template <typename Stream> LIBC_INLINE void DescribeTo(Stream *os) const {
+    *os << "matches";
+  }
+
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  template <typename Stream>
+  LIBC_INLINE void DescribeNegationTo(Stream *os) const {
+    *os << "does not match";
+  }
 };
 
-template <typename T> struct Matcher : public MatcherBase {
-  bool match(const T &t);
-};
-
+template <typename T> struct Matcher : public MatcherBase {};
 namespace internal {
 
 // A simple location object to allow consistent passing of __FILE__ and
@@ -177,6 +202,20 @@ bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
 bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
 
+void mark_match_failure(const char *LHSStr, const char *RHSStr, Location Loc);
+
+template <typename MatcherT, typename ValType>
+LIBC_INLINE bool match_and_explain(const MatcherT &Matcher,
+                                   const ValType &Value, const char *MatcherStr,
+                                   const char *ValueStr, Location Loc) {
+  MatchResultListener NullListener(nullptr);
+  if (Matcher.MatchAndExplain(Value, &NullListener))
+    return true;
+  mark_match_failure(ValueStr, MatcherStr, Loc);
+  MatchResultListener Listener(&tlog);
+  Matcher.MatchAndExplain(Value, &Listener);
+  return false;
+}
 } // namespace internal
 
 struct TestOptions {
@@ -204,16 +243,6 @@ public:
 
 protected:
   static void addTest(Test *T);
-
-  bool testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
-                 const char *RHSStr, internal::Location Loc);
-
-  template <typename MatcherT, typename ValType>
-  bool matchAndExplain(MatcherT &&Matcher, ValType Value,
-                       const char *MatcherStr, const char *ValueStr,
-                       internal::Location Loc) {
-    return testMatch(Matcher.match(Value), Matcher, ValueStr, MatcherStr, Loc);
-  }
 
   bool testProcessExits(cpp::function_ref<void(void)> Func, int ExitCode,
                         const char *LHSStr, const char *RHSStr,
@@ -539,9 +568,10 @@ CString libc_make_test_file_path_func(const char *file_name);
 // Custom matcher checks.
 
 #define LIBC_TEST_MATCH_(MATCHER, MATCH, MATCHER_STR, MATCH_STR, RET_OR_EMPTY) \
-  LIBC_TEST_SCAFFOLDING_(matchAndExplain(MATCHER, MATCH, MATCHER_STR,          \
-                                         MATCH_STR, LIBC_TEST_LOC_()),         \
-                         RET_OR_EMPTY)
+  LIBC_TEST_SCAFFOLDING_(                                                      \
+      LIBC_NAMESPACE::testing::internal::match_and_explain(                    \
+          MATCHER, MATCH, MATCHER_STR, MATCH_STR, LIBC_TEST_LOC_()),           \
+      RET_OR_EMPTY)
 
 #define EXPECT_THAT(MATCH, MATCHER)                                            \
   LIBC_TEST_MATCH_(MATCHER, MATCH, #MATCHER, #MATCH, )

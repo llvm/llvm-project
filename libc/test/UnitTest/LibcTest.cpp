@@ -313,21 +313,12 @@ bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
                    RHSStr, Loc);
 }
 
-} // namespace internal
-
-bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
-                     const char *RHSStr, internal::Location Loc) {
-  if (MatchResult)
-    return true;
-
-  internal::current_context->markFail();
-  if (!Matcher.is_silent()) {
-    tlog << Loc;
-    tlog << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";
-    Matcher.explainError();
-  }
-  return false;
+void mark_match_failure(const char *LHSStr, const char *RHSStr, Location Loc) {
+  current_context->markFail();
+  tlog << Loc;
+  tlog << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";
 }
 
+} // namespace internal
 } // namespace testing
 } // namespace LIBC_NAMESPACE_DECL

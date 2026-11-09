@@ -18,15 +18,14 @@ namespace testing {
 
 class FormatSectionMatcher : public Matcher<scanf_core::FormatSection> {
   scanf_core::FormatSection expected;
-  scanf_core::FormatSection actual;
 
 public:
   FormatSectionMatcher(scanf_core::FormatSection expectedValue)
       : expected(expectedValue) {}
 
-  bool match(scanf_core::FormatSection actualValue);
-
-  void explainError() override;
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  bool MatchAndExplain(const scanf_core::FormatSection &actual,
+                       MatchResultListener *listener) const;
 };
 
 } // namespace testing
