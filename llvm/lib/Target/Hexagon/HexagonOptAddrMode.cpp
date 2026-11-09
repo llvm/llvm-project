@@ -15,7 +15,9 @@
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -1184,6 +1186,30 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
     G.build();
     L.computeLiveIns();
     L.resetLiveIns();
+
+    // The RDF-based recomputation can leave stale (over-approximate) live-ins,
+    // which later confuses passes like IfConversion into inserting incorrect
+    // implicit-use operands. Correct them with a conventional backward
+    // recomputation in post-order (successors before predecessors). Skip the
+    // entry block (its calling-convention live-ins were set from the RDF
+    // LiveMap by resetLiveIns() and can't be recovered by a backward walk) and
+    // EH pads (exception pointer/selector are runtime-established).
+    SmallVector<MachineBasicBlock *, 16> Candidates;
+    for (MachineBasicBlock *MBB : post_order(&MF))
+      if (!MBB->isEntryBlock() && !MBB->isEHPad())
+        Candidates.push_back(MBB);
+
+    // Repeat while live-ins change (predecessors may need updating), bounded
+    // to keep compile time in check.
+    constexpr unsigned MaxLiveInSweeps = 8;
+    for (unsigned Sweep = 0; Sweep != MaxLiveInSweeps; ++Sweep) {
+      bool AnyChanged = false;
+      for (MachineBasicBlock *MBB : Candidates)
+        AnyChanged |= recomputeLiveIns(*MBB);
+      if (!AnyChanged)
+        break;
+    }
+
     L.resetKills();
   }
 
