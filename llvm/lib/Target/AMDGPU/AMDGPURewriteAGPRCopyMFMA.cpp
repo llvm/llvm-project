@@ -13,20 +13,23 @@
 /// pass will attempt to delete the cross register bank copy and replace the
 /// MFMA opcode.
 ///
-/// TODO:
-/// - Handle rewrites of phis. This must be more careful than normal about the
-///   reassignment. We do not want to introduce an AGPR-to-AGPR copy inside of a
-///   loop, so it depends on the exact assignment of the copy.
+/// After a rewrite, copies between any two registers assigned to AGPRs (e.g.
+/// the loop-carried copy from PHI elimination, which the coalescer could not
+/// join across the VGPR/AGPR classes) are joined where possible, so they do
+/// not become AGPR-to-AGPR copies.
 ///
+/// TODO:
 ///  - Update LiveIntervals incrementally instead of recomputing from scratch
 ///
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "GCNRegPressure.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/LiveStacks.h"
@@ -50,6 +53,8 @@ namespace {
 
 STATISTIC(NumMFMAsRewrittenToAGPR,
           "Number of MFMA instructions rewritten to use AGPR form");
+STATISTIC(NumCopyRelatedRegsJoined,
+          "Number of copy-related registers joined after an AGPR rewrite");
 
 /// Map from spill slot frame index to list of instructions which reference it.
 using SpillReferenceMap = DenseMap<int, SmallVector<MachineInstr *, 4>>;
@@ -66,6 +71,8 @@ class AMDGPURewriteAGPRCopyMFMAImpl {
   LiveStacks &LSS;
   const RegisterClassInfo &RegClassInfo;
   MachineDominatorTree &MDT;
+  /// Null if the analysis is not available.
+  LiveDebugVariables *LDV;
 
   bool attemptReassignmentsToAGPR(SmallSetVector<Register, 4> &InterferingRegs,
                                   MCPhysReg PrefPhysReg) const;
@@ -75,10 +82,11 @@ public:
                                 LiveRegMatrix &LRM, LiveIntervals &LIS,
                                 LiveStacks &LSS,
                                 const RegisterClassInfo &RegClassInfo,
-                                MachineDominatorTree &MDT)
+                                MachineDominatorTree &MDT,
+                                LiveDebugVariables *LDV)
       : MF(MF), ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
         TRI(*ST.getRegisterInfo()), MRI(MF.getRegInfo()), VRM(VRM), LRM(LRM),
-        LIS(LIS), LSS(LSS), RegClassInfo(RegClassInfo), MDT(MDT) {}
+        LIS(LIS), LSS(LSS), RegClassInfo(RegClassInfo), MDT(MDT), LDV(LDV) {}
 
   bool isRewriteCandidate(const MachineInstr &MI) const {
     return TII.isMAI(MI) && AMDGPU::getAGPRFormOp(MI.getOpcode()) != -1;
@@ -116,6 +124,37 @@ public:
   bool recomputeRegClassExceptRewritable(
       Register Reg, SmallVectorImpl<MachineInstr *> &RewriteCandidates,
       SmallSetVector<Register, 4> &RewriteRegs) const;
+
+  /// \returns the slot index at which the def operand \p MO defines its
+  /// register.
+  SlotIndex getDefIndex(const MachineOperand &MO) const {
+    return LIS.getInstructionIndex(*MO.getParent())
+        .getRegSlot(MO.isEarlyClobber());
+  }
+
+  /// Collect in \p Copies the copies of \p Src that define \p Dst. \returns
+  /// true if there are any and removing them preserves every value: \p Dst
+  /// and \p Src only overlap where \p Dst holds the value it copied.
+  bool collectJoinableCopies(Register Dst, Register Src,
+                             SmallVectorImpl<MachineInstr *> &Copies) const;
+
+  /// Clear the dead flag of every def of \p Reg that is not dead in \p LI.
+  void clearStaleDeadFlags(Register Reg, const LiveInterval &LI) const;
+
+  /// Erase \p Copy and remove it from the slot indexes.
+  void eraseCopy(MachineInstr &Copy) const;
+
+  /// Join \p Dst into \p Src if \p Dst is defined by copies of \p Src and the
+  /// two only overlap where they hold the same value. \returns true on
+  /// success; \p Dst then has no defs or uses left.
+  bool tryJoinCopyPair(Register Dst, Register Src) const;
+
+  /// Join \p Reg with one of its AGPR copy partners. \returns true on success.
+  bool joinWithCopyPartner(Register Reg) const;
+
+  /// Join the copy-related registers assigned to AGPRs until nothing more
+  /// joins.
+  void joinAllCopyPartners() const;
 
   bool tryFoldCopiesToAGPR(Register VReg, MCRegister AssignedAGPR) const;
   bool tryFoldCopiesFromAGPR(Register VReg, MCRegister AssignedAGPR) const;
@@ -314,6 +353,204 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
   return true;
 }
 
+bool AMDGPURewriteAGPRCopyMFMAImpl::collectJoinableCopies(
+    Register Dst, Register Src, SmallVectorImpl<MachineInstr *> &Copies) const {
+  const LiveInterval &DstLI = LIS.getInterval(Dst);
+  const LiveInterval &SrcLI = LIS.getInterval(Src);
+
+  // Dst must be (partly) defined by copies of Src with matching subregisters.
+  // Every other def of Dst must happen where Src is dead, and every def of Src
+  // where Dst is dead. Then wherever both are live, Dst holds the value it
+  // copied from Src and neither has been redefined, so renaming Dst to Src and
+  // deleting the copies preserves every value.
+  for (MachineOperand &MO : MRI.def_operands(Dst)) {
+    MachineInstr &MI = *MO.getParent();
+    bool IsCopyOfSrc =
+        MI.isCopy() && MI.getOperand(1).getReg() == Src &&
+        MI.getOperand(0).getSubReg() == MI.getOperand(1).getSubReg();
+    if (!IsCopyOfSrc) {
+      if (SrcLI.liveAt(getDefIndex(MO)))
+        return false;
+      continue;
+    }
+
+    // The copy defines every lane it writes in Dst, also if the lane is
+    // undefined in Src (or the whole read is undef). After the join, a use of
+    // such a lane would have no reaching def of Src. Do not join then.
+    LaneBitmask ReadLanes =
+        TRI.getSubRegIndexLaneMask(MI.getOperand(1).getSubReg()) &
+        MRI.getMaxLaneMaskForVReg(Src);
+    if (getLiveLaneMask(SrcLI, LIS.getInstructionIndex(MI), MRI, ReadLanes) !=
+        ReadLanes)
+      return false;
+    Copies.push_back(&MI);
+  }
+  if (Copies.empty())
+    return false;
+
+  return none_of(MRI.def_operands(Src), [&](const MachineOperand &MO) {
+    return DstLI.liveAt(getDefIndex(MO));
+  });
+}
+
+void AMDGPURewriteAGPRCopyMFMAImpl::clearStaleDeadFlags(
+    Register Reg, const LiveInterval &LI) const {
+  for (MachineOperand &MO : MRI.def_operands(Reg)) {
+    if (!MO.isDead())
+      continue;
+    // The def is read if a lane it writes is live after the instruction.
+    LaneBitmask Lanes = TRI.getSubRegIndexLaneMask(MO.getSubReg());
+    if (getLiveLaneMask(LI, getDefIndex(MO).getDeadSlot(), MRI, Lanes).any())
+      MO.setIsDead(false);
+  }
+}
+
+void AMDGPURewriteAGPRCopyMFMAImpl::eraseCopy(MachineInstr &Copy) const {
+  // SplitKit bundles the copies of a register that no single subregister index
+  // covers. Remove only the copy, not the bundle.
+  if (Copy.isBundled()) {
+    LIS.getSlotIndexes()->removeSingleMachineInstrFromMaps(Copy);
+    Copy.eraseFromBundle();
+    return;
+  }
+  LIS.RemoveMachineInstrFromMaps(Copy);
+  Copy.eraseFromParent();
+}
+
+bool AMDGPURewriteAGPRCopyMFMAImpl::tryJoinCopyPair(Register Dst,
+                                                    Register Src) const {
+  // Only join registers that ended up in AGPRs; VGPR copies are the
+  // coalescer's business.
+  MCRegister DstPhys = getAssignedAGPR(Dst), SrcPhys = getAssignedAGPR(Src);
+  if (!DstPhys || !SrcPhys || DstPhys == SrcPhys)
+    return false;
+
+  if (VRM.getStackSlot(Dst) != VirtRegMap::NO_STACK_SLOT ||
+      VRM.getStackSlot(Src) != VirtRegMap::NO_STACK_SLOT)
+    return false;
+
+  const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
+  const TargetRegisterClass *JoinedRC =
+      TRI.getCommonSubClass(MRI.getRegClass(Dst), SrcRC);
+  if (!JoinedRC)
+    return false;
+
+  SmallVector<MachineInstr *, 4> Copies;
+  if (!collectJoinableCopies(Dst, Src, Copies))
+    return false;
+
+  // Take Dst and Src out of the matrix, so that their own registers count as
+  // free.
+  LiveInterval &DstLI = LIS.getInterval(Dst);
+  LRM.unassign(DstLI);
+  LRM.unassign(LIS.getInterval(Src));
+
+  // The joined live range can be larger than the two old ranges together: a
+  // read of a lane that is undefined in one register can see a def of that
+  // lane in the other register. Rename tentatively, with the copies detached
+  // from Src, and check the interference of the range that will be assigned.
+  SmallVector<MachineOperand *, 16> DstOperands;
+  for (MachineOperand &MO : MRI.reg_operands(Dst)) {
+    if (!is_contained(Copies, MO.getParent()))
+      DstOperands.push_back(&MO);
+  }
+  // Set the operands of Dst outside the copies to NewReg, the source of the
+  // copies to CopySrc and the class of Src to RC, then recompute the interval
+  // of Src.
+  auto RenameAndRecomputeSrc =
+      [&](Register NewReg, Register CopySrc,
+          const TargetRegisterClass *RC) -> LiveInterval & {
+    for (MachineOperand *MO : DstOperands)
+      MO->setReg(NewReg);
+    for (MachineInstr *Copy : Copies)
+      Copy->getOperand(1).setReg(CopySrc);
+    MRI.setRegClass(Src, RC);
+    LIS.removeInterval(Src);
+    LiveInterval &LI = LIS.createAndComputeVirtRegInterval(Src);
+    // The interference queries cached for Src are for its old live range.
+    LRM.invalidateVirtRegs();
+    return LI;
+  };
+
+  LiveInterval &Joined = RenameAndRecomputeSrc(Src, Dst, JoinedRC);
+  // Prefer Src's register, which the copies read from, then Dst's. Else take
+  // any free register of the class, but not a callee-saved one the function
+  // does not use yet, which would need a save and restore.
+  auto IsFree = [&](MCRegister Cand) {
+    return JoinedRC->contains(Cand) &&
+           LRM.checkInterference(Joined, Cand) == LiveRegMatrix::IK_Free;
+  };
+  MCRegister Target;
+  if (IsFree(SrcPhys)) {
+    Target = SrcPhys;
+  } else if (IsFree(DstPhys)) {
+    Target = DstPhys;
+  } else {
+    for (MCRegister Cand : RegClassInfo.getOrder(JoinedRC)) {
+      if ((!RegClassInfo.getLastCalleeSavedAlias(Cand) ||
+           LRM.isPhysRegUsed(Cand)) &&
+          IsFree(Cand)) {
+        Target = Cand;
+        break;
+      }
+    }
+  }
+  if (!Target) {
+    LLVM_DEBUG(dbgs() << "Not joining " << printReg(Dst, &TRI) << " into "
+                      << printReg(Src, &TRI)
+                      << ": the joined live range interferes\n");
+    LRM.assign(DstLI, DstPhys);
+    LRM.assign(RenameAndRecomputeSrc(Dst, Src, SrcRC), SrcPhys);
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "Joining " << printReg(Dst, &TRI) << " into "
+                    << printReg(Src, &TRI) << " in " << printReg(Target, &TRI)
+                    << ", removing " << Copies.size() << " copies\n");
+
+  for (MachineInstr *Copy : Copies)
+    eraseCopy(*Copy);
+  LIS.removeInterval(Dst);
+  // Src's range now extends over Dst's; a kill flag on Src may be stale.
+  MRI.clearKillFlags(Src);
+  // A def that was dead can be read now, by a use of a lane that was undefined
+  // in the other register.
+  clearStaleDeadFlags(Src, Joined);
+  LRM.assign(Joined, Target);
+  if (LDV)
+    LDV->splitRegister(Dst, {Src}, LIS);
+  ++NumCopyRelatedRegsJoined;
+  return true;
+}
+
+bool AMDGPURewriteAGPRCopyMFMAImpl::joinWithCopyPartner(Register Reg) const {
+  // Collect the pairs first: trying a join rewrites the use lists.
+  SmallSetVector<std::pair<Register, Register>, 4> Pairs;
+  for (MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
+    if (MI.isCopy() && MI.getOperand(0).getReg().isVirtual() &&
+        MI.getOperand(1).getReg().isVirtual())
+      Pairs.insert({MI.getOperand(0).getReg(), MI.getOperand(1).getReg()});
+  }
+
+  return any_of(Pairs, [&](std::pair<Register, Register> Pair) {
+    return tryJoinCopyPair(Pair.first, Pair.second);
+  });
+}
+
+void AMDGPURewriteAGPRCopyMFMAImpl::joinAllCopyPartners() const {
+  // A join fails if no AGPR is free for the joined live range. Another join
+  // can free one, so retry until nothing more joins.
+  bool Joined = true;
+  while (Joined) {
+    Joined = false;
+    for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+      Register VReg = Register::index2VirtReg(I);
+      if (getAssignedAGPR(VReg))
+        Joined |= joinWithCopyPartner(VReg);
+    }
+  }
+}
+
 /// Attempt to reassign the registers in \p InterferingRegs to be AGPRs, with a
 /// preference to use \p PhysReg first. Returns false if the reassignments
 /// cannot be trivially performed.
@@ -383,7 +620,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesToAGPR(
     if (!CopySrcReg.isVirtual())
       continue;
 
-    // TODO: Handle loop phis copied to AGPR. e.g.
+    // Loop phis copied to AGPR, e.g.
     //
     // loop:
     //   %phi:vgpr = COPY %mfma:vgpr
@@ -393,8 +630,9 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesToAGPR(
     // endloop:
     //   %agpr = mfma
     //
-    // We need to be sure that %phi is assigned to the same physical register as
-    // %mfma, or else we will just be moving copies into the loop.
+    // are rewritten like any other chain; joinAllCopyPartners then joins %phi
+    // with %mfma so the loop-carried copy is not an AGPR-to-AGPR copy in the
+    // loop.
 
     for (MachineInstr &CopySrcDefMI : MRI.def_instructions(CopySrcReg)) {
       if (isRewriteCandidate(CopySrcDefMI) &&
@@ -692,6 +930,11 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
       MadeChange = true;
   }
 
+  // Join after all rewrites. A join takes an AGPR that a later rewrite could
+  // need, and a join may pick any free AGPR only when no rewrite follows.
+  if (MadeChange)
+    joinAllCopyPartners();
+
   // If we've successfully rewritten some MFMAs, we've alleviated some VGPR
   // pressure. See if we can eliminate some spills now that those registers are
   // more available.
@@ -762,7 +1005,10 @@ bool AMDGPURewriteAGPRCopyMFMALegacy::runOnMachineFunction(
   auto &LSS = getAnalysis<LiveStacksWrapperLegacy>().getLS();
   auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI, MDT);
+  auto *LDVWrapper = getAnalysisIfAvailable<LiveDebugVariablesWrapperLegacy>();
+  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI, MDT,
+                                     LDVWrapper ? &LDVWrapper->getLDV()
+                                                : nullptr);
   return Impl.run(MF);
 }
 
@@ -775,8 +1021,10 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
   LiveStacks &LSS = MFAM.getResult<LiveStacksAnalysis>(MF);
   RegisterClassInfo &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  LiveDebugVariables *LDV =
+      MFAM.getCachedResult<LiveDebugVariablesAnalysis>(MF);
 
-  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI, MDT);
+  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI, MDT, LDV);
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -786,6 +1034,7 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
       .preserve<SlotIndexesAnalysis>()
       .preserve<LiveIntervalsAnalysis>()
       .preserve<LiveRegMatrixAnalysis>()
-      .preserve<MachineRegisterClassAnalysis>();
+      .preserve<MachineRegisterClassAnalysis>()
+      .preserve<LiveDebugVariablesAnalysis>();
   return PA;
 }
