@@ -35,24 +35,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spirv-module-analysis"
 
-static cl::opt<bool>
-    SPVDumpDeps("spv-dump-deps",
-                cl::desc("Dump MIR with SPIR-V dependencies info"),
-                cl::init(false));
-
-static cl::list<SPIRV::Capability::Capability>
-    AvoidCapabilities("avoid-spirv-capabilities",
-                      cl::desc("SPIR-V capabilities to avoid if there are "
-                               "other options enabling a feature"),
-                      cl::Hidden,
-                      cl::values(clEnumValN(SPIRV::Capability::Shader, "Shader",
-                                            "SPIR-V Shader capability")));
-// Use sets instead of cl::list to check "if contains" condition
-struct AvoidCapabilitiesSet {
-  SmallSet<SPIRV::Capability::Capability, 4> S;
-  AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
-};
-
 char llvm::SPIRVModuleAnalysisWrapperPass::ID = 0;
 
 INITIALIZE_PASS(SPIRVModuleAnalysisWrapperPass, DEBUG_TYPE,
@@ -74,17 +56,18 @@ static unsigned getMetadataUInt(MDNode *MdNode, unsigned OpIndex,
   return DefaultVal;
 }
 
+// Return true if Cap should be avoided when another option enables the feature.
+static bool shouldAvoidCapability(const SPIRVSubtarget &ST,
+                                  SPIRV::Capability::Capability Cap) {
+  return Cap == (ST.isShader() ? SPIRV::Capability::Kernel
+                               : SPIRV::Capability::Shader) ||
+         is_contained(ST.getCLOpts().avoid_capabilities, Cap);
+}
+
 static SPIRV::Requirements
 getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                unsigned i, const SPIRVSubtarget &ST,
                                SPIRV::RequirementHandler &Reqs) {
-  // A set of capabilities to avoid if there is another option.
-  AvoidCapabilitiesSet AvoidCaps;
-  if (!ST.isShader())
-    AvoidCaps.S.insert(SPIRV::Capability::Shader);
-  else
-    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
-
   VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
   VersionTuple SPIRVVersion = ST.getSPIRVVersion();
@@ -124,7 +107,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
           UseCaps.push_back(Cap);
       for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
         auto Cap = UseCaps[i];
-        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap)) {
+        if (i == Sz - 1 || !shouldAvoidCapability(ST, Cap)) {
           ReqExts.append(getSymbolicOperandExtensions(
               SPIRV::OperandCategory::CapabilityOperand, Cap));
           return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
@@ -954,14 +937,8 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
-  AvoidCapabilitiesSet AvoidCaps;
-  if (!ST.isShader())
-    AvoidCaps.S.insert(SPIRV::Capability::Shader);
-  else
-    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
-
   for (auto Cap : MinimalCaps) {
-    if (AvailableCaps.contains(Cap) && !AvoidCaps.S.contains(Cap))
+    if (AvailableCaps.contains(Cap) && !shouldAvoidCapability(ST, Cap))
       continue;
     LLVM_DEBUG(dbgs() << "Capability not supported: "
                       << getSymbolicOperandMnemonic(
