@@ -9,8 +9,9 @@
 #include "exphk.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
-#include "src/__support/fixed_point/fx_bits.h"
+#include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -65,9 +66,9 @@ LLVM_LIBC_FUNCTION(short accum, exphk, (short accum x)) {
   // with relative errors < |lo|^2 <= 2^-8.
   //   exp(hi) and exp(mid) are extracted from small lookup tables.
 
-  // Round-to-nearest 1/8, tie-to-(+Int):
+  // Round-to-nearest 1/8, tie-to-(+Inf):
   constexpr short accum ONE_SIXTEENTH = 0x1.0p-4hk;
-  // x_rounded = floor(x + 1/16).
+  // x_rounded = floor((x + 1/16) * 2^3) * 2^-3.
   short accum x_rounded = ((x + ONE_SIXTEENTH) >> (FXRep::FRACTION_LEN - 3))
                           << (FXRep::FRACTION_LEN - 3);
   short accum lo = x - x_rounded;
@@ -92,7 +93,7 @@ LLVM_LIBC_FUNCTION(short accum, exphk, (short accum x)) {
   short accum exp_hi = EXP_HI[indices >> 3];
   short accum exp_mid = EXP_MID[indices & 0x7];
   // exp(x) ~ exp(hi) * exp(mid) * (1 + lo);
-  return (exp_hi * (exp_mid * (0x1.0p0hk + lo)));
+  return exp_hi * (exp_mid * (0x1.0p0hk + lo));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
