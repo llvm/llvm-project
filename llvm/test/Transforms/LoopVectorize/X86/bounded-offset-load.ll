@@ -90,7 +90,6 @@ exit:
 ; CHECK: middle.block:
 define void @unbounded_offset(ptr noalias %out, ptr noalias %conditions, i64 %index) {
 entry:
-  %in_range = icmp ult i64 %index, 58
   br label %loop
 
 loop:
