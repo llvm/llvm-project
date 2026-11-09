@@ -5,12 +5,12 @@ define void @exit_block_trunc_cond(i1 %c, ptr %p) {
 ; CHECK-LABEL: define void @exit_block_trunc_cond(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[BASE:%.*]] = getelementptr i8, ptr [[P]], i64 16
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[BASE:%.*]] = getelementptr i8, ptr [[P]], i64 16
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[V]] to i1
