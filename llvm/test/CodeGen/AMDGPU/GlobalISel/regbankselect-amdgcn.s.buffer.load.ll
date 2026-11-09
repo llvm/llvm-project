@@ -1246,8 +1246,9 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_offset_add_4095(<4 x i32> inreg %
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 4095
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
   ; GFX7-NEXT:   [[ADD:%[0-9]+]]:vgpr(i32) = G_ADD [[COPY4]], [[COPY5]]
-  ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
-  ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(f32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s32))
+  ; GFX7-NEXT:   [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
+  ; GFX7-NEXT:   [[C2:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
+  ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(f32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C2]](i32), [[COPY4]], [[C1]], 4095, 0, 0 :: (dereferenceable invariant load (s32))
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vgpr(f32) = COPY [[AMDGPU_BUFFER_LOAD]](f32)
   ; GFX7-NEXT:   $vgpr0 = COPY [[COPY6]](f32)
   ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -2191,9 +2192,8 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX7-NEXT:   [[COPY3:%[0-9]+]]:vgpr(i32) = COPY $vgpr3
   ; GFX7-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:vgpr(<4 x i32>) = G_BUILD_VECTOR [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32)
   ; GFX7-NEXT:   [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 4095
-  ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
-  ; GFX7-NEXT:   [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
-  ; GFX7-NEXT:   [[C2:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
+  ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
+  ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
@@ -2215,7 +2215,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
   ; GFX7-NEXT: {{  $}}
-  ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(f32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x i32>), [[C2]](i32), [[COPY4]], [[C1]], 0, 0, 0 :: (dereferenceable invariant load (s32))
+  ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(f32) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR1]](<4 x i32>), [[C1]](i32), [[C1]], [[C2]], 4095, 0, 0 :: (dereferenceable invariant load (s32) from unknown-address + 4095, align 1)
   ; GFX7-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
@@ -2223,8 +2223,8 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.5:
-  ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vgpr(f32) = COPY [[AMDGPU_BUFFER_LOAD]](f32)
-  ; GFX7-NEXT:   $vgpr0 = COPY [[COPY5]](f32)
+  ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vgpr(f32) = COPY [[AMDGPU_BUFFER_LOAD]](f32)
+  ; GFX7-NEXT:   $vgpr0 = COPY [[COPY4]](f32)
   ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
   ; GFX1200_1250-LABEL: name: s_buffer_load_f32_vgpr_rsrc_offset_4095

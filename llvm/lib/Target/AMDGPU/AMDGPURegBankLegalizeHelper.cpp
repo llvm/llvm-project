@@ -650,7 +650,10 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   for (int I = 0; I < NumLoads; ++I)
     LoadParts.emplace_back(MRI.createVirtualRegister({VgprRB, Ty}));
   MachineMemOperand *OrigMMO = *MI.memoperands_begin();
-  const Align Alignment = OrigMMO->getAlign();
+  // Use the alignment to ensure that the required offsets will fit into the
+  // immediate offsets. This is unrelated to the alignment of the memory
+  // access.
+  const Align Alignment = NumLoads > 1 ? Align(16 * NumLoads) : Align(1);
   MachineFunction &MF = B.getMF();
   Register SOffset;
   Register VOffset;
