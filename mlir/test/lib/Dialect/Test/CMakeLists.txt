@@ -42,8 +42,8 @@ endforeach()
 add_public_tablegen_target(MLIRTestOpsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestOpsSyntax.td)
-mlir_tablegen(TestOpsSyntax.h.inc -gen-op-decls -op-partition=Syntax)
-mlir_tablegen(TestOpsSyntax.cpp.inc -gen-op-defs -op-partition=Syntax)
+mlir_tablegen(TestOpsSyntax.h.inc -gen-op-decls)
+mlir_tablegen(TestOpsSyntax.cpp.inc -gen-op-defs)
 add_public_tablegen_target(MLIRTestOpsSyntaxIncGen)
 
 # Exclude tests from libMLIR.so

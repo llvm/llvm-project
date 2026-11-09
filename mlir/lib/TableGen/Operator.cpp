@@ -151,11 +151,6 @@ void Operator::assertInvariants() const {
 
 StringRef Operator::getDialectName() const { return dialect.getName(); }
 
-StringRef Operator::getPartitionName() const {
-  const llvm::Record *partition = def.getValueAsOptionalDef("partition");
-  return partition ? partition->getValueAsString("partitionName") : "";
-}
-
 StringRef Operator::getCppClassName() const { return cppClassName; }
 
 std::string Operator::getQualCppClassName() const {

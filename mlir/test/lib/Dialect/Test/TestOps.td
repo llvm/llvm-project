@@ -41,15 +41,24 @@ include "TestAttrDefs.td"
 // Include the type definitions.
 include "TestTypeDefs.td"
 
+// Op partitions, each generated and compiled separately.
+def Test_CorePartition : Partition<"Core">;
+def Test_AttributesPartition : Partition<"Attributes">;
+def Test_TraitsPartition : Partition<"Traits">;
+def Test_PatternsPartition : Partition<"Patterns">;
+def Test_ConversionPartition : Partition<"Conversion">;
+def Test_InterfacesPartition : Partition<"Interfaces">;
+def Test_PropertiesPartition : Partition<"Properties">;
 
-class TEST_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Test_Dialect, mnemonic, traits>;
-
-// Ops are in the dialect's default partition (`Core`), unless they are in a
+// Ops are in partition `Core`, unless they are in a
 // `let partition = ... in { ... }` block. Since TableGen rejects `let` of a
 // field that a record does not have, such blocks cannot contain non-op records
 // like patterns. The sections that interleave ops and other records use these
 // base classes instead.
+class TEST_Op<string mnemonic, list<Trait> traits = []> :
+    Op<Test_Dialect, mnemonic, traits> {
+  let partition = Test_CorePartition;
+}
 class TEST_AttrOp<string mnemonic, list<Trait> traits = []> :
     TEST_Op<mnemonic, traits> {
   let partition = Test_AttributesPartition;

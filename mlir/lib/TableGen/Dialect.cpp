@@ -21,9 +21,6 @@ Dialect::Dialect(const llvm::Record *def) : def(def) {
     return;
   for (StringRef dialect : def->getValueAsListOfStrings("dependentDialects"))
     dependentDialects.push_back(dialect);
-  for (const llvm::Record *partition :
-       def->getValueAsListOfDefs("opPartitions"))
-    opPartitions.push_back(partition->getValueAsString("partitionName"));
 }
 
 StringRef Dialect::getName() const { return def->getValueAsString("name"); }
@@ -112,8 +109,6 @@ bool Dialect::isExtensible() const {
 const llvm::DagInit *Dialect::getDiscardableAttributes() const {
   return def->getValueAsDag("discardableAttrs");
 }
-
-ArrayRef<StringRef> Dialect::getOpPartitions() const { return opPartitions; }
 
 bool Dialect::operator==(const Dialect &other) const {
   return def == other.def;

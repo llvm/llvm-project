@@ -330,9 +330,6 @@ public:
   /// Returns the dialect of the op.
   const Dialect &getDialect() const { return dialect; }
 
-  /// Returns the name of the op's partition, or an empty string if it has none.
-  StringRef getPartitionName() const;
-
   /// Prints the contents in this operator to the given `os`. This is used for
   /// debugging purposes.
   void print(llvm::raw_ostream &os) const;
