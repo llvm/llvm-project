@@ -2759,8 +2759,7 @@ static void DiagnoseNonConstReason(Sema &SemaRef, SourceLocation Loc,
   if (T->isReferenceType()) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::RefTypeNotConstQualified;
-  }
-  else if (T->isFunctionType()) {
+  } else if (T->isFunctionType()) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::FunctionTypeNotConstQualified;
   }
