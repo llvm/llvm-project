@@ -19,6 +19,7 @@ using namespace mlir::intrange;
 //===----------------------------------------------------------------------===//
 
 void AffineApplyOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                      std::optional<unsigned> indexBitwidth,
                                       SetIntRangeFn setResultRange) {
   AffineMap map = getAffineMap();
 
@@ -32,7 +33,7 @@ void AffineApplyOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
   // Infer the range for the affine expression.
   ConstantIntRanges resultRange =
-      inferAffineExpr(map.getResult(0), dimRanges, symbolRanges);
+      inferAffineExpr(map.getResult(0), dimRanges, symbolRanges, indexBitwidth);
 
   setResultRange(getResult(), resultRange);
 }

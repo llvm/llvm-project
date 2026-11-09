@@ -9,6 +9,7 @@
 #include "mlir/Dialect/GPU/IR/ValueBoundsOpInterfaceImpl.h"
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
@@ -32,11 +33,18 @@ struct GpuIdOpInterface
     auto translateConstraint = [&](Value v, const ConstantIntRanges &range) {
       assert(v == value &&
              "GPU ID op inferring values for something that's not its result");
-      cstr.bound(v) >= range.smin().getSExtValue();
-      cstr.bound(v) <= range.smax().getSExtValue();
+      // Value bounds constraints accept int64_t constants. Runtime index bounds
+      // can be wider. Omit bounds that do not fit to keep the constraints
+      // sound.
+      if (range.smin().isSignedIntN(64))
+        cstr.bound(v) >= range.smin().getSExtValue();
+      if (range.smax().isSignedIntN(64))
+        cstr.bound(v) <= range.smax().getSExtValue();
     };
     assert(inferrable->getNumOperands() == 0 && "ID ops have no operands");
-    inferrable.inferResultRanges({}, translateConstraint);
+    auto width = getIndexBitwidthForRangeInference(DataLayout::closest(op));
+    if (width)
+      inferrable.inferResultRanges({}, *width, translateConstraint);
   }
 };
 
