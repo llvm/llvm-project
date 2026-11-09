@@ -12,6 +12,7 @@
 
 #if _LIBCPP_HAS_THREADS
 
+#  include <__assert>
 #  include <__verbose_abort>
 #  include <algorithm>
 #  include <atomic>
@@ -96,6 +97,16 @@ struct alignas(std::hardware_destructive_interference_size) TaskQueue {
       bottom.store(t);
       return nullptr;
     }
+  }
+
+  // Pops a task from the bottom of the queue only if it is the expected one, only called by the owner.
+  // Returns nullptr if the queue is empty or if the bottom task is a different one.
+  Task* pop_if(Task* expected) noexcept {
+    // Only the owner writes the elements and moves the bottom index, so peeking there is safe.
+    // If that element has already been stolen, the slot is stale, but then the queue is empty and pop() detects it.
+    if (get(bottom.load() - 1) != expected)
+      return nullptr;
+    return pop();
   }
 
   // Steals a task from the top of the queue, can be called by any thread.
@@ -386,25 +397,19 @@ inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(voi
     --num_requests;
   }
 
-  // Loop and help out until all requests to participate in root_root are processed.
+  // Wait until all requests to participate in root_task are processed.
+  // While waiting, only participate in the request to root_task that might be still left in this queue.
+  // This loop deliberately does not try to steal from other queues and help with progress of these tasks,
+  // since this might end up processing the requests of root_task in an interleaved manner, which is not allowed by the
+  // Standard and can cause a deadlock inside the user code.
   while (root_task.requests.load(std::memory_order_acquire) != 0) {
-    Task* task = nullptr;
-
-    // Try to pop from own queue
-    if (!(task = queue->pop())) {
-      // Try to steal from other queues
-      for (size_t i = 0; i != m_queues_count; ++i) {
-        if (&m_queues[i] != queue && (task = m_queues[i].steal())) {
-          break;
-        }
-      }
-    }
-
-    if (task) {
-      // Do the work
+    if (Task* task = queue->pop_if(&root_task)) {
+      // Participate in root_task, i.e. decrement its requests count, as the iterations should be already exhausted.
+      _LIBCPP_ASSERT_INTERNAL(task == &root_task, "Expected to pop the root_task from the queue");
+      _LIBCPP_ASSERT_INTERNAL(task->index.load() >= task->iterations, "The iterations must be already exhausted");
       process_request(task);
     } else {
-      // Wait a bit and try again
+      // Wait for other threads to finish participating in root_task.
       std::this_thread::yield();
     }
   }
