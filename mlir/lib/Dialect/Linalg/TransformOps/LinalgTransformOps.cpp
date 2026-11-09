@@ -1912,7 +1912,8 @@ transform::PackOp::apply(transform::TransformRewriter &rewriter,
       state, *this, packedSizes, getMixedPackedSizes());
 
   rewriter.setInsertionPoint(linalgOp);
-  FailureOr<PackResult> maybeResult = pack(rewriter, linalgOp, packedSizes);
+  FailureOr<PackResult> maybeResult =
+      pack(rewriter, linalgOp, packedSizes, getKeepLayoutOperands());
   if (failed(maybeResult))
     return emitDefiniteFailure("data tiling failed");
 

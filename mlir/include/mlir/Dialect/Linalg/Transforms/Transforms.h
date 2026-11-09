@@ -1376,9 +1376,13 @@ struct PackResult {
 };
 /// Implement packing of a single LinalgOp by `packedSizes`.
 /// There must be one packedSizes entry per `linalgOp` iterator.
+/// The operands in `keepLayoutOperands` (operand numbers, inputs first) are
+/// split with a `tensor.expand_shape` instead of being packed. See
+/// `transform.structured.pack`.
 /// Return the packed Linalg op on success, failure otherwise.
 FailureOr<PackResult> pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
-                           ArrayRef<OpFoldResult> packedSizes);
+                           ArrayRef<OpFoldResult> packedSizes,
+                           ArrayRef<int64_t> keepLayoutOperands = {});
 
 /// Struct to hold the result of a `packTranspose` call.
 struct PackTransposeResult {
