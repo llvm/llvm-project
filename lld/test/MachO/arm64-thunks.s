@@ -29,6 +29,7 @@
 # OBJC: __text
 # OBJC-NEXT: __stubs
 # OBJC-NEXT: __stub_helper
+# OBJC-NEXT: __objc_clsstubs
 # OBJC-NEXT: __objc_stubs
 
 # OBJC: Contents of (__DATA,__objc_selrefs) section
@@ -203,6 +204,7 @@
 # CHECK:  bl 0x[[#%x, NAN]]
 # CHECK:  bl 0x[[#%x, FOO:]] <_objc_msgSend$foo>
 # CHECK:  bl 0x[[#%x, BAR:]] <_objc_msgSend$bar>
+# CHECK:  bl 0x[[#%x, BAZ:]] <_objc_msgSendClass$baz$_OBJC_CLASS_$_Baz>
 
 # CHECK: [[#%x, FOLD_HIGH]] <_fold_func_high_addr>:
 # CHECK:  b 0x[[#%x, FOLD_LOW_THUNK_0]] <_fold_func_low_addr.thunk.0>
@@ -231,6 +233,10 @@
 
 # CHECK: [[#%x, NAN_PAGE + NAN_OFFSET]] <__stubs>:
 
+# CHECK: Disassembly of section __TEXT,__objc_clsstubs:
+
+# CHECK: [[#%x, BAZ]] <_objc_msgSendClass$baz$_OBJC_CLASS_$_Baz>:
+
 # CHECK: Disassembly of section __TEXT,__objc_stubs:
 
 # CHECK: <_objc_msgSend$bar>:
@@ -246,6 +252,11 @@ lselref2:
 .p2align  3
 .quad lselref1
 .quad lselref2
+
+.data
+.globl _OBJC_CLASS_$_Baz
+_OBJC_CLASS_$_Baz:
+  .quad 0
 
 .text
 .globl _objc_msgSend
@@ -400,6 +411,7 @@ _main:
   bl ___nan
   bl _objc_msgSend$foo
   bl _objc_msgSend$bar
+  bl _objc_msgSendClass$baz$_OBJC_CLASS_$_Baz
   ret
 
 .globl _fold_func_high_addr

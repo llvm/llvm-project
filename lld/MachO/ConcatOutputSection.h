@@ -117,9 +117,10 @@ private:
   /// can't estimate this yet. Used to determine if stub symbol targets are in
   /// range.
   std::optional<uint64_t> estimateStubsEndVA(unsigned numPotentialThunks) const;
-  /// \return true if the target in \p r is in __stubs or __objc_stubs and in
-  /// range from the location in \p isec. \p estimatedStubsEnd is the estimated
-  /// VA of the end of the last stubs section.
+  /// \return true if the target in \p r is in __stubs, __objc_clsstubs or
+  /// __objc_stubs and in range from the location in \p isec.
+  /// \p estimatedStubsEnd is the estimated VA of the end of the last stubs
+  /// section.
   bool isTargetStubsAndInRange(const ConcatInputSection &isec,
                                const Relocation &r,
                                std::optional<uint64_t> estimatedStubsEnd) const;

@@ -109,7 +109,7 @@ void MarkLiveImpl<RecordWhyLive>::addSym(
     if (!config->whyLive.empty() && config->whyLive.match(s->getName()))
       printWhyLive(s, prev);
   if (ObjCStubsSection::isObjCClassStubSymbol(s))
-    if (auto *classSym = in.objcStubs->lookupClassSymbol(s))
+    if (auto *classSym = in.objcClassStubs->lookupClassSymbol(s))
       addSym(classSym, prev);
   if (auto *d = dyn_cast<Defined>(s)) {
     if (d->isec())

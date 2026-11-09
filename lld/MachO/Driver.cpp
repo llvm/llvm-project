@@ -1656,7 +1656,7 @@ static void prepareObjCStubs() {
     if (needsEarlyUndefinedClassRef)
       classSym = symtab->addUndefined(names->classSymbolName, /*file=*/nullptr,
                                       /*isWeakRef=*/false);
-    in.objcStubs->recordClassSymbol(sym, classSym);
+    in.objcClassStubs->recordClassSymbol(sym, classSym);
   }
 
   if (data.empty())

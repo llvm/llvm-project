@@ -21,24 +21,24 @@
 # RUN:   -o %t/weak-thin-fast.out %t/weak.thin.bc %t/libFuture.dylib
 # RUN: llvm-nm -m %t/weak-thin-fast.out | FileCheck %s --check-prefix=WEAK-NM
 # RUN: llvm-objdump --macho --chained-fixups %t/weak-thin-fast.out | FileCheck %s --check-prefix=WEAK-CHAIN
-# RUN: llvm-objdump --macho --no-show-raw-insn --section=__TEXT,__objc_stubs %t/weak-thin-fast.out | FileCheck %s --check-prefix=STUB
+# RUN: llvm-objdump --macho --no-show-raw-insn --section=__TEXT,__objc_clsstubs %t/weak-thin-fast.out | FileCheck %s --check-prefix=STUB
 # RUN: %lld -arch arm64 -dead_strip -fixup_chains -objc_stubs_small \
 # RUN:   -o %t/weak-thin-small.out %t/weak.thin.bc %t/libFuture.dylib
 # RUN: llvm-nm -m %t/weak-thin-small.out | FileCheck %s --check-prefix=WEAK-NM
 # RUN: llvm-objdump --macho --chained-fixups %t/weak-thin-small.out | FileCheck %s --check-prefix=WEAK-CHAIN
-# RUN: llvm-objdump --macho --no-show-raw-insn --section=__TEXT,__objc_stubs %t/weak-thin-small.out | FileCheck %s --check-prefix=STUB
+# RUN: llvm-objdump --macho --no-show-raw-insn --section=__TEXT,__objc_clsstubs %t/weak-thin-small.out | FileCheck %s --check-prefix=STUB
 
 # Check both stub modes and serialized chained import flags with dead stripping.
 # RUN: %lld -arch arm64 -dead_strip -dead_strip_dylibs -fixup_chains \
 # RUN:   -objc_stubs_fast -o %t/weak-fast.out %t/weak.o %t/libFuture.dylib
 # RUN: llvm-nm -m %t/weak-fast.out | FileCheck %s --check-prefix=WEAK-NM
 # RUN: llvm-objdump --macho --chained-fixups %t/weak-fast.out | FileCheck %s --check-prefix=WEAK-CHAIN
-# RUN: llvm-objdump --macho --no-show-raw-insn --section=__TEXT,__objc_stubs %t/weak-fast.out | FileCheck %s --check-prefix=STUB
+# RUN: llvm-objdump --macho --no-show-raw-insn --section=__TEXT,__objc_clsstubs %t/weak-fast.out | FileCheck %s --check-prefix=STUB
 # RUN: %lld -arch arm64 -dead_strip -dead_strip_dylibs -fixup_chains \
 # RUN:   -objc_stubs_small -o %t/weak-small.out %t/weak.o %t/libFuture.dylib
 # RUN: llvm-nm -m %t/weak-small.out | FileCheck %s --check-prefix=WEAK-NM
 # RUN: llvm-objdump --macho --chained-fixups %t/weak-small.out | FileCheck %s --check-prefix=WEAK-CHAIN
-# RUN: llvm-objdump --macho --no-show-raw-insn --section=__TEXT,__objc_stubs %t/weak-small.out | FileCheck %s --check-prefix=STUB
+# RUN: llvm-objdump --macho --no-show-raw-insn --section=__TEXT,__objc_clsstubs %t/weak-small.out | FileCheck %s --check-prefix=STUB
 
 # The GOT and ordinary classref must both keep weak_import in legacy bind info.
 # RUN: %lld -arch arm64 -no_fixup_chains -objc_stubs_fast \

@@ -344,16 +344,19 @@ private:
 // '_objc_msgSend$foo', which are then synthesized by the linker. The stubs
 // load the particular selector 'foo' from __objc_selrefs, setting it to the
 // first argument of the objc_msgSend call, and then jumps to objc_msgSend. The
-// actual stub contents are mirrored from ld64.
+// actual stub contents are mirrored from ld64, and so is the layout: class
+// stubs, which also load the receiver class, go in __objc_clsstubs and the
+// others in __objc_stubs.
 class ObjCStubsSection final : public SyntheticSection {
 public:
-  ObjCStubsSection();
+  explicit ObjCStubsSection(const char *name);
   void addEntry(Symbol *sym);
   uint64_t getSize() const override;
   bool isNeeded() const override { return !symbols.empty(); }
   void finalize() override { isec->isFinal = true; }
   void writeTo(uint8_t *buf) const override;
-  void setUp();
+  // Sets up _objc_msgSend, which both sections branch to.
+  static void setUp();
 
   static constexpr llvm::StringLiteral objcMsgSendStubPrefix = "_objc_msgSend$";
   static constexpr llvm::StringLiteral objcMsgSendClassStubPrefix =
@@ -894,6 +897,7 @@ struct InStruct {
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
+  ObjCStubsSection *objcClassStubs = nullptr;
   ObjCStubsSection *objcStubs = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
   ObjCImageInfoSection *objCImageInfo = nullptr;
