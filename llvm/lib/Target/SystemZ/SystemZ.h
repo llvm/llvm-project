@@ -191,7 +191,7 @@ static inline bool isImmHF(uint64_t Val) {
 }
 } // end namespace SystemZ
 
-class SystemZISelDAGToDAGPass : SelectionDAGISelPass {
+class SystemZISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
   SystemZISelDAGToDAGPass(SystemZTargetMachine &TM, CodeGenOptLevel OptLevel);
 };
