@@ -1,10 +1,8 @@
 // RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fclangir %s -verify -emit-cir -o -
 
-void do_things() {
-  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP named critical}}
-#pragma omp critical(name)
-  {}
+void clash(void);
 
+void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPSingleDirective}}
 #pragma omp single
   {}
@@ -29,4 +27,18 @@ void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP synthesized 'firstprivate' clause from construct decomposition}}
 #pragma omp target
   { i = 1; }
+}
+
+void use_clash() {
+  clash();
+  // A critical name shares the symbol table with functions.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP critical name that clashes with another symbol}}
+#pragma omp critical(clash)
+  {}
+}
+
+void hint_nyi() {
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP CRITICAL 'hint' clause}}
+#pragma omp critical(hinted) hint(2)
+  {}
 }

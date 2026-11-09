@@ -210,6 +210,29 @@ CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
   return mlir::failure();
 }
 
+/// Find or create the module-level declaration of the critical section \p name.
+/// Returns null, after emitting an error, if the name is already used by
+/// another symbol.
+static mlir::omp::CriticalDeclareOp
+getOrCreateCriticalDeclare(CIRGenFunction &cgf, const OMPCriticalDirective &s,
+                           llvm::StringRef name, mlir::Location loc) {
+  CIRGenModule &cgm = cgf.getCIRGenModule();
+  mlir::ModuleOp module = cgm.getModule();
+
+  if (mlir::Operation *sym = mlir::SymbolTable::lookupSymbolIn(module, name)) {
+    if (auto declareOp = mlir::dyn_cast<mlir::omp::CriticalDeclareOp>(sym))
+      return declareOp;
+    cgm.errorNYI(s.getBeginLoc(),
+                 "OpenMP critical name that clashes with another symbol");
+    return nullptr;
+  }
+
+  mlir::omp::CriticalDeclareOperands clauseOps;
+  clauseOps.symName = mlir::StringAttr::get(&cgf.getMLIRContext(), name);
+  mlir::OpBuilder modBuilder(module.getBodyRegion());
+  return mlir::omp::CriticalDeclareOp::create(modBuilder, loc, clauseOps);
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
   mlir::Location begin = getLoc(s.getBeginLoc());
@@ -228,13 +251,15 @@ CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
                               llvm::omp::Directive::OMPD_critical)))
     return mlir::failure();
 
-  if (!s.getDirectiveName().getAsString().empty()) {
-    getCIRGenModule().errorNYI(s.getBeginLoc(), "OpenMP named critical");
-    return mlir::failure();
+  mlir::FlatSymbolRefAttr nameAttr;
+  std::string name = s.getDirectiveName().getAsString();
+  if (!name.empty()) {
+    if (!getOrCreateCriticalDeclare(*this, s, name, begin))
+      return mlir::failure();
+    nameAttr = mlir::FlatSymbolRefAttr::get(&getMLIRContext(), name);
   }
 
-  auto criticalOp =
-      mlir::omp::CriticalOp::create(builder, begin, mlir::FlatSymbolRefAttr());
+  auto criticalOp = mlir::omp::CriticalOp::create(builder, begin, nameAttr);
   mlir::Block &block = criticalOp.getRegion().emplaceBlock();
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(&block);
