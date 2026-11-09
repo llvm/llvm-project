@@ -8,10 +8,59 @@
 
 #include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/AST/Attr.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/MD5.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::CodeGenUtils {
+
+void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
+                                     const ASTContext &Ctx, const Decl &D,
+                                     const PreprocessorOptions &PPOpts,
+                                     llvm::vfs::FileSystem &FS) {
+  // ptxas does not allow '.', whereas HIP preserves demangleable names.
+  if (Ctx.getLangOpts().HIP)
+    OS << (isa<VarDecl>(D) ? ".static." : ".intern.");
+  else
+    OS << (isa<VarDecl>(D) ? "__static__" : "__intern__");
+
+  if (!Ctx.getLangOpts().CUID.empty()) {
+    OS << Ctx.getCUIDHash();
+    return;
+  }
+
+  const SourceManager &SM = Ctx.getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(D.getLocation());
+  assert(PLoc.isValid() && "source location is expected to be valid");
+
+  llvm::MD5 Hash;
+  llvm::MD5::MD5Result Result;
+  for (const auto &Arg : PPOpts.Macros)
+    Hash.update(Arg.first);
+  Hash.final(Result);
+
+  auto Status = FS.status(PLoc.getFilename());
+  if (!Status) {
+    PLoc = SM.getPresumedLoc(D.getLocation(), /*UseLineDirectives=*/false);
+    assert(PLoc.isValid() && "source location is expected to be valid");
+    Status = FS.status(PLoc.getFilename());
+  }
+  if (!Status) {
+    SM.getDiagnostics().Report(diag::err_cannot_open_file)
+        << PLoc.getFilename() << Status.getError().message();
+    return;
+  }
+  llvm::sys::fs::UniqueID ID = Status->getUniqueID();
+  OS << llvm::format("%x", ID.getFile()) << llvm::format("%x", ID.getDevice())
+     << "_" << llvm::utohexstr(Result.low(), /*LowerCase=*/true, /*Width=*/8);
+}
 
 LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
                                      const TargetInfo &Target) {

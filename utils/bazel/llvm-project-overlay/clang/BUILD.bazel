@@ -2197,6 +2197,7 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        ":lex",
         "//llvm:CodeGen",
         "//llvm:Core",
         "//llvm:Demangle",

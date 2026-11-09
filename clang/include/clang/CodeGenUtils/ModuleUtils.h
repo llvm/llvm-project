@@ -20,7 +20,24 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
+namespace clang {
+class PreprocessorOptions;
+} // namespace clang
+
+namespace llvm {
+class raw_ostream;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+} // namespace llvm
+
 namespace clang::CodeGenUtils {
+
+/// Print the unique suffix for an externalized CUDA/HIP device symbol.
+void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
+                                     const ASTContext &Ctx, const Decl &D,
+                                     const PreprocessorOptions &PPOpts,
+                                     llvm::vfs::FileSystem &FS);
 
 /// Determines whether the language options require us to model
 /// unwind exceptions.  We treat -fexceptions as mandating this
