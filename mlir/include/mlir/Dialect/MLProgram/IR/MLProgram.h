@@ -10,7 +10,6 @@
 
 #include "mlir/Dialect/MLProgram/IR/MLProgramAttributes.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgramTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"

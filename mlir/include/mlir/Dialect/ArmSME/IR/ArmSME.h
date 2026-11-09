@@ -20,7 +20,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #define GET_ATTRDEF_CLASSES
