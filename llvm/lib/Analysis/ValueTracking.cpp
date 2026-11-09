@@ -8158,9 +8158,9 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
 static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
                                    bool ConsiderFlagsAndMetadata) {
   const auto *CB = dyn_cast<CallBase>(Op);
-  bool CBHasNoundef = CB && CB->hasRetAttr(Attribute::NoUndef);
+  bool CBHasNoUndef = CB && CB->hasRetAttr(Attribute::NoUndef);
   if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
-      Op->hasPoisonGeneratingAnnotations() && !CBHasNoundef)
+      Op->hasPoisonGeneratingAnnotations() && !CBHasNoUndef)
     return true;
 
   unsigned Opcode = Op->getOpcode();
