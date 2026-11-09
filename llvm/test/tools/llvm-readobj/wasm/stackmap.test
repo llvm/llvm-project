@@ -1,0 +1,11 @@
+## LLVM stack maps are not currently supported by llvm-readobj for WebAssembly
+## objects, so --stackmap should print only the file summary.
+# RUN: llvm-readobj --stackmap %p/Inputs/trivial.obj.wasm > %t 2>&1
+# RUN: FileCheck %s --input-file=%t --match-full-lines
+
+# CHECK-NOT:  {{.}}
+# CHECK:      File: {{.*}}trivial.obj.wasm
+# CHECK-NEXT: Format: WASM
+# CHECK-NEXT: Arch: wasm32
+# CHECK-NEXT: AddressSize: 32bit
+# CHECK-NOT:  {{.}}

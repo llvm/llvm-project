@@ -360,11 +360,11 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     OS << "Global Variables: " << Globals.size() << '\n';
   }
   unsigned GI = 0;
-  for (const Global *G : Globals) {
-    const Descriptor *Desc = G->block()->getDescriptor();
+  for (const Block *G : Globals) {
+    const Descriptor *Desc = G->getDescriptor();
     Pointer GP = getPtrGlobal(GI);
 
-    OS << GI << ": " << (const void *)G->block() << " ";
+    OS << GI << ": " << (const void *)G << " ";
     {
       ColorScope SC(OS, true,
                     GP.isInitialized()

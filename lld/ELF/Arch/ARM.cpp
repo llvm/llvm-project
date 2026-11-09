@@ -1543,8 +1543,8 @@ void ArmCmseSGSection::finalizeContents() {
 
   for (auto [i, s] : enumerate(sgVeneers)) {
     s->offset = i * s->size;
-    Defined(ctx, file, StringRef(), s->sym->binding, s->sym->stOther,
-            s->sym->type, s->offset | 1, s->size, this)
+    Defined(file, StringRef(), s->sym->binding, s->sym->stOther, s->sym->type,
+            s->offset | 1, s->size, this)
         .overwrite(*s->sym);
   }
 }
@@ -1580,7 +1580,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
-        ctx, ctx.internalFile, d->getName(), d->computeBinding(ctx),
+        ctx.internalFile, d->getName(), d->computeBinding(ctx),
         /*stOther=*/0, STT_FUNC, d->getVA(ctx), d->getSize(), nullptr));
   }
 

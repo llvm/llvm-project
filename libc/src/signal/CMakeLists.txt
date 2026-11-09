@@ -17,10 +17,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  killpg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.killpg
+)
+
+add_entrypoint_object(
   sigaction
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sigaction
+)
+
+add_entrypoint_object(
+  sigpending
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigpending
 )
 
 add_entrypoint_object(

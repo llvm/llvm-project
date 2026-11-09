@@ -36,12 +36,6 @@ using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::debug;
 using namespace llvm::omp::target::helpers;
 
-namespace llvm::offload::tmp {
-GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
-llvm::omp::target::plugin::DeviceImageTy *
-__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
-} // namespace llvm::offload::tmp
-
 void PluginManager::init() {
   TIMESCOPE();
 
@@ -55,15 +49,12 @@ void PluginManager::init() {
   if (auto Err = iteratePlatforms(
           [](ol_platform_handle_t Platform, void *Data) {
             auto *PM = static_cast<PluginManager *>(Data);
-            auto *Plugin =
-                llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
             PlatformTy &P =
                 PM->Platforms
                     .try_emplace(Platform, PlatformTy::create(Platform))
                     .first->second;
-            ODBG(ODT_Init) << "Adding plugin " << P.getName()
+            ODBG(ODT_Init) << "Added plugin " << P.getName()
                            << " from liboffload";
-            PM->Plugins.push_back(Plugin);
           },
           this))
     REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
@@ -82,7 +73,6 @@ void PluginManager::deinit() {
                << toString(std::move(Err));
   }
 
-  Plugins.clear();
   Platforms.clear();
   if (LibOffloadInitialized) {
     if (auto Err = olShutDown())
@@ -451,17 +441,11 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             // for use at launch time.
             SmallString<128> EnvName(Entry.SymbolName);
             EnvName += "_kernel_environment";
-            llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
-                Device.RTL->getDevice(Device.RTLDeviceID);
             KernelEnvironmentTy KernelEnv{};
-            llvm::omp::target::plugin::GlobalTy KernelEnvGlobal(
-                EnvName, sizeof(KernelEnv), &KernelEnv);
-            auto &Image =
-                *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
-                    Program.getHandle());
-            if (auto Err =
-                    GenericDevice.Plugin.getGlobalHandler().readGlobalFromImage(
-                        GenericDevice, Image, KernelEnvGlobal)) {
+            // Read the kernel environment from the image on the host; it is
+            // constant, so no device access is needed.
+            if (auto Err = Program.readGlobalFromImage(
+                    EnvName.c_str(), &KernelEnv, sizeof(KernelEnv))) {
               std::string ErrStr = toString(std::move(Err));
               KernelEnv = KernelEnvironmentTy{};
               KernelEnv.Configuration.ExecMode =
@@ -490,8 +474,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             const auto &Cfg = KernelEnv.Configuration;
             KernelLaunchInfoTy LaunchInfo;
             LaunchInfo.Name = Entry.SymbolName;
-            LaunchInfo.Image = Image.getMemoryBuffer();
-            LaunchInfo.IRImage = Image.getIRImageMemoryBuffer();
+            LaunchInfo.Program = Program;
             LaunchInfo.Mode =
                 static_cast<llvm::omp::OMPTgtExecModeFlags>(Cfg.ExecMode);
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;

@@ -2670,7 +2670,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
-      Defined(ctx, s->file, StringRef(), s->binding, s->stOther, s->type,
+      Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
               /*value=*/0, s->size, bss)
           .overwrite(*s);
     }
@@ -2731,6 +2731,11 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err) {
           Err(ctx) << f << ": could not decode addrsig section: " << err;
+          break;
+        }
+        if (symIndex >= syms.size()) {
+          Err(ctx) << f << ": out of range symbol index " << symIndex
+                   << " in addrsig section";
           break;
         }
         markAddrsig(icfSafe, syms[symIndex]);
