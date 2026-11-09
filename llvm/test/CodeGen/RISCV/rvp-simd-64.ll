@@ -9963,19 +9963,13 @@ define i64 @test_pm4addasu_v4i16_i64_direct(i64 %rd, <4 x i16> %a, <4 x i16> %b)
 define <8 x i8> @merge_v8i8(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: merge_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    and a4, a0, a4
-; RV32-NEXT:    and a5, a1, a5
-; RV32-NEXT:    andn a0, a2, a0
-; RV32-NEXT:    andn a1, a3, a1
-; RV32-NEXT:    or a1, a5, a1
-; RV32-NEXT:    or a0, a4, a0
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: merge_v8i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    andn a0, a1, a0
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    merge a0, a1, a2
 ; RV64-NEXT:    ret
   %n = xor <8 x i8> %m, splat (i8 -1)
   %x = and <8 x i8> %m, %b
@@ -9987,19 +9981,13 @@ define <8 x i8> @merge_v8i8(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b) {
 define <4 x i16> @merge_v4i16(<4 x i16> %m, <4 x i16> %a, <4 x i16> %b) {
 ; RV32-LABEL: merge_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    and a4, a0, a4
-; RV32-NEXT:    and a5, a1, a5
-; RV32-NEXT:    andn a0, a2, a0
-; RV32-NEXT:    andn a1, a3, a1
-; RV32-NEXT:    or a1, a5, a1
-; RV32-NEXT:    or a0, a4, a0
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    merge a0, a2, a4
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: merge_v4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    andn a0, a1, a0
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    merge a0, a1, a2
 ; RV64-NEXT:    ret
   %n = xor <4 x i16> %m, splat (i16 -1)
   %x = and <4 x i16> %m, %b
@@ -10017,9 +10005,7 @@ define <2 x i32> @merge_v2i32(<2 x i32> %m, <2 x i32> %a, <2 x i32> %b) {
 ;
 ; RV64-LABEL: merge_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    andn a0, a1, a0
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    merge a0, a1, a2
 ; RV64-NEXT:    ret
   %n = xor <2 x i32> %m, splat (i32 -1)
   %x = and <2 x i32> %m, %b
