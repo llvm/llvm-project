@@ -420,8 +420,8 @@ public:
   bool isKnownPositive(Value *V);
 
   /// Returns true if \p V is known to be negative, false if \p V is known to be
-  /// nonnegative, or std::nullopt if neither the signed system or value
-  /// tracking cannot prove it.
+  /// nonnegative, or std::nullopt if neither the signed system nor ValueTracking
+  /// can prove it.
   std::optional<bool> getKnownSign(Value *V);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
