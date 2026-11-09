@@ -96,9 +96,9 @@ module attributes {cir.amdgpu_printf_kind = "buffered"} {
 // BUFFERED: store i64 -3179066091271850508, ptr addrspace(1) [[P1]], align 8
 // BUFFERED: [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P1]], i32 8
 // BUFFERED: [[ARG:%.*]] = zext i32 %0 to i64
-// BUFFERED: store i64 [[ARG]], ptr addrspace(1) [[P2]], align 8
+// BUFFERED: store i64 [[ARG]], ptr addrspace(1) [[P2]], align 4
 // BUFFERED: [[P3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P2]], i32 8
-// BUFFERED: call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[P3]], ptr align 1 %1, i64 [[LEN]], i1 false)
+// BUFFERED: call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[P3]], ptr align 1 %1, i64 [[LEN]], i1 false)
 // BUFFERED: br label %[[CONT]]
 // BUFFERED: [[CONT]]:
 // BUFFERED: [[FAIL:%.*]] = xor i1 [[OK]], true
@@ -131,4 +131,4 @@ module attributes {cir.amdgpu_printf_kind = "buffered"} {
 // BUFFERED: store ptr addrspace(3) %0, ptr addrspace(1) [[P2]], align 4
 // BUFFERED: [[P3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P2]], i32 8
 // BUFFERED: [[ARG:%.*]] = zext i32 %1 to i64
-// BUFFERED: store i64 [[ARG]], ptr addrspace(1) [[P3]], align 8
+// BUFFERED: store i64 [[ARG]], ptr addrspace(1) [[P3]], align 4
