@@ -47,8 +47,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[ADDWrr]]
-    ; CHECK-NEXT: $w0 = COPY [[FREEZE]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[ADDWrr]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32 = COPY $w0
     %1:gpr32 = COPY $w1
@@ -68,8 +68,8 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[COPY]]
-    ; CHECK-NEXT: $w0 = COPY [[FREEZE]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32 = COPY $w0
     %1:gpr32 = FREEZE %0
@@ -89,8 +89,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[DEF]], 1, [[COPY]]
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:fpr128 = FREEZE [[INSvi32gpr]]
-    ; CHECK-NEXT: $q0 = COPY [[FREEZE]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr128 = COPY [[INSvi32gpr]]
+    ; CHECK-NEXT: $q0 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:gpr32 = COPY $w0
     %1:fpr128 = IMPLICIT_DEF
@@ -165,15 +165,15 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[COPY]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[FREEZE]]
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:gpr32 = FREEZE [[COPY1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[FREEZE2:%[0-9]+]]:gpr32 = FREEZE [[DEF]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[FREEZE2]]
-    ; CHECK-NEXT: [[FREEZE3:%[0-9]+]]:gpr32 = FREEZE [[COPY2]]
-    ; CHECK-NEXT: $w0 = COPY [[FREEZE1]]
-    ; CHECK-NEXT: $w1 = COPY [[FREEZE3]]
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[DEF]]
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY [[FREEZE]]
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:gpr32 = COPY [[COPY4]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY3]]
+    ; CHECK-NEXT: $w1 = COPY [[COPY5]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0, implicit $w1
     %0:gpr32 = COPY $w0
     %1:gpr32 = FREEZE %0
@@ -211,9 +211,9 @@ body: |
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.0, [[DEF]], %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.0, [[COPY]], %bb.1
   ; CHECK-NEXT:   [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[PHI]]
-  ; CHECK-NEXT:   [[FREEZE1:%[0-9]+]]:gpr32 = FREEZE [[PHI1]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[PHI1]]
   ; CHECK-NEXT:   $w0 = COPY [[FREEZE]]
-  ; CHECK-NEXT:   $w1 = COPY [[FREEZE1]]
+  ; CHECK-NEXT:   $w1 = COPY [[COPY2]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0, implicit $w1
   bb.0:
     successors: %bb.1, %bb.2
@@ -261,10 +261,10 @@ body: |
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[PHI]]
-  ; CHECK-NEXT:   [[FREEZE1:%[0-9]+]]:gpr32 = FREEZE [[PHI1]]
-  ; CHECK-NEXT:   $w0 = COPY [[FREEZE]]
-  ; CHECK-NEXT:   $w1 = COPY [[FREEZE1]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[PHI]]
+  ; CHECK-NEXT:   [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[PHI1]]
+  ; CHECK-NEXT:   $w0 = COPY [[COPY4]]
+  ; CHECK-NEXT:   $w1 = COPY [[FREEZE]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0, implicit $w1
   bb.0:
     successors: %bb.1
@@ -307,12 +307,12 @@ body: |
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:qq = REG_SEQUENCE [[COPY]], %subreg.qsub0, [[COPY1]], %subreg.qsub1
     ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:qq = REG_SEQUENCE [[COPY]], %subreg.qsub0, [[DEF]], %subreg.qsub1
     ; CHECK-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:qq = REG_SEQUENCE [[COPY]], %subreg.qsub0
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:qq = FREEZE [[REG_SEQUENCE]]
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:qq = FREEZE [[REG_SEQUENCE1]]
-    ; CHECK-NEXT: [[FREEZE2:%[0-9]+]]:qq = FREEZE [[REG_SEQUENCE2]]
-    ; CHECK-NEXT: $q0_q1 = COPY [[FREEZE]]
-    ; CHECK-NEXT: $q2_q3 = COPY [[FREEZE1]]
-    ; CHECK-NEXT: $q4_q5 = COPY [[FREEZE2]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:qq = COPY [[REG_SEQUENCE]]
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:qq = FREEZE [[REG_SEQUENCE1]]
+    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:qq = FREEZE [[REG_SEQUENCE2]]
+    ; CHECK-NEXT: $q0_q1 = COPY [[COPY2]]
+    ; CHECK-NEXT: $q2_q3 = COPY [[FREEZE]]
+    ; CHECK-NEXT: $q4_q5 = COPY [[FREEZE1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0_q1, implicit $q2_q3, implicit $q4_q5
     %0:fpr128 = COPY $q0
     %1:fpr128 = COPY $q1
@@ -343,10 +343,10 @@ body: |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.dsub
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.dsub
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:fpr128 = FREEZE [[INSERT_SUBREG]]
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:fpr128 = FREEZE [[INSERT_SUBREG1]]
-    ; CHECK-NEXT: $q0 = COPY [[FREEZE]]
-    ; CHECK-NEXT: $q1 = COPY [[FREEZE1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr128 = COPY [[INSERT_SUBREG]]
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:fpr128 = FREEZE [[INSERT_SUBREG1]]
+    ; CHECK-NEXT: $q0 = COPY [[COPY2]]
+    ; CHECK-NEXT: $q1 = COPY [[FREEZE]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
     %0:fpr128 = COPY $q0
     %1:fpr64 = COPY $d1
@@ -372,8 +372,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[ADDWrr]], %subreg.sub_32
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:gpr64 = FREEZE [[SUBREG_TO_REG]]
-    ; CHECK-NEXT: $x0 = COPY [[FREEZE]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: $x0 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr32 = COPY $w0
     %1:gpr32 = ADDWrr %0, %0
@@ -395,10 +395,10 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[COPY]], [[DEF]], %subreg.sub_32
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[COPY]].sub_32
-    ; CHECK-NEXT: [[FREEZE1:%[0-9]+]]:gpr32 = FREEZE [[INSERT_SUBREG]].sub_32
-    ; CHECK-NEXT: $w0 = COPY [[FREEZE]]
-    ; CHECK-NEXT: $w1 = COPY [[FREEZE1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]].sub_32
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:gpr32 = FREEZE [[INSERT_SUBREG]].sub_32
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $w1 = COPY [[FREEZE]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0, implicit $w1
     %0:gpr64 = COPY $x0
     %1:gpr32 = IMPLICIT_DEF
