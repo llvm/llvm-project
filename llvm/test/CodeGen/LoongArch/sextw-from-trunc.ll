@@ -29,3 +29,111 @@ define i64 @shl_trunc_sext_const(i64 %x) {
   %r = sext i32 %t to i64
   ret i64 %r
 }
+
+; R1: sll.w fold creates an opaque LoongArchISD::SLL_W before the shift amount
+; folds to a constant; slli.w (1) -> ori+sll.w (2).
+define i64 @r1(i64 %x, i64 %y) {
+; CHECK-LABEL: r1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ori $a1, $zero, 1
+; CHECK-NEXT:    sll.w $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %o = or i64 %y, 1
+  %m = and i64 %o, 1
+  %s = shl i64 %x, %m
+  %tr = trunc i64 %s to i32
+  %r = sext i32 %tr to i64
+  ret i64 %r
+}
+; Shift amount is provably 0: addi.w (1) -> sll.w $a0,$a0,$zero (1, but not removable).
+define i64 @r1_zero(i64 %x, i64 %y) {
+; CHECK-LABEL: r1_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sll.w $a0, $a0, $zero
+; CHECK-NEXT:    ret
+  %y1 = lshr i64 %y, 63
+  %n = icmp slt i64 %y1, 0
+  %e = zext i1 %n to i64
+  %s = shl i64 %x, %e
+  %tr = trunc i64 %s to i32
+  %r = sext i32 %tr to i64
+  ret i64 %r
+}
+
+; R2: xor path always emits (add (setcc CC), -1), even when CC is one of the
+; slt+xori forms; slt+sub.d (2) -> slt+xori+addi.d (3).
+define i64 @r2(i64 %a, i64 %b) {
+; CHECK-LABEL: r2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt $a0, $a0, $a1
+; CHECK-NEXT:    xori $a0, $a0, 1
+; CHECK-NEXT:    addi.d $a0, $a0, -1
+; CHECK-NEXT:    ret
+  %ge = icmp sge i64 %a, %b
+  %z = zext i1 %ge to i64
+  %x = xor i64 %z, 1
+  %s = shl i64 %x, 63
+  %r = ashr i64 %s, 63
+  ret i64 %r
+}
+
+; R3: the sext_inreg combine pre-empts the generic
+; (sub X, (sext_inreg Y, i1)) -> (add X, (and Y, 1)); 3 -> 4.
+define signext i32 @r3(i64 %a, i64 %b, i32 signext %c) {
+; CHECK-LABEL: r3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor $a0, $a0, $a1
+; CHECK-NEXT:    sltu $a0, $zero, $a0
+; CHECK-NEXT:    sub.d $a0, $a2, $a0
+; CHECK-NEXT:    addi.w $a0, $a0, 1
+; CHECK-NEXT:    ret
+  %ne = icmp ne i64 %a, %b
+  %z = zext i1 %ne to i32
+  %x = xor i32 %z, -1
+  %s = shl i32 %x, 31
+  %m = ashr i32 %s, 31
+  %r = sub i32 %c, %m
+  ret i32 %r
+}
+
+; R4: xor path keeps (setcc ne) although (setcc eq) already exists, so two
+; compares (sltui + sltu) instead of one; 4 -> 5.
+define i64 @r4(i64 %a, i64 %b) {
+; CHECK-LABEL: r4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor $a0, $a0, $a1
+; CHECK-NEXT:    sltui $a1, $a0, 1
+; CHECK-NEXT:    sltu $a0, $zero, $a0
+; CHECK-NEXT:    addi.d $a0, $a0, -1
+; CHECK-NEXT:    xor $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %eq = icmp eq i64 %a, %b
+  %ze = zext i1 %eq to i64
+  %ne = xor i1 %eq, true
+  %zn = zext i1 %ne to i64
+  %x = xor i64 %zn, -1
+  %s = shl i64 %x, 63
+  %m = ashr i64 %s, 63
+  %r = xor i64 %m, %ze
+  ret i64 %r
+}
+
+; R6: the early rewrite blocks the generic
+; (xor (sext_inreg X), (sext_inreg Y)) -> (sext_inreg (xor X, Y)); 5 -> 6.
+define i64 @r6(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: r6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor $a0, $a0, $a2
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    addi.d $a0, $a0, -1
+; CHECK-NEXT:    andi $a1, $a1, 1
+; CHECK-NEXT:    sub.d $a1, $zero, $a1
+; CHECK-NEXT:    xor $a0, $a0, $a1
+; CHECK-NEXT:    ret
+  %ne = icmp ne i64 %a, %c
+  %s1 = sext i1 %ne to i64
+  %t = shl i64 %b, 63
+  %s2 = ashr i64 %t, 63
+  %r = xor i64 %s1, %s2
+  ret i64 %r
+}
