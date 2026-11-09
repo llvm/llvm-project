@@ -265,5 +265,21 @@ spirv.module Logical GLSL450 {
   }
 }
 
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @callee() -> () "DontInline|Pure" {
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @do_not_inline_dont_inline_callee
+  spirv.func @do_not_inline_dont_inline_callee() -> () "None" {
+    // CHECK-NEXT: spirv.FunctionCall @callee() : () -> ()
+    spirv.FunctionCall @callee() : () -> ()
+    // CHECK-NEXT: spirv.Return
+    spirv.Return
+  }
+}
+
 // TODO: Add tests for inlining structured control flow into
 // structured control flow.

@@ -54,10 +54,13 @@ namespace {
 struct SPIRVInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
-  /// All call operations within SPIRV can be inlined.
+  /// Call operations can be inlined unless the callee is marked DontInline.
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
-    return true;
+    auto funcOp = dyn_cast<spirv::FuncOp>(callable);
+    return !(funcOp &&
+             spirv::bitEnumContainsAll(funcOp.getFunctionControl(),
+                                       spirv::FunctionControl::DontInline));
   }
 
   /// Returns true if the given region 'src' can be inlined into the region
