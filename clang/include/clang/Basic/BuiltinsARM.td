@@ -243,6 +243,10 @@ let Languages = "ALL_MS_LANGUAGES" in {
 }
 
 let Attributes = [NoThrow, RequireDeclaration], Header = "intrin.h", Languages = "ALL_MS_LANGUAGES" in {
+	def _AddressOfReturnAddress : ARMNoPrefixTargetLibBuiltin<"void * ()">;
+}
+
+let Attributes = [NoThrow, RequireDeclaration], Header = "intrin.h", Languages = "ALL_MS_LANGUAGES" in {
 	def _BitScanForward 					: ARMNoPrefixTargetLibBuiltin<"unsigned char (msuint32_t *, msuint32_t)">;
 	def _BitScanReverse 					: ARMNoPrefixTargetLibBuiltin<"unsigned char (msuint32_t *, msuint32_t)">;
 	def _BitScanForward64					: ARMNoPrefixTargetLibBuiltin<"unsigned char (msuint32_t *, unsigned long long int)">;
