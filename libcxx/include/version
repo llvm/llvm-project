@@ -468,7 +468,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_common_reference_wrapper             202302L
 # define __cpp_lib_concepts                             202207L
 # define __cpp_lib_constexpr_algorithms                 201806L
-// # define __cpp_lib_constexpr_atomic                     202411L
 # define __cpp_lib_constexpr_complex                    201711L
 # define __cpp_lib_constexpr_dynamic_alloc              201907L
 # define __cpp_lib_constexpr_functional                 201907L
@@ -578,9 +577,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_ranges
 # define __cpp_lib_ranges                               202406L
 // # define __cpp_lib_ranges_as_const                      202207L
-// # define __cpp_lib_ranges_as_input                      202502L
 # define __cpp_lib_ranges_as_rvalue                     202207L
-// # define __cpp_lib_ranges_cache_latest                  202411L
 // # define __cpp_lib_ranges_chunk                         202202L
 # define __cpp_lib_ranges_chunk_by                      202202L
 # define __cpp_lib_ranges_contains                      202207L
@@ -620,6 +617,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constant_wrapper                     202606L
 # undef  __cpp_lib_constexpr_algorithms
 # define __cpp_lib_constexpr_algorithms                 202306L
+// # define __cpp_lib_constexpr_atomic                     202411L
 // # define __cpp_lib_constexpr_deque                      202502L
 // # define __cpp_lib_constexpr_exceptions                 202411L
 # define __cpp_lib_constexpr_flat_map                   202502L
@@ -703,6 +701,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_out_ptr                              202311L
 // # define __cpp_lib_philox_engine                        202406L
 // # define __cpp_lib_polymorphic                          202502L
+// # define __cpp_lib_ranges_as_input                      202502L
+// # define __cpp_lib_ranges_cache_latest                  202411L
 # define __cpp_lib_ranges_concat                        202403L
 # define __cpp_lib_ranges_indices                       202506L
 // # define __cpp_lib_ranges_reserve_hint                  202502L
