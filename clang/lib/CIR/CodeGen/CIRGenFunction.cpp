@@ -432,15 +432,16 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
     if (shouldEmitUnreachable) {
       assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
-        cir::TrapOp::create(builder, localScope->endLoc);
+        cir::TrapOp::create(builder, localScope->endLoc, /*implicit=*/true);
       else
-        cir::UnreachableOp::create(builder, localScope->endLoc);
+        cir::UnreachableOp::create(builder, localScope->endLoc,
+                                   /*implicit=*/true);
       builder.clearInsertionPoint();
       return;
     }
   }
 
-  (void)emitReturn(localScope->endLoc);
+  emitReturn(localScope->endLoc).setImplicit(true);
 }
 
 cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
