@@ -10,6 +10,7 @@ private struct DebugServer {
 
     Subcommands:
       [v]ersion   Display version information.
+      [g]dbserver Run in gdb-remote server mode.
   """
 
   static func execute(_ args: consuming [String]) {
@@ -23,23 +24,11 @@ private struct DebugServer {
 
     switch subcommandName {
     case "v", "version":
-      version(subcommandArgs)
+      VersionCommand.run(subcommandArgs)
+    case "g", "gdbserver":
+      GDBServerCommand.run(subcommandArgs)
     default:
       print(helpText)
-    }
-  }
-
-  static func version(_ args: ArraySlice<String>) {
-    do {
-      try Version.parse(args).run()
-    } catch {
-      switch error {
-      case .failure(let message):
-        print(message)
-      case .unexpectedArgument(let arg):
-        print("Unexpected argument: \(arg)")
-      }
-      print(Version.helpText)
     }
   }
 }

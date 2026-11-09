@@ -270,9 +270,6 @@ Error CodeGenPassBuilder::buildPipeline(
     addAsmPrinterBegin(PMW);
   }
 
-  if (PrintMIR)
-    addModulePass(PrintMIRPreparePass(Out), PMW, /*Force=*/true);
-
   if (auto Err = addCoreISelPasses(PMW))
     return Err;
 
@@ -288,14 +285,11 @@ Error CodeGenPassBuilder::buildPipeline(
   // MIR as the final output, we never end up running AsmPrinter.
   addAsmPrinter(PMW);
 
-  if (PrintAsm) {
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
+  flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/!PrintMIR);
+  if (PrintAsm)
     addAsmPrinterEnd(PMW);
-  } else {
-    if (PrintMIR)
-      addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
-  }
+  else if (PrintMIR)
+    addModulePass(PrintMIRPass(Out), PMW, /*Force=*/true);
 
   return verifyStartStop(*StartStopInfo);
 }

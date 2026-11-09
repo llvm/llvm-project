@@ -102,10 +102,6 @@ LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) const {
 
 unsigned LoongArchTTIImpl::getCacheLineSize() const { return 64; }
 
-unsigned LoongArchTTIImpl::getPrefetchDistance() const { return 200; }
-
-bool LoongArchTTIImpl::enableWritePrefetching() const { return true; }
-
 bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
