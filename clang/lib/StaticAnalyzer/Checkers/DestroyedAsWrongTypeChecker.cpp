@@ -45,8 +45,7 @@ struct WrongDestruction {
                                const NamedDecl *StdCaller) const {
     std::string Caller;
     if (StdCaller)
-      Caller =
-          llvm::formatv(" by '{0}'", StdCaller->getQualifiedNameAsString());
+      Caller = " by '" + StdCaller->getQualifiedNameAsString() + "'";
     if (Delete)
       return llvm::formatv(
           "Deleting an object of type '{0}' through a pointer to '{1}'{2}",
@@ -64,7 +63,7 @@ struct WrongDestruction {
 // Storage reused by placement new -> type of the new object.
 REGISTER_MAP_WITH_PROGRAMSTATE(PlacedObjectTypes, const MemRegion *, QualType)
 // Memory from a non-placement new, which holds an original object.
-REGISTER_SET_WITH_PROGRAMSTATE(NewAllocatedObjects, const MemRegion *)
+REGISTER_SET_WITH_PROGRAMSTATE(ObjectsAllocatedByNew, const MemRegion *)
 // Found inside std; reported on return to user code.
 REGISTER_MAP_WITH_PROGRAMSTATE(PendingDestructions, const MemRegion *,
                                WrongDestruction)
@@ -107,7 +106,7 @@ static const MemRegion *getStorageRegion(SVal V, CheckerContext &C) {
 
 // Storage obtained as raw memory has no original object to be replaced.
 static bool holdsOriginalObject(ProgramStateRef State, const MemRegion *R) {
-  if (State->contains<NewAllocatedObjects>(R))
+  if (State->contains<ObjectsAllocatedByNew>(R))
     return true;
   const auto *TR = dyn_cast<TypedValueRegion>(R);
   if (!TR)
@@ -130,7 +129,8 @@ static QualType getStorageType(const MemRegion *R) {
   return {};
 }
 
-// A field and a byte offset from its parent are different regions.
+// A field and a byte offset from its parent are different regions, but we want
+// to recognize that they refer to the same location.
 static bool isSameLocation(const MemRegion *A, const MemRegion *B) {
   if (A == B)
     return true;
@@ -159,8 +159,7 @@ getPlacementStorages(const CXXNewExpr *NE, CheckerContext &C) {
 }
 
 static bool isInStdFrame(CheckerContext &C) {
-  const Decl *D = C.getStackFrame()->getDecl();
-  return D && AnalysisDeclContext::isInStdNamespace(D);
+  return AnalysisDeclContext::isInStdNamespace(C.getStackFrame()->getDecl());
 }
 
 void DestroyedAsWrongTypeChecker::reportBug(const MemRegion *R,
@@ -201,7 +200,7 @@ void DestroyedAsWrongTypeChecker::checkPostStmt(const CXXNewExpr *NE,
     // An operator new that is not inlined may have placed the object there.
     for (const MemRegion *Storage : Storages)
       State = forgetPlacedTypes(State, Storage);
-    C.addTransition(State->add<NewAllocatedObjects>(Result));
+    C.addTransition(State->add<ObjectsAllocatedByNew>(Result));
     return;
   }
 
@@ -266,10 +265,11 @@ findWrongDestruction(const CallEvent &Call, const CXXDestructorDecl *Dtor,
 
   const auto *Implicit = dyn_cast<CXXDestructorCall>(&Call);
   // An explicit destructor call may name a base class ([class.dtor]p16).
-  if (!Implicit)
-    return isDerivedFrom(*Placed, DtorClass)
-               ? std::nullopt
-               : std::optional(WrongDestruction{*Placed, DtorClass, nullptr});
+  if (!Implicit) {
+    if (isDerivedFrom(*Placed, DtorClass))
+      return std::nullopt;
+    return WrongDestruction{*Placed, DtorClass, nullptr};
+  }
 
   std::optional<CFGDeleteDtor> Delete =
       Implicit->getCFGElementRef()->getAs<CFGDeleteDtor>();
@@ -350,9 +350,9 @@ void DestroyedAsWrongTypeChecker::checkDeadSymbols(SymbolReaper &SR,
        llvm::make_first_range(State->get<PlacedObjectTypes>()))
     if (!SR.isLiveRegion(R))
       State = State->remove<PlacedObjectTypes>(R);
-  for (const MemRegion *R : State->get<NewAllocatedObjects>())
+  for (const MemRegion *R : State->get<ObjectsAllocatedByNew>())
     if (!SR.isLiveRegion(R))
-      State = State->remove<NewAllocatedObjects>(R);
+      State = State->remove<ObjectsAllocatedByNew>(R);
   C.addTransition(State);
 }
 
