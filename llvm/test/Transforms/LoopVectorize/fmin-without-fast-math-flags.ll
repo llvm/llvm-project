@@ -494,6 +494,122 @@ exit:
   ret float %min.next
 }
 
+; Select-based min reduction starting at -0.0, which keeps -0.0 on +0.0 inputs.
+define float @fmin_olt_with_select_neg_zero_start(ptr %src, i64 %n) {
+; CHECK-LABEL: define float @fmin_olt_with_select_neg_zero_start(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN:%.*]] = phi float [ -0.000000e+00, %[[ENTRY]] ], [ [[MIN_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[L]], [[MIN]]
+; CHECK-NEXT:    [[MIN_NEXT]] = select i1 [[CMP]], float [[L]], float [[MIN]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MIN_NEXT_LCSSA:%.*]] = phi float [ [[MIN_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret float [[MIN_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = phi float [ -0.000000e+00, %entry ], [ %min.next, %loop ]
+  %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+  %l = load float, ptr %gep.src, align 4
+  %cmp = fcmp olt float %l, %min
+  %min.next = select i1 %cmp, float %l, float %min
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %min.next
+}
+
+; Select-based ninf min reduction starting at +inf, which lanes may still hold
+; when the scalar loop has selected a finite value.
+define float @fmin_olt_with_select_ninf_inf_start(ptr %src, i64 %n) {
+; CHECK-LABEL: define float @fmin_olt_with_select_ninf_inf_start(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN:%.*]] = phi float [ +inf, %[[ENTRY]] ], [ [[MIN_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[L]], [[MIN]]
+; CHECK-NEXT:    [[MIN_NEXT]] = select ninf i1 [[CMP]], float [[L]], float [[MIN]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MIN_NEXT_LCSSA:%.*]] = phi float [ [[MIN_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret float [[MIN_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = phi float [ 0x7FF0000000000000, %entry ], [ %min.next, %loop ]
+  %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+  %l = load float, ptr %gep.src, align 4
+  %cmp = fcmp olt float %l, %min
+  %min.next = select ninf i1 %cmp, float %l, float %min
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %min.next
+}
+
+; Select-based double min reduction with a start value that may be NaN or a
+; zero of either sign.
+define double @fmin_olt_with_select_double_start_arg(ptr %src, double %start, i64 %n) {
+; CHECK-LABEL: define double @fmin_olt_with_select_double_start_arg(
+; CHECK-SAME: ptr [[SRC:%.*]], double [[START:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN:%.*]] = phi double [ [[START]], %[[ENTRY]] ], [ [[MIN_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw double, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[L]], [[MIN]]
+; CHECK-NEXT:    [[MIN_NEXT]] = select i1 [[CMP]], double [[L]], double [[MIN]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MIN_NEXT_LCSSA:%.*]] = phi double [ [[MIN_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret double [[MIN_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = phi double [ %start, %entry ], [ %min.next, %loop ]
+  %gep.src = getelementptr inbounds nuw double, ptr %src, i64 %iv
+  %l = load double, ptr %gep.src, align 8
+  %cmp = fcmp olt double %l, %min
+  %min.next = select i1 %cmp, double %l, double %min
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret double %min.next
+}
+
 ; The reduction chain contains an intermediate minnum.
 define float @fminnum_intermediate_minnum_op(ptr %src, i64 %n, float %k) {
 ; CHECK-LABEL: define float @fminnum_intermediate_minnum_op(
