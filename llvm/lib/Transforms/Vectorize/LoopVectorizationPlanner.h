@@ -673,17 +673,23 @@ class VFSelectionContext {
         IsScalable ? VectorKind::Scalable : VectorKind::FixedWidth, ElementTy);
   }
 
-  struct VFSelectionTypeWidths {
+  struct TypeWidths {
     unsigned SmallestTypeForMaxBandwidth;
     unsigned SmallestType;
     unsigned WidestType;
   };
 
+  /// \return The size (in bits) of the of the types used to determine the
+  /// possible VFs. That is the widest type in the loop and the smallest type
+  /// the target wants to maximize vector bandwidth for. We ignore values that
+  /// remain scalar such as 64 bit loop indices.
+  TypeWidths getTypeWidthsForVFSelection() const;
+
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
   ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
-                                       const VFSelectionTypeWidths &TypeWidths,
+                                       const TypeWidths &TyWidths,
                                        ElementCount MaxSafeVF, unsigned UserIC,
                                        bool FoldTailByMasking,
                                        bool RequiresScalarEpilogue);
@@ -796,12 +802,6 @@ public:
   /// Collect element types in the loop that need widening.
   void collectElementTypesForWidening(
       const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
-
-  /// \return The size (in bits) of the of the types used to determine the
-  /// possible VFs. That is the widest type in the loop and the smallest type
-  /// the target wants to maximize vector bandwidth for. We ignore values that
-  /// remain scalar such as 64 bit loop indices.
-  VFSelectionTypeWidths getTypeWidthsForVFSelection() const;
 
   /// \return An upper bound for the vectorization factors for both
   /// fixed and scalable vectorization, where the minimum-known number of
