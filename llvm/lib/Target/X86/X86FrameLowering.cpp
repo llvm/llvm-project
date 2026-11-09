@@ -3226,6 +3226,21 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
                   "Windows x64 unwind v2 or v3 yet"
                 : "Can't handle guaranteed tail calls that change the stack "
                   "argument size with Windows x64 unwind v2 or v3 yet");
+      if (MF.hasEHFunclets())
+        report_fatal_error(
+            IsLargePopReturn
+                ? "Can't handle a return that pops more than 65535 bytes in a "
+                  "function with EH funclets under win64 yet"
+                : "Can't handle guaranteed tail calls that change the stack "
+                  "argument size in a function with EH funclets under win64 "
+                  "yet");
+      if (ArgBaseReg)
+        report_fatal_error("Can't handle an argument base register in a "
+                           "Windows x64 tail call exit that changes the stack "
+                           "argument size");
+      if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA)
+        report_fatal_error("Can't handle AMX in a Windows x64 tail call exit "
+                           "that changes the stack argument size");
       emitWin64ReserveExit(MF, MBB, Terminator, FPDiff, SEHFrameOffset);
       return;
     }
