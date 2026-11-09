@@ -1,8 +1,5 @@
 ; RUN: opt -S -p sroa < %s | FileCheck %s
 
-; target triple = "aarch64-unknown-fuchsia"
-; target datalayout = "e-p:64:64-i64:64-n32:64"
-
 ; Test that SROA removes allocas with only droppable uses left
 
 ; CHECK-LABEL: @no_dead_alloca
