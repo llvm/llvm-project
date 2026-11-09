@@ -7,6 +7,15 @@
 // RUN:    -triple %itanium_abi_triple \
 // RUN:    -emit-llvm -o - -disable-llvm-passes \
 // RUN:    | FileCheck %t/Use.cpp --check-prefix=CHECK-O0
+// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN:    -std=c++20 %t/M.cppm -emit-module-interface -o %t/M-cir.pcm %}
+// RUN: %if cir-enabled %{ %clang_cc1 -std=c++20 %t/Use.cpp \
+// RUN:    -fmodule-file=M=%t/M-cir.pcm -triple x86_64-unknown-linux-gnu \
+// RUN:    -fclangir -emit-llvm -o - -disable-llvm-passes \
+// RUN:    | FileCheck %t/Use.cpp --check-prefix=CHECK-O0 %}
+// RUN: %if cir-enabled %{ %clang_cc1 -std=c++20 %t/Use.cpp \
+// RUN:    -fmodule-file=M=%t/M-cir.pcm -triple x86_64-unknown-linux-gnu \
+// RUN:    -fclangir -emit-cir -o - | FileCheck %t/Use.cpp --check-prefix=CIR %}
 //
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -O1 %t/M.cppm \
 // RUN:    -emit-module-interface -o %t/M.pcm
@@ -14,6 +23,15 @@
 // RUN:    -triple %itanium_abi_triple \
 // RUN:    -emit-llvm -o - -disable-llvm-passes | \
 // RUN:    FileCheck %t/Use.cpp --check-prefix=CHECK-O1
+// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN:    -std=c++20 -O1 %t/M.cppm -emit-module-interface -o %t/M-cir.pcm %}
+// RUN: %if cir-enabled %{ %clang_cc1 -std=c++20 %t/Use.cpp \
+// RUN:    -fmodule-file=M=%t/M-cir.pcm -O1 -triple x86_64-unknown-linux-gnu \
+// RUN:    -fclangir -emit-llvm -o - -disable-llvm-passes \
+// RUN:    | FileCheck %t/Use.cpp --check-prefix=CHECK-O1 %}
+// RUN: %if cir-enabled %{ %clang_cc1 -std=c++20 %t/Use.cpp \
+// RUN:    -fmodule-file=M=%t/M-cir.pcm -O1 -triple x86_64-unknown-linux-gnu \
+// RUN:    -fclangir -emit-cir -o - | FileCheck %t/Use.cpp --check-prefix=CIR %}
 
 //--- foo.h
 int func_in_gmf() {
@@ -95,3 +113,14 @@ int use() {
 // CHECK-O1-NOT: non_exported_func
 // CHECK-O1-NOT: non_exported_func_not_called
 // CHECK-O1-NOT: func_not_called
+
+// CIR: cir.func {{.*}}@_Z3usev(
+// CIR: cir.func private @_ZW1M13exported_funcv(
+// CIR: cir.func private @_ZW1M18always_inline_funcv(
+// CIR: cir.func always_inline {{.*}}available_externally @_ZN1AIcE8getValueEv(
+// CIR: cir.func private @_ZN1AIcE9getValue2Ev(
+// CIR-NOT: func_in_gmf
+// CIR-NOT: func_in_gmf_not_called
+// CIR-NOT: non_exported_func
+// CIR-NOT: non_exported_func_not_called
+// CIR-NOT: func_not_called
