@@ -259,7 +259,13 @@ protected:
 
 /// Use the CC1 tool callback when available, to avoid creating a new process
 class CC1Command : public Command {
+  static bool CanRunAgain;
+
 public:
+  /// Whether this process can run cc1 again after crash recovery.
+  /// Embedding hosts must discard it if this returns false.
+  static bool canRunAgain();
+
   CC1Command(const Action &Source, const Tool &Creator,
              ResponseFileSupport ResponseSupport, const char *Executable,
              const llvm::opt::ArgStringList &Arguments,

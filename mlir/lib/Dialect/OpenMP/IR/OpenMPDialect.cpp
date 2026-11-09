@@ -29,7 +29,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
@@ -3507,7 +3506,7 @@ static void getPrivatisationEffects(
 }
 
 /// Reductions initialise private accumulators and combine them into the
-/// original variables. Account for all three reduction clauses.
+/// original variables. Account for reduction and in_reduction clauses.
 static void
 getReductionEffects(Operation *op,
                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
@@ -3531,7 +3530,6 @@ getReductionEffects(Operation *op,
 
   addEffects(iface.getReductionVars(), iface.getReductionBlockArgs());
   addEffects(iface.getInReductionVars(), iface.getInReductionBlockArgs());
-  addEffects(iface.getTaskReductionVars(), iface.getTaskReductionBlockArgs());
 }
 
 static void getBarrierEffects(
@@ -4243,7 +4241,8 @@ void TaskgroupOp::build(OpBuilder &builder, OperationState &state,
                      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
                      clauses.taskReductionVars,
                      makeDenseBoolArrayAttr(ctx, clauses.taskReductionByref),
-                     makeArrayAttr(ctx, clauses.taskReductionSyms));
+                     makeArrayAttr(ctx, clauses.taskReductionSyms),
+                     /*task_reduction_assume_bounded_recipe_effects=*/nullptr);
 }
 
 LogicalResult TaskgroupOp::verify() {
@@ -4255,6 +4254,48 @@ LogicalResult TaskgroupOp::verify() {
   return verifyReductionVarList(*this, getTaskReductionSyms(),
                                 getTaskReductionVars(),
                                 getTaskReductionByref());
+}
+
+static void getTaskReductionEffects(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  auto iface = dyn_cast<BlockArgOpenMPOpInterface>(op);
+  auto taskVars = iface.getTaskReductionVars();
+  for (auto &source : MutableArrayRef(taskVars.getBase(), taskVars.size())) {
+    effects.emplace_back(MemoryEffects::Read::get(), &source);
+    effects.emplace_back(MemoryEffects::Write::get(), &source);
+  }
+
+  for (BlockArgument arg : iface.getTaskReductionBlockArgs()) {
+    effects.emplace_back(MemoryEffects::Read::get(), arg);
+    effects.emplace_back(MemoryEffects::Write::get(), arg);
+  }
+
+  // The task_reduction clause does not necessarily allocate or free private
+  // accumulators. We avoid attaching an allocate effect to these accumulators
+  // as this would incorrectly imply they are fresh storage.
+  if (!taskVars.empty()) {
+    effects.emplace_back(MemoryEffects::Allocate::get());
+    effects.emplace_back(MemoryEffects::Free::get());
+  }
+}
+
+static void getTaskSchedulingPointEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
+}
+
+void TaskgroupOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getTaskSchedulingPointEffects(effects);
+
+  if (!getTaskReductionVars().empty() &&
+      !getTaskReductionAssumeBoundedRecipeEffects())
+    addUnknownMemoryEffects(effects);
+  else
+    getTaskReductionEffects(*this, effects);
 }
 
 //===----------------------------------------------------------------------===//

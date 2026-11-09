@@ -73,6 +73,7 @@ add_orc_rt_unittest(SupportTests
   support/span-test.cpp
 
   support/sps/SPSAllocActionTest.cpp
+  support/sps/SPSJITDylibLookupFlagsTest.cpp
   support/sps/SPSMemoryFlagsTest.cpp
   support/sps/SPSSymbolLookupSetTest.cpp
   support/sps/SPSWrapperFunctionBufferTest.cpp
@@ -118,6 +119,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/ThreadPoolRunnerTest.cpp
 
   bedrock/sps/CallSPSCITest.cpp
+  bedrock/sps/LookupInJITDylibSPSTest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
   bedrock/sps/SessionSPSCITest.cpp

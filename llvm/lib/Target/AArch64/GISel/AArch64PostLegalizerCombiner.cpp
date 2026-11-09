@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/Debug.h"
 
 #define GET_GICOMBINER_DEPS
@@ -558,6 +560,26 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
       M2->getOpcode() != AArch64::G_UMULL)
     return false;
   return true;
+}
+
+/// Match a vector G_ASHR/G_LSHR whose amount is not a valid immediate. These
+/// are lowered to SSHL/USHL of the negated amount by vashr_to_sshl and
+/// vlshr_to_ushl, so the negation can be folded into a constant amount.
+/// Splat-immediate shifts are left for vashr_vlshr_imm.
+bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
+         MI.getOpcode() == TargetOpcode::G_LSHR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (!Ty.isVector())
+    return false;
+  // Leave shifts by zero to the identity combines, which remove them.
+  if (isBuildVectorAllZeros(*MRI.getVRegDef(MI.getOperand(2).getReg()), MRI,
+                            /*AllowUndef=*/true))
+    return false;
+  // Leave shifts by a valid immediate to vashr_vlshr_imm.
+  int64_t Cnt;
+  return !AArch64GISelUtils::isVShiftRImm(MI.getOperand(2).getReg(), MRI, Ty,
+                                          Cnt);
 }
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {

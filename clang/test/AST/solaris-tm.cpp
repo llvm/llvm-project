@@ -2,7 +2,9 @@
 /// Issue #33114.
 ///
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple amd64-pc-solaris2.11 | FileCheck --check-prefix=CHECK-SOLARIS %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -triple amd64-pc-solaris2.11 | FileCheck --check-prefix=CHECK-SOLARIS %s %}
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu  | FileCheck --check-prefix=CHECK-LINUX %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -triple x86_64-unknown-linux-gnu  | FileCheck --check-prefix=CHECK-LINUX %s %}
 //
 // REQUIRES: x86-registered-target
 
