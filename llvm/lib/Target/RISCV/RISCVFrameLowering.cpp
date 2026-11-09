@@ -75,7 +75,7 @@ static const MCPhysReg FixedCSRFIMap[] = {
 static constexpr uint64_t QCIInterruptPushAmount = 96;
 
 // Smip/Ssip push six registers. ACLIC specifies a 24-byte frame for RV32E,
-// a 32-byte frame for RV32I, and a 48-byte frame for RV64.
+// a 32-byte frame for RV32I, and a 48-byte frame for RV64I/E.
 static uint64_t getACLICInterruptPushAmount(const MachineFunction &MF) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   if (STI.is64Bit())
@@ -417,8 +417,7 @@ static void emitACLICPreemptibleSaves(MachineFunction &MF,
     CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
         .buildOffset(RISCV::X5, MF.getFrameInfo().getObjectOffset(ScratchFI));
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS))
-      .addReg(RISCV::X5, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS), RISCV::X5)
       .addImm(EpcCSR)
       .addReg(RISCV::X0)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -428,8 +427,7 @@ static void emitACLICPreemptibleSaves(MachineFunction &MF,
 
   // xistatus.xie is bit zero. CSRRSI returns the old status in X5 and enables
   // interrupts after that value has been captured.
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRSI))
-      .addReg(RISCV::X5, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRSI), RISCV::X5)
       .addImm(StatusCSR)
       .addImm(1)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -460,8 +458,7 @@ static void emitACLICPreemptibleRestores(MachineFunction &MF,
                             RVFI->getInterruptCSRFrameIndex(1),
                             &RISCV::GPRRegClass, Register(),
                             RISCV::NoSubRegister, MachineInstr::FrameDestroy);
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(RISCV::X0, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW), RISCV::X0)
       .addImm(StatusCSR)
       .addReg(RISCV::X5, RegState::Kill)
       .setMIFlag(MachineInstr::FrameDestroy);
@@ -470,8 +467,7 @@ static void emitACLICPreemptibleRestores(MachineFunction &MF,
                             RVFI->getInterruptCSRFrameIndex(0),
                             &RISCV::GPRRegClass, Register(),
                             RISCV::NoSubRegister, MachineInstr::FrameDestroy);
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(RISCV::X0, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW), RISCV::X0)
       .addImm(EpcCSR)
       .addReg(RISCV::X5, RegState::Kill)
       .setMIFlag(MachineInstr::FrameDestroy);
@@ -2395,6 +2391,10 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   // Disable SplitSPAdjust if save-restore libcall, push/pop or QCI interrupts
   // are used. The callee-saved registers will be pushed by the save-restore
   // libcalls, so we don't have to split the SP adjustment in this case.
+  //
+  // ACLIC push-pop interrupts deliberately allow the split: Smip/Ssip
+  // only save a0-a5, so the remaining callee-saved registers are spilled in
+  // software.
   if (RVFI->getLibCallStackSize() || RVFI->getRVPushStackSize() ||
       RVFI->getQCIInterruptStackSize())
     return 0;

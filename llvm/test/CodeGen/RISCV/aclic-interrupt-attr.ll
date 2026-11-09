@@ -8,6 +8,9 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs \
 ; RUN:   -mattr=+experimental-smnip,+experimental-ssnip,+experimental-smip,+experimental-ssip \
 ; RUN:   < %s | FileCheck %s --check-prefix=RV64
+; RUN: llc -mtriple=riscv64 -target-abi=lp64e -verify-machineinstrs \
+; RUN:   -mattr=+e,+experimental-smnip,+experimental-ssnip,+experimental-smip,+experimental-ssip \
+; RUN:   < %s | FileCheck %s --check-prefix=RV64E
 
 declare void @callee()
 
@@ -232,6 +235,63 @@ define void @m_preemptible_call() #0 {
 ; RV64-NEXT:    addi sp, sp, 144
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    mret
+;
+; RV64E-LABEL: m_preemptible_call:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    addi sp, sp, -96
+; RV64E-NEXT:    .cfi_def_cfa_offset 96
+; RV64E-NEXT:    sd t0, 64(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset t0, -32
+; RV64E-NEXT:    csrr t0, mepc
+; RV64E-NEXT:    sd t0, 88(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    csrrsi t0, mistatus, 1
+; RV64E-NEXT:    sd t0, 80(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t1, 56(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t2, 48(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a3, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a5, 0(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset ra, -24
+; RV64E-NEXT:    .cfi_offset t1, -40
+; RV64E-NEXT:    .cfi_offset t2, -48
+; RV64E-NEXT:    .cfi_offset a0, -56
+; RV64E-NEXT:    .cfi_offset a1, -64
+; RV64E-NEXT:    .cfi_offset a2, -72
+; RV64E-NEXT:    .cfi_offset a3, -80
+; RV64E-NEXT:    .cfi_offset a4, -88
+; RV64E-NEXT:    .cfi_offset a5, -96
+; RV64E-NEXT:    call callee
+; RV64E-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t1, 56(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t2, 48(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a2, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a3, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a4, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a5, 0(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t0, 80(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw mistatus, t0
+; RV64E-NEXT:    ld t0, 88(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw mepc, t0
+; RV64E-NEXT:    ld t0, 64(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    .cfi_restore ra
+; RV64E-NEXT:    .cfi_restore t1
+; RV64E-NEXT:    .cfi_restore t2
+; RV64E-NEXT:    .cfi_restore a0
+; RV64E-NEXT:    .cfi_restore a1
+; RV64E-NEXT:    .cfi_restore a2
+; RV64E-NEXT:    .cfi_restore a3
+; RV64E-NEXT:    .cfi_restore a4
+; RV64E-NEXT:    .cfi_restore a5
+; RV64E-NEXT:    addi sp, sp, 96
+; RV64E-NEXT:    .cfi_def_cfa_offset 0
+; RV64E-NEXT:    mret
   call void @callee()
   ret void
 }
@@ -455,6 +515,63 @@ define void @s_preemptible_call() #1 {
 ; RV64-NEXT:    addi sp, sp, 144
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    sret
+;
+; RV64E-LABEL: s_preemptible_call:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    addi sp, sp, -96
+; RV64E-NEXT:    .cfi_def_cfa_offset 96
+; RV64E-NEXT:    sd t0, 64(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset t0, -32
+; RV64E-NEXT:    csrr t0, sepc
+; RV64E-NEXT:    sd t0, 88(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    csrrsi t0, sistatus, 1
+; RV64E-NEXT:    sd t0, 80(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t1, 56(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t2, 48(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a3, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd a5, 0(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset ra, -24
+; RV64E-NEXT:    .cfi_offset t1, -40
+; RV64E-NEXT:    .cfi_offset t2, -48
+; RV64E-NEXT:    .cfi_offset a0, -56
+; RV64E-NEXT:    .cfi_offset a1, -64
+; RV64E-NEXT:    .cfi_offset a2, -72
+; RV64E-NEXT:    .cfi_offset a3, -80
+; RV64E-NEXT:    .cfi_offset a4, -88
+; RV64E-NEXT:    .cfi_offset a5, -96
+; RV64E-NEXT:    call callee
+; RV64E-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t1, 56(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t2, 48(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a2, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a3, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a4, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld a5, 0(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t0, 80(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw sistatus, t0
+; RV64E-NEXT:    ld t0, 88(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw sepc, t0
+; RV64E-NEXT:    ld t0, 64(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    .cfi_restore ra
+; RV64E-NEXT:    .cfi_restore t1
+; RV64E-NEXT:    .cfi_restore t2
+; RV64E-NEXT:    .cfi_restore a0
+; RV64E-NEXT:    .cfi_restore a1
+; RV64E-NEXT:    .cfi_restore a2
+; RV64E-NEXT:    .cfi_restore a3
+; RV64E-NEXT:    .cfi_restore a4
+; RV64E-NEXT:    .cfi_restore a5
+; RV64E-NEXT:    addi sp, sp, 96
+; RV64E-NEXT:    .cfi_def_cfa_offset 0
+; RV64E-NEXT:    sret
   call void @callee()
   ret void
 }
@@ -522,6 +639,27 @@ define void @m_preemptible() #0 {
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    mret
+;
+; RV64E-LABEL: m_preemptible:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    addi sp, sp, -32
+; RV64E-NEXT:    .cfi_def_cfa_offset 32
+; RV64E-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset t0, -24
+; RV64E-NEXT:    csrr t0, mepc
+; RV64E-NEXT:    sd t0, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    csrrsi t0, mistatus, 1
+; RV64E-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sw zero, 4(sp)
+; RV64E-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw mistatus, t0
+; RV64E-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw mepc, t0
+; RV64E-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    addi sp, sp, 32
+; RV64E-NEXT:    .cfi_def_cfa_offset 0
+; RV64E-NEXT:    mret
   %slot = alloca i32
   store volatile i32 0, ptr %slot
   ret void
@@ -590,6 +728,27 @@ define void @s_preemptible() #1 {
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    sret
+;
+; RV64E-LABEL: s_preemptible:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    addi sp, sp, -32
+; RV64E-NEXT:    .cfi_def_cfa_offset 32
+; RV64E-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset t0, -24
+; RV64E-NEXT:    csrr t0, sepc
+; RV64E-NEXT:    sd t0, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    csrrsi t0, sistatus, 1
+; RV64E-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sw zero, 4(sp)
+; RV64E-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw sistatus, t0
+; RV64E-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw sepc, t0
+; RV64E-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    addi sp, sp, 32
+; RV64E-NEXT:    .cfi_def_cfa_offset 0
+; RV64E-NEXT:    sret
   %slot = alloca i32
   store volatile i32 0, ptr %slot
   ret void
@@ -721,6 +880,32 @@ define void @m_push_pop() #2 {
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    mipopret
+;
+; RV64E-LABEL: m_push_pop:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    addi sp, sp, -32
+; RV64E-NEXT:    .cfi_def_cfa_offset 80
+; RV64E-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t1, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t2, 0(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset ra, -56
+; RV64E-NEXT:    .cfi_offset t0, -64
+; RV64E-NEXT:    .cfi_offset t1, -72
+; RV64E-NEXT:    .cfi_offset t2, -80
+; RV64E-NEXT:    call callee
+; RV64E-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t1, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t2, 0(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore ra
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    .cfi_restore t1
+; RV64E-NEXT:    .cfi_restore t2
+; RV64E-NEXT:    addi sp, sp, 32
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    mipopret
   call void @callee()
   ret void
 }
@@ -851,6 +1036,32 @@ define void @s_push_pop() #3 {
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    sipopret
+;
+; RV64E-LABEL: s_push_pop:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    addi sp, sp, -32
+; RV64E-NEXT:    .cfi_def_cfa_offset 80
+; RV64E-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t1, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t2, 0(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset ra, -56
+; RV64E-NEXT:    .cfi_offset t0, -64
+; RV64E-NEXT:    .cfi_offset t1, -72
+; RV64E-NEXT:    .cfi_offset t2, -80
+; RV64E-NEXT:    call callee
+; RV64E-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t1, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t2, 0(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore ra
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    .cfi_restore t1
+; RV64E-NEXT:    .cfi_restore t2
+; RV64E-NEXT:    addi sp, sp, 32
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    sipopret
   call void @callee()
   ret void
 }
@@ -921,6 +1132,28 @@ define void @m_combined() #4 {
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    mipopret
+;
+; RV64E-LABEL: m_combined:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    addi sp, sp, -32
+; RV64E-NEXT:    .cfi_def_cfa_offset 80
+; RV64E-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset t0, -72
+; RV64E-NEXT:    csrr t0, mepc
+; RV64E-NEXT:    sd t0, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    csrrsi t0, mistatus, 1
+; RV64E-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sw zero, 4(sp)
+; RV64E-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw mistatus, t0
+; RV64E-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw mepc, t0
+; RV64E-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    addi sp, sp, 32
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    mipopret
   %slot = alloca i32
   store volatile i32 0, ptr %slot
   ret void
@@ -992,6 +1225,28 @@ define void @s_combined() #5 {
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    sipopret
+;
+; RV64E-LABEL: s_combined:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    addi sp, sp, -32
+; RV64E-NEXT:    .cfi_def_cfa_offset 80
+; RV64E-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset t0, -72
+; RV64E-NEXT:    csrr t0, sepc
+; RV64E-NEXT:    sd t0, 24(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    csrrsi t0, sistatus, 1
+; RV64E-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sw zero, 4(sp)
+; RV64E-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw sistatus, t0
+; RV64E-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    csrw sepc, t0
+; RV64E-NEXT:    ld t0, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    addi sp, sp, 32
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    sipopret
   %slot = alloca i32
   store volatile i32 0, ptr %slot
   ret void
@@ -1144,6 +1399,39 @@ define void @m_push_pop_large() #2 {
 ; RV64-NEXT:    addi sp, sp, 1984
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    mipopret
+;
+; RV64E-LABEL: m_push_pop_large:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    addi sp, sp, -1992
+; RV64E-NEXT:    .cfi_def_cfa_offset 2040
+; RV64E-NEXT:    sd ra, 1984(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t0, 1976(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t1, 1968(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd t2, 1960(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset ra, -56
+; RV64E-NEXT:    .cfi_offset t0, -64
+; RV64E-NEXT:    .cfi_offset t1, -72
+; RV64E-NEXT:    .cfi_offset t2, -80
+; RV64E-NEXT:    addi sp, sp, -2048
+; RV64E-NEXT:    addi sp, sp, -1000
+; RV64E-NEXT:    .cfi_def_cfa_offset 5088
+; RV64E-NEXT:    call callee
+; RV64E-NEXT:    sb zero, 8(sp)
+; RV64E-NEXT:    addi sp, sp, 2040
+; RV64E-NEXT:    addi sp, sp, 1008
+; RV64E-NEXT:    .cfi_def_cfa_offset 2040
+; RV64E-NEXT:    ld ra, 1984(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t0, 1976(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t1, 1968(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld t2, 1960(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore ra
+; RV64E-NEXT:    .cfi_restore t0
+; RV64E-NEXT:    .cfi_restore t1
+; RV64E-NEXT:    .cfi_restore t2
+; RV64E-NEXT:    addi sp, sp, 1992
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    mipopret
   %slot = alloca [5000 x i8]
   call void @callee()
   store volatile i8 0, ptr %slot
@@ -1165,6 +1453,11 @@ define void @m_push_pop_empty() #6 {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    mipopret
+;
+; RV64E-LABEL: m_push_pop_empty:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    mipopret
   ret void
 }
 
@@ -1183,6 +1476,11 @@ define void @s_push_pop_empty() #7 {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    sipopret
+;
+; RV64E-LABEL: s_push_pop_empty:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    sipopret
   ret void
 }
 
@@ -1249,6 +1547,27 @@ define void @m_push_pop_fp() #8 {
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
 ; RV64-NEXT:    mipopret
+;
+; RV64E-LABEL: m_push_pop_fp:
+; RV64E:       # %bb.0:
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    addi sp, sp, -24
+; RV64E-NEXT:    .cfi_def_cfa_offset 72
+; RV64E-NEXT:    sd ra, 16(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64E-NEXT:    .cfi_offset ra, -56
+; RV64E-NEXT:    .cfi_offset s0, -64
+; RV64E-NEXT:    addi s0, sp, 72
+; RV64E-NEXT:    .cfi_def_cfa s0, 0
+; RV64E-NEXT:    sw zero, 4(sp)
+; RV64E-NEXT:    .cfi_def_cfa sp, 72
+; RV64E-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64E-NEXT:    .cfi_restore ra
+; RV64E-NEXT:    .cfi_restore s0
+; RV64E-NEXT:    addi sp, sp, 24
+; RV64E-NEXT:    .cfi_def_cfa_offset 48
+; RV64E-NEXT:    mipopret
   %slot = alloca i32
   store volatile i32 0, ptr %slot
   ret void

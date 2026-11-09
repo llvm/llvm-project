@@ -1744,17 +1744,13 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (HasUnaryType && HasSiFiveCLICType) {
-    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
-    return;
-  }
-
   if (HasMachine && HasSupervisor) {
     Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
     return;
   }
 
-  if (HasSiFiveCLICType && (HasSupervisor || HasPreemptible || HasPushPop)) {
+  if (HasSiFiveCLICType &&
+      (HasUnaryType || HasSupervisor || HasPreemptible || HasPushPop)) {
     Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
     return;
   }

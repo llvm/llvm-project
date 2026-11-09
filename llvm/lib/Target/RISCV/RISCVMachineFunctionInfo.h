@@ -271,10 +271,7 @@ public:
     return InterruptCSRFrameIndexes[Idx];
   }
   bool isInterruptCSRFrameIndex(int FI) const {
-    for (int Index : InterruptCSRFrameIndexes)
-      if (Index == FI)
-        return true;
-    return false;
+    return llvm::is_contained(InterruptCSRFrameIndexes, FI);
   }
 
   // Some Stack Management Variants automatically update FP in a frame-pointer
