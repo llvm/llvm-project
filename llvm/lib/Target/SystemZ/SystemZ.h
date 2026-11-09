@@ -206,7 +206,16 @@ FunctionPass *createSystemZLongBranchPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLDCleanupPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
-FunctionPass *createSystemZTDCPass();
+
+class SystemZTDCPass : public RequiredPassInfoMixin<SystemZTDCPass> {
+  SystemZTargetMachine &TM;
+
+public:
+  SystemZTDCPass(SystemZTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+FunctionPass *createSystemZTDCLegacyPass();
 
 class SystemZAlignGlobalsPass
     : public RequiredPassInfoMixin<SystemZAlignGlobalsPass> {
@@ -224,7 +233,7 @@ void initializeSystemZLDCleanupPass(PassRegistry &);
 void initializeSystemZLongBranchPass(PassRegistry &);
 void initializeSystemZPostRewritePass(PassRegistry &);
 void initializeSystemZShortenInstPass(PassRegistry &);
-void initializeSystemZTDCPassPass(PassRegistry &);
+void initializeSystemZTDCLegacyPass(PassRegistry &);
 void initializeSystemZAlignGlobalsLegacyPass(PassRegistry &);
 
 namespace SYSTEMZAS {
