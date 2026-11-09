@@ -316,5 +316,5 @@
 // CHECK-NEXT:    FeatureZCZeroingFPR128,
 // CHECK-NEXT:    FeatureZCZeroingGPR32,
 // CHECK-NEXT:    FeatureZCZeroingGPR64];
-// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineDefault;
+// CHECK-NEXT:    InlineBehavior InlineBehavior = InlineIgnore;
 // CHECK-NEXT: }
