@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -O3 -triple=aarch64-apple-ios -S -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O3 -triple=aarch64-apple-ios -S -o - %s | FileCheck %s %}
 // REQUIRES: aarch64-registered-target
 
 float fma_test1(float a, float b, float c) {

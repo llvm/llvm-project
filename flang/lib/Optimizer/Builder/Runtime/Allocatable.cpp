@@ -92,3 +92,18 @@ void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
       sourceLine, deviceInit)};
   fir::CallOp::create(builder, loc, func, args);
 }
+
+void fir::runtime::genAllocatableDeallocateNoFinal(fir::FirOpBuilder &builder,
+                                                   mlir::Location loc,
+                                                   mlir::Value desc) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocateNoFinal)>(
+          loc, builder)};
+  mlir::FunctionType fTy{func.getFunctionType()};
+  mlir::Value sourceFile{fir::factory::locationToFilename(builder, loc)};
+  mlir::Value sourceLine{
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(2))};
+  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      builder, loc, fTy, desc, sourceFile, sourceLine)};
+  fir::CallOp::create(builder, loc, func, args);
+}
