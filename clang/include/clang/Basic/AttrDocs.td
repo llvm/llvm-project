@@ -9771,10 +9771,11 @@ is ignored with an "unknown attribute ignored" warning.
 The attribute takes a single string literal argument naming the built-in.
 Currently supported built-ins:
 
-* `PointSize`: the GLSL equivalent is `gl_PointSize`. Must be of floating-point
-  type. Can be used as a vertex shader output, a hull or domain shader control
-  point input or output, a geometry shader input or output, a pixel shader
-  input, or a mesh shader output.
+* `PointSize`: the GLSL equivalent is `gl_PointSize`. Must be a scalar
+  `float`, or a `half` when native 16-bit types are not enabled (it is then
+  treated as `float`). Can be used as a vertex or mesh shader output, or as a
+  hull, domain or geometry shader input or output. It cannot be used in a pixel
+  shader.
 
 A declaration annotated with `[[vk::builtin]]` does not take part in
 `vk::location` assignment, and cannot also be annotated with `[[vk::location]]`.

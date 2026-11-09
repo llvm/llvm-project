@@ -4,8 +4,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-pixel   -hlsl-entry ps_out -fsyntax-only -verify -DCASE_PS_OUT    %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-compute -hlsl-entry cs     -fsyntax-only -verify -DCASE_CS        %s
 
-// PointSize is legal as a vertex shader output and a pixel shader input;
-// vertex shader input, pixel shader output and compute are not.
+// PointSize is legal as a vertex shader output; vertex shader input, pixel
+// shader input and output, and compute are not.
 
 #ifdef CASE_VS_OUT_OK
 // expected-no-diagnostics
@@ -25,7 +25,9 @@ float4 vs_err([[vk::builtin("PointSize")]] float size : PSIZE) : SV_Position {
 #endif
 
 #ifdef CASE_PS_IN
-// expected-no-diagnostics
+// Vulkan does not allow BuiltIn PointSize in a fragment shader
+// (VUID-PointSize-PointSize-04314).
+// expected-error@+1 {{'PointSize' builtin cannot be used as pixel shader inputs}}
 float4 ps_in([[vk::builtin("PointSize")]] float size : PSIZE) : SV_Target {
   return size;
 }

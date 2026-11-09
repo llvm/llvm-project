@@ -1053,7 +1053,13 @@ static void validateVkBuiltinUsage(Sema &S, FunctionDecl *FD,
   bool IsOut = any(CurrentIOType & IOType::Out);
 
   if (BuiltIn == "PointSize") {
-    if (!T->isFloatingType())
+    // Vulkan requires PointSize to be a 32-bit float
+    // (VUID-PointSize-PointSize-04317). Without native 16-bit types, `half` is
+    // lowered to a 32-bit float, so it is accepted as well.
+    bool Is32BitFloat = T->isSpecificBuiltinType(BuiltinType::Float) ||
+                        (T->isSpecificBuiltinType(BuiltinType::Half) &&
+                         !AstContext.getLangOpts().NativeHalfType);
+    if (!Is32BitFloat)
       S.Diag(Attr->getLocation(), diag::err_hlsl_vk_builtin_wrong_type)
           << BuiltIn << S.getASTContext().FloatTy;
 
@@ -1067,7 +1073,6 @@ static void validateVkBuiltinUsage(Sema &S, FunctionDecl *FD,
         ((Stage == llvm::Triple::Vertex && IsOut) ||
          Stage == llvm::Triple::Hull || Stage == llvm::Triple::Domain ||
          Stage == llvm::Triple::Geometry ||
-         (Stage == llvm::Triple::Pixel && IsIn) ||
          (Stage == llvm::Triple::Mesh && IsOut));
     if (!LegalStage) {
       StringRef IOTypeName = (IsIn && IsOut) ? "inputs and outputs"

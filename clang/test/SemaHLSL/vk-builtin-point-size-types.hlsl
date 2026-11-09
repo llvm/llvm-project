@@ -1,12 +1,15 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-vertex -hlsl-entry vs_float  -fsyntax-only -verify -DCASE_FLOAT  %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-vertex -hlsl-entry vs_half   -fsyntax-only -verify -DCASE_HALF   %s
+// RUN: %clang_cc1 -finclude-default-header -fnative-half-type -fnative-int16-type -triple spirv-pc-vulkan1.3-vertex -hlsl-entry vs_half -fsyntax-only -verify -DCASE_HALF_NATIVE %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-vertex -hlsl-entry vs_double -fsyntax-only -verify -DCASE_DOUBLE %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-vertex -hlsl-entry vs_vector -fsyntax-only -verify -DCASE_VECTOR %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-vertex -hlsl-entry vs_int    -fsyntax-only -verify -DCASE_INT    %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-vertex -hlsl-entry vs_bool   -fsyntax-only -verify -DCASE_BOOL   %s
 
-// PointSize accepts any scalar floating-point type, and rejects everything
-// else (vectors, integers, bool).
+// Vulkan requires PointSize to be a 32-bit float (VUID-PointSize-PointSize-04317),
+// so every other type is rejected: native half, double, vectors, integers and
+// bool. Without native 16-bit types `half` is lowered to a 32-bit float, so it
+// is accepted.
 
 #ifdef CASE_FLOAT
 // expected-no-diagnostics
@@ -26,10 +29,19 @@ struct Out {
 [shader("vertex")] Out vs_half() { Out o; o.pos = 0; o.size = 1; return o; }
 #endif
 
-#ifdef CASE_DOUBLE
-// expected-no-diagnostics
+#ifdef CASE_HALF_NATIVE
 struct Out {
   float4 pos : SV_Position;
+  // expected-error@+1 {{'PointSize' builtin must be of type 'float'}}
+  [[vk::builtin("PointSize")]] half size : PSIZE;
+};
+[shader("vertex")] Out vs_half() { Out o; o.pos = 0; o.size = 1; return o; }
+#endif
+
+#ifdef CASE_DOUBLE
+struct Out {
+  float4 pos : SV_Position;
+  // expected-error@+1 {{'PointSize' builtin must be of type 'float'}}
   [[vk::builtin("PointSize")]] double size : PSIZE;
 };
 [shader("vertex")] Out vs_double() { Out o; o.pos = 0; o.size = 1; return o; }
