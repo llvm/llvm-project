@@ -1,20 +1,22 @@
 ; RUN: echo 'v1' > %t.propeller
 ; RUN: echo 'f foo' >> %t.propeller
-; RUN: echo 'g 0:100,1:100,2:0 1:100,3:100 2:0,3:0 3:100' >> %t.propeller
+; RUN: echo 'g 0:100,1:0,2:100 1:0,2:0 2:100' >> %t.propeller
 ; RUN: echo 'foo:2000:1000' > %t.prof
-; RUN: echo ' 5: 5' >> %t.prof
+; RUN: echo ' 3: 5' >> %t.prof
 ; RUN: echo 'foo:2000:1000' > %t.round_zero.prof
-; RUN: echo ' 5: 4' >> %t.round_zero.prof
+; RUN: echo ' 3: 4' >> %t.round_zero.prof
 ; RUN: echo 'foo:2000:1000' > %t.probe.prof
-; RUN: echo ' 5: 5' >> %t.probe.prof
+; RUN: echo ' 3: 5' >> %t.probe.prof
 ; RUN: echo ' !CFGChecksum: 123' >> %t.probe.prof
 
-; Case 1: Without a sample profile supplement, block 2 has 0 Propeller samples and is split into cold section.
+; Case 1: Without a sample profile supplement, block 1 has 0 Propeller samples and is split into cold section.
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid | \
 ; RUN: FileCheck %s --check-prefixes=CHECK,WITHOUT-SUPPLEMENT
 
-; Case 2: With a sample profile supplement, block 2 gets its samples scaled to the Propeller entry weight (5 * 100 / 1000 rounds to 1), and is kept in the main section. When the scaled weight rounds to 0 (4 * 100 / 1000), block 2 stays in the cold section.
+; Case 2: With a sample profile supplement, block 1 gets its samples scaled to the Propeller entry weight (5 * 100 / 1000 rounds to 1), and is kept in the main section even without even flow distribution. When the scaled weight rounds to 0 (4 * 100 / 1000), block 1 stays in the cold section.
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.prof | \
+; RUN: FileCheck %s --check-prefixes=CHECK,WITH-SUPPLEMENT
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-even-flow-distribution=false -sample-profile-supplement=%t.prof | \
 ; RUN: FileCheck %s --check-prefixes=CHECK,WITH-SUPPLEMENT
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.round_zero.prof | \
 ; RUN: FileCheck %s --check-prefixes=CHECK,WITHOUT-SUPPLEMENT
@@ -50,7 +52,7 @@
 
 ; Case 7: Context-sensitive and pseudo-probe supplemental sample profiles are ignored with a warning.
 ; RUN: echo '[foo]:2000:1000' > %t.cs.prof
-; RUN: echo ' 5: 5' >> %t.cs.prof
+; RUN: echo ' 3: 5' >> %t.cs.prof
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.cs.prof 2>&1 | \
 ; RUN: FileCheck %s --check-prefixes=CS-PROF,CHECK,WITHOUT-SUPPLEMENT
 ; CS-PROF: warning: {{.*}}.cs.prof: Context-sensitive supplemental sample profiles are not supported
@@ -64,36 +66,29 @@ define void @foo(i1 zeroext %0) nounwind !dbg !4 {
   store i8 %3, ptr %2, align 1, !dbg !10
   %4 = load i8, ptr %2, align 1, !dbg !11
   %5 = trunc i8 %4 to i1, !dbg !11
-  br i1 %5, label %6, label %8, !dbg !12
+  br i1 %5, label %8, label %6, !dbg !12
 
 6:                                                ; preds = %1
-  %7 = call i32 @bar(), !dbg !13
-  br label %10, !dbg !14
+  %7 = call i32 @baz(), !dbg !13
+  br label %8, !dbg !14
 
-8:                                                ; preds = %1
-  %9 = call i32 @baz(), !dbg !15
-  br label %10, !dbg !16
-
-10:                                               ; preds = %8, %6
-  ret void, !dbg !17
+8:                                                ; preds = %6, %1
+  ret void, !dbg !15
 }
 
-declare i32 @bar()
 declare i32 @baz()
 
 ; CHECK:                    .section        .text.foo,"ax",@progbits
 ; CHECK-LABEL:              foo:
 ; CHECK-LABEL:              # %bb.0:
-; CHECK-LABEL:              # %bb.1:
-; CHECK:                    callq   bar@PLT
+; CHECK-LABEL:              .LBB0_2:
+; CHECK:                    retq
 
-; WITHOUT-SUPPLEMENT-LABEL: .LBB0_3:
-; WITHOUT-SUPPLEMENT:       retq
 ; WITHOUT-SUPPLEMENT:       .section        .text.split.foo,"ax",@progbits
 ; WITHOUT-SUPPLEMENT-LABEL: foo.cold:
 ; WITHOUT-SUPPLEMENT:       callq   baz@PLT
 
-; WITH-SUPPLEMENT-LABEL:    .LBB0_2:
+; WITH-SUPPLEMENT-LABEL:    .LBB0_1:
 ; WITH-SUPPLEMENT:          callq   baz@PLT
 ; WITH-SUPPLEMENT-NOT:      .section        .text.split.foo
 
@@ -113,5 +108,3 @@ declare i32 @baz()
 !13 = !DILocation(line: 4, column: 1, scope: !4)
 !14 = !DILocation(line: 5, column: 1, scope: !4)
 !15 = !DILocation(line: 6, column: 1, scope: !4)
-!16 = !DILocation(line: 7, column: 1, scope: !4)
-!17 = !DILocation(line: 8, column: 1, scope: !4)
