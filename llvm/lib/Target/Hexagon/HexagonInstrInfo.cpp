@@ -1171,7 +1171,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       Register SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
       copyPhysReg(MBB, MI, DL, DstReg, SrcSubLo, MI.getOperand(1).isKill());
       MBB.erase(MI);
-      MRI.clearKillFlags(SrcSubLo);
       return true;
     }
     case Hexagon::V6_hi: {
@@ -1180,7 +1179,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       Register SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
       copyPhysReg(MBB, MI, DL, DstReg, SrcSubHi, MI.getOperand(1).isKill());
       MBB.erase(MI);
-      MRI.clearKillFlags(SrcSubHi);
       return true;
     }
     case Hexagon::PS_vloadrv_ai: {
@@ -1315,10 +1313,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(Src1SubLo)
           .addReg(Src2SubLo);
       MBB.erase(MI);
-      MRI.clearKillFlags(Src1SubHi);
-      MRI.clearKillFlags(Src1SubLo);
-      MRI.clearKillFlags(Src2SubHi);
-      MRI.clearKillFlags(Src2SubLo);
       return true;
     }
     case Hexagon::PS_vmulw_acc: {
@@ -1344,12 +1338,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(Src2SubLo)
           .addReg(Src3SubLo);
       MBB.erase(MI);
-      MRI.clearKillFlags(Src1SubHi);
-      MRI.clearKillFlags(Src1SubLo);
-      MRI.clearKillFlags(Src2SubHi);
-      MRI.clearKillFlags(Src2SubLo);
-      MRI.clearKillFlags(Src3SubHi);
-      MRI.clearKillFlags(Src3SubLo);
       return true;
     }
     case Hexagon::PS_pselect: {

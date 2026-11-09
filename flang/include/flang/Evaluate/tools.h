@@ -951,28 +951,7 @@ template <typename A> semantics::Attrs GetAttrs(const A &x) {
   }
 }
 
-template <>
-inline semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x) {
-  if (IsVariable(x)) {
-    if (const auto *procRef{UnwrapProcedureRef(x)}) {
-      if (const Symbol * interface{procRef->proc().GetInterfaceSymbol()}) {
-        if (const auto *details{
-                interface->detailsIf<semantics::SubprogramDetails>()}) {
-          if (details->isFunction() &&
-              details->result().attrs().test(semantics::Attr::POINTER)) {
-            // N.B.: POINTER becomes TARGET in SetAttrsFromAssociation()
-            return details->result().attrs();
-          }
-        }
-      }
-    }
-  }
-  if (const Symbol * symbol{GetLastSymbol(x)}) {
-    return symbol->attrs();
-  } else {
-    return {};
-  }
-}
+template <> semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x);
 
 template <typename A> semantics::Attrs GetAttrs(const std::optional<A> &x) {
   if (x) {

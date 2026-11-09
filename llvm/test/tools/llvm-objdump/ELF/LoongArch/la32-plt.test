@@ -1,0 +1,55 @@
+# RUN: yaml2obj %s | llvm-objdump -d --no-print-imm-hex --no-show-raw-insn - | FileCheck %s
+
+# CHECK:      00010220 <foo@plt>:
+# CHECK-NEXT:    10220:       pcaddu12i $t3, 32
+# CHECK-NEXT:    10224:       ld.w $t3, $t3, 128
+# CHECK-NEXT:    10228:       jirl $t1, $t3, 0
+# CHECK-NEXT:    1022c:       nop
+# CHECK-EMPTY:
+# CHECK-NEXT: 00010230 <bar@plt>:
+# CHECK-NEXT:    10230:       pcaddu12i $t3, 32
+# CHECK-NEXT:    10234:       ld.w $t3, $t3, 116
+# CHECK-NEXT:    10238:       jirl $t1, $t3, 0
+# CHECK-NEXT:    1023c:       nop
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_LOONGARCH
+  Flags:           [ EF_LOONGARCH_ABI_DOUBLE_FLOAT, EF_LOONGARCH_OBJABI_V1 ]
+Sections:
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x1C4
+    Link:            .dynsym
+    AddressAlign:    0x4
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x302A0
+        Symbol:          foo
+        Type:            R_LARCH_JUMP_SLOT
+      - Offset:          0x302A4
+        Symbol:          bar
+        Type:            R_LARCH_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10200
+    AddressAlign:    0x10
+    Content:         0E04001CAD3D1100CF618228AD51BF02CC618202AD8944008C118028E001004C0F04001CEF018228ED01004C000040030F04001CEFD18128ED01004C00004003
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x30298
+    AddressAlign:    0x4
+    Content:         '00000000000000000002010000020100'
+DynamicSymbols:
+  - Name:            foo
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            bar
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL

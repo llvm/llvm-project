@@ -48,6 +48,7 @@ cc_library(
         ":LanguageCPlusPlusProperties",
         ":PluginHighlighterClang",
         ":PluginObjectFilePDB",
+        ":PluginObjectFilePECOFF",
         ":PluginProcessUtility",
         ":SymbolFileDWARFProperties",
         ":SymbolFilePDBProperties",

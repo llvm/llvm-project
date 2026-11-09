@@ -727,9 +727,9 @@ bool PartialInlinerImpl::shouldPartialInline(
   bool RemarksEnabled =
       Callee->getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
           DEBUG_TYPE);
-  InlineCost IC =
-      getInlineCost(CB, getInlineParams(), CallerTTI, GetAssumptionCache,
-                    GetTLI, GetBFI, &PSI, RemarksEnabled ? &ORE : nullptr);
+  InlineCost IC = getInlineCost(CB, getInlineParams(CB.getContext()), CallerTTI,
+                                GetAssumptionCache, GetTLI, GetBFI, &PSI,
+                                RemarksEnabled ? &ORE : nullptr);
 
   if (IC.isAlways()) {
     ORE.emit([&]() {
@@ -801,7 +801,7 @@ PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
                                         TargetTransformInfo *TTI) {
   InstructionCost InlineCost = 0;
   const DataLayout &DL = BB->getDataLayout();
-  int InstrCost = InlineConstants::getInstrCost();
+  int InstrCost = InlineConstants::getInstrCost(BB->getContext());
   for (Instruction &I : *BB) {
     // Skip free instructions.
     switch (I.getOpcode()) {
@@ -880,7 +880,8 @@ PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) const {
   // additional unconditional branches. Those branches will be eliminated
   // later with bb layout. The cost should be adjusted accordingly:
   OutlinedFunctionCost -=
-      2 * InlineConstants::getInstrCost() * Cloner.OutlinedFunctions.size();
+      2 * InlineConstants::getInstrCost(Cloner.OrigFunc->getContext()) *
+      Cloner.OutlinedFunctions.size();
 
   InstructionCost OutliningRuntimeOverhead =
       OutliningFuncCallCost +
