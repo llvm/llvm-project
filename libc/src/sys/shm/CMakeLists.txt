@@ -1,0 +1,24 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+add_entrypoint_object(
+  shmat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shmat
+)
+
+add_entrypoint_object(
+  shmdt
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shmdt
+)
+
+add_entrypoint_object(
+  shmget
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.shmget
+)

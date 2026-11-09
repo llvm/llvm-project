@@ -58,7 +58,7 @@ body:             |
   bb.1:
     successors: %bb.2, %bb.3
 
-    %3:sreg_64 = SI_IF killed %2, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64 = SI_IF %2, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -68,7 +68,7 @@ body:             |
   bb.3:
     successors: %bb.4, %bb.5
 
-    %5:sreg_64 = SI_ELSE killed %3, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %5:sreg_64 = SI_ELSE %3, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
@@ -76,6 +76,6 @@ body:             |
 
   bb.5:
     %6:vreg_64 = PHI undef %7:vreg_64, %bb.3, %1, %bb.4
-    SI_END_CF killed %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0, implicit %6
 ...
