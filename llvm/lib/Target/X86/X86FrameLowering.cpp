@@ -2836,12 +2836,13 @@ static OldReturnAddressStores detachOldReturnAddressStores(
           findDeadScratchReg(MBB, Terminator, TRI, *RC, Result.LiveSources,
                              MachineBasicBlock::iterator(MI));
       if (!Tmp)
-        report_fatal_error("Can't move the store of a tail call argument that "
-                           "overwrites the return address under win64");
+        report_fatal_error("Can't find a scratch register to defer a store "
+                           "that overwrites the original return address");
       TII.copyPhysReg(MBB, MachineBasicBlock::iterator(MI), MI->getDebugLoc(),
                       Tmp, Src, /*KillSrc=*/false);
-      MI->getOperand(X86::AddrNumOperands).setReg(Tmp);
-      MI->getOperand(X86::AddrNumOperands).setIsKill(false);
+      MachineOperand &MO = MI->getOperand(X86::AddrNumOperands);
+      MO.setReg(Tmp);
+      MO.setIsKill(false);
       Src = Tmp;
     }
 
@@ -2851,12 +2852,14 @@ static OldReturnAddressStores detachOldReturnAddressStores(
         MCRegister Tmp = findDeadScratchReg(
             MBB, Terminator, TRI, X86::VR128RegClass, Result.LiveSources);
         if (!Tmp)
-          report_fatal_error("Can't find a scratch register to preserve a tail "
-                             "call argument under win64");
+          report_fatal_error("Can't find a scratch register to preserve a "
+                             "store that overwrites the original return "
+                             "address");
         TII.copyPhysReg(MBB, RestoreBegin, Terminator->getDebugLoc(), Tmp, Src,
                         /*KillSrc=*/false);
-        MI->getOperand(X86::AddrNumOperands).setReg(Tmp);
-        MI->getOperand(X86::AddrNumOperands).setIsKill(false);
+        MachineOperand &MO = MI->getOperand(X86::AddrNumOperands);
+        MO.setReg(Tmp);
+        MO.setIsKill(false);
         Src = Tmp;
       } else if (X86::GR64RegClass.contains(Src) ||
                  X86::GR32RegClass.contains(Src) ||
@@ -2866,8 +2869,9 @@ static OldReturnAddressStores detachOldReturnAddressStores(
         if (!llvm::is_contained(Result.CSRSources, Super))
           Result.CSRSources.push_back(Super);
       } else {
-        report_fatal_error("Can't preserve a tail call argument that "
-                           "overwrites the return address under win64");
+        report_fatal_error("Unsupported register class while trying to "
+                           "preserve a tail call argument that would "
+                           "overwrite the original return address");
       }
     }
     Result.LiveSources.push_back(Src);
@@ -2920,6 +2924,12 @@ loadFrameIndexTailCallTarget(MachineFunction &MF, MachineBasicBlock &MBB,
   return New.getIterator();
 }
 
+// Return `true` if Opc is a pop instruction.
+static bool isPop(unsigned Opc) {
+  return Opc == X86::POP64r || Opc == X86::POPP64r || Opc == X86::POP2 ||
+         Opc == X86::POP2P;
+}
+
 void X86FrameLowering::emitWin64ReserveExit(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator Terminator, int64_t FPDiff,
@@ -2952,10 +2962,7 @@ void X86FrameLowering::emitWin64ReserveExit(
       I = PI;
       continue;
     }
-    unsigned Opc = PI->getOpcode();
-    if (!PI->getFlag(MachineInstr::FrameDestroy) ||
-        (Opc != X86::POP64r && Opc != X86::POPP64r && Opc != X86::POP2 &&
-         Opc != X86::POP2P))
+    if (!PI->getFlag(MachineInstr::FrameDestroy) || !isPop(PI->getOpcode()))
       break;
     Pops.push_back(&*PI);
     I = PI;
