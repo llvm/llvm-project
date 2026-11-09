@@ -45,14 +45,6 @@ using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 using namespace MIPatternMatch;
 
-// Hack until load/store selection patterns support any tuple of legal types.
-static cl::opt<bool> EnableNewLegality(
-  "amdgpu-global-isel-new-legality",
-  cl::desc("Use GlobalISel desired legality, rather than try to use"
-           "rules compatible with selection patterns"),
-  cl::init(false),
-  cl::ReallyHidden);
-
 static constexpr unsigned MaxRegisterSize = 1024;
 
 // Round the number of elements to the next power of two elements
@@ -530,8 +522,8 @@ static bool hasBufferRsrcWorkaround(const LLT Ty) {
 // workaround this. Eventually it should ignore the type for loads and only care
 // about the size. Return true in cases where we will workaround this for now by
 // bitcasting.
-static bool loadStoreBitcastWorkaround(const LLT Ty) {
-  if (EnableNewLegality)
+static bool loadStoreBitcastWorkaround(const GCNSubtarget &ST, const LLT Ty) {
+  if (ST.getCLOpts().global_isel_new_legality)
     return false;
 
   const unsigned Size = Ty.getSizeInBits();
@@ -552,7 +544,7 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
 static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query) {
   const LLT Ty = Query.Types[0];
   return isRegisterType(ST, Ty) && isLoadStoreSizeLegal(ST, Query) &&
-         !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
+         !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(ST, Ty);
 }
 
 /// Return true if a load or store of the type should be lowered with a bitcast
@@ -564,7 +556,7 @@ static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
   if (Size != MemSizeInBits)
     return Size <= 32 && Ty.isVector();
 
-  if (loadStoreBitcastWorkaround(Ty) && isRegisterType(ST, Ty))
+  if (loadStoreBitcastWorkaround(ST, Ty) && isRegisterType(ST, Ty))
     return true;
 
   // Don't try to handle bitcasting vector ext loads for now.

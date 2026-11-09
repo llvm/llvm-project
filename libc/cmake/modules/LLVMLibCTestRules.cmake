@@ -880,7 +880,6 @@ function(create_libc_test fq_target_name)
   )
 endfunction()
 
-
 # Rule to add a fuzzer test.
 # Usage
 #    add_libc_fuzzer(
@@ -908,7 +907,6 @@ function(add_libc_fuzzer target_name)
     endif()
     list(APPEND link_libraries mpfr gmp)
   endif()
-
 
   get_fq_target_name(${target_name} fq_target_name)
   get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS} libc.src.errno.errno)
@@ -959,7 +957,6 @@ function(add_libc_fuzzer target_name)
       ${LIBC_FUZZER_COMPILE_OPTIONS})
 
 endfunction()
-
 
 # A unified function to add a libc test.
 # FULL_BUILD_ONLY: skip test in overlay mode.

@@ -104,9 +104,9 @@ LIBC_INLINE constexpr float16 sinhf16(float16 x) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
-  // When |x| = 0, or -2^(-14) <= x <= -2^(-9), or |x| >= asinh(2^16), or x is
-  // NaN.
-  if (LIBC_UNLIKELY(x_abs == 0U || (x_u >= 0x8400U && x_u <= 0xa400U) ||
+  // When |x| < 2^(-14), or -2^(-14) <= x <= -2^(-9), or |x| >= asinh(2^16), or
+  // x is NaN.
+  if (LIBC_UNLIKELY(x_abs < 0x0400U || (x_u >= 0x8400U && x_u <= 0xa400U) ||
                     x_abs >= 0x49e5U)) {
     // sinh(NaN) = NaN
     if (x_bits.is_nan()) {
@@ -121,6 +121,23 @@ LIBC_INLINE constexpr float16 sinhf16(float16 x) {
     // sinh(+/-0) = sinh(+/-0)
     if (x_abs == 0U)
       return FPBits::zero(x_bits.sign()).get_val();
+
+    // When 0 < |x| < 2^(-14), the correction to x is nonzero but less than
+    // half a subnormal ulp, so select the adjacent half value directly. Even
+    // when that is the minimum normal, the result rounded to 11 bits with an
+    // unbounded exponent is below 2^(-14), so underflow is always signaled.
+    if (x_abs < 0x0400U) {
+      uint16_t out = x_u;
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      int mode = fputil::quick_get_round();
+      if ((x_bits.is_pos() && mode == FE_UPWARD) ||
+          (x_bits.is_neg() && mode == FE_DOWNWARD))
+        out = static_cast<uint16_t>(x_u + 1);
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_underflow_except_if_required<float16>();
+      return FPBits(out).get_val();
+    }
 
     // When |x| >= asinh(2^16).
     if (x_abs >= 0x49e5U) {
