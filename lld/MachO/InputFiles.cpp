@@ -227,14 +227,13 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   // even though macOS executables are marked version 1. Static links also take
   // unversioned and kernel objects.
   if (isArm64e && hdr->filetype == MH_OBJECT) {
-    uint32_t sub = hdr->cpusubtype;
     bool takesObject =
-        sub == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false) ||
+        hdr->cpusubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false) ||
         (config->staticLink &&
-         (sub == CPU_SUBTYPE_ARM64E ||
-          sub == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true)));
+         (hdr->cpusubtype == CPU_SUBTYPE_ARM64E ||
+          hdr->cpusubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true)));
     if (!takesObject)
-      return reportMismatch(getArm64eVariantName(sub));
+      return reportMismatch(getArm64eVariantName(hdr->cpusubtype));
   }
 
   return checkCompatibility(file);
