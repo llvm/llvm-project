@@ -59,10 +59,13 @@ static bool shouldDisableRetRegFromCSR(CallingConv::ID CC,
   case CallingConv::PreserveAll:
     return true;
   case CallingConv::Cold:
-    // On x86-64, coldcc preserves most registers (CSR_64_MostRegs), including
-    // registers that are also used for return values, such as RDX and XMM0.
-    // On 32-bit x86, coldcc uses the default callee-saved registers, which must
-    // be left as is (e.g. CSR_32EHRet must keep EAX and EDX).
+    // On x86-64, coldcc uses CSR_64_MostRegs, which includes registers that
+    // are also used for return values, such as RCX, RDX, XMM0 and XMM1.
+    // On 32-bit x86, coldcc uses the C callee-saved registers: CSR_32 (ESI,
+    // EDI, EBX, EBP) contains no return registers, and CSR_32EHRet adds EAX
+    // and EDX only for functions that call llvm.eh.return. There they must
+    // stay callee-saved so that the eh_return epilogue reloads the values the
+    // unwinder stored in their save slots.
     return Subtarget.is64Bit();
   }
 }
