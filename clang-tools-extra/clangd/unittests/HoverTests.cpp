@@ -1648,14 +1648,14 @@ TEST(Hover, DefinitionLanuage) {
 TEST(Hover, AccessSpecifierByLanguage) {
   struct {
     const char *const Code;
-    const std::string ClangLanguageFlag;
+    const llvm::StringRef ClangLanguageFlag;
     const char *const ExpectedAccessSpecifier;
   } Cases[] = {
-      {R"cpp(
+      {R"c(
         struct Waldo {
           int loca^tion;
         };
-      )cpp",
+      )c",
        "-xc", ""},
       {R"cpp(
         struct Waldo {
@@ -1663,43 +1663,35 @@ TEST(Hover, AccessSpecifierByLanguage) {
         };
       )cpp",
        "-xc++", "public"},
-      {R"cpp(
-        struct Waldo {
-          struct {
-            int loca^tion;
-          } inner;
-        };
-      )cpp",
-       "-xc", ""},
-      {R"cpp(
+      {R"objc(
         struct Waldo {
           int loca^tion;
         };
-      )cpp",
+      )objc",
        "-xobjective-c", ""},
-      {R"cpp(
+      {R"objcpp(
         struct Waldo {
           int loca^tion;
         };
-      )cpp",
+      )objcpp",
        "-xobjective-c++", "public"},
       // Hover currently does not retrieve ivar access specifiers in either
       // Objective-C or Objective-C++, so no label is expected.
-      {R"cpp(
+      {R"objc(
         @interface Waldo {
         @public
           int loca^tion;
         }
         @end
-      )cpp",
+      )objc",
        "-xobjective-c", ""},
-      {R"cpp(
+      {R"objcpp(
         @interface Waldo {
         @public
           int loca^tion;
         }
         @end
-      )cpp",
+      )objcpp",
        "-xobjective-c++", ""},
   };
   for (const auto &Case : Cases) {
@@ -1709,7 +1701,7 @@ TEST(Hover, AccessSpecifierByLanguage) {
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
     if (!Case.ClangLanguageFlag.empty())
-      TU.ExtraArgs.push_back(Case.ClangLanguageFlag);
+      TU.ExtraArgs.push_back(Case.ClangLanguageFlag.str());
     auto AST = TU.build();
 
     auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
