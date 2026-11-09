@@ -15,6 +15,7 @@
 #include "hdr/sys_ipc_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "hdr/types/struct_shmid_ds.h"
+#include "src/__support/CPP/scope.h"
 #include "src/sys/shm/shmctl.h"
 #include "src/sys/shm/shmget.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -22,6 +23,7 @@
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LIBC_NAMESPACE::cpp::scope_exit;
 using LlvmLibcShmCtlTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcShmCtlTest, StatSetAndRemove) {
@@ -29,6 +31,9 @@ TEST_F(LlvmLibcShmCtlTest, StatSetAndRemove) {
   ASSERT_THAT(shmid = LIBC_NAMESPACE::shmget(
                   IPC_PRIVATE, 256, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR),
               returns(GE(0)).with_errno(EQ(0)));
+  scope_exit cleanup([&] {
+    EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
+  });
 
   struct shmid_ds ds = {};
   ASSERT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_STAT, &ds), Succeeds(0));
@@ -45,6 +50,7 @@ TEST_F(LlvmLibcShmCtlTest, StatSetAndRemove) {
   EXPECT_EQ(updated_ds.shm_perm.mode & 0777, mode_t(S_IRUSR));
 
   ASSERT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
+  cleanup.release();
 
   // Verify that once shmid is deleted, we can no longer query stat.
   EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_STAT, &ds), Fails(EINVAL));

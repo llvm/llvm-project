@@ -72,11 +72,55 @@ macros:
     macro_header: sys-shm-macros.h
     standards:
       - linux
+  - macro_name: SHM_HUGE_16KB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_64KB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_512KB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_1MB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
   - macro_name: SHM_HUGE_2MB
     macro_header: sys-shm-macros.h
     standards:
       - linux
+  - macro_name: SHM_HUGE_8MB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_16MB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_32MB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_256MB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_512MB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
   - macro_name: SHM_HUGE_1GB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_2GB
+    macro_header: sys-shm-macros.h
+    standards:
+      - linux
+  - macro_name: SHM_HUGE_16GB
     macro_header: sys-shm-macros.h
     standards:
       - linux

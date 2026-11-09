@@ -16,6 +16,7 @@
 #include "hdr/sys_ipc_macros.h"
 #include "hdr/sys_shm_macros.h"
 #include "hdr/sys_stat_macros.h"
+#include "src/__support/CPP/scope.h"
 #include "src/sys/shm/shmat.h"
 #include "src/sys/shm/shmctl.h"
 #include "src/sys/shm/shmdt.h"
@@ -25,6 +26,7 @@
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LIBC_NAMESPACE::cpp::scope_exit;
 using LlvmLibcShmAtTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcShmAtTest, AttachReadWriteAndReadOnly) {
@@ -32,6 +34,9 @@ TEST_F(LlvmLibcShmAtTest, AttachReadWriteAndReadOnly) {
   ASSERT_THAT(shmid = LIBC_NAMESPACE::shmget(
                   IPC_PRIVATE, 256, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR),
               returns(GE(0)).with_errno(EQ(0)));
+  scope_exit cleanup([&] {
+    EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
+  });
 
   // Attach the newly created segment for read-write access.
   void *rw_addr = LIBC_NAMESPACE::shmat(shmid, nullptr, 0);
@@ -53,7 +58,6 @@ TEST_F(LlvmLibcShmAtTest, AttachReadWriteAndReadOnly) {
 
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(rw_addr), Succeeds(0));
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(ro_addr), Succeeds(0));
-  EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
@@ -61,6 +65,9 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
   ASSERT_THAT(shmid = LIBC_NAMESPACE::shmget(
                   IPC_PRIVATE, 256, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR),
               returns(GE(0)).with_errno(EQ(0)));
+  scope_exit cleanup([&] {
+    EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
+  });
 
   void *addr = LIBC_NAMESPACE::shmat(shmid, nullptr, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -73,7 +80,6 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
               Fails(EINVAL, SHM_FAILED));
 
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(addr), Succeeds(0));
-  EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
@@ -81,6 +87,9 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
   ASSERT_THAT(shmid = LIBC_NAMESPACE::shmget(
                   IPC_PRIVATE, 256, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR),
               returns(GE(0)).with_errno(EQ(0)));
+  scope_exit cleanup([&] {
+    EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
+  });
 
   void *addr = LIBC_NAMESPACE::shmat(shmid, nullptr, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -96,7 +105,6 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
   EXPECT_EQ(rounded_addr, addr);
 
   EXPECT_THAT(LIBC_NAMESPACE::shmdt(rounded_addr), Succeeds(0));
-  EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
 }
 
 TEST_F(LlvmLibcShmAtTest, InvalidShmidReturnsEinval) {

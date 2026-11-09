@@ -12,6 +12,7 @@ add_libc_test(
     libc.hdr.sys_ipc_macros
     libc.hdr.sys_shm_macros
     libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
     libc.src.sys.shm.shmat
     libc.src.sys.shm.shmctl
     libc.src.sys.shm.shmdt
@@ -31,6 +32,7 @@ add_libc_test(
     libc.hdr.sys_ipc_macros
     libc.hdr.sys_stat_macros
     libc.hdr.types.struct_shmid_ds
+    libc.src.__support.CPP.scope
     libc.src.sys.shm.shmctl
     libc.src.sys.shm.shmget
     libc.test.UnitTest.ErrnoCheckingTest
@@ -48,6 +50,7 @@ add_libc_test(
     libc.hdr.sys_ipc_macros
     libc.hdr.sys_shm_macros
     libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
     libc.src.sys.shm.shmat
     libc.src.sys.shm.shmctl
     libc.src.sys.shm.shmdt
@@ -66,6 +69,7 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.sys_ipc_macros
     libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
     libc.src.sys.shm.shmctl
     libc.src.sys.shm.shmget
     libc.test.UnitTest.ErrnoCheckingTest

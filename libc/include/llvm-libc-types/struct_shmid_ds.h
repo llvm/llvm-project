@@ -20,6 +20,7 @@
 #include "struct_ipc_perm.h"
 #include "time_t.h"
 
+#ifdef __linux__
 struct shmid_ds {
   struct ipc_perm shm_perm;
   size_t shm_segsz;
@@ -29,10 +30,11 @@ struct shmid_ds {
   pid_t shm_cpid;
   pid_t shm_lpid;
   shmatt_t shm_nattch;
-#ifdef __linux__
   unsigned long __unused4;
   unsigned long __unused5;
-#endif
 };
+#else
+#error "shmid_ds type not defined for the target platform."
+#endif
 
 #endif // LLVM_LIBC_TYPES_STRUCT_SHMID_DS_H
