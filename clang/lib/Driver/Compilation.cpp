@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Compilation.h"
+#include "ClangCLArgs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/CommonArgs.h"
@@ -38,9 +39,10 @@ using namespace llvm::opt;
 
 Compilation::Compilation(const Driver &D, const ToolChain &_DefaultToolChain,
                          InputArgList *_Args, DerivedArgList *_TranslatedArgs,
-                         bool ContainsError)
+                         bool ContainsError, bool CC1MainIsReusable)
     : TheDriver(D), DefaultToolChain(_DefaultToolChain), Args(_Args),
-      TranslatedArgs(_TranslatedArgs), ContainsError(ContainsError) {
+      TranslatedArgs(_TranslatedArgs), CC1MainIsReusable(CC1MainIsReusable),
+      ContainsError(ContainsError) {
   // The offloading host toolchain is the default toolchain.
   OrderedOffloadingToolchains.insert(
       std::make_pair(Action::OFK_Host, &DefaultToolChain));
@@ -74,9 +76,8 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
     // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
     if (DeviceOffloadKind == Action::OFK_OpenMP) {
       const ToolChain *HostTC = getSingleOffloadToolChain<Action::OFK_Host>();
-      bool SameTripleAsHost = (TC->getTriple() == HostTC->getTriple());
       OpenMPArgs = TC->TranslateOpenMPTargetArgs(
-          *TranslatedArgs, SameTripleAsHost, AllocatedArgs);
+          *TranslatedArgs, HostTC->getTriple(), AllocatedArgs);
     }
 
     DerivedArgList *NewDAL = nullptr;
@@ -90,6 +91,15 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
         NewDAL = OpenMPArgs;
       else
         delete OpenMPArgs;
+    }
+
+    if (NewDAL && TheDriver.IsCLMode()) {
+      // Forwarding can introduce clang-cl options after the shared
+      // translation. Keep synthesized arguments in the compilation-owned list.
+      auto *DAL = ClangCLArgs::translateArgs(
+          *NewDAL, DefaultToolChain.getTriple(), *TranslatedArgs);
+      delete NewDAL;
+      NewDAL = DAL;
     }
 
     if (!NewDAL) {
@@ -397,6 +407,8 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
       if (TheDriver.IsCLMode())
         return;
     }
+    if (Job.InProcess && !CC1Command::canRunAgain())
+      return;
   }
 }
 

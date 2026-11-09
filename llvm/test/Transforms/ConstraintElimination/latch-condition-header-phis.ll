@@ -217,7 +217,7 @@ define i1 @latch_samesign_ult(i1 %d) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[LO]], [[HI]]
 ; CHECK-NEXT:    br i1 [[D]], label %[[LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[LO_NEXT]] = add i8 [[LO]], 1
+; CHECK-NEXT:    [[LO_NEXT]] = add nuw i8 [[LO]], 1
 ; CHECK-NEXT:    [[HI_NEXT]] = add nuw nsw i8 [[HI]], 0
 ; CHECK-NEXT:    [[CONT:%.*]] = icmp samesign ult i8 [[LO_NEXT]], [[HI_NEXT]]
 ; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT]]
@@ -257,7 +257,7 @@ define i32 @latch_slt_header_varying_bound() {
 ; CHECK-NEXT:    [[CMP_REM:%.*]] = icmp eq i64 [[I]], [[REM]]
 ; CHECK-NEXT:    br i1 [[CMP_REM]], label %[[EXIT1:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[CONT:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT2:.*]]
@@ -890,7 +890,7 @@ define void @latch_three_distinct_phis(i8 %sx, i8 %sp) {
 ; CHECK-NEXT:    [[X:%.*]] = phi i8 [ [[SX]], %[[ENTRY]] ], [ [[XN:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi i8 [ [[SP]], %[[ENTRY]] ], [ [[A:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[A]] = add i8 [[X]], 1
+; CHECK-NEXT:    [[A]] = add nsw i8 [[X]], 1
 ; CHECK-NEXT:    [[XN]] = add i8 [[X]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[A]], [[XN]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]

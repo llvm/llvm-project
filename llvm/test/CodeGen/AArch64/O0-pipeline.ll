@@ -10,8 +10,8 @@
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Library Function Lowering Analysis
-; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Assumption Cache Tracker
+; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT:   ModulePass Manager
@@ -27,6 +27,7 @@
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       AArch64 Stack Tagging
+; CHECK-NEXT:       SJLJ Exception Handling preparation
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
@@ -52,6 +53,7 @@
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Machine SME ABI pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved

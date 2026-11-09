@@ -59,6 +59,15 @@ SuccessorOperands TestBranchOp::getSuccessorOperands(unsigned index) {
   return SuccessorOperands(getTargetOperandsMutable());
 }
 
+LogicalResult TestBranchOp::fold(FoldAdaptor adaptor,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  if (!getFoldToLast())
+    return failure();
+  (*this)->setSuccessor(&(*this)->getParentRegion()->back(), 0);
+  removeFoldToLastAttr();
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TestProducingBranchOp
 //===----------------------------------------------------------------------===//
@@ -1399,6 +1408,47 @@ void IsolatedRegionBranchOp::getCanonicalizationPatterns(
 
 MutableOperandRange
 IsolatedRegionYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  return getValuesMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TypeChangingRegionBranchOp
+//===----------------------------------------------------------------------===//
+
+void TypeChangingRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.emplace_back(getOperation());
+    return;
+  }
+  for (Region &region : getBranches())
+    regions.emplace_back(&region);
+}
+
+ValueRange
+TypeChangingRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation()
+             ? ValueRange(getOutputs())
+             : ValueRange(successor.getSuccessor()->getArguments());
+}
+
+OperandRange TypeChangingRegionBranchOp::getEntrySuccessorOperands(
+    RegionSuccessor successor) {
+  return getInputs();
+}
+
+bool TypeChangingRegionBranchOp::areTypesCompatible(Type lhs, Type rhs) {
+  return true;
+}
+
+void TypeChangingRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+MutableOperandRange
+TypeChangingYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
   return getValuesMutable();
 }
 
