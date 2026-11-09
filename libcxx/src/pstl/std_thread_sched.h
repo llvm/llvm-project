@@ -30,7 +30,7 @@ namespace __pstl::__statpart {
 static_assert(std::atomic_size_t::is_always_lock_free);
 static_assert(std::atomic<std::thread::id>::is_always_lock_free);
 
-// Typedefs of the apply()'s parameters.
+// Typedefs for apply()'s parameters.
 using ctx_t  = void*;
 using func_t = void (*)(void*, std::size_t);
 
@@ -151,7 +151,7 @@ private:
 // QueueOwnership represents the ownership of a queue by a thread and the number of nested acquisitions by this thread.
 struct QueueOwnership {
   // Identification of a thread that owns a queue.
-  // Attempts to acquire ownership must be synchronized by this variable.
+  // Attempts to acquire ownership must be synchronized via this variable.
   std::atomic<std::thread::id> id = {};
 
   // Supports nested parallelism: this variable is incremented with each acquisition and decremented with each release.
@@ -165,7 +165,7 @@ public:
   // Allocates internal data structures and starts the worker threads.
   Scheduler() noexcept;
 
-  // Destructor must never be called, doing so will cause a verbose abort.
+  // Destructor must never be called; doing so causes a verbose abort.
   ~Scheduler();
 
   // No copying or moving is allowed.
@@ -207,8 +207,7 @@ private:
   std::atomic_unsigned_lock_free m_epoch{0};
 };
 
-// For cases when the number of iterations is fewer than 2 or when there are no worker threads available,
-// fallback to serial execution.
+// When there are fewer than 2 iterations or no worker threads available, fall back to serial execution.
 inline void apply_serial(std::size_t iterations, void* ctx, void (*func)(void*, std::size_t)) noexcept {
   for (std::size_t i = 0; i < iterations; ++i) {
     func(ctx, i);
@@ -237,8 +236,8 @@ inline Scheduler::Scheduler() noexcept {
     return; // Nothing to do, don't enable parallelism.
   }
 
-  // Start `cpu_threads - 1` worker threads since the calling thread also participates in the work, thus all cpu
-  // threads will be occupied.
+  // Start `cpu_threads - 1` worker threads since the calling thread also participates in the work,
+  // thus all cpu threads will be occupied.
   const size_t max_workers_count = cpu_threads - 1;
 
   // Allocate at least cpu_threads * 2 slots in each TaskQueue's buffer.
@@ -248,7 +247,7 @@ inline Scheduler::Scheduler() noexcept {
   // Conservatively allow each cpu thread to come in as a guest and publish tasks.
   const size_t guest_queues = cpu_threads;
 
-  // We need one queue per each worker thread and one queue per each guest thread.
+  // We need one queue per worker thread and one queue per guest thread.
   m_queues_count = max_workers_count + guest_queues;
 
   // Allocate the queues.
@@ -293,6 +292,7 @@ inline Scheduler::~Scheduler() {
 }
 
 inline void Scheduler::worker_thread(size_t worker_index) noexcept {
+  // Worker threads live forever and never return.
   while (true) {
     std::atomic_unsigned_lock_free::value_type epoch = m_epoch.load(); // Load the epoch before looking for work
     Task* task                                       = nullptr;
@@ -300,7 +300,7 @@ inline void Scheduler::worker_thread(size_t worker_index) noexcept {
     // The queue owned by this worker thread must be empty at this time, thus there's no reason to try popping from it.
 
     // Try to steal from other queues in a staggered manner.
-    // Loop over each queue except the one owned by the worker.
+    // Loop over each queue except the one owned by this worker.
     for (size_t i = 1; i != m_queues_count; ++i) {
       if ((task = m_queues[(worker_index + i) % m_queues_count].steal())) {
         break;
@@ -339,7 +339,7 @@ inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) {
     }
   }
 
-  // Unable to aquire a queue for this thread.
+  // Unable to acquire a queue for this thread.
   return nullptr;
 }
 
@@ -355,7 +355,7 @@ inline bool Scheduler::is_parallelism_disabled() const noexcept { return m_worke
 
 inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(void*, std::size_t)) noexcept {
   if (iterations < 2 || is_parallelism_disabled()) {
-    // No worker threads available or not enough iterations requested, fallback to serial execution.
+    // No worker threads available or not enough iterations requested, fall back to serial execution.
     apply_serial(iterations, ctx, func);
     return;
   }
@@ -375,7 +375,7 @@ inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(voi
   // Split the workload for potentially (m_workers_count + 1) participants (workers + caller thread).
   size_t num_requests = std::min(m_workers_count + 1, iterations);
 
-  // Create a task, whose requests then will be published in the queue and stolen by the workers.
+  // Create a task whose requests will then be pushed in the queue and stolen by the workers.
   Task root_task{.ctx = ctx, .func = func, .iterations = iterations, .index = 0, .requests = num_requests};
 
   // Push all but one request to the queue, and process the last one directly in this thread.
