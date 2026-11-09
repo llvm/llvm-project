@@ -1568,7 +1568,7 @@ define nofpclass(snan) half @ret_no_snan__known_negative__fadd__known_positive()
 }
 
 ;---------------------------------------------------------------------
-; Check not-0 outupt handling with different denormal modes
+; Check not-0 output handling with different denormal modes
 ;---------------------------------------------------------------------
 
 ; Can drop selects with daz
