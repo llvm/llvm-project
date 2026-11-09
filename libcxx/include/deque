@@ -204,6 +204,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__iterator/move_iterator.h>
 #  include <__iterator/next.h>
 #  include <__iterator/prev.h>
+#  include <__iterator/repeat_iterator.h>
 #  include <__iterator/reverse_iterator.h>
 #  include <__iterator/segmented_iterator.h>
 #  include <__memory/addressof.h>
@@ -853,7 +854,10 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) { return __emplace(__p, __v); }
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, size_type __n, const value_type& __v);
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, size_type __n, const value_type& __v) {
+    value_type __tmp(__v);
+    return insert(__p, __repeat_iterator<const value_type>(__tmp, __n), __repeat_iterator<const value_type>(__tmp, 0));
+  }
   template <class _InputIter, __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InputIter __f, _InputIter __l);
   template <class _ForwardIterator,
@@ -1260,12 +1264,6 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __add_front_capacity(size_type __n);
   _LIBCPP_HIDE_FROM_ABI void __add_back_capacity();
   _LIBCPP_HIDE_FROM_ABI void __add_back_capacity(size_type __n);
-  _LIBCPP_HIDE_FROM_ABI iterator __move_and_check(iterator __f, iterator __l, iterator __r, const_pointer& __vt);
-  _LIBCPP_HIDE_FROM_ABI iterator
-  __move_backward_and_check(iterator __f, iterator __l, iterator __r, const_pointer& __vt);
-  _LIBCPP_HIDE_FROM_ABI void __move_construct_and_check(iterator __f, iterator __l, iterator __r, const_pointer& __vt);
-  _LIBCPP_HIDE_FROM_ABI void
-  __move_construct_backward_and_check(iterator __f, iterator __l, iterator __r, const_pointer& __vt);
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const deque& __c) {
     __copy_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_copy_assignment::value>());
@@ -1730,58 +1728,6 @@ typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::__emplace(cons
 }
 
 template <class _Tp, class _Allocator>
-typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::insert(const_iterator __p, size_type __n, const value_type& __v) {
-  size_type __pos     = __p - begin();
-  size_type __to_end  = __size() - __pos;
-  allocator_type& __a = __alloc();
-  if (__pos < __to_end) { // insert by shifting things backward
-    if (__n > __front_spare())
-      __add_front_capacity(__n - __front_spare());
-    // __n <= __front_spare()
-    __annotate_increase_front(__n);
-    iterator __old_begin = begin();
-    iterator __i         = __old_begin;
-    if (__n > __pos) {
-      for (size_type __m = __n - __pos; __m; --__m, --__start_, ++__size())
-        __alloc_traits::construct(__a, std::addressof(*--__i), __v);
-      __n = __pos;
-    }
-    if (__n > 0) {
-      const_pointer __vt = pointer_traits<const_pointer>::pointer_to(__v);
-      iterator __obn     = __old_begin + __n;
-      __move_construct_backward_and_check(__old_begin, __obn, __i, __vt);
-      if (__n < __pos)
-        __old_begin = __move_and_check(__obn, __old_begin + __pos, __old_begin, __vt);
-      std::fill_n(__old_begin, __n, *__vt);
-    }
-  } else { // insert by shifting things forward
-    size_type __back_capacity = __back_spare();
-    if (__n > __back_capacity)
-      __add_back_capacity(__n - __back_capacity);
-    // __n <= __back_capacity
-    __annotate_increase_back(__n);
-    iterator __old_end = end();
-    iterator __i       = __old_end;
-    size_type __de     = size() - __pos;
-    if (__n > __de) {
-      for (size_type __m = __n - __de; __m; --__m, (void)++__i, ++__size())
-        __alloc_traits::construct(__a, std::addressof(*__i), __v);
-      __n = __de;
-    }
-    if (__n > 0) {
-      const_pointer __vt = pointer_traits<const_pointer>::pointer_to(__v);
-      iterator __oen     = __old_end - __n;
-      __move_construct_and_check(__oen, __old_end, __i, __vt);
-      if (__n < __de)
-        __old_end = __move_backward_and_check(__old_end - __de, __oen, __old_end, __vt);
-      std::fill_n(__old_end - __n, __n, *__vt);
-    }
-  }
-  return begin() + __pos;
-}
-
-template <class _Tp, class _Allocator>
 template <class _InputIter, __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value, int> >
 typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::insert(const_iterator __p, _InputIter __f, _InputIter __l) {
@@ -2212,120 +2158,6 @@ void deque<_Tp, _Allocator>::pop_back() {
   --__size();
   __annotate_shrink_back(__old_sz, __old_start);
   __maybe_remove_back_spare();
-}
-
-// move assign [__f, __l) to [__r, __r + (__l-__f)).
-// If __vt points into [__f, __l), then subtract (__f - __r) from __vt.
-template <class _Tp, class _Allocator>
-typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::__move_and_check(iterator __f, iterator __l, iterator __r, const_pointer& __vt) {
-  // as if
-  //   for (; __f != __l; ++__f, ++__r)
-  //       *__r = std::move(*__f);
-  difference_type __n = __l - __f;
-  while (__n > 0) {
-    pointer __fb         = __f.__ptr_;
-    pointer __fe         = *__f.__m_iter_ + __block_size;
-    difference_type __bs = __fe - __fb;
-    if (__bs > __n) {
-      __bs = __n;
-      __fe = __fb + __bs;
-    }
-    if (__fb <= __vt && __vt < __fe)
-      __vt = (const_iterator(__f.__m_iter_, __vt) -= __f - __r).__ptr_;
-    __r = std::move(__fb, __fe, __r);
-    __n -= __bs;
-    __f += __bs;
-  }
-  return __r;
-}
-
-// move assign [__f, __l) to [__r - (__l-__f), __r) backwards.
-// If __vt points into [__f, __l), then add (__r - __l) to __vt.
-template <class _Tp, class _Allocator>
-typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::__move_backward_and_check(iterator __f, iterator __l, iterator __r, const_pointer& __vt) {
-  // as if
-  //   while (__f != __l)
-  //       *--__r = std::move(*--__l);
-  difference_type __n = __l - __f;
-  while (__n > 0) {
-    --__l;
-    pointer __lb         = *__l.__m_iter_;
-    pointer __le         = __l.__ptr_ + 1;
-    difference_type __bs = __le - __lb;
-    if (__bs > __n) {
-      __bs = __n;
-      __lb = __le - __bs;
-    }
-    if (__lb <= __vt && __vt < __le)
-      __vt = (const_iterator(__l.__m_iter_, __vt) += __r - __l - 1).__ptr_;
-    __r = std::move_backward(__lb, __le, __r);
-    __n -= __bs;
-    __l -= __bs - 1;
-  }
-  return __r;
-}
-
-// move construct [__f, __l) to [__r, __r + (__l-__f)).
-// If __vt points into [__f, __l), then add (__r - __f) to __vt.
-template <class _Tp, class _Allocator>
-void deque<_Tp, _Allocator>::__move_construct_and_check(iterator __f, iterator __l, iterator __r, const_pointer& __vt) {
-  allocator_type& __a = __alloc();
-  // as if
-  //   for (; __f != __l; ++__r, ++__f, ++__size())
-  //       __alloc_traits::construct(__a, std::addressof(*__r), std::move(*__f));
-  difference_type __n = __l - __f;
-  while (__n > 0) {
-    pointer __fb         = __f.__ptr_;
-    pointer __fe         = *__f.__m_iter_ + __block_size;
-    difference_type __bs = __fe - __fb;
-    if (__bs > __n) {
-      __bs = __n;
-      __fe = __fb + __bs;
-    }
-    if (__fb <= __vt && __vt < __fe)
-      __vt = (const_iterator(__f.__m_iter_, __vt) += __r - __f).__ptr_;
-    for (; __fb != __fe; ++__fb, ++__r, ++__size())
-      __alloc_traits::construct(__a, std::addressof(*__r), std::move(*__fb));
-    __n -= __bs;
-    __f += __bs;
-  }
-}
-
-// move construct [__f, __l) to [__r - (__l-__f), __r) backwards.
-// If __vt points into [__f, __l), then subtract (__l - __r) from __vt.
-template <class _Tp, class _Allocator>
-void deque<_Tp, _Allocator>::__move_construct_backward_and_check(
-    iterator __f, iterator __l, iterator __r, const_pointer& __vt) {
-  allocator_type& __a = __alloc();
-  // as if
-  //   for (iterator __j = __l; __j != __f;)
-  //   {
-  //       __alloc_traitsconstruct(__a, std::addressof(*--__r), std::move(*--__j));
-  //       --__start_;
-  //       ++__size();
-  //   }
-  difference_type __n = __l - __f;
-  while (__n > 0) {
-    --__l;
-    pointer __lb         = *__l.__m_iter_;
-    pointer __le         = __l.__ptr_ + 1;
-    difference_type __bs = __le - __lb;
-    if (__bs > __n) {
-      __bs = __n;
-      __lb = __le - __bs;
-    }
-    if (__lb <= __vt && __vt < __le)
-      __vt = (const_iterator(__l.__m_iter_, __vt) -= __l - __r + 1).__ptr_;
-    while (__le != __lb) {
-      __alloc_traits::construct(__a, std::addressof(*--__r), std::move(*--__le));
-      --__start_;
-      ++__size();
-    }
-    __n -= __bs;
-    __l -= __bs - 1;
-  }
 }
 
 template <class _Tp, class _Allocator>
