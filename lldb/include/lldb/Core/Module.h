@@ -29,10 +29,10 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
@@ -127,7 +127,7 @@ public:
   ///     multiple architectures).
   Module(
       const FileSpec &file_spec, const ArchSpec &arch,
-      ConstString object_name = ConstString(), lldb::offset_t object_offset = 0,
+      std::string object_name = std::string(), lldb::offset_t object_offset = 0,
       const llvm::sys::TimePoint<> &object_mod_time = llvm::sys::TimePoint<>());
 
   Module(const ModuleSpec &module_spec);
@@ -522,7 +522,7 @@ public:
 
   lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
-  ConstString GetObjectName() const;
+  llvm::StringRef GetObjectName() const;
 
   std::optional<lldb::addr_t> GetMemoryModuleAddress() const {
     return m_memory_module_addr;
@@ -783,7 +783,7 @@ public:
       const FileSpec &file_spec, uint32_t line, bool check_inlines,
       lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
-  void SetFileSpecAndObjectName(const FileSpec &file, ConstString object_name);
+  void SetFileSpecAndObjectName(const FileSpec &file, std::string object_name);
 
   bool GetIsDynamicLinkEditor();
 
@@ -954,8 +954,9 @@ public:
     /// \param[in] lang_type
     ///     The language to create lookups for. If eLanguageTypeUnknown is
     ///     passed, creates one LookupInfo for each language plugin currently
-    ///     available in LLDB. If a specific language is provided, creates only
-    ///     a single LookupInfo for that language.
+    ///     available in LLDB, except for full-name lookups that would repeat
+    ///     the lookup of another language. If a specific language is provided,
+    ///     creates only a single LookupInfo for that language.
     ///
     /// \param[in] lookup_name_override
     ///     Manually override the name used for lookup. This parameter is
@@ -983,7 +984,13 @@ public:
 
     void Prune(SymbolContextList &sc_list, size_t start_idx) const;
 
+    /// Returns true if this lookup equals \p other in everything but the
+    /// language.
+    bool EqualsIgnoringLanguage(const LookupInfo &other) const;
+
   protected:
+    // When adding a member, also compare it in EqualsIgnoringLanguage().
+
     /// What the user originally typed
     ConstString m_name;
 
@@ -1073,7 +1080,7 @@ protected:
   FileSpec m_symfile_spec;   ///< If this path is valid, then this is the file
                              /// that _will_ be used as the symbol file for this
                              /// module
-  ConstString m_object_name; ///< The name an object within this module that is
+  std::string m_object_name; ///< The name an object within this module that is
                              /// selected, or empty of the module is represented
                              /// by \a m_file.
   std::optional<lldb::addr_t>
@@ -1109,7 +1116,7 @@ protected:
 
   /// Directories registered via AddPrefixMapSearchDir, searched lazily on the
   /// first call to RemapSourceFile or FindSourceFile. Cleared after searching.
-  llvm::DenseSet<ConstString> m_prefix_map_search_dirs;
+  llvm::StringSet<> m_prefix_map_search_dirs;
 
   /// Search each registered directory upward for compilation-prefix-map.json
   /// and apply any found mappings to m_source_mappings. Called at most once.

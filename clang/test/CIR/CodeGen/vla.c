@@ -232,10 +232,10 @@ void f3(unsigned len) {
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
 // LLVM: define{{.*}} void @f3(i32 {{.*}} %[[LEN_ARG:.*]])
-// LLVM:   %[[SAVED_STACK2:.*]] = alloca ptr
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   %[[I:.*]] = alloca i32
+// LLVM:   %[[SAVED_STACK2:.*]] = alloca ptr
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN_SIZE_T:.*]] = zext i32 %[[LEN]] to i64
@@ -254,8 +254,6 @@ void f3(unsigned len) {
 // LLVM:   %[[CMP:.*]] = icmp ult i32 %[[NEXT]], %[[LEN2]]
 // LLVM:   br i1 %[[CMP]], label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]
 // LLVM: [[WHILE_BODY]]:
-// LLVM:   br label %[[WHILE_BODY2:.*]]
-// LLVM: [[WHILE_BODY2]]:
 // LLVM:   %[[I_LEN:.*]] = load i32, ptr %[[I]]
 // LLVM:   %[[I_LEN_SIZE_T2:.*]] = zext i32 %[[I_LEN]] to i64
 // LLVM:   %[[STACK_PTR2:.*]] = call ptr @llvm.stacksave.p0()
@@ -267,8 +265,6 @@ void f3(unsigned len) {
 // LLVM: [[WHILE_BODY_END]]:
 // LLVM:   br label %[[WHILE_COND]]
 // LLVM: [[WHILE_END]]:
-// LLVM:   br label %[[F3_END:.*]]
-// LLVM: [[F3_END]]:
 // LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
 // LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
 
@@ -329,8 +325,8 @@ int f5(unsigned long len) {
 }
 
 // CIR: cir.func{{.*}} @f5(%[[LEN_ARG:.*]]: !u64i {{.*}}) -> !s32i
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!u64i>
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!u64i>
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
@@ -344,11 +340,12 @@ int f5(unsigned long len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 // CIR:   %[[RET_VAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
-// CIR:   cir.return %[[RET_VAL]] : !s32i
+// CIR:   cir.return implicit %[[RET_VAL]] : !s32i
 
 // LLVM: define{{.*}} i32 @f5(i64 {{.*}} %[[LEN_ARG:.*]])
-// LLVM:   %[[LEN_ADDR:.*]] = alloca i64
+// LLVM:   %[[CLEANUP_DEST:.*]] = alloca i32
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32
+// LLVM:   %[[LEN_ADDR:.*]] = alloca i64
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   store i64 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN:.*]] = load i64, ptr %[[LEN_ADDR]]
@@ -543,8 +540,6 @@ void complex_vla_cast(int n) {
 // LLVM: [[CLEANUP_BODY]]:
 // LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]], align 8
 // LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
-// LLVM:   br label %[[CLEANUP_END:.*]]
-// LLVM: [[CLEANUP_END]]:
 // LLVM:   br label %[[DONE:.*]]
 // LLVM: [[DONE]]:
 // LLVM:   ret void

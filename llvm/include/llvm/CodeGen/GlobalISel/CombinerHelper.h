@@ -39,6 +39,7 @@ class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
 class GISelValueTracking;
+struct KnownBits;
 class MachineDominatorTree;
 class LegalizerInfo;
 struct LegalityQuery;
@@ -167,9 +168,17 @@ public:
   /// perform a FewerElements action on the target.
   LLVM_ABI bool isLegalOrHasFewerElements(const LegalityQuery &Query) const;
 
-  /// \return true if the combine is running prior to legalization, or if \p Ty
-  /// is a legal integer constant type on the target.
+  /// \return true if the combine is running prior to legalization, or if a
+  /// scalar \p Ty G_CONSTANT is legal. For fixed vectors, also requires
+  /// G_BUILD_VECTOR of those scalar constants to be legal. Scalable vectors are
+  /// not constant folded and return false.
   LLVM_ABI bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
+
+  /// \return true if the combine is running prior to legalization, or if a
+  /// scalar \p Ty G_FCONSTANT is legal. For fixed vectors, also requires
+  /// G_BUILD_VECTOR of those scalar constants to be legal. Scalable vectors are
+  /// not constant folded and return false.
+  LLVM_ABI bool isFPConstantLegalOrBeforeLegalizer(const LLT Ty) const;
 
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
   LLVM_ABI void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
@@ -291,8 +300,10 @@ public:
   LLVM_ABI void applyCombineShuffleConcat(MachineInstr &MI,
                                           SmallVector<Register> &Ops) const;
 
-  /// Replace \p MI with a build_vector.
+  /// Replace shuffle \p MI with a build_vector.
   LLVM_ABI void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
+  /// Replace shuffle of build_vector with a build_vector.
+  LLVM_ABI void applyCombineShuffleOfBuildVector(MachineInstr &MI) const;
 
   /// Combine G_BUILD_VECTOR(G_UNMERGE(G_BITCAST), Undef) to
   /// G_BITCAST(G_BUILD_VECTOR(..))
@@ -436,10 +447,6 @@ public:
   LLVM_ABI bool matchCombineUnmergeZExtToZExt(MachineInstr &MI) const;
   LLVM_ABI void applyCombineUnmergeZExtToZExt(MachineInstr &MI) const;
 
-  /// Transform fp_instr(cst) to constant result of the fp operation.
-  LLVM_ABI void applyCombineConstantFoldFpUnary(MachineInstr &MI,
-                                                const ConstantFP *Cst) const;
-
   /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
   /// _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
   /// a scalar constant or a G_BUILD_VECTOR of constants.
@@ -527,10 +534,12 @@ public:
 
   /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
   /// is true, also match operands whose negation is a power of 2 (i.e. whose
-  /// absolute value is a power of 2).
-  LLVM_ABI bool
-  matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
-                                     bool OrNegative = false) const;
+  /// absolute value is a power of 2). When \p OrZero is true, also match
+  /// operands that may be zero (i.e. that are known to be either zero or a
+  /// power of two).
+  LLVM_ABI bool matchOperandIsKnownToBeAPowerOfTwo(const MachineOperand &MO,
+                                                   bool OrNegative = false,
+                                                   bool OrZero = false) const;
 
   /// Erase \p MI
   LLVM_ABI void eraseInst(MachineInstr &MI) const;
@@ -727,19 +736,23 @@ public:
 
   /// Do constant folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldCastOp(MachineInstr &MI,
-                                        APInt &MatchInfo) const;
+                                        BuildFnTy &MatchInfo) const;
 
   /// Do constant folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldBinOp(MachineInstr &MI,
-                                       APInt &MatchInfo) const;
+                                       BuildFnTy &MatchInfo) const;
 
   /// Do constant FP folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldFPBinOp(MachineInstr &MI,
-                                         ConstantFP *&MatchInfo) const;
+                                         BuildFnTy &MatchInfo) const;
+
+  /// Constant fold a unary FP operation when the source is constant.
+  LLVM_ABI bool matchConstantFoldFPUnary(MachineInstr &MI,
+                                         BuildFnTy &MatchInfo) const;
 
   /// Constant fold G_FMA/G_FMAD.
   LLVM_ABI bool matchConstantFoldFMA(MachineInstr &MI,
-                                     ConstantFP *&MatchInfo) const;
+                                     BuildFnTy &MatchInfo) const;
 
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
@@ -770,6 +783,14 @@ public:
   /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
   /// return expressions that implements it by shifting.
   LLVM_ABI void applyUDivByPow2(MachineInstr &MI) const;
+
+  /// Combine unsigned division by a shifted power of two into a right shift.
+  LLVM_ABI bool matchUDivByShiftedPow2(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const;
+
+  /// Convert signed division or remainder of nonnegative operands to unsigned.
+  LLVM_ABI bool matchSignedDivRemToUnsigned(MachineInstr &MI,
+                                            unsigned UnsignedOpcode) const;
 
   /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
   LLVM_ABI void applySimplifySRemByPow2(MachineInstr &MI) const;
@@ -892,8 +913,7 @@ public:
 
   /// Match shifts greater or equal to the range (the bitwidth of the result
   /// datatype, or the effective bitwidth of the source value).
-  LLVM_ABI bool matchShiftsTooBig(MachineInstr &MI,
-                                  std::optional<int64_t> &MatchInfo) const;
+  LLVM_ABI bool matchShiftsTooBig(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Match constant LHS ops that should be commuted.
   LLVM_ABI bool matchCommuteConstantToRHS(MachineInstr &MI) const;
@@ -936,7 +956,7 @@ public:
                                  BuildFnTy &MatchInfo) const;
 
   LLVM_ABI bool matchCastOfInteger(const MachineInstr &CastMI,
-                                   APInt &MatchInfo) const;
+                                   BuildFnTy &MatchInfo) const;
 
   /// Combine addos.
   LLVM_ABI bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) const;
@@ -1065,9 +1085,36 @@ public:
   LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI, unsigned Opc,
                                            unsigned ZeroPoisonOpc) const;
 
+  /// Simplify a register use under \p DemandedBits and compute \p Known in
+  /// the same walk. Partial-demand rewrites of shared values update only this
+  /// use.
+  LLVM_ABI bool simplifyDemandedBits(MachineInstr &MI, unsigned OpNo,
+                                     const APInt &DemandedBits,
+                                     KnownBits &Known,
+                                     unsigned Depth = 0) const;
+
+  /// Match demanded-bits simplification of a root's register use.
+  LLVM_ABI bool matchSimplifyDemandedBits(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const;
+
 private:
+  Register simplifyMultipleUseDemandedBits(Register R,
+                                           const APInt &DemandedBits,
+                                           unsigned Depth) const;
+
+  /// Walk a use operand; \p DoRewrite false probes without changing MIR.
+  bool simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
+                                const APInt &DemandedBits, KnownBits &Known,
+                                unsigned Depth, bool DoRewrite) const;
+
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
+
+  /// \return true if the combine is running prior to legalization, or if a
+  /// scalar \p Ty \p Opc (G_CONSTANT or G_FCONSTANT) is legal. For fixed
+  /// vectors, also requires G_BUILD_VECTOR of those scalar constants to be
+  /// legal. Scalable vectors are not constant folded and return false.
+  bool isImmConstantLegalOrBeforeLegalizer(unsigned Opc, const LLT Ty) const;
 
   /// Helper function for matchBinopWithNeg: tries to match one commuted form
   /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.

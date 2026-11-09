@@ -30,9 +30,8 @@ target_compile_options(orc-rt-connect-objects PRIVATE ${ORC_RT_COMPILE_FLAGS})
 # than two.
 add_library(orc-rt-connect ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
-target_link_libraries(orc-rt-connect PUBLIC orc-rt-headers orc-rt-bedrock)
-
 target_link_libraries(orc-rt-connect
+  PUBLIC orc-rt-headers orc-rt-bedrock
   PRIVATE $<BUILD_INTERFACE:orc-rt-connect-objects>)
 
 # TODO: Use common runtimes infrastructure for output and install paths

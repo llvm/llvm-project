@@ -73,7 +73,7 @@ void readStrings(
 }
 
 } // namespace
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 ORC_RT_SPS_WRAPPER_IMPL(orc_rt_ci_sps_mem_write_uint8s,
                         void(SPSSequence<SPSTuple<SPSExecutorAddr, uint8_t>>),
@@ -151,4 +151,4 @@ Error addMemoryAccess(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_MemoryAccess_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

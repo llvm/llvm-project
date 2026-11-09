@@ -19,7 +19,6 @@
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -531,9 +530,9 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
     for (uint16_t I = 0; I < Size; I += 2) {
       uint8_t Byte;
       error(IO.mapInteger(Byte));
-      Record.Slots.push_back(static_cast<VFTableSlotKind>(Byte & 0xF));
+      Record.Slots.push_back(static_cast<VFTableSlotKind>(Byte >> 4));
       if ((I + 1) < Size)
-        Record.Slots.push_back(static_cast<VFTableSlotKind>(Byte >> 4));
+        Record.Slots.push_back(static_cast<VFTableSlotKind>(Byte & 0xF));
     }
   }
 

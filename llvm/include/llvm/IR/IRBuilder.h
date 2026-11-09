@@ -117,9 +117,6 @@ protected:
   using InsertFn = void (*)(const IRBuilderBase &, Instruction *, const Twine &,
                             BasicBlock::iterator);
 
-  // TODO: Remove this in favor of InsertPt.getNodeParent(), so they cannot
-  // go out of sync.
-  BasicBlock *BB;
   BasicBlock::iterator InsertPt;
   LLVMContext &Context;
   const IRBuilderFolder &Folder;
@@ -171,42 +168,37 @@ public:
 
   /// Clear the insertion point: created instructions will not be
   /// inserted into a block.
-  void ClearInsertionPoint() {
-    BB = nullptr;
-    InsertPt = BasicBlock::iterator();
-  }
+  void ClearInsertionPoint() { InsertPt = BasicBlock::iterator(); }
 
-  BasicBlock *GetInsertBlock() const { return BB; }
+  BasicBlock *GetInsertBlock() const {
+    return InsertPt.isValid() ? InsertPt.getNodeParent() : nullptr;
+  }
   BasicBlock::iterator GetInsertPoint() const { return InsertPt; }
   LLVMContext &getContext() const { return Context; }
 
   /// Get data layout. Requires that an insertion point is set and connected
   /// to a module.
   const DataLayout &getDataLayout() const {
-    assert(BB && "Must have insertion point to get data layout");
-    return BB->getDataLayout();
+    assert(InsertPt.isValid() &&
+           "Must have insertion point to get data layout");
+    return InsertPt.getNodeParent()->getDataLayout();
   }
 
   /// Get the module. Requires that an insertion point is set and connected
   /// to a module.
   Module *getModule() const {
-    assert(BB && "Must have insertion point to get module");
-    return BB->getModule();
+    assert(InsertPt.isValid() && "Must have insertion point to get module");
+    return InsertPt.getNodeParent()->getModule();
   }
 
   /// This specifies that created instructions should be appended to the
   /// end of the specified block.
-  void SetInsertPoint(BasicBlock *TheBB) {
-    BB = TheBB;
-    InsertPt = BB->end();
-  }
+  void SetInsertPoint(BasicBlock *TheBB) { InsertPt = TheBB->end(); }
 
   /// This specifies that created instructions should be inserted before
   /// the specified instruction.
   void SetInsertPoint(Instruction *I) {
-    BB = I->getParent();
     InsertPt = I->getIterator();
-    assert(InsertPt != BB->end() && "Can't read debug loc from end()");
     SetCurrentDebugLocation(I->getDebugLoc());
   }
 
@@ -220,9 +212,8 @@ public:
   /// This specifies that created instructions should be inserted at
   /// the specified point.
   void SetInsertPoint(BasicBlock::iterator IP) {
-    BB = IP.getNodeParent();
     InsertPt = IP;
-    if (IP != BB->end())
+    if (IP != IP.getNodeParent()->end())
       SetCurrentDebugLocation(IP->getDebugLoc());
   }
 
@@ -230,8 +221,7 @@ public:
   /// end of the specified function, but after already existing static alloca
   /// instructions that are at the start.
   void SetInsertPointPastAllocas(Function *F) {
-    BB = &F->getEntryBlock();
-    InsertPt = BB->getFirstNonPHIOrDbgOrAlloca();
+    InsertPt = F->getEntryBlock().getFirstNonPHIOrAlloca();
   }
 
   /// Set location information used by debugging information.
@@ -337,6 +327,7 @@ public:
   }
 
   void setConstrainedFPFunctionAttr() {
+    BasicBlock *BB = GetInsertBlock();
     assert(BB && "Must have a basic block to set any function attributes!");
 
     Function *F = BB->getParent();
@@ -2100,13 +2091,53 @@ public:
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",
                       GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    assert(Offset->getType()->isIntOrIntVectorTy(
+               getDataLayout().getIndexTypeSizeInBits(Ptr->getType())) &&
+           "Offset must match index type");
     return CreateGEP(getInt8Ty(), Ptr, Offset, Name, NW);
   }
 
   Value *CreateInBoundsPtrAdd(Value *Ptr, Value *Offset,
                               const Twine &Name = "") {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
-                     GEPNoWrapFlags::inBounds());
+    return CreatePtrAdd(Ptr, Offset, Name, GEPNoWrapFlags::inBounds());
+  }
+
+  /// Create a ptradd with an unsigned constant offset. The offset must fit into
+  /// the unsigned index type.
+  Value *
+  CreatePtrAddWithUnsignedOffset(Value *Ptr, uint64_t Offset,
+                                 const Twine &Name = "",
+                                 GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, ConstantInt::get(IdxTy, Offset), Name, NW);
+  }
+
+  /// Create a ptradd with a signed constant offset. The offset must fit into
+  /// the signed index type.
+  Value *
+  CreatePtrAddWithSignedOffset(Value *Ptr, int64_t Offset,
+                               const Twine &Name = "",
+                               GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, ConstantInt::getSigned(IdxTy, Offset), Name, NW);
+  }
+
+  /// Create a ptradd where the offset is sign-extended or truncated to the
+  /// index type. Offset must match the vector-ness of the base pointer.
+  Value *
+  CreatePtrAddWithSExtOrTrunc(Value *Ptr, Value *Offset, const Twine &Name = "",
+                              GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, CreateSExtOrTrunc(Offset, IdxTy), Name, NW);
+  }
+
+  /// Create a ptradd where the offset is zero-extended or truncated to the
+  /// index type. Offset must match the vector-ness of the base pointer.
+  Value *
+  CreatePtrAddWithZExtOrTrunc(Value *Ptr, Value *Offset, const Twine &Name = "",
+                              GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, CreateZExtOrTrunc(Offset, IdxTy), Name, NW);
   }
 
   //===--------------------------------------------------------------------===//
@@ -2928,14 +2959,16 @@ private:
   }
 
 public:
-  // TODO: Deprecate ctors accepting LLVMContext.
+  [[deprecated("Use the overload taking Module instead")]]
   IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter)
       : IRBuilderBase(C, this->Folder, CallInsertHelper), Folder(Folder),
         Inserter(Inserter) {}
 
+  [[deprecated("Use the overload taking Module instead")]]
   IRBuilder(LLVMContext &C, FolderTy Folder)
       : IRBuilderBase(C, this->Folder, CallInsertHelper), Folder(Folder) {}
 
+  [[deprecated("Use the overload taking Module instead")]]
   explicit IRBuilder(LLVMContext &C)
       : IRBuilderBase(C, this->Folder, CallInsertHelper) {}
 
@@ -3030,8 +3063,8 @@ template <typename FolderTy>
 IRBuilder(BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
 IRBuilder(BasicBlock::iterator) -> IRBuilder<>;
 
-// Create wrappers for C Binding types (see CBindingWrapping.h).
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)
+/// Unwrap C API builder reference.
+LLVM_ABI IRBuilder<> *unwrap(LLVMBuilderRef Ref);
 
 } // end namespace llvm
 

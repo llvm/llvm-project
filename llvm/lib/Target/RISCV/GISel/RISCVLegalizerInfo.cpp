@@ -199,7 +199,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-    if (XLen == 32 && ST.hasStdExtD()) {
+    if (XLen == 32 && (ST.hasStdExtD() || ST.hasStdExtZilsd())) {
       MergeUnmergeActions.legalIf(
           all(typeIs(BigTyIdx, s64), typeIs(LitTyIdx, s32)));
     }
@@ -249,20 +249,37 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtZbc(), {s32})
       .unsupported();
 
-  auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
-  auto &CountZerosPoisonActions =
-      getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
+  auto &CTLZPoisonActions = getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON);
+  auto &CTTZPoisonActions = getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON);
   if (ST.hasStdExtZbb()) {
-    CountZerosActions.legalFor({{sXLen, sXLen}})
+    getActionDefinitionsBuilder({G_CTLZ, G_CTTZ})
+        .legalFor({{sXLen, sXLen}})
         .customFor({{s32, s32}})
         .clampScalar(0, s32, sXLen)
         .widenScalarToNextPow2(0)
         .scalarSameSizeAs(1, 0);
   } else {
-    CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
-    CountZerosPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    auto &CTLZActions = getActionDefinitionsBuilder(G_CTLZ);
+    if (ST.hasVendorXTHeadBb())
+      CTLZActions.legalFor({{sXLen, sXLen}})
+          .clampScalar(0, sXLen, sXLen)
+          .scalarSameSizeAs(1, 0);
+    else
+      CTLZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+
+    auto &CTTZActions = getActionDefinitionsBuilder(G_CTTZ);
+    if (ST.hasVendorXTHeadBb()) {
+      CTTZActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0).lower();
+      CTLZPoisonActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0);
+      CTTZPoisonActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0);
+    } else {
+      CTTZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+      CTLZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+      CTTZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    }
   }
-  CountZerosPoisonActions.lower();
+  CTLZPoisonActions.lower();
+  CTTZPoisonActions.lower();
 
   auto &CountSignActions = getActionDefinitionsBuilder(G_CTLS);
   if (ST.hasStdExtP()) {
@@ -371,7 +388,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
          {s64, p0, s64, getScalarMemAlign(64)}});
     ExtLoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s32, getScalarMemAlign(32)}});
-  } else if (ST.hasStdExtD()) {
+  } else if (ST.hasStdExtD() || ST.hasStdExtZilsd()) {
+    // RV32: s64 is legal for f64 (D/Zdinx) or i64 (Zilsd); LLT cannot tell the
+    // two apart, so one rule covers both.
+    // FIXME: We require natural alignment, so under -mzilsd-word-align an
+    // align-4 i64 access is split into two s32 ones. riscv-prera-zilsd-opt
+    // merges them back into LD_RV32/SD_RV32, but it is skipped at -O0.
     LoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s64, getScalarMemAlign(64)}});
     StoreActions.legalForTypesWithMemDesc(
@@ -596,12 +618,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}, {s64, s16}})
       .lower();
 
-  // FIXME: Use Zfhmin.
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(ST.hasStdExtD(), {{s32, s64}})
-      .legalFor(ST.hasStdExtZfh(), {{s16, s32}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}})
-      .libcallFor({{s32, s64}})
+      .legalFor(ST.hasStdExtZfhmin(), {{s16, s32}})
+      .legalFor(ST.hasStdExtZfhmin() && ST.hasStdExtD(), {{s16, s64}})
+      .libcallFor({{s16, s32}, {s16, s64}, {s32, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(ST.hasStdExtD(), {{s64, s32}})
@@ -632,9 +653,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfhmin(), {s16})
-      .customFor(!ST.is64Bit(), {s32})
-      .customFor(ST.is64Bit(), {s32, s64})
-      .lowerFor({s64, s128});
+      .lowerFor({s32, s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -661,6 +680,23 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
+
+  // Unlike G_FPTOSI/G_FPTOUI these need no libcalls for out-of-range values:
+  // the RISC-V conversions already saturate. There is no legalFor() because
+  // they do not produce 0 for NaN, which legalizeCustom fixes up with a
+  // compare and a select. The remaining cases fall back to the generic
+  // lowering, which clamps before converting and only handles scalars.
+  getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
+      .customFor(ST.hasStdExtF(), {{sXLen, s32}})
+      .customFor(ST.hasStdExtD(), {{sXLen, s64}})
+      .customFor(ST.hasStdExtZfh(), {{sXLen, s16}})
+      .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
+      .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
+      // f16 extends exactly to f32; converting via f32 avoids needing rules
+      // for every {sXX, s16} combination.
+      .widenScalarIf(typeIs(1, s16), changeTo(1, s32))
+      .lowerIf(all(isScalar(0), isScalar(1)));
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -730,7 +766,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
-                               G_FTANH, G_FMODF})
+                               G_FTANH, G_FMODF, G_FSINCOS})
       .libcallFor({s32, s64})
       .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
@@ -1700,16 +1736,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
     MI.eraseFromParent();
     return true;
   }
-  case TargetOpcode::G_FCONSTANT: {
-    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
-
-    // Convert G_FCONSTANT to G_CONSTANT.
-    Register DstReg = MI.getOperand(0).getReg();
-    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
-
-    MI.eraseFromParent();
-    return true;
-  }
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||
@@ -1723,6 +1749,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_ADD: {
     Helper.Observer.changingInstr(MI);
+    // The G_ANYEXTs below leave the new high bits unconstrained, so no-wrap
+    // claims proved at the narrow width no longer hold.
+    MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
     Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
 
@@ -1751,6 +1780,10 @@ bool RISCVLegalizerInfo::legalizeCustom(
         ExtOpc = TargetOpcode::G_ZEXT;
 
       Helper.Observer.changingInstr(MI);
+      // The G_ANYEXT leave the new high bits unconstrained, so no-wrap
+      // claims proved at the narrow width no longer hold.
+      if (ExtOpc == TargetOpcode::G_ANYEXT)
+        MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
       Helper.widenScalarSrc(MI, sXLen, 1, ExtOpc);
       Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ZEXT);
       Helper.widenScalarDst(MI, sXLen);
@@ -1796,6 +1829,41 @@ bool RISCVLegalizerInfo::legalizeCustom(
     MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
     MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RTZ));
     Helper.Observer.changedInstr(MI);
+    return true;
+  }
+  case TargetOpcode::G_FPTOSI_SAT:
+  case TargetOpcode::G_FPTOUI_SAT: {
+    // Mirror lowerFP_TO_INT_SAT (RISCVISelLowering.cpp): the conversion
+    // saturates out-of-range values, but we need to select 0 for NaN as
+    // required by the intrinsics.
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    unsigned DstBits = DstTy.getScalarSizeInBits();
+    bool IsSigned = MI.getOpcode() == TargetOpcode::G_FPTOSI_SAT;
+
+    unsigned FCvtOp;
+    if (DstBits == XLen) {
+      FCvtOp = IsSigned ? RISCV::G_FCVT_X : RISCV::G_FCVT_XU;
+    } else {
+      assert(STI.is64Bit() && "Non-XLen results are only custom on RV64");
+      FCvtOp = IsSigned ? RISCV::G_FCVT_W_RV64 : RISCV::G_FCVT_WU_RV64;
+    }
+
+    auto FCvt = MIRBuilder.buildInstr(FCvtOp, {sXLen}, {Src})
+                    .addImm(RISCVFPRndMode::RTZ);
+
+    // RISC-V G_FCMP results are XLen wide, and so are G_SELECT conditions.
+    auto IsNaN = MIRBuilder.buildFCmp(CmpInst::FCMP_UNO, sXLen, Src, Src);
+
+    Register FCvtReg = FCvt.getReg(0);
+    if (DstBits != XLen)
+      FCvtReg = MIRBuilder.buildTrunc(DstTy, FCvtReg).getReg(0);
+
+    MIRBuilder.buildSelect(Dst, IsNaN, MIRBuilder.buildConstant(DstTy, 0),
+                           FCvtReg);
+
+    MI.eraseFromParent();
     return true;
   }
   case TargetOpcode::G_LROUND: {

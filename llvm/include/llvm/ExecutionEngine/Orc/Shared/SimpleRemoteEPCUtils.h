@@ -185,43 +185,13 @@ private:
   std::atomic<bool> Disconnected{false};
 };
 
-struct RemoteSymbolLookupSetElement {
-  std::string Name;
-  bool Required;
-};
-
-using RemoteSymbolLookupSet = std::vector<RemoteSymbolLookupSetElement>;
-
 namespace shared {
-
-using SPSRemoteSymbolLookupSetElement = SPSTuple<SPSString, bool>;
-
-using SPSRemoteSymbolLookupSet = SPSSequence<SPSRemoteSymbolLookupSetElement>;
 
 /// Tuple containing target triple, page size, and bootstrap symbols.
 using SPSSimpleRemoteEPCExecutorInfo =
     SPSTuple<SPSString, uint64_t,
              SPSSequence<SPSTuple<SPSString, SPSSequence<char>>>,
              SPSSequence<SPSTuple<SPSString, SPSExecutorAddr>>>;
-
-template <>
-class SPSSerializationTraits<SPSRemoteSymbolLookupSetElement,
-                             RemoteSymbolLookupSetElement> {
-public:
-  static size_t size(const RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::size(V.Name, V.Required);
-  }
-
-  static size_t serialize(SPSOutputBuffer &OB,
-                          const RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::serialize(OB, V.Name, V.Required);
-  }
-
-  static size_t deserialize(SPSInputBuffer &IB,
-                            RemoteSymbolLookupSetElement &V) {
-    return SPSArgList<SPSString, bool>::deserialize(IB, V.Name, V.Required);
-  }
-};
 
 template <>
 class SPSSerializationTraits<SPSSimpleRemoteEPCExecutorInfo,

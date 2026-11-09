@@ -480,6 +480,92 @@ static void handleAccessGroups(Operation *call,
           accessGroupOpInterface.getAccessGroupsOrNull(), accessGroups));
 }
 
+/// Whether the two call stacks agree up to the shorter length, matching
+/// LLVM's haveCommonPrefix: a MemProf context matches the new inlined
+/// callsite context when they share a prefix, even if the callsite stack
+/// is longer than the MemProf stack.
+static bool haveCommonPrefix(ArrayRef<int64_t> mibStack,
+                             ArrayRef<int64_t> callsiteStack) {
+  size_t len = std::min(mibStack.size(), callsiteStack.size());
+  return mibStack.take_front(len) == callsiteStack.take_front(len);
+}
+
+/// Updates MemProf metadata on calls inlined into `call`, matching LLVM's
+/// propagateMemProfMetadata. Each cloned call's `llvm.callsite` stack is
+/// concatenated with the inlined callsite's stack, and its `llvm.memprof`
+/// MIBs are filtered to the ones whose call stack shares a prefix with the
+/// new callsite stack; the kept MIBs are unchanged. If the inlined call
+/// has no callsite metadata, or no MIB matches, both attributes are removed
+/// from the cloned call. A cloned call with `llvm.memprof` but no
+/// `llvm.callsite` cannot have its context extended, so its `llvm.memprof`
+/// attribute is removed.
+///
+/// Known gap: unlike LLVM, which rebuilds a filtered subset through a
+/// call-stack trie (trimming contexts, and replacing the metadata with a
+/// function attribute when a single allocation type is left), this keeps
+/// the raw subset. There is no MLIR way to carry that function attribute.
+static void
+handleMemProfMetadata(Operation *call,
+                      iterator_range<Region::iterator> inlinedBlocks) {
+  MLIRContext *context = call->getContext();
+  StringRef callsiteName = LLVM::LLVMDialect::getCallsiteAttrName();
+  StringRef memprofName = LLVM::LLVMDialect::getMemProfAttrName();
+  DenseI64ArrayAttr inlinedCallsite =
+      call->getDiscardableAttrOfType<DenseI64ArrayAttr>(callsiteName);
+  ArrayRef<int64_t> inlinedStack =
+      inlinedCallsite ? inlinedCallsite.asArrayRef() : ArrayRef<int64_t>{};
+
+  // Any op carrying these attributes lowers to a call, so act on every
+  // carrier, including calls nested in region ops and intrinsic calls that
+  // are not CallOpInterface, matching the set translation can produce.
+  for (Block &block : inlinedBlocks) {
+    block.walk([&](Operation *op) {
+      DenseI64ArrayAttr origCallsite =
+          op->getDiscardableAttrOfType<DenseI64ArrayAttr>(callsiteName);
+      ArrayAttr memprof = op->getDiscardableAttrOfType<ArrayAttr>(memprofName);
+      if (!origCallsite && !memprof)
+        return;
+      if (!origCallsite) {
+        // No callsite context to extend from: drop the memprof attribute
+        // when the clone carries one. LLVM asserts this case cannot happen;
+        // dropping is the conservative equivalent.
+        op->removeDiscardableAttr(memprofName);
+        return;
+      }
+      if (inlinedStack.empty()) {
+        // The inlined call carries no callsite context: the cloned call is
+        // not part of any profiled context.
+        op->removeDiscardableAttr(memprofName);
+        op->removeDiscardableAttr(callsiteName);
+        return;
+      }
+      SmallVector<int64_t> newStack(origCallsite.asArrayRef());
+      newStack.append(inlinedStack.begin(), inlinedStack.end());
+      op->setDiscardableAttr(callsiteName,
+                             DenseI64ArrayAttr::get(context, newStack));
+      if (!memprof)
+        return;
+      SmallVector<Attribute> keptMIBs;
+      bool malformed = false;
+      for (Attribute mibAttr : memprof) {
+        auto mib = dyn_cast<LLVM::MemProfMIBAttr>(mibAttr);
+        if (!mib) {
+          malformed = true;
+          break;
+        }
+        if (haveCommonPrefix(mib.getCallStack().asArrayRef(), newStack))
+          keptMIBs.push_back(mibAttr);
+      }
+      if (malformed || keptMIBs.empty()) {
+        op->removeDiscardableAttr(memprofName);
+        op->removeDiscardableAttr(callsiteName);
+      } else if (keptMIBs.size() != memprof.size()) {
+        op->setDiscardableAttr(memprofName, ArrayAttr::get(context, keptMIBs));
+      }
+    });
+  }
+}
+
 /// Updates locations inside loop annotations to reflect that they were inlined.
 static void
 handleLoopAnnotations(Operation *call,
@@ -514,13 +600,14 @@ handleLoopAnnotations(Operation *call,
     if (!newStartLoc && !newEndLoc)
       return {loopAnnotation, WalkResult::advance()};
     auto newLoopAnnotation = LLVM::LoopAnnotationAttr::get(
-        loopAnnotation.getContext(), loopAnnotation.getDisableNonforced(),
-        loopAnnotation.getVectorize(), loopAnnotation.getInterleave(),
-        loopAnnotation.getUnroll(), loopAnnotation.getUnrollAndJam(),
-        loopAnnotation.getLicm(), loopAnnotation.getDistribute(),
-        loopAnnotation.getPipeline(), loopAnnotation.getPeeled(),
-        loopAnnotation.getUnswitch(), loopAnnotation.getMustProgress(),
-        loopAnnotation.getIsVectorized(), newStartLoc, newEndLoc,
+        loopAnnotation.getContext(), loopAnnotation.getId(),
+        loopAnnotation.getDisableNonforced(), loopAnnotation.getVectorize(),
+        loopAnnotation.getInterleave(), loopAnnotation.getUnroll(),
+        loopAnnotation.getUnrollAndJam(), loopAnnotation.getLicm(),
+        loopAnnotation.getDistribute(), loopAnnotation.getPipeline(),
+        loopAnnotation.getPeeled(), loopAnnotation.getUnswitch(),
+        loopAnnotation.getMustProgress(), loopAnnotation.getIsVectorized(),
+        loopAnnotation.getAlign(), newStartLoc, newEndLoc,
         loopAnnotation.getParallelAccesses());
     // Needs to advance, as loop annotations can be nested.
     return {newLoopAnnotation, WalkResult::advance()};
@@ -842,6 +929,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     handleInlinedAllocas(call, inlinedBlocks);
     handleAliasScopes(call, inlinedBlocks);
     handleAccessGroups(call, inlinedBlocks);
+    handleMemProfMetadata(call, inlinedBlocks);
     handleLoopAnnotations(call, inlinedBlocks);
   }
 
