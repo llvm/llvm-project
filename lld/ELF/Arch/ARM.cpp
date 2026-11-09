@@ -59,9 +59,9 @@ public:
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.ekind == ELF32BEKind)
-      elf::scanSection1<ARM, ELF32BE>(*this, sec, shard);
+      elf::scanSection1<ELF32BE>(*this, sec, shard);
     else
-      elf::scanSection1<ARM, ELF32LE>(*this, sec, shard);
+      elf::scanSection1<ELF32LE>(*this, sec, shard);
   }
 
   DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap;
