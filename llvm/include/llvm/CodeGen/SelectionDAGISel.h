@@ -498,7 +498,7 @@ public:
   /// Look through a mask on the amount \p N of a shift that reads only the low
   /// Log2(\p ShiftWidth) bits of its amount, as many shift instructions do.
   ///
-  /// Looks through one ZERO_EXTEND or TRUNCATE that keeps those bits. If the
+  /// Looks through one TRUNCATE that keeps those bits. If the
   /// result is (and X, C) and C keeps all the bits the shift reads, possibly
   /// after adding bits known to be zero in X, sets \p ShAmt to X and returns
   /// true. Otherwise returns false and leaves \p ShAmt unchanged.

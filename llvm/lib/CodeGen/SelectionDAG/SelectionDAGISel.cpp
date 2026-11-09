@@ -4597,11 +4597,10 @@ bool SelectionDAGISel::selectShiftAmountMask(SDValue N, unsigned ShiftWidth,
   assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
   unsigned ShiftBits = Log2_32(ShiftWidth);
 
-  // Extensions and truncations that keep the low ShiftBits bits don't change
-  // the bits the shift reads.
-  if (N.getOpcode() == ISD::ZERO_EXTEND ||
-      (N.getOpcode() == ISD::TRUNCATE &&
-       N.getScalarValueSizeInBits() >= ShiftBits))
+  // A truncation that keeps the low ShiftBits bits doesn't change the bits the
+  // shift reads.
+  if (N.getOpcode() == ISD::TRUNCATE &&
+      N.getScalarValueSizeInBits() >= ShiftBits)
     N = N.getOperand(0);
 
   if (N.getOpcode() != ISD::AND || !isa<ConstantSDNode>(N.getOperand(1)))

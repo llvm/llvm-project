@@ -4096,13 +4096,9 @@ bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
 bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
                                         SDValue &ShAmt) {
   // Shift instructions on RISC-V only read the lower 5 or 6 bits of the shift
-  // amount. Look through a zext and an AND that doesn't affect those bits.
-  if (!selectShiftAmountMask(N, ShiftWidth, ShAmt)) {
+  // amount. Look through an AND that doesn't affect those bits.
+  if (!selectShiftAmountMask(N, ShiftWidth, ShAmt))
     ShAmt = N;
-    // Peek through zext.
-    if (ShAmt.getOpcode() == ISD::ZERO_EXTEND)
-      ShAmt = ShAmt.getOperand(0);
-  }
 
   if (ShAmt.getOpcode() == ISD::ADD &&
       isa<ConstantSDNode>(ShAmt.getOperand(1))) {
