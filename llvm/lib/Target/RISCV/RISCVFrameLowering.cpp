@@ -73,7 +73,7 @@ static uint64_t getACLICInterruptPushAmount(const MachineFunction &MF) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   if (STI.is64Bit())
     return 48;
-  return STI.getTargetABI() == RISCVABI::ABI_ILP32E ? 24 : 32;
+  return STI.getTargetABI() == RISCVABI::ABI::ILP32E ? 24 : 32;
 }
 
 static const std::pair<MCPhysReg, int8_t> FixedCSRFIQCIInterruptMap[] = {
