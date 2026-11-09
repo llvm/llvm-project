@@ -34,9 +34,11 @@ class DependencyScanningTool {
 public:
   /// Construct a dependency scanning tool.
   ///
-  /// @param Service  The parent service. Must outlive the tool.
-  DependencyScanningTool(dependencies::DependencyScanningService &Service)
-      : Worker(Service) {}
+  /// \param Service The parent service. Must outlive the tool.
+  DependencyScanningTool(
+      dependencies::DependencyScanningService &Service,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS = nullptr)
+      : Worker(Service, LocalFS) {}
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
@@ -56,7 +58,7 @@ public:
   /// dependency information by `-MD -MF <dep_file>`.
   ///
   /// \param MakeformatOutputPath The output parameter for the path to
-  /// \param MakeformatOutput.
+  /// \p MakeformatOutput.
   ///
   /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
   /// P1689 dependency format rules otherwise.
@@ -87,8 +89,8 @@ public:
   ///                           "-fmodule-file=", "-o" and other output
   ///                           arguments for dependencies.
   /// \param TUBuffer Optional memory buffer for translation unit input. If
-  ///                 TUBuffer is nullopt, the input should be included in the
-  ///                 Commandline already.
+  ///                 std::nullopt, the input should be included
+  ///                 in the \p CommandLine already.
   ///
   /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
   /// translation unit dependencies otherwise.
@@ -116,6 +118,19 @@ public:
       llvm::function_ref<std::optional<std::string>()> getNextName,
       dependencies::DependencyConsumer &DepConsumer);
 
+  /// Find the module maps that define each module in \p ModuleNames, without
+  /// loading or reporting diagnostics about the modules.
+  ///
+  /// \returns a map from each module name that is found to the path of the
+  /// module map that defines it, or std::nullopt if the compiler invocation
+  /// could not be set up. Names provided by a prebuilt module file, or with no
+  /// module map found, are omitted.
+  std::optional<llvm::StringMap<std::string>>
+  getModuleMapsForModules(StringRef CWD, ArrayRef<std::string> CommandLine,
+                          DiagnosticConsumer &DiagConsumer,
+                          dependencies::DependencyActionController &Controller,
+                          ArrayRef<StringRef> ModuleNames);
+
   /// Returns the worker tracing VFS, if it was requested via the service.
   llvm::vfs::TracingFileSystem *getWorkerTracingVFS() const {
     return Worker.getTracingVFS();
@@ -135,7 +150,7 @@ private:
 /// dependency scanning file-system is used instead.
 ///
 /// \returns false if any errors occurred (with diagnostics reported to
-/// \c DiagConsumer), true otherwise.
+/// \p DiagConsumer), true otherwise.
 bool computeDependencies(
     dependencies::DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine,

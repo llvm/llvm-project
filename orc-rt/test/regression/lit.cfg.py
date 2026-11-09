@@ -49,11 +49,27 @@ if llvm_jitlink:
 
 
 # %{cc} and %{cxx} compile C and C++ for the runtime's target. They default to
-# clang and clang++ from the LLVM tools directory. Pass --param orc-rt-cc=<cc>
-# or --param orc-rt-cxx=<cxx> to use a different compiler: it must accept
-# clang-style options and target the runtime's target without being told to
-# (use a wrapper script if necessary). Tests that use %{cc} or %{cxx} must be
-# gated on the orc-rt-cc or orc-rt-cxx feature respectively.
+# clang and clang++ from the LLVM tools directory, building against the sysroot
+# that the runtime was built against (ORC_RT_TEST_SYSROOT, see
+# cmake/OrcRTTesting.cmake). Pass --param orc-rt-cc=<cc> or
+# --param orc-rt-cxx=<cxx> to use a different compiler: it must accept
+# clang-style options and target the runtime's target and sysroot without being
+# told to (use a wrapper script if necessary). Tests that use %{cc} or %{cxx}
+# must be gated on the orc-rt-cc or orc-rt-cxx feature respectively.
+target_is_apple = "apple" in config.target_triple.split("-")
+if config.orc_rt_sysroot:
+    sysroot_option = (
+        " -isysroot " if target_is_apple else " --sysroot="
+    ) + config.orc_rt_sysroot
+else:
+    sysroot_option = ""
+    if target_is_apple:
+        lit_config.note(
+            "no SDK found for %{cc} and %{cxx}; tests that include system "
+            "headers will fail"
+        )
+
+
 def add_compiler(name, clang_name):
     override = lit_config.params.get(name)
     if override:
@@ -64,7 +80,7 @@ def add_compiler(name, clang_name):
     else:
         compiler = llvm_config.use_llvm_tool(clang_name)
         if compiler:
-            compiler += " --target=" + config.target_triple
+            compiler += " --target=" + config.target_triple + sysroot_option
     if compiler:
         config.available_features.add(name)
         substitution = "%{" + name[len("orc-rt-") :] + "}"
