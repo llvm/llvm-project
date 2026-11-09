@@ -410,6 +410,8 @@ std::optional<SmallVector<Value>> ForOp::getLoopInductionVars() {
   return SmallVector<Value>{getInductionVar()};
 }
 
+std::optional<bool> ForOp::isLoopIterationSigned() { return !getUnsignedCmp(); }
+
 std::optional<SmallVector<OpFoldResult>> ForOp::getLoopLowerBounds() {
   return SmallVector<OpFoldResult>{OpFoldResult(getLowerBound())};
 }
@@ -725,6 +727,8 @@ ValueRange ForOp::getSuccessorInputs(RegionSuccessor successor) {
 }
 
 SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
+
+std::optional<bool> ForallOp::isLoopIterationSigned() { return true; }
 
 /// Promotes the loop body of a forallOp to its containing block if it can be
 /// determined that the loop has a single iteration.
@@ -3010,6 +3014,10 @@ SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
 std::optional<SmallVector<Value>> ParallelOp::getLoopInductionVars() {
   return SmallVector<Value>{getBody()->getArguments()};
+}
+
+std::optional<bool> ParallelOp::isLoopIterationSigned() {
+  return !getUnsignedCmp();
 }
 
 std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopLowerBounds() {

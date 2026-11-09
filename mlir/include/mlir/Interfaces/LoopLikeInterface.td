@@ -111,6 +111,21 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
+        Return true if loop iteration uses signed comparisons, false if it uses
+        unsigned comparisons, or std::nullopt if the signedness is unknown or
+        differs between induction variables. This applies to all induction
+        variables of the loop and describes the iteration semantics, not the
+        signedness of their MLIR types.
+      }],
+      /*retTy=*/"::std::optional<bool>",
+      /*methodName=*/"isLoopIterationSigned",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::std::nullopt;
+      }]
+    >,
+    InterfaceMethod<[{
         Return all lower bounds, if they exist. If the op has no notion of
         lower bounds, then return std::nullopt. If it does have
         a notion but an instance doesn't have lower bounds, then
