@@ -444,10 +444,6 @@
 #    error "__cpp_lib_gcd_lcm should not be defined before c++17"
 #  endif
 
-#  ifdef __cpp_lib_generate_random
-#    error "__cpp_lib_generate_random should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should not be defined before c++14"
 #  endif
@@ -834,6 +830,10 @@
 
 #  ifdef __cpp_lib_ranges_fold
 #    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_generate_random
+#    error "__cpp_lib_ranges_generate_random should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -1567,10 +1567,6 @@
 #    error "__cpp_lib_gcd_lcm should not be defined before c++17"
 #  endif
 
-#  ifdef __cpp_lib_generate_random
-#    error "__cpp_lib_generate_random should not be defined before c++26"
-#  endif
-
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++14"
 #  endif
@@ -1993,6 +1989,10 @@
 
 #  ifdef __cpp_lib_ranges_fold
 #    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_generate_random
+#    error "__cpp_lib_ranges_generate_random should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -2819,10 +2819,6 @@
 #    error "__cpp_lib_gcd_lcm should have the value 201606L in c++17"
 #  endif
 
-#  ifdef __cpp_lib_generate_random
-#    error "__cpp_lib_generate_random should not be defined before c++26"
-#  endif
-
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++17"
 #  endif
@@ -3320,6 +3316,10 @@
 
 #  ifdef __cpp_lib_ranges_fold
 #    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_generate_random
+#    error "__cpp_lib_ranges_generate_random should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -4338,10 +4338,6 @@
 #    error "__cpp_lib_gcd_lcm should have the value 201606L in c++20"
 #  endif
 
-#  ifdef __cpp_lib_generate_random
-#    error "__cpp_lib_generate_random should not be defined before c++26"
-#  endif
-
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++20"
 #  endif
@@ -4914,6 +4910,10 @@
 
 #  ifdef __cpp_lib_ranges_fold
 #    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_generate_random
+#    error "__cpp_lib_ranges_generate_random should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -6052,10 +6052,6 @@
 #    error "__cpp_lib_gcd_lcm should have the value 201606L in c++23"
 #  endif
 
-#  ifdef __cpp_lib_generate_random
-#    error "__cpp_lib_generate_random should not be defined before c++26"
-#  endif
-
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++23"
 #  endif
@@ -6709,6 +6705,10 @@
 #  endif
 #  if __cpp_lib_ranges_fold != 202207L
 #    error "__cpp_lib_ranges_fold should have the value 202207L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_generate_random
+#    error "__cpp_lib_ranges_generate_random should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -8180,19 +8180,6 @@
 #    error "__cpp_lib_gcd_lcm should have the value 201606L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_generate_random
-#      error "__cpp_lib_generate_random should be defined in c++26"
-#    endif
-#    if __cpp_lib_generate_random != 202403L
-#      error "__cpp_lib_generate_random should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_generate_random
-#      error "__cpp_lib_generate_random should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++26"
 #  endif
@@ -9131,6 +9118,13 @@
 #  endif
 #  if __cpp_lib_ranges_fold != 202207L
 #    error "__cpp_lib_ranges_fold should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_generate_random
+#    error "__cpp_lib_ranges_generate_random should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_generate_random != 202403L
+#    error "__cpp_lib_ranges_generate_random should have the value 202403L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_indices
@@ -10701,19 +10695,6 @@
 #    error "__cpp_lib_gcd_lcm should have the value 201606L in c++29"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_generate_random
-#      error "__cpp_lib_generate_random should be defined in c++29"
-#    endif
-#    if __cpp_lib_generate_random != 202403L
-#      error "__cpp_lib_generate_random should have the value 202403L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_generate_random
-#      error "__cpp_lib_generate_random should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++29"
 #  endif
@@ -11679,6 +11660,13 @@
 #  endif
 #  if __cpp_lib_ranges_fold != 202207L
 #    error "__cpp_lib_ranges_fold should have the value 202207L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_ranges_generate_random
+#    error "__cpp_lib_ranges_generate_random should be defined in c++29"
+#  endif
+#  if __cpp_lib_ranges_generate_random != 202403L
+#    error "__cpp_lib_ranges_generate_random should have the value 202403L in c++29"
 #  endif
 
 #  ifndef __cpp_lib_ranges_indices
