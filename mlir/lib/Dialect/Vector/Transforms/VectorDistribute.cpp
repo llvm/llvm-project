@@ -18,6 +18,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
@@ -310,9 +311,14 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
     // reads within the scf.if to transit the values captured from above.
     SmallVector<Value> bbArgReplacements;
     // Pool of args buffers paired with a "consumed" flag, so Step 5 can try
-    // to reuse them for yielded values' transit buffers.
+    // to reuse them for yielded values' transit buffers. Skip reuse inside a
+    // loop: thread convergence is only guaranteed within a barrier, so the
+    // next iteration's arg stores could race with this iteration's result
+    // loads.
     SmallVector<std::pair<Value, /*consumed=*/bool>> reusableArgBuffers;
-    reusableArgBuffers.reserve(warpOp.getArgs().size());
+    bool canReuseArgBuffers = !warpOp->getParentOfType<LoopLikeOpInterface>();
+    if (canReuseArgBuffers)
+      reusableArgBuffers.reserve(warpOp.getArgs().size());
     for (const auto &it : llvm::enumerate(warpOp.getArgs())) {
       Value sequentialVal = warpOpBody->getArgument(it.index());
       Value distributedVal = it.value();
@@ -323,7 +329,8 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
       rewriter.setInsertionPoint(ifOp);
       Value buffer = options.warpAllocationFn(loc, rewriter, warpOp,
                                               sequentialVal.getType());
-      reusableArgBuffers.emplace_back(buffer, /*consumed=*/false);
+      if (canReuseArgBuffers)
+        reusableArgBuffers.emplace_back(buffer, /*consumed=*/false);
       // Store distributed vector into buffer, before the ifOp.
       helper.buildStore(rewriter, loc, distributedVal, buffer);
       // Load sequential vector from buffer, inside the ifOp.

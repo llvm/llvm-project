@@ -114,6 +114,39 @@ func.func @rewrite_warp_op_to_scf_if_incompatible_shape(%laneid: index,
 
 // -----
 
+// Warp op inside a loop: args buffers must not be reused, since convergence
+// is only guaranteed within a barrier and the next iteration's arg stores
+// could race with this iteration's result loads.
+
+// CHECK-SCF-IF-LABEL: func @warp_op_inside_loop(
+//  CHECK-SCF-IF-SAME:     %[[lane:.*]]: index, %[[out:.*]]: memref<2x32xindex>)
+func.func @warp_op_inside_loop(%lane: index, %out: memref<2x32xindex>) {
+//       CHECK-SCF-IF:   scf.for
+//       CHECK-SCF-IF:   %[[arg_buf:.*]] = memref.get_global @__shared_64xindex
+//       CHECK-SCF-IF:   %[[res_buf:.*]] = memref.get_global @__shared_32xindex
+//   CHECK-SCF-IF-NOT:   memref.subview
+//       CHECK-SCF-IF:   scf.if
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.for %i = %c0 to %c2 step %c1 {
+    %v = vector.broadcast %i : index to vector<2xindex>
+    %r = gpu.warp_execute_on_lane_0(%lane)[32]
+        args(%v : vector<2xindex>) -> (vector<1xindex>) {
+      ^bb0(%arg: vector<64xindex>):
+        %s = vector.extract_strided_slice %arg
+            offsets = [0], sizes = [32], strides = [1]
+            : vector<64xindex> to vector<32xindex>
+        gpu.yield %s : vector<32xindex>
+    }
+    %x = vector.extract %r[0] : index from vector<1xindex>
+    memref.store %x, %out[%i, %lane] : memref<2x32xindex>
+  }
+  return
+}
+
+// -----
+
 // CHECK-D-DAG: #[[MAP1:.*]] = affine_map<()[s0] -> (s0 * 2 + 32)>
 
 // CHECK-DIST-AND-PROP-LABEL: func @warp(
