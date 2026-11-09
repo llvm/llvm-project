@@ -4317,13 +4317,12 @@ define amdgpu_kernel void @fma_extract_hi_v4f32(ptr addrspace(1) %out, ptr addrs
 ; GFX90A-SDAG-LABEL: fma_extract_hi_v4f32:
 ; GFX90A-SDAG:       ; %bb.0:
 ; GFX90A-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90A-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-SDAG-NEXT:    global_load_dwordx4 v[4:7], v2, s[2:3] glc
+; GFX90A-SDAG-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3] glc
 ; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v0, v7
-; GFX90A-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[0:1], v[0:1] op_sel_hi:[0,0,0]
-; GFX90A-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX90A-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[2:3], v[2:3], v[2:3] op_sel:[1,1,1]
+; GFX90A-SDAG-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX90A-SDAG-NEXT:    s_endpgm
 ;
 ; GFX90A-GISEL-LABEL: fma_extract_hi_v4f32:
@@ -4342,13 +4341,12 @@ define amdgpu_kernel void @fma_extract_hi_v4f32(ptr addrspace(1) %out, ptr addrs
 ; GFX942-SDAG-LABEL: fma_extract_hi_v4f32:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-SDAG-NEXT:    global_load_dwordx4 v[4:7], v2, s[2:3] sc0 sc1
+; GFX942-SDAG-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3] sc0 sc1
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, v7
-; GFX942-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[0:1], v[0:1] op_sel_hi:[0,0,0]
-; GFX942-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX942-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[2:3], v[2:3], v[2:3] op_sel:[1,1,1]
+; GFX942-SDAG-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX942-SDAG-NEXT:    s_endpgm
 ;
 ; GFX942-GISEL-LABEL: fma_extract_hi_v4f32:
@@ -4376,9 +4374,7 @@ define amdgpu_kernel void @fma_extract_hi_v4f32(ptr addrspace(1) %out, ptr addrs
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[0:3], v4, s[2:3] scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, v3
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[0:1], v[0:1] op_sel_hi:[0,0,0]
+; GFX1250-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[2:3], v[2:3], v[2:3] op_sel:[1,1,1]
 ; GFX1250-SDAG-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -4643,8 +4639,7 @@ define <2 x float> @fmul_fadd_bcast_w_v4f32(ptr addrspace(1) %in, <2 x float> %y
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, v7
-; PACKED-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[2:3] op_sel_hi:[0,1]
+; PACKED-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[6:7], v[2:3] op_sel:[1,0]
 ; PACKED-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
 ; PACKED-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4664,10 +4659,9 @@ define <2 x float> @fmul_fadd_bcast_w_v4f32(ptr addrspace(1) %in, <2 x float> %y
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v6, v7
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[2:3], v[6:7], v[2:3] op_sel_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[2:3], v[6:7], v[2:3] op_sel:[1,0]
 ; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[2:3], v[4:5]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -4708,9 +4702,8 @@ define <2 x float> @fmul_fadd_bcast_odd_v8f32(ptr addrspace(1) %in, <2 x float> 
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, v7
-; PACKED-SDAG-NEXT:    v_pk_mul_f32 v[2:3], v[4:5], v[2:3] op_sel:[1,0]
-; PACKED-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[2:3], v[0:1] op_sel_hi:[1,0]
+; PACKED-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[4:5], v[2:3] op_sel:[1,0]
+; PACKED-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[6:7] op_sel:[0,1]
 ; PACKED-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; PACKED-GISEL-LABEL: fmul_fadd_bcast_odd_v8f32:
@@ -4730,11 +4723,10 @@ define <2 x float> @fmul_fadd_bcast_odd_v8f32(ptr addrspace(1) %in, <2 x float> 
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v6, v7
 ; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[2:3], v[4:5], v[2:3] op_sel:[1,0]
 ; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[2:3], v[6:7] op_sel_hi:[1,0]
+; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[2:3], v[6:7] op_sel:[0,1]
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-LABEL: fmul_fadd_bcast_odd_v8f32:
