@@ -4783,6 +4783,13 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //     ... // do something to R, G, B
 //   }
 // To:
+// With shufflevector based interleave
+//   %wide.vec = load <12 x i32>                       ; Read 4 tuples of R,G,B
+//   %R.vec = shuffle %wide.vec, poison, <0, 3, 6, 9>   ; R elements
+//   %G.vec = shuffle %wide.vec, poison, <1, 4, 7, 10>  ; G elements
+//   %B.vec = shuffle %wide.vec, poison, <2, 5, 8, 11>  ; B elements
+
+// With intrinsic based interleave
 //   %wide.vec = load <12 x i32>                       ; Read 4 tuples of R,G,B
 //   %strided.vec = call { <4 x i32>, <4 x i32>, <4 x i32> }
 //        @llvm.vector.deinterleave3.v12i32(<12 x i32> %wide.vec)
@@ -4798,6 +4805,14 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //     Pic[i+2] = B;           // Member of index 2
 //   }
 // To:
+// With shufflevector based interleave
+//   %R_G.vec = shuffle %R.vec, %G.vec, <0, 1, 2, ..., 7>
+//   %B_U.vec = shuffle %B.vec, poison, <0, 1, 2, 3, u, u, u, u>
+//   %interleaved.vec = shuffle %R_G.vec, %B_U.vec,
+//        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
+//   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
+
+// With intrinsic based interleave
 //   %interleaved.vec = call <12 x i32>
 //        @llvm.vector.interleave3.v12i32(
 //          <4 x i32> %R.vec, <4 x i32> %G.vec, <4 x i32> %B.vec)
