@@ -14,6 +14,7 @@ import {
 } from "./ui/modules-data-provider";
 import { registerStackFramesTracker } from "./ui/stack-frames-tracker";
 import { SymbolsProvider } from "./ui/symbols-provider";
+import { VariablesTrackerFactory } from "./ui/variables-tracker";
 import { LaunchUriHandler } from "./uri-launch-handler";
 
 /**
@@ -55,7 +56,20 @@ export class LLDBDapExtension extends DisposableContext {
       ),
       vscode.window.registerUriHandler(new LaunchUriHandler()),
     );
+
+    // Register trackers
     registerStackFramesTracker(context);
+    const showVariableTypes = function () {
+      return vscode.workspace
+        .getConfiguration("debug")
+        .get<boolean>("showVariableTypes", false);
+    };
+    this.pushSubscription(
+      vscode.debug.registerDebugAdapterTrackerFactory(
+        "lldb-dap",
+        new VariablesTrackerFactory(showVariableTypes),
+      ),
+    );
 
     this.pushSubscription(
       vscode.commands.registerCommand(
