@@ -162,6 +162,10 @@ bool isStdCallableWrapperType(const CXXRecordDecl *RD);
 /// argument to result.
 bool isStdReferenceCast(const FunctionDecl *FD);
 
+/// Skips parentheses and implicit casts. Unlike IgnoreParenImpCasts(), stops at
+/// a MaterializeTemporaryExpr, which owns the storage of a temporary.
+const Expr *ignoreParensAndImpCasts(const Expr *E);
+
 } // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H

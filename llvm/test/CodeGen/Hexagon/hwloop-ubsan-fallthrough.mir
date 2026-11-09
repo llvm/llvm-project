@@ -78,8 +78,8 @@ body: |
     %1:intregs = PHI %5, %bb.0, %4, %bb.2
     %2:intregs = PHI %6, %bb.0, %3, %bb.2
     %7:intregs = L2_loadrb_io %1, 0
-    %8:predregs = C2_cmpeqi killed %7, 0
-    J2_jumpt killed %8, %bb.4, implicit-def dead $pc
+    %8:predregs = C2_cmpeqi %7, 0
+    J2_jumpt %8, %bb.4, implicit-def dead $pc
     J2_jump %bb.2, implicit-def dead $pc
 
   bb.2.body:
