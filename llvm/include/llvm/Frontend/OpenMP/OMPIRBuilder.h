@@ -4271,6 +4271,11 @@ public:
   /// \param IsFailOnly   True if the original value of 'x' is stored to 'v'
   ///                     only when the comparison fails. This is only valid for
   ///                     the case the comparison is '=='.
+  /// \param IsIgnoreDenormalMode True if the atomic may flush denormals.
+  /// \param IsFineGrainedMemory  False if X is known not to be in fine-grained
+  ///                             memory.
+  /// \param IsRemoteMemory       False if X is known not to be in remote
+  ///                             memory.
   ///
   /// \return Insertion point after generated atomic capture IR.
   /// Whether to emit special handling for IEEE 754 -0.0 == +0.0 in
@@ -4289,12 +4294,15 @@ public:
       const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
       AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
       omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, bool IsWeak = false);
+      bool IsFailOnly, bool IsWeak = false, bool IsIgnoreDenormalMode = false,
+      bool IsFineGrainedMemory = true, bool IsRemoteMemory = true);
   LLVM_ABI InsertPointTy createAtomicCompare(
       const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
       AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
       omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false);
+      bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false,
+      bool IsIgnoreDenormalMode = false, bool IsFineGrainedMemory = true,
+      bool IsRemoteMemory = true);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///

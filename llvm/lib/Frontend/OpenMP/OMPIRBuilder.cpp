@@ -11786,6 +11786,21 @@ static AtomicOrdering TransformReleaseAcquireRelease(AtomicOrdering AO) {
   return LoadAO;
 }
 
+static void setAtomicRMWMetadata(AtomicRMWInst *RMWInst, const Triple &T,
+                                 bool IsIgnoreDenormalMode,
+                                 bool IsFineGrainedMemory,
+                                 bool IsRemoteMemory) {
+  MDNode *Empty = MDNode::get(RMWInst->getContext(), {});
+  if (IsIgnoreDenormalMode)
+    RMWInst->setMetadata(LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
+  if (T.isAMDGPU()) {
+    if (!IsFineGrainedMemory)
+      RMWInst->setMetadata("amdgpu.no.fine.grained.memory", Empty);
+    if (!IsRemoteMemory)
+      RMWInst->setMetadata("amdgpu.no.remote.memory", Empty);
+  }
+}
+
 Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
@@ -11825,17 +11840,8 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   if (emitRMWOp) {
     AtomicRMWInst *RMWInst =
         Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
-    if (IsIgnoreDenormalMode)
-      RMWInst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
-                           llvm::MDNode::get(Builder.getContext(), {}));
-    if (T.isAMDGPU()) {
-      if (!IsFineGrainedMemory)
-        RMWInst->setMetadata("amdgpu.no.fine.grained.memory",
-                             llvm::MDNode::get(Builder.getContext(), {}));
-      if (!IsRemoteMemory)
-        RMWInst->setMetadata("amdgpu.no.remote.memory",
-                             llvm::MDNode::get(Builder.getContext(), {}));
-    }
+    setAtomicRMWMetadata(RMWInst, T, IsIgnoreDenormalMode, IsFineGrainedMemory,
+                         IsRemoteMemory);
     Res.first = RMWInst;
     // not needed except in case of postfix captures. Generate anyway for
     // consistency with the else part. Will be removed with any DCE pass.
@@ -12003,18 +12009,22 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, bool IsWeak) {
+    bool IsFailOnly, bool IsWeak, bool IsIgnoreDenormalMode,
+    bool IsFineGrainedMemory, bool IsRemoteMemory) {
 
   AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
   return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
-                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak);
+                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak,
+                             IsIgnoreDenormalMode, IsFineGrainedMemory,
+                             IsRemoteMemory);
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak) {
+    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak,
+    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -12321,6 +12331,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
     AtomicRMWInst *OldValue =
         Builder.CreateAtomicRMW(NewOp, X.Var, E, MaybeAlign(), AO);
+    setAtomicRMWMetadata(OldValue, T, IsIgnoreDenormalMode, IsFineGrainedMemory,
+                         IsRemoteMemory);
     if (V.Var) {
       Value *CapturedValue = nullptr;
       if (IsPostfixUpdate) {
