@@ -6759,6 +6759,7 @@ cc_library(
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":LLVMDialect",
         ":NVVMOpSrcs__gentbl_cc_lib",
@@ -6880,6 +6881,7 @@ td_library(
     deps = [
         ":BasicPtxBuilderIntTdFiles",
         ":GPUOpsTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
         ":LLVMOpsTdFiles",
         ":NVVMRequiresSMTraitsTdFiles",
         ":OpBaseTdFiles",
@@ -7021,6 +7023,7 @@ cc_library(
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",

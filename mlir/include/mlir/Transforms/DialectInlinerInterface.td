@@ -10,6 +10,7 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
     given dialect.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Transforms/InliningUtils.h"];
 
   let methods = [
     InterfaceMethod<[{
