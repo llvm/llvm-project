@@ -22,6 +22,9 @@
 
 ;--- r6.ll
 ; The fifth integer argument is passed in the callee-saved register %r6.
+; FIXME: in this particular case, the value in %r6 ends up being the same for caller
+;        and callee, so the tail call would actually be possible. This should be fixed
+;        once the backend is smarter about which tail calls it permits.
 define i32 @caller(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
   %ret = musttail call i32 @callee(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e)
   ret i32 %ret
