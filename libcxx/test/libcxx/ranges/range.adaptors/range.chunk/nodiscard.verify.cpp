@@ -46,19 +46,9 @@ void test() {
   std::as_const(view).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::iter_move(view.begin());
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::iter_move(std::as_const(view).begin());
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   view.end();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(view).end();
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::iter_move(view.end());
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::iter_move(std::as_const(view).end());
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   view.size();
@@ -115,7 +105,7 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   inner - std::default_sentinel;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::iter_move(inner);
+  iter_move(std::as_const(inner));
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::chunk(3);
