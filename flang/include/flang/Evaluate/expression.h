@@ -723,11 +723,6 @@ public:
   common::CombineVariants<Operations, Others> u;
 };
 
-FOR_EACH_INTEGER_KIND(extern template class Expr, )
-FOR_EACH_UNSIGNED_KIND(extern template class Expr, )
-FOR_EACH_REAL_KIND(extern template class Expr, )
-FOR_EACH_COMPLEX_KIND(extern template class Expr, )
-
 template <>
 class Expr<Type<TypeCategory::Character>>
     : public ExpressionBase<Type<TypeCategory::Character>> {
@@ -746,8 +741,6 @@ public:
       Extremum<Result>, SetLength, ConditionalExpr<Result>>
       u;
 };
-
-FOR_EACH_CHARACTER_KIND(extern template class Expr, )
 
 // The Relational class template is a helper for constructing logical
 // expressions with polymorphism over the cross product of the possible
@@ -806,11 +799,10 @@ public:
   common::MapTemplate<Relational, DirectlyComparableTypes> u;
 };
 
-FOR_EACH_INTEGER_KIND(extern template class Relational, )
-FOR_EACH_UNSIGNED_KIND(extern template class Relational, )
-FOR_EACH_REAL_KIND(extern template class Relational, )
-FOR_EACH_CHARACTER_KIND(extern template class Relational, )
-extern template class Relational<SomeType>;
+extern template class Relational<Type<TypeCategory::Integer>>;
+extern template class Relational<Type<TypeCategory::Unsigned>>;
+extern template class Relational<Type<TypeCategory::Real>>;
+extern template class Relational<Type<TypeCategory::Character>>;
 
 // Relational<> operations always have the default logical result kind.
 // They are included in this shared runtime-kind variant, but report
@@ -839,8 +831,6 @@ public:
   common::TupleToVariant<common::CombineTuples<Operations, Relations, Others>>
       u;
 };
-
-FOR_EACH_LOGICAL_KIND(extern template class Expr, )
 
 // StructureConstructor pairs a StructureConstructorValues instance
 // (a map associating symbols with expressions) with a derived type
@@ -1047,13 +1037,11 @@ FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructor, )
 
 // Template instantiations to resolve these "extern template" declarations.
 #define INSTANTIATE_EXPRESSION_TEMPLATES \
-  FOR_EACH_INTRINSIC_KIND(template class Expr, ) \
   FOR_EACH_CATEGORY_TYPE(template class Expr, ) \
-  FOR_EACH_INTEGER_KIND(template class Relational, ) \
-  FOR_EACH_UNSIGNED_KIND(template class Relational, ) \
-  FOR_EACH_REAL_KIND(template class Relational, ) \
-  FOR_EACH_CHARACTER_KIND(template class Relational, ) \
-  template class Relational<SomeType>; \
+  template class Relational<Type<TypeCategory::Integer>>; \
+  template class Relational<Type<TypeCategory::Unsigned>>; \
+  template class Relational<Type<TypeCategory::Real>>; \
+  template class Relational<Type<TypeCategory::Character>>; \
   FOR_EACH_TYPE_AND_KIND(template class ExpressionBase, ) \
   FOR_EACH_INTRINSIC_KIND(template class ArrayConstructorValues, ) \
   FOR_EACH_INTRINSIC_KIND(template class ArrayConstructor, ) \

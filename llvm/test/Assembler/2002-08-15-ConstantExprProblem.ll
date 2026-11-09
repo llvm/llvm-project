@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -o /dev/null
+; RUN: llvm-as %s -disable-output
 ; RUN: verify-uselistorder %s
 
 @.LC0 = internal global [12 x i8] c"hello world\00"             ; <ptr> [#uses=1]
