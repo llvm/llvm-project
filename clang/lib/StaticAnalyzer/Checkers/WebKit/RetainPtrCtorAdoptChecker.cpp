@@ -11,6 +11,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/RetainSummaryManager.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -578,10 +579,9 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     Os << "Incorrect use of " << Name
-       << ". The argument is +0 and results in an use-after-free";
+       << "; the argument is +0 and results in an use-after-free";
     if (condition)
       Os << " " << condition;
-    Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
@@ -599,10 +599,9 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     Os << "Incorrect use of " << Name
-       << ". The argument is +1 and results in a memory leak";
+       << "; the argument is +1 and results in a memory leak";
     if (condition)
       Os << " " << condition;
-    Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),

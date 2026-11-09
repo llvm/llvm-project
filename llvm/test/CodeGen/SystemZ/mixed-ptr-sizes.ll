@@ -379,12 +379,12 @@ declare ptr addrspace(1) @domalloc(i64)
 
 define void @f1(ptr %inp, ptr %outp) "target-features"="-vector" {
 ; CHECK-LABEL: f1 DS 0H
-; CHECK:        iilf 0,2147483647
+; CHECK:        lg 0,8(1)
 ; CHECK-NEXT:   iilf 3,2147483647
-; CHECK-NEXT:   n 0,12(1)
 ; CHECK-NEXT:   n 3,4(1)
-; CHECK-NEXT:   st 0,4(2)
+; CHECK-NEXT:   nilh 0,32767
 ; CHECK-NEXT:   st 3,0(2)
+; CHECK-NEXT:   st 0,4(2)
 ; CHECK-NEXT:   b 2(7)
   %in = load <2 x ptr>, ptr %inp, align 8
   %out = addrspacecast <2 x ptr> %in to <2 x ptr addrspace(1)>

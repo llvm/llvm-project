@@ -7,7 +7,7 @@ if(LIBC_TESTS_CAN_USE_MPFR OR LIBC_TESTS_CAN_USE_MPC)
   _get_common_test_compile_options(compile_options "" "")
   # mpfr/gmp headers do not work with -ffreestanding flag.
   list(REMOVE_ITEM compile_options "-ffreestanding")
-  target_compile_options(libc.utils.MPCommon PRIVATE -O3 ${compile_options})
+  target_compile_options(libc.utils.MPCommon PRIVATE ${compile_options})
   add_dependencies(
     libc.utils.MPCommon
     libc.hdr.stdint_proxy
@@ -41,7 +41,7 @@ if(LIBC_TESTS_CAN_USE_MPFR)
   _get_common_test_compile_options(compile_options "" "")
   # mpfr/gmp headers do not work with -ffreestanding flag.
   list(REMOVE_ITEM compile_options "-ffreestanding")
-  target_compile_options(libc.utils.MPFRWrapper PRIVATE ${libc_opt_high_flag} ${compile_options})
+  target_compile_options(libc.utils.MPFRWrapper PRIVATE ${compile_options})
   add_dependencies(
     libc.utils.MPFRWrapper
     libc.utils.MPCommon

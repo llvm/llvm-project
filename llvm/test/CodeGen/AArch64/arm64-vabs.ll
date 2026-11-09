@@ -1916,10 +1916,10 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 define <8 x i16> @pr88784(<8 x i8> %l0, <8 x i8> %l1, <8 x i16> %l2) {
 ; CHECK-LABEL: pr88784:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt.8h v2, v2, #0
 ; CHECK-NEXT:    usubl.8h v0, v0, v1
-; CHECK-NEXT:    cmlt.8h v1, v2, #0
-; CHECK-NEXT:    ssra.8h v0, v2, #15
-; CHECK-NEXT:    eor.16b v0, v1, v0
+; CHECK-NEXT:    add.8h v0, v2, v0
+; CHECK-NEXT:    eor.16b v0, v2, v0
 ; CHECK-NEXT:    ret
   %l4 = zext <8 x i8> %l0 to <8 x i16>
   %l5 = ashr <8 x i16> %l2, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -1940,7 +1940,7 @@ define <8 x i16> @pr88784_fixed(<8 x i8> %l0, <8 x i8> %l1, <8 x i16> %l2) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
 ; CHECK-GI-NEXT:    cmlt.8h v1, v0, #0
-; CHECK-GI-NEXT:    ssra.8h v0, v0, #15
+; CHECK-GI-NEXT:    add.8h v0, v1, v0
 ; CHECK-GI-NEXT:    eor.16b v0, v1, v0
 ; CHECK-GI-NEXT:    ret
   %l4 = zext <8 x i8> %l0 to <8 x i16>

@@ -1,4 +1,4 @@
-// RUN: clang-tblgen -gen-clang-diag-groups -I%S %s -o /dev/null 2>&1 | FileCheck %s
+// RUN: not clang-tblgen -gen-clang-diag-groups -I%S %s -o /dev/null 2>&1 | FileCheck %s
 include "DiagnosticBase.inc"
 
 def NamedGroup : DiagGroup<"a">;
@@ -41,3 +41,5 @@ def InGroupF4 : Warning<"">, InGroup<DiagGroup<"f">>;
 // CHECK: redefined-group.td:[[@LINE-7]]:5: note: also implicitly defined here
 // CHECK: redefined-group.td:[[@LINE-6]]:5: note: also implicitly defined here
 // CHECK: redefined-group.td:[[@LINE-4]]:5: note: also implicitly defined here
+
+// CHECK: 6 errors.

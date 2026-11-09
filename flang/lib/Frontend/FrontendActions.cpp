@@ -281,8 +281,7 @@ bool CodeGenAction::beginSourceFileAction() {
         makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
     llvm::omp::Version version =
         ci.getInvocation().getLangOpts().getOpenMPVersion();
-    mlir::omp::setOpenMPVersionAttribute(lb.getModule(),
-                                         static_cast<unsigned>(version));
+    mlir::omp::setOpenMPVersionAttribute(lb.getModule(), version.value());
     if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
       mlir::omp::setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
@@ -873,6 +872,15 @@ void CodeGenAction::generateLLVMIR() {
                                 opts.CodeObjectVersion);
     }
   }
+
+  // Add NonLazyBind attribute to function declarations when -fno-plt is used.
+  // Also set the RtLibUseGOT module flag so compiler-rt calls use the GOT.
+  if (opts.NoPLT) {
+    llvmModule->setRtLibUseGOT();
+    for (llvm::Function &func : *llvmModule)
+      if (func.isDeclaration() && !func.isIntrinsic())
+        func.addFnAttr(llvm::Attribute::NonLazyBind);
+  }
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
@@ -937,8 +945,8 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
-  llvm::Error codeGenError =
-      runCodeGenPipeline(tm, llvmModule, os, dwoOS, cgft);
+  llvm::Error codeGenError = runCodeGenPipeline(
+      tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft);
   if (codeGenError) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
@@ -967,7 +975,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::PassInstrumentationCallbacks pic;
   const llvm::cl::LibraryOptionsContext &libraryOptions =
       llvmModule->getContext().getLibraryOptions();
-  llvm::PipelineTuningOptions pto(&libraryOptions);
+  llvm::PipelineTuningOptions pto;
   std::optional<llvm::PGOOptions> pgoOpt;
 
   if (opts.hasProfileIRInstr()) {
@@ -1022,7 +1030,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;
 
-  llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
+  llvm::PassBuilder pb(llvmModule->getContext(), targetMachine, pto, pgoOpt,
+                       &pic);
 
   // Register plugin callbacks with PB.
   for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins())
