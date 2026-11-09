@@ -14,7 +14,7 @@
 
 __mmask8 test_mm_cmp_ph_mask(__m128h a, __m128h b) {
   // CIR-LABEL: cir.func {{.*}}@test_mm_cmp_ph_mask
-  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast
 
   // CHECK-LABEL: @test_mm_cmp_ph_mask
@@ -31,7 +31,7 @@ __mmask8 test_mm_cmp_ph_mask(__m128h a, __m128h b) {
 
 __mmask16 test_mm256_cmp_ph_mask(__m256h a, __m256h b) {
   // CIR-LABEL: cir.func {{.*}}@test_mm256_cmp_ph_mask
-  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !cir.f16>, !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !cir.f16>, !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast
 
   // CHECK-LABEL: @test_mm256_cmp_ph_mask
@@ -48,7 +48,7 @@ __mmask16 test_mm256_cmp_ph_mask(__m256h a, __m256h b) {
 
 __mmask32 test_mm512_cmp_ph_mask(__m512h a, __m512h b) {
   // CIR-LABEL: cir.func {{.*}}@test_mm512_cmp_ph_mask
-  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<32 x !cir.f16>, !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<32 x !cir.f16>, !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast
 
   // CHECK-LABEL: @test_mm512_cmp_ph_mask
@@ -65,7 +65,7 @@ __mmask32 test_mm512_cmp_ph_mask(__m512h a, __m512h b) {
 
 __mmask16 test_mm512_cmp_ps_mask(__m512 a, __m512 b) {
   // CIR-LABEL: cir.func {{.*}}@test_mm512_cmp_ps_mask
-  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !cir.float>, !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !cir.float>, !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast
 
   // CHECK-LABEL: @test_mm512_cmp_ps_mask
@@ -82,7 +82,7 @@ __mmask16 test_mm512_cmp_ps_mask(__m512 a, __m512 b) {
 
 __mmask8 test_mm512_cmp_pd_mask(__m512d a, __m512d b) {
   // CIR-LABEL: cir.func {{.*}}@test_mm512_cmp_pd_mask
-  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<8 x !cir.double>, !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<8 x !cir.double>, !cir.vector<8 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast
 
   // CHECK-LABEL: @test_mm512_cmp_pd_mask
@@ -101,7 +101,7 @@ __mmask8 test_mm512_cmp_pd_mask(__m512d a, __m512d b) {
 // under strict FP.
 __mmask16 test_mm512_cmp_round_ps_mask(__m512 a, __m512 b) {
   // CIR-LABEL: cir.func {{.*}}@test_mm512_cmp_round_ps_mask
-  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !cir.float>, !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<16 x !cir.float>, !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast
 
   // CHECK-LABEL: @test_mm512_cmp_round_ps_mask

@@ -2909,83 +2909,68 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
         ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue() &
         0x1f;
 
-    // CIR has no unordered predicates, so they are expressed as the inverse of
-    // the corresponding ordered predicate, e.g. ULT is !OGE.
-    cir::CmpOpKind pred = cir::CmpOpKind::eq;
-    bool shouldInvert = false;
+    cir::FCmpOpKind pred = cir::FCmpOpKind::oeq;
     bool isTrue = false;
     bool isFalse = false;
     bool isSignaling = false;
     switch (cc & 0xf) {
     case 0x00:
-      pred = cir::CmpOpKind::eq;
-      isSignaling = false;
+      pred = cir::FCmpOpKind::oeq;
       break;
     case 0x01:
-      pred = cir::CmpOpKind::lt;
+      pred = cir::FCmpOpKind::olt;
       isSignaling = true;
       break;
     case 0x02:
-      pred = cir::CmpOpKind::le;
+      pred = cir::FCmpOpKind::ole;
       isSignaling = true;
       break;
     case 0x03:
-      pred = cir::CmpOpKind::uno;
-      isSignaling = false;
+      pred = cir::FCmpOpKind::uno;
       break;
     case 0x04:
-      pred = cir::CmpOpKind::ne;
-      isSignaling = false;
+      pred = cir::FCmpOpKind::une;
       break;
-    case 0x05: // UGE = !LT
-      pred = cir::CmpOpKind::lt;
-      shouldInvert = true;
+    case 0x05:
+      pred = cir::FCmpOpKind::uge;
       isSignaling = true;
       break;
-    case 0x06: // UGT = !LE
-      pred = cir::CmpOpKind::le;
-      shouldInvert = true;
+    case 0x06:
+      pred = cir::FCmpOpKind::ugt;
       isSignaling = true;
       break;
-    case 0x07: // ORD = !UNO
-      pred = cir::CmpOpKind::uno;
-      shouldInvert = true;
-      isSignaling = false;
+    case 0x07:
+      pred = cir::FCmpOpKind::ord;
       break;
-    case 0x08: // UEQ != ONE
-      pred = cir::CmpOpKind::one;
-      shouldInvert = true;
-      isSignaling = false;
+    case 0x08:
+      pred = cir::FCmpOpKind::ueq;
       break;
-    case 0x09: // ULT != GE
-      pred = cir::CmpOpKind::ge;
-      shouldInvert = true;
+    case 0x09:
+      pred = cir::FCmpOpKind::ult;
       isSignaling = true;
       break;
-    case 0x0a: // ULE != GT
-      pred = cir::CmpOpKind::gt;
-      shouldInvert = true;
+    case 0x0a:
+      pred = cir::FCmpOpKind::ule;
       isSignaling = true;
       break;
     case 0x0b: // FALSE
+      pred = cir::FCmpOpKind::_false;
       isFalse = true;
-      isSignaling = false;
       break;
     case 0x0c:
-      pred = cir::CmpOpKind::one;
-      isSignaling = false;
+      pred = cir::FCmpOpKind::one;
       break;
     case 0x0d:
-      pred = cir::CmpOpKind::ge;
+      pred = cir::FCmpOpKind::oge;
       isSignaling = true;
       break;
-    case 0x0e: // GT
-      pred = cir::CmpOpKind::gt;
+    case 0x0e:
+      pred = cir::FCmpOpKind::ogt;
       isSignaling = true;
       break;
     case 0x0f: // TRUE
+      pred = cir::FCmpOpKind::_true;
       isTrue = true;
-      isSignaling = false;
       break;
     default:
       llvm_unreachable("Unhandled cc");
@@ -3004,7 +2989,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     if (builder.getIsFPConstrained() && (isTrue || isFalse || isMaskFCmp)) {
       llvm::StringRef intrinsicName;
       switch (builtinID) {
-      default: llvm_unreachable("Unexpected builtin");
+      default:
+        llvm_unreachable("Unexpected builtin");
       case X86::BI__builtin_ia32_cmpps:
         intrinsicName = "x86.sse.cmp.ps";
         break;
@@ -3062,21 +3048,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     cir::IntType cmpEltTy = builder.getSIntNTy(isMaskFCmp ? 1 : width);
     auto cmpTy = cir::VectorType::getFixed(cmpEltTy, numElts);
 
-    mlir::Value cmp;
-    if (isFalse) {
-      cmp = builder.getNullValue(cmpTy, loc);
-    } else if (isTrue) {
-      llvm::APInt allOnes = llvm::APInt::getAllOnes(cmpEltTy.getWidth());
-      cmp = cir::VecSplatOp::create(
-          builder, loc, cmpTy, builder.getConstAPInt(loc, cmpEltTy, allOnes));
-    } else {
-      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
-      cmp = cir::VecCmpOp::create(builder, loc, cmpTy, pred, ops[0], ops[1],
-                                  builder.getConstrainedFPAttr(),
-                                  builder.getBoolAttr(isSignaling));
-      if (shouldInvert)
-        cmp = builder.createNot(cmp);
-    }
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
+    mlir::Value cmp = builder.createVecFCompare(loc, cmpTy, pred, ops[0],
+                                                ops[1], isSignaling);
 
     if (isMaskFCmp)
       return emitX86MaskedCompareResult(builder, cmp, numElts, ops[3], loc);

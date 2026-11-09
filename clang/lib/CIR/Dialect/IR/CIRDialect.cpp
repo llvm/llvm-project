@@ -4341,9 +4341,6 @@ LogicalResult cir::VecCmpOp::verify() {
   if (getFenvAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
     return emitOpError()
            << "'fenv' is only valid for floating-point comparisons";
-  if (getSignalingAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
-    return emitOpError()
-           << "'signaling' is only valid for floating-point comparisons";
   return success();
 }
 

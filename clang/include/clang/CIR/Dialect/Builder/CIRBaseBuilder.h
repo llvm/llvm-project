@@ -1006,8 +1006,7 @@ public:
     cir::FenvAttr fenv;
     if (cir::isFPOrVectorOfFPType(lhs.getType()))
       fenv = getConstrainedFPAttr();
-    return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs, fenv,
-                                 mlir::BoolAttr{});
+    return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs, fenv);
   }
 
   /// Compares \p lhs and \p rhs element-wise.  Each result element is a
