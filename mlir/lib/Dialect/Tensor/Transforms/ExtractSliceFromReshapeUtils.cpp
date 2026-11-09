@@ -157,6 +157,9 @@ tensor::ExtractSliceFromCollapseHelper::emitLoopNestBody(
 FailureOr<Operation *>
 tensor::simplifyCollapseShapeWithRankReducingExtractSlice(
     tensor::CollapseShapeOp op, RewriterBase &rewriter) {
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(op);
+
   SmallVector<ReassociationIndices> reassociationIndices =
       op.getReassociationIndices();
   RankedTensorType sourceType = op.getSrcType();
