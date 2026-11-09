@@ -7447,6 +7447,12 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   }
 }
 
+/// Extensions of omp_sync_hint_t in omp.h.
+enum : uint64_t {
+  OMPXFastFPAtomics = 1 << 19,
+  OMPXSafeFPAtomics = 1 << 20,
+};
+
 void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   llvm::AtomicOrdering AO = CGM.getOpenMPRuntime().getDefaultMemoryOrdering();
   // Fail Memory Clause Ordering.
@@ -7521,6 +7527,20 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
         FailAO = llvm::AtomicOrdering::SequentiallyConsistent;
     }
   }
+
+  // The fp atomics hints override -f[no-]atomic-ignore-denormal-mode for this
+  // construct. The safe hint takes precedence if both are given.
+  AtomicOptions AtomicOpts = CGM.getAtomicOpts();
+  if (const auto *HintClause = S.getSingleClause<OMPHintClause>()) {
+    uint64_t Hint = HintClause->getHint()
+                        ->EvaluateKnownConstInt(getContext())
+                        .getZExtValue();
+    if (Hint & OMPXSafeFPAtomics)
+      AtomicOpts.ignore_denormal_mode = false;
+    else if (Hint & OMPXFastFPAtomics)
+      AtomicOpts.ignore_denormal_mode = true;
+  }
+  CGAtomicOptionsRAII AtomicOptsRAII(CGM, AtomicOpts);
 
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(S.getAssociatedStmt());

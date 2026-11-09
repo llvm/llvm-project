@@ -1546,6 +1546,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- Added the `ompx_fast_fp_atomics` (alias `ompx_unsafe_fp_atomics`) and
+  `ompx_safe_fp_atomics` hints for the `atomic` construct. They override
+  `-f[no-]atomic-ignore-denormal-mode` (`-m[no-]unsafe-fp-atomics`) for a
+  single construct.
 - Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
   semantic checks, which caused spurious `reverse_offload` errors.
 - Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
