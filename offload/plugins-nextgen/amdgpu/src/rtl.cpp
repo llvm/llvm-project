@@ -2517,6 +2517,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   AMDGPUDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
                  AMDHostDeviceTy &HostDevice, hsa_agent_t Agent)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, {}), AMDGenericDeviceTy(),
+        OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4),
         OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 4),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
@@ -2634,7 +2635,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     DeviceOptions =
         AMDGPUDeviceOptionsTy::getDeviceDefaults(ComputeUnitKind, IsAPU);
-    DeviceOptions.applyFromEnv();
+    DeviceOptions.readFromEnv();
 
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
@@ -2646,13 +2647,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     // Compute the number of queues and their size.
-    DeviceOptions.NumQueues =
-        std::max(1U, std::min(DeviceOptions.NumQueues.Value, MaxQueues));
+    OMPX_NumQueues = std::max(1U, std::min(OMPX_NumQueues.get(), MaxQueues));
     OMPX_QueueSize = std::min(OMPX_QueueSize.get(), MaxQueueSize);
 
     // Initialize stream pool.
-    if (auto Err = AMDGPUStreamManager.init(
-            OMPX_InitialNumStreams, DeviceOptions.NumQueues, OMPX_QueueSize))
+    if (auto Err = AMDGPUStreamManager.init(OMPX_InitialNumStreams,
+                                            OMPX_NumQueues, OMPX_QueueSize))
       return Err;
 
     // Initialize event pool.
@@ -3917,6 +3917,10 @@ private:
 
   /// Runtime options of the device.
   AMDGPUDeviceOptionsTy DeviceOptions;
+
+  /// Envar for controlling the number of HSA queues per device. High number of
+  /// queues may degrade performance.
+  UInt32Envar OMPX_NumQueues;
 
   /// Envar for controlling the size of each HSA queue. The size is the number
   /// of HSA packets a queue is expected to hold. It is also the number of HSA
