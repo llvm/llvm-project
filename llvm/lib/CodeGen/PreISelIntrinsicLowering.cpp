@@ -904,7 +904,8 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!isa<ScalableVectorType>(Ty))
           return false;
-        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        const TargetSubtargetInfo *Subtarget = TM->getSubtargetImpl(F);
+        const TargetLowering *TL = Subtarget->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         EVT VT = EVT::getEVT(Ty);
@@ -925,8 +926,10 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         default:
           llvm_unreachable("unexpected intrinsic");
         }
-        if (TL->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC) !=
-            RTLIB::Unsupported)
+
+        const LibcallLoweringInfo &Libcalls =
+            getLibcallLowering(ModuleLibcalls, *Subtarget);
+        if (Libcalls.getVectorLibcallImplOrMasked(LC) != RTLIB::Unsupported)
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });

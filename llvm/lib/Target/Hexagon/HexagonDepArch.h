@@ -31,7 +31,8 @@ enum class ArchEnum {
   V75,
   V79,
   V81,
-  V83
+  V83,
+  V85
 };
 
 inline std::optional<Hexagon::ArchEnum> getCpu(StringRef CPU) {
@@ -54,6 +55,7 @@ inline std::optional<Hexagon::ArchEnum> getCpu(StringRef CPU) {
       .Case("hexagonv79", Hexagon::ArchEnum::V79)
       .Case("hexagonv81", Hexagon::ArchEnum::V81)
       .Case("hexagonv83", Hexagon::ArchEnum::V83)
+      .Case("hexagonv85", Hexagon::ArchEnum::V85)
       .Default(std::nullopt);
 }
 } // namespace Hexagon

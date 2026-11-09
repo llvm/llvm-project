@@ -2468,10 +2468,11 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x,
-          std::function<Expr<T>(Expr<T> &&, Expr<T> &&)>{[=](Expr<T> &&l,
-                                                             Expr<T> &&r) {
-            return Expr<T>{Extremum<T>{x.ordering, std::move(l), std::move(r)}};
-          }})}) {
+          std::function<Expr<T>(Expr<T> &&, Expr<T> &&)>{
+              [ordering{x.ordering}](Expr<T> &&l, Expr<T> &&r) {
+                return Expr<T>{
+                    Extremum<T>{ordering, std::move(l), std::move(r)}};
+              }})}) {
     return *array;
   }
   if (auto folded{OperandsAreConstants(x)}) {

@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 define void @okay(ptr %p, i32 %x) {
 	call void asm "addl $1, $0", "=*rm,r"(ptr elementtype(i32) %p, i32 %x)

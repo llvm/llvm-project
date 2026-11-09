@@ -8,6 +8,10 @@ macros:
     macro_header: sys-shm-macros.h
   - macro_name: SHM_RND
     macro_header: sys-shm-macros.h
+  - macro_name: SHMLBA
+    macro_header: sys-shm-macros.h
+  - macro_name: SHM_FAILED
+    macro_header: sys-shm-macros.h
   - macro_name: SHM_REMAP
     macro_header: sys-shm-macros.h
     standards:
@@ -25,6 +29,20 @@ types:
 enums: []
 objects: []
 functions:
+  - name: shmat
+    standards:
+      - posix
+    return_type: void *
+    arguments:
+      - type: int
+      - type: const void *
+      - type: int
+  - name: shmdt
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const void *
   - name: shmget
     standards:
       - posix
