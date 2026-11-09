@@ -24,4 +24,4 @@
 // OZ-SAME: "-Oz"
 
 // NOOPT: {{ld(.exe)?"}}
-// NOOPT-NOT: -O
+// NOOPT-NOT: "-O{{[0-9a-zA-Z]*}}"

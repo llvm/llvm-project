@@ -98,6 +98,7 @@ def FP128 : FuncArgType;
 def PPCFP128 : FuncArgType;
 def Floating : FuncArgType; // Any floating type.
 def Ptr : FuncArgType;      // Any pointer type.
+def AllocaPtr : FuncArgType; // Pointer in the alloca address space.
 def Struct : FuncArgType;   // Any struct type.
 def Ellip : FuncArgType;    // The ellipsis (...).
 def Same : FuncArgType;     // Same argument type as the previous one.
@@ -109,6 +110,11 @@ def V8I32 : FuncArgType;
 def V16I32 : FuncArgType;
 def NXV2I32 : FuncArgType;
 def NXV4I32 : FuncArgType;
+
+// Signature markers for libcalls that are global variables rather than
+// functions. The variable's type follows the marker.
+def Variable : FuncArgType;
+def ThreadLocalVariable : FuncArgType;
 
 class StructFuncArgType<list<FuncArgType> elementTypes> : FuncArgType {
   list<FuncArgType> ElementTypes = elementTypes;
@@ -174,6 +180,9 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   list<list<EnumAttr>> ParamAttrs = [];
   list<FuncArgType> ParamPointeeTypes = [];
 }
+
+class RuntimeLibcallVariable<FuncArgType Ty, bit threadLocal = false>
+    : RuntimeLibcall<!if(threadLocal, ThreadLocalVariable, Variable), [Ty]>;
 
 class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
     : RuntimeLibcall<unmasked.ReturnType,

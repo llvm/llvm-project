@@ -1057,6 +1057,9 @@ def CIR_ReturnOp : CIR_Op<"return", [
     The operand type must match the signature of the function that contains
     the operation.
 
+    The `implicit` keyword marks a return that CIRGen synthesized because
+    control flows off the end of the function body.
+
     ```
       func @foo() -> i32 {
         ...
@@ -1067,10 +1070,12 @@ def CIR_ReturnOp : CIR_Op<"return", [
 
   // The return operation takes an optional input operand to return. This
   // value must match the return type of the enclosing function.
-  let arguments = (ins Variadic<CIR_AnyType>:$input);
+  let arguments = (ins Variadic<CIR_AnyType>:$input, UnitAttr:$implicit);
 
   // The return operation only emits the input in the format if it is present.
-  let assemblyFormat = "($input^ `:` type($input))? attr-dict ";
+  let assemblyFormat = [{
+    (`implicit` $implicit^)? ($input^ `:` type($input))? attr-dict
+  }];
 
   // Allow building a ReturnOp with no return operand.
   let builders = [
@@ -3487,6 +3492,11 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
+    The `unnamed_addr` attribute indicates that the address of the global is
+    not significant, only its contents are. Such globals may be merged with
+    other globals that have identical contents. It is lowered to LLVM's
+    `unnamed_addr` (as opposed to `local_unnamed_addr`).
+
     The `dynamic_init_guard` attribute indicates that this global requires
     guarded dynamic initialization via the Itanium `__cxa_guard_*` protocol
     (e.g., C++ static local variables with non-constant initializers, or
@@ -3523,6 +3533,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
+                       UnitAttr:$unnamed_addr,
                        OptionalAttr<CIR_DynamicInitGuardAttr>:$dynamic_init_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
@@ -3546,6 +3557,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
+    (`unnamed_addr` $unnamed_addr^)?
     (`dynamic_init_guard` `` $dynamic_init_guard^)?
     (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
@@ -6038,9 +6050,14 @@ def CIR_UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
     program exhibits undefined behavior immediately. This operation is useful
     in cases where the unreachability of a program point needs to be explicitly
     marked.
+
+    The `implicit` keyword marks an unreachable that CIRGen synthesized because
+    control flows off the end of a non-void function body.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins UnitAttr:$implicit);
+
+  let assemblyFormat = "(`implicit` $implicit^)? attr-dict";
 
   let llvmOp = "UnreachableOp";
 }
@@ -6057,9 +6074,14 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
     example, an implementation may implement this operation by calling abort,
     while another implementation may implement this operation by executing an
     illegal instruction.
+
+    The `implicit` keyword marks a trap that CIRGen synthesized because control
+    flows off the end of a non-void function body.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins UnitAttr:$implicit);
+
+  let assemblyFormat = "(`implicit` $implicit^)? attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
