@@ -22,6 +22,7 @@ include "mlir/Dialect/MPI/IR/MPI.td"
 
 class MPI_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<MPI_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/MPI/IR/MPI.h"];
   let mnemonic = typeMnemonic;
 }
 
