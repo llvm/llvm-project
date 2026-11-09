@@ -1945,7 +1945,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // evaluation if that fails.
         SCEVUse ExitValue = SE->getSCEVAtExit(Inst, L, PN->getIncomingBlock(i));
         if (!SE->isLoopInvariant(ExitValue, L) ||
-            !Rewriter.isSafeToExpand(ExitValue))
+            !Rewriter.isSafeToExpandAt(ExitValue,
+                                       L->getLoopPreheader()->getTerminator()))
           continue;
 
         // Computing the value outside of the loop brings no benefit if it is
@@ -1968,9 +1969,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // and next SCEV may errneously get smaller cost.
 
         // Collect all the candidate PHINodes to be rewritten.
-        Instruction *InsertPt =
-          (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
-          &*Inst->getParent()->getFirstInsertionPt() : Inst;
+        Instruction *InsertPt = L->getLoopPreheader()->getTerminator();
         RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
       }
     }

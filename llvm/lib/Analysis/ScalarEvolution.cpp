@@ -3605,10 +3605,6 @@ SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
   for (const SCEV *Op : Operands)
     assert(isAvailableAtLoopEntry(Op, L) &&
            "SCEVAddRecExpr operand is not available at loop entry!");
-
-  // Keep track of the original operands, for verification when adding
-  // use-specific flags.
-  const SmallVector<SCEVUse, 4> OrigOperands(Operands.begin(), Operands.end());
 #endif
 
   if (Operands.back()->isZero()) {
@@ -3624,53 +3620,6 @@ SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
 
   ExprFlags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, ExprFlags);
 
-  // Canonicalize nested AddRecs in by nesting them in order of loop depth.
-  if (const SCEVAddRecExpr *NestedAR = dyn_cast<SCEVAddRecExpr>(Operands[0])) {
-    const Loop *NestedLoop = NestedAR->getLoop();
-    if (L->contains(NestedLoop)
-            ? (L->getLoopDepth() < NestedLoop->getLoopDepth())
-            : (!NestedLoop->contains(L) &&
-               DT.dominates(L->getHeader(), NestedLoop->getHeader()))) {
-      SmallVector<SCEVUse, 4> NestedOperands(NestedAR->operands());
-      Operands[0] = NestedAR->getStart();
-      // AddRecs require their operands be loop-invariant with respect to their
-      // loops. Don't perform this transformation if it would break this
-      // requirement.
-      bool AllInvariant = all_of(
-          Operands, [&](const SCEV *Op) { return isLoopInvariant(Op, L); });
-
-      if (AllInvariant) {
-        // Create a recurrence for the outer loop with the same step size.
-        //
-        // The outer recurrence keeps its NW flag but only keeps NUW/NSW if the
-        // inner recurrence has the same property.
-        SCEVFlags OuterFlags =
-            maskFlags(ExprFlags, SCEV::FlagNW | NestedAR->getNoWrapFlags());
-
-        NestedOperands[0] = getAddRecExpr(Operands, L, OuterFlags);
-        AllInvariant = all_of(NestedOperands, [&](const SCEV *Op) {
-          return isLoopInvariant(Op, NestedLoop);
-        });
-
-        if (AllInvariant) {
-          // Ok, both add recurrences are valid after the transformation.
-          //
-          // The inner recurrence keeps its NW flag but only keeps NUW/NSW if
-          // the outer recurrence has the same property.
-          SCEVFlags InnerFlags =
-              maskFlags(NestedAR->getNoWrapFlags(), SCEV::FlagNW | ExprFlags);
-          return getAddRecExpr(NestedOperands, NestedLoop, InnerFlags);
-        }
-      }
-      // Reset Operands to its original state.
-      Operands[0] = NestedAR;
-    }
-  }
-
-  // Okay, it looks like we really DO need an addrec expr.  Check to see if we
-  // already have one, otherwise create a new one.
-  assert((UseFlags == SCEV::FlagNone || equal(OrigOperands, Operands)) &&
-         "Tried to add SCEVUse flags after operands changed");
   return {getOrCreateAddRecExpr(Operands, L, ExprFlags), UseFlags};
 }
 
@@ -11937,40 +11886,13 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   CmpPredicate NonStrictPredicate = ICmpInst::getNonStrictCmpPredicate(Pred);
   const bool ProvingStrictComparison =
       Pred != NonStrictPredicate.dropSameSign();
-  bool ProvedNonStrictComparison = false;
-  bool ProvedNonEquality = false;
-
-  auto SplitAndProve = [&](std::function<bool(CmpPredicate)> Fn) -> bool {
-    if (!ProvedNonStrictComparison)
-      ProvedNonStrictComparison = Fn(NonStrictPredicate);
-    if (!ProvedNonEquality)
-      ProvedNonEquality = Fn(ICmpInst::ICMP_NE);
-    if (ProvedNonStrictComparison && ProvedNonEquality)
-      return true;
-    return false;
-  };
-
-  if (ProvingStrictComparison) {
-    auto ProofFn = [&](CmpPredicate P) {
-      return isKnownViaNonRecursiveReasoning(P, LHS, RHS);
-    };
-    if (SplitAndProve(ProofFn))
-      return true;
-  }
+  const Instruction *CtxI = &BB->front();
+  SmallVector<std::pair<const Value *, bool>> Conds;
 
   // Try to prove (Pred, LHS, RHS) using isImpliedCond.
   auto ProveViaCond = [&](const Value *Condition, bool Inverse) {
-    const Instruction *CtxI = &BB->front();
-    if (isImpliedCond(Pred, LHS, RHS, Condition, Inverse, CtxI))
-      return true;
-    if (ProvingStrictComparison) {
-      auto ProofFn = [&](CmpPredicate P) {
-        return isImpliedCond(P, LHS, RHS, Condition, Inverse, CtxI);
-      };
-      if (SplitAndProve(ProofFn))
-        return true;
-    }
-    return false;
+    Conds.emplace_back(Condition, Inverse);
+    return isImpliedCond(Pred, LHS, RHS, Condition, Inverse, CtxI);
   };
 
   // Starting at the block's predecessor, climb up the predecessor chain, as long
@@ -12015,7 +11937,18 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
         if (Guard->getFunction() == BB->getParent() && DT.dominates(Guard, BB))
           if (ProveViaCond(Guard->getArgOperand(0), false))
             return true;
-  return false;
+
+  // First try to prove conditions directly, then fall back to proving via the
+  // non-strict predicate and not-equal.
+  if (!ProvingStrictComparison)
+    return false;
+  auto ProveViaAll = [&](CmpPredicate P) {
+    return isKnownViaNonRecursiveReasoning(P, LHS, RHS) ||
+           any_of(Conds, [&](const auto &C) {
+             return isImpliedCond(P, LHS, RHS, C.first, C.second, CtxI);
+           });
+  };
+  return ProveViaAll(NonStrictPredicate) && ProveViaAll(ICmpInst::ICMP_NE);
 }
 
 bool ScalarEvolution::isLoopEntryGuardedByCond(const Loop *L, CmpPredicate Pred,
@@ -15309,10 +15242,10 @@ bool SCEVComparePredicate::implies(const SCEVPredicate *N,
   if (!Op)
     return false;
 
-  if (Pred != ICmpInst::ICMP_EQ)
+  if (Op->LHS != LHS || Op->RHS != RHS)
     return false;
 
-  return Op->LHS == LHS && Op->RHS == RHS;
+  return ICmpInst::isImpliedByMatchingCmp(Pred, Op->Pred) == true;
 }
 
 bool SCEVComparePredicate::isAlwaysTrue() const { return false; }
