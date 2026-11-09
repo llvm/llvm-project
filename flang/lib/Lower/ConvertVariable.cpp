@@ -616,6 +616,9 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       });
     }
   } else if (Fortran::evaluate::IsCoarray(sym)) {
+    if (oeDetails && oeDetails->init() && var.isModuleOrSubmoduleVariable())
+      TODO(loc, "coarray: initialization of module or submodule variable.");
+
     createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
       mlir::Value box =
           genCoarrayDefaultInitializerValue(converter, loc, sym, symTy);
@@ -3253,11 +3256,6 @@ void Fortran::lower::mapSymbolAttributes(
       Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
     ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
                        replace);
-    // Default Initialization if needed.
-    if (std::optional<fir::FortranVariableOpInterface> varDef =
-            symMap.lookupVariableDefinition(sym))
-      Fortran::lower::initializeCoarrayAfterDeclare(
-          converter, loc, sym, *varDef, isNonAllocatableSaveCoarray);
     return;
   }
 

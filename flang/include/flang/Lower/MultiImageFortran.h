@@ -90,12 +90,6 @@ void genAllocateNonAllocatableSaveCoarray(AbstractConverter &converter,
                                           const semantics::Symbol &sym,
                                           mlir::Value addr);
 
-void initializeCoarrayAfterDeclare(AbstractConverter &converter,
-                                   mlir::Location loc,
-                                   const semantics::Symbol &sym,
-                                   fir::FortranVariableOpInterface var,
-                                   bool initInGlobalAllocFunc = false);
-
 //===----------------------------------------------------------------------===//
 // EVENT and NOTIFY statements
 //===----------------------------------------------------------------------===//
