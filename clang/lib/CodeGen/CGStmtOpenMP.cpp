@@ -328,7 +328,7 @@ public:
         }
       }
     }
-    if (!isOpenMPSimdDirective(getEffectiveDirectiveKind(S)))
+    if (!isOpenMPSimdDirective(S.getDirectiveKind()))
       CGF.EmitOMPPrivateClause(S, InlinedShareds);
     if (const auto *TG = dyn_cast<OMPTaskgroupDirective>(&S)) {
       if (const Expr *E = TG->getReductionRef())

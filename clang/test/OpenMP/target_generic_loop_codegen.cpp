@@ -99,6 +99,21 @@ void tl_if(int *a, int m, int n) {
     a[i] += 1;
 }
 
+// -fopenmp-simd must still privatize 'x'.
+// SIMD-LABEL: define {{.*}}void @_Z10tl_privatePii(
+// SIMD: %x = alloca i32
+// SIMD: %[[XP:x[0-9]+]] = alloca i32
+// SIMD-NOT: store i32 {{.*}}, ptr %x,
+// SIMD: store i32 {{.*}}, ptr %[[XP]],
+void tl_private(int *a, int n) {
+  int x;
+#pragma omp target loop private(x) map(tofrom: a[0:n])
+  for (int i = 0; i < n; ++i) {
+    x = i;
+    a[i] += x;
+  }
+}
+
 // HOST: ![[HLOOP1]] = distinct !{![[HLOOP1]], ![[HPA1:[0-9]+]],
 // HOST-SAME: ![[VEC:[0-9]+]]}
 // HOST: ![[HPA1]] = !{!"llvm.loop.parallel_accesses", !{{[0-9]+}}}
