@@ -14,6 +14,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
@@ -376,6 +377,7 @@ struct MemberData {
   StringRef Padding;
   uint64_t PreHeadPadSize = 0;
   std::unique_ptr<SymbolicFile> SymFile = nullptr;
+  std::unique_ptr<SymbolicFile> FatLTOSymFile = nullptr;
   std::string HybridName = "";
   std::unique_ptr<MemoryBuffer> NativeBuf = nullptr;
 };
@@ -576,6 +578,27 @@ getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context,
       return ObjOrErr.takeError();
     return std::move(*ObjOrErr);
   }
+}
+
+static std::unique_ptr<SymbolicFile>
+getFatLTOSymbolicFile(const SymbolicFile *Native, LLVMContext &Context) {
+  const auto *Obj = dyn_cast_or_null<ObjectFile>(Native);
+  if (!Obj || !(Obj->isELF() || Obj->isCOFF()))
+    return nullptr;
+  Expected<MemoryBufferRef> BCOrErr = IRObjectFile::findBitcodeInObject(*Obj);
+  if (!BCOrErr) {
+    consumeError(BCOrErr.takeError());
+    return nullptr;
+  }
+  Expected<std::unique_ptr<IRObjectFile>> IROrErr = IRObjectFile::create(
+      MemoryBufferRef(BCOrErr->getBuffer(),
+                      Obj->getMemoryBufferRef().getBufferIdentifier()),
+      Context);
+  if (!IROrErr) {
+    consumeError(IROrErr.takeError());
+    return nullptr;
+  }
+  return std::move(*IROrErr);
 }
 
 static bool is64BitSymbolicFile(const SymbolicFile *SymObj) {
@@ -802,10 +825,9 @@ bool isImportDescriptor(StringRef Name) {
           Name.ends_with(NullThunkDataSuffix));
 }
 
-static Expected<std::vector<unsigned>> getSymbols(SymbolicFile *Obj,
-                                                  uint16_t Index,
-                                                  raw_ostream &SymNames,
-                                                  SymMap *SymMap) {
+static Expected<std::vector<unsigned>>
+getSymbols(SymbolicFile *Obj, SymbolicFile *FatLTOObj, uint16_t Index,
+           raw_ostream &SymNames, SymMap *SymMap) {
   std::vector<unsigned> Ret;
 
   if (Obj == nullptr)
@@ -815,29 +837,45 @@ static Expected<std::vector<unsigned>> getSymbols(SymbolicFile *Obj,
   if (SymMap)
     Map = SymMap->UseECMap && isECObject(*Obj) ? &SymMap->ECMap : &SymMap->Map;
 
-  for (const object::BasicSymbolRef &S : Obj->symbols()) {
-    if (!isArchiveSymbol(S))
+  StringSet<> NativeNames;
+  for (SymbolicFile *File : {Obj, FatLTOObj}) {
+    if (File == nullptr)
       continue;
-    if (Map) {
+    for (const object::BasicSymbolRef &S : File->symbols()) {
+      if (!isArchiveSymbol(S))
+        continue;
+      if (!Map && !FatLTOObj) {
+        Ret.push_back(SymNames.tell());
+        if (Error E = S.printName(SymNames))
+          return std::move(E);
+        SymNames << '\0';
+        continue;
+      }
       std::string Name;
       raw_string_ostream NameStream(Name);
       if (Error E = S.printName(NameStream))
         return std::move(E);
-      if (!Map->try_emplace(Name, Index).second)
-        continue; // ignore duplicated symbol
-      if (Map == &SymMap->Map) {
+      if (File == Obj) {
+        if (FatLTOObj)
+          NativeNames.insert(Name);
+      } else if (NativeNames.contains(Name)) {
+        continue;
+      }
+      if (Map) {
+        if (!Map->try_emplace(Name, Index).second)
+          continue; // ignore duplicated symbol
+        if (Map == &SymMap->Map) {
+          Ret.push_back(SymNames.tell());
+          SymNames << Name << '\0';
+          // If EC is enabled, then the import descriptors are NOT put into EC
+          // objects so we need to copy them to the EC map manually.
+          if (SymMap->UseECMap && isImportDescriptor(Name))
+            SymMap->ECMap[Name] = Index;
+        }
+      } else {
         Ret.push_back(SymNames.tell());
         SymNames << Name << '\0';
-        // If EC is enabled, then the import descriptors are NOT put into EC
-        // objects so we need to copy them to the EC map manually.
-        if (SymMap->UseECMap && isImportDescriptor(Name))
-          SymMap->ECMap[Name] = Index;
       }
-    } else {
-      Ret.push_back(SymNames.tell());
-      if (Error E = S.printName(SymNames))
-        return std::move(E);
-      SymNames << '\0';
     }
   }
   return Ret;
@@ -928,6 +966,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       if (!SymFileOrErr)
         return createFileError(M.MemberName, SymFileOrErr.takeError());
       D.SymFile = std::move(*SymFileOrErr);
+      D.FatLTOSymFile = getFatLTOSymbolicFile(D.SymFile.get(), Context);
 
       if (SymMap && D.SymFile.get()) {
         auto COFFObj = dyn_cast<COFFObjectFile>(D.SymFile.get());
@@ -1077,8 +1116,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     }
 
     if (NeedSymbols != SymtabWritingMode::NoSymtab) {
-      Expected<std::vector<unsigned>> SymbolsOrErr =
-          getSymbols(D.SymFile.get(), Index + 1, SymNames, SymMap);
+      Expected<std::vector<unsigned>> SymbolsOrErr = getSymbols(
+          D.SymFile.get(), D.FatLTOSymFile.get(), Index + 1, SymNames, SymMap);
       if (!SymbolsOrErr)
         return createFileError(MemberName, SymbolsOrErr.takeError());
       D.Symbols = std::move(*SymbolsOrErr);
@@ -1354,7 +1393,7 @@ Error writeArchiveToStream(raw_ostream &Out,
       // Generate the symbol names for the members.
       for (const auto &M : Data) {
         Expected<std::vector<unsigned>> SymbolsOrErr = getSymbols(
-            M.SymFile.get(), 0,
+            M.SymFile.get(), /*FatLTOObj=*/nullptr, 0,
             is64BitSymbolicFile(M.SymFile.get()) ? SymNames64 : SymNames32,
             nullptr);
         if (!SymbolsOrErr)
