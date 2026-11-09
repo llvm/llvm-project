@@ -806,28 +806,21 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "DWARFCFIChecker",
-    srcs = glob([
-        "lib/DWARFCFIChecker/*.cpp",
-        "lib/DWARFCFIChecker/*.h",
-    ]),
-    hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
-    copts = llvm_copts,
-    deps = [
-        ":BinaryFormat",
-        ":DebugInfoDWARFLowLevel",
-        ":MC",
-        ":Support",
-    ],
-)
-
 gentbl_cc_library(
     name = "MCCLOptionsTableGen",
     strip_include_prefix = "lib/MC",
     tbl_outs = {"lib/MC/MCCLOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "lib/MC/MCCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MCToolOptionsTableGen",
+    strip_include_prefix = "lib/MC",
+    tbl_outs = {"lib/MC/MCToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/MC/MCToolOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -847,6 +840,7 @@ cc_library(
         ":DebugInfoCodeView",
         ":DebugInfoDWARFLowLevel",
         ":MCCLOptionsTableGen",
+        ":MCToolOptionsTableGen",
         ":Option",
         ":Support",
         ":TargetParser",
@@ -6260,7 +6254,6 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
-        ":DWARFCFIChecker",
         ":MC",
         ":MCDisassembler",
         ":MCParser",

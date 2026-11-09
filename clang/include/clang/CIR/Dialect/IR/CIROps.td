@@ -3492,6 +3492,11 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
+    The `unnamed_addr` attribute indicates that the address of the global is
+    not significant, only its contents are. Such globals may be merged with
+    other globals that have identical contents. It is lowered to LLVM's
+    `unnamed_addr` (as opposed to `local_unnamed_addr`).
+
     The `dynamic_init_guard` attribute indicates that this global requires
     guarded dynamic initialization via the Itanium `__cxa_guard_*` protocol
     (e.g., C++ static local variables with non-constant initializers, or
@@ -3528,6 +3533,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
+                       UnitAttr:$unnamed_addr,
                        OptionalAttr<CIR_DynamicInitGuardAttr>:$dynamic_init_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
@@ -3551,6 +3557,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
+    (`unnamed_addr` $unnamed_addr^)?
     (`dynamic_init_guard` `` $dynamic_init_guard^)?
     (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name

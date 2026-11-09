@@ -1085,7 +1085,10 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
 
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
-  SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false);
+  // The IR SCEVExpander may expand expressions early, where they may cause UB.
+  // Use SafeUDivMode.
+  SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false,
+                        /*SafeUDivMode=*/true);
 
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BasicBlock *EntryBB = Entry->getIRBasicBlock();

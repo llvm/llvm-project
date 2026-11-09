@@ -347,15 +347,17 @@ static CoroConditionalWrapper buildCoroWrapper(ThinOrFullLTOPhase Phase) {
   return CoroConditionalWrapper(std::move(CoroPM));
 }
 
-static InlineParams getInlineParamsFromOptLevel(OptimizationLevel Level) {
-  return getInlineParamsFromOptLevel(static_cast<unsigned>(Level));
+static InlineParams getInlineParamsFromOptLevel(const LLVMContext &Context,
+                                                OptimizationLevel Level) {
+  return getInlineParamsFromOptLevel(Context, static_cast<unsigned>(Level));
 }
 
 static void addModuleInlinerPass(ModulePassManager &MPM,
-                                 const PassesOptions &Opts,
+                                 const LLVMContext &Context,
                                  OptimizationLevel Level,
                                  ThinOrFullLTOPhase Phase) {
-  InlineParams IP = ::getInlineParamsFromOptLevel(Level);
+  const PassesOptions &Opts = getPassesOptions(Context);
+  InlineParams IP = ::getInlineParamsFromOptLevel(Context, Level);
   if (Opts.enable_module_inliner)
     MPM.addPass(ModuleInlinerPass(IP, Opts.enable_ml_inliner, Phase));
   else
@@ -847,9 +849,9 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
                                   ThinOrFullLTOPhase Phase) {
   InlineParams IP;
   if (PTO.InlinerThreshold == -1)
-    IP = ::getInlineParamsFromOptLevel(Level);
+    IP = ::getInlineParamsFromOptLevel(Context, Level);
   else
-    IP = getInlineParams(PTO.InlinerThreshold);
+    IP = getInlineParams(Context, PTO.InlinerThreshold);
   // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
   // set hot-caller threshold to 0 to disable hot
   // callsite inline (as much as possible [1]) because it makes
@@ -955,7 +957,7 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
                                         ThinOrFullLTOPhase Phase) {
   ModulePassManager MPM;
 
-  InlineParams IP = ::getInlineParamsFromOptLevel(Level);
+  InlineParams IP = ::getInlineParamsFromOptLevel(Context, Level);
   // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
   // set hot-caller threshold to 0 to disable hot
   // callsite inline (as much as possible [1]) because it makes
@@ -1638,7 +1640,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     // Also, we can't run devirtualization before inlining because the
     // devirtualization depends on the passes optimizing/eliminating vtable GVs
     // and those passes are only effective after inlining.
-    addModuleInlinerPass(MPM, Opts, Level, ThinOrFullLTOPhase::None);
+    addModuleInlinerPass(MPM, Context, Level, ThinOrFullLTOPhase::None);
   }
 
   // Attach !implicit.ref metadata from all functions to copyright strings.
@@ -2098,7 +2100,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // valuable as the inliner doesn't currently care whether it is inlining an
   // invoke or a call.
   // Run the inliner now.
-  addModuleInlinerPass(MPM, Opts, Level, ThinOrFullLTOPhase::FullLTOPostLink);
+  addModuleInlinerPass(MPM, Context, Level,
+                       ThinOrFullLTOPhase::FullLTOPostLink);
 
   // Perform context disambiguation after inlining, since that would reduce the
   // amount of additional cloning required to distinguish the allocation

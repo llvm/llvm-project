@@ -26,7 +26,9 @@ namespace sps {
 /// Lookup the given symbols in the JITDylib with the given base address.
 ///
 /// On success the result has one entry per element of LS, in the same order.
-/// A controller result of any other length is reported as an error.
+/// A controller result of any other length is reported as an error, as are
+/// failures of the lookup in the controller and failures to call the
+/// controller.
 void lookupInJITDylib(
     move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
     Session &S, const void *JITDylibKeyAddr,
