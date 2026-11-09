@@ -25,6 +25,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
     Symbol, CallableOpInterface
   ]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/FunctionInterfaces.h"];
   let description = [{
     This interfaces provides support for interacting with operations that
     behave like functions. In particular, these operations:

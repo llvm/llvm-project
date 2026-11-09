@@ -10,6 +10,7 @@ def QuantStorageTypeInterface : TypeInterface<"QuantStorageTypeInterface"> {
     including packing behavior, and alignment requirements.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/QuantStorageTypeInterface.h"];
 
   let methods = [
     InterfaceMethod<[{
