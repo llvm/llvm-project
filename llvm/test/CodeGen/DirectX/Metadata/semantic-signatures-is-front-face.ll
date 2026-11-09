@@ -5,8 +5,8 @@
 ; RUN: opt -S -dxil-translate-metadata %t/int.ll | FileCheck %s --check-prefix=MD-INT
 
 ; SV_IsFrontFace is a system-generated pixel input. Like SV_PrimitiveID, it is
-; allocated like an arbitrary input, so it is packed at row 1 after A. As in
-; DXC, a bool or uint is carried as U32 (5) and an int as I32 (4). All of them
+; allocated like an arbitrary input, so it is packed at row 1 after A. A bool or
+; uint is carried as U32 (5) and an int as I32 (4). All of them
 ; are read with the i32 load overload.
 
 ;--- uint.ll

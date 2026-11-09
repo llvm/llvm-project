@@ -6,14 +6,15 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/linear.ll 2>&1 | FileCheck %s --check-prefix=CHECK-LINEAR
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/unallocated.ll 2>&1 | FileCheck %s --check-prefix=CHECK-UNALLOCATED
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex.ll 2>&1 | FileCheck %s --check-prefix=CHECK-VERTEX
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/output.ll 2>&1 | FileCheck %s --check-prefix=CHECK-OUTPUT
 
 ; Each case is a complete module with one invalid SV_IsFrontFace declaration.
-; As in the DXC validator, the only valid component types are I32 (4) and U32
-; (5). Clang carries a bool as U32.
+; The only valid component types are I32 (4) and U32 (5). Clang carries a bool
+; as U32.
 
 ;--- bool.ll
-; The component type is 1 (I1). Clang never emits it for SV_IsFrontFace, and the
-; DXC validator rejects it.
+; The component type is 1 (I1). Clang never emits it for SV_IsFrontFace, and it
+; is not a valid type for this semantic.
 ; CHECK-BOOL: SV_IsFrontFace requires a scalar 32-bit integer
 target triple = "dxil-pc-shadermodel6.0-pixel"
 define void @main() #0 { ret void }
@@ -87,6 +88,18 @@ define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
 !dx.semantic.signatures = !{!0}
 !0 = !{ptr @main, !1, null}
+!1 = !{!2}
+!2 = !{i32 0, !"SV_IsFrontFace", i32 5, i32 13, !3, i32 1, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 0}
+
+;--- output.ll
+; SV_IsFrontFace is only a pixel input, so a pixel output is rejected.
+; CHECK-OUTPUT: invalid or unsupported semantic for this stage and signature category
+target triple = "dxil-pc-shadermodel6.0-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, null, !1}
 !1 = !{!2}
 !2 = !{i32 0, !"SV_IsFrontFace", i32 5, i32 13, !3, i32 1, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 !3 = !{i32 0}
