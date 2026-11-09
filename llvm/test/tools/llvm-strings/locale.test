@@ -1,8 +1,8 @@
 UNSUPPORTED: system-windows
 
-RUN: echo -e 'Hello\360\237\230\203' > %t
-RUN: echo -e '\202\261\202\361\202\311\202\277\202\315' >> %t
-RUN: echo -e '\033$B$3$s$K$A$O\033(B' >> %t
+RUN: printf 'Hello\360\237\230\203\n' > %t
+RUN: printf '\202\261\202\361\202\311\202\277\202\315\n' >> %t
+RUN: printf '\033$B$3$s$K$A$O\033(B\n' >> %t
 
 RUN: %if locale-en_US.US-ASCII %{ env LANG=en_US.US-ASCII \
 RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-US-ASCII %s %} \
