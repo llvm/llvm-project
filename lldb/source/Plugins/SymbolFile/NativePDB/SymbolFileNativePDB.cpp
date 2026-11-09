@@ -1608,12 +1608,9 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
           LLDB_INVALID_ADDRESS, 0);
       const bool has_columns = lines.hasColumnInfo() &&
                                group.Columns.size() == group.LineNumbers.size();
-      auto column_it = group.Columns.begin();
-      for (const LineNumberEntry &entry : group.LineNumbers) {
+      for (const auto &[i, entry] : llvm::enumerate(group.LineNumbers)) {
         LineInfo cur_info(entry.Flags);
-        uint16_t column = 0;
-        if (has_columns)
-          column = (column_it++)->StartColumn;
+        uint16_t column = has_columns ? group.Columns[i].StartColumn : 0;
 
         if (cur_info.isAlwaysStepInto() || cur_info.isNeverStepInto())
           continue;
