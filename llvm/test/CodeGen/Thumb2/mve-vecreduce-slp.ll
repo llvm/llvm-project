@@ -95,21 +95,21 @@ define i32 @addv32i32i32(ptr %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    vaddv.u32 r0, q1
-; CHECK-NEXT:    vaddva.u32 r0, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #32]
-; CHECK-NEXT:    vaddva.u32 r0, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #48]
-; CHECK-NEXT:    vaddva.u32 r0, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #64]
-; CHECK-NEXT:    vaddva.u32 r0, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #80]
-; CHECK-NEXT:    vaddva.u32 r0, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #96]
-; CHECK-NEXT:    vaddva.u32 r0, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #112]
-; CHECK-NEXT:    vaddva.u32 r0, q0
+; CHECK-NEXT:    vaddv.u32 r2, q1
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #80]
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #96]
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #112]
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <32 x i32>, ptr %x, align 4
@@ -855,21 +855,21 @@ define i32 @addv128i32i8(ptr %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
 ; CHECK-NEXT:    vldrb.u8 q0, [r0, #16]
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    vaddv.u8 r0, q1
-; CHECK-NEXT:    vaddva.u8 r0, q0
-; CHECK-NEXT:    vldrb.u8 q0, [r1, #32]
-; CHECK-NEXT:    vaddva.u8 r0, q0
-; CHECK-NEXT:    vldrb.u8 q0, [r1, #48]
-; CHECK-NEXT:    vaddva.u8 r0, q0
-; CHECK-NEXT:    vldrb.u8 q0, [r1, #64]
-; CHECK-NEXT:    vaddva.u8 r0, q0
-; CHECK-NEXT:    vldrb.u8 q0, [r1, #80]
-; CHECK-NEXT:    vaddva.u8 r0, q0
-; CHECK-NEXT:    vldrb.u8 q0, [r1, #96]
-; CHECK-NEXT:    vaddva.u8 r0, q0
-; CHECK-NEXT:    vldrb.u8 q0, [r1, #112]
-; CHECK-NEXT:    vaddva.u8 r0, q0
+; CHECK-NEXT:    vaddv.u8 r2, q1
+; CHECK-NEXT:    vaddva.u8 r2, q0
+; CHECK-NEXT:    vldrb.u8 q0, [r0, #32]
+; CHECK-NEXT:    vaddva.u8 r2, q0
+; CHECK-NEXT:    vldrb.u8 q0, [r0, #48]
+; CHECK-NEXT:    vaddva.u8 r2, q0
+; CHECK-NEXT:    vldrb.u8 q0, [r0, #64]
+; CHECK-NEXT:    vaddva.u8 r2, q0
+; CHECK-NEXT:    vldrb.u8 q0, [r0, #80]
+; CHECK-NEXT:    vaddva.u8 r2, q0
+; CHECK-NEXT:    vldrb.u8 q0, [r0, #96]
+; CHECK-NEXT:    vaddva.u8 r2, q0
+; CHECK-NEXT:    vldrb.u8 q0, [r0, #112]
+; CHECK-NEXT:    vaddva.u8 r2, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <16 x i8>, ptr %x, align 1
@@ -1390,23 +1390,23 @@ define i32 @mlav24i32i32(ptr %x, ptr %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    vmlav.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #16]
+; CHECK-NEXT:    vmlav.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #16]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #32]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #32]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #48]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #48]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #64]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #64]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #80]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #80]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <8 x i32>, ptr %x, align 4
@@ -1465,53 +1465,53 @@ define i32 @mlav64i32i32(ptr %x, ptr %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    vmlav.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #16]
+; CHECK-NEXT:    vmlav.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #16]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #32]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #32]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #48]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #48]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #64]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #64]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #80]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #80]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #96]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #96]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #96]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #112]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #112]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #112]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #128]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #128]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #128]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #144]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #144]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #144]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #160]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #160]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #160]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #176]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #176]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #176]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #192]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #192]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #192]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #208]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #208]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #208]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #224]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #224]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #224]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #240]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #240]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #240]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <4 x i32>, ptr %x, align 4
@@ -1631,101 +1631,101 @@ define i32 @mlav128i32i32(ptr %x, ptr %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    vmlav.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #16]
+; CHECK-NEXT:    vmlav.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #16]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #32]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #32]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #48]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #48]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #64]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #64]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #80]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #80]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #96]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #96]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #96]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #112]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #112]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #112]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #128]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #128]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #128]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #144]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #144]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #144]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #160]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #160]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #160]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #176]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #176]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #176]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #192]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #192]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #192]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #208]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #208]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #208]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #224]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #224]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #224]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #240]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #240]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #240]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #256]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #256]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #256]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #272]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #272]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #272]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #288]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #288]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #288]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #304]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #304]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #304]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #320]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #320]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #320]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #336]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #336]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #336]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #352]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #352]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #352]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #368]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #368]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #368]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #384]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #384]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #384]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #400]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #400]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #400]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #416]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #416]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #416]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #432]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #432]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #432]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #448]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #448]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #448]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #464]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #464]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #464]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #480]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #480]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #480]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r2, #496]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #496]
 ; CHECK-NEXT:    vldrw.u32 q1, [r1, #496]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <4 x i32>, ptr %x, align 4
@@ -2045,20 +2045,20 @@ define i32 @mlav24i32i16(ptr %x, ptr %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    vmlav.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #16]
+; CHECK-NEXT:    vmlav.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #16]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #24]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #24]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #24]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #32]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #32]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #32]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #40]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #40]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #40]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <8 x i16>, ptr %x, align 2
@@ -2084,29 +2084,29 @@ define i32 @mlav32i32i16(ptr %x, ptr %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r0]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    vmlav.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #8]
+; CHECK-NEXT:    vmlav.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #8]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #16]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #16]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #24]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #24]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #24]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #32]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #32]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #32]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #40]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #40]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #40]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #48]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #48]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #48]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q0, [r2, #56]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrh.s32 q0, [r0, #56]
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #56]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <32 x i16>, ptr %x, align 2
@@ -2225,53 +2225,53 @@ define i32 @mlav128i32i16(ptr %x, ptr %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    vmlav.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #16]
+; CHECK-NEXT:    vmlav.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #16]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #16]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #32]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #32]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #32]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #48]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #48]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #48]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #64]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #64]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #64]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #80]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #80]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #80]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #96]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #96]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #96]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #112]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #112]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #112]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #128]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #128]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #128]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #144]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #144]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #144]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #160]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #160]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #160]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #176]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #176]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #176]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #192]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #192]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #192]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #208]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #208]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #208]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #224]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #224]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #224]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r2, #240]
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #240]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1, #240]
-; CHECK-NEXT:    vmlava.s16 r0, q1, q0
+; CHECK-NEXT:    vmlava.s16 r2, q1, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %wide.load = load <8 x i16>, ptr %x, align 2
@@ -2531,29 +2531,29 @@ define i32 @mlav32i32i8(ptr %x, ptr %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrb.u32 q0, [r0]
 ; CHECK-NEXT:    vldrb.u32 q1, [r1]
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    vmlav.u32 r0, q1, q0
-; CHECK-NEXT:    vldrb.u32 q0, [r2, #4]
+; CHECK-NEXT:    vmlav.u32 r2, q1, q0
+; CHECK-NEXT:    vldrb.u32 q0, [r0, #4]
 ; CHECK-NEXT:    vldrb.u32 q1, [r1, #4]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrb.u32 q0, [r2, #8]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrb.u32 q0, [r0, #8]
 ; CHECK-NEXT:    vldrb.u32 q1, [r1, #8]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrb.u32 q0, [r2, #12]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrb.u32 q0, [r0, #12]
 ; CHECK-NEXT:    vldrb.u32 q1, [r1, #12]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrb.u32 q0, [r2, #16]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrb.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrb.u32 q1, [r1, #16]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrb.u32 q0, [r2, #20]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrb.u32 q0, [r0, #20]
 ; CHECK-NEXT:    vldrb.u32 q1, [r1, #20]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrb.u32 q0, [r2, #24]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrb.u32 q0, [r0, #24]
 ; CHECK-NEXT:    vldrb.u32 q1, [r1, #24]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
-; CHECK-NEXT:    vldrb.u32 q0, [r2, #28]
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    vldrb.u32 q0, [r0, #28]
 ; CHECK-NEXT:    vldrb.u32 q1, [r1, #28]
-; CHECK-NEXT:    vmlava.u32 r0, q1, q0
+; CHECK-NEXT:    vmlava.u32 r2, q1, q0
+; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = load <32 x i8>, ptr %x, align 1

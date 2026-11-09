@@ -197,3 +197,18 @@ StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
       return E.Name;
   return "";
 }
+
+IGCATarget llvm::IntelGPU::getIGCATarget(GPUKind Kind) {
+  switch (Kind) {
+  case GK_NONE:
+    return IGCATarget::invalid();
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_FEATURE_SETS)    \
+  case GK_##KIND:                                                              \
+    return IGCATarget(IGCA_TARGET, IGCAFeatureSet::IGCA_FEATURE_SETS);
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)           \
+  case GK_##KIND:                                                              \
+    return IGCATarget(IGCA_TARGET, IGCAFeatureSet::IGCA_FEATURE_SETS);
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+  }
+  llvm_unreachable("invalid Intel GPU kind");
+}
