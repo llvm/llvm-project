@@ -1330,11 +1330,14 @@ private:
 
   /// Return information about the function \p F, potentially by creating it.
   FunctionInfo &getFunctionInfo(const Function &F) {
-    FunctionInfo *&FI = FuncInfoMap[&F];
-    if (!FI) {
-      FI = new (Allocator) FunctionInfo();
-      initializeInformationCache(F, *FI);
-    }
+    auto [It, Inserted] = FuncInfoMap.try_emplace(&F);
+    if (!Inserted)
+      return *It->second;
+
+    // Initialization can grow the map, so don't keep a reference into it.
+    FunctionInfo *FI = new (Allocator) FunctionInfo();
+    It->second = FI;
+    initializeInformationCache(F, *FI);
     return *FI;
   }
 
