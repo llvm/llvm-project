@@ -101,7 +101,7 @@ public:
       Chunk::UnpackedHeader Header = {};
       Header.ClassId = QuarantineClassId & Chunk::ClassIdMask;
       Header.SizeOrUnusedBytes = sizeof(QuarantineBatch);
-      Header.State = Chunk::State::Quarantined;
+      Header.State = Chunk::State::QuarantineBatch;
       Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
 
       // Reset tag to 0 as this chunk may have been previously used for a tagged
@@ -120,7 +120,7 @@ public:
       Chunk::UnpackedHeader Header;
       Chunk::loadHeader(Allocator.Cookie, Ptr, &Header);
 
-      if (UNLIKELY(Header.State != Chunk::State::Quarantined))
+      if (UNLIKELY(Header.State != Chunk::State::QuarantineBatch))
         reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
       DCHECK_EQ(Header.ClassId, QuarantineClassId);
       DCHECK_EQ(Header.Offset, 0);
@@ -135,16 +135,16 @@ public:
     }
 
     // Make sure that Ptr is a live batch returned by allocate() before the
-    // quarantine uses it. Batches share a size class with user chunks and
-    // their links aren't covered by the header checksum, so a corrupted link
-    // must not lead the quarantine to anything else.
+    // quarantine uses it. Batches share a size class with user chunks, but have
+    // a distinct checksummed state, even from quarantined user chunks of the
+    // same size. The links themselves aren't covered by the header checksum.
     void checkBatch(void *Ptr) {
       const uptr QuarantineClassId = SizeClassMap::getClassIdBySize(
           sizeof(QuarantineBatch) + Chunk::getHeaderSize());
       Chunk::UnpackedHeader Header;
       Chunk::loadHeader(Allocator.Cookie, Ptr, &Header);
 
-      if (UNLIKELY(Header.State != Chunk::State::Quarantined))
+      if (UNLIKELY(Header.State != Chunk::State::QuarantineBatch))
         reportInvalidChunkState(AllocatorAction::Recycling, Ptr);
       CHECK_EQ(Header.ClassId, QuarantineClassId);
       CHECK_EQ(Header.Offset, 0);

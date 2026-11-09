@@ -76,7 +76,13 @@ ALWAYS_INLINE bool originAligned(u8 Origin) {
 }
 ALWAYS_INLINE bool originSized(u8 Origin) { return Origin & Origin::Size; }
 
-enum State : u8 { Available = 0, Allocated = 1, Quarantined = 2 };
+enum State : u8 {
+  Available = 0,
+  Allocated = 1,
+  Quarantined = 2,
+  // Internal batches must be distinguishable from quarantined user chunks.
+  QuarantineBatch = 3
+};
 
 typedef u64 PackedHeader;
 // Update the 'Mask' constants to reflect changes in this structure.
