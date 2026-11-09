@@ -23,7 +23,6 @@
 #  include <type_traits>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl::__statpart {
 
 // Assumptions that need to hold for this implementation.
@@ -420,7 +419,6 @@ inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(voi
 }
 
 } // namespace __pstl::__statpart
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_THREADS
