@@ -208,7 +208,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*clang_abi_compat=*/
           static_cast<int32_t>(langOpts.getClangABICompat()),
           static_cast<int32_t>(langOpts.LongDoubleSize),
-          /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs));
+          /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs,
+          /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
+              LangOptions::FPE_Ignore,
+          /*ssp_buffer_size=*/cgo.SSPBufferSize));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -2293,7 +2296,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
   gv.setLinkageAttr(
       cir::GlobalLinkageKindAttr::get(cgm.getBuilder().getContext(), lt));
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  gv.setUnnamedAddr(true);
   CIRGenModule::setInitializer(gv, c);
   if (gv.isWeakForLinker()) {
     assert(cgm.supportsCOMDAT() && "Only COFF uses weak string literals");
@@ -4060,6 +4063,8 @@ cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
 
+  extraAttrs.set(cir::CIRDialect::getRuntimeFuncAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
                                              /*forVtable=*/false, extraAttrs);
 
@@ -4600,6 +4605,7 @@ cir::GlobalOp CIRGenModule::getAddrOfUnnamedGlobalConstantDecl(
 
   CharUnits alignment = getASTContext().getTypeAlignInChars(gcd->getType());
   globalOp.setAlignment(alignment.getAsAlign().value());
+  globalOp.setUnnamedAddr(true);
   CIRGenModule::setInitializer(globalOp, init);
 
   emitter.finalize(globalOp);

@@ -68,7 +68,7 @@ namespace llvm::RISCV {
 RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
     : RISCVGenInstrInfo(STI, RegInfo, RISCV::ADJCALLSTACKDOWN,
                         RISCV::ADJCALLSTACKUP),
-      RegInfo(STI.getHwMode()), STI(STI) {}
+      RegInfo(STI.getHwMode(), STI.getUserReservedXRegs()), STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
 #include "RISCVGenInstrInfo.inc"
@@ -1715,9 +1715,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .add(RHS)
           .addReg(RegZ)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -1736,9 +1733,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .addReg(RegZ)
           .add(LHS)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -2974,11 +2968,6 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   uint32_t IntersectedFlags = Root.getFlags() & Prev.getFlags();
   DebugLoc MergedLoc =
       DILocation::getMergedLocation(Root.getDebugLoc(), Prev.getDebugLoc());
-
-  // We need to clear kill flags since we may be extending the live range past
-  // a kill.
-  MRI.clearKillFlags(Mul1.getReg());
-  MRI.clearKillFlags(Mul2.getReg());
 
   MachineInstrBuilder MIB = BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
                                 .addReg(Mul1.getReg())

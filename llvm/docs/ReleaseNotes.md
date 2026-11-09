@@ -266,6 +266,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
   `condition : value` pairs, along with their corresponding side effects,
   are left unresolved.
+* HwMode type expansion has been removed from CodeGenDAGPatterns. SelectionDAG
+  and GlobalISel handle HwModes during instruction selection. FastISel does not
+  support HwModes and will skip any patterns that use HwMode based types.
 
 ### Changes to Interprocedural Optimizations
 
@@ -513,6 +516,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* `llvm-mc` now supports `--verify[=<prefixes>]` to check diagnostics against `<prefix>-<kind> {{...}}` comments in the input instead of printing them.
+
 * `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
   A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
   `LLVM_PLUGIN_API_VERSION` is now 3.
@@ -523,6 +528,8 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-offload-binary can now compress packaged binaries using zstd or zlib.
 
 * llvm-mca no longer defaults -mcpu to "native"
+
+* The `llvm-mc --validate-cfi` option and the `DWARFCFIChecker` library have been removed.
 
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
