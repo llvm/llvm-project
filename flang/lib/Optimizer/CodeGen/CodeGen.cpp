@@ -3481,8 +3481,14 @@ struct CoordinateOpConversion
     // Complex type - basically, extract the real or imaginary part
     // FIXME: double check why this is done before the fir.box case below.
     if (fir::isa_complex(objectTy)) {
+      // A complex is two elements of the same type laid out contiguously, so a
+      // part index that is not constant can index the element type directly.
+      // Only an index into the struct itself has to be constant.
       mlir::Value gep =
-          genGEP(loc, llvmObjectTy, rewriter, base, 0, operands[1]);
+          fir::getIntIfConstant(operands[1])
+              ? genGEP(loc, llvmObjectTy, rewriter, base, 0, operands[1])
+              : genGEP(loc, convertType(getComplexEleTy(objectTy)), rewriter,
+                       base, operands[1]);
       rewriter.replaceOp(coor, gep);
       return mlir::success();
     }
