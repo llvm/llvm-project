@@ -29,85 +29,24 @@ define <8 x i16> @shuffle_v8i16(<8 x i16> %v, <8 x i16> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v8i16:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    umov w9, v1.h[4]
-; LE-NEXT:    umov w10, v1.h[0]
-; LE-NEXT:    mov x8, sp
-; LE-NEXT:    umov w11, v1.h[1]
-; LE-NEXT:    umov w12, v1.h[5]
-; LE-NEXT:    mov x15, sp
-; LE-NEXT:    umov w13, v1.h[6]
-; LE-NEXT:    umov w14, v1.h[2]
-; LE-NEXT:    mov x16, sp
-; LE-NEXT:    str q0, [sp]
-; LE-NEXT:    bfi x8, x10, #1, #3
-; LE-NEXT:    bfi x15, x9, #1, #3
-; LE-NEXT:    mov x9, sp
-; LE-NEXT:    bfi x16, x11, #1, #3
-; LE-NEXT:    bfi x9, x12, #1, #3
-; LE-NEXT:    umov w10, v1.h[3]
-; LE-NEXT:    ldr h0, [x8]
-; LE-NEXT:    ldr h2, [x15]
-; LE-NEXT:    umov w8, v1.h[7]
-; LE-NEXT:    mov x11, sp
-; LE-NEXT:    mov x12, sp
-; LE-NEXT:    ld1 { v0.h }[1], [x16]
-; LE-NEXT:    ld1 { v2.h }[1], [x9]
-; LE-NEXT:    bfi x11, x14, #1, #3
-; LE-NEXT:    bfi x12, x13, #1, #3
-; LE-NEXT:    mov x9, sp
-; LE-NEXT:    mov x13, sp
-; LE-NEXT:    bfi x13, x10, #1, #3
-; LE-NEXT:    bfi x9, x8, #1, #3
-; LE-NEXT:    ld1 { v0.h }[2], [x11]
-; LE-NEXT:    ld1 { v2.h }[2], [x12]
-; LE-NEXT:    ld1 { v0.h }[3], [x13]
-; LE-NEXT:    ld1 { v2.h }[3], [x9]
-; LE-NEXT:    zip1 v0.2d, v0.2d, v2.2d
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    movi v2.16b, #2
+; LE-NEXT:    movi v3.8h, #1, lsl #8
+; LE-NEXT:    mla v3.8h, v1.8h, v2.8h
+; LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v8i16:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    rev64 v1.8h, v1.8h
-; BE-NEXT:    mov x8, sp
-; BE-NEXT:    str q0, [sp]
-; BE-NEXT:    mov x11, sp
+; BE-NEXT:    movi v2.16b, #2
+; BE-NEXT:    rev64 v0.8h, v0.8h
+; BE-NEXT:    movi v3.8h, #1, lsl #8
 ; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; BE-NEXT:    umov w9, v1.h[0]
-; BE-NEXT:    umov w10, v1.h[1]
-; BE-NEXT:    bfi x8, x9, #1, #3
-; BE-NEXT:    umov w9, v1.h[2]
-; BE-NEXT:    bfi x11, x10, #1, #3
-; BE-NEXT:    mov x10, sp
-; BE-NEXT:    ldr h0, [x8]
-; BE-NEXT:    umov w8, v1.h[3]
-; BE-NEXT:    ld1 { v0.h }[1], [x11]
-; BE-NEXT:    bfi x10, x9, #1, #3
-; BE-NEXT:    umov w9, v1.h[4]
-; BE-NEXT:    ld1 { v0.h }[2], [x10]
-; BE-NEXT:    mov x10, sp
-; BE-NEXT:    bfi x10, x8, #1, #3
-; BE-NEXT:    umov w8, v1.h[5]
-; BE-NEXT:    ld1 { v0.h }[3], [x10]
-; BE-NEXT:    mov x10, sp
-; BE-NEXT:    bfi x10, x9, #1, #3
-; BE-NEXT:    umov w9, v1.h[6]
-; BE-NEXT:    ld1 { v0.h }[4], [x10]
-; BE-NEXT:    mov x10, sp
-; BE-NEXT:    bfi x10, x8, #1, #3
-; BE-NEXT:    umov w8, v1.h[7]
-; BE-NEXT:    ld1 { v0.h }[5], [x10]
-; BE-NEXT:    mov x10, sp
-; BE-NEXT:    bfi x10, x9, #1, #3
-; BE-NEXT:    mov x9, sp
-; BE-NEXT:    bfi x9, x8, #1, #3
-; BE-NEXT:    ld1 { v0.h }[6], [x10]
-; BE-NEXT:    ld1 { v0.h }[7], [x9]
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    mla v3.8h, v1.8h, v2.8h
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; BE-NEXT:    rev64 v0.8h, v0.8h
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %res = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %v, <8 x i16> %mask)
   ret <8 x i16> %res
@@ -117,53 +56,28 @@ define <4 x i32> @shuffle_v4i32(<4 x i32> %v, <4 x i32> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v4i32:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    fmov w10, s1
-; LE-NEXT:    mov w9, v1.s[1]
-; LE-NEXT:    mov x8, sp
-; LE-NEXT:    str q0, [sp]
-; LE-NEXT:    mov x11, sp
-; LE-NEXT:    bfi x8, x10, #2, #2
-; LE-NEXT:    mov w10, v1.s[2]
-; LE-NEXT:    bfi x11, x9, #2, #2
-; LE-NEXT:    mov x9, sp
-; LE-NEXT:    ldr s0, [x8]
-; LE-NEXT:    mov w8, v1.s[3]
-; LE-NEXT:    ld1 { v0.s }[1], [x11]
-; LE-NEXT:    bfi x9, x10, #2, #2
-; LE-NEXT:    mov x10, sp
-; LE-NEXT:    bfi x10, x8, #2, #2
-; LE-NEXT:    ld1 { v0.s }[2], [x9]
-; LE-NEXT:    ld1 { v0.s }[3], [x10]
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    mov w8, #256 // =0x100
+; LE-NEXT:    movi v2.16b, #4
+; LE-NEXT:    movk w8, #770, lsl #16
+; LE-NEXT:    dup v3.4s, w8
+; LE-NEXT:    mla v3.4s, v1.4s, v2.4s
+; LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v4i32:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    rev64 v1.4s, v1.4s
-; BE-NEXT:    mov x8, sp
-; BE-NEXT:    mov x13, sp
-; BE-NEXT:    str q0, [sp]
+; BE-NEXT:    mov w8, #256 // =0x100
+; BE-NEXT:    movi v2.16b, #4
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    movk w8, #770, lsl #16
+; BE-NEXT:    dup v3.4s, w8
 ; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; BE-NEXT:    mov w9, v1.s[2]
-; BE-NEXT:    fmov w12, s1
-; BE-NEXT:    mov w10, v1.s[1]
-; BE-NEXT:    mov w11, v1.s[3]
-; BE-NEXT:    bfi x8, x12, #2, #2
-; BE-NEXT:    mov x12, sp
-; BE-NEXT:    bfi x13, x9, #2, #2
-; BE-NEXT:    mov x9, sp
-; BE-NEXT:    bfi x12, x10, #2, #2
-; BE-NEXT:    ldr s0, [x8]
-; BE-NEXT:    bfi x9, x11, #2, #2
-; BE-NEXT:    ldr s1, [x13]
-; BE-NEXT:    ld1 { v0.s }[1], [x12]
-; BE-NEXT:    ld1 { v1.s }[1], [x9]
-; BE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    mla v3.4s, v1.4s, v2.4s
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; BE-NEXT:    rev64 v0.4s, v0.4s
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %res = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %v, <4 x i32> %mask)
   ret <4 x i32> %res
@@ -173,34 +87,24 @@ define <2 x i64> @shuffle_v2i64(<2 x i64> %v, <2 x i64> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v2i64:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    fmov x10, d1
-; LE-NEXT:    mov x9, v1.d[1]
-; LE-NEXT:    mov x8, sp
-; LE-NEXT:    str q0, [sp]
-; LE-NEXT:    bfi x8, x10, #3, #1
-; LE-NEXT:    mov x10, sp
-; LE-NEXT:    bfi x10, x9, #3, #1
-; LE-NEXT:    ldr d0, [x8]
-; LE-NEXT:    ld1 { v0.d }[1], [x10]
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    adrp x8, .LCPI3_0
+; LE-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; LE-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
+; LE-NEXT:    cmeq v1.2d, v1.2d, v2.2d
+; LE-NEXT:    bif v0.16b, v3.16b, v1.16b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v2i64:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
-; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; BE-NEXT:    mov x8, sp
-; BE-NEXT:    str q0, [sp]
-; BE-NEXT:    fmov x10, d1
-; BE-NEXT:    mov x9, v1.d[1]
-; BE-NEXT:    bfi x8, x10, #3, #1
-; BE-NEXT:    mov x10, sp
-; BE-NEXT:    bfi x10, x9, #3, #1
-; BE-NEXT:    ldr d0, [x8]
-; BE-NEXT:    ld1 { v0.d }[1], [x10]
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; BE-NEXT:    adrp x8, .LCPI3_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI3_0
+; BE-NEXT:    ld1 { v2.2d }, [x8]
+; BE-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    cmeq v1.2d, v1.2d, v2.2d
+; BE-NEXT:    bif v0.16b, v3.16b, v1.16b
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ret
   %res = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i64(<2 x i64> %v, <2 x i64> %mask)
   ret <2 x i64> %res
@@ -210,53 +114,28 @@ define <4 x float> @shuffle_v4f32(<4 x float> %v, <4 x i32> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v4f32:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    fmov w10, s1
-; LE-NEXT:    mov w9, v1.s[1]
-; LE-NEXT:    mov x8, sp
-; LE-NEXT:    str q0, [sp]
-; LE-NEXT:    mov x11, sp
-; LE-NEXT:    bfi x8, x10, #2, #2
-; LE-NEXT:    mov w10, v1.s[2]
-; LE-NEXT:    bfi x11, x9, #2, #2
-; LE-NEXT:    mov x9, sp
-; LE-NEXT:    ldr s0, [x8]
-; LE-NEXT:    mov w8, v1.s[3]
-; LE-NEXT:    ld1 { v0.s }[1], [x11]
-; LE-NEXT:    bfi x9, x10, #2, #2
-; LE-NEXT:    mov x10, sp
-; LE-NEXT:    bfi x10, x8, #2, #2
-; LE-NEXT:    ld1 { v0.s }[2], [x9]
-; LE-NEXT:    ld1 { v0.s }[3], [x10]
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    mov w8, #256 // =0x100
+; LE-NEXT:    movi v2.16b, #4
+; LE-NEXT:    movk w8, #770, lsl #16
+; LE-NEXT:    dup v3.4s, w8
+; LE-NEXT:    mla v3.4s, v1.4s, v2.4s
+; LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v4f32:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    rev64 v1.4s, v1.4s
-; BE-NEXT:    mov x8, sp
-; BE-NEXT:    mov x13, sp
-; BE-NEXT:    str q0, [sp]
+; BE-NEXT:    mov w8, #256 // =0x100
+; BE-NEXT:    movi v2.16b, #4
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    movk w8, #770, lsl #16
+; BE-NEXT:    dup v3.4s, w8
 ; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; BE-NEXT:    mov w9, v1.s[2]
-; BE-NEXT:    fmov w12, s1
-; BE-NEXT:    mov w10, v1.s[1]
-; BE-NEXT:    mov w11, v1.s[3]
-; BE-NEXT:    bfi x8, x12, #2, #2
-; BE-NEXT:    mov x12, sp
-; BE-NEXT:    bfi x13, x9, #2, #2
-; BE-NEXT:    mov x9, sp
-; BE-NEXT:    bfi x12, x10, #2, #2
-; BE-NEXT:    ldr s0, [x8]
-; BE-NEXT:    bfi x9, x11, #2, #2
-; BE-NEXT:    ldr s1, [x13]
-; BE-NEXT:    ld1 { v0.s }[1], [x12]
-; BE-NEXT:    ld1 { v1.s }[1], [x9]
-; BE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    mla v3.4s, v1.4s, v2.4s
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; BE-NEXT:    rev64 v0.4s, v0.4s
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %res = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %v, <4 x i32> %mask)
   ret <4 x float> %res
@@ -288,52 +167,22 @@ define <4 x i16> @shuffle_v4i16(<4 x i16> %v, <4 x i16> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v4i16:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    // kill: def $d1 killed $d1 def $q1
-; LE-NEXT:    umov w9, v1.h[0]
-; LE-NEXT:    umov w10, v1.h[1]
-; LE-NEXT:    add x8, sp, #8
-; LE-NEXT:    str d0, [sp, #8]
-; LE-NEXT:    add x11, sp, #8
-; LE-NEXT:    bfi x8, x9, #1, #2
-; LE-NEXT:    umov w9, v1.h[2]
-; LE-NEXT:    bfi x11, x10, #1, #2
-; LE-NEXT:    add x10, sp, #8
-; LE-NEXT:    ldr h0, [x8]
-; LE-NEXT:    umov w8, v1.h[3]
-; LE-NEXT:    ld1 { v0.h }[1], [x11]
-; LE-NEXT:    bfi x10, x9, #1, #2
-; LE-NEXT:    add x9, sp, #8
-; LE-NEXT:    bfi x9, x8, #1, #2
-; LE-NEXT:    ld1 { v0.h }[2], [x10]
-; LE-NEXT:    ld1 { v0.h }[3], [x9]
-; LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    movi v2.8b, #2
+; LE-NEXT:    movi v3.4h, #1, lsl #8
+; LE-NEXT:    // kill: def $d0 killed $d0 def $q0
+; LE-NEXT:    mla v3.4h, v1.4h, v2.4h
+; LE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v4i16:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
+; BE-NEXT:    movi v2.8b, #2
 ; BE-NEXT:    rev64 v1.4h, v1.4h
-; BE-NEXT:    add x8, sp, #8
-; BE-NEXT:    str d0, [sp, #8]
-; BE-NEXT:    add x11, sp, #8
-; BE-NEXT:    umov w9, v1.h[0]
-; BE-NEXT:    umov w10, v1.h[1]
-; BE-NEXT:    bfi x8, x9, #1, #2
-; BE-NEXT:    umov w9, v1.h[2]
-; BE-NEXT:    bfi x11, x10, #1, #2
-; BE-NEXT:    add x10, sp, #8
-; BE-NEXT:    ldr h0, [x8]
-; BE-NEXT:    umov w8, v1.h[3]
-; BE-NEXT:    ld1 { v0.h }[1], [x11]
-; BE-NEXT:    bfi x10, x9, #1, #2
-; BE-NEXT:    add x9, sp, #8
-; BE-NEXT:    bfi x9, x8, #1, #2
-; BE-NEXT:    ld1 { v0.h }[2], [x10]
-; BE-NEXT:    ld1 { v0.h }[3], [x9]
+; BE-NEXT:    movi v3.4h, #1, lsl #8
 ; BE-NEXT:    rev64 v0.4h, v0.4h
-; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    mla v3.4h, v1.4h, v2.4h
+; BE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
+; BE-NEXT:    rev64 v0.4h, v0.4h
 ; BE-NEXT:    ret
   %res = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %v, <4 x i16> %mask)
   ret <4 x i16> %res
@@ -343,36 +192,24 @@ define <2 x i32> @shuffle_v2i32(<2 x i32> %v, <2 x i32> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v2i32:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    // kill: def $d1 killed $d1 def $q1
-; LE-NEXT:    fmov w10, s1
-; LE-NEXT:    mov w9, v1.s[1]
-; LE-NEXT:    add x8, sp, #8
-; LE-NEXT:    str d0, [sp, #8]
-; LE-NEXT:    bfi x8, x10, #2, #1
-; LE-NEXT:    add x10, sp, #8
-; LE-NEXT:    bfi x10, x9, #2, #1
-; LE-NEXT:    ldr s0, [x8]
-; LE-NEXT:    ld1 { v0.s }[1], [x10]
-; LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    mov x8, #4294967296 // =0x100000000
+; LE-NEXT:    rev64 v3.2s, v0.2s
+; LE-NEXT:    fmov d2, x8
+; LE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
+; LE-NEXT:    bif v0.8b, v3.8b, v1.8b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v2i32:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
-; BE-NEXT:    rev64 v1.2s, v1.2s
-; BE-NEXT:    add x8, sp, #8
-; BE-NEXT:    str d0, [sp, #8]
-; BE-NEXT:    fmov w10, s1
-; BE-NEXT:    mov w9, v1.s[1]
-; BE-NEXT:    bfi x8, x10, #2, #1
-; BE-NEXT:    add x10, sp, #8
-; BE-NEXT:    bfi x10, x9, #2, #1
-; BE-NEXT:    ldr s0, [x8]
-; BE-NEXT:    ld1 { v0.s }[1], [x10]
 ; BE-NEXT:    rev64 v0.2s, v0.2s
-; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    rev64 v1.2s, v1.2s
+; BE-NEXT:    adrp x8, .LCPI7_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI7_0
+; BE-NEXT:    ld1 { v2.2s }, [x8]
+; BE-NEXT:    rev64 v3.2s, v0.2s
+; BE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
+; BE-NEXT:    bif v0.8b, v3.8b, v1.8b
+; BE-NEXT:    rev64 v0.2s, v0.2s
 ; BE-NEXT:    ret
   %res = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %v, <2 x i32> %mask)
   ret <2 x i32> %res
@@ -384,54 +221,31 @@ define <4 x i32> @shuffle_v4i32_i8_mask(<4 x i32> %v, <4 x i8> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v4i32_i8_mask:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    // kill: def $d1 killed $d1 def $q1
-; LE-NEXT:    mov x8, sp
-; LE-NEXT:    str q0, [sp]
-; LE-NEXT:    mov x11, sp
 ; LE-NEXT:    bic v1.4h, #255, lsl #8
-; LE-NEXT:    umov w9, v1.h[0]
-; LE-NEXT:    umov w10, v1.h[1]
-; LE-NEXT:    bfi x8, x9, #2, #2
-; LE-NEXT:    umov w9, v1.h[2]
-; LE-NEXT:    bfi x11, x10, #2, #2
-; LE-NEXT:    mov x10, sp
-; LE-NEXT:    ldr s0, [x8]
-; LE-NEXT:    umov w8, v1.h[3]
-; LE-NEXT:    ld1 { v0.s }[1], [x11]
-; LE-NEXT:    bfi x10, x9, #2, #2
-; LE-NEXT:    mov x9, sp
-; LE-NEXT:    bfi x9, x8, #2, #2
-; LE-NEXT:    ld1 { v0.s }[2], [x10]
-; LE-NEXT:    ld1 { v0.s }[3], [x9]
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    mov w8, #256 // =0x100
+; LE-NEXT:    movi v2.16b, #4
+; LE-NEXT:    movk w8, #770, lsl #16
+; LE-NEXT:    dup v3.4s, w8
+; LE-NEXT:    ushll v1.4s, v1.4h, #0
+; LE-NEXT:    mla v3.4s, v1.4s, v2.4s
+; LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v4i32_i8_mask:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    rev64 v1.4h, v1.4h
-; BE-NEXT:    mov x8, sp
-; BE-NEXT:    str q0, [sp]
-; BE-NEXT:    mov x11, sp
+; BE-NEXT:    mov w8, #256 // =0x100
+; BE-NEXT:    movi v2.16b, #4
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    movk w8, #770, lsl #16
+; BE-NEXT:    dup v3.4s, w8
 ; BE-NEXT:    bic v1.4h, #255, lsl #8
-; BE-NEXT:    umov w9, v1.h[0]
-; BE-NEXT:    umov w10, v1.h[1]
-; BE-NEXT:    bfi x8, x9, #2, #2
-; BE-NEXT:    umov w9, v1.h[2]
-; BE-NEXT:    bfi x11, x10, #2, #2
-; BE-NEXT:    mov x10, sp
-; BE-NEXT:    ldr s0, [x8]
-; BE-NEXT:    umov w8, v1.h[3]
-; BE-NEXT:    ld1 { v0.s }[1], [x11]
-; BE-NEXT:    bfi x10, x9, #2, #2
-; BE-NEXT:    mov x9, sp
-; BE-NEXT:    bfi x9, x8, #2, #2
-; BE-NEXT:    ld1 { v0.s }[2], [x10]
-; BE-NEXT:    ld1 { v0.s }[3], [x9]
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    ushll v1.4s, v1.4h, #0
+; BE-NEXT:    mla v3.4s, v1.4s, v2.4s
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; BE-NEXT:    rev64 v0.4s, v0.4s
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %res = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> %v, <4 x i8> %mask)
   ret <4 x i32> %res
@@ -807,39 +621,28 @@ define <2 x i16> @shuffle_v2i16(<2 x i16> %v, <2 x i16> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v2i16:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
 ; LE-NEXT:    movi d2, #0x00ffff0000ffff
-; LE-NEXT:    add x10, sp, #8
-; LE-NEXT:    str d0, [sp, #8]
+; LE-NEXT:    mov x8, #4294967296 // =0x100000000
+; LE-NEXT:    rev64 v3.2s, v0.2s
 ; LE-NEXT:    and v1.8b, v1.8b, v2.8b
-; LE-NEXT:    fmov w9, s1
-; LE-NEXT:    mov w8, v1.s[1]
-; LE-NEXT:    bfi x10, x9, #2, #1
-; LE-NEXT:    add x9, sp, #8
-; LE-NEXT:    bfi x9, x8, #2, #1
-; LE-NEXT:    ldr s0, [x10]
-; LE-NEXT:    ld1 { v0.s }[1], [x9]
-; LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    fmov d2, x8
+; LE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
+; LE-NEXT:    bif v0.8b, v3.8b, v1.8b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v2i16:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    movi d2, #0x00ffff0000ffff
 ; BE-NEXT:    rev64 v1.2s, v1.2s
-; BE-NEXT:    add x10, sp, #8
-; BE-NEXT:    str d0, [sp, #8]
-; BE-NEXT:    and v1.8b, v1.8b, v2.8b
-; BE-NEXT:    fmov w9, s1
-; BE-NEXT:    mov w8, v1.s[1]
-; BE-NEXT:    bfi x10, x9, #2, #1
-; BE-NEXT:    add x9, sp, #8
-; BE-NEXT:    bfi x9, x8, #2, #1
-; BE-NEXT:    ldr s0, [x10]
-; BE-NEXT:    ld1 { v0.s }[1], [x9]
+; BE-NEXT:    adrp x8, .LCPI12_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI12_0
 ; BE-NEXT:    rev64 v0.2s, v0.2s
-; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    and v1.8b, v1.8b, v2.8b
+; BE-NEXT:    ld1 { v2.2s }, [x8]
+; BE-NEXT:    rev64 v3.2s, v0.2s
+; BE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
+; BE-NEXT:    bif v0.8b, v3.8b, v1.8b
+; BE-NEXT:    rev64 v0.2s, v0.2s
 ; BE-NEXT:    ret
   %res = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %v, <2 x i16> %mask)
   ret <2 x i16> %res
@@ -849,36 +652,24 @@ define <1 x i32> @shuffle_v1i32(<1 x i32> %v, <1 x i32> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v1i32:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    // kill: def $d1 killed $d1 def $q1
-; LE-NEXT:    fmov w10, s1
-; LE-NEXT:    mov w9, v1.s[1]
-; LE-NEXT:    add x8, sp, #8
-; LE-NEXT:    str d0, [sp, #8]
-; LE-NEXT:    bfi x8, x10, #2, #1
-; LE-NEXT:    add x10, sp, #8
-; LE-NEXT:    bfi x10, x9, #2, #1
-; LE-NEXT:    ldr s0, [x8]
-; LE-NEXT:    ld1 { v0.s }[1], [x10]
-; LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    mov x8, #4294967296 // =0x100000000
+; LE-NEXT:    rev64 v3.2s, v0.2s
+; LE-NEXT:    fmov d2, x8
+; LE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
+; LE-NEXT:    bif v0.8b, v3.8b, v1.8b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v1i32:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
-; BE-NEXT:    rev64 v1.2s, v1.2s
-; BE-NEXT:    add x8, sp, #8
-; BE-NEXT:    str d0, [sp, #8]
-; BE-NEXT:    fmov w10, s1
-; BE-NEXT:    mov w9, v1.s[1]
-; BE-NEXT:    bfi x8, x10, #2, #1
-; BE-NEXT:    add x10, sp, #8
-; BE-NEXT:    bfi x10, x9, #2, #1
-; BE-NEXT:    ldr s0, [x8]
-; BE-NEXT:    ld1 { v0.s }[1], [x10]
 ; BE-NEXT:    rev64 v0.2s, v0.2s
-; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    rev64 v1.2s, v1.2s
+; BE-NEXT:    adrp x8, .LCPI13_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI13_0
+; BE-NEXT:    ld1 { v2.2s }, [x8]
+; BE-NEXT:    rev64 v3.2s, v0.2s
+; BE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
+; BE-NEXT:    bif v0.8b, v3.8b, v1.8b
+; BE-NEXT:    rev64 v0.2s, v0.2s
 ; BE-NEXT:    ret
   %res = call <1 x i32> @llvm.vector.shuffle.v1i32.v1i32(<1 x i32> %v, <1 x i32> %mask)
   ret <1 x i32> %res
@@ -888,54 +679,24 @@ define <4 x i8> @shuffle_v4i8(<4 x i8> %v, <4 x i8> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v4i8:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    // kill: def $d1 killed $d1 def $q1
-; LE-NEXT:    add x8, sp, #8
-; LE-NEXT:    str d0, [sp, #8]
-; LE-NEXT:    add x11, sp, #8
+; LE-NEXT:    movi v2.8b, #2
+; LE-NEXT:    movi v3.4h, #1, lsl #8
+; LE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; LE-NEXT:    bic v1.4h, #255, lsl #8
-; LE-NEXT:    umov w9, v1.h[0]
-; LE-NEXT:    umov w10, v1.h[1]
-; LE-NEXT:    bfi x8, x9, #1, #2
-; LE-NEXT:    umov w9, v1.h[2]
-; LE-NEXT:    bfi x11, x10, #1, #2
-; LE-NEXT:    add x10, sp, #8
-; LE-NEXT:    ldr h0, [x8]
-; LE-NEXT:    umov w8, v1.h[3]
-; LE-NEXT:    ld1 { v0.h }[1], [x11]
-; LE-NEXT:    bfi x10, x9, #1, #2
-; LE-NEXT:    add x9, sp, #8
-; LE-NEXT:    bfi x9, x8, #1, #2
-; LE-NEXT:    ld1 { v0.h }[2], [x10]
-; LE-NEXT:    ld1 { v0.h }[3], [x9]
-; LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    mla v3.4h, v1.4h, v2.4h
+; LE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v4i8:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    rev64 v1.4h, v1.4h
-; BE-NEXT:    add x8, sp, #8
-; BE-NEXT:    str d0, [sp, #8]
-; BE-NEXT:    add x11, sp, #8
-; BE-NEXT:    bic v1.4h, #255, lsl #8
-; BE-NEXT:    umov w9, v1.h[0]
-; BE-NEXT:    umov w10, v1.h[1]
-; BE-NEXT:    bfi x8, x9, #1, #2
-; BE-NEXT:    umov w9, v1.h[2]
-; BE-NEXT:    bfi x11, x10, #1, #2
-; BE-NEXT:    add x10, sp, #8
-; BE-NEXT:    ldr h0, [x8]
-; BE-NEXT:    umov w8, v1.h[3]
-; BE-NEXT:    ld1 { v0.h }[1], [x11]
-; BE-NEXT:    bfi x10, x9, #1, #2
-; BE-NEXT:    add x9, sp, #8
-; BE-NEXT:    bfi x9, x8, #1, #2
-; BE-NEXT:    ld1 { v0.h }[2], [x10]
-; BE-NEXT:    ld1 { v0.h }[3], [x9]
+; BE-NEXT:    movi v2.8b, #2
+; BE-NEXT:    movi v3.4h, #1, lsl #8
 ; BE-NEXT:    rev64 v0.4h, v0.4h
-; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    bic v1.4h, #255, lsl #8
+; BE-NEXT:    mla v3.4h, v1.4h, v2.4h
+; BE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
+; BE-NEXT:    rev64 v0.4h, v0.4h
 ; BE-NEXT:    ret
   %res = call <4 x i8> @llvm.vector.shuffle.v4i8.v4i8(<4 x i8> %v, <4 x i8> %mask)
   ret <4 x i8> %res
@@ -945,53 +706,28 @@ define <3 x i32> @shuffle_v3i32(<3 x i32> %v, <3 x i32> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v3i32:
 ; LE:       // %bb.0:
-; LE-NEXT:    sub sp, sp, #16
-; LE-NEXT:    fmov w10, s1
-; LE-NEXT:    mov w9, v1.s[1]
-; LE-NEXT:    mov x8, sp
-; LE-NEXT:    str q0, [sp]
-; LE-NEXT:    mov x11, sp
-; LE-NEXT:    bfi x8, x10, #2, #2
-; LE-NEXT:    mov w10, v1.s[2]
-; LE-NEXT:    bfi x11, x9, #2, #2
-; LE-NEXT:    mov x9, sp
-; LE-NEXT:    ldr s0, [x8]
-; LE-NEXT:    mov w8, v1.s[3]
-; LE-NEXT:    ld1 { v0.s }[1], [x11]
-; LE-NEXT:    bfi x9, x10, #2, #2
-; LE-NEXT:    mov x10, sp
-; LE-NEXT:    bfi x10, x8, #2, #2
-; LE-NEXT:    ld1 { v0.s }[2], [x9]
-; LE-NEXT:    ld1 { v0.s }[3], [x10]
-; LE-NEXT:    add sp, sp, #16
+; LE-NEXT:    mov w8, #256 // =0x100
+; LE-NEXT:    movi v2.16b, #4
+; LE-NEXT:    movk w8, #770, lsl #16
+; LE-NEXT:    dup v3.4s, w8
+; LE-NEXT:    mla v3.4s, v1.4s, v2.4s
+; LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v3i32:
 ; BE:       // %bb.0:
-; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    rev64 v1.4s, v1.4s
-; BE-NEXT:    mov x8, sp
-; BE-NEXT:    mov x13, sp
-; BE-NEXT:    str q0, [sp]
+; BE-NEXT:    mov w8, #256 // =0x100
+; BE-NEXT:    movi v2.16b, #4
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    movk w8, #770, lsl #16
+; BE-NEXT:    dup v3.4s, w8
 ; BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; BE-NEXT:    mov w9, v1.s[2]
-; BE-NEXT:    fmov w12, s1
-; BE-NEXT:    mov w10, v1.s[1]
-; BE-NEXT:    mov w11, v1.s[3]
-; BE-NEXT:    bfi x8, x12, #2, #2
-; BE-NEXT:    mov x12, sp
-; BE-NEXT:    bfi x13, x9, #2, #2
-; BE-NEXT:    mov x9, sp
-; BE-NEXT:    bfi x12, x10, #2, #2
-; BE-NEXT:    ldr s0, [x8]
-; BE-NEXT:    bfi x9, x11, #2, #2
-; BE-NEXT:    ldr s1, [x13]
-; BE-NEXT:    ld1 { v0.s }[1], [x12]
-; BE-NEXT:    ld1 { v1.s }[1], [x9]
-; BE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    mla v3.4s, v1.4s, v2.4s
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
 ; BE-NEXT:    rev64 v0.4s, v0.4s
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
   %res = call <3 x i32> @llvm.vector.shuffle.v3i32.v3i32(<3 x i32> %v, <3 x i32> %mask)
   ret <3 x i32> %res

@@ -2380,6 +2380,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
                             {3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+  setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
@@ -8865,6 +8866,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::VECTOR_REVERSE:
     return LowerVECTOR_REVERSE(Op, DAG);
+  case ISD::VECTOR_SHUFFLE_VAR:
+    return LowerVECTOR_SHUFFLE_VAR(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -16296,6 +16299,63 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // Fall back to generating a TBL
   return GenerateTBL(Op, ShuffleMask, DAG);
+}
+
+SDValue
+AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  SDValue V = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+  SDLoc DL(Op);
+
+  assert(!VT.isScalableVector() && "Unexpected VECTOR_SHUFFLE_VAR");
+
+  EVT IdxVT = VT.changeVectorElementTypeToInteger();
+  SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+
+  unsigned NumElts = VT.getVectorNumElements();
+  // The only in-range index is 0; any other index gives poison.
+  if (NumElts == 1)
+    return V;
+
+  if (NumElts == 2) {
+    // Select between V and V with its lanes swapped.
+    SDValue Keep =
+        DAG.getSetCC(DL, IdxVT, Idx, DAG.getStepVector(DL, IdxVT), ISD::SETEQ);
+    SDValue Swapped = DAG.getVectorShuffle(VT, DL, V, V, {1, 0});
+    return DAG.getNode(ISD::VSELECT, DL, VT, Keep, V, Swapped);
+  }
+
+  // TBL indexes bytes. Multiplying by EltBytes splatted into each byte puts
+  // Idx * EltBytes in every byte of the lane; adding <0, 1, ...> gives the
+  // byte indices. In-range indices never carry between bytes.
+  unsigned EltBytes = VT.getScalarSizeInBits() / 8;
+  assert(EltBytes <= 4 && "Expected i64 elements to have at most 2 lanes");
+  if (EltBytes > 1) {
+    uint64_t RepEltBytes = 0, ByteOffsets = 0;
+    for (unsigned I = 0; I < EltBytes; ++I) {
+      RepEltBytes |= (uint64_t)EltBytes << (8 * I);
+      ByteOffsets |= (uint64_t)I << (8 * I);
+    }
+    Idx = DAG.getNode(ISD::MUL, DL, IdxVT, Idx,
+                      DAG.getConstant(RepEltBytes, DL, IdxVT));
+    Idx = DAG.getNode(ISD::ADD, DL, IdxVT, Idx,
+                      DAG.getConstant(ByteOffsets, DL, IdxVT));
+  }
+
+  // NVCAST keeps the byte indices valid for big-endian.
+  MVT ByteVT = VT.getSizeInBits() == 128 ? MVT::v16i8 : MVT::v8i8;
+  SDValue Table = DAG.getNode(AArch64ISD::NVCAST, DL, ByteVT, V);
+  // TBL tables are 128 bits; only out-of-range indices read the upper half.
+  if (ByteVT == MVT::v8i8)
+    Table = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Table,
+                        DAG.getPOISON(MVT::v8i8));
+  SDValue Tbl = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, ByteVT,
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl1, DL, MVT::i32), Table,
+      DAG.getNode(AArch64ISD::NVCAST, DL, ByteVT, Idx));
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Tbl);
 }
 
 SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
