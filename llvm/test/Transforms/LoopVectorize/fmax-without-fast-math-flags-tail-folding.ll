@@ -26,8 +26,9 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; IC1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; IC1-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; IC1-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP5]], true
+; IC1-NEXT:    [[TMP12:%.*]] = or i1 [[TMP4]], [[TMP6]]
 ; IC1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; IC1-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; IC1-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IC1:       [[MIDDLE_BLOCK]]:
 ; IC1-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> [[TMP2]], <4 x float> [[VEC_PHI]]
 ; IC1-NEXT:    [[TMP8:%.*]] = select i1 [[TMP4]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
@@ -81,8 +82,9 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; IC2-NEXT:    [[EXTRACT_NEXT_ALM_PART5]] = call <4 x i1> @llvm.vector.extract.v4i1.v8i1(<8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 4)
 ; IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[EXTRACT_NEXT_ALM_PART]], i64 0
 ; IC2-NEXT:    [[TMP9:%.*]] = xor i1 [[TMP8]], true
+; IC2-NEXT:    [[TMP17:%.*]] = or i1 [[TMP7]], [[TMP9]]
 ; IC2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
-; IC2-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; IC2-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IC2:       [[MIDDLE_BLOCK]]:
 ; IC2-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> [[TMP4]], <4 x float> [[VEC_PHI]]
 ; IC2-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK2]], <4 x float> [[TMP5]], <4 x float> [[VEC_PHI3]]
