@@ -627,10 +627,6 @@ def PthreadLockChecker : Checker<"PthreadLock">,
   Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 
-def SimpleStreamChecker : Checker<"SimpleStream">,
-  HelpText<"Check for misuses of stream APIs">,
-  Documentation<HasDocumentation>;
-
 } // end "alpha.unix"
 
 //===----------------------------------------------------------------------===//

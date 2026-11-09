@@ -1,6 +1,6 @@
-// Unsupported on AIX because we don't support the requisite "__clangast"
-// section in XCOFF yet.
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// Unsupported on AIX & z/OS because we don't support the requisite "__clangast"
+// section in XCOFF/GOFF yet.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // RUN: rm -rf %t
 // RUN: mkdir %t

@@ -279,7 +279,7 @@ interface StackFrame {
    * @format uint32
    * @since LLDB 24
    */
-  compileUnitId?: number;
+  $__lldb_compileUnitId?: number;
 
   /**
    * Language specific data about the frame, as returned by
