@@ -929,7 +929,7 @@ void SizeClassAllocator64<Config>::pushBlocksImpl(
     DCHECK_NE(CurBatch, nullptr);
 
     for (u32 I = 0; I < Size;) {
-      CHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
+      DCHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
       u16 UnusedSlots =
           static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
       if (UnusedSlots == 0) {
@@ -1091,7 +1091,6 @@ void SizeClassAllocator64<Config>::pushBatchClassBlocks(RegionInfo *Region,
   DCHECK_NE(CurBatch, nullptr);
 
   for (u32 I = 0; I < Size;) {
-    CHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
     u16 UnusedSlots =
         static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
     if (UnusedSlots == 0) {

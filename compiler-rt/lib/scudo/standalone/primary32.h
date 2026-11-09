@@ -674,7 +674,6 @@ void SizeClassAllocator32<Config>::pushBatchClassBlocks(SizeClassInfo *Sci,
   DCHECK_NE(CurBatch, nullptr);
 
   for (u32 I = 0; I < Size;) {
-    CHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
     u16 UnusedSlots =
         static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
     if (UnusedSlots == 0) {
@@ -743,7 +742,7 @@ void SizeClassAllocator32<Config>::pushBlocksImpl(
     DCHECK_NE(CurBatch, nullptr);
 
     for (u32 I = 0; I < Size;) {
-      CHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
+      DCHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
       u16 UnusedSlots =
           static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
       if (UnusedSlots == 0) {

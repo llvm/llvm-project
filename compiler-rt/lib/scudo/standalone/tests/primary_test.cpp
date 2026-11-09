@@ -649,6 +649,9 @@ TEST(ScudoPrimaryDeathTest, BatchInvalidCount) {
   }
 }
 
+// Fuchsia runs a death test's statement in a thread of the same process, which
+// would leave the corrupted Batches in the freelist and its lock held.
+#if !SCUDO_FUCHSIA
 template <template <typename> class BaseConfig>
 struct ScudoPrimaryDeathTest : public Test {};
 
@@ -710,8 +713,9 @@ SCUDO_TYPED_TEST(ScudoPrimaryDeathTest, BatchClassFreeListInvalidCount) {
         CorruptBatches();
         Allocator->pushBlocks(&SizeClassAllocator, BatchClassId, &Kept, 1U);
       },
-      "MaxCachedPerBatch");
+      "MaxNumBlocksInBatch");
 
   Allocator->pushBlocks(&SizeClassAllocator, BatchClassId, &Kept, 1U);
   SizeClassAllocator.destroy(nullptr);
 }
+#endif // !SCUDO_FUCHSIA
