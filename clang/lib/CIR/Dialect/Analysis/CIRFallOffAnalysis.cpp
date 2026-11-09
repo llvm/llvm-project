@@ -22,6 +22,7 @@
 #include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -30,29 +31,27 @@ using namespace cir;
 
 namespace {
 
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 /// How control can leave a region or a structured operation.
-struct Exits {
-  bool normal = false;
-  bool breaks = false;
-  bool continues = false;
-  bool explicitReturn = false;
-  bool implicitReturn = false;
+enum class Exits : uint8_t {
+  None = 0,
+  Normal = 1 << 0,
+  Break = 1 << 1,
+  Continue = 1 << 2,
+  ExplicitReturn = 1 << 3,
+  ImplicitReturn = 1 << 4,
   // Outcomes of a reachable `cir.condition` terminating the region.
-  bool condTrue = false;
-  bool condFalse = false;
-
-  /// Merge the exits that escape an enclosed operation.
-  void mergeEscaping(const Exits &other) {
-    breaks |= other.breaks;
-    continues |= other.continues;
-    explicitReturn |= other.explicitReturn;
-    implicitReturn |= other.implicitReturn;
-  }
-
-  bool any() const {
-    return normal || breaks || continues || explicitReturn || implicitReturn;
-  }
+  CondTrue = 1 << 5,
+  CondFalse = 1 << 6,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CondFalse)
 };
+
+/// The exits that leave an enclosing operation too, not just the region.
+constexpr Exits escapingExits = Exits::Break | Exits::Continue |
+                                Exits::ExplicitReturn | Exits::ImplicitReturn;
+
+bool has(Exits exits, Exits kinds) { return (exits & kinds) != Exits::None; }
 
 class FallOffAnalyzer {
 public:
@@ -65,7 +64,7 @@ public:
   /// label inside it, or dead code that may hold one, means yes.
   bool mayCompleteFromTop(mlir::Operation *op) {
     assert(tailOnly && "needs a tail-only analyzer");
-    return visitStructured(op, /*entered=*/true).normal || unsure;
+    return has(visitStructured(op, /*entered=*/true), Exits::Normal) || unsure;
   }
 
 private:
@@ -247,7 +246,7 @@ FallOffKind FallOffAnalyzer::run() {
 
   // A reached goto may target a label in a region already walked as dead, so
   // walk again until no new label is targeted; without gotos, once.
-  Exits exits;
+  Exits exits = Exits::None;
   while (true) {
     abnormalEdge = fakeEdge = reachedIndirectGoto = false;
     reachedGotoTargets.clear();
@@ -262,11 +261,10 @@ FallOffKind FallOffAnalyzer::run() {
     updateLabelAncestors();
   }
 
-  bool plainEdge = exits.implicitReturn || exits.normal;
-  if (!plainEdge)
-    return exits.explicitReturn ? FallOffKind::Never
-                                : FallOffKind::NeverAndNoReturn;
-  if (abnormalEdge || fakeEdge || exits.explicitReturn)
+  bool explicitReturn = has(exits, Exits::ExplicitReturn);
+  if (!has(exits, Exits::Normal | Exits::ImplicitReturn))
+    return explicitReturn ? FallOffKind::Never : FallOffKind::NeverAndNoReturn;
+  if (abnormalEdge || fakeEdge || explicitReturn)
     return FallOffKind::Maybe;
   return FallOffKind::Always;
 }
@@ -320,11 +318,8 @@ void FallOffAnalyzer::updateLabelAncestors() {
 }
 
 Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
-  Exits exits;
-  if (region.empty()) {
-    exits.normal = entered;
-    return exits;
-  }
+  if (region.empty())
+    return entered ? Exits::Normal : Exits::None;
 
   // Dead code is still walked when a goto or a switch dispatch may enter it,
   // and walked again if it turns out live.
@@ -335,6 +330,7 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
   };
   // Most regions have a single block, which an inline map holds without
   // allocating.
+  Exits exits = Exits::None;
   llvm::SmallDenseMap<mlir::Block *, bool, 4> visited;
   llvm::SmallVector<std::pair<mlir::Block *, bool>> worklist;
   worklist.push_back({&region.front(), entered});
@@ -374,8 +370,8 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
 
       if (op.getNumRegions() != 0) {
         Exits opExits = visitStructured(&op, live);
-        exits.mergeEscaping(opExits);
-        live = opExits.normal;
+        exits |= opExits & escapingExits;
+        live = has(opExits, Exits::Normal);
         continue;
       }
 
@@ -398,7 +394,7 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
 
     // A block without a terminator falls through to the region's parent.
     if (live)
-      exits.normal = true;
+      exits |= Exits::Normal;
 
     for (mlir::Block *succ : liveSuccessors)
       worklist.push_back({succ, true});
@@ -412,31 +408,31 @@ void FallOffAnalyzer::visitTerminator(
     mlir::Operation *op, Exits &exits,
     llvm::SmallVectorImpl<mlir::Block *> &liveSuccessors) {
   if (mlir::isa<YieldOp>(op)) {
-    exits.normal = true;
+    exits |= Exits::Normal;
   } else if (auto condOp = mlir::dyn_cast<ConditionOp>(op)) {
     std::optional<bool> cond = getConstantBool(condOp.getCondition());
-    exits.condTrue |= cond.value_or(true);
-    exits.condFalse |= !cond.value_or(false);
+    if (cond.value_or(true))
+      exits |= Exits::CondTrue;
+    if (!cond.value_or(false))
+      exits |= Exits::CondFalse;
   } else if (mlir::isa<CoReturnOp>(op)) {
-    exits.explicitReturn = true;
+    exits |= Exits::ExplicitReturn;
   } else if (auto retOp = mlir::dyn_cast<ReturnOp>(op)) {
-    if (retOp.getImplicit())
-      exits.implicitReturn = true;
-    else
-      exits.explicitReturn = true;
+    exits |=
+        retOp.getImplicit() ? Exits::ImplicitReturn : Exits::ExplicitReturn;
   } else if (mlir::isa<TrapOp, UnreachableOp>(op)) {
     // User traps and __builtin_unreachable are noreturn, like in the CFG.
     auto trapOp = mlir::dyn_cast<TrapOp>(op);
     bool isImplicit = trapOp ? trapOp.getImplicit()
                              : mlir::cast<UnreachableOp>(op).getImplicit();
     if (isImplicit)
-      exits.implicitReturn = true;
+      exits |= Exits::ImplicitReturn;
     else
       abnormalEdge = true;
   } else if (mlir::isa<BreakOp>(op)) {
-    exits.breaks = true;
+    exits |= Exits::Break;
   } else if (mlir::isa<ContinueOp>(op)) {
-    exits.continues = true;
+    exits |= Exits::Continue;
   } else if (auto brCond = mlir::dyn_cast<BrCondOp>(op)) {
     std::optional<bool> cond = getConstantBool(brCond.getCond());
     if (cond.value_or(true))
@@ -477,35 +473,24 @@ Exits FallOffAnalyzer::visitStructured(mlir::Operation *op, bool entered) {
         visitRegion(ifOp.getThenRegion(), entered && cond.value_or(true));
     Exits elseExits =
         visitRegion(ifOp.getElseRegion(), entered && !cond.value_or(false));
-    Exits exits;
-    exits.normal = thenExits.normal || elseExits.normal;
-    exits.mergeEscaping(thenExits);
-    exits.mergeEscaping(elseExits);
-    return exits;
+    return (thenExits | elseExits) & (Exits::Normal | escapingExits);
   }
 
   if (auto tryOp = mlir::dyn_cast<TryOp>(op)) {
     // Like the CFG check, treat every handler as reachable when the try is.
     Exits exits = visitRegion(tryOp.getTryRegion(), entered);
-    for (mlir::Region &handler : tryOp.getHandlerRegions()) {
-      Exits handlerExits = visitRegion(handler, entered);
-      exits.normal |= handlerExits.normal;
-      exits.mergeEscaping(handlerExits);
-    }
-    return exits;
+    for (mlir::Region &handler : tryOp.getHandlerRegions())
+      exits |= visitRegion(handler, entered);
+    return exits & (Exits::Normal | escapingExits);
   }
 
   // Any region may run. Scopes and ternaries complete if a region does; ops
   // whose regions do not yield control complete whenever reached.
-  Exits exits;
   bool yieldsControl = mlir::isa<ScopeOp, TernaryOp>(op);
-  exits.normal = entered && !yieldsControl;
-  for (mlir::Region &region : op->getRegions()) {
-    Exits regionExits = visitRegion(region, entered);
-    if (yieldsControl)
-      exits.normal |= regionExits.normal;
-    exits.mergeEscaping(regionExits);
-  }
+  Exits exits = entered && !yieldsControl ? Exits::Normal : Exits::None;
+  Exits kept = yieldsControl ? Exits::Normal | escapingExits : escapingExits;
+  for (mlir::Region &region : op->getRegions())
+    exits |= visitRegion(region, entered) & kept;
   return exits;
 }
 
@@ -517,13 +502,14 @@ Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
 
   // Visit the regions in execution order. Another round is only needed when
   // the loop was not entered from the top but through a goto into it.
-  Exits condExits, bodyExits, stepExits;
+  Exits condExits = Exits::None, bodyExits = Exits::None,
+        stepExits = Exits::None;
   auto visitBodyAndStep = [&]() {
     bodyExits = visitRegion(loop.getBody(), bodyEntered);
-    bool reachesLatch = bodyExits.normal || bodyExits.continues;
+    bool reachesLatch = has(bodyExits, Exits::Normal | Exits::Continue);
     if (step) {
       stepExits = visitRegion(*step, reachesLatch);
-      reachesLatch = stepExits.normal;
+      reachesLatch = has(stepExits, Exits::Normal);
     }
     return reachesLatch;
   };
@@ -531,24 +517,23 @@ Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
     if (isDoWhile) {
       condEntered |= visitBodyAndStep();
       condExits = visitRegion(loop.getCond(), condEntered);
-      if (!condExits.condTrue || bodyEntered)
+      if (!has(condExits, Exits::CondTrue) || bodyEntered)
         break;
       bodyEntered = true;
     } else {
       condExits = visitRegion(loop.getCond(), condEntered);
-      bodyEntered |= condExits.condTrue;
+      bodyEntered |= has(condExits, Exits::CondTrue);
       if (!visitBodyAndStep() || condEntered)
         break;
       condEntered = true;
     }
   }
 
-  Exits exits;
-  exits.normal = condExits.condFalse || bodyExits.breaks;
-  for (const Exits &regionExits : {condExits, bodyExits, stepExits}) {
-    exits.explicitReturn |= regionExits.explicitReturn;
-    exits.implicitReturn |= regionExits.implicitReturn;
-  }
+  // Breaks and continues stop at the loop; returns leave it.
+  Exits exits = (condExits | bodyExits | stepExits) &
+                (Exits::ExplicitReturn | Exits::ImplicitReturn);
+  if (has(condExits, Exits::CondFalse) || has(bodyExits, Exits::Break))
+    exits |= Exits::Normal;
   return exits;
 }
 
@@ -561,12 +546,12 @@ Exits FallOffAnalyzer::visitSwitch(SwitchOp op, bool entered) {
 
   // As in the CFG check, a switch listing every enumerator has no implicit
   // default edge.
-  Exits exits;
-  exits.normal = bodyExits.normal || bodyExits.breaks ||
-                 (entered && !hasDefault && !op.getAllEnumCasesCovered());
-  exits.continues = bodyExits.continues;
-  exits.explicitReturn = bodyExits.explicitReturn;
-  exits.implicitReturn = bodyExits.implicitReturn;
+  // Breaks stop at the switch; continues and returns leave it.
+  Exits exits = bodyExits & (Exits::Continue | Exits::ExplicitReturn |
+                             Exits::ImplicitReturn);
+  if (has(bodyExits, Exits::Normal | Exits::Break) ||
+      (entered && !hasDefault && !op.getAllEnumCasesCovered()))
+    exits |= Exits::Normal;
   return exits;
 }
 
@@ -577,11 +562,12 @@ Exits FallOffAnalyzer::visitCleanupScope(CleanupScopeOp op, bool entered) {
 
   // A cleanup that cannot complete (e.g. a noreturn destructor) stops every
   // path leaving the body.
-  Exits cleanupExits = visitRegion(op.getCleanupRegion(), bodyExits.any());
-  if (!bodyExits.any() || cleanupExits.normal)
+  bool leavesBody = has(bodyExits, Exits::Normal | escapingExits);
+  Exits cleanupExits = visitRegion(op.getCleanupRegion(), leavesBody);
+  if (!leavesBody || has(cleanupExits, Exits::Normal))
     return bodyExits;
   abnormalEdge = true;
-  return Exits();
+  return Exits::None;
 }
 
 llvm::StringRef cir::stringifyFallOffKind(FallOffKind kind) {
