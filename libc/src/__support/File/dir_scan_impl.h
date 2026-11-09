@@ -20,6 +20,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/unique_ptr.h"
+#include "src/__support/CPP/utility/move.h"
 #include "src/__support/File/dir_scan_result.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
@@ -46,27 +47,6 @@ class ScannedEntries {
   struct dirent **entries = nullptr;
   size_t count = 0;
   size_t capacity = 0;
-
-public:
-  LIBC_INLINE constexpr ScannedEntries() = default;
-  ScannedEntries(const ScannedEntries &) = delete;
-  ScannedEntries &operator=(const ScannedEntries &) = delete;
-  ScannedEntries(ScannedEntries &&) = delete;
-  ScannedEntries &operator=(ScannedEntries &&) = delete;
-
-  LIBC_INLINE ~ScannedEntries() {
-    if (entries == nullptr)
-      return;
-
-    // Match the uint8_t[] dynamic allocation type when freeing entries.
-    for (size_t i = 0; i < count; ++i)
-      delete[] reinterpret_cast<uint8_t *>(entries[i]);
-
-    delete[] entries;
-  }
-
-  LIBC_INLINE constexpr size_t size() const { return count; }
-  LIBC_INLINE constexpr struct dirent **data() const { return entries; }
 
   LIBC_INLINE bool ensure_capacity() {
     if (LIBC_LIKELY(count < capacity))
@@ -95,7 +75,35 @@ public:
     return true;
   }
 
-  LIBC_INLINE void push_back(struct dirent *entry) { entries[count++] = entry; }
+public:
+  LIBC_INLINE constexpr ScannedEntries() = default;
+  ScannedEntries(const ScannedEntries &) = delete;
+  ScannedEntries &operator=(const ScannedEntries &) = delete;
+  ScannedEntries(ScannedEntries &&) = delete;
+  ScannedEntries &operator=(ScannedEntries &&) = delete;
+
+  LIBC_INLINE ~ScannedEntries() {
+    if (entries == nullptr)
+      return;
+
+    // Match the uint8_t[] dynamic allocation type when freeing entries.
+    for (size_t i = 0; i < count; ++i)
+      delete[] reinterpret_cast<uint8_t *>(entries[i]);
+
+    delete[] entries;
+  }
+
+  LIBC_INLINE constexpr size_t size() const { return count; }
+  LIBC_INLINE constexpr struct dirent **data() const { return entries; }
+
+  [[nodiscard]] LIBC_INLINE bool
+  push_back(cpp::unique_ptr<uint8_t[]> entry_buf) {
+    if (LIBC_UNLIKELY(!ensure_capacity()))
+      return false;
+
+    entries[count++] = reinterpret_cast<struct dirent *>(entry_buf.release());
+    return true;
+  }
 
   LIBC_INLINE struct dirent **release() {
     struct dirent **res = entries;
@@ -137,9 +145,6 @@ LIBC_INLINE ErrorOr<DirScanResult> scan_impl(
     if (LIBC_UNLIKELY(entries.size() == MAX_ENTRIES))
       return LIBC_NAMESPACE::Error(EOVERFLOW);
 
-    if (LIBC_UNLIKELY(!entries.ensure_capacity()))
-      return LIBC_NAMESPACE::Error(ENOMEM);
-
     const size_t reclen = DirType::reclen(entry);
     AllocChecker ac;
     // Allocate only the variable-length record size (reclen) to save memory
@@ -150,14 +155,14 @@ LIBC_INLINE ErrorOr<DirScanResult> scan_impl(
       return LIBC_NAMESPACE::Error(ENOMEM);
 
     inline_memcpy(new_entry_buf.get(), entry, reclen);
-    entries.push_back(
-        reinterpret_cast<struct dirent *>(new_entry_buf.release()));
+    if (LIBC_UNLIKELY(!entries.push_back(cpp::move(new_entry_buf))))
+      return LIBC_NAMESPACE::Error(ENOMEM);
   }
 
   dir.reset();
 
-  const size_t NUM_ENTRIES = entries.size();
-  if (compare != nullptr && NUM_ENTRIES > 1) {
+  const size_t num_entries = entries.size();
+  if (compare != nullptr && num_entries > 1) {
     // POSIX scandir/alphasort specifies 'const struct dirent **' rather than
     // 'const struct dirent * const *'.  Because the inner pointer is non-const,
     // converting from the sort engine's read-only 'const void *' requires
@@ -168,11 +173,11 @@ LIBC_INLINE ErrorOr<DirScanResult> scan_impl(
       auto right = static_cast<const struct dirent **>(const_cast<void *>(b));
       return compare(left, right);
     };
-    internal::unstable_sort(entries.data(), NUM_ENTRIES,
+    internal::unstable_sort(entries.data(), num_entries,
                             sizeof(struct dirent *), cmp_fn);
   }
 
-  return DirScanResult{entries.release(), NUM_ENTRIES};
+  return DirScanResult{entries.release(), num_entries};
 }
 
 } // namespace internal

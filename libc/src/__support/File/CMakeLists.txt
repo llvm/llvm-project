@@ -63,6 +63,7 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
     libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
     libc.src.__support.alloc_checker
     libc.src.__support.error_or
     libc.src.__support.macros.attributes
@@ -89,7 +90,6 @@ add_object_library(
     libc.hdr.errno_macros
     libc.hdr.types.struct_dirent
 )
-
 
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   return()
