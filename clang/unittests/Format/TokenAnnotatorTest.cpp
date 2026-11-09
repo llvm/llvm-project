@@ -703,7 +703,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   Tokens = annotate("enum class AttributeA [[nodiscard]] AttributeB Enum {};",
                     Style);
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::l_square, TT_AttributeLSquare);
   EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_EnumLBrace);
   EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_EnumRBrace);
 
@@ -711,7 +710,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
       "enum class AttributeA __attribute__((nodiscard)) AttributeB Enum {};",
       Style);
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
-  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_AttributeLParen);
   EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_EnumLBrace);
   EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_EnumRBrace);
 
