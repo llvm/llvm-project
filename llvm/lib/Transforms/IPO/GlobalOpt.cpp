@@ -1650,8 +1650,7 @@ OptimizeFunctions(Module &M,
         ChangedCFGCallback(F);
       }
 
-      if (removeUnnecessaryCallSiteExtends(F))
-        Changed = true;
+      Changed |= removeUnnecessaryCallSiteExtends(F);
     }
 
     Changed |= processGlobal(F, GetTTI, GetTLI, LookupDomTree);
