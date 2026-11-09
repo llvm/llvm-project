@@ -329,10 +329,10 @@ public:
   }
 
   /// True if the subtarget should run the local reassignment
-  /// heuristic of the register allocator.
-  /// This heuristic may be compile time intensive, \p OptLevel provides
-  /// a finer grain to tune the register allocator.
-  virtual bool enableRALocalReassignment(CodeGenOptLevel OptLevel) const;
+  /// heuristic of the register allocator for \p MF.
+  /// This heuristic may be compile time intensive. A target can decide
+  /// per function.
+  virtual bool enableRALocalReassignment(const MachineFunction &MF) const;
 
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).

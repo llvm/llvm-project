@@ -57,7 +57,7 @@ bool TargetSubtargetInfo::enableJoinGlobalCopies() const {
 }
 
 bool TargetSubtargetInfo::enableRALocalReassignment(
-    CodeGenOptLevel OptLevel) const {
+    const MachineFunction &MF) const {
   return true;
 }
 

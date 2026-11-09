@@ -184,8 +184,7 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
       EnableLocalReassign(
           EnableLocalReassignment == cl::boolOrDefault::BOU_TRUE ||
           (EnableLocalReassignment != cl::boolOrDefault::BOU_FALSE &&
-           MF.getSubtarget().enableRALocalReassignment(
-               MF.getTarget().getOptLevel()))) {}
+           MF.getSubtarget().enableRALocalReassignment(MF))) {}
 
 /// isUrgentEviction - Returns true if this is an urgent eviction. Once a live
 /// range becomes small enough, it is urgent that we find a register for it.
