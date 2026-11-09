@@ -77,6 +77,8 @@ add_fp_unittest(
     libc-math-tests
   SRCS
     daddf128_test.cpp
+  HDRS
+    AddTest.h
   DEPENDS
     libc.src.math.daddf128
     libc.src.__support.FPUtil.float128
