@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
-; CHECK-LABEL: get_stack DS 0H
+; CHECK-LABEL: get_stack DS 0B
 ; CHECK: lgr   3,4
 ; CHECK: b 2(7)
 

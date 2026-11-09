@@ -12,7 +12,7 @@
 ; CHECK:      exp XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
 ; CHECK:      C_CODE64 CATTR
 ; CHECK:      loc XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
-; CHECK-NEXT: loc DS 0H
+; CHECK-NEXT: loc DS 0B
 
 @tab = hidden constant [2 x i32] [i32 1, i32 2], align 4
 @exp = constant [2 x i32] [i32 3, i32 4], align 4

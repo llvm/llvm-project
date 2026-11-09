@@ -5,21 +5,21 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
-; CHECK-LABEL: useext DS 0H
+; CHECK-LABEL: useext DS 0B
 ; CHECK:         lg 2,0(5)
 ; CHECK-NOT:     larl
 ; CHECK:         b 2(7)
-; CHECK-LABEL: useloc DS 0H
+; CHECK-LABEL: useloc DS 0B
 ; CHECK:         larl 2,loc
 ; CHECK:         b 2(7)
-; CHECK-LABEL: usetbl DS 0H
+; CHECK-LABEL: usetbl DS 0B
 ; CHECK:         lg 1,8(5)
 ; CHECK-NOT:     larl
 ; CHECK:         b 2(7)
 ; CHECK:      ext CSECT
 ; CHECK-NEXT: C_WSA64 CATTR {{.*}}PART(ext)
 ; CHECK:      loc XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
-; CHECK-NEXT: loc DS 0H
+; CHECK-NEXT: loc DS 0B
 ; CHECK:      tbl CSECT
 ; CHECK-NEXT: C_WSA64 CATTR {{.*}}PART(tbl)
 @ext = constant [2 x i32] [i32 3, i32 4], align 4

@@ -18,7 +18,7 @@
 ; CHECK:                    aghi  4,[[#%u,mul(div(DSA_SIZE,32),32)]]
 ; CHECK:                    b     2(7)
 ; failure block
-; CHECK:                    [[FAIL_LABEL]] DS 0H
+; CHECK:                    [[FAIL_LABEL]] DS 0B
 ; invoke __stack_chk_fail
 ; CHECK:                    lg    6,[[#CHK_FAIL_OFF:]]({{[0-9]+}})
 ; CHECK:                    lg    5,[[#CHK_FAIL_OFF-8]]({{[0-9]+}})
@@ -49,7 +49,7 @@ define void @func0() sspreq {
 ; CHECK:                    agfi  4,[[#%u,mul(div(DSA_SIZE,32),32)]]
 ; CHECK:                    b     2(7)
 ; failure block
-; CHECK:                    [[FAIL_LABEL]] DS 0H
+; CHECK:                    [[FAIL_LABEL]] DS 0B
 ; invoke __stack_chk_fail
 ; CHECK:                    lg    6,[[#CHK_FAIL_OFF:]]({{[0-9]+}})
 ; CHECK:                    lg    5,[[#CHK_FAIL_OFF-8]]({{[0-9]+}})
@@ -105,7 +105,7 @@ entry:
 ; CHECK:                    lmg   4,[[SPILLHI]],2048(4)
 ; CHECK:                    b     2(7)
 ; failure block
-; CHECK:                    [[FAIL_LABEL]] DS 0H
+; CHECK:                    [[FAIL_LABEL]] DS 0B
 ; invoke __stack_chk_fail
 ; CHECK:                    lg    6,[[#CHK_FAIL_OFF:]]({{[0-9]+}})
 ; CHECK:                    lg    5,[[#CHK_FAIL_OFF-8]]({{[0-9]+}})
@@ -130,32 +130,32 @@ declare i64 @fun(i64 %arg0)
 declare i64 @fun1(ptr %ptr)
 declare i64 @fun2(i64 %n, ptr %arr0, ptr %arr1)
 
-; CHECK-LABEL: L#PPA1_func0_0 DS 0H
+; CHECK-LABEL: L#PPA1_func0_0 DS 0B
 ; CHECK:                    * PPA1 Flags 2
 ; CHECK-NOT:                * PPA1 Flags 3
 ; CHECK:                    *   Bit 3: 1 = STACKPROTECT is enabled
 
-; CHECK-LABEL: L#PPA1_func1_0 DS 0H
+; CHECK-LABEL: L#PPA1_func1_0 DS 0B
 ; CHECK:                    * PPA1 Flags 2
 ; CHECK-NOT:                * PPA1 Flags 3
 ; CHECK:                    *   Bit 3: 1 = STACKPROTECT is enabled
 
-; CHECK-LABEL: L#PPA1_func2_64_0 DS 0H
+; CHECK-LABEL: L#PPA1_func2_64_0 DS 0B
 ; CHECK:                    * PPA1 Flags 2
 ; CHECK-NOT:                * PPA1 Flags 3
 ; CHECK:                    *   Bit 3: 1 = STACKPROTECT is enabled
 
-; CHECK-LABEL: L#PPA1_func3_0 DS 0H
+; CHECK-LABEL: L#PPA1_func3_0 DS 0B
 ; CHECK:                    * PPA1 Flags 2
 ; CHECK-NOT:                * PPA1 Flags 3
 ; CHECK:                    *   Bit 3: 1 = STACKPROTECT is enabled
 
-; CHECK-LABEL: L#PPA1_func4_0 DS 0H
+; CHECK-LABEL: L#PPA1_func4_0 DS 0B
 ; CHECK:                    * PPA1 Flags 2
 ; CHECK-NOT:                * PPA1 Flags 3
 ; CHECK:                    *   Bit 3: 1 = STACKPROTECT is enabled
 
-; CHECK-LABEL: L#PPA1_func5_0 DS 0H
+; CHECK-LABEL: L#PPA1_func5_0 DS 0B
 ; CHECK:                    * PPA1 Flags 2
 ; CHECK-NOT:                * PPA1 Flags 3
 ; CHECK:                    *   Bit 3: 0 = STACKPROTECT is not enabled

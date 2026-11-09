@@ -5,10 +5,10 @@
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -generate-arange-section \
 ; RUN:   -filetype=obj -o - | od -Ax -tx1 | FileCheck --check-prefix=OBJ %s
 
-; CHECK:      CELQMAIN DS 0H
+; CHECK:      CELQMAIN DS 0B
 ; CHECK-NEXT: * CELQMAIN, RENT format
 ; CHECK-NEXT:  DC XL4'04000001'
-; CHECK:      main DS 0H
+; CHECK:      main DS 0B
 
 ; OBJ: 04 00 00 01 00 00 00 00
 

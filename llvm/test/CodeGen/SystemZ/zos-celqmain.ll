@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -filetype=obj -o - | od -Ax -tx1 | FileCheck --check-prefix=OBJ %s
 
 ; CHECK:      CELQMAIN XATTR LINKAGE(OS),SCOPE(LIBRARY)
-; CHECK-NEXT: CELQMAIN DS 0H
+; CHECK-NEXT: CELQMAIN DS 0B
 ; CHECK-NEXT: * CELQMAIN, RENT format
 ; CHECK-NEXT:  DC XL4'04000001'
 ; CHECK-NEXT:  DC XL4'00000000'
