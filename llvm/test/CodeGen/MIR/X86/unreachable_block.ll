@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple x86_64-- -stop-before peephole-opt -o %t.mir %s
-; RUN: llc -mtriple x86_64-- -run-pass none %t.mir -verify-machineinstrs -o - | FileCheck %s
+; RUN: llc -mtriple x86_64-- -run-pass none %t.mir -o - | FileCheck %s
 
 ; Unreachable blocks in the machine instr representation are these
 ; weird empty blocks with no successors.

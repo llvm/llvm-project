@@ -1,5 +1,5 @@
-;; Check that dxil-pdb can emit PRIV using a temporary PDB when PDBNAME is absent.
-; RUN: opt %s -dxil-pdb --dx-pdb-in-private -S -o - | FileCheck %s
+;; Check that dxil-container-pdb can emit PRIV using a temporary PDB when PDBNAME is absent.
+; RUN: opt %s -dxil-container-pdb --dx-pdb-in-private -S -o - | FileCheck %s
 
 ;; CHECK: @dx.priv = private constant {{.*}} section "PRIV"
 

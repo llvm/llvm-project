@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZ_H
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
@@ -190,8 +191,13 @@ static inline bool isImmHF(uint64_t Val) {
 }
 } // end namespace SystemZ
 
-FunctionPass *createSystemZISelDag(SystemZTargetMachine &TM,
-                                   CodeGenOptLevel OptLevel);
+class SystemZISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  SystemZISelDAGToDAGPass(SystemZTargetMachine &TM, CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createSystemZISelDagLegacyPass(SystemZTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel);
 FunctionPass *createSystemZElimComparePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZShortenInstPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLongBranchPass(SystemZTargetMachine &TM);
