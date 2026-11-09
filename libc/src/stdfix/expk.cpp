@@ -51,7 +51,7 @@ LLVM_LIBC_FUNCTION(accum, expk, (accum x)) {
   using FXRep = fixed_point::FXRep<accum>;
   using StorageType = typename FXRep::StorageType;
   // Output overflow
-  // > ceil(log(2^16) * 2^15) * 2^-15
+  //   ceil(log(2^16) * 2^15) * 2^-15
   if (LIBC_UNLIKELY(x >= 0x1.62e44p3k))
     return FXRep::MAX();
   // Lower bound where exp(x) -> 0:
@@ -82,8 +82,10 @@ LLVM_LIBC_FUNCTION(accum, expk, (accum x)) {
   // Range of x_rounded:
   //   x_rounded >= floor((-0x1.62e4p3 + 0x1.0p-5) * 2^4) * 2^-4
   //              = -0x1.62p3 = -11.0625
+  //   x_rounded <= floor((0x1.62e4p3 + 0x1.0p-5) * 2^4) * 2^-4
+  //              = 0x1.62p3 = 11.0625
   // To get the indices, we shift the values so that it start with 0.
-  // Range of indices: 0 <= indices <= 355.
+  // Range of indices: 0 <= indices <= 354.
   StorageType indices = cpp::bit_cast<StorageType>((x_rounded + 0x1.62p3k) >>
                                                    (FXRep::FRACTION_LEN - 4));
   // So we have the following relation:
