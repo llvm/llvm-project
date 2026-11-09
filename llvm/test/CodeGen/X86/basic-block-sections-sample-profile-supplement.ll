@@ -43,12 +43,15 @@
 ; RUN: FileCheck %s --check-prefixes=SAMPLEFDO,CHECK,WITHOUT-SUPPLEMENT
 ; SAMPLEFDO: warning: {{.*}}: Supplemental sample profiles are not supported with SampleFDO
 
-; Case 6: Flow-sensitive supplemental sample profiles require -enable-fs-discriminator.
+; Case 6: Flow-sensitive supplemental sample profiles and -enable-fs-discriminator must match.
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -profile-isfs -sample-profile-supplement=%t.prof 2>&1 | \
 ; RUN: FileCheck %s --check-prefixes=FS-WITHOUT-ENABLE,CHECK,WITHOUT-SUPPLEMENT
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -enable-fs-discriminator -sample-profile-supplement=%t.prof 2>&1 | \
+; RUN: FileCheck %s --check-prefixes=NON-FS-WITH-ENABLE,CHECK,WITHOUT-SUPPLEMENT
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -profile-isfs -enable-fs-discriminator -sample-profile-supplement=%t.prof | \
 ; RUN: FileCheck %s --check-prefixes=CHECK,WITH-SUPPLEMENT
 ; FS-WITHOUT-ENABLE: warning: {{.*}}.prof: Flow-sensitive supplemental sample profiles require -enable-fs-discriminator
+; NON-FS-WITH-ENABLE: warning: {{.*}}.prof: Non-flow-sensitive supplemental sample profiles are not supported with -enable-fs-discriminator
 
 ; Case 7: Context-sensitive and pseudo-probe supplemental sample profiles are ignored with a warning.
 ; RUN: echo '[foo]:2000:1000' > %t.cs.prof

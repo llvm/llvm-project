@@ -359,6 +359,14 @@ bool BasicBlockMatchingAndInference::doInitialization(Module &M) {
         DS_Warning));
     return false;
   }
+  if (!Reader->profileIsFS() && EnableFSDiscriminator) {
+    Ctx.diagnose(DiagnosticInfoSampleProfile(
+        ProfileFile,
+        "Non-flow-sensitive supplemental sample profiles are not supported "
+        "with -enable-fs-discriminator",
+        DS_Warning));
+    return false;
+  }
   SampleReader = std::move(Reader);
   return false;
 }
