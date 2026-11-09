@@ -293,6 +293,12 @@ ignoreUnsafeBufferInContainer(const Stmt &Node,
   return Handler->ignoreUnsafeBufferInContainer(Node.getBeginLoc());
 }
 
+static bool
+ignoreUnsafeBufferInDataCall(const Stmt &Node,
+                             const UnsafeBufferUsageHandler *Handler) {
+  return Handler->ignoreUnsafeBufferInDataCall(Node.getBeginLoc());
+}
+
 static bool ignoreUnsafeLibcCall(const ASTContext &Ctx, const Stmt &Node,
                                  const UnsafeBufferUsageHandler *Handler) {
   if (Ctx.getLangOpts().CPlusPlus)
@@ -2401,9 +2407,12 @@ public:
   }
 
   static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     auto *CE = dyn_cast<ExplicitCastExpr>(S);
     if (!CE)
+      return false;
+    if (ignoreUnsafeBufferInDataCall(*S, Handler))
       return false;
     const Expr *Operand = CE->getSubExpr();
     if (auto *Paren = dyn_cast<ParenExpr>(Operand))
@@ -2420,7 +2429,7 @@ public:
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
-    Handler.handleUnsafeOperation(Op, IsRelatedToDecl, Ctx);
+    Handler.handleUnsafeDataCall(Op, Ctx);
   }
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
@@ -5047,6 +5056,8 @@ bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
     void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
                                           bool IsRelatedToDecl,
                                           ASTContext &Ctx) override {}
+    void handleUnsafeDataCall(const ExplicitCastExpr *Cast,
+                              ASTContext &Ctx) override {}
     bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
       return false;
     }
@@ -5062,6 +5073,10 @@ bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
     }
     bool ignoreUnsafeBufferInStaticSizedArray(
         const SourceLocation &Loc) const override {
+      return false;
+    }
+    bool
+    ignoreUnsafeBufferInDataCall(const SourceLocation &Loc) const override {
       return false;
     }
     std::string getUnsafeBufferUsageAttributeTextAt(
