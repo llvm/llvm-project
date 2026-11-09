@@ -2714,6 +2714,17 @@ void CodeGenFunction::EmitOMPCanonicalLoop(const OMPCanonicalLoop *S) {
   OMPLoopNestStack.push_back(CL);
 }
 
+/// A directive's own source range covers only the pragma, so use the range of
+/// the associated loop, looking through loop transformation directives.
+static SourceRange getAssociatedLoopRange(const OMPExecutableDirective &S) {
+  if (!isa<OMPLoopDirective>(S))
+    return S.getSourceRange();
+  const Stmt *Loop = S.getRawStmt()->IgnoreContainers();
+  while (isa<OMPLoopTransformationDirective>(Loop))
+    Loop = cast<OMPExecutableDirective>(Loop)->getRawStmt()->IgnoreContainers();
+  return Loop->getSourceRange();
+}
+
 void CodeGenFunction::EmitOMPInnerLoop(
     const OMPExecutableDirective &S, bool RequiresCleanup, const Expr *LoopCond,
     const Expr *IncExpr,
@@ -2724,7 +2735,7 @@ void CodeGenFunction::EmitOMPInnerLoop(
   // Start the loop with a block that tests the condition.
   auto CondBlock = createBasicBlock("omp.inner.for.cond");
   EmitBlock(CondBlock);
-  const SourceRange R = S.getSourceRange();
+  const SourceRange R = getAssociatedLoopRange(S);
 
   // If attributes are attached, push to the basic block with them.
   const auto &OMPED = cast<OMPExecutableDirective>(S);
@@ -3599,7 +3610,7 @@ void CodeGenFunction::EmitOMPOuterLoop(
   // Start the loop with a block that tests the condition.
   llvm::BasicBlock *CondBlock = createBasicBlock("omp.dispatch.cond");
   EmitBlock(CondBlock);
-  const SourceRange R = S.getSourceRange();
+  const SourceRange R = getAssociatedLoopRange(S);
   OMPLoopNestStack.clear();
   LoopStack.push(CondBlock, SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()));
