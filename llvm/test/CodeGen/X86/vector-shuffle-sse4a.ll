@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ssse3,+sse4a | FileCheck %s --check-prefixes=ALL,SSE,BTVER1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+sse4a | FileCheck %s --check-prefixes=ALL,AVX,BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+sse4a | FileCheck %s --check-prefixes=ALL,AVX,ZNVER2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+sse4a | FileCheck %s --check-prefixes=ALL,AVX,ZNVER4
 
 ;
 ; EXTRQI
@@ -147,6 +148,11 @@ define <16 x i8> @shuf_1zzzuuuuuuuuuuuu(<16 x i8> %a0) {
 ; ZNVER2-NEXT:    vpbroadcastw %xmm0, %xmm0
 ; ZNVER2-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_1zzzuuuuuuuuuuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    extrq {{.*#+}} xmm0 = xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <16 x i8> %a0, <16 x i8> zeroinitializer, <16 x i32> <i32 1, i32 16, i32 16, i32 16, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <16 x i8> %s
 }
@@ -167,6 +173,11 @@ define <8 x i16> @shuf_1zzzuuuu(<8 x i16> %a0) {
 ; ZNVER2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; ZNVER2-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_1zzzuuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> zeroinitializer, <8 x i32> <i32 1, i32 8, i32 8, i32 8, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -187,6 +198,11 @@ define <8 x i16> @shuf_12zzuuuu(<8 x i16> %a0) {
 ; ZNVER2-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5]
 ; ZNVER2-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_12zzuuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3,4,5],zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> zeroinitializer, <8 x i32> <i32 1, i32 2, i32 8, i32 8, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -296,6 +312,11 @@ define <16 x i8> @shuf_0_0_2_3_uuuu_uuuu_uuuu(<16 x i8> %a0, <16 x i8> %a1) {
 ; ZNVER2:       # %bb.0:
 ; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,2,3,u,u,u,u,u,u,u,u,u,u,u,u]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_0_0_2_3_uuuu_uuuu_uuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <16 x i8> %a0, <16 x i8> %a1, <16 x i32> <i32 0, i32 0, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <16 x i8> %s
 }
@@ -316,6 +337,11 @@ define <16 x i8> @shuf_0_16_2_3_uuuu_uuuu_uuuu(<16 x i8> %a0, <16 x i8> %a1) {
 ; ZNVER2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_0_16_2_3_uuuu_uuuu_uuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3,4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <16 x i8> %a0, <16 x i8> %a1, <16 x i32> <i32 0, i32 16, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <16 x i8> %s
 }
@@ -336,6 +362,11 @@ define <16 x i8> @shuf_16_1_2_3_uuuu_uuuu_uuuu(<16 x i8> %a0, <16 x i8> %a1) {
 ; ZNVER2-NEXT:    vmovd {{.*#+}} xmm2 = [0,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0]
 ; ZNVER2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_16_1_2_3_uuuu_uuuu_uuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <16 x i8> %a0, <16 x i8> %a1, <16 x i32> <i32 16, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <16 x i8> %s
 }
@@ -357,6 +388,11 @@ define <8 x i16> @shuf_0823uuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; ZNVER2-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; ZNVER2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_0823uuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1],xmm0[4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> %a1, <8 x i32> <i32 0, i32 8, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -377,6 +413,11 @@ define <8 x i16> @shuf_0183uuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,2,3,12,13,4,5,12,13,12,13,14,15]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_0183uuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[0,1],xmm0[6,7,u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> %a1, <8 x i32> <i32 0, i32 1, i32 8, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -397,6 +438,11 @@ define <8 x i16> @shuf_0128uuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,2,3,8,9,4,5,4,5,6,7]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_0128uuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[0,1],xmm0[u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -417,6 +463,11 @@ define <8 x i16> @shuf_0893uuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,12,13,12,13,6,7,12,13,14,15]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_0893uuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3],xmm0[6,7,u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> %a1, <8 x i32> <i32 0, i32 8, i32 9, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -437,6 +488,11 @@ define <8 x i16> @shuf_089Auuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,0,1,4,5,8,9,8,9,4,5,4,5,6,7]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_089Auuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3,4,5],xmm0[u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> %a1, <8 x i32> <i32 0, i32 8, i32 9, i32 10, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -457,6 +513,11 @@ define <8 x i16> @shuf_089uuuuu(<8 x i16> %a0, <8 x i16> %a1) {
 ; ZNVER2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; ZNVER2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,0,2,3,4,5,6,7]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuf_089uuuuu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,1,2,3],xmm0[6,7,u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> %a1, <8 x i32> <i32 0, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -541,6 +602,11 @@ define <16 x i8> @shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu(<16 x i
 ; ZNVER2:       # %bb.0:
 ; ZNVER2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: shuffle_uu_uu_4_16_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    extrq {{.*#+}} xmm0 = xmm0[2,3,4],zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %1 = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer, <16 x i32> <i32 undef, i32 undef, i32 4, i32 16, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <16 x i8> %1
 }
@@ -562,6 +628,12 @@ define <8 x i8> @insert_v8i8_0_0(<8 x i8> %a0) {
 ; ZNVER2:       # %bb.0:
 ; ZNVER2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; ZNVER2-NEXT:    retq
+;
+; ZNVER4-LABEL: insert_v8i8_0_0:
+; ZNVER4:       # %bb.0:
+; ZNVER4-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; ZNVER4-NEXT:    insertq {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
+; ZNVER4-NEXT:    retq
   %r = insertelement <8 x i8> %a0, i8 0, i64 0
   ret <8 x i8> %r
 }
