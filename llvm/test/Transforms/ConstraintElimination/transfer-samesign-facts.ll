@@ -363,13 +363,11 @@ exit:
 
 define i1 @samesign_sign_from_lshr(i8 %v, i8 %start) {
 ; CHECK-LABEL: @samesign_sign_from_lshr(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[END:%.*]] = lshr i8 [[V:%.*]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp samesign uge i8 [[END]], [[START:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    ret i1 true
 ;
-entry:
   %end = lshr i8 %v, 1
   %c = icmp samesign uge i8 %end, %start
   call void @llvm.assume(i1 %c)
@@ -379,13 +377,11 @@ entry:
 
 define i1 @samesign_sign_from_negative(i8 %v, i8 %start) {
 ; CHECK-LABEL: @samesign_sign_from_negative(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[END:%.*]] = or i8 [[V:%.*]], -128
 ; CHECK-NEXT:    [[C:%.*]] = icmp samesign uge i8 [[END]], [[START:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    ret i1 true
 ;
-entry:
   %end = or i8 %v, -128
   %c = icmp samesign uge i8 %end, %start
   call void @llvm.assume(i1 %c)
@@ -395,13 +391,11 @@ entry:
 
 define i1 @samesign_sign_unknown(i8 %end, i8 %start) {
 ; CHECK-LABEL: @samesign_sign_unknown(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = icmp samesign uge i8 [[END:%.*]], [[START:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp sge i8 [[START]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-entry:
   %c = icmp samesign uge i8 %end, %start
   call void @llvm.assume(i1 %c)
   %r = icmp sge i8 %start, 0
@@ -410,89 +404,59 @@ entry:
 
 define i1 @samesign_ptr(ptr %a, ptr %b) {
 ; CHECK-LABEL: @samesign_ptr(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = icmp samesign ult ptr [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
-; CHECK:       then:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    ret i1 true
-; CHECK:       else:
-; CHECK-NEXT:    ret i1 false
 ;
-entry:
   %c = icmp samesign ult ptr %a, %b
-  br i1 %c, label %then, label %else
-then:
-  %d = icmp ult ptr %a, %b
-  ret i1 %d
-else:
-  ret i1 false
+  call void @llvm.assume(i1 %c)
+  %r = icmp ult ptr %a, %b
+  ret i1 %r
 }
 
 define <2 x i1> @samesign_vector(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @samesign_vector(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = icmp samesign ult <2 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i1> [[C]], i32 0
-; CHECK-NEXT:    br i1 [[E]], label [[THEN:%.*]], label [[ELSE:%.*]]
-; CHECK:       then:
-; CHECK-NEXT:    ret <2 x i1> [[C]]
-; CHECK:       else:
-; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[E]], <2 x i1> [[C]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    call void @llvm.assume(i1 [[E]])
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-entry:
   %c = icmp samesign ult <2 x i32> %a, %b
   %e = extractelement <2 x i1> %c, i32 0
-  br i1 %e, label %then, label %else
-then:
-  ret <2 x i1> %c
-else:
-  ret <2 x i1> zeroinitializer
+  %r = select i1 %e, <2 x i1> %c, <2 x i1> zeroinitializer
+  call void @llvm.assume(i1 %e)
+  ret <2 x i1> %r
 }
 
 define i1 @samesign_sign_from_negative_fact(i8 %end, i8 %start) {
 ; CHECK-LABEL: @samesign_sign_from_negative_fact(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i8 [[END:%.*]], 0
-; CHECK-NEXT:    br i1 [[NEG]], label [[THEN:%.*]], label [[EXIT:%.*]]
-; CHECK:       then:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NEG]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp samesign ule i8 [[END]], [[START:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    ret i1 true
-; CHECK:       exit:
-; CHECK-NEXT:    ret i1 false
 ;
-entry:
   %neg = icmp slt i8 %end, 0
-  br i1 %neg, label %then, label %exit
-then:
+  call void @llvm.assume(i1 %neg)
   %c = icmp samesign ule i8 %end, %start
   call void @llvm.assume(i1 %c)
   %r = icmp slt i8 %start, 0
   ret i1 %r
-exit:
-  ret i1 false
 }
 
 define i1 @samesign_sign_from_nonnegative_fact(i8 %end, i8 %start) {
 ; CHECK-LABEL: @samesign_sign_from_nonnegative_fact(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NN:%.*]] = icmp sge i8 [[END:%.*]], 0
-; CHECK-NEXT:    br i1 [[NN]], label [[THEN:%.*]], label [[EXIT:%.*]]
-; CHECK:       then:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp samesign uge i8 [[END]], [[START:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    ret i1 true
-; CHECK:       exit:
-; CHECK-NEXT:    ret i1 false
 ;
-entry:
   %nn = icmp sge i8 %end, 0
-  br i1 %nn, label %then, label %exit
-then:
+  call void @llvm.assume(i1 %nn)
   %c = icmp samesign uge i8 %end, %start
   call void @llvm.assume(i1 %c)
   %r = icmp sge i8 %start, 0
   ret i1 %r
-exit:
-  ret i1 false
 }
