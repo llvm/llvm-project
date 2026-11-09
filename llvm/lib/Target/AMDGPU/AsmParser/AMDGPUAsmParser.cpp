@@ -54,11 +54,7 @@ using namespace llvm::amdhsa;
 
 namespace {
 
-static cl::opt<bool> WarnAsyncBarrierReplay(
-    "amdgpu-asm-warn-async-barrier-replay",
-    cl::desc("Warn about async barrier arrivals without a recognized replay "
-             "workaround in assembly"),
-    cl::init(true), cl::Hidden);
+static bool WarnAsyncBarrierReplay = true;
 
 class AMDGPUAsmParser;
 
@@ -10888,6 +10884,12 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 /// Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAMDGPUAsmParser() {
+  static cl::opt<bool, true> WarnAsyncBarrierReplayOpt(
+      "amdgpu-asm-warn-async-barrier-replay",
+      cl::desc("Warn about async barrier arrivals without a recognized replay "
+               "workaround in assembly"),
+      cl::location(WarnAsyncBarrierReplay), cl::init(true), cl::Hidden);
+
   RegisterMCAsmParser<AMDGPUAsmParser> A(getTheR600Target());
   RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
   RegisterMCAsmParser<AMDGPUAsmParser> C(getTheGCNLegacyTarget());
