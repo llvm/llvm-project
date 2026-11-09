@@ -9,7 +9,7 @@ define i32 @test(<2 x i32> %a, <4 x i8> %b) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[TMP0]] to i2
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i2 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[B]])
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX]]
 ;
