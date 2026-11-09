@@ -50,7 +50,7 @@ break the code that uses library symbols from the global namespace.
 - `<wctype.h>`
 
 If the specified standard is older than C++11 the check will only replace
-headers deprecated before C++11, otherwise -- every header that appeared in
+headers deprecated before C++11, otherwise every header that appeared in
 the previous list.
 
 These headers don't have effect in C++:
@@ -72,12 +72,10 @@ extern "C" {
 
 ## Options
 
-(modernize-deprecated-headers-check-header-file)=
-
 ```{option} CheckHeaderFile
-`clang-tidy` cannot know if the header file included by the currently
+{program}`clang-tidy` cannot know if the header file included by the currently
 analyzed C++ source file is not included by any other C source files.
-Hence, to omit false-positives and wrong fixit-hints, we ignore emitting
+Hence, to omit false-positives and wrong fix-it hints, we ignore emitting
 reports into header files. One can set this option to `true` if they know
 that the header files in the project are only used by C++ source files.
 Default is `false`.

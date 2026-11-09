@@ -61,8 +61,6 @@ can be either `char* argv[]` or `char** argv`, but cannot be
 
 ## Options
 
-(modernize-avoid-c-arrays-allow-string-arrays)=
-
 ````{option} AllowStringArrays
 When set to `true`, variables of character array type
 with deduced length, initialized directly from string literals, will be ignored.

@@ -137,15 +137,11 @@ lives.
 
 ## Options
 
-(modernize-loop-convert-use-cxx20-reverse-ranges)=
-
 ```{option} UseCxx20ReverseRanges
 When set to true convert loops when in C++20 or later mode using
 `std::views::reverse`.
 Default is `true`.
 ```
-
-(modernize-loop-convert-make-reverse-range-function)=
 
 ```{option} MakeReverseRangeFunction
 Specify the function used to reverse an iterator pair, the function should
@@ -156,21 +152,17 @@ and `llvm::reverse`.
 Default is an empty string.
 ```
 
-(modernize-loop-convert-make-reverse-range-header)=
-
 ```{option} MakeReverseRangeHeader
-Specifies the header file where [`MakeReverseRangeFunction`](#modernize-loop-convert-make-reverse-range-function) is
+Specifies the header file where {option}`MakeReverseRangeFunction` is
 declared. For the previous examples this option would be set to
 `range/v3/view/reverse.hpp` and `llvm/ADT/STLExtras.h` respectively.
-If this is an empty string and [`MakeReverseRangeFunction`](#modernize-loop-convert-make-reverse-range-function) is set,
+If this is an empty string and {option}`MakeReverseRangeFunction` is set,
 the check will proceed on the assumption that the function is already
 available in the translation unit.
 This can be wrapped in angle brackets to signify to add the include as a
 system include.
 Default is an empty string.
 ```
-
-(modernize-loop-convert-include-style)=
 
 ```{option} IncludeStyle
 A string specifying which include-style is used, `llvm` or `google`. Default is `llvm`.

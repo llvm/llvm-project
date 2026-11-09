@@ -45,8 +45,6 @@ This check requires using C++14 or higher to run.
 
 ## Options
 
-(modernize-avoid-bind-permissive-parameter-list)=
-
 ````{option} PermissiveParameterList
 If the option is set to `true`, the check will append `auto&&...` to the end
 of every placeholder parameter list. Without this, it is possible for a fix-it
@@ -65,7 +63,7 @@ int foo() {
 ```
 
 is valid code, and returns `4`. The actual values passed to `ignore_args` are
-simply ignored. Without [`PermissiveParameterList`](#modernize-avoid-bind-permissive-parameter-list), this would be transformed into
+simply ignored. Without {option}`PermissiveParameterList`, this would be transformed into
 
 ```c++
 int add(int x, int y) { return x + y; }

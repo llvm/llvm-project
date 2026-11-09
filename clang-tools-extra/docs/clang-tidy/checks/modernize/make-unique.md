@@ -28,33 +28,23 @@ my_ptr = std::make_unique<MyPair>(1, 2);
 
 ## Options
 
-(modernize-make-unique-make-smart-ptr-function)=
-
 ```{option} MakeSmartPtrFunction
 A string specifying the name of make-unique-ptr function. Default is
 `std::make_unique`.
 ```
-
-(modernize-make-unique-make-smart-ptr-function-header)=
 
 ```{option} MakeSmartPtrFunctionHeader
 A string specifying the corresponding header of make-unique-ptr function.
 Default is `<memory>`.
 ```
 
-(modernize-make-unique-include-style)=
-
 ```{option} IncludeStyle
 A string specifying which include-style is used, `llvm` or `google`. Default is `llvm`.
 ```
 
-(modernize-make-unique-ignore-macros)=
-
 ```{option} IgnoreMacros
 If set to `true`, the check will not give warnings inside macros. Default is `true`.
 ```
-
-(modernize-make-unique-ignore-default-initialization)=
 
 ```{option} IgnoreDefaultInitialization
 If set to `false`, the check does not suggest edits that will transform
