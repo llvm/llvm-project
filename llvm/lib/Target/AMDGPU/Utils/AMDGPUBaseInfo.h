@@ -573,9 +573,8 @@ LLVM_READNONE
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(int64_t EncodingVal);
 
 LLVM_READONLY
-const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(int64_t CBSZ,
-                                                      int64_t BLGP,
-                                                      unsigned F8F8Opcode);
+const MFMA_F8F6F4_Info *
+getMFMA_F8F6F4_WithFormatArgs(int64_t CBSZ, int64_t BLGP, unsigned F8F8Opcode);
 
 LLVM_READNONE
 uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt);

@@ -616,9 +616,8 @@ uint8_t mfmaScaleF8F6F4FormatToNumRegs(int64_t EncodingVal) {
   llvm_unreachable("covered switch over mfma scale formats");
 }
 
-const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(int64_t CBSZ,
-                                                      int64_t BLGP,
-                                                      unsigned F8F8Opcode) {
+const MFMA_F8F6F4_Info *
+getMFMA_F8F6F4_WithFormatArgs(int64_t CBSZ, int64_t BLGP, unsigned F8F8Opcode) {
   uint8_t SrcANumRegs = mfmaScaleF8F6F4FormatToNumRegs(CBSZ);
   uint8_t SrcBNumRegs = mfmaScaleF8F6F4FormatToNumRegs(BLGP);
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
