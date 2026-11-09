@@ -117,9 +117,9 @@
 # CHECK-NEXT:  1      6     1.00                        eor	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      6     1.00                        ext	v0.16b, v0.16b, v0.16b, #3
 # CHECK-NEXT:  1      6     0.50                        ext	v0.8b, v0.8b, v0.8b, #3
-# CHECK-NEXT:  1      6     0.50                        fabd	d29, d24, d20
-# CHECK-NEXT:  1      6     0.50                        fabd	s29, s24, s20
-# CHECK-NEXT:  1      6     0.50                        fabd	h27, h20, h17
+# CHECK-NEXT:  1      4     0.50                        fabd	d29, d24, d20
+# CHECK-NEXT:  1      4     0.50                        fabd	s29, s24, s20
+# CHECK-NEXT:  1      4     0.50                        fabd	h27, h20, h17
 # CHECK-NEXT:  1      4     1.00                        fabd	v13.8h, v28.8h, v12.8h
 # CHECK-NEXT:  1      4     1.00                        fabd	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      4     0.50                        fabs	h25, h7
@@ -266,12 +266,12 @@
 # CHECK-NEXT:  1      4     0.50                        fcvtxn	s22, d13
 # CHECK-NEXT:  1      4     1.00                        fcvtxn	v0.2s, v0.2d
 # CHECK-NEXT:  1      4     1.00                        fcvtxn2	v0.4s, v0.2d
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	d21, d12, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	d21, d12, #1
 # CHECK-NEXT:  1      4     0.50                        fcvtzs	d21, d14
 # CHECK-NEXT:  1      4     0.50                        fcvtzs	s12, s13
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	s21, s12, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	s21, s12, #1
 # CHECK-NEXT:  1      6     0.50                        fcvtzs	h21, h14
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	h21, h12, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	h21, h12, #1
 # CHECK-NEXT:  1      4     1.00                        fcvtzs	v0.2d, v0.2d
 # CHECK-NEXT:  1      4     1.00                        fcvtzs	v0.2d, v0.2d, #3
 # CHECK-NEXT:  1      4     0.50                        fcvtzs	v0.2s, v0.2s
@@ -282,12 +282,12 @@
 # CHECK-NEXT:  1      4     1.00                        fcvtzs	v0.4s, v0.4s, #3
 # CHECK-NEXT:  1      4     1.00                        fcvtzs	v0.8h, v0.8h
 # CHECK-NEXT:  1      4     1.00                        fcvtzs	v18.8h, v10.8h, #7
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	d21, d12, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	d21, d12, #1
 # CHECK-NEXT:  1      4     0.50                        fcvtzu	d21, d14
 # CHECK-NEXT:  1      4     0.50                        fcvtzu	s12, s13
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	s21, s12, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	s21, s12, #1
 # CHECK-NEXT:  1      6     0.50                        fcvtzu	h12, h13
-# CHECK-NEXT:  1      6     0.50                        fcvtzu	h21, h12, #1
+# CHECK-NEXT:  1      4     0.50                        fcvtzu	h21, h12, #1
 # CHECK-NEXT:  1      4     1.00                        fcvtzu	v0.2d, v0.2d
 # CHECK-NEXT:  1      4     1.00                        fcvtzu	v0.2d, v0.2d, #3
 # CHECK-NEXT:  1      4     0.50                        fcvtzu	v0.2s, v0.2s
@@ -315,16 +315,16 @@
 # CHECK-NEXT:  1      4     0.50                        fmaxnmp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     1.00                        fmaxnmp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      4     0.50                        fmaxnmv	h0, v13.4h
-# CHECK-NEXT:  1      6     1.00                        fmaxnmv	h12, v11.8h
-# CHECK-NEXT:  1      4     1.00                        fmaxnmv	s28, v31.4s
+# CHECK-NEXT:  1      4     0.50                        fmaxnmv	h12, v11.8h
+# CHECK-NEXT:  1      4     0.50                        fmaxnmv	s28, v31.4s
 # CHECK-NEXT:  1      4     1.00                        fmaxp	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      4     0.50                        fmaxp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     1.00                        fmaxp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      6     0.50                        fmaxp	h15, v25.2h
 # CHECK-NEXT:  1      6     0.50                        fmaxp	s6, v2.2s
 # CHECK-NEXT:  1      4     0.50                        fmaxv	h0, v0.4h
-# CHECK-NEXT:  1      6     1.00                        fmaxv	h0, v0.8h
-# CHECK-NEXT:  1      4     1.00                        fmaxv	s0, v0.4s
+# CHECK-NEXT:  1      4     0.50                        fmaxv	h0, v0.8h
+# CHECK-NEXT:  1      4     0.50                        fmaxv	s0, v0.4s
 # CHECK-NEXT:  1      4     1.00                        fmin	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      4     0.50                        fmin	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     1.00                        fmin	v0.4s, v0.4s, v0.4s
@@ -337,16 +337,16 @@
 # CHECK-NEXT:  1      4     0.50                        fminnmp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     1.00                        fminnmp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      4     0.50                        fminnmv	h19, v25.4h
-# CHECK-NEXT:  1      6     1.00                        fminnmv	h23, v17.8h
-# CHECK-NEXT:  1      4     1.00                        fminnmv	s29, v17.4s
+# CHECK-NEXT:  1      4     0.50                        fminnmv	h23, v17.8h
+# CHECK-NEXT:  1      4     0.50                        fminnmv	s29, v17.4s
 # CHECK-NEXT:  1      4     1.00                        fminp	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      4     0.50                        fminp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     1.00                        fminp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      6     0.50                        fminp	h7, v10.2h
 # CHECK-NEXT:  1      6     0.50                        fminp	s17, v7.2s
 # CHECK-NEXT:  1      4     0.50                        fminv	h3, v30.4h
-# CHECK-NEXT:  1      6     1.00                        fminv	h29, v12.8h
-# CHECK-NEXT:  1      4     1.00                        fminv	s16, v19.4s
+# CHECK-NEXT:  1      4     0.50                        fminv	h29, v12.8h
+# CHECK-NEXT:  1      4     0.50                        fminv	s16, v19.4s
 # CHECK-NEXT:  1      8     0.50                        fmla	d0, d1, v0.d[1]
 # CHECK-NEXT:  1      8     0.50                        fmla	h23, h24, v15.h[4]
 # CHECK-NEXT:  1      8     0.50                        fmla	s0, s1, v0.s[3]
@@ -378,10 +378,10 @@
 # CHECK-NEXT:  1      4     0.50                        fmul	s0, s1, v0.s[3]
 # CHECK-NEXT:  1      4     0.50                        fmul	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.50                        fmulx	d0, d4, v0.d[1]
-# CHECK-NEXT:  1      6     0.50                        fmulx	d23, d11, d1
-# CHECK-NEXT:  1      6     0.50                        fmulx	s20, s22, s15
+# CHECK-NEXT:  1      4     0.50                        fmulx	d23, d11, d1
+# CHECK-NEXT:  1      4     0.50                        fmulx	s20, s22, s15
 # CHECK-NEXT:  1      4     0.50                        fmulx	h18, h17, v7.h[1]
-# CHECK-NEXT:  1      6     0.50                        fmulx	h20, h25, h0
+# CHECK-NEXT:  1      4     0.50                        fmulx	h20, h25, h0
 # CHECK-NEXT:  1      4     0.50                        fmulx	s3, s5, v0.s[3]
 # CHECK-NEXT:  1      4     1.00                        fmulx	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  1      4     0.50                        fmulx	v28.4h, v25.4h, v15.h[1]
@@ -751,12 +751,12 @@
 # CHECK-NEXT:  1      6     1.00                        saddw2	v0.2d, v0.2d, v0.4s
 # CHECK-NEXT:  1      6     1.00                        saddw2	v0.4s, v0.4s, v0.8h
 # CHECK-NEXT:  1      6     1.00                        saddw2	v0.8h, v0.8h, v0.16b
-# CHECK-NEXT:  1      6     0.50                        scvtf	h4, h8, #9
+# CHECK-NEXT:  1      4     0.50                        scvtf	h4, h8, #9
 # CHECK-NEXT:  1      4     0.50                        scvtf	h5, h14
 # CHECK-NEXT:  1      4     0.50                        scvtf	d21, d12
-# CHECK-NEXT:  1      6     0.50                        scvtf	d21, d12, #64
+# CHECK-NEXT:  1      4     0.50                        scvtf	d21, d12, #64
 # CHECK-NEXT:  1      4     0.50                        scvtf	s22, s13
-# CHECK-NEXT:  1      6     0.50                        scvtf	s22, s13, #32
+# CHECK-NEXT:  1      4     0.50                        scvtf	s22, s13, #32
 # CHECK-NEXT:  1      4     1.00                        scvtf	v0.2d, v0.2d
 # CHECK-NEXT:  1      4     1.00                        scvtf	v0.2d, v0.2d, #3
 # CHECK-NEXT:  1      4     0.50                        scvtf	v0.2s, v0.2s
@@ -1302,13 +1302,13 @@
 # CHECK-NEXT:  1      6     1.00                        uaddw2	v0.4s, v0.4s, v0.8h
 # CHECK-NEXT:  1      6     1.00                        uaddw2	v0.8h, v0.8h, v0.16b
 # CHECK-NEXT:  1      4     0.50                        ucvtf	h17, x12
-# CHECK-NEXT:  1      6     0.50                        ucvtf	h22, h16, #11
+# CHECK-NEXT:  1      4     0.50                        ucvtf	h22, h16, #11
 # CHECK-NEXT:  1      4     0.50                        ucvtf	h7, h21
 # CHECK-NEXT:  1      4     0.50                        ucvtf	d21, d14
-# CHECK-NEXT:  1      6     0.50                        ucvtf	d21, d14, #64
+# CHECK-NEXT:  1      4     0.50                        ucvtf	d21, d14, #64
 # CHECK-NEXT:  1      4     0.50                        ucvtf	s8, x0
 # CHECK-NEXT:  1      4     0.50                        ucvtf	s22, s13
-# CHECK-NEXT:  1      6     0.50                        ucvtf	s22, s13, #32
+# CHECK-NEXT:  1      4     0.50                        ucvtf	s22, s13, #32
 # CHECK-NEXT:  1      4     1.00                        ucvtf	v0.2d, v0.2d
 # CHECK-NEXT:  1      4     1.00                        ucvtf	v0.2d, v0.2d, #3
 # CHECK-NEXT:  1      4     0.50                        ucvtf	v0.2s, v0.2s
@@ -1586,7 +1586,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     990.50 990.50 76.00  76.00  466.00  -
+# CHECK-NEXT:  -      -      -      -     986.50 986.50 76.00  76.00  466.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -1895,16 +1895,16 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxnmp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmaxnmp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxnmv	h0, v13.4h
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmaxnmv	h12, v11.8h
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmaxnmv	s28, v31.4s
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxnmv	h12, v11.8h
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxnmv	s28, v31.4s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmaxp	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmaxp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxp	h15, v25.2h
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxp	s6, v2.2s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxv	h0, v0.4h
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmaxv	h0, v0.8h
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmaxv	s0, v0.4s
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxv	h0, v0.8h
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxv	s0, v0.4s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmin	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmin	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmin	v0.4s, v0.4s, v0.4s
@@ -1917,16 +1917,16 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminnmp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminnmp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminnmv	h19, v25.4h
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminnmv	h23, v17.8h
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminnmv	s29, v17.4s
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminnmv	h23, v17.8h
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminnmv	s29, v17.4s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminp	v0.2d, v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminp	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminp	h7, v10.2h
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminp	s17, v7.2s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminv	h3, v30.4h
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminv	h29, v12.8h
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminv	s16, v19.4s
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminv	h29, v12.8h
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminv	s16, v19.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmla	d0, d1, v0.d[1]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmla	h23, h24, v15.h[4]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmla	s0, s1, v0.s[3]
