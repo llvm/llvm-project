@@ -1150,7 +1150,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->viewGraph("scheduler input for " + BlockName);
 
   // Schedule machine code.
-  ScheduleDAGSDNodes *Scheduler = CreateScheduler();
+  if (!Scheduler)
+    Scheduler.reset(CreateScheduler());
   {
     NamedRegionTimer T("sched", "Instruction Scheduling", GroupName,
                        GroupDescription, TimePassesIsEnabled);
@@ -1176,13 +1177,6 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   // update PHI nodes later on.
   if (FirstMBB != LastMBB)
     SDB->UpdateSplitBlock(FirstMBB, LastMBB);
-
-  // Free the scheduler state.
-  {
-    NamedRegionTimer T("cleanup", "Instruction Scheduling Cleanup", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
-    delete Scheduler;
-  }
 
   // Free the SelectionDAG state, now that we're finished with it.
   CurDAG->clear();
@@ -1646,6 +1640,7 @@ static void processSingleLocVars(FunctionLoweringInfo &FuncInfo,
 }
 
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
+  assert(!Scheduler && "scheduler leaked from previous function");
   FastISelFailed = false;
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = nullptr;
@@ -1958,6 +1953,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   SwiftError->propagateVRegs();
 
   delete FastIS;
+  Scheduler.reset();
   SDB->clearDanglingDebugInfo();
   SDB->SPDescriptor.resetPerFunctionState();
 }
