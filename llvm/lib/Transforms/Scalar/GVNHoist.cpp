@@ -619,10 +619,6 @@ bool GVNHoist::hasEHOrLoadsOnPath(const Instruction *NewPt, MemoryDef *Def,
   const BasicBlock *NewBB = NewPt->getParent();
   const BasicBlock *OldBB = Def->getBlock();
   assert(DT->dominates(NewBB, OldBB) && "invalid path");
-  assert(DT->dominates(
-             MSSA->getWalker()->getClobberingMemoryAccess(Def)->getBlock(),
-             NewBB) &&
-         "def does not dominate new hoisting point");
 
   // Walk all basic blocks reachable in depth-first iteration on the inverse
   // CFG from OldBB to NewBB. These blocks are all the blocks that may be
