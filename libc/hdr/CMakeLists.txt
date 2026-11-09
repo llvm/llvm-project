@@ -120,6 +120,14 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.netinet_in_macros
 )
 
+add_proxy_header_library(
+  netinet_tcp_macros
+  HDRS
+    netinet_tcp_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.netinet_tcp_macros
+)
+
 add_header_library(poll_overlay HDRS poll_overlay.h)
 add_proxy_header_library(
   poll_macros
@@ -251,6 +259,14 @@ add_proxy_header_library(
     sys_sem_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_sem_macros
+)
+
+add_proxy_header_library(
+  sys_shm_macros
+  HDRS
+    sys_shm_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_shm_macros
 )
 
 add_header_library(sys_socket_overlay HDRS sys_socket_overlay.h)

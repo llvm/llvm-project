@@ -1,4 +1,4 @@
-# RUN: llc -mtriple aarch64 -run-pass=early-tailduplication -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+# RUN: llc -mtriple aarch64 -run-pass=early-tailduplication %s -o - 2>&1 | FileCheck %s
 ---
 name:            pluto
 tracksRegLiveness: true

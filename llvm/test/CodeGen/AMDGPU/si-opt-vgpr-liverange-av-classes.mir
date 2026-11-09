@@ -57,16 +57,16 @@ body:             |
 
     %10:vgpr_32 = COPY killed $vgpr1
     %7:vgpr_32 = COPY killed $vgpr0
-    %0:av_32 = COPY killed %10
-    %14:sreg_64 = V_CMP_GT_I32_e64 6, killed %7, implicit $exec
-    %1:sreg_64 = SI_IF killed %14, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %0:av_32 = COPY %10
+    %14:sreg_64 = V_CMP_GT_I32_e64 6, %7, implicit $exec
+    %1:sreg_64 = SI_IF %14, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
   bb.1:
     successors: %bb.2(0x40000000), %bb.4(0x40000000)
 
     %2:av_32 = PHI undef %11:av_32, %bb.0, %5, %bb.3
-    %3:sreg_64 = SI_ELSE killed %1, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64 = SI_ELSE %1, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -74,7 +74,7 @@ body:             |
 
     %20:vgpr_32 = COPY %0
     %17:vgpr_32 = nofpexcept V_ADD_F32_e32 %20, %20, implicit $mode, implicit $exec
-    %4:av_32 = COPY killed %17
+    %4:av_32 = COPY %17
     S_BRANCH %bb.4
 
   bb.3:
@@ -82,13 +82,13 @@ body:             |
 
     %21:vgpr_32 = COPY %0
     %16:vgpr_32 = nofpexcept V_MUL_F32_e32 1077936128, %21, implicit $mode, implicit $exec
-    %5:av_32 = COPY killed %16
+    %5:av_32 = COPY %16
     S_BRANCH %bb.1
 
   bb.4:
     %6:av_32 = PHI %2, %bb.1, %4, %bb.2
-    SI_END_CF killed %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    $vgpr0 = COPY killed %6
+    SI_END_CF %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    $vgpr0 = COPY %6
     SI_RETURN_TO_EPILOG killed $vgpr0
 ...
 
@@ -143,16 +143,16 @@ body:             |
 
     %10:vreg_64_align2 = COPY killed $vgpr2_vgpr3
     %7:vgpr_32 = COPY killed $vgpr0
-    %0:av_64_align2 = COPY killed %10
-    %14:sreg_64 = V_CMP_GT_I32_e64 6, killed %7, implicit $exec
-    %1:sreg_64 = SI_IF killed %14, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %0:av_64_align2 = COPY %10
+    %14:sreg_64 = V_CMP_GT_I32_e64 6, %7, implicit $exec
+    %1:sreg_64 = SI_IF %14, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
   bb.1:
     successors: %bb.2(0x40000000), %bb.4(0x40000000)
 
     %2:av_64_align2 = PHI undef %11:av_64_align2, %bb.0, %5, %bb.3
-    %3:sreg_64 = SI_ELSE killed %1, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64 = SI_ELSE %1, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -160,7 +160,7 @@ body:             |
 
     %20:vreg_64_align2 = COPY %0
     %17:vreg_64_align2 = nofpexcept V_ADD_F64_e64 0, %20, 0, %20, 0, 0, implicit $mode, implicit $exec
-    %4:av_64_align2 = COPY killed %17
+    %4:av_64_align2 = COPY %17
     S_BRANCH %bb.4
 
   bb.3:
@@ -168,13 +168,13 @@ body:             |
 
     %21:vreg_64_align2 = COPY %0
     %16:vreg_64_align2 = nofpexcept V_MUL_F64_e64 0, %21, 0, %21, 0, 0, implicit $mode, implicit $exec
-    %5:av_64_align2 = COPY killed %16
+    %5:av_64_align2 = COPY %16
     S_BRANCH %bb.1
 
   bb.4:
     %6:av_64_align2 = PHI %2, %bb.1, %4, %bb.2
-    SI_END_CF killed %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    $vgpr0_vgpr1 = COPY killed %6
+    SI_END_CF %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    $vgpr0_vgpr1 = COPY %6
     SI_RETURN_TO_EPILOG killed $vgpr0_vgpr1
 ...
 
@@ -228,16 +228,16 @@ body:             |
 
     %10:vgpr_32 = COPY killed $vgpr1
     %7:vgpr_32 = COPY killed $vgpr0
-    %0:av_32 = COPY killed %10
+    %0:av_32 = COPY %10
     %14:sreg_64 = V_CMP_GT_I32_e64 6, %7, implicit $exec
-    %1:sreg_64 = SI_IF killed %14, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %1:sreg_64 = SI_IF %14, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
   bb.1:
     successors: %bb.2(0x40000000), %bb.4(0x40000000)
 
     %2:av_32 = PHI undef %11:av_32, %bb.0, %5, %bb.3
-    %3:sreg_64 = SI_ELSE killed %1, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64 = SI_ELSE %1, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -248,14 +248,14 @@ body:             |
   bb.3:
     successors: %bb.1(0x80000000)
 
-    %16:vgpr_32 = nofpexcept V_MUL_F32_e32 1077936128, killed %7, implicit $mode, implicit $exec
-    %5:av_32 = COPY killed %16
+    %16:vgpr_32 = nofpexcept V_MUL_F32_e32 1077936128, %7, implicit $mode, implicit $exec
+    %5:av_32 = COPY %16
     S_BRANCH %bb.1
 
   bb.4:
     %6:av_32 = PHI %2, %bb.1, %0, %bb.2
-    SI_END_CF killed %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    $vgpr0 = COPY killed %6
+    SI_END_CF %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    $vgpr0 = COPY %6
     SI_RETURN_TO_EPILOG killed $vgpr0
 ...
 
@@ -313,18 +313,18 @@ body:             |
 
     %5:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
     %6:sreg_64_xexec = V_CMP_EQ_U32_e64 %5, %0, implicit $exec
-    %7:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %7:sreg_64_xexec = S_AND_SAVEEXEC_B64 %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
 
     %8:vgpr_32 = COPY %1
-    %9:vgpr_32 = V_ADD_U32_e32 killed %5, killed %8, implicit $exec
-    GLOBAL_STORE_DWORD_SADDR %2, killed %9, %3, 0, 0, implicit $exec
-    $exec = S_XOR_B64_term $exec, killed %7, implicit-def dead $scc
+    %9:vgpr_32 = V_ADD_U32_e32 %5, %8, implicit $exec
+    GLOBAL_STORE_DWORD_SADDR %2, %9, %3, 0, 0, implicit $exec
+    $exec = S_XOR_B64_term $exec, %7, implicit-def dead $scc
     SI_WATERFALL_LOOP %bb.1, implicit $exec
 
   bb.3:
-    $exec = S_MOV_B64 killed %4
+    $exec = S_MOV_B64 %4
     SI_RETURN
 ...

@@ -1773,6 +1773,40 @@ func.func @extract_strided_broadcast5(%arg0: vector<2x1xf32>) -> vector<2x4xf32>
 
 // -----
 
+// ExtractStridedSliceOp only extracts a prefix of its source vector
+// (#num_offsets < #source_rank).
+// CHECK-LABEL: func @extract_strided_broadcast_prefix(
+//  CHECK-SAME: %[[ARG:.+]]: vector<4x1xf32>
+//       CHECK: %[[E:.+]] = vector.extract %[[ARG]][3] : vector<1xf32> from vector<4x1xf32>
+//  CHECK-NEXT: %[[B:.+]] = vector.broadcast %[[E]] : vector<1xf32> to vector<1x4xf32>
+//  CHECK-NEXT: return %[[B]] : vector<1x4xf32>
+func.func @extract_strided_broadcast_prefix(%arg0: vector<4x1xf32>) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4x1xf32> to vector<4x4xf32>
+  %1 = vector.extract_strided_slice %0
+      offsets = [3], sizes = [1], strides = [1]
+      : vector<4x4xf32> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
+// ExtractStridedSliceOp only extracts a prefix of its source vector
+// (#num_offsets < #source_rank). In addition, BroadcastOp bumps the output rank.
+// CHECK-LABEL: func @extract_strided_broadcast_prefix_rank_increase(
+//  CHECK-SAME: %[[ARG:.+]]: vector<8x1x1xf32>
+//       CHECK: %[[E:.+]] = vector.extract_strided_slice %[[ARG]] offsets = [5, 0], sizes = [2, 1], strides = [1, 1] : vector<8x1x1xf32> to vector<2x1x1xf32>
+//  CHECK-NEXT: %[[B:.+]] = vector.broadcast %[[E]] : vector<2x1x1xf32> to vector<1x2x2x5xf32>
+//  CHECK-NEXT: return %[[B]] : vector<1x2x2x5xf32>
+func.func @extract_strided_broadcast_prefix_rank_increase(%arg0: vector<8x1x1xf32>) -> vector<1x2x2x5xf32> {
+  %0 = vector.broadcast %arg0 : vector<8x1x1xf32> to vector<4x8x7x5xf32>
+  %1 = vector.extract_strided_slice %0
+      offsets = [3, 5, 3], sizes = [1, 2, 2], strides = [1, 1, 1]
+      : vector<4x8x7x5xf32> to vector<1x2x2x5xf32>
+  return %1 : vector<1x2x2x5xf32>
+}
+
+// -----
+
 // CHECK-LABEL: consecutive_shape_cast
 //       CHECK:   %[[C:.*]] = vector.shape_cast %{{.*}} : vector<16xf16> to vector<4x4xf16>
 //  CHECK-NEXT:   return %[[C]] : vector<4x4xf16>
@@ -2437,6 +2471,18 @@ func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32
 
 //       CHECK:     return %[[RESULT]] : vector<5x4x20xf32>
     return %0 : vector<5x4x20xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_multi_reduction_unit_dimensions_fastmath(
+//  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4xf32>, %[[ACC:.+]]: vector<5x4xf32>
+func.func @vector_multi_reduction_unit_dimensions_fastmath(%source: vector<5x1x4xf32>, %acc: vector<5x4xf32>) -> vector<5x4xf32> {
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[SOURCE]] : vector<5x1x4xf32> to vector<5x4xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.maximumf %[[ACC]], %[[CAST]] fastmath<nnan,nsz> : vector<5x4xf32>
+    %0 = vector.multi_reduction <maximumf>, %source, %acc fastmath<nnan,nsz> [1] : vector<5x1x4xf32> to vector<5x4xf32>
+//       CHECK:   return %[[RESULT]] : vector<5x4xf32>
+    return %0 : vector<5x4xf32>
 }
 
 // -----
@@ -4552,14 +4598,14 @@ func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi3
 
 // CHECK-LABEL: @fold_insert_use_chain(
 //  CHECK-SAME:   %[[ARG:.*]]: vector<4x4xf32>,
-//  CHECK-SAME:   %[[VAL:.*]]: f32,
+//  CHECK-SAME:   %[[VAL0:.*]]: f32, %[[VAL1:.*]]: f32, %[[VAL2:.*]]: f32,
 //  CHECK-SAME:   %[[POS:.*]]: index) -> vector<4x4xf32> {
-//  CHECK-NEXT:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] {{\[}}%[[POS]], 0] : f32 into vector<4x4xf32>
+//  CHECK-NEXT:   %[[RES:.*]] = vector.insert %[[VAL2]], %[[ARG]] {{\[}}%[[POS]], 0] : f32 into vector<4x4xf32>
 //  CHECK-NEXT:   return %[[RES]] : vector<4x4xf32>
-func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %val : f32, %pos: index) -> vector<4x4xf32> {
-  %v_0 = vector.insert %val, %arg[%pos, 0] : f32 into vector<4x4xf32>
-  %v_1 = vector.insert %val, %v_0[%pos, 0] : f32 into vector<4x4xf32>
-  %v_2 = vector.insert %val, %v_1[%pos, 0] : f32 into vector<4x4xf32>
+func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %val0 : f32, %val1 : f32, %val2 : f32, %pos: index) -> vector<4x4xf32> {
+  %v_0 = vector.insert %val0, %arg[%pos, 0] : f32 into vector<4x4xf32>
+  %v_1 = vector.insert %val1, %v_0[%pos, 0] : f32 into vector<4x4xf32>
+  %v_2 = vector.insert %val2, %v_1[%pos, 0] : f32 into vector<4x4xf32>
   return %v_2 : vector<4x4xf32>
 }
 

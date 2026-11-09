@@ -636,8 +636,9 @@ diagnoseUnsupportedCoExecSchedulerSelection(const Function &F,
 static bool useNoopPostScheduler(const Function &F) {
   Attribute PostSchedStrategyAttr =
       F.getFnAttribute("amdgpu-post-sched-strategy");
-  return PostSchedStrategyAttr.isValid() &&
-         PostSchedStrategyAttr.getValueAsString() == "nop";
+  if (PostSchedStrategyAttr.isValid())
+    return PostSchedStrategyAttr.getValueAsString() == "nop";
+  return AMDGPU::getSchedStrategy(F) == "coexec";
 }
 
 static cl::opt<bool> EnableRewritePartialRegUses(
@@ -2005,6 +2006,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   addPreRewrite();
   addPass(&VirtRegRewriterID);
+
+  addPass(createRegAllocScoringPass());
 
   addPass(&AMDGPUMarkLastScratchLoadID);
 
