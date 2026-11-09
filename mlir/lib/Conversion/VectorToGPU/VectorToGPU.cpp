@@ -31,7 +31,7 @@
 
 #define DEBUG_TYPE "vector-to-gpu"
 
-#include "../VectorToGPUCommon/VectorToGPUUtils.h"
+#include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTOGPU
