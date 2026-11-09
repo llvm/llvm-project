@@ -375,8 +375,12 @@ configuration: it ignores checks and check options it does not know, and
 releases up to at least 21 react to an unknown top-level key by discarding
 the file and running their default checks, exiting 0 either way. Results
 from an older `clang-tidy` are therefore not comparable with a build at the
-same revision. To match, add `clang-tools-extra` to a bootstrapping build
-and point `LLVM_LIBC_CLANG_TIDY` at the `clang-tidy` it produces;
+same revision. Premerge lints with a `clang-tidy` built in the same
+bootstrapping build as the compiler, so `clang`, `clang-tidy`, and libc are all
+at the revision under test. To match premerge locally, add `clang-tools-extra`
+to a bootstrapping build with `-DLLVM_LIBC_ENABLE_LINTING=ON`; the build
+produces `clang-tidy` before configuring `libc`, picks it up automatically from
+the build tree, and exposes `libc-lint` at the top level.
 `clang-tidy --verify-config --config-file=libc/src/.clang-tidy` reports
 anything your `clang-tidy` would silently skip.
 

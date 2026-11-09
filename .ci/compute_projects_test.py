@@ -307,7 +307,9 @@ class TestComputeProjects(unittest.TestCase):
         env_variables = compute_projects.get_env_variables(
             ["libc/CMakeLists.txt"], "Linux"
         )
-        self.assertEqual(env_variables["projects_to_build"], "clang;lld")
+        self.assertEqual(
+            env_variables["projects_to_build"], "clang;clang-tools-extra;lld"
+        )
         self.assertEqual(env_variables["project_check_targets"], "")
         self.assertEqual(env_variables["runtimes_to_build"], "libc")
         self.assertEqual(env_variables["runtimes_check_targets"], "check-libc")
@@ -532,7 +534,10 @@ class TestComputeProjects(unittest.TestCase):
         env_variables = compute_projects.get_env_variables(
             ["libc/shared/math/acos.h"], "Linux"
         )
-        self.assertEqual(env_variables["projects_to_build"], "clang;lld;llvm")
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "clang;clang-tools-extra;lld;llvm",
+        )
         self.assertEqual(
             env_variables["project_check_targets"],
             "check-clang check-clang-python check-llvm",
