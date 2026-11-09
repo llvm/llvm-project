@@ -11,21 +11,14 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm::AMDGPU {
 
-static cl::opt<bool> ExpertSchedulingModeFlag(
-    "amdgpu-expert-scheduling-mode",
-    cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
-    cl::init(false), cl::Hidden);
-
 bool isExpertSchedulingMode(const GCNSubtarget &ST, const Function &F) {
   return ST.hasExpertSchedulingMode() &&
-         (ExpertSchedulingModeFlag.getNumOccurrences()
-              ? ExpertSchedulingModeFlag
-              : F.getFnAttribute("amdgpu-expert-scheduling-mode")
-                    .getValueAsBool());
+         valueOr(ST.getCLOpts().expert_scheduling_mode,
+                 F.getFnAttribute("amdgpu-expert-scheduling-mode")
+                     .getValueAsBool());
 }
 
 iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {

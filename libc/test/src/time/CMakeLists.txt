@@ -1,5 +1,10 @@
 add_libc_testsuite(libc-time-tests)
 
+# Allow designated and aggregate initialisers of struct tm to omit fields
+# (such as platform extension fields tm_gmtoff and tm_zone) and rely on
+# standard zero-initialisation without compiler warnings.
+set(time_test_copts "-Wno-missing-field-initializers")
+
 add_header_library(
   time_test_utils
   HDRS
@@ -20,6 +25,8 @@ add_libc_test(
     asctime_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.hdr.errno_macros
@@ -37,6 +44,8 @@ add_libc_test(
     asctime_r_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.hdr.errno_macros
@@ -54,6 +63,8 @@ add_libc_test(
     ctime_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.include.time
@@ -72,6 +83,8 @@ add_libc_test(
     ctime_r_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.include.time
@@ -179,6 +192,7 @@ add_libc_test(
     libc.src.time.clock_gettime
     libc.src.time.timer_create
     libc.src.time.timer_delete
+    libc.src.time.timer_getoverrun
     libc.src.time.timer_gettime
     libc.src.time.timer_settime
     libc.src.unistd.gettid
@@ -204,6 +218,8 @@ add_libc_test(
     libc-time-tests
   SRCS
     gmtime_test.cpp
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.hdr.errno_macros
@@ -221,6 +237,8 @@ add_libc_test(
     libc-time-tests
   SRCS
     gmtime_r_test.cpp
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.src.time.gmtime_r
@@ -237,6 +255,8 @@ add_libc_test(
     mktime_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.src.time.mktime
@@ -290,7 +310,6 @@ add_libc_test(
   DEPENDS
     libc.src.time.time
     libc.src.__support.time.clock_gettime
-    libc.src.errno.errno
 )
 
 add_libc_test(
@@ -313,7 +332,6 @@ add_libc_test(
   DEPENDS
     libc.include.time
     libc.src.time.clock
-    libc.src.errno.errno
     libc.hdr.types.clock_t
 )
 

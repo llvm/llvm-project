@@ -3,6 +3,7 @@
 
 ---
 name:            Cst
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Cst
@@ -13,6 +14,7 @@ body:             |
 ...
 ---
 name:            Test2
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; Note: This comment should not be removed, the check lines below should be updated
