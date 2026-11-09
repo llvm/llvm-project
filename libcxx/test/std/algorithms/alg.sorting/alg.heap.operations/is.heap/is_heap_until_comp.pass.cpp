@@ -18,6 +18,7 @@
 #include <functional>
 #include <iterator>
 
+#include "../heap_helpers.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
