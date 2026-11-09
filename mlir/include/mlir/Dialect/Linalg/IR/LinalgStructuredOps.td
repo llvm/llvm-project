@@ -1232,6 +1232,7 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
 //===----------------------------------------------------------------------===//
 
 def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
+    DeclareOpInterfaceMethods<AggregatedOpInterface, ["decomposeOperation"]>,
     AttrSizedOperandSegments]> {
   let summary = [{
     Perform a scaled contraction on two inputs where their scaling is described
@@ -1315,6 +1316,22 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
     ```
 
     Numeric casting promotes inputs and scales to the accumulator/output type.
+
+    **Decomposition**
+
+    The op can be decomposed by first splitting block scaled dims into block
+    levels. The unscaled inputs are then contracted over reduction dims `R` not
+    used by the scales, followed by scaling of the partial results and reduction
+    over the remaining reduction dims `S`:
+
+      `T[H ∪ S] = SUM_{R} A[I] * B[J]`
+
+      `D[H] = (SUM_{S} (T[H ∪ S] * scale_A[I]) * scale_B[J]) + C[H]`
+
+    This follows the dot product definition of the OCP Microscaling
+    specification, where the order of operations and internal precision are
+    implementation-defined. Inputs, scales, and intermediate values may use a
+    wider type than the output type.
   }];
 
   let arguments = (ins
@@ -1386,6 +1403,16 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
     // Implement function necessary for DestinationStyleOpInterface.
     ::mlir::MutableOperandRange getDpsInitsMutable() {
       return getOutputsMutable();
+    }
+
+    /// Returns the input data operands.
+    SmallVector<OpOperand *> getDataOperands() {
+      return {getDpsInputOperand(0), getDpsInputOperand(2)};
+    }
+
+    /// Returns the inputs scale operands.
+    SmallVector<OpOperand *> getScaleOperands() {
+      return {getDpsInputOperand(1), getDpsInputOperand(3)};
     }
   }];
 }
