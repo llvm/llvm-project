@@ -14,7 +14,6 @@
 #define FORTRAN_OPTIMIZER_DIALECT_CUF_CUFDIALECT_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"

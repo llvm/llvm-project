@@ -111,6 +111,13 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_usum:
   case Intrinsic::dx_wave_prefix_product:
   case Intrinsic::dx_wave_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_bit_and:
+  case Intrinsic::dx_wave_multi_prefix_bit_or:
+  case Intrinsic::dx_wave_multi_prefix_bit_xor:
+  case Intrinsic::dx_wave_multi_prefix_product:
+  case Intrinsic::dx_wave_multi_prefix_uproduct:
+  case Intrinsic::dx_wave_multi_prefix_sum:
+  case Intrinsic::dx_wave_multi_prefix_usum:
     // Quad Op Variants
   case Intrinsic::dx_quad_read_across_x:
   case Intrinsic::dx_quad_read_across_y:

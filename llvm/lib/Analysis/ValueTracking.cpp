@@ -8658,39 +8658,68 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
   case Intrinsic::pow:
+  case Intrinsic::experimental_constrained_pow:
   case Intrinsic::powi:
+  case Intrinsic::experimental_constrained_powi:
   case Intrinsic::sin:
+  case Intrinsic::experimental_constrained_sin:
   case Intrinsic::sinh:
+  case Intrinsic::experimental_constrained_sinh:
   case Intrinsic::cos:
+  case Intrinsic::experimental_constrained_cos:
   case Intrinsic::cosh:
+  case Intrinsic::experimental_constrained_cosh:
   case Intrinsic::sincos:
   case Intrinsic::sincospi:
   case Intrinsic::tan:
+  case Intrinsic::experimental_constrained_tan:
   case Intrinsic::tanh:
+  case Intrinsic::experimental_constrained_tanh:
   case Intrinsic::asin:
+  case Intrinsic::experimental_constrained_asin:
   case Intrinsic::acos:
+  case Intrinsic::experimental_constrained_acos:
   case Intrinsic::atan:
+  case Intrinsic::experimental_constrained_atan:
   case Intrinsic::atan2:
+  case Intrinsic::experimental_constrained_atan2:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
+  case Intrinsic::experimental_constrained_sqrt:
   case Intrinsic::fma:
+  case Intrinsic::experimental_constrained_fma:
   case Intrinsic::fmuladd:
+  case Intrinsic::experimental_constrained_fmuladd:
   case Intrinsic::exp:
+  case Intrinsic::experimental_constrained_exp:
   case Intrinsic::exp2:
+  case Intrinsic::experimental_constrained_exp2:
   case Intrinsic::exp10:
   case Intrinsic::log:
+  case Intrinsic::experimental_constrained_log:
   case Intrinsic::log2:
+  case Intrinsic::experimental_constrained_log2:
   case Intrinsic::log10:
+  case Intrinsic::experimental_constrained_log10:
   case Intrinsic::modf:
   case Intrinsic::floor:
+  case Intrinsic::experimental_constrained_floor:
   case Intrinsic::ceil:
+  case Intrinsic::experimental_constrained_ceil:
   case Intrinsic::trunc:
+  case Intrinsic::experimental_constrained_trunc:
   case Intrinsic::rint:
+  case Intrinsic::experimental_constrained_rint:
   case Intrinsic::nearbyint:
+  case Intrinsic::experimental_constrained_nearbyint:
   case Intrinsic::round:
+  case Intrinsic::experimental_constrained_round:
   case Intrinsic::roundeven:
+  case Intrinsic::experimental_constrained_roundeven:
   case Intrinsic::lrint:
+  case Intrinsic::experimental_constrained_lrint:
   case Intrinsic::llrint:
+  case Intrinsic::experimental_constrained_llrint:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::frexp:

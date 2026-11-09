@@ -858,9 +858,14 @@ void CGDebugInfo::CreateCompileUnit() {
   // file was specified with an absolute path.
   if (CSKind)
     CSInfo.emplace(*CSKind, Checksum);
-  llvm::DIFile *CUFile = DBuilder.createFile(
-      remapDIPath(MainFileName), remapDIPath(getCurrentDirname()), CSInfo,
-      getSource(SM, SM.getMainFileID()));
+  const llvm::StringRef cwd =
+      !CGOpts.EmitCodeView ||
+              (CGOpts.EmitCodeView && CGOpts.CodeViewEmitCurrentWorkdir)
+          ? getCurrentDirname()
+          : llvm::StringRef("");
+  llvm::DIFile *CUFile =
+      DBuilder.createFile(remapDIPath(MainFileName), remapDIPath(cwd), CSInfo,
+                          getSource(SM, SM.getMainFileID()));
 
   StringRef Sysroot, SDK;
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB) {
@@ -6614,8 +6619,8 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
   llvm::DIFile *File = getOrCreateFile(Loc);
   llvm::DIGlobalVariableExpression *Debug =
       DBuilder.createGlobalVariableExpression(
-          nullptr, StringRef(), StringRef(), getOrCreateFile(Loc),
-          getLineNumber(Loc), getOrCreateType(S->getType(), File), true);
+          nullptr, StringRef(), StringRef(), File, getLineNumber(Loc),
+          getOrCreateType(S->getType(), File), true);
   GV->addDebugInfo(Debug);
 }
 

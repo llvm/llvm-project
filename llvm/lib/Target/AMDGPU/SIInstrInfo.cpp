@@ -32,7 +32,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Target/TargetMachine.h"
 #include <tuple>
 
@@ -56,19 +56,6 @@ struct AMDGPUBlockingCyclesInfo {
 
 #include "AMDGPUGenSearchableTables.inc"
 } // namespace llvm::AMDGPU
-
-// Must be at least 4 to be able to branch over minimum unconditional branch
-// code. This is only for making it possible to write reasonably small tests for
-// long branches.
-static cl::opt<unsigned>
-BranchOffsetBits("amdgpu-s-branch-bits", cl::ReallyHidden, cl::init(16),
-                 cl::desc("Restrict range of branch instructions (DEBUG)"));
-
-static cl::opt<bool> Fix16BitCopies(
-  "amdgpu-fix-16-bit-physreg-copies",
-  cl::desc("Fix copies between 32 and 16 bit registers by extending to 32 bit"),
-  cl::init(true),
-  cl::ReallyHidden);
 
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
     : AMDGPUGenInstrInfo(ST, RI, AMDGPU::ADJCALLSTACKUP,
@@ -959,8 +946,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // The rest of copyPhysReg assumes Src and Dst size are the same size.
   // TODO-GFX11_16BIT If all true 16 bit instruction patterns are completed can
-  // we remove Fix16BitCopies and this code block?
-  if (Fix16BitCopies) {
+  // we remove fix_16_bit_physreg_copies and this code block?
+  if (ST.getCLOpts().fix_16_bit_physreg_copies) {
     if (((Size == 16) != (SrcSize == 16))) {
       // Non-VGPR Src and Dst will later be expanded back to 32 bits.
       assert(ST.useRealTrue16Insts());
@@ -3135,7 +3122,7 @@ bool SIInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   // from the next instruction.
   BrOffset -= 1;
 
-  return isIntN(BranchOffsetBits, BrOffset);
+  return isIntN(ST.getCLOpts().s_branch_bits, BrOffset);
 }
 
 MachineBasicBlock *
@@ -4478,6 +4465,30 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         for (auto &SR : LI.subranges())
           UpdateDefIndex(SR);
       }
+
+      // A use tied to an early-clobber def is read at the early-clobber slot.
+      // The three-address instruction has no tied operands, so the use is now
+      // read at the register slot.
+      const MachineOperand &OldDef = MI.getOperand(0);
+      if (OldDef.isEarlyClobber()) {
+        assert(OldDef.isTied() &&
+               "expected a tied def in the two-address form");
+        Register UseReg =
+            MI.getOperand(MI.findTiedOperandIdx(OldDef.getOperandNo()))
+                .getReg();
+        SlotIndex Idx = LIS->getInstructionIndex(*NewMI);
+        SlotIndex OldEnd = Idx.getRegSlot(true);
+        SlotIndex NewEnd = Idx.getRegSlot();
+        auto UpdateUseIndex = [&](LiveRange &LR) {
+          LiveRange::Segment *S = LR.getSegmentContaining(Idx);
+          if (S && S->end == OldEnd)
+            S->end = NewEnd;
+        };
+        LiveInterval &LI = LIS->getInterval(UseReg);
+        UpdateUseIndex(LI);
+        for (LiveInterval::SubRange &SR : LI.subranges())
+          UpdateUseIndex(SR);
+      }
     }
   }
 
@@ -4849,6 +4860,50 @@ bool SIInstrInfo::mayAccessLDSThroughFlat(const MachineInstr &MI,
   }
 
   return false;
+}
+
+AMDGPU::AsyncStages SIInstrInfo::getAsyncStage(const MachineInstr &MI) const {
+  if (!isAsync(MI))
+    return AMDGPU::AsyncStages::NONE;
+  if (usesTENSOR_CNT(MI))
+    return AMDGPU::AsyncStages::TENSOR;
+  if (!usesASYNC_CNT(MI))
+    return AMDGPU::AsyncStages::BUFFER_GLOBAL_LOAD;
+
+  // TODO: Declare the stage of each async instruction in TableGen alongside
+  // its definition, instead of listing opcodes here.
+  switch (MI.getOpcode()) {
+  // Keep in sync with FLATInstructions.td.
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_SADDR:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32_SADDR:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B64:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B128:
+  case AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B128_SADDR:
+    return AMDGPU::AsyncStages::GLOBAL_LOAD_ASYNC_TO_LDS;
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B8:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B8_SADDR:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B32:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B32_SADDR:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B64:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B64_SADDR:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B128:
+  case AMDGPU::CLUSTER_LOAD_ASYNC_TO_LDS_B128_SADDR:
+    return AMDGPU::AsyncStages::GLOBAL_LOAD_ASYNC_TO_LDS_MCAST;
+  case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B8:
+  case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR:
+  case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B32:
+  case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR:
+  case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B64:
+  case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR:
+  case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B128:
+  case AMDGPU::GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR:
+    return AMDGPU::AsyncStages::GLOBAL_STORE_ASYNC_FROM_LDS;
+  default:
+    llvm_unreachable("Async opcode has no associated async stage");
+  }
 }
 
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
@@ -5907,6 +5962,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "WRITELANE instruction violates constant bus restriction";
         return false;
       }
+    }
+  }
+
+  if (Opcode == AMDGPU::ASYNCMARK || Opcode == AMDGPU::WAIT_ASYNCMARK) {
+    int64_t Mask = MI.getOperand(MI.getNumExplicitOperands() - 1).getImm();
+    if (!AMDGPU::isValidAsyncStageMask(Mask)) {
+      ErrInfo = "invalid asyncmark stage mask";
+      return false;
     }
   }
 
@@ -7699,15 +7762,6 @@ generateWaterFallLoop(const SIInstrInfo &TII, MachineInstr &MI,
   // Save the EXEC mask
   BuildMI(MBB, Begin, DL, TII.get(LMC.MovOpc), SaveExec).addReg(LMC.ExecReg);
 
-  // Killed uses in the instruction we are waterfalling around will be
-  // incorrect due to the added control-flow.
-  MachineBasicBlock::iterator AfterMI = MI;
-  ++AfterMI;
-  for (auto I = Begin; I != AfterMI; I++) {
-    for (auto &MO : I->all_uses())
-      MRI.clearKillFlags(MO.getReg());
-  }
-
   // To insert the loop we need to split the block. Move everything after this
   // point to a new block, and insert a new empty block between the two.
   MachineBasicBlock *LoopBB = MF.CreateMachineBasicBlock();
@@ -8893,7 +8947,6 @@ void SIInstrInfo::moveToVALUImpl(
           if (IsUndef)
             UseMO.setIsUndef();
         }
-        MRI.clearKillFlags(NewDstReg);
 
         if (!MRI.constrainRegClass(NewDstReg, CommonRC))
           llvm_unreachable("failed to constrain register");

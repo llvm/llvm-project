@@ -1,10 +1,19 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("SelectionDAGOptions") {
+  visibility = [ ":SelectionDAG" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("SelectionDAG") {
   output_name = "LLVMSelectionDAG"
   deps = [
+    ":SelectionDAGOptions",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -33,6 +42,7 @@ static_library("SelectionDAG") {
     "SelectionDAGBuilder.cpp",
     "SelectionDAGDumper.cpp",
     "SelectionDAGISel.cpp",
+    "SelectionDAGOptions.cpp",
     "SelectionDAGPrinter.cpp",
     "SelectionDAGTargetInfo.cpp",
     "StatepointLowering.cpp",

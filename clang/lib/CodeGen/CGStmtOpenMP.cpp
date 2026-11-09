@@ -173,6 +173,7 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
   void emitPreInitStmt(CodeGenFunction &CGF, const OMPLoopBasedDirective &S) {
     const Stmt *PreInits;
     CodeGenFunction::OMPMapVars PreCondVars;
+    SmallVector<const Decl *, 4> DoacrossOnlyDecls;
     if (auto *LD = dyn_cast<OMPLoopDirective>(&S)) {
       // Emit init, __range, __begin and __end variables for C++ range loops.
       (void)OMPLoopBasedDirective::doForAllLoops(
@@ -214,6 +215,30 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
         }
       }
       (void)PreCondVars.apply(CGF);
+      // The pre-inits also use the bounds of the loops that an 'ordered(n)'
+      // clause counts beyond the collapsed ones. Such a loop is emitted as a
+      // regular loop in the body and declares its own helpers, so these copies
+      // only live until the pre-inits.
+      if (const auto *C = LD->getSingleClause<OMPOrderedClause>())
+        (void)OMPLoopBasedDirective::doForAllLoops(
+            LD->getInnermostCapturedStmt()->getCapturedStmt(),
+            /*TryImperfectlyNestedLoops=*/true,
+            C->getLoopNumIterations().size(),
+            [&CGF, LD, &DoacrossOnlyDecls](unsigned Cnt, const Stmt *CurStmt) {
+              const auto *CXXFor = dyn_cast<CXXForRangeStmt>(CurStmt);
+              if (!CXXFor || Cnt < LD->getLoopsNumber())
+                return false;
+              for (const Stmt *Helper : std::initializer_list<const Stmt *>{
+                       CXXFor->getInit(), CXXFor->getRangeStmt(),
+                       CXXFor->getBeginStmt(), CXXFor->getEndStmt()}) {
+                if (!Helper)
+                  continue;
+                CGF.EmitStmt(Helper);
+                if (const auto *DS = dyn_cast<DeclStmt>(Helper))
+                  llvm::append_range(DoacrossOnlyDecls, DS->decls());
+              }
+              return false;
+            });
       PreInits = LD->getPreInits();
     } else if (const auto *Tile = dyn_cast<OMPTileDirective>(&S)) {
       PreInits = Tile->getPreInits();
@@ -234,6 +259,8 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
     doEmitPreinits(PreInits);
+    for (const Decl *D : DoacrossOnlyDecls)
+      CGF.eraseLocalDecl(D);
     PreCondVars.restore(CGF);
   }
 
@@ -1063,8 +1090,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
   llvm::SmallVector<llvm::Value *, 16> CallArgs;
   assert(CD->getContextParamPosition() == 0 &&
          "Expected context param at position 0 for target regions");
-  assert(RD->getNumFields() + 1 == F->getNumOperands() &&
-         "Argument count mismatch");
+  assert(RD->getNumFields() + 1 == F->arg_size() && "Argument count mismatch");
 
   for (auto [FD, InnerParam, SlotIdx] : llvm::zip(
            RD->fields(), F->args(), llvm::seq<unsigned>(RD->getNumFields()))) {
@@ -8142,9 +8168,8 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
 
 CodeGenFunction::JumpDest
 CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
-  if (Kind == OMPD_parallel || Kind == OMPD_task ||
-      Kind == OMPD_target_parallel || Kind == OMPD_taskloop ||
-      Kind == OMPD_master_taskloop || Kind == OMPD_parallel_master_taskloop)
+  if (Kind == OMPD_parallel || Kind == OMPD_target_parallel ||
+      isOpenMPTaskingDirective(Kind))
     return ReturnBlock;
   assert(Kind == OMPD_for || Kind == OMPD_section || Kind == OMPD_sections ||
          Kind == OMPD_parallel_sections || Kind == OMPD_parallel_for ||

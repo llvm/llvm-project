@@ -2443,7 +2443,8 @@ SDValue SelectionDAGLegalize::ExpandSincosStretLibCall(SDNode *Node) const {
   /// - Single return as vector elements
   /// - sret struct
 
-  const RTLIB::RuntimeLibcallsInfo &CallsInfo = TLI.getRuntimeLibcallsInfo();
+  const RTLIB::RuntimeLibcallsInfo &CallsInfo =
+      DAG.getLibcalls().getRuntimeLibcallsInfo();
 
   const DataLayout &DL = DAG.getDataLayout();
 

@@ -43,7 +43,7 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 static lto::Config createConfig() {
   lto::Config c;
   c.LibraryOptions = &ctx.arg.libraryOptions;
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options = getTargetOptions(ctx.arg.libraryOptions);
 
   // Always emit a section per function/data with LTO.
   c.Options.FunctionSections = true;
