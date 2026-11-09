@@ -37,6 +37,7 @@ add_entrypoint_object(
   HDRS
     ../canonicalizef128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.canonicalizef128
 )
 
@@ -306,6 +307,7 @@ add_entrypoint_object(
   HDRS
     ../cos.h
   DEPENDS
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.cos
     libc.src.__support.math.cos_integer_eval
@@ -358,6 +360,7 @@ add_entrypoint_object(
   HDRS
     ../sin.h
   DEPENDS
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.sin
     libc.src.__support.math.sin_integer_eval
@@ -2043,6 +2046,7 @@ add_entrypoint_object(
   HDRS
     ../modff128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.modff128
 )
 
@@ -2914,6 +2918,7 @@ add_entrypoint_object(
   HDRS
     ../remquof128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.remquof128
 )
 
