@@ -20,7 +20,7 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT:   [[COPY:%[0-9]+]]:gprjalrnonx7 = COPY $x10
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; GISEL-NEXT:   PseudoCALLIndirect [[COPY]], csr_ilp32_lp64, implicit-def dead $x1
+  ; GISEL-NEXT:   PseudoCALLIndirect [[COPY]], csr_ilp32_lp64, implicit-def dead $x1, cfi-type 12345678
   ; GISEL-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; GISEL-NEXT:   PseudoRET
   call void %x() [ "kcfi"(i32 12345678) ]
@@ -41,7 +41,7 @@ define void @f2(ptr noundef %x) #0 {
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT:   [[COPY:%[0-9]+]]:gprjalrnonx7 = COPY $x10
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; GISEL-NEXT:   PseudoCALLIndirect [[COPY]], csr_ilp32_lp64, implicit-def dead $x1
+  ; GISEL-NEXT:   PseudoCALLIndirect [[COPY]], csr_ilp32_lp64, implicit-def dead $x1, cfi-type 12345678
   ; GISEL-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; GISEL-NEXT:   PseudoRET
   tail call void %x() [ "kcfi"(i32 12345678) ]
