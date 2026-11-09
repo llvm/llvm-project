@@ -101,3 +101,56 @@ TEST_F(DAPSessionManagerTest, WaitForAllSessionsToDisconnect) {
 
   unregister_thread.join();
 }
+
+TEST_F(DAPSessionManagerTest, SharedDebuggerReplAcrossSessions) {
+  DAPSessionManager &manager = DAPSessionManager::GetInstance();
+  CreateDebugger();
+  manager.RegisterSession(&loop, dap.get());
+
+  lldb_private::MainLoop loop2;
+  auto [to_client2, to_server2] = TestDAPTransport::createPair(loop2);
+  auto dap2 = std::make_unique<DAP>(
+      /*log=*/*log,
+      /*default_repl_mode=*/ReplMode::Auto,
+      /*pre_init_commands=*/std::vector<protocol::String>(),
+      /*no_lldbinit=*/true,
+      /*client_name=*/"test_client_2",
+      /*transport=*/*to_client2, /*loop=*/loop2);
+
+  protocol::DAPSession session;
+  SBTarget second_target = dap->debugger.CreateTarget("");
+  ASSERT_TRUE(second_target.IsValid());
+  session.debuggerId = dap->debugger.GetID();
+  session.targetId = second_target.GetGloballyUniqueID();
+  ASSERT_THAT_ERROR(dap2->InitializeDebugger(session), llvm::Succeeded());
+
+  // Evaluate a command from the second session using the shared REPL.
+  llvm::Expected<SBCommandReturnObject> res1 = dap2->EvaluateCommand("version");
+  ASSERT_THAT_EXPECTED(res1, llvm::Succeeded());
+  EXPECT_TRUE(res1->Succeeded());
+
+  // Enter an interactive sub-IOHandler from dap2 and verify both sessions see
+  // the sub-IOHandler as active, then exit it.
+  llvm::Expected<SBCommandReturnObject> script_start =
+      dap2->EvaluateCommand("script -l python --");
+  ASSERT_THAT_EXPECTED(script_start, llvm::Succeeded());
+  EXPECT_FALSE(dap->IsCommandInterpreterActive());
+  EXPECT_FALSE(dap2->IsCommandInterpreterActive());
+
+  llvm::Expected<SBCommandReturnObject> script_exit =
+      dap2->EvaluateCommand("quit()");
+  ASSERT_THAT_EXPECTED(script_exit, llvm::Succeeded());
+  EXPECT_TRUE(dap->IsCommandInterpreterActive());
+  EXPECT_TRUE(dap2->IsCommandInterpreterActive());
+
+  // Unregister and destroy the first session while dap2 is still active; dap2
+  // should continue to be able to evaluate REPL commands without a dangling
+  // print callback or closed input pipe.
+  std::thread unregister_thread([&]() { manager.UnregisterSession(&loop); });
+  unregister_thread.join();
+  dap.reset();
+
+  llvm::Expected<SBCommandReturnObject> res2 = dap2->EvaluateCommand("version");
+  ASSERT_THAT_EXPECTED(res2, llvm::Succeeded());
+  EXPECT_TRUE(res2->Succeeded());
+}
