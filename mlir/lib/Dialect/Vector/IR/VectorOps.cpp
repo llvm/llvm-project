@@ -7152,83 +7152,75 @@ public:
 
   LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
-    auto broadcastOp =
-        shapeCastOp.getSource().getDefiningOp<vector::BroadcastOp>();
-    if (!broadcastOp)
+    auto oldBcOp = shapeCastOp.getSource().getDefiningOp<vector::BroadcastOp>();
+    if (!oldBcOp)
       return failure();
 
     // Replace Y = ShapeCast(Broadcast(X)) with Y = Broadcast(X)
     // Example
-    // %0 = vector.broadcast %in : vector<3xf32> to vector<2x4x3xf32>
-    // %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
+    // %oldBc = vector.broadcast %src : vector<3xf32> to vector<2x4x3xf32>
+    // %res = vector.shape_cast %oldBc : vector<2x4x3xf32> to vector<8x3xf32>
     // to
-    // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
-    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    // %newBc = vector.broadcast %src : vector<3xf32> to vector<8x3xf32>
+    VectorType resVectorType = shapeCastOp.getResultVectorType();
+
+    // Limit this pattern to vectors with at most one scalable dimension for
+    // now.
+    if (resVectorType.getNumScalableDims() > 1)
+      return failure();
+
+    auto srcVectorType = dyn_cast<VectorType>(oldBcOp.getSourceType());
     bool srcIsScalar = !srcVectorType;
-    VectorType dstVectorType = shapeCastOp.getResultVectorType();
 
     if (!srcIsScalar) {
-      if (isBroadcastableTo(srcVectorType, dstVectorType) !=
+      if (isBroadcastableTo(srcVectorType, resVectorType) !=
           BroadcastableToResult::Success) {
         return failure();
       }
       // For a fixed source shape, the result strides determine which source
       // element supplies each linear position in the broadcast result (see the
-      // `BroadcastOp` documentation for the closed-form mapping). Since
+      // `BroadcastOp` definition for the closed-form mapping). Since
       // `shape_cast` preserves the flattened 1-D (row-major) element order,
-      // folding `shape_cast(broadcast(src, bcastShape), dstShape)` into
-      // `broadcast(src, dstShape)` is valid when every non-unit source
-      // dimension has the same corresponding result stride in both `bcastShape`
-      // and `dstShape`.
-      //
-      // For scalable vectors, a dimension's runtime stride is
-      // `staticStride * (vscale ^ numTrailingScalableDims)`. Note that scalable
-      // dimensions may still move across leading or unit source dimensions
-      // (e.g. `2x[4]x4 -> [8]x4` or `2x1x[4]x3 -> 2x[2]x2x3`), as long as both
-      // the static stride product and the number of trailing scalable
-      // dimensions match at every non-unit source dimension.
-      VectorType broadcastVectorType = broadcastOp.getResultVectorType();
+      // folding into `%newBc` is valid when every non-unit `%src` dimension has
+      // the same stride (both static product and scalability) in `%oldBc` and
+      // `%res`. Note that a scalable `[1]` has runtime size `vscale` and is not
+      // a unit dimension.
+      VectorType oldBcVectorType = oldBcOp.getResultVectorType();
       int64_t srcRank = srcVectorType.getRank();
-      int64_t bcastRank = broadcastVectorType.getRank();
-      int64_t dstRank = dstVectorType.getRank();
+      int64_t oldBcRank = oldBcVectorType.getRank();
+      int64_t resRank = resVectorType.getRank();
       ArrayRef<int64_t> srcShape = srcVectorType.getShape();
-      ArrayRef<int64_t> bcastShape = broadcastVectorType.getShape();
-      ArrayRef<int64_t> dstShape = dstVectorType.getShape();
+      ArrayRef<int64_t> oldBcShape = oldBcVectorType.getShape();
+      ArrayRef<int64_t> resShape = resVectorType.getShape();
       ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
-      ArrayRef<bool> bcastScalable = broadcastVectorType.getScalableDims();
-      ArrayRef<bool> dstScalable = dstVectorType.getScalableDims();
+      ArrayRef<bool> oldBcScalable = oldBcVectorType.getScalableDims();
+      ArrayRef<bool> resScalable = resVectorType.getScalableDims();
 
       // Iterate from the innermost (trailing) dimension outward, aligning each
-      // `src` dimension with the corresponding trailing dimension of
-      // `broadcast` and `dst`.
-      int64_t bcastStride = 1, dstStride = 1;
-      int64_t bcastTrailingScalableDims = 0, dstTrailingScalableDims = 0;
+      // `%src` dimension with the corresponding trailing dimension of `%oldBc`
+      // and `%res`.
+      int64_t oldBcStride = 1, resStride = 1;
+      bool isOldBcStrideScalable = false, isResStrideScalable = false;
       for (int64_t i = 0; i < srcRank; ++i) {
         int64_t srcDim = srcRank - 1 - i;
-        int64_t bcastDim = bcastRank - 1 - i;
-        int64_t dstDim = dstRank - 1 - i;
+        int64_t oldBcDim = oldBcRank - 1 - i;
+        int64_t resDim = resRank - 1 - i;
 
-        // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
-        // not unit) always map to source coordinate 0, so their stride is
-        // irrelevant.
         bool isUnitDim = srcShape[srcDim] == 1 && !srcScalable[srcDim];
-        if (!isUnitDim &&
-            (bcastStride != dstStride ||
-             bcastTrailingScalableDims != dstTrailingScalableDims)) {
+        if (!isUnitDim && (oldBcStride != resStride ||
+                           isOldBcStrideScalable != isResStrideScalable)) {
           return failure();
         }
 
-        bcastStride *= bcastShape[bcastDim];
-        dstStride *= dstShape[dstDim];
-        if (bcastScalable[bcastDim])
-          ++bcastTrailingScalableDims;
-        if (dstScalable[dstDim])
-          ++dstTrailingScalableDims;
+        oldBcStride *= oldBcShape[oldBcDim];
+        resStride *= resShape[resDim];
+        isOldBcStrideScalable |= oldBcScalable[oldBcDim];
+        isResStrideScalable |= resScalable[resDim];
       }
     }
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shapeCastOp, dstVectorType,
-                                                     broadcastOp.getSource());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shapeCastOp, resVectorType,
+                                                     oldBcOp.getSource());
     return success();
   }
 };

@@ -128,6 +128,8 @@ func.func @extract_from_broadcast(%src: vector<1x1x1xf32>) -> vector<1xf32> {
   return %1: vector<1xf32>
 }
 
+// -----
+
 // **--------------------------------------------------------** //
 //     ShapeCastBroadcastFolder
 // **--------------------------------------------------------** //
@@ -274,6 +276,18 @@ func.func @no_fold_bcast_scalable_unit_dim_axis_shift(%arg0: vector<1x[1]x1xf32>
   %0 = vector.broadcast %arg0 : vector<1x[1]x1xf32> to vector<1x[1]x4xf32>
   %1 = vector.shape_cast %0 : vector<1x[1]x4xf32> to vector<4x[1]x1xf32>
   return %1 : vector<4x[1]x1xf32>
+}
+
+// -----
+
+// Vectors with multiple scalable dimensions are not supported yet.
+// CHECK-LABEL: @no_fold_bcast_multiple_scalable_dims
+// CHECK:         vector.broadcast %{{.*}} : vector<[4]x[4]xf32> to vector<2x4x[4]x[4]xf32>
+// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<2x4x[4]x[4]xf32> to vector<8x[4]x[4]xf32>
+func.func @no_fold_bcast_multiple_scalable_dims(%arg0: vector<[4]x[4]xf32>) -> vector<8x[4]x[4]xf32> {
+  %0 = vector.broadcast %arg0 : vector<[4]x[4]xf32> to vector<2x4x[4]x[4]xf32>
+  %1 = vector.shape_cast %0 : vector<2x4x[4]x[4]xf32> to vector<8x[4]x[4]xf32>
+  return %1 : vector<8x[4]x[4]xf32>
 }
 
 // -----
