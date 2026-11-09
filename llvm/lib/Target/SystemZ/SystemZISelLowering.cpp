@@ -1579,6 +1579,14 @@ bool SystemZTargetLowering::isTruncateFree(EVT FromVT, EVT ToVT) const {
   return FromBits > ToBits;
 }
 
+bool SystemZTargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
+  unsigned Opc = N->getOpcode();
+  if ((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) && VT.isVector() &&
+      VT.getScalarSizeInBits() < N->getValueType(0).getScalarSizeInBits())
+    return false;
+  return TargetLowering::isTypeDesirableForOp(N, VT);
+}
+
 //===----------------------------------------------------------------------===//
 // Inline asm support
 //===----------------------------------------------------------------------===//
