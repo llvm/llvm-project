@@ -551,11 +551,24 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   VPBlockUtils::insertTwoBlocksAfter(Pred, Exiting, Entry);
   VPBlockUtils::connectBlocks(Pred, Exiting);
 
-  if (!PredRecipe->user_empty()) {
-    auto *PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
-                                              RecipeWithoutMask->getDebugLoc());
+  PredRecipe->replaceAllUsesWith(RecipeWithoutMask);
+  // Move the extracts of a struct result into the region, so only scalars
+  // leave it.
+  SmallVector<VPUser *> Defs = {RecipeWithoutMask};
+  if (RecipeWithoutMask->getScalarType()->isStructTy())
+    Defs = to_vector(RecipeWithoutMask->users());
+  for (VPUser *U : Defs) {
+    auto *Def = cast<VPReplicateRecipe>(U);
+    assert((Def == RecipeWithoutMask ||
+            Def->getOpcode() == Instruction::ExtractValue) &&
+           "only extracts can use a predicated struct");
+    Def->moveBefore(*Pred, Pred->end());
+    if (Def->user_empty())
+      continue;
+    auto *PHIRecipe = new VPPredInstPHIRecipe(Def, Def->getDebugLoc());
     Exiting->appendRecipe(PHIRecipe);
-    PredRecipe->replaceAllUsesWith(PHIRecipe);
+    Def->replaceAllUsesWith(PHIRecipe);
+    PHIRecipe->setOperand(0, Def);
   }
   PredRecipe->eraseFromParent();
   return Region;
@@ -906,8 +919,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         continue;
 
       // TODO: Support scalarizing ExtractValue.
-      if (match(Def,
-                m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
+      if (isa<ExtractValueInst>(Def->getUnderlyingInstr()))
         continue;
 
       auto *Clone = VPBuilder::createSingleScalarOp(
@@ -5502,7 +5514,7 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
       vp_depth_first_shallow(Plan.getEntry()));
   auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
       vp_depth_first_shallow(LoopRegion->getEntry()));
-  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
+  // Materialize BuildVector for all replicating VPReplicateRecipes,
   // VPScalarIVStepsRecipe and VPInstructions, excluding ones in replicate
   // regions. Those are not materialized explicitly yet.
   // TODO: materialize build vectors for replicating recipes in replicating
@@ -5525,11 +5537,7 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
           none_of(DefR->users(), UsesVectorOrInsideReplicateRegion))
         continue;
 
-      Type *ScalarTy = DefR->getScalarType();
-      unsigned Opcode = ScalarTy->isStructTy()
-                            ? VPInstruction::BuildStructVector
-                            : VPInstruction::BuildVector;
-      auto *BuildVector = new VPInstruction(Opcode, {DefR});
+      auto *BuildVector = new VPInstruction(VPInstruction::BuildVector, {DefR});
       BuildVector->insertAfter(DefR);
 
       DefR->replaceUsesWithIf(
@@ -7517,6 +7525,11 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
 
       // If executing other lanes produces side-effects we can't avoid them.
       if (VPI->mayHaveSideEffects())
+        continue;
+
+      // ExtractValue takes the shape of its aggregate, decided in
+      // tryToCreateWidenNonPhiRecipe.
+      if (VPI->getOpcode() == Instruction::ExtractValue)
         continue;
 
       // We want to drop the mask operand, verify we can safely do that.
