@@ -545,6 +545,11 @@ void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TT.isOSBinFormatELF())
     emitAttributes();
 
+  // Emit @feat.00, as x86 and AArch64 do. Without it the linker ignores the
+  // object's /guard:cf tables.
+  if (TT.isOSBinFormatCOFF())
+    emitCOFFFeatureSymbol(M);
+
   // Use the triple's architecture and subarchitecture to determine
   // if we're thumb for the purposes of the top level code16 state.
   if (!M.getModuleInlineAsm().empty() && TT.isThumb())
