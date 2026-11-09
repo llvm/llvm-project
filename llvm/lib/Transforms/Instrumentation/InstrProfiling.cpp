@@ -1161,15 +1161,16 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   // Optimizations can merge the counter update with a user access, and then
   // ThreadSanitizer ends up instrumenting the counter access - and can report
   // it as a data race. Making updates atomic cures this.
-  bool TSanInstrumented = CoverInstruction->getFunction()->hasFnAttribute(
-      Attribute::SanitizeThread);
+  Function *F = CoverInstruction->getFunction();
+  bool MakeAtomic =
+      F->hasFnAttribute(Attribute::SanitizeThread) && isAtomic(*F);
   if (Opts.conditional_counter_update) {
     Instruction *SplitBefore = CoverInstruction->getNextNode();
     auto &Ctx = CoverInstruction->getParent()->getContext();
     auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
     auto *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
     Load->setNoSanitizeMetadata();
-    if (TSanInstrumented)
+    if (MakeAtomic)
       Load->setAtomic(AtomicOrdering::Monotonic);
     Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
     Instruction *ThenBranch =
@@ -1180,7 +1181,7 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   // We store zero to represent that this block is covered.
   auto *Store = Builder.CreateStore(Builder.getInt8(0), Addr);
   Store->setNoSanitizeMetadata();
-  if (TSanInstrumented)
+  if (MakeAtomic)
     Store->setAtomic(AtomicOrdering::Monotonic);
   CoverInstruction->eraseFromParent();
 }

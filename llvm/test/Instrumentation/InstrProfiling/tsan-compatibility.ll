@@ -5,7 +5,8 @@
 ; RUN: opt < %s -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,NOCOND
 ; RUN: opt < %s -passes=instrprof -conditional-counter-update -S | FileCheck %s --check-prefixes=CHECK,COND
 ; RUN: opt < %s -passes=instrprof -do-counter-promotion -S | FileCheck %s --check-prefix=PROMO
-; RUN: opt < %s -passes=instrprof -instrprof-atomic-counter-update-all=false -S | FileCheck %s --check-prefix=SINGLE
+; RUN: opt < %s -passes=instrprof -instrprof-atomic-counter-update-all=false -S | FileCheck %s --check-prefixes=SINGLE,SINGLE-NOCOND
+; RUN: opt < %s -passes=instrprof -conditional-counter-update -instrprof-atomic-counter-update-all=false -S | FileCheck %s --check-prefixes=SINGLE,SINGLE-COND
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -133,6 +134,14 @@ define dso_local void @mcdc_tsan(i32 noundef %A) sanitize_thread {
 ; CHECK-NEXT:    atomicrmw or ptr %[[ADDR]], i8 %[[SHIFTED]] monotonic, align 1, !nosanitize
 ;
 ; SINGLE-LABEL: define dso_local void @mcdc_tsan(
+; SINGLE-NOCOND:  store i8 0, ptr @__profc_mcdc_tsan, align 1, !nosanitize
+; SINGLE-COND:    %pgocount = load i8, ptr @__profc_mcdc_tsan, align 1, !nosanitize
+; SINGLE-COND-NEXT: %pgocount.ifnonzero = icmp ne i8 %pgocount, 0
+; SINGLE-COND-NEXT: br i1 %pgocount.ifnonzero, label %[[COVER:.+]], label %[[CONT:.+]]
+; SINGLE-COND:  [[COVER]]:
+; SINGLE-COND-NEXT: store i8 0, ptr @__profc_mcdc_tsan, align 1, !nosanitize
+; SINGLE-COND-NEXT: br label %[[CONT]]
+; SINGLE-COND:  [[CONT]]:
 ; SINGLE:         %[[ADDR:.+]] = getelementptr inbounds i8, ptr @__profbm_mcdc_tsan, i64 %{{.+}}
 ; SINGLE:         %[[SHIFTED:.+]] = shl i8 1, %{{.+}}
 ; SINGLE-NEXT:    %[[BITS:.+]] = load i8, ptr %[[ADDR]], align 1, !nosanitize
