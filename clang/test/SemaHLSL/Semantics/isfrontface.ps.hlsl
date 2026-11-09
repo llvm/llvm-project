@@ -1,44 +1,33 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -verify -o - %s
-// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -fsyntax-only -verify %s
 
-// DXC accepts a bool or a 32-bit integer, signed or unsigned. The SPIR-V
+// Valid type, index and interpolation uses of SV_IsFrontFace. The invalid
+// cases are covered by isfrontface.ps.errors.hlsl, and the shader stage and IO
+// direction by isfrontface.stages.hlsl.
+
+// expected-no-diagnostics
+
+// A bool or a 32-bit integer, signed or unsigned, is accepted. The SPIR-V
 // FrontFacing variable is always bool, and CodeGen converts it to the declared
 // type.
 [shader("pixel")]
-float4 ok_uint(uint ff : SV_IsFrontFace) : SV_Target {
-  return ff ? float4(1, 0, 0, 1) : float4(0, 0, 1, 1);
-}
-
+void valid_bool(bool s : SV_IsFrontFace) {}
 [shader("pixel")]
-float4 ok_int(int ff : SV_IsFrontFace) : SV_Target {
-  return ff ? float4(1, 0, 0, 1) : float4(0, 0, 1, 1);
-}
-
+void valid_uint(uint s : SV_IsFrontFace) {}
 [shader("pixel")]
-float4 bad_uint64(uint64_t ff : SV_IsFrontFace) : SV_Target {
-// expected-error@-1 {{semantic 'SV_IsFrontFace' must be a scalar of bool or 32 bit integer type (was 'uint64_t' (aka 'unsigned long'))}}
-  return ff ? float4(1, 0, 0, 1) : float4(0, 0, 1, 1);
-}
-
+void valid_int(int s : SV_IsFrontFace) {}
+// The semantic name is case insensitive, and index 0 is the same as no index.
 [shader("pixel")]
-float4 bad_float(float ff : SV_IsFrontFace) : SV_Target {
-// expected-error@-1 {{semantic 'SV_IsFrontFace' must be a scalar of bool or 32 bit integer type (was 'float')}}
-  return (ff.x > 0.f) ? float4(1, 0, 0, 1) : float4(0, 0, 1, 1);
-}
-
+void valid_lowercase(bool s : sv_isfrontface) {}
 [shader("pixel")]
-float4 bad_vec(bool3 ff : SV_IsFrontFace) : SV_Target {
-// expected-error@-1 {{semantic 'SV_IsFrontFace' must be a scalar of bool or 32 bit integer type (was 'bool3' (aka 'vector<bool, 3>'))}}
-  return ff.x ? float4(1, 0, 0, 1) : float4(0, 0, 1, 1);
-}
-
+void valid_index(bool s : SV_IsFrontFace0) {}
 [shader("pixel")]
-float4 bad_index(bool ff : SV_IsFrontFace1) : SV_Target {
-// expected-error@-1 {{semantic 'SV_IsFrontFace' does not allow indexing}}
-  return ff ? float4(1, 0, 0, 1) : float4(0, 0, 1, 1);
-}
-
+void valid_flat_bool(nointerpolation bool s : SV_IsFrontFace) {}
 [shader("pixel")]
-float4 ok(bool ff : SV_IsFrontFace) : SV_Target {
-  return ff ? float4(1, 0, 0, 1) : float4(0, 0, 1, 1);
-}
+void valid_flat_uint(nointerpolation uint s : SV_IsFrontFace) {}
+
+struct Input {
+  bool s : SV_IsFrontFace;
+};
+[shader("pixel")]
+void valid_struct(Input i) {}
