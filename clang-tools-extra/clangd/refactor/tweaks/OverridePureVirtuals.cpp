@@ -77,16 +77,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "refactor/Tweak.h"
-#include "support/Token.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <string>
 
@@ -231,10 +235,17 @@ void OverridePureVirtuals::collectMissingPureVirtuals() {
   }
 }
 
-std::string generateOverrideString(const clang::CXXRecordDecl *CurrentDeclDef,
+std::string generateOverrideString(const CXXRecordDecl *CurrentDeclDef,
                                    const CXXMethodDecl *Method) {
+  // Parts of this function mirror DeclPrinter::VisitFunctionDecl in
+  // (clang/lib/AST/DeclPrinter.cpp). We can't simply use DeclPrinter, because
+  // Policy.FullyQualifiedName qualifies the types and the method name together,
+  // and the name of the override has to stay unqualified.
+
   std::string MethodDecl;
   auto OS = llvm::raw_string_ostream(MethodDecl);
+  std::string Pragmas;
+  auto POS = llvm::raw_string_ostream(Pragmas);
 
   // Create policy that prints all nested name specifiers that do not enclose
   // the class to be modified.
@@ -260,6 +271,27 @@ std::string generateOverrideString(const clang::CXXRecordDecl *CurrentDeclDef,
   QualType Ty = Method->getType();
   const FunctionProtoType *FT = Ty->getAs<FunctionProtoType>();
 
+  // Attribute specifiers
+  if (Method->hasAttrs()) {
+    for (const Attr *A : Method->attrs()) {
+      // Pragmas will be printed above the function header. All other attributes
+      // are printed at the beginning of the header.
+      if (A->getSyntax() == AttributeCommonInfo::AS_Pragma) {
+        A->printPretty(POS, PP);
+        continue;
+      }
+
+      // Keyword attributes are not copied: `override` is added explicitly below,
+      // `final` is intentionally not carried over, and an asm label has to follow
+      // the declarator, so it can't be placed in front like the other attributes.
+      if (A->isInherited() || A->isImplicit() || A->isKeywordAttribute())
+        continue;
+
+      A->printPretty(OS, PP);
+      OS << " ";
+    }
+  }
+
   // Relevant specifiers
   if (Method->isInlineSpecified())
     OS << "inline ";
@@ -269,11 +301,41 @@ std::string generateOverrideString(const clang::CXXRecordDecl *CurrentDeclDef,
     OS << "consteval ";
 
   // Return type
-  if (FT->hasTrailingReturn())
-    OS << "auto ";
-  else {
-    FT->getReturnType().print(OS, PP);
-    OS << " ";
+  bool HasReturnType = !isa<CXXConversionDecl>(Method);
+
+  if (HasReturnType) {
+    if (FT->hasTrailingReturn())
+      OS << "auto ";
+    else {
+      FT->getReturnType().print(OS, PP);
+      OS << " ";
+    }
+  }
+
+  // Calling convention
+  CallingConv CC = FT->getCallConv();
+  // An override must have the same convention as the method it overrides,
+  // otherwise Clang rejects it ("different calling convention attributes").
+  // Only conventions that are spelled as a plain attribute name are handled.
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86FastCall:
+  case CC_X86ThisCall:
+  case CC_X86VectorCall:
+  case CC_X86RegCall:
+  case CC_Win64:
+  case CC_X86_64SysV:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+  case CC_PreserveNone:
+    OS << "__attribute__((" << FunctionType::getNameForCallConv(CC) << ")) ";
+    break;
+  default:
+    // Not copied: CC_C is the default and printing it would only add noise
+    // (or an ignored-attribute warning on some targets), some conventions are
+    // unlikely to occur on C++ methods, and some (e.g. pcs("..."),
+    // riscv_vls_cc(N)) need an argument that we do not print.
+    break;
   }
 
   // Unqualified method name
@@ -281,10 +343,15 @@ std::string generateOverrideString(const clang::CXXRecordDecl *CurrentDeclDef,
 
   // Parameter list
   OS << "(";
-  for (unsigned i = 0; i < Method->getNumParams(); ++i) {
-    if (i > 0)
+  llvm::ListSeparator LS;
+  for (unsigned I = 0, E = Method->getNumParams(); I < E; ++I) {
+    OS << LS;
+    Method->getParamDecl(I)->print(OS, PP);
+  }
+  if (FT->isVariadic()) {
+    if (Method->getNumParams())
       OS << ", ";
-    Method->getParamDecl(i)->print(OS, PP);
+    OS << "...";
   }
   OS << ")";
 
@@ -307,27 +374,45 @@ std::string generateOverrideString(const clang::CXXRecordDecl *CurrentDeclDef,
   }
 
   // Exception specifier
-  if (isNoexceptExceptionSpec(FT->getExceptionSpecType()))
+  if (FT->hasDynamicExceptionSpec()) {
+    OS << " throw(";
+    if (FT->getExceptionSpecType() == EST_MSAny)
+      OS << "...";
+    else {
+      llvm::ListSeparator LS;
+      for (unsigned I = 0, N = FT->getNumExceptions(); I != N; ++I) {
+        OS << LS;
+        OS << FT->getExceptionType(I).getAsString(PP);
+      }
+    }
+    OS << ")";
+  } else if (isNoexceptExceptionSpec(FT->getExceptionSpecType())) {
     OS << " noexcept";
+    if (isComputedNoexcept(FT->getExceptionSpecType())) {
+      OS << "(";
+      FT->getNoexceptExpr()->printPretty(OS, nullptr, PP);
+      OS << ")";
+    }
+  }
 
   // Trailing return type
-  if (FT->hasTrailingReturn()) {
+  if (HasReturnType && FT->hasTrailingReturn()) {
     OS << " -> ";
     FT->getReturnType().print(OS, PP);
   }
 
   return llvm::formatv(
-             "\n  {0} override {{\n"
+             "\n{0}  {1} override {{\n"
              "    // TODO: Implement this pure virtual method.\n"
-             "    static_assert(false, \"Method `{1}` is not implemented.\");\n"
+             "    static_assert(false, \"Method `{2}` is not implemented.\");\n"
              "  }",
-             MethodDecl, Method->getNameAsString())
+             Pragmas, MethodDecl, Method->getNameAsString())
       .str();
 }
 
 // Free function to generate the string for a group of method overrides.
 std::string generateOverridesStringForGroup(
-    const clang::CXXRecordDecl *CurrentDeclDef,
+    const CXXRecordDecl *CurrentDeclDef,
     llvm::SmallVector<const CXXMethodDecl *> Methods) {
   llvm::SmallVector<std::string> MethodsString;
   MethodsString.reserve(Methods.size());

@@ -715,6 +715,77 @@ public:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
+TEST_F(OverridePureVirtualsTests, VariadicMethods) {
+  constexpr auto Before = R"cpp(
+class Base {
+public:
+  virtual void foo(int, ...) = 0;
+};
+
+class De^riv : Base {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class Base {
+public:
+  virtual void foo(int, ...) = 0;
+};
+
+class Deriv : Base {
+public:
+  void foo(int, ...) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, ExceptionSpecifiers) {
+  constexpr auto Before = R"cpp(
+class Base {
+public:
+  virtual void f1() noexcept = 0;
+  virtual void f2() noexcept(sizeof(int) > 2) = 0;
+  virtual void f3() throw() = 0;
+};
+
+class De^riv : Base {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+class Base {
+public:
+  virtual void f1() noexcept = 0;
+  virtual void f2() noexcept(sizeof(int) > 2) = 0;
+  virtual void f3() throw() = 0;
+};
+
+class Deriv : Base {
+public:
+  void f1() noexcept override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f1` is not implemented.");
+  }
+
+  void f2() noexcept(sizeof(int) > 2) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f2` is not implemented.");
+  }
+
+  void f3() throw() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f3` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+
 TEST_F(OverridePureVirtualsTests, QualifiedNames) {
   constexpr auto Before = R"cpp(
 namespace foo { struct S{}; namespace bar { struct S2{}; } }
@@ -875,6 +946,7 @@ public:
   virtual bool operator==(const B &o) const = 0;
   virtual B* operator->() const = 0;
   virtual B & operator*() = 0;
+  virtual operator bool() const = 0;
 };
 
 class ^D : public B {};
@@ -898,6 +970,7 @@ public:
   virtual bool operator==(const B &o) const = 0;
   virtual B* operator->() const = 0;
   virtual B & operator*() = 0;
+  virtual operator bool() const = 0;
 };
 
 class D : public B {
@@ -970,6 +1043,92 @@ public:
   B & operator*() override {
     // TODO: Implement this pure virtual method.
     static_assert(false, "Method `operator*` is not implemented.");
+  }
+
+  operator bool() const override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `operator bool` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
+TEST_F(OverridePureVirtualsTests, Attributes) {
+  ExtraArgs = {"-fopenmp", "--target=x86_64-unknown-linux-gnu"};
+  constexpr auto Before = R"cpp(
+struct Base {
+  virtual int f0() = 0;
+  [ [gnu::hot] ] [ [gnu::const] ] [ [nodiscard] ] virtual int f1() = 0;
+  [ [gnu::const, gnu::hot, nodiscard] ] virtual int f2() = 0;
+  __attribute__((annotate("foo"))) __attribute__((cold)) virtual int f3() = 0;
+#pragma omp declare simd
+  [ [nodiscard] ] virtual int f4() = 0;
+  virtual int __attribute__((ms_abi)) f5() = 0;
+  virtual int f6() asm("sym") = 0;
+  virtual int f7([ [maybe_unused] ] int x) = 0;
+};
+
+struct De^riv : Base {
+};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+struct Base {
+  virtual int f0() = 0;
+  [ [gnu::hot] ] [ [gnu::const] ] [ [nodiscard] ] virtual int f1() = 0;
+  [ [gnu::const, gnu::hot, nodiscard] ] virtual int f2() = 0;
+  __attribute__((annotate("foo"))) __attribute__((cold)) virtual int f3() = 0;
+#pragma omp declare simd
+  [ [nodiscard] ] virtual int f4() = 0;
+  virtual int __attribute__((ms_abi)) f5() = 0;
+  virtual int f6() asm("sym") = 0;
+  virtual int f7([ [maybe_unused] ] int x) = 0;
+};
+
+struct Deriv : Base {
+
+public:
+  int f0() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f0` is not implemented.");
+  }
+
+  [[gnu::hot]] [[gnu::const]] [[nodiscard("")]] int f1() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f1` is not implemented.");
+  }
+
+  [[gnu::const]] [[gnu::hot]] [[nodiscard("")]] int f2() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f2` is not implemented.");
+  }
+
+  __attribute__((annotate("foo"))) __attribute__((cold)) int f3() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f3` is not implemented.");
+  }
+
+#pragma omp declare simd
+  [[nodiscard("")]] int f4() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f4` is not implemented.");
+  }
+
+  int __attribute__((ms_abi)) f5() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f5` is not implemented.");
+  }
+
+  int f6() override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f6` is not implemented.");
+  }
+
+  int f7([[maybe_unused]] int x) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `f7` is not implemented.");
   }
 };
 )cpp";

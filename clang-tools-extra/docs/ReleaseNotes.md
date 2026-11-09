@@ -102,6 +102,10 @@ infrastructure are described first, followed by tool-specific sections.
   value when possible, and otherwise via a pointer parameter, since C has
   no references.
 
+- The `Override pure virtuals` tweak now prints the nested name specifiers for
+  parameter and return types that don't enclose the derived class, and keeps the
+  calling convention of the overridden method.
+
 #### Signature help
 
 - Parameters declared with a `decltype` are now displayed as the type the
