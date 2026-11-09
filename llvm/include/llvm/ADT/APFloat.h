@@ -300,37 +300,55 @@ private:
   friend class APFloat;
 
 public:
-  static const fltSemantics &IEEEhalf() { return semIEEEhalf; }
-  static const fltSemantics &BFloat() { return semBFloat; }
-  static const fltSemantics &IEEEsingle() { return semIEEEsingle; }
-  static const fltSemantics &IEEEdouble() { return semIEEEdouble; }
-  static const fltSemantics &IEEEquad() { return semIEEEquad; }
-  static const fltSemantics &x87DoubleExtended() {
+  static constexpr const fltSemantics &IEEEhalf() { return semIEEEhalf; }
+  static constexpr const fltSemantics &BFloat() { return semBFloat; }
+  static constexpr const fltSemantics &IEEEsingle() { return semIEEEsingle; }
+  static constexpr const fltSemantics &IEEEdouble() { return semIEEEdouble; }
+  static constexpr const fltSemantics &IEEEquad() { return semIEEEquad; }
+  static constexpr const fltSemantics &x87DoubleExtended() {
     return semX87DoubleExtended;
   }
-  static const fltSemantics &PPCDoubleDouble() { return semPPCDoubleDouble; }
-  static const fltSemantics &PPCDoubleDoubleLegacy() {
+  static constexpr const fltSemantics &PPCDoubleDouble() {
+    return semPPCDoubleDouble;
+  }
+  static constexpr const fltSemantics &PPCDoubleDoubleLegacy() {
     return semPPCDoubleDoubleLegacy;
   }
-  static const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
-  static const fltSemantics &Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
-  static const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
-  static const fltSemantics &Float8E4M3FN() { return semFloat8E4M3FN; }
-  static const fltSemantics &Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
-  static const fltSemantics &Float8E4M3B11FNUZ() {
+  static constexpr const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
+  static constexpr const fltSemantics &Float8E5M2FNUZ() {
+    return semFloat8E5M2FNUZ;
+  }
+  static constexpr const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
+  static constexpr const fltSemantics &Float8E4M3FN() {
+    return semFloat8E4M3FN;
+  }
+  static constexpr const fltSemantics &Float8E4M3FNUZ() {
+    return semFloat8E4M3FNUZ;
+  }
+  static constexpr const fltSemantics &Float8E4M3B11FNUZ() {
     return semFloat8E4M3B11FNUZ;
   }
-  static const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
-  static const fltSemantics &FloatTF32() { return semFloatTF32; }
-  static const fltSemantics &Float8E8M0FNU() { return semFloat8E8M0FNU; }
-  static const fltSemantics &Float8E5M3FNU() { return semFloat8E5M3FNU; }
-  static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
-  static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
-  static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
+  static constexpr const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
+  static constexpr const fltSemantics &FloatTF32() { return semFloatTF32; }
+  static constexpr const fltSemantics &Float8E8M0FNU() {
+    return semFloat8E8M0FNU;
+  }
+  static constexpr const fltSemantics &Float8E5M3FNU() {
+    return semFloat8E5M3FNU;
+  }
+  static constexpr const fltSemantics &Float6E3M2FN() {
+    return semFloat6E3M2FN;
+  }
+  static constexpr const fltSemantics &Float6E2M3FN() {
+    return semFloat6E2M3FN;
+  }
+  static constexpr const fltSemantics &Float4E2M1FN() {
+    return semFloat4E2M1FN;
+  }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  static const fltSemantics &Bogus() { return semBogus; }
+  static constexpr const fltSemantics &Bogus() { return semBogus; }
 
   // Returns true if any number described by this semantics can be precisely
   // represented by the specified semantics. Does not take into account
