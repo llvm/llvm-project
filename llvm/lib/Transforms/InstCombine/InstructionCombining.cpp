@@ -1379,6 +1379,17 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
   return true;
 }
 
+/// Distribute a binop over a select:
+///   (Cond ? TVal : FVal) op Other --> Cond ? (TVal op Other) : (FVal op Other)
+/// (or with the operands swapped if \p SelIsLHS is false). \p Other is the
+/// non-distributed operand. If it is itself a select,
+///   Other = OtherCond ? OtherT : OtherF
+/// and Cond implies OtherCond (or its negation), then Other is first replaced
+/// by the arm it must take when Cond is true / false:
+///   Cond ? (TVal op OtherT') : (FVal op OtherF')
+/// where OtherT'/OtherF' are the resolved values of Other under Cond / !Cond.
+/// \p True and \p False return the simplified arms, or null if an arm did not
+/// simplify.
 static void distributeBinOpOverSelect(InstCombinerImpl &IC,
                                       Instruction::BinaryOps Opcode,
                                       SelectInst *Sel, Value *Other,
@@ -1403,10 +1414,13 @@ static void distributeBinOpOverSelect(InstCombinerImpl &IC,
   Value *TVal = Sel->getTrueValue(), *FVal = Sel->getFalseValue();
   Value *OtherT = SimplifySelectWithImpliedCond(Other, Cond, true);
   Value *OtherF = SimplifySelectWithImpliedCond(Other, Cond, false);
-  auto [LHSTrueArm, RHSTrueArm] =
-      SelIsLHS ? std::pair(TVal, OtherT) : std::pair(OtherT, TVal);
-  auto [LHSFalseArm, RHSFalseArm] =
-      SelIsLHS ? std::pair(FVal, OtherF) : std::pair(OtherF, FVal);
+  Value *LHSTrueArm = TVal, *RHSTrueArm = OtherT;
+  Value *LHSFalseArm = FVal, *RHSFalseArm = OtherF;
+  if (!SelIsLHS) {
+    std::swap(LHSTrueArm, RHSTrueArm);
+    std::swap(LHSFalseArm, RHSFalseArm);
+  }
+
   True = simplifyBinOp(Opcode, LHSTrueArm, RHSTrueArm, FMF, SQ);
   False = simplifyBinOp(Opcode, LHSFalseArm, RHSFalseArm, FMF, SQ);
 
@@ -1483,6 +1497,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       if (Value *NewSel = foldAddNegate(B, C, RHS))
         return NewSel;
     }
+    // If distributing over the LHS select was not possible, or did not fold,
+    // try the RHS select.
     if ((!True || !False) && RHSIsSelect && RHS->hasOneUse()) {
       SI = cast<SelectInst>(RHS);
       Cond = D;
