@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  if __has_builtin(__builtin_invoke)
 
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<_Args...> invoke(_Args&&... __args)
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __direct_invoke_result_t<_Args...> invoke(_Args&&... __args)
     _NOEXCEPT_(noexcept(__builtin_invoke(static_cast<_Args&&>(__args)...))) {
   return __builtin_invoke(static_cast<_Args&&>(__args)...);
 }

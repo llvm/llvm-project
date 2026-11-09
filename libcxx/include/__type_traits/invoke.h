@@ -65,7 +65,7 @@
 // struct __invoke_result : invoke_result {};
 //
 // template <class Func, class... Args>
-// using __invoke_result_t = invoke_result_t<Func, Args...>;
+// using __direct_invoke_result_t = invoke_result_t<Func, Args...>;
 //
 // template <class Ret, class Func, class... Args>
 // struct __is_invocable_r : is_invocable_r<Ret, Func, Args...> {};
@@ -78,12 +78,12 @@ template <class, class... _Args>
 struct __invoke_result_impl {};
 
 template <class... _Args>
-using __invoke_result_t _LIBCPP_NODEBUG =
+using __direct_invoke_result_t _LIBCPP_NODEBUG =
     decltype(__builtin_invoke(reinterpret_cast<_Args&&>(static_cast<int&&>(0))...));
 
 template <class... _Args>
-struct __invoke_result_impl<__void_t<__invoke_result_t<_Args...> >, _Args...> {
-  using type _LIBCPP_NODEBUG = __invoke_result_t<_Args...>;
+struct __invoke_result_impl<__void_t<__direct_invoke_result_t<_Args...> >, _Args...> {
+  using type _LIBCPP_NODEBUG = __direct_invoke_result_t<_Args...>;
 };
 
 template <class... _Args>
@@ -93,7 +93,7 @@ template <class _Void, class... _Args>
 inline const bool __is_invocable_impl = false;
 
 template <class... _Args>
-inline const bool __is_invocable_impl<__void_t<__invoke_result_t<_Args...> >, _Args...> = true;
+inline const bool __is_invocable_impl<__void_t<__direct_invoke_result_t<_Args...> >, _Args...> = true;
 
 template <class... _Args>
 inline const bool __is_invocable_v = __is_invocable_impl<void, _Args...>;
@@ -106,7 +106,7 @@ inline const bool __is_invocable_r_impl = false;
 
 template <class _Ret, class... _Args>
 inline const bool __is_invocable_r_impl<_Ret, true, _Args...> =
-    __is_core_convertible<__invoke_result_t<_Args...>, _Ret>::value || is_void<_Ret>::value;
+    __is_core_convertible<__direct_invoke_result_t<_Args...>, _Ret>::value || is_void<_Ret>::value;
 
 template <class _Ret, class... _Args>
 _LIBCPP_NO_SPECIALIZATIONS inline const bool __is_invocable_r_v =
@@ -131,14 +131,14 @@ inline const bool __is_nothrow_invocable_r_impl = false;
 
 template <class _Ret, class... _Args>
 inline const bool __is_nothrow_invocable_r_impl<true, _Ret, _Args...> =
-    __is_nothrow_core_convertible_v<__invoke_result_t<_Args...>, _Ret> || is_void<_Ret>::value;
+    __is_nothrow_core_convertible_v<__direct_invoke_result_t<_Args...>, _Ret> || is_void<_Ret>::value;
 
 template <class _Ret, class... _Args>
 inline const bool __is_nothrow_invocable_r_v =
     __is_nothrow_invocable_r_impl<__is_nothrow_invocable_v<_Args...>, _Ret, _Args...>;
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __invoke_result_t<_Args...> __invoke(_Args&&... __args)
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __direct_invoke_result_t<_Args...> __invoke(_Args&&... __args)
     _NOEXCEPT_(__is_nothrow_invocable_v<_Args...>) {
   return __builtin_invoke(static_cast<_Args&&>(__args)...);
 }
@@ -352,7 +352,7 @@ struct __invoke_result
     : enable_if<__is_invocable_v<_Func, _Args...>, typename __invokable_r<void, _Func, _Args...>::_Result> {};
 
 template <class _Func, class... _Args>
-using __invoke_result_t _LIBCPP_NODEBUG = typename __invoke_result<_Func, _Args...>::type;
+using __direct_invoke_result_t _LIBCPP_NODEBUG = typename __invoke_result<_Func, _Args...>::type;
 
 template <class _Ret, class _Func, class... _Args>
 struct __is_invocable_r : integral_constant<bool, __is_invocable_r_v<_Ret, _Func, _Args...> > {};
