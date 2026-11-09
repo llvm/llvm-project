@@ -490,7 +490,7 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
 
   let methods = [
     InterfaceMethod<
-      "Get the MemRef layout as an AffineMap, the method must not return NULL",
+      "Get the MemRef layout as an AffineMap, returns NULL if cannot be expressed as affine map",
       "::mlir::AffineMap", "getAffineMap", (ins)
     >,
 
@@ -499,7 +499,8 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
       "bool", "isIdentity", (ins),
       [{}],
       [{
-        return $_attr.getAffineMap().isIdentity();
+        AffineMap map = $_attr.getAffineMap();
+        return map && $_attr.getAffineMap().isIdentity();
       }]
     >,
 
