@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
+// C++-specific cases (lambdas, references, templates) are in critical.cpp.
+
 void work(void);
 void work2(void);
 
