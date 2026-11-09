@@ -1220,8 +1220,8 @@ static std::optional<SmallVector<int64_t>> get2DBlockIOInstDataLayout(
 
 /// Picks the subgroup layout for a 2D block IO op (store_nd / prefetch_nd).
 /// Every supported block (height, width) dividing the shape is tried, largest
-/// area first (ties: wider first), until one admits a subgroup layout. The
-/// first candidate is the one get2DBlockIOInstDataLayout would pick.
+/// area first and the more square block first among equal areas, until one
+/// admits a subgroup layout.
 static xegpu::DistributeLayoutAttr get2DBlockIOSubgroupLayout(
     MLIRContext *context, ArrayRef<int64_t> dataShape, Type elemTy,
     const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
@@ -1246,14 +1246,18 @@ static xegpu::DistributeLayoutAttr get2DBlockIOSubgroupLayout(
       instDataCandidates.push_back(std::move(instData));
     }
   }
-  llvm::stable_sort(instDataCandidates,
-                    [&](ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs) {
-                      int64_t areaLhs = lhs[rank - 2] * lhs[rank - 1];
-                      int64_t areaRhs = rhs[rank - 2] * rhs[rank - 1];
-                      if (areaLhs != areaRhs)
-                        return areaLhs > areaRhs;
-                      return lhs[rank - 1] > rhs[rank - 1];
-                    });
+  // Largest area first; among equal areas, the more square block first (e.g.
+  // 16x16 before 8x32 before 4x64), then the wider one.
+  llvm::stable_sort(instDataCandidates, [&](ArrayRef<int64_t> lhs,
+                                            ArrayRef<int64_t> rhs) {
+    int64_t hL = lhs[rank - 2], wL = lhs[rank - 1];
+    int64_t hR = rhs[rank - 2], wR = rhs[rank - 1];
+    if (hL * wL != hR * wR)
+      return hL * wL > hR * wR;
+    if (std::min(hL, wL) != std::min(hR, wR))
+      return std::min(hL, wL) > std::min(hR, wR);
+    return wL > wR;
+  });
 
   for (ArrayRef<int64_t> instData : instDataCandidates) {
     auto sgLayouts = getSgLayoutCandidates(dataShape, instData, numSg);
@@ -1598,16 +1602,13 @@ getDpasSubgroupLayouts(
   // common subgroup layout. N and K are fixed, so only M can shrink.
   int64_t mDimA = aTy.getRank() - 2;
   int64_t mDimCD = cdTy.getRank() - 2;
-  int64_t maxM = instDataA[mDimA];
-  SmallVector<int64_t> mCandidates = {maxM};
-  for (unsigned m : uArchInstruction->getSupportedM(aTy.getElementType()))
-    if (m < maxM && aTy.getShape()[mDimA] % m == 0)
-      mCandidates.push_back(m);
-  llvm::sort(std::next(mCandidates.begin()), mCandidates.end(),
-             std::greater<int64_t>());
+  auto supportedM = uArchInstruction->getSupportedM(aTy.getElementType());
+  llvm::sort(supportedM, std::greater<uint32_t>());
 
   std::optional<LayoutRepresentation> bestPick;
-  for (int64_t m : mCandidates) {
+  for (unsigned m : supportedM) {
+    if (m == 0 || aTy.getShape()[mDimA] % m != 0)
+      continue;
     instDataA[mDimA] = m;
     instDataCD[mDimCD] = m;
     if ((bestPick = pickSgLayout()))
