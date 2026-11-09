@@ -1,7 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -o /dev/null < %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -o /dev/null < %s
 
-define void @trunc_load_i24(ptr addrspace(4) inreg %in,
-                            ptr addrspace(1) inreg %out) {
+define void @trunc_load_i24(ptr addrspace(4) inreg %in, ptr addrspace(1) inreg %out) {
 entry:
   %v = load volatile i24, ptr addrspace(4) %in, align 2
   %t = trunc i24 %v to i16
