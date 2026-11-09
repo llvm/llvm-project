@@ -103,8 +103,8 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
                                 SectionBase &section) {
-  Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
-                           type, value, size, &section);
+  Defined *s = makeDefined(section.file, name, STB_LOCAL, STV_DEFAULT, type,
+                           value, size, &section);
   if (ctx.in.symTab)
     ctx.in.symTab->addSymbol(s);
 
@@ -2076,7 +2076,7 @@ void SymbolTableBaseSection::maybeAddSttFile() {
           syms.drop_front(firstGlobalIdx),
           [](const SymbolTableEntry &s) { return s.sym->isLocal(); })) {
     synthSttFileSym =
-        makeDefined(ctx, ctx.internalFile, "", STB_LOCAL, STV_DEFAULT, STT_FILE,
+        makeDefined(ctx.internalFile, "", STB_LOCAL, STV_DEFAULT, STT_FILE,
                     /*value=*/0, /*size=*/0, nullptr);
     addSymbol(synthSttFileSym);
   }

@@ -80,6 +80,11 @@ struct RVCRefQual {
   constexpr std::expected<int, int> operator()(int) const&& { return 1; }
 };
 
+struct ADLDeref {
+  friend void operator*(std::expected<ADLDeref, int>&)       = delete;
+  friend void operator*(const std::expected<ADLDeref, int>&) = delete;
+};
+
 template <class E, class F>
 concept has_or_else =
     requires(E&& e, F&& f) {
@@ -89,6 +94,12 @@ concept has_or_else =
 // [LWG 3877] https://cplusplus.github.io/LWG/issue3877, check constraint failing but not compile error inside the function body.
 static_assert(!has_or_else<const std::expected<std::unique_ptr<int>, int>&, int()>);
 static_assert(!has_or_else<const std::expected<std::unique_ptr<int>, int>&&, int()>);
+
+// [LWG 3973] https://cplusplus.github.io/LWG/issue3973, check that std::expected monadic ops are ADL-proof.
+static_assert(has_or_else<std::expected<ADLDeref, int>&, std::expected<ADLDeref, int>(int&)>);
+static_assert(has_or_else<const std::expected<ADLDeref, int>&, std::expected<ADLDeref, int>(const int&)>);
+static_assert(has_or_else<std::expected<ADLDeref, int>&&, std::expected<ADLDeref, int>(int&&)>);
+static_assert(has_or_else<const std::expected<ADLDeref, int>&&, std::expected<ADLDeref, int>(const int&&)>);
 
 // [LWG 3983] https://cplusplus.github.io/LWG/issue3938, check std::expected monadic ops well-formed with move-only error_type.
 static_assert(has_or_else<std::expected<int, MoveOnlyErrorType>&, std::expected<int, int>(MoveOnlyErrorType &)>);
