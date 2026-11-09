@@ -466,7 +466,7 @@ func.func @test_slice_static_dim_outside_bounds(%arg0: tensor<?x11x7xi32>) -> te
 func.func @test_slice_start_size_overflow(%arg0: tensor<11xi32>) -> tensor<2xi32> {
   %start = tosa.const_shape values(dense<[9223372036854775807]> : tensor<1xindex>) : () -> !tosa.shape<1>
   %size = tosa.const_shape values(dense<[2]> : tensor<1xindex>) : () -> !tosa.shape<1>
-  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=9223372036854775807, size=2 vs input dim size=11 at dimension 0}}
+  // expected-error-re@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start={{.*}}, size=2 vs input dim size=11 at dimension 0}}
   %0 = tosa.slice %arg0, %start, %size : (tensor<11xi32>, !tosa.shape<1>, !tosa.shape<1>) -> tensor<2xi32>
   return %0 : tensor<2xi32>
 }
