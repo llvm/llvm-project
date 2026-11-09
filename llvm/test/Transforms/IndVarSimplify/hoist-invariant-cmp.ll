@@ -143,3 +143,63 @@ exit:
 exit.1:
   ret i8 1
 }
+
+; The compare made invariant in the inner loop is also invariant in the outer
+; loop and is hoisted to the outer preheader.
+define i8 @cmp_invariant_in_outer_loop(ptr %p, i64 %n, i64 %m, i64 %start) {
+; CHECK-LABEL: define i8 @cmp_invariant_in_outer_loop(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i64 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[START]], 0
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
+; CHECK:       [[INNER_HEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[START]], %[[OUTER_HEADER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[NEG]], label %[[EXIT_1:.*]], label %[[INNER_LATCH]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[J]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    [[INNER_EC:%.*]] = icmp slt i64 [[J_NEXT]], [[M]]
+; CHECK-NEXT:    br i1 [[INNER_EC]], label %[[INNER_HEADER]], label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[OUTER_EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[OUTER_EC]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i8 0
+; CHECK:       [[EXIT_1]]:
+; CHECK-NEXT:    ret i8 1
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %outer.latch ]
+  br label %inner.header
+
+inner.header:
+  %j = phi i64 [ %start, %outer.header ], [ %j.next, %inner.latch ]
+  %neg = icmp slt i64 %j, 0
+  br i1 %neg, label %exit.1, label %inner.latch
+
+inner.latch:
+  %gep = getelementptr inbounds i8, ptr %p, i64 %j
+  store i8 0, ptr %gep
+  %j.next = add nsw i64 %j, 1
+  %inner.ec = icmp slt i64 %j.next, %m
+  br i1 %inner.ec, label %inner.header, label %outer.latch
+
+outer.latch:
+  %iv.next = add nsw i64 %iv, 1
+  %outer.ec = icmp slt i64 %iv.next, %n
+  br i1 %outer.ec, label %outer.header, label %exit
+
+exit:
+  ret i8 0
+
+exit.1:
+  ret i8 1
+}

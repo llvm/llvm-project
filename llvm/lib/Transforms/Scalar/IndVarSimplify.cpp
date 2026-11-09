@@ -2205,7 +2205,10 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
   auto PA = getLoopPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   if (IVS.runUnswitching()) {
-    AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(L, AR);
+    // The new invariant conditions may also be invariant in parent loops.
+    // Requests for parent loops stay cached until their extra unswitch run.
+    for (Loop *UL = &L; UL; UL = UL->getParentLoop())
+      AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(*UL, AR);
     PA.preserve<ShouldRunExtraSimpleLoopUnswitch>();
   }
 

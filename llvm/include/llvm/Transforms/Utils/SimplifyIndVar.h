@@ -22,8 +22,11 @@ namespace llvm {
 
 class Type;
 class WeakTrackingVH;
+template <typename T> class ArrayRef;
 template <typename T> class SmallVectorImpl;
 class CastInst;
+class Instruction;
+class SCEV;
 class DominatorTree;
 class Loop;
 class LoopInfo;
@@ -59,6 +62,13 @@ simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
                   LoopInfo *LI, const TargetTransformInfo *TTI,
                   SmallVectorImpl<WeakTrackingVH> &Dead, SCEVExpander &Rewriter,
                   IVVisitor *V = nullptr, bool HoistInvariantCmps = false);
+
+/// Return the terminator of the preheader of the outermost loop (starting at
+/// \p L, which must have a preheader) in which all of \p Exprs are invariant
+/// and can be safely expanded.
+LLVM_ABI Instruction *
+findOutermostInvariantInsertPt(Loop *L, ArrayRef<const SCEV *> Exprs,
+                               SCEVExpander &Rewriter);
 
 /// SimplifyLoopIVs - Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.

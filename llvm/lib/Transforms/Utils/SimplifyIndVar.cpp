@@ -207,6 +207,23 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
   return IVSrc;
 }
 
+Instruction *llvm::findOutermostInvariantInsertPt(Loop *L,
+                                                  ArrayRef<const SCEV *> Exprs,
+                                                  SCEVExpander &Rewriter) {
+  Instruction *InsertPt = L->getLoopPreheader()->getTerminator();
+  for (Loop *P = L->getParentLoop(); P; P = P->getParentLoop()) {
+    BasicBlock *PH = P->getLoopPreheader();
+    // Expressions dominating PH are invariant in P. PH may execute without L
+    // being entered, so the expansion must also be safe to speculate.
+    if (!PH || !all_of(Exprs, [&](const SCEV *S) {
+          return Rewriter.isSafeToExpandAt(S, PH->getTerminator());
+        }))
+      break;
+    InsertPt = PH->getTerminator();
+  }
+  return InsertPt;
+}
+
 bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
                                                Instruction *IVOperand) {
   auto *Preheader = L->getLoopPreheader();
@@ -233,8 +250,14 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   const SCEV *InvariantLHS = LIP->LHS;
   const SCEV *InvariantRHS = LIP->RHS;
 
-  // Do not generate something ridiculous.
-  auto *PHTerm = Preheader->getTerminator();
+  // Do not generate something ridiculous. If the compare gets hoisted, expand
+  // its operands in the preheader of the outermost loop it is invariant in, as
+  // parent loops get unswitched as well.
+  Instruction *PHTerm =
+      HoistInvariantCmps
+          ? findOutermostInvariantInsertPt(L, {InvariantLHS, InvariantRHS},
+                                           Rewriter)
+          : Preheader->getTerminator();
   if (Rewriter.isHighCostExpansion({InvariantLHS, InvariantRHS}, L,
                                    2 * SCEVCheapExpansionBudget, TTI, PHTerm) ||
       !Rewriter.isSafeToExpandAt(InvariantLHS, PHTerm) ||
