@@ -311,6 +311,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned NumKernargPreloadSGPRs = 0;
 
   unsigned MinNumAGPRs = ~0u;
+  bool HasExcessRegPressure = false;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -372,6 +373,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
     YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
+    YamlIO.mapOptional("hasExcessRegPressure", MFI.HasExcessRegPressure,
+                       false);
   }
 };
 
@@ -492,6 +495,10 @@ private:
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
+
+  // Set by the pre-RA scheduler when register pressure in some region exceeds
+  // the allocatable limits.
+  bool HasExcessRegPressure = false;
 
   unsigned DynamicVGPRBlockSize = 0;
 
@@ -1141,6 +1148,9 @@ public:
   void addToSpilledVGPRs(unsigned num) {
     NumSpilledVGPRs += num;
   }
+
+  bool hasExcessRegPressure() const { return HasExcessRegPressure; }
+  void setHasExcessRegPressure(bool V) { HasExcessRegPressure = V; }
 
   unsigned getPSInputAddr() const {
     return PSInputAddr;

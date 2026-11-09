@@ -61,6 +61,7 @@
 ; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
 ; CHECK-NEXT: minNumAGPRs: 4294967295
+; CHECK-NEXT: hasExcessRegPressure: false
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
   %gep = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %arg0
@@ -115,6 +116,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
 ; CHECK-NEXT: minNumAGPRs: 4294967295
+; CHECK-NEXT: hasExcessRegPressure: false
 ; CHECK-NEXT: body:
 define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
   %gep = getelementptr inbounds [128 x i32], ptr addrspace(2) @gds, i32 0, i32 %arg0
@@ -193,6 +195,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
 ; CHECK-NEXT: minNumAGPRs: 4294967295
+; CHECK-NEXT: hasExcessRegPressure: false
 ; CHECK-NEXT: body:
 define void @function() {
   ret void
@@ -253,6 +256,7 @@ define void @function() {
 ; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
 ; CHECK-NEXT: minNumAGPRs: 4294967295
+; CHECK-NEXT: hasExcessRegPressure: false
 ; CHECK-NEXT: body:
 define void @function_nsz() #0 {
   ret void

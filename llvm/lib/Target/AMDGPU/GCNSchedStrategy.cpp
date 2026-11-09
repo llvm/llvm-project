@@ -1225,6 +1225,10 @@ void GCNScheduleDAGMILive::runSchedStages() {
     Stage->finalizeGCNSchedStage();
   }
 
+  MFI.setHasExcessRegPressure(any_of(Pressure, [&](const GCNRegPressure &RP) {
+    return !GCNRPTarget(MF, RP).satisfied();
+  }));
+
 #ifndef NDEBUG
   if (ST.getCLOpts().print_max_reg_pressure_regusage_after_scheduler) {
     dumpMaxRegPressure(MF, GCNRegPressure::VGPR, *LIS, MLI);

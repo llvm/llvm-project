@@ -748,7 +748,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
       NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()),
-      MinNumAGPRs(MFI.getMinNumAGPRs()) {
+      MinNumAGPRs(MFI.getMinNumAGPRs()),
+      HasExcessRegPressure(MFI.hasExcessRegPressure()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -797,6 +798,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
   MinNumAGPRs = YamlMFI.MinNumAGPRs;
+  HasExcessRegPressure = YamlMFI.HasExcessRegPressure;
   // This can also be set by the function attribute, MFI has higher precedence
   // though.
   if (YamlMFI.DynamicVGPRBlockSize != std::nullopt)
