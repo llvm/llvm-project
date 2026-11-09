@@ -94,7 +94,6 @@ body:             |
 
 ---
 name:            waterfall_si_call_inreg_dbg_value
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
