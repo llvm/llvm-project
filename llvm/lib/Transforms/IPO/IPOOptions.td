@@ -80,6 +80,12 @@ defm : ValueField<"max-ifunc-versions", "unsigned", "5",
 defm : BoolField<"optimize-non-fmv-callers", "true",
   "Statically resolve calls to versioned functions from non-versioned callers">;
 
+// Instrumentor.cpp
+defm : ValueField<"instrumentor-read-config-paths-file", "StringRef", "",
+  "Read the instrumentor configuration file paths from the specified file (newline separated)">;
+defm : ValueField<"instrumentor-write-config-file", "StringRef", "",
+  "Write the instrumentor configuration into the specified JSON file">;
+
 // LowerTypeTests.cpp
 defm : BoolField<"lowertypetests-avoid-reuse", "true",
   "Try to avoid reuse of byte array addresses using aliases">;
