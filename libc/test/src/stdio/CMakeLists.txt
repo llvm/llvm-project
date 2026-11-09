@@ -111,7 +111,9 @@ add_libc_test(
     setvbuf_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.stdio.clearerr
     libc.src.stdio.fclose
+    libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fwrite
@@ -574,7 +576,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
-
 
   add_libc_test(
     fdopen_test
