@@ -3067,7 +3067,6 @@ adds sp, #-4096
         str r5, [r6, #32]
         str r5, [r6, #33]
         str r5, [r6, #257]
-        str.w pc, [r7, #257]
         str r2, [r4, #255]!
         str r8, [sp, #4]!
         str lr, [sp, #-4]!
@@ -3079,7 +3078,6 @@ adds sp, #-4096
 @ CHECK: str	r5, [r6, #32]           @ encoding: [0x35,0x62]
 @ CHECK: str.w	r5, [r6, #33]           @ encoding: [0xc6,0xf8,0x21,0x50]
 @ CHECK: str.w	r5, [r6, #257]          @ encoding: [0xc6,0xf8,0x01,0x51]
-@ CHECK: str.w	pc, [r7, #257]          @ encoding: [0xc7,0xf8,0x01,0xf1]
 @ CHECK: str	r2, [r4, #255]!         @ encoding: [0x44,0xf8,0xff,0x2f]
 @ CHECK: str	r8, [sp, #4]!           @ encoding: [0x4d,0xf8,0x04,0x8f]
 @ CHECK: str	lr, [sp, #-4]!          @ encoding: [0x4d,0xf8,0x04,0xed]
