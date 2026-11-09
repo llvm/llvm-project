@@ -500,20 +500,6 @@ private:
             mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
 
-        // Type-bound dispatch tables store procedure addresses in runtime
-        // TypeDescriptor metadata. If the TypeDescriptor is registered for
-        // OpenMP offload, the referenced procedures must also be available in
-        // the device image so device-side dispatch table entries can refer to
-        // device functions.
-        if (converter.getFoldingContext().languageFeatures().IsEnabled(
-                Fortran::common::LanguageFeature::OpenMP) &&
-            mlir::omp::getOpenMPVersionAttribute(converter.getModuleOp(),
-                                                 /*fallback=*/0) >= 61)
-          if (mlir::Operation *bindingOp =
-                  builder.getModule().lookupSymbol(bindingName))
-            Fortran::lower::omp::markDeclareTarget(bindingOp,
-                                                   /*implicit=*/true);
-
         // Propagate DEFERRED attribute on the binding to fir.dt_entry.
         if (binding.get().attrs().test(Fortran::semantics::Attr::DEFERRED))
           dtEntry->setAttr(fir::DTEntryOp::getDeferredAttrNameStr(),

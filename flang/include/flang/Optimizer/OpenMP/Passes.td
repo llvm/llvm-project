@@ -22,6 +22,21 @@ def MapInfoFinalizationPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
+def PolymorphicRTTIDeclareTargetPass
+    : Pass<"omp-polymorphic-rtti-declare-target", "mlir::ModuleOp"> {
+  let summary = "marks OpenMP device-referenced polymorphic RTTI declare target";
+  let description = [{
+    Finds finalized OpenMP polymorphic descriptor maps and declare-target
+    functions that reference FIR runtime type information, then marks only the
+    required RTTI globals and dispatch-table procedures as OpenMP declare target.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect",
+    "mlir::func::FuncDialect",
+    "mlir::omp::OpenMPDialect"
+  ];
+}
+
 def MapsForPrivatizedSymbolsPass
     : Pass<"omp-maps-for-privatized-symbols", "mlir::func::FuncOp"> {
   let summary = "Creates MapInfoOp instances for privatized symbols when needed";

@@ -6,6 +6,7 @@ add_flang_library(FlangOpenMPTransforms
   GenericLoopConversion.cpp
   MapsForPrivatizedSymbols.cpp
   MapInfoFinalization.cpp
+  PolymorphicRTTIDeclareTarget.cpp
   LowerWorkdistribute.cpp
   LowerWorkshare.cpp
   LowerNontemporal.cpp
