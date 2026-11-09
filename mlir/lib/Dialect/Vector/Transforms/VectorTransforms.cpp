@@ -1997,6 +1997,9 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
     if (!parentReduction.getResult().hasOneUse())
       return failure();
 
+    if (parentReduction.getVector().getType() != op.getVector().getType())
+      return failure();
+
     Location loc = op.getLoc();
     Value vAdd;
     if (isa<IntegerType>(acc.getType())) {
