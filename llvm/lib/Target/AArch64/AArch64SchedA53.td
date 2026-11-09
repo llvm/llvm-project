@@ -156,7 +156,7 @@ def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
 // generic class only covers what the A53WriteF2R/A53WriteR2F overrides below
 // do not; see those for the measured behaviour.
 def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 2; }
-def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 2; }
 def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
 // A 128-bit (Q-form) operation fills the whole 128-bit datapath, so it takes
 // both lanes.
@@ -174,6 +174,12 @@ def A53WriteFMulIdx : SchedWriteRes<[A53UnitFPALU]> {
 }
 def A53WriteFMulIdxQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 4;
+}
+// The other 4-cycle floating-point operations that only issue as the younger
+// instruction of a pair.
+def A53WriteVecYng_4 : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 4;
+  let EndGroup = 1;
 }
 def : WriteRes<WriteFDiv, [A53UnitFPDS, A53UnitFPDS]> {
   let Latency = 33;
@@ -465,17 +471,18 @@ def : InstRW<[A53WriteVecD_4],
       (instregex "^F(ADD|SUB|ABD|MUL|MULX|MAX|MIN|MAXNM|MINNM)P?(v2f32|v4f16)$",
                  "^F(ABS|NEG)(v2f32|v4f16)$",
                  "^FRINT[AIMNPXZ](v2f32|v4f16)$",
-                 "^F(MAX|MIN|MAXNM|MINNM)Vv4i16v$",
                  "^([SU]CVTF|FCVT[AMNPZ][SU])(v1i16|v1i32|v1i64)$",
                  "^([SU]CVTF|FCVT[AMNPZ][SU])(v2f32|v4f16)$",
                  "^([SU]CVTF|FCVT[AMNPZ][SU])(v2i32|v4i16)_shift$",
-                 "^FCVTXNv1i64$",
+                 "^FABD(16|32|64)$", "^FMULX(16|32|64)$",
+                 "^(FCVTZ[SU]|[SU]CVTF)[hsd]$",
                  "^MULv(2i32|4i16|8i8)$", "^MULv(2i32|4i16)_indexed$")>;
+def : InstRW<[A53WriteVecYng_4],
+      (instregex "^F(MAX|MIN|MAXNM|MINNM)Vv(4i16|4i32|8i16)v$", "^FCVTXNv1i64$")>;
 def : InstRW<[A53WriteVecQ_4],
       (instregex "^F(ADD|SUB|ABD|MUL|MULX|MAX|MIN|MAXNM|MINNM)P?(v4f32|v2f64|v8f16)$",
                  "^F(ABS|NEG)(v4f32|v2f64|v8f16)$",
                  "^FRINT[AIMNPXZ](v4f32|v2f64|v8f16)$",
-                 "^F(MAX|MIN|MAXNM|MINNM)Vv4i32v$",
                  "^([SU]CVTF|FCVT[AMNPZ][SU])(v2f64|v4f32|v8f16)$",
                  "^([SU]CVTF|FCVT[AMNPZ][SU])(v2i64|v4i32|v8i16)_shift$",
                  "^FCVT(L|N)2?v(2i32|4i16|4i32|8i16)$",

@@ -774,14 +774,14 @@
 # CHECK-NEXT:  1      2     0.50                        fmov	d1, x15
 # CHECK-NEXT:  1      4     0.50                        fmov	x3, v12.d[1]
 # CHECK-NEXT:  1      2     0.50                        fmov	v1.d[1], x19
-# CHECK-NEXT:  1      6     0.50                        fmov	h29, #0.50000000
-# CHECK-NEXT:  1      6     0.50                        fmov	s2, #0.12500000
-# CHECK-NEXT:  1      6     0.50                        fmov	s3, #1.00000000
-# CHECK-NEXT:  1      6     0.50                        fmov	d30, #16.00000000
-# CHECK-NEXT:  1      6     0.50                        fmov	s4, #1.06250000
-# CHECK-NEXT:  1      6     0.50                        fmov	d10, #1.93750000
-# CHECK-NEXT:  1      6     0.50                        fmov	s12, #-1.00000000
-# CHECK-NEXT:  1      6     0.50                        fmov	d16, #8.50000000
+# CHECK-NEXT:  1      2     0.50                        fmov	h29, #0.50000000
+# CHECK-NEXT:  1      2     0.50                        fmov	s2, #0.12500000
+# CHECK-NEXT:  1      2     0.50                        fmov	s3, #1.00000000
+# CHECK-NEXT:  1      2     0.50                        fmov	d30, #16.00000000
+# CHECK-NEXT:  1      2     0.50                        fmov	s4, #1.06250000
+# CHECK-NEXT:  1      2     0.50                        fmov	d10, #1.93750000
+# CHECK-NEXT:  1      2     0.50                        fmov	s12, #-1.00000000
+# CHECK-NEXT:  1      2     0.50                        fmov	d16, #8.50000000
 # CHECK-NEXT:  1      4     1.00    *                   ldr	w3, #0
 # CHECK-NEXT:  1      4     1.00    *                   ldr	x29, #4
 # CHECK-NEXT:  1      4     1.00    *                   ldrsw	xzr, #-4
