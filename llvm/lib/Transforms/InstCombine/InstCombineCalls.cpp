@@ -3167,6 +3167,31 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // m(uitofp X, uitofp Y) -> uitofp (umin/umax(X, Y))
+    // m(sitofp X, sitofp Y) -> sitofp (smin/smax(X, Y))
+    if (match(Arg0, m_IToFP(m_Value(X))) && match(Arg1, m_IToFP(m_Value(Y))) &&
+        cast<Instruction>(Arg0)->getOpcode() ==
+            cast<Instruction>(Arg1)->getOpcode() &&
+        (Arg0->hasOneUse() || Arg1->hasOneUse()) &&
+        X->getType() == Y->getType()) {
+      bool IsSigned = isa<SIToFPInst>(Arg0);
+      bool IsMax = IID == Intrinsic::maxnum || IID == Intrinsic::maximum ||
+                   IID == Intrinsic::maximumnum;
+      Intrinsic::ID IntIID =
+          IsMax ? (IsSigned ? Intrinsic::smax : Intrinsic::umax)
+                : (IsSigned ? Intrinsic::smin : Intrinsic::umin);
+      Value *NewInt = Builder.CreateBinaryIntrinsic(IntIID, X, Y);
+      auto *NewCast =
+          CastInst::Create(IsSigned ? Instruction::SIToFP : Instruction::UIToFP,
+                           NewInt, II->getType());
+      // umax/umin of two nneg values is nneg. Both flags are required: nneg is
+      // not a known bit of the integer, so visitUIToFP cannot recover it later.
+      if (!IsSigned && cast<Instruction>(Arg0)->hasNonNeg() &&
+          cast<Instruction>(Arg1)->hasNonNeg())
+        NewCast->setNonNeg();
+      return NewCast;
+    }
+
     // max X, -X --> fabs X
     // min X, -X --> -(fabs X)
     // TODO: Remove one-use limitation? That is obviously better for max,
@@ -3930,10 +3955,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         Value *BasePtr;
         const APInt *PtrOffset;
-        if (match(Ptr.get(), m_PtrAdd(m_Value(BasePtr), m_APInt(PtrOffset)))) {
-          auto PtrOffsetVal =
-              PtrOffset->sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()))
-                  .trySExtValue();
+        if (match(Ptr.get(),
+                  m_PtrAdd(DL, m_Value(BasePtr), m_APInt(PtrOffset)))) {
+          std::optional<int64_t> PtrOffsetVal = PtrOffset->trySExtValue();
           if (!PtrOffsetVal)
             break;
           Builder.CreateAlignmentAssumption(
@@ -4046,9 +4070,49 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         }
       } break;
 
+      case BundleAttr::Range: {
+        auto [Val, Range] = getAssumeRangeInfo(OBU);
+
+        auto KnownRange = computeConstantRangeIncludingKnownBits(
+            Val.get(), false, getSimplifyQuery().getWithInstruction(II));
+
+        // Drop the assume if we can prove it already without the assume
+        if (Range.contains(KnownRange))
+          return RemoveBundle();
+
+        // If we know more, update the range assume to be more precise. This
+        // allows dropping another range assume on the same value if they have
+        // overlapping ranges.
+        if (auto Intersected = Range.exactIntersectWith(KnownRange);
+            Intersected && *Intersected != Range) {
+          Builder.CreateRangeAssumption(Val, *Intersected);
+          return RemoveBundle();
+        }
+
+        // Move the assume across arithmetic operations
+        if (auto *BinOp = dyn_cast<BinaryOperator>(Val)) {
+          if (auto *ConstI = dyn_cast<ConstantInt>(BinOp->getOperand(1))) {
+            const auto &V = ConstI->getValue();
+            const auto &NewVal = BinOp->getOperand(0);
+            switch (BinOp->getOpcode()) {
+            case BinaryOperator::Add:
+              Builder.CreateRangeAssumption(NewVal, Range.sub(V));
+              return RemoveBundle();
+            case BinaryOperator::Sub:
+              Builder.CreateRangeAssumption(NewVal, Range.add(V));
+              return RemoveBundle();
+
+              // TODO: Move this across more arithemtic operations
+            default:
+              break;
+            }
+          }
+        }
+
+      } break;
+
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
-      case BundleAttr::Range:
         break;
 
       // This cannot be simplified

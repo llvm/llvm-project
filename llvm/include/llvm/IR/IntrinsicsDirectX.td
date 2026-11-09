@@ -473,6 +473,56 @@ let TargetPrefix = "dx" in {
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
 
+  // Scalar mask words preserve the lane mask during vector scalarization.
+  def int_dx_wave_multi_prefix_bit_and
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_bit_or
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_bit_xor
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_product
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_uproduct
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_sum
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_dx_wave_multi_prefix_usum
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
   def int_dx_wave_prefix_usum
       : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>],
                               [IntrConvergent, IntrNoMem,
