@@ -59,6 +59,8 @@
 ; O3-NEXT: pre-isel-intrinsic-lowering
 ; O3-NEXT: function
 ; O3-NEXT:   expand-ir-insts<O3>
+; O3-NEXT: systemz-align-globals
+; O3-NEXT: function
 ; O3-NEXT:   loop-data-prefetch
 ; O3-NEXT:   atomic-expand
 ; O3-NEXT:   verify

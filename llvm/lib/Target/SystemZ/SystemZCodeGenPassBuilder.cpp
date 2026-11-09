@@ -53,7 +53,8 @@ public:
 
 void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZAlignGlobalsPass(
+    flushFPMsToMPM(PMW);
+    addModulePass(SystemZAlignGlobalsPass(), PMW);
     // TODO(boomanaiden154): Add SystemZTDCPass
     addFunctionPass(LoopDataPrefetchPass(), PMW);
   }

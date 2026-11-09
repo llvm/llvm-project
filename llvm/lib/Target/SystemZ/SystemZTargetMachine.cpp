@@ -47,6 +47,7 @@ LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeSystemZAlignGlobalsLegacyPass(PR);
   initializeSystemZAsmPrinterPass(PR);
   initializeSystemZElimComparePass(PR);
   initializeSystemZShortenInstPass(PR);
@@ -226,7 +227,7 @@ public:
 
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createSystemZAlignGlobalsPass());
+    addPass(createSystemZAlignGlobalsLegacyPass());
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }

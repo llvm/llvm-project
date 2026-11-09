@@ -16,6 +16,8 @@
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
@@ -205,7 +207,14 @@ FunctionPass *createSystemZLDCleanupPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
-ModulePass *createSystemZAlignGlobalsPass();
+
+class SystemZAlignGlobalsPass
+    : public RequiredPassInfoMixin<SystemZAlignGlobalsPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createSystemZAlignGlobalsLegacyPass();
 
 void initializeSystemZAsmPrinterPass(PassRegistry &);
 void initializeSystemZCopyPhysRegsPass(PassRegistry &);
@@ -216,7 +225,7 @@ void initializeSystemZLongBranchPass(PassRegistry &);
 void initializeSystemZPostRewritePass(PassRegistry &);
 void initializeSystemZShortenInstPass(PassRegistry &);
 void initializeSystemZTDCPassPass(PassRegistry &);
-void initializeSystemZAlignGlobalsPass(PassRegistry &);
+void initializeSystemZAlignGlobalsLegacyPass(PassRegistry &);
 
 namespace SYSTEMZAS {
 enum : unsigned { PTR32 = 1 };
