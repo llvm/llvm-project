@@ -1064,6 +1064,53 @@ define void @loads_addrspace_4_readfirstlane(ptr addrspace(4) %p) {
   ret void
 }
 
+define void @loads_addrspace_4_addrspacecast(ptr addrspace(1) %p, ptr addrspace(1) inreg %q) {
+; CHECK-LABEL: 'loads_addrspace_4_addrspacecast'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %p.cast = addrspacecast ptr addrspace(1) %p to ptr addrspace(4)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <16 x i32>, ptr addrspace(4) %p.cast, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %q.cast = addrspacecast ptr addrspace(1) %q to ptr addrspace(4)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <16 x i32>, ptr addrspace(4) %q.cast, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr inbounds i8, ptr addrspace(4) %q.cast, i64 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <16 x i32>, ptr addrspace(4) %gep, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+  %p.cast = addrspacecast ptr addrspace(1) %p to ptr addrspace(4)
+  load <16 x i32>, ptr addrspace(4) %p.cast, align 64
+  %q.cast = addrspacecast ptr addrspace(1) %q to ptr addrspace(4)
+  load <16 x i32>, ptr addrspace(4) %q.cast, align 64
+  %gep = getelementptr inbounds i8, ptr addrspace(4) %q.cast, i64 64
+  load <16 x i32>, ptr addrspace(4) %gep, align 64
+  ret void
+}
+
+define void @loads_addrspace_4_unreachable_cycle() {
+; GFX8-LABEL: 'loads_addrspace_4_unreachable_cycle'
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep = getelementptr i8, ptr addrspace(4) %gep, i64 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %0 = load <16 x i32>, ptr addrspace(4) %gep, align 64
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX90A-LABEL: 'loads_addrspace_4_unreachable_cycle'
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr i8, ptr addrspace(4) %gep, i64 64
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %0 = load <16 x i32>, ptr addrspace(4) %gep, align 64
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX12-LABEL: 'loads_addrspace_4_unreachable_cycle'
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep = getelementptr i8, ptr addrspace(4) %gep, i64 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %0 = load <16 x i32>, ptr addrspace(4) %gep, align 64
+; GFX12-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+entry:
+  ret void
+
+dead:
+  %gep = getelementptr i8, ptr addrspace(4) %gep, i64 64
+  load <16 x i32>, ptr addrspace(4) %gep, align 64
+  ret void
+}
+
 define amdgpu_kernel void @loads_addrspace_4_illegal_types(ptr addrspace(4) %p) {
 ; GFX8-LABEL: 'loads_addrspace_4_illegal_types'
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <15 x i32>, ptr addrspace(4) %p, align 4
