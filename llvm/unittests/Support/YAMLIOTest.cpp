@@ -1320,11 +1320,20 @@ TEST(YAMLIO, TestBlockScalarFallsBackToQuoted) {
 ...
 )");
 
-  // \u0085 (NEL) and \u2028 (LS) are line breaks to a YAML 1.1 reader, and
-  // \u0080 is a C1 control.
-  llvm::StringRef Vals[] = {"AA\n\x01ZZ",  "AA\r\nBB",     "  AA\nBB",
-                            "\n  AA\nBB",  "AA\n\u0085BB", "AA\n\u2028BB",
-                            "AA\n\u0080BB"};
+  // U+0085 (NEL) and U+2028 (LS) are line breaks to a YAML 1.1 reader, and
+  // U+0080 is a C1 control. They are spelled as UTF-8 bytes because \u escapes
+  // in narrow literals follow the compiler's execution charset (e.g. MSVC on
+  // Windows). The literals are split so 'B' is not read as a hex digit.
+  llvm::StringRef Vals[] = {"AA\n\x01ZZ",
+                            "AA\r\nBB",
+                            "  AA\nBB",
+                            "\n  AA\nBB",
+                            "AA\n\xC2\x85"
+                            "BB",
+                            "AA\n\xE2\x80\xA8"
+                            "BB",
+                            "AA\n\xC2\x80"
+                            "BB"};
   for (llvm::StringRef Val : Vals) {
     std::string intermediate;
     {
