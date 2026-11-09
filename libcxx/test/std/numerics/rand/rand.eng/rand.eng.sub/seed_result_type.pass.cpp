@@ -47,7 +47,7 @@ test2()
 }
 
 void test_lwg3809() {
-  typedef std::subtract_with_carry_engine< std::uint16_t, 16, 5, 12> E;
+  typedef std::subtract_with_carry_engine<std::uint16_t, 16, 5, 12> E;
 
   static_assert(std::is_same<decltype(E::default_seed), const std::uint_least32_t>::value, "");
 
