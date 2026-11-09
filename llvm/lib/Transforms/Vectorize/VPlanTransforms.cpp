@@ -5717,6 +5717,12 @@ static void updatePartialReductionPhiAndResult(VPlan &Plan,
   // Replace reduction_result by 'sub (startval, reductionresult)'.
   VPInstruction *RdxResult = vputils::findComputeReductionResult(Phi);
   assert(RdxResult && "Could not find reduction result");
+  // Fold the start op, if any, into the subtraction.
+  if (VPInstruction *StartOp = vputils::findReductionStartOp(RdxResult)) {
+    OldStartValue = StartOp->getOperand(1);
+    StartOp->replaceAllUsesWith(RdxResult);
+    StartOp->eraseFromParent();
+  }
 
   VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
   unsigned SubOpc = RK == RecurKind::FSub ? Instruction::BinaryOps::FSub
@@ -5872,7 +5878,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       // Check if the compute-reduction-result is used by a sunk store.
       // TODO: Also form partial reductions in those cases.
       if (auto *RdxResult = vputils::findComputeReductionResult(RedPhiR)) {
-        if (any_of(RdxResult->users(), [](VPUser *U) {
+        VPValue *Result = RdxResult;
+        if (VPInstruction *StartOp = vputils::findReductionStartOp(RdxResult))
+          Result = StartOp;
+        if (any_of(Result->users(), [](VPUser *U) {
               auto *RepR = dyn_cast<VPReplicateRecipe>(U);
               return RepR && RepR->getOpcode() == Instruction::Store;
             })) {
@@ -6475,60 +6484,5 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
         cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
       R.eraseFromParent();
     }
-  }
-}
-
-void VPlanTransforms::applyReductionStartAfterLoop(VPlan &Plan) {
-  // With VF 1, seeding every interleaved part with the identity can
-  // let SLP vectorize the loop, overriding LV's choice not to
-  // vectorize it.
-  if (Plan.hasScalarVFOnly())
-    return;
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  if (!LoopRegion)
-    return;
-  for (auto &PhiR : make_isa_range<VPReductionPHIRecipe>(
-           LoopRegion->getEntryBasicBlock()->phis())) {
-    if (PhiR.isInLoop())
-      continue;
-    // Reductions without an identity have no ReductionStartVector.
-    if (!match(PhiR.getStartValue(),
-               m_VPInstruction<VPInstruction::ReductionStartVector>()))
-      continue;
-    auto *StartVec = cast<VPInstruction>(PhiR.getStartValue());
-    // A constant start value folds into a constant start vector, so
-    // applying it after the loop would only add an operation.
-    VPValue *Start = StartVec->getOperand(0);
-    if (isa<VPConstant>(Start))
-      continue;
-    // findComputeReductionResult does not find reductions performed in a
-    // narrower type: their result is computed from a truncate of the backedge
-    // value.
-    VPInstruction *RdxResult = vputils::findComputeReductionResult(&PhiR);
-    if (!RdxResult)
-      continue;
-    assert(RdxResult->getScalarType() == Start->getScalarType() &&
-           "Unexpected reduction performed in a narrower type");
-
-    // The start vector may be shared with other reductions. Seed this
-    // one with a new start vector holding the identity.
-    auto *NewStartVec = StartVec->clone();
-    NewStartVec->setOperand(0, StartVec->getOperand(1));
-    NewStartVec->insertBefore(StartVec);
-    PhiR.setStartValue(NewStartVec);
-
-    RecurKind RK = PhiR.getRecurrenceKind();
-    unsigned Opc = RecurrenceDescriptor::getOpcode(RK);
-    // The lanes of a sub reduction hold negated sums: add the start value.
-    if (RecurrenceDescriptor::isSubRecurrenceKind(RK))
-      Opc = RK == RecurKind::Sub ? Instruction::Add : Instruction::FAdd;
-    VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)
-                          ? VPIRFlags(PhiR.getFastMathFlagsOrNone())
-                          : VPIRFlags::getDefaultFlags(Opc);
-    VPInstruction *StartOp =
-        VPBuilder::getToInsertAfter(RdxResult).createNaryOp(
-            Opc, {RdxResult, Start}, Flags, RdxResult->getDebugLoc(),
-            "rdx.start");
-    RdxResult->replaceUsesWithIf(StartOp, not_equal_to(StartOp));
   }
 }
