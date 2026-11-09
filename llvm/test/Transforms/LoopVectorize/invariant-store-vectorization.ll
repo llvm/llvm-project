@@ -370,7 +370,9 @@ define void @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[VAR2:%.*]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP0]], [[J_022]]
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[TMP12]], 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP9]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP14]], 4
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[VAR2]], i64 [[TMP25]]

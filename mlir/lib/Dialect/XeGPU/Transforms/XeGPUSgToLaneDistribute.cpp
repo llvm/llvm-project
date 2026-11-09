@@ -2528,8 +2528,8 @@ struct SgToLaneConvertLayoutDeinterleaveSelect
     Value isFirstGroup = arith::CmpIOp::create(
         rewriter, loc, arith::CmpIPredicate::eq, group, zero);
     Value selected = arith::SelectOp::create(rewriter, loc, isFirstGroup,
-                                             deinterleaved.getRes1(),
-                                             deinterleaved.getRes2());
+                                             deinterleaved.getResultEven(),
+                                             deinterleaved.getResultOdd());
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         op, redistribution->distributedTarget, selected);
     return success();

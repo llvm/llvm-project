@@ -464,7 +464,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Secondary Entry Points : ";
     ListSeparator LS;
     for (const auto &KV : SecondaryEntryPoints)
-      OS << LS << KV.second->getName();
+      OS << LS << KV.second.Symbol->getName();
   }
   if (FrameInstructions.size())
     OS << "\n  CFI Instrs  : " << FrameInstructions.size();
@@ -3828,8 +3828,10 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress);
 
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(LocalSymbol);
-  if (EntrySymbol)
+  if (EntrySymbol) {
+    ++SecondaryEntryPoints[LocalSymbol].RefCount;
     return EntrySymbol;
+  }
 
   assert(CurrentState == State::Empty || CurrentState == State::Disassembled);
 
@@ -3839,7 +3841,7 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
     EntrySymbol = BC.getOrCreateGlobalSymbol(
         EntryPointAddress, Twine("__ENTRY_") + getOneName() + "@");
   }
-  SecondaryEntryPoints[LocalSymbol] = EntrySymbol;
+  SecondaryEntryPoints[LocalSymbol] = {EntrySymbol, 1};
 
   BC.setSymbolToFunctionMap(EntrySymbol, this);
 
@@ -3854,17 +3856,27 @@ MCSymbol *BinaryFunction::addEntryPoint(const BinaryBasicBlock &BB) {
     return getSymbol();
 
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(BB);
-  if (EntrySymbol)
+  if (EntrySymbol) {
+    ++SecondaryEntryPoints[BB.getLabel()].RefCount;
     return EntrySymbol;
+  }
 
   EntrySymbol =
       BC.Ctx->getOrCreateSymbol("__ENTRY_" + BB.getLabel()->getName());
 
-  SecondaryEntryPoints[BB.getLabel()] = EntrySymbol;
+  SecondaryEntryPoints[BB.getLabel()] = {EntrySymbol, 1};
 
   BC.setSymbolToFunctionMap(EntrySymbol, this);
 
   return EntrySymbol;
+}
+
+void BinaryFunction::releaseEntryPoint(const BinaryBasicBlock &BB) {
+  auto It = SecondaryEntryPoints.find(BB.getLabel());
+  assert(It != SecondaryEntryPoints.end() &&
+         "releasing an entry point that was never requested");
+  if (!--It->second.RefCount)
+    SecondaryEntryPoints.erase(It);
 }
 
 MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {

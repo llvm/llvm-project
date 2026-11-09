@@ -449,8 +449,9 @@ __gpu_kernel void foo() {
 // AMDGPU-LABEL: define internal void @__gpu_sync_threads(
 // AMDGPU-SAME: ) #[[ATTR0]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
+// AMDGPU-NEXT:    fence syncscope("workgroup") release
 // AMDGPU-NEXT:    call void @llvm.amdgcn.s.barrier()
-// AMDGPU-NEXT:    fence syncscope("workgroup") seq_cst
+// AMDGPU-NEXT:    fence syncscope("workgroup") acquire
 // AMDGPU-NEXT:    ret void
 //
 //
