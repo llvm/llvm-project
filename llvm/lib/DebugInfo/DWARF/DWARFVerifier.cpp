@@ -9,7 +9,6 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
@@ -300,6 +299,7 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
 
     NumUnitErrors += verifyDebugInfoCallSite(Die);
     NumUnitErrors += verifyDebugInfoSubprogram(Die);
+    verifyDebugInfoLocalEntities(Die);
   }
 
   DWARFDie Die = Unit.getUnitDIE(/* ExtractUnitDIEOnly = */ false);
@@ -392,8 +392,6 @@ unsigned DWARFVerifier::verifyDebugInfoSubprogram(const DWARFDie &Die) {
   if (Die.getTag() != DW_TAG_subprogram)
     return 0;
 
-  verifyDebugInfoLocalEntities(Die);
-
   // Also show the immediate children: they are usually the reason an otherwise
   // meaningless subprogram entry was emitted.
   auto DumpWithChildren = [&]() {
@@ -446,34 +444,19 @@ static void collectSharedLocalEntities(const DWARFDie &Scope,
     case DW_TAG_imported_declaration:
       Entities.push_back(Child);
       break;
+    // TODO: Static local variables are shared by all instances of a subprogram
+    // too, but they aren't checked here. A DW_TAG_variable doesn't say whether
+    // it is static, so it'd have to be inferred from DW_AT_location.
     default:
       break;
     }
   }
 }
 
-/// Returns a key that identifies a shared local entity across the instances
-/// of a subprogram. The instances may be in different units, so the key
-/// doesn't rely on DIE offsets.
-static std::string getSharedLocalEntityKey(const DWARFDie &Die) {
-  std::string Key;
-  raw_string_ostream OS(Key);
-  OS << TagString(Die.getTag()) << ':';
-  if (const char *Name = Die.getShortName())
-    OS << Name;
-  OS << ':'
-     << Die.getDeclFile(DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath)
-     << ':' << Die.getDeclLine();
-  if (DWARFDie Imported = Die.getAttributeValueAsReferencedDie(DW_AT_import)) {
-    OS << ':' << TagString(Imported.getTag()) << ':';
-    if (const char *Name = Imported.getShortName())
-      OS << Name;
-  }
-  return Key;
-}
-
 void DWARFVerifier::verifyDebugInfoLocalEntities(const DWARFDie &Die) {
-  assert(Die.getTag() == DW_TAG_subprogram && "Expected subprogram DIE");
+  if (Die.getTag() != DW_TAG_subprogram &&
+      Die.getTag() != DW_TAG_inlined_subroutine)
+    return;
 
   DWARFDie Origin = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
   if (!Origin || Origin.getTag() != DW_TAG_subprogram)
@@ -481,23 +464,13 @@ void DWARFVerifier::verifyDebugInfoLocalEntities(const DWARFDie &Die) {
 
   SmallVector<DWARFDie, 4> Entities;
   collectSharedLocalEntities(Die, Entities);
-  if (Entities.empty())
-    return;
-
-  SmallVector<DWARFDie, 4> OriginEntities;
-  collectSharedLocalEntities(Origin, OriginEntities);
-  StringSet<> OriginKeys;
-  for (const DWARFDie &Entity : OriginEntities)
-    OriginKeys.insert(getSharedLocalEntityKey(Entity));
-
   for (const DWARFDie &Entity : Entities) {
-    // An entity that refers to its abstract counterpart is fine, and so is a
-    // copy of an entity that is also in the abstract origin.
-    if (Entity.find(DW_AT_abstract_origin) ||
-        OriginKeys.contains(getSharedLocalEntityKey(Entity)))
+    // A concrete instance may refer to the entity in the abstract origin, but
+    // it shouldn't describe the entity on its own.
+    if (Entity.find(DW_AT_abstract_origin))
       continue;
-    warn() << formatv("{0} in out-of-line instance {1:x+8} of a subprogram is "
-                      "missing from its abstract origin {2:x+8}:\n",
+    warn() << formatv("{0} in concrete instance {1:x+8} of a subprogram should "
+                      "only be in its abstract origin {2:x+8}:\n",
                       TagString(Entity.getTag()), Die.getOffset(),
                       Origin.getOffset());
     dump(Entity) << '\n';

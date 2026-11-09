@@ -1,32 +1,54 @@
 # Check that the verifier warns about local types and imported entities that
-# are placed into an out-of-line instance of a subprogram (a subprogram with
-# DW_AT_abstract_origin) but are missing from its abstract origin. Entities that
-# are present in both, or that refer to their abstract counterpart, are fine.
+# are described in a concrete instance of a subprogram (an out-of-line
+# DW_TAG_subprogram or a DW_TAG_inlined_subroutine with DW_AT_abstract_origin)
+# instead of only in its abstract origin. Entities that refer to their abstract
+counterpart are fine.
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t.o
 # RUN: llvm-dwarfdump -verify %t.o | FileCheck %s \
 # RUN:   --implicit-check-not=warning: --implicit-check-not=error:
 
-# CHECK:      warning: DW_TAG_structure_type in out-of-line instance 0x00000044 of a subprogram is missing from its abstract origin 0x00000016:
+# CHECK:      warning: DW_TAG_structure_type in concrete instance 0x00000044 of a subprogram should only be in its abstract origin 0x00000016:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x00000049: DW_TAG_structure_type
+# CHECK-NEXT:               DW_AT_name {{.*}}("InBoth")
+
+# CHECK:      warning: DW_TAG_structure_type in concrete instance 0x00000044 of a subprogram should only be in its abstract origin 0x00000016:
 # CHECK-EMPTY:
 # CHECK-NEXT: 0x00000051: DW_TAG_structure_type
 # CHECK-NEXT:               DW_AT_name {{.*}}("OnlyHere")
 
-# CHECK:      warning: DW_TAG_enumeration_type in out-of-line instance 0x00000044 of a subprogram is missing from its abstract origin 0x00000016:
+# CHECK:      warning: DW_TAG_enumeration_type in concrete instance 0x00000044 of a subprogram should only be in its abstract origin 0x00000016:
 # CHECK-EMPTY:
 # CHECK-NEXT: 0x0000005b: DW_TAG_enumeration_type
 # CHECK-NEXT:               DW_AT_name {{.*}}("OnlyHereEnum")
 
-# CHECK:      warning: DW_TAG_imported_module in out-of-line instance 0x00000044 of a subprogram is missing from its abstract origin 0x00000016:
+# CHECK:      warning: DW_TAG_imported_module in concrete instance 0x00000044 of a subprogram should only be in its abstract origin 0x00000016:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x0000006e: DW_TAG_imported_module
+# CHECK-NEXT:               DW_AT_import {{.*}} "ns"
+# CHECK-NEXT:               DW_AT_decl_line {{.*}} (3)
+
+# CHECK:      warning: DW_TAG_imported_module in concrete instance 0x00000044 of a subprogram should only be in its abstract origin 0x00000016:
 # CHECK-EMPTY:
 # CHECK-NEXT: 0x00000074: DW_TAG_imported_module
 # CHECK-NEXT:               DW_AT_import {{.*}} "ns"
 # CHECK-NEXT:               DW_AT_decl_line {{.*}} (7)
 
-# CHECK:      warning: DW_TAG_union_type in out-of-line instance 0x00000044 of a subprogram is missing from its abstract origin 0x00000016:
+# CHECK:      warning: DW_TAG_typedef in concrete instance 0x00000044 of a subprogram should only be in its abstract origin 0x00000016:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x0000007f: DW_TAG_typedef
+# CHECK-NEXT:               DW_AT_name {{.*}}("BlockInBoth")
+
+# CHECK:      warning: DW_TAG_union_type in concrete instance 0x00000044 of a subprogram should only be in its abstract origin 0x00000016:
 # CHECK-EMPTY:
 # CHECK-NEXT: 0x0000008c: DW_TAG_union_type
 # CHECK-NEXT:               DW_AT_name {{.*}}("BlockOnlyHere")
+
+# CHECK:      warning: DW_TAG_typedef in concrete instance 0x000000af of a subprogram should only be in its abstract origin 0x00000016:
+# CHECK-EMPTY:
+# CHECK-NEXT: 0x000000b9: DW_TAG_typedef
+# CHECK-NEXT:               DW_AT_name {{.*}}("InlinedOnlyHere")
 
 # CHECK: No errors.
 
@@ -111,6 +133,12 @@
 	.uleb128 0x03                   # DW_AT_name
 	.uleb128 0x08                   # DW_FORM_string
 	.byte	0, 0
+	.uleb128 14                     # Abbrev 14
+	.uleb128 0x1d                   # DW_TAG_inlined_subroutine
+	.byte	1                       # DW_CHILDREN_yes
+	.uleb128 0x31                   # DW_AT_abstract_origin
+	.uleb128 0x13                   # DW_FORM_ref4
+	.byte	0, 0
 	.byte	0                       # End of abbreviations
 
 	.section	.debug_info,"",@progbits
@@ -178,6 +206,14 @@
 	.asciz	"g"
 	.uleb128 4                      # DW_TAG_structure_type
 	.asciz	"NotAnInstance"
+## An inlined instance is checked the same way as an out-of-line one.
+	.uleb128 14                     # DW_TAG_inlined_subroutine
+	.long	.Lf - .Lcu_begin
+	.uleb128 12                     # DW_TAG_structure_type
+	.long	.LInAbstract - .Lcu_begin
+	.uleb128 7                      # DW_TAG_typedef
+	.asciz	"InlinedOnlyHere"
+	.byte	0                       # End of the inlined instance
 	.byte	0                       # End of g
 
 	.byte	0                       # End of compile unit
