@@ -71,30 +71,33 @@ static_assert(APFloatBase::integerPartWidth % 4 == 0, "Part width must be divisi
 namespace llvm {
 
 namespace detail {
-template <const fltSemantics &S>
-unsigned int IEEEFloat::partCountForSemantic() {
-  static_assert(&S != &APFloatBase::semBogus);
-  static_assert(&S != &APFloatBase::semPPCDoubleDouble);
+constexpr const llvm::fltSemantics &EnumToSemanticsCE(APFloatBase::Semantics S);
 
-  if constexpr (&S == &APFloatBase::semIEEEquad)
+unsigned int IEEEFloat::partCountForSemantic(APFloatBase::Semantics S) {
+  switch (S) {
+  case APFloatBase::S_IEEEquad:
     return 2;
-  else if constexpr (&S == &APFloatBase::semX87DoubleExtended)
+  case APFloatBase::S_x87DoubleExtended:
     return 2;
-  else if constexpr (&S == &APFloatBase::semPPCDoubleDoubleLegacy)
+  case APFloatBase::S_PPCDoubleDoubleLegacy:
     return 2;
-  else
+  case APFloatBase::S_PPCDoubleDouble:
+    assert(false);
+  default:
     return 1;
+  }
 }
 
-template <const fltSemantics &S> APInt bitcastForSemantics(const FloatRepr &R) {
+template <APFloatBase::Semantics S>
+APInt bitcastForSemantics(const FloatRepr &R) {
   const IEEEFloat &f{IEEEFloat::fromRepr(R)};
-  assert(f.partCount() == IEEEFloat::partCountForSemantic<S>());
-  return f.convertIEEEFloatToAPInt<S>();
+  assert(f.partCount() == IEEEFloat::partCountForSemantic(S));
+  return f.convertIEEEFloatToAPInt<EnumToSemanticsCE(S)>();
 }
 
-template <const fltSemantics &S>
+template <APFloatBase::Semantics S>
 void initFromAPIntForSemantics(FloatRepr &R, const APInt &api) {
-  IEEEFloat::fromRepr(R).initFromIEEEAPInt<S>(api);
+  IEEEFloat::fromRepr(R).initFromIEEEAPInt<EnumToSemanticsCE(S)>(api);
 }
 } // namespace detail
 
@@ -110,8 +113,8 @@ constexpr fltSemantics APFloatBase::semIEEEhalf = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semIEEEhalf>,
-    &detail::bitcastForSemantics<APFloatBase::semIEEEhalf>};
+    &detail::initFromAPIntForSemantics<S_IEEEhalf>,
+    &detail::bitcastForSemantics<S_IEEEhalf>};
 constexpr fltSemantics APFloatBase::semBFloat = {
     127,
     -126,
@@ -124,8 +127,8 @@ constexpr fltSemantics APFloatBase::semBFloat = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semBFloat>,
-    &detail::bitcastForSemantics<APFloatBase::semBFloat>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_BFloat>,
+    &detail::bitcastForSemantics<APFloatBase::S_BFloat>};
 constexpr fltSemantics APFloatBase::semIEEEsingle = {
     127,
     -126,
@@ -138,8 +141,8 @@ constexpr fltSemantics APFloatBase::semIEEEsingle = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semIEEEsingle>,
-    &detail::bitcastForSemantics<APFloatBase::semIEEEsingle>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_IEEEsingle>,
+    &detail::bitcastForSemantics<APFloatBase::S_IEEEsingle>};
 constexpr fltSemantics APFloatBase::semIEEEdouble = {
     1023,
     -1022,
@@ -152,8 +155,8 @@ constexpr fltSemantics APFloatBase::semIEEEdouble = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semIEEEdouble>,
-    &detail::bitcastForSemantics<APFloatBase::semIEEEdouble>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_IEEEdouble>,
+    &detail::bitcastForSemantics<APFloatBase::S_IEEEdouble>};
 constexpr fltSemantics APFloatBase::semIEEEquad = {
     16383,
     -16382,
@@ -166,8 +169,8 @@ constexpr fltSemantics APFloatBase::semIEEEquad = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semIEEEquad>,
-    &detail::bitcastForSemantics<APFloatBase::semIEEEquad>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_IEEEquad>,
+    &detail::bitcastForSemantics<APFloatBase::S_IEEEquad>};
 constexpr fltSemantics APFloatBase::semX87DoubleExtended = {
     16383,
     -16382,
@@ -180,8 +183,8 @@ constexpr fltSemantics APFloatBase::semX87DoubleExtended = {
     true,
     true,
     true,
-    &detail::initFromAPIntForSemantics<APFloatBase::semX87DoubleExtended>,
-    &detail::bitcastForSemantics<APFloatBase::semX87DoubleExtended>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_x87DoubleExtended>,
+    &detail::bitcastForSemantics<APFloatBase::S_x87DoubleExtended>};
 constexpr fltSemantics APFloatBase::semPPCDoubleDouble = {
     -1,
     0,
@@ -208,8 +211,8 @@ constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semPPCDoubleDoubleLegacy>,
-    &detail::bitcastForSemantics<APFloatBase::semPPCDoubleDoubleLegacy>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_PPCDoubleDoubleLegacy>,
+    &detail::bitcastForSemantics<APFloatBase::S_PPCDoubleDoubleLegacy>};
 constexpr fltSemantics APFloatBase::semFloat8E5M2 = {
     15,
     -14,
@@ -222,8 +225,8 @@ constexpr fltSemantics APFloatBase::semFloat8E5M2 = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E5M2>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E5M2>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E5M2>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E5M2>};
 constexpr fltSemantics APFloatBase::semFloat8E5M2FNUZ = {
     15,
     -15,
@@ -236,8 +239,8 @@ constexpr fltSemantics APFloatBase::semFloat8E5M2FNUZ = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E5M2FNUZ>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E5M2FNUZ>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E5M2FNUZ>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E5M2FNUZ>};
 constexpr fltSemantics APFloatBase::semFloat8E4M3 = {
     7,
     -6,
@@ -250,8 +253,8 @@ constexpr fltSemantics APFloatBase::semFloat8E4M3 = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E4M3>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E4M3>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E4M3>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E4M3>};
 constexpr fltSemantics APFloatBase::semFloat8E4M3FN = {
     8,
     -6,
@@ -264,8 +267,8 @@ constexpr fltSemantics APFloatBase::semFloat8E4M3FN = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E4M3FN>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E4M3FN>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E4M3FN>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E4M3FN>};
 constexpr fltSemantics APFloatBase::semFloat8E4M3FNUZ = {
     7,
     -7,
@@ -278,8 +281,8 @@ constexpr fltSemantics APFloatBase::semFloat8E4M3FNUZ = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E4M3FNUZ>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E4M3FNUZ>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E4M3FNUZ>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E4M3FNUZ>};
 constexpr fltSemantics APFloatBase::semFloat8E4M3B11FNUZ = {
     4,
     -10,
@@ -292,8 +295,8 @@ constexpr fltSemantics APFloatBase::semFloat8E4M3B11FNUZ = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E4M3B11FNUZ>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E4M3B11FNUZ>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E4M3B11FNUZ>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E4M3B11FNUZ>};
 constexpr fltSemantics APFloatBase::semFloat8E3M4 = {
     3,
     -2,
@@ -306,8 +309,8 @@ constexpr fltSemantics APFloatBase::semFloat8E3M4 = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E3M4>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E3M4>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E3M4>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E3M4>};
 constexpr fltSemantics APFloatBase::semFloatTF32 = {
     127,
     -126,
@@ -320,8 +323,8 @@ constexpr fltSemantics APFloatBase::semFloatTF32 = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloatTF32>,
-    &detail::bitcastForSemantics<APFloatBase::semFloatTF32>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_FloatTF32>,
+    &detail::bitcastForSemantics<APFloatBase::S_FloatTF32>};
 constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
     127,
     -127,
@@ -334,8 +337,8 @@ constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
     false,
     false,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E8M0FNU>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E8M0FNU>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E8M0FNU>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E8M0FNU>};
 
 constexpr fltSemantics APFloatBase::semFloat8E5M3FNU = {
     16,
@@ -349,8 +352,8 @@ constexpr fltSemantics APFloatBase::semFloat8E5M3FNU = {
     false,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat8E5M3FNU>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat8E5M3FNU>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float8E5M3FNU>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float8E5M3FNU>};
 
 constexpr fltSemantics APFloatBase::semFloat6E3M2FN = {
     4,
@@ -364,8 +367,8 @@ constexpr fltSemantics APFloatBase::semFloat6E3M2FN = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat6E3M2FN>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat6E3M2FN>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float6E3M2FN>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float6E3M2FN>};
 constexpr fltSemantics APFloatBase::semFloat6E2M3FN = {
     2,
     0,
@@ -378,8 +381,8 @@ constexpr fltSemantics APFloatBase::semFloat6E2M3FN = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat6E2M3FN>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat6E2M3FN>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float6E2M3FN>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float6E2M3FN>};
 constexpr fltSemantics APFloatBase::semFloat4E2M1FN = {
     2,
     0,
@@ -392,56 +395,64 @@ constexpr fltSemantics APFloatBase::semFloat4E2M1FN = {
     true,
     true,
     false,
-    &detail::initFromAPIntForSemantics<APFloatBase::semFloat4E2M1FN>,
-    &detail::bitcastForSemantics<APFloatBase::semFloat4E2M1FN>};
+    &detail::initFromAPIntForSemantics<APFloatBase::S_Float4E2M1FN>,
+    &detail::bitcastForSemantics<APFloatBase::S_Float4E2M1FN>};
 constexpr fltSemantics APFloatBase::semBogus = {0, 0, 0, 0};
 
-const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
+constexpr const llvm::fltSemantics &
+detail::EnumToSemanticsCE(APFloatBase::Semantics S) {
   switch (S) {
-  case S_IEEEhalf:
-    return IEEEhalf();
-  case S_BFloat:
-    return BFloat();
-  case S_IEEEsingle:
-    return IEEEsingle();
-  case S_IEEEdouble:
-    return IEEEdouble();
-  case S_IEEEquad:
-    return IEEEquad();
-  case S_x87DoubleExtended:
-    return x87DoubleExtended();
-  case S_PPCDoubleDouble:
-    return PPCDoubleDouble();
-  case S_PPCDoubleDoubleLegacy:
-    return PPCDoubleDoubleLegacy();
-  case S_Float8E5M2:
-    return Float8E5M2();
-  case S_Float8E5M2FNUZ:
-    return Float8E5M2FNUZ();
-  case S_Float8E4M3:
-    return Float8E4M3();
-  case S_Float8E4M3FN:
-    return Float8E4M3FN();
-  case S_Float8E4M3FNUZ:
-    return Float8E4M3FNUZ();
-  case S_Float8E4M3B11FNUZ:
-    return Float8E4M3B11FNUZ();
-  case S_Float8E3M4:
-    return Float8E3M4();
-  case S_FloatTF32:
-    return FloatTF32();
-  case S_Float8E8M0FNU:
-    return Float8E8M0FNU();
-  case S_Float8E5M3FNU:
-    return Float8E5M3FNU();
-  case S_Float6E3M2FN:
-    return Float6E3M2FN();
-  case S_Float6E2M3FN:
-    return Float6E2M3FN();
-  case S_Float4E2M1FN:
-    return Float4E2M1FN();
+  case APFloatBase::S_IEEEhalf:
+    return APFloatBase::IEEEhalf();
+  case APFloatBase::S_BFloat:
+    return APFloatBase::BFloat();
+  case APFloatBase::S_IEEEsingle:
+    return APFloatBase::IEEEsingle();
+  case APFloatBase::S_IEEEdouble:
+    return APFloatBase::IEEEdouble();
+  case APFloatBase::S_IEEEquad:
+    return APFloatBase::IEEEquad();
+  case APFloatBase::S_x87DoubleExtended:
+    return APFloatBase::x87DoubleExtended();
+  case APFloatBase::S_PPCDoubleDouble:
+    return APFloatBase::PPCDoubleDouble();
+  case APFloatBase::S_PPCDoubleDoubleLegacy:
+    return APFloatBase::PPCDoubleDoubleLegacy();
+  case APFloatBase::S_Float8E5M2:
+    return APFloatBase::Float8E5M2();
+  case APFloatBase::S_Float8E5M2FNUZ:
+    return APFloatBase::Float8E5M2FNUZ();
+  case APFloatBase::S_Float8E4M3:
+    return APFloatBase::Float8E4M3();
+  case APFloatBase::S_Float8E4M3FN:
+    return APFloatBase::Float8E4M3FN();
+  case APFloatBase::S_Float8E4M3FNUZ:
+    return APFloatBase::Float8E4M3FNUZ();
+  case APFloatBase::S_Float8E4M3B11FNUZ:
+    return APFloatBase::Float8E4M3B11FNUZ();
+  case APFloatBase::S_Float8E3M4:
+    return APFloatBase::Float8E3M4();
+  case APFloatBase::S_FloatTF32:
+    return APFloatBase::FloatTF32();
+  case APFloatBase::S_Float8E8M0FNU:
+    return APFloatBase::Float8E8M0FNU();
+  case APFloatBase::S_Float8E5M3FNU:
+    return APFloatBase::Float8E5M3FNU();
+  case APFloatBase::S_Float6E3M2FN:
+    return APFloatBase::Float6E3M2FN();
+  case APFloatBase::S_Float6E2M3FN:
+    return APFloatBase::Float6E2M3FN();
+  case APFloatBase::S_Float4E2M1FN:
+    return APFloatBase::Float4E2M1FN();
   }
-  llvm_unreachable("Unrecognised floating semantics");
+  return APFloatBase::Bogus();
+}
+
+const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
+  // Wrapper to avoid moving EnumToSemanticsCE into the header
+  const fltSemantics &Sem = detail::EnumToSemanticsCE(S);
+  assert(&Sem != &semBogus);
+  return Sem;
 }
 
 APFloatBase::Semantics
@@ -3775,7 +3786,7 @@ APInt IEEEFloat::convertIEEEFloatToAPInt<
   IEEEFloat u(extended);
   fs = u.convert(APFloatBase::semIEEEdouble, rmNearestTiesToEven, &losesInfo);
   assert(fs == opOK || fs == opInexact);
-  words[0] = *bitcastForSemantics<APFloatBase::semIEEEdouble>(FloatRepr(u))
+  words[0] = *bitcastForSemantics<APFloatBase::S_IEEEdouble>(FloatRepr(u))
                   .getRawData();
 
   // If conversion was exact or resulted in a special case, we're done;
@@ -3790,7 +3801,7 @@ APInt IEEEFloat::convertIEEEFloatToAPInt<
     v.subtract(u, rmNearestTiesToEven);
     fs = v.convert(APFloatBase::semIEEEdouble, rmNearestTiesToEven, &losesInfo);
     assert(fs == opOK && !losesInfo);
-    words[1] = *bitcastForSemantics<APFloatBase::semIEEEdouble>(FloatRepr(v))
+    words[1] = *bitcastForSemantics<APFloatBase::S_IEEEdouble>(FloatRepr(v))
                     .getRawData();
   } else {
     words[1] = 0;
