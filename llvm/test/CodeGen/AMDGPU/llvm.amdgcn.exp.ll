@@ -639,8 +639,8 @@ define amdgpu_kernel void @test_export_pos_before_param_across_load(i32 %idx) #0
 ; PREGFX11: {{exp|export}} param0
 ; PREGFX11: {{exp|export}} param1
 define amdgpu_kernel void @test_export_across_store_load(i32 %idx, float %v) #0 {
-  %data0 = alloca <4 x float>, align 8, addrspace(5)
-  %data1 = alloca <4 x float>, align 8, addrspace(5)
+  %data0 = alloca <64 x float>, align 8, addrspace(5)
+  %data1 = alloca <64 x float>, align 8, addrspace(5)
   %cmp = icmp eq i32 %idx, 1
   %data = select i1 %cmp, ptr addrspace(5) %data0, ptr addrspace(5) %data1
   store float %v, ptr addrspace(5) %data, align 8
