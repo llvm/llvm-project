@@ -768,14 +768,14 @@ def _usingLLDBServerOnWindows():
     in-process Win32 ``windows`` process plugin.
 
     The choice is controlled by the ``LLDB_USE_LLDB_SERVER`` environment
-    variable: unset/off selects the default in-process plugin, on selects
-    the gdb-remote path through ``lldb-server``.
+    variable: unset/on selects the default gdb-remote path through
+    ``lldb-server``, off selects the in-process plugin.
     """
-    return os.environ.get("LLDB_USE_LLDB_SERVER", "").lower() in (
-        "on",
-        "yes",
-        "1",
-        "true",
+    return os.environ.get("LLDB_USE_LLDB_SERVER", "").lower() not in (
+        "off",
+        "no",
+        "0",
+        "false",
     )
 
 
