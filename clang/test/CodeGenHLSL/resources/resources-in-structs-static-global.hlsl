@@ -1,8 +1,8 @@
-// We should not split global struct instances containing resources when they are
-// static
-
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple spirv1.6-unknown-vulkan1.3-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+
+// We should not split global struct instances containing resources when they are
+// static
 
 // CHECK: @_ZL6cached = internal {{.*}}global %struct.A
 
