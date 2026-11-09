@@ -229,10 +229,6 @@ linalg::isaTransposeOpInterface(GenericOp op) {
 //===----------------------------------------------------------------------===//
 std::optional<SmallVector<int64_t>>
 linalg::isaReductionOpInterface(GenericOp op) {
-  // Unary reduce: single input, single output.
-  if (!op.isSingleInputOutput())
-    return std::nullopt;
-
   // It must reduce along at least one dimension.
   if (op.getNumReductionLoops() == 0)
     return std::nullopt;

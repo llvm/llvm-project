@@ -841,7 +841,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     dim identifiers).
 
     Currently, this operation supports multiplication followed by summation,
-    with the corresponding type-specific operations (`int`, `float`, `bool`).
+    with the corresponding type-specific operations (`int`, `float`, `bool`, `complex`).
     Support for other combinations can be added in the future if required
     by concrete use cases and can be lowered to appropriate lower-level operations.
 
@@ -1254,9 +1254,7 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
     The iteration type of each dim is inferred.
 
     Currently, this operation supports multiplication followed by summation,
-    with the corresponding type-specific operations (`int`, `float`, `bool`).
-    Support for other combinations can be added in the future if required
-    by concrete use cases and can be lowered to appropriate lower-level operations.
+    with the corresponding type-specific operations.
 
     The input operands `A`, `B`, and `C` follow the standard contraction semantics
     together with broadcasting and transposition rules.
