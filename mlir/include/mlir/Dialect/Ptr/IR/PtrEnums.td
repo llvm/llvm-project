@@ -72,8 +72,10 @@ def AtomicOrderingProp : EnumProp<AtomicOrdering>;
 // Ptr add flags enum properties.
 //===----------------------------------------------------------------------===//
 
+def PtrAddFlagsNone : I32EnumCase<"none", 0>;
+
 def Ptr_PtrAddFlags : I32Enum<"PtrAddFlags", "Pointer add flags", [
-    I32EnumCase<"none", 0>, I32EnumCase<"nusw", 1>, I32EnumCase<"nuw", 2>,
+    PtrAddFlagsNone, I32EnumCase<"nusw", 1>, I32EnumCase<"nuw", 2>,
     I32EnumCase<"inbounds", 3>
   ]> {
   let cppNamespace = "::mlir::ptr";
@@ -83,8 +85,10 @@ def Ptr_PtrAddFlags : I32Enum<"PtrAddFlags", "Pointer add flags", [
 // Ptr diff flags enum properties.
 //===----------------------------------------------------------------------===//
 
+def PtrDiffFlagsNone : I8BitEnumCase<"none", 0>;
+
 def Ptr_PtrDiffFlags : I8BitEnum<"PtrDiffFlags", "Pointer difference flags", [
-    I8BitEnumCase<"none", 0>, I8BitEnumCase<"nuw", 1>, I8BitEnumCase<"nsw", 2>
+    PtrDiffFlagsNone, I8BitEnumCase<"nuw", 1>, I8BitEnumCase<"nsw", 2>
   ]> {
   let cppNamespace = "::mlir::ptr";
 }

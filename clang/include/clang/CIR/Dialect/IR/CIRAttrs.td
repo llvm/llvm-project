@@ -1584,8 +1584,10 @@ def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
 // VisibilityKind
 //===----------------------------------------------------------------------===//
 
+def CIR_VisibilityDefault : I32EnumCase<"Default", 0, "default">;
+
 def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
-  I32EnumCase<"Default", 0, "default">,
+  CIR_VisibilityDefault,
   I32EnumCase<"Hidden", 1, "hidden">,
   I32EnumCase<"Protected", 2, "protected">
 ]>;
