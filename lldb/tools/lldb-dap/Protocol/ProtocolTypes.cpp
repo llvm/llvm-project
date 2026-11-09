@@ -1229,7 +1229,7 @@ llvm::json::Value toJSON(const StackFrame &SF) {
   if (SF.moduleId)
     result.insert({"moduleId", *SF.moduleId});
   if (SF.compileUnitId)
-    result.insert({"compileUnitId", *SF.compileUnitId});
+    result.insert({"$__lldb_compileUnitId", *SF.compileUnitId});
   if (SF.languageSpecificData)
     result.insert({"$__lldb_languageSpecificData", *SF.languageSpecificData});
   if (SF.presentationHint != StackFrame::ePresentationHintNone)

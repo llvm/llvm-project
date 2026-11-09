@@ -1230,12 +1230,15 @@ bool Attributor::hasAttr(const IRPosition &IRP,
   }
   if (!HasAttr) {
     Implied = true;
-    SmallVector<Attribute> Attrs;
-    for (Attribute::AttrKind AK : AttrKinds)
-      if (getAttrsFromAssumes(IRP, AK, Attrs)) {
-        HasAttr = true;
-        break;
-      }
+    // Most modules have no assume knowledge.
+    if (!InfoCache.getKnowledgeMap().empty()) {
+      SmallVector<Attribute> Attrs;
+      for (Attribute::AttrKind AK : AttrKinds)
+        if (getAttrsFromAssumes(IRP, AK, Attrs)) {
+          HasAttr = true;
+          break;
+        }
+    }
   }
 
   // Check if we should manifest the implied attribute kind at the IRP.
@@ -1264,8 +1267,10 @@ void Attributor::getAttrs(const IRPosition &IRP,
     if (IgnoreSubsumingPositions)
       break;
   }
-  for (Attribute::AttrKind AK : AttrKinds)
-    getAttrsFromAssumes(IRP, AK, Attrs);
+  if (!InfoCache.getKnowledgeMap().empty()) {
+    for (Attribute::AttrKind AK : AttrKinds)
+      getAttrsFromAssumes(IRP, AK, Attrs);
+  }
 }
 
 ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
@@ -2096,7 +2101,7 @@ static bool checkForAllInstructionsImpl(
     bool CheckPotentiallyDead = false) {
   for (unsigned Opcode : Opcodes) {
     // Check if we have instructions with this opcode at all first.
-    auto *Insts = OpcodeInstMap.lookup(Opcode);
+    auto *Insts = OpcodeInstMap[Opcode];
     if (!Insts)
       continue;
 
@@ -2758,10 +2763,14 @@ ChangeStatus Attributor::run() {
 }
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
-  TimeTraceScope TimeScope("updateAA", [&]() {
-    return AA.getName().str() +
-           std::to_string(AA.getIRPosition().getPositionKind());
-  });
+  std::optional<TimeTraceScope> TimeScope;
+  if (TimeTraceEnabled) {
+    TimeScope.emplace("updateAA", [&]() {
+      return AA.getName().str() +
+             std::to_string(AA.getIRPosition().getPositionKind());
+    });
+  }
+
   assert(Phase == AttributorPhase::UPDATE &&
          "We can update AA only in the update stage!");
 
@@ -3366,8 +3375,10 @@ void InformationCache::initializeInformationCache(const Function &CF,
 InformationCache::FunctionInfo::~FunctionInfo() {
   // The instruction vectors are allocated using a BumpPtrAllocator, we need to
   // manually destroy them.
-  for (auto &It : OpcodeInstMap)
-    It.getSecond()->~InstructionVectorTy();
+  for (InstructionVectorTy *Insts : OpcodeInstMap) {
+    if (Insts)
+      Insts->~InstructionVectorTy();
+  }
 }
 
 ArrayRef<Function *>

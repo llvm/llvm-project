@@ -542,7 +542,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// a null coercion is its own coerced type, so the rewriter splits it into one
 /// wire argument per field as classic codegen does.  A coercion this bridge
 /// cannot represent yields std::nullopt so the caller reports NYI rather than
-/// silently passing the value unchanged.
+/// silently passing the value unchanged.  The stack-slot alignment the
+/// classifier asks for, if any, is carried in directAlign.
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
 /// The classifiers for the targets the bridge serves only return Extend for
@@ -562,15 +563,17 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                   mlir::Type origTy) {
   if (info.isDirect()) {
     unsigned offset = info.getDirectOffset();
+    llvm::MaybeAlign align = info.getDirectAlign();
     // The classifier names a coerce type even where it matches the natural
     // type, so a non-null coerce does not by itself mean a rewrite is needed.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
     if (!coerceAbi) {
       auto recTy = dyn_cast_if_present<cir::RecordType>(origTy);
       if (!recTy || !recTy.isStruct() || !info.getCanBeFlattened())
-        return ArgClassification::getDirect();
+        return ArgClassification::getDirect(/*coerced=*/nullptr, /*offset=*/0,
+                                            align);
       ArgClassification classified =
-          ArgClassification::getDirect(recTy, /*offset=*/0);
+          ArgClassification::getDirect(recTy, /*offset=*/0, align);
       classified.canFlatten = true;
       return classified;
     }
@@ -600,7 +603,7 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
         ArgClassification classified = ArgClassification::getDirect(
             cir::PointerType::get(origPtr.getPointee(),
                                   coercedPtr.getAddrSpace()),
-            /*offset=*/0);
+            /*offset=*/0, align);
         classified.canFlatten = info.getCanBeFlattened();
         return classified;
       }
@@ -620,7 +623,8 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // an offset cannot take this path.
     if (!offset && !isAggregate && !comparesAgainstCoerce &&
         !coerceIsRegisterTuple && !coerceWidensScalar)
-      return ArgClassification::getDirect();
+      return ArgClassification::getDirect(/*coerced=*/nullptr, /*offset=*/0,
+                                          align);
     mlir::Type coerced = abiTypeToCIR(coerceAbi, ctx);
     if (!coerced)
       return std::nullopt;
@@ -632,9 +636,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // Coercing a value to the type it already has would add a memory round
     // trip for nothing.
     if (comparesAgainstCoerce && coerceIsNatural)
-      return ArgClassification::getDirect();
+      return ArgClassification::getDirect(/*coerced=*/nullptr, /*offset=*/0,
+                                          align);
     ArgClassification classified =
-        ArgClassification::getDirect(coerced, offset);
+        ArgClassification::getDirect(coerced, offset, align);
     classified.canFlatten = info.getCanBeFlattened();
     return classified;
   }
@@ -747,7 +752,8 @@ std::optional<FunctionClassification> CIRABIClassifierCommon::classifySignature(
     // The classifier passes a transparent union as its first member, and
     // names no coerce type when it passes that member as its own type.
     auto recTy = dyn_cast_if_present<cir::RecordType>(origArg);
-    if (ac->isPassThrough() && recTy && recordIsTransparentUnion(modOp, recTy))
+    if (ac->kind == ArgKind::Direct && !ac->coercedType && recTy &&
+        recordIsTransparentUnion(modOp, recTy))
       ac->coercedType = recTy.getMembers().front();
     ac->neededIntRegs = argInfo.getNeededIntRegs();
     ac->neededSseRegs = argInfo.getNeededSseRegs();
