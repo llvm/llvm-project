@@ -26,10 +26,12 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <thread>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -343,13 +345,50 @@ template <class ELFT>
 static void
 doParseFiles(Ctx &ctx,
              const SmallVector<std::unique_ptr<InputFile>, 0> &files) {
+  // Use worker threads to intern global symbol names while the doParseFile loop
+  // below parses files. The workers use a copy of files as doParseFile may add
+  // additional files. If there is a Fatal error in doParseFile then control
+  // flow longjmps out of this frame while the worker threads are still running,
+  // so their state remains on the heap and leaks along with ctx.
+  struct InternQueue {
+    SmallVector<ObjFile<ELFT> *, 0> files;
+    std::atomic<size_t> next = 0;
+    parallel::TaskGroup tg;
+  };
+  auto queue = std::make_unique<InternQueue>();
+  if (ctx.arg.threadCount > 1) {
+    for (const std::unique_ptr<InputFile> &f : files) {
+      if (f->kind() == InputFile::ObjKind && f->ekind == ctx.arg.ekind)
+        queue->files.push_back(cast<ObjFile<ELFT>>(f.get()));
+    }
+  }
+  ctx.symtab->concurrent = !queue->files.empty();
+  for (size_t i = 1; i < ctx.arg.threadCount; ++i)
+    queue->tg.spawn([q = queue.get()] {
+      size_t j;
+      while ((j = q->next.fetch_add(1, std::memory_order_relaxed)) <
+             q->files.size())
+        q->files[j]->internSymbols();
+    });
+
   // Add all files to the symbol table. This will add almost all symbols that we
   // need to the symbol table. This process might add files to the link due to
   // addDependentLibrary.
-  for (size_t i = 0; i < files.size(); ++i) {
+  for (size_t i = 0, j = 0; i < files.size(); ++i) {
     llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
+    // Claim the file unless a worker has claimed it. If one has, wait for it.
+    if (j < queue->files.size() && files[i].get() == queue->files[j]) {
+      size_t expected = j;
+      if (!queue->next.compare_exchange_strong(expected, j + 1,
+                                               std::memory_order_relaxed))
+        while (!queue->files[j]->interned)
+          std::this_thread::yield();
+      ++j;
+    }
     doParseFile<ELFT>(ctx, files[i].get());
   }
+  queue.reset();
+  ctx.symtab->concurrent = false;
   if (ctx.driver.armCmseImpLib)
     cast<ObjFile<ELFT>>(*ctx.driver.armCmseImpLib).importCmseSymbols();
 }
@@ -526,6 +565,21 @@ template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
   stringTable = CHECK2(obj.getStringTableForSymtab(*symtabSec, sections), this);
 }
 
+template <class ELFT> void ObjFile<ELFT>::internSymbols() {
+  assert(!interned);
+  // Leave names with '@' and errors to the serial parse loop.
+  ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
+  symbols = std::make_unique<Symbol *[]>(numSymbols);
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
+    Expected<StringRef> name = eSyms[i].getName(stringTable);
+    if (!name)
+      consumeError(name.takeError());
+    else if (!name->contains('@'))
+      symbols[i] = ctx.symtab->intern(CachedHashStringRef(*name));
+  }
+  interned = true;
+}
+
 template <class ELFT>
 uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
   return CHECK2(
@@ -609,8 +663,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       if (keepGroup) {
         keptGroups.push_back(i);
         if (!ctx.arg.resolveGroups)
-          sections[i] = createInputSection(
-              i, sec, check(obj.getSectionName(sec, shstrtab)));
+          sections[i] = makeThreadLocal<InputSection>(
+              *this, sec, check(obj.getSectionName(sec, shstrtab)));
       } else {
         // Otherwise, discard group members.
         for (uint32_t secIndex : entries.slice(1)) {
@@ -776,8 +830,7 @@ static bool isKnownSpecificSectionType(uint32_t t, uint32_t flags) {
 }
 
 template <class ELFT>
-void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
-                                       const llvm::object::ELFFile<ELFT> &obj) {
+void ObjFile<ELFT>::initializeSections(const llvm::object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
@@ -1000,7 +1053,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
     uint32_t type = read32<ELFT::Endianness>(desc.data());
     uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
     desc = desc.slice(8);
-    if (desc.size() < size)
+    if (desc.size() < alignTo<(ELFT::Is64Bits ? 8 : 4)>(size))
       return void(err(place) << "program property is too short");
 
     if (type == featureAndType) {
@@ -1197,6 +1250,13 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   return makeThreadLocal<InputSection>(*this, sec, name);
 }
 
+template <class ELFT> Symbol *ObjFile<ELFT>::insertGlobal(size_t i) {
+  if (symbols[i])
+    return ctx.symtab->insert(symbols[i]);
+  return ctx.symtab->insert(
+      CHECK2(this->getELFSyms<ELFT>()[i].getName(stringTable), this));
+}
+
 // Initialize symbols. symbols is a parallel array to the corresponding ELF
 // symbol table.
 template <class ELFT>
@@ -1205,11 +1265,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   if (!symbols)
     symbols = std::make_unique<Symbol *[]>(numSymbols);
 
-  // Some entries have been filled by LazyObjFile.
-  auto *symtab = ctx.symtab.get();
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i)
-    if (!symbols[i])
-      symbols[i] = symtab->insert(CHECK2(eSyms[i].getName(stringTable), this));
+    symbols[i] = insertGlobal(i);
 
   // Perform symbol resolution on non-local symbols.
   SmallVector<unsigned, 32> undefineds;
@@ -1234,14 +1291,14 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
         Err(ctx) << this << ": common symbol '" << sym->getName()
                  << "' has invalid alignment: " << value;
       hasCommonSyms = true;
-      sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
-                                     type, value, size});
+      sym->resolve(ctx, CommonSymbol{this, StringRef(), binding, stOther, type,
+                                     value, size});
       continue;
     }
 
     // Handle global defined symbols. Defined::section will be set in postParse.
-    sym->resolve(ctx, Defined{ctx, this, StringRef(), binding, stOther, type,
-                              value, size, nullptr});
+    sym->resolve(ctx, Defined{this, StringRef(), binding, stOther, type, value,
+                              size, nullptr});
   }
 
   // Undefined symbols (excluding those defined relative to non-prevailing
@@ -1325,10 +1382,9 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
   }
 }
 
-template <class ELFT>
-void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
+template <class ELFT> void ObjFile<ELFT>::initSectionsAndLocalSyms() {
   if (!justSymbols)
-    initializeSections(ignoreComdats, getObj());
+    initializeSections(getObj());
 
   if (!firstGlobal)
     return;
@@ -1366,7 +1422,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
       new (symbols[i]) Undefined(this, name, STB_LOCAL, eSym.st_other, type,
                                  /*discardedSecIdx=*/secIdx);
     else
-      new (symbols[i]) Defined(ctx, this, name, STB_LOCAL, eSym.st_other, type,
+      new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
     symbols[i]->isUsedInRegularObj = true;
   }
@@ -1797,6 +1853,9 @@ static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
     return t.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:
     return EM_X86_64;
+  case Triple::nvptx:
+  case Triple::nvptx64:
+    return EM_CUDA;
   default:
     ErrAlways(ctx) << path
                    << ": could not infer e_machine from bitcode target triple "
@@ -1888,12 +1947,11 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   }
 
   if (objSym.isCommon()) {
-    sym->resolve(ctx, CommonSymbol{ctx, &f, StringRef(), binding, visibility,
+    sym->resolve(ctx, CommonSymbol{&f, StringRef(), binding, visibility,
                                    STT_OBJECT, objSym.getCommonAlignment(),
                                    objSym.getCommonSize()});
   } else {
-    Defined newSym(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
-                   nullptr);
+    Defined newSym(&f, StringRef(), binding, visibility, type, 0, 0, nullptr);
     // The definition can be omitted if all bitcode definitions satisfy
     // `canBeOmittedFromSymbolTable()` and isUsedInRegularObj is false.
     // The latter condition is tested in parseVersionAndComputeIsPreemptible.
@@ -1976,15 +2034,15 @@ void BinaryFile::parse() {
       c = '_';
 
   llvm::StringSaver &ss = ctx.saver;
-  ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, ss.save(s + "_start"), STB_GLOBAL, STV_DEFAULT,
-                   STT_OBJECT, 0, 0, section});
-  ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, ss.save(s + "_end"), STB_GLOBAL, STV_DEFAULT,
-                   STT_OBJECT, data.size(), 0, section});
-  ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, ss.save(s + "_size"), STB_GLOBAL, STV_DEFAULT,
-                   STT_OBJECT, data.size(), 0, nullptr});
+  ctx.symtab->addAndCheckDuplicate(Defined{this, ss.save(s + "_start"),
+                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                           0, 0, section});
+  ctx.symtab->addAndCheckDuplicate(Defined{this, ss.save(s + "_end"),
+                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                           data.size(), 0, section});
+  ctx.symtab->addAndCheckDuplicate(Defined{this, ss.save(s + "_size"),
+                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                           data.size(), 0, nullptr});
 }
 
 InputFile *elf::createInternalFile(Ctx &ctx, StringRef name) {
@@ -2023,17 +2081,16 @@ std::unique_ptr<ELFFileBase> elf::createObjFile(Ctx &ctx, MemoryBufferRef mb,
 
 template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
-  numSymbols = eSyms.size();
-  symbols = std::make_unique<Symbol *[]>(numSymbols);
+  if (!symbols)
+    symbols = std::make_unique<Symbol *[]>(numSymbols);
 
   // resolve() may trigger this->extract() if an existing symbol is an undefined
   // symbol. If that happens, this function has served its purpose, and we can
   // exit from the loop early.
-  auto *symtab = ctx.symtab.get();
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
-    symbols[i] = symtab->insert(CHECK2(eSyms[i].getName(stringTable), this));
+    symbols[i] = insertGlobal(i);
     symbols[i]->resolve(ctx, LazySymbol{*this});
     if (!lazy)
       break;

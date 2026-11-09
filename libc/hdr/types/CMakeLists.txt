@@ -927,6 +927,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_shmid_ds
+  HDRS
+    struct_shmid_ds.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_shmid_ds
+)
+
+add_proxy_header_library(
   gid_t
   HDRS
     gid_t.h
@@ -1388,4 +1396,12 @@ add_proxy_header_library(
     idtype_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.idtype_t
+)
+
+add_proxy_header_library(
+  eventfd_t
+  HDRS
+    eventfd_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.eventfd_t
 )

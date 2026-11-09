@@ -179,7 +179,6 @@ private:
   SDValue ExpandFNEG(SDNode *Node) const;
   SDValue expandLdexp(SDNode *Node) const;
   SDValue expandFrexp(SDNode *Node) const;
-  SDValue expandModf(SDNode *Node) const;
 
   SDValue ExpandLegalINT_TO_FP(SDNode *Node, SDValue &Chain);
   void PromoteLegalINT_TO_FP(SDNode *N, const SDLoc &dl,
@@ -202,7 +201,7 @@ private:
   SDValue ExpandVectorBuildThroughStack(SDNode* Node);
   SDValue ExpandConcatVectors(SDNode *Node);
 
-  SDValue ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP);
+  SDValue ExpandConstantFP(ConstantFPSDNode *CFP);
   SDValue ExpandConstant(ConstantSDNode *CP);
 
   // if ExpandNode returns false, LegalizeOp falls back to ConvertNodeToLibcall
@@ -314,10 +313,8 @@ SDValue SelectionDAGLegalize::ShuffleWithNarrowerEltType(
   return DAG.getVectorShuffle(NVT, dl, N1, N2, NewMask);
 }
 
-/// Expands the ConstantFP node to an integer constant or
-/// a load from the constant pool.
-SDValue
-SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
+/// Expands the ConstantFP node to a load from the constant pool.
+SDValue SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP) {
   bool Extend = false;
   SDLoc dl(CFP);
 
@@ -329,11 +326,6 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
   // fp stack or PPC FP unit).
   EVT VT = CFP->getValueType(0);
   ConstantFP *LLVMC = const_cast<ConstantFP*>(CFP->getConstantFPValue());
-  if (!UseCP) {
-    assert((VT == MVT::f64 || VT == MVT::f32) && "Invalid type expansion");
-    return DAG.getConstant(LLVMC->getValueAPF().bitcastToAPInt(), dl,
-                           (VT == MVT::f64) ? MVT::i64 : MVT::i32);
-  }
 
   APFloat APF = CFP->getValueAPF();
   EVT OrigVT = VT;
@@ -540,6 +532,10 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
       ReplaceNode(SDValue(Node, 0), Result);
       break;
     }
+    case TargetLowering::Expand:
+      assert(VT.isVector() && "Cannot expand a scalar store");
+      ReplaceNode(SDValue(Node, 0), TLI.scalarizeVectorStore(ST, DAG));
+      break;
     }
     return;
   }
@@ -719,6 +715,10 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       RChain = Res.getValue(1);
       break;
     }
+    case TargetLowering::Expand:
+      assert(VT.isVector() && "Cannot expand a scalar load");
+      std::tie(RVal, RChain) = TLI.scalarizeVectorLoad(LD, DAG);
+      break;
     }
     if (RChain.getNode() != Node) {
       assert(RVal.getNode() != Node && "Load must be completely replaced");
@@ -1063,6 +1063,22 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+  case ISD::ATOMIC_CMP_SWAP:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    cast<AtomicSDNode>(Node)->getMemoryVT());
+    break;
   case ISD::SELECT_CC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
@@ -1081,8 +1097,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
                               : Opc == ISD::STRICT_FSETCCS ? 1
                                                            : 0;
     MVT OpVT = Node->getOperand(CompareOperand).getSimpleValueType();
-    ISD::CondCode CCCode =
-        cast<CondCodeSDNode>(Node->getOperand(CCOperand))->get();
+    ISD::CondCode CCCode = Node->getOperandCondCode(CCOperand);
     Action = TLI.getCondCodeAction(CCCode, OpVT);
     if (Action == TargetLowering::Legal) {
       if (Node->getOpcode() == ISD::SELECT_CC)
@@ -2444,7 +2459,8 @@ SDValue SelectionDAGLegalize::ExpandSincosStretLibCall(SDNode *Node) const {
   /// - Single return as vector elements
   /// - sret struct
 
-  const RTLIB::RuntimeLibcallsInfo &CallsInfo = TLI.getRuntimeLibcallsInfo();
+  const RTLIB::RuntimeLibcallsInfo &CallsInfo =
+      DAG.getLibcalls().getRuntimeLibcallsInfo();
 
   const DataLayout &DL = DAG.getDataLayout();
 
@@ -2763,34 +2779,6 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
       DAG.getNode(ISD::SELECT, dl, ExpVT, DenormOrZero, Zero, ComputedExp);
 
   return DAG.getMergeValues({Result0, Result1}, dl);
-}
-
-SDValue SelectionDAGLegalize::expandModf(SDNode *Node) const {
-  SDLoc dl(Node);
-  SDValue Val = Node->getOperand(0);
-  EVT VT = Val.getValueType();
-  SDNodeFlags Flags = Node->getFlags();
-
-  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
-  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
-
-  SDValue FracToUse;
-  if (Flags.hasNoInfs()) {
-    FracToUse = FracPart;
-  } else {
-    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
-    SDValue Inf =
-        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
-    EVT SetCCVT =
-        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
-    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
-    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
-  }
-
-  SDValue ResultFrac =
-      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
-  return DAG.getMergeValues({ResultFrac, IntPart}, dl);
 }
 
 /// This function is responsible for legalizing a
@@ -3391,6 +3379,22 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Res.getValue(1));
     break;
   }
+  case ISD::ATOMIC_LOAD_AND: {
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    if (TLI.getOperationAction(ISD::ATOMIC_LOAD_CLR, AN->getMemoryVT()) ==
+        TargetLowering::Expand)
+      break;
+
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    SDValue NewRHS = DAG.getNOT(DL, Node->getOperand(2), VT);
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_CLR, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
   case ISD::ATOMIC_LOAD_FSUB: {
     SDLoc DL(Node);
     EVT VT = Node->getValueType(0);
@@ -3931,10 +3935,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
-    if (SDValue Expanded = expandModf(Node)) {
-      Results.push_back(Expanded);
-      Results.push_back(Expanded.getValue(1));
-    }
+    TLI.expandMODF(Node, DAG, Results);
     break;
   }
   case ISD::FSINCOS: {
@@ -3996,11 +3997,28 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::ConstantFP: {
     ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Node);
-    // Check to see if this FP immediate is already legal.
-    // If this is a legal constant, turn it into a TargetConstantFP node.
-    if (!TLI.isFPImmLegal(CFP->getValueAPF(), Node->getValueType(0),
-                          DAG.shouldOptForSize()))
-      Results.push_back(ExpandConstantFP(CFP, true));
+    EVT VT = Node->getValueType(0);
+    TargetLowering::FPImmAction Action =
+        TLI.getFPImmAction(CFP->getValueAPF(), VT, DAG.shouldOptForSize());
+    switch (Action) {
+    case TargetLowering::FPImmAction::Legal:
+      break;
+    case TargetLowering::FPImmAction::Bitcast: {
+      EVT IntVT = VT.changeTypeToInteger();
+      assert(TLI.isTypeLegal(IntVT) &&
+             "integer type for FP immediate bits must be legal");
+      // The constant is opaque so the bitcast is not folded back.
+      SDValue Bits =
+          DAG.getConstant(CFP->getValueAPF().bitcastToAPInt(), dl, IntVT,
+                          /*isTarget=*/false, /*isOpaque=*/true);
+      Results.push_back(DAG.getBitcast(VT, Bits));
+      break;
+    }
+    case TargetLowering::FPImmAction::ConstantPool:
+      Results.push_back(ExpandConstantFP(CFP));
+      break;
+    }
+
     break;
   }
   case ISD::Constant: {
@@ -4286,9 +4304,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp2 = Node->getOperand(1);
     Tmp3 = Node->getOperand(2);
     if (Tmp1.getOpcode() == ISD::SETCC) {
-      Tmp1 = DAG.getSelectCC(
-          dl, Tmp1.getOperand(0), Tmp1.getOperand(1), Tmp2, Tmp3,
-          cast<CondCodeSDNode>(Tmp1.getOperand(2))->get(), Node->getFlags());
+      Tmp1 =
+          DAG.getSelectCC(dl, Tmp1.getOperand(0), Tmp1.getOperand(1), Tmp2,
+                          Tmp3, Tmp1.getOperandCondCode(2), Node->getFlags());
     } else {
       Tmp1 =
           DAG.getSelectCC(dl, Tmp1, DAG.getConstant(0, dl, Tmp1.getValueType()),
@@ -5712,7 +5730,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::STRICT_FSETCCS: {
     unsigned ExtOp = ISD::FP_EXTEND;
     if (NVT.isInteger()) {
-      ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
+      ISD::CondCode CCCode = Node->getOperandCondCode(2);
       if (isSignedIntSetCC(CCCode) ||
           TLI.isSExtCheaperThanZExt(Node->getOperand(0).getValueType(), NVT))
         ExtOp = ISD::SIGN_EXTEND;
@@ -5743,8 +5761,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::BR_CC: {
     unsigned ExtOp = ISD::FP_EXTEND;
     if (NVT.isInteger()) {
-      ISD::CondCode CCCode =
-        cast<CondCodeSDNode>(Node->getOperand(1))->get();
+      ISD::CondCode CCCode = Node->getOperandCondCode(1);
       ExtOp = isSignedIntSetCC(CCCode) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
     }
     Tmp1 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(2));

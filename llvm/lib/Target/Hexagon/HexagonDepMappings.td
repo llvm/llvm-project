@@ -152,6 +152,7 @@ def S4_storeirif_zomapAlias : InstAlias<"if (!$Pv4) memw($Rs32) = #$II", (S4_sto
 def S4_storeirifnew_zomapAlias : InstAlias<"if (!$Pv4.new) memw($Rs32) = #$II", (S4_storeirifnew_io PredRegs:$Pv4, IntRegs:$Rs32, 0, s32_0Imm:$II)>;
 def S4_storeirit_zomapAlias : InstAlias<"if ($Pv4) memw($Rs32) = #$II", (S4_storeirit_io PredRegs:$Pv4, IntRegs:$Rs32, 0, s32_0Imm:$II)>;
 def S4_storeiritnew_zomapAlias : InstAlias<"if ($Pv4.new) memw($Rs32) = #$II", (S4_storeiritnew_io PredRegs:$Pv4, IntRegs:$Rs32, 0, s32_0Imm:$II)>;
+def S6_allocframe_rb_to_rawAlias : InstAlias<"allocframe_rb(#$Ii)", (S2_allocframe_rb R29, u29_3Imm:$Ii)>, Requires<[HasV83]>;
 def S6_allocframe_to_rawAlias : InstAlias<"allocframe(#$Ii)", (S2_allocframe R29, u11_3Imm:$Ii)>;
 def V6_MAP_equbAlias : InstAlias<"$Qd4 = vcmp.eq($Vu32.ub,$Vv32.ub)", (V6_veqb HvxQR:$Qd4, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_MAP_equb_andAlias : InstAlias<"$Qx4 &= vcmp.eq($Vu32.ub,$Vv32.ub)", (V6_veqb_and HvxQR:$Qx4, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
