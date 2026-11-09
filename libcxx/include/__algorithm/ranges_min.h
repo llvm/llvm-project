@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_MIN_H
 #define _LIBCPP___ALGORITHM_RANGES_MIN_H
 
+#include <__algorithm/for_each.h>
 #include <__algorithm/min_element.h>
 #include <__assert>
 #include <__concepts/copyable.h>
@@ -21,6 +22,8 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__type_traits/is_trivially_copyable.h>
+#include <__utility/forward.h>
+#include <__utility/move.h>
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -67,12 +70,20 @@ struct __min {
     if constexpr (forward_range<_Rp> && !__is_cheap_to_copy<range_value_t<_Rp>>) {
       return *std::__min_element(__first, __last, __comp, __proj);
     } else {
-      range_value_t<_Rp> __result = *__first;
-      while (++__first != __last) {
-        if (std::invoke(__comp, std::invoke(__proj, *__first), std::invoke(__proj, __result)))
-          __result = *__first;
-      }
-      return __result;
+      struct _Func {
+        range_value_t<_Rp> __result_;
+        _Comp& __comp_;
+        _Proj& __proj_;
+
+        constexpr void operator()(range_reference_t<_Rp> __val) {
+          if (std::invoke(__comp_, std::invoke(__proj_, __val), std::invoke(__proj_, __result_)))
+            __result_ = std::forward<range_reference_t<_Rp>>(__val);
+        }
+      };
+
+      identity __identity;
+      _Func __func(*__first, __comp, __proj);
+      return std::__for_each(std::move(++__first), std::move(__last), std::move(__func), __identity).__fun_.__result_;
     }
   }
 };
