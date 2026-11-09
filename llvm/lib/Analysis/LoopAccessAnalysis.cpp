@@ -2202,6 +2202,14 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   return true;
 }
 
+/// Returns true if the address of a pointer in \p AS identifies the accessed
+/// memory location, i.e. the pointer has no non-address bits and its
+/// representation is stable and has no external state.
+static bool addressIdentifiesLocation(unsigned AS, const DataLayout &DL) {
+  return DL.getPointerSizeInBits(AS) == DL.getAddressSizeInBits(AS) &&
+         !DL.hasUnstableRepresentation(AS) && !DL.hasExternalState(AS);
+}
+
 /// Returns true if pointers in \p AS0 and \p AS1 can be compared in runtime
 /// checks, i.e. casts between them are no-ops and both are integral with the
 /// same pointer size.
@@ -2211,8 +2219,8 @@ static bool areAddrSpacesComparable(unsigned AS0, unsigned AS1,
   return AS0 == AS1 ||
          (TTI && TTI->isNoopAddrSpaceCast(AS0, AS1) &&
           TTI->isNoopAddrSpaceCast(AS1, AS0) &&
-          !DL.isNonIntegralAddressSpace(AS0) &&
-          !DL.isNonIntegralAddressSpace(AS1) &&
+          addressIdentifiesLocation(AS0, DL) &&
+          addressIdentifiesLocation(AS1, DL) &&
           DL.getPointerSizeInBits(AS0) == DL.getPointerSizeInBits(AS1));
 }
 
