@@ -6379,9 +6379,12 @@ simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
     // -X /  X -> -1.0 and
     //  X / -X -> -1.0 are legal when NaNs are ignored.
-    // We can ignore signed zeros because +-0.0/+-0.0 is NaN and ignored.
+    // We can ignore signed zeros because +-0.0/+-0.0 is NaN and ignored, so
+    // -X can be fneg X or fsub +-0.0, X.
     if (match(Op0, m_FNegNSZ(m_Specific(Op1))) ||
-        match(Op1, m_FNegNSZ(m_Specific(Op0))))
+        match(Op1, m_FNegNSZ(m_Specific(Op0))) ||
+        match(Op0, m_FNeg(m_Specific(Op1))) ||
+        match(Op1, m_FNeg(m_Specific(Op0))))
       return ConstantFP::get(Op0->getType(), -1.0);
 
     // nnan ninf X / [-]0.0 -> poison

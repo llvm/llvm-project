@@ -504,6 +504,15 @@ define <2 x float> @fdiv_neg_vec_poison_elt(<2 x float> %f) #0 {
   ret <2 x float> %div
 }
 
+define float @fdiv_fneg(float %f) #0 {
+; CHECK-LABEL: @fdiv_fneg(
+; CHECK-NEXT:    ret float -1.000000e+00
+;
+  %neg = fneg float %f
+  %div = call nnan float @llvm.experimental.constrained.fdiv.f32(float %neg, float %f, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %div
+}
+
 ; PR21126: http://llvm.org/bugs/show_bug.cgi?id=21126
 ; With loose math, sqrt(X) * sqrt(X) is just X.
 
