@@ -1833,7 +1833,6 @@ add_entrypoint_object(
     ../log10p1bf16.h
   DEPENDS
     libc.src.__support.math.log10p1bf16
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
