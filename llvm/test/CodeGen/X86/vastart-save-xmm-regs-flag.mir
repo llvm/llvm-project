@@ -1,0 +1,48 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=none -o - %s | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=x86-expand-pseudo -verify-machineinstrs -o - %s | FileCheck %s
+
+# x86-expand-pseudo looks for VASTART_SAVE_XMM_REGS in every block when the
+# function info says it was created. The flag survives MIR printing.
+
+# MIR:      machineFunctionInfo:
+# MIR:        hasVAStartSaveXMMRegs: true
+
+# CHECK-LABEL: name: vastart_save_xmm_regs
+# CHECK:       bb.1:
+# CHECK:         TEST8rr $al, $al, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %bb.3, 4, implicit $eflags
+# CHECK:       bb.2:
+# CHECK:         MOVAPSmr %stack.0, 1, $noreg, 48, $noreg, $xmm0
+# CHECK:         MOVAPSmr %stack.0, 1, $noreg, 160, $noreg, $xmm7
+# CHECK:       bb.3:
+# CHECK-NEXT:    liveins:
+# CHECK-NOT:   VASTART_SAVE_XMM_REGS
+
+--- |
+  define void @vastart_save_xmm_regs(ptr %fmt, ...) {
+    ret void
+  }
+...
+---
+name:            vastart_save_xmm_regs
+tracksRegLiveness: true
+frameInfo:
+  hasVAStart:      true
+stack:
+  - { id: 0, size: 176, alignment: 16 }
+machineFunctionInfo:
+  hasVAStartSaveXMMRegs: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $al, $xmm0, $xmm1, $xmm2, $xmm3, $xmm4, $xmm5, $xmm6, $xmm7
+
+    $rsp = SUB64ri32 $rsp, 4096, implicit-def dead $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    liveins: $al, $xmm0, $xmm1, $xmm2, $xmm3, $xmm4, $xmm5, $xmm6, $xmm7
+
+    VASTART_SAVE_XMM_REGS $al, %stack.0, 1, $noreg, 0, $noreg, 48, $xmm0, $xmm1, $xmm2, $xmm3, $xmm4, $xmm5, $xmm6, $xmm7, implicit-def dead $eflags :: (store (s1024) into %stack.0 + 48, align 16)
+    RET64
+...

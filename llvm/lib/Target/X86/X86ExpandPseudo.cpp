@@ -942,6 +942,9 @@ bool X86ExpandPseudoImpl::expandPseudosWhichAffectControlFlow(
   // Currently pseudo which affects control flow is only
   // X86::VASTART_SAVE_XMM_REGS. It is created in the entry block, but the
   // prologue can split that block, e.g. for an inline stack probe loop.
+  if (!X86FI->getHasVAStartSaveXMMRegs())
+    return false;
+
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &Instr : MBB.instrs()) {
       if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
