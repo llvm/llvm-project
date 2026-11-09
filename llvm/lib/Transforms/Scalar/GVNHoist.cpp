@@ -225,7 +225,6 @@ public:
            AliasAnalysis *AA, MemorySSA *MSSA)
       : Opts(Opts), DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
-    MSSA->ensureOptimizedUses();
   }
 
   bool run(Function &F);
@@ -620,7 +619,9 @@ bool GVNHoist::hasEHOrLoadsOnPath(const Instruction *NewPt, MemoryDef *Def,
   const BasicBlock *NewBB = NewPt->getParent();
   const BasicBlock *OldBB = Def->getBlock();
   assert(DT->dominates(NewBB, OldBB) && "invalid path");
-  assert(DT->dominates(Def->getDefiningAccess()->getBlock(), NewBB) &&
+  assert(DT->dominates(
+             MSSA->getWalker()->getClobberingMemoryAccess(Def)->getBlock(),
+             NewBB) &&
          "def does not dominate new hoisting point");
 
   // Walk all basic blocks reachable in depth-first iteration on the inverse
@@ -694,7 +695,7 @@ bool GVNHoist::safeToHoistLdSt(const Instruction *NewPt,
   const BasicBlock *UBB = U->getBlock();
 
   // Check for dependences on the Memory SSA.
-  MemoryAccess *D = U->getDefiningAccess();
+  MemoryAccess *D = MSSA->getWalker()->getClobberingMemoryAccess(U);
   BasicBlock *DBB = D->getBlock();
   if (DT->properlyDominates(NewBB, DBB))
     // Cannot move the load or store to NewBB above its definition in DBB.
@@ -996,8 +997,6 @@ unsigned GVNHoist::removeAndReplace(const SmallVecInsn &Candidates,
     // The definition of this ld/st will not change: ld/st hoisting is
     // legal when the ld/st is not moved past its current definition.
     MSSAUpdater->moveToPlace(NewMemAcc, DestBB, MemorySSA::BeforeTerminator);
-    if (isa<MemoryUse>(NewMemAcc))
-      MSSA->getWalker()->getClobberingMemoryAccess(NewMemAcc);
   }
 
   // Replace all other instructions with Repl with memory access NewMemAcc.
