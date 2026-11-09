@@ -638,7 +638,8 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unkn
 define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rne_f32_bf16__psub__ninf_pnorm(i1 %c0, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan pinf zero sub nnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rne_f32_bf16__psub__ninf_pnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan pinf zero sub nnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.tonearest")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.tonearest")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -649,7 +650,8 @@ define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptru
 define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rna_f32_bf16__psub__ninf_pnorm(i1 %c0, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan pinf zero sub nnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rna_f32_bf16__psub__ninf_pnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan pinf zero sub nnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.tonearestaway")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.tonearestaway")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -660,7 +662,8 @@ define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptru
 define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rtz_f32_bf16__psub__ninf_pnorm(i1 %c0, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan pinf zero sub nnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rtz_f32_bf16__psub__ninf_pnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan pinf zero sub nnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.towardzero")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.towardzero")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -671,7 +674,8 @@ define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptru
 define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rtp_f32_bf16__psub__ninf_pnorm(i1 %c0, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan pinf zero sub nnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rtp_f32_bf16__psub__ninf_pnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan pinf zero sub nnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.upward")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.upward")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -682,7 +686,8 @@ define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptru
 define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rtn_f32_bf16__psub__ninf_pnorm(i1 %c0, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan pinf zero sub nnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptrunc_rtn_f32_bf16__psub__ninf_pnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan pinf zero sub nnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.downward")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.downward")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -695,7 +700,8 @@ define nofpclass(nan pinf zero sub nnorm) bfloat @ret__ninf_pnorm__select__fptru
 define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rne_f32_bf16__nsub__pinf_nnorm(i1 %c0, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan ninf zero sub pnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rne_f32_bf16__nsub__pinf_nnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan ninf zero sub pnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.tonearest")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.tonearest")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -706,7 +712,8 @@ define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptru
 define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rna_f32_bf16__nsub__pinf_nnorm(i1 %c0, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan ninf zero sub pnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rna_f32_bf16__nsub__pinf_nnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan ninf zero sub pnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.tonearestaway")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.tonearestaway")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -717,7 +724,8 @@ define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptru
 define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rtz_f32_bf16__nsub__pinf_nnorm(i1 %c0, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan ninf zero sub pnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rtz_f32_bf16__nsub__pinf_nnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan ninf zero sub pnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.towardzero")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.towardzero")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -728,7 +736,8 @@ define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptru
 define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rtp_f32_bf16__nsub__pinf_nnorm(i1 %c0, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan ninf zero sub pnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rtp_f32_bf16__nsub__pinf_nnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan ninf zero sub pnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.upward")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.upward")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
@@ -739,7 +748,8 @@ define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptru
 define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rtn_f32_bf16__nsub__pinf_nnorm(i1 %c0, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan ninf zero sub pnorm) %arg1) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub pnorm) bfloat @ret__pinf_nnorm__select__fptrunc_rtn_f32_bf16__nsub__pinf_nnorm(
 ; CHECK-SAME: i1 [[C0:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan ninf zero sub pnorm) [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[ARG1]], metadata !"round.downward")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C0]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan bfloat @llvm.fptrunc.round.bf16.f32(float [[SELECT]], metadata !"round.downward")
 ; CHECK-NEXT:    ret bfloat [[RESULT]]
 ;
   %select = select i1 %c0, float %arg0, float %arg1
