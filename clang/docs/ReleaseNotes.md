@@ -1336,6 +1336,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
   option.
 
+- Atomic load, store, exchange and compare-exchange on a `__ptrauth`-qualified
+  object now sign and authenticate.
+
 - Added support for the `aarch64-unknown-uefi` target triple. Like
   `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
   Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
