@@ -216,4 +216,85 @@ namespace template_instantiation {
   NonDependent<int> nonDependentInt;
   NonDependent<char> nonDependentChar;
 
+  template <typename T>
+  struct AnonymousUnion {
+    union {
+      T* ptr;
+      int i;
+    };
+  };
+  AnonymousUnion<RefCountable> anonymousUnion;
+  // expected-warning@-1{{Member variable 'ptr' (of 'template_instantiation::AnonymousUnion<RefCountable>::(anonymous union at}}
+
+  template <typename T>
+  struct NestedAnonymous {
+    struct {
+      union {
+        T* ptr;
+        int i;
+      };
+      int j;
+    };
+  };
+  NestedAnonymous<RefCountable> nestedAnonymous;
+  // expected-warning@-1{{Member variable 'ptr' (of 'template_instantiation::NestedAnonymous<RefCountable>::(anonymous struct)::(anonymous union at}}
+
+  template <typename T>
+  struct NonDependentAnonymousUnion {
+    union {
+      RefCountable* ptr;
+      // expected-warning@-1{{Member variable 'ptr' (of 'template_instantiation::NonDependentAnonymousUnion::(anonymous union at}}
+      T i;
+    };
+  };
+  NonDependentAnonymousUnion<int> nonDependentAnonymousUnionInt;
+  NonDependentAnonymousUnion<char> nonDependentAnonymousUnionChar;
+
+  struct UsedAsBase {
+    void ref() const;
+    void deref() const;
+  };
+
+  template <typename T>
+  struct Base {
+    T* ptr;
+  };
+
+  template <typename T>
+  struct MiddleBase : Base<T> {
+  };
+
+  template <typename T>
+  struct Derived : MiddleBase<T> {
+  };
+
+  Derived<UsedAsBase> derived;
+  // expected-warning@-1{{Member variable 'ptr' (of 'template_instantiation::Base<template_instantiation::UsedAsBase>') is a raw pointer to RefPtr-capable type 'template_instantiation::UsedAsBase'}}
+
+  struct UsedInMethod {
+    void ref() const;
+    void deref() const;
+  };
+
+  template <typename T>
+  struct WithMethod {
+    void method() {
+      Inner<T> inner;
+    }
+  };
+
+  void callMethodWithUsedInMethod(WithMethod<UsedInMethod>& withMethod) {
+    withMethod.method();
+    // expected-warning@-1{{Member variable 'ptr' (of 'template_instantiation::Inner<template_instantiation::UsedInMethod>') is a raw pointer to RefPtr-capable type 'template_instantiation::UsedInMethod'}}
+  }
+
+  struct NotInstantiated {
+    void ref() const;
+    void deref() const;
+  };
+
+  // A pointer to a class template specialization doesn't instantiate it.
+  Middle<NotInstantiated>* notInstantiated;
+  Top<NotInstantiated>* topNotInstantiated;
+
 } // namespace template_instantiation

@@ -93,7 +93,7 @@ public:
 
       bool VisitRecordDecl(const RecordDecl *RD) override {
         auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
-        if (CXXRD && isInstantiation(CXXRD))
+        if (CXXRD && getEnclosingInstantiation(CXXRD))
           Instantiations.push_back(CXXRD);
         else
           Checker->visitRecordDecl(RD);
@@ -137,9 +137,9 @@ public:
     const CXXRecordDecl *Pattern = nullptr;
     SourceLocation InstantiationLoc;
     if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-      if (isInstantiation(CXXRD)) {
-        Pattern = CXXRD->getTemplateInstantiationPattern();
-        InstantiationLoc = getReportLocation(CXXRD);
+      if (auto *Instantiation = getEnclosingInstantiation(CXXRD)) {
+        Pattern = Instantiation->getTemplateInstantiationPattern();
+        InstantiationLoc = getReportLocation(Instantiation);
       }
     }
 
@@ -162,11 +162,26 @@ public:
                                    const CXXRecordDecl *Pattern) {
     if (!Pattern || !Member->getDeclName())
       return true;
+    // Members of anonymous structs and unions are found in the enclosing
+    // record as IndirectFieldDecls.
     for (auto *Found : Pattern->lookup(Member->getDeclName())) {
-      if (auto *PatternField = dyn_cast<FieldDecl>(Found))
+      const FieldDecl *PatternField = dyn_cast<FieldDecl>(Found);
+      if (auto *Indirect = dyn_cast<IndirectFieldDecl>(Found))
+        PatternField = Indirect->getAnonField();
+      if (PatternField)
         return PatternField->getType()->isDependentType();
     }
     return true;
+  }
+
+  // Returns RD if it's a template instantiation. Anonymous structs and unions
+  // don't have their own template specialization kind, so returns their
+  // enclosing record if it's a template instantiation.
+  static const CXXRecordDecl *
+  getEnclosingInstantiation(const CXXRecordDecl *RD) {
+    while (RD && RD->isAnonymousStructOrUnion())
+      RD = dyn_cast<CXXRecordDecl>(RD->getDeclContext());
+    return RD && isInstantiation(RD) ? RD : nullptr;
   }
 
   static bool isInstantiation(const Decl *D) {
