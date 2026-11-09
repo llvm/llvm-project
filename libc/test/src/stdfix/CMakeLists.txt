@@ -205,37 +205,23 @@ add_libc_test(
     libc.src.__support.FPUtil.sqrt
 )
 
-add_libc_test(
-  exphk_test
-  SUITE
-    libc-stdfix-tests
-  HDRS
-    ExpTest.h
-  SRCS
-    exphk_test.cpp
-  DEPENDS
-    libc.src.stdfix.exphk
-    libc.src.math.exp
-    libc.src.__support.CPP.bit
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.FPUtil.basic_operations
-)
-
-add_libc_test(
-  expk_test
-  SUITE
-    libc-stdfix-tests
-  HDRS
-    ExpTest.h
-  SRCS
-    expk_test.cpp
-  DEPENDS
-    libc.src.stdfix.expk
-    libc.src.math.exp
-    libc.src.__support.CPP.bit
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.FPUtil.basic_operations
-)
+foreach(suffix IN ITEMS hk k uhk uk)
+  add_libc_test(
+    exp${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      ExpTest.h
+    SRCS
+      exp${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.exp${suffix}
+      libc.src.math.exp
+      libc.src.__support.CPP.bit
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.FPUtil.basic_operations
+  )
+endforeach()
 
 set(macros_depends)
 

@@ -37,12 +37,16 @@ public:
   void test_special_numbers(ExpFunc func) {
     EXPECT_EQ(one, func(T(0)));
     EXPECT_EQ(FXRep::MAX(), func(T(30)));
-    EXPECT_EQ(zero, func(T(-30)));
+    EXPECT_EQ(FXRep::MAX(), func(FXRep::MAX()));
+    if constexpr (FXRep::SIGN_LEN > 0) {
+      EXPECT_EQ(zero, func(T(-30)));
+      EXPECT_EQ(zero, func(FXRep::MIN()));
+    }
   }
 
   void test_range_with_step(ExpFunc func, T step, bool rel_error,
                             T start = zero) {
-    constexpr int COUNT = 2047;
+    constexpr int COUNT = 4095;
     constexpr double ERR = 3.0 * static_cast<double>(eps);
     double x_d = 0.0;
     T x = start;
@@ -76,10 +80,12 @@ public:
   }
 
   void test_negative_range(ExpFunc func) {
-    test_range_with_step(func, T(-0x1.0p-7), /*rel_error*/ false);
-    test_range_with_step(func, -eps, /*rel_error*/ false);
-    test_range_with_step(func, -eps, /*rel_error*/ false,
-                         T(FXRep::INTEGRAL_LEN == 8 ? -0x1.6p2 : -0x1.62p3));
+    if constexpr (FXRep::SIGN_LEN > 0) {
+      test_range_with_step(func, T(-0x1.0p-7), /*rel_error*/ false);
+      test_range_with_step(func, -eps, /*rel_error*/ false);
+      test_range_with_step(func, -eps, /*rel_error*/ false,
+                           T(FXRep::INTEGRAL_LEN == 8 ? -0x1.6p2 : -0x1.62p3));
+    }
   }
 };
 
