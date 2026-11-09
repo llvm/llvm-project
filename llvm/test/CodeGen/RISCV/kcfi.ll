@@ -2,6 +2,12 @@
 ; RUN:      | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -M no-aliases < %s \
 ; RUN:      | FileCheck %s --check-prefixes=CHECK,RV64
+; RUN: llc -mtriple=riscv32 -global-isel -global-isel-abort=1 \
+; RUN:      -verify-machineinstrs -M no-aliases < %s \
+; RUN:      | FileCheck %s --check-prefix=RV32-GISEL
+; RUN: llc -mtriple=riscv64 -global-isel -global-isel-abort=1 \
+; RUN:      -verify-machineinstrs -M no-aliases < %s \
+; RUN:      | FileCheck %s --check-prefix=RV64-GISEL
 
 ; CHECK:       .word 12345678
 define void @f1(ptr noundef %x) !kcfi_type !1 {
@@ -20,6 +26,15 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
 ; CHECK-NEXT:    .text
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    jalr ra, 0(a0)
+; RV32-GISEL-LABEL: f1:
+; RV32-GISEL:  # %bb.0:
+; RV32-GISEL:    jalr ra, 0(a0)
+; RV32-GISEL:    jalr ra, 0(s0)
+;
+; RV64-GISEL-LABEL: f1:
+; RV64-GISEL:  # %bb.0:
+; RV64-GISEL:    jalr ra, 0(a0)
+; RV64-GISEL:    jalr ra, 0(s0)
   call void %x() [ "kcfi"(i32 12345678) ]
 ; CHECK:         lw t1, -4(s0)
 ; CHECK-NEXT:    addi t2, t2, 1234
@@ -55,7 +70,92 @@ define void @f2(ptr noundef %x) #0 {
 ; CHECK-NEXT:    .text
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    jalr zero, 0(a0)
+; RV32-GISEL-LABEL: f2:
+; RV32-GISEL:  # %bb.0:
+; RV32-GISEL:    addi zero, zero, 0
+; RV32-GISEL:    addi zero, zero, 0
+; RV32-GISEL:    jalr ra, 0(a0)
+;
+; RV64-GISEL-LABEL: f2:
+; RV64-GISEL:  # %bb.0:
+; RV64-GISEL:    addi zero, zero, 0
+; RV64-GISEL:    addi zero, zero, 0
+; RV64-GISEL:    jalr ra, 0(a0)
   tail call void %x() [ "kcfi"(i32 12345678) ]
+  ret void
+}
+
+define void @f3(ptr noundef %x) {
+; RV32-GISEL-LABEL: f3:
+; RV32-GISEL:       # %bb.0:
+; RV32-GISEL-NEXT:    addi sp, sp, -16
+; RV32-GISEL-NEXT:    .cfi_def_cfa_offset 16
+; RV32-GISEL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-GISEL-NEXT:    .cfi_offset ra, -4
+; RV32-GISEL-NEXT:    jalr ra, 0(a0)
+; RV32-GISEL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-GISEL-NEXT:    .cfi_restore ra
+; RV32-GISEL-NEXT:    addi sp, sp, 16
+; RV32-GISEL-NEXT:    .cfi_def_cfa_offset 0
+; RV32-GISEL-NEXT:    jalr zero, 0(ra)
+;
+; RV64-GISEL-LABEL: f3:
+; RV64-GISEL:       # %bb.0:
+; RV64-GISEL-NEXT:    addi sp, sp, -16
+; RV64-GISEL-NEXT:    .cfi_def_cfa_offset 16
+; RV64-GISEL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-GISEL-NEXT:    .cfi_offset ra, -8
+; RV64-GISEL-NEXT:    jalr ra, 0(a0)
+; RV64-GISEL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-GISEL-NEXT:    .cfi_restore ra
+; RV64-GISEL-NEXT:    addi sp, sp, 16
+; RV64-GISEL-NEXT:    .cfi_def_cfa_offset 0
+; RV64-GISEL-NEXT:    jalr zero, 0(ra)
+  call void %x()
+  ret void
+}
+
+declare void @g()
+
+define void @f4() {
+; RV32-GISEL-LABEL: f4:
+; RV32-GISEL:       # %bb.0:
+; RV32-GISEL-NEXT:    addi sp, sp, -16
+; RV32-GISEL-NEXT:    .cfi_def_cfa_offset 16
+; RV32-GISEL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-GISEL-NEXT:    .cfi_offset ra, -4
+; RV32-GISEL-NEXT:    call g
+; RV32-GISEL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-GISEL-NEXT:    .cfi_restore ra
+; RV32-GISEL-NEXT:    addi sp, sp, 16
+; RV32-GISEL-NEXT:    .cfi_def_cfa_offset 0
+; RV32-GISEL-NEXT:    jalr zero, 0(ra)
+;
+; RV64-GISEL-LABEL: f4:
+; RV64-GISEL:       # %bb.0:
+; RV64-GISEL-NEXT:    addi sp, sp, -16
+; RV64-GISEL-NEXT:    .cfi_def_cfa_offset 16
+; RV64-GISEL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-GISEL-NEXT:    .cfi_offset ra, -8
+; RV64-GISEL-NEXT:    call g
+; RV64-GISEL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-GISEL-NEXT:    .cfi_restore ra
+; RV64-GISEL-NEXT:    addi sp, sp, 16
+; RV64-GISEL-NEXT:    .cfi_def_cfa_offset 0
+; RV64-GISEL-NEXT:    jalr zero, 0(ra)
+  call void @g()
+  ret void
+}
+
+define void @f5(ptr noundef %x) {
+; RV32-GISEL-LABEL: f5:
+; RV32-GISEL:  # %bb.0:
+; RV32-GISEL:    jalr ra, 0(a0)
+;
+; RV64-GISEL-LABEL: f5:
+; RV64-GISEL:  # %bb.0:
+; RV64-GISEL:    jalr ra, 0(a0)
+  call void %x() [ "kcfi"(i32 -559038737) ]
   ret void
 }
 
