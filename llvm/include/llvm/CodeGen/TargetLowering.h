@@ -4692,6 +4692,8 @@ public:
   /// and pass them to \p Helper.simplifyDemandedBits with \p DoRewrite and
   /// Depth + 1. Return true if an operand was simplified, or would be if
   /// \p DoRewrite is false, and set \p Known to the known bits of the result.
+  /// Known bits may be provided even when returning false, and only need to
+  /// be accurate for \p DemandedBits.
   virtual bool simplifyDemandedBitsForTargetInstr(
       const CombinerHelper &Helper, MachineInstr &MI, const APInt &DemandedBits,
       KnownBits &Known, unsigned Depth, bool DoRewrite) const {
