@@ -4990,8 +4990,8 @@ void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {
   Self->ParseLexedTypeAttribute(*this, OutAttrs);
 }
 
-void Parser::TakeLateParsedTypeAttrInfosFrom(LateParsedTypeAttrInfoList &To,
-                                             LateParsedAttrList &From) {
+void Parser::TakeLateParsedTypeAttrInfos(LateParsedTypeAttrInfoList &To,
+                                         LateParsedAttrList &From) {
   LateParsedAttrList::iterator It =
       llvm::remove_if(From, [&](LateParsedAttribute *LA) {
         if (auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA)) {
