@@ -12,6 +12,7 @@
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/IR/Function.h"
 
 namespace llvm {
 
