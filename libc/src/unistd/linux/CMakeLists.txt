@@ -722,9 +722,11 @@ add_entrypoint_object(
   HDRS
     ../pipe.h
   DEPENDS
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pipe
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
 
