@@ -38,8 +38,7 @@ namespace ns1 {
 // CIR: cir.call @_ZN3ns118sycl_kernel_launchI2KNILi1EEJ2KTILi1ELi0EEEEEvPKcDpT0_(%{{.*}}) : (
 // CIR: cir.return
 
-// LLVM: ; Function Attrs: mustprogress noinline optnone
-// LLVM-NEXT: define dso_local void @_ZN3ns14skepE2KTILi1ELi0EE() #{{[0-9]+}} {
+// LLVM: define dso_local void @_ZN3ns14skepE2KTILi1ELi0EE() #[[THROW_ATTR:[0-9]+]] {
 // LLVM-NOT: invoke
 // LLVM: call void @_ZN3ns118sycl_kernel_launchI2KNILi1EEJ2KTILi1ELi0EEEEEvPKcDpT0_(ptr noundef @.str)
 // LLVM: ret void
@@ -68,8 +67,7 @@ namespace ns2 {
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 
-// LLVM:      ; Function Attrs: mustprogress noinline nounwind optnone
-// LLVM-NEXT: define dso_local void @_ZN3ns24skepE2KTILi2ELi0EE() #{{[0-9]+}} personality ptr @__gxx_personality_v0 {
+// LLVM:      define dso_local void @_ZN3ns24skepE2KTILi2ELi0EE() #[[NOTHROW_ATTR:[0-9]+]] personality ptr @__gxx_personality_v0 {
 // LLVM:        invoke void @_ZN3ns218sycl_kernel_launchI2KNILi2EEJ2KTILi2ELi0EEEEEvPKcDpT0_(ptr noundef @.str.1)
 // LLVM-NEXT:     to label %[[CONT:[a-z0-9.]+]] unwind label %[[LPAD:[a-z0-9.]+]]
 // LLVM-EMPTY:
@@ -123,11 +121,10 @@ namespace ns3 {
 // CIR: cir.call @_ZN3ns318sycl_kernel_launchI2KNILi3EEJ2KTILi3ELi0EEEEEvPKcDpT0_(%{{.*}}) nothrow : (
 // CIR: cir.return
 
-// ClangIR does not yet infer nounwind for functions that contain no
-// potentially throwing calls.
-// LLVM-CIR: ; Function Attrs: mustprogress noinline optnone
-// OGCG: ; Function Attrs: mustprogress noinline nounwind optnone
-// LLVM-NEXT: define dso_local void @_ZN3ns34skepE2KTILi3ELi0EE() #{{[0-9]+}} {
+// FIXME(cir): ClangIR needs to infer nounwind for functions that don't contain
+// throwing calls.
+// LLVM-CIR: define dso_local void @_ZN3ns34skepE2KTILi3ELi0EE() #[[THROW_ATTR]] {
+// OGCG: define dso_local void @_ZN3ns34skepE2KTILi3ELi0EE() #[[NOTHROW_ATTR]] {
 // LLVM-NOT: invoke
 // LLVM: call void @_ZN3ns318sycl_kernel_launchI2KNILi3EEJ2KTILi3ELi0EEEEEvPKcDpT0_(ptr noundef @.str.2) #{{[0-9]+}}
 // LLVM: ret void
@@ -151,10 +148,11 @@ namespace ns4 {
 // CIR: cir.call @_ZN3ns418sycl_kernel_launchI2KNILi4EEJ2KTILi4ELi0EEEEEvPKcDpT0_(%{{.*}}) nothrow : (
 // CIR: cir.eh.terminate
 
-// LLVM: ; Function Attrs: mustprogress noinline nounwind optnone
-// LLVM-NEXT: define dso_local void @_ZN3ns44skepE2KTILi4ELi0EE() #{{[0-9]+}} {
+// LLVM: define dso_local void @_ZN3ns44skepE2KTILi4ELi0EE() #[[NOTHROW_ATTR]] {
 // LLVM-NOT: invoke
 // LLVM: call void @_ZN3ns418sycl_kernel_launchI2KNILi4EEJ2KTILi4ELi0EEEEEvPKcDpT0_(ptr noundef @.str.3) #{{[0-9]+}}
 // LLVM: ret void
 
+// LLVM: attributes #[[THROW_ATTR]] = { mustprogress noinline optnone {{.*}}}
+// LLVM: attributes #[[NOTHROW_ATTR]] = { mustprogress noinline nounwind optnone {{.*}}}
 // LLVM: attributes #[[TERM_ATTR]] = { noreturn nounwind }
