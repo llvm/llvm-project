@@ -1818,16 +1818,23 @@ bool SPIRVEmitIntrinsicsImpl::hasDeducedPointee(Value *V) {
   return C && deduceNestedTypeHelper(C, false) != C->getType();
 }
 
-// A nested aggregate member with such pointers gets its own chain.
+// A nested aggregate or vector member with such pointers gets its own chain,
+// a vector one of insertelement.
 Value *
 SPIRVEmitIntrinsicsImpl::buildInsertValueChain(Constant *C,
                                                BasicBlock::iterator InsertPt) {
   Value *Composite = PoisonValue::get(C->getType());
+  bool IsVector = C->getType()->isVectorTy();
+  Type *I32Ty = Type::getInt32Ty(C->getContext());
   for (unsigned Idx = 0, E = C->getNumOperands(); Idx != E; ++Idx) {
     Value *Member = C->getOperand(Idx);
     if (hasDeducedPointee(Member))
       Member = buildInsertValueChain(cast<Constant>(Member), InsertPt);
-    Composite = InsertValueInst::Create(Composite, Member, Idx, "", InsertPt);
+    if (IsVector)
+      Composite = InsertElementInst::Create(
+          Composite, Member, ConstantInt::get(I32Ty, Idx), "", InsertPt);
+    else
+      Composite = InsertValueInst::Create(Composite, Member, Idx, "", InsertPt);
   }
   return Composite;
 }
