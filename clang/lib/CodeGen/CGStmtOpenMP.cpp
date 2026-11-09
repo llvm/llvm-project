@@ -75,12 +75,11 @@ static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
 }
 
 static bool isLoopCounter(const OMPLoopDirective &S, const Expr *E) {
-  const VarDecl *Canonical =
-      cast<VarDecl>(cast<DeclRefExpr>(E->IgnoreParenImpCasts())->getDecl())
-          ->getCanonicalDecl();
+  const Decl *Canonical = cast<DeclRefExpr>(E->IgnoreParenImpCasts())
+                              ->getDecl()
+                              ->getCanonicalDecl();
   for (const Expr *C : S.counters()) {
-    if (cast<VarDecl>(cast<DeclRefExpr>(C)->getDecl())->getCanonicalDecl() ==
-        Canonical)
+    if (cast<DeclRefExpr>(C)->getDecl()->getCanonicalDecl() == Canonical)
       return true;
   }
   return false;
