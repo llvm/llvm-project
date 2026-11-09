@@ -1073,8 +1073,7 @@ void StreamChecker::preRead(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   SymbolRef Sym = StreamVal.getAsSymbol();
-  if (Sym && State->get<StreamMap>(Sym)) {
-    const StreamState *SS = State->get<StreamMap>(Sym);
+  if (const StreamState *SS = State->get<StreamMap>(Sym)) {
     if (SS->ErrorState & ErrorFEof) {
       reportFEofWarning(Sym, C, State);
       return;
