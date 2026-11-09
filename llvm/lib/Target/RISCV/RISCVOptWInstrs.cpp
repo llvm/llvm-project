@@ -788,7 +788,6 @@ bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
 
       LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
       MRI.replaceRegWith(DstReg, SrcReg);
-      MRI.clearKillFlags(SrcReg);
       MI.eraseFromParent();
       ++NumRemovedSExtW;
       MadeChange = true;

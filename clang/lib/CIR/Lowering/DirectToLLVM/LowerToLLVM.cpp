@@ -3132,7 +3132,8 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNakedAttrName() ||
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
-         attr.getName() == CIRDialect::getDontCallWarnAttrName();
+         attr.getName() == CIRDialect::getDontCallWarnAttrName() ||
+         attr.getName() == CIRDialect::getRuntimeFuncAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -3197,6 +3198,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
       attributes);
   aliasOp.setVisibility_(
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
+  if (op.getUnnamedAddr())
+    aliasOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Global);
   {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.createBlock(&aliasOp.getInitializerRegion());
@@ -3280,6 +3283,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
+  if (op.getUnnamedAddr())
+    fn.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Global);
+
   if (cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
     fn.setMemoryEffectsAttr(convertMemoryEffects(fn.getContext(), effects));
 
@@ -3328,6 +3334,24 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     if (auto diagnostic = op->getAttrOfType<mlir::StringAttr>(dontCallAttr))
       passthrough.push_back(rewriter.getArrayAttr(
           {rewriter.getStringAttr(dontCallAttr), diagnostic}));
+
+  // Every function but a runtime function gets the TU-wide default function
+  // attributes.
+  if (!op->hasAttr(CIRDialect::getRuntimeFuncAttrName())) {
+    if (auto langOpts = op->getParentOfType<mlir::ModuleOp>()
+                            ->getAttrOfType<cir::LoweringOptionsAttr>(
+                                CIRDialect::getLoweringOptionsAttrName())) {
+      // A strictfp function may use a pragma to observe FP exceptions locally,
+      // so the TU-wide default does not apply to it.
+      if (langOpts.getNoTrappingMath() &&
+          !op->hasAttr(CIRDialect::getStrictFPAttrName()))
+        passthrough.push_back(
+            rewriter.getStrArrayAttr({"no-trapping-math", "true"}));
+      passthrough.push_back(rewriter.getStrArrayAttr(
+          {"stack-protector-buffer-size",
+           llvm::utostr(langOpts.getSspBufferSize())}));
+    }
+  }
 
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
@@ -3394,6 +3418,11 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
       getContext(),
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
   attributes.push_back(rewriter.getNamedAttr("visibility_", visibility));
+
+  if (op.getUnnamedAddr())
+    attributes.push_back(rewriter.getNamedAttr(
+        "unnamed_addr", mlir::LLVM::UnnamedAddrAttr::get(
+                            getContext(), mlir::LLVM::UnnamedAddr::Global)));
 
   if (op->getAttr(CUDAExternallyInitializedAttr::getMnemonic()))
     attributes.push_back(rewriter.getNamedAttr("externally_initialized",
@@ -6705,6 +6734,13 @@ mlir::LogicalResult CIRToLLVMTokenNoneOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
     cir::CpuIdOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(moduleOp);
+  if (!triple)
+    return op.emitOpError()
+           << "requires a '" << cir::CIRDialect::getTripleAttrName()
+           << "' module attribute";
+
   mlir::Type i32Ty = rewriter.getI32Type();
   mlir::Type i64Ty = rewriter.getI64Type();
   mlir::Type i32PtrTy = mlir::LLVM::LLVMPointerType::get(i32Ty.getContext(), 0);
@@ -6716,12 +6752,7 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   mlir::Value subFunctionId = adaptor.getSubFunctionId();
 
   StringRef asmString, constraints;
-  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  llvm::Triple triple(
-      mlir::cast<mlir::StringAttr>(
-          moduleOp->getAttr(cir::CIRDialect::getTripleAttrName()))
-          .getValue());
-  if (triple.getArch() == llvm::Triple::x86) {
+  if (triple->getArch() == llvm::Triple::x86) {
     asmString = "cpuid";
     constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";
   } else {

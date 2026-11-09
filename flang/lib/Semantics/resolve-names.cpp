@@ -8579,6 +8579,15 @@ Symbol &DeclarationVisitor::FindOrDeclareEnclosingEntity(
     prev = &MakeSymbol(InclusiveScope(), name.source, Attrs{});
     ConvertToObjectEntity(*prev);
     ApplyImplicitRules(*prev);
+  } else {
+    // A name in a locality-spec must be a variable (F2023 C1126). An entity
+    // declared in an enclosing BLOCK is not classified as an object or a
+    // procedure until the end of the BLOCK, so classify it now; the locality
+    // checks then diagnose a name that cannot be a variable. A nested BLOCK
+    // can reach the entity through a host-association symbol (for example,
+    // after an ASYNCHRONOUS or VOLATILE statement), so classify the ultimate
+    // entity. The locality checks still use prev, which has those attributes.
+    ConvertToObjectEntity(prev->GetUltimate());
   }
   return *prev;
 }
