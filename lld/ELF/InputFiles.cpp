@@ -1054,7 +1054,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
     uint32_t type = read32<ELFT::Endianness>(desc.data());
     uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
     desc = desc.slice(8);
-    if (desc.size() < size)
+    if (desc.size() < alignTo<(ELFT::Is64Bits ? 8 : 4)>(size))
       return void(err(place) << "program property is too short");
 
     if (type == featureAndType) {
