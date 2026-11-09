@@ -1456,11 +1456,19 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 bool SPIRVInstructionSelector::selectDebugTrap(Register ResVReg,
                                                SPIRVTypeInst ResType,
                                                MachineInstr &I) const {
-  unsigned Opcode = SPIRV::OpNop;
-  MachineBasicBlock &BB = *I.getParent();
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-      .constrainAllUses(TII, TRI, RBI);
-  return true;
+  if (!STI.canUseExtInstSet(SPIRV::InstructionSet::NonSemantic_DebugBreak)) {
+    MachineBasicBlock &BB = *I.getParent();
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpNop))
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVTypeInst VoidTy = GR.getOpTypeVoid(MIRBuilder);
+  Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(VoidTy));
+  return selectExtInst(ExtReg, VoidTy, I,
+                       {{SPIRV::InstructionSet::NonSemantic_DebugBreak,
+                         SPIRV::NonSemanticDebugBreakExtInst::DebugBreak}},
+                       /*setMIFlags=*/false, /*useMISrc=*/false);
 }
 
 bool SPIRVInstructionSelector::selectPrefetch(MachineInstr &I) const {

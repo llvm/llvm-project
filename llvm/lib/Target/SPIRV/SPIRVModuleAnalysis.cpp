@@ -1794,6 +1794,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
       break;
     }
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(SPIRV::InstructionSet::NonSemantic_DebugBreak)) {
+      // Non-semantic instruction sets no longer require
+      // SPV_KHR_non_semantic_info as of SPIR-V 1.6
+      if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+      break;
+    }
     if (MI.getOperand(3).getImm() ==
         static_cast<int64_t>(SPIRV::OpenCLExtInst::printf)) {
       addPrintfRequirements(MI, Reqs, ST);
