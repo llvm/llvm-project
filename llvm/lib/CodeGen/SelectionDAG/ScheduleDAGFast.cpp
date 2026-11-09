@@ -108,8 +108,8 @@ void ScheduleDAGFast::Schedule() {
   LLVM_DEBUG(dbgs() << "********** List Scheduling **********\n");
 
   NumLiveRegs = 0;
-  LiveRegDefs.resize(TRI->getNumRegs(), nullptr);
-  LiveRegCycles.resize(TRI->getNumRegs(), 0);
+  LiveRegDefs.assign(TRI->getNumRegs(), nullptr);
+  LiveRegCycles.assign(TRI->getNumRegs(), 0);
 
   // Build the scheduling graph.
   BuildSchedGraph();
@@ -681,6 +681,9 @@ static SDNode *findGluedUser(SDNode *N) {
 
 void ScheduleDAGLinearize::Schedule() {
   LLVM_DEBUG(dbgs() << "********** DAG Linearization **********\n");
+
+  Sequence.clear();
+  GluedMap.clear();
 
   SmallVector<SDNode*, 8> Glues;
   unsigned DAGSize = 0;
