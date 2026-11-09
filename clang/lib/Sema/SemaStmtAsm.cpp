@@ -251,10 +251,13 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
     }
 
     if (!IsConstexpr &&
-        PP.getTextEncoding().getFromIBM1047Converter() != nullptr) {
+        PP.getTextEncoding().getzOSFromAsmLiteralEncodingConverter() !=
+            nullptr) {
       SmallString<16> ConvertedAsm;
-      PP.getTextEncoding().getFromIBM1047Converter()->convert(SL->getString(),
-                                                              ConvertedAsm);
+      [[maybe_unused]] std::error_code EC =
+          PP.getTextEncoding().getzOSFromAsmLiteralEncodingConverter()->convert(
+              SL->getString(), ConvertedAsm);
+      assert(!EC && "This conversion should always succeed");
       QualType StrTy = Context.getStringLiteralArrayType(Context.CharTy,
                                                          ConvertedAsm.size());
       return StringLiteral::Create(Context, ConvertedAsm,
@@ -277,7 +280,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
   }
 
   // The evaluated string is in the literal encoding (-fexec-charset).
-  // Convert it back to UTF-8
+  // Convert it back to UTF-8.
   if (llvm::TextEncodingConverter *FromLiteral =
           PP.getTextEncoding().getFromLiteralEncodingConverter()) {
     std::string Raw = V.getCharArrayAsString();

@@ -46,7 +46,7 @@ public:
   }
 
   /// Returns the converter from IBM-1047 to UTF-8, or nullptr if not on z/OS.
-  llvm::TextEncodingConverter *getFromIBM1047Converter() const {
+  llvm::TextEncodingConverter *getzOSFromAsmLiteralEncodingConverter() const {
     return FromIBM1047Converter.get();
   }
 
