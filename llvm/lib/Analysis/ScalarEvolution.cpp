@@ -15842,6 +15842,19 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // We cannot express strict predicates in SCEV, so instead we replace them
     // with non-strict ones against plus or minus one of RHS depending on the
     // predicate.
+    // x != C for an extreme non-zero C is a strict comparison. x != 0 is
+    // handled below.
+    const APInt *NEC;
+    if (Predicate == CmpInst::ICMP_NE && match(RHS, m_scev_APInt(NEC)) &&
+        !NEC->isZero()) {
+      if (NEC->isMaxSignedValue())
+        Predicate = CmpInst::ICMP_SLT;
+      else if (NEC->isMaxValue())
+        Predicate = CmpInst::ICMP_ULT;
+      else if (NEC->isMinSignedValue())
+        Predicate = CmpInst::ICMP_SGT;
+    }
+
     const SCEV *One = SE.getOne(RHS->getType());
     switch (Predicate) {
     case CmpInst::ICMP_ULT:
