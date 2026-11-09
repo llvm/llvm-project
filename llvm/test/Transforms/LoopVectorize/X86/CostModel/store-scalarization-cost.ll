@@ -47,16 +47,16 @@ exit:
 
 define void @varying_pred_store_kept_in_replicate_region(ptr noalias %dst, ptr noalias %src, i32 %b) {
 ; CHECK-LABEL: 'varying_pred_store_kept_in_replicate_region'
-; CHECK:  Cost of 1 for VF 2: profitable to scalarize store i32 %mul, ptr %gep.dst, align 8
-; CHECK:  Cost of 3.5 for VF 2: profitable to scalarize %mul = mul i32 %l, %b
+; CHECK:  Cost of 3.5 for VF 2: profitable to scalarize store i32 %mul, ptr %gep.dst, align 8
+; CHECK:  Cost of 1 for VF 2: profitable to scalarize %mul = mul i32 %l, %b
 ; CHECK:  Precomputed costs for VF 2: 4.5
 ; CHECK:  Cost of 1 for VF 2: BRANCH-ON-MASK ir<%c> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%mul> = mul ir<%l>, ir<%b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%mul>, ir<%gep.dst>
 ; CHECK:  Cost of 0 for VF 2: unconditional branches from pred.store.if
 ; CHECK:  Cost for VF 2: 10 (Estimated cost per lane: 5)
-; CHECK:  Cost of 2 for VF 4: profitable to scalarize store i32 %mul, ptr %gep.dst, align 8
-; CHECK:  Cost of 8.5 for VF 4: profitable to scalarize %mul = mul i32 %l, %b
+; CHECK:  Cost of 8.5 for VF 4: profitable to scalarize store i32 %mul, ptr %gep.dst, align 8
+; CHECK:  Cost of 2 for VF 4: profitable to scalarize %mul = mul i32 %l, %b
 ; CHECK:  Precomputed costs for VF 4: 10.5
 ; CHECK:  Cost of 1 for VF 4: BRANCH-ON-MASK ir<%c> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; CHECK:  Cost of 0 for VF 4: REPLICATE ir<%mul> = mul ir<%l>, ir<%b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
