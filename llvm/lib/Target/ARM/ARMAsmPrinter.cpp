@@ -545,8 +545,6 @@ void ARMAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TT.isOSBinFormatELF())
     emitAttributes();
 
-  // Emit @feat.00, as x86 and AArch64 do. Without it the linker ignores the
-  // object's /guard:cf tables.
   if (TT.isOSBinFormatCOFF())
     emitCOFFFeatureSymbol(M);
 
