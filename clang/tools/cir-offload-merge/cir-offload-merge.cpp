@@ -27,14 +27,12 @@
 #include "clang/Driver/OffloadBundler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <cctype>
 #include <string>
 
 static llvm::cl::OptionCategory
@@ -70,25 +68,6 @@ struct InputTarget {
 static int reportError(const llvm::Twine &message) {
   llvm::errs() << "error: " << message << '\n';
   return 1;
-}
-
-static std::string sanitizeModuleName(llvm::StringRef target) {
-  std::string name = "device_";
-  for (char c : target) {
-    if (std::isalnum(static_cast<unsigned char>(c)))
-      name.push_back(c);
-    else
-      name.push_back('_');
-  }
-  return name;
-}
-
-static std::string makeUnique(llvm::StringRef name,
-                              llvm::StringMap<unsigned> &seenNames) {
-  unsigned &count = seenNames[name];
-  if (count++ == 0)
-    return name.str();
-  return (name + "_" + llvm::Twine(count - 1)).str();
 }
 
 // Targets are offload bundle IDs, so they are checked with
@@ -160,7 +139,6 @@ combineInputs(llvm::ArrayRef<InputTarget> inputTargets,
               mlir::MLIRContext &context) {
   mlir::OwningOpRef<mlir::ModuleOp> hostModule;
   llvm::SmallVector<mlir::OwningOpRef<mlir::ModuleOp>> deviceModules;
-  llvm::StringMap<unsigned> deviceNames;
 
   for (const InputTarget &inputTarget : inputTargets) {
     mlir::OwningOpRef<mlir::ModuleOp> module =
@@ -177,7 +155,7 @@ combineInputs(llvm::ArrayRef<InputTarget> inputTargets,
     }
 
     std::string deviceName =
-        makeUnique(sanitizeModuleName(inputTarget.Target), deviceNames);
+        ("device_" + llvm::Twine(deviceModules.size())).str();
     setOffloadAttrs(*module, deviceName, cir::OffloadKind::Device,
                     inputTarget.Target);
     deviceModules.push_back(std::move(module));
