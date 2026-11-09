@@ -3016,8 +3016,6 @@ static void readSecurityNotes(Ctx &ctx) {
       ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_RISCV)
     return;
 
-  ctx.arg.andFeatures = -1;
-
   StringRef referenceFileName;
   if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
@@ -3039,6 +3037,14 @@ static void readSecurityNotes(Ctx &ctx) {
       return {ctx, DiagLevel::None};
     return {ctx, toDiagLevel(policy)};
   };
+
+  // We start with a mask with all bits set, unless we have no true object
+  // file like in ld -b binary invocations.
+  if (!ctx.objectFiles.empty())
+    ctx.arg.andFeatures = -1;
+  else
+    ctx.arg.andFeatures = 0;
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
