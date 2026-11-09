@@ -2195,7 +2195,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Unwinding through a callee that tail-calls with a different stack-arg size
   // only works on Win64 if this frame is found via a frame pointer.
-  if (!isTailCall && Subtarget.isTargetWin64() && ShouldGuaranteeTCO &&
+  if (!isTailCall && MF.usesWindowsUnwindInfo() && ShouldGuaranteeTCO &&
       canGuaranteeTCO(CallConv))
     X86Info->setForceFramePointer(true);
 
@@ -2589,7 +2589,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       } else {
         // Store relative to framepointer.
         SDValue StoreChain = Chain;
-        if (Subtarget.isTargetWin64() && FPDiff && Offset < 0 &&
+        if (MF.usesWindowsUnwindInfo() && FPDiff && Offset < 0 &&
             Offset + (int64_t)OpSize > -(int64_t)RegInfo->getSlotSize())
           std::tie(StoreChain, Arg) = KeepLive(Chain, Arg);
         MemOpChains2.push_back(DAG.getStore(

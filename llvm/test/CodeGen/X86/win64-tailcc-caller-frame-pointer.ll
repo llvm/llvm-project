@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-uefi %s -o - | FileCheck %s
 ; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s --check-prefix=LINUX
 
 ; A Win64 frame that stays live across a call to a guaranteed-TCO convention

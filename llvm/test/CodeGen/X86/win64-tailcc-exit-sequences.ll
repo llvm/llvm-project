@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-uefi %s -o - | FileCheck %s
 
 ; Exits whose RSP adjustment is not simply the frame size are arranged so that
 ; the Windows unwinder, which matches epilogues by their instructions, is right

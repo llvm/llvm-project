@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-uefi %s -o - | FileCheck %s
 
 ; A tail call that grows the stack-argument area makes the prologue reserve the
 ; extra space directly below the return address. The reserve is its own

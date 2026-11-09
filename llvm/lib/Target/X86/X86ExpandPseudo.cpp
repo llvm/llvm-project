@@ -447,8 +447,7 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       // off bytes before the return address, we must do it manually. On Win64
       // with unwind info this sequence isn't one the unwinder can follow, so
       // emitEpilogue has already moved the return address instead.
-      if (STI->isTargetWin64() &&
-          MBB.getParent()->getFunction().needsUnwindTableEntry())
+      if (MBB.getParent()->needsWinCFI())
         MBB.getParent()->getContext().reportError(
             SMLoc(), "Unexpected attempt to use pop/push to handle a "
                      "callee-pop return of more than 65535 bytes on win64");

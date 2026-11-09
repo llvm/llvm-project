@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-uefi %s -o - | FileCheck %s
 
 ; A callee-pop function can pop more bytes than ret's 16-bit immediate holds.
 ; The Windows unwinder can't follow a pop/add/push sequence, so instead the

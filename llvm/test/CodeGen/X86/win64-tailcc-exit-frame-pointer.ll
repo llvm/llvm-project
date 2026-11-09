@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-uefi %s -o - | FileCheck %s
 
 ; As win64-tailcc-exit-sequences.ll, with a frame pointer. The frame register
 ; has to stay intact until the epilogue, so it is restored by the pop that ends

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-uefi %s -o - | FileCheck %s
 
 ; The value stored over the caller's return address is live across a call, so
 ; it is in a callee-saved register. That store must be the last body

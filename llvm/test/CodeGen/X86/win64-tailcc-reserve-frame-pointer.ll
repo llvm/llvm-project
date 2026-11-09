@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-uefi %s -o - | FileCheck %s
 
 ; With a tail-call reserve, frame-pointer-relative and stack-pointer-relative
 ; addressing must agree. In the first two functions the old return address is
