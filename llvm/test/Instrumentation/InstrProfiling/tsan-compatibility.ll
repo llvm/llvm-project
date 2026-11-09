@@ -123,7 +123,7 @@ define dso_local void @mcdc_tsan(i32 noundef %A) sanitize_thread {
 ; COND-NEXT:     store atomic i8 0, ptr @__profc_mcdc_tsan monotonic, align 1, !nosanitize
 ; COND-NEXT:     br label %[[CONT]]
 ; COND:        [[CONT]]:
-; CHECK:         %[[ADDR:.+]] = getelementptr inbounds i8, ptr @__profbm_mcdc_tsan, i32 %{{.+}}
+; CHECK:         %[[ADDR:.+]] = getelementptr inbounds i8, ptr @__profbm_mcdc_tsan, i64 %{{.+}}
 ; CHECK:         %[[SHIFTED:.+]] = shl i8 1, %{{.+}}
 ; CHECK-NEXT:    %[[BITS:.+]] = load atomic i8, ptr %[[ADDR]] monotonic, align 1, !nosanitize
 ; CHECK-NEXT:    %[[MASKED:.+]] = and i8 %[[BITS]], %[[SHIFTED]]
@@ -133,7 +133,7 @@ define dso_local void @mcdc_tsan(i32 noundef %A) sanitize_thread {
 ; CHECK-NEXT:    atomicrmw or ptr %[[ADDR]], i8 %[[SHIFTED]] monotonic, align 1, !nosanitize
 ;
 ; SINGLE-LABEL: define dso_local void @mcdc_tsan(
-; SINGLE:         %[[ADDR:.+]] = getelementptr inbounds i8, ptr @__profbm_mcdc_tsan, i32 %{{.+}}
+; SINGLE:         %[[ADDR:.+]] = getelementptr inbounds i8, ptr @__profbm_mcdc_tsan, i64 %{{.+}}
 ; SINGLE:         %[[SHIFTED:.+]] = shl i8 1, %{{.+}}
 ; SINGLE-NEXT:    %[[BITS:.+]] = load i8, ptr %[[ADDR]], align 1, !nosanitize
 ; SINGLE-NEXT:    %[[OR:.+]] = or i8 %[[BITS]], %[[SHIFTED]]
@@ -161,7 +161,7 @@ define dso_local void @mcdc_no_tsan(i32 noundef %A) {
 ; COND-NEXT:     store i8 0, ptr @__profc_mcdc_no_tsan, align 1, !nosanitize
 ; COND-NEXT:     br label %[[CONT]]
 ; COND:        [[CONT]]:
-; CHECK:         %[[ADDR:.+]] = getelementptr inbounds i8, ptr @__profbm_mcdc_no_tsan, i32 %{{.+}}
+; CHECK:         %[[ADDR:.+]] = getelementptr inbounds i8, ptr @__profbm_mcdc_no_tsan, i64 %{{.+}}
 ; CHECK:         %[[SHIFTED:.+]] = shl i8 1, %{{.+}}
 ; CHECK-NEXT:    %[[BITS:.+]] = load i8, ptr %[[ADDR]], align 1, !nosanitize
 ; CHECK-NEXT:    %[[OR:.+]] = or i8 %[[BITS]], %[[SHIFTED]]
