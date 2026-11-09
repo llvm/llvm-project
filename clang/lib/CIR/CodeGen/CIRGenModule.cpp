@@ -208,7 +208,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*clang_abi_compat=*/
           static_cast<int32_t>(langOpts.getClangABICompat()),
           static_cast<int32_t>(langOpts.LongDoubleSize),
-          /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs));
+          /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs,
+          /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
+              LangOptions::FPE_Ignore,
+          /*ssp_buffer_size=*/cgo.SSPBufferSize));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -4060,6 +4063,8 @@ cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
 
+  extraAttrs.set(cir::CIRDialect::getRuntimeFuncAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
                                              /*forVtable=*/false, extraAttrs);
 
