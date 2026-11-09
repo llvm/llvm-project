@@ -17,24 +17,34 @@
 # RUN: echo '      - { sym: _f2, objAddr: 0x1, binAddr: 0x10010, size: 0x1 }' >> %t.map
 # RUN: echo '...' >> %t.map
 
+# RUN: dsymutil --linker=classic -y %t.map -f -o %t.classic.dSYM
+# RUN: llvm-dwarfdump --verify %t.classic.dSYM
+# RUN: llvm-dwarfdump -v -debug-info %t.classic.dSYM \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,CLASSIC
+
 # RUN: dsymutil --linker=parallel -y %t.map -f -o %t.dSYM --num-threads 1
 # RUN: llvm-dwarfdump --verify %t.dSYM
-# RUN: llvm-dwarfdump -v -debug-info %t.dSYM | FileCheck %s
+# RUN: llvm-dwarfdump -v -debug-info %t.dSYM \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,PARALLEL
 
-# CHECK:      DW_TAG_compile_unit
-# CHECK:        DW_AT_name [DW_FORM_strx] (indexed (00000000) string = "CU1")
-# CHECK:      DW_TAG_structure_type
-# CHECK-NEXT:   DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "S")
-# CHECK:      DW_TAG_subprogram
-# CHECK-NEXT:   DW_AT_name [DW_FORM_strx] (indexed (00000002) string = "f1")
+## The classic linker emits one .debug_str_offsets table shared by all units,
+## the parallel linker one table per unit.
+# CHECK:         DW_TAG_compile_unit
+# CHECK:           DW_AT_name [DW_FORM_strx] (indexed (00000000) string = "CU1")
+# CHECK:         DW_TAG_structure_type
+# CHECK-NEXT:      DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "S")
+# CHECK:         DW_TAG_subprogram
+# CHECK-NEXT:      DW_AT_name [DW_FORM_strx] (indexed (00000002) string = "f1")
 
-# CHECK:      DW_TAG_compile_unit
-# CHECK:        DW_AT_name [DW_FORM_strx] (indexed (00000000) string = "CU2")
-# CHECK:      DW_TAG_formal_parameter
-# CHECK-NEXT:   DW_AT_name [DW_FORM_strx] (indexed (00000002) string = "p")
-# CHECK-NEXT:   DW_AT_type [DW_FORM_ref_addr] {{.*}} "S"
+# CHECK:         DW_TAG_compile_unit
+# CLASSIC:         DW_AT_name [DW_FORM_strx] (indexed (00000003) string = "CU2")
+# PARALLEL:        DW_AT_name [DW_FORM_strx] (indexed (00000000) string = "CU2")
+# CHECK:         DW_TAG_formal_parameter
+# CLASSIC-NEXT:    DW_AT_name [DW_FORM_strx] (indexed (00000005) string = "p")
+# PARALLEL-NEXT:   DW_AT_name [DW_FORM_strx] (indexed (00000002) string = "p")
+# CHECK-NEXT:      DW_AT_type [DW_FORM_ref_addr] {{.*}} "S"
 
-## The output does not depend on the number of threads.
+## The output of the parallel linker does not depend on the number of threads.
 # RUN: dsymutil --linker=parallel -y %t.map -f -o %t.4.dSYM --num-threads 4
 # RUN: llvm-dwarfdump -debug-info %t.dSYM | sed 1d > %t.1.txt
 # RUN: llvm-dwarfdump -debug-info %t.4.dSYM | sed 1d > %t.4.txt
