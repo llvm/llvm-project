@@ -3457,6 +3457,12 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     func->setAttr(cir::CIRDialect::getNoBuiltinAttrName(),
                   mlir::UnitAttr::get(&getMLIRContext()));
   }
+
+  if (isa<CXXConstructorDecl>(funcDecl) || isa<CXXDestructorDecl>(funcDecl))
+    func.setUnnamedAddr(true);
+  else if (const auto *md = dyn_cast<CXXMethodDecl>(funcDecl))
+    if (md->isVirtual())
+      func.setUnnamedAddr(true);
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
@@ -4306,10 +4312,11 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
   assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
-void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
-                                      mlir::Operation *op, GlobalDecl aliasGD,
-                                      cir::FuncOp aliasee,
-                                      cir::GlobalLinkageKind linkage) {
+cir::FuncOp CIRGenModule::emitAliasForGlobal(StringRef mangledName,
+                                             mlir::Operation *op,
+                                             GlobalDecl aliasGD,
+                                             cir::FuncOp aliasee,
+                                             cir::GlobalLinkageKind linkage) {
 
   auto *aliasFD = dyn_cast<FunctionDecl>(aliasGD.getDecl());
   assert(aliasFD && "expected FunctionDecl");
@@ -4332,9 +4339,6 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
   mlir::SymbolTable::setSymbolVisibility(
       alias, mlir::SymbolTable::Visibility::Private);
 
-  // Alias constructors and destructors are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
-
   if (op) {
     // Any existing users of the existing function declaration will be
     // referencing the function by flat symbol reference (i.e. the name), so
@@ -4351,6 +4355,7 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
 
   // Finally, set up the alias with its proper name and attributes.
   setCommonAttributes(aliasGD, alias);
+  return alias;
 }
 
 mlir::Type CIRGenModule::convertType(QualType type) {

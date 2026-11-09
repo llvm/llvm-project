@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -fclangir -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -mconstructor-aliases -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // Test that constructor aliases work correctly when the call site is emitted
 // before the constructor definition. This creates a declaration for the
@@ -28,16 +30,16 @@ B::B() {
 // CHECK:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
 
-// CHECK: cir.func{{.*}} private dso_local @_ZN1BC1Ev(!cir.ptr<!rec_B>) alias(@_ZN1BC2Ev)
+// CHECK: cir.func{{.*}} private dso_local unnamed_addr @_ZN1BC1Ev(!cir.ptr<!rec_B>) alias(@_ZN1BC2Ev)
 
-// OGCG: @_ZN1BC1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BC2Ev
+// LLVM: @_ZN1BC1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BC2Ev
 
-// OGCG: define{{.*}} void @_Z3barv()
-// OGCG:   %[[B:.*]] = alloca %struct.B, align 1
-// OGCG:   call void @_ZN1BC1Ev(ptr{{.*}} %[[B]])
-// OGCG:   ret void
+// LLVM: define{{.*}} void @_Z3barv()
+// LLVM:   %[[B:.*]] = alloca %struct.B, align 1
+// LLVM:   call void @_ZN1BC1Ev(ptr{{.*}} %[[B]])
+// LLVM:   ret void
 
-// OGCG: define{{.*}} @_ZN1BC2Ev(ptr{{.*}} %[[THIS_ARG:.*]])
-// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
-// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
-// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// LLVM: define{{.*}} @_ZN1BC2Ev(ptr{{.*}} %[[THIS_ARG:.*]])
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
