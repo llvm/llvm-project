@@ -684,9 +684,12 @@ public:
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
 
-  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
-                          GlobalDecl aliasGD, cir::FuncOp aliasee,
-                          cir::GlobalLinkageKind linkage);
+  /// Emit `aliasGD` as an alias of `aliasee`, replacing any existing
+  /// declaration `op`, and return the alias.
+  cir::FuncOp emitAliasForGlobal(llvm::StringRef mangledName,
+                                 mlir::Operation *op, GlobalDecl aliasGD,
+                                 cir::FuncOp aliasee,
+                                 cir::GlobalLinkageKind linkage);
 
   /// Emit a definition for an `__attribute__((alias))` declaration.
   void emitAliasDefinition(GlobalDecl gd);

@@ -197,6 +197,17 @@ functions:
       - type: unsigned int
       - type: unsigned int
       - type: int
+  - name: copy_file_range
+    standards:
+      - linux
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: off_t *
+      - type: int
+      - type: off_t *
+      - type: size_t
+      - type: unsigned int
   - name: dup
     standards:
       - posix

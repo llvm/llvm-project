@@ -1324,6 +1324,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
         cpu_type != 0 && cpu_type != static_cast<cpu_type_t>(UINT32_MAX) &&
         cpu_type != static_cast<cpu_type_t>(LLDB_INVALID_CPUTYPE);
     const bool set_cpu_subtype =
+        cpu_subtype != 0 &&
         cpu_subtype != static_cast<cpu_subtype_t>(UINT32_MAX) &&
         cpu_subtype != CPU_SUBTYPE_X86_64_H;
     if (set_cpu_type) {

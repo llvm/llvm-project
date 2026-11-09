@@ -3690,6 +3690,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SPIRV/SPIRVGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":SPIRVOptionsTableGen",
+        ],
     },
     {
         "name": "SystemZ",
@@ -4265,6 +4268,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/RISCV/RISCVOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SPIRVOptionsTableGen",
+    strip_include_prefix = "lib/Target/SPIRV",
+    tbl_outs = {"lib/Target/SPIRV/SPIRVOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/SPIRV/SPIRVOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
