@@ -367,11 +367,11 @@ void IteratorInvalidatedThroughPointerParameter(std::vector<int> *v) { // expect
 }
 
 void ParenthesizedContainerInvalidatesIterator() {
-  // FIXME: Support invalidation through non-DRE lvalue expressions.
   std::vector<int> v;
-  auto it = v.begin();
-  (v).push_back(42);
-  use(it);
+  auto it = v.begin(); // expected-warning {{local variable 'v' is later invalidated}} \
+                       // expected-note {{result of call to 'begin' aliases the storage of local variable 'v'}}
+  (v).push_back(42);   // expected-note {{local variable 'v' is invalidated here}}
+  use(it);             // expected-note {{later used here}}
 }
 
 } // namespace InvalidatingThroughContainerAliases
