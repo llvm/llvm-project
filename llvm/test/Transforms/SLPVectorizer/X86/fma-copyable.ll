@@ -14,20 +14,17 @@ define void @addend_copyable(ptr %dst, ptr %srcA, ptr %srcB, ptr %srcC) {
 ; FMA-NEXT:    [[A2:%.*]] = load double, ptr [[GEPA2]], align 8
 ; FMA-NEXT:    [[GEPB2:%.*]] = getelementptr double, ptr [[SRCB]], i64 2
 ; FMA-NEXT:    [[B2:%.*]] = load double, ptr [[GEPB2]], align 8
-; FMA-NEXT:    [[GEPC2:%.*]] = getelementptr double, ptr [[SRCC]], i64 2
-; FMA-NEXT:    [[C2:%.*]] = load double, ptr [[GEPC2]], align 8
-; FMA-NEXT:    [[GEPC3:%.*]] = getelementptr double, ptr [[SRCC]], i64 3
-; FMA-NEXT:    [[X:%.*]] = load double, ptr [[GEPC3]], align 8
-; FMA-NEXT:    [[FMA2:%.*]] = call double @llvm.fma.f64(double [[A2]], double [[B2]], double [[C2]])
 ; FMA-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
 ; FMA-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
-; FMA-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
-; FMA-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-; FMA-NEXT:    store <2 x double> [[TMP3]], ptr [[DST]], align 8
-; FMA-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i64 2
-; FMA-NEXT:    store double [[FMA2]], ptr [[D2]], align 8
-; FMA-NEXT:    [[D3:%.*]] = getelementptr double, ptr [[DST]], i64 3
-; FMA-NEXT:    store double [[X]], ptr [[D3]], align 8
+; FMA-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[SRCC]], align 8
+; FMA-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 0.000000e+00>, double [[A2]], i64 2
+; FMA-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FMA-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; FMA-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double -0.000000e+00>, double [[B2]], i64 2
+; FMA-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FMA-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; FMA-NEXT:    [[TMP9:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP5]], <4 x double> [[TMP8]], <4 x double> [[TMP2]])
+; FMA-NEXT:    store <4 x double> [[TMP9]], ptr [[DST]], align 8
 ; FMA-NEXT:    ret void
 ;
 ; NO-FMA-LABEL: define void @addend_copyable(
@@ -97,15 +94,15 @@ define void @addend_two_copyables(ptr %dst, ptr %srcA, ptr %srcB, ptr %srcC) {
 ; FMA-LABEL: define void @addend_two_copyables(
 ; FMA-SAME: ptr [[DST:%.*]], ptr [[SRCA:%.*]], ptr [[SRCB:%.*]], ptr [[SRCC:%.*]]) #[[ATTR1]] {
 ; FMA-NEXT:  [[ENTRY:.*:]]
-; FMA-NEXT:    [[GEPC2:%.*]] = getelementptr double, ptr [[SRCC]], i64 2
-; FMA-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i64 2
-; FMA-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[GEPC2]], align 8
 ; FMA-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
 ; FMA-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
-; FMA-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
-; FMA-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP3]])
-; FMA-NEXT:    store <2 x double> [[TMP4]], ptr [[DST]], align 8
-; FMA-NEXT:    store <2 x double> [[TMP2]], ptr [[D2]], align 8
+; FMA-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[SRCC]], align 8
+; FMA-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FMA-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> <double poison, double poison, double 0.000000e+00, double 0.000000e+00>, <4 x double> [[TMP3]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; FMA-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FMA-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> <double poison, double poison, double -0.000000e+00, double -0.000000e+00>, <4 x double> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; FMA-NEXT:    [[TMP7:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP4]], <4 x double> [[TMP6]], <4 x double> [[TMP2]])
+; FMA-NEXT:    store <4 x double> [[TMP7]], ptr [[DST]], align 8
 ; FMA-NEXT:    ret void
 ;
 ; NO-FMA-LABEL: define void @addend_two_copyables(
@@ -161,16 +158,14 @@ define void @mul_copyables(ptr %dst, ptr %srcA, ptr %srcB, double %c0, double %c
 ; FMA-LABEL: define void @mul_copyables(
 ; FMA-SAME: ptr [[DST:%.*]], ptr [[SRCA:%.*]], ptr [[SRCB:%.*]], double [[C0:%.*]], double [[C1:%.*]]) #[[ATTR1]] {
 ; FMA-NEXT:  [[ENTRY:.*:]]
-; FMA-NEXT:    [[GEPA2:%.*]] = getelementptr double, ptr [[SRCA]], i64 2
-; FMA-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i64 2
-; FMA-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[GEPA2]], align 8
-; FMA-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
+; FMA-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[SRCA]], align 8
 ; FMA-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
-; FMA-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[C0]], i64 0
-; FMA-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[C1]], i64 1
-; FMA-NEXT:    [[TMP5:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x double> [[TMP4]])
-; FMA-NEXT:    store <2 x double> [[TMP5]], ptr [[DST]], align 8
-; FMA-NEXT:    store <2 x double> [[TMP0]], ptr [[D2]], align 8
+; FMA-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FMA-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> <double poison, double poison, double 1.000000e+00, double 1.000000e+00>, <4 x double> [[TMP2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; FMA-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> <double poison, double poison, double -0.000000e+00, double -0.000000e+00>, double [[C0]], i64 0
+; FMA-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[C1]], i64 1
+; FMA-NEXT:    [[TMP6:%.*]] = call <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP0]], <4 x double> [[TMP3]], <4 x double> [[TMP5]])
+; FMA-NEXT:    store <4 x double> [[TMP6]], ptr [[DST]], align 8
 ; FMA-NEXT:    ret void
 ;
 ; NO-FMA-LABEL: define void @mul_copyables(
@@ -350,20 +345,17 @@ define void @fast_math_flags(ptr %dst, ptr %srcA, ptr %srcB, ptr %srcC) {
 ; FMA-NEXT:    [[A2:%.*]] = load double, ptr [[GEPA2]], align 8
 ; FMA-NEXT:    [[GEPB2:%.*]] = getelementptr double, ptr [[SRCB]], i64 2
 ; FMA-NEXT:    [[B2:%.*]] = load double, ptr [[GEPB2]], align 8
-; FMA-NEXT:    [[GEPC2:%.*]] = getelementptr double, ptr [[SRCC]], i64 2
-; FMA-NEXT:    [[C2:%.*]] = load double, ptr [[GEPC2]], align 8
-; FMA-NEXT:    [[GEPC3:%.*]] = getelementptr double, ptr [[SRCC]], i64 3
-; FMA-NEXT:    [[X:%.*]] = load double, ptr [[GEPC3]], align 8
-; FMA-NEXT:    [[FMA2:%.*]] = call fast double @llvm.fma.f64(double [[A2]], double [[B2]], double [[C2]])
 ; FMA-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
 ; FMA-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
-; FMA-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
-; FMA-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-; FMA-NEXT:    store <2 x double> [[TMP3]], ptr [[DST]], align 8
-; FMA-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i64 2
-; FMA-NEXT:    store double [[FMA2]], ptr [[D2]], align 8
-; FMA-NEXT:    [[D3:%.*]] = getelementptr double, ptr [[DST]], i64 3
-; FMA-NEXT:    store double [[X]], ptr [[D3]], align 8
+; FMA-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[SRCC]], align 8
+; FMA-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 0.000000e+00>, double [[A2]], i64 2
+; FMA-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FMA-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; FMA-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double -0.000000e+00>, double [[B2]], i64 2
+; FMA-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FMA-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; FMA-NEXT:    [[TMP9:%.*]] = call reassoc arcp contract afn <4 x double> @llvm.fma.v4f64(<4 x double> [[TMP5]], <4 x double> [[TMP8]], <4 x double> [[TMP2]])
+; FMA-NEXT:    store <4 x double> [[TMP9]], ptr [[DST]], align 8
 ; FMA-NEXT:    ret void
 ;
 ; NO-FMA-LABEL: define void @fast_math_flags(
