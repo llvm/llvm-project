@@ -2141,7 +2141,12 @@ private:
             load = fir::ReboxOp::create(*builder, loc, load.getType(), load,
                                         shiftOp, /*slice=*/mlir::Value{});
           }
-          return load;
+          // The function result type does not carry the volatility of the
+          // result variable, so match it before returning.
+          mlir::Type funcResultType =
+              builder->getFunction().getFunctionType().getResult(0);
+          return builder->createVolatileCast(
+              loc, fir::isa_volatile_type(funcResultType), load);
         },
         [&](const auto &) -> mlir::Value {
           mlir::Value resultRef = resultSymBox.getAddr();
