@@ -13,7 +13,6 @@
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/NonNullSharedPtr.h"
@@ -84,7 +83,7 @@ protected:
     void Clear();
 
     /// Object name in the archive.
-    lldb_private::ConstString ar_name;
+    std::string ar_name;
 
     /// Object modification time in the archive.
     uint32_t modification_time = 0;
@@ -138,7 +137,7 @@ protected:
 
     size_t ParseObjects();
 
-    Object *FindObject(lldb_private::ConstString object_name,
+    Object *FindObject(llvm::StringRef object_name,
                        const llvm::sys::TimePoint<> &object_mod_time);
 
     lldb::offset_t GetFileOffset() const { return m_file_offset; }
@@ -159,7 +158,8 @@ protected:
     ArchiveType GetArchiveType() { return m_archive_type; }
 
   protected:
-    typedef lldb_private::UniqueCStringMap<uint32_t> ObjectNameToIndexMap;
+    typedef llvm::StringMap<llvm::SmallVector<uint32_t, 1>>
+        ObjectNameToIndexMap;
     // Member Variables
     lldb_private::ArchSpec m_arch;
     llvm::sys::TimePoint<> m_modification_time;

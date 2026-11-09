@@ -48,7 +48,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         }
         arch: str = self.getArchitecture()
         expected_arch = replaced_arch.get(arch, arch)
-        self.assertIn(architecture.text, expected_arch)
+        self.assertTrue(architecture.text.startswith(expected_arch))
 
         feature = root.find("feature")
         self.assertIsNotNone(feature)

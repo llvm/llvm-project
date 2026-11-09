@@ -4,6 +4,10 @@
 // described in the scope of that module.
 
 module {
+  // Marks `helper` as defined in this compilation unit, as lowering does for
+  // every module it compiles.
+  fir.module_debug_imports "helper" {
+  } loc(#loc0)
   fir.global @_QMhelperECpi constant : f32 {
     %cst = arith.constant 3.14159274 : f32
     fir.has_value %cst : f32
@@ -12,6 +16,7 @@ module {
     return
   } loc(#loc2)
 }
+#loc0 = loc("test.f90":5:1)
 #loc1 = loc("test.f90":8:26)
 #loc2 = loc("test.f90":12:5)
 

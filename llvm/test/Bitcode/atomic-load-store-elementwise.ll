@@ -14,3 +14,17 @@ define <4 x i32> @load_elem_i32_volatile(ptr %p) {
   %v = load atomic volatile elementwise <4 x i32>, ptr %p acquire, align 4
   ret <4 x i32> %v
 }
+
+define void @store_elem_f32(ptr %p, <2 x float> %v) {
+; CHECK-LABEL: @store_elem_f32(
+; CHECK: store atomic elementwise <2 x float> %v, ptr %p syncscope("agent") monotonic, align 4
+  store atomic elementwise <2 x float> %v, ptr %p syncscope("agent") monotonic, align 4
+  ret void
+}
+
+define void @store_elem_i32_volatile(ptr %p, <4 x i32> %v) {
+; CHECK-LABEL: @store_elem_i32_volatile(
+; CHECK: store atomic volatile elementwise <4 x i32> %v, ptr %p monotonic, align 4
+  store atomic volatile elementwise <4 x i32> %v, ptr %p monotonic, align 4
+  ret void
+}

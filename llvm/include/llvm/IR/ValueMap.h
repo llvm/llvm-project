@@ -169,17 +169,6 @@ public:
     return I != Map.end() ? I->second : ValueT();
   }
 
-  /// Return the entry for the specified key, or \p Default. This variant is
-  /// useful, because `lookup` cannot be used with non-default-constructible
-  /// values.
-  template <typename U = std::remove_cv_t<ValueT>>
-  ValueT lookup_or(const KeyT &Val, U &&Default) const {
-    typename MapT::const_iterator I = Map.find_as(Val);
-    if (I != Map.end())
-      return I->second;
-    return std::forward<U>(Default);
-  }
-
   // Inserts key,value pair into the map if the key isn't already in the map.
   // If the key is already in the map, it returns false and doesn't update the
   // value.
@@ -212,20 +201,6 @@ public:
   }
 
   ValueT &operator[](const KeyT &Key) { return Map[Wrap(Key)]; }
-
-  /// isPointerIntoBucketsArray - Return true if the specified pointer points
-  /// somewhere into the ValueMap's array of buckets (i.e. either to a key or
-  /// value in the ValueMap).
-  bool isPointerIntoBucketsArray(const void *Ptr) const {
-    return Map.isPointerIntoBucketsArray(Ptr);
-  }
-
-  /// getPointerIntoBucketsArray() - Return an opaque pointer into the buckets
-  /// array.  In conjunction with the previous method, this can be used to
-  /// determine whether an insertion caused the ValueMap to reallocate.
-  const void *getPointerIntoBucketsArray() const {
-    return Map.getPointerIntoBucketsArray();
-  }
 
 private:
   // Takes a key being looked up in the map and wraps it into a

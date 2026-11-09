@@ -41,7 +41,12 @@ enum MSDemangleFlags {
   MSDF_None = 0,
   MSDF_DumpBackrefs = 1 << 0,
   MSDF_NoAccessSpecifier = 1 << 1,
+  /// Don't write the calling convention (`__cdecl`, `__stdcall`...) in function
+  /// and function pointers.
   MSDF_NoCallingConvention = 1 << 2,
+  /// Don't write the return type for functions. That flag doesn't apply to the
+  /// return type of function pointers since it is an essential part of their
+  /// type.
   MSDF_NoReturnType = 1 << 3,
   MSDF_NoMemberType = 1 << 4,
   MSDF_NoVariableType = 1 << 5,
@@ -53,6 +58,10 @@ enum MSDemangleFlags {
   /// will instead output
   ///   struct MyStruct
   MSDF_NoDecorativeRTTITypeDescriptor = 1 << 8,
+  /// Do not insert a space between template arguments (matches MSVC).
+  MSDF_CompactTemplateLists = 1 << 9,
+  /// Add a space between nested closing braces of templates.
+  MSDF_SplitTemplateClosers = 1 << 10,
 };
 
 /// Demangles the Microsoft symbol pointed at by mangled_name and returns it.

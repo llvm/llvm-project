@@ -11,7 +11,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpecList.h"
@@ -749,7 +748,7 @@ const LazyDyldSPIs &GetLazyDyldSPIs() {
 
 class SharedCacheInfo {
 public:
-  SharedCacheImageInfo GetByFilename(UUID sc_uuid, ConstString filename) {
+  SharedCacheImageInfo GetByFilename(UUID sc_uuid, llvm::StringRef filename) {
     llvm::sys::ScopedReader guard(m_mutex);
     if (!sc_uuid)
       sc_uuid = m_host_uuid;
@@ -787,7 +786,7 @@ private:
   // All of the entries for a given shared cache are in m_file_infos.
   // m_filename_map and m_uuid_map have pointers into those entries.
   llvm::SmallDenseMap<UUID, std::vector<SharedCacheImageInfo>> m_file_infos;
-  llvm::SmallDenseMap<UUID, llvm::DenseMap<ConstString, size_t>> m_filename_map;
+  llvm::SmallDenseMap<UUID, llvm::StringMap<size_t>> m_filename_map;
   llvm::SmallDenseMap<UUID, llvm::DenseMap<UUID, size_t>> m_uuid_map;
 
   UUID m_host_uuid;
@@ -819,15 +818,36 @@ SharedCacheInfo::SharedCacheInfo(SymbolSharedCacheUse sc_mode) {
   CreateSharedCacheInfoWithInstrospectionSPIs();
 }
 
+namespace {
 struct segment {
   std::string name;
   uint64_t vmaddr;
   size_t vmsize;
 
   // Mapped into lldb's own address space via libdispatch:
-  const void *data;
-  size_t size;
+  dispatch_data_t mapping = nullptr;
+  const void *data = nullptr;
+  size_t size = 0;
 };
+
+/// An unowned view of an image's segments that keeps their mappings alive.
+class DataBufferDispatchData : public DataBufferUnowned {
+public:
+  DataBufferDispatchData(uint8_t *bytes, lldb::offset_t size,
+                         std::vector<dispatch_data_t> mappings)
+      : DataBufferUnowned(bytes, size), m_mappings(std::move(mappings)) {}
+  DataBufferDispatchData(const DataBufferDispatchData &) = delete;
+  DataBufferDispatchData &operator=(const DataBufferDispatchData &) = delete;
+
+  ~DataBufferDispatchData() override {
+    for (dispatch_data_t mapping : m_mappings)
+      dispatch_release(mapping);
+  }
+
+private:
+  std::vector<dispatch_data_t> m_mappings;
+};
+} // namespace
 
 static DataExtractorSP map_shared_cache_binary_segments(void *image) {
   // dyld_image_segment_data_4HWTrace can't be called on
@@ -849,12 +869,20 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
         seg.vmaddr = vmAddr;
         seg.vmsize = vmSize;
 
-        dispatch_data_t data_from_libdyld =
-            dyld.image_segment_data_4HWTrace(image_copy, segmentName);
-        (void)dispatch_data_create_map(data_from_libdyld, &seg.data, &seg.size);
+        // The segment data is autoreleased. The map is ours to release.
+        @autoreleasepool {
+          dispatch_data_t data_from_libdyld =
+              dyld.image_segment_data_4HWTrace(image_copy, segmentName);
+          // NULL when the cache's backing file is unavailable.
+          if (data_from_libdyld)
+            seg.mapping = dispatch_data_create_map(data_from_libdyld, &seg.data,
+                                                   &seg.size);
+        }
 
         if (seg.size > 0 && seg.data != 0)
           segments.push_back(seg);
+        else if (seg.mapping)
+          dispatch_release(seg.mapping);
       });
 
   if (!segments.size())
@@ -887,8 +915,12 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
         std::max(max_lldb_vm_addr, (uint64_t)seg.data + seg.vmsize);
     min_file_vm_addr = std::min(min_file_vm_addr, (uint64_t)seg.vmaddr);
   }
-  DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
-      (uint8_t *)min_lldb_vm_addr, max_lldb_vm_addr - min_lldb_vm_addr);
+  std::vector<dispatch_data_t> mappings;
+  for (const segment &seg : segments)
+    mappings.push_back(seg.mapping);
+  DataBufferSP data_sp = std::make_shared<DataBufferDispatchData>(
+      (uint8_t *)min_lldb_vm_addr, max_lldb_vm_addr - min_lldb_vm_addr,
+      std::move(mappings));
   VirtualDataExtractor::LookupTable remap_table;
   for (const segment &seg : segments)
     remap_table.Append(VirtualDataExtractor::LookupTable::Entry(
@@ -942,11 +974,11 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
         return;
       UUID image_uuid(uuid_tmp, sizeof(uuid_t));
 
-      // Copy the filename into the const string pool to
-      // ensure lifetime.
-      ConstString installname(dyld_image_get_installname(image));
+      const char *installname_cstr = dyld_image_get_installname(image);
+      std::string installname = installname_cstr ? installname_cstr : "";
+
       Log *log = GetLog(LLDBLog::Modules);
-      LLDB_LOGF_VERBOSE(log, "sc file %s image %p", installname.GetCString(),
+      LLDB_LOGF_VERBOSE(log, "sc file %s image %p", installname.c_str(),
                         (void *)image);
 
       dyld.image_retain_4HWTrace(image);
@@ -1052,9 +1084,8 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
           seg.first - minVmAddr, seg.second, seg.first - minVmAddr));
     lldb::DataExtractorSP extractor_sp =
         std::make_shared<VirtualDataExtractor>(data_sp, table);
-    // Copy the filename into the const string pool to
-    // ensure lifetime.
-    ConstString installname(dyld_image_get_installname(image));
+    const char *installname_cstr = dyld_image_get_installname(image);
+    std::string installname = installname_cstr ? installname_cstr : "";
     m_file_infos[m_host_uuid].push_back(
         SharedCacheImageInfo(installname, UUID(uuid, 16), extractor_sp));
   });
@@ -1076,7 +1107,7 @@ SharedCacheInfo &GetSharedCacheSingleton(SymbolSharedCacheUse sc_mode) {
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(ConstString filepath,
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef filepath,
                                         SymbolSharedCacheUse sc_mode) {
   return GetSharedCacheSingleton(sc_mode).GetByFilename(UUID(), filepath);
 }
@@ -1087,8 +1118,10 @@ HostInfoMacOSX::GetSharedCacheImageInfo(const UUID &file_uuid,
   return GetSharedCacheSingleton(sc_mode).GetByUUID(UUID(), file_uuid);
 }
 
-SharedCacheImageInfo HostInfoMacOSX::GetSharedCacheImageInfo(
-    ConstString filepath, const UUID &sc_uuid, SymbolSharedCacheUse sc_mode) {
+SharedCacheImageInfo
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef filepath,
+                                        const UUID &sc_uuid,
+                                        SymbolSharedCacheUse sc_mode) {
   return GetSharedCacheSingleton(sc_mode).GetByFilename(sc_uuid, filepath);
 }
 

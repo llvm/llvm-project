@@ -72,7 +72,7 @@ struct __fn {
   // *The name `swap` is used here unqualified.
   template <class _Tp, class _Up>
     requires __unqualified_swappable_with<_Tp, _Up>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Tp&& __t, _Up&& __u) const
+  constexpr void operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(swap(std::forward<_Tp>(__t), std::forward<_Up>(__u)))) {
     swap(std::forward<_Tp>(__t), std::forward<_Up>(__u));
   }
@@ -80,8 +80,7 @@ struct __fn {
   // 2.2   Otherwise, if `E1` and `E2` are lvalues of array types with equal extent and...
   template <class _Tp, class _Up, size_t _Size>
     requires __swappable_arrays<_Tp, _Up, _Size>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Tp (&__t)[_Size], _Up (&__u)[_Size]) const
-      noexcept(noexcept((*this)(*__t, *__u))) {
+  constexpr void operator()(_Tp (&__t)[_Size], _Up (&__u)[_Size]) const noexcept(noexcept((*this)(*__t, *__u))) {
     // TODO(cjdb): replace with `ranges::swap_ranges`.
     for (size_t __i = 0; __i < _Size; ++__i) {
       (*this)(__t[__i], __u[__i]);
@@ -90,7 +89,7 @@ struct __fn {
 
   // 2.3   Otherwise, if `E1` and `E2` are lvalues of the same type `T` that models...
   template <__exchangeable _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Tp& __x, _Tp& __y) const
+  constexpr void operator()(_Tp& __x, _Tp& __y) const
       noexcept(is_nothrow_move_constructible_v<_Tp> && is_nothrow_move_assignable_v<_Tp>) {
     __y = std::exchange(__x, std::move(__y));
   }

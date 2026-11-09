@@ -139,6 +139,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
    * - ``SPV_EXT_demote_to_helper_invocation``
      - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
+   * - ``SPV_EXT_long_vector``
+     - Adds support for any vector rank.
    * - ``SPV_EXT_optnone``
      - Adds OptNoneEXT value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_EXT_shader_atomic_float16_add``
@@ -147,6 +149,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_EXT_shader_subgroup_partitioned``
+     - Adds subgroup reductions and scans that use a partition mask.
    * - ``SPV_INTEL_16bit_atomics``
      - Extends the SPV_EXT_shader_atomic_float_add and SPV_EXT_shader_atomic_float_min_max to support addition, minimum and maximum on 16-bit `bfloat16` floating-point numbers in memory.
    * - ``SPV_NV_shader_atomic_fp16_vector``
@@ -209,6 +213,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds decorations to indicate that a given instruction does not cause integer wrapping.
    * - ``SPV_KHR_shader_clock``
      - Adds the extension cl_khr_kernel_clock that adds the ability for a kernel to sample the value from clocks provided by compute units.
+   * - ``SPV_KHR_storage_buffer_storage_class``
+     - Adds the StorageBuffer storage class for SPIR-V versions before 1.3.
    * - ``SPV_KHR_subgroup_rotate``
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``
@@ -261,6 +267,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds the Vulkan memory model, which defines memory semantics for the Vulkan API.
    * - ``SPV_KHR_poison_freeze``
      - Adds instructions to represent a poison value and freeze. Also adds an execution mode to control poison behavior.
+   * - ``SPV_KHR_untyped_pointers``
+     - Adds untyped pointer types and instructions that operate on them, decoupling pointer types from the type of the data they point to.
 
 ```
 

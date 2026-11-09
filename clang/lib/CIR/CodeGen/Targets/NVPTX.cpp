@@ -15,11 +15,49 @@
 #include "../TargetInfo.h"
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/NVVMAttributes.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
 namespace {
+
+/// Handle the launch_bounds attribute, which maps onto the nvvm.maxntid,
+/// nvvm.minctasm and nvvm.maxclusterrank function attributes.
+static void handleCUDALaunchBoundsAttr(const CUDALaunchBoundsAttr *attr,
+                                       cir::FuncOp func, CIRGenModule &cgm,
+                                       CIRGenBuilderTy &builder) {
+  auto setNVVMAttr = [&](llvm::StringRef name, const llvm::APSInt &value) {
+    func->setAttr(("cir." + name).str(),
+                  builder.getStringAttr(llvm::utostr(value.getExtValue())));
+  };
+
+  llvm::APSInt maxThreads(32);
+  maxThreads =
+      attr->getMaxThreads()->EvaluateKnownConstInt(cgm.getASTContext());
+  if (maxThreads > 0)
+    setNVVMAttr(llvm::NVVMAttr::MaxNTID, maxThreads);
+
+  // min and max blocks is an optional argument for CUDALaunchBoundsAttr. If it
+  // was not specified in __launch_bounds__ or if the user specified a 0 value,
+  // we don't have to add a PTX directive.
+  if (attr->getMinBlocks()) {
+    llvm::APSInt minBlocks(32);
+    minBlocks =
+        attr->getMinBlocks()->EvaluateKnownConstInt(cgm.getASTContext());
+    if (minBlocks > 0)
+      setNVVMAttr(llvm::NVVMAttr::MinCTASm, minBlocks);
+  }
+
+  if (attr->getMaxBlocks()) {
+    llvm::APSInt maxBlocks(32);
+    maxBlocks =
+        attr->getMaxBlocks()->EvaluateKnownConstInt(cgm.getASTContext());
+    if (maxBlocks > 0)
+      setNVVMAttr(llvm::NVVMAttr::MaxClusterRank, maxBlocks);
+  }
+}
 
 class NVPTXABIInfo : public ABIInfo {
 public:
@@ -62,20 +100,50 @@ public:
         // are also not subject to inlining.
         func.setInlineKind(cir::InlineKind::NoInline);
         if (fd->hasAttr<CUDAGlobalAttr>()) {
-          func.setCallingConv(cir::CallingConv::PTXKernel);
+          func.setCallingConv(getDeviceKernelCallingConv());
           assert(!cir::MissingFeatures::opFuncParameterAttributes());
         }
-        if (fd->hasAttr<CUDALaunchBoundsAttr>())
-          assert(!cir::MissingFeatures::handleCUDALaunchBoundsAttr());
+        if (const auto *attr = fd->getAttr<CUDALaunchBoundsAttr>())
+          handleCUDALaunchBoundsAttr(attr, func, cgm, cgm.getBuilder());
       }
     }
   }
 
+  cir::CallingConv getDeviceKernelCallingConv() const override {
+    return cir::CallingConv::PTXKernel;
+  }
+
   mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const override {
-    // On the device side, surface reference is represented as an object handle
-    // in 64-bit integer.
-    return cir::IntType::get(&getABIInfo().cgt.getMLIRContext(), 64,
-                             /*isSigned=*/true);
+    return cir::CUDADeviceSurfaceType::get(&getABIInfo().cgt.getMLIRContext());
+  }
+
+  mlir::Type getCUDADeviceBuiltinTextureDeviceType() const override {
+    return cir::CUDADeviceTextureType::get(&getABIInfo().cgt.getMLIRContext());
+  }
+
+  // A null pointer in the local address space is materialized via an address
+  // space cast from null in the generic address space, so that it converts
+  // back to a generic null pointer.
+  mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                             QualType qt, mlir::Location loc) const override {
+    CIRGenBuilderTy &builder = cgm.getBuilder();
+    // The local address space is either a language address space or an
+    // explicit target address space at this point.
+    mlir::ptr::MemorySpaceAttrInterface addrSpace = ptrTy.getAddrSpace();
+    auto targetAS =
+        mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(addrSpace);
+    bool isLocal =
+        cir::isMatchingAddressSpace(addrSpace, LangAS::opencl_local) ||
+        (targetAS &&
+         targetAS.getValue() ==
+             cgm.getASTContext().getTargetAddressSpace(LangAS::opencl_local));
+    if (!isLocal)
+      return builder.getNullPtr(ptrTy, loc);
+
+    cir::PointerType genericPtrTy =
+        builder.getPointerTo(ptrTy.getPointee(), LangAS::opencl_generic);
+    return builder.createAddrSpaceCast(
+        loc, builder.getNullPtr(genericPtrTy, loc), ptrTy);
   }
 };
 

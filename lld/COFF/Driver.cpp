@@ -33,6 +33,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -413,27 +414,40 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
     llvm::TimeTraceScope timeScope("File: ", path);
     auto [mb, ec] = future->get();
     if (ec) {
-      // Retry reading the file (synchronously) now that we may have added
-      // winsysroot search paths from SymbolTable::addFile().
-      // Retrying synchronously is important for keeping the order of inputs
-      // consistent.
-      // This makes it so that if the user passes something in the winsysroot
-      // before something we can find with an architecture, we won't find the
-      // winsysroot file.
-      if (std::optional<StringRef> retryPath = findFileIfNew(pathStr)) {
-        auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
-                                             /*RequiresNullTerminator=*/false);
-        ec = retryMb.getError();
-        if (!ec) {
-          mb = std::move(*retryMb);
-          // Prefetch memory pages in the background as we will need them soon
-          // enough.
-          if (ctx.config.prefetchInputs)
-            mb->willNeedIfMmap();
+      // Retry reading pathStr directly before consulting findFileIfNew: if the
+      // file already existed when findFileIfNew/findLibIfNew ran prior to
+      // enqueuePath, its UniqueID is already in visitedFiles, so findFileIfNew
+      // would return std::nullopt and silently drop the input file on error.
+      auto retryMb = MemoryBuffer::getFile(pathStr, /*IsText=*/false,
+                                           /*RequiresNullTerminator=*/false);
+      ec = retryMb.getError();
+      if (!ec) {
+        mb = std::move(*retryMb);
+        if (ctx.config.prefetchInputs)
+          mb->willNeedIfMmap();
+      } else if (findFile(pathStr) != pathStr) {
+        // Retry reading the file (synchronously) now that we may have added
+        // winsysroot search paths from SymbolTable::addFile().
+        // Retrying synchronously is important for keeping the order of inputs
+        // consistent.
+        // This makes it so that if the user passes something in the winsysroot
+        // before something we can find with an architecture, we won't find the
+        // winsysroot file.
+        if (std::optional<StringRef> retryPath = findFileIfNew(pathStr)) {
+          retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
+                                          /*RequiresNullTerminator=*/false);
+          ec = retryMb.getError();
+          if (!ec) {
+            mb = std::move(*retryMb);
+            // Prefetch memory pages in the background as we will need them soon
+            // enough.
+            if (ctx.config.prefetchInputs)
+              mb->willNeedIfMmap();
+          }
+        } else {
+          // We've already handled this file.
+          return;
         }
-      } else {
-        // We've already handled this file.
-        return;
       }
     }
     if (ec) {
@@ -953,6 +967,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
     case OPT_INPUT:
       os << quote(rewritePath(arg->getValue())) << "\n";
       break;
+    case OPT_lto_sample_profile:
     case OPT_wholearchive_file:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
       break;
@@ -1641,7 +1656,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Parse cl::opt");
     cl::ResetAllOptionOccurrences();
-    cl::ParseCommandLineOptions(v.size(), v.data());
+    cl::parseCommandLineOptions(config->libraryOptions, v);
   }
 
   // Handle /errorlimit early, because error() depends on it.
@@ -1708,6 +1723,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         Err(ctx) << "/linkrepro: failed to open " << *path << ": "
                  << toString(errOrWriter.takeError());
       }
+    }
+
+    // LTO reads the sample profile directly, so collect it explicitly.
+    if (tar) {
+      StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
+      if (!ltoSampleProfile.empty())
+        takeBuffer(CHECK(MemoryBuffer::getFile(ltoSampleProfile),
+                         "could not open " + ltoSampleProfile));
     }
   }
   // Handle /linkreprofullpathrsp
@@ -2326,6 +2349,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
     config->prefetchInputs = true;
+
+  config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
+  config->optRemarksPasses = args.getLastArgValue(OPT_opt_remarks_passes);
+  config->optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);
+  config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
+  if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
+    auto resultOrErr = remarks::parseHotnessThresholdOption(arg->getValue());
+    if (!resultOrErr)
+      Err(ctx) << arg->getSpelling() << ": invalid argument '"
+               << arg->getValue() << "', only integer or 'auto' is supported";
+    else
+      config->optRemarksHotnessThreshold = *resultOrErr;
+  }
 
   if (errCount(ctx))
     return;

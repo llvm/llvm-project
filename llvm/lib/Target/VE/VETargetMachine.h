@@ -16,6 +16,7 @@
 #include "VEInstrInfo.h"
 #include "VESubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include <list>
 #include <optional>
 
 namespace llvm {
@@ -57,7 +58,13 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  unsigned getSjLjDataSize() const override { return 64; }
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 };
 
 } // namespace llvm

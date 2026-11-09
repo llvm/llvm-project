@@ -85,6 +85,11 @@ namespace llvm {
   /// Otherwise return the \p TBAANode itself.
   LLVM_ABI MDNode *UpgradeTBAANode(MDNode &TBAANode);
 
+  /// If the given !tbaa.struct node has old-style scalar field tags, return an
+  /// equivalent node with each field tag upgraded to the struct-path aware
+  /// format. Otherwise return the node itself.
+  LLVM_ABI MDNode *UpgradeTBAAStructNode(MDNode &TBAAStructNode);
+
   /// This is an auto-upgrade for bitcast between pointers with different
   /// address spaces: the instruction is replaced by a pair ptrtoint+inttoptr.
   LLVM_ABI Instruction *UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
@@ -121,7 +126,9 @@ namespace llvm {
       {"llvm.loop.distribute.enable", "llvm.loop.distribute.disable"},
       {"llvm.loop.vectorize.enable", "llvm.loop.vectorize.disable"},
       {"llvm.loop.vectorize.predicate.enable",
-       "llvm.loop.vectorize.predicate.disable"}};
+       "llvm.loop.vectorize.predicate.disable"},
+      {"llvm.loop.vectorize.scalable.enable",
+       "llvm.loop.vectorize.scalable.disable"}};
 
   /// Return the replacement tags for the enable tag \p Name, or nullptr.
   inline const BooleanLoopTags *findBooleanLoopTags(StringRef Name) {

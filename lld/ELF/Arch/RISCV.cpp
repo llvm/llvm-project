@@ -515,9 +515,9 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
 void RISCV::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.is64)
-    elf::scanSection1<RISCV, ELF64LE>(*this, sec, shard);
+    elf::scanSection1<ELF64LE>(*this, sec, shard);
   else
-    elf::scanSection1<RISCV, ELF32LE>(*this, sec, shard);
+    elf::scanSection1<ELF32LE>(*this, sec, shard);
 }
 
 void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -702,6 +702,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write16le(loc, val);
     return;
   case R_RISCV_SET32:
+    write32le(loc, val);
+    return;
   case R_RISCV_32_PCREL:
   case R_RISCV_PLT32:
   case R_RISCV_GOT32_PCREL:

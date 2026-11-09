@@ -10,7 +10,7 @@ add_header_library(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.vdso
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.__support.error_or
     libc.src.__support.threads.raw_rwlock
 )
@@ -23,9 +23,25 @@ add_entrypoint_object(
     ../kill.h
   DEPENDS
     libc.hdr.types.pid_t
-    libc.src.errno.errno
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.kill
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  killpg
+  SRCS
+    killpg.cpp
+  HDRS
+    ../killpg.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.kill
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -74,11 +90,12 @@ add_entrypoint_object(
   HDRS
     ../sigaltstack.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
+    libc.hdr.types.stack_t
     libc.include.sys_syscall
+    libc.src.__support.libc_errno
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-    libc.hdr.types.stack_t
 )
 
 add_entrypoint_object(
@@ -91,6 +108,30 @@ add_entrypoint_object(
     .signal_utils
     libc.hdr.types.sigset_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigpending
+  SRCS
+    sigpending.cpp
+  HDRS
+    ../sigpending.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigpending
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigsuspend
+  SRCS
+    sigsuspend.cpp
+  HDRS
+    ../sigsuspend.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigsuspend
     libc.src.errno.errno
 )
 
@@ -108,14 +149,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_kill
+  SRCS
+    pthread_kill.cpp
+  HDRS
+    ../pthread_kill.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.pthread_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
   sigemptyset
   SRCS
     sigemptyset.cpp
   HDRS
     ../sigemptyset.h
   DEPENDS
-    .signal_utils
     libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )
 
@@ -126,8 +183,8 @@ add_entrypoint_object(
   HDRS
     ../sigaddset.h
   DEPENDS
-    .signal_utils
     libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )
 
@@ -149,8 +206,8 @@ add_entrypoint_object(
   HDRS
     ../sigfillset.h
   DEPENDS
-    .signal_utils
     libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )
 
@@ -161,7 +218,20 @@ add_entrypoint_object(
   HDRS
     ../sigdelset.h
   DEPENDS
-    .signal_utils
     libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigismember
+  SRCS
+    sigismember.cpp
+  HDRS
+    ../sigismember.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.sigmask
     libc.src.errno.errno
 )

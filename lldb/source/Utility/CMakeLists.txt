@@ -25,6 +25,7 @@ endif()
 
 add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   AddressableBits.cpp
+  AddressSpace.cpp
   ArchSpec.cpp
   Args.cpp
   Baton.cpp
@@ -67,6 +68,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp
   StringList.cpp
+  StringPool.cpp
   StructuredData.cpp
   TildeExpressionResolver.cpp
   Timer.cpp

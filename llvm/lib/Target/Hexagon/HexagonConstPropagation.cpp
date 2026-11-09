@@ -1870,9 +1870,7 @@ namespace {
     bool evaluateHexExt(const MachineInstr &MI, const CellMap &Inputs,
           CellMap &Outputs);
     bool evaluateHexVector1(const MachineInstr &MI, const CellMap &Inputs,
-          CellMap &Outputs);
-    bool evaluateHexVector2(const MachineInstr &MI, const CellMap &Inputs,
-          CellMap &Outputs);
+                            CellMap &Outputs);
 
     void replaceAllRegUsesWith(Register FromReg, Register ToReg);
     bool rewriteHexBranch(MachineInstr &BrI, const CellMap &Inputs);
@@ -1934,6 +1932,12 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
   assert(!DefR.SubReg);
   if (!DefR.Reg.isVirtual())
     return false;
+
+  // The evaluators below assume every register use has a cell.
+  for (const MachineOperand &MO : MI.uses()) {
+    if (MO.isReg() && MO.getReg().isVirtual() && !Inputs.has(MO.getReg()))
+      return false;
+  }
 
   if (MI.isCopy()) {
     LatticeCell RC;
@@ -2296,7 +2300,10 @@ Undetermined:
     // we currently recognize.
     if (PR.SubReg)
       goto Undetermined;
-    assert(Inputs.has(PR.Reg));
+    // A predicate with no reaching definition (e.g. an undef operand) has no
+    // cell; its value is unknown.
+    if (!Inputs.has(PR.Reg))
+      goto Undetermined;
     const LatticeCell &PredC = Inputs.get(PR.Reg);
     if (PredC.isBottom())
       goto Undetermined;
@@ -2328,6 +2335,12 @@ Undetermined:
 bool HexagonConstEvaluator::rewrite(MachineInstr &MI, const CellMap &Inputs) {
   if (MI.isBranch())
     return rewriteHexBranch(MI, Inputs);
+
+  // The rewriters below assume every register use has a cell.
+  for (const MachineOperand &MO : MI.uses()) {
+    if (MO.isReg() && MO.getReg().isVirtual() && !Inputs.has(MO.getReg()))
+      return false;
+  }
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
@@ -3004,7 +3017,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                     .addReg(R1.Reg, getRegState(Acc), R1.SubReg);
         }
         replaceAllRegUsesWith(DefR.Reg, NewR);
-        MRI->clearKillFlags(NewR);
         Changed = true;
         break;
       }
@@ -3070,7 +3082,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                   .addReg(SR.Reg, getRegState(SO), SR.SubReg);
       }
       replaceAllRegUsesWith(DefR.Reg, NewR);
-      MRI->clearKillFlags(NewR);
       Changed = true;
     }
     break;
@@ -3102,7 +3113,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                   .addReg(SR.Reg, getRegState(SO), SR.SubReg);
       }
       replaceAllRegUsesWith(DefR.Reg, NewR);
-      MRI->clearKillFlags(NewR);
       Changed = true;
     }
     break;

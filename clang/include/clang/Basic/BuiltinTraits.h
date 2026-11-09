@@ -45,7 +45,7 @@ namespace clang {
 //   ET_Last == last ET_XX in the enum.
 // };
 #define EMIT_ENUMS
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
 
 /// Return the internal name of the trait \p T. Never null.
 const char *getTraitName(TypeTrait T) LLVM_READONLY;

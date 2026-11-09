@@ -202,22 +202,73 @@ Emits **all** remarks unconditionally.
 
 ### RemarkEmittingPolicyFinal
 
-Emits only the **final** remark for each location. This is useful in multi-pass
-compilers where an early pass may report a failure, but a later pass succeeds.
+Stores remarks until `finalize()` is called and keeps the last report for each
+identity: the complete location, remark name, combined category and subcategory,
+and remark kind. The function name is not part of the identity. Reports with
+different kinds, such as a missed remark followed by a passed remark, both
+survive.
 
-**Example:** Only the successful remark is emitted:
+For example, only the second missed remark is emitted:
 
 ```c++
 auto opts = remark::RemarkOpts::name("Unroller").category("LoopUnroll");
 
-// First pass: reports failure
-remark::failed(loc, opts) << "Loop could not be unrolled";
+remark::missed(loc, opts) << "Loop trip count is unknown";
 
-// Later pass: reports success (this is the one emitted)
-remark::passed(loc, opts) << "Loop unrolled successfully";
+// A later report replaces the earlier remark with the same identity.
+remark::missed(loc, opts) << "Loop trip count is too small";
 ```
 
+`finalize()` drains one batch of stored remarks. Traversals start from roots
+with IDs in ID order, then ID-less roots in unspecified order, then any unvisited
+remarks in ID order. Related remarks are grouped after their parent.
+Shared targets, transitive links, and cycles emit every surviving remark once.
+Calling `finalize()` again emits only remarks reported since the previous drain.
+
+If a related target was overwritten in the current batch, its link is removed
+from the surviving consumer and its serialized arguments. The consumer still
+emits; its link is not redirected to the replacement. Explicit IDs that were not
+overwritten in that batch are preserved, including IDs from earlier batches and
+IDs unknown to the policy. Callers are responsible for the validity of those
+references. The policy releases the discarded-ID bookkeeping after each batch.
+An ordinary user argument named `RelatedTo` is preserved independently of typed
+remark links.
+
+Reports may run concurrently. Call `finalize()` after reporting stops; it must
+not overlap other policy operations, including calls from streamer callbacks.
+When concurrent reports have the same identity, the last report to acquire the
+policy lock wins. ID order does not guarantee reproducibility across thread
+schedules. The built-in LLVM streamer serializes writes; custom streamers used
+with `All` must support concurrent calls.
+
 You can also implement custom policies by inheriting from the policy interface.
+
+***
+
+## Querying Enabled Remarks
+
+A remark is only built when its kind and category match the configured
+filters. The `remark::passed`, `remark::missed`, `remark::failed` and
+`remark::analysis` helpers perform this check themselves, so passes do not need
+to do anything. Code that produces remarks from another source, for example a
+bridge that imports remarks from a different compiler, can ask the engine what
+is enabled before doing any work:
+
+```c++
+remark::detail::RemarkEngine *engine = context.getRemarkEngine();
+if (!engine || !engine->isAnyRemarkEnabled())
+  return; // No remark engine, or no category filter is active.
+
+if (engine->isRemarkEnabled(remark::RemarkKind::RemarkPassed, "Vectorizer"))
+  remark::passed(loc, opts) << "vectorized loop";
+```
+
+| Query                                        | Answers                                              |
+|----------------------------------------------|------------------------------------------------------|
+| `isAnyRemarkEnabled()`                       | At least one category filter is active               |
+| `isAnyRemarkEnabled(category)`               | Some kind of remark is enabled for the category      |
+| `isRemarkEnabled(kind, category)`            | Remarks of `kind` are enabled for the category       |
+| `is{Passed,Missed,Analysis,Failed}OptRemarkEnabled(category)` | Per-kind query                      |
 
 ***
 
@@ -299,3 +350,38 @@ public:
 auto streamer = std::make_unique<MyStreamer>();
 remark::enableOptimizationRemarks(context, std::move(streamer), cats);
 ```
+
+***
+
+## Importing LLVM Remarks
+
+LLVM passes emit their own
+[optimization remarks](https://llvm.org/docs/Remarks.html) while MLIR compiles
+a module with LLVM, for example in `gpu-module-to-binary`. `ModuleToObject`
+installs a `remark::LLVMToMLIRDiagnosticHandler` on the `llvm::LLVMContext` it
+compiles with, which imports these remarks into the remark engine: the category
+is the LLVM pass name prefixed with `llvm-`, the LLVM remark name becomes the
+name, the message is stored under the `Remark` argument and the structured LLVM
+arguments are copied as metrics. The remark filters therefore select LLVM
+remarks by pass name, and `llvm-.*` selects all of them:
+
+```
+mlir-opt kernel.mlir --gpu-module-to-binary="format=isa" --remarks-filter-passed=llvm-inline
+```
+
+```
+[Passed] Inlined | Category:llvm-inline | Function=kernel | Callee=helper, Caller=kernel, Cost=-30, Remark="'helper' inlined into 'kernel' with (cost=-30, threshold=337)", Threshold=337
+```
+
+Remarks that are not enabled in the engine are left to LLVM, so LLVM's
+`-pass-remarks` flags keep working. Other LLVM diagnostics, such as errors
+reported by a backend, become MLIR diagnostics.
+
+LLVM remarks carry a source location only when the LLVM IR has debug
+information; run `ensure-debug-info-scope-on-llvm-func` before serializing to
+get `file:line:column` locations. Otherwise a remark is attached to the MLIR
+symbol named after its LLVM function, or to the serialized operation.
+
+Remarks saved by an LLVM-based compiler to a YAML or bitstream file can be
+replayed into the engine with `remark::importLLVMRemarks`, which applies the
+same conversion.

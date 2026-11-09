@@ -4,17 +4,17 @@
 // Invalid immediate (multiple of 4 in range [0, 252]).
 
 ld1rsw z0.d, p1/z, [x0, #-4]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 252].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 252].
 // CHECK-NEXT: ld1rsw z0.d, p1/z, [x0, #-4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rsw z0.d, p1/z, [x0, #256]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 252].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 252].
 // CHECK-NEXT: ld1rsw z0.d, p1/z, [x0, #256]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rsw z0.d, p1/z, [x0, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 252].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 252].
 // CHECK-NEXT: ld1rsw z0.d, p1/z, [x0, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

@@ -674,6 +674,10 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
       opBuilder, unknownLoc, resultType,
       SymbolRefAttr::get(opBuilder.getContext(), functionName), arguments);
 
+  if (auto it = decorations.find(resultID); it != decorations.end())
+    for (NamedAttribute attr : it->second)
+      opFunctionCall->setAttr(attr.getName(), attr.getValue());
+
   if (resultType)
     valueMap[resultID] = opFunctionCall.getResult(0);
   return success();
@@ -747,8 +751,17 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   }
 
   Location loc = createFileLineColLoc(opBuilder);
-  spirv::CopyMemoryOp::create(opBuilder, loc, resultTypes, operands,
-                              attributes);
+  spirv::CopyMemoryOp::Properties properties{};
+  spirv::CopyMemoryOp::populateDefaultProperties(
+      OperationName(spirv::CopyMemoryOp::getOperationName(),
+                    opBuilder.getContext()),
+      properties);
+  if (failed(spirv::CopyMemoryOp::setPropertiesFromAttr(
+          properties, opBuilder.getDictionaryAttr(attributes),
+          [&]() { return emitError(loc); })))
+    return failure();
+  spirv::CopyMemoryOp::create(opBuilder, loc, resultTypes, operands, properties,
+                              /*discardableAttributes=*/{});
 
   return success();
 }

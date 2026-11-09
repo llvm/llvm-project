@@ -8,7 +8,7 @@
 ; RUN:     -disable-output 2>&1 | sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-DIV-2
 
 ; LOOP-DIV-1-COUNT-6: Loop at depth 1 containing:
-; LOOP-DIV-2-COUNT-12: Loop at depth 1 containing:
+; LOOP-DIV-2-COUNT-11: Loop at depth 1 containing:
 
 @a = global i32 0, align 4
 @b = global i32 0, align 4

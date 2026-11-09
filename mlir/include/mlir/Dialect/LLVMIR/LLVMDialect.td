@@ -23,7 +23,9 @@ def LLVM_Dialect : Dialect {
 
   let discardableAttrs = (ins
     /// Attribute encoding size and type of GPU workgroup attributions.
-    "WorkgroupAttributionAttr":$workgroup_attribution
+    "WorkgroupAttributionAttr":$workgroup_attribution,
+    /// Loop metadata attached to operations that do not declare it inherently.
+    "LoopAnnotationAttr":$loop_annotation
   );
 
   let extraClassDeclaration = [{
@@ -37,6 +39,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getModuleFlags() { return "llvm.module.flags"; }
     static StringRef getCommandlineAttrName() { return "llvm.commandline"; }
     static StringRef getMmraAttrName() { return "llvm.mmra"; }
+    static StringRef getMemProfAttrName() { return "llvm.memprof"; }
+    static StringRef getCallsiteAttrName() { return "llvm.callsite"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }
@@ -54,6 +58,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
     static StringRef getNoCaptureAttrName() { return "llvm.nocapture"; }
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
+    static StringRef getNoFreeObjAttrName() { return "llvm.nofreeobj"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
     static StringRef getPreallocatedAttrName() { return "llvm.preallocated"; }
     static StringRef getRangeAttrName() { return "llvm.range"; }

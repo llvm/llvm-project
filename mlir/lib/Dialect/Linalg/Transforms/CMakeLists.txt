@@ -10,7 +10,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
   ElementwiseToLinalg.cpp
-  CategoryToNamedOp.cpp
   EliminateEmptyTensors.cpp
   EraseUnusedOperandsAndResults.cpp
   FoldAddIntoDest.cpp
@@ -25,19 +24,17 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Loops.cpp
   MorphOps.cpp
   TransposeMatmul.cpp
-  ShardingInterfaceImpl.cpp
   SimplifyDepthwiseConv.cpp
-  NamedToElementwise.cpp
   BlockPackMatmul.cpp
   PackAndUnpackPatterns.cpp
   Padding.cpp
   PadTilingInterface.cpp
   Promotion.cpp
-  RuntimeOpVerification.cpp
+  RuntimeVerifiableOpInterfaceImpl.cpp
   Specialize.cpp
   Split.cpp
   SplitReduction.cpp
-  SubsetInsertionOpInterfaceImpl.cpp
+  SubsetOpInterfaceImpl.cpp
   SwapExtractSliceWithFillPatterns.cpp
   Tiling.cpp
   TilingInterfaceImpl.cpp
@@ -56,7 +53,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAffineUtils
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRArithTransforms
   MLIRArithUtils
@@ -70,7 +67,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRIR
   MLIRMemRefDialect
   MLIRMemRefTransforms
-  MLIRShardTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
   MLIRSCFDialect

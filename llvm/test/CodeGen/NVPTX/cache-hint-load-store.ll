@@ -363,6 +363,28 @@ define void @test_store_no_hint(ptr addrspace(1) %p, i32 %v) {
 }
 
 ;-----------------------------------------------------------------------------
+; Volatile loads and stores
+;-----------------------------------------------------------------------------
+
+; Volatile load with l1 + l2 eviction, l2 prefetch, and l2 cache hint. Volatile
+; loads only support l2 prefetch, so the rest should be dropped.
+define i32 @test_volatile_load_drop_hint(ptr addrspace(1) %p) {
+; CHECK-LABEL: test_volatile_load_drop_hint(
+; CHECK:    ld.volatile.global.L2::128B.b32 %r1, [%rd1];
+  %v = load volatile i32, ptr addrspace(1) %p, !mem.cache_hint !100
+  ret i32 %v
+}
+
+; Volatile store with l1 + l2 eviction, l2 prefetch, and l2 cache hint. Volatile
+; stores don't support any of these, so they should all be dropped.
+define void @test_volatile_store_drop_hint(ptr addrspace(1) %p, i32 %v) {
+; CHECK-LABEL: test_volatile_store_drop_hint(
+; CHECK:    st.volatile.global.b32 [%rd1], %r1;
+  store volatile i32 %v, ptr addrspace(1) %p, !mem.cache_hint !101
+  ret void
+}
+
+;-----------------------------------------------------------------------------
 ; Metadata definitions
 ;-----------------------------------------------------------------------------
 
@@ -406,3 +428,6 @@ define void @test_store_no_hint(ptr addrspace(1) %p, i32 %v) {
 !23 = !{i32 1, !37}
 !24 = !{i32 0, !39}
 !39 = !{!"nvvm.l2_cache_hint", i64 12345}
+!100 = !{i32 0, !102}
+!101 = !{i32 1, !102}
+!102 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"128B", !"nvvm.l2_cache_hint", i64 12345}

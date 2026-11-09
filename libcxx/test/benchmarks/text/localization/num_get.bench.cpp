@@ -13,11 +13,12 @@
 #include <locale>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
 struct num_get : std::num_get<char, std::string::iterator> {};
 
 template <class T>
-void BM_num_get(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_num_get(benchmark::State& state) {
   auto val = std::string("123");
   std::ios ios(nullptr);
   num_get np;

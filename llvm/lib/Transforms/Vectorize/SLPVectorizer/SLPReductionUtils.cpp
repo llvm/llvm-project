@@ -1,0 +1,414 @@
+//===- SLPReductionUtils.cpp - SLP reduction match helpers ----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "SLPReductionUtils.h"
+
+#include "SLPCostAnalysis.h"
+#include "SLPUtils.h"
+
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+
+using namespace llvm;
+using namespace llvm::PatternMatch;
+
+namespace llvm::slpvectorizer {
+
+static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
+  if (match(I, m_BinOp(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_FMaxNum(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_FMinNum(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_FMaximum(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_FMinimum(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::smax>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::smin>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::umax>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::umin>(m_Value(V0), m_Value(V1))))
+    return true;
+  return false;
+}
+
+Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi) {
+  Value *Op0 = nullptr;
+  Value *Op1 = nullptr;
+  if (!matchRdxBop(I, Op0, Op1))
+    return nullptr;
+  return dyn_cast<Instruction>(Op0 == Phi ? Op1 : Op0);
+}
+
+bool isReductionCandidate(Instruction *I) {
+  bool IsSelect = match(I, m_Select(m_Value(), m_Value(), m_Value()));
+  Value *B0 = nullptr, *B1 = nullptr;
+  bool IsBinop = matchRdxBop(I, B0, B1);
+  return IsBinop || IsSelect;
+}
+
+Type *getBoolReduxWideTy(RecurKind RdxKind, Type *RootTy, Type *LeafTy) {
+  if ((RdxKind == RecurKind::And || RdxKind == RecurKind::Or) &&
+      RootTy->isIntegerTy(1) && LeafTy->isIntegerTy() &&
+      !LeafTy->isIntegerTy(1))
+    return LeafTy;
+  return nullptr;
+}
+
+BoolBitmask isBoolBitmaskRdx(
+    RecurKind RdxKind,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    const DataLayout &DL) {
+  if (RdxKind != RecurKind::Or || DL.isBigEndian() ||
+      NarrowedLeafShifts.empty())
+    return BoolBitmask::None;
+  unsigned NumLeaves = NarrowedLeafShifts.size();
+  SmallBitVector Seen(NumLeaves);
+  bool NeedMask = false;
+  for (const auto &[V, L] : NarrowedLeafShifts) {
+    if (L.Shift >= NumLeaves || Seen.test(L.Shift))
+      return BoolBitmask::None;
+    Seen.set(L.Shift);
+    KnownBits Known = computeKnownBits(V, DL);
+    // The masked leaf must be known to be 0 or 1.
+    if ((L.Mask & ~Known.Zero).ugt(1))
+      return BoolBitmask::None;
+    // The mask is redundant if it keeps all not-known-zero bits.
+    NeedMask |= !(Known.Zero | L.Mask).isAllOnes();
+  }
+  return NeedMask ? BoolBitmask::NeedMask : BoolBitmask::NoMask;
+}
+
+bool matchPackedFields(Value *V, unsigned MaxDepth,
+                       SmallVectorImpl<Value *> &Fields,
+                       SmallVectorImpl<Instruction *> &Chain) {
+  auto *PackTy = dyn_cast<IntegerType>(V->getType());
+  if (!PackTy)
+    return false;
+  SmallVector<NarrowedLeafInfo> Leaves;
+  collectNarrowedLeaves(V, Instruction::Or, PackTy->getBitWidth(), MaxDepth,
+                        Leaves, Chain);
+  if (Leaves.size() < 2)
+    return false;
+  Type *FieldTy = Leaves.front().V->getType();
+  if (!FieldTy->isIntegerTy() ||
+      PackTy->getBitWidth() != Leaves.size() * FieldTy->getIntegerBitWidth())
+    return false;
+  llvm::sort(Leaves, [](const NarrowedLeafInfo &A, const NarrowedLeafInfo &B) {
+    return A.Shift < B.Shift;
+  });
+  for (const auto &[Pos, L] : enumerate(Leaves))
+    if (L.V->getType() != FieldTy || !L.Mask.isAllOnes() ||
+        L.Shift != Pos * FieldTy->getIntegerBitWidth())
+      return false;
+  append_range(
+      Fields, map_range(Leaves, [](const NarrowedLeafInfo &L) { return L.V; }));
+  return true;
+}
+
+Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
+                                  const TargetTransformInfo &TTI,
+                                  RecurKind RdxKind, Value *Vec,
+                                  const Value *Root, FastMathFlags FMF,
+                                  const TTI::TargetCostKind CostKind) {
+  auto *VecTy = cast<FixedVectorType>(Vec->getType());
+  unsigned VF = VecTy->getNumElements();
+  auto *I1VecTy = FixedVectorType::get(Builder.getInt1Ty(), VF);
+  DebugLoc DL = Builder.getCurrentDebugLocation();
+  Builder.SetCurrentDebugLocation(cast<Instruction>(Root)->getDebugLoc());
+  Value *T = Builder.CreateTrunc(Vec, I1VecTy);
+  Value *BC = Builder.CreateBitCast(T, Builder.getIntNTy(VF));
+  CmpInst::Predicate Pred =
+      RdxKind == RecurKind::And ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+  Constant *RHS = RdxKind == RecurKind::And
+                      ? Constant::getAllOnesValue(BC->getType())
+                      : Constant::getNullValue(BC->getType());
+  Value *Res = Builder.CreateICmp(Pred, BC, RHS);
+  // The costs are evaluated from the emitted instructions; they are dropped
+  // if the wide reduction form is cheaper.
+  auto CastCost = [&](Value *V, unsigned Opcode, Type *SrcTy) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return InstructionCost(0);
+    return TTI.getCastInstrCost(Opcode, I->getType(), SrcTy,
+                                TTI.getCastContextHint(I), CostKind, I);
+  };
+  InstructionCost BitcastCmpCost = CastCost(T, Instruction::Trunc, VecTy) +
+                                   CastCost(BC, Instruction::BitCast, I1VecTy);
+  if (auto *Cmp = dyn_cast<Instruction>(Res))
+    BitcastCmpCost += TTI.getCmpSelInstrCost(
+        Instruction::ICmp, BC->getType(), /*CondTy=*/nullptr, Pred, CostKind,
+        TTI.getOperandInfo(BC), TTI.getOperandInfo(RHS), Cmp);
+  if (BitcastCmpCost >=
+      getBoolReduxWideRdxCost(TTI, RdxKind, VecTy, Root, FMF, CostKind)) {
+    for (Value *V : {Res, BC, T})
+      if (auto *I = dyn_cast<Instruction>(V))
+        I->eraseFromParent();
+    Builder.SetCurrentDebugLocation(DL);
+    return nullptr;
+  }
+  Builder.SetCurrentDebugLocation(DL);
+  return Res;
+}
+
+Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                               BasicBlock *ParentBB, LoopInfo *LI) {
+  // There are situations where the reduction value is not dominated by the
+  // reduction phi. Vectorizing such cases has been reported to cause
+  // miscompiles. See PR25787.
+  auto DominatedReduxValue = [&](Value *R) {
+    return isa<Instruction>(R) &&
+           DT->dominates(P->getParent(), cast<Instruction>(R)->getParent());
+  };
+
+  Instruction *Rdx = nullptr;
+
+  // Return the incoming value if it comes from the same BB as the phi node.
+  if (P->getIncomingBlock(0) == ParentBB) {
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
+  } else if (P->getIncomingBlock(1) == ParentBB) {
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
+  }
+
+  if (Rdx && DominatedReduxValue(Rdx))
+    return Rdx;
+
+  // Otherwise, check whether we have a loop latch to look at.
+  Loop *BBL = LI->getLoopFor(ParentBB);
+  if (!BBL)
+    return nullptr;
+  BasicBlock *BBLatch = BBL->getLoopLatch();
+  if (!BBLatch)
+    return nullptr;
+
+  // There is a loop latch, return the incoming value if it comes from
+  // that. This reduction pattern occasionally turns up.
+  if (P->getIncomingBlock(0) == BBLatch) {
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
+  } else if (P->getIncomingBlock(1) == BBLatch) {
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
+  }
+
+  if (Rdx && DominatedReduxValue(Rdx))
+    return Rdx;
+
+  return nullptr;
+}
+
+bool isReductionOfConsecutiveAccumulators(Instruction *Root, const LoopInfo &LI,
+                                          const DataLayout &DL,
+                                          ScalarEvolution &SE,
+                                          unsigned MaxDepth,
+                                          SmallVectorImpl<unsigned> &Shape,
+                                          SmallPtrSetImpl<PHINode *> &Accs) {
+  SmallVector<Instruction *> RdxVals;
+  SmallVector<Instruction *> Worklist(1, Root);
+  while (!Worklist.empty()) {
+    for (Value *Op : Worklist.pop_back_val()->operands()) {
+      auto *I = dyn_cast<Instruction>(Op);
+      if (!I)
+        return false;
+      if (I->getOpcode() == Root->getOpcode() &&
+          I->getParent() == Root->getParent() && I->hasOneUse() &&
+          isReductionCandidate(I))
+        Worklist.push_back(I);
+      else
+        RdxVals.push_back(I);
+    }
+  }
+  constexpr unsigned MinReducedVals = 4;
+  BasicBlock *BB = RdxVals.front()->getParent();
+  const Loop *L = LI.getLoopFor(BB);
+  if (RdxVals.size() < MinReducedVals || !L || L->contains(Root) ||
+      any_of(RdxVals, [&](Instruction *I) { return I->getParent() != BB; }))
+    return false;
+  // The accumulators, used by the other ones, cannot be vectorized along the
+  // reduced values without the shuffles in the loop.
+  auto GetAccumulator = [&](Instruction *RdxVal) -> PHINode * {
+    PHINode *Acc = nullptr;
+    for (User *U : RdxVal->users()) {
+      if (!L->contains(cast<Instruction>(U)))
+        continue;
+      auto *P = dyn_cast<PHINode>(U);
+      if (Acc || !P || P->getParent() != L->getHeader() || !P->hasOneUse())
+        return nullptr;
+      Acc = P;
+    }
+    return Acc;
+  };
+  SmallVector<SmallVector<LoadInst *>> Loads;
+  for (Instruction *RdxVal : RdxVals) {
+    PHINode *Acc = GetAccumulator(RdxVal);
+    if (!Acc)
+      return false;
+    Accs.insert(Acc);
+    SmallVectorImpl<LoadInst *> &RdxLoads = Loads.emplace_back();
+    SmallVector<unsigned> RdxShape;
+    SmallPtrSet<Instruction *, 16> Visited;
+    SmallVector<std::pair<Instruction *, unsigned>> Stack(1, {RdxVal, 0});
+    while (!Stack.empty()) {
+      auto [I, Depth] = Stack.pop_back_val();
+      if (!Visited.insert(I).second)
+        continue;
+      if (I != Acc && isa<PHINode>(I) && I->getParent() == L->getHeader())
+        return false;
+      if (auto *LdI = dyn_cast<LoadInst>(I)) {
+        RdxLoads.push_back(LdI);
+        RdxShape.push_back(I->getOpcode());
+        continue;
+      }
+      if (Depth == MaxDepth || isa<PHINode>(I) || I->getParent() != BB)
+        continue;
+      RdxShape.push_back(I->getOpcode());
+      if (auto *Cmp = dyn_cast<CmpInst>(I))
+        RdxShape.push_back(Cmp->getPredicate());
+      for (Value *Op : reverse(I->operands()))
+        if (auto *OpI = dyn_cast<Instruction>(Op))
+          Stack.emplace_back(OpI, Depth + 1);
+    }
+    if (RdxLoads.empty() || !Visited.contains(Acc))
+      return false;
+    if (Shape.empty())
+      Shape.assign(RdxShape.begin(), RdxShape.end());
+    else if (RdxShape != Shape)
+      return false;
+  }
+  return all_of(seq<unsigned>(Loads.front().size()), [&](unsigned Pos) {
+    LoadInst *Ld0 = Loads.front()[Pos];
+    SmallVector<int64_t> Offsets;
+    for (ArrayRef<LoadInst *> RdxLoads : Loads) {
+      std::optional<int64_t> Diff = getPointersDiff(
+          Ld0->getType(), Ld0->getPointerOperand(), RdxLoads[Pos]->getType(),
+          RdxLoads[Pos]->getPointerOperand(), DL, SE);
+      if (!Diff)
+        return false;
+      Offsets.push_back(*Diff);
+    }
+    sort(Offsets);
+    return all_of(enumerate(Offsets), [&](const auto &P) {
+      return P.value() == Offsets.front() + static_cast<int64_t>(P.index());
+    });
+  });
+}
+
+RecurKind getRdxKind(Value *V) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return RecurKind::None;
+  if (match(I, m_Add(m_Value(), m_Value())))
+    return RecurKind::Add;
+  if (match(I, m_Mul(m_Value(), m_Value())))
+    return RecurKind::Mul;
+  if (match(I, m_And(m_Value(), m_Value())) ||
+      match(I, m_LogicalAnd(m_Value(), m_Value())))
+    return RecurKind::And;
+  if (match(I, m_Or(m_Value(), m_Value())) ||
+      match(I, m_LogicalOr(m_Value(), m_Value())))
+    return RecurKind::Or;
+  if (match(I, m_Xor(m_Value(), m_Value())))
+    return RecurKind::Xor;
+  if (match(I, m_FAdd(m_Value(), m_Value())))
+    return RecurKind::FAdd;
+  if (match(I, m_FMul(m_Value(), m_Value())))
+    return RecurKind::FMul;
+
+  if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
+    return RecurKind::FMax;
+  if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
+    return RecurKind::FMin;
+
+  if (match(I, m_FMaximum(m_Value(), m_Value())))
+    return RecurKind::FMaximum;
+  if (match(I, m_FMinimum(m_Value(), m_Value())))
+    return RecurKind::FMinimum;
+  // TODO: remove several special-case paths that deal with selects.
+  if (match(I, m_SMax(m_Value(), m_Value())))
+    return RecurKind::SMax;
+  if (match(I, m_SMin(m_Value(), m_Value())))
+    return RecurKind::SMin;
+  if (match(I, m_UMax(m_Value(), m_Value())))
+    return RecurKind::UMax;
+  if (match(I, m_UMin(m_Value(), m_Value())))
+    return RecurKind::UMin;
+
+  if (auto *Select = dyn_cast<SelectInst>(I)) {
+    // Try harder: look for min/max pattern based on instructions producing
+    // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
+    // During the intermediate stages of SLP, it's very common to have
+    // pattern like this (since optimizeGatherSequence is run only once
+    // at the end):
+    // %1 = extractelement <2 x i32> %a, i32 0
+    // %2 = extractelement <2 x i32> %a, i32 1
+    // %cond = icmp sgt i32 %1, %2
+    // %3 = extractelement <2 x i32> %a, i32 0
+    // %4 = extractelement <2 x i32> %a, i32 1
+    // %select = select i1 %cond, i32 %3, i32 %4
+    CmpPredicate Pred;
+    Instruction *L1;
+    Instruction *L2;
+
+    Value *LHS = Select->getTrueValue();
+    Value *RHS = Select->getFalseValue();
+    Value *Cond = Select->getCondition();
+
+    // TODO: Support inverse predicates.
+    if (match(Cond, m_Cmp(Pred, m_Specific(LHS), m_Instruction(L2)))) {
+      if (!isa<ExtractElementInst>(RHS) ||
+          !L2->isIdenticalTo(cast<Instruction>(RHS)))
+        return RecurKind::None;
+    } else if (match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Specific(RHS)))) {
+      if (!isa<ExtractElementInst>(LHS) ||
+          !L1->isIdenticalTo(cast<Instruction>(LHS)))
+        return RecurKind::None;
+    } else {
+      if (!isa<ExtractElementInst>(LHS) || !isa<ExtractElementInst>(RHS))
+        return RecurKind::None;
+      if (!match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Instruction(L2))) ||
+          !L1->isIdenticalTo(cast<Instruction>(LHS)) ||
+          !L2->isIdenticalTo(cast<Instruction>(RHS)))
+        return RecurKind::None;
+    }
+
+    switch (Pred) {
+    default:
+      return RecurKind::None;
+    case CmpInst::ICMP_SGT:
+    case CmpInst::ICMP_SGE:
+      return RecurKind::SMax;
+    case CmpInst::ICMP_SLT:
+    case CmpInst::ICMP_SLE:
+      return RecurKind::SMin;
+    case CmpInst::ICMP_UGT:
+    case CmpInst::ICMP_UGE:
+      return RecurKind::UMax;
+    case CmpInst::ICMP_ULT:
+    case CmpInst::ICMP_ULE:
+      return RecurKind::UMin;
+    }
+  }
+  return RecurKind::None;
+}
+
+} // namespace llvm::slpvectorizer

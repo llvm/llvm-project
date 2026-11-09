@@ -22,6 +22,7 @@ import lldb
 from . import lldbtest_config
 from . import configuration
 from lldbsuite.test.gdbclientutils import escape_binary
+from lldbsuite.test.skip_reason import UnsupportedReason
 
 # How often failed simulator process launches are retried.
 SIMULATOR_RETRY = 3
@@ -963,6 +964,28 @@ def get_one_thread_stopped_at_breakpoint(process, bkpt, require_exactly_one=True
     )
 
 
+def get_threads_in_executable(process):
+    """Returns the threads of process that have a frame in the target's main
+    executable.
+
+    Count these rather than process.GetNumThreads() when a test checks how many
+    threads it created: the OS can add threads of its own between two stops.
+    For example, on Windows, starting a std::thread also starts a thread pool
+    worker thread
+    (https://learn.microsoft.com/en-us/windows/win32/procthread/thread-pools).
+    The debugger is only told about that worker once it first runs, which can
+    be after the next stop, so the thread count changes from one stop to the
+    next.
+
+    Match on the module rather than the test's source file: a thread stopped in
+    a runtime library function without debug info may only unwind back to its
+    caller, which is still in the executable.
+    """
+    target = process.GetTarget()
+    exe = target.FindModule(target.GetExecutable())
+    return [t for t in process if any(f.GetModule() == exe for f in t)]
+
+
 def is_thread_crashed(test, thread):
     """In the test suite we dereference a null pointer to simulate a crash. The way this is
     reported depends on the platform."""
@@ -1101,6 +1124,7 @@ def run_to_name_breakpoint(
     in_cwd=True,
     only_one_thread=True,
     extra_images=None,
+    has_locations_before_run=True,
 ) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
     """Start up a target, using exe_name as the executable, and run it to
     a breakpoint set by name on bkpt_name restricted to bkpt_module.
@@ -1128,16 +1152,21 @@ def run_to_name_breakpoint(
     thread stopped at the breakpoint.  Otherwise we only require one
     or more threads stop there.  If there are more than one, we return
     the first thread that stopped.
+
+    Pass has_locations_before_run=False for names that only become
+    resolvable once the process is running, e.g. symbols in a shared
+    library that isn't loaded yet.
     """
 
     target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
 
     breakpoint = target.BreakpointCreateByName(bkpt_name, bkpt_module)
 
-    test.assertTrue(
-        breakpoint.GetNumLocations() > 0,
-        "No locations found for name breakpoint: '%s'." % (bkpt_name),
-    )
+    if has_locations_before_run:
+        test.assertTrue(
+            breakpoint.GetNumLocations() > 0,
+            "No locations found for name breakpoint: '%s'." % (bkpt_name),
+        )
     return run_to_breakpoint_do_run(
         test, target, breakpoint, launch_info, only_one_thread, extra_images
     )
@@ -1804,6 +1833,21 @@ def read_file_from_process_wd(test, name):
     return read_file_on_target(test, path)
 
 
+def create_file_on_target(test, remote):
+    """Create an empty file at remote, a path on the target."""
+    if lldb.remote_platform:
+        local = test.getBuildArtifact("file_to_target")
+        open(local, "w").close()
+        error = lldb.remote_platform.Put(
+            lldb.SBFileSpec(local, True), lldb.SBFileSpec(remote, False)
+        )
+        test.assertTrue(
+            error.Success(), "Creating file {0} failed: {1}".format(remote, error)
+        )
+    else:
+        open(remote, "w").close()
+
+
 def wait_for_file_on_target(testcase, file_path: str):
     timeout_seconds = 600 if "ASAN_OPTIONS" in os.environ else 120
     sleep_interval_seconds = 0.5
@@ -2006,6 +2050,17 @@ def send_packet_get_reply(test, packet_str):
 def get_qsupported_capabilities(test):
     reply = send_packet_get_reply(test, "qSupported")
     return reply.strip().split(";")
+
+
+def require_qsupported_capability(test, capability):
+    """Require *capability* in the stub's qSupported reply.  Requires a live
+    process.  Our own stub must advertise it, so a miss is a failure; a stub we
+    did not build can lack the feature, and the test is UNSUPPORTED."""
+    if capability in get_qsupported_capabilities(test):
+        return
+    if not lldbtest_config.out_of_tree_debugserver:
+        test.fail(f"stub built from this tree does not advertise {capability}")
+    test.skipTest(UnsupportedReason(f"stub does not support {capability}"))
 
 
 def connect_to_new_remote_platform(testcase, platform_exe, extra_args=[]):

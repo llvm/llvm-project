@@ -45,6 +45,7 @@ set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB compiler-rt CACHE STRING "")
 set(CLANG_DEFAULT_UNWINDLIB libunwind CACHE STRING "")
 set(CLANG_ENABLE_STATIC_ANALYZER ON CACHE BOOL "")
+set(CLANG_ENABLE_CIR OFF CACHE BOOL "")
 set(CLANG_PLUGIN_SUPPORT OFF CACHE BOOL "")
 
 set(ENABLE_LINKER_BUILD_ID ON CACHE BOOL "")
@@ -127,6 +128,7 @@ if(WIN32 OR LLVM_WINSYSROOT)
   list(APPEND RUNTIME_TARGETS "${target}")
   set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Windows CACHE STRING "")
   set(RUNTIMES_${target}_CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "")
+  set(RUNTIMES_${target}_CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded CACHE STRING "")
   set(RUNTIMES_${target}_LIBCXX_ABI_UNSTABLE ON CACHE STRING "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_ABI_LINKER_SCRIPT OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
@@ -468,7 +470,7 @@ set(LLVM_RUNTIME_TARGETS "${RUNTIME_TARGETS}" CACHE STRING "")
 
 # Setup toolchain.
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
-set(LLVM_TOOLCHAIN_TOOLS
+set(TOOLCHAIN_TOOLS
   dsymutil
   llvm-ar
   llvm-cov
@@ -485,7 +487,6 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-libtool-darwin
   llvm-lipo
   llvm-ml
-  llvm-mt
   llvm-nm
   llvm-objcopy
   llvm-objdump
@@ -505,8 +506,13 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-xray
   opt-viewer
   sancov
-  scan-build-py
-  CACHE STRING "")
+  scan-build-py)
+
+if(LLVM_ENABLE_LIBXML2)
+  list(APPEND TOOLCHAIN_TOOLS llvm-mt)
+endif()
+
+set(LLVM_TOOLCHAIN_TOOLS "${TOOLCHAIN_TOOLS}" CACHE STRING "")
 
 set(LLVM_Toolchain_DISTRIBUTION_COMPONENTS
   bolt

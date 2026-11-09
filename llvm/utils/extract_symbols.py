@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """A tool for extracting a list of symbols to export
 
@@ -106,6 +106,13 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
         # instantiated locally. Pattern: ??$getAs@<template_arg>@Type@clang@@...
         if symbol.startswith("??$getAs@") and "@Type@clang@@" in symbol:
             return symbol
+        # Keep the Registry<T> storage accessors: explicit specializations that
+        # LLVM_DEFINE_REGISTRY defines once, and that plugins call to register.
+        if (
+            symbol.startswith("??$getRegistryLinkListInstance@")
+            and "@detail@llvm@@" in symbol
+        ):
+            return symbol
         return None
     # Delete lambda object constructors and operator() functions. These start
     # with ??R<lambda_ or ??0<lambda_ and can be discarded because lambdas are
@@ -120,14 +127,6 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     # Skip X86GenMnemonicTables functions, they are not exposed from llvm/include/.
     elif re.match(r"\?is[A-Z0-9]*@X86@llvm", symbol):
         return None
-    # Keep Registry<T>::Head and Registry<T>::Tail static members for plugin support.
-    # Pattern matches: ?Head@?$Registry@<template_args>@llvm@@ or ?Tail@?$Registry@...
-    elif (
-        "?$Registry@" in symbol
-        and "@llvm@@" in symbol
-        and (symbol.startswith("?Head@") or symbol.startswith("?Tail@"))
-    ):
-        return symbol
     # Skip symbols added by the compiler with -fprofile-generate.
     elif symbol.startswith("__prof"):
         return None
@@ -154,6 +153,10 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
         # clang::<Class>::dumpColor, and clang::<Class>::printPretty methods
         # because they are used for debugging only.
         if symbol.startswith(("?dump@", "?dumpColor@", "?printPretty@")):
+            return None
+        # Remove clang::interp:: symbols: the bytecode interpreter's headers are
+        # private to clang/lib/AST/ByteCode, so no plugin can reference them.
+        if "@interp@clang@@" in symbol:
             return None
         return symbol
     # Keep mangled global variables and static class members in llvm:: namespace.
@@ -477,8 +480,18 @@ if __name__ == "__main__":
     #        partition's allocated memory, and can lead to an out of memory
     #        IO error. We are setting the pool size to 8 to avoid such
     #        errors at the moment, and will look for a graceful solution later.
-    pool = multiprocessing.Pool(8) if platform.system() == "AIX" \
-                                   else multiprocessing.Pool()
+    # On Windows, WaitForMultipleObjects is limited to 63 handles (61 workers +
+    # 2 internal pipe handles in multiprocessing.Pool), so cap at 60 workers.
+    # Also cap at len(libs) to avoid spawning idle worker processes.
+    max_workers = (
+        8
+        if platform.system() == "AIX"
+        else min(60, os.cpu_count() or 1)
+        if os.name == "nt"
+        else (os.cpu_count() or 1)
+    )
+    num_workers = max(1, min(max_workers, len(libs)))
+    pool = multiprocessing.Pool(num_workers)
     try:
         # Only one argument can be passed to the mapping function, and we can't
         # use a lambda or local function definition as that doesn't work on
@@ -494,6 +507,7 @@ if __name__ == "__main__":
         result = pool.map_async(extract_symbols, vals)
         pool.close()
         libs_symbols = result.get(3600)
+        pool.join()
     except KeyboardInterrupt:
         # On Ctrl-C terminate everything and exit
         pool.terminate()
@@ -515,6 +529,11 @@ if __name__ == "__main__":
         template = get_template_name(sym, args.mangling)
         if template:
             template_instantiation_refs.add(template)
+            # Registry<T> is only ever used through its storage accessor.
+            if template.endswith("getRegistryLinkListInstance"):
+                template_instantiation_refs.add(
+                    "Registry" if args.mangling == "microsoft" else "8Registry"
+                )
 
     # Print symbols which both:
     #  * Appear in exactly one input, as symbols defined in multiple

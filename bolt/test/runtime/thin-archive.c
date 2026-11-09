@@ -6,8 +6,8 @@
 
 // RUN: cd %t/objects && llvm-ar x %libbolt_rt_instr
 // RUN: cd %t && llvm-ar rcT libbolt_rt_instr.a objects/*
-// RUN: file %t/libbolt_rt_instr.a | FileCheck %s --check-prefix=CHECK-THIN
-// CHECK-THIN: thin archive
+// RUN: FileCheck --input-file %t/libbolt_rt_instr.a --check-prefix=THIN %s
+// THIN: !<thin>
 
 // RUN: %clang %cflags -no-pie -Wl,-q -o %t/exe %s
 // RUN: llvm-bolt -o %t/exe.bolt %t/exe \

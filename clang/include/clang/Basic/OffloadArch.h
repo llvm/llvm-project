@@ -10,17 +10,21 @@
 #define LLVM_CLANG_BASIC_OFFLOADARCH_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <tuple>
 
 namespace llvm {
-class Triple;
 template <typename T> class SmallVectorImpl;
 namespace NVPTX {
 enum GPUKind : uint8_t;
 }
 namespace AMDGPU {
 enum GPUKind : uint8_t;
+}
+namespace IntelGPU {
+enum GPUKind : uint8_t;
+class IGCATarget;
 }
 } // namespace llvm
 
@@ -32,20 +36,15 @@ namespace clang {
 class OffloadArch {
 public:
   enum class TargetArch : uint8_t {
-    Unused,   // Default-constructed; no architecture bound.
-    Unknown,  // A name that matched no known architecture.
-    NVPTX,    // Kind is an llvm::NVPTX::GPUKind.
-    AMDGPU,   // Kind is an llvm::AMDGPU::GPUKind.
-    SPIRV,    // The 'amdgcnspirv' pseudo target.
-    IntelCPU, // Kind is an IntelArch.
-    IntelGPU, // Kind is an IntelArch.
-    Generic,  // The 'generic' processor model.
-  };
-
-  // Intel architectures, which have no TargetParser list yet.
-  enum class IntelArch : uint32_t {
-    GRANITERAPIDS,
-    BMG_G21,
+    Unused,      // Default-constructed; no architecture bound.
+    Unknown,     // A name that matched no known architecture.
+    NVPTX,       // Kind is an llvm::NVPTX::GPUKind.
+    AMDGPU,      // Kind is an llvm::AMDGPU::GPUKind.
+    AMDGCNSPIRV, // The 'amdgcnspirv' pseudo target.
+    IntelCPU,    // The 'graniterapids' processor; Kind is unused.
+    IntelGPU,    // Kind is an llvm::IntelGPU::GPUKind.
+    IntelIGCA,   // Kind is an llvm::IntelGPU::IGCATarget.
+    Generic,     // The 'generic' processor model.
   };
 
 private:
@@ -64,12 +63,21 @@ public:
   static OffloadArch getAMDGPU(llvm::AMDGPU::GPUKind K) {
     return {TargetArch::AMDGPU, static_cast<uint32_t>(K)};
   }
-  static constexpr OffloadArch getIntel(TargetArch V, IntelArch A) {
-    return {V, static_cast<uint32_t>(A)};
+  /// An Intel GPU, named by its entry in the TargetParser device list.
+  static OffloadArch getIntelGPU(llvm::IntelGPU::GPUKind K) {
+    return {TargetArch::IntelGPU, static_cast<uint32_t>(K)};
+  }
+  /// An Intel IGCA target, e.g. igca_20ca; \p T must be valid.
+  static OffloadArch getIntelIGCA(llvm::IntelGPU::IGCATarget T);
+  /// Intel CPU offload, which has a single target, so no kind is needed.
+  static constexpr OffloadArch getIntelCPU() {
+    return {TargetArch::IntelCPU, 0};
   }
   static constexpr OffloadArch getUnused() { return {TargetArch::Unused, 0}; }
   static constexpr OffloadArch getUnknown() { return {TargetArch::Unknown, 0}; }
-  static constexpr OffloadArch getSPIRV() { return {TargetArch::SPIRV, 0}; }
+  static constexpr OffloadArch getAMDGCNSPIRV() {
+    return {TargetArch::AMDGCNSPIRV, 0};
+  }
   static constexpr OffloadArch getGeneric() { return {TargetArch::Generic, 0}; }
 
   /// Default architectures used when the user does not specify one.
@@ -80,10 +88,11 @@ public:
 
   bool isNVPTX() const { return V == TargetArch::NVPTX; }
   bool isAMDGPU() const { return V == TargetArch::AMDGPU; }
-  bool isSPIRV() const { return V == TargetArch::SPIRV; }
+  bool isAMDGCNSPIRV() const { return V == TargetArch::AMDGCNSPIRV; }
   bool isIntelCPU() const { return V == TargetArch::IntelCPU; }
   bool isIntelGPU() const { return V == TargetArch::IntelGPU; }
-  bool isIntel() const { return isIntelCPU() || isIntelGPU(); }
+  bool isIntelIGCA() const { return V == TargetArch::IntelIGCA; }
+  bool isIntel() const { return isIntelCPU() || isIntelGPU() || isIntelIGCA(); }
   bool isGeneric() const { return V == TargetArch::Generic; }
   bool isUnused() const { return V == TargetArch::Unused; }
   bool isUnknown() const { return V == TargetArch::Unknown; }
@@ -95,6 +104,12 @@ public:
   llvm::AMDGPU::GPUKind amdgpuKind() const {
     return static_cast<llvm::AMDGPU::GPUKind>(Kind);
   }
+  /// Which Intel GPU this is; only meaningful when isIntelGPU().
+  llvm::IntelGPU::GPUKind intelGPUKind() const {
+    return static_cast<llvm::IntelGPU::GPUKind>(Kind);
+  }
+  /// Which IGCA target this is; only valid when isIntelIGCA().
+  llvm::IntelGPU::IGCATarget igcaTarget() const;
 
   bool operator==(const OffloadArch &Other) const {
     return V == Other.V && Kind == Other.Kind;
@@ -113,8 +128,8 @@ const char *OffloadArchToVirtualArchString(OffloadArch A);
 // string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
 
-/// Append the canonical names of all NVIDIA and AMDGPU GPUs.
-void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values);
+OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch);
+llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID);
 
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID);

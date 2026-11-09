@@ -27,6 +27,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DJB.h"
+#include "llvm/Support/Error.h"
 #include <optional>
 
 using namespace lldb;
@@ -57,9 +58,9 @@ ObjCLanguageRuntime::ObjCLanguageRuntime(Process *process)
       m_isa_to_descriptor_stop_id(UINT32_MAX), m_complete_class_cache(),
       m_negative_complete_class_cache() {}
 
-bool ObjCLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
-  static ConstString g_self = ConstString("self");
-  static ConstString g_cmd = ConstString("_cmd");
+bool ObjCLanguageRuntime::IsAllowedRuntimeValue(llvm::StringRef name) {
+  static constexpr llvm::StringLiteral g_self = "self";
+  static constexpr llvm::StringLiteral g_cmd = "_cmd";
   return name == g_self || name == g_cmd;
 }
 
@@ -280,10 +281,10 @@ ObjCLanguageRuntime::GetClassDescriptor(ValueObject &valobj) {
 
       Process *process = exe_ctx.GetProcessPtr();
       if (process) {
-        Status error;
-        ObjCISA isa = process->ReadPointerFromMemory(isa_pointer, error);
-        if (isa != LLDB_INVALID_ADDRESS)
-          objc_class_sp = GetClassDescriptorFromISA(isa);
+        std::optional<lldb::addr_t> isa = llvm::expectedToOptional(
+            process->ReadPointerFromMemory(isa_pointer));
+        if (isa)
+          objc_class_sp = GetClassDescriptorFromISA(*isa);
       }
     }
   }

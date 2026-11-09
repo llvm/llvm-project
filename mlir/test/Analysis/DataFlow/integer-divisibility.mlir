@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --test-int-divisibility-analysis --allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --test-int-divisibility-analysis %s | FileCheck %s
 
 // CHECK-LABEL: @constant
 func.func @constant() -> index {
@@ -147,6 +147,32 @@ func.func @affine_apply_mul_plus_const(%arg0 : index) -> index {
   %0 = affine.apply affine_map<(d0) -> (d0 * 8 + 16)>(%seed)
   // seed has udiv = 4, multiplied by 8 -> 32, then +16. gcd(32,16) = 16.
   // CHECK: divisibility = "udiv = 16, sdiv = 16"
+  %1 = "test.int_divisibility"(%0) : (index) -> index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @divui_constant
+func.func @divui_constant(%arg0 : index) -> index {
+  %c8 = arith.constant 8 : index
+  %c2 = arith.constant 2 : index
+  %seed = arith.muli %arg0, %c8 : index
+  %0 = arith.divui %seed, %c2 : index
+  // CHECK: divisibility = "udiv = 4, sdiv = 4"
+  %1 = "test.int_divisibility"(%0) : (index) -> index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: @divui_zero_divisor
+func.func @divui_zero_divisor() -> index {
+  %c10 = arith.constant 10 : index
+  %c0 = arith.constant 0 : index
+  %0 = arith.divui %c10, %c0 : index
+  // Division by zero is undefined, so nothing is inferred.
+  // CHECK: divisibility = "uninitialized"
   %1 = "test.int_divisibility"(%0) : (index) -> index
   return %1 : index
 }

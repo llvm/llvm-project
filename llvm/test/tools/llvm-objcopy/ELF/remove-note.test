@@ -196,3 +196,73 @@ Sections:
       - Name:     ABC
         Type:     1
         Desc:     0102
+
+## Check that all note sections are processed when replacing a note section
+## reallocates the section table. The object has exactly four sections (not
+## counting the null section), which fills the table to capacity under common
+## vector growth policies (e.g. 1, 2, 4 with doubling), so replacing .note0
+## reallocates the table before .note1 is processed.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-objcopy --remove-note=1 %t4 %t4o
+# RUN: llvm-readobj --notes %t4o | FileCheck %s --check-prefix=TEST4
+
+# TEST4:      NoteSections [
+# TEST4-NEXT:   NoteSection {
+# TEST4-NEXT:     Name: .note0
+# TEST4-NEXT:     Offset:
+# TEST4-NEXT:     Size:
+# TEST4-NEXT:     Notes [
+# TEST4-NEXT:       {
+# TEST4-NEXT:         Owner: CORE
+# TEST4-NEXT:         Data size: 0x2
+# TEST4-NEXT:         Type: NT_ARCH
+# TEST4-NEXT:         Description data (
+# TEST4-NEXT:           0000: 0201
+# TEST4-NEXT:         )
+# TEST4-NEXT:       }
+# TEST4-NEXT:     ]
+# TEST4-NEXT:   }
+# TEST4-NEXT:   NoteSection {
+# TEST4-NEXT:     Name: .note1
+# TEST4-NEXT:     Offset:
+# TEST4-NEXT:     Size:
+# TEST4-NEXT:     Notes [
+# TEST4-NEXT:       {
+# TEST4-NEXT:         Owner: CORE
+# TEST4-NEXT:         Data size: 0x2
+# TEST4-NEXT:         Type: Unknown (0x00000003)
+# TEST4-NEXT:         Description data (
+# TEST4-NEXT:           0000: 0301
+# TEST4-NEXT:         )
+# TEST4-NEXT:       }
+# TEST4-NEXT:     ]
+# TEST4-NEXT:   }
+# TEST4-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:          ELFCLASS64
+  Data:           ELFDATA2LSB
+  Type:           ET_REL
+  Machine:        EM_X86_64
+Sections:
+  - Name:         .note0
+    Type:         SHT_NOTE
+    AddressAlign: 4
+    Notes:
+      - Name:   CORE
+        Type:   0x01
+        Desc:   0101
+      - Name:   CORE
+        Type:   0x02
+        Desc:   0201
+  - Name:         .note1
+    Type:         SHT_NOTE
+    AddressAlign: 4
+    Notes:
+      - Name:   CORE
+        Type:   0x01
+        Desc:   0102
+      - Name:   CORE
+        Type:   0x03
+        Desc:   0301

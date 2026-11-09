@@ -123,15 +123,12 @@ define <16 x i8> @var_rotr_v16i8(<16 x i8> %a, <16 x i8> %amt) nounwind {
 ;
 ; GFNIAVX512BW-LABEL: var_rotr_v16i8:
 ; GFNIAVX512BW:       # %bb.0:
+; GFNIAVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; GFNIAVX512BW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; GFNIAVX512BW-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
-; GFNIAVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
-; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; GFNIAVX512BW-NEXT:    vpsrlvw %xmm2, %xmm3, %xmm2
-; GFNIAVX512BW-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; GFNIAVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; GFNIAVX512BW-NEXT:    vpsrlvw %xmm1, %xmm0, %xmm0
-; GFNIAVX512BW-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; GFNIAVX512BW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; GFNIAVX512BW-NEXT:    vpsrlvw %ymm1, %ymm0, %ymm0
 ; GFNIAVX512BW-NEXT:    vpmovwb %ymm0, %xmm0
 ; GFNIAVX512BW-NEXT:    vzeroupper
 ; GFNIAVX512BW-NEXT:    retq
