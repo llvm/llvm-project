@@ -476,6 +476,70 @@ define <2 x float> @fdiv_neg_vec_poison_elt(<2 x float> %f) {
   ret <2 x float> %div
 }
 
+; Same as above, with the negation written as fneg.
+
+define float @fdiv_fneg(float %f) {
+; CHECK-LABEL: @fdiv_fneg(
+; CHECK-NEXT:    ret float -1.000000e+00
+;
+  %neg = fneg float %f
+  %div = fdiv nnan float %neg, %f
+  ret float %div
+}
+
+define float @fdiv_fneg_swapped(float %f) {
+; CHECK-LABEL: @fdiv_fneg_swapped(
+; CHECK-NEXT:    ret float -1.000000e+00
+;
+  %neg = fneg float %f
+  %div = fdiv nnan float %f, %neg
+  ret float %div
+}
+
+define <2 x float> @fdiv_fneg_vec(<2 x float> %f) {
+; CHECK-LABEL: @fdiv_fneg_vec(
+; CHECK-NEXT:    ret <2 x float> splat (float -1.000000e+00)
+;
+  %neg = fneg <2 x float> %f
+  %div = fdiv nnan <2 x float> %neg, %f
+  ret <2 x float> %div
+}
+
+define double @fdiv_fneg_swapped_double(double %f) {
+; CHECK-LABEL: @fdiv_fneg_swapped_double(
+; CHECK-NEXT:    ret double -1.000000e+00
+;
+  %neg = fneg double %f
+  %div = fdiv nnan double %f, %neg
+  ret double %div
+}
+
+; Negative test: nnan is required on the fdiv, nnan on the fneg doesn't count.
+
+define float @fdiv_fneg_invalid(float %f) {
+; CHECK-LABEL: @fdiv_fneg_invalid(
+; CHECK-NEXT:    [[NEG:%.*]] = fneg nnan float [[F:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[NEG]], [[F]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %neg = fneg nnan float %f
+  %div = fdiv float %neg, %f
+  ret float %div
+}
+
+; Negative test: the fneg operand must be the other fdiv operand.
+
+define float @fdiv_fneg_wrong_op(float %f, float %g) {
+; CHECK-LABEL: @fdiv_fneg_wrong_op(
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[F:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan float [[NEG]], [[G:%.*]]
+; CHECK-NEXT:    ret float [[DIV]]
+;
+  %neg = fneg float %f
+  %div = fdiv nnan float %neg, %g
+  ret float %div
+}
+
 ; PR21126: http://llvm.org/bugs/show_bug.cgi?id=21126
 ; With loose math, sqrt(X) * sqrt(X) is just X.
 
