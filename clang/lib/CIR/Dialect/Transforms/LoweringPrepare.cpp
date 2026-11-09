@@ -187,7 +187,8 @@ struct LoweringPreparePass
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       mlir::Type type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
-      cir::VisibilityKind visibility = cir::VisibilityKind::Default);
+      cir::VisibilityKind visibility = cir::VisibilityKind::Default,
+      mlir::ptr::MemorySpaceAttrInterface addrSpace = {});
 
   /// ------------
   /// CUDA registration related
@@ -424,30 +425,39 @@ struct LoweringPreparePass
   }
 
   /// Register `dtorFunc` to be called with `arg` when the program exits, or
-  /// when the current thread exits if `tls` is set.
+  /// when the current thread exits if `object` is thread_local.
   cir::CallOp emitAtExitCall(CIRBaseBuilderTy &builder, mlir::Location loc,
-                             cir::FuncOp dtorFunc, mlir::Value arg, bool tls) {
+                             cir::FuncOp dtorFunc, mlir::Value arg,
+                             cir::GlobalOp object) {
     cir::GlobalOp handle;
     cir::FuncOp fnAtExit;
-    cir::PointerType voidPtrTy = builder.getVoidPtrTy();
-    cir::PointerType voidFnPtrTy = builder.getVoidFnPtrTy({voidPtrTy});
+    // As in classic codegen, all arguments are passed in `arg`'s address
+    // space, and __dso_handle lives in `object`'s.
+    mlir::ptr::MemorySpaceAttrInterface argAS =
+        mlir::cast<cir::PointerType>(arg.getType()).getAddrSpace();
+    cir::PointerType voidPtrTy = builder.getVoidPtrTy(argAS);
+    cir::PointerType voidFnPtrTy = builder.getPointerTo(
+        builder.getVoidFnTy({builder.getVoidPtrTy()}), argAS);
+    cir::PointerType handlePtrTy =
+        builder.getPointerTo(builder.getUIntNTy(8), argAS);
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       // Create a variable that binds the atexit to this shared object.
       builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
       handle = getOrCreateRuntimeVariable(
           builder, "__dso_handle", loc, builder.getUIntNTy(8),
-          cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
+          cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden,
+          object.getAddrSpaceAttr());
 
       // Create a runtime helper function:
       //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
-      cir::PointerType handlePtrTy = builder.getPointerTo(handle.getSymType());
       IntType intTy = builder.getSIntNTy(32);
       auto fnAtExitType =
           cir::FuncType::get({voidFnPtrTy, voidPtrTy, handlePtrTy}, intTy);
 
+      // Keyed on thread_local, not on the guard being thread-safe.
       llvm::StringLiteral nameAtExit = "__cxa_atexit";
-      if (tls)
+      if (object.getTlsModel())
         nameAtExit = getTargetInfo().getTriple().isOSDarwin()
                          ? llvm::StringLiteral("_tlv_atexit")
                          : llvm::StringLiteral("__cxa_thread_atexit");
@@ -455,17 +465,18 @@ struct LoweringPreparePass
       fnAtExit = buildRuntimeFunction(builder, nameAtExit, loc, fnAtExitType);
     }
 
+    // Retype each pointer in its own address space, then cast to `argAS`.
     mlir::Value args[3];
     auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
     args[0] = cir::GetGlobalOp::create(builder, loc, dtorPtrTy,
                                        dtorFunc.getSymName());
-    args[0] = cir::CastOp::create(builder, loc, voidFnPtrTy,
-                                  cir::CastKind::bitcast, args[0]);
-    args[1] = cir::CastOp::create(builder, loc, voidPtrTy,
-                                  cir::CastKind::bitcast, arg);
-    args[2] = cir::GetGlobalOp::create(
-        builder, loc, builder.getPointerTo(handle.getSymType()),
-        handle.getSymName());
+    args[0] = builder.createAddrSpaceCast(
+        loc, builder.createPtrBitcast(args[0], voidFnPtrTy.getPointee()),
+        voidFnPtrTy);
+    args[1] = builder.createAddrSpaceCast(
+        loc, builder.createPtrBitcast(arg, voidPtrTy.getPointee()), voidPtrTy);
+    args[2] = builder.createAddrSpaceCast(
+        loc, builder.createGetGlobal(loc, handle), handlePtrTy);
     // TODO(cir): set the runtime calling convention on the __cxa_atexit call.
     assert(!cir::MissingFeatures::opFuncCallingConv());
     return builder.createCallOp(loc, fnAtExit, args);
@@ -473,7 +484,7 @@ struct LoweringPreparePass
 
   void emitGlobalGuardedDtorRegion(CIRBaseBuilderTy &builder,
                                    cir::GlobalOp global,
-                                   mlir::Region &dtorRegion, bool tls,
+                                   mlir::Region &dtorRegion,
                                    mlir::Block &entryBB) {
     // If this is a simple call to a destructor, get the called function.
     // Otherwise, create a helper function for the entire dtor region,
@@ -487,7 +498,7 @@ struct LoweringPreparePass
     //   __cxa_atexit(&dtor, &var, &__dso_handle)
     builder.setInsertionPointAfter(dtorCall);
     emitAtExitCall(builder, dtorCall.getLoc(), dtorFunc,
-                   dtorCall.getArgOperand(0), tls);
+                   dtorCall.getArgOperand(0), global);
     dtorCall->erase();
     mlir::Block &dtorBlock = dtorRegion.front();
     entryBB.getOperations().splice(entryBB.end(), dtorBlock.getOperations(),
@@ -541,12 +552,7 @@ struct LoweringPreparePass
       if (!dtorRegion.empty()) {
         assert(dtorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
 
-        // Whether the destructor is registered with __cxa_thread_atexit depends
-        // on the variable being thread_local, not on the guard being
-        // thread-safe, so make sure we use getTlsModel here instead of
-        // threadsafe.
         emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion,
-                                    globalOp.getTlsModel().has_value(),
                                     *insertBlock);
       }
       builder.setInsertionPointToEnd(insertBlock);
@@ -641,12 +647,14 @@ struct LoweringPreparePass
 cir::GlobalOp LoweringPreparePass::getOrCreateRuntimeVariable(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
     mlir::Type type, cir::GlobalLinkageKind linkage,
-    cir::VisibilityKind visibility) {
+    cir::VisibilityKind visibility,
+    mlir::ptr::MemorySpaceAttrInterface addrSpace) {
   cir::GlobalOp g = dyn_cast_or_null<cir::GlobalOp>(
       mlir::SymbolTable::lookupNearestSymbolFrom(
           mlirModule, mlir::StringAttr::get(mlirModule->getContext(), name)));
   if (!g) {
-    g = cir::GlobalOp::create(builder, loc, name, type);
+    g = cir::GlobalOp::create(builder, loc, name, type, /*isConstant=*/false,
+                              addrSpace);
     g.setLinkageAttr(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
@@ -1310,8 +1318,7 @@ void LoweringPreparePass::lowerRegisterExitDtorOp(cir::RegisterExitDtorOp op) {
     arg = builder.getNullPtr(builder.getVoidPtrTy(), loc);
   }
 
-  cir::CallOp atExitCall = emitAtExitCall(builder, loc, dtorFunc, arg,
-                                          object.getTlsModel().has_value());
+  cir::CallOp atExitCall = emitAtExitCall(builder, loc, dtorFunc, arg, object);
   // The atexit functions do not throw, and marking the call so keeps it out of
   // an invoke inside the initializer.
   atExitCall.setNothrowAttr(builder.getUnitAttr());
@@ -1330,8 +1337,7 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
 
   // The first operation should be a get_global to retrieve the address
   // of the global variable we're destroying.
-  auto opIt = dtorBlock.getOperations().begin();
-  cir::GetGlobalOp ggop = mlir::cast<cir::GetGlobalOp>(*opIt);
+  cir::GetGlobalOp ggop = mlir::cast<cir::GetGlobalOp>(dtorBlock.front());
 
   // The simple case is just a call to a destructor, like this:
   //
@@ -1341,12 +1347,21 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   //
   // That is, if the second operation is a call that takes the get_global
   // result as its only operand, and the only other operation is a yield, then
-  // we can just return the called function.
-  if (dtorBlock.getOperations().size() == 3) {
-    auto callOp = mlir::dyn_cast<cir::CallOp>(&*(++opIt));
-    auto yieldOp = mlir::dyn_cast<cir::YieldOp>(&*(++opIt));
-    if (yieldOp && callOp && callOp.getNumOperands() == 1 &&
-        callOp.getArgOperand(0) == ggop) {
+  // we can just return the called function. If the global is in a non-default
+  // address space (e.g. SYCL device code), an address_space cast of the
+  // get_global may sit between them; that is still simple.
+  auto callOp = mlir::dyn_cast_if_present<cir::CallOp>(
+      dtorBlock.getTerminator()->getPrevNode());
+  if (callOp && callOp.getNumOperands() == 1) {
+    mlir::Value thisArg = callOp.getArgOperand(0);
+    size_t simpleNumOps = 3;
+    if (auto castOp = thisArg.getDefiningOp<cir::CastOp>();
+        castOp && castOp.getKind() == cir::CastKind::address_space) {
+      thisArg = castOp.getSrc();
+      simpleNumOps = 4;
+    }
+    if (thisArg == ggop.getResult() &&
+        dtorBlock.getOperations().size() == simpleNumOps) {
       dtorCall = callOp;
       return getCalledFunction(callOp);
     }
@@ -1492,9 +1507,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   if (!dtorRegion.empty()) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
 
-    emitGlobalGuardedDtorRegion(builder, op, dtorRegion,
-                                op.getTlsModel().has_value(),
-                                *builder.getBlock());
+    emitGlobalGuardedDtorRegion(builder, op, dtorRegion, *builder.getBlock());
   }
 
   // If we're actually in the 'if' above, create a yield.

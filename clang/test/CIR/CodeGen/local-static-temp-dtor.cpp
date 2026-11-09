@@ -95,10 +95,8 @@ void arr() {
 // CIR:         cir.call @_ZN10NonTrivialC1Ev
 // CIR:         %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR:         %[[ARR_DTOR:.*]] = cir.get_global @__cxx_global_array_dtor
-// CIR:         %[[ARR_DTOR_CAST:.*]] = cir.cast bitcast %[[ARR_DTOR]]
-// CIR:         %[[NULL_CAST:.*]] = cir.cast bitcast %[[NULL]]
 // CIR:         %[[HANDLE:.*]] = cir.get_global @__dso_handle
-// CIR:         cir.call @__cxa_atexit(%[[ARR_DTOR_CAST]], %[[NULL_CAST]], %[[HANDLE]]) nothrow
+// CIR:         cir.call @__cxa_atexit(%[[ARR_DTOR]], %[[NULL]], %[[HANDLE]]) nothrow
 
 // The helper destroys the array through the global, not its argument.
 // HELPER-LABEL: define internal void @__cxx_global_array_dtor(ptr noundef %{{.+}})
