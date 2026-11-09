@@ -2396,6 +2396,9 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
     if (MOI.isCooperative())
       Changed |= CC->handleCooperativeAtomic(*MI);
 
+    Changed |= CC->finalizeLoad(MI);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
+
     if (Order == AtomicOrdering::SequentiallyConsistent)
       Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
                                 SIMemOp::LOAD | SIMemOp::STORE,
@@ -2415,8 +2418,6 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       }
     }
 
-    Changed |= CC->finalizeLoad(MI);
-    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
