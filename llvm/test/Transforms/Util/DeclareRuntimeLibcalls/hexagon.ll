@@ -5,7 +5,10 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=hexagon-unknown-elf < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CHECK %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=hexagon-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=LINUX %s
 
-; CHECK: declare void @_Unwind_Resume(ptr)
+; CHECK: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; CHECK-NEXT: @__stack_chk_guard = external global ptr
+; CHECK-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; CHECK-NEXT: declare void @_Unwind_Resume(ptr)
 ; CHECK-NEXT: declare double @__adddf3(double, double)
 ; CHECK-NEXT: declare float @__addsf3(float, float)
 ; CHECK-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -73,6 +76,9 @@
 ; CHECK-NEXT: declare i32 @__clzdi2(i64)
 ; CHECK-NEXT: declare i32 @__clzsi2(i32)
 ; CHECK-NEXT: declare i32 @__clzti2(i128)
+; CHECK-NEXT: declare i32 @__ctzdi2(i64)
+; CHECK-NEXT: declare i32 @__ctzsi2(i32)
+; CHECK-NEXT: declare i32 @__ctzti2(i128)
 ; CHECK-NEXT: declare void @__cxa_end_cleanup()
 ; CHECK-NEXT: declare double @__divdf3(double, double)
 ; CHECK-NEXT: declare i64 @__divdi3(i64, i64)
@@ -234,9 +240,7 @@
 ; CHECK-NEXT: declare double @__powidf2(double, i32)
 ; CHECK-NEXT: declare float @__powisf2(float, i32)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i32)
-; CHECK-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; CHECK-NEXT: declare void @__stack_chk_fail()
-; CHECK-NEXT: declare void @__stack_chk_guard(...)
 ; CHECK-NEXT: declare double @__subdf3(double, double)
 ; CHECK-NEXT: declare float @__subsf3(float, float)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -440,7 +444,10 @@
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; LINUX: declare void @_Unwind_Resume(ptr)
+; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; LINUX-NEXT: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare float @__addsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -508,6 +515,9 @@
 ; LINUX-NEXT: declare i32 @__clzdi2(i64)
 ; LINUX-NEXT: declare i32 @__clzsi2(i32)
 ; LINUX-NEXT: declare i32 @__clzti2(i128)
+; LINUX-NEXT: declare i32 @__ctzdi2(i64)
+; LINUX-NEXT: declare i32 @__ctzsi2(i32)
+; LINUX-NEXT: declare i32 @__ctzti2(i128)
 ; LINUX-NEXT: declare void @__cxa_end_cleanup()
 ; LINUX-NEXT: declare double @__divdf3(double, double)
 ; LINUX-NEXT: declare i64 @__divdi3(i64, i64)
@@ -669,9 +679,7 @@
 ; LINUX-NEXT: declare double @__powidf2(double, i32)
 ; LINUX-NEXT: declare float @__powisf2(float, i32)
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32)
-; LINUX-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
 ; LINUX-NEXT: declare void @__stack_chk_fail()
-; LINUX-NEXT: declare void @__stack_chk_guard(...)
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
