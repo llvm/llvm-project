@@ -297,7 +297,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchIntrinsicDemandedBits(
     // Only the half kept in the result is read from vdst_in.
     OpNo = 4;
     Demanded = MI.getOperand(5).getImm() ? APInt::getLowBitsSet(32, 16)
-                                      : APInt::getHighBitsSet(32, 16);
+                                         : APInt::getHighBitsSet(32, 16);
     break;
   default:
     return false;
