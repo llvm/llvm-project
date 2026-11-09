@@ -822,11 +822,11 @@ class VSelectCommUnpredOrPassthruPatFrags<SDPatternOperator intrinsic, SDPattern
     return N->getOpcode() != ISD::VSELECT || N->getOperand(1).hasOneUse();
   }]>;
 
-// Match `intr` with either data operand order, keeping the predicate unchanged.
-class CommPredBinPatFrags<SDPatternOperator intr>
+// Match `op` with either data operand order, keeping the predicate unchanged.
+class PredicatedCommutativeBinOpPatFrags<SDPatternOperator op>
   : PatFrags<(ops node:$pg, node:$a, node:$b),
-            [(intr node:$pg, node:$a, node:$b),
-             (intr node:$pg, node:$b, node:$a)]>;
+            [(op node:$pg, node:$a, node:$b),
+             (op node:$pg, node:$b, node:$a)]>;
 
 //
 // Pseudo -> Instruction mappings

@@ -562,10 +562,10 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                            (AArch64bic_node node:$op1, node:$op2)]>;
 
 // Match the specified binary op with either order of data operands.
-def SVEAndU : CommPredBinPatFrags<AArch64and_p>;
-def SVEAndZ : CommPredBinPatFrags<int_aarch64_sve_and_z>;
-def SVEEorU : CommPredBinPatFrags<AArch64eor_p>;
-def SVEEorZ : CommPredBinPatFrags<int_aarch64_sve_eor_z>;
+def SVEAndU : PredicatedCommutativeBinOpPatFrags<AArch64and_p>;
+def SVEAndZ : PredicatedCommutativeBinOpPatFrags<int_aarch64_sve_and_z>;
+def SVEEorU : PredicatedCommutativeBinOpPatFrags<AArch64eor_p>;
+def SVEEorZ : PredicatedCommutativeBinOpPatFrags<int_aarch64_sve_eor_z>;
 
 def AArch64and_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
                              [(int_aarch64_sve_and_z node:$pg, node:$op1, node:$op2),
