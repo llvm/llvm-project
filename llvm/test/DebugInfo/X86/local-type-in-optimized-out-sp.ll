@@ -6,7 +6,7 @@
 ; inlined, its DIE is emitted inside an abstract subprogram, and that subprogram
 ; is not attributeless.
 
-; Compiled and reduced from the source below.
+; Compiled with -O2 and reduced from the source below.
 ;
 ; template <typename T> void use() {}
 ; inline auto f() {
