@@ -525,8 +525,7 @@ define zeroext i1 @select_opt2(i1 zeroext %c, i1 zeroext %a) {
 ;
 ; CHECK-GISEL-LABEL: select_opt2:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    eor w8, w0, #0x1
-; CHECK-GISEL-NEXT:    orr w8, w8, w1
+; CHECK-GISEL-NEXT:    orn w8, w1, w0
 ; CHECK-GISEL-NEXT:    and w0, w8, #0x1
 ; CHECK-GISEL-NEXT:    ret
   %1 = select i1 %c, i1 %a, i1 true

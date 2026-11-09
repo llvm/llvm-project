@@ -109,8 +109,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %amt:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], %amt(s32)
-    ; CHECK-NEXT: %trunc:_(s16) = G_TRUNC [[ASHR]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], %amt(s32)
+    ; CHECK-NEXT: %trunc:_(s16) = G_TRUNC [[LSHR]](s32)
     ; CHECK-NEXT: %foo:_(s16) = G_CONSTANT i16 55
     ; CHECK-NEXT: %keep:_(s32) = G_MERGE_VALUES %trunc(s16), %foo(s16)
     ; CHECK-NEXT: $vgpr0 = COPY %keep(s32)

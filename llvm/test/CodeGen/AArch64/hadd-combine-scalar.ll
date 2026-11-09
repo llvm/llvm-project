@@ -107,7 +107,7 @@ define i32 @hadds_base(i32 %src1, i32 %src2) {
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    sxtw x8, w1
 ; CHECK-GI-NEXT:    add x8, x8, w0, sxtw
-; CHECK-GI-NEXT:    asr x0, x8, #1
+; CHECK-GI-NEXT:    lsr x0, x8, #1
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
@@ -119,23 +119,14 @@ define i32 @hadds_base(i32 %src1, i32 %src2) {
 }
 
 define i32 @hadds_const(i32 %src1) {
-; CHECK-SD-LABEL: hadds_const:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    sxtw x8, w0
-; CHECK-SD-NEXT:    add x8, x8, #1
-; CHECK-SD-NEXT:    lsr x0, x8, #1
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: hadds_const:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    sxtw x8, w0
-; CHECK-GI-NEXT:    add x8, x8, #1
-; CHECK-GI-NEXT:    asr x0, x8, #1
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: hadds_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
   %add = add i64 %zextsrc1, 1
   %resulti32 = ashr i64 %add, 1
@@ -144,23 +135,14 @@ define i32 @hadds_const(i32 %src1) {
 }
 
 define i32 @hadds_const_lhs(i32 %src1) {
-; CHECK-SD-LABEL: hadds_const_lhs:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    sxtw x8, w0
-; CHECK-SD-NEXT:    add x8, x8, #1
-; CHECK-SD-NEXT:    lsr x0, x8, #1
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: hadds_const_lhs:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    sxtw x8, w0
-; CHECK-GI-NEXT:    add x8, x8, #1
-; CHECK-GI-NEXT:    asr x0, x8, #1
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: hadds_const_lhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
   %add = add i64 1, %zextsrc1
   %resulti32 = ashr i64 %add, 1
@@ -169,20 +151,13 @@ define i32 @hadds_const_lhs(i32 %src1) {
 }
 
 define i32 @hadds_const_zero(i32 %src1) {
-; CHECK-SD-LABEL: hadds_const_zero:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    sxtw x8, w0
-; CHECK-SD-NEXT:    lsr x0, x8, #1
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: hadds_const_zero:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    sbfx x0, x0, #1, #31
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: hadds_const_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
   %add = add i64 0, %zextsrc1
   %resulti32 = ashr i64 %add, 1
@@ -199,7 +174,8 @@ define i32 @hadds_poison(i32 %src1) {
 ; CHECK-GI-LABEL: hadds_poison:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    sbfx x0, x0, #1, #31
+; CHECK-GI-NEXT:    sxtw x8, w0
+; CHECK-GI-NEXT:    lsr x0, x8, #1
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
@@ -375,7 +351,7 @@ define i32 @rhadds_base(i32 %src1, i32 %src2) {
 ; CHECK-GI-NEXT:    sxtw x8, w1
 ; CHECK-GI-NEXT:    add x8, x8, w0, sxtw
 ; CHECK-GI-NEXT:    add x8, x8, #1
-; CHECK-GI-NEXT:    asr x0, x8, #1
+; CHECK-GI-NEXT:    lsr x0, x8, #1
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
@@ -388,23 +364,14 @@ define i32 @rhadds_base(i32 %src1, i32 %src2) {
 }
 
 define i32 @rhadds_const(i32 %src1) {
-; CHECK-SD-LABEL: rhadds_const:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    sxtw x8, w0
-; CHECK-SD-NEXT:    add x8, x8, #2
-; CHECK-SD-NEXT:    lsr x0, x8, #1
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: rhadds_const:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    sxtw x8, w0
-; CHECK-GI-NEXT:    add x8, x8, #2
-; CHECK-GI-NEXT:    asr x0, x8, #1
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: rhadds_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
   %add1 = add i64 %zextsrc1, 1
   %add = add i64 %add1, 1
@@ -414,23 +381,14 @@ define i32 @rhadds_const(i32 %src1) {
 }
 
 define i32 @rhadds_const_lhs(i32 %src1) {
-; CHECK-SD-LABEL: rhadds_const_lhs:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    sxtw x8, w0
-; CHECK-SD-NEXT:    add x8, x8, #2
-; CHECK-SD-NEXT:    lsr x0, x8, #1
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: rhadds_const_lhs:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    sxtw x8, w0
-; CHECK-GI-NEXT:    add x8, x8, #2
-; CHECK-GI-NEXT:    asr x0, x8, #1
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: rhadds_const_lhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
   %add1 = add i64 1, %zextsrc1
   %add = add i64 %add1, 1
@@ -440,23 +398,14 @@ define i32 @rhadds_const_lhs(i32 %src1) {
 }
 
 define i32 @rhadds_const_zero(i32 %src1) {
-; CHECK-SD-LABEL: rhadds_const_zero:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    sxtw x8, w0
-; CHECK-SD-NEXT:    add x8, x8, #1
-; CHECK-SD-NEXT:    lsr x0, x8, #1
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: rhadds_const_zero:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    sxtw x8, w0
-; CHECK-GI-NEXT:    add x8, x8, #1
-; CHECK-GI-NEXT:    asr x0, x8, #1
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: rhadds_const_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
   %add1 = add i64 0, %zextsrc1
   %add = add i64 %add1, 1
@@ -502,7 +451,7 @@ define i32 @rhadds_poison(i32 %src1) {
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    sxtw x8, w0
 ; CHECK-GI-NEXT:    add x8, x8, #1
-; CHECK-GI-NEXT:    asr x0, x8, #1
+; CHECK-GI-NEXT:    lsr x0, x8, #1
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext i32 %src1 to i64
