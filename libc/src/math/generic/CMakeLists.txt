@@ -1,5 +1,3 @@
-
-
 add_entrypoint_object(
   canonicalize
   SRCS
@@ -277,7 +275,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.math.dsqrtf128
 )
-
 
 add_entrypoint_object(
   dsubf128

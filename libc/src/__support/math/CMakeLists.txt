@@ -749,7 +749,6 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
-
 add_header_library(
   bf16divl
   HDRS
@@ -1153,7 +1152,6 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
-
 add_header_library(
   fmin
   HDRS
@@ -1219,7 +1217,6 @@ add_header_library(
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
-
 
 add_header_library(
   fminimum
@@ -4171,7 +4168,6 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
-
 add_header_library(
   frexpf16
   HDRS
@@ -5076,7 +5072,6 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
-
 
 add_header_library(
   nextdown
