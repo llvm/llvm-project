@@ -1406,6 +1406,18 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
     requirement in data clauses - since a `lower_bound` of 0 means looking
     at data at the zero offset from pointer.
 
+    For target-update translation, bounds are ordered from fastest to slowest
+    varying dimension. With `stride_in_bytes`, `stride` is the byte distance
+    between adjacent elements of that source dimension, including any faster
+    varying dimensions. Otherwise strides are measured in scalar elements.
+    When the mapped type is a nested LLVM array, translation reconstructs the
+    physical element strides from its complete shape; this also supports
+    existing static-array bounds that carry unit strides. When only the scalar
+    element type is available, each explicit element stride must already
+    include the complete source extents of faster varying dimensions. Selected
+    section lengths must not replace those source extents when computing a
+    physical stride. Explicit byte strides take precedence over the type shape.
+
     This operation must have an `upper_bound` or `extent` (or both are allowed -
     but not checked for consistency). When the source language's arrays are
     not zero-based, the `start_idx` must specify the zero-position index.

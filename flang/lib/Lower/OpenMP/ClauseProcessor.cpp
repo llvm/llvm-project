@@ -1868,7 +1868,9 @@ void ClauseProcessor::processMapObjects(
                                               mlir::omp::MapBoundsType>(
             converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
             object.ref(), clauseLocation, asFortran, bounds,
-            treatIndexAsSection);
+            treatIndexAsSection, /*unwrapFirBox=*/true,
+            /*genDefaultBounds=*/true,
+            /*strideIncludeLowerExtent=*/isMotionModifier);
 
     mlir::Value baseOp = info.rawInput;
     if (object.sym()->owner().IsDerivedType() && !isMotionModifier) {
