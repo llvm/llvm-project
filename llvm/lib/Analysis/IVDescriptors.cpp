@@ -486,9 +486,8 @@ bool RecurrenceDescriptor::AddReductionVar(
   // must include the original PHI.
   bool FoundStartPHI = false;
 
-  // To recognize AnyOf patterns formed by a select, we store
-  // the number of selects we saw to make sure we only see one.
-  unsigned NumCmpSelectPatternInst = 0;
+  // To recognize AnyOf patterns formed by a select, we store the select to
+  // make sure we only see one.
   SelectInst *AnyOfSelect = nullptr;
   InstDesc ReduxDesc(false, nullptr);
 
@@ -675,7 +674,8 @@ bool RecurrenceDescriptor::AddReductionVar(
     }
 
     if (isAnyOfRecurrenceKind(Kind) && IsASelect) {
-      ++NumCmpSelectPatternInst;
+      if (AnyOfSelect)
+        return false;
       AnyOfSelect = cast<SelectInst>(Cur);
     }
 
@@ -758,7 +758,7 @@ bool RecurrenceDescriptor::AddReductionVar(
          "Unexpectedly matched a 'find-last-like' phi");
 
   if (isAnyOfRecurrenceKind(Kind)) {
-    if (NumCmpSelectPatternInst != 1)
+    if (!AnyOfSelect)
       return false;
     // Reject a select whose condition is part of the chain: the vectorizer
     // replaces the chain, so the condition would become poison. Compares are
