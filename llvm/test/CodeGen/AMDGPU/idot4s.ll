@@ -3491,20 +3491,27 @@ define i32 @idot4_repeated_byte(i32 %a, i32 %b) {
 ; GFX9-DL-LABEL: idot4_repeated_byte:
 ; GFX9-DL:       ; %bb.0: ; %entry
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-DL-NEXT:    s_mov_b32 s4, 0x3020101
+; GFX9-DL-NEXT:    v_perm_b32 v1, v1, v1, s4
+; GFX9-DL-NEXT:    v_perm_b32 v0, v0, v0, s4
 ; GFX9-DL-NEXT:    v_dot4_i32_i8 v0, v0, v1, 0
 ; GFX9-DL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DL-LABEL: idot4_repeated_byte:
 ; GFX10-DL:       ; %bb.0: ; %entry
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DL-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-DL-NEXT:    v_dot4c_i32_i8 v2, v0, v1
-; GFX10-DL-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-DL-NEXT:    v_perm_b32 v1, v1, v1, 0x3020101
+; GFX10-DL-NEXT:    v_perm_b32 v2, v0, v0, 0x3020101
+; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-DL-NEXT:    v_dot4c_i32_i8 v0, v2, v1
 ; GFX10-DL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-DL-LABEL: idot4_repeated_byte:
 ; GFX11-DL:       ; %bb.0: ; %entry
 ; GFX11-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-DL-NEXT:    v_perm_b32 v1, v1, v1, 0x3020101
+; GFX11-DL-NEXT:    v_perm_b32 v0, v0, v0, 0x3020101
+; GFX11-DL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DL-NEXT:    v_dot4_i32_iu8 v0, v0, v1, 0 neg_lo:[1,1,0]
 ; GFX11-DL-NEXT:    s_setpc_b64 s[30:31]
 entry:
