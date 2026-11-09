@@ -165,6 +165,11 @@ public:
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
   ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
+  // parse() split in two. parsePrepare() is the per-file half: it touches no
+  // global state, so it can be run for many files at once. parseFinish() is
+  // the half that inserts into the symbol table, and has to run in file order.
+  template <class LP> void parsePrepare();
+  template <class LP> void parseFinish();
   template <class LP>
   void parseLinkerOptions(llvm::SmallVectorImpl<StringRef> &LinkerOptions);
   void parseDeferredRelocations();
@@ -192,11 +197,35 @@ private:
   template <class LP> void parseLazy();
   template <class SectionHeader> void parseSections(ArrayRef<SectionHeader>);
   template <class LP>
-  void parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
-                    ArrayRef<typename LP::nlist> nList, const char *strtab,
-                    bool subsectionsViaSymbols);
+  void parseSymbolsPrepare(ArrayRef<typename LP::section> sectionHeaders,
+                           ArrayRef<typename LP::nlist> nList,
+                           const char *strtab, bool subsectionsViaSymbols);
+  template <class LP> void parseSymbols(ArrayRef<typename LP::nlist> nList);
+
+  // Filled in by parsePrepare(), consumed by parseFinish(). The symbols that
+  // go through the symbol table are recorded with their name already hashed,
+  // so that the half of parsing that runs one file at a time has nothing left
+  // to do with the name but look it up.
+  llvm::SmallVector<StringRef, 4> lcLinkerOptions;
+  std::vector<std::vector<uint32_t>> symbolsBySection;
+  struct PendingSymbol {
+    llvm::CachedHashStringRef name;
+    uint32_t symIndex;
+  };
+  std::vector<PendingSymbol> undefineds;
+  std::vector<PendingSymbol> nonSectionSymbols;
+  // An external section symbol, and the subsection it was found to be in.
+  struct PendingDefined {
+    llvm::CachedHashStringRef name;
+    uint32_t symIndex;
+    InputSection *isec;
+    uint64_t value;
+    uint64_t size;
+  };
+  std::vector<PendingDefined> pendingDefineds;
   template <class NList>
-  Symbol *parseNonSectionSymbol(const NList &sym, const char *strtab);
+  Symbol *parseNonSectionSymbol(const NList &sym,
+                                llvm::CachedHashStringRef name);
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
