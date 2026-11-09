@@ -879,6 +879,12 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "modff128",
+    hdrs = ["ModfTest.h"],
+    deps = ["//libc:__support_fputil_float128"],
+)
+
+math_mpfr_test(
     name = "nearbyint",
     hdrs = ["NearbyIntTest.h"],
     deps = [
@@ -947,6 +953,12 @@ math_mpfr_test(
 math_mpfr_test(
     name = "remquof",
     hdrs = ["RemQuoTest.h"],
+)
+
+math_mpfr_test(
+    name = "remquof128",
+    hdrs = ["RemQuoTest.h"],
+    deps = ["//libc:__support_fputil_float128"],
 )
 
 math_mpfr_test(

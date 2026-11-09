@@ -49,6 +49,7 @@ set(ORC_RT_HEADERS
     orc-rt/support/ExecutorAddress.h
     orc-rt/support/IntervalMap.h
     orc-rt/support/IntervalSet.h
+    orc-rt/support/JITDylibLookupFlags.h
     orc-rt/support/LockedAccess.h
     orc-rt/support/MacroUtils.h
     orc-rt/support/Mangling.h
@@ -66,6 +67,7 @@ set(ORC_RT_HEADERS
     orc-rt/support/scope_exit.h
     orc-rt/support/span.h
     orc-rt/support/sps/SPSAllocAction.h
+    orc-rt/support/sps/SPSJITDylibLookupFlags.h
     orc-rt/support/sps/SPSMemoryFlags.h
     orc-rt/support/sps/SPSSymbolLookupSet.h
     orc-rt/support/sps/SPSWrapperFunction.h
