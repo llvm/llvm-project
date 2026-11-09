@@ -853,7 +853,7 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   explicit DIE(dwarf::Tag Tag) : Tag(Tag) {}
 
   /// Get parent of a (possibly placeholder) DIE.
-  DIE *getPhysicalParent() const;
+  DIE *getRawParent() const;
 
 public:
   /// Internal tag for temporary containers. Such DIEs must be removed before
@@ -958,14 +958,14 @@ public:
 
   /// Add a child to the DIE.
   DIE &addChild(DIE *Child) {
-    assert(!Child->getPhysicalParent() && "Child should be orphaned");
+    assert(!Child->getRawParent() && "Child should be orphaned");
     Child->Owner = this;
     Children.push_back(*Child);
     return Children.back();
   }
 
   DIE &addChildFront(DIE *Child) {
-    assert(!Child->getPhysicalParent() && "Child should be orphaned");
+    assert(!Child->getRawParent() && "Child should be orphaned");
     Child->Owner = this;
     Children.push_front(*Child);
     return Children.front();

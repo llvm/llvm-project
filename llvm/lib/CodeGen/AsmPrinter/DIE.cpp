@@ -171,19 +171,17 @@ void DIEAbbrevSet::Emit(const AsmPrinter *AP, MCSection *Section) const {
 // DIE Implementation
 //===----------------------------------------------------------------------===//
 
-DIE *DIE::getPhysicalParent() const {
-  return dyn_cast_if_present<DIE *>(Owner);
-}
+DIE *DIE::getRawParent() const { return dyn_cast_if_present<DIE *>(Owner); }
 
 DIE *DIE::getParent() const {
-  DIE *Parent = getPhysicalParent();
+  DIE *Parent = getRawParent();
   assert((!Parent || !Parent->isPlaceholder()) &&
          "Parent must not be requested when DIE is in a temporary placeholder");
   return Parent;
 }
 
 void DIE::removeChild(DIE &Child) {
-  assert(Child.getPhysicalParent() == this && "Not a child of this DIE");
+  assert(Child.getRawParent() == this && "Not a child of this DIE");
   [[maybe_unused]] bool Removed = Children.deleteNode(Child);
   assert(Removed && "Child is missing from the list of children");
   Child.Owner = nullptr;
@@ -223,7 +221,7 @@ uint64_t DIE::getDebugSectionOffset() const {
 }
 
 DIEUnit *DIE::getUnit() const {
-  for (const DIE *P = this; P; P = P->getPhysicalParent())
+  for (const DIE *P = this; P; P = P->getRawParent())
     if (auto *Unit = dyn_cast_if_present<DIEUnit *>(P->Owner))
       return Unit;
   return nullptr;
