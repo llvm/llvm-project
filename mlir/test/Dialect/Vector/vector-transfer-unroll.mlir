@@ -420,38 +420,25 @@ func.func @transfer_write_unroll_dynamic_index(%mem : memref<4x4xf32>, %vec : ve
 // -----
 
 // Transfers masked by vector.mask are unrolled into one vector.mask per tile,
-// each with its tile of the mask.
+// each with its tile of the mask (and of the passthru, if any).
 
 // ALL-LABEL: func @masked_transfer_read_unroll(
-//  ALL-SAME:     %[[MEM:.*]]: memref<4x4xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<4x4xi1>
+//  ALL-SAME:     %[[MEM:.*]]: memref<4x4xf32>, %[[IDX:.*]]: index, %[[MASK:.*]]: vector<4x4xi1>, %[[PASS:.*]]: vector<4x4xf32>
 //   ALL-DAG:   %[[M0:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [0, 0], sizes = [2, 2]
-//   ALL-DAG:   %[[R0:.*]] = vector.mask %[[M0]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   %[[P0:.*]] = vector.extract_strided_slice %[[PASS]] offsets = [0, 0], sizes = [2, 2]
+//   ALL-DAG:   %[[R0:.*]] = vector.mask %[[M0]], %[[P0]] { vector.transfer_read %[[MEM]]{{.*}} : memref<4x4xf32>, vector<2x2xf32> } : vector<2x2xi1> -> vector<2x2xf32>
 //   ALL-DAG:   vector.insert_strided_slice %[[R0]], %{{.*}} offsets = [0, 0]
 //   ALL-DAG:   %[[M1:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [0, 2], sizes = [2, 2]
-//   ALL-DAG:   %[[R1:.*]] = vector.mask %[[M1]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   %[[P1:.*]] = vector.extract_strided_slice %[[PASS]] offsets = [0, 2], sizes = [2, 2]
+//   ALL-DAG:   %[[R1:.*]] = vector.mask %[[M1]], %[[P1]] { vector.transfer_read %[[MEM]]
 //   ALL-DAG:   vector.insert_strided_slice %[[R1]], %{{.*}} offsets = [0, 2]
 //   ALL-DAG:   %[[M2:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 2], sizes = [2, 2]
-//   ALL-DAG:   %[[R2:.*]] = vector.mask %[[M2]] { vector.transfer_read %[[MEM]]
+//   ALL-DAG:   %[[P2:.*]] = vector.extract_strided_slice %[[PASS]] offsets = [2, 2], sizes = [2, 2]
+//   ALL-DAG:   %[[R2:.*]] = vector.mask %[[M2]], %[[P2]] { vector.transfer_read %[[MEM]]
 //   ALL-DAG:   vector.insert_strided_slice %[[R2]], %{{.*}} offsets = [2, 2]
 //   ALL-NOT:   vector.mask %[[MASK]]
 //       ALL:   return
-func.func @masked_transfer_read_unroll(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>) -> vector<4x4xf32> {
-  %cf0 = arith.constant 0.0 : f32
-  %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx], %cf0 : memref<4x4xf32>, vector<4x4xf32> } : vector<4x4xi1> -> vector<4x4xf32>
-  return %res : vector<4x4xf32>
-}
-
-// -----
-
-// ALL-LABEL: func @masked_transfer_read_passthru_unroll(
-//  ALL-SAME:     %[[MASK:[a-z0-9]+]]: vector<4x4xi1>, %[[PASS:[a-z0-9]+]]: vector<4x4xf32>
-//       ALL:   %[[M0:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [0, 0], sizes = [2, 2], strides = [1, 1]
-//       ALL:   %[[P0:.*]] = vector.extract_strided_slice %[[PASS]] offsets = [0, 0], sizes = [2, 2], strides = [1, 1]
-//       ALL:   vector.mask %[[M0]], %[[P0]] { vector.transfer_read {{.*}} : memref<4x4xf32>, vector<2x2xf32> } : vector<2x2xi1> -> vector<2x2xf32>
-//       ALL:   %[[M3:.*]] = vector.extract_strided_slice %[[MASK]] offsets = [2, 2], sizes = [2, 2], strides = [1, 1]
-//       ALL:   %[[P3:.*]] = vector.extract_strided_slice %[[PASS]] offsets = [2, 2], sizes = [2, 2], strides = [1, 1]
-//       ALL:   vector.mask %[[M3]], %[[P3]] { vector.transfer_read
-func.func @masked_transfer_read_passthru_unroll(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>, %pass : vector<4x4xf32>) -> vector<4x4xf32> {
+func.func @masked_transfer_read_unroll(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>, %pass : vector<4x4xf32>) -> vector<4x4xf32> {
   %cf0 = arith.constant 0.0 : f32
   %res = vector.mask %mask, %pass { vector.transfer_read %mem[%idx, %idx], %cf0 : memref<4x4xf32>, vector<4x4xf32> } : vector<4x4xi1> -> vector<4x4xf32>
   return %res : vector<4x4xf32>
@@ -511,37 +498,21 @@ func.func @masked_transfer_read_rank_reducing_unroll(%mem : memref<?x4x4xf32>, %
 
 // -----
 
-// Not supported yet: with a non-minor-identity map, the mask tiles are not at
-// the offsets of the vector tiles.
+// Not supported yet:
+// * a non-minor-identity map: the mask tiles are not at the offsets of the
+//   vector tiles,
+// * a target shape with a lower rank than the vector (2x2 for a 3-D read),
+// * scalable vectors.
 
-// ALL-LABEL: func @negative_masked_transfer_read_permutation(
-//       ALL:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<4x4xf32>, vector<4x4xf32> }
-//  ALL-NEXT:   return %[[R]]
-func.func @negative_masked_transfer_read_permutation(%mem : memref<4x4xf32>, %idx : index, %mask : vector<4x4xi1>) -> vector<4x4xf32> {
-  %cf0 = arith.constant 0.0 : f32
-  %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<4x4xf32>, vector<4x4xf32> } : vector<4x4xi1> -> vector<4x4xf32>
-  return %res : vector<4x4xf32>
-}
-
-// -----
-
-// Not supported yet: the 2x2 target shape has a lower rank than the vector.
-
-// ALL-LABEL: func @negative_masked_transfer_read_rank_mismatch(
-//       ALL:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<4x4x4xf32>, vector<4x4x4xf32> }
-//  ALL-NEXT:   return %[[R]]
-func.func @negative_masked_transfer_read_rank_mismatch(%mem : memref<4x4x4xf32>, %idx : index, %mask : vector<4x4x4xi1>) -> vector<4x4x4xf32> {
-  %cf0 = arith.constant 0.0 : f32
-  %res = vector.mask %mask { vector.transfer_read %mem[%idx, %idx, %idx], %cf0 : memref<4x4x4xf32>, vector<4x4x4xf32> } : vector<4x4x4xi1> -> vector<4x4x4xf32>
-  return %res : vector<4x4x4xf32>
-}
-
-// -----
-
-// ALL-LABEL: func @negative_masked_transfer_write_scalable(
+// ALL-LABEL: func @negative_masked_transfer_unroll(
+//       ALL:   %[[R0:.*]] = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<4x4xf32>, vector<4x4xf32> }
+//  ALL-NEXT:   %[[R1:.*]] = vector.mask %{{.*}} { vector.transfer_read {{.*}} : memref<4x4x4xf32>, vector<4x4x4xf32> }
 //  ALL-NEXT:   vector.mask %{{.*}} { vector.transfer_write {{.*}} : vector<4x[4]xf32>, memref<4x?xf32> }
-//  ALL-NEXT:   return
-func.func @negative_masked_transfer_write_scalable(%mem : memref<4x?xf32>, %vec : vector<4x[4]xf32>, %idx : index, %mask : vector<4x[4]xi1>) {
-  vector.mask %mask { vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x[4]xf32>, memref<4x?xf32> } : vector<4x[4]xi1>
-  return
+//  ALL-NEXT:   return %[[R0]], %[[R1]]
+func.func @negative_masked_transfer_unroll(%mem : memref<4x4xf32>, %mem3d : memref<4x4x4xf32>, %mem_s : memref<4x?xf32>, %idx : index, %mask : vector<4x4xi1>, %mask3d : vector<4x4x4xi1>, %vec_s : vector<4x[4]xf32>, %mask_s : vector<4x[4]xi1>) -> (vector<4x4xf32>, vector<4x4x4xf32>) {
+  %cf0 = arith.constant 0.0 : f32
+  %perm = vector.mask %mask { vector.transfer_read %mem[%idx, %idx], %cf0 {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<4x4xf32>, vector<4x4xf32> } : vector<4x4xi1> -> vector<4x4xf32>
+  %rank3d = vector.mask %mask3d { vector.transfer_read %mem3d[%idx, %idx, %idx], %cf0 : memref<4x4x4xf32>, vector<4x4x4xf32> } : vector<4x4x4xi1> -> vector<4x4x4xf32>
+  vector.mask %mask_s { vector.transfer_write %vec_s, %mem_s[%idx, %idx] : vector<4x[4]xf32>, memref<4x?xf32> } : vector<4x[4]xi1>
+  return %perm, %rank3d : vector<4x4xf32>, vector<4x4x4xf32>
 }
