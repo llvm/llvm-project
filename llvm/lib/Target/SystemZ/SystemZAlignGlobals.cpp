@@ -12,19 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZ.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
 
 namespace {
 
-class SystemZAlignGlobals : public ModulePass {
+class SystemZAlignGlobalsLegacy : public ModulePass {
 public:
   static char ID;
 
-  explicit SystemZAlignGlobals() : ModulePass(ID) {}
+  explicit SystemZAlignGlobalsLegacy() : ModulePass(ID) {}
 
   StringRef getPassName() const override { return "SystemZ Align Globals"; }
 
@@ -33,16 +35,16 @@ public:
 
 } // end anonymous namespace
 
-char SystemZAlignGlobals::ID = 0;
+char SystemZAlignGlobalsLegacy::ID = 0;
 
-INITIALIZE_PASS(SystemZAlignGlobals, "systemz-align-globals",
+INITIALIZE_PASS(SystemZAlignGlobalsLegacy, "systemz-align-globals",
                 "Try aligning globals to 2 bytes", false, false)
 
-ModulePass *llvm::createSystemZAlignGlobalsPass() {
-  return new SystemZAlignGlobals();
+ModulePass *llvm::createSystemZAlignGlobalsLegacyPass() {
+  return new SystemZAlignGlobalsLegacy();
 }
 
-bool SystemZAlignGlobals::runOnModule(Module &M) {
+static bool alignGlobalsInModule(Module &M) {
   bool Changed = false;
 
   for (GlobalVariable &GV : M.globals()) {
@@ -58,4 +60,14 @@ bool SystemZAlignGlobals::runOnModule(Module &M) {
   }
 
   return Changed;
+}
+
+bool SystemZAlignGlobalsLegacy::runOnModule(Module &M) {
+  return alignGlobalsInModule(M);
+}
+
+PreservedAnalyses SystemZAlignGlobalsPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  return alignGlobalsInModule(M) ? PreservedAnalyses::none()
+                                 : PreservedAnalyses::all();
 }
