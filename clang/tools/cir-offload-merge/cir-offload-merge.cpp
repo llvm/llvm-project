@@ -37,40 +37,42 @@
 #include <cctype>
 #include <string>
 
-namespace {
+static llvm::cl::OptionCategory
+    CIROffloadMergeCategory("cir-offload-merge options");
 
-llvm::cl::OptionCategory CIROffloadMergeCategory("cir-offload-merge options");
+static llvm::cl::opt<bool> Combine("combine",
+                                   llvm::cl::desc("Combine CIR inputs"),
+                                   llvm::cl::cat(CIROffloadMergeCategory));
 
-llvm::cl::opt<bool> Combine("combine", llvm::cl::desc("Combine CIR inputs"),
-                            llvm::cl::cat(CIROffloadMergeCategory));
-
-llvm::cl::list<std::string>
+static llvm::cl::list<std::string>
     InputFileNames("input",
                    llvm::cl::desc("Input CIR file. Can be specified multiple "
                                   "times."),
                    llvm::cl::cat(CIROffloadMergeCategory));
 
-llvm::cl::list<std::string>
+static llvm::cl::list<std::string>
     TargetNames("targets", llvm::cl::CommaSeparated,
                 llvm::cl::desc("[<offload kind>-<target triple>,...]"),
                 llvm::cl::cat(CIROffloadMergeCategory));
 
-llvm::cl::list<std::string>
+static llvm::cl::list<std::string>
     OutputFileNames("output", llvm::cl::desc("Output CIR file."),
                     llvm::cl::cat(CIROffloadMergeCategory));
 
+namespace {
 struct InputTarget {
   std::string Input;
   std::string Target;
   bool IsHost = false;
 };
+} // namespace
 
-int reportError(const llvm::Twine &message) {
+static int reportError(const llvm::Twine &message) {
   llvm::errs() << "error: " << message << '\n';
   return 1;
 }
 
-std::string sanitizeModuleName(llvm::StringRef target) {
+static std::string sanitizeModuleName(llvm::StringRef target) {
   std::string name = "device_";
   for (char c : target) {
     if (std::isalnum(static_cast<unsigned char>(c)))
@@ -81,16 +83,20 @@ std::string sanitizeModuleName(llvm::StringRef target) {
   return name;
 }
 
-std::string makeUnique(llvm::StringRef name,
-                       llvm::StringMap<unsigned> &seenNames) {
+static std::string makeUnique(llvm::StringRef name,
+                              llvm::StringMap<unsigned> &seenNames) {
   unsigned &count = seenNames[name];
   if (count++ == 0)
     return name.str();
   return (name + "_" + llvm::Twine(count - 1)).str();
 }
 
-bool isValidTarget(llvm::StringRef target,
-                   const clang::OffloadBundlerConfig &bundlerConfig) {
+// Targets are offload bundle IDs, so they are checked with
+// clang-offload-bundler's parser (thus, legalized). checkOffloadBundleID must
+// run first, since OffloadTargetInfo asserts on a malformed ID.
+static bool
+isValidCombineTarget(llvm::StringRef target,
+                     const clang::OffloadBundlerConfig &bundlerConfig) {
   if (!clang::checkOffloadBundleID(target))
     return false;
 
@@ -101,8 +107,8 @@ bool isValidTarget(llvm::StringRef target,
          offloadInfo.isTripleValid();
 }
 
-int validateCombineCommandLine(
-    llvm::SmallVectorImpl<InputTarget> &inputTargets) {
+static int
+validateCombineCommandLine(llvm::SmallVectorImpl<InputTarget> &inputTargets) {
   if (InputFileNames.empty())
     return reportError("missing required -input");
   if (TargetNames.empty())
@@ -115,6 +121,8 @@ int validateCombineCommandLine(
     return reportError("number of input files and targets should match in "
                        "combine mode");
 
+  // OffloadTargetInfo requires a bundler config; the defaults are enough to
+  // parse a target.
   clang::OffloadBundlerConfig bundlerConfig;
   llvm::StringSet<> seenTargets;
   unsigned numHostTargets = 0;
@@ -122,7 +130,7 @@ int validateCombineCommandLine(
   for (auto [input, target] : llvm::zip_equal(InputFileNames, TargetNames)) {
     if (!seenTargets.insert(target).second)
       return reportError("duplicate target '" + target + "'");
-    if (!isValidTarget(target, bundlerConfig))
+    if (!isValidCombineTarget(target, bundlerConfig))
       return reportError("invalid target '" + target + "'");
 
     bool isHost = clang::OffloadTargetInfo(target, bundlerConfig).hasHostKind();
@@ -137,8 +145,9 @@ int validateCombineCommandLine(
   return 0;
 }
 
-void setOffloadAttrs(mlir::ModuleOp module, llvm::StringRef name,
-                     cir::OffloadKind offloadKind, llvm::StringRef bundleID) {
+static void setOffloadAttrs(mlir::ModuleOp module, llvm::StringRef name,
+                            cir::OffloadKind offloadKind,
+                            llvm::StringRef bundleID) {
   module.setSymName(name);
   module->setAttr(cir::CIRDialect::getOffloadKindAttrName(),
                   cir::OffloadKindAttr::get(module.getContext(), offloadKind));
@@ -146,7 +155,7 @@ void setOffloadAttrs(mlir::ModuleOp module, llvm::StringRef name,
                   mlir::StringAttr::get(module.getContext(), bundleID));
 }
 
-mlir::OwningOpRef<mlir::ModuleOp>
+static mlir::OwningOpRef<mlir::ModuleOp>
 combineInputs(llvm::ArrayRef<InputTarget> inputTargets,
               mlir::MLIRContext &context) {
   mlir::OwningOpRef<mlir::ModuleOp> hostModule;
@@ -186,7 +195,8 @@ combineInputs(llvm::ArrayRef<InputTarget> inputTargets,
   return container;
 }
 
-int writeModuleToOutput(mlir::ModuleOp module, llvm::StringRef outputFileName) {
+static int writeModuleToOutput(mlir::ModuleOp module,
+                               llvm::StringRef outputFileName) {
   // Type aliases are only printed for an operation without a parent.
   assert(!module->getParentOp() && "expected a top-level module");
   std::string errorMessage;
@@ -201,8 +211,6 @@ int writeModuleToOutput(mlir::ModuleOp module, llvm::StringRef outputFileName) {
   outputFile->keep();
   return 0;
 }
-
-} // namespace
 
 int main(int argc, char **argv) {
   llvm::InitLLVM y(argc, argv);
