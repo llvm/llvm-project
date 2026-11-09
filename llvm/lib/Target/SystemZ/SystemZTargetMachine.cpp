@@ -31,10 +31,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMachineCombinerPass(
-    "systemz-machine-combiner",
-    cl::desc("Enable the machine combiner pass"),
-    cl::init(true), cl::Hidden);
+cl::opt<bool>
+    EnableMachineCombinerPass("systemz-machine-combiner",
+                              cl::desc("Enable the machine combiner pass"),
+                              cl::init(true), cl::Hidden);
 
 static cl::opt<bool> GenericSched(
     "generic-sched", cl::Hidden, cl::init(false),
