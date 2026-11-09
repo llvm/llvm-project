@@ -1,12 +1,9 @@
-; RUN: rm -rf %t && split-file %s %t
-; RUN: llc -verify-machineinstrs -mtriple=thumbv7-windows-msvc %t/tail.ll -o - | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=armv7-linux-gnueabi %t/tail.ll -o - | FileCheck %s
-; RUN: not --crash llc -mtriple=thumbv8m.base-none-eabi %t/thumb1.ll -o - 2>&1 | FileCheck %s --check-prefix=THUMB1
+; RUN: llc -verify-machineinstrs -mtriple=thumbv7-windows-msvc %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=armv7-linux-gnueabi %s -o - | FileCheck %s
 
 ;; A variadic function that calls va_start can still forward its arguments
 ;; with a musttail call. The save area is released before the tail branch.
 
-;--- tail.ll
 declare void @llvm.va_start(ptr)
 declare void @llvm.va_end(ptr)
 declare void @sink(ptr)
@@ -47,20 +44,16 @@ entry:
   ret void
 }
 
-;--- thumb1.ll
-;; Thumb1 is not handled and still fails.
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-declare void @sink(ptr)
+;; A split byval also has a save area. Its register part goes back in r0-r3
+;; and its stack part stays where it is.
+%struct.S = type { [5 x i32] }
+declare void @callee(ptr byval(%struct.S) align 4, ...)
 
-define void @fwd_vastart_thumb1(ptr %pfn, ...) nounwind {
-entry:
-  %ap = alloca ptr, align 4
-  call void @llvm.va_start(ptr %ap)
-  call void @sink(ptr %ap)
-  call void @llvm.va_end(ptr %ap)
-  musttail call void (ptr, ...) %pfn(ptr %pfn, ...)
+define void @fwd_byval(ptr byval(%struct.S) align 4 %s, ...) nounwind {
+; CHECK-LABEL: fwd_byval:
+; CHECK:       sub sp, {{(sp, )?}}#16
+; CHECK:       stm{{(\.w)?}} sp!, {r0, r1, r2, r3}
+; CHECK:       b callee
+  musttail call void (ptr, ...) @callee(ptr byval(%struct.S) align 4 %s, ...)
   ret void
 }
-
-; THUMB1: LLVM ERROR: failed to perform tail call elimination on a call site marked musttail

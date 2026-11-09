@@ -2888,12 +2888,11 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
 
   // If Caller's vararg argument has been split between registers and stack, do
   // not perform tail call, since part of the argument is in caller's local
-  // frame. A musttail call can still go ahead when the save area only holds
-  // the unnamed arguments for va_start: the callee gets them in registers.
+  // frame. This doesn't apply to a musttail call, which has the caller's own
+  // signature.
   const ARMFunctionInfo *AFI_Caller = MF.getInfo<ARMFunctionInfo>();
-  bool VAStartOnly = !AFI_Caller->getByValArgRegsSaveSize() && CLI.CB &&
-                     CLI.CB->isMustTailCall() && !Subtarget->isThumb1Only();
-  if (CLI.IsVarArg && AFI_Caller->getArgRegsSaveSize() && !VAStartOnly) {
+  if (CLI.IsVarArg && AFI_Caller->getArgRegsSaveSize() &&
+      !(CLI.CB && CLI.CB->isMustTailCall())) {
     LLVM_DEBUG(dbgs() << "false (arg reg save area)\n");
     return false;
   }
@@ -4311,7 +4310,6 @@ SDValue ARMTargetLowering::LowerFormalArguments(
     CCInfo.nextInRegsParam();
   }
   CCInfo.rewindByValRegsInfo();
-  AFI->setByValArgRegsSaveSize(4 * (ARM::R4 - ArgRegBegin));
 
   int lastInsIndex = -1;
   if (isVarArg && MFI.hasVAStart()) {

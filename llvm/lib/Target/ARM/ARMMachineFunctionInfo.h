@@ -50,10 +50,6 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   ///
   unsigned ArgRegsSaveSize = 0;
 
-  /// The part of ArgRegsSaveSize that holds byval arguments split between
-  /// registers and the stack.
-  unsigned ByValArgRegsSaveSize = 0;
-
   /// ReturnRegsCount - Number of registers used up in the return.
   unsigned ReturnRegsCount = 0;
 
@@ -188,9 +184,6 @@ public:
 
   unsigned getArgRegsSaveSize() const { return ArgRegsSaveSize; }
   void setArgRegsSaveSize(unsigned s) { ArgRegsSaveSize = s; }
-
-  unsigned getByValArgRegsSaveSize() const { return ByValArgRegsSaveSize; }
-  void setByValArgRegsSaveSize(unsigned s) { ByValArgRegsSaveSize = s; }
 
   unsigned getReturnRegsCount() const { return ReturnRegsCount; }
   void setReturnRegsCount(unsigned s) { ReturnRegsCount = s; }
