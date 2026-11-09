@@ -14,14 +14,19 @@ define i32 @load_group_reordered_with_store(ptr %a, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[A2]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[A2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[A2]], -4
 ; CHECK-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[C1]], i64 [[A2]], i64 8)
-; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP2]], i64 [[C1]], i64 8)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP26]], i64 [[C1]], i64 8)
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i1> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP0]], i64 [[C1]], i64 8)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[TMP2]], i64 [[C1]], i64 8)
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i1> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i1> [[TMP7]] to <4 x i64>
+; CHECK-NEXT:    [[TMP27:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[A2]], i64 [[C1]], i64 8)
+; CHECK-NEXT:    [[TMP28:%.*]] = and <4 x i1> [[TMP7]], [[TMP27]]
+; CHECK-NEXT:    [[TMP29:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 [[C1]], i64 [[TMP0]], i64 8)
+; CHECK-NEXT:    [[TMP30:%.*]] = and <4 x i1> [[TMP28]], [[TMP29]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i1> [[TMP30]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP8]])
 ; CHECK-NEXT:    [[VF_IS_SCALAR:%.*]] = icmp ule i64 [[TMP9]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 -1, [[N]]
@@ -43,7 +48,7 @@ define i32 @load_group_reordered_with_store(ptr %a, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP14:%.*]] = and <4 x i1> [[TMP13]], [[TMP7]]
+; CHECK-NEXT:    [[TMP14:%.*]] = and <4 x i1> [[TMP13]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = add nuw nsw i64 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP16]]
