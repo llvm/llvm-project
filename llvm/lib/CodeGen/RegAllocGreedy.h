@@ -373,9 +373,9 @@ private:
                                           MCRegister PhysReg,
                                           uint8_t &CostPerUseLimit,
                                           SmallVectorImpl<Register> &NewVRegs);
-  std::optional<BlockFrequency>
-  calcEvictRematCost(const LiveInterval &VirtReg, MCRegister PhysReg,
-                     unsigned Cascade) const;
+  std::optional<BlockFrequency> calcEvictRematCost(const LiveInterval &VirtReg,
+                                                   MCRegister PhysReg,
+                                                   unsigned Cascade) const;
   MCRegister tryEvictRematForCSR(const LiveInterval &VirtReg,
                                  AllocationOrder &Order,
                                  SmallVectorImpl<Register> &NewVRegs,
