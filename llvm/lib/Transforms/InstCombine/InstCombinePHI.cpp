@@ -1143,7 +1143,9 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
 
   // If this phi node is transformable, create new PHIs for all the pieces
   // extracted out of it.  First, sort the users by their offset and size.
-  array_pod_sort(PHIUsers.begin(), PHIUsers.end());
+  // Users of the same piece compare equal, so the sort must be stable for the
+  // result not to depend on the host's qsort.
+  llvm::stable_sort(PHIUsers);
 
   LLVM_DEBUG(dbgs() << "SLICING UP PHI: " << FirstPhi << '\n';
              for (unsigned I = 1; I != PHIsToSlice.size(); ++I) dbgs()
