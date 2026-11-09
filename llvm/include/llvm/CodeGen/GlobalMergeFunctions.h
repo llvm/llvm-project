@@ -78,10 +78,6 @@ public:
 
 /// Global function merging pass for new pass manager.
 struct GlobalMergeFuncPass : public OptionalPassInfoMixin<GlobalMergeFuncPass> {
-  const ModuleSummaryIndex *ImportSummary = nullptr;
-  GlobalMergeFuncPass() = default;
-  GlobalMergeFuncPass(const ModuleSummaryIndex *ImportSummary)
-      : ImportSummary(ImportSummary) {}
   LLVM_ABI PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
 };
 
