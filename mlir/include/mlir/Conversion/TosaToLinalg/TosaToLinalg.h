@@ -23,13 +23,11 @@
 #include <utility>
 
 namespace mlir {
-
 #define GEN_PASS_DECL_TOSATOLINALG
 #define GEN_PASS_DECL_TOSATOLINALGNAMED
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace tosa {
-
 std::unique_ptr<Pass>
 createTosaToLinalg(const TosaToLinalgOptions &options = TosaToLinalgOptions());
 std::unique_ptr<Pass> createTosaToLinalgNamed(
@@ -83,7 +81,6 @@ using IndexPool = llvm::DenseMap<int64_t, Value>;
 std::pair<OpFoldResult, Value>
 computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
                   ValueRange operands, int64_t dim);
-
 } // namespace tosa
 } // namespace mlir
 
