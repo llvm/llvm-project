@@ -251,8 +251,8 @@ def SDT_AArch64FMA : SDTypeProfile<1, 4, [
 ]>;
 
 // Predicated operations with the result of inactive lanes being unspecified.
-def AArch64and_u  : SDNode<"AArch64ISD::AND_U", SDT_AArch64Arith>;
-def AArch64eor_u  : SDNode<"AArch64ISD::EOR_U", SDT_AArch64Arith>;
+def AArch64and_p  : SDNode<"AArch64ISD::AND_PRED", SDT_AArch64Arith>;
+def AArch64eor_p  : SDNode<"AArch64ISD::EOR_PRED", SDT_AArch64Arith>;
 def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
 def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
 def AArch64lsr_p  : SDNode<"AArch64ISD::SRL_PRED",  SDT_AArch64Arith>;
@@ -566,10 +566,10 @@ class CommPredBinPatFrags<SDPatternOperator intr>
   : PatFrags<(ops node:$pg, node:$a, node:$b),
             [(intr node:$pg, node:$a, node:$b),
              (intr node:$pg, node:$b, node:$a)]>;
-def SVEAndU : CommPredBinPatFrags<AArch64and_u>;
+def SVEAndU : CommPredBinPatFrags<AArch64and_p>;
 def SVEAndM : CommPredBinPatFrags<int_aarch64_sve_and>;
 def SVEAndZ : CommPredBinPatFrags<int_aarch64_sve_and_z>;
-def SVEEorU : CommPredBinPatFrags<AArch64eor_u>;
+def SVEEorU : CommPredBinPatFrags<AArch64eor_p>;
 def SVEEorM : CommPredBinPatFrags<int_aarch64_sve_eor>;
 def SVEEorZ : CommPredBinPatFrags<int_aarch64_sve_eor_z>;
 
@@ -799,7 +799,7 @@ let Predicates = [HasSVE_or_SME] in {
 
     // Fall back to register AND when no BIC pattern matches.
     // AND_U allows any result in inactive lanes.
-    def : Pat<(VT (AArch64and_u (PT srcvalue), VT:$a, VT:$b)),
+    def : Pat<(VT (AArch64and_p (PT srcvalue), VT:$a, VT:$b)),
               (AND_ZZZ $a, $b)>;
   }
   defm : SVEAndNotPats<nxv16i8, nxv16i1>;
