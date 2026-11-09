@@ -1,10 +1,14 @@
-//===-- Implementation header for isnanbf16 ----------------------*- C++
-//-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \brief
+/// This file implements the isnanbf16 function using FPBits.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ISNANBF16_H
@@ -17,7 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr int isnanbf16(bfloat16 x) {
+LIBC_INLINE LIBC_CONSTEXPR int isnanbf16(bfloat16 x) {
   return fputil::FPBits<bfloat16>(x).is_nan();
 }
 

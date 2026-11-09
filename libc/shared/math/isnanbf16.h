@@ -1,10 +1,15 @@
-//===-- Shared isnanbf16 function --------------------------------*- C++
-//-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \brief
+/// This file will be used for shared_math_test.cpp and
+/// shared_math_constexpr_test.cpp
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_MATH_ISNANBF16_H
