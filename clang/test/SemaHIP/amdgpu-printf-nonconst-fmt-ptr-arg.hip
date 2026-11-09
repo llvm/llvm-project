@@ -35,6 +35,18 @@ __device__ void NonConstFmtNoPtrArgs(const char *fmt) {
   printf(fmt, 1, 2.0, 'c');
 }
 
+// An unevaluated printf is never called, so it is not lowered.
+__device__ void UnevaluatedNonConstFmtPtrArgs(const char *fmt, const char *s) {
+  (void)sizeof(printf(fmt, s));
+  using T = decltype(printf(fmt, s));
+  (void)noexcept(printf(fmt, s));
+}
+
+template <typename T>
+__device__ void UnevaluatedTypeDependentFmt(T fmt, const char *s) {
+  (void)sizeof(printf(fmt, s));
+}
+
 __device__ const char DeviceFmt[] = "%s\n";
 __device__ constexpr char ConstexprFmt[] = "x%s\n";
 
@@ -73,4 +85,5 @@ template <const char *Fmt> __device__ void ValueDependentFmt(const char *s) {
 __device__ void Instantiate(const char *fmt, const char *s) {
   TypeDependentFmt(fmt, s); // expected-note {{in instantiation of function template specialization 'TypeDependentFmt<const char *>' requested here}}
   ValueDependentFmt<ConstexprFmt>(s);
+  UnevaluatedTypeDependentFmt(fmt, s);
 }

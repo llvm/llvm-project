@@ -2509,7 +2509,7 @@ static void checkAMDGPUDevicePrintf(Sema &S, CallExpr *TheCall) {
       !(TT.isAMDGCN() || (TT.isSPIRV() && TT.getVendor() == llvm::Triple::AMD)))
     return;
   if (TheCall->getNumArgs() < 2 || TheCall->isValueDependent() ||
-      TheCall->isTypeDependent())
+      TheCall->isTypeDependent() || S.isUnevaluatedContext())
     return;
 
   auto PtrArg =
