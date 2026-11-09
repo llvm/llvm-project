@@ -21,6 +21,7 @@
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <set>
 
 namespace llvm {
@@ -39,13 +40,14 @@ class MCSymbol;
 /// The base class for BTF type generation.
 class BTFTypeBase {
 protected:
-  uint8_t Kind;
-  bool IsCompleted;
+  bool IsCompleted = false;
   uint32_t Id;
-  struct BTF::CommonType BTFType;
+  BTF::CommonType BTFType;
+
+  explicit BTFTypeBase(BTF::TypeKinds Kind, uint32_t VLen = 0,
+                       bool KindFlag = false);
 
 public:
-  BTFTypeBase() : IsCompleted(false) {}
   virtual ~BTFTypeBase() = default;
   void setId(uint32_t Id) { this->Id = Id; }
   uint32_t getId() { return Id; }
@@ -68,8 +70,8 @@ class BTFTypeDerived : public BTFTypeBase {
   StringRef Name;
 
 public:
-  BTFTypeDerived(const DIDerivedType *Ty, unsigned Tag, bool NeedsFixup);
-  BTFTypeDerived(unsigned NextTypeId, unsigned Tag, StringRef Name);
+  BTFTypeDerived(const DIDerivedType *Ty, BTF::TypeKinds Kind, bool NeedsFixup);
+  BTFTypeDerived(uint32_t NextTypeId, BTF::TypeKinds Kind, StringRef Name);
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
   void setPointeeType(uint32_t PointeeType);
@@ -304,6 +306,7 @@ class BTFDebug : public DebugHandlerBase {
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
   DenseMap<const DIType *, uint32_t> DIToIdMap;
+  bool HasIncompleteFuncInfo = false;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
@@ -317,34 +320,32 @@ class BTFDebug : public DebugHandlerBase {
       FixupDerivedTypes;
   std::set<const Function *>ProtoFunctions;
 
-  /// Add types to TypeEntries.
-  /// @{
-  /// Add types to TypeEntries and DIToIdMap.
-  uint32_t addType(std::unique_ptr<BTFTypeBase> TypeEntry, const DIType *Ty);
-  /// Add types to TypeEntries only and return type id.
-  uint32_t addType(std::unique_ptr<BTFTypeBase> TypeEntry);
-  /// @}
+  /// Add a BTF record and associate its ID with Ty if supplied.
+  uint32_t addType(std::unique_ptr<BTFTypeBase> TypeEntry,
+                   const DIType *Ty = nullptr);
+
+  // While traversing a struct or union member, crossing an unannotated pointer
+  // makes named record pointees eligible for forward declarations.
+  enum class TypeUse { Direct, Member, MemberPointee };
 
   /// IR type visiting functions.
   /// @{
-  void visitTypeEntry(const DIType *Ty);
-  void visitTypeEntry(const DIType *Ty, uint32_t &TypeId, bool CheckPointer,
-                      bool SeenPointer);
-  void visitBasicType(const DIBasicType *BTy, uint32_t &TypeId);
-  void
+  std::optional<uint32_t> visitTypeEntry(const DIType *Ty,
+                                         TypeUse Use = TypeUse::Direct);
+  std::optional<uint32_t> visitBasicType(const DIBasicType *BTy);
+  std::optional<uint32_t>
   visitSubroutineType(const DISubroutineType *STy, bool ForSubprog,
                       const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
-                      uint32_t &TypeId, bool VoidReturn = false);
-  void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
-                        uint32_t &TypeId);
-  void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId);
-  void visitStructType(const DICompositeType *STy, bool IsStruct,
-                       uint32_t &TypeId);
-  void visitArrayType(const DICompositeType *ATy, uint32_t &TypeId);
-  void visitEnumType(const DICompositeType *ETy, uint32_t &TypeId);
-  void visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
-                        bool CheckPointer, bool SeenPointer);
-  void visitMapDefType(const DIType *Ty, uint32_t &TypeId);
+                      bool VoidReturn = false);
+  uint32_t visitFwdDeclType(const DICompositeType *CTy, bool IsUnion);
+  std::optional<uint32_t> visitCompositeType(const DICompositeType *CTy);
+  std::optional<uint32_t> visitStructType(const DICompositeType *STy,
+                                          bool IsStruct);
+  std::optional<uint32_t> visitArrayType(const DICompositeType *ATy);
+  std::optional<uint32_t> visitEnumType(const DICompositeType *ETy);
+  std::optional<uint32_t> visitDerivedType(const DIDerivedType *DTy,
+                                           TypeUse Use);
+  std::optional<uint32_t> visitMapDefType(const DIType *Ty);
   /// @}
 
   /// Check whether the type is a forward declaration candidate or not.
@@ -377,19 +378,15 @@ class BTFDebug : public DebugHandlerBase {
       const DISubprogram *SP, uint32_t ProtoTypeId, uint8_t Scope,
       const SmallDenseMap<uint32_t, uint32_t> *ArgIndexMap = nullptr);
 
-  /// Generate BTF type_tag's. If BaseTypeId is nonnegative, the last
-  /// BTF type_tag in the chain points to BaseTypeId. Otherwise, it points to
-  /// the base type of DTy. Return the type id of the first BTF type_tag
-  /// in the chain. If no type_tag's are generated, a negative value
-  /// is returned.
-  int genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId);
+  /// Return the head of the BTF type tag chain, if any. The last tag refers
+  /// to BaseTypeId when supplied, or to the base type of DTy.
+  std::optional<uint32_t>
+  genBTFTypeTags(const DIDerivedType *DTy,
+                 std::optional<uint32_t> BaseTypeId = std::nullopt);
 
   /// Generate one field relocation record.
   void generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
                              const GlobalVariable *, bool IsAma);
-
-  /// Populating unprocessed type on demand.
-  unsigned populateType(const DIType *Ty);
 
   /// Process global variables referenced by relocation instructions
   /// and extern function references.
@@ -426,13 +423,9 @@ public:
   /// Add string to the string table.
   size_t addString(StringRef S) { return StringTable.addString(S); }
 
-  /// Get the type id for a particular DIType.
-  uint32_t getTypeId(const DIType *Ty) {
-    assert(Ty && "Invalid null Type");
-    assert(DIToIdMap.find(Ty) != DIToIdMap.end() &&
-           "DIType not added in the BDIToIdMap");
-    return DIToIdMap[Ty];
-  }
+  /// Get the ID of a required type referenced by another BTF record.
+  uint32_t getTypeId(const DIType *Ty) const;
+  uint32_t getDerivedBaseTypeId(const DIDerivedType *DTy) const;
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
