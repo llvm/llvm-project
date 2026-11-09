@@ -45,7 +45,6 @@
 #endif
 
 #include <atomic>
-#include <cstdarg>
 #include <cstdio>
 #include <mutex>
 #include <string>
@@ -464,19 +463,14 @@ enum InfoLevel : uint32_t { IL_Summary = 1, IL_Detailed = 2, IL_Full = 3 };
 
 #ifdef OMPTARGET_DEBUG
 
-// Not llvm::format: a format without arguments would trip -Wformat-security.
-[[maybe_unused]] static std::string formatInfoMessage(const char *Fmt, ...) {
-  va_list Args;
-  va_start(Args, Fmt);
-  va_list ArgsCopy;
-  va_copy(ArgsCopy, Args);
-  int Len = std::vsnprintf(nullptr, 0, Fmt, ArgsCopy);
-  va_end(ArgsCopy);
-  std::string Str(Len > 0 ? Len : 0, '\0');
-  if (Len > 0)
-    std::vsnprintf(Str.data(), Str.size() + 1, Fmt, Args);
-  va_end(Args);
-  return Str;
+// Without arguments the message is printed as-is: llvm::format would trip
+// -Wformat-security.
+[[maybe_unused]] static StringRef formatInfoMessage(const char *Msg) {
+  return Msg;
+}
+template <typename... Ts>
+static auto formatInfoMessage(const char *Fmt, const Ts &...Vals) {
+  return ::llvm::format(Fmt, Vals...);
 }
 
 #define ODBG_BASE(Stream, Component, Prefix, Type, Level)                      \
