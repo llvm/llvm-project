@@ -2213,6 +2213,143 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::arm_dbg), Option);
   }
 
+  // MSVC intrinsics that cl expands inline. They follow the AArch64 lowering.
+  if (BuiltinID == clang::ARM::BI_MulHigh ||
+      BuiltinID == clang::ARM::BI_MulUnsignedHigh) {
+    // The high 32 bits of the 64-bit product.
+    bool IsSigned = BuiltinID == clang::ARM::BI_MulHigh;
+    llvm::Type *ResType = ConvertType(E->getType());
+    Value *LHS =
+        Builder.CreateIntCast(EmitScalarExpr(E->getArg(0)), Int64Ty, IsSigned);
+    Value *RHS =
+        Builder.CreateIntCast(EmitScalarExpr(E->getArg(1)), Int64Ty, IsSigned);
+    Value *HigherBits;
+    if (IsSigned)
+      HigherBits = Builder.CreateAShr(Builder.CreateNSWMul(LHS, RHS), 32);
+    else
+      HigherBits = Builder.CreateLShr(Builder.CreateNUWMul(LHS, RHS), 32);
+    return Builder.CreateIntCast(HigherBits, ResType, IsSigned);
+  }
+
+  if (BuiltinID == clang::ARM::BI_CountLeadingOnes ||
+      BuiltinID == clang::ARM::BI_CountLeadingOnes64 ||
+      BuiltinID == clang::ARM::BI_CountLeadingZeros ||
+      BuiltinID == clang::ARM::BI_CountLeadingZeros64) {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = Arg->getType();
+
+    if (BuiltinID == clang::ARM::BI_CountLeadingOnes ||
+        BuiltinID == clang::ARM::BI_CountLeadingOnes64)
+      Arg = Builder.CreateXor(Arg, Constant::getAllOnesValue(ArgType));
+
+    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+    Value *Result = Builder.CreateCall(F, {Arg, Builder.getInt1(false)});
+
+    if (BuiltinID == clang::ARM::BI_CountLeadingOnes64 ||
+        BuiltinID == clang::ARM::BI_CountLeadingZeros64)
+      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+    return Result;
+  }
+
+  if (BuiltinID == clang::ARM::BI_CountLeadingSigns ||
+      BuiltinID == clang::ARM::BI_CountLeadingSigns64) {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    Function *F = (BuiltinID == clang::ARM::BI_CountLeadingSigns)
+                      ? CGM.getIntrinsic(Intrinsic::arm_cls)
+                      : CGM.getIntrinsic(Intrinsic::arm_cls64);
+    return Builder.CreateCall(F, Arg, "cls");
+  }
+
+  if (BuiltinID == clang::ARM::BI_CountOneBits ||
+      BuiltinID == clang::ARM::BI_CountOneBits64) {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
+
+    Value *Result = Builder.CreateCall(F, ArgValue);
+    if (BuiltinID == clang::ARM::BI_CountOneBits64)
+      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+    return Result;
+  }
+
+  if (BuiltinID == clang::ARM::BI_CountTrailingZeros ||
+      BuiltinID == clang::ARM::BI_CountTrailingZeros64) {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+
+    // MSVC returns the bit width for 0, so zero is not poison.
+    Value *Result = Builder.CreateCall(F, {ArgValue, Builder.getInt1(false)});
+    if (BuiltinID == clang::ARM::BI_CountTrailingZeros64)
+      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+    return Result;
+  }
+
+  if (BuiltinID == clang::ARM::BI_CopyDoubleFromInt64 ||
+      BuiltinID == clang::ARM::BI_CopyFloatFromInt32 ||
+      BuiltinID == clang::ARM::BI_CopyInt32FromFloat ||
+      BuiltinID == clang::ARM::BI_CopyInt64FromDouble) {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateBitCast(Arg, RetTy);
+  }
+
+  if (BuiltinID == clang::ARM::BI_InterlockedAdd ||
+      BuiltinID == clang::ARM::BI_InterlockedAdd_acq ||
+      BuiltinID == clang::ARM::BI_InterlockedAdd_nf ||
+      BuiltinID == clang::ARM::BI_InterlockedAdd_rel ||
+      BuiltinID == clang::ARM::BI_InterlockedAdd64 ||
+      BuiltinID == clang::ARM::BI_InterlockedAdd64_acq ||
+      BuiltinID == clang::ARM::BI_InterlockedAdd64_nf ||
+      BuiltinID == clang::ARM::BI_InterlockedAdd64_rel) {
+    Address DestAddr = CheckAtomicAlignment(*this, E);
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    llvm::AtomicOrdering Ordering;
+    switch (BuiltinID) {
+    case clang::ARM::BI_InterlockedAdd:
+    case clang::ARM::BI_InterlockedAdd64:
+      Ordering = llvm::AtomicOrdering::SequentiallyConsistent;
+      break;
+    case clang::ARM::BI_InterlockedAdd_acq:
+    case clang::ARM::BI_InterlockedAdd64_acq:
+      Ordering = llvm::AtomicOrdering::Acquire;
+      break;
+    case clang::ARM::BI_InterlockedAdd_rel:
+    case clang::ARM::BI_InterlockedAdd64_rel:
+      Ordering = llvm::AtomicOrdering::Release;
+      break;
+    default:
+      Ordering = llvm::AtomicOrdering::Monotonic;
+      break;
+    }
+    // _InterlockedAdd returns the new value, not the old one.
+    AtomicRMWInst *RMWI =
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val, Ordering);
+    return Builder.CreateAdd(RMWI, Val);
+  }
+
+  if (BuiltinID == clang::ARM::BI_ReadStatusReg) {
+    // 0 is APSR and 1 is SPSR; Sema has checked the range.
+    LLVMContext &Context = CGM.getLLVMContext();
+    uint64_t SysReg =
+        E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    llvm::Metadata *Ops[] = {
+        llvm::MDString::get(Context, SysReg ? "spsr" : "apsr")};
+    llvm::Value *Metadata =
+        llvm::MetadataAsValue::get(Context, llvm::MDNode::get(Context, Ops));
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::read_register, {Int32Ty});
+    return Builder.CreateCall(F, Metadata);
+  }
+
+  if (BuiltinID == clang::ARM::BI__prefetch) {
+    Value *Address = EmitScalarExpr(E->getArg(0));
+    Value *RW = llvm::ConstantInt::get(Int32Ty, 0);
+    Value *Locality = ConstantInt::get(Int32Ty, 3);
+    Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
+    Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
+    return Builder.CreateCall(F, {Address, RW, Locality, Data});
+  }
+
   if (BuiltinID == clang::ARM::BI__builtin_arm_prefetch) {
     Value *Address = EmitScalarExpr(E->getArg(0));
     Value *RW      = EmitScalarExpr(E->getArg(1));
