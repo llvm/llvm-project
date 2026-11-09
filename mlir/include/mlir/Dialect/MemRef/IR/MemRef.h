@@ -13,17 +13,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
-#include "mlir/Interfaces/AlignmentAttrInterface.h"
-#include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Interfaces/CastInterfaces.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/InferIntRangeInterface.h"
-#include "mlir/Interfaces/InferStridedMetadataInterface.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/MemOpInterfaces.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
-#include "mlir/Interfaces/ShapedOpInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
 #include <optional>

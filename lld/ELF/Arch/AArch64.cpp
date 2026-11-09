@@ -84,9 +84,9 @@ public:
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.ekind == ELF64BEKind)
-      elf::scanSection1<AArch64, ELF64BE>(*this, sec, shard);
+      elf::scanSection1<ELF64BE>(*this, sec, shard);
     else
-      elf::scanSection1<AArch64, ELF64LE>(*this, sec, shard);
+      elf::scanSection1<ELF64LE>(*this, sec, shard);
   }
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,

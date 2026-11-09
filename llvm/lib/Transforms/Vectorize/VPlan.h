@@ -55,7 +55,6 @@ namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
-class InnerLoopVectorizer;
 struct VPTransformState;
 class raw_ostream;
 class SCEV;
