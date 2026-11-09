@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/Delinearization.h"
 #include "AnalysisOptions.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -22,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -656,9 +658,71 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   return !Subscripts.empty();
 }
 
+/// Return true if \p Root, an integer value feeding the computation of a
+/// pointer offset, evaluates to its mathematical value rather than a wrapped
+/// one.
+static bool hasExactOffsetArithmetic(Value *Root, ScalarEvolution &SE) {
+
+  // Max Bound the walk
+  constexpr unsigned MaxValuesVisited = 16;
+
+  SmallVector<Value *, 8> Worklist(1, Root);
+  SmallPtrSet<Value *, 16> Visited;
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    // Reaching a value again, which is how the cycle through a phi ends,
+    // needs no second proof.
+    if (!Visited.insert(V).second)
+      continue;
+    if (Visited.size() > MaxValuesVisited)
+      return false;
+
+    if (!SE.isSCEVable(V->getType()))
+      return false;
+    const SCEV *S = SE.getSCEV(V);
+    if (isa<SCEVConstant>(S) || isa<SCEVUnknown>(S))
+      continue;
+
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return false;
+
+    switch (I->getOpcode()) {
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::Mul:
+    case Instruction::Shl:
+      if (!cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap())
+        return false;
+      break;
+    case Instruction::PHI:
+      break;
+    default:
+      return false;
+    }
+
+    Worklist.append(I->op_begin(), I->op_end());
+  }
+  return true;
+}
+
+bool llvm::hasNoSignedWrapOffsetFromBase(ScalarEvolution &SE, Value *Ptr) {
+  Value *V = Ptr->stripPointerCasts();
+  while (auto *GEP = dyn_cast<GEPOperator>(V)) {
+    if (!GEP->hasNoUnsignedSignedWrap())
+      return false;
+    for (Value *Idx : GEP->indices())
+      if (!hasExactOffsetArithmetic(Idx, SE))
+        return false;
+    V = GEP->getPointerOperand()->stripPointerCasts();
+  }
+  return SE.getPointerBase(SE.getSCEV(Ptr)) == SE.getSCEV(V);
+}
+
 bool llvm::validateDelinearizationResult(
     ScalarEvolution &SE, ArrayRef<const SCEV *> Sizes,
-    ArrayRef<const SCEV *> Subscripts, DelinearizationRangeCache *RangeCache) {
+    ArrayRef<const SCEV *> Subscripts, Value *Ptr,
+    DelinearizationRangeCache *RangeCache) {
   // Sizes and Subscripts are as follows:
   //
   //   Sizes:      [UNK][S_2]...[S_n]
@@ -795,6 +859,15 @@ bool llvm::validateDelinearizationResult(
   //       = Min + (S_2 * ... * S_n) - 1
   //
   // NOTE: I_1 can be negative, so Min is not just 0.
+  //
+  // When Sizes are already constant it does reqruire nusw based proof.
+  bool HasSymbolicSize = false;
+  for (const SCEV *Size : Sizes)
+    HasSymbolicSize |= !isa<SCEVConstant>(Size);
+  if (Sizes.size() >= 2 && HasSymbolicSize &&
+      hasNoSignedWrapOffsetFromBase(SE, Ptr))
+    return true;
+
   const SCEV *Prod = SE.getOne(Sizes[0]->getType());
   for (const SCEV *Size : Sizes) {
     Prod = MulOverflow(Prod, Size);
@@ -931,7 +1004,8 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
       O << "[" << *Subscripts[i] << "]";
     O << "\n";
 
-    bool IsValid = validateDelinearizationResult(*SE, Sizes, Subscripts);
+    bool IsValid = validateDelinearizationResult(*SE, Sizes, Subscripts,
+                                                 getPointerOperand(&Inst));
     O << "Delinearization validation: " << (IsValid ? "Succeeded" : "Failed")
       << "\n";
   }

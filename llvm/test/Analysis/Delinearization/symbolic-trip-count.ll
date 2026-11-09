@@ -3,7 +3,7 @@
 
 ; CHECK-LABEL: Printing analysis 'Delinearization' for function 'symbolic_trip_count':
 ; CHECK: Range check via trip count: %cols <=s %cols
-; CHECK: Delinearization validation: Failed
+; CHECK: Delinearization validation: Succeeded
 
 define void @symbolic_trip_count(ptr %a, i64 %cols) {
 entry:
