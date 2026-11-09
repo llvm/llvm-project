@@ -663,8 +663,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       if (keepGroup) {
         keptGroups.push_back(i);
         if (!ctx.arg.resolveGroups)
-          sections[i] = createInputSection(
-              i, sec, check(obj.getSectionName(sec, shstrtab)));
+          sections[i] = makeThreadLocal<InputSection>(
+              *this, sec, check(obj.getSectionName(sec, shstrtab)));
       } else {
         // Otherwise, discard group members.
         for (uint32_t secIndex : entries.slice(1)) {
