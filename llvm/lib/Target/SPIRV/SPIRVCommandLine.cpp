@@ -184,6 +184,9 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_untyped_pointers",
      SPIRV::Extension::Extension::SPV_KHR_untyped_pointers},
     {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector},
+    {"SPV_KHR_quad_control", SPIRV::Extension::Extension::SPV_KHR_quad_control},
+    {"SPV_KHR_compute_shader_derivatives",
+     SPIRV::Extension::Extension::SPV_KHR_compute_shader_derivatives},
     {"SPV_KHR_relaxed_extended_instruction",
      SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
 
