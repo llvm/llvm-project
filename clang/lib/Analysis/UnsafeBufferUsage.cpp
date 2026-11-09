@@ -2389,7 +2389,9 @@ public:
   SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
-// Warning gadget for unsafe invocation of span::data method.
+// Warning gadget for unsafe invocation of container or view data() methods
+// (including methods annotated with [[clang::unsafe_buffer_usage_in_data_call]]
+// or [[clang::unsafe_buffer_usage("data")]]).
 // Triggers when the pointer returned by the invocation is immediately
 // cast to a larger type.
 
@@ -2414,9 +2416,7 @@ public:
       return false;
     if (ignoreUnsafeBufferInDataCall(*S, Handler))
       return false;
-    const Expr *Operand = CE->getSubExpr();
-    if (auto *Paren = dyn_cast<ParenExpr>(Operand))
-      Operand = Paren->getSubExpr();
+    const Expr *Operand = CE->getSubExpr()->IgnoreParens();
     auto *MCE = dyn_cast<CXXMemberCallExpr>(Operand);
     if (!MCE || !isDataFunction(MCE))
       return false;
@@ -2443,6 +2443,9 @@ private:
     if (!callee || !isa<CXXMethodDecl>(callee))
       return false;
     auto *method = cast<CXXMethodDecl>(callee);
+    if (const auto *Attr = method->getAttr<UnsafeBufferUsageAttr>();
+        Attr && Attr->getCategory() == "data")
+      return true;
     if (method->getNameAsString() == "data" &&
         method->getParent()->isInStdNamespace() &&
         llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},

@@ -5107,7 +5107,8 @@ def ReleaseHandle : InheritableParamAttr {
 
 def UnsafeBufferUsage : InheritableAttr {
   let Spellings = [Clang<"unsafe_buffer_usage">,
-                   Clang<"unsafe_buffer_usage_in_container">];
+                   Clang<"unsafe_buffer_usage_in_container">,
+                   Clang<"unsafe_buffer_usage_in_data_call">];
   let Args = [StringArgument<"Category", 1>];
   let Subjects = SubjectList<[Function, Field]>;
   let Documentation = [UnsafeBufferUsageDocs];

@@ -7268,15 +7268,21 @@ static void handleHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleUnsafeBufferUsage(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Category;
-  if (AL.getAttrName()->getName() == "unsafe_buffer_usage_in_container") {
+  StringRef AttrName = AL.getAttrName()->getName();
+  normalizeName(AttrName);
+  if (AttrName == "unsafe_buffer_usage_in_container") {
     if (!AL.checkExactlyNumArgs(S, 0))
       return;
     Category = "container";
+  } else if (AttrName == "unsafe_buffer_usage_in_data_call") {
+    if (!AL.checkExactlyNumArgs(S, 0))
+      return;
+    Category = "data";
   } else if (AL.getNumArgs() != 0) {
     SourceLocation Loc;
     if (!S.checkStringLiteralArgumentAttr(AL, 0, Category, &Loc))
       return;
-    if (Category != "container") {
+    if (Category != "container" && Category != "data") {
       S.Diag(Loc, diag::warn_attribute_type_not_supported) << AL << Category;
       return;
     }
