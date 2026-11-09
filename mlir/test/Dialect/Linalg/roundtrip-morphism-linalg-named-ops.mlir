@@ -154,3 +154,32 @@ func.func @reduce_memref(%A: memref<?x?xf32>, %Out: memref<?xf32>) {
 // CHECK-SAME: outs(%[[OUT]] : memref<?xf32>)
 // CHECK-SAME: dimensions = [0]
 
+// -----
+
+// Multiple inputs/inits (variadic reduce) are preserved through the roundtrip.
+func.func @reduce_multi_input(%A: tensor<?x?xf32>, %B: tensor<?x?xi32>,
+    %OutA: tensor<?xf32>, %OutB: tensor<?xi32>) -> (tensor<?xf32>, tensor<?xi32>) {
+  %0:2 = linalg.reduce
+    ins(%A, %B : tensor<?x?xf32>, tensor<?x?xi32>)
+    outs(%OutA, %OutB : tensor<?xf32>, tensor<?xi32>)
+    dimensions = [1]
+    (%a: f32, %b: i32, %accA: f32, %accB: i32) {
+      %1 = arith.addf %accA, %a : f32
+      %2 = arith.addi %accB, %b : i32
+      linalg.yield %1, %2 : f32, i32
+    }
+  return %0#0, %0#1 : tensor<?xf32>, tensor<?xi32>
+}
+
+// CHECK-LABEL: @reduce_multi_input
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xi32>,
+// CHECK-SAME: %[[OUTA:.+]]: tensor<?xf32>, %[[OUTB:.+]]: tensor<?xi32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.reduce ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xi32>)
+// CHECK-SAME: outs(%[[OUTA]], %[[OUTB]] : tensor<?xf32>, tensor<?xi32>)
+// CHECK-SAME: dimensions = [1]
+// CHECK-NEXT: (%[[IA:.+]]: f32, %[[IB:.+]]: i32, %[[ACCA:.+]]: f32, %[[ACCB:.+]]: i32) {
+// CHECK-NEXT: %[[ADDF:.+]] = arith.addf %[[ACCA]], %[[IA]] : f32
+// CHECK-NEXT: %[[ADDI:.+]] = arith.addi %[[ACCB]], %[[IB]] : i32
+// CHECK-NEXT: linalg.yield %[[ADDF]], %[[ADDI]] : f32, i32
+

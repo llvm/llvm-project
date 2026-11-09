@@ -266,10 +266,6 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
 static FailureOr<LinalgOp>
 specializeLinalgReductions(RewriterBase &rewriter, GenericOp genericOp,
                            ArrayRef<int64_t> reductionDims) {
-  // Support for unary reductions only for now.
-  if (!genericOp.isSingleInputOutput())
-    return failure();
-
   auto reduceOp = ReduceOp::create(
       rewriter, genericOp.getLoc(), genericOp.getDpsInputs(),
       genericOp.getDpsInits(), reductionDims, /*bodyBuild=*/nullptr);

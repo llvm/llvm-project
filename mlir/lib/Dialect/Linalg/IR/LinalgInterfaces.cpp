@@ -233,13 +233,9 @@ linalg::isaReductionOpInterface(GenericOp op) {
   if (op.getNumReductionLoops() == 0)
     return std::nullopt;
 
-  auto mapRange = op.getIndexingMapsArray();
-  if (mapRange.size() != 2)
-    return std::nullopt;
-
-  // The input must be read with an identity indexing map.
-  AffineMap inputMap = mapRange.front();
-  if (!inputMap.isIdentity())
+  // linalg.reduce takes N inputs and N inits, N >= 1.
+  unsigned numInputs = op.getNumDpsInputs();
+  if (numInputs == 0 || numInputs != op.getNumDpsInits())
     return std::nullopt;
 
   // The reduction dimensions are the loops carrying a reduction iterator.
@@ -248,13 +244,42 @@ linalg::isaReductionOpInterface(GenericOp op) {
     if (iter == utils::IteratorType::reduction)
       reductionDims.push_back(idx);
 
-  // The output must be the identity map with the reduction dimensions dropped,
-  // matching the semantics of linalg.reduce.
+  // All inputs must be read with an identity indexing map and all outputs with
+  // the identity map with the reduction dimensions dropped, matching the
+  // semantics of linalg.reduce.
   AffineMap expectedOutputMap =
-      AffineMap::getMultiDimIdentityMap(inputMap.getNumDims(), op.getContext())
+      AffineMap::getMultiDimIdentityMap(op.getNumLoops(), op.getContext())
           .dropResults(reductionDims);
-  if (mapRange.back() != expectedOutputMap)
+  for (OpOperand *input : op.getDpsInputOperands())
+    if (!op.getMatchingIndexingMap(input).isIdentity())
+      return std::nullopt;
+  for (OpOperand &init : op.getDpsInitsMutable())
+    if (op.getMatchingIndexingMap(&init) != expectedOutputMap)
+      return std::nullopt;
+
+  // Unlike linalg.generic, linalg.reduce requires all inputs to share the same
+  // shape and all inits to match it exactly, including static sizes, after
+  // dropping the reduction dimensions.
+  auto inputType =
+      dyn_cast<ShapedType>(op.getDpsInputOperand(0)->get().getType());
+  if (!inputType || !inputType.hasRank())
     return std::nullopt;
+  for (OpOperand *input : op.getDpsInputOperands()) {
+    auto type = dyn_cast<ShapedType>(input->get().getType());
+    if (!type || !type.hasRank() || type.getShape() != inputType.getShape())
+      return std::nullopt;
+  }
+
+  SmallVector<int64_t> expectedOutputShape;
+  for (auto [idx, size] : llvm::enumerate(inputType.getShape()))
+    if (!llvm::is_contained(reductionDims, idx))
+      expectedOutputShape.push_back(size);
+  for (OpOperand &init : op.getDpsInitsMutable()) {
+    auto type = dyn_cast<ShapedType>(init.get().getType());
+    if (!type || !type.hasRank() ||
+        type.getShape() != ArrayRef<int64_t>(expectedOutputShape))
+      return std::nullopt;
+  }
 
   return reductionDims;
 }
