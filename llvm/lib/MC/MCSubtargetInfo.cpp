@@ -363,19 +363,15 @@ class FeatureExpressionParser {
   StringRef Expr;
   const FeatureBitset &FeatureBits;
   ArrayRef<SubtargetFeatureKV> ProcFeatures;
-  function_ref<std::optional<bool>(StringRef)> ResolveCustomTerm;
   size_t Pos = 0;
 
 public:
-  FeatureExpressionParser(
-      StringRef Expr, const FeatureBitset &FeatureBits,
-      ArrayRef<SubtargetFeatureKV> ProcFeatures,
-      function_ref<std::optional<bool>(StringRef)> ResolveCustomTerm)
-      : Expr(Expr), FeatureBits(FeatureBits), ProcFeatures(ProcFeatures),
-        ResolveCustomTerm(ResolveCustomTerm) {}
+  FeatureExpressionParser(StringRef Expr, const FeatureBitset &FeatureBits,
+                          ArrayRef<SubtargetFeatureKV> ProcFeatures)
+      : Expr(Expr), FeatureBits(FeatureBits), ProcFeatures(ProcFeatures) {}
 
-  bool parse() {
-    bool Result = parseOr();
+  bool parse(StringRef &MissingFeatures) {
+    bool Result = parseOr(true, MissingFeatures);
     if (Pos != Expr.size())
       reportFatalInternalError("malformed target feature expression");
     return Result;
@@ -389,27 +385,36 @@ private:
     return true;
   }
 
-  bool parseOr() {
-    bool Result = parseAnd();
+  bool parseOr(bool Evaluate, StringRef &MissingFeatures) {
+    size_t Start = Pos;
+    bool Result = parseAnd(Evaluate, MissingFeatures);
+    bool HasAlternative = false;
     while (consume('|')) {
-      bool RHS = parseAnd();
+      bool RHS = parseAnd(Evaluate && !Result, MissingFeatures);
       Result |= RHS;
+      HasAlternative = true;
+    }
+    if (Evaluate) {
+      if (Result)
+        MissingFeatures = {};
+      else if (HasAlternative)
+        MissingFeatures = Expr.slice(Start, Pos);
     }
     return Result;
   }
 
-  bool parseAnd() {
-    bool Result = parsePrimary();
+  bool parseAnd(bool Evaluate, StringRef &MissingFeatures) {
+    bool Result = parsePrimary(Evaluate, MissingFeatures);
     while (consume(',')) {
-      bool RHS = parsePrimary();
+      bool RHS = parsePrimary(Evaluate && Result, MissingFeatures);
       Result &= RHS;
     }
     return Result;
   }
 
-  bool parsePrimary() {
+  bool parsePrimary(bool Evaluate, StringRef &MissingFeatures) {
     if (consume('(')) {
-      bool Result = parseOr();
+      bool Result = parseOr(Evaluate, MissingFeatures);
       if (!consume(')'))
         reportFatalInternalError("malformed target feature expression");
       return Result;
@@ -423,27 +428,29 @@ private:
     if (Start == Pos)
       reportFatalInternalError("malformed target feature expression");
 
+    if (!Evaluate)
+      return true;
+
     StringRef Term = Expr.slice(Start, Pos);
-    if (ResolveCustomTerm)
-      if (std::optional<bool> Result = ResolveCustomTerm(Term))
-        return *Result;
-    return hasFeature(Term, FeatureBits, ProcFeatures);
+    if (hasFeature(Term, FeatureBits, ProcFeatures))
+      return true;
+    MissingFeatures = Term;
+    return false;
   }
 };
 } // namespace
 
-bool MCSubtargetInfo::checkFeatureExpression(
-    StringRef FeatureExpr,
-    function_ref<std::optional<bool>(StringRef)> ResolveCustomTerm) const {
+bool MCSubtargetInfo::checkFeatureExpression(StringRef FeatureExpr,
+                                             StringRef &MissingFeatures) const {
+  MissingFeatures = {};
   if (FeatureExpr.empty())
     return true;
   if (FeatureExpr.contains(' ')) {
     reportFatalInternalError(
         "spaces are not allowed in target feature expressions");
   }
-  FeatureExpressionParser Parser(FeatureExpr, FeatureBits, ProcFeatures,
-                                 ResolveCustomTerm);
-  return Parser.parse();
+  FeatureExpressionParser Parser(FeatureExpr, FeatureBits, ProcFeatures);
+  return Parser.parse(MissingFeatures);
 }
 
 const SubtargetSubTypeKV *MCSubtargetInfo::resolveCPU(StringRef CPU) const {

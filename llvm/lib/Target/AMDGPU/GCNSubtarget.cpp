@@ -62,8 +62,8 @@ bool GCNSubtarget::isCustomIntrinsicSupported(unsigned IntrinsicID,
                                               const CallBase &CB) const {
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_ballot:
-    // Only reached in wave64, where i32 ballots cannot hold the lane mask.
-    return !CB.getType()->isIntegerTy(32);
+    // An i32 ballot cannot hold the full wave64 lane mask.
+    return isWave32() || !CB.getType()->isIntegerTy(32);
   default:
     return TargetSubtargetInfo::isCustomIntrinsicSupported(IntrinsicID, CB);
   }

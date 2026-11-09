@@ -26,6 +26,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -97,7 +98,10 @@ public:
 
   /// \returns true if the target intrinsic \p IntrinsicID called by \p CB is
   /// supported by this subtarget.
-  bool isIntrinsicSupported(unsigned IntrinsicID, const CallBase &CB) const;
+  /// Sets MissingFeatures on static failure; leaves it empty on success or
+  /// when a call-dependent custom check rejects the intrinsic.
+  bool isIntrinsicSupported(unsigned IntrinsicID, const CallBase &CB,
+                            StringRef &MissingFeatures) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -404,23 +408,15 @@ public:
   virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
 
 protected:
-  /// Evaluates the \c $custom term of the target feature expression of
-  /// \p IntrinsicID for the call \p CB. Only called when the rest of the
-  /// expression does not already decide whether the intrinsic is supported.
+  /// Performs the additional call-dependent check requested by \c $custom for
+  /// \p IntrinsicID. Only called after all static feature requirements pass.
   virtual bool isCustomIntrinsicSupported(unsigned IntrinsicID,
                                           const CallBase &CB) const;
 
 private:
-  enum class IntrinsicSupport : uint8_t {
-    Supported,
-    Unsupported,
-    NeedsCustomCheck
-  };
-
-  IntrinsicSupport getIntrinsicSupport(unsigned IntrinsicID) const;
-
-  /// Lazy, incrementally-populated cache for getIntrinsicSupport().
-  mutable DenseMap<unsigned, IntrinsicSupport> IntrinsicSupportCache;
+  /// Cache the static result and its failure reason, never call-dependent
+  /// checks.
+  mutable DenseMap<unsigned, std::pair<bool, StringRef>> IntrinsicSupportCache;
 };
 } // end namespace llvm
 

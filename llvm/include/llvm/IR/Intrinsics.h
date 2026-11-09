@@ -69,8 +69,8 @@ LLVM_ABI StringRef getBaseName(ID id);
 /// check must be performed by the target.
 LLVM_ABI StringRef getRequiredTargetFeatures(ID id);
 
-/// Sentinel used as a standalone term in a target feature expression when
-/// support requires a call-dependent target check.
+/// Marker used alone or as a final ,$custom suffix to request an additional
+/// call-dependent target check after the static feature requirements pass.
 inline constexpr StringLiteral CustomTargetFeatures = "$custom";
 
 /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx" or

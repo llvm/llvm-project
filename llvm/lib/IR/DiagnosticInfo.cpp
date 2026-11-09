@@ -423,17 +423,14 @@ DiagnosticInfoUnsupportedTargetIntrinsic::
     DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
                                              unsigned IntrinsicID,
                                              FunctionType *IntrinsicType,
-                                             const DiagnosticLocation &Loc)
+                                             const DiagnosticLocation &Loc,
+                                             StringRef MissingFeatures)
     : DiagnosticInfoWithLocationBase(DK_UnsupportedTargetIntrinsic, DS_Error,
                                      Fn, Loc),
       IntrinsicID(IntrinsicID), IntrinsicType(IntrinsicType) {
   assert(IntrinsicType && "intrinsic type should not be null");
-  StringRef Features = Intrinsic::getRequiredTargetFeatures(
-      static_cast<Intrinsic::ID>(IntrinsicID));
-  assert(!Features.empty() &&
-         "intrinsic without required features should be supported");
-  if (!Features.contains(Intrinsic::CustomTargetFeatures))
-    RequiredFeatures = Features;
+  if (!MissingFeatures.empty())
+    RequiredFeatures = MissingFeatures;
 }
 
 std::string DiagnosticInfoUnsupportedTargetIntrinsic::getMessage() const {

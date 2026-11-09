@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -229,12 +228,12 @@ public:
   /// Check whether the current subtarget satisfies a target feature expression.
   /// The expression uses feature names from the target's subtarget feature
   /// table. Comma means AND, | means OR, comma has higher precedence than |,
-  /// and parentheses group expressions. \p ResolveCustomTerm may evaluate terms
-  /// that are not subtarget features; it returns \c std::nullopt for terms that
-  /// should use the normal subtarget feature lookup.
+  /// and parentheses group expressions. Decided branches are parsed but not
+  /// evaluated. On failure, MissingFeatures references the failed requirement
+  /// in FeatureExpr (the entire disjunction if all alternatives fail);
+  /// otherwise it is cleared.
   bool checkFeatureExpression(StringRef FeatureExpr,
-                              function_ref<std::optional<bool>(StringRef)>
-                                  ResolveCustomTerm = {}) const;
+                              StringRef &MissingFeatures) const;
 
   /// Get the machine model of a CPU.
   const MCSchedModel &getSchedModelForCPU(StringRef CPU) const;

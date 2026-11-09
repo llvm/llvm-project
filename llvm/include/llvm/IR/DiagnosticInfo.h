@@ -1138,9 +1138,11 @@ private:
   std::optional<StringRef> RequiredFeatures;
 
 public:
-  DiagnosticInfoUnsupportedTargetIntrinsic(
-      const Function &Fn, unsigned IntrinsicID, FunctionType *IntrinsicType,
-      const DiagnosticLocation &Loc = DiagnosticLocation());
+  DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
+                                           unsigned IntrinsicID,
+                                           FunctionType *IntrinsicType,
+                                           const DiagnosticLocation &Loc,
+                                           StringRef MissingFeatures);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_UnsupportedTargetIntrinsic;
