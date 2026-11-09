@@ -78,6 +78,8 @@ public:
   void test_negative_range(ExpFunc func) {
     test_range_with_step(func, T(-0x1.0p-7), /*rel_error*/ false);
     test_range_with_step(func, -eps, /*rel_error*/ false);
+    test_range_with_step(func, -eps, /*rel_error*/ false,
+                         T(FXRep::INTEGRAL_LEN == 8 ? -0x1.6p2 : -0x1.62p3));
   }
 };
 
