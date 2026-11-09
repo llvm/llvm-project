@@ -1,0 +1,26 @@
+REQUIRES: arm-registered-target
+
+llvm-lib infers the ARMNT machine type from thumb bitcode.
+
+RUN: rm -rf %t && split-file %s %t
+RUN: llvm-as %t/thumb.ll -o %t/thumb.bc
+RUN: llvm-mc -triple=thumbv7-pc-windows-msvc -filetype=obj -o %t/thumb.obj %S/Inputs/a.s
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/x86_64.obj %S/Inputs/a.s
+
+RUN: llvm-lib /out:%t/mixed.lib %t/thumb.obj %t/thumb.bc
+RUN: llvm-nm --print-armap %t/mixed.lib | FileCheck %s --check-prefix=MIXED
+RUN: not llvm-lib %t/x86_64.obj %t/thumb.bc 2>&1 | FileCheck %s
+
+MIXED:      Archive map
+MIXED-NEXT: a in {{.*}}thumb.obj
+MIXED-NEXT: f in {{.*}}thumb.bc
+
+CHECK: thumb.bc: file machine type arm conflicts with library machine type x64 (inferred from earlier file '{{.*}}x86_64.obj')
+
+#--- thumb.ll
+target datalayout = "e-m:w-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+target triple = "thumbv7-pc-windows-msvc"
+
+define dso_local arm_aapcs_vfpcc void @f() {
+  ret void
+}
