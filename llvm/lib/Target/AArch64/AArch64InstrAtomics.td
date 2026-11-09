@@ -54,14 +54,14 @@ class atomic_fp_patfrag<ValueType VTy, dag Ops, dag Frag> :
   let MemoryVT = VTy;
 }
 
-class atomic_load_nonext_fp<ValueType VTy> :
-  atomic_fp_patfrag<VTy, (ops node:$ptr),
-                    (atomic_load_nonext node:$ptr)>;
-
-def atomic_load_nonext_f16 : atomic_load_nonext_fp<f16>;
-def atomic_load_nonext_bf16 : atomic_load_nonext_fp<bf16>;
-def atomic_load_nonext_f32 : atomic_load_nonext_fp<f32>;
-def atomic_load_nonext_f64 : atomic_load_nonext_fp<f64>;
+def atomic_load_nonext_f16 :
+  atomic_fp_patfrag<f16, (ops node:$ptr), (atomic_load_nonext node:$ptr)>;
+def atomic_load_nonext_bf16 :
+  atomic_fp_patfrag<bf16, (ops node:$ptr), (atomic_load_nonext node:$ptr)>;
+def atomic_load_nonext_f32 :
+  atomic_fp_patfrag<f32, (ops node:$ptr), (atomic_load_nonext node:$ptr)>;
+def atomic_load_nonext_f64 :
+  atomic_fp_patfrag<f64, (ops node:$ptr), (atomic_load_nonext node:$ptr)>;
 
 let Predicates = [HasRCPC] in {
   // v8.3 Release Consistent Processor Consistent support, optional in v8.2.
