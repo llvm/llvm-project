@@ -10,8 +10,6 @@ target datalayout = "e-p:16:16-i64:64-n16:32-S16"
 ;     p[i] = -1;
 ; }
 ;
-; TODO: should be range(i16 0, 17) once SCEV uses loop guards.
-
 define void @i64_iv_bounded(ptr %p, i64 %start) {
 ; CHECK-LABEL: define void @i64_iv_bounded(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[START:%.*]]) {
@@ -23,7 +21,7 @@ define void @i64_iv_bounded(ptr %p, i64 %start) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i16 [[TMP0]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i16 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 16, [[TMP1]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i16(ptr align 4 [[SCEVGEP]], i8 -1, i16 range(i16 0, 21) [[TMP2]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i16(ptr align 4 [[SCEVGEP]], i8 -1, i16 range(i16 0, 17) [[TMP2]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]

@@ -12,7 +12,7 @@ define void @sgt_exit(i64 %start) {
 ; CHECK-LABEL: 'sgt_exit'
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_exit
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %start) + (9999 smax %start))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -9223372036854765809
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9967
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %start) + (9999 smax %start))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
