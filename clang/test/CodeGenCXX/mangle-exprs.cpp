@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-error=return-type -std=c++11 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=return-type -Wno-dangling-initializer-list -std=c++11 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -210,6 +210,24 @@ namespace test4 {
   // CHECK: void @_ZN5test43tf3INS_1XEEEvDTnw_T_ilLi1EEE
   template void tf3<X>(X*);
 
+}
+
+namespace new_std_initializer_list {
+  template <int N>
+  void empty(decltype((N, new std::initializer_list<int>{}))) {}
+
+  template <int N>
+  void one(decltype((N, new std::initializer_list<int>{1}))) {}
+
+  template <int N>
+  void two(decltype((N, new std::initializer_list<int>{1, 2}))) {}
+
+  // CHECK-LABEL: define {{.*}} @_ZN24new_std_initializer_list5emptyILi0EEEvDTcmT_nw_St16initializer_listIiEilEE
+  template void empty<0>(std::initializer_list<int> *);
+  // CHECK-LABEL: define {{.*}} @_ZN24new_std_initializer_list3oneILi0EEEvDTcmT_nw_St16initializer_listIiEilLi1EEE
+  template void one<0>(std::initializer_list<int> *);
+  // CHECK-LABEL: define {{.*}} @_ZN24new_std_initializer_list3twoILi0EEEvDTcmT_nw_St16initializer_listIiEilLi1ELi2EEE
+  template void two<0>(std::initializer_list<int> *);
 }
 
 namespace test5 {

@@ -351,7 +351,10 @@ attributes #7 = { builtin }
 ; REMARKS: call in clone _ZN1A1xEv assigned to call function clone _Z3foov
 ; REMARKS: call in clone _ZN1B1xEv assigned to call function clone _Z3foov
 ; REMARKS: call in clone main assigned to call function clone _Z3foov
-; REMARKS: call in clone _Z3foov marked with memprof allocation attribute notcold
+;; The original foo is still reached through the indirect calls in bar, which
+;; carry both cold and not cold contexts that cannot be cloned apart, so its
+;; allocation keeps the ambiguous attribute.
+; REMARKS: call in clone _Z3foov marked with memprof allocation attribute ambiguous
 
 
 ; IR: define {{.*}} @main(
@@ -368,15 +371,15 @@ attributes #7 = { builtin }
 ; IR: define internal {{.*}} @_ZN1B1xEv(
 ; IR:   call {{.*}} @_Z3foov()
 ; IR: define internal {{.*}} @_Z3foov()
-; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[AMBIGUOUS:[0-9]+]]
 ; IR: define internal {{.*}} @_Z3foov.memprof.1()
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
-; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
+; IR: attributes #[[AMBIGUOUS]] = { builtin "memprof"="ambiguous" }
 ; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
 
 
+; STATS: 1 memprof-context-disambiguation - Number of ambiguous static allocations (possibly cloned)
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
-; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
 ; STATS: 1 memprof-context-disambiguation - Number of function clones created during whole program analysis
 
 

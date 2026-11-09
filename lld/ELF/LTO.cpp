@@ -58,7 +58,7 @@ static lto::Config createConfig(Ctx &ctx) {
   c.LibraryOptions = &ctx.arg.libraryOptions;
 
   // LLD supports the new relocations and address-significance tables.
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options = getTargetOptions(ctx.arg.libraryOptions);
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.arg.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());

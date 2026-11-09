@@ -216,6 +216,18 @@ public:
   getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
                 RTLIB::LibcallImpl LibcallImpl) const;
 
+  /// \returns the value type of \p LibcallImpl if it is a global variable
+  /// rather than a function, or nullptr otherwise.
+  LLVM_ABI Type *getVariableType(LLVMContext &Ctx, const Triple &TT,
+                                 const DataLayout &DL,
+                                 RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns true if \p LibcallImpl is a thread local variable.
+  static bool isThreadLocalVariable(RTLIB::LibcallImpl LibcallImpl) {
+    return SignatureTable[SignatureOffset[LibcallImpl]] ==
+           RTLIB::ThreadLocalVariable;
+  }
+
   /// Return the unmasked variant of the masked vector libcall \p LC, or
   /// RTLIB::UNKNOWN_LIBCALL if \p LC is not a masked vector libcall.
   LLVM_ABI static RTLIB::Libcall getUnmaskedVectorLibcall(RTLIB::Libcall LC);
