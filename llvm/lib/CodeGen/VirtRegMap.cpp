@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
@@ -653,12 +654,17 @@ LaneBitmask VirtRegRewriter::liveOutUndefPhiLanesForUndefSubregDef(
 
 void VirtRegRewriter::rewrite() {
   bool NoSubRegLiveness = !MRI->subRegLivenessEnabled();
+  // Whether a super-register kill belongs to a partial redef that reads the
+  // bits it preserves.  Such a read needs an implicit-use operand of its own,
+  // or rewriting can take it away together with the operand carrying it.
+  enum class PreservedRead { None, Reads };
+  struct SuperKill {
+    Register Reg;
+    PreservedRead Read;
+  };
   SmallVector<Register, 8> SuperDeads;
   SmallVector<Register, 8> SuperDefs;
-  SmallVector<Register, 8> SuperKills;
-  // Super-registers whose untouched bits are read by a partial redef and must
-  // therefore stay live: recorded as their own implicit-use operand.
-  SmallVector<Register, 8> SuperPreservedUses;
+  SmallVector<SuperKill, 8> SuperKills;
 
   for (MachineFunction::iterator MBBI = MF->begin(), MBBE = MF->end();
        MBBI != MBBE; ++MBBI) {
@@ -689,29 +695,21 @@ void VirtRegRewriter::rewrite() {
             // have to add implicit killed operands for the super-register.  A
             // partial redef always kills and redefines the super-register.
             if ((MO.readsReg() && (MO.isDef() || MO.isKill())) ||
-                (MO.isDef() && subRegLiveThrough(MI, PhysReg)))
-              SuperKills.push_back(PhysReg);
-
-            // A partial def that preserves the bits it does not write also
-            // reads them.  When another operand of this instruction already
-            // carries that read, rewriting that operand (e.g. copy propagation
-            // forwarding a COPY source into it) can take the only thing keeping
-            // the value alive with it.  Give the read its own operand so it
-            // survives on its own.
-            if (MO.isDef() && MO.readsReg()) {
-              bool HasCarrier = false;
-              for (const MachineOperand &Op : MI.operands()) {
-                // Operands are rewritten in place, so a use may still name the
-                // virtual register at this point.
-                if (!Op.isReg() || !Op.isUse() || Op.isUndef() || Op.isDebug())
-                  continue;
-                if (Op.getReg() == PhysReg || Op.getReg() == VirtReg) {
-                  HasCarrier = true;
-                  break;
-                }
-              }
-              if (HasCarrier)
-                SuperPreservedUses.push_back(PhysReg);
+                (MO.isDef() && subRegLiveThrough(MI, PhysReg))) {
+              PreservedRead Read = PreservedRead::None;
+              // A partial def that preserves the bits it does not write also
+              // reads them, but that read currently rides on whichever other
+              // operand names the super-register.  Operands are rewritten in
+              // place, so such a use may still name the virtual register here;
+              // match either.
+              if (MO.isDef() && MO.readsReg() &&
+                  llvm::any_of(MI.operands(), [&](const MachineOperand &Op) {
+                    return Op.isReg() && Op.isUse() && !Op.isUndef() &&
+                           !Op.isDebug() &&
+                           (Op.getReg() == PhysReg || Op.getReg() == VirtReg);
+                  }))
+                Read = PreservedRead::Reads;
+              SuperKills.push_back({PhysReg, Read});
             }
 
             if (MO.isDef()) {
@@ -781,30 +779,24 @@ void VirtRegRewriter::rewrite() {
 
       // Add any missing super-register kills after rewriting the whole
       // instruction.
-      while (!SuperKills.empty())
-        MI.addRegisterKilled(SuperKills.pop_back_val(), TRI, true);
+      while (!SuperKills.empty()) {
+        auto [R, Read] = SuperKills.pop_back_val();
+        MI.addRegisterKilled(R, TRI, true);
+        // The kill above landed on whichever operand carried the read.  Give
+        // the preserved bits an operand that copy propagation cannot remove.
+        // Implicit-only on purpose: the explicit carrier is rewritten to R by
+        // now, and skipping on it would reintroduce the bug this guards.
+        if (Read == PreservedRead::Reads &&
+            !MI.hasRegisterImplicitUseOperand(R))
+          MI.addOperand(MachineOperand::CreateReg(R, /*isDef=*/false,
+                                                  /*isImp=*/true));
+      }
 
       while (!SuperDeads.empty())
         MI.addRegisterDead(SuperDeads.pop_back_val(), TRI, true);
 
       while (!SuperDefs.empty())
         MI.addRegisterDefined(SuperDefs.pop_back_val(), TRI);
-
-      while (!SuperPreservedUses.empty()) {
-        Register R = SuperPreservedUses.pop_back_val();
-        bool Already = false;
-        for (const MachineOperand &Op : MI.operands()) {
-          if (!Op.isReg() || !Op.isUse() || !Op.isImplicit())
-            continue;
-          if (Op.getReg() == R) {
-            Already = true;
-            break;
-          }
-        }
-        if (!Already)
-          MI.addOperand(MachineOperand::CreateReg(R, /*isDef=*/false,
-                                                  /*isImp=*/true));
-      }
 
       LLVM_DEBUG(dbgs() << "> " << MI);
 
