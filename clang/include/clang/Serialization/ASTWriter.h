@@ -581,8 +581,8 @@ private:
   /// input files.
   SourceLocation getAdjustedLocation(SourceLocation Loc) const;
   /// Like \c getAdjustedLocation, but never redirects into a loaded module
-  /// file. For the values a reader resolves against this module file instead
-  /// of in the global source space.
+  /// file. This is for the values that a reader resolves against this module
+  /// file rather than in the global source space.
   SourceLocation getAdjustedLocalLocation(SourceLocation Loc) const;
   /// Returns an adjusted \c SourceRange, accounting for any non-affecting input
   /// files.

@@ -10,7 +10,7 @@
 // mod1 is built first and keeps its own entries. mod2 and mod3 are built with
 // mod1's entries loaded, so they keep none and point at mod1's copy. Reuse
 // does not chain: mod3 points at mod1 as well, not at mod2, which kept nothing
-// to offer. The module map is therefore entered twice however long the chain
+// to offer. So the module map is entered twice no matter how long the chain
 // gets, instead of once more for each module in it.
 // RUN: %clang_cc1 -xc++ -fmodules -fno-implicit-modules -I%t/reuse \
 // RUN:   -fmodule-map-file=%t/reuse/module.modulemap \
@@ -46,9 +46,9 @@
 // RUN:   -fsyntax-only -verify %t/inferred/check.cc
 
 // A module map read through 'extern module' has an entry whose include
-// location points into the module map that read it. Leaving out the latter
-// would leave the former pointing into a different module file, so it keeps
-// its own entries too.
+// location points into the module map that read it. Leaving out that parent
+// would leave the child pointing into a different module file, so the parent
+// keeps its own entries too.
 // RUN: %clang_cc1 -xc++ -fmodules -fno-implicit-modules -I%t/extern \
 // RUN:   -fmodule-map-file=%t/extern/module.modulemap \
 // RUN:   -fmodule-name=mod1 -emit-module %t/extern/module.modulemap -o %t/ext1.pcm
@@ -73,6 +73,22 @@
 // RUN:   -fmodule-map-file=%t/same/a/module.modulemap \
 // RUN:   -fmodule-map-file=%t/same/b/module.modulemap -fmodule-file=%t/same2.pcm \
 // RUN:   -fsyntax-only -verify %t/same/b/check.cc
+
+// The same module map can be found as a user file by one compilation and as a
+// system file by another, and its characteristic is observable, so a copy that
+// was read the other way round is not reused. mod1 is built with the module
+// map found via -I, then mod2 with it found via -isystem.
+// RUN: %clang_cc1 -xc++ -std=c++17 -fmodules -fimplicit-module-maps \
+// RUN:   -fmodules-cache-path=%t/syscache -I%t/system/inc \
+// RUN:   -fsyntax-only %t/system/t1.cpp
+// RUN: %clang_cc1 -xc++ -std=c++17 -fmodules -fimplicit-module-maps \
+// RUN:   -fmodules-cache-path=%t/syscache -isystem %t/system/inc \
+// RUN:   -fsyntax-only %t/system/t2.cpp
+// RUN: llvm-bcanalyzer -dump %t/syscache/*/mod2-*.pcm \
+// RUN:   | FileCheck %s --check-prefix=SYSKEPT
+// mod1 kept the module map as a user file (op2=3), so mod2, which sees it as
+// a system file, keeps its own copy (op2=4) instead of reusing mod1's.
+// SYSKEPT: <SM_SLOC_FILE_ENTRY {{.*}}op2=4
 
 // A module whose module map was reused is still rebuilt when that module map
 // changes, since its input file record was written all the same.
@@ -179,6 +195,25 @@ int mod2_fn(void);
 // expected-note@module.modulemap:1 {{file entered 2 times}}
 // expected-note@../a/module.modulemap:1 {{file entered 2 times}}
 // expected-note@* + {{file entered}}
+
+// The translation units sit outside the include directory so that the headers
+// are found through the search path rather than next to the including file.
+//--- system/inc/module.modulemap
+module mod1 { header "mod1.h" export * }
+module mod2 { header "mod2.h" export * }
+
+//--- system/inc/mod1.h
+int mod1_fn(void);
+
+//--- system/inc/mod2.h
+#include "mod1.h"
+int mod2_fn(void);
+
+//--- system/t1.cpp
+#include "mod1.h"
+
+//--- system/t2.cpp
+#include "mod2.h"
 
 //--- stale/module.modulemap
 module mod1 { header "mod1.h" export * }

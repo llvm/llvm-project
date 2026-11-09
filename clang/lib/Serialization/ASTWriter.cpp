@@ -5643,34 +5643,13 @@ void ASTWriter::computeNonAffectingInputFiles() {
 
   auto AffectingModuleMaps = GetAffectingModuleMaps(*PP, WritingModule);
 
-  // The local files named by a FileID somewhere in this module file. A FileID
-  // is serialized as an index into this module file's own source location
-  // table, so such a file cannot be redirected to a copy in another one.
-  llvm::DenseSet<FileID> NamedFileIDs;
-  auto NameFileID = [&](FileID FID) {
-    if (FID.ID > 0)
-      NamedFileIDs.insert(FID);
-  };
-  NameFileID(SrcMgr.getMainFileID());
-  if (SrcMgr.hasLineTable())
-    for (const auto &L : SrcMgr.getLineTable())
-      NameFileID(L.first);
-  for (const auto &F : PP->getDiagnostics().DiagStatesByLoc.Files)
-    if (F.second.HasLocalTransitions)
-      NameFileID(F.first);
-  // An import location is written local to this module file too.
-  if (hasChain())
-    for (ModuleFile &M : getChain()->getModuleManager())
-      if (M.isDirectlyImported() && M.ImportLoc.isValid())
-        NameFileID(SrcMgr.getFileID(M.ImportLoc));
-
   // Module maps whose entries were left out in favor of a loaded copy.
   llvm::BitVector ReusedModuleMap(N, false);
 
   // Whether a local entry is the parent of another local one. A module map
   // read through 'extern module' has an entry whose include location points
-  // into the module map that read it, so redirecting the latter would leave
-  // the former pointing into a different module file.
+  // into the module map that read it. Redirecting that parent would leave the
+  // child pointing into a different module file.
   llvm::BitVector HasLocalChild(N, false);
   for (unsigned I = 1; I != N; ++I) {
     const SrcMgr::SLocEntry &E = SrcMgr.getLocalSLocEntry(I);
@@ -5684,9 +5663,8 @@ void ASTWriter::computeNonAffectingInputFiles() {
       HasLocalChild[ParentFID.ID] = true;
   }
 
-  // A submodule record names a module map by FileID only for an inferred
-  // module. Every other reference to one is a location, which redirecting
-  // already handles.
+  // Only an inferred module names its module map by FileID, and a FileID is an
+  // index into this module file's own table, so it cannot name a copy.
   bool AnyInferredModule = false;
   {
     std::queue<Module *> Q;
@@ -5759,12 +5737,11 @@ void ASTWriter::computeNonAffectingInputFiles() {
     if (!AffectingModuleMaps)
       continue;
 
-    // An affecting module map is pointed into by Module::DefinitionLoc, so its
+    // Module::DefinitionLoc points into an affecting module map, so its
     // locations have to resolve somewhere. A loaded module file's copy of the
-    // same module map will do, since it has the same text at the same offsets.
+    // same module map works, because it has the same text at the same offsets.
     if (AffectingModuleMaps->DefinitionFileIDs.contains(FID)) {
-      if (!hasChain() || AnyInferredModule || NamedFileIDs.contains(FID) ||
-          HasLocalChild[I])
+      if (!hasChain() || AnyInferredModule || HasLocalChild[I])
         continue;
       serialization::InputFileLoc Loaded =
           getChain()->getLoadedModuleMapLoc(*Cache->OrigEntry);
@@ -5773,18 +5750,12 @@ void ASTWriter::computeNonAffectingInputFiles() {
       const SrcMgr::SLocEntry &DonorSLoc = SrcMgr.getSLocEntry(Loaded.FID);
       if (!DonorSLoc.isFile())
         continue;
-      // Don't compare the diagnostic state. A module map location is written
-      // only as a module's definition location, and what gets reported there
-      // is either a note, which is never remapped, or an ungrouped error about
-      // a shadowed or unavailable module, which no pragma can remap either.
-      // The warnings about a module map itself are reported while parsing it,
-      // against a location that is still local.
-      //
-      // Don't compare include locations either. A module file's top-level file
-      // is read back with the location its module was imported from standing
-      // in for its own invalid one, so the copy of a module map read at the
-      // top level no longer looks top-level. Which import a consumer is shown
-      // for a location in a module map is the reader's convention either way.
+      // The other FileInfo fields do not have to match. A module map location
+      // is only written as a module's definition location, and no pragma can
+      // change the severity of what a consumer reports there, so the
+      // diagnostic state makes no difference. The include locations never
+      // agree anyway, because a module file's top-level file is read back with
+      // the location it was imported from.
       const SrcMgr::FileInfo &Donor = DonorSLoc.getFile();
       if (Donor.getFileCharacteristic() != File.getFileCharacteristic() ||
           Donor.hasLineDirectives() != File.hasLineDirectives())
@@ -6989,12 +6960,11 @@ SourceLocation ASTWriter::getRedirectedLocation(SourceLocation Loc) const {
   if (!Adjustment)
     return SourceLocation();
 
-  // Keep the kind of the location. The copy has the same text, so a macro
-  // location names the corresponding expansion there.
-  auto Redirected = static_cast<SourceLocation::UIntTy>(
-      static_cast<int64_t>(Offset) - Adjustment);
-  return Loc.isMacroID() ? SourceLocation::getMacroLoc(Redirected)
-                         : SourceLocation::getFileLoc(Redirected);
+  // A module map is not macro-expanded, so no expansion entry is ever created
+  // inside one and a redirected location is always a file location.
+  assert(!Loc.isMacroID() && "macro location in a module map");
+  return SourceLocation::getFileLoc(static_cast<SourceLocation::UIntTy>(
+      static_cast<int64_t>(Offset) - Adjustment));
 }
 
 SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {
@@ -7450,8 +7420,8 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
     return;
   assert(SM.getSLocEntry(FID).isFile());
   // Only module maps are left out of this module file, and a module map holds
-  // no declarations. Leaving out a file that did hold some would need its
-  // declaration table recorded somewhere a reader can still find it.
+  // no declarations. To leave out a file that holds declarations, we would
+  // have to record its declaration table where a reader can still find it.
   assert(IsSLocAffecting[FID.ID] && "declaration in a file left out");
 
   std::unique_ptr<DeclIDInFileInfo> &Info = FileDeclIDs[FID];
