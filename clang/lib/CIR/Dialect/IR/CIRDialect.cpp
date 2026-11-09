@@ -4145,6 +4145,9 @@ LogicalResult cir::GetRuntimeMemberOp::verify() {
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
+  if (getType().getAddrSpace() != getAddr().getType().getAddrSpace())
+    return emitError()
+           << "result address space does not match the object address space";
   return mlir::success();
 }
 

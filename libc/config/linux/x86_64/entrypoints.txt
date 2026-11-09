@@ -389,6 +389,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/shm.h entrypoints
     libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmctl
     libc.src.sys.shm.shmdt
     libc.src.sys.shm.shmget
 
