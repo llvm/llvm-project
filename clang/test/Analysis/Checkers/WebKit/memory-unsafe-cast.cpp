@@ -29,6 +29,11 @@ void test_non_pointers(Derived derived) {
   Base base_static = static_cast<Base>(derived);  // no warning
 }
 
+void test_bit_cast(Base base) {
+  Derived derived = __builtin_bit_cast(Derived, base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+}
+
 void test_refs(Base &base) {
   Derived &derived_static = static_cast<Derived&>(base);
   // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}

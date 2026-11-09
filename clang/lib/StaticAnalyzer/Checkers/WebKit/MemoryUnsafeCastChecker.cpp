@@ -105,6 +105,15 @@ using BoundNodesMap = ::clang::ast_matchers::internal::BoundNodesMap;
 // Matches the plain `id` type.
 AST_MATCHER(QualType, isObjCIdType) { return Node->isObjCIdType(); }
 
+// Matches an explicit cast producing a prvalue of record type, which constructs
+// a new object through a converting constructor or a conversion operator (or
+// is a copy) rather than reinterpreting the source object's memory.
+// __builtin_bit_cast is excluded since it does reinterpret the source's bytes.
+AST_MATCHER(ExplicitCastExpr, isRecordValueConversion) {
+  return Node.isPRValue() && Node.getType()->isRecordType() &&
+         !isa<BuiltinBitCastExpr>(Node);
+}
+
 // Like equalsBoundNode, but compares canonical declarations so that different
 // redeclarations of the same class (e.g. a forward declaration and the
 // definition) are treated as the same declaration.
@@ -202,7 +211,8 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
                     .bind(DerivedNode)));
 
   auto ExplicitCast =
-      explicitCastExpr(anyOf(MatchExprPtr, MatchExprRefTypeDef,
+      explicitCastExpr(unless(isRecordValueConversion()),
+                       anyOf(MatchExprPtr, MatchExprRefTypeDef,
                              MatchExprPtrObjC, MatchExprPtrVoidCast))
           .bind(WarnRecordDecl);
   auto Cast = stmt(ExplicitCast);
@@ -267,7 +277,8 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
                   hasSameCanonicalDeclAsBoundNode(ToCastNode))))))))))));
 
   auto ExplicitCastUnrelated =
-      explicitCastExpr(anyOf(MatchExprPtrUnrelatedTypes,
+      explicitCastExpr(unless(isRecordValueConversion()),
+                       anyOf(MatchExprPtrUnrelatedTypes,
                              MatchExprPtrObjCUnrelatedTypes,
                              MatchExprRefTypeDefUnrelated))
           .bind(WarnRecordDecl);
