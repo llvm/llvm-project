@@ -71,7 +71,9 @@ struct Properties {
   unsigned XIDContinue : 1;
   unsigned MathStart : 1;
   unsigned MathContinue : 1;
+  unsigned Char : 1;
   unsigned Printable : 1;
+  unsigned Control : 1;
   unsigned Format : 1;
   unsigned Combining : 1;
   unsigned DoubleWidth : 1;
@@ -135,6 +137,7 @@ static CharacterDatabase loadDatabase(StringRef Path) {
     while (xmlTextReaderMoveToNextAttribute(Reader.get()) == 1) {
       StringRef Name = fromXmlChar(xmlTextReaderConstLocalName(Reader.get()));
       StringRef Value = fromXmlChar(xmlTextReaderConstValue(Reader.get()));
+      P.Char = Element == "char";
       if (Name == "cp" || Name == "first-cp") {
         if (Value.getAsInteger(16, First))
           break;
@@ -158,6 +161,7 @@ static CharacterDatabase loadDatabase(StringRef Path) {
         ++Found;
       } else if (Name == "gc") {
         P.Printable = isPrintableGC(Value);
+        P.Control = Value == "Cc";
         P.Format = Value == "Cf";
         P.Combining = Value == "Mn" || Value == "Me";
         ++Found;
@@ -182,7 +186,8 @@ static CharacterDatabase loadDatabase(StringRef Path) {
 
 template <typename Predicate>
 static void emitTable(raw_ostream &OS, StringRef Name, StringRef Description,
-                      ArrayRef<Properties> Chars, Predicate Pred) {
+                      ArrayRef<Properties> Chars, Predicate Pred,
+                      bool LlvmAbi) {
   SmallVector<sys::UnicodeCharRange> Ranges;
   for (unsigned CodePoint = 0, E = Chars.size(); CodePoint != E; ++CodePoint) {
     if (!Pred(Chars[CodePoint]))
@@ -197,18 +202,25 @@ static void emitTable(raw_ostream &OS, StringRef Name, StringRef Description,
      << "Data[] = {\n";
   for (sys::UnicodeCharRange Range : Ranges)
     OS << formatv("    {{{0:X4}, {1:X4}},\n", Range.Lower, Range.Upper);
-  OS << "};\nextern const CharRanges " << Name << " = " << Name << "Data;\n";
+  OS << "};\n";
+  if (LlvmAbi)
+    OS << "LLVM_ABI ";
+  OS << "extern const CharRanges " << Name << " = " << Name << "Data;\n";
 }
 
+template <typename EmitTablesT>
 static void writeFile(StringRef Path, StringRef Namespace, StringRef Version,
-                      function_ref<void(raw_ostream &)> EmitTables) {
+                      ArrayRef<Properties> Chars, bool LlvmAbi,
+                      EmitTablesT &&EmitTables) {
   std::error_code EC;
   ToolOutputFile Out(Path, EC, sys::fs::OF_Text);
   if (EC)
     error(Path + ": " + EC.message());
 
   Out.os() << formatv(FileHeader.drop_front().data(), Version, Namespace);
-  EmitTables(Out.os());
+  EmitTables([&](StringRef Name, StringRef Description, auto &&Pred) {
+    emitTable(Out.os(), Name, Description, Chars, Pred, LlvmAbi);
+  });
   Out.os() << "\n} // namespace " << Namespace << '\n';
   Out.keep();
 }
@@ -227,31 +239,35 @@ int main(int argc, char **argv) {
   CharacterDatabase UCD = loadDatabase(UCDFile);
   ArrayRef<Properties> Chars = UCD.Chars;
 
-  writeFile(ClangOutput, "clang", UCD.Version, [&](raw_ostream &OS) {
-    emitTable(OS, "GeneratedXIDStartRanges", "XID_Start", Chars,
-              [](Properties P) { return P.XIDStart; });
-    emitTable(OS, "GeneratedXIDContinueRanges",
-              "XID_Continue, excluding XID_Start", Chars,
-              [](Properties P) { return P.XIDContinue && !P.XIDStart; });
-    emitTable(OS, "GeneratedMathematicalNotationProfileIDStartRanges",
-              "ID_Compat_Math_Start", Chars,
-              [](Properties P) { return P.MathStart; });
-    emitTable(OS, "GeneratedMathematicalNotationProfileIDContinueRanges",
-              "ID_Compat_Math_Continue, excluding ID_Compat_Math_Start", Chars,
-              [](Properties P) { return P.MathContinue && !P.MathStart; });
-  });
   writeFile(
-      LLVMOutput, "llvm::sys::unicode", UCD.Version, [&](raw_ostream &OS) {
-        emitTable(OS, "GeneratedPrintableRanges",
-                  "General_Category=L|M|N|P|S|Zs", Chars,
+      ClangOutput, "clang", UCD.Version, Chars, /*LlvmAbi=*/false,
+      [&](auto &&EmitTable) {
+        EmitTable("GeneratedXIDStartRanges", "XID_Start",
+                  [](Properties P) { return P.XIDStart; });
+        EmitTable("GeneratedXIDContinueRanges",
+                  "XID_Continue, excluding XID_Start",
+                  [](Properties P) { return P.XIDContinue && !P.XIDStart; });
+        EmitTable("GeneratedMathematicalNotationProfileIDStartRanges",
+                  "ID_Compat_Math_Start",
+                  [](Properties P) { return P.MathStart; });
+        EmitTable("GeneratedMathematicalNotationProfileIDContinueRanges",
+                  "ID_Compat_Math_Continue, excluding ID_Compat_Math_Start",
+                  [](Properties P) { return P.MathContinue && !P.MathStart; });
+      });
+  writeFile(
+      LLVMOutput, "llvm::sys::unicode", UCD.Version, Chars, /*LlvmAbi=*/true,
+      [&](auto &&EmitTable) {
+        EmitTable("GeneratedCharacterRanges", "Characters",
+                  [](Properties P) { return P.Char; });
+        EmitTable("GeneratedPrintableRanges", "General_Category=L|M|N|P|S|Zs",
                   [](Properties P) { return P.Printable; });
-        emitTable(OS, "GeneratedFormatCharacterRanges", "General_Category=Cf",
-                  Chars, [](Properties P) { return P.Format; });
-        emitTable(OS, "GeneratedCombiningCharacterRanges",
-                  "General_Category=Mn|Me", Chars,
+        EmitTable("GeneratedControlCharacterRanges", "General_Category=Cc",
+                  [](Properties P) { return P.Control; });
+        EmitTable("GeneratedFormatCharacterRanges", "General_Category=Cf",
+                  [](Properties P) { return P.Format; });
+        EmitTable("GeneratedCombiningCharacterRanges", "General_Category=Mn|Me",
                   [](Properties P) { return P.Combining; });
-        emitTable(OS, "GeneratedDoubleWidthCharacterRanges",
-                  "East_Asian_Width=F|W", Chars,
+        EmitTable("GeneratedDoubleWidthCharacterRanges", "East_Asian_Width=F|W",
                   [](Properties P) { return P.DoubleWidth; });
       });
 }

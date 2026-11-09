@@ -58,6 +58,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
 }
 
 Type *IRBuilderBase::getCurrentFunctionReturnType() const {
+  BasicBlock *BB = GetInsertBlock();
   assert(BB && BB->getParent() && "No current function!");
   return BB->getParent()->getReturnType();
 }
@@ -1429,6 +1430,17 @@ CallInst *IRBuilderBase::CreateNonnullAssumption(Value *PtrValue) {
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create a nonnull assumption on a non-pointer?");
   return CreateAssumption(OperandBundleDef("nonnull", PtrValue));
+}
+
+CallInst *IRBuilderBase::CreateRangeAssumption(Value *Val,
+                                               ConstantRange Range) {
+  assert(isa<IntegerType>(Val->getType()) &&
+         "trying to create a range assumption on a non-integer?");
+  assert(!Range.isFullSet() &&
+         "trying to create a range assumption which doesn't assume anything?");
+  return CreateAssumption(
+      OperandBundleDef("range", ArrayRef<Value *>{Val, getInt(Range.getLower()),
+                                                  getInt(Range.getUpper())}));
 }
 
 void IRBuilderFolder::anchor() {}

@@ -21,7 +21,6 @@
 #include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
@@ -294,7 +293,9 @@ static int usage() {
 }
 
 static int run(int argc, char **argv) {
-  cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+                              "Resolution-based LTO test harness");
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
@@ -343,12 +344,13 @@ static int run(int argc, char **argv) {
   std::vector<std::unique_ptr<MemoryBuffer>> MBs;
 
   Config Conf;
+  Conf.LibraryOptions = &LibraryOptions;
   if (TimeTrace) {
     Conf.TimeTraceEnabled = TimeTrace;
     Conf.TimeTraceGranularity = TimeTraceGranularity;
   }
   Conf.CPU = codegen::getMCPU();
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple());
   Conf.MAttrs = codegen::getMAttrs();
   if (auto RM = codegen::getExplicitRelocModel())
     Conf.RelocModel = *RM;

@@ -91,6 +91,11 @@ public:
     return llvm::CallingConv::PTX_Kernel;
   }
 
+  void setCUDAKernelCallingConvention(const FunctionType *&FT) const override {
+    FT = getABIInfo().getContext().adjustFunctionType(
+        FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
+  }
+
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
   static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
@@ -273,8 +278,6 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
       // And kernel functions are not subject to inlining
       F->addFnAttr(llvm::Attribute::NoInline);
       if (FD->hasAttr<CUDAGlobalAttr>()) {
-        F->setCallingConv(getDeviceKernelCallingConv());
-
         for (auto IV : llvm::enumerate(FD->parameters()))
           if (IV.value()->hasAttr<CUDAGridConstantAttr>())
             F->addParamAttr(IV.index(),

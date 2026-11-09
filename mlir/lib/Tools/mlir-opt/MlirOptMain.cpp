@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Debug/Counter.h"
@@ -36,6 +37,7 @@
 #include "mlir/Tools/Plugins/PassPlugin.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -106,6 +108,15 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
             "emit-bytecode-version",
             cl::desc("Use specified bytecode when generating output"),
             cl::location(emitBytecodeVersion), cl::init(std::nullopt));
+
+    static cl::list<std::string, std::vector<std::string>>
+        bytecodeDialectVersions(
+            "emit-bytecode-dialect-version",
+            cl::desc(
+                "Use the specified dialect version when generating bytecode "
+                "(may be repeated for different dialects)"),
+            cl::value_desc("dialect=version"),
+            cl::location(emitBytecodeDialectVersions));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> irdlFile(
         "irdl-file",
@@ -366,8 +377,8 @@ MlirOptMainConfig &MlirOptMainConfig::setPassPipelineParser(
     if (failed(passPipeline.addToPipeline(pm, errorHandler)))
       return failure();
     if (this->shouldDumpPassPipeline()) {
-
-      pm.dump();
+      llvm::errs() << "Pass Manager with " << pm.size() << " passes:\n";
+      pm.printAsTextualPipeline(llvm::errs(), /*pretty=*/true);
       llvm::errs() << "\n";
     }
     return success();
@@ -620,6 +631,30 @@ performActions(raw_ostream &os,
                  : BytecodeWriterConfig(fallbackResourceMap);
     if (auto v = config.bytecodeVersionToEmit())
       writerConfig.setDesiredBytecodeVersion(*v);
+    llvm::StringSet<> versionedDialects;
+    for (StringRef entry : config.bytecodeDialectVersionsToEmit()) {
+      auto [name, version] = entry.split('=');
+      if (name.empty() || version.empty())
+        return op.get()->emitError() << "expected 'dialect=version' for "
+                                        "--emit-bytecode-dialect-version, got '"
+                                     << entry << "'";
+      if (!versionedDialects.insert(name).second)
+        return op.get()->emitError()
+               << "duplicate bytecode version for dialect '" << name << "'";
+      Dialect *dialect = context->getOrLoadDialect(name);
+      if (!dialect)
+        return op.get()->emitError()
+               << "unknown dialect '" << name << "' for bytecode emission";
+      auto *interface =
+          dialect->getRegisteredInterface<BytecodeDialectInterface>();
+      std::unique_ptr<DialectVersion> parsedVersion =
+          interface ? interface->parseVersion(version) : nullptr;
+      if (!parsedVersion)
+        return op.get()->emitError()
+               << "dialect '" << name << "' does not support emitting bytecode "
+               << "version '" << version << "'";
+      writerConfig.setDialectVersion(name, std::move(parsedVersion));
+    }
     if (config.shouldElideResourceDataFromBytecode())
       writerConfig.setElideResourceDataFlag();
     return writeBytecodeToFile(op.get(), os, writerConfig);
@@ -628,6 +663,10 @@ performActions(raw_ostream &os,
   if (config.bytecodeVersionToEmit().has_value())
     return emitError(UnknownLoc::get(pm.getContext()))
            << "bytecode version while not emitting bytecode";
+
+  if (!config.bytecodeDialectVersionsToEmit().empty())
+    return emitError(UnknownLoc::get(pm.getContext()))
+           << "dialect bytecode version while not emitting bytecode";
 
   // Don't re-run the verifier if we already ran the verifier at the end of the
   // pass pipeline.

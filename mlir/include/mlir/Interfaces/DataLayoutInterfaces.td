@@ -22,6 +22,7 @@ include "mlir/IR/OpBase.td"
 
 def DLTIQueryInterface : AttrInterface<"DLTIQueryInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface exposing querying-mechanism for key-value associations.
@@ -43,8 +44,15 @@ def DLTIQueryInterface : AttrInterface<"DLTIQueryInterface"> {
   ];
 }
 
+def ImplementsDLTIQueryInterface : AttrConstraint<
+    CPred<"::llvm::isa<::mlir::DLTIQueryInterface>($_self)">,
+    "implementing the `DLTIQueryInterface` attr interface">;
+
+def DLTIQueryAttr : ConfinedAttr<AnyAttr, [ImplementsDLTIQueryInterface]>;
+
 def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface describing an entry in a data layout specification.
@@ -93,6 +101,7 @@ def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
 
 def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface describing a data layout specification.
@@ -252,6 +261,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
 
 def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface describing a target device description specification.
@@ -310,6 +320,7 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface", [DLTI
 
 def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface describing a target system description specification.
@@ -372,6 +383,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTI
 
 def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Interface for operations that can have a data layout specification attached.
@@ -611,6 +623,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
 
 def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Interface for types subject to data layout.
@@ -728,6 +741,7 @@ def DataLayoutDialectInterface : DialectInterface<"DataLayoutDialectInterface"> 
     validity and combining two entries.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let extraClassDeclaration = [{
     /// Default implementation of entry combination that combines identical

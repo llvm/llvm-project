@@ -6,6 +6,7 @@
 # CONFLICT: yaml2obj: error: cannot specify section '__debug_str' contents in the 'DWARF' entry and the 'content' at the same time
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

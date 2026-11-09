@@ -9,11 +9,10 @@
 #include "../lib/Transforms/Vectorize/VPlanVerifier.h"
 #include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
-#include "../lib/Transforms/Vectorize/VectorizeOptions.h"
 #include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/CommandLine.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -485,8 +484,9 @@ TEST_F(VPVerifierTest, testRUN_VPLAN_PASS) {
   VPBB1->appendRecipe(UseI);
   VPBB1->appendRecipe(DefI);
 
-  llvm::SaveAndRestore<bool> RestoreVerifyEachVPlan(
-      VectorizeOptions::Global.vplan_verify_each, true);
+  const char *Args[] = {"prog", "-vplan-verify-each"};
+  ASSERT_TRUE(
+      cl::parseCommandLineOptions(C.getLibraryOptions(), Args, "", &nulls()));
   auto NopPass = [](VPlan &Plan) {};
   EXPECT_DEATH(
       { VPlanTransforms::runPass("simplifyRecipes", NopPass, Plan); },
