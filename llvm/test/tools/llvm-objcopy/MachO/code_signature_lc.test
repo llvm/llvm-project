@@ -43,6 +43,7 @@
 # RUN: %python %p/Inputs/code-signature-check.py %t.copy 16544 304 0 16544
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

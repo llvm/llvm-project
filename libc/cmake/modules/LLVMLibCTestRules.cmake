@@ -413,6 +413,7 @@ endfunction()
 # needed to support code coverage profiling in hermetic/full-build mode.
 function(_get_libc_coverage_dependencies output_var)
   set(${output_var}
+    libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.fdopen
     libc.src.stdio.feof
@@ -459,6 +460,7 @@ endfunction()
 # entrypoints, subprocess support, and coverage dependencies.
 function(_get_libc_test_dependencies output_var user_depends startup_target_dep is_c_test is_fp_test is_integration_test)
   get_fq_deps_list(fq_deps_list ${user_depends})
+  list(APPEND fq_deps_list libc.src.errno.errno)
   if(is_integration_test)
     list(APPEND fq_deps_list
       generate-libc-headers
@@ -816,8 +818,7 @@ function(create_libc_test fq_target_name)
   )
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_BUILD_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
 
   _get_common_test_compile_options(compile_options "${TEST_C_TEST}" "${TEST_FLAGS}")
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options} ${TEST_COMPILE_OPTIONS})
@@ -910,7 +911,7 @@ function(add_libc_fuzzer target_name)
 
 
   get_fq_target_name(${target_name} fq_target_name)
-  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
+  get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS} libc.src.errno.errno)
   get_object_files_for_test(
     link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
