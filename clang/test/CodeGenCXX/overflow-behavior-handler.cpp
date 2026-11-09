@@ -83,3 +83,29 @@ int dtor_temporary(int __ob_trap n) {
 __overflow:
   return -1;
 }
+
+// A member function of a local class is its own function: it uses its own
+// handler and traps without one, even when the enclosing function has one.
+int local_class(int __ob_trap x) {
+  struct S {
+    int none(int __ob_trap a) { return a + 1; }
+    int own(int __ob_trap a) {
+      return a * 2;
+    __overflow:
+      return -1;
+    }
+  };
+  S s;
+  return s.none(x) + s.own(x);
+__overflow:
+  return -1;
+}
+
+// CHECK-LABEL: define internal {{.*}} @_ZZ11local_classU8ObtTrap_iEN1S4noneES_(
+// CHECK: @llvm.sadd.with.overflow.i32
+// CHECK-NOT: br label %__overflow
+// CHECK: call void @llvm.ubsantrap
+
+// CHECK-LABEL: define internal {{.*}} @_ZZ11local_classU8ObtTrap_iEN1S3ownES_(
+// CHECK: @llvm.smul.with.overflow.i32
+// CHECK: br label %__overflow

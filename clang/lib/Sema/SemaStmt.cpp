@@ -682,11 +682,10 @@ class OverflowHandlerDiagnoser {
   /// Handlers visible in the current function body, innermost last. The first
   /// entry is the function-level handler and may be null.
   SmallVector<LabelDecl *, 4> Handlers;
-  /// Matches the %select in warn_overflow_behavior_unreachable_handler.
-  enum NestedBodyKind { NB_Lambda, NB_Block };
   /// Innermost handler of an enclosing function, when walking a nested body.
   const LabelDecl *EnclosingHandler = nullptr;
-  NestedBodyKind NestedKind = NB_Lambda;
+  /// A diag::OverflowNestedBodyKind.
+  unsigned NestedKind = diag::OverflowNestedBodyKind::Lambda;
   /// Set while walking the operands of a diagnosed operation, so that one
   /// expression yields one warning.
   bool InDiagnosedOp = false;
@@ -702,7 +701,7 @@ public:
   }
 
 private:
-  void visitNestedBody(const Decl *D, const Stmt *Body, NestedBodyKind Kind) {
+  void visitNestedBody(const Decl *D, const Stmt *Body, unsigned Kind) {
     const LabelDecl *Outer = Handlers.back();
     SaveAndRestore SaveHandlers(Handlers, {});
     SaveAndRestore SaveEnclosing(EnclosingHandler,
@@ -736,11 +735,13 @@ private:
     if (const auto *LE = dyn_cast<LambdaExpr>(St)) {
       for (const Expr *Init : LE->capture_inits())
         visit(Init);
-      visitNestedBody(LE->getCallOperator(), LE->getBody(), NB_Lambda);
+      visitNestedBody(LE->getCallOperator(), LE->getBody(),
+                      diag::OverflowNestedBodyKind::Lambda);
       return;
     }
     if (const auto *BE = dyn_cast<BlockExpr>(St)) {
-      visitNestedBody(BE->getBlockDecl(), BE->getBody(), NB_Block);
+      visitNestedBody(BE->getBlockDecl(), BE->getBody(),
+                      diag::OverflowNestedBodyKind::Block);
       return;
     }
 
@@ -785,9 +786,10 @@ void Sema::DiagnoseOverflowHandlers(Decl *D, Stmt *Body) {
   // Templates are diagnosed per instantiation.
   if (D->isTemplated())
     return;
-  // A nested lambda or block is diagnosed with its enclosing function, whose
-  // handler labels are not all known yet.
-  if (FunctionScopes.size() > 1)
+  // A nested lambda is diagnosed with its enclosing function, whose handler
+  // labels are not all known yet. A member function of a local class is not
+  // part of the enclosing body and is diagnosed on its own.
+  if (FunctionScopes.size() > 1 && isLambdaCallOperator(D->getAsFunction()))
     return;
   // Walk the body only if something can be diagnosed: a handler that nested
   // bodies cannot reach, or any unhandled operation when that warning is on.

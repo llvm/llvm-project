@@ -7018,15 +7018,17 @@ def err_overflow_goto_invalid_operand : Error<
 def warn_overflow_goto_no_effect : Warning<
   "'__builtin_overflow_goto' has no effect because its operand performs no "
   "overflow-checked operation">,
-  InGroup<OverflowBehaviorGotoNoEffect>;
+  InGroup<DiagGroup<"overflow-behavior-goto-no-effect">>;
 def warn_overflow_behavior_no_handler : Warning<
   "overflow-checked operation has no overflow handler label '%0'; overflow "
   "will trap">,
-  InGroup<OverflowBehaviorNoHandler>, DefaultIgnore;
+  InGroup<DiagGroup<"overflow-behavior-no-handler">>, DefaultIgnore;
 def warn_overflow_behavior_unreachable_handler : Warning<
-  "overflow in this %select{lambda|block}0 traps; it cannot jump to the "
-  "enclosing function's overflow handler label '%1'">,
-  InGroup<OverflowBehaviorUnreachableHandler>;
+  "overflow in this "
+  "%enum_select<OverflowNestedBodyKind>{%Lambda{lambda}|%Block{block}}0 "
+  "traps; it cannot jump to the enclosing function's overflow handler label "
+  "'%1'">,
+  InGroup<DiagGroup<"overflow-behavior-unreachable-handler">>;
 def note_overflow_behavior_enclosing_handler : Note<
   "enclosing function's overflow handler label is here">;
 def err_switch_into_protected_scope : Error<
