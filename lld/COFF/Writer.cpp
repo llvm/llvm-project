@@ -530,6 +530,14 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
       uint64_t s = sym->getRVA();
 
+      // A target in the relocation's own chunk needs no margin: thunks are
+      // only inserted between chunks, so this distance cannot change.
+      if (auto *dr = dyn_cast<DefinedRegular>(sym))
+        if (dr->getChunk() == sc &&
+            isInRange(rel.Type, s, sc->getRVA() + rel.VirtualAddress, 0,
+                      machine))
+          continue;
+
       if (isInRange(rel.Type, s, p, margin, machine))
         continue;
 
