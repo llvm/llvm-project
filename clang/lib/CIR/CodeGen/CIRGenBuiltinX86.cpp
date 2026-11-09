@@ -127,6 +127,41 @@ static X86FCmpInfo getX86FCmpInfo(unsigned cc) {
   return info;
 }
 
+/// Returns the legacy x86 intrinsic that implements the given x86 cmppps/cmppd*
+/// builtin.
+static llvm::StringRef getX86FCmpIntrinsicName(unsigned builtinID) {
+  switch (builtinID) {
+  default:
+    llvm_unreachable("Unexpected builtin");
+  case X86::BI__builtin_ia32_cmpps:
+    return "x86.sse.cmp.ps";
+  case X86::BI__builtin_ia32_cmpps256:
+    return "x86.avx.cmp.ps.256";
+  case X86::BI__builtin_ia32_cmppd:
+    return "x86.sse2.cmp.pd";
+  case X86::BI__builtin_ia32_cmppd256:
+    return "x86.avx.cmp.pd.256";
+  case X86::BI__builtin_ia32_cmpph128_mask:
+    return "x86.avx512fp16.mask.cmp.ph.128";
+  case X86::BI__builtin_ia32_cmpph256_mask:
+    return "x86.avx512fp16.mask.cmp.ph.256";
+  case X86::BI__builtin_ia32_cmpph512_mask:
+    return "x86.avx512fp16.mask.cmp.ph.512";
+  case X86::BI__builtin_ia32_cmpps512_mask:
+    return "x86.avx512.mask.cmp.ps.512";
+  case X86::BI__builtin_ia32_cmppd512_mask:
+    return "x86.avx512.mask.cmp.pd.512";
+  case X86::BI__builtin_ia32_cmpps128_mask:
+    return "x86.avx512.mask.cmp.ps.128";
+  case X86::BI__builtin_ia32_cmpps256_mask:
+    return "x86.avx512.mask.cmp.ps.256";
+  case X86::BI__builtin_ia32_cmppd128_mask:
+    return "x86.avx512.mask.cmp.pd.128";
+  case X86::BI__builtin_ia32_cmppd256_mask:
+    return "x86.avx512.mask.cmp.pd.256";
+  }
+}
+
 static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
                                    mlir::Value mask, unsigned numElems) {
   auto maskTy = cir::VectorType::getFixed(
@@ -3002,50 +3037,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     if (builder.getIsFPConstrained() &&
         (cmpInfo.pred == cir::FCmpOpKind::_true ||
          cmpInfo.pred == cir::FCmpOpKind::_false || isMaskFCmp)) {
-      llvm::StringRef intrinsicName;
-      switch (builtinID) {
-      default:
-        llvm_unreachable("Unexpected builtin");
-      case X86::BI__builtin_ia32_cmpps:
-        intrinsicName = "x86.sse.cmp.ps";
-        break;
-      case X86::BI__builtin_ia32_cmpps256:
-        intrinsicName = "x86.avx.cmp.ps.256";
-        break;
-      case X86::BI__builtin_ia32_cmppd:
-        intrinsicName = "x86.sse2.cmp.pd";
-        break;
-      case X86::BI__builtin_ia32_cmppd256:
-        intrinsicName = "x86.avx.cmp.pd.256";
-        break;
-      case X86::BI__builtin_ia32_cmpph128_mask:
-        intrinsicName = "x86.avx512fp16.mask.cmp.ph.128";
-        break;
-      case X86::BI__builtin_ia32_cmpph256_mask:
-        intrinsicName = "x86.avx512fp16.mask.cmp.ph.256";
-        break;
-      case X86::BI__builtin_ia32_cmpph512_mask:
-        intrinsicName = "x86.avx512fp16.mask.cmp.ph.512";
-        break;
-      case X86::BI__builtin_ia32_cmpps512_mask:
-        intrinsicName = "x86.avx512.mask.cmp.ps.512";
-        break;
-      case X86::BI__builtin_ia32_cmppd512_mask:
-        intrinsicName = "x86.avx512.mask.cmp.pd.512";
-        break;
-      case X86::BI__builtin_ia32_cmpps128_mask:
-        intrinsicName = "x86.avx512.mask.cmp.ps.128";
-        break;
-      case X86::BI__builtin_ia32_cmpps256_mask:
-        intrinsicName = "x86.avx512.mask.cmp.ps.256";
-        break;
-      case X86::BI__builtin_ia32_cmppd128_mask:
-        intrinsicName = "x86.avx512.mask.cmp.pd.128";
-        break;
-      case X86::BI__builtin_ia32_cmppd256_mask:
-        intrinsicName = "x86.avx512.mask.cmp.pd.256";
-        break;
-      }
+      llvm::StringRef intrinsicName = getX86FCmpIntrinsicName(builtinID);
 
       if (isMaskFCmp) {
         ops[3] = getMaskVecValue(builder, loc, ops[3], numElts);
