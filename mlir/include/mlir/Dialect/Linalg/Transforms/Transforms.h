@@ -1376,9 +1376,17 @@ struct PackResult {
 };
 /// Implement packing of a single LinalgOp by `packedSizes`.
 /// There must be one packedSizes entry per `linalgOp` iterator.
+///
+/// The operands in `keepLayoutOperands` (operand numbers, inputs first) are not
+/// packed: their packed dimensions are split into [outer, inner] with a
+/// `tensor.expand_shape` and an init's result is collapsed back. The tiles must
+/// be static. A static packed dimension must be a multiple of its tile, a
+/// dynamic one is assumed to be (UB otherwise).
+///
 /// Return the packed Linalg op on success, failure otherwise.
 FailureOr<PackResult> pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
-                           ArrayRef<OpFoldResult> packedSizes);
+                           ArrayRef<OpFoldResult> packedSizes,
+                           ArrayRef<int64_t> keepLayoutOperands = {});
 
 /// Struct to hold the result of a `packTranspose` call.
 struct PackTransposeResult {

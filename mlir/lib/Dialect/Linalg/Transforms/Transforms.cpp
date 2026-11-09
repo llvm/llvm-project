@@ -516,15 +516,85 @@ PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
   return res;
 }
 
+/// Split the packed dimensions of `operand` into [outer, inner] with a
+/// `tensor.expand_shape`, without moving any data. Dimensions with no tile are
+/// not split. `map` is the operand's indexing map, with one trailing result per
+/// inner tile as built by `pack`: it is rewritten in place so that each inner
+/// result follows its outer one, matching the expanded shape. Fail if a tile is
+/// not a positive constant or if a static dimension is not a multiple of its
+/// tile. A dynamic dimension is assumed to be a multiple.
+static FailureOr<tensor::ExpandShapeOp>
+expandPackedDims(RewriterBase &rewriter, Location loc, Value operand,
+                 ArrayRef<int64_t> innerPos,
+                 ArrayRef<OpFoldResult> innerPackSizes, AffineMap &map) {
+  auto operandType = cast<RankedTensorType>(operand.getType());
+  int64_t rank = operandType.getRank();
+  SmallVector<int64_t> tileOfDim(rank, 0);
+  for (auto [dim, size] : llvm::zip_equal(innerPos, innerPackSizes)) {
+    std::optional<int64_t> tile = getConstantIntValue(size);
+    int64_t dimSize = operandType.getDimSize(dim);
+    if (!tile || *tile <= 0) {
+      LDBG() << "tile of dim " << dim << " is not a positive constant";
+      return failure();
+    }
+    if (ShapedType::isStatic(dimSize) && dimSize % *tile != 0) {
+      LDBG() << "dim " << dim << " of size " << dimSize
+             << " is not a multiple of tile " << *tile;
+      return failure();
+    }
+    tileOfDim[dim] = *tile;
+  }
+
+  SmallVector<OpFoldResult> sizes =
+      tensor::getMixedSizes(rewriter, loc, operand);
+  AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
+  SmallVector<OpFoldResult> outputShape;
+  SmallVector<ReassociationIndices> reassociation;
+  SmallVector<AffineExpr> exprs;
+  for (int64_t dim = 0; dim < rank; ++dim) {
+    int64_t index = outputShape.size();
+    exprs.push_back(map.getResult(dim));
+    if (tileOfDim[dim] == 0) {
+      outputShape.push_back(sizes[dim]);
+      reassociation.push_back({index});
+      continue;
+    }
+    outputShape.push_back(affine::makeComposedFoldedAffineApply(
+        rewriter, loc, d0.floorDiv(tileOfDim[dim]), {sizes[dim]}));
+    outputShape.push_back(rewriter.getIndexAttr(tileOfDim[dim]));
+    reassociation.push_back({index, index + 1});
+    exprs.push_back(
+        map.getResult(rank + llvm::find(innerPos, dim) - innerPos.begin()));
+  }
+  map = AffineMap::get(map.getNumDims(), map.getNumSymbols(), exprs,
+                       rewriter.getContext());
+
+  auto expandedType = RankedTensorType::get(
+      decomposeMixedValues(outputShape).first, operandType.getElementType(),
+      operandType.getEncoding());
+  auto expandOp = tensor::ExpandShapeOp::create(
+      rewriter, loc, expandedType, operand, reassociation, outputShape);
+  LDBG() << "expand_shape op: " << expandOp;
+  LDBG() << "map: " << map;
+  return expandOp;
+}
+
 /// Implement packing of a single LinalgOp by performing packing by
 /// `packedSizes`. There must be one packedSizes entry per `linalgOp` iterator.
 /// Return the packed Linalg op on success, failure otherwise.
 FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
                                    linalg::LinalgOp linalgOp,
-                                   ArrayRef<OpFoldResult> packedSizes) {
+                                   ArrayRef<OpFoldResult> packedSizes,
+                                   ArrayRef<int64_t> keepLayoutOperands) {
   if (packedSizes.size() != linalgOp.getNumLoops()) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "incorrect number of pack sizes");
+  }
+  if (llvm::any_of(keepLayoutOperands, [&](int64_t operandNumber) {
+        return operandNumber < 0 || operandNumber >= linalgOp->getNumOperands();
+      })) {
+    return rewriter.notifyMatchFailure(
+        linalgOp, "keepLayoutOperands has an operand number out of range");
   }
   if (!linalgOp.hasPureTensorSemantics()) {
     return rewriter.notifyMatchFailure(
@@ -571,6 +641,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
 
   // Step 2. Propagate packing to all LinalgOp operands.
   SmallVector<Value> inputsAndInits, results;
+  SmallVector<tensor::ExpandShapeOp> expandOps;
   SmallVector<OpOperand *> initOperands =
       llvm::to_vector(llvm::make_pointer_range(linalgOp.getDpsInitsMutable()));
   SmallVector<OpOperand *> inputOperands = linalgOp.getDpsInputOperands();
@@ -587,6 +658,21 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
       LDBG() << "innerPackSizes: " << llvm::interleaved(innerPackSizes);
       if (innerPackSizes.empty()) {
         inputsAndInits.push_back(operand);
+        continue;
+      }
+      if (llvm::is_contained(keepLayoutOperands, pos)) {
+        LDBG() << "keeping the layout of operand #" << pos;
+        FailureOr<tensor::ExpandShapeOp> expandOp =
+            expandPackedDims(rewriter, loc, operand, innerPos, innerPackSizes,
+                             indexingMaps[pos]);
+        if (failed(expandOp)) {
+          return rewriter.notifyMatchFailure(
+              linalgOp,
+              "operand in keepLayoutOperands needs static tiles and static "
+              "packed dimensions that are a multiple of the tile");
+        }
+        expandOps.push_back(*expandOp);
+        inputsAndInits.push_back(expandOp->getResult());
         continue;
       }
       Value dest = linalg::PackOp::createDestinationTensor(
@@ -632,6 +718,14 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
   // Step 4. Propagate packing to all the op results.
   for (OpResult result : packedLinalgOp->getResults()) {
     int64_t resultNum = result.getResultNumber();
+    auto expandOp = inits[resultNum].getDefiningOp<tensor::ExpandShapeOp>();
+    if (expandOp && llvm::is_contained(expandOps, expandOp)) {
+      LDBG() << "collapsing result #" << resultNum << " back";
+      results.push_back(tensor::CollapseShapeOp::create(
+          rewriter, packedLinalgOp->getLoc(), result,
+          expandOp.getReassociationIndices()));
+      continue;
+    }
     linalg::PackOp maybePackedInit =
         inits[resultNum].getDefiningOp<linalg::PackOp>();
     if (!maybePackedInit) {

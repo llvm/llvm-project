@@ -1057,6 +1057,15 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     This composition allows separating concerns and composes better compared
     to adding additional permutation attributes to this transform op.
 
+    #### Keep-layout operands
+
+    The operands listed in `keep_layout_operands` (operand numbers, inputs
+    first) are not packed. Their packed dimensions are split into
+    `[outer, inner]` with a `tensor.expand_shape` and an init's result is
+    collapsed back, so no data moves. The packed sizes must be static. A static
+    packed dimension must be a multiple of its size, a dynamic one is assumed to
+    be (UB otherwise), e.g., after splitting the op with `transform.structured.split`.
+
     #### Return modes
 
     This operation applies to a single Linalg op, otherwise it fails.
@@ -1068,12 +1077,14 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformHandleTypeInterface>:$packed_sizes,
-                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_packed_sizes);
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_packed_sizes,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$keep_layout_operands);
   let results = (outs TransformHandleTypeInterface:$packed_op);
   let assemblyFormat = [{
     $target
     `packed_sizes` `=` custom<DynamicIndexList>($packed_sizes,
-                                                $static_packed_sizes) attr-dict
+                                                $static_packed_sizes)
+    (`keep_layout_operands` `=` $keep_layout_operands^ )? attr-dict
     `:` functional-type(operands, results)
   }];
 
