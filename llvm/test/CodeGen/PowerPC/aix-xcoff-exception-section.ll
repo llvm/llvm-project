@@ -1,4 +1,4 @@
-; Testing 32-bit and 64-bit exception section entries, no exception auxilliary
+; Testing 32-bit and 64-bit exception section entries, no exception auxiliary
 ; entries should be produced as no debug information is specified.
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t_32.o < %s
 ; RUN: llvm-readobj --exception-section %t_32.o | FileCheck %s --check-prefix=EXCEPT
