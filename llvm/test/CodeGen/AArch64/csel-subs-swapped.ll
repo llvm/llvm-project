@@ -288,10 +288,9 @@ define i64 @both(i64 %x) {
 define i32 @qabs(i32 %0) {
 ; CHECK-LABEL: qabs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    cmp w0, w8
 ; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
-; CHECK-NEXT:    csneg w8, w8, w0, eq
+; CHECK-NEXT:    negs w9, w0
+; CHECK-NEXT:    csel w8, w8, w9, vs
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel w0, w0, w8, gt
 ; CHECK-NEXT:    ret

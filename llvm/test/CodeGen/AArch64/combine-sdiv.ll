@@ -40,9 +40,8 @@ define <4 x i32> @combine_vec_sdiv_by_negone(<4 x i32> %x) {
 define i32 @combine_sdiv_by_minsigned(i32 %x) {
 ; CHECK-SD-LABEL: combine_sdiv_by_minsigned:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-SD-NEXT:    cmp w0, w8
-; CHECK-SD-NEXT:    cset w0, eq
+; CHECK-SD-NEXT:    cmp wzr, w0
+; CHECK-SD-NEXT:    cset w0, vs
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_sdiv_by_minsigned:
