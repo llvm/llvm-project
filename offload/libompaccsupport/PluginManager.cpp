@@ -326,7 +326,9 @@ void PluginManager::destroyPrograms(const void *Key, TranslationTable &TT) {
   for (size_t DeviceId = 0; DeviceId < TT.TargetsEntries.size(); ++DeviceId) {
     if (DeviceId < ExclusiveDevicesAccessor->size())
       (*ExclusiveDevicesAccessor)[DeviceId]->destroyProgram(
-          Key, TT.TargetsEntries[DeviceId]);
+          Key, TT.TargetsEntries[DeviceId],
+          llvm::ArrayRef<llvm::offloading::EntryTy>(TT.HostTable.EntriesBegin,
+                                                    TT.HostTable.EntriesEnd));
   }
 }
 
