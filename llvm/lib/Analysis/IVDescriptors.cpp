@@ -486,9 +486,10 @@ bool RecurrenceDescriptor::AddReductionVar(
   // must include the original PHI.
   bool FoundStartPHI = false;
 
-  // To recognize AnyOf patterns formed by a icmp select sequence, we store
-  // the number of instruction we saw to make sure we only see one.
+  // To recognize AnyOf patterns formed by a select, we store
+  // the number of selects we saw to make sure we only see one.
   unsigned NumCmpSelectPatternInst = 0;
+  SelectInst *AnyOfSelect = nullptr;
   InstDesc ReduxDesc(false, nullptr);
 
   // To recognize find-lasts of conditional operations (such as loads or
@@ -673,8 +674,10 @@ bool RecurrenceDescriptor::AddReductionVar(
       }
     }
 
-    if (isAnyOfRecurrenceKind(Kind) && IsASelect)
+    if (isAnyOfRecurrenceKind(Kind) && IsASelect) {
       ++NumCmpSelectPatternInst;
+      AnyOfSelect = cast<SelectInst>(Cur);
+    }
 
     // Check  whether we found a reduction operator.
     FoundReduxOp |= (!IsAPhi || FoundFindLastLikePhi) && Cur != Start;
@@ -718,14 +721,6 @@ bool RecurrenceDescriptor::AddReductionVar(
         continue;
       }
 
-      // An any-of select can't use a phi of the chain as its condition: the
-      // vectorizer replaces the chain, so the condition would become poison.
-      // Reject it here, since the check below accepts an any-of select that
-      // uses the chain more than once.
-      if (IsAPhi && isAnyOfRecurrenceKind(Kind) &&
-          match(UI, m_Select(m_Specific(Cur), m_Value(), m_Value())))
-        return false;
-
       // Process instructions only once (termination). Each reduction cycle
       // value must only be used once, except by phi nodes and conditional
       // reductions which are represented as a cmp followed by a select.
@@ -762,8 +757,17 @@ bool RecurrenceDescriptor::AddReductionVar(
           (Kind == RecurKind::FindLast && NumNonPHIUsers == 0)) &&
          "Unexpectedly matched a 'find-last-like' phi");
 
-  if (isAnyOfRecurrenceKind(Kind) && NumCmpSelectPatternInst != 1)
-    return false;
+  if (isAnyOfRecurrenceKind(Kind)) {
+    if (NumCmpSelectPatternInst != 1)
+      return false;
+    // Reject a select whose condition is part of the chain: the vectorizer
+    // replaces the chain, so the condition would become poison. Compares are
+    // allowed, since the vectorizer rewrites a compare of the reduction phi
+    // to use the start value.
+    auto *Cond = dyn_cast<Instruction>(AnyOfSelect->getCondition());
+    if (Cond && !isa<CmpInst>(Cond) && VisitedInsts.contains(Cond))
+      return false;
+  }
 
   if (IntermediateStore) {
     // Check that stored value goes to the phi node again. This way we make sure
@@ -873,9 +877,9 @@ bool RecurrenceDescriptor::AddReductionVar(
 //     %cmp = icmp sgt i32 %5, 3
 //     %spec.select = select i1 %cmp, i32 3, i32 %r
 //     ...
-// The condition doesn't have to be a compare; an and of two compares works
-// too. It can't be the reduction phi or another phi in the chain, since the
-// vectorizer replaces those.
+// The condition can be any i1 value, including one defined outside the loop.
+// If it is part of the reduction chain, it has to be a compare (see
+// AddReductionVar).
 // In general we can support vectorization of loops where 'r' flips between
 // any two non-constants, provided they are loop invariant. The only thing
 // we actually care about at the end of the loop is whether or not any lane
@@ -893,10 +897,10 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  if (!match(I, m_Select(m_Value(), m_Value(), m_Value())))
+  SelectInst *SI = dyn_cast<SelectInst>(I);
+  if (!SI)
     return InstDesc(false, I);
 
-  SelectInst *SI = cast<SelectInst>(I);
   Value *NonPhi = nullptr;
 
   if (OrigPhi == dyn_cast<PHINode>(SI->getTrueValue()))

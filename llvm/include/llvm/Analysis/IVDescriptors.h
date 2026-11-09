@@ -60,7 +60,7 @@ enum class RecurKind {
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
   FMaximumNum, ///< FP max with llvm.maximumnum semantics
   FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
-  AnyOf,    ///< AnyOf reduction with select(cmp(),x,y) where one of (x,y) is
+  AnyOf,    ///< AnyOf reduction with select(cond,x,y) where one of (x,y) is
             ///< loop invariant, and both x and y are integer type.
   FindIV,   ///< FindIV reduction with select(icmp(),x,y) where one of (x,y) is
             ///< a loop induction variable (increasing or decreasing), and both
@@ -169,9 +169,8 @@ public:
   LLVM_ABI static bool areAllUsesIn(Instruction *I,
                                     SmallPtrSetImpl<Instruction *> &Set);
 
-  /// Returns a struct describing whether the instruction is either a
-  ///   Select(ICmp(A, B), X, Y), or
-  ///   Select(FCmp(A, B), X, Y)
+  /// Returns a struct describing whether the instruction is a
+  ///   Select(Cond, X, Y)
   /// where one of (X, Y) is a loop invariant integer and the other is a PHI
   /// value. \p Prev specifies the description of an already processed select
   /// instruction, so its corresponding cmp can be matched to it.
@@ -278,7 +277,7 @@ public:
   }
 
   /// Returns true if the recurrence kind is of the form
-  ///   select(cmp(),x,y) where one of (x,y) is loop invariant.
+  ///   select(cond,x,y) where one of (x,y) is loop invariant.
   static bool isAnyOfRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::AnyOf;
   }
