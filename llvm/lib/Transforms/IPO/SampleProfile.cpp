@@ -106,6 +106,8 @@ STATISTIC(NumMismatchedProfile,
 STATISTIC(NumMatchedProfile, "Number of functions with CFG matched profile");
 STATISTIC(NumDuplicatedInlinesite,
           "Number of inlined callsites with a partial distribution factor");
+STATISTIC(NumOrphanedRootsLoaded,
+          "Number of orphaned root profiles loaded on demand");
 
 STATISTIC(NumCSInlinedHitMinLimit,
           "Number of functions with FDO inline stopped due to min size limit");
@@ -335,11 +337,12 @@ protected:
   findFunctionSamples(const Instruction &I) const override;
   std::vector<const FunctionSamples *>
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
-  const FunctionSamples *findOrphanedRoot(const FunctionSamples &CallerFS,
-                                          const LineLocation &Loc,
-                                          const DISubprogram &SP,
-                                          StringRef Name) const;
+  const FunctionSamples *
+  findOrphanedRoot(const FunctionSamples &CallerFS, const LineLocation &Loc,
+                   const DISubprogram &SP, StringRef Name,
+                   DenseSet<StringRef> *Missing = nullptr) const;
   void hoistImportsOfSoleCallees(Module &M);
+  bool loadOrphanedRoots(Module &M);
   void findExternalInlineCandidate(CallBase *CB, const FunctionSamples *Samples,
                                    DenseSet<GlobalValue::GUID> &InlinedGUIDs,
                                    uint64_t Threshold);
@@ -638,10 +641,13 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// Return the top-level profile of local function \p SP, inlined at \p Loc of
 /// \p CallerFS, when no other code can use it. This happens when the
 /// pre-inliner kept the function's profile top-level but ThinLTO pre-link
-/// inlined the function into its only caller and deleted it.
-const FunctionSamples *SampleProfileLoader::findOrphanedRoot(
-    const FunctionSamples &CallerFS, const LineLocation &Loc,
-    const DISubprogram &SP, StringRef Name) const {
+/// inlined the function into its only caller and deleted it. If the reader has
+/// not loaded the profile, add the function's name to \p Missing.
+const FunctionSamples *
+SampleProfileLoader::findOrphanedRoot(const FunctionSamples &CallerFS,
+                                      const LineLocation &Loc,
+                                      const DISubprogram &SP, StringRef Name,
+                                      DenseSet<StringRef> *Missing) const {
   if (!PreserveDeferredInlines ||
       LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink || !SP.isLocalToUnit())
     return nullptr;
@@ -650,15 +656,21 @@ const FunctionSamples *SampleProfileLoader::findOrphanedRoot(
   if (Def && !Def->isDeclaration())
     return nullptr;
   const FunctionSamples *Root = Reader->getSamplesFor(Canonical);
-  if (!Root)
-    return nullptr;
   // Require this call site to account for all entries of the function, so
   // that inlined copies at other call sites do not reuse the same samples.
   auto Targets = CallerFS.findCallTargetMapAt(Loc);
   if (!Targets)
     return nullptr;
-  auto Target = Targets->find(Root->getFunction());
-  if (Target == Targets->end() || Target->second < Root->getHeadSamples())
+  auto Target =
+      Targets->find(Root ? Root->getFunction() : getRepInFormat(Canonical));
+  if (Target == Targets->end())
+    return nullptr;
+  if (!Root) {
+    if (Missing)
+      Missing->insert(Canonical);
+    return nullptr;
+  }
+  if (Target->second < Root->getHeadSamples())
     return nullptr;
   if (FunctionSamples::ProfileIsProbeBased) {
     const PseudoProbeDescriptor *Desc = ProbeManager->getDesc(Root->getGUID());
@@ -666,6 +678,54 @@ const FunctionSamples *SampleProfileLoader::findOrphanedRoot(
       return nullptr;
   }
   return Root;
+}
+
+/// Load the top-level profiles that findOrphanedRoot needs. An extbinary reader
+/// loads only the profiles of functions in \p M, so it misses those of local
+/// functions that pre-link inlined and deleted. A loaded profile can expose a
+/// deeper miss, so repeat until no new name is found.
+bool SampleProfileLoader::loadOrphanedRoots(Module &M) {
+  DenseSet<StringRef> Requested;
+  while (true) {
+    DenseSet<StringRef> Names;
+    auto Fallback = [&](const FunctionSamples &CallerFS,
+                        const LineLocation &Loc, const DISubprogram &SP,
+                        StringRef Name) {
+      return findOrphanedRoot(CallerFS, Loc, SP, Name, &Names);
+    };
+    for (const Function &F : M) {
+      const FunctionSamples *FS =
+          F.isDeclaration() ? nullptr : Reader->getSamplesFor(F);
+      if (!FS)
+        continue;
+      // The lookup depends only on the inlinee and the inline chain, not on
+      // the line of the instruction.
+      DenseSet<std::pair<const DILocation *, const DISubprogram *>> Visited;
+      for (const BasicBlock &BB : F)
+        for (const Instruction &I : BB) {
+          const DILocation *DIL = I.getDebugLoc();
+          if (!DIL || !DIL->getInlinedAt() ||
+              (FunctionSamples::ProfileIsProbeBased && !extractProbe(I)))
+            continue;
+          auto Key = std::make_pair(DIL->getInlinedAt(),
+                                    DIL->getScope()->getSubprogram());
+          if (Visited.insert(Key).second)
+            FS->findFunctionSamples(DIL, Reader->getRemapper(),
+                                    &FuncNameToProfNameMap, Fallback);
+        }
+    }
+    Names.remove_if([&](StringRef N) { return Requested.contains(N); });
+    if (Names.empty())
+      return true;
+    Requested.insert_range(Names);
+    if (std::error_code EC = Reader->read(Names)) {
+      M.getContext().diagnose(DiagnosticInfoSampleProfile(
+          Filename, "profile reading failed: " + EC.message()));
+      return false;
+    }
+    NumOrphanedRootsLoaded +=
+        count_if(Names, [&](StringRef N) { return Reader->getSamplesFor(N); });
+  }
 }
 
 /// Return the caller of \p F if \p F is a local function with a single direct
@@ -2057,8 +2117,6 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
                                       ProfileSummaryInfo *_PSI) {
-  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
-
   PSI = _PSI;
   if (M.getProfileSummary(/* IsCS */ false) == nullptr) {
     M.setProfileSummary(Reader->getSummary().getMD(M.getContext()),
@@ -2097,6 +2155,16 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
       }
     }
   }
+
+  // Needs SymbolMap. Must precede matching and annotation.
+  if (PreserveDeferredInlines &&
+      LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink &&
+      Reader->getFormat() == SPF_Ext_Binary && !Reader->profileIsCS() &&
+      !loadOrphanedRoots(M))
+    return false;
+
+  // Created after all profiles are loaded, so that it covers them all.
+  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
   // Stale profile matching.
   if (Opts.report_profile_staleness || Opts.persist_profile_staleness ||
