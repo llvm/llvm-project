@@ -8,6 +8,12 @@ This guide provides a step-by-step walkthrough for adding a new function to LLVM
 
 Adding a new function involves several steps, from updating the public specification to implementing and testing the code. Below is the standard checklist for contributors.
 
+```{note}
+Math functions (`math.h`) use a modular header-only evaluation layout and have
+additional precision, rounding-mode, and testing requirements. See
+{ref}`add_math_function` for the dedicated math guide.
+```
+
 ## Step-by-Step Checklist
 
 ### 1. Header Entry
