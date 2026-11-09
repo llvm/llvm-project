@@ -564,7 +564,6 @@ bool LTOCodeGenerator::optimize() {
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
   Config.SampleProfile = SampleProfileFile;
-  Config.PTO = PipelineTuningOptions(Config.LibraryOptions);
   Config.PTO.LoopVectorization = Config.OptLevel > 1;
   Config.PTO.SLPVectorization = Config.OptLevel > 1;
 

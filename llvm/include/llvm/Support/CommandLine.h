@@ -81,6 +81,10 @@ LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &Context,
                                       vfs::FileSystem *VFS = nullptr,
                                       const char *EnvVar = nullptr);
 
+// The library options that LLVMParseCommandLineOptions sets, which contexts
+// created through the C API start with.
+LLVM_ABI LibraryOptionsContext &getCAPILibraryOptions();
+
 // Function pointer type for printing version information.
 using VersionPrinterTy = std::function<void(raw_ostream &)>;
 

@@ -27,10 +27,14 @@ define void @test(ptr noalias %d, ptr noalias %dct) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <8 x i32> [[TMP14]], [[TMP16]]
+; CHECK-NEXT:    [[TMP29:%.*]] = freeze <8 x i32> [[TMP14]]
+; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <8 x i32> [[TMP16]], <8 x i32> [[TMP29]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <8 x i32> [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP11]], <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP20:%.*]] = add nsw <8 x i32> [[TMP18]], [[TMP19]]
+; CHECK-NEXT:    [[TMP31:%.*]] = freeze <8 x i32> [[TMP18]]
+; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <8 x i32> [[TMP19]], <8 x i32> [[TMP31]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP20:%.*]] = add nsw <8 x i32> [[TMP31]], [[TMP32]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = add nsw <8 x i32> [[TMP11]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc <8 x i32> [[TMP21]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <8 x i32> [[TMP17]], <8 x i32> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>

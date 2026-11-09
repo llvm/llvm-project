@@ -8121,12 +8121,12 @@ Sema::BuildExprRequirement(
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
 
     SFINAETrap Trap(*this);
-    ExprResult Constraint = SubstExpr(IDC, MLTAL);
+    ExprResult Constraint = SubstConstraintExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
       SubstitutedConstraintExpr =
           cast<ConceptSpecializationExpr>(Constraint.get());
-      if (SubstitutedConstraintExpr->getSatisfaction().ContainsErrors)
+      if (SubstitutedConstraintExpr->getSatisfaction().containsErrors())
         HasError = true;
     }
     if (HasError) {
@@ -8194,14 +8194,6 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
 
   return new (Context) concepts::NestedRequirement(Context, Constraint,
                                                    Satisfaction);
-}
-
-concepts::NestedRequirement *
-Sema::BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                       const ASTConstraintSatisfaction &Satisfaction) {
-  return new (Context) concepts::NestedRequirement(
-      InvalidConstraintEntity,
-      ASTConstraintSatisfaction::Rebuild(Context, Satisfaction));
 }
 
 RequiresExprBodyDecl *

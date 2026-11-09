@@ -15,22 +15,17 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_POW_ACCURATE_128_H
 
 #include "src/__support/CPP/bit.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
-#include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/frac128.h"
 #include "src/__support/frac64.h"
-#include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/math/common_constants.h"
 #include "src/__support/math/pow_accurate_256.h"
 #include "src/__support/math/pow_utils.h"
-#include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
@@ -38,7 +33,6 @@ namespace pow_internal {
 
 using DFloat128 = typename fputil::DyadicFloat<128>;
 using MantissaType = typename DFloat128::MantissaType;
-using LIBC_NAMESPACE::operator""_u128;
 
 // exp2_f128 shares EXP2_MID_FRAC256 from pow_accurate_256.h via
 // Frac256::to_frac128().
@@ -274,6 +268,7 @@ LIBC_INLINE DFloat128 exp2_f128(const DFloat128 &z) {
 // Accurate pow(x, y) reusing range reduction parameters from the fast pass.
 LIBC_INLINE double pow_accurate(double x, double y, bool is_neg, int x_e,
                                 unsigned idx_x, double dx) {
+  Sign out_sign = is_neg ? Sign::NEG : Sign::POS;
   DFloat128 log2_x = log2_f128(x_e, idx_x, dx);
   DFloat128 y_f128(y);
   DFloat128 z = fputil::quick_mul(y_f128, log2_x);
@@ -281,11 +276,11 @@ LIBC_INLINE double pow_accurate(double x, double y, bool is_neg, int x_e,
   // 2^1025 > max normal double.
   double z_d = static_cast<double>(z);
   if (LIBC_UNLIKELY(z_d >= 1025.0))
-    return set_overflow(is_neg);
+    return fputil::set_overflow<double>(out_sign);
 
   // 2^-1076 < min subnormal double.
   if (LIBC_UNLIKELY(z_d <= -1076.0))
-    return set_underflow(is_neg);
+    return fputil::set_underflow<double>(out_sign);
 
   // For 0 < |z| <= 2^-55, x^y is between 1 - 2^-54 and 1 + 2^-53.
   if (LIBC_UNLIKELY(!z.mantissa.is_zero() && z.exponent + 127 <= -55)) {
@@ -296,12 +291,11 @@ LIBC_INLINE double pow_accurate(double x, double y, bool is_neg, int x_e,
   }
 
   DFloat128 r = exp2_f128(z);
-  if (is_neg)
-    r.sign = Sign::NEG;
+  r.sign = out_sign;
 
   int unbiased_exp = r.exponent + 127;
   if (LIBC_UNLIKELY(unbiased_exp >= 1024))
-    return set_overflow(is_neg);
+    return fputil::set_overflow<double>(out_sign);
 
   // Check if r is close to a 54-bit rounding boundary (either an exact 53-bit
   // float or a midpoint).
@@ -364,7 +358,7 @@ LIBC_INLINE double pow_accurate(double x, double y, bool is_neg, int x_e,
 
   double res = static_cast<double>(r);
   if (LIBC_UNLIKELY(fputil::FPBits<double>(res).is_inf()))
-    return set_overflow(is_neg);
+    return fputil::set_overflow<double>(out_sign);
   return res;
 }
 

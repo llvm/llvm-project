@@ -86,35 +86,35 @@ body:             |
     %8:gpr64 = COPY killed $x0
     %9:gpr64 = IMPLICIT_DEF
     %10:gpr64 = IMPLICIT_DEF
-    %11:gpr64 = SUBREG_TO_REG killed undef %1, %subreg.sub_32
+    %11:gpr64 = SUBREG_TO_REG undef %1, %subreg.sub_32
     ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp
     BL @_ZL9testScanfPKcjz, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp
     ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    STRXui %9, killed %0, 0 :: (store (s64) into stack)
+    STRXui %9, %0, 0 :: (store (s64) into stack)
     ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
-    STRWui undef %1, killed %2, 0 :: (store (s32))
+    STRWui undef %1, %2, 0 :: (store (s32))
     ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    STRXui killed %10, killed undef %0, 0 :: (store (s64) into stack)
-    $x0 = COPY killed %8
-    ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
-    ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    $x0 = COPY killed %7
+    STRXui %10, undef %0, 0 :: (store (s64) into stack)
+    $x0 = COPY %8
     ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    $x0 = COPY killed %6
+    $x0 = COPY %7
     ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    $x0 = COPY killed %5
+    $x0 = COPY %6
     ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    $x0 = COPY killed %4
+    $x0 = COPY %5
     ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
-    $x0 = COPY killed %3
+    $x0 = COPY %4
+    ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
+    ADJCALLSTACKDOWN 8, 0, implicit-def dead $sp, implicit $sp
+    $x0 = COPY %3
     ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ADJCALLSTACKDOWN 24, 0, implicit-def dead $sp, implicit $sp
-    STRXui killed %11, undef %0, 1 :: (store (s64) into stack + 8)
+    STRXui %11, undef %0, 1 :: (store (s64) into stack + 8)
     ADJCALLSTACKUP 24, 0, implicit-def dead $sp, implicit $sp
     RET_ReallyLR
 

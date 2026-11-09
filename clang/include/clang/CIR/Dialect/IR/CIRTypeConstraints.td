@@ -397,6 +397,13 @@ def CIR_AnyFloatOrVecOfFloatType
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
 
+def CIR_AnyIntOrFloatOrVecOfFloatType
+    : AnyTypeOf<[CIR_AnyIntOrFloatType, CIR_VectorOfFloatType],
+        "integer, floating point or vector of floating point type">;
+
+def CIR_PtrToIntOrFloatOrVecOfFloatType
+    : CIR_PtrToType<CIR_AnyIntOrFloatOrVecOfFloatType>;
+
 // Types valid for bitwise ops (and/or/xor):
 // integer, boolean, or vector of bool or integer (no floating-point).
 def CIR_AnyBitwiseType

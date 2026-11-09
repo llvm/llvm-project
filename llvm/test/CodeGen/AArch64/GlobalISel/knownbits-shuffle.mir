@@ -3,6 +3,7 @@
 
 ---
 name:            lane0
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @lane0
@@ -15,6 +16,7 @@ body:             |
 ...
 ---
 name:            zext_known
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @zext_known
@@ -29,6 +31,7 @@ body:             |
 ...
 ---
 name:            zext_unknown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @zext_unknown
@@ -43,6 +46,7 @@ body:             |
 ...
 ---
 name:            sext_known
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @sext_known
@@ -57,6 +61,7 @@ body:             |
 ...
 ---
 name:            sext_unknown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @sext_unknown

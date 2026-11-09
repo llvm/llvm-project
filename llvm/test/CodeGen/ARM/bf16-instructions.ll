@@ -560,15 +560,53 @@ define bfloat @test_bitcast_f16tobfloat(half %a) #0 {
 ;  ret bfloat %r
 ;}
 
-;define bfloat @test_fabs(bfloat %a) #0 {
-;  %r = call bfloat @llvm.fabs.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_fabs(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_fabs:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    bfc r0, #15, #17
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-BF16-LABEL: test_fabs:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .pad #4
+; CHECK-BF16-NEXT:    sub sp, sp, #4
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    bfc r0, #15, #17
+; CHECK-BF16-NEXT:    strh r0, [sp, #2]
+; CHECK-BF16-NEXT:    ldrh r0, [sp, #2]
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    add sp, sp, #4
+; CHECK-BF16-NEXT:    bx lr
+  %r = call bfloat @llvm.fabs.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_fneg(bfloat %a) #0 {
-;  %r = fneg bfloat %a
-;  ret bfloat %r
-;}
+define bfloat @test_fneg(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_fneg:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    movw r1, #32768
+; CHECK-CVT-NEXT:    movt r1, #65535
+; CHECK-CVT-NEXT:    eor r0, r0, r1
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-BF16-LABEL: test_fneg:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .pad #4
+; CHECK-BF16-NEXT:    sub sp, sp, #4
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    eor r0, r0, #32768
+; CHECK-BF16-NEXT:    strh r0, [sp, #2]
+; CHECK-BF16-NEXT:    ldrh r0, [sp, #2]
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    add sp, sp, #4
+; CHECK-BF16-NEXT:    bx lr
+  %r = fneg bfloat %a
+  ret bfloat %r
+}
 
 ;define bfloat @test_minnum(bfloat %a, bfloat %b) #0 {
 ;  %r = call bfloat @llvm.minnum.bf16(bfloat %a, bfloat %b)

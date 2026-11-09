@@ -3,6 +3,7 @@
 
 ---
 name: no_knownbits
+tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -16,6 +17,7 @@ body: |
 ...
 ---
 name: zext_concat
+tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -34,6 +36,7 @@ body: |
 ---
 
 name: sext_concat
+tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -52,6 +55,7 @@ body: |
 ---
 
 name: mixed_ext
+tracksRegLiveness: false
 body: |
   bb.0:
 

@@ -10,6 +10,7 @@
 # CHECK:         CCMPXr %5, %4, 0, 10, implicit-def $nzcv, implicit $nzcv
 #
 name: aarch64-ccmp-successor-probs
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -29,7 +30,7 @@ body : |
     %3 = SUBSXri $x1, 1, 0, implicit-def dead $nzcv
     %4 = COPY %0
     %5 = COPY %3
-    %6 = SUBSXrr $x1, killed %2, implicit-def $nzcv
+    %6 = SUBSXrr $x1, %2, implicit-def $nzcv
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
 

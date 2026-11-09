@@ -452,7 +452,10 @@ GISelCSEAnalysis::Result
 GISelCSEAnalysis::run(MachineFunction &MF,
                       MachineFunctionAnalysisManager &MFAM) {
   std::unique_ptr<GISelCSEInfo> Info = std::make_unique<GISelCSEInfo>();
-  Info->setCSEConfig(getStandardCSEConfigForOpt(TM->getOptLevel()));
+  if (CSEConfigBase *Config = TM->createCSEConfig())
+    Info->setCSEConfig(std::unique_ptr<CSEConfigBase>(Config));
+  else
+    Info->setCSEConfig(getStandardCSEConfigForOpt(TM->getOptLevel()));
   Info->analyze(MF);
   return Info;
 }

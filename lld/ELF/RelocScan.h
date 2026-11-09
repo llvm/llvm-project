@@ -56,9 +56,6 @@ public:
 
   RelocScan(Ctx &ctx, InputSectionBase *sec, unsigned shard)
       : ctx(ctx), sec(sec), shard(shard) {}
-  template <class ELFT, class RelTy>
-  void scan(typename Relocs<RelTy>::const_iterator &i, RelType type,
-            int64_t addend);
   void scanEhSection(EhInputSection &s);
 
   template <class ELFT, class RelTy>
@@ -183,27 +180,8 @@ int64_t RelocScan::getAddend(const RelTy &r, RelType type) {
                                 sec->content().data() + r.r_offset, type);
 }
 
-template <class ELFT, class RelTy>
-void RelocScan::scan(typename Relocs<RelTy>::const_iterator &it, RelType type,
-                     int64_t addend) {
-  const RelTy &rel = *it;
-  uint32_t symIdx = rel.getSymbol(false);
-  Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIdx);
-  uint64_t offset = rel.r_offset;
-  RelExpr expr =
-      ctx.target->getRelExpr(type, sym, sec->content().data() + offset);
-
-  // Error if the target symbol is undefined. Symbol index 0 may be used by
-  // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
-  if (sym.isUndefined() && symIdx != 0 &&
-      maybeReportUndefined(cast<Undefined>(sym), offset))
-    return;
-
-  process(expr, type, offset, sym, addend);
-}
-
 // Dispatch to target-specific scanSectionImpl based on relocation format.
-template <class Target, class ELFT>
+template <class ELFT, class Target>
 void scanSection1(Target &target, InputSectionBase &sec, unsigned shard) {
   const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
   if (rels.areRelocsCrel())

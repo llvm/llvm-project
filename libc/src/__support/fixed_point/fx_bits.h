@@ -404,6 +404,55 @@ divifx(IntType n, FXType d) {
   return static_cast<IntType>(result);
 }
 
+// Multiply an integer operand by a fixed-point operand and return the
+// mathematically exact result as an IntType rounded towards 0. Assumes
+// signedness of IntType matches the signedness of FXType.
+template <typename IntType, typename FXType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<FXType>, IntType>
+mulifx(IntType n, FXType m) {
+  using FXBits = FXBits<FXType>;
+  using FXRep = FXRep<FXType>;
+  using CompType = typename FXRep::CompType;
+
+  static_assert(cpp::is_signed_v<IntType> == (FXRep::SIGN_LEN > 0),
+                "IntType and FXType must have matching signedness");
+
+  constexpr int F = FXRep::FRACTION_LEN;
+
+  using LargerType = cpp::make_unsigned_t<cpp::conditional_t<
+      (sizeof(IntType) >= sizeof(CompType)), IntType, CompType>>;
+  using CalcType =
+      cpp::conditional_t<(2 * F <= cpp::numeric_limits<LargerType>::digits),
+                         LargerType, uint64_t>;
+  static_assert(sizeof(CalcType) >= sizeof(LargerType) &&
+                2 * F <= cpp::numeric_limits<CalcType>::digits);
+
+  CompType m_comp = static_cast<CompType>(FXBits(m).get_bits());
+  bool is_negative = false;
+  CalcType n_mag, m_mag;
+  if constexpr (FXRep::SIGN_LEN > 0) {
+    is_negative = (n < 0) != (m_comp < 0);
+    n_mag = (n < 0) ? -static_cast<CalcType>(n) : static_cast<CalcType>(n);
+    m_mag = (m_comp < 0) ? -static_cast<CalcType>(m_comp)
+                         : static_cast<CalcType>(m_comp);
+  } else {
+    n_mag = static_cast<CalcType>(n);
+    m_mag = static_cast<CalcType>(m_comp);
+  }
+
+  constexpr CalcType LOW_MASK = mask_trailing_ones<CalcType, F>();
+  CalcType n_hi = n_mag >> F;
+  CalcType n_lo = n_mag & LOW_MASK;
+  CalcType m_hi = m_mag >> F;
+  CalcType m_lo = m_mag & LOW_MASK;
+
+  CalcType result = m_hi * n_mag + n_hi * m_lo + ((n_lo * m_lo) >> F);
+  if constexpr (FXRep::SIGN_LEN > 0)
+    result = is_negative ? -result : result;
+
+  return static_cast<IntType>(result);
+}
+
 } // namespace fixed_point
 } // namespace LIBC_NAMESPACE_DECL
 

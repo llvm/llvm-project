@@ -41,6 +41,7 @@ public:
   const X86RegisterInfo *TRI = nullptr;
   const X86MachineFunctionInfo *X86FI = nullptr;
   const X86FrameLowering *X86FL = nullptr;
+  bool CFGChanged = false;
 
   bool runOnMachineFunction(MachineFunction &MF);
 
@@ -99,6 +100,7 @@ INITIALIZE_PASS(X86ExpandPseudoLegacy, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME,
 
 void X86ExpandPseudoImpl::expandICallBranchFunnel(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
+  CFGChanged = true;
   MachineBasicBlock *JTMBB = MBB;
   MachineInstr *JTInst = &*MBBI;
   MachineFunction *MF = MBB->getParent();
@@ -943,6 +945,7 @@ bool X86ExpandPseudoImpl::expandPseudosWhichAffectControlFlow(
   for (MachineInstr &Instr : MF.front().instrs()) {
     if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
       expandVastartSaveXmmRegs(&(MF.front()), Instr);
+      CFGChanged = true;
       return true;
     }
   }
@@ -983,6 +986,9 @@ X86ExpandPseudoPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
+  // TODO: We should propagate this info directly once we are done with NewPM
+  // transition.
+  if (!Impl.CFGChanged)
+    PA.preserveSet<CFGAnalyses>();
   return PA;
 }

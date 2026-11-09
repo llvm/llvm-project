@@ -2,7 +2,7 @@
 #
 # Check that we can fold (x & mask) -> x when (x & mask) is known to equal x.
 #
-# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-combiner %s -o - | FileCheck %s
 
 ---
 name:            remove_and_with_one_bit

@@ -2822,7 +2822,6 @@ std::optional<SmallVector<OpFoldResult>> AffineForOp::getLoopUpperBounds() {
 }
 
 std::optional<APInt> AffineForOp::getStaticTripCount() {
-  MLIRContext *context = getContext();
   int64_t step = getStepAsInt();
   if (step <= 0)
     return std::nullopt;
@@ -2845,15 +2844,11 @@ std::optional<APInt> AffineForOp::getStaticTripCount() {
   // expression (divided by the step) provides the expressions for the trip
   // count map.
   AffineValueMap ubValueMap(ubMap, getUpperBoundOperands());
-
-  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
-                                         lbMap.getResult(0));
-  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
-                                   lbSplatExpr, context);
-  AffineValueMap lbSplatValueMap(lbMapSplat, getLowerBoundOperands());
+  AffineValueMap lbValueMap(lbMap, getLowerBoundOperands());
 
   AffineValueMap tripCountValueMap;
-  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbValueMap,
+                                             &tripCountValueMap);
 
   // Take the min if all trip counts are constant.
   std::optional<uint64_t> tripCount;
@@ -5090,7 +5085,6 @@ SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getPaddedBasis() {
 }
 
 namespace {
-
 // Drops delinearization indices that correspond to unit-extent basis
 struct DropUnitExtentBasis
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {

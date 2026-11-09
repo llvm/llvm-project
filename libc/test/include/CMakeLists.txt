@@ -54,6 +54,21 @@ add_libc_test(
     -Wno-gnu-statement-expression-from-macro-expansion
 )
 
+if(LIBC_TARGET_OS_IS_LINUX)
+  add_libc_test(
+    sys_time_macros_test
+    SUITE
+      libc-include-tests
+    SRCS
+      sys_time_macros_test.cpp
+    DEPENDS
+      libc.include.llvm-libc-macros.sys_time_macros
+      libc.include.llvm-libc-types.struct_timeval
+      libc.include.llvm-libc-types.suseconds_t
+      libc.include.llvm-libc-types.time_t
+  )
+endif()
+
 add_libc_test(
   stdbit_test
   SUITE

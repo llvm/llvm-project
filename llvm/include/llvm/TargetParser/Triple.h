@@ -1275,6 +1275,10 @@ public:
   /// particular module may override this default.
   LLVM_ABI LongDoubleFormat getDefaultLongDoubleFormat() const;
 
+  /// Returns the default debugger tuning for this target triple, i.e. the
+  /// tuning used when the "debugger-tuning" module flag is absent.
+  LLVM_ABI DebuggerKind getDefaultDebuggerTuning() const;
+
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
     return !(isOSBinFormatMachO() || isOSBinFormatXCOFF() ||

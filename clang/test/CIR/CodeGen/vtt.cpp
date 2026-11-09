@@ -116,7 +116,7 @@ void D::y() {}
 // CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [1 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>
 // CIR-COMMON-SAME: ]> : !cir.array<!cir.ptr<!u8i> x 7> align(8)
 
-// LLVM-COMMON:      @_ZTT1D = constant [7 x ptr] [
+// LLVM-COMMON:      @_ZTT1D = unnamed_addr constant [7 x ptr] [
 // LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw inrange(-24, 16) (i8, ptr @_ZTV1D, i64 24),
 // LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw inrange(-24, 8) (i8, ptr @_ZTC1D0_1B, i64 24),
 // LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw inrange(-24, 8) (i8, ptr @_ZTC1D0_1B, i64 56),

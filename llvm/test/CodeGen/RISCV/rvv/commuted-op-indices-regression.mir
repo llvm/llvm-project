@@ -38,7 +38,7 @@ body:             |
     %0:vr = COPY $v0
     %1:vrnov0 = COPY $v1
     %2:vrnov0 = COPY $v2
-    %0:vr = PseudoVNMSUB_VV_M1 %0, %1, killed %2, -1, 6, 1, implicit $vl, implicit $vtype
+    %0:vr = PseudoVNMSUB_VV_M1 %0, %1, %2, -1, 6, 1, implicit $vl, implicit $vtype
     %3:vr = COPY %0
     %3:vr = PseudoVSLL_VI_M1 undef %3, %3, 11, $noreg, 6, 0, implicit $vl, implicit $vtype
     $v0 = COPY %0

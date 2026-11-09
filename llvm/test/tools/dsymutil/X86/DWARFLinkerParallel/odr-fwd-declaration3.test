@@ -90,6 +90,7 @@
 # CHECK: DW_AT_type{{.*}}0x{{.*}}[[PTR_CLASS2]] "class2<int> *"
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

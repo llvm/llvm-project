@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Analysis/AnyCall.h"
@@ -57,40 +58,36 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
          CMD->getParamDecl(0)->hasAttr<clang::LifetimeBoundAttr>();
 }
 
-/// Check if a function has a lifetimebound attribute on its function type
+/// Check if a function has an attribute on its function type
 /// (which represents the implicit 'this' parameter for methods).
 /// Returns the attribute if found, nullptr otherwise.
-static const LifetimeBoundAttr *
-getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
-  // Walk through the type layers looking for a lifetimebound attribute.
-  TypeLoc TL = TSI.getTypeLoc();
+template <typename AttrType>
+static const AttrType *getAttrFromFunctionType(const FunctionDecl *FD) {
+  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+  if (!TSI)
+    return nullptr;
+  TypeLoc TL = TSI->getTypeLoc();
   while (true) {
     auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
     if (!ATL)
       break;
-    if (auto *LBAttr = ATL.getAttrAs<LifetimeBoundAttr>())
-      return LBAttr;
+    if (auto *Attr = ATL.getAttrAs<AttrType>())
+      return Attr;
     TL = ATL.getModifiedLoc();
   }
   return nullptr;
 }
 
-const LifetimeBoundAttr *
-getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
-  if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
-    if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
-      return Attr;
-  return nullptr;
-}
-
-const LifetimeBoundAttr *
-getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+template <typename AttrType>
+static const AttrType *getImplicitObjectParamAttr(const FunctionDecl *FD) {
+  // getDeclWithMergedLifetimeBoundAttrs just returns the most recent decl,
+  // so it is perfectly safe to reuse for capture_by as well.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
+  auto CheckRedecls = [](const FunctionDecl *F) -> const AttrType * {
     for (const FunctionDecl *Redecl : F->redecls())
-      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
+      if (const auto *Attr = getAttrFromFunctionType<AttrType>(Redecl))
         return Attr;
     return nullptr;
   };
@@ -102,10 +99,25 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   return nullptr;
 }
 
+const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
+  return getAttrFromFunctionType<LifetimeBoundAttr>(FD);
+}
+
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+  return getImplicitObjectParamAttr<LifetimeBoundAttr>(FD);
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
+}
+
+const LifetimeCaptureByAttr *
+getCaptureByAttrFromFunctionType(const FunctionDecl *FD) {
+  return getImplicitObjectParamAttr<LifetimeCaptureByAttr>(FD);
 }
 
 FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
@@ -528,6 +540,40 @@ bool destructsFirstArg(const FunctionDecl &FD) {
   return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
 }
 
+bool isAllocatingFunction(const FunctionDecl &FD) {
+  switch (FD.getBuiltinID()) {
+  case Builtin::BImalloc:
+  case Builtin::BI__builtin_malloc:
+  case Builtin::BIcalloc:
+  case Builtin::BI__builtin_calloc:
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return true;
+  default:
+    break;
+  }
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Returns;
+                      });
+}
+
+bool isFreeingFunction(const FunctionDecl &FD) {
+  switch (FD.getBuiltinID()) {
+  case Builtin::BIfree:
+  case Builtin::BI__builtin_free:
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return true;
+  default:
+    break;
+  }
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Takes;
+                      });
+}
+
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
   if (!RD || !isInStlNamespace(RD))
     return false;
@@ -548,6 +594,11 @@ bool isStdReferenceCast(const FunctionDecl *FD) {
   default:
     return false;
   }
+}
+
+const Expr *ignoreParensAndImpCasts(const Expr *E) {
+  return IgnoreExprNodes(E, IgnoreParensSingleStep,
+                         IgnoreImplicitCastsSingleStep);
 }
 
 } // namespace clang::lifetimes

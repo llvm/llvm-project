@@ -81,8 +81,8 @@ body:             |
     %8 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %8, %18, %subreg.sub_8bit_hi
     %10 = COPY %9
-    %11 = VMOVAPDZrrk %2, killed %10, %1
-    VMOVAPDZmr %0, 1, $noreg, 0, $noreg, killed %11
+    %11 = VMOVAPDZrrk %2, %10, %1
+    VMOVAPDZmr %0, 1, $noreg, 0, $noreg, %11
 
   bb.1:
 

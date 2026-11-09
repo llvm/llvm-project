@@ -98,11 +98,11 @@ ErrorOr<off_t> StringFile::str_seek(LIBC_NAMESPACE::File *f, off_t offset,
                                     int whence) {
   StringFile *sf = static_cast<StringFile *>(f);
   if (whence == SEEK_SET)
-    sf->pos = offset;
-  if (whence == SEEK_CUR)
+    sf->pos = static_cast<size_t>(offset);
+  else if (whence == SEEK_CUR)
     sf->pos += offset;
-  if (whence == SEEK_END)
-    sf->pos = SIZE + offset;
+  else if (whence == SEEK_END)
+    sf->pos = static_cast<size_t>(SIZE + offset);
   return sf->pos;
 }
 
@@ -503,7 +503,7 @@ TEST(LlvmLibcFileTest, WriteSplit) {
       new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
 
   static constexpr size_t AVAIL = 12;
-  f->seek(-AVAIL, SEEK_END);
+  f->seek(-static_cast<off_t>(AVAIL), SEEK_END);
 
   const char data[] = "hello";
   ASSERT_EQ(sizeof(data) - 1, f->write(data, sizeof(data) - 1).value);
@@ -815,11 +815,11 @@ class ShortWriteFile : public File {
                                    int whence) {
     ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
     if (whence == SEEK_SET)
-      sf->pos = offset;
-    if (whence == SEEK_CUR)
+      sf->pos = static_cast<size_t>(offset);
+    else if (whence == SEEK_CUR)
       sf->pos += offset;
-    if (whence == SEEK_END)
-      sf->pos = SIZE + offset;
+    else if (whence == SEEK_END)
+      sf->pos = static_cast<size_t>(SIZE + offset);
     return sf->pos;
   }
 

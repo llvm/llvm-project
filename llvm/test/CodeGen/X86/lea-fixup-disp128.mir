@@ -21,6 +21,7 @@
 
 ---
 name:            disp128
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: disp128
@@ -32,6 +33,7 @@ body:             |
 ...
 ---
 name:            disp128_32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: disp128_32
@@ -43,6 +45,7 @@ body:             |
 ...
 ---
 name:            disp129
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: disp129
@@ -54,6 +57,7 @@ body:             |
 ...
 ---
 name:            disp_minus128
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: disp_minus128

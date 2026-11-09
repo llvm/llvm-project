@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -28,7 +29,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -40,20 +40,6 @@ STATISTIC(NumNonAddrTakenFunctions,"Number of functions without address taken");
 STATISTIC(NumNoMemFunctions, "Number of functions that do not access memory");
 STATISTIC(NumReadMemFunctions, "Number of functions that only read memory");
 STATISTIC(NumIndirectGlobalVars, "Number of indirect global objects");
-
-// An option to enable unsafe alias results from the GlobalsModRef analysis.
-// When enabled, GlobalsModRef will provide no-alias results which in extremely
-// rare cases may not be conservatively correct. In particular, in the face of
-// transforms which cause asymmetry between how effective getUnderlyingObject
-// is for two pointers, it may produce incorrect results.
-//
-// These unsafe results have been returned by GMR for many years without
-// causing significant issues in the wild and so we provide a mechanism to
-// re-enable them for users of LLVM that have a particular performance
-// sensitivity and no known issues. The option also makes it easy to evaluate
-// the performance impact of these results.
-static cl::opt<bool> EnableUnsafeGlobalsModRefAliasResults(
-    "enable-unsafe-globalsmodref-alias-results", cl::init(false), cl::Hidden);
 
 /// The mod/ref information collected for a particular function.
 ///
@@ -862,9 +848,9 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     // If one is and the other isn't, it isn't strictly safe but we can fake
     // this result if necessary for performance. This does not appear to be
     // a common problem in practice.
-    if (EnableUnsafeGlobalsModRefAliasResults)
-      if ((GV1 || GV2) && GV1 != GV2)
-        return AliasResult::NoAlias;
+    if ((GV1 || GV2) && GV1 != GV2 &&
+        Opts.enable_unsafe_globalsmodref_alias_results)
+      return AliasResult::NoAlias;
 
     // Check for a special case where a non-escaping global can be used to
     // conclude no-alias.
@@ -908,9 +894,9 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
   // If one is based on an indirect global and the other isn't, it isn't
   // strictly safe but we can fake this result if necessary for performance.
   // This does not appear to be a common problem in practice.
-  if (EnableUnsafeGlobalsModRefAliasResults)
-    if ((GV1 || GV2) && GV1 != GV2)
-      return AliasResult::NoAlias;
+  if ((GV1 || GV2) && GV1 != GV2 &&
+      Opts.enable_unsafe_globalsmodref_alias_results)
+    return AliasResult::NoAlias;
 
   return AliasResult::MayAlias;
 }
@@ -969,12 +955,13 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
 }
 
 GlobalsAAResult::GlobalsAAResult(
-    const DataLayout &DL,
+    const AnalysisOptions &Opts, const DataLayout &DL,
     std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
-    : DL(DL), GetTLI(std::move(GetTLI)) {}
+    : Opts(Opts), DL(DL), GetTLI(std::move(GetTLI)) {}
 
 GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
-    : AAResultBase(std::move(Arg)), DL(Arg.DL), GetTLI(std::move(Arg.GetTLI)),
+    : AAResultBase(std::move(Arg)), Opts(Arg.Opts), DL(Arg.DL),
+      GetTLI(std::move(Arg.GetTLI)),
       NonAddressTakenGlobals(std::move(Arg.NonAddressTakenGlobals)),
       IndirectGlobals(std::move(Arg.IndirectGlobals)),
       AllocsForIndirectGlobals(std::move(Arg.AllocsForIndirectGlobals)),
@@ -992,7 +979,7 @@ GlobalsAAResult::~GlobalsAAResult() = default;
 /*static*/ GlobalsAAResult GlobalsAAResult::analyzeModule(
     Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
     CallGraph &CG) {
-  GlobalsAAResult Result(M.getDataLayout(), GetTLI);
+  GlobalsAAResult Result(getAnalysisOptions(M), M.getDataLayout(), GetTLI);
 
   // Discover which functions aren't recursive, to feed into AnalyzeGlobals.
   Result.CollectSCCMembership(CG);

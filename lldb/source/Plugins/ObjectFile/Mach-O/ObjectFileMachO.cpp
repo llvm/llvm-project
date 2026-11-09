@@ -11,10 +11,10 @@
 
 #include <algorithm>
 
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_riscv32.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"

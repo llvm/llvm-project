@@ -47,12 +47,11 @@ define void @fptosi_sat_v4f32_to_v4i16(ptr %res, ptr %a) nounwind {
 ; LA32-NEXT:    movfr2gr.s $a1, $fa3
 ; LA32-NEXT:    movcf2gr $a2, $fcc0
 ; LA32-NEXT:    masknez $a1, $a1, $a2
-; LA32-NEXT:    vreplvei.w $vr1, $vr0, 0
-; LA32-NEXT:    fmax.s $fa3, $fa1, $fa2
-; LA32-NEXT:    fmin.s $fa3, $fa3, $fa4
-; LA32-NEXT:    ftintrz.w.s $fa3, $fa3
-; LA32-NEXT:    fcmp.cun.s $fcc0, $fa1, $fa1
-; LA32-NEXT:    movfr2gr.s $a2, $fa3
+; LA32-NEXT:    fmax.s $fa1, $fa0, $fa2
+; LA32-NEXT:    fmin.s $fa1, $fa1, $fa4
+; LA32-NEXT:    ftintrz.w.s $fa1, $fa1
+; LA32-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
+; LA32-NEXT:    movfr2gr.s $a2, $fa1
 ; LA32-NEXT:    movcf2gr $a3, $fcc0
 ; LA32-NEXT:    masknez $a2, $a2, $a3
 ; LA32-NEXT:    vinsgr2vr.h $vr1, $a2, 0
@@ -95,12 +94,11 @@ define void @fptosi_sat_v4f32_to_v4i16(ptr %res, ptr %a) nounwind {
 ; LA64-NEXT:    movfr2gr.d $a1, $fa3
 ; LA64-NEXT:    movcf2gr $a2, $fcc0
 ; LA64-NEXT:    masknez $a1, $a1, $a2
-; LA64-NEXT:    vreplvei.w $vr1, $vr0, 0
-; LA64-NEXT:    fmax.s $fa3, $fa1, $fa2
-; LA64-NEXT:    fmin.s $fa3, $fa3, $fa4
-; LA64-NEXT:    ftintrz.l.s $fa3, $fa3
-; LA64-NEXT:    fcmp.cun.s $fcc0, $fa1, $fa1
-; LA64-NEXT:    movfr2gr.d $a2, $fa3
+; LA64-NEXT:    fmax.s $fa1, $fa0, $fa2
+; LA64-NEXT:    fmin.s $fa1, $fa1, $fa4
+; LA64-NEXT:    ftintrz.l.s $fa1, $fa1
+; LA64-NEXT:    fcmp.cun.s $fcc0, $fa0, $fa0
+; LA64-NEXT:    movfr2gr.d $a2, $fa1
 ; LA64-NEXT:    movcf2gr $a3, $fcc0
 ; LA64-NEXT:    masknez $a2, $a2, $a3
 ; LA64-NEXT:    vinsgr2vr.h $vr1, $a2, 0

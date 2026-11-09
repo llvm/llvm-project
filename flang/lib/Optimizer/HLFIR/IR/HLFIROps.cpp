@@ -1952,7 +1952,15 @@ void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::Value temp_box, mlir::Value var_is_present) {
   return build(builder, odsState,
                {var.getType(), builder.getI1Type(), builder.getI1Type()}, var,
-               temp_box, var_is_present);
+               temp_box, var_is_present, /*alignment=*/mlir::IntegerAttr{});
+}
+
+llvm::LogicalResult hlfir::CopyInOp::verify() {
+  if (std::optional<std::int64_t> alignment = getAlignment()) {
+    if (*alignment <= 0 || (*alignment & (*alignment - 1)) != 0)
+      return emitOpError("alignment must be a positive power of two");
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

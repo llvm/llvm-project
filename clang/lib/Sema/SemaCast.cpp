@@ -2972,6 +2972,7 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), MT->getElementType(), CK_HLSLMatrixTruncation,
           SrcExpr.get()->getValueKind(), nullptr, CCK);
+
     // Inserting a scalar cast here allows for a simplified codegen in
     // the case the destTy is a vector
     if (const VectorType *DVT = DestType->getAs<VectorType>())
@@ -2979,6 +2980,15 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
           SrcExpr.get(), DVT->getElementType(),
           Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
           SrcExpr.get()->getValueKind(), nullptr, CCK);
+
+    // Inserting a scalar cast here allows for a simplified codegen in
+    // the case the destTy is a matrix
+    if (const MatrixType *DMT = DestType->getAs<MatrixType>())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), DMT->getElementType(),
+          Self.PrepareScalarCast(SrcExpr, DMT->getElementType()),
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+
     Kind = CK_HLSLAggregateSplatCast;
     return true;
   }

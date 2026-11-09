@@ -2,6 +2,7 @@
 # RUN: llc -O0 -debugify-and-strip-all-safe -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            test_shift
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_shift
@@ -42,6 +43,7 @@ body:             |
 ...
 ---
 name: test_shl_i64_i32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_shl_i64_i32
@@ -58,6 +60,7 @@ body:             |
 ...
 ---
 name: test_ashr_i64_i32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_i64_i32
@@ -74,6 +77,7 @@ body:             |
 ...
 ---
 name: test_lshr_i64_i32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_lshr_i64_i32
@@ -91,6 +95,7 @@ body:             |
 
 ---
 name: test_shl_s128_s128
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_shl_s128_s128
@@ -123,6 +128,7 @@ body:             |
 
 ---
 name: test_lshr_s128_s128
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_lshr_s128_s128
@@ -155,6 +161,7 @@ body:             |
 
 ---
 name: test_ashr_s128_s128
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_s128_s128
@@ -189,6 +196,7 @@ body:             |
 
 ---
 name: test_ashr_v2i32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v2i32
@@ -204,6 +212,7 @@ body:             |
 ...
 ---
 name: test_ashr_v4i32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v4i32
@@ -219,6 +228,7 @@ body:             |
 ...
 ---
 name:            shl_cimm_32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -240,6 +250,7 @@ body:             |
 ...
 ---
 name:            lshr_cimm_32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -261,6 +272,7 @@ body:             |
 ...
 ---
 name:            ashr_cimm_32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -282,6 +294,7 @@ body:             |
 ...
 ---
 name: test_ashr_v16i8
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v16i8
@@ -296,6 +309,7 @@ body:             |
 ...
 ---
 name: test_ashr_v8i16
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v8i16
@@ -310,6 +324,7 @@ body:             |
 ...
 ---
 name: test_shl_v16i8
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_shl_v16i8
@@ -324,6 +339,7 @@ body:             |
 ...
 ---
 name: test_shl_v8i16
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_shl_v8i16
@@ -338,6 +354,7 @@ body:             |
 ...
 ---
 name: test_lshr_v16i8
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_lshr_v16i8
@@ -352,6 +369,7 @@ body:             |
 ...
 ---
 name: test_lshr_v8i16
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_lshr_v8i16
@@ -366,6 +384,7 @@ body:             |
 ...
 ---
 name: test_shl_v4i16
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_shl_v4i16
@@ -380,6 +399,7 @@ body:             |
 ...
 ---
 name: test_lshr_v4i16
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_lshr_v4i16
@@ -394,6 +414,7 @@ body:             |
 ...
 ---
 name: test_ashr_v4i16
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v4i16
@@ -408,6 +429,7 @@ body:             |
 ...
 ---
 name: test_ashr_v8s32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v8s32
@@ -425,6 +447,7 @@ body:             |
 ...
 ---
 name: test_shl_v8s8
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_shl_v8s8
@@ -439,6 +462,7 @@ body:             |
 ...
 ---
 name: test_ashr_v8s8
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v8s8
@@ -454,6 +478,7 @@ body:             |
 
 ---
 name: test_lshr_v8s8
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_lshr_v8s8
@@ -468,6 +493,7 @@ body:             |
 ...
 ---
 name: test_lshr_nonpow2
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_lshr_nonpow2
@@ -500,6 +526,7 @@ body:             |
 ...
 ---
 name: test_lshr_nonpow2_wide
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_lshr_nonpow2_wide
@@ -554,6 +581,7 @@ body:             |
 ...
 ---
 name: test_lshr_i48
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -578,6 +606,7 @@ body:             |
 ...
 ---
 name: test_lshr_i512
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8

@@ -15,7 +15,7 @@ body: |
   bb.0:
     ; CHECK-NOT: $rax = KILL implicit-def dead $rax
     %0:gr64 = KILL implicit-def dead $rax
-    KILL killed %0
+    KILL %0
     RET 0
 ...
 ---

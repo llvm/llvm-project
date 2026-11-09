@@ -2022,14 +2022,16 @@ private:
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, false, ConstexprSpecKind::Unspecified,
                      TrailingRequiresClause),
-        Ctor(Ctor), ExplicitSpec(ES),
+        CtorAndKind(Ctor, Kind), ExplicitSpec(ES),
         SourceDeductionGuide(GeneratedFrom, SourceKind) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
-    setDeductionCandidateKind(Kind);
   }
 
-  CXXConstructorDecl *Ctor;
+  /// The constructor from which this guide was generated, if any, and the kind
+  /// of the guide that is implicitly generated (used during overload
+  /// resolution).
+  llvm::PointerIntPair<CXXConstructorDecl *, 2, DeductionCandidate> CtorAndKind;
   ExplicitSpecifier ExplicitSpec;
   // The deduction guide, if any, that this deduction guide was generated from,
   // in the case of alias template deduction. The SourceDeductionGuideKind
@@ -2068,7 +2070,9 @@ public:
 
   /// Get the constructor from which this deduction guide was generated, if
   /// this is an implicit deduction guide.
-  CXXConstructorDecl *getCorrespondingConstructor() const { return Ctor; }
+  CXXConstructorDecl *getCorrespondingConstructor() const {
+    return CtorAndKind.getPointer();
+  }
 
   /// Get the deduction guide from which this deduction guide was generated,
   /// if it was generated as part of alias template deduction or from an
@@ -2090,12 +2094,11 @@ public:
   }
 
   void setDeductionCandidateKind(DeductionCandidate K) {
-    FunctionDeclBits.DeductionCandidateKind = static_cast<unsigned char>(K);
+    CtorAndKind.setInt(K);
   }
 
   DeductionCandidate getDeductionCandidateKind() const {
-    return static_cast<DeductionCandidate>(
-        FunctionDeclBits.DeductionCandidateKind);
+    return CtorAndKind.getInt();
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -2648,6 +2651,18 @@ class CXXConstructorDecl final
   /// The arguments used to initialize the base or member.
   LazyCXXCtorInitializersPtr CtorInitializers;
 
+  /// FIXME: as a space-optimization for constructors we could probably make
+  /// LazyCXXCtorInitializersPtr refer to an ArrayRef type (that is, size + ptr)
+  /// to store this size. However, the downside to this is that querying whether
+  /// this is a 'delegating' constructor would then become expensive.
+  ///
+  /// An additional alternative we can do to negate that is to either store
+  /// 'isDelegatingConstructor', or a 2 bit 'size' (where 0b11 means 'always
+  /// check the Lazy Ptr array ref') in CXXConstructorDeclBitfields.
+  ///
+  /// The number of base/member initializers.
+  unsigned numCtorInitializers = 0;
+
   CXXConstructorDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                      const DeclarationNameInfo &NameInfo, QualType T,
                      TypeSourceInfo *TInfo, ExplicitSpecifier ES,
@@ -2771,17 +2786,10 @@ public:
 
   /// Determine the number of arguments used to initialize the member
   /// or base.
-  unsigned getNumCtorInitializers() const {
-      return CXXConstructorDeclBits.NumCtorInitializers;
-  }
+  unsigned getNumCtorInitializers() const { return numCtorInitializers; }
 
   void setNumCtorInitializers(unsigned numCtorInitializers) {
-    CXXConstructorDeclBits.NumCtorInitializers = numCtorInitializers;
-    // This assert added because NumCtorInitializers is stored
-    // in CXXConstructorDeclBits as a bitfield and its width has
-    // been shrunk from 32 bits to fit into CXXConstructorDeclBitfields.
-    assert(CXXConstructorDeclBits.NumCtorInitializers ==
-           numCtorInitializers && "NumCtorInitializers overflow!");
+    this->numCtorInitializers = numCtorInitializers;
   }
 
   void setCtorInitializers(CXXCtorInitializer **Initializers) {

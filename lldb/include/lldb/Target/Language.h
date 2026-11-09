@@ -169,8 +169,8 @@ public:
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
 
-  /// Returns the Language that handles names mangled with \p scheme, or a
-  /// nullptr if there is none.
+  /// Returns the Language that registered \p scheme with
+  /// Mangled::RegisterManglingScheme(), or a nullptr if none did.
   static Language *FindPluginForManglingScheme(Mangled::ManglingScheme scheme);
 
   static llvm::Expected<lldb::LanguageType>
@@ -330,11 +330,6 @@ public:
     return false;
   }
 
-  /// Returns true if this language handles the names mangled with \p scheme.
-  virtual bool HandlesManglingScheme(Mangled::ManglingScheme scheme) const {
-    return false;
-  }
-
   /// How to demangle a name in DemangleSymbol().
   struct DemangleOptions {
     /// Whether to compute the \c DemangledNameInfo too.
@@ -350,7 +345,7 @@ public:
   };
 
   /// Demangle \p mangled, a name mangled with \p scheme, a scheme that this
-  /// language handles.
+  /// language registered with Mangled::RegisterManglingScheme().
   virtual DemangledName DemangleSymbol(ConstString mangled,
                                        Mangled::ManglingScheme scheme,
                                        const DemangleOptions &options) const {
@@ -369,8 +364,8 @@ public:
   };
 
   /// Returns a parser for the names mangled with \p scheme, a scheme that this
-  /// language handles, or a nullptr if the symbol table should index them by
-  /// their demangled names.
+  /// language registered, or a nullptr if the symbol table should index them
+  /// by their demangled names.
   virtual std::unique_ptr<MangledNameParser>
   CreateMangledNameParser(Mangled::ManglingScheme scheme) const {
     return nullptr;

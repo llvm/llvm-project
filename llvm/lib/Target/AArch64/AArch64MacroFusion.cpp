@@ -529,19 +529,41 @@ static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
   return false;
 }
 
-static bool definesRegInClass(const MachineInstr &MI,
-                              const TargetRegisterInfo *TRI,
-                              const TargetRegisterClass &Class) {
-  return llvm::any_of(Class, [&MI, TRI](MCPhysReg Reg) {
-    return MI.definesRegister(Reg, TRI);
+// Checks whether RegMO's class is Class, or a subclass of it. Supports both
+// physical and virtual registers.
+static bool isRegInClass(const MachineOperand &RegMO,
+                         const TargetRegisterClass &Class,
+                         const MachineRegisterInfo &MRI) {
+  Register Reg = RegMO.getReg();
+  if (Reg.isVirtual())
+    return Class.hasSubClassEq(MRI.getRegClass(Reg));
+  return Class.contains(Reg.asMCReg());
+}
+
+// Checks whether MI defines any register whose class is any of Classes, or a
+// subclass of them. Supports both physical and virtual registers.
+static bool
+definesRegInClass(const MachineInstr &MI,
+                  const ArrayRef<const TargetRegisterClass *> Classes) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return llvm::any_of(MI.all_defs(), [&](const MachineOperand &MO) {
+    return llvm::any_of(Classes, [&](const TargetRegisterClass *Class) {
+      return isRegInClass(MO, *Class, MRI);
+    });
   });
 }
 
-static bool readsRegInClass(const MachineInstr &MI,
-                            const TargetRegisterInfo *TRI,
-                            const TargetRegisterClass &Class) {
-  return llvm::any_of(
-      Class, [&MI, TRI](MCPhysReg Reg) { return MI.readsRegister(Reg, TRI); });
+// Checks whether MI reads/uses any register whose class is any of Classes, or a
+// subclass of them. Supports both physical and virtual registers.
+static bool
+readsRegInClass(const MachineInstr &MI,
+                const ArrayRef<const TargetRegisterClass *> Classes) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return llvm::any_of(MI.all_uses(), [&](const MachineOperand &MO) {
+    return llvm::any_of(Classes, [&](const TargetRegisterClass *Class) {
+      return isRegInClass(MO, *Class, MRI);
+    });
+  });
 }
 
 static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
@@ -551,7 +573,9 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
                              MI.definesRegister(AArch64::ZA, TRI);
 
   // (read/write ZA or read/write Z)
-  if (!ReadOrWriteZA && !definesRegInClass(MI, TRI, AArch64::ZPRRegClass))
+  if (!ReadOrWriteZA &&
+      !definesRegInClass(MI, {&AArch64::ZPRRegClass, &AArch64::ZPR2RegClass,
+                              &AArch64::ZPR3RegClass, &AArch64::ZPR4RegClass}))
     return false;
 
   // (NOT load/store)
@@ -559,12 +583,12 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
     return false;
 
   // (NOT write P)
-  if (definesRegInClass(MI, TRI, AArch64::PPRRegClass))
+  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass}))
     return false;
 
   // (NOT write GPR)
-  const bool WriteGPR = definesRegInClass(MI, TRI, AArch64::GPR32RegClass) ||
-                        definesRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  const bool WriteGPR =
+      definesRegInClass(MI, {&AArch64::GPR32RegClass, &AArch64::GPR64RegClass});
   if (WriteGPR)
     return false;
 
@@ -573,8 +597,8 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
       MI.definesRegister(AArch64::NZCV, TRI))
     return false;
 
-  const bool ReadGPR = readsRegInClass(MI, TRI, AArch64::GPR32RegClass) &&
-                       readsRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  const bool ReadGPR =
+      readsRegInClass(MI, {&AArch64::GPR32RegClass, &AArch64::GPR64RegClass});
 
   // ( (NOT read GPR) or read/write ZA )
   if (ReadGPR && !ReadOrWriteZA)
@@ -597,17 +621,18 @@ static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
   return false;
 }
 
+enum class FMinFMaxKind { None, Scalar, Vector };
+
 // Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd).
-static bool isFMinFMax(unsigned Opcode) {
+static FMinFMaxKind getFMinFMaxKind(unsigned Opcode) {
   switch (Opcode) {
-  // Scalar.
   case AArch64::FMAXHrr:
   case AArch64::FMAXSrr:
   case AArch64::FMAXDrr:
   case AArch64::FMINHrr:
   case AArch64::FMINSrr:
   case AArch64::FMINDrr:
-  // Vector.
+    return FMinFMaxKind::Scalar;
   case AArch64::FMAXv4f16:
   case AArch64::FMAXv8f16:
   case AArch64::FMAXv2f32:
@@ -618,22 +643,23 @@ static bool isFMinFMax(unsigned Opcode) {
   case AArch64::FMINv2f32:
   case AArch64::FMINv4f32:
   case AArch64::FMINv2f64:
-    return true;
+    return FMinFMaxKind::Vector;
   }
-  return false;
+  return FMinFMaxKind::None;
 }
 
-// FMIN + FMAX.
+// FMIN + FMAX, both scalar or both vector.
 static bool isFMinFMaxPair(const MachineInstr *FirstMI,
                            const MachineInstr &SecondMI) {
-  if (!isFMinFMax(SecondMI.getOpcode()))
+  FMinFMaxKind SecondKind = getFMinFMaxKind(SecondMI.getOpcode());
+  if (SecondKind == FMinFMaxKind::None)
     return false;
 
   // Assume the 1st instr to be a wildcard if it is unspecified.
   if (FirstMI == nullptr)
     return true;
 
-  if (!isFMinFMax(FirstMI->getOpcode()))
+  if (getFMinFMaxKind(FirstMI->getOpcode()) != SecondKind)
     return false;
 
   return mayHaveWAWDependency(*FirstMI, SecondMI);

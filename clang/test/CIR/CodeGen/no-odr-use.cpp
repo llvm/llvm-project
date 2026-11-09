@@ -11,20 +11,20 @@
 // RUN: %clang_cc1 -std=c++2a -emit-llvm -o %t-cxx2a.ll -triple x86_64-linux-gnu %s
 // RUN: FileCheck %s --input-file=%t-cxx2a.ll --check-prefixes=OGCG,OGCG-CXX2A
 
-// CIR-DAG: cir.global "private" constant cir_private @[[F_A:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i]> : !cir.array<!s32i x 3>}> : !rec_A
-// LLVM-DAG: @[[F_A:.*]] = private constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[F_A:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i]> : !cir.array<!s32i x 3>}> : !rec_A
+// LLVM-DAG: @[[F_A:.*]] = private unnamed_addr constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 // OGCG-DAG: @__const._Z1fi.a = private unnamed_addr constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 
-// CIR-CXX11-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE.const = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
+// CIR-CXX11-DAG: cir.global "private" constant cir_private unnamed_addr @_ZN7PR422765State3dmsE.const = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
 // LLVM-CXX11-DAG :@_ZN7PR422765State3dmsE.const = private constant [2 x i64] zeroinitializer, align 16
 // OGCG-CXX11-DAG :@_ZN7PR422765State3dmsE.const = private constant [2 x i64] zeroinitializer, align 16
 
-// CIR-CXX20-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
+// CIR-CXX20-DAG: cir.global "private" constant cir_private unnamed_addr @_ZN7PR422765State3dmsE = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
 // LLVM-CXX20-DAG :@_ZN7PR422765State3dmsE = private constant [2 x i64] zeroinitializer, align 16
 // OGCG-CXX20-DAG :@_ZN7PR422765State3dmsE = private constant [2 x i64] zeroinitializer, align 16
 
-// CIR-CXX11-DAG: cir.global "private" constant cir_private @_ZN7PR422765State1mE.const = #cir.const_array<[#cir.const_record<{#cir.global_view<@_ZN7PR422765State2f1Ev> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct, #cir.const_record<{#cir.global_view<@_ZN7PR422765State2f2Ev> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct]> : !cir.array<!rec_anon_struct x 2>
-// LLVM-CXX11-DAG: @_ZN7PR422765State1mE.const = private constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }]
+// CIR-CXX11-DAG: cir.global "private" constant cir_private unnamed_addr @_ZN7PR422765State1mE.const = #cir.const_array<[#cir.const_record<{#cir.global_view<@_ZN7PR422765State2f1Ev> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct, #cir.const_record<{#cir.global_view<@_ZN7PR422765State2f2Ev> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct]> : !cir.array<!rec_anon_struct x 2>
+// LLVM-CXX11-DAG: @_ZN7PR422765State1mE.const = private unnamed_addr constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }]
 // OGCG-CXX11-DAG: @_ZN7PR422765State1mE.const = private unnamed_addr constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }]
 
 // CIR-CXX2A-DAG: cir.global constant linkonce_odr comdat @_ZN7PR422765State1mE = #cir.const_array<[#cir.const_record<{#cir.global_view<@_ZN7PR422765State2f1Ev> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct, #cir.const_record<{#cir.global_view<@_ZN7PR422765State2f2Ev> : !s64i, #cir.int<0> : !s64i}> : !rec_anon_struct]> : !cir.array<!rec_anon_struct x 2>

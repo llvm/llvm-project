@@ -280,34 +280,6 @@ func.func @full_contract2(%arg0: vector<2x3xf32>,
   return %0 : f32
 }
 
-// CHECK-LABEL: @contract_one_sided_unit_reduction_dim
-// CHECK-SAME: (%[[A0:.+]]: vector<1x2xi32>, %[[A1:.+]]: vector<2x2xi32>, %[[A2:.+]]: vector<2xi32>)
-// CHECK-DAG: %[[C:.+]] = arith.constant dense<0> : vector<2xi32>
-// CHECK-DAG: %[[E00:.+]] = vector.extract %[[A0]][0] : vector<2xi32> from vector<1x2xi32>
-// CHECK-DAG: %[[E10:.+]] = vector.extract %[[A1]][0] : vector<2xi32> from vector<2x2xi32>
-// CHECK:     %[[M0:.+]] = arith.muli %[[E10]], %[[E00]] : vector<2xi32>
-// CHECK:     %[[R0:.+]] = vector.reduction <add>, %[[M0]] : vector<2xi32> into i32
-// CHECK:     %[[I0:.+]] = vector.insert %[[R0]], %[[C]] [0] : i32 into vector<2xi32>
-// CHECK:     %[[E11:.+]] = vector.extract %[[A1]][1] : vector<2xi32> from vector<2x2xi32>
-// CHECK:     %[[M1:.+]] = arith.muli %[[E11]], %[[E00]] : vector<2xi32>
-// CHECK:     %[[R1:.+]] = vector.reduction <add>, %[[M1]] : vector<2xi32> into i32
-// CHECK:     %[[I1:.+]] = vector.insert %[[R1]], %[[I0]] [1] : i32 into vector<2xi32>
-// CHECK:     %[[S:.+]] = arith.addi %[[I1]], %[[A2]] : vector<2xi32>
-// CHECK:     return %[[S]] : vector<2xi32>
-
-func.func @contract_one_sided_unit_reduction_dim(%arg0 : vector<1x2xi32>, %arg1 : vector<2x2xi32>, %arg2 : vector<2xi32>) -> vector<2xi32> {
-  %res = vector.contract {
-    indexing_maps = [
-      affine_map<(d0, d1, d2) -> (d0, d2)>,
-      affine_map<(d0, d1, d2) -> (d1, d2)>,
-      affine_map<(d0, d1, d2) -> (d1)>
-    ],
-    iterator_types = ["reduction", "parallel", "reduction"],
-    kind = #vector.kind<add>
-  } %arg0, %arg1, %arg2 : vector<1x2xi32>, vector<2x2xi32>, vector<2xi32> into vector<2xi32>
-  return %res : vector<2xi32>
-}
-
 // Verify that fastmath flags on vector.contract propagate to the lowered ops.
 // CHECK-LABEL: func @extract_contract2_fmf
 // CHECK-SAME: %[[A:.*0]]: vector<2x3xf32>,
@@ -431,6 +403,34 @@ func.func @batch_contract_fmf(%arg0: vector<2x2xf32>,
     iterator_types = ["parallel", "reduction"],
     fastmath = #arith.fastmath<reassoc>
   } %arg0, %arg1, %arg2 : vector<2x2xf32>, vector<2x2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// CHECK-LABEL: @negative_contract_to_dot_matvec_scalable
+//       CHECK: vector.contract
+func.func @negative_contract_to_dot_matvec_scalable(%arg0: vector<[2]x3xf32>,
+                        %arg1: vector<3xf32>,
+                        %arg2: vector<[2]xf32>) -> vector<[2]xf32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<[2]x3xf32>, vector<3xf32> into vector<[2]xf32>
+  return %0 : vector<[2]xf32>
+}
+
+// CHECK-LABEL: func @contract_to_dot_matvec_scalable_reduction
+//  CHECK-SAME:   %[[A:.*]]: vector<2x[8]xf32>, %[[B:.*]]: vector<[8]xf32>, %[[ACC:.*]]: vector<2xf32>
+//       CHECK:   %[[ROW0:.*]] = vector.extract %[[A]][0] : vector<[8]xf32> from vector<2x[8]xf32>
+//       CHECK:   %[[MUL0:.*]] = arith.mulf %[[ROW0]], %[[B]] : vector<[8]xf32>
+//       CHECK:   vector.reduction <add>, %[[MUL0]] : vector<[8]xf32> into f32
+//       CHECK:   %[[ROW1:.*]] = vector.extract %[[A]][1] : vector<[8]xf32> from vector<2x[8]xf32>
+//       CHECK:   %[[MUL1:.*]] = arith.mulf %[[ROW1]], %[[B]] : vector<[8]xf32>
+//       CHECK:   vector.reduction <add>, %[[MUL1]] : vector<[8]xf32> into f32
+//       CHECK:   %[[RES:.*]] = arith.addf %{{.*}}, %[[ACC]] : vector<2xf32>
+//       CHECK:   return %[[RES]] : vector<2xf32>
+func.func @contract_to_dot_matvec_scalable_reduction(%arg0: vector<2x[8]xf32>,
+                        %arg1: vector<[8]xf32>,
+                        %arg2: vector<2xf32>) -> vector<2xf32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<2x[8]xf32>, vector<[8]xf32> into vector<2xf32>
   return %0 : vector<2xf32>
 }
 

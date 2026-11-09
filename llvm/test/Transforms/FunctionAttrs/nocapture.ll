@@ -370,8 +370,8 @@ define void @readonly_nounwind_not_willreturn(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
 ; ATTRIBUTOR-LABEL: define void @readonly_nounwind_not_willreturn
-; ATTRIBUTOR-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @external_not_willreturn(ptr readonly captures(none) [[P]]) #[[ATTR4]]
+; ATTRIBUTOR-SAME: (ptr readonly [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    call void @external_not_willreturn(ptr [[P]]) #[[ATTR4]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @external_not_willreturn(ptr %p)
@@ -441,7 +441,7 @@ define void @self_readonly_nounwind_not_willreturn(ptr %p) readonly nounwind {
 ;
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
 ; ATTRIBUTOR-LABEL: define void @self_readonly_nounwind_not_willreturn
-; ATTRIBUTOR-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR7]] {
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]]) #[[ATTR7]] {
 ; ATTRIBUTOR-NEXT:    call void @capture(ptr [[P]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;

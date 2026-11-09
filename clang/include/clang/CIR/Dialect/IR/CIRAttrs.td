@@ -171,11 +171,14 @@ def CIR_ArgPassingKind : CIR_I32Enum<
 ]>;
 
 def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
-    // record_align is consumed as an llvm::Align, whose constructor asserts a
-    // non-zero power of two.
+    // Both alignments are consumed as llvm::Align, whose constructor asserts
+    // a non-zero power of two.
     PredAttrTrait<"record_align must be a non-zero power of two",
                   CPred<"$record_align != 0 && "
-                        "::llvm::isPowerOf2_64($record_align)">>
+                        "::llvm::isPowerOf2_64($record_align)">>,
+    PredAttrTrait<"unadjusted_align must be a non-zero power of two",
+                  CPred<"$unadjusted_align != 0 && "
+                        "::llvm::isPowerOf2_64($unadjusted_align)">>
   ]> {
   let summary = "ABI layout metadata for a record type";
   let description = [{
@@ -190,6 +193,13 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `record_align_in_bytes`: from `ASTRecordLayout::getAlignment()`.
       Needed because CIR's DataLayout cannot account for
       `__attribute__((aligned(N)))`.
+    - `unadjusted_align`: the alignment the members give the record before an
+      alignment attribute on the record raises it.  AAPCS64 sizes argument slots
+      using this alignment.  This field is not printed when it is equal to
+      `record_align`.
+    - `transparent_union`: whether the record is a union with
+      `__attribute__((transparent_union))`, which is passed as its first
+      member.  False, the default, is omitted from the printed form.
 
     Example:
     ```
@@ -211,16 +221,23 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
   let parameters = (ins
     EnumParameter<CIR_ArgPassingKind>:$arg_passing_kind,
     "bool":$has_trivial_dtor,
-    "uint64_t":$record_align
+    "uint64_t":$record_align,
+    "uint64_t":$unadjusted_align,
+    DefaultValuedParameter<"bool", "false">:$transparent_union
   );
 
-  let assemblyFormat = [{
-    `<`
-      `arg_passing_kind` `=` $arg_passing_kind `,`
-      `has_trivial_dtor` `=` $has_trivial_dtor `,`
-      `record_align` `=` $record_align
-    `>`
-  }];
+  let builders = [
+    AttrBuilder<(ins "cir::ArgPassingKind":$arg_passing_kind,
+                     "bool":$has_trivial_dtor,
+                     "uint64_t":$record_align), [{
+      return $_get($_ctxt, arg_passing_kind, has_trivial_dtor, record_align,
+                   /*unadjusted_align=*/record_align,
+                   /*transparent_union=*/false);
+    }]>
+  ];
+
+  // Printing and parsing available in CIRAttrs.cpp.
+  let hasCustomAssemblyFormat = 1;
 
   let canHaveIllegalCXXABIType = 0;
 }
@@ -1002,7 +1019,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     - `must_progress`: the loop must eventually terminate or have an
       observable side effect (the forward-progress guarantee of C++11 and
       later, and C11 loops with a non-constant condition).
-    - `vectorize_enable`: force vectorization on.
+    - `vectorize_enable`: force vectorization on/off.
     - `vectorize_width`: the vectorization factor. A width of 1 disables
       vectorization.
     - `vectorize_scalable`: whether the vectorization factor is
@@ -1025,14 +1042,14 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     ```
     #cir.loop_hint<>
     #cir.loop_hint< must_progress>
-    #cir.loop_hint< must_progress vectorize_enable interleave_count = 2
+    #cir.loop_hint< must_progress vectorize_enable = true interleave_count = 2
                     unroll_count = 4>
     ```
   }];
 
   let parameters = (ins
     CIR_FlagParam<"must_progress">:$must_progress,
-    CIR_FlagParam<"vectorize_enable">:$vectorize_enable,
+    OptionalParameter<"mlir::BoolAttr">:$vectorize_enable,
     OptionalParameter<"uint32_t">:$vectorize_width,
     OptionalParameter<"mlir::BoolAttr">:$vectorize_scalable,
     OptionalParameter<"mlir::BoolAttr">:$vectorize_predicate,
@@ -1051,7 +1068,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
   let assemblyFormat = [{
     `<`
       (` ` $must_progress^)?
-      (` ` $vectorize_enable^)?
+      (` ` `vectorize_enable` `=` $vectorize_enable^)?
       (` ` `vectorize_width` `=` $vectorize_width^)?
       (` ` `vectorize_scalable` `=` $vectorize_scalable^)?
       (` ` `vectorize_predicate` `=` $vectorize_predicate^)?
@@ -2649,34 +2666,53 @@ def CIR_DynamicInitInfoAttr
 }
 
 //===----------------------------------------------------------------------===//
-// LoweringLangOptionsAttr
+// LoweringOptionsAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_LoweringLangOptionsAttr
-    : CIR_Attr<"LoweringLangOptions", "lowering_lang_options"> {
-  let summary = "LangOptions facts that post-CIRGen lowering consumes";
+def CIR_LoweringOptionsAttr
+    : CIR_Attr<"LoweringOptions", "lowering_options"> {
+  let summary =
+    "LangOptions and CodeGenOptions facts that post-CIRGen lowering consumes";
   let description = [{
-    Serializes the subset of `clang::LangOptions` that post-CIRGen lowering
-    reads, as plain data, so a reloaded `.cir` module lowers the same way it
-    was compiled without a live `clang::LangOptions`. Only LangOpts flags with
-    no triple/module representation live here; target-derived facts (size_t
+    Serializes the subset of `clang::LangOptions` and `clang::CodeGenOptions`
+    that post-CIRGen lowering reads, as plain data, so a reloaded `.cir`
+    module lowers the same way it was compiled without a live
+    `clang::LangOptions` or `clang::CodeGenOptions`. Only flags with no
+    triple/module representation live here; target-derived facts (size_t
     width, CXXABI, fp formats, etc.) are rebuilt from `cir.triple` instead.
 
-    Each bool field mirrors the like-named `LangOptions` member: `exceptions`,
+    The following fields come from `LangOptions`.  Each bool field mirrors the
+    like-named `LangOptions` member: `exceptions`,
     `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`, `gpu_rdc`,
     `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
     `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
     `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
     `ClangABI` gains an enumerator every Clang release (see
     `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
-    single toolchain.
+    single toolchain. `no_trapping_math` is true when
+    `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
+
+    The following fields come from `CodeGenOptions`.
+    `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
+    which calling convention lowering reads when it decides whether an
+    argument is `noundef`. `ssp_buffer_size` mirrors
+    `CodeGenOptions::SSPBufferSize`.
+
+    `LowerToLLVM` turns `no_trapping_math` and `ssp_buffer_size` into the
+    `"no-trapping-math"` and `"stack-protector-buffer-size"` LLVM function
+    attributes of every function not marked `runtime_func`. A `strictfp`
+    function does not get `"no-trapping-math"`, since a pragma such as
+    `float_control(except, on)` can make its FP operations observe exceptions
+    even when the TU-wide default ignores them.
 
     Example:
     ```
-    module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
+    module attributes {cir.lowering_options = #cir.lowering_options<
       exceptions = false, threadsafe_statics = true, cuda = false,
-      cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
-      openmp_is_target_device = false, clang_abi_compat = 17>} { }
+      cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
+      openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
+      long_double_size = 0, enable_noundef_attrs = false,
+      no_trapping_math = true, ssp_buffer_size = 8>} { }
     ```
   }];
 
@@ -2691,13 +2727,17 @@ def CIR_LoweringLangOptionsAttr
     "bool":$openmp,
     "bool":$openmp_is_target_device,
     "int32_t":$clang_abi_compat,
-    "int32_t":$long_double_size
+    "int32_t":$long_double_size,
+    "bool":$enable_noundef_attrs,
+    "bool":$no_trapping_math,
+    "uint32_t":$ssp_buffer_size
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
                $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat, $long_double_size) `>`
+               $clang_abi_compat, $long_double_size, $enable_noundef_attrs,
+               $no_trapping_math, $ssp_buffer_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

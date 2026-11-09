@@ -46,7 +46,8 @@ VoidTask silly_task() {
 
 // CIR: %[[NullPtr:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR-NEXT: %[[Align:.*]] = cir.const #cir.int<16> : !u32i
-// CIR-NEXT: %[[CoroId:.*]] = cir.coro.intrinsic.id(%[[Align]], %[[NullPtr]], %[[NullPtr]], %[[NullPtr]]) : (!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> token
+// CIR-NEXT: %[[PromiseVoidPtr:.*]] = cir.cast bitcast %[[VoidPromisseAddr]] : !cir.ptr<![[VoidPromisse]]> -> !cir.ptr<!void>
+// CIR-NEXT: %[[CoroId:.*]] = cir.coro.intrinsic.id(%[[Align]], %[[PromiseVoidPtr]], %[[NullPtr]], %[[NullPtr]]) : (!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> token
 // OGCG: %[[CoroId:.*]] = call token @llvm.coro.id(i32 16, ptr %[[VoidPromisseAddr]], ptr null, ptr null)
 
 // Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
@@ -267,7 +268,8 @@ VoidTask silly_task() {
 
 // CIR-FLAT:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR-FLAT:   %[[ALIGN:.*]] = cir.const #cir.int<16> : !u32i
-// CIR-FLAT:   %[[CORO_ID:.*]] = cir.coro.intrinsic.id(%[[ALIGN]], %[[NULL]], %[[NULL]], %[[NULL]])
+// CIR-FLAT:   %[[PROMISE_VOID_PTR:.*]] = cir.cast bitcast %[[PROMISE]] : {{.*}} -> !cir.ptr<!void>
+// CIR-FLAT:   %[[CORO_ID:.*]] = cir.coro.intrinsic.id(%[[ALIGN]], %[[PROMISE_VOID_PTR]], %[[NULL]], %[[NULL]])
 // CIR-FLAT:   %[[SHOULD_ALLOC:.*]] = cir.coro.intrinsic.alloc(%[[CORO_ID]])
 // CIR-FLAT:   cir.store %[[NULL]], %[[FRAME_ADDR]]
 // CIR-FLAT:   cir.brcond %[[SHOULD_ALLOC]] ^[[CORO_ALLOC:bb[0-9]+]], ^[[CORO_INIT:bb[0-9]+]]

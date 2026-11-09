@@ -33,10 +33,9 @@ define void @vec_reduce_add_v16i8(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_add_v8i8(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_add_v8i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
 ; LA32-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
@@ -46,8 +45,7 @@ define void @vec_reduce_add_v8i8(ptr %src, ptr %dst) nounwind {
 ;
 ; LA64-LABEL: vec_reduce_add_v8i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
 ; LA64-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
@@ -63,8 +61,7 @@ define void @vec_reduce_add_v8i8(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_add_v4i8(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_add_v4i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; LA32-NEXT:    fld.s $fa0, $a0, 0
 ; LA32-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
@@ -73,8 +70,7 @@ define void @vec_reduce_add_v4i8(ptr %src, ptr %dst) nounwind {
 ;
 ; LA64-LABEL: vec_reduce_add_v4i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.w $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; LA64-NEXT:    fld.s $fa0, $a0, 0
 ; LA64-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
@@ -89,8 +85,7 @@ define void @vec_reduce_add_v4i8(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_add_v2i8(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_add_v2i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.h $a0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; LA32-NEXT:    vldrepl.h $vr0, $a0, 0
 ; LA32-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
 ; LA32-NEXT:    st.b $a0, $a1, 0
@@ -98,8 +93,7 @@ define void @vec_reduce_add_v2i8(ptr %src, ptr %dst) nounwind {
 ;
 ; LA64-LABEL: vec_reduce_add_v2i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.h $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; LA64-NEXT:    vldrepl.h $vr0, $a0, 0
 ; LA64-NEXT:    vhaddw.h.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-NEXT:    st.b $a0, $a1, 0
@@ -139,10 +133,9 @@ define void @vec_reduce_add_v8i16(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_add_v4i16(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_add_v4i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
 ; LA32-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
@@ -151,8 +144,7 @@ define void @vec_reduce_add_v4i16(ptr %src, ptr %dst) nounwind {
 ;
 ; LA64-LABEL: vec_reduce_add_v4i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
 ; LA64-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
@@ -167,8 +159,7 @@ define void @vec_reduce_add_v4i16(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_add_v2i16(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_add_v2i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; LA32-NEXT:    fld.s $fa0, $a0, 0
 ; LA32-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
 ; LA32-NEXT:    st.h $a0, $a1, 0
@@ -176,8 +167,7 @@ define void @vec_reduce_add_v2i16(ptr %src, ptr %dst) nounwind {
 ;
 ; LA64-LABEL: vec_reduce_add_v2i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.w $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; LA64-NEXT:    fld.s $fa0, $a0, 0
 ; LA64-NEXT:    vhaddw.w.h $vr0, $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-NEXT:    st.h $a0, $a1, 0
@@ -214,18 +204,16 @@ define void @vec_reduce_add_v4i32(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_add_v2i32(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_add_v2i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
 ; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vec_reduce_add_v2i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vhaddw.d.w $vr0, $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
 ; LA64-NEXT:    st.w $a0, $a1, 0

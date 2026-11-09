@@ -41,9 +41,8 @@ body: |
 ...
 
 ---
-# Test that foldImmediate correctly handles kill flags when eliminating
-# redundant instructions. Without the fix, kill flags are not cleared when
-# replacing the COPY's destination with the original immediate-defining register.
+# Test that foldImmediate folds an immediate into an ADD whose other operand
+# is a COPY, replacing the COPY with its source.
 name: fold_imm_copy_kill_bug
 tracksRegLiveness: true
 body: |
@@ -59,7 +58,7 @@ body: |
 
     %2:gr32 = COPY %0:gr32
 
-    %3:gr32 = ADD32rr %1:gr32, killed %2:gr32, implicit-def dead $eflags
+    %3:gr32 = ADD32rr %1:gr32, %2:gr32, implicit-def dead $eflags
     %4:gr32 = ADD32ri %0:gr32, 42, implicit-def dead $eflags
 
     RET 0

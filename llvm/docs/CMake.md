@@ -1002,8 +1002,8 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     runs each command as `/path/to/launcher --config=/path/to/config <tablegen> ...`.
     The launcher must support the generator being invoked and is responsible
     for any input discovery and execution environment it requires. This also
-    applies to other generators invoked through the `tablegen()` CMake
-    function, such as MLIR source sharding.
+    applies to other generators invoked through the `tablegen_internal()`
+    CMake function, such as MLIR source sharding.
 
 **LLVM_TARGET_ARCH**:STRING
 

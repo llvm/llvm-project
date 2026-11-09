@@ -14,13 +14,7 @@ add_library(omptarget SHARED
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
 
-  ../libompaccsupport/AsyncInfo.cpp
-  ../libompaccsupport/device.cpp
-  ../libompaccsupport/PluginManager.cpp
-  ../libompaccsupport/DeviceImage.cpp
-  ../libompaccsupport/Mapping.cpp
-  ../libompaccsupport/OmpAccError.cpp
-  ../libompaccsupport/Program.cpp
+  ${LIBOMPACCSUPPORT_SOURCES}
 
   KernelLanguage/API.cpp
 )
@@ -33,8 +27,6 @@ endif()
 target_link_libraries(omptarget PRIVATE omp ${llvm_libs})
 target_include_directories(omptarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
-  ${CMAKE_CURRENT_BINARY_DIR}/../plugins-nextgen/common/include
 )
 
 if(LLVM_HAVE_LINK_VERSION_SCRIPT)

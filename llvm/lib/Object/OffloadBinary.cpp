@@ -176,10 +176,6 @@ Error extractFromArchive(const Archive &Library,
   return Error::success();
 }
 
-bool isCompressed(const OffloadBinary::Header &Header) {
-  return Header.Version >= 3 && Header.InflatedSize != 0;
-}
-
 Expected<std::unique_ptr<MemoryBuffer>>
 decompressOffloadBinary(MemoryBufferRef Buf) {
   const auto *Header =
@@ -217,6 +213,16 @@ decompressOffloadBinary(MemoryBufferRef Buf) {
 
 } // namespace
 
+bool OffloadBinary::isCompressed(MemoryBufferRef Buf) {
+  if (Buf.getBufferSize() < sizeof(Header) ||
+      !isAddrAligned(Align(getAlignment()), Buf.getBufferStart()) ||
+      identify_magic(Buf.getBuffer()) != file_magic::offload_binary)
+    return false;
+
+  const auto *Hdr = reinterpret_cast<const Header *>(Buf.getBufferStart());
+  return Hdr->Version >= 3 && Hdr->InflatedSize != 0;
+}
+
 Expected<const OffloadBinary::Header *>
 OffloadBinary::extractHeader(MemoryBufferRef Buf) {
   if (Buf.getBufferSize() < sizeof(Header))
@@ -238,7 +244,7 @@ OffloadBinary::extractHeader(MemoryBufferRef Buf) {
   if (TheHeader->Size > Buf.getBufferSize() || TheHeader->Size < sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 
-  if (isCompressed(*TheHeader))
+  if (isCompressed(Buf))
     return TheHeader;
 
   if (TheHeader->Size < sizeof(Entry))
@@ -264,7 +270,7 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
 
   // The binary data may be a compressed image.
   std::shared_ptr<MemoryBuffer> Binary;
-  if (isCompressed(*OnDisk)) {
+  if (isCompressed(Buf)) {
     auto DecompressedOrErr = decompressOffloadBinary(Buf);
     if (!DecompressedOrErr)
       return DecompressedOrErr.takeError();

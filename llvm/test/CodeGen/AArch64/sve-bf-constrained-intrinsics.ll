@@ -10,12 +10,169 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ;
-; constrained.ceil (TODO)
+; constrained.ceil
 ;
 
+define <vscale x 2 x bfloat> @ceil_nxv2bf16(<vscale x 2 x bfloat> %a) {
+; CHECK-LABEL: ceil_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frintp z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.ceil(<vscale x 2 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @ceil_nxv4bf16(<vscale x 4 x bfloat> %a) {
+; CHECK-LABEL: ceil_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frintp z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.ceil(<vscale x 4 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @ceil_nxv8bf16(<vscale x 8 x bfloat> %a) {
+; NONSTREAMING-LABEL: ceil_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    frintp z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    frintp z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
 ;
-; constrained.fadd (TODO)
+; STREAMING-LABEL: ceil_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    frintp z0.s, p0/m, z0.s
+; STREAMING-NEXT:    frintp z2.s, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
 ;
+; SVE-B16B16_NONSTREAMING-LABEL: ceil_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    frintp z0.s, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    frintp z2.s, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: ceil_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    frintp z0.s, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    frintp z2.s, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.ceil(<vscale x 8 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
+
+;
+; constrained.fadd
+;
+
+define <vscale x 2 x bfloat> @fadd_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; BF16-LABEL: fadd_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fadd_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.fadd(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @fadd_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; BF16-LABEL: fadd_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    fadd z0.s, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fadd_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.fadd(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @fadd_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; NONSTREAMING-LABEL: fadd_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    fadd z0.s, z0.s, z1.s
+; NONSTREAMING-NEXT:    fadd z1.s, z4.s, z3.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z1.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: fadd_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; STREAMING-NEXT:    fadd z0.s, z0.s, z1.s
+; STREAMING-NEXT:    fadd z1.s, z4.s, z3.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z1.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fadd_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    bfadd z0.h, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.fadd(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
 ; constrained.fcmp (TODO)
@@ -26,24 +183,435 @@ target triple = "aarch64-unknown-linux-gnu"
 ;
 
 ;
-; constrained.fdiv (TODO)
+; constrained.fdiv
 ;
 
+define <vscale x 2 x bfloat> @fdiv_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; CHECK-LABEL: fdiv_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.fdiv(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @fdiv_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; CHECK-LABEL: fdiv_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z1.s, z1.s, #16
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.fdiv(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @fdiv_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; NONSTREAMING-LABEL: fdiv_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip1 z3.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z4.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    zip2 z1.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip2 z0.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    fdivr z3.s, p0/m, z3.s, z4.s
+; NONSTREAMING-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    ret
 ;
-; constrained.floor (TODO)
+; STREAMING-LABEL: fdiv_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip1 z3.h, z2.h, z1.h
+; STREAMING-NEXT:    zip1 z4.h, z2.h, z0.h
+; STREAMING-NEXT:    zip2 z1.h, z2.h, z1.h
+; STREAMING-NEXT:    zip2 z0.h, z2.h, z0.h
+; STREAMING-NEXT:    fdivr z3.s, p0/m, z3.s, z4.s
+; STREAMING-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    ret
 ;
+; SVE-B16B16_NONSTREAMING-LABEL: fdiv_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z3.h, z2.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z4.h, z2.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z1.h, z2.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z0.h, z2.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    fdivr z3.s, p0/m, z3.s, z4.s
+; SVE-B16B16_NONSTREAMING-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: fdiv_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip1 z3.h, z2.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    zip1 z4.h, z2.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip2 z1.h, z2.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    zip2 z0.h, z2.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    fdivr z3.s, p0/m, z3.s, z4.s
+; SVE-B16B16_STREAMING-NEXT:    fdiv z0.s, p0/m, z0.s, z1.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.fdiv(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
-; constrained.fma (TODO)
+; constrained.floor
 ;
 
+define <vscale x 2 x bfloat> @floor_nxv2bf16(<vscale x 2 x bfloat> %a) {
+; CHECK-LABEL: floor_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frintm z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.floor(<vscale x 2 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @floor_nxv4bf16(<vscale x 4 x bfloat> %a) {
+; CHECK-LABEL: floor_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frintm z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.floor(<vscale x 4 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @floor_nxv8bf16(<vscale x 8 x bfloat> %a) {
+; NONSTREAMING-LABEL: floor_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    frintm z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    frintm z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
 ;
-; constrained.fmul (TODO)
+; STREAMING-LABEL: floor_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    frintm z0.s, p0/m, z0.s
+; STREAMING-NEXT:    frintm z2.s, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
 ;
+; SVE-B16B16_NONSTREAMING-LABEL: floor_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    frintm z0.s, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    frintm z2.s, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: floor_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    frintm z0.s, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    frintm z2.s, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.floor(<vscale x 8 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
-; constrained.fmuladd (TODO)
+; constrained.fma
 ;
+
+define <vscale x 2 x bfloat> @fma_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, <vscale x 2 x bfloat> %c) {
+; BF16-LABEL: fma_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z2.s, z2.s, #16
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fma_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.fma(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, <vscale x 2 x bfloat> %c, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @fma_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, <vscale x 4 x bfloat> %c) {
+; BF16-LABEL: fma_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z2.s, z2.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    bfmlalb z2.s, z0.h, z1.h
+; BF16-NEXT:    bfcvt z0.h, p0/m, z2.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fma_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.fma(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, <vscale x 4 x bfloat> %c, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @fma_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c) {
+; NONSTREAMING-LABEL: fma_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v3.2d, #0000000000000000
+; NONSTREAMING-NEXT:    uunpkhi z4.s, z1.h
+; NONSTREAMING-NEXT:    uunpkhi z5.s, z0.h
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip1 z6.h, z3.h, z2.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z3.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z3.h, z0.h
+; NONSTREAMING-NEXT:    zip2 z2.h, z3.h, z2.h
+; NONSTREAMING-NEXT:    fmad z0.s, p0/m, z1.s, z6.s
+; NONSTREAMING-NEXT:    bfmlalb z2.s, z5.h, z4.h
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: fma_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z3.h, #0 // =0x0
+; STREAMING-NEXT:    uunpkhi z4.s, z1.h
+; STREAMING-NEXT:    uunpkhi z5.s, z0.h
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip1 z6.h, z3.h, z2.h
+; STREAMING-NEXT:    zip1 z1.h, z3.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z3.h, z0.h
+; STREAMING-NEXT:    zip2 z2.h, z3.h, z2.h
+; STREAMING-NEXT:    fmad z0.s, p0/m, z1.s, z6.s
+; STREAMING-NEXT:    bfmlalb z2.s, z5.h, z4.h
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fma_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.h
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.fma(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
+
+;
+; constrained.fmul
+;
+
+define <vscale x 2 x bfloat> @fmul_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; BF16-LABEL: fmul_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fmul_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfmul z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.fmul(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @fmul_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; BF16-LABEL: fmul_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    fmul z0.s, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fmul_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfmul z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.fmul(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @fmul_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; NONSTREAMING-LABEL: fmul_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    fmul z0.s, z0.s, z1.s
+; NONSTREAMING-NEXT:    fmul z1.s, z4.s, z3.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z1.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: fmul_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; STREAMING-NEXT:    fmul z0.s, z0.s, z1.s
+; STREAMING-NEXT:    fmul z1.s, z4.s, z3.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z1.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fmul_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    bfmul z0.h, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.fmul(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
+
+;
+; constrained.fmuladd
+;
+
+define <vscale x 2 x bfloat> @fmuladd_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, <vscale x 2 x bfloat> %c) {
+; BF16-LABEL: fmuladd_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z2.s, z2.s, #16
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fmuladd_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.fmuladd(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, <vscale x 2 x bfloat> %c, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @fmuladd_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, <vscale x 4 x bfloat> %c) {
+; BF16-LABEL: fmuladd_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z2.s, z2.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    bfmlalb z2.s, z0.h, z1.h
+; BF16-NEXT:    bfcvt z0.h, p0/m, z2.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fmuladd_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.fmuladd(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, <vscale x 4 x bfloat> %c, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @fmuladd_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c) {
+; NONSTREAMING-LABEL: fmuladd_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v3.2d, #0000000000000000
+; NONSTREAMING-NEXT:    uunpkhi z4.s, z1.h
+; NONSTREAMING-NEXT:    uunpkhi z5.s, z0.h
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip1 z6.h, z3.h, z2.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z3.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z3.h, z0.h
+; NONSTREAMING-NEXT:    zip2 z2.h, z3.h, z2.h
+; NONSTREAMING-NEXT:    fmad z0.s, p0/m, z1.s, z6.s
+; NONSTREAMING-NEXT:    bfmlalb z2.s, z5.h, z4.h
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: fmuladd_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z3.h, #0 // =0x0
+; STREAMING-NEXT:    uunpkhi z4.s, z1.h
+; STREAMING-NEXT:    uunpkhi z5.s, z0.h
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip1 z6.h, z3.h, z2.h
+; STREAMING-NEXT:    zip1 z1.h, z3.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z3.h, z0.h
+; STREAMING-NEXT:    zip2 z2.h, z3.h, z2.h
+; STREAMING-NEXT:    fmad z0.s, p0/m, z1.s, z6.s
+; STREAMING-NEXT:    bfmlalb z2.s, z5.h, z4.h
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fmuladd_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.h
+; SVE-B16B16-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.fmuladd(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
 ; constrained.fpext
@@ -258,8 +826,85 @@ define <vscale x 2 x bfloat> @fptrunc_nv2f64_to_nxv2bf16(<vscale x 2 x double> %
 ;
 
 ;
-; constrained.fsub (TODO)
+; constrained.fsub
 ;
+
+define <vscale x 2 x bfloat> @fsub_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; BF16-LABEL: fsub_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fsub_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.fsub(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @fsub_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; BF16-LABEL: fsub_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    fsub z0.s, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fsub_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.fsub(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @fsub_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; NONSTREAMING-LABEL: fsub_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    fsub z0.s, z0.s, z1.s
+; NONSTREAMING-NEXT:    fsub z1.s, z4.s, z3.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z1.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: fsub_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; STREAMING-NEXT:    fsub z0.s, z0.s, z1.s
+; STREAMING-NEXT:    fsub z1.s, z4.s, z3.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z1.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: fsub_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    bfsub z0.h, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.fsub(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
 ; constrained.ldexp (TODO)
@@ -282,40 +927,752 @@ define <vscale x 2 x bfloat> @fptrunc_nv2f64_to_nxv2bf16(<vscale x 2 x double> %
 ;
 
 ;
-; constrained.maximum (TODO)
+; constrained.maximum
 ;
 
+define <vscale x 2 x bfloat> @maximum_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; BF16-LABEL: maximum_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
 ;
-; constrained.maxnum (TODO)
+; SVE-B16B16-LABEL: maximum_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfmax z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.maximum(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @maximum_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; BF16-LABEL: maximum_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
 ;
+; SVE-B16B16-LABEL: maximum_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfmax z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.maximum(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @maximum_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; NONSTREAMING-LABEL: maximum_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    fmax z3.s, p0/m, z3.s, z4.s
+; NONSTREAMING-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: maximum_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; STREAMING-NEXT:    fmax z3.s, p0/m, z3.s, z4.s
+; STREAMING-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: maximum_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.h
+; SVE-B16B16-NEXT:    bfmax z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.maximum(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
-; constrained.minimum (TODO)
+; constrained.maxnum
 ;
 
+define <vscale x 2 x bfloat> @maxnum_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; BF16-LABEL: maxnum_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
 ;
-; constrained.minnum (TODO)
+; SVE-B16B16-LABEL: maxnum_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfmaxnm z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.maxnum(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @maxnum_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; BF16-LABEL: maxnum_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
 ;
+; SVE-B16B16-LABEL: maxnum_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfmaxnm z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.maxnum(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @maxnum_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; NONSTREAMING-LABEL: maxnum_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    fmaxnm z3.s, p0/m, z3.s, z4.s
+; NONSTREAMING-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: maxnum_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; STREAMING-NEXT:    fmaxnm z3.s, p0/m, z3.s, z4.s
+; STREAMING-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: maxnum_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.h
+; SVE-B16B16-NEXT:    bfmaxnm z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.maxnum(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
-; constrained.nearbyint (TODO)
+; constrained.minimum
 ;
 
+define <vscale x 2 x bfloat> @minimum_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; BF16-LABEL: minimum_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
 ;
-; constrained.rint (TODO)
+; SVE-B16B16-LABEL: minimum_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfmin z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.minimum(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @minimum_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; BF16-LABEL: minimum_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
 ;
+; SVE-B16B16-LABEL: minimum_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfmin z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.minimum(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @minimum_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; NONSTREAMING-LABEL: minimum_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    fmin z3.s, p0/m, z3.s, z4.s
+; NONSTREAMING-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: minimum_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; STREAMING-NEXT:    fmin z3.s, p0/m, z3.s, z4.s
+; STREAMING-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: minimum_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.h
+; SVE-B16B16-NEXT:    bfmin z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.minimum(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
-; constrained.round (TODO)
+; constrained.minnum
 ;
 
+define <vscale x 2 x bfloat> @minnum_nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b) {
+; BF16-LABEL: minnum_nxv2bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.d
+; BF16-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
 ;
-; constrained.roundeven (TODO)
+; SVE-B16B16-LABEL: minnum_nxv2bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.d
+; SVE-B16B16-NEXT:    bfminnm z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.minnum(<vscale x 2 x bfloat> %a, <vscale x 2 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @minnum_nxv4bf16(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b) {
+; BF16-LABEL: minnum_nxv4bf16:
+; BF16:       // %bb.0:
+; BF16-NEXT:    lsl z1.s, z1.s, #16
+; BF16-NEXT:    lsl z0.s, z0.s, #16
+; BF16-NEXT:    ptrue p0.s
+; BF16-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; BF16-NEXT:    bfcvt z0.h, p0/m, z0.s
+; BF16-NEXT:    ret
 ;
+; SVE-B16B16-LABEL: minnum_nxv4bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.s
+; SVE-B16B16-NEXT:    bfminnm z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.minnum(<vscale x 4 x bfloat> %a, <vscale x 4 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @minnum_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; NONSTREAMING-LABEL: minnum_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v2.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; NONSTREAMING-NEXT:    fminnm z3.s, p0/m, z3.s, z4.s
+; NONSTREAMING-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: minnum_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z2.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z3.h, z2.h, z1.h
+; STREAMING-NEXT:    zip2 z4.h, z2.h, z0.h
+; STREAMING-NEXT:    zip1 z1.h, z2.h, z1.h
+; STREAMING-NEXT:    zip1 z0.h, z2.h, z0.h
+; STREAMING-NEXT:    fminnm z3.s, p0/m, z3.s, z4.s
+; STREAMING-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z3.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16-LABEL: minnum_nxv8bf16:
+; SVE-B16B16:       // %bb.0:
+; SVE-B16B16-NEXT:    ptrue p0.h
+; SVE-B16B16-NEXT:    bfminnm z0.h, p0/m, z0.h, z1.h
+; SVE-B16B16-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.minnum(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
-; constrained.sqrt (TODO)
+; constrained.nearbyint
 ;
+
+define <vscale x 2 x bfloat> @nearbyint_nxv2bf16(<vscale x 2 x bfloat> %a) {
+; CHECK-LABEL: nearbyint_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frinti z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.nearbyint(<vscale x 2 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @nearbyint_nxv4bf16(<vscale x 4 x bfloat> %a) {
+; CHECK-LABEL: nearbyint_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frinti z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.nearbyint(<vscale x 4 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @nearbyint_nxv8bf16(<vscale x 8 x bfloat> %a) {
+; NONSTREAMING-LABEL: nearbyint_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    frinti z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    frinti z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: nearbyint_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    frinti z0.s, p0/m, z0.s
+; STREAMING-NEXT:    frinti z2.s, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16_NONSTREAMING-LABEL: nearbyint_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    frinti z0.s, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    frinti z2.s, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: nearbyint_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    frinti z0.s, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    frinti z2.s, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.nearbyint(<vscale x 8 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
+
+;
+; constrained.rint
+;
+
+define <vscale x 2 x bfloat> @rint_nxv2bf16(<vscale x 2 x bfloat> %a) {
+; CHECK-LABEL: rint_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.rint(<vscale x 2 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @rint_nxv4bf16(<vscale x 4 x bfloat> %a) {
+; CHECK-LABEL: rint_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.rint(<vscale x 4 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @rint_nxv8bf16(<vscale x 8 x bfloat> %a) {
+; NONSTREAMING-LABEL: rint_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    frintx z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    frintx z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: rint_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    frintx z0.s, p0/m, z0.s
+; STREAMING-NEXT:    frintx z2.s, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16_NONSTREAMING-LABEL: rint_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    frintx z0.s, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    frintx z2.s, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: rint_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    frintx z0.s, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    frintx z2.s, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.rint(<vscale x 8 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
+
+;
+; constrained.round
+;
+
+define <vscale x 2 x bfloat> @round_nxv2bf16(<vscale x 2 x bfloat> %a) {
+; CHECK-LABEL: round_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frinta z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.round(<vscale x 2 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @round_nxv4bf16(<vscale x 4 x bfloat> %a) {
+; CHECK-LABEL: round_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frinta z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.round(<vscale x 4 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @round_nxv8bf16(<vscale x 8 x bfloat> %a) {
+; NONSTREAMING-LABEL: round_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    frinta z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    frinta z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: round_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    frinta z0.s, p0/m, z0.s
+; STREAMING-NEXT:    frinta z2.s, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16_NONSTREAMING-LABEL: round_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    frinta z0.s, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    frinta z2.s, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: round_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    frinta z0.s, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    frinta z2.s, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.round(<vscale x 8 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
+
+;
+; constrained.roundeven
+;
+
+define <vscale x 2 x bfloat> @roundeven_nxv2bf16(<vscale x 2 x bfloat> %a) {
+; CHECK-LABEL: roundeven_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frintn z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.roundeven(<vscale x 2 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @roundeven_nxv4bf16(<vscale x 4 x bfloat> %a) {
+; CHECK-LABEL: roundeven_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frintn z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.roundeven(<vscale x 4 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @roundeven_nxv8bf16(<vscale x 8 x bfloat> %a) {
+; NONSTREAMING-LABEL: roundeven_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    frintn z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    frintn z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: roundeven_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    frintn z0.s, p0/m, z0.s
+; STREAMING-NEXT:    frintn z2.s, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16_NONSTREAMING-LABEL: roundeven_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    frintn z0.s, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    frintn z2.s, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: roundeven_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    frintn z0.s, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    frintn z2.s, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.roundeven(<vscale x 8 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
+
+;
+; constrained.sqrt
+;
+
+define <vscale x 2 x bfloat> @sqrt_nxv2bf16(<vscale x 2 x bfloat> %a) {
+; CHECK-LABEL: sqrt_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.sqrt(<vscale x 2 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @sqrt_nxv4bf16(<vscale x 4 x bfloat> %a) {
+; CHECK-LABEL: sqrt_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fsqrt z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.sqrt(<vscale x 4 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @sqrt_nxv8bf16(<vscale x 8 x bfloat> %a) {
+; NONSTREAMING-LABEL: sqrt_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip1 z2.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    zip2 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    fsqrt z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    fsqrt z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: sqrt_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip1 z2.h, z1.h, z0.h
+; STREAMING-NEXT:    zip2 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    fsqrt z2.s, p0/m, z2.s
+; STREAMING-NEXT:    fsqrt z0.s, p0/m, z0.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16_NONSTREAMING-LABEL: sqrt_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z2.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    fsqrt z2.s, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    fsqrt z0.s, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: sqrt_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip1 z2.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip2 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    fsqrt z2.s, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    fsqrt z0.s, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.sqrt(<vscale x 8 x bfloat> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
 ; constrained_sitofp
@@ -360,8 +1717,88 @@ define <vscale x 2 x bfloat> @sitofp_nxv2i64_to_nxv2bf16(<vscale x 2 x i64> %a) 
 }
 
 ;
-; constrained.trunc (TODO)
+; constrained.trunc
 ;
+
+define <vscale x 2 x bfloat> @trunc_nxv2bf16(<vscale x 2 x bfloat> %a) {
+; CHECK-LABEL: trunc_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x bfloat> @llvm.experimental.constrained.trunc(<vscale x 2 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x bfloat> %r
+}
+
+define <vscale x 4 x bfloat> @trunc_nxv4bf16(<vscale x 4 x bfloat> %a) {
+; CHECK-LABEL: trunc_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frintz z0.s, p0/m, z0.s
+; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x bfloat> @llvm.experimental.constrained.trunc(<vscale x 4 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x bfloat> %r
+}
+
+define <vscale x 8 x bfloat> @trunc_nxv8bf16(<vscale x 8 x bfloat> %a) {
+; NONSTREAMING-LABEL: trunc_nxv8bf16:
+; NONSTREAMING:       // %bb.0:
+; NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; NONSTREAMING-NEXT:    ptrue p0.s
+; NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; NONSTREAMING-NEXT:    frintz z0.s, p0/m, z0.s
+; NONSTREAMING-NEXT:    frintz z2.s, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; NONSTREAMING-NEXT:    ret
+;
+; STREAMING-LABEL: trunc_nxv8bf16:
+; STREAMING:       // %bb.0:
+; STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; STREAMING-NEXT:    ptrue p0.s
+; STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; STREAMING-NEXT:    frintz z0.s, p0/m, z0.s
+; STREAMING-NEXT:    frintz z2.s, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; STREAMING-NEXT:    ret
+;
+; SVE-B16B16_NONSTREAMING-LABEL: trunc_nxv8bf16:
+; SVE-B16B16_NONSTREAMING:       // %bb.0:
+; SVE-B16B16_NONSTREAMING-NEXT:    movi v1.2d, #0000000000000000
+; SVE-B16B16_NONSTREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_NONSTREAMING-NEXT:    frintz z0.s, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    frintz z2.s, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_NONSTREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_NONSTREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_NONSTREAMING-NEXT:    ret
+;
+; SVE-B16B16_STREAMING-LABEL: trunc_nxv8bf16:
+; SVE-B16B16_STREAMING:       // %bb.0:
+; SVE-B16B16_STREAMING-NEXT:    mov z1.h, #0 // =0x0
+; SVE-B16B16_STREAMING-NEXT:    ptrue p0.s
+; SVE-B16B16_STREAMING-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-B16B16_STREAMING-NEXT:    frintz z0.s, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    frintz z2.s, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z1.h, p0/m, z2.s
+; SVE-B16B16_STREAMING-NEXT:    bfcvt z0.h, p0/m, z0.s
+; SVE-B16B16_STREAMING-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-B16B16_STREAMING-NEXT:    ret
+  %r = call <vscale x 8 x bfloat> @llvm.experimental.constrained.trunc(<vscale x 8 x bfloat> %a, metadata !"fpexcept.strict")
+  ret <vscale x 8 x bfloat> %r
+}
 
 ;
 ; constrained_uitofp

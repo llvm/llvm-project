@@ -6,7 +6,6 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "DXILDataScalarization.h"
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -478,8 +477,8 @@ static bool findAndReplaceVectors(Module &M) {
   return MadeChange;
 }
 
-PreservedAnalyses DXILDataScalarization::run(Module &M,
-                                             ModuleAnalysisManager &) {
+PreservedAnalyses DXILDataScalarizationPass::run(Module &M,
+                                                 ModuleAnalysisManager &) {
   bool MadeChanges = findAndReplaceVectors(M);
   if (!MadeChanges)
     return PreservedAnalyses::all();

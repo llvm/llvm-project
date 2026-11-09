@@ -696,11 +696,11 @@ define i64 @mixed_i64_f64(ptr %p) nounwind {
 ; SLOW-NEXT:    addi sp, sp, -16
 ; SLOW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; SLOW-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; SLOW-NEXT:    lui a1, %hi(.LCPI16_0)
-; SLOW-NEXT:    ld a2, %lo(.LCPI16_0)(a1)
 ; SLOW-NEXT:    ld s0, 0(a0)
+; SLOW-NEXT:    lui a3, 261888
 ; SLOW-NEXT:    mv a0, s0
 ; SLOW-NEXT:    mv a1, s1
+; SLOW-NEXT:    li a2, 0
 ; SLOW-NEXT:    call __adddf3
 ; SLOW-NEXT:    add a0, a0, s0
 ; SLOW-NEXT:    sltu a2, a0, s0
@@ -716,11 +716,11 @@ define i64 @mixed_i64_f64(ptr %p) nounwind {
 ; FAST-NEXT:    addi sp, sp, -16
 ; FAST-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; FAST-NEXT:    sd s0, 4(sp) # 8-byte Folded Spill
-; FAST-NEXT:    lui a1, %hi(.LCPI16_0)
-; FAST-NEXT:    ld a2, %lo(.LCPI16_0)(a1)
 ; FAST-NEXT:    ld s0, 0(a0)
+; FAST-NEXT:    lui a3, 261888
 ; FAST-NEXT:    mv a0, s0
 ; FAST-NEXT:    mv a1, s1
+; FAST-NEXT:    li a2, 0
 ; FAST-NEXT:    call __adddf3
 ; FAST-NEXT:    add a0, a0, s0
 ; FAST-NEXT:    sltu a2, a0, s0
@@ -736,11 +736,11 @@ define i64 @mixed_i64_f64(ptr %p) nounwind {
 ; 4BYTEALIGN-NEXT:    addi sp, sp, -16
 ; 4BYTEALIGN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; 4BYTEALIGN-NEXT:    sd s0, 4(sp) # 8-byte Folded Spill
-; 4BYTEALIGN-NEXT:    lui a1, %hi(.LCPI16_0)
-; 4BYTEALIGN-NEXT:    ld a2, %lo(.LCPI16_0)(a1)
 ; 4BYTEALIGN-NEXT:    ld s0, 0(a0)
+; 4BYTEALIGN-NEXT:    lui a3, 261888
 ; 4BYTEALIGN-NEXT:    mv a0, s0
 ; 4BYTEALIGN-NEXT:    mv a1, s1
+; 4BYTEALIGN-NEXT:    li a2, 0
 ; 4BYTEALIGN-NEXT:    call __adddf3
 ; 4BYTEALIGN-NEXT:    add a0, a0, s0
 ; 4BYTEALIGN-NEXT:    sltu a2, a0, s0

@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Fn, class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 invoke_result_t<_Fn, _Args...>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 invoke_result_t<_Fn, _Args...>
 invoke(_Fn&& __f, _Args&&... __args) noexcept(is_nothrow_invocable_v<_Fn, _Args...>) {
   return std::__invoke(std::forward<_Fn>(__f), std::forward<_Args>(__args)...);
 }
@@ -32,8 +32,7 @@ invoke(_Fn&& __f, _Args&&... __args) noexcept(is_nothrow_invocable_v<_Fn, _Args.
 #  if _LIBCPP_STD_VER >= 23
 template <class _Result, class _Fn, class... _Args>
   requires is_invocable_r_v<_Result, _Fn, _Args...>
-_LIBCPP_HIDE_FROM_ABI constexpr _Result
-invoke_r(_Fn&& __f, _Args&&... __args) noexcept(is_nothrow_invocable_r_v<_Result, _Fn, _Args...>) {
+constexpr _Result invoke_r(_Fn&& __f, _Args&&... __args) noexcept(is_nothrow_invocable_r_v<_Result, _Fn, _Args...>) {
   if constexpr (is_void_v<_Result>) {
     static_cast<void>(std::invoke(std::forward<_Fn>(__f), std::forward<_Args>(__args)...));
   } else {

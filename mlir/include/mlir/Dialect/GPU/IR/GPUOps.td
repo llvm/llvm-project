@@ -103,7 +103,7 @@ def GPU_ClusterDimBlocksOp : GPU_IndexOp<"cluster_dim_blocks"> {
     environment where the thread blocks per cluster  is greater than `upper_bound`
     causes undefined behavior.
 
-    There is an implicit upper bound of `kMaxClusterDim` (currently 8).
+    There is an implicit upper bound of `kMaxClusterDim`.
   }];
 }
 
@@ -140,7 +140,7 @@ def GPU_ClusterBlockIdOp : GPU_IndexOp<"cluster_block_id"> {
     environment where the number of thread blocks per cluster along `dimension`
     is greater than `upper_bound` causes undefined behavior.
 
-    There is an implicit upper bound of `kMaxClusterDim` (currently 8).
+    There is an implicit upper bound of `kMaxClusterDim`.
   }];
 }
 

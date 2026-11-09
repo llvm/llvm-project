@@ -34,7 +34,7 @@ public:
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
-    elf::scanSection1<SPARCV9, ELF64BE>(*this, sec, shard);
+    elf::scanSection1<ELF64BE>(*this, sec, shard);
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;

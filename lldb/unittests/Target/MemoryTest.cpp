@@ -1797,6 +1797,7 @@ TEST_F(MemoryTest, TestReadMemoryClearsStaleError) {
 
   auto expected_file = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

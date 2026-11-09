@@ -493,7 +493,7 @@ struct PrepareContractToGPUMMA
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         op, lhs, rhs, res,
         rewriter.getAffineMapArrayAttr(infer({{m, k}, {k, n}, {m, n}})),
-        op.getIteratorTypes());
+        op.getIteratorTypes(), op.getKind(), op.getFastmath());
     return success();
   }
 };

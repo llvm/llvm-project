@@ -357,7 +357,11 @@ static void emitConstructorDestructorAlias(CIRGenModule &cgm,
   auto aliasee = cast<cir::FuncOp>(cgm.getAddrOfGlobal(targetDecl));
 
   // Populate actual alias.
-  cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+  cir::FuncOp alias =
+      cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+
+  // Alias constructors and destructors are always unnamed_addr.
+  alias.setUnnamedAddr(true);
 }
 
 void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
@@ -2101,7 +2105,6 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   // TODO: When sanitizer support is implemented, we'll need to
   // get the address space from `newPtr`.
-  assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::sanitizers());
 
   ASTContext &ctx = cgm.getASTContext();
@@ -2114,9 +2117,8 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
   mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
-  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
-      cgf.getBuilder().createBitcast(newPtr.getPointer(), u8PtrTy);
+      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8Ty);
 
   // Compute an offset to the cookie.
   CharUnits cookieOffset = cookieSize - sizeSize;

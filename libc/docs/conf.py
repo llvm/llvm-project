@@ -1,4 +1,10 @@
-# -*- coding: utf-8 -*-
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
 #
 # libc documentation build configuration file.
 #
@@ -12,6 +18,7 @@
 
 import sys, os
 from datetime import date
+from pathlib import Path
 
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
@@ -56,13 +63,6 @@ today_fmt = "%Y-%m-%d"
 # directories to ignore when looking for source files.
 exclude_patterns = ["_build"]
 
-rst_prolog = """
-.. role::  raw-html(raw)
-    :format: html
-
-.. |check| replace:: :raw-html:`&#x2705`
-"""
-
 myst_substitutions = {
     "check": "\N{WHITE HEAVY CHECK MARK}",
 }
@@ -95,6 +95,7 @@ configure_furo(
     source_directory="libc/docs/",
     html_title="The LLVM C Library",
     local_static_path=["_static"],
+    extra_css_files=["status.css"],
 )
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -108,9 +109,9 @@ configure_furo(
 # html_logo = None
 
 # The name of an image file (within the static path) to use as favicon of the
-# docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
+# docs.  This file should be a Windows icon file (.ico)/SVG file (.svg) being 16x16 or 32x32
 # pixels large.
-# html_favicon = None
+html_favicon = "_static/llvm_libc_logo.svg"
 
 # html_context = {
 #    'css_files': [
@@ -248,3 +249,20 @@ intersphinx_mapping = {}
 todo_include_todos = True
 
 redirects = {"math/index": "../headers/math/index.html"}
+
+
+def _configure_generated_header_links(app, pagename, templatename, context, doctree):
+    if not pagename.startswith("headers/"):
+        return
+    stem = pagename[len("headers/") :]
+    yaml_rel = f"libc/utils/docgen/{stem}.yaml"
+    for p in Path(__file__).resolve().parents:
+        if (p / yaml_rel).exists():
+            repo = "https://github.com/llvm/llvm-project"
+            context["theme_source_view_link"] = f"{repo}/blob/main/{yaml_rel}?plain=1"
+            context["theme_source_edit_link"] = f"{repo}/edit/main/{yaml_rel}"
+            break
+
+
+def setup(app):
+    app.connect("html-page-context", _configure_generated_header_links)

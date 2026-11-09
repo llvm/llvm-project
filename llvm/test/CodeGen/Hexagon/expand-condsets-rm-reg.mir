@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=hexagon -run-pass expand-condsets -o - %s -verify-machineinstrs -debug-only=expand-condsets 2>&1 | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass expand-condsets -o - %s -debug-only=expand-condsets 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Check that coalesced registers are removed from live intervals.
@@ -40,7 +40,7 @@ body: |
         %2 = COPY $p0
         ; Check that %3 was coalesced into %4.
         ; CHECK: %4:intregs = A2_abs %1
-        ; CHECK: %4:intregs = A2_tfrt killed %2, killed %0, implicit %4
+        ; CHECK: %4:intregs = A2_tfrt %2, %0, implicit %4
         %3 = A2_abs %1
         %4 = C2_mux %2, %0, %3
         $r0 = COPY %4

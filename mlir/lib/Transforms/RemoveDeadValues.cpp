@@ -209,7 +209,8 @@ static void dropUsesAndEraseResults(RewriterBase &rewriter, Operation *op,
 }
 
 /// Process a simple operation `op` using the liveness analysis `la`.
-/// If the operation has no memory effects and none of its results are live:
+/// If the operation has no memory effects, none of its results are live, and it
+/// is not a symbol with known users:
 ///   1. Add the operation to a list for future removal, and
 ///   2. Mark all its results as non-live values
 ///
@@ -222,8 +223,16 @@ static void dropUsesAndEraseResults(RewriterBase &rewriter, Operation *op,
 ///   - A region branch terminator
 ///   - Return-like
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
+                            const SymbolUserMap &symbolUserMap,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
+  if (isa<SymbolOpInterface>(op) && !symbolUserMap.useEmpty(op)) {
+    LDBG() << "Simple op is a symbol with known users, preserving it: "
+           << OpWithFlags(op,
+                          OpPrintingFlags().skipRegions().printGenericOpForm());
+    return;
+  }
+
   // Operations that have dead operands can be erased regardless of their
   // side effects. The liveness analysis would not have marked an SSA value as
   // "dead" if it had a side-effecting user that is reachable.
@@ -836,7 +845,7 @@ void RemoveDeadValues::runOnOperation() {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.
     } else {
-      processSimpleOp(op, la, deadVals, finalCleanupList);
+      processSimpleOp(op, la, symbolUserMap, deadVals, finalCleanupList);
     }
   });
 

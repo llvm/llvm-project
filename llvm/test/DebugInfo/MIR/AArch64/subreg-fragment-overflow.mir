@@ -28,6 +28,7 @@
   !1809 = !DILocation(line: 0, scope: !1590   )
 ---
 name:            _f
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     renamable $d16_d17_d18 = LD3Threev8b killed renamable $x15, debug-location !1809

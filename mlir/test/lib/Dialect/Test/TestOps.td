@@ -612,6 +612,21 @@ def OpWithBitEnumVerticalBarDirective
   let assemblyFormat = "enum($value) attr-dict";
 }
 
+def TestBitEnumSpaceAttr
+    : EnumAttr<Test_Dialect, TestBitEnumSpace, "bit_enum_space">;
+
+def OpWithBitEnumSpace : TEST_Op<"op_with_bit_enum_space"> {
+  let arguments = (ins TestBitEnumSpaceAttr:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+def OpWithBitEnumSpaceDirective : TEST_Op<"op_with_bit_enum_space_directive"> {
+  let arguments = (ins TestBitEnumSpaceAttr:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "enum($value) (`tag` $tag^)? attr-dict";
+}
+
 // Define a pattern that matches and creates a bit enum attribute.
 def : Pat<(OpWithBitEnum ConstantEnumCase<TestBitEnumAttr, "write|execute">,
                          ConstantAttr<I32Attr, "0">),
@@ -2885,6 +2900,23 @@ def IsolatedRegionBranchOp : TEST_Op<"isolated_region_branch", [
 }
 
 def IsolatedRegionYieldOp : TEST_Op<"isolated_region_yield", [
+    Pure, ReturnLike, Terminator,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins Variadic<AnyType>:$values);
+}
+
+def TypeChangingRegionBranchOp : TEST_Op<"type_changing_region_branch", [
+    RecursiveMemoryEffects,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs", "areTypesCompatible"]>]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
+  let hasCanonicalizer = 1;
+}
+
+def TypeChangingYieldOp : TEST_Op<"type_changing_yield", [
     Pure, ReturnLike, Terminator,
     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
         ["getMutableSuccessorOperands"]>]> {

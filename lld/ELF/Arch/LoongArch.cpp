@@ -41,9 +41,9 @@ public:
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.is64)
-      elf::scanSection1<LoongArch, ELF64LE>(*this, sec, shard);
+      elf::scanSection1<ELF64LE>(*this, sec, shard);
     else
-      elf::scanSection1<LoongArch, ELF32LE>(*this, sec, shard);
+      elf::scanSection1<ELF32LE>(*this, sec, shard);
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;

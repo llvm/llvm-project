@@ -5378,19 +5378,21 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
             CanSimplify())
           return P;
 
-        // getelementptr V, (ashr (sub P, V), C) -> P if P points to a type of
-        // size 1 << C.
-        if (match(Indices[0], m_AShr(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
-                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
-                                     m_ConstantInt(C))) &&
+        // getelementptr V, (ashr exact (sub P, V), C) -> P if P points to a
+        // type of size 1 << C.
+        if (match(Indices[0],
+                  m_Exact(m_AShr(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                       m_PtrToIntOrAddr(m_Specific(Ptr))),
+                                 m_ConstantInt(C)))) &&
             TyAllocSize == 1ULL << C && CanSimplify())
           return P;
 
-        // getelementptr V, (sdiv (sub P, V), C) -> P if P points to a type of
-        // size C.
-        if (match(Indices[0], m_SDiv(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
-                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
-                                     m_SpecificInt(TyAllocSize))) &&
+        // getelementptr V, (sdiv exact (sub P, V), C) -> P if P points to a
+        // type of size C.
+        if (match(Indices[0],
+                  m_Exact(m_SDiv(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                       m_PtrToIntOrAddr(m_Specific(Ptr))),
+                                 m_SpecificInt(TyAllocSize)))) &&
             CanSimplify())
           return P;
       }
@@ -5786,10 +5788,8 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
   // provenance.
   Value *Ptr, *X;
   if (CastOpc == Instruction::PtrToAddr &&
-      match(Op,
-            m_PtrAdd(m_Value(Ptr),
-                     m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
-      X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
+      match(Op, m_PtrAdd(Q.DL, m_Value(Ptr),
+                         m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))))
     return X;
 
   // Fold a value-preserving zext/sext of a trunc back to the original value.
@@ -6013,7 +6013,8 @@ static Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
 
   Value *X;
   // fneg (fneg X) ==> X
-  if (match(Op, m_FNeg(m_Value(X))))
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Op, m_FNegOrFSubNegZero(m_Value(X))))
     return X;
 
   return nullptr;
@@ -6157,8 +6158,9 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
         match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
 
-    if (match(Op0, m_FNeg(m_Specific(Op1))) ||
-        match(Op1, m_FNeg(m_Specific(Op0))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op0, m_FNegOrFSubNegZero(m_Specific(Op1))) ||
+        match(Op1, m_FNegOrFSubNegZero(m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
   }
 
@@ -6204,7 +6206,9 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub -0.0, (fneg X) ==> X
   Value *X;
   if (canIgnoreSNaN(ExBehavior, FMF))
-    if (match(Op0, m_NegZeroFP()) && match(Op1, m_FNeg(m_Value(X))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op0, m_NegZeroFP()) &&
+        match(Op1, m_FNegOrFSubNegZero(m_Value(X))))
       return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
@@ -6659,11 +6663,6 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
 // TODO: Need to pass in FastMathFlags
 static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                             bool IsStrict) {
-  // ldexp(poison, x) -> poison
-  // ldexp(x, poison) -> poison
-  if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
-    return Op0;
-
   // ldexp(undef, x) -> nan
   if (Q.isUndefValue(Op0))
     return ConstantFP::getNaN(Op0->getType());
@@ -7045,6 +7044,15 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                       const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
+  case Intrinsic::vector_shuffle:
+    // A poison mask selects poison in every lane.
+    if (isa<PoisonValue>(Op1))
+      return PoisonValue::get(ReturnType);
+    // The only in-range index into a one-element vector is 0, and other
+    // indices select poison, so the shuffle is its source.
+    if (cast<VectorType>(ReturnType)->getElementCount().isScalar())
+      return Op0;
+    break;
   case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);

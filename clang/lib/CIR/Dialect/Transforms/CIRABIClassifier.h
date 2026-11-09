@@ -176,30 +176,6 @@ createAMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
 /// uses.  Conventions the classifier does not distinguish fall back to C.
 llvm::CallingConv::ID convertCallingConv(cir::CallingConv cc);
 
-//===----------------------------------------------------------------------===//
-// Classification helpers defined in CallConvLoweringPass.cpp
-//===----------------------------------------------------------------------===//
-
-/// Record on \p fc whether \p returnType is CIR's void.
-std::optional<mlir::abi::FunctionClassification>
-withReturnVoidness(std::optional<mlir::abi::FunctionClassification> fc,
-                   mlir::Type returnType);
-
-/// Classify \p func with the test target, or from the attribute named
-/// \p classificationAttrName when that is non-empty.
-std::optional<mlir::abi::FunctionClassification>
-classifyFunction(cir::FuncOp func, const mlir::DataLayout &dl,
-                 cir::CallConvTarget target,
-                 llvm::StringRef classificationAttrName);
-
-/// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
-llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy);
-
-/// The AVX level to classify \p func at: \p base, raised if the function's own
-/// recorded feature list enables a wider vector.
-llvm::abi::X86AVXABILevel funcAvxLevel(cir::FuncOp func,
-                                       llvm::abi::X86AVXABILevel base);
-
 } // namespace cir
 
 #endif // CLANG_LIB_CIR_DIALECT_TRANSFORMS_CIRABICLASSIFIER_H

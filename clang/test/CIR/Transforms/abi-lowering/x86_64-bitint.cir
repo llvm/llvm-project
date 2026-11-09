@@ -38,35 +38,35 @@ module attributes {
 
   // A sub-register width is Extend: signext for arguments, and no coercion in
   // the body.
-  cir.func @ret_b17(%arg0: !b17i) -> !b17i {
+  cir.func @ret_b17(%arg0: !b17i) -> !b17i requires_call_conv_lowering {
     cir.return %arg0 : !b17i
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_b17(
-  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.signext})
+  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext})
   // CHECK-SAME:    -> !cir.int<s, 17, bitint>
   // CHECK-NEXT:    cir.return %arg0 : !cir.int<s, 17, bitint>
 
   // LLVM-LABEL: define i17 @ret_b17(
-  // LLVM-SAME:    i17 signext %[[ARG:[0-9]+]])
+  // LLVM-SAME:    i17 noundef signext %[[ARG:[0-9]+]])
   // LLVM-NEXT:    ret i17 %[[ARG]]
 
   // Unsigned takes zeroext instead.
-  cir.func @ret_ub17(%arg0: !ub17i) -> !ub17i {
+  cir.func @ret_ub17(%arg0: !ub17i) -> !ub17i requires_call_conv_lowering {
     cir.return %arg0 : !ub17i
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_ub17(
-  // CHECK-SAME:    %arg0: !cir.int<u, 17, bitint> {llvm.zeroext})
+  // CHECK-SAME:    %arg0: !cir.int<u, 17, bitint> {llvm.noundef, llvm.zeroext})
   // CHECK-SAME:    -> !cir.int<u, 17, bitint>
   // CHECK-NEXT:    cir.return %arg0 : !cir.int<u, 17, bitint>
 
   // LLVM-LABEL: define i17 @ret_ub17(
-  // LLVM-SAME:    i17 zeroext %[[ARG:[0-9]+]])
+  // LLVM-SAME:    i17 noundef zeroext %[[ARG:[0-9]+]])
   // LLVM-NEXT:    ret i17 %[[ARG]]
 
   // Already the width the classifier names: Direct, nothing to rewrite.
-  cir.func @ret_b32(%arg0: !b32i) -> !b32i {
+  cir.func @ret_b32(%arg0: !b32i) -> !b32i requires_call_conv_lowering {
     cir.return %arg0 : !b32i
   }
 
@@ -80,7 +80,7 @@ module attributes {
   // 33 bits travels in an i64.  Its five bytes are fewer than the eightbyte,
   // so both coerce slots are typed i64 and the narrow views sit on the
   // accesses.  That memory round trip is a truncate and a re-extend in LLVM.
-  cir.func @ret_b33(%arg0: !b33i) -> !b33i {
+  cir.func @ret_b33(%arg0: !b33i) -> !b33i requires_call_conv_lowering {
     cir.return %arg0 : !b33i
   }
 
@@ -102,7 +102,7 @@ module attributes {
   // LLVM-NEXT:    ret i33 %[[NARROW]]
 
   // Signedness changes only the extension back into the eightbyte.
-  cir.func @ret_ub33(%arg0: !ub33i) -> !ub33i {
+  cir.func @ret_ub33(%arg0: !ub33i) -> !ub33i requires_call_conv_lowering {
     cir.return %arg0 : !ub33i
   }
 
@@ -125,7 +125,7 @@ module attributes {
 
   // 63 bits fills the eightbyte, and the slot takes whichever type is larger,
   // so here it is the bit-precise one and the i64 view moves to the load.
-  cir.func @ret_b63(%arg0: !b63i) -> !b63i {
+  cir.func @ret_b63(%arg0: !b63i) -> !b63i requires_call_conv_lowering {
     cir.return %arg0 : !b63i
   }
 
@@ -146,7 +146,7 @@ module attributes {
   // LLVM-NEXT:    ret i63 %[[NARROW]]
 
   // A _BitInt exactly filling one register is Direct, signature unchanged.
-  cir.func @ret_b64(%arg0: !b64i) -> !b64i {
+  cir.func @ret_b64(%arg0: !b64i) -> !b64i requires_call_conv_lowering {
     cir.return %arg0 : !b64i
   }
 
@@ -159,14 +159,12 @@ module attributes {
 
   // Two INTEGER eightbytes: coerced to a {i64, i64} pair the rewriter flattens
   // into two arguments, which the prologue writes back into one slot.
-  cir.func @ret_b65(%arg0: !b65i) -> !b65i {
+  cir.func @ret_b65(%arg0: !b65i) -> !b65i requires_call_conv_lowering {
     cir.return %arg0 : !b65i
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_b65(%arg0: !u64i, %arg1: !u64i)
-  // CHECK-SAME:    -> !rec_anon_struct
-  // CHECK-NEXT:    %[[RETSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
+  // CHECK-SAME:    -> !cir.int<s, 65, bitint>
   // CHECK-NEXT:    %[[VALSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[VALSLOT]][0]
@@ -179,17 +177,10 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
   // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[VALVIEW]]
   // CHECK-SAME:      : !cir.ptr<!cir.int<s, 65, bitint>>, !cir.int<s, 65, bitint>
-  // CHECK-NEXT:    %[[RETVIEW:[0-9]+]] = cir.cast bitcast %[[RETSLOT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
-  // CHECK-NEXT:    cir.store %[[VAL]], %[[RETVIEW]]
-  // CHECK-SAME:      : !cir.int<s, 65, bitint>, !cir.ptr<!cir.int<s, 65, bitint>>
-  // CHECK-NEXT:    %[[WIDE:[0-9]+]] = cir.load %[[RETSLOT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.return %[[WIDE]] : !rec_anon_struct
+  // CHECK-NEXT:    cir.return %[[VAL]] : !cir.int<s, 65, bitint>
 
-  // LLVM-LABEL: define { i64, i64 } @ret_b65(
+  // LLVM-LABEL: define i65 @ret_b65(
   // LLVM-SAME:    i64 %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]])
-  // LLVM-NEXT:    %[[RETSLOT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[VALSLOT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
   // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 0
@@ -199,20 +190,15 @@ module attributes {
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E1]]
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i128, ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[NARROW:[0-9]+]] = trunc i128 %[[WIDE]] to i65
-  // LLVM-NEXT:    %[[EXT:[0-9]+]] = sext i65 %[[NARROW]] to i128
-  // LLVM-NEXT:    store i128 %[[EXT]], ptr %[[RETSLOT]]
-  // LLVM-NEXT:    %[[RES:[0-9]+]] = load { i64, i64 }, ptr %[[RETSLOT]]
-  // LLVM-NEXT:    ret { i64, i64 } %[[RES]]
+  // LLVM-NEXT:    ret i65 %[[NARROW]]
 
   // Unsigned pairs the same way and zero-extends on the way back.
-  cir.func @ret_ub65(%arg0: !ub65i) -> !ub65i {
+  cir.func @ret_ub65(%arg0: !ub65i) -> !ub65i requires_call_conv_lowering {
     cir.return %arg0 : !ub65i
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_ub65(%arg0: !u64i, %arg1: !u64i)
-  // CHECK-SAME:    -> !rec_anon_struct
-  // CHECK-NEXT:    %[[RETSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
+  // CHECK-SAME:    -> !cir.int<u, 65, bitint>
   // CHECK-NEXT:    %[[VALSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[VALSLOT]][0]
@@ -225,17 +211,10 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<u, 65, bitint>>
   // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[VALVIEW]]
   // CHECK-SAME:      : !cir.ptr<!cir.int<u, 65, bitint>>, !cir.int<u, 65, bitint>
-  // CHECK-NEXT:    %[[RETVIEW:[0-9]+]] = cir.cast bitcast %[[RETSLOT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<u, 65, bitint>>
-  // CHECK-NEXT:    cir.store %[[VAL]], %[[RETVIEW]]
-  // CHECK-SAME:      : !cir.int<u, 65, bitint>, !cir.ptr<!cir.int<u, 65, bitint>>
-  // CHECK-NEXT:    %[[WIDE:[0-9]+]] = cir.load %[[RETSLOT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.return %[[WIDE]] : !rec_anon_struct
+  // CHECK-NEXT:    cir.return %[[VAL]] : !cir.int<u, 65, bitint>
 
-  // LLVM-LABEL: define { i64, i64 } @ret_ub65(
+  // LLVM-LABEL: define i65 @ret_ub65(
   // LLVM-SAME:    i64 %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]])
-  // LLVM-NEXT:    %[[RETSLOT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[VALSLOT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
   // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 0
@@ -245,20 +224,15 @@ module attributes {
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E1]]
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i128, ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[NARROW:[0-9]+]] = trunc i128 %[[WIDE]] to i65
-  // LLVM-NEXT:    %[[EXT:[0-9]+]] = zext i65 %[[NARROW]] to i128
-  // LLVM-NEXT:    store i128 %[[EXT]], ptr %[[RETSLOT]]
-  // LLVM-NEXT:    %[[RES:[0-9]+]] = load { i64, i64 }, ptr %[[RETSLOT]]
-  // LLVM-NEXT:    ret { i64, i64 } %[[RES]]
+  // LLVM-NEXT:    ret i65 %[[NARROW]]
 
   // 127 bits fills both eightbytes, so the slot is the bit-precise type again.
-  cir.func @ret_b127(%arg0: !b127i) -> !b127i {
+  cir.func @ret_b127(%arg0: !b127i) -> !b127i requires_call_conv_lowering {
     cir.return %arg0 : !b127i
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_b127(%arg0: !u64i, %arg1: !u64i)
-  // CHECK-SAME:    -> !rec_anon_struct
-  // CHECK-NEXT:    %[[RETSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 127, bitint>>
+  // CHECK-SAME:    -> !cir.int<s, 127, bitint>
   // CHECK-NEXT:    %[[VALSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[E0:[0-9]+]] = cir.get_member %[[VALSLOT]][0]
@@ -271,17 +245,10 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 127, bitint>>
   // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[VALVIEW]]
   // CHECK-SAME:      : !cir.ptr<!cir.int<s, 127, bitint>>, !cir.int<s, 127, bitint>
-  // CHECK-NEXT:    cir.store %[[VAL]], %[[RETSLOT]]
-  // CHECK-SAME:      : !cir.int<s, 127, bitint>, !cir.ptr<!cir.int<s, 127, bitint>>
-  // CHECK-NEXT:    %[[RETVIEW:[0-9]+]] = cir.cast bitcast %[[RETSLOT]]
-  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 127, bitint>> -> !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[WIDE:[0-9]+]] = cir.load %[[RETVIEW]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.return %[[WIDE]] : !rec_anon_struct
+  // CHECK-NEXT:    cir.return %[[VAL]] : !cir.int<s, 127, bitint>
 
-  // LLVM-LABEL: define { i64, i64 } @ret_b127(
+  // LLVM-LABEL: define i127 @ret_b127(
   // LLVM-SAME:    i64 %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]])
-  // LLVM-NEXT:    %[[RETSLOT:[0-9]+]] = alloca i128
   // LLVM-NEXT:    %[[VALSLOT:[0-9]+]] = alloca { i64, i64 }
   // LLVM-NEXT:    %[[E0:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
   // LLVM-SAME:      , ptr %[[VALSLOT]], i32 0, i32 0
@@ -291,13 +258,10 @@ module attributes {
   // LLVM-NEXT:    store i64 %[[A1]], ptr %[[E1]]
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i128, ptr %[[VALSLOT]]
   // LLVM-NEXT:    %[[NARROW:[0-9]+]] = trunc i128 %[[WIDE]] to i127
-  // LLVM-NEXT:    %[[EXT:[0-9]+]] = sext i127 %[[NARROW]] to i128
-  // LLVM-NEXT:    store i128 %[[EXT]], ptr %[[RETSLOT]]
-  // LLVM-NEXT:    %[[RES:[0-9]+]] = load { i64, i64 }, ptr %[[RETSLOT]]
-  // LLVM-NEXT:    ret { i64, i64 } %[[RES]]
+  // LLVM-NEXT:    ret i127 %[[NARROW]]
 
   // Exactly two eightbytes: passed as one i128, nothing to rewrite.
-  cir.func @ret_b128(%arg0: !b128i) -> !b128i {
+  cir.func @ret_b128(%arg0: !b128i) -> !b128i requires_call_conv_lowering {
     cir.return %arg0 : !b128i
   }
 
@@ -310,7 +274,7 @@ module attributes {
 
   // A call site widens the argument and narrows the result symmetrically, so
   // the truncate and extend appear on both sides of the call.
-  cir.func @call_b33(%arg0: !b33i) -> !b33i {
+  cir.func @call_b33(%arg0: !b33i) -> !b33i requires_call_conv_lowering {
     %0 = cir.call @ret_b33(%arg0) : (!b33i) -> !b33i
     cir.return %0 : !b33i
   }
@@ -344,15 +308,13 @@ module attributes {
 
   // A call site decomposes the argument into the two registers the callee
   // expects and reassembles the returned pair.
-  cir.func @call_b65(%arg0: !b65i) -> !b65i {
+  cir.func @call_b65(%arg0: !b65i) -> !b65i requires_call_conv_lowering {
     %0 = cir.call @ret_b65(%arg0) : (!b65i) -> !b65i
     cir.return %0 : !b65i
   }
 
   // CHECK-LABEL: cir.func{{.*}} @call_b65(%arg0: !u64i, %arg1: !u64i)
-  // CHECK-SAME:    -> !rec_anon_struct
-  // CHECK-NEXT:    %[[RETSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
+  // CHECK-SAME:    -> !cir.int<s, 65, bitint>
   // CHECK-NEXT:    %[[INSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[I0:[0-9]+]] = cir.get_member %[[INSLOT]][0]
@@ -365,8 +327,6 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
   // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[INVIEW]]
   // CHECK-SAME:      : !cir.ptr<!cir.int<s, 65, bitint>>, !cir.int<s, 65, bitint>
-  // CHECK-NEXT:    %[[RESSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[ARGSLOT:[0-9]+]] = cir.alloca "coerce" align(8)
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>
   // CHECK-NEXT:    %[[ARGVIEW:[0-9]+]] = cir.cast bitcast %[[ARGSLOT]]
@@ -380,22 +340,10 @@ module attributes {
   // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
   // CHECK-NEXT:    %[[A1:[0-9]+]] = cir.load %[[A1P]] : !cir.ptr<!u64i>, !u64i
   // CHECK-NEXT:    %[[RES:[0-9]+]] = cir.call @ret_b65(%[[A0]], %[[A1]])
-  // CHECK-SAME:      : (!u64i, !u64i) -> !rec_anon_struct
-  // CHECK-NEXT:    cir.store %[[RES]], %[[RESSLOT]]
-  // CHECK-SAME:      : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
-  // CHECK-NEXT:    %[[RESVIEW:[0-9]+]] = cir.cast bitcast %[[RESSLOT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
-  // CHECK-NEXT:    %[[NARROW:[0-9]+]] = cir.load %[[RESVIEW]]
-  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 65, bitint>>, !cir.int<s, 65, bitint>
-  // CHECK-NEXT:    %[[RETVIEW:[0-9]+]] = cir.cast bitcast %[[RETSLOT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!cir.int<s, 65, bitint>>
-  // CHECK-NEXT:    cir.store %[[NARROW]], %[[RETVIEW]]
-  // CHECK-SAME:      : !cir.int<s, 65, bitint>, !cir.ptr<!cir.int<s, 65, bitint>>
-  // CHECK-NEXT:    %[[OUT:[0-9]+]] = cir.load %[[RETSLOT]]
-  // CHECK-SAME:      : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-  // CHECK-NEXT:    cir.return %[[OUT]] : !rec_anon_struct
+  // CHECK-SAME:      : (!u64i, !u64i) -> !cir.int<s, 65, bitint>
+  // CHECK-NEXT:    cir.return %[[RES]] : !cir.int<s, 65, bitint>
 
-  // LLVM-LABEL: define { i64, i64 } @call_b65(
+  // LLVM-LABEL: define i65 @call_b65(
   // LLVM-SAME:    i64 %{{[0-9]+}}, i64 %{{[0-9]+}})
   // LLVM:         %[[VAL:[0-9]+]] = trunc i128 %{{[0-9]+}} to i65
   // LLVM:         %[[EXT:[0-9]+]] = sext i65 %[[VAL]] to i128
@@ -406,24 +354,18 @@ module attributes {
   // LLVM-NEXT:    %[[A1P:[0-9]+]] = getelementptr inbounds nuw { i64, i64 }
   // LLVM-SAME:      , ptr %[[ARGSLOT]], i32 0, i32 1
   // LLVM-NEXT:    %[[A1:[0-9]+]] = load i64, ptr %[[A1P]]
-  // LLVM-NEXT:    %[[RES:[0-9]+]] = call { i64, i64 } @ret_b65(i64 %[[A0]], i64 %[[A1]])
-  // LLVM-NEXT:    store { i64, i64 } %[[RES]], ptr %[[RESSLOT:[0-9]+]], align 8
-  // LLVM-NEXT:    %[[RESWIDE:[0-9]+]] = load i128, ptr %[[RESSLOT]]
-  // LLVM-NEXT:    %[[RESNARROW:[0-9]+]] = trunc i128 %[[RESWIDE]] to i65
-  // LLVM-NEXT:    %[[RETEXT:[0-9]+]] = sext i65 %[[RESNARROW]] to i128
-  // LLVM-NEXT:    store i128 %[[RETEXT]], ptr %[[RETSLOT:[0-9]+]], align 8
-  // LLVM-NEXT:    %[[OUT:[0-9]+]] = load { i64, i64 }, ptr %[[RETSLOT]], align 8
-  // LLVM-NEXT:    ret { i64, i64 } %[[OUT]]
+  // LLVM-NEXT:    %[[RES:[0-9]+]] = call i65 @ret_b65(i64 %[[A0]], i64 %[[A1]])
+  // LLVM-NEXT:    ret i65 %[[RES]]
 
   // Widths that classify differently in one signature: the 65-bit parameter
   // expands to two registers, shifting the 33-bit one to the fourth position
   // while the extended one stays where it was.
-  cir.func @take_widths(%arg0: !b17i, %arg1: !b65i, %arg2: !b33i) {
+  cir.func @take_widths(%arg0: !b17i, %arg1: !b65i, %arg2: !b33i) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK-LABEL: cir.func{{.*}} @take_widths(
-  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.signext}
+  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext}
   // CHECK-SAME:    , %arg1: !u64i, %arg2: !u64i, %arg3: !u64i)
   // CHECK-NEXT:    %[[W33SLOT:[0-9]+]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg3, %[[W33SLOT]] : !u64i, !cir.ptr<!u64i>
@@ -446,7 +388,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_widths(
-  // LLVM-SAME:    i17 signext %{{[0-9]+}}, i64 %[[A1:[0-9]+]]
+  // LLVM-SAME:    i17 noundef signext %{{[0-9]+}}, i64 %[[A1:[0-9]+]]
   // LLVM-SAME:    , i64 %[[A2:[0-9]+]], i64 %[[A3:[0-9]+]])
   // The fourth register holds the 33-bit value, materialized first.
   // LLVM-NEXT:    %[[W33SLOT:[0-9]+]] = alloca i64, align 8
@@ -468,13 +410,13 @@ module attributes {
   // Calling it maps the caller's four registers back onto the callee's four:
   // the extended argument passes straight through, the pair is decomposed, and
   // the 33-bit value is re-widened.
-  cir.func @call_widths(%arg0: !b17i, %arg1: !b65i, %arg2: !b33i) {
+  cir.func @call_widths(%arg0: !b17i, %arg1: !b65i, %arg2: !b33i) requires_call_conv_lowering {
     cir.call @take_widths(%arg0, %arg1, %arg2) : (!b17i, !b65i, !b33i) -> ()
     cir.return
   }
 
   // CHECK-LABEL: cir.func{{.*}} @call_widths(
-  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.signext}
+  // CHECK-SAME:    %arg0: !cir.int<s, 17, bitint> {llvm.noundef, llvm.signext}
   // CHECK-SAME:    , %arg1: !u64i, %arg2: !u64i, %arg3: !u64i)
   // CHECK-NEXT:    %[[V33SLOT:[0-9]+]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
   // CHECK-NEXT:    cir.store %arg3, %[[V33SLOT]] : !u64i, !cir.ptr<!u64i>
@@ -513,12 +455,12 @@ module attributes {
   // CHECK-SAME:      : !cir.int<s, 33, bitint>, !cir.ptr<!cir.int<s, 33, bitint>>
   // CHECK-NEXT:    %[[A3:[0-9]+]] = cir.load %[[W33SLOT]] : !cir.ptr<!u64i>, !u64i
   // CHECK-NEXT:    cir.call @take_widths(%arg0, %[[A1]], %[[A2]], %[[A3]])
-  // CHECK-SAME:      : (!cir.int<s, 17, bitint> {llvm.signext}
+  // CHECK-SAME:      : (!cir.int<s, 17, bitint> {llvm.noundef, llvm.signext}
   // CHECK-SAME:      , !u64i, !u64i, !u64i) -> ()
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @call_widths(
-  // LLVM-SAME:    i17 signext %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]]
+  // LLVM-SAME:    i17 noundef signext %[[A0:[0-9]+]], i64 %[[A1:[0-9]+]]
   // LLVM-SAME:    , i64 %[[A2:[0-9]+]], i64 %[[A3:[0-9]+]])
   // LLVM-NEXT:    %[[V33SLOT:[0-9]+]] = alloca i64, align 8
   // LLVM-NEXT:    store i64 %[[A3]], ptr %[[V33SLOT]], align 8
@@ -547,13 +489,13 @@ module attributes {
   // LLVM-NEXT:    %[[EXT33:[0-9]+]] = sext i33 %[[V33]] to i64
   // LLVM-NEXT:    store i64 %[[EXT33]], ptr %[[C3SLOT]], align 8
   // LLVM-NEXT:    %[[C3:[0-9]+]] = load i64, ptr %[[C3SLOT]], align 8
-  // LLVM-NEXT:    call void @take_widths(i17 signext %[[A0]], i64 %[[C1]]
+  // LLVM-NEXT:    call void @take_widths(i17 noundef signext %[[A0]], i64 %[[C1]]
   // LLVM-SAME:      , i64 %[[C2]], i64 %[[C3]])
   // LLVM-NEXT:    ret void
 
   // Only a bit-precise type rounds up to a storage width, so a plain i40
   // coerces to its own width and the widen check leaves it alone.
-  cir.func @plain_i40(%arg0: !cir.int<s, 40>) -> !cir.int<s, 40> {
+  cir.func @plain_i40(%arg0: !cir.int<s, 40>) -> !cir.int<s, 40> requires_call_conv_lowering {
     cir.return %arg0 : !cir.int<s, 40>
   }
 
@@ -567,7 +509,7 @@ module attributes {
 
   // A struct holding one sub-eightbyte _BitInt is a single INTEGER eightbyte:
   // Direct, coerced to i32, and reconstituted before the body's own alloca.
-  cir.func @coerce_s(%arg0: !rec_S) -> !rec_S {
+  cir.func @coerce_s(%arg0: !rec_S) -> !rec_S requires_call_conv_lowering {
     %0 = cir.alloca "a" align(4) : !cir.ptr<!rec_S>
     cir.store %arg0, %0 : !rec_S, !cir.ptr<!rec_S>
     %1 = cir.load %0 : !cir.ptr<!rec_S>, !rec_S
@@ -596,7 +538,7 @@ module attributes {
   // LLVM-NEXT:    ret i32 %[[RES]]
 
   // A struct holding a two-eightbyte _BitInt flattens into an i64 pair.
-  cir.func @take_p(%arg0: !rec_P) {
+  cir.func @take_p(%arg0: !rec_P) requires_call_conv_lowering {
     cir.return
   }
 
@@ -625,7 +567,7 @@ module attributes {
   // LLVM-NEXT:    ret void
 
   // A struct holding a _BitInt(128) coerces to a single i128.
-  cir.func @take_w(%arg0: !rec_W) {
+  cir.func @take_w(%arg0: !rec_W) requires_call_conv_lowering {
     cir.return
   }
 
@@ -644,7 +586,7 @@ module attributes {
 
   // A trailing byte pushes the struct past two eightbytes, so it passes byval,
   // aligned 8 as _BitInt(128) requires rather than __int128's 16.
-  cir.func @take_o(%arg0: !rec_O) {
+  cir.func @take_o(%arg0: !rec_O) requires_call_conv_lowering {
     cir.return
   }
 
@@ -659,7 +601,7 @@ module attributes {
 
   // Returning it takes the sret path, and the caller's buffer replaces the
   // return slot the body allocated.
-  cir.func @ret_o() -> !rec_O {
+  cir.func @ret_o() -> !rec_O requires_call_conv_lowering {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_O>
     %1 = cir.const #cir.zero : !rec_O
     cir.store %1, %0 : !rec_O, !cir.ptr<!rec_O>
@@ -683,7 +625,7 @@ module attributes {
 
   // Each _BitInt(65) element occupies two eightbytes, so an array of two is 32
   // bytes and the wrapping struct passes indirectly.
-  cir.func @take_arr(%arg0: !rec_Arr) {
+  cir.func @take_arr(%arg0: !rec_Arr) requires_call_conv_lowering {
     cir.return
   }
 
@@ -699,7 +641,7 @@ module attributes {
   // A _BitInt wider than 128 bits classifies Indirect: byval on the argument
   // side.  The rewriter attaches llvm.noundef to a byval argument, so where
   // CIRGen already attached one the merged dictionary keeps a single entry.
-  cir.func @take_b200(%arg0: !b200i {llvm.noundef}) {
+  cir.func @take_b200(%arg0: !b200i {llvm.noundef}) requires_call_conv_lowering {
     cir.return
   }
 
@@ -719,7 +661,7 @@ module attributes {
 
   // A call site builds the byval copy itself, and the call operand's own
   // byval attribute is widened the same way as the callee's.
-  cir.func @call_b200(%arg0: !b200i) {
+  cir.func @call_b200(%arg0: !b200i) requires_call_conv_lowering {
     cir.call @take_b200(%arg0) : (!b200i) -> ()
     cir.return
   }
@@ -745,7 +687,7 @@ module attributes {
   // A non-multiple-of-8 width past 128 still classifies Indirect at the same
   // 8-byte alignment: the byval alignment is the target's clamped _BitInt
   // maximum, not derived from the width's own byte count.
-  cir.func @take_b201(%arg0: !b201i) {
+  cir.func @take_b201(%arg0: !b201i) requires_call_conv_lowering {
     cir.return
   }
 
@@ -762,7 +704,7 @@ module attributes {
   // handing the slot over to the incoming pointer is gated on the parameter
   // being a record, and for a _BitInt the pair is its conversion between the
   // i256 in memory and the i200 value.
-  cir.func @take_b200_spilled(%arg0: !b200i) {
+  cir.func @take_b200_spilled(%arg0: !b200i) requires_call_conv_lowering {
     %0 = cir.alloca "x" align(8) : !cir.ptr<!b200i>
     cir.store %arg0, %0 : !b200i, !cir.ptr<!b200i>
     cir.return
@@ -788,7 +730,7 @@ module attributes {
 
   // Signedness only affects the extend direction on the memory round trip,
   // not the classification.
-  cir.func @take_ub200(%arg0: !ub200i) {
+  cir.func @take_ub200(%arg0: !ub200i) requires_call_conv_lowering {
     cir.return
   }
 
@@ -806,7 +748,7 @@ module attributes {
   // attach to any scalar return) must be dropped along with the result
   // itself rather than surviving as a stale one-element res_attrs on a
   // function that now returns void.
-  cir.func @ret_b200() -> (!b200i {llvm.noundef}) {
+  cir.func @ret_b200() -> (!b200i {llvm.noundef}) requires_call_conv_lowering {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!b200i>
     %1 = cir.const #cir.int<5> : !b200i
     cir.store %1, %0 : !b200i, !cir.ptr<!b200i>
@@ -832,7 +774,7 @@ module attributes {
 
   // A call site rewriting to the sret shape drops the pre-existing
   // llvm.noundef the same way the callee's own definition does.
-  cir.func @call_ret_b200() -> (!b200i {llvm.noundef}) {
+  cir.func @call_ret_b200() -> (!b200i {llvm.noundef}) requires_call_conv_lowering {
     %0 = cir.alloca "__retval" align(8) : !cir.ptr<!b200i>
     %1 = cir.call @ret_b200() : () -> !b200i
     cir.store %1, %0 : !b200i, !cir.ptr<!b200i>
@@ -858,7 +800,7 @@ module attributes {
   // A struct member wider than 128 bits recurses through the same rule as a
   // scalar of that width; the struct as a whole still passes byval since it
   // spans more than two eightbytes.
-  cir.func @take_d(%arg0: !rec_D) {
+  cir.func @take_d(%arg0: !rec_D) requires_call_conv_lowering {
     cir.return
   }
 
@@ -874,7 +816,7 @@ module attributes {
   // A union member wider than 128 bits recurses through the same rule via
   // the union's own member-recursion check, a separate code path from a
   // struct's.
-  cir.func @take_ud(%arg0: !rec_UD) {
+  cir.func @take_ud(%arg0: !rec_UD) requires_call_conv_lowering {
     cir.return
   }
 
@@ -889,7 +831,7 @@ module attributes {
 
   // An array of a width wider than 128 bits recurses through the element type,
   // a third member-recursion path distinct from a struct's and a union's.
-  cir.func @take_ad(%arg0: !rec_AD) {
+  cir.func @take_ad(%arg0: !rec_AD) requires_call_conv_lowering {
     cir.return
   }
 

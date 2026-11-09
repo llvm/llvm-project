@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
@@ -18,7 +19,6 @@
 #include "mlir/Dialect/X86/Transforms.h"
 #include "mlir/Dialect/X86/X86Dialect.h"
 
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
 
 using namespace mlir;
@@ -70,6 +70,11 @@ void mlir::transform::ApplyVectorContractMultiLevelUnrollForAMXPatternsOp::
   x86::populateVectorContractMultiLevelUnrollForAMXPatterns(patterns);
 }
 
+void mlir::transform::ApplyMathRsqrtApproximationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  x86::populateMathRsqrtApproximationPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
@@ -84,7 +89,9 @@ public:
   X86TransformDialectExtension() {
     declareGeneratedDialect<affine::AffineDialect>();
     declareGeneratedDialect<arith::ArithDialect>();
+    declareGeneratedDialect<math::MathDialect>();
     declareGeneratedDialect<memref::MemRefDialect>();
+    declareGeneratedDialect<vector::VectorDialect>();
     declareGeneratedDialect<x86::X86Dialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();
     registerTransformOps<

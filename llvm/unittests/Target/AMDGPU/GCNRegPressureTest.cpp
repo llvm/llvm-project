@@ -246,3 +246,80 @@ body:             |
   GCNRegPressure P = RPTracker.bumpDownwardPressure(UseRedef, TRI);
   EXPECT_EQ(P.getSGPRNum(), 1U);
 }
+
+// Returns the maximum pressure over the only block of \p MF, from the downward
+// and from the upward tracker.
+static std::pair<GCNRegPressure, GCNRegPressure>
+getMaxPressureOfBlock(MachineFunction &MF, LiveIntervals &LIS) {
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+
+  GCNDownwardRPTracker Down(LIS);
+  Down.advance(MBB.begin(), MBB.end(), nullptr);
+
+  GCNUpwardRPTracker Up(LIS);
+  Up.reset(MF.getRegInfo(),
+           LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
+  for (const MachineInstr &MI : reverse(MBB))
+    Up.recede(MI);
+
+  return {Down.moveMaxPressure(), Up.getMaxPressure()};
+}
+
+// An AV register and a VGPR are live at different points. Only one vector
+// register is live at any point.
+TEST_F(GCNRegPressureTest, MaxPressureAVAndVGPRAtDifferentPoints) {
+  StringRef MIR = R"(
+name:            MaxPressureAVAndVGPRAtDifferentPoints
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:av_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %0
+    %1:vgpr_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %1
+    S_ENDPGM 0
+...
+)";
+  EXPECT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("MaxPressureAVAndVGPRAtDifferentPoints");
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+
+  auto [Down, Up] = getMaxPressureOfBlock(MF, LIS);
+  for (const GCNRegPressure *RP : {&Down, &Up}) {
+    EXPECT_EQ(RP->getArchVGPRNum(), 1U);
+    EXPECT_EQ(RP->getVGPRNum(/*UnifiedVGPRFile=*/false), 1U);
+  }
+}
+
+// The same with 64-bit registers, for the tuple weights.
+TEST_F(GCNRegPressureTest, MaxPressureAVAndVGPRTuplesAtDifferentPoints) {
+  StringRef MIR = R"(
+name:            MaxPressureAVAndVGPRTuplesAtDifferentPoints
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    %0:av_64 = IMPLICIT_DEF
+    S_NOP 0, implicit %0
+    %1:vreg_64 = IMPLICIT_DEF
+    S_NOP 0, implicit %1
+    S_ENDPGM 0
+...
+)";
+  EXPECT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("MaxPressureAVAndVGPRTuplesAtDifferentPoints");
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  unsigned TupleWeight =
+      std::max(TRI->getRegClassWeight(&AMDGPU::AV_64RegClass).RegWeight,
+               TRI->getRegClassWeight(&AMDGPU::VReg_64RegClass).RegWeight);
+
+  auto [Down, Up] = getMaxPressureOfBlock(MF, LIS);
+  for (const GCNRegPressure *RP : {&Down, &Up}) {
+    EXPECT_EQ(RP->getArchVGPRNum(), 2U);
+    EXPECT_EQ(RP->getVGPRTuplesWeight(), TupleWeight);
+  }
+}

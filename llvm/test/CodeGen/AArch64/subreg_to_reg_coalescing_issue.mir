@@ -25,9 +25,9 @@ body: |
     ; NOSRLT-NEXT: RET_ReallyLR implicit $x1, implicit $x0
     %0:gpr64 = COPY killed $x1
     %1:gpr32 = COPY %0.sub_32:gpr64
-    %2:gpr32 = ORRWrr $wzr, killed %1:gpr32
-    %3:gpr64all = SUBREG_TO_REG killed %2:gpr32, %subreg.sub_32
-    $x0 = COPY killed %0:gpr64
-    $x1 = COPY killed %3:gpr64all
+    %2:gpr32 = ORRWrr $wzr, %1:gpr32
+    %3:gpr64all = SUBREG_TO_REG %2:gpr32, %subreg.sub_32
+    $x0 = COPY %0:gpr64
+    $x1 = COPY %3:gpr64all
     RET_ReallyLR implicit $x1, implicit $x0
 ...

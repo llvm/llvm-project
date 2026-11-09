@@ -12,8 +12,13 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Value.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+
+#include <mutex>
 
 using namespace mlir::remark::detail;
 using namespace mlir::remark;
@@ -39,13 +44,22 @@ Remark::Arg::Arg(llvm::StringRef k, Attribute a) : key(k), attr(a) {
 void Remark::insert(llvm::StringRef s) { args.emplace_back(s); }
 void Remark::insert(Arg a) { args.push_back(std::move(a)); }
 
+void Remark::setRelatedRemarkIds(ArrayRef<RemarkId> ids) {
+  SmallVector<RemarkId> copy(ids);
+  llvm::erase_if(args, [](const Arg &arg) { return arg.isLink; });
+  relatedRemarks.clear();
+  for (RemarkId id : copy)
+    addRelatedRemark(id);
+}
+
 // Simple helper to print key=val list (sorted).
 static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
   if (args.empty())
     return;
 
+  // Preserve the relative order of repeated keys, including related IDs.
   llvm::SmallVector<Remark::Arg, 8> sorted(args.begin(), args.end());
-  llvm::sort(sorted, [](const Remark::Arg &a, const Remark::Arg &b) {
+  llvm::stable_sort(sorted, [](const Remark::Arg &a, const Remark::Arg &b) {
     return a.key < b.key;
   });
 
@@ -151,7 +165,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.PassName = getCombinedCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
-  // Add all args (includes RemarkId and RelatedTo if they were added).
+  // Keep serialized strings owned by the source remark.
   for (const Remark::Arg &arg : getArgs()) {
     r.Args.emplace_back();
     r.Args.back().Key = arg.key;
@@ -365,19 +379,56 @@ llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
 
 namespace mlir::remark {
 RemarkEmittingPolicyAll::RemarkEmittingPolicyAll() = default;
+
 RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
+
+static void dropDiscardedLinks(detail::Remark &remark,
+                               const llvm::DenseSet<uint64_t> &discardedIds) {
+  if (discardedIds.empty())
+    return;
+  auto ids = llvm::to_vector(remark.getRelatedRemarkIds());
+  llvm::erase_if(
+      ids, [&](RemarkId id) { return discardedIds.contains(id.getValue()); });
+  if (ids.size() != remark.getRelatedRemarkIds().size())
+    remark.setRelatedRemarkIds(ids);
+}
+
+void RemarkEmittingPolicyFinal::reportRemark(const detail::Remark &remark) {
+  detail::Remark copy = remark;
+  std::scoped_lock<std::mutex> lock(mutex);
+  auto previous = pendingRemarks.find(copy);
+  if (previous != pendingRemarks.end()) {
+    if (previous->getId() && previous->getId() != copy.getId())
+      discardedIds.insert(previous->getId().getValue());
+    pendingRemarks.erase(previous);
+  }
+  pendingRemarks.insert(std::move(copy));
+}
 
 void RemarkEmittingPolicyFinal::finalize() {
   assert(reportImpl && "reportImpl is not set");
 
-  // Take the pending remarks so that a second finalize(), e.g. from the engine
-  // destructor after an explicit call, does not emit them again. IDs are
-  // assigned in creation order; sorting by them keeps the output independent
-  // of the set's hash layout.
-  std::vector<detail::Remark> remarks(postponedRemarks.begin(),
-                                      postponedRemarks.end());
-  postponedRemarks.clear();
+  SmallVector<detail::Remark, 0> remarks;
+  llvm::DenseSet<uint64_t> discarded;
+  {
+    std::scoped_lock<std::mutex> lock(mutex);
+    remarks = llvm::to_vector<0>(pendingRemarks);
+    pendingRemarks.clear();
+    discarded.swap(discardedIds);
+  }
+
+  // A re-reported ID that survives is still a valid target.
+  for (const auto &remark : remarks)
+    if (remark.getId())
+      discarded.erase(remark.getId().getValue());
+  for (auto &remark : remarks)
+    dropDiscardedLinks(remark, discarded);
+
   llvm::sort(remarks, [](const auto &lhs, const auto &rhs) {
+    if (!lhs.getId())
+      return false;
+    if (!rhs.getId())
+      return true;
     return lhs.getId().getValue() < rhs.getId().getValue();
   });
 
@@ -392,22 +443,31 @@ void RemarkEmittingPolicyFinal::finalize() {
       childIds.insert(relId.getValue());
   }
 
-  // Emit remarks with related remarks grouped after their parents.
-  // Parent remarks are emitted first, followed by their related (child)
-  // remarks. Child-only remarks are skipped at the top level to avoid
-  // duplication.
+  // Visit by address so ID-less remarks remain distinct.
+  llvm::DenseSet<const detail::Remark *> emitted;
+  SmallVector<const detail::Remark *> worklist;
+  auto emit = [&](const detail::Remark &root) {
+    worklist.push_back(&root);
+    while (!worklist.empty()) {
+      const auto *remark = worklist.pop_back_val();
+      if (!emitted.insert(remark).second)
+        continue;
+      reportImpl(*remark);
+      for (RemarkId id : llvm::reverse(remark->getRelatedRemarkIds()))
+        if (const auto *related = idMap.lookup(id.getValue()))
+          worklist.push_back(related);
+    }
+  };
+
   for (const auto &remark : remarks) {
     if (remark.getId() && childIds.contains(remark.getId().getValue()))
-      continue; // will be printed grouped under its parent
-
-    reportImpl(remark);
-
-    // Emit related remarks immediately after the parent.
-    for (auto relId : remark.getRelatedRemarkIds()) {
-      if (const auto *related = idMap.lookup(relId.getValue()))
-        reportImpl(*related);
-    }
+      continue;
+    emit(remark);
   }
+  // Cycles have no root.
+  for (const auto &remark : remarks)
+    if (!emitted.contains(&remark))
+      emit(remark);
 }
 
 } // namespace mlir::remark

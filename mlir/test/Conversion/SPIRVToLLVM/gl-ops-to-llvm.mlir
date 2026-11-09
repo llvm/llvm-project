@@ -169,6 +169,17 @@ spirv.func @pow(%arg0: f32, %arg1: vector<3xf16>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Ldexp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ldexp
+spirv.func @ldexp(%arg0: f32, %arg1: i32) "None" {
+  // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+  %0 = spirv.GL.Ldexp %arg0 : f32, %arg1 : i32 -> f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Fma
 //===----------------------------------------------------------------------===//
 
@@ -451,6 +462,19 @@ spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %1 = spirv.GL.Acos %arg1 : vector<3xf16>
   // CHECK: llvm.intr.atan(%{{.*}}) : (f32) -> f32
   %2 = spirv.GL.Atan %arg0 : f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Atan2
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @atan2
+spirv.func @atan2(%arg0: f32, %arg1: f32, %arg2: vector<3xf16>, %arg3: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.atan2(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.Atan2 %arg0, %arg1 : f32
+  // CHECK: llvm.intr.atan2(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Atan2 %arg2, %arg3 : vector<3xf16>
   spirv.Return
 }
 

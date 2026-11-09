@@ -147,13 +147,12 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
-    // Objective-C objects are represented as pointers in the ABI.
+    // Objective-C objects are represented as pointers in the ABI. Clang lowers
+    // them to a pointer in address space 0.
     return Builder.getPointerType(
-        ASTCtx.getTargetInfo().getPointerWidth(QT.getAddressSpace()),
-        llvm::Align(
-            ASTCtx.getTargetInfo().getPointerAlign(QT.getAddressSpace()) / 8),
-        ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()),
-        QT.hasAddressSpace());
+        ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default),
+        llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default) /
+                    8));
   case Type::OverflowBehavior:
     return convertType(cast<OverflowBehaviorType>(QT)->getUnderlyingType());
   case Type::Auto:
@@ -179,7 +178,11 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getVoidType();
 
   case BuiltinType::NullPtr:
-    return createPointerTypeForPointee(QT);
+    // Clang lowers std::nullptr_t to a pointer in address space 0.
+    return Builder.getPointerType(
+        ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default),
+        llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(LangAS::Default) /
+                    8));
 
   case BuiltinType::Bool:
     return Builder.getIntegerType(1, getTypeAlign(QT), /*Signed=*/false,
@@ -286,14 +289,10 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getScalablePredicateOrCountVectorType(
         getTypeAlign(QT), llvm::abi::VectorKind::SVECount);
 
-  // TODO: __mfp8 has no floating-point semantics of its own, so representing
-  // it needs a decision about how the ABI library should model opaque
-  // floating-point data. As an mfloat8 vector element it is treated as an
-  // 8-bit integer, but that is not right for the scalar type, which is passed
-  // in a floating-point register.
+  // __mfp8 is an opaque 8-bit float. Vector elements stay 8-bit
+  // integers, which is also their representation in LLVM IR.
   case BuiltinType::MFloat8:
-    llvm::reportFatalInternalError(
-        "__mfp8 is not yet supported in the ABI lowering library");
+    return Builder.getOpaqueFloat8Type(getTypeAlign(QT));
 
     // Target-specific vector/matrix types — not yet implemented.
 #define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
@@ -364,7 +363,12 @@ QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
 }
 
 const llvm::abi::Type *QualTypeMapper::convertVectorType(const VectorType *VT) {
-  const llvm::abi::Type *ElementType = convertType(VT->getElementType());
+  // Vectors of __mfp8 are stored as 8-bit integers. The scalar type is
+  // mapped separately as an opaque float.
+  const llvm::abi::Type *ElementType =
+      VT->getElementType()->isMFloat8Type()
+          ? Builder.getIntegerType(8, llvm::Align(1), /*Signed=*/false)
+          : convertType(VT->getElementType());
   QualType VectorQualType(VT, 0);
 
   unsigned NElems = VT->getNumElements();
@@ -633,8 +637,11 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
       PointeeType->isFunctionType() && !PointeeType.hasAddressSpace()
           ? DL.getProgramAddressSpace()
           : ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace);
-  return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value() / 8),
-                                TargetAddrSpace, PointeeType.hasAddressSpace());
+  // The default address space may map to a non-zero target address space
+  // (e.g. the SPIR-V generic one), which still makes the pointer qualified.
+  return Builder.getPointerType(
+      PointerSize, llvm::Align(Alignment.value() / 8), TargetAddrSpace,
+      PointeeType.hasAddressSpace() || TargetAddrSpace != 0);
 }
 
 /// Processes the fields of a record (struct/class/union) and populates

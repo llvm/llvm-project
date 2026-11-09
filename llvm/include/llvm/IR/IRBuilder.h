@@ -125,6 +125,7 @@ protected:
   MDNode *DefaultFPMathTag = nullptr;
   FastMathFlags FMF;
 
+  bool CanonicalizeGEPs = false;
   bool IsFPConstrained = false;
   fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
   RoundingMode DefaultConstrainedRounding = RoundingMode::Dynamic;
@@ -343,6 +344,8 @@ public:
   void setDefaultOperandBundles(ArrayRef<OperandBundleDef> OpBundles) {
     DefaultOperandBundles = OpBundles;
   }
+
+  void enableGEPCanonicalization() { CanonicalizeGEPs = true; }
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.
@@ -2008,13 +2011,9 @@ public:
         });
   }
 
-  Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                   const Twine &Name = "",
-                   GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    if (auto *V = Folder.FoldGEP(getDataLayout(), Ty, Ptr, IdxList, NW))
-      return V;
-    return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList, NW), Name);
-  }
+  LLVM_ABI Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NW = GEPNoWrapFlags::none());
 
   Value *CreateInBoundsGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                            const Twine &Name = "") {
@@ -2091,13 +2090,87 @@ public:
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",
                       GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name, NW);
+    assert(Offset->getType()->isIntOrIntVectorTy(
+               getDataLayout().getIndexTypeSizeInBits(Ptr->getType())) &&
+           "Offset must match index type");
+    Type *Ty = getInt8Ty();
+    if (auto *V = Folder.FoldGEP(getDataLayout(), Ty, Ptr, Offset, NW))
+      return V;
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, Offset, NW), Name);
   }
 
   Value *CreateInBoundsPtrAdd(Value *Ptr, Value *Offset,
                               const Twine &Name = "") {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
-                     GEPNoWrapFlags::inBounds());
+    return CreatePtrAdd(Ptr, Offset, Name, GEPNoWrapFlags::inBounds());
+  }
+
+  /// Create a ptradd with an unsigned constant offset. The offset must fit into
+  /// the unsigned index type.
+  Value *
+  CreatePtrAddWithUnsignedOffset(Value *Ptr, uint64_t Offset,
+                                 const Twine &Name = "",
+                                 GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, ConstantInt::get(IdxTy, Offset), Name, NW);
+  }
+
+  /// Create a ptradd with a signed constant offset. The offset must fit into
+  /// the signed index type.
+  Value *
+  CreatePtrAddWithSignedOffset(Value *Ptr, int64_t Offset,
+                               const Twine &Name = "",
+                               GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, ConstantInt::getSigned(IdxTy, Offset), Name, NW);
+  }
+
+  /// Create a ptradd where the offset is sign-extended or truncated to the
+  /// index type. Offset must match the vector-ness of the base pointer.
+  Value *
+  CreatePtrAddWithSExtOrTrunc(Value *Ptr, Value *Offset, const Twine &Name = "",
+                              GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, CreateSExtOrTrunc(Offset, IdxTy), Name, NW);
+  }
+
+  /// Create a ptradd where the offset is zero-extended or truncated to the
+  /// index type. Offset must match the vector-ness of the base pointer.
+  Value *
+  CreatePtrAddWithZExtOrTrunc(Value *Ptr, Value *Offset, const Twine &Name = "",
+                              GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    Type *IdxTy = getDataLayout().getIndexType(Ptr->getType());
+    return CreatePtrAdd(Ptr, CreateZExtOrTrunc(Offset, IdxTy), Name, NW);
+  }
+
+  Value *CreateScaledPtrAdd(Value *Ptr, uint64_t Scale, Value *Offset,
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    assert(Offset->getType()->isIntOrIntVectorTy(
+               getDataLayout().getIndexTypeSizeInBits(Ptr->getType())) &&
+           "Offset must match index type");
+    if (Scale == 1)
+      return CreatePtrAdd(Ptr, Offset, Name, NW);
+
+    Type *Ty = ArrayType::get(getInt8Ty(), Scale);
+    if (auto *V = Folder.FoldGEP(getDataLayout(), Ty, Ptr, Offset, NW))
+      return V;
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, Offset, NW), Name);
+  }
+
+  Value *CreateScaledPtrAdd(Value *Ptr, TypeSize Scale, Value *Offset,
+                            const Twine &Name = "",
+                            GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    assert(Offset->getType()->isIntOrIntVectorTy(
+               getDataLayout().getIndexTypeSizeInBits(Ptr->getType())) &&
+           "Offset must match index type");
+    if (Scale.isScalable()) {
+      Value *VScale = CreateVScale(Offset->getType()->getScalarType());
+      if (auto *VT = dyn_cast<VectorType>(Offset->getType()))
+        VScale = CreateVectorSplat(VT->getElementCount(), VScale);
+      Offset = CreateMul(VScale, Offset, "", NW.hasNoUnsignedWrap(),
+                         NW.hasNoUnsignedSignedWrap());
+    }
+    return CreateScaledPtrAdd(Ptr, Scale.getKnownMinValue(), Offset, Name, NW);
   }
 
   //===--------------------------------------------------------------------===//
@@ -2888,6 +2961,8 @@ public:
   /// Create an assume intrinsic call that represents a nonnull assumption on
   /// the provided pointer.
   LLVM_ABI CallInst *CreateNonnullAssumption(Value *PtrValue);
+
+  LLVM_ABI CallInst *CreateRangeAssumption(Value *Int, ConstantRange Range);
 };
 
 /// This provides a uniform API for creating instructions and inserting

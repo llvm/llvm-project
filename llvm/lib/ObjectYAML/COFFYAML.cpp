@@ -524,6 +524,7 @@ void MappingTraits<COFF::header>::mapping(IO &IO, COFF::header &H) {
                                                             H.Characteristics);
 
   IO.mapRequired("Machine", NM->Machine);
+  IO.mapOptional("TimeDateStamp", H.TimeDateStamp);
   IO.mapOptional("Characteristics", NC->Characteristics);
   IO.setContext(static_cast<void *>(&H));
 }

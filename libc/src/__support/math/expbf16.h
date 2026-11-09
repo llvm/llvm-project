@@ -22,7 +22,6 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -84,21 +83,7 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
       if (x_bits.is_inf())
         return x;
 
-#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-      fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_OVERFLOW);
-      return FPBits::inf().get_val();
-#else
-      switch (fputil::quick_get_round()) {
-      case FE_TONEAREST:
-      case FE_UPWARD:
-        fputil::set_errno_if_required(ERANGE);
-        fputil::raise_except_if_required(FE_OVERFLOW);
-        return FPBits::inf().get_val();
-      default:
-        return FPBits::max_normal().get_val();
-      }
-#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return fputil::set_overflow<bfloat16>();
     }
 
     // x <= -92.5
@@ -107,22 +92,20 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
       if (x_bits.is_inf())
         return FPBits::zero().get_val();
 
-      fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
-
+      if (LIBC_UNLIKELY(x_u == 0xc2b9U)) {
+        fputil::set_errno_if_required(ERANGE);
+        fputil::raise_underflow_except_if_required<bfloat16>();
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-      return FPBits::zero().get_val();
+        return FPBits::min_subnormal().get_val();
 #else
-      switch (fputil::quick_get_round()) {
-      case FE_UPWARD:
-      case FE_TONEAREST:
-        if (LIBC_UNLIKELY(x_u == 0xc2b9U))
+        int rounding = fputil::quick_get_round();
+        if (rounding == FE_TONEAREST || rounding == FE_UPWARD)
           return FPBits::min_subnormal().get_val();
         return FPBits::zero().get_val();
-      default:
-        return FPBits::zero().get_val();
-      }
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      }
+
+      return fputil::set_underflow<bfloat16>();
     }
 
     // exp(0) = 1

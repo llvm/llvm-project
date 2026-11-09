@@ -282,7 +282,8 @@ bool FIRToMemRef::isCompilerGeneratedAlloca(Operation *op) const {
   if (!isa<fir::AllocaOp, memref::AllocaOp>(op))
     llvm_unreachable("expected alloca op");
 
-  return !op->getAttr("bindc_name") && !op->getAttr("uniq_name");
+  return !op->getAttr(fir::getBindcNameAttrName()) &&
+         !op->getAttr(fir::getUniqNameAttrName());
 }
 
 void FIRToMemRef::copyAttribute(Operation *from, Operation *to,

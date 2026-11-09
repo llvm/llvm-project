@@ -933,7 +933,7 @@ TEST_F(X86TargetInfoTest, IntReturnExtension) {
   // bool must be zero-extended.
   expectExtendInteger(classifyRet(Bool, FI, TI), Bool, /*IsSigned=*/false);
 
-  // _BitInt(1) types must not be extended.
+  // _BitInt types are never extended, including for _BitInt(1).
   const ABIType *BitInt1 =
       TB.getIntegerType(1, llvm::Align(1), /*IsSigned=*/false,
                         /*IsBitInt=*/true);
@@ -946,11 +946,34 @@ TEST_F(X86TargetInfoTest, IntReturnExtension) {
       TB.getIntegerType(40, llvm::Align(8), /*IsSigned=*/false,
                         /*IsBitInt=*/true);
   expectDirectInteger(classifyRet(BitInt40, FI, TI), 40);
+  const ABIType *BitInt65 =
+      TB.getIntegerType(65, llvm::Align(8), /*IsSigned=*/false,
+                        /*IsBitInt=*/true);
+  expectDirectInteger(classifyRet(BitInt65, FI, TI), 65);
+  const ABIType *BitInt128 =
+      TB.getIntegerType(128, llvm::Align(8), /*IsSigned=*/false,
+                        /*IsBitInt=*/true);
+  expectDirectInteger(classifyRet(BitInt128, FI, TI), 128);
+  // _BitInt > 128 is passed indirectly.
+  const ABIType *BitInt129 =
+      TB.getIntegerType(129, llvm::Align(8), /*IsSigned=*/false,
+                        /*IsBitInt=*/true);
+  EXPECT_TRUE(classifyRet(BitInt129, FI, TI).isIndirect());
 
   // char, short and int must not be extended.
   expectDirectInteger(classifyRet(I8, FI, TI), 8);
   expectDirectInteger(classifyRet(I16, FI, TI), 16);
   expectDirectInteger(classifyRet(I32, FI, TI), 32);
+
+  // __int128 is returned directly.
+  const ABIType *Int128 =
+      TB.getIntegerType(128, llvm::Align(16), /*IsSigned=*/true,
+                        /*IsBitInt=*/false);
+  expectDirectInteger(classifyRet(Int128, FI, TI), 128);
+  // Same for struct of __int128.
+  const ABIType *StructInt128 =
+      makeRecord({FieldInfo(Int128, 0)}, 128, llvm::Align(16));
+  expectDirectInteger(classifyRet(StructInt128, FI, TI), 128);
 }
 
 } // namespace

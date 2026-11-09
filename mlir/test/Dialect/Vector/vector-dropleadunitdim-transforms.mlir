@@ -8,8 +8,8 @@
 //  CHECK-NEXT:   %[[R0:.+]] =  vector.shape_cast %{{.*}} : vector<1x16x8xf32> to vector<16x8xf32>
 //  CHECK-NEXT:   %[[R1:.+]] =  vector.shape_cast %{{.*}} : vector<1x8x16xf32> to vector<8x16xf32>
 //  CHECK-NEXT:   %[[R2:.+]] =  vector.shape_cast %{{.*}} : vector<1x16x16xf32> to vector<16x16xf32>
-//  CHECK-NEXT:   %[[R3:.+]] = vector.contract {indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
-//  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+//  CHECK-NEXT:   %[[R3:.+]] = vector.contract {fastmath = #arith.fastmath<nnan>, indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
+//  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<maxnumf>}
 //  CHECK-SAME:   %[[R0]], %[[R1]], %[[R2]] : vector<16x8xf32>, vector<8x16xf32> into vector<16x16xf32>
 //  CHECK-NEXT:   %[[R4:.+]] = vector.shape_cast %[[R3]] : vector<16x16xf32> to vector<1x16x16xf32>
 //  CHECK-NEXT:  return %[[R4]] : vector<1x16x16xf32>
@@ -21,7 +21,9 @@
 ]
 #contraction_trait0 = {
   indexing_maps = #contraction_accesses0,
-  iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+  iterator_types = ["parallel", "parallel", "parallel", "reduction"],
+  kind = #vector.kind<maxnumf>,
+  fastmath = #arith.fastmath<nnan>
 }
 
 func.func @cast_away_contraction_leading_one_dims(%arg0: vector<1x16x8xf32>, %arg1: vector<1x8x16xf32>, %arg2: vector<1x16x16xf32>) -> vector<1x16x16xf32> {

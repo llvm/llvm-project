@@ -99,7 +99,6 @@ private:
                   MachineFunction &MF) const;
   bool selectUAddSub(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
-  bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI,
                            MachineFunction &MF);
@@ -247,47 +246,15 @@ static const TargetRegisterClass *getRegClassFromGRPhysReg(Register Reg) {
   llvm_unreachable("Unknown RegClass for PhysReg!");
 }
 
-// FIXME: We need some sort of API in RBI/TRI to allow generic code to
-// constrain operands of simple instructions given a TargetRegisterClass
-// and LLT
-bool X86InstructionSelector::selectDebugInstr(MachineInstr &I,
-                                              MachineRegisterInfo &MRI) const {
-  for (MachineOperand &MO : I.operands()) {
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (!Reg)
-      continue;
-    if (Reg.isPhysical())
-      continue;
-    LLT Ty = MRI.getType(Reg);
-    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-    const TargetRegisterClass *RC =
-        dyn_cast_if_present<const TargetRegisterClass *>(RegClassOrBank);
-    if (!RC) {
-      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-      RC = getRegClass(Ty, RB);
-      if (!RC) {
-        LLVM_DEBUG(
-            dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
-        break;
-      }
-    }
-    RBI.constrainGenericRegister(Reg, *RC, MRI);
-  }
-
-  return true;
-}
-
 // Set X86 Opcode and constrain DestReg.
 bool X86InstructionSelector::selectCopy(MachineInstr &I,
                                         MachineRegisterInfo &MRI) const {
   Register DstReg = I.getOperand(0).getReg();
-  const unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
+  const unsigned DstSize = TRI.getRegSizeInBits(DstReg, MRI);
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
 
   Register SrcReg = I.getOperand(1).getReg();
-  const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+  const unsigned SrcSize = TRI.getRegSizeInBits(SrcReg, MRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
   if (DstReg.isPhysical()) {
@@ -364,12 +331,12 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
 
   assert((!SrcReg.isPhysical() || I.isCopy()) &&
          "No phys reg on generic operators");
-  assert((DstSize == SrcSize ||
-          // Copies are a mean to setup initial types, the number of
-          // bits may not exactly match.
-          (SrcReg.isPhysical() &&
-           DstSize <= RBI.getSizeInBits(SrcReg, MRI, TRI))) &&
-         "Copy with different width?!");
+  assert(
+      (DstSize == SrcSize ||
+       // Copies are a mean to setup initial types, the number of
+       // bits may not exactly match.
+       (SrcReg.isPhysical() && DstSize <= TRI.getRegSizeInBits(SrcReg, MRI))) &&
+      "Copy with different width?!");
 
   const TargetRegisterClass *DstRC =
       getRegClass(MRI.getType(DstReg), DstRegBank);
@@ -419,9 +386,6 @@ bool X86InstructionSelector::select(MachineInstr &I) {
 
     if (I.isCopy())
       return selectCopy(I, MRI);
-
-    if (I.isDebugInstr())
-      return selectDebugInstr(I, MRI);
 
     return true;
   }

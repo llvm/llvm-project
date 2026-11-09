@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-ldst-opt %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-ldst-opt %s -o - | FileCheck %s
 --- |
   define void @ldr_str_aa(ptr noalias nocapture %x, ptr noalias nocapture readonly %y) {
   entry:

@@ -626,16 +626,6 @@ define signext i32 @test_trunc_si32(float %x) {
 define i64 @test_trunc_si64(float %x) {
 ; RV32IF-LABEL: test_trunc_si64:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lui a0, 307200
-; RV32IF-NEXT:    fmv.w.x fa5, a0
-; RV32IF-NEXT:    fabs.s fa4, fa0
-; RV32IF-NEXT:    flt.s a0, fa4, fa5
-; RV32IF-NEXT:    beqz a0, .LBB19_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    fcvt.w.s a0, fa0, rtz
-; RV32IF-NEXT:    fcvt.s.w fa5, a0, rtz
-; RV32IF-NEXT:    fsgnj.s fa0, fa5, fa0
-; RV32IF-NEXT:  .LBB19_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -654,15 +644,6 @@ define i64 @test_trunc_si64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_trunc_si64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    fabs.s a1, a0
-; RV32IZFINX-NEXT:    lui a2, 307200
-; RV32IZFINX-NEXT:    flt.s a1, a1, a2
-; RV32IZFINX-NEXT:    beqz a1, .LBB19_2
-; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rtz
-; RV32IZFINX-NEXT:    fcvt.s.w a1, a1, rtz
-; RV32IZFINX-NEXT:    fsgnj.s a0, a1, a0
-; RV32IZFINX-NEXT:  .LBB19_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -761,16 +742,6 @@ define signext i32 @test_trunc_ui32(float %x) {
 define i64 @test_trunc_ui64(float %x) {
 ; RV32IF-LABEL: test_trunc_ui64:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lui a0, 307200
-; RV32IF-NEXT:    fmv.w.x fa5, a0
-; RV32IF-NEXT:    fabs.s fa4, fa0
-; RV32IF-NEXT:    flt.s a0, fa4, fa5
-; RV32IF-NEXT:    beqz a0, .LBB23_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    fcvt.w.s a0, fa0, rtz
-; RV32IF-NEXT:    fcvt.s.w fa5, a0, rtz
-; RV32IF-NEXT:    fsgnj.s fa0, fa5, fa0
-; RV32IF-NEXT:  .LBB23_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -789,15 +760,6 @@ define i64 @test_trunc_ui64(float %x) {
 ;
 ; RV32IZFINX-LABEL: test_trunc_ui64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    fabs.s a1, a0
-; RV32IZFINX-NEXT:    lui a2, 307200
-; RV32IZFINX-NEXT:    flt.s a1, a1, a2
-; RV32IZFINX-NEXT:    beqz a1, .LBB23_2
-; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rtz
-; RV32IZFINX-NEXT:    fcvt.s.w a1, a1, rtz
-; RV32IZFINX-NEXT:    fsgnj.s a0, a1, a0
-; RV32IZFINX-NEXT:  .LBB23_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill

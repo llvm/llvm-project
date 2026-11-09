@@ -141,7 +141,6 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_load_b64 v[4:5], v[0:1], off
 ; GFX13-NEXT:    s_mov_b32 s0, 0
@@ -178,7 +177,6 @@ define void @v_mov_b64_int(ptr addrspace(1) %ptr) {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v2, 0x12345678 :: v_dual_mov_b32 v3, 15
 ; GFX13-NEXT:    global_atomic_add_u64 v[0:1], v[2:3], off scope:SCOPE_SYS
@@ -201,7 +199,6 @@ define void @store_double(ptr addrspace(1) %ptr) {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0x33333333
 ; GFX13-NEXT:    v_mov_b32_e32 v3, 0x40632333
@@ -243,7 +240,6 @@ define i1 @class_f64() noinline optnone {
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX13-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GFX13-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
@@ -258,7 +254,6 @@ define i1 @class_f64() noinline optnone {
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX13-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_mov_b32 s2, 1
 ; GFX13-GISEL-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
@@ -287,7 +282,6 @@ define double @rsq_f64() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_rsq_f64_e32 v[0:1], 0x4063233333333333
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]

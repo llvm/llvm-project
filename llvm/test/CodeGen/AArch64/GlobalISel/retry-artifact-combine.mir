@@ -2,6 +2,7 @@
 # RUN: llc -o - -mtriple=aarch64 -run-pass=legalizer %s | FileCheck %s
 ---
 name:            combine_anyext_s2
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: combine_anyext_s2

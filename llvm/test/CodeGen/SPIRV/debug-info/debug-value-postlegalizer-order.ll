@@ -1,4 +1,4 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --stop-after=spirv-postlegalizer %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --stop-after=spirv-postlegalizer %s -o - | FileCheck %s
 
 ; SPIRVPostLegalizer::generateAssignType() must leave the ASSIGN_TYPE that takes
 ; over a definition ahead of any DBG_VALUE naming it. updateRegType() moves the

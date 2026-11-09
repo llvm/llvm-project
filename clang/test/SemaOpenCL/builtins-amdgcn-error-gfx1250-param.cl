@@ -194,6 +194,11 @@ void test_amdgcn_tensor_load_store(v4u sg0, v8u sg1, v4u sg2, v4u sg3, v8u sg4, 
 void test_prefetch(generic void *fptr, global void *gptr, int cpol) {
   __builtin_amdgcn_flat_prefetch(fptr, cpol); // expected-error {{'__builtin_amdgcn_flat_prefetch' must be a constant integer}}
   __builtin_amdgcn_global_prefetch(gptr, cpol); // expected-error {{'__builtin_amdgcn_global_prefetch' must be a constant integer}}
+  __builtin_amdgcn_flat_prefetch(fptr, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
+  __builtin_amdgcn_global_prefetch(gptr, 2048); // expected-error {{argument value 2048 is outside the valid range [0, 63]}}
+  __builtin_amdgcn_flat_prefetch(fptr, 15); // expected-error {{cache policy uses the reserved th value 7}}
+  __builtin_amdgcn_global_prefetch(gptr, 7); // expected-error {{cache policy uses the reserved th value 7}}
+  __builtin_amdgcn_global_prefetch(gptr, 62);
 }
 
 void test_cvt_f32_fp8_e5m3(global int* out, int a)

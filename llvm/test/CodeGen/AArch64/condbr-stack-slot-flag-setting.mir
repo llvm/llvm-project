@@ -116,14 +116,14 @@ body:             |
     %0:fpr64 = PHI %6, %bb.0, %11, %bb.2, %1, %bb.3
     %9:zpr = IMPLICIT_DEF
     %8:zpr = INSERT_SUBREG %9, %0, %subreg.dsub
-    %10:zpr = EOR_ZI_PSEUDO killed %8, 0
+    %10:zpr = EOR_ZI_PSEUDO %8, 0
     %1:fpr64 = COPY %10.dsub
     TBNZW %5, 0, %bb.3
     B %bb.2
   
   bb.2 (%ir-block.6):
     %12:fpr64 = MOVIv4i16 1, 0
-    STRDui killed %12, %3, 0 :: (store (s64) into %ir.g28)
+    STRDui %12, %3, 0 :: (store (s64) into %ir.g28)
     %13:fpr128 = MOVIv2d_ns 0
     %11:fpr64 = COPY %13.dsub
     B %bb.1
@@ -137,7 +137,7 @@ body:             |
     %15:gpr32 = COPY $wzr
     STRBBui %15, %4, 0 :: (store (s8) into %ir.g10, align 4)
     %16:gpr64common = ADDXri %stack.0, 0, 0
-    CBZX killed %16, %bb.1
+    CBZX %16, %bb.1
     B %bb.4
   
   ; We check here that the last three instructions of that basic block
@@ -145,7 +145,7 @@ body:             |
   ; ADDSXri + Bcc.
   ;
   ; CHECK: %16:gpr64common = ADDXri %stack.0, 0, 0
-  ; CHECK: CBZX killed %16, %bb.1
+  ; CHECK: CBZX %16, %bb.1
   ; CHECK: B %bb.4
   
   bb.4 (%ir-block.11):

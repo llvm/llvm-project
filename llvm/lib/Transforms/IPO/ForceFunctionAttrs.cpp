@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
+#include "IPOOptions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
@@ -37,12 +38,6 @@ static cl::list<std::string> ForceRemoveAttributes(
              "attribute will remove the attribute from all functions in the "
              "module. This "
              "option can be specified multiple times."));
-
-static cl::opt<std::string> CSVFilePath(
-    "forceattrs-csv-path", cl::Hidden,
-    cl::desc(
-        "Path to CSV file containing lines of function names and attributes to "
-        "add to them in the form of `f1,attr1` or `f2,attr2=str`."));
 
 static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
   switch (Kind) {
@@ -135,9 +130,10 @@ static bool hasForceAttributes() {
 
 PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
                                               ModuleAnalysisManager &) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
-  if (!CSVFilePath.empty()) {
-    auto BufferOrError = MemoryBuffer::getFileOrSTDIN(CSVFilePath);
+  if (!Opts.forceattrs_csv_path.empty()) {
+    auto BufferOrError = MemoryBuffer::getFileOrSTDIN(Opts.forceattrs_csv_path);
     if (!BufferOrError) {
       std::error_code EC = BufferOrError.getError();
       M.getContext().emitError("cannot open CSV file: " + EC.message());

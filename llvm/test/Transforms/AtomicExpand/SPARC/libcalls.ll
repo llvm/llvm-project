@@ -13,7 +13,7 @@ target triple = "sparc-unknown-unknown"
 ;; straightforward.
 
 ; CHECK-LABEL: @test_load_i16(
-; CHECK:  %1 = call i16 @__atomic_load_2(ptr %arg, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_load_2(ptr %arg, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_load_i16(ptr %arg) {
   %ret = load atomic i16, ptr %arg seq_cst, align 4
@@ -21,7 +21,7 @@ define i16 @test_load_i16(ptr %arg) {
 }
 
 ; CHECK-LABEL: @test_store_i16(
-; CHECK:  call void @__atomic_store_2(ptr %arg, i16 %val, i32 5)
+; CHECK:  call void @__atomic_store_2(ptr %arg, i16 zeroext %val, i32 5)
 ; CHECK:  ret void
 define void @test_store_i16(ptr %arg, i16 %val) {
   store atomic i16 %val, ptr %arg seq_cst, align 4
@@ -29,7 +29,7 @@ define void @test_store_i16(ptr %arg, i16 %val) {
 }
 
 ; CHECK-LABEL: @test_exchange_i16(
-; CHECK:  %1 = call i16 @__atomic_exchange_2(ptr %arg, i16 %val, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_exchange_2(ptr %arg, i16 zeroext %val, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_exchange_i16(ptr %arg, i16 %val) {
   %ret = atomicrmw xchg ptr %arg, i16 %val seq_cst
@@ -40,7 +40,7 @@ define i16 @test_exchange_i16(ptr %arg, i16 %val) {
 ; CHECK:  %1 = alloca i16, align 2
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
 ; CHECK:  store i16 %old, ptr %1, align 2
-; CHECK:  %2 = call zeroext i1 @__atomic_compare_exchange_2(ptr %arg, ptr %1, i16 %new, i32 5, i32 0)
+; CHECK:  %2 = call zeroext i1 @__atomic_compare_exchange_2(ptr %arg, ptr %1, i16 zeroext %new, i32 5, i32 0)
 ; CHECK:  %3 = load i16, ptr %1, align 2
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  %4 = insertvalue { i16, i1 } poison, i16 %3, 0
@@ -54,7 +54,7 @@ define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 }
 
 ; CHECK-LABEL: @test_add_i16(
-; CHECK:  %1 = call i16 @__atomic_fetch_add_2(ptr %arg, i16 %val, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_fetch_add_2(ptr %arg, i16 zeroext %val, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_add_i16(ptr %arg, i16 %val) {
   %ret = atomicrmw add ptr %arg, i16 %val seq_cst

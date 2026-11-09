@@ -701,34 +701,72 @@ inline bool FPArithShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_fadd_ftz:
   case Intrinsic::nvvm_fadd_ftz_sat:
+  case Intrinsic::nvvm_fma_ftz:
+  case Intrinsic::nvvm_fma_ftz_sat:
+  case Intrinsic::nvvm_fma_ftz_relu:
   case Intrinsic::nvvm_fmul_ftz:
   case Intrinsic::nvvm_fmul_ftz_sat:
     return true;
 
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_sat:
+  case Intrinsic::nvvm_fma_relu:
   case Intrinsic::nvvm_fmul:
   case Intrinsic::nvvm_fmul_sat:
     return false;
   }
-  llvm_unreachable("Checking FTZ flag for invalid NVVM fadd/fmul intrinsic");
+  llvm_unreachable(
+      "Checking FTZ flag for invalid NVVM fadd/fmul/fma intrinsic");
 }
 
 inline bool FPArithIsSaturating(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_fadd_sat:
   case Intrinsic::nvvm_fadd_ftz_sat:
+  case Intrinsic::nvvm_fma_sat:
+  case Intrinsic::nvvm_fma_ftz_sat:
   case Intrinsic::nvvm_fmul_sat:
   case Intrinsic::nvvm_fmul_ftz_sat:
     return true;
 
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_ftz:
+  case Intrinsic::nvvm_fma_relu:
+  case Intrinsic::nvvm_fma_ftz_relu:
   case Intrinsic::nvvm_fmul:
   case Intrinsic::nvvm_fmul_ftz:
     return false;
   }
-  llvm_unreachable("Checking sat flag for invalid NVVM fadd/fmul intrinsic");
+  llvm_unreachable(
+      "Checking sat flag for invalid NVVM fadd/fmul/fma intrinsic");
+}
+
+inline bool FPArithIsRelu(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fma_relu:
+  case Intrinsic::nvvm_fma_ftz_relu:
+    return true;
+
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fadd_ftz_sat:
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_ftz:
+  case Intrinsic::nvvm_fma_sat:
+  case Intrinsic::nvvm_fma_ftz_sat:
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
+  case Intrinsic::nvvm_fmul_sat:
+  case Intrinsic::nvvm_fmul_ftz_sat:
+    return false;
+  }
+  llvm_unreachable(
+      "Checking relu flag for invalid NVVM fadd/fmul/fma intrinsic");
 }
 
 inline bool FDivShouldFTZ(Intrinsic::ID IntrinsicID) {
@@ -772,49 +810,6 @@ inline APFloat::roundingMode GetFDivRoundingMode(Intrinsic::ID IntrinsicID) {
     return APFloat::rmTowardZero;
   }
   llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM div");
-}
-
-inline bool FMAShouldFTZ(Intrinsic::ID IntrinsicID) {
-  switch (IntrinsicID) {
-  case Intrinsic::nvvm_fma_rm_ftz_f:
-  case Intrinsic::nvvm_fma_rn_ftz_f:
-  case Intrinsic::nvvm_fma_rp_ftz_f:
-  case Intrinsic::nvvm_fma_rz_ftz_f:
-    return true;
-
-  case Intrinsic::nvvm_fma_rm_f:
-  case Intrinsic::nvvm_fma_rn_f:
-  case Intrinsic::nvvm_fma_rp_f:
-  case Intrinsic::nvvm_fma_rz_f:
-  case Intrinsic::nvvm_fma_rm_d:
-  case Intrinsic::nvvm_fma_rn_d:
-  case Intrinsic::nvvm_fma_rp_d:
-  case Intrinsic::nvvm_fma_rz_d:
-    return false;
-  }
-  llvm_unreachable("Checking FTZ flag for invalid NVVM fma intrinsic");
-}
-
-inline APFloat::roundingMode GetFMARoundingMode(Intrinsic::ID IntrinsicID) {
-  switch (IntrinsicID) {
-  case Intrinsic::nvvm_fma_rm_f:
-  case Intrinsic::nvvm_fma_rm_d:
-  case Intrinsic::nvvm_fma_rm_ftz_f:
-    return APFloat::rmTowardNegative;
-  case Intrinsic::nvvm_fma_rn_f:
-  case Intrinsic::nvvm_fma_rn_d:
-  case Intrinsic::nvvm_fma_rn_ftz_f:
-    return APFloat::rmNearestTiesToEven;
-  case Intrinsic::nvvm_fma_rp_f:
-  case Intrinsic::nvvm_fma_rp_d:
-  case Intrinsic::nvvm_fma_rp_ftz_f:
-    return APFloat::rmTowardPositive;
-  case Intrinsic::nvvm_fma_rz_f:
-  case Intrinsic::nvvm_fma_rz_d:
-  case Intrinsic::nvvm_fma_rz_ftz_f:
-    return APFloat::rmTowardZero;
-  }
-  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM fma");
 }
 
 } // namespace nvvm

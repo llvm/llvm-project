@@ -86,6 +86,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
+#include <set>
 
 #define DEBUG_TYPE "flang-lower-bridge"
 
@@ -2512,6 +2513,60 @@ private:
     for (const Fortran::semantics::Symbol *sym : info.sharedSymList) {
       const auto *hostDetails =
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+
+      // When using delayed privatization (the OpenMP conversion path), create
+      // a fir.local {type = shared} op at the module level. This serves as
+      // explicit documentation that the programmer marked this variable as
+      // SHARED, and prepares for future DEFAULT(NONE) support where we need
+      // to distinguish "explicitly shared" from "implicitly shared" variables.
+      //
+      // Note: the fir.local {type = shared} op is NOT added to local_vars on
+      // the fir.do_concurrent.loop. SHARED variables remain as implicit
+      // live-ins to the loop, which maps correctly to OpenMP's default(shared)
+      // semantics. Adding them to local_vars would require changes to the
+      // block arg remapping logic in DoConcurrentConversion, which assumes a
+      // 1:1 correspondence between local_vars entries and the privatizer
+      // block args on omp.wsloop (host) or omp.parallel (device). Since
+      // SHARED variables need no privatizer, including them in local_vars
+      // would break this correspondence.
+      //
+      // The fir.local op is cleaned up by DoConcurrentSpecifierOpConversion
+      // in CodeGen.cpp, which erases all unreferenced fir.local ops.
+      if (useDelayedPriv) {
+        const Fortran::semantics::Symbol &ultimate = sym->GetUltimate();
+        Fortran::lower::SymbolBox hsb = lookupSymbol(ultimate);
+        assert(hsb && "Host symbol box not found for shared variable");
+
+        mlir::Value hostAddr = hsb.getAddr();
+        mlir::Type allocType = fir::unwrapRefType(hostAddr.getType());
+        mlir::Location symLoc = hostAddr.getLoc();
+
+        // Build a unique name for the fir.local op, following the same
+        // naming convention as privatizeSymbol (mangled name + suffix + type).
+        // Use a dot separator (".shared") rather than underscore to avoid
+        // potential collisions with user symbol names — dots cannot appear
+        // in Fortran identifiers.
+        std::string sharedPrefix = mangleName(ultimate) + ".shared";
+        std::string uniqueName =
+            fir::getTypeAsString(allocType, getKindMap(), sharedPrefix);
+
+        // Only create the op if it doesn't already exist (e.g., for the same
+        // type used in multiple do concurrent loops).
+        auto moduleOp = builder->getModule();
+        if (!moduleOp.lookupSymbol<fir::LocalitySpecifierOp>(uniqueName)) {
+          mlir::OpBuilder::InsertionGuard guard(*builder);
+          builder->setInsertionPointToStart(moduleOp.getBody());
+          fir::LocalitySpecifierOp::create(*builder, symLoc, uniqueName,
+                                           /*sym_visibility=*/nullptr,
+                                           allocType,
+                                           fir::LocalitySpecifierType::Shared);
+        }
+      }
+
+      // Regardless of delayed privatization mode, keep the existing behavior:
+      // alias the inner (host-associated) symbol to the host variable's MLIR
+      // value. This makes the SHARED variable a regular live-in to the loop
+      // body, which becomes implicitly shared in the OpenMP parallel region.
       copySymbolBinding(hostDetails->symbol(), *sym);
     }
 
@@ -6508,26 +6563,42 @@ private:
 
   void setOpenMPAssumptionAttributes(mlir::func::FuncOp func,
                                      const Fortran::semantics::Scope &scope) {
-    if (bridge.getSemanticsContext().langOptions().OpenMPSimd)
+    const auto &langOptions = bridge.getSemanticsContext().langOptions();
+    if (langOptions.OpenMPSimd)
       return;
     const auto *assumptionScopeEnd =
         &Fortran::semantics::omp::GetProgramUnit(scope).parent();
+    bool noOpenmp = false;
+    std::set<llvm::omp::Directive> absent;
     for (const auto *assumptionScope = &scope;
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
       if (const auto *symbol = assumptionScope->symbol();
-          !symbol ||
-          !symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
-        continue;
-      llvm::SmallVector<mlir::Attribute> llvmAttrs;
-      if (auto existing =
-              func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
-        llvm::append_range(llvmAttrs, existing);
-      llvmAttrs.push_back(
-          builder->getStrArrayAttr({llvm::AssumptionAttrKey, "omp_no_openmp"}));
-      func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
-      break;
+          symbol &&
+          symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp))
+        noOpenmp = true;
+      const auto &directives = assumptionScope->ompAssumesAbsent();
+      absent.insert(directives.begin(), directives.end());
     }
+    if (!noOpenmp && absent.empty())
+      return;
+    std::string assumptions = noOpenmp ? "omp_no_openmp" : "";
+    for (llvm::omp::Directive directive : absent) {
+      if (!assumptions.empty())
+        assumptions += ',';
+      assumptions += "absent(";
+      assumptions += llvm::omp::getOpenMPDirectiveName(
+                         directive, langOptions.getOpenMPVersion())
+                         .str();
+      assumptions += ')';
+    }
+    llvm::SmallVector<mlir::Attribute> llvmAttrs;
+    if (auto existing =
+            func->getAttrOfType<mlir::ArrayAttr>("llvm.passthrough"))
+      llvm::append_range(llvmAttrs, existing);
+    llvmAttrs.push_back(
+        builder->getStrArrayAttr({llvm::AssumptionAttrKey, assumptions}));
+    func->setAttr("llvm.passthrough", builder->getArrayAttr(llvmAttrs));
   }
 
   /// Start translation of a function.
@@ -7165,8 +7236,7 @@ private:
               return Fortran::common::visit(
                   [&](const auto &someKind) -> std::string {
                     using T = std::decay_t<decltype(someKind)>;
-                    using TK = Fortran::evaluate::Type<T::Result::category,
-                                                       T::Result::kind>;
+                    using TK = typename T::Result;
                     if (const auto *constant =
                             std::get_if<Fortran::evaluate::Constant<TK>>(
                                 &someKind.u)) {

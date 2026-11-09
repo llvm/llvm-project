@@ -1,0 +1,37 @@
+UNSUPPORTED: system-windows
+
+RUN: echo -e 'Hello\360\237\230\203' > %t
+RUN: echo -e '\202\261\202\361\202\311\202\277\202\315' >> %t
+RUN: echo -e '\033$B$3$s$K$A$O\033(B' >> %t
+
+RUN: %if locale-en_US.US-ASCII %{ env LANG=en_US.US-ASCII \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-US-ASCII %s %} \
+RUN: %else %{ echo en_US.US-ASCII locale not supported, skipping test %}
+
+RUN: %if locale-en_US.ISO8859-1 %{ env LANG=en_US.ISO8859-1 \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-ISO8859-1 %s %} \
+RUN: %else %{ echo en_US.ISO8859-1 locale not supported, skipping test %}
+
+RUN: %if locale-en_US.UTF-8 %{ env LANG=en_US.UTF-8 \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-UTF-8 %s %} \
+RUN: %else %{ echo en_US.UTF-8 locale not supported, skipping test %}
+
+RUN: %if locale-ja_JP.SJIS %{ env LANG=ja_JP.SJIS \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-SJIS %s %} \
+RUN: %else %{ echo ja_JP.SJIS locale not supported, skipping test %}
+
+RUN: %if locale-Ja_JP.IBM-943 %{ env LANG=Ja_JP.IBM-943 \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-SJIS %s %} \
+RUN: %else %{ echo Ja_JP.IBM-943 locale not supported, skipping test %}
+
+RUN: %if locale-ja_JP.ISO2022-JP %{ env LANG=ja_JP.ISO2022-JP \
+RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-ISO2022-JP %s %} \
+RUN: %else %{ echo ja_JP.ISO2022-JP locale not supported, skipping test %}
+
+CHECK-IN-US-ASCII:Hello
+CHECK-IN-ISO8859-1:Hello{{\xF0}}
+CHECK-IN-UTF-8:Hello{{\xF0\x9F\x98\x83}}
+CHECK-IN-SJIS:Hello
+CHECK-IN-SJIS:{{\x82\xB1\x82\xF1\x82\xC9\x82\xBF\x82\xCD}}
+CHECK-IN-ISO2022-JP:Hello
+CHECK-IN-ISO2022-JP:{{\x1B}}$B$3$s$K$A$O{{\x1B}}(B

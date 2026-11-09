@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MetadataLoader.h"
+#include "BitReaderOptions.h"
 #include "ValueList.h"
 
 #include "llvm/ADT/APInt.h"
@@ -40,7 +41,6 @@
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -65,17 +65,6 @@ using namespace llvm;
 STATISTIC(NumMDStringLoaded, "Number of MDStrings loaded");
 STATISTIC(NumMDNodeTemporary, "Number of MDNode::Temporary created");
 STATISTIC(NumMDRecordLoaded, "Number of Metadata records loaded");
-
-/// Flag whether we need to import full type definitions for ThinLTO.
-/// Currently needed for Darwin and LLDB.
-static cl::opt<bool> ImportFullTypeDefinitions(
-    "import-full-type-definitions", cl::init(false), cl::Hidden,
-    cl::desc("Import full type definitions for ThinLTO."));
-
-static cl::opt<bool> DisableLazyLoading(
-    "disable-ondemand-mds-loading", cl::init(false), cl::Hidden,
-    cl::desc("Force disable the lazy-loading on-demand of metadata when "
-             "loading bitcode for importing."));
 
 namespace {
 
@@ -455,6 +444,7 @@ static Error error(const Twine &Message) {
 }
 
 class MetadataLoader::MetadataLoaderImpl {
+  const BitReaderOptions &Opts;
   BitcodeReaderMetadataList MetadataList;
   BitcodeReaderValueList &ValueList;
   BitstreamCursor &Stream;
@@ -829,7 +819,8 @@ public:
   MetadataLoaderImpl(BitstreamCursor &Stream, Module &TheModule,
                      BitcodeReaderValueList &ValueList,
                      MetadataLoaderCallbacks Callbacks, bool IsImporting)
-      : MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
+      : Opts(getBitReaderOptions(TheModule.getContext())),
+        MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
         ValueList(ValueList), Stream(Stream), Context(TheModule.getContext()),
         TheModule(TheModule), Callbacks(std::move(Callbacks)),
         IsImporting(IsImporting) {}
@@ -1204,7 +1195,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
   // We lazy-load module-level metadata: we build an index for each record, and
   // then load individual record as needed, starting with the named metadata.
   if (ModuleLevel && IsImporting && MetadataList.empty() &&
-      !DisableLazyLoading) {
+      Opts.ondemand_mds_loading) {
     auto SuccessOrErr = lazyLoadModuleMetadataBlock();
     if (!SuccessOrErr)
       return SuccessOrErr.takeError();
@@ -1919,7 +1910,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // We always import full definitions for anonymous composite types,
     // as without a name, debuggers cannot easily resolve a declaration
     // to its definition.
-    if (IsImporting && !ImportFullTypeDefinitions && Identifier && Name &&
+    if (IsImporting && !Opts.import_full_type_definitions && Identifier &&
+        Name &&
         (Tag == dwarf::DW_TAG_enumeration_type ||
          Tag == dwarf::DW_TAG_class_type ||
          Tag == dwarf::DW_TAG_structure_type ||

@@ -1,10 +1,18 @@
-//===-- Utility class to test integer sqrt ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test fixed-point exp.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_EXPTEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_EXPTEST_H
 
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -75,3 +83,5 @@ public:
     test_negative_range(&func);                                                \
   }                                                                            \
   static_assert(true, "Require semicolon.")
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_EXPTEST_H

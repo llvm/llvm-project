@@ -546,6 +546,11 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     return EINVAL;
   }
 
+  // A buffer of no size cannot hold anything, so the stream is unbuffered
+  // whatever mode was asked for.
+  if (size == 0)
+    buffer_mode = _IONBF;
+
   if (buffer == nullptr && size != 0 && buffer_mode != _IONBF) {
     // We exclude the case of buffer_mode == _IONBF in this branch
     // because we don't need to allocate buffer in such a case.

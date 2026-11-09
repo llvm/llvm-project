@@ -3033,6 +3033,44 @@ func.func @negate_i64_no_noop_cast(%arg0: tensor<4xi64>, %in_zp: tensor<1xi64>, 
 
 // -----
 
+// CHECK-LABEL: @negate_i64_const_zp
+// CHECK: linalg.generic
+// CHECK: ^bb0(%[[IN:.*]]: i64, %{{.*}}: i64):
+// CHECK: %[[ZP_ADD:.*]] = arith.constant 0 : i64
+// CHECK: %[[SUB:.*]] = arith.subi %[[ZP_ADD]], %[[IN]] : i64
+// CHECK: %[[MIN:.*]] = arith.constant -9223372036854775808 : i64
+// CHECK: %[[MAX:.*]] = arith.constant 9223372036854775807 : i64
+// CHECK: %[[LOWER:.*]] = arith.maxsi %[[MIN]], %[[SUB]] : i64
+// CHECK: %[[CLAMP:.*]] = arith.minsi %[[MAX]], %[[LOWER]] : i64
+// CHECK: linalg.yield %[[CLAMP]] : i64
+func.func @negate_i64_const_zp(%arg0: tensor<1x1xi64>) -> tensor<1x1xi64> {
+  %zp = "tosa.const"() <{values = dense<0> : tensor<1xi64>}> : () -> tensor<1xi64>
+  %neg = tosa.negate %arg0, %zp, %zp : (tensor<1x1xi64>, tensor<1xi64>, tensor<1xi64>) -> tensor<1x1xi64>
+  return %neg : tensor<1x1xi64>
+}
+
+// -----
+
+// CHECK-LABEL: @negate_i16_const_zp
+// CHECK: linalg.generic
+// CHECK: ^bb0(%[[IN:.*]]: i16, %{{.*}}: i16):
+// CHECK: %[[ZP_ADD:.*]] = arith.constant 0 : i32
+// CHECK: %[[EXT:.*]] = arith.extsi %[[IN]] : i16 to i32
+// CHECK: %[[SUB:.*]] = arith.subi %[[ZP_ADD]], %[[EXT]] : i32
+// CHECK: %[[MIN:.*]] = arith.constant -32768 : i32
+// CHECK: %[[MAX:.*]] = arith.constant 32767 : i32
+// CHECK: %[[LOWER:.*]] = arith.maxsi %[[MIN]], %[[SUB]] : i32
+// CHECK: %[[CLAMP:.*]] = arith.minsi %[[MAX]], %[[LOWER]] : i32
+// CHECK: %[[TRUNC:.*]] = arith.trunci %[[CLAMP]] : i32 to i16
+// CHECK: linalg.yield %[[TRUNC]] : i16
+func.func @negate_i16_const_zp(%arg0: tensor<1x1xi16>) -> tensor<1x1xi16> {
+  %zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
+  %neg = tosa.negate %arg0, %zp, %zp : (tensor<1x1xi16>, tensor<1xi16>, tensor<1xi16>) -> tensor<1x1xi16>
+  return %neg : tensor<1x1xi16>
+}
+
+// -----
+
 // A non-constant mul shift or negate zero point is a single-element tensor: it
 // does not take part in broadcasting and every iteration reads its element 0.
 

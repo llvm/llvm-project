@@ -61,6 +61,19 @@ PreservedAnalyses DeclareRuntimeLibcallsPass::run(Module &M,
     if (!RTLCI.isAvailable(Impl))
       continue;
 
+    if (Type *VarTy = RTLCI.getVariableType(Ctx, TT, DL, Impl)) {
+      StringRef VarName = RTLCI.getLibcallImplName(Impl);
+      M.getOrInsertGlobal(VarName, VarTy, [&] {
+        auto *GV =
+            new GlobalVariable(M, VarTy, /*isConstant=*/false,
+                               GlobalValue::ExternalLinkage, nullptr, VarName);
+        if (RTLIB::RuntimeLibcallsInfo::isThreadLocalVariable(Impl))
+          GV->setThreadLocalMode(GlobalValue::InitialExecTLSModel);
+        return GV;
+      });
+      continue;
+    }
+
     auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(Ctx, TT, DL, Impl);
 
     // TODO: Declare with correct type, calling convention, and attributes.

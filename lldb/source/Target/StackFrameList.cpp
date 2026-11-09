@@ -15,7 +15,6 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Target/BorrowedStackFrame.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -641,18 +640,19 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       if (curr_frame->GetStackID() != prev_frame->GetStackID())
         break;
 
-      // Never adopt a frame borrowed from another StackFrameList, which only a
-      // provider's SyntheticStackFrameList hands out: it keeps reporting the
-      // index of the frame it borrows, and the update below cannot change
-      // that. Skipping it is safe because the merge only carries cached state
-      // onto a frame this list has already unwound correctly.
-      if (llvm::isa<BorrowedStackFrame>(prev_frame))
+      // Only adopt a frame that a list with this identifier produced. A frame
+      // from another layer of the provider chain, scripted or borrowed, can
+      // share its StackID with a frame of this list without being
+      // interchangeable with it. Skipping it is safe because the merge only
+      // carries cached state onto a frame this list has already unwound
+      // correctly.
+      if (prev_frame->GetContainingStackFrameListIdentifier() !=
+          GetIdentifier())
         continue;
 
       prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
       // Now copy the fixed up previous frame into the current frames so the
       // pointer doesn't change.
-      prev_frame_sp->m_frame_list_id = GetIdentifier();
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)

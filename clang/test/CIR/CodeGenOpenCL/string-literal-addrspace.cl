@@ -21,25 +21,25 @@
 
 void take(const __constant char *);
 
-// CIR-SPV: cir.global "private" constant cir_private dso_local target_address_space(2) @".str" = #cir.const_array<"hi" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3>
-// CIR-SPV: cir.global "private" constant cir_private dso_local target_address_space(2) @".str.1" = #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4>
-// CIR-SPV: cir.global "private" constant cir_private dso_local target_address_space(2) @__func__.func_name = #cir.const_array<"func_name" : !cir.array<!s8i x 9>, trailing_zeros> : !cir.array<!s8i x 10>
+// CIR-SPV: cir.global "private" constant cir_private dso_local unnamed_addr target_address_space(2) @".str" = #cir.const_array<"hi" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3>
+// CIR-SPV: cir.global "private" constant cir_private dso_local unnamed_addr target_address_space(2) @".str.1" = #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4>
+// CIR-SPV: cir.global "private" constant cir_private dso_local unnamed_addr target_address_space(2) @__func__.func_name = #cir.const_array<"func_name" : !cir.array<!s8i x 9>, trailing_zeros> : !cir.array<!s8i x 10>
 
-// CIR-GCN: cir.global "private" constant cir_private dso_local target_address_space(4) @".str" = #cir.const_array<"hi" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3>
-// CIR-GCN: cir.global "private" constant cir_private dso_local target_address_space(4) @".str.1" = #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4>
-// CIR-GCN: cir.global "private" constant cir_private dso_local target_address_space(4) @__func__.func_name = #cir.const_array<"func_name" : !cir.array<!s8i x 9>, trailing_zeros> : !cir.array<!s8i x 10>
+// CIR-GCN: cir.global "private" constant cir_private dso_local unnamed_addr target_address_space(4) @".str" = #cir.const_array<"hi" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3>
+// CIR-GCN: cir.global "private" constant cir_private dso_local unnamed_addr target_address_space(4) @".str.1" = #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4>
+// CIR-GCN: cir.global "private" constant cir_private dso_local unnamed_addr target_address_space(4) @__func__.func_name = #cir.const_array<"func_name" : !cir.array<!s8i x 9>, trailing_zeros> : !cir.array<!s8i x 10>
 
-// LLVM-SPV: @.str = private addrspace(2) constant [3 x i8] c"hi\00"
-// LLVM-SPV: @.str.1 = private addrspace(2) constant [4 x i8] c"abc\00"
-// LLVM-SPV: @__func__.func_name = private addrspace(2) constant [10 x i8] c"func_name\00"
+// LLVM-SPV: @.str = private unnamed_addr addrspace(2) constant [3 x i8] c"hi\00"
+// LLVM-SPV: @.str.1 = private unnamed_addr addrspace(2) constant [4 x i8] c"abc\00"
+// LLVM-SPV: @__func__.func_name = private unnamed_addr addrspace(2) constant [10 x i8] c"func_name\00"
 
 // OGCG-SPV: @.str = private unnamed_addr addrspace(2) constant [3 x i8] c"hi\00"
 // OGCG-SPV: @.str.1 = private unnamed_addr addrspace(2) constant [4 x i8] c"abc\00"
 // OGCG-SPV: @__func__.func_name = private unnamed_addr addrspace(2) constant [10 x i8] c"func_name\00"
 
-// LLVM-GCN: @.str = private addrspace(4) constant [3 x i8] c"hi\00"
-// LLVM-GCN: @.str.1 = private addrspace(4) constant [4 x i8] c"abc\00"
-// LLVM-GCN: @__func__.func_name = private addrspace(4) constant [10 x i8] c"func_name\00"
+// LLVM-GCN: @.str = private unnamed_addr addrspace(4) constant [3 x i8] c"hi\00"
+// LLVM-GCN: @.str.1 = private unnamed_addr addrspace(4) constant [4 x i8] c"abc\00"
+// LLVM-GCN: @__func__.func_name = private unnamed_addr addrspace(4) constant [10 x i8] c"func_name\00"
 
 // OGCG-GCN: @.str = private unnamed_addr addrspace(4) constant [3 x i8] c"hi\00"
 // OGCG-GCN: @.str.1 = private unnamed_addr addrspace(4) constant [4 x i8] c"abc\00"

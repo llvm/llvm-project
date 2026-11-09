@@ -544,6 +544,10 @@ ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,
 /// Adds attributes that prevent outlining (`-mno-outline`)
 CODEGENOPT(DisableOutlining, 1, 0, Benign)
 
+/// Marks inline functions and template instantiations defined in the main
+/// source file as likely_module_local (`-fmodule-local-hints`)
+CODEGENOPT(ModuleLocalHints, 1, 0, Benign)
+
 /// Controlls the emission of function name in PPA1 on z/OS.
 CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 

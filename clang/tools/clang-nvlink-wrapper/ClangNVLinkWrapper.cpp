@@ -376,7 +376,6 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
   const llvm::Triple Triple("nvptx64-nvidia-cuda");
   lto::Config Conf;
   Conf.LibraryOptions = &LibraryOptions;
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))
@@ -388,7 +387,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
       lto::createInProcessThinBackend(heavyweight_hardware_concurrency(Jobs));
 
   Conf.CPU = Args.getLastArgValue(OPT_arch);
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
+  Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple);
 
   Conf.RemarksFilename =
       Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);

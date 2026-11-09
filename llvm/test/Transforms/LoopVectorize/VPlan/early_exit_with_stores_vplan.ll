@@ -25,16 +25,16 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ee.addr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw i16, ir<%ee.addr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
+; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>, align 2
 ; CHECK-NEXT:      WIDEN ir<%ee.cond> = icmp sgt ir<%ee.val>, ir<500>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%ee.cond>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP7]]>
 ; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i16, ir<%st.addr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP8]]>, vp<%uncountable.exit.mask>
+; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP8]]>, vp<%uncountable.exit.mask>, align 2
 ; CHECK-NEXT:      WIDEN ir<%inc> = add nsw ir<%data>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%inc>, vp<%uncountable.exit.mask>
+; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%inc>, vp<%uncountable.exit.mask>, align 2
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = any-of vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
@@ -114,16 +114,16 @@ define void @loop_contains_store_after_uncountable_exit(ptr dereferenceable(40) 
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ee.addr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw i16, ir<%ee.addr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
+; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>, align 2
 ; CHECK-NEXT:      WIDEN ir<%ee.cond> = icmp sgt ir<%ee.val>, ir<500>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%ee.cond>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP7]]>
 ; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i16, ir<%st.addr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP8]]>, vp<%uncountable.exit.mask> (!vplan.execution.frequency 17870283321406128127 (96.88%, estimated))
+; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP8]]>, vp<%uncountable.exit.mask>, align 2 (!vplan.execution.frequency 17870283321406128127 (96.88%, estimated))
 ; CHECK-NEXT:      WIDEN ir<%inc> = add nsw ir<%data>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%inc>, vp<%uncountable.exit.mask> (!vplan.execution.frequency 17870283321406128127 (96.88%, estimated))
+; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%inc>, vp<%uncountable.exit.mask>, align 2 (!vplan.execution.frequency 17870283321406128127 (96.88%, estimated))
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = any-of vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
@@ -199,16 +199,16 @@ define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %arra
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ee.addr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw i16, ir<%ee.addr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
+; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>, align 2
 ; CHECK-NEXT:      WIDEN ir<%ee.cond> = icmp sgt ir<%ee.val>, ir<500>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%ee.cond>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP7]]>
 ; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i16, ir<%st.addr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP8]]>, vp<%uncountable.exit.mask>
+; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP8]]>, vp<%uncountable.exit.mask>, align 2
 ; CHECK-NEXT:      WIDEN ir<%inc> = add nsw ir<%data>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%inc>, vp<%uncountable.exit.mask>
+; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%inc>, vp<%uncountable.exit.mask>, align 2
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = any-of vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
@@ -291,7 +291,7 @@ define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%ee.ptr> = getelementptr inbounds nuw ir<%pred>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw i32, ir<%ee.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>
+; CHECK-NEXT:      WIDEN ir<%ee.val> = load vp<[[VP5]]>, align 4
 ; CHECK-NEXT:      WIDEN ir<%ee.cmp> = icmp ne ir<%ee.val>, ir<0>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%ee.cmp>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = freeze vp<[[VP6]]>
@@ -299,11 +299,11 @@ define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %
 ; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP8]]>
 ; CHECK-NEXT:      CLONE ir<%src.ptr> = getelementptr ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i32, ir<%src.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP9]]>, vp<%uncountable.exit.mask>
+; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP9]]>, vp<%uncountable.exit.mask>, align 4
 ; CHECK-NEXT:      WIDEN ir<%add> = add nsw ir<%data>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%dst.ptr> = getelementptr ir<%dst>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer i32, ir<%dst.ptr>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP10]]>, ir<%add>, vp<%uncountable.exit.mask>
+; CHECK-NEXT:      WIDEN store vp<[[VP10]]>, ir<%add>, vp<%uncountable.exit.mask>, align 4
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = any-of vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>

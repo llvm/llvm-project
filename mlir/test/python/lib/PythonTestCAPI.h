@@ -36,6 +36,10 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAPythonTestTestTensorValue(MlirValue value);
 
 MLIR_CAPI_EXPORTED void mlirPythonTestEmitDiagnosticWithNote(MlirContext ctx);
 
+/// Registers the `test-python-rendezvous` pass (see
+/// TestConcurrencyPasses.cpp). Idempotent.
+MLIR_CAPI_EXPORTED void mlirPythonTestRegisterRendezvousPass(void);
+
 #ifdef __cplusplus
 }
 #endif

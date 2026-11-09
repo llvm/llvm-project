@@ -10,8 +10,8 @@
 #include "mlir/IR/Builders.h"
 #include "gtest/gtest.h"
 
-#include "../../test/lib/Dialect/Test/TestDialect.h"
-#include "../../test/lib/Dialect/Test/TestOps.h"
+#include "TestDialect.h"
+#include "TestOps.h"
 
 using namespace mlir;
 

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/IR2Vec.h"
+#include "AnalysisOptions.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
@@ -35,35 +36,12 @@ using namespace ir2vec;
 STATISTIC(VocabMissCounter,
           "Number of lookups to entities not present in the vocabulary");
 
-namespace llvm {
-namespace ir2vec {
-cl::OptionCategory IR2VecCategory("IR2Vec Options");
-
-// FIXME: Use a default vocab when not specified
-cl::opt<std::string>
-    VocabFile("ir2vec-vocab-path",
-              cl::desc("Path to the vocabulary file for IR2Vec"), cl::init(""),
-              cl::cat(IR2VecCategory));
-cl::opt<float> OpcWeight("ir2vec-opc-weight", cl::init(1.0),
-                         cl::desc("Weight for opcode embeddings"),
-                         cl::cat(IR2VecCategory));
-cl::opt<float> TypeWeight("ir2vec-type-weight", cl::init(0.5),
-                          cl::desc("Weight for type embeddings"),
-                          cl::cat(IR2VecCategory));
-cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::init(0.2),
-                         cl::desc("Weight for argument embeddings"),
-                         cl::cat(IR2VecCategory));
-cl::opt<IR2VecKind> IR2VecEmbeddingKind(
-    "ir2vec-kind",
-    cl::values(clEnumValN(IR2VecKind::Symbolic, "symbolic",
-                          "Generate symbolic embeddings"),
-               clEnumValN(IR2VecKind::FlowAware, "flow-aware",
-                          "Generate flow-aware embeddings")),
-    cl::init(IR2VecKind::Symbolic), cl::desc("IR2Vec embedding kind"),
-    cl::cat(IR2VecCategory));
-
-} // namespace ir2vec
-} // namespace llvm
+StringRef llvm::ir2vec::getVocabFile(const LLVMContext &C) {
+  return getAnalysisOptions(C).ir2vec_vocab_path;
+}
+IR2VecKind llvm::ir2vec::getEmbeddingKind(const LLVMContext &C) {
+  return getAnalysisOptions(C).ir2vec_kind;
+}
 
 AnalysisKey IR2VecVocabAnalysis::Key;
 
@@ -645,7 +623,8 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
     return Vocabulary(std::move(Vocab.value()));
 
   // Otherwise, try to read from the vocabulary file specified via CLI.
-  if (VocabFile.empty())
+  const AnalysisOptions &Opts = getAnalysisOptions(M);
+  if (Opts.ir2vec_vocab_path.empty())
     // FIXME: Use default vocabulary
     reportFatalUsageError(
         "IR2Vec vocabulary file path not specified; You may need to "
@@ -653,7 +632,8 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 
   // Use the static factory method to load the vocabulary.
   auto VocabOrErr =
-      Vocabulary::fromFile(VocabFile, OpcWeight, TypeWeight, ArgWeight);
+      Vocabulary::fromFile(Opts.ir2vec_vocab_path, Opts.ir2vec_opc_weight,
+                           Opts.ir2vec_type_weight, Opts.ir2vec_arg_weight);
   if (!VocabOrErr)
     emitError(VocabOrErr.takeError());
 
@@ -669,8 +649,9 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
   auto &Vocabulary = MAM.getResult<IR2VecVocabAnalysis>(M);
   assert(Vocabulary.isValid() && "IR2Vec Vocabulary is invalid");
 
+  IR2VecKind Kind = getAnalysisOptions(M).ir2vec_kind;
   for (Function &F : M) {
-    auto Emb = Embedder::create(IR2VecEmbeddingKind, F, Vocabulary);
+    auto Emb = Embedder::create(Kind, F, Vocabulary);
     if (!Emb) {
       OS << "Error creating IR2Vec embeddings \n";
       continue;

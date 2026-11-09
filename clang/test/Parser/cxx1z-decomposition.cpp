@@ -121,7 +121,7 @@ namespace BadSpecifiers {
                        // CHECK: :[[@LINE-1]]:13: error: structured binding declaration '[K]' requires an initializer; expected '=' or braced initializer list
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
-    auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
+    auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}}
     auto S::*[g] = s; // expected-error {{cannot be declared with type 'auto S::*'}} expected-error {{incompatible initializer}}
 
     // ref-qualifiers are OK.

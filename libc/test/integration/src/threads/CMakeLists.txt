@@ -8,7 +8,6 @@ add_integration_test(
     mtx_test.cpp
   DEPENDS
     libc.include.threads
-    libc.src.errno.errno
     libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
@@ -44,7 +43,6 @@ add_integration_test(
     thrd_test.cpp
   DEPENDS
     libc.include.threads
-    libc.src.errno.errno
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
 )

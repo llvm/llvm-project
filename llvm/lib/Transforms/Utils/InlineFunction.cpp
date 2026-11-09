@@ -162,8 +162,7 @@ namespace {
     /// a simple branch. When there is more than one predecessor, we need to
     /// split the landing pad block after the landingpad instruction and jump
     /// to there.
-    void forwardResume(ResumeInst *RI,
-                       SmallPtrSetImpl<LandingPadInst*> &InlinedLPads);
+    void forwardResume(ResumeInst *RI);
 
     /// Add incoming-PHI values to the unwind destination block for the given
     /// basic block, using the values for the original invoke's source block.
@@ -234,8 +233,7 @@ BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
 /// When the landing pad block has only one predecessor, this is a simple
 /// branch. When there is more than one predecessor, we need to split the
 /// landing pad block after the landingpad instruction and jump to there.
-void LandingPadInliningInfo::forwardResume(
-    ResumeInst *RI, SmallPtrSetImpl<LandingPadInst *> &InlinedLPads) {
+void LandingPadInliningInfo::forwardResume(ResumeInst *RI) {
   BasicBlock *Dest = getInnerResumeDest();
   BasicBlock *Src = RI->getParent();
 
@@ -631,8 +629,9 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   // rewrite.
   LandingPadInliningInfo Invoke(II);
 
-  // Get all of the inlined landing pad instructions.
-  SmallPtrSet<LandingPadInst*, 16> InlinedLPads;
+  // Get all of the inlined landing pad instructions. Keep them in block order
+  // so the clauses appended below get a deterministic use-list order.
+  SmallSetVector<LandingPadInst *, 16> InlinedLPads;
   for (Function::iterator I = FirstNewBlock->getIterator(), E = Caller->end();
        I != E; ++I)
     if (InvokeInst *II = dyn_cast<InvokeInst>(I->getTerminator()))
@@ -662,7 +661,7 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
 
     // Forward any resumes that are remaining here.
     if (ResumeInst *RI = dyn_cast<ResumeInst>(BB->getTerminator()))
-      Invoke.forwardResume(RI, InlinedLPads);
+      Invoke.forwardResume(RI);
   }
 
   // Now that everything is happy, we have one final detail.  The PHI nodes in

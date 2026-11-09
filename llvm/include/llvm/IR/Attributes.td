@@ -217,6 +217,10 @@ def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 /// inline=never.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
+/// Function is likely only referenced from the current module.
+def LikelyModuleLocal
+    : EnumAttr<"likely_module_local", IntersectAnd, [FnAttr]>;
+
 /// nooutline
 def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
 
@@ -338,6 +342,10 @@ def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
 
 /// ThreadSanitizer is on.
 def SanitizeThread : EnumAttr<"sanitize_thread", IntersectPreserve, [FnAttr]>;
+
+/// ConcurrencySanitizer is on.
+def SanitizeConcurrency
+    : EnumAttr<"sanitize_concurrency", IntersectPreserve, [FnAttr]>;
 
 /// TypeSanitizer is on.
 def SanitizeType : EnumAttr<"sanitize_type", IntersectPreserve, [FnAttr]>;
@@ -462,6 +470,7 @@ class CompatRuleStrAttr<string F, string Attr> : CompatRule<F> {
 
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeThreadAttr>">;
+def : CompatRule<"isEqual<SanitizeConcurrencyAttr>">;
 def : CompatRule<"isEqual<SanitizeTypeAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;

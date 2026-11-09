@@ -3,6 +3,7 @@ static_library("DTLTO") {
   deps = [
     "//llvm/lib/IR",
     "//llvm/lib/LTO",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
   ]
   sources = [

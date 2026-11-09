@@ -49,8 +49,6 @@ end:
 // LLVM:       [[GOTO_BB]]:
 // LLVM:         br label %[[LABEL_BB:[0-9]+]]
 // LLVM:       [[FALLTHROUGH]]:
-// LLVM:         br label %[[USE_BB:.*]]
-// LLVM:       [[USE_BB]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
 // LLVM:         br label %[[LABEL_BB]]
 // LLVM:       [[LABEL_BB]]:
@@ -121,21 +119,17 @@ skip:
 // LLVM:       [[GOTO_BB]]:
 // LLVM:         br label %[[SKIP_BB:[0-9]+]]
 // LLVM:       [[FALLTHROUGH]]:
-// LLVM:         br label %[[USE_BB:.*]]
-// LLVM:       [[USE_BB]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
 // LLVM:         br label %[[COND2_BB:.*]]
 // LLVM:       [[COND2_BB]]:
 // LLVM:         %[[COND2_BYTE:.*]] = load i8, ptr %[[COND2_ADDR]]
 // LLVM:         %[[COND2_BIT:.*]] = trunc i8 %[[COND2_BYTE]] to i1
-// LLVM:         br i1 %[[COND2_BIT]], label %[[GOTO_BB2:.*]], label %[[MERGE:.*]]
+// LLVM:         br i1 %[[COND2_BIT]], label %[[GOTO_BB2:.*]], label %[[CLEANUP:.*]]
 // LLVM:       [[GOTO_BB2]]:
 // LLVM:         br label %[[SKIP_BB]]
 // LLVM:       [[SKIP_BB]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
-// LLVM:         br label %[[MERGE]]
-// LLVM:       [[MERGE]]:
-// LLVM:         br label %[[CLEANUP:.*]]
+// LLVM:         br label %[[CLEANUP]]
 // LLVM:       [[CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[A_ADDR]])
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev

@@ -62,7 +62,8 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
   if (BaseDesc->isPrimitiveArray()) {
     if (BasePtr.allElementsInitialized())
       return true;
-    DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+    if (const FieldDecl *F = BasePtr.getField())
+      DiagnoseUninitializedSubobject(S, Loc, F);
     return false;
   }
   const Descriptor *ElemDesc = BaseDesc->ElemDesc;

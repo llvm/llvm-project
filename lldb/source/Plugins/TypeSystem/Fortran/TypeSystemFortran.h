@@ -14,6 +14,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace lldb_private {
@@ -101,19 +102,13 @@ public:
 
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type) override;
 
-  bool IsFunctionType(lldb::opaque_compiler_type_t type) override {
-    return false;
-  }
+  bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
 
   size_t
-  GetNumberOfFunctionArguments(lldb::opaque_compiler_type_t type) override {
-    return 0;
-  }
+  GetNumberOfFunctionArguments(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
-                                          const size_t index) override {
-    return CompilerType();
-  }
+                                          const size_t index) override;
 
   bool IsFunctionPointerType(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -213,13 +208,18 @@ public:
 
   lldb::TypeClass GetTypeClass(lldb::opaque_compiler_type_t type) override;
 
+  // Creating related types
+
   CompilerType GetOrCreateFortranBaseType(int kind, uint64_t bitsize,
                                           ConstString name);
 
   CompilerType CreateBaseType(llvm::dwarf::TypeKind dwarf_encoding,
                               uint64_t bitsize, ConstString name);
 
-  // Creating related types
+  CompilerType CreateFortranFunction(
+      ConstString name, const llvm::SmallVectorImpl<CompilerType> &parameters,
+      const llvm::SmallVectorImpl<llvm::StringRef> &parameter_names,
+      CompilerType return_type);
 
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) override {
@@ -233,21 +233,17 @@ public:
     return CompilerType();
   }
 
-  // Returns -1 if this isn't a function of if the function doesn't have a
-  // prototype Returns a value >= 0 if there is a prototype.
-  int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) override {
-    return -1;
-  }
+  // Returns -1 if this isn't a function or if the function doesn't have a
+  // prototype. Returns a value >= 0 if there is a prototype.
+  int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetFunctionArgumentTypeAtIndex(lldb::opaque_compiler_type_t type,
                                               size_t idx) override {
-    return CompilerType();
+    return GetFunctionArgumentAtIndex(type, idx);
   }
 
   CompilerType
-  GetFunctionReturnType(lldb::opaque_compiler_type_t type) override {
-    return CompilerType();
-  }
+  GetFunctionReturnType(lldb::opaque_compiler_type_t type) override;
 
   size_t GetNumMemberFunctions(lldb::opaque_compiler_type_t type) override {
     return 0;
@@ -472,6 +468,7 @@ public:
 
 private:
   mutable llvm::FoldingSet<plugin::fortran::FortranType> m_basic_types;
+  mutable llvm::FoldingSet<plugin::fortran::FortranFunction> m_functions;
   // We store all unique pointer types here so we can manage the lifecycle
   // of the types
   mutable llvm::SmallVector<std::unique_ptr<plugin::fortran::FortranType>>

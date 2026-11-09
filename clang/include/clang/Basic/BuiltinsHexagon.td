@@ -20,8 +20,10 @@ class V<string version, VFeatures newer> : VFeatures {
   let Features = !strconcat("v", version, "|", newer.Features);
 }
 
-let Features = "v81" in def V81 : VFeatures;
+let Features = "v85" in def V85 : VFeatures;
 
+def V83 : V<"83", V85>;
+def V81 : V<"81", V83>;
 def V79 : V<"79", V81>;
 def V75 : V<"75", V79>;
 def V73 : V<"73", V75>;
@@ -44,8 +46,10 @@ class HVXV<string version, HVXVFeatures newer> : HVXVFeatures {
   let Features = !strconcat("hvxv", version, "|", newer.Features);
 }
 
-let Features = "hvxv81" in def HVXV81 : HVXVFeatures;
+let Features = "hvxv85" in def HVXV85 : HVXVFeatures;
 
+def HVXV83 : HVXV<"83", HVXV85>;
+def HVXV81 : HVXV<"81", HVXV83>;
 def HVXV79 : HVXV<"79", HVXV81>;
 def HVXV75 : HVXV<"75", HVXV79>;
 def HVXV73 : HVXV<"73", HVXV75>;
@@ -2211,4 +2215,80 @@ let Features = HVXV81.Features in {
   def V6_vsub_hf_mix_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
   def V6_vsub_sf_mix : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
   def V6_vsub_sf_mix_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+}
+
+// V83 Scalar Instructions.
+
+let Features = V83.Features in {
+  def A2_nop_rb : HexagonBuiltin<"void()">;
+  def F7_vsfadd : HexagonBuiltin<"double(double, double)">;
+  def F7_vsffma : HexagonBuiltin<"double(double, double, double)">;
+  def F7_vsffms : HexagonBuiltin<"double(double, double, double)">;
+  def F7_vsfmpy : HexagonBuiltin<"double(double, double)">;
+  def F7_vsfsub : HexagonBuiltin<"double(double, double)">;
+  def V2_vallocframe_imm : HexagonBuiltin<"void(unsigned _Constant int)">;
+  def V2_vallocframe_reg : HexagonBuiltin<"void(int)">;
+  def V2_vdeallocframe_imm : HexagonBuiltin<"void(unsigned _Constant int)">;
+  def V2_vdeallocframe_reg : HexagonBuiltin<"void(int)">;
+}
+
+// V83 HVX Instructions.
+
+let Features = HVXV83.Features in {
+  def V6_vabsdiffuw : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vabsdiffuw_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vadduhhsat : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vadduhhsat_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vadduwwsat_dv : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vadduwwsat_dv_128B : HexagonBuiltin<"_Vector<64, int>(_Vector<64, int>, _Vector<64, int>)">;
+  def V6_vmaxuw : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmaxuw_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vminuw : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vminuw_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vmpar_uwuhuw_si : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<16, int>, int)">;
+  def V6_vmpar_uwuhuw_si_128B : HexagonBuiltin<"_Vector<64, int>(_Vector<64, int>, _Vector<32, int>, int)">;
+  def V6_vmpar_wuhw_si : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<16, int>, int)">;
+  def V6_vmpar_wuhw_si_128B : HexagonBuiltin<"_Vector<64, int>(_Vector<64, int>, _Vector<32, int>, int)">;
+  def V6_vmpauhuh : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, long long int)">;
+  def V6_vmpauhuh_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>, long long int)">;
+  def V6_vmpauhuhuh : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, long long int)">;
+  def V6_vmpauhuhuh_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>, long long int)">;
+  def V6_vmpsuhuh : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, long long int)">;
+  def V6_vmpsuhuh_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>, long long int)">;
+  def V6_vmpyewuh_rnd : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmpyewuh_rnd_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vmpyhuh : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmpyhuh_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vmpyhuh_rnd : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmpyhuh_rnd_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vmpyowuh : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmpyowuh_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vmpyowuh_acc : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmpyowuh_acc_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>, _Vector<32, int>)">;
+  def V6_vmpyowuh_rnd : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmpyowuh_rnd_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vmpyowuh_rnd_acc : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmpyowuh_rnd_acc_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>, _Vector<32, int>)">;
+  def V6_vmpyrhuh : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, int)">;
+  def V6_vmpyrhuh_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, int)">;
+  def V6_vmpyrhuh_rnd : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, int)">;
+  def V6_vmpyrhuh_rnd_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, int)">;
+  def V6_vmpyrhus : HexagonBuiltin<"_Vector<32, int>(_Vector<16, int>, int)">;
+  def V6_vmpyrhus_128B : HexagonBuiltin<"_Vector<64, int>(_Vector<32, int>, int)">;
+  def V6_vmpyrhus_acc : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<16, int>, int)">;
+  def V6_vmpyrhus_acc_128B : HexagonBuiltin<"_Vector<64, int>(_Vector<64, int>, _Vector<32, int>, int)">;
+  def V6_vmpyruhuh : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, int)">;
+  def V6_vmpyruhuh_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, int)">;
+  def V6_vmpyruhuh_rnd : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, int)">;
+  def V6_vmpyruhuh_rnd_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, int)">;
+  def V6_vmpyuhuh_rnd : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vmpyuhuh_rnd_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vnavguh : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vnavguh_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vnavguw : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vnavguw_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vsubuhhsat : HexagonBuiltin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>)">;
+  def V6_vsubuhhsat_128B : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vsubuwwsat_dv : HexagonBuiltin<"_Vector<32, int>(_Vector<32, int>, _Vector<32, int>)">;
+  def V6_vsubuwwsat_dv_128B : HexagonBuiltin<"_Vector<64, int>(_Vector<64, int>, _Vector<64, int>)">;
 }

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/OperationSupport.h"
-#include "../../test/lib/Dialect/Test/TestDialect.h"
-#include "../../test/lib/Dialect/Test/TestOps.h"
+#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/BitVector.h"

@@ -590,17 +590,22 @@ void MCStreamer::emitCFIRememberState(SMLoc Loc) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
+  ++CurFrame->RememberStateDepth;
   CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
 void MCStreamer::emitCFIRestoreState(SMLoc Loc) {
-  // FIXME: Error if there is no matching cfi_remember_state.
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
       MCCFIInstruction::createRestoreState(Label, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
+  if (!CurFrame->RememberStateDepth) {
+    getContext().reportError(Loc, "no matching .cfi_remember_state");
+    return;
+  }
+  --CurFrame->RememberStateDepth;
   CurFrame->Instructions.push_back(std::move(Instruction));
 }
 

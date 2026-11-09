@@ -3,6 +3,7 @@ add_subdirectory(TargetLowering)
 add_clang_library(MLIRCIRTransforms
   CallConvLoweringPass.cpp
   CIRCanonicalize.cpp
+  CIRFoldEmptyBranches.cpp
   CIRSimplify.cpp
   CIRTransformUtils.cpp
   CXXABILowering.cpp
@@ -21,8 +22,7 @@ add_clang_library(MLIRCIRTransforms
 
   DEPENDS
   MLIRCIRPassIncGen
-  MLIRBuiltinLocationAttributesIncGen
-  MLIRBytecodeOpInterfaceIncGen
+  mlir-headers
 
   LINK_COMPONENTS
   ABI

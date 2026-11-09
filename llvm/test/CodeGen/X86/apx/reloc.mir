@@ -84,7 +84,7 @@ registers:
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg :: (load (s64))
-    %1:gr32 = MOV32rm killed %0, 1, $noreg, 0, $fs :: (load (s32))
+    %1:gr32 = MOV32rm %0, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %1
     RET 0, $eax
 
@@ -128,7 +128,7 @@ body: |
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = OR64ri8 %0, 7, implicit-def $eflags
     %2:gr64 = ADC64rm %1, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags, implicit $eflags :: (load (s64))
-    %3:gr32 = MOV32rm killed %2, 1, $noreg, 0, $fs :: (load (s32))
+    %3:gr32 = MOV32rm %2, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %3
     RET 0, $eax
 
@@ -148,7 +148,7 @@ body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = ADD64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
-    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %2
     RET 0, $eax
 # CHECK: name: add
@@ -167,7 +167,7 @@ body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = AND64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
-    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %2
     RET 0, $eax
 
@@ -187,7 +187,7 @@ body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = OR64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
-    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %2
     RET 0, $eax
 
@@ -209,7 +209,7 @@ body: |
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = OR64ri8 %0, 7, implicit-def $eflags
     %2:gr64 = SBB64rm %1, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags, implicit $eflags :: (load (s64))
-    %3:gr32 = MOV32rm killed %2, 1, $noreg, 0, $fs :: (load (s32))
+    %3:gr32 = MOV32rm %2, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %3
     RET 0, $eax
 
@@ -231,7 +231,7 @@ body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = SUB64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
-    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %2
     RET 0, $eax
 
@@ -251,7 +251,7 @@ body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = XOR64rm %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def $eflags :: (load (s64))
-    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %2
     RET 0, $eax
 
@@ -271,7 +271,7 @@ body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = ADD64rm_ND %0, $rip, 1, $noreg, target-flags(x86-gotpcrel) @i, $noreg, implicit-def dead $eflags :: (load (s64) from got)
-    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %2
     RET 0, $eax
 
@@ -292,7 +292,7 @@ body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = ADD64rm_ND %0, $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, implicit-def dead $eflags :: (load (s64) from got)
-    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %2
     RET 0, $eax
 
@@ -313,7 +313,7 @@ body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
     %1:gr64 = ADD64mr_ND $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg, %0, implicit-def dead $eflags :: (load (s64) from got)
-    %2:gr32 = MOV32rm killed %1, 1, $noreg, 0, $fs :: (load (s32))
+    %2:gr32 = MOV32rm %1, 1, $noreg, 0, $fs :: (load (s32))
     $eax = COPY %2
     RET 0, $eax
 

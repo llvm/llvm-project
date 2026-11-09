@@ -2541,9 +2541,12 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
 
 void ASTStmtReader::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
-  // The NumClauses field was read in ReadStmtFromStream.
+  // The NumVariants field was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
+  D->setHasImplicitOtherwise(Record.readBool());
+  for (OMPTraitInfo *&TI : D->getTrailingTraitInfos())
+    TI = Record.readOMPTraitInfo();
 }
 
 void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {

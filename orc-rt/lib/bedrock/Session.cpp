@@ -451,7 +451,7 @@ void Session::wrapperReturn(orc_rt_SessionRef S,
 extern "C" {
 
 void orc_rt_Session_callController(orc_rt_SessionRef S,
-                                   orc_rt_ControllerHandlerTag T,
+                                   orc_rt_ControllerHandlerTag *T,
                                    orc_rt_WrapperFunctionBuffer ArgBytes,
                                    orc_rt_Session_CallControllerReturn Return,
                                    void *ReturnCtx) {

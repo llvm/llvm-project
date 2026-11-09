@@ -401,8 +401,8 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
     Value out0, out1;
     if (swapOperands) {
       auto tmp = vector::DeinterleaveOp::create(rewriter, loc, row);
-      out0 = tmp.getRes1();
-      out1 = tmp.getRes2();
+      out0 = tmp.getResultEven();
+      out1 = tmp.getResultOdd();
     } else {
       // Deinterleave by pairs.
       auto row64 = vector::BitCastOp::create(rewriter, loc, accRowX264Ty, row);
@@ -410,9 +410,9 @@ Value VectorContractRewriter::lower(vector::ContractionOp op,
 
       // Bitcast back into original element type and insert into the result.
       out0 = vector::BitCastOp::create(rewriter, loc, accRowTy,
-                                       deintr64.getRes1());
+                                       deintr64.getResultEven());
       out1 = vector::BitCastOp::create(rewriter, loc, accRowTy,
-                                       deintr64.getRes2());
+                                       deintr64.getResultOdd());
     }
     result = vector::InsertOp::create(rewriter, loc, out0, result, i * 2);
     result = vector::InsertOp::create(rewriter, loc, out1, result, i * 2 + 1);

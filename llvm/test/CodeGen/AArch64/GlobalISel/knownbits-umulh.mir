@@ -3,6 +3,7 @@
 
 ---
 name: Cst
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst
@@ -15,6 +16,7 @@ body: |
 ...
 ---
 name: CstZero
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstZero
@@ -27,6 +29,7 @@ body: |
 ...
 ---
 name: ScalarVar
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ScalarVar
@@ -39,6 +42,7 @@ body: |
 ...
 ---
 name: ScalarZero
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ScalarZero
@@ -51,6 +55,7 @@ body: |
 ...
 ---
 name: ScalarVarAbs
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ScalarVarAbs
@@ -67,6 +72,7 @@ body: |
 ...
 ---
 name: SplatVecCst
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @SplatVecCst
@@ -81,6 +87,7 @@ body: |
 ...
 ---
 name: SplatVecPartScalar
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @SplatVecPartScalar
@@ -101,6 +108,7 @@ body: |
 ...
 ---
 name: VecCst
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @VecCst
@@ -117,6 +125,7 @@ body: |
 ...
 ---
 name: VecPartScalar
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @VecPartScalar

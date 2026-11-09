@@ -212,6 +212,9 @@ protected:
   /// True if full register names are printed.
   bool PPCUseFullRegisterNames = false;
 
+  /// True if the target supports the .addrsig directive.
+  bool HasAddrsigDirective = true;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -448,6 +451,8 @@ public:
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 
+  unsigned getAsmMacroMaxNestingDepth() const;
+
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
 
@@ -599,6 +604,8 @@ public:
 
   bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
   void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
+
+  bool hasAddrsigDirective() const { return HasAddrsigDirective; }
 
   const char *getZeroDirective() const { return ZeroDirective; }
   const char *getAsciiDirective() const { return AsciiDirective; }
@@ -757,6 +764,14 @@ public:
   }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
+
+  /// True if the instruction is stored in multiple halfwords, with
+  /// the high-order half appearing first in memory regardless of target
+  /// endianness, to distinguish it from instructions occupying only one
+  /// halfword. Examples are the Thumb variant of Arm, microMIPS, and nanoMIPS.
+  virtual bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+    return false;
+  }
 };
 
 } // end namespace llvm

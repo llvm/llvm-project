@@ -787,3 +787,45 @@ func.func @shape_cast_insert_unit_dim_replicated_lanes() {
   return
 }
 }
+
+// -----
+// A [1, 64] i4 row is too short for a transformed block (64 rows for i4), so
+// the load stays a regular one with its own lane layout ([1, 16] / [1, 4])
+// even though the consumer asks for [1, 16] / [1, 1]; the conflict is left to a
+// convert_layout.
+gpu.module @test {
+  // CHECK-LABEL: load_nd_i4_row_stays_regular
+  // CHECK: xegpu.load_nd {{.*}} <{layout = #xegpu.layout<inst_data = [1, 64], lane_layout = [1, 16], lane_data = [1, 4]>}>
+  // CHECK-SAME: -> vector<1x64xi4>
+  // CHECK: arith.extui {{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
+  gpu.func @load_nd_i4_row_stays_regular(%src: memref<32x512xi4>, %dst: memref<32x512xi32>) kernel {
+    %t = xegpu.create_nd_tdesc %src : memref<32x512xi4> -> !xegpu.tensor_desc<1x64xi4>
+    %v = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<1x64xi4> -> vector<1x64xi4>
+    %e = arith.extui %v : vector<1x64xi4> to vector<1x64xi32>
+    %o = xegpu.create_nd_tdesc %dst : memref<32x512xi32> -> !xegpu.tensor_desc<1x64xi32>
+    xegpu.store_nd %e, %o[0, 0] <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<1x64xi32>, !xegpu.tensor_desc<1x64xi32>
+    gpu.return
+  }
+}
+
+// -----
+// A transposed i32 block load only supports height 16 (width 8), so the 32-row
+// request is rejected and the load falls back to its own inst_data [16, 8].
+gpu.module @test {
+  // CHECK-LABEL: gpu.func @load_nd_transpose_i32_height_16_only(
+  // CHECK: xegpu.create_nd_tdesc %{{.*}} : memref<32x8xi32> -> !xegpu.tensor_desc<32x8xi32, #xegpu.layout<inst_data = [16, 8], lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
+  // CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[0, 0] <{layout = #xegpu.layout<inst_data = [16, 8], lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}>
+  // CHECK-SAME: -> vector<32x8xi32>
+  // CHECK: %[[TRANS:.*]] = vector.transpose %[[LOAD]], [1, 0] {layout_result_0 = #xegpu.layout<inst_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>}
+  // CHECK-SAME: : vector<32x8xi32> to vector<8x32xi32>
+  // CHECK: xegpu.convert_layout %[[TRANS]] <{target_layout = #xegpu.layout<inst_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>}>
+  gpu.func @load_nd_transpose_i32_height_16_only(%src: memref<32x8xi32>, %dst: memref<8x32xi32>) kernel {
+    %0 = xegpu.create_nd_tdesc %src : memref<32x8xi32> -> !xegpu.tensor_desc<32x8xi32>
+    %1 = xegpu.create_nd_tdesc %dst : memref<8x32xi32> -> !xegpu.tensor_desc<8x32xi32>
+    %2 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<32x8xi32> -> vector<32x8xi32>
+    %3 = vector.transpose %2, [1, 0] : vector<32x8xi32> to vector<8x32xi32>
+    %4 = xegpu.convert_layout %3 <{target_layout = #xegpu.layout<inst_data = [8, 32]>}> : vector<8x32xi32>
+    xegpu.store_nd %4, %1[0, 0] : vector<8x32xi32>, !xegpu.tensor_desc<8x32xi32>
+    gpu.return
+  }
+}

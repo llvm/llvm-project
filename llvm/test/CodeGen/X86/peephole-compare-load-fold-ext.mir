@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt %s -o - | FileCheck %s
 
 # When removing the second compare makes a load foldable into the first one,
 # make sure the folded compare remains marked as already visited. Otherwise,

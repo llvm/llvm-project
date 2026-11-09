@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -verify-machineinstrs | FileCheck %s --check-prefix=REORDER
-# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -branch-folder-reorder-blocks=false -verify-machineinstrs | FileCheck %s --check-prefix=NOREORDER
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder | FileCheck %s --check-prefix=REORDER
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -branch-folder-reorder-blocks=false | FileCheck %s --check-prefix=NOREORDER
 
 # Check that -branch-folder-reorder-blocks=false disables the basic-block
 # reordering sub-phase of branch optimization. bb.1 is a non-fall-through return

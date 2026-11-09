@@ -125,10 +125,10 @@ void MacOSXAPIChecker::CheckDispatchOnce(CheckerContext &C, const CallExpr *CE,
   } else {
     os << " stack allocated memory";
   }
-  os << " for the predicate value.  Using such transient memory for "
-        "the predicate is potentially dangerous.";
+  os << " for the predicate value; using such transient memory for "
+        "the predicate is potentially dangerous";
   if (SuggestStatic)
-    os << "  Perhaps you intended to declare the variable as 'static'?";
+    os << "; perhaps you intended to declare the variable as 'static'?";
 
   ExplodedNode *N = C.addSink();
   if (!N)

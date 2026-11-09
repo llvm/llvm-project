@@ -203,7 +203,7 @@ bool LoopIdiomVectorize::run(Loop *L) {
 
   // Bail if vectorization is disabled on loop.
   LoopVectorizeHints Hints(Opts, L, /*InterleaveOnlyWhenForced=*/true, ORE);
-  if (!Hints.allowVectorization(&F, L, /*VectorizeOnlyWhenForced=*/false)) {
+  if (!Hints.allowVectorization(L, /*VectorizeOnlyWhenForced=*/false)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << " is disabled on " << L->getName()
                       << " due to vectorization hints\n");
     return false;
@@ -992,13 +992,11 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
     return false;
 
   auto *InnerLoop = CurLoop->getSubLoops().front();
-  Function &F = *InnerLoop->getHeader()->getParent();
 
   // Bail if vectorization is disabled on inner loop.
   LoopVectorizeHints Hints(Opts, InnerLoop, /*InterleaveOnlyWhenForced=*/true,
                            ORE);
-  if (!Hints.allowVectorization(&F, InnerLoop,
-                                /*VectorizeOnlyWhenForced=*/false)) {
+  if (!Hints.allowVectorization(InnerLoop, /*VectorizeOnlyWhenForced=*/false)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << " is disabled on inner loop "
                       << InnerLoop->getName()
                       << " due to vectorization hints\n");

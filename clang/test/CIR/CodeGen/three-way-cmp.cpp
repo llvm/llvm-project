@@ -251,9 +251,6 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM-NEXT:   ret i8 %[[RES_TRUE]]
   //
   // LLVM: [[SO_NE_RES_FALSE]]:
-  // LLVM:   br label %[[SO_NE_RES_FALSE_CTD:.*]]
-  //
-  // LLVM: [[SO_NE_RES_FALSE_CTD]]:
   // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[RESULT_SLOT]], ptr align 1 @_ZNSt3__115strong_ordering5equalE, i64 1, i1 false)
   // LLVM-NEXT:   %[[RES_FALSE:.*]] = load i8, ptr %[[RESULT_SLOT]], align 1
   // LLVM-NEXT:   ret i8 %[[RES_FALSE]]

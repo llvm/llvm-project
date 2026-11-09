@@ -362,7 +362,7 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 }
 
 void SystemZ::scanSection(InputSectionBase &sec, unsigned shard) {
-  elf::scanSection1<SystemZ, ELF64BE>(*this, sec, shard);
+  elf::scanSection1<ELF64BE>(*this, sec, shard);
 }
 
 RelType SystemZ::getDynRel(RelType type) const {

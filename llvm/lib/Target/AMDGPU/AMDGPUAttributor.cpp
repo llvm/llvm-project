@@ -141,6 +141,7 @@ static bool isDSAddress(const Constant *C) {
 static bool hasSanitizerAttributes(const Function &F) {
   return F.hasFnAttribute(Attribute::SanitizeAddress) ||
          F.hasFnAttribute(Attribute::SanitizeThread) ||
+         F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
          F.hasFnAttribute(Attribute::SanitizeMemory) ||
          F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
          F.hasFnAttribute(Attribute::SanitizeMemTag);
@@ -379,10 +380,8 @@ struct AAAMDAttributes
   static AAAMDAttributes &createForPosition(const IRPosition &IRP,
                                             Attributor &A);
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAAMDAttributes"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -405,10 +404,8 @@ struct AAUniformWorkGroupSize
   static AAUniformWorkGroupSize &createForPosition(const IRPosition &IRP,
                                                    Attributor &A);
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAUniformWorkGroupSize"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -486,7 +483,6 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     return "AMDWorkGroupSize[" + std::to_string(getAssumed()) + "]";
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 };
 
@@ -673,7 +669,6 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     return OS.str();
   }
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
 private:
@@ -846,7 +841,6 @@ struct AAAMDSizeRangeAttribute
                           StringRef AttrName)
       : Base(IRP, 32), AttrName(AttrName) {}
 
-  /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
   template <class AttributeImpl> ChangeStatus updateImplImpl(Attributor &A) {
@@ -967,10 +961,8 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
         A, InfoCache.getMaximumFlatWorkGroupRange());
   }
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAAMDFlatWorkGroupSize"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1205,10 +1197,8 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
         A, {1U, InfoCache.getMaxWavesPerEU()});
   }
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAAMDWavesPerEU"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1307,6 +1297,26 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   return std::min(MaxVirtReg + MaxPhysReg, 256u);
 }
 
+/// Call \p Pred on each function that \p CB may call. Return false if a callee
+/// is unknown, or if \p Pred returns false for a callee.
+static bool
+checkForAllPossibleCallees(Attributor &A, const AbstractAttribute &QueryingAA,
+                           const CallBase &CB,
+                           function_ref<bool(const Function &)> Pred) {
+  // A direct call without callbacks only calls its callee, so it does not need
+  // a call site AACallEdges.
+  auto *Callee = dyn_cast<Function>(CB.getCalledOperand());
+  if (Callee && !Callee->hasMetadata(LLVMContext::MD_callback))
+    return Pred(*Callee);
+
+  const AACallEdges *CBEdges = A.getAAFor<AACallEdges>(
+      QueryingAA, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
+  if (!CBEdges || CBEdges->hasUnknownCallee())
+    return false;
+  return all_of(CBEdges->getOptimisticEdges(),
+                [&](const Function *Fn) { return Pred(*Fn); });
+}
+
 struct AAAMDGPUMinAGPRAlloc
     : public StateWrapper<DecIntegerState<>, AbstractAttribute> {
   using Base = StateWrapper<DecIntegerState<>, AbstractAttribute>;
@@ -1398,22 +1408,18 @@ struct AAAMDGPUMinAGPRAlloc
       }
 
       // TODO: Handle callsite attributes
-      auto *CBEdges = A.getAAFor<AACallEdges>(
-          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
-      if (!CBEdges || CBEdges->hasUnknownCallee()) {
+      auto CheckCallee = [&](const Function &Callee) {
+        const AAAMDGPUMinAGPRAlloc *CalleeInfo =
+            A.getAAFor<AAAMDGPUMinAGPRAlloc>(
+                *this, IRPosition::function(Callee), DepClassTy::REQUIRED);
+        if (!CalleeInfo || !CalleeInfo->isValidState())
+          return false;
+        Maximum.takeAssumedMaximum(CalleeInfo->getAssumed());
+        return true;
+      };
+      if (!checkForAllPossibleCallees(A, *this, CB, CheckCallee)) {
         Maximum.indicatePessimisticFixpoint();
         return false;
-      }
-
-      for (const Function *PossibleCallee : CBEdges->getOptimisticEdges()) {
-        const auto *CalleeInfo = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
-            *this, IRPosition::function(*PossibleCallee), DepClassTy::REQUIRED);
-        if (!CalleeInfo || !CalleeInfo->isValidState()) {
-          Maximum.indicatePessimisticFixpoint();
-          return false;
-        }
-
-        Maximum.takeAssumedMaximum(CalleeInfo->getAssumed());
       }
 
       return true;
@@ -1492,19 +1498,12 @@ struct AAAMDGPUNoLDSDMA : public StateWrapper<BooleanState, AbstractAttribute> {
                CB.hasFnAttr(Attribute::NoCallback);
       }
 
-      const auto *CBEdges = A.getAAFor<AACallEdges>(
-          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
-      if (!CBEdges || CBEdges->hasUnknownCallee())
-        return false;
-
-      for (const Function *PossibleCallee : CBEdges->getOptimisticEdges()) {
-        const auto *CalleeInfo = A.getAAFor<AAAMDGPUNoLDSDMA>(
-            *this, IRPosition::function(*PossibleCallee), DepClassTy::REQUIRED);
-        if (!CalleeInfo || !CalleeInfo->getAssumed())
-          return false;
-      }
-
-      return true;
+      return checkForAllPossibleCallees(
+          A, *this, CB, [&](const Function &Callee) {
+            const AAAMDGPUNoLDSDMA *CalleeInfo = A.getAAFor<AAAMDGPUNoLDSDMA>(
+                *this, IRPosition::function(Callee), DepClassTy::REQUIRED);
+            return CalleeInfo && CalleeInfo->getAssumed();
+          });
     };
 
     bool UsedAssumedInformation = false;
@@ -1557,10 +1556,8 @@ struct AAAMDGPUClusterDims
   static AAAMDGPUClusterDims &createForPosition(const IRPosition &IRP,
                                                 Attributor &A);
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAAMDGPUClusterDims"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is

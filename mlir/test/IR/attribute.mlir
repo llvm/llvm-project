@@ -542,6 +542,29 @@ func.func @allowed_cases_pass() {
 
 // -----
 
+// CHECK-LABEL: func @space_separated_cases_pass
+func.func @space_separated_cases_pass() {
+  // CHECK: test.op_with_bit_enum_space <user group>
+  "test.op_with_bit_enum_space"() {
+    value = #test.bit_enum_space<group user>
+  } : () -> ()
+  // CHECK: test.op_with_bit_enum_space <user group other> tag 1 : i32
+  test.op_with_bit_enum_space <other user group> tag 1 : i32
+  // CHECK: test.op_with_bit_enum_space_directive user other tag 1 : i32
+  test.op_with_bit_enum_space_directive other user tag 1 : i32
+  return
+}
+
+// -----
+
+func.func @space_separated_case_missing() {
+  // expected-error@+2 {{expected one of [none, user, group, other] for a space-separated test bit enum}}
+  // expected-error@+1 {{failed to parse TestBitEnumSpaceAttr}}
+  "test.op_with_bit_enum_space"() {value = #test.bit_enum_space<sticky>} : () -> ()
+}
+
+// -----
+
 func.func @disallowed_case_sticky_fail() {
   // expected-error@+2 {{expected one of [none, read, write, execute] for a test bit enum, got: sticky}}
   // expected-error@+1 {{failed to parse TestBitEnumAttr}}

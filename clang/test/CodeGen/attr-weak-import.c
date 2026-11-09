@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-darwin-apple -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-darwin-apple -emit-llvm -o - %s | FileCheck %s %}
 
 extern int A __attribute__((weak_import));
 int A;

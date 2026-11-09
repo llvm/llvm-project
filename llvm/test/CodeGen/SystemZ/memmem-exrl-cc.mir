@@ -75,7 +75,7 @@ body:             |
   
     %6:addr64bit = SLLG %4, $noreg, 3
     %7:addr64bit = LARL %jump-table.0
-    BI killed %6, 0, killed %7 :: (load (s64) from jump-table)
+    BI %6, 0, %7 :: (load (s64) from jump-table)
   
   bb.1:
     successors: 
@@ -85,11 +85,11 @@ body:             |
     successors: %bb.4(0x30000000), %bb.3(0x50000000)
   
     %8:gr64bit = LG %1, 0, $noreg
-    %9:gr128bit = FLOGR killed %8, implicit-def dead $cc
+    %9:gr128bit = FLOGR %8, implicit-def dead $cc
     %10:gr64bit = COPY %9.subreg_h64
     %11:gr32bit = COPY %10.subreg_l32
     %12:gr32bit = LHIMux 64
-    %13:gr32bit = nuw nsw SRK killed %12, killed %11, implicit-def dead $cc
+    %13:gr32bit = nuw nsw SRK %12, %11, implicit-def dead $cc
     %0:grx32bit = COPY %13
     %14:addr64bit = AGHIK %3, -1, implicit-def dead $cc
     XCReg %1, 0, %1, 0, %14, implicit-def dead $cc
@@ -104,9 +104,9 @@ body:             |
     %16:gr64bit = IMPLICIT_DEF
     %15:gr64bit = INSERT_SUBREG %16, %0, %subreg.subreg_l32
     %18:gr64bit = IMPLICIT_DEF
-    %17:addr64bit = RISBGN %18, killed %15, 54, 185, 3
+    %17:addr64bit = RISBGN %18, %15, 54, 185, 3
     %19:vr128bit = VGBM 0
-    VST killed %19, killed %17, 16, $noreg
+    VST %19, %17, 16, $noreg
   
   bb.4:
     successors: 

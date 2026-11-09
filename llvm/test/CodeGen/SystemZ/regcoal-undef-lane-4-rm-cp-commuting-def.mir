@@ -84,14 +84,14 @@ body:             |
     %6:gr64bit = LGHI -30
     %8:grx32bit = LHIMux 1
     %21:grx32bit = LHIMux 0
-    %23:addr64bit = COPY killed %6
+    %23:addr64bit = COPY %6
     %24:gr32bit = IMPLICIT_DEF
 
   bb.1:
     successors: %bb.3(0x00000001), %bb.4(0x7fffffff)
 
-    %1:gr32bit = COPY killed %24
-    %0:addr64bit = COPY killed %23
+    %1:gr32bit = COPY %24
+    %0:addr64bit = COPY %23
     CHIMux %8, 0, implicit-def $cc
     BRC 14, 6, %bb.3, implicit killed $cc
     J %bb.4
@@ -99,7 +99,7 @@ body:             |
   bb.2:
     successors:
 
-    STMux killed %4, undef %22:addr64bit, 0, $noreg :: (store (s32) into `ptr undef`)
+    STMux %4, undef %22:addr64bit, 0, $noreg :: (store (s32) into `ptr undef`)
 
   bb.3:
     successors:
@@ -111,19 +111,19 @@ body:             |
     %2:gr64bit = LAY %0, 19838, $noreg
     %3:gr64bit = LAY %0, 19840, $noreg
     %9:gr64bit = LAY %0, 19844, $noreg
-    %10:gr64bit = COPY killed %9
-    %10:gr64bit = OGR %10, killed %2, implicit-def dead $cc
+    %10:gr64bit = COPY %9
+    %10:gr64bit = OGR %10, %2, implicit-def dead $cc
     %11:gr32bit = COPY %0.subreg_l32
-    %12:gr32bit = AHIMuxK killed %11, 19843, implicit-def dead $cc
-    undef %13.subreg_l32:gr64bit = COPY killed %12
-    %15:gr64bit = COPY killed %13
-    %15:gr64bit = ROSBG %15, killed %10, 32, 63, 0, implicit-def dead $cc
-    %16:gr32bit = COPY killed %15.subreg_l32
-    %17:gr32bit = COPY killed %16
-    %17:gr32bit = OR %17, killed %1, implicit-def dead $cc
-    undef %18.subreg_l32:gr64bit = COPY killed %17
-    %20:gr64bit = COPY killed %18
-    %20:gr64bit = ROSBG %20, killed %3, 32, 63, 0, implicit-def dead $cc
+    %12:gr32bit = AHIMuxK %11, 19843, implicit-def dead $cc
+    undef %13.subreg_l32:gr64bit = COPY %12
+    %15:gr64bit = COPY %13
+    %15:gr64bit = ROSBG %15, %10, 32, 63, 0, implicit-def dead $cc
+    %16:gr32bit = COPY %15.subreg_l32
+    %17:gr32bit = COPY %16
+    %17:gr32bit = OR %17, %1, implicit-def dead $cc
+    undef %18.subreg_l32:gr64bit = COPY %17
+    %20:gr64bit = COPY %18
+    %20:gr64bit = ROSBG %20, %3, 32, 63, 0, implicit-def dead $cc
     CHIMux %21, 0, implicit-def $cc
     BRC 14, 6, %bb.6, implicit killed $cc
     J %bb.5
@@ -133,14 +133,14 @@ body:             |
   bb.6:
     successors: %bb.2(0x00000001), %bb.7(0x7fffffff)
 
-    %4:grx32bit = COPY killed %20.subreg_l32
-    %5:gr64bit = nuw nsw LA killed %0, 6, $noreg
+    %4:grx32bit = COPY %20.subreg_l32
+    %5:gr64bit = nuw nsw LA %0, 6, $noreg
     CGHI %5, 0, implicit-def $cc
     BRC 14, 8, %bb.2, implicit killed $cc
 
   bb.7:
-    %23:addr64bit = COPY killed %5
-    %24:gr32bit = COPY killed %4
+    %23:addr64bit = COPY %5
+    %24:gr32bit = COPY %4
     J %bb.1
 
 ...

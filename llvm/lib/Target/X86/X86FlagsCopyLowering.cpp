@@ -801,9 +801,6 @@ void X86FlagsCopyLoweringImpl::rewriteSetCC(MachineBasicBlock &MBB,
     assert(MI.getOperand(0).isReg() &&
            "Cannot have a non-register defined operand to SETcc!");
     Register OldReg = MI.getOperand(0).getReg();
-    // Drop Kill flags on the old register before replacing. CondReg may have
-    // a longer live range.
-    MRI->clearKillFlags(OldReg);
     MRI->replaceRegWith(OldReg, CondReg);
     MI.eraseFromParent();
     return;

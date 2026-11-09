@@ -43,9 +43,7 @@
 #include "llvm/Object/SFrameParser.h"
 #include "llvm/Object/StackMapParser.h"
 #include "llvm/Support/AArch64AttributeParser.h"
-#include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/ARMAttributeParser.h"
-#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -56,11 +54,9 @@
 #include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MSP430AttributeParser.h"
-#include "llvm/Support/MSP430Attributes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MipsABIFlags.h"
 #include "llvm/Support/RISCVAttributeParser.h"
-#include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -73,7 +69,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <system_error>
 #include <vector>
 
 using namespace llvm;

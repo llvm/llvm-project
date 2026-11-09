@@ -40,8 +40,8 @@ static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Type |
-    SanitizerKind::Thread | SanitizerKind::Memory | SanitizerKind::DataFlow |
-    SanitizerKind::NumericalStability;
+    SanitizerKind::Thread | SanitizerKind::Concurrency | SanitizerKind::Memory |
+    SanitizerKind::DataFlow | SanitizerKind::NumericalStability;
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress |
@@ -53,7 +53,8 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
-    SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
+    SanitizerKind::Thread | SanitizerKind::Concurrency |
+    SanitizerKind::ObjCCast | SanitizerKind::KCFI |
     SanitizerKind::NumericalStability | SanitizerKind::Vptr |
     SanitizerKind::CFI | SanitizerKind::AllocToken;
 static const SanitizerMask RecoverableByDefault =
@@ -395,6 +396,10 @@ bool SanitizerArgs::needsUbsanRt() const {
       needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
+  // CSan provides coverage and is incompatible with UBSan.
+  if (needsCsanRt())
+    return false;
+
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
          CoverageFeatures;
 }
@@ -528,18 +533,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithMinimalRuntime;
       }
 
-      if (llvm::opt::Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
-        StringRef CM = A->getValue();
-        if (CM != "small" &&
-            (Add & SanitizerKind::Function & ~DiagnosedKinds)) {
-          if (DiagnoseErrors)
-            D.Diag(diag::err_drv_argument_only_allowed_with)
-                << "-fsanitize=function"
-                << "-mcmodel=small";
-          Add &= ~SanitizerKind::Function;
-          DiagnosedKinds |= SanitizerKind::Function;
-        }
-      }
       // -fsanitize=function and -fsanitize=kcfi instrument indirect function
       // calls to load a type hash before the function label. Therefore, an
       // execute-only target doesn't support the function and kcfi sanitizers.
@@ -738,7 +731,15 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::Memory | SanitizerKind::Leak |
                          SanitizerKind::Thread),
-      std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::Thread,
+                     SanitizerKind::Memory | SanitizerKind::Concurrency),
+      std::make_pair(
+          SanitizerKind::Concurrency,
+          SanitizerKind::Thread | SanitizerKind::Address |
+              SanitizerKind::Memory | SanitizerKind::Leak |
+              SanitizerKind::Undefined | SanitizerKind::Integer |
+              SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
+              SanitizerKind::LocalBounds | SanitizerKind::FloatDivideByZero),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
       std::make_pair(SanitizerKind::KernelAddress,

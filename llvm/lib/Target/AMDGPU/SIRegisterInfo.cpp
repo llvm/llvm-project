@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIRegisterInfo.h"
-#include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
@@ -568,8 +567,8 @@ const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
   return AMDGPU_AllVectorRegs_RegMask;
 }
 
-unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
-                                              unsigned NumRegs) {
+unsigned SIRegisterInfo::getSubRegFromChannel(uint64_t Channel,
+                                              uint64_t NumRegs) {
   assert(NumRegs < SubRegFromChannelTableWidthMap.size());
   unsigned NumRegIndex = SubRegFromChannelTableWidthMap[NumRegs];
   assert(NumRegIndex && "Not implemented");
@@ -4482,19 +4481,20 @@ MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const 
 }
 
 const TargetRegisterClass *
-SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
+SIRegisterInfo::getRegClassForSizeOnBank(uint64_t Size,
                                          const RegisterBank &RB) const {
+  unsigned SizeEnc = static_cast<unsigned>(Size);
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
     return getVGPRClassForBitWidth(
-        std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size));
+        std::max(ST.useRealTrue16Insts() ? 16u : 32u, SizeEnc));
   case AMDGPU::VCCRegBankID:
     assert(Size == 1);
     return getWaveMaskRegClass();
   case AMDGPU::SGPRRegBankID:
-    return getSGPRClassForBitWidth(std::max(32u, Size));
+    return getSGPRClassForBitWidth(std::max(32u, SizeEnc));
   case AMDGPU::AGPRRegBankID:
-    return getAGPRClassForBitWidth(std::max(32u, Size));
+    return getAGPRClassForBitWidth(std::max(32u, SizeEnc));
   default:
     llvm_unreachable("unknown register bank");
   }

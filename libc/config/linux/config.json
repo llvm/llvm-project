@@ -1,4 +1,9 @@
 {
+  "general": {
+    "LIBC_COPT_PROVIDE_GNU_ALIASES": {
+      "value": true
+    }
+  },
   "scanf": {
     "LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES": {
       "value": "${LLVM_LIBC_OVERLAY}"

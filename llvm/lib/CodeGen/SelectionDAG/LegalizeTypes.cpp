@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/CommandLine.h"
@@ -21,9 +22,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "legalize-types"
-
-static cl::opt<bool>
-EnableExpensiveChecks("enable-legalize-types-checking", cl::Hidden);
 
 /// Do extensive, expensive, basic correctness checking.
 void DAGTypeLegalizer::PerformExpensiveChecks() {
@@ -194,6 +192,9 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
 /// traversal of the dag, legalizing types as it goes. Returns "true" if it made
 /// any changes.
 bool DAGTypeLegalizer::run() {
+  [[maybe_unused]] const SelectionDAGOptions &Opts =
+      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+
   bool Changed = false;
 
   // Create a dummy node (which is not added to allnodes), that adds a reference
@@ -221,7 +222,7 @@ bool DAGTypeLegalizer::run() {
   // Now that we have a set of nodes to process, handle them all.
   while (!Worklist.empty()) {
 #ifndef EXPENSIVE_CHECKS
-    if (EnableExpensiveChecks)
+    if (Opts.enable_legalize_types_checking)
 #endif
       PerformExpensiveChecks();
 
@@ -423,7 +424,7 @@ NodeDone:
   }
 
 #ifndef EXPENSIVE_CHECKS
-  if (EnableExpensiveChecks)
+  if (Opts.enable_legalize_types_checking)
 #endif
     PerformExpensiveChecks();
 

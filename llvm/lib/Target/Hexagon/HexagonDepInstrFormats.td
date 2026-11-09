@@ -1682,6 +1682,10 @@ class Enc_7a0ea6 : OpcodeHexagon {
   let Inst{3-0} = Rd16{3-0};
   bits <0> n1;
 }
+class Enc_7abde3 : OpcodeHexagon {
+  bits <7> Ii;
+  let Inst{6-0} = Ii{6-0};
+}
 class Enc_7b523d : OpcodeHexagon {
   bits <5> Vu32;
   let Inst{12-8} = Vu32{4-0};
@@ -2175,6 +2179,12 @@ class Enc_9cdba7 : OpcodeHexagon {
   let Inst{20-16} = Rs32{4-0};
   bits <5> Rdd32;
   let Inst{4-0} = Rdd32{4-0};
+}
+class Enc_9ceb20 : OpcodeHexagon {
+  bits <5> Rs32;
+  let Inst{20-16} = Rs32{4-0};
+  bits <5> Rt32;
+  let Inst{10-6} = Rt32{4-0};
 }
 class Enc_9d1247 : OpcodeHexagon {
   bits <7> Ii;
@@ -3085,6 +3095,14 @@ class Enc_d7dc10 : OpcodeHexagon {
   let Inst{12-8} = Rtt32{4-0};
   bits <2> Pd4;
   let Inst{1-0} = Pd4{1-0};
+}
+class Enc_d9cf33 : OpcodeHexagon {
+  bits <5> Rs32;
+  let Inst{20-16} = Rs32{4-0};
+  bits <5> Rtt32;
+  let Inst{12-8} = Rtt32{4-0};
+  bits <5> Rdd32;
+  let Inst{4-0} = Rdd32{4-0};
 }
 class Enc_da664b : OpcodeHexagon {
   bits <2> Ii;

@@ -2751,10 +2751,15 @@ private:
         std::string Brace;
         if (BraceCount < 0) {
           assert(BraceCount == -1);
+          // Keep the marker so that the parser doesn't mark the token again in
+          // a later run.
+          if (Token->LBraceInserted)
+            continue;
           if (!Line->Affected)
             break;
           Brace = Token->is(tok::comment) ? "\n{" : "{";
           ++OpeningBraceSurplus;
+          Token->LBraceInserted = true;
         } else {
           if (OpeningBraceSurplus == 0)
             break;
@@ -2762,8 +2767,8 @@ private:
             BraceCount = OpeningBraceSurplus;
           Brace = '\n' + std::string(BraceCount, '}');
           OpeningBraceSurplus -= BraceCount;
+          Token->BraceCount = 0;
         }
-        Token->BraceCount = 0;
         const auto Start = Token->Tok.getEndLoc();
         cantFail(Result.add(tooling::Replacement(SourceMgr, Start, 0, Brace)));
       }
@@ -3032,7 +3037,7 @@ public:
     ContinuationIndenter Indenter(Style, Tokens.getKeywords(),
                                   Env.getSourceManager(), Whitespaces, Encoding,
                                   BinPackInconclusiveFunctions);
-    unsigned Penalty =
+    uint64_t Penalty =
         UnwrappedLineFormatter(&Indenter, &Whitespaces, Style,
                                Tokens.getKeywords(), Env.getSourceManager(),
                                Status)
@@ -3045,7 +3050,8 @@ public:
     for (const auto &R : Whitespaces.generateReplacements())
       if (Result.add(R))
         return std::make_pair(Result, 0);
-    return std::make_pair(Result, Penalty);
+    return std::make_pair(
+        Result, static_cast<unsigned>(std::min<uint64_t>(Penalty, UINT_MAX)));
   }
 
 private:
@@ -3791,6 +3797,19 @@ static void sortCppIncludes(const FormatStyle &Style,
                 Indices.end());
 
   int CurrentCategory = Includes.front().Category;
+  const auto TopLevelDirectory = [](StringRef Filename) {
+    Filename = Filename.drop_front(); // Strip leading '"' or '<'.
+    const size_t SlashPos = Filename.find('/');
+    return SlashPos == StringRef::npos ? StringRef()
+                                       : Filename.take_front(SlashPos);
+  };
+  StringRef CurrentDirectory = TopLevelDirectory(Includes.front().Filename);
+  const auto DirectoryChanged = [&](StringRef Filename) {
+    const StringRef Directory = TopLevelDirectory(Filename);
+    return Style.SortIncludes.IgnoreCase
+               ? !CurrentDirectory.equals_insensitive(Directory)
+               : CurrentDirectory != Directory;
+  };
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.
@@ -3812,12 +3831,18 @@ static void sortCppIncludes(const FormatStyle &Style,
               tooling::IncludeStyle::IBS_Regroup &&
           CurrentCategory != Includes[Index].Category) {
         result += "\n";
+      } else if (Style.IncludeStyle.IncludeBlocks ==
+                     tooling::IncludeStyle::IBS_RegroupByDirectory &&
+                 (CurrentCategory != Includes[Index].Category ||
+                  DirectoryChanged(Includes[Index].Filename))) {
+        result += "\n";
       }
     }
     result += Includes[Index].Text;
     if (Cursor && CursorIndex == Index)
       *Cursor = IncludesBeginOffset + result.size() - CursorToEOLOffset;
     CurrentCategory = Includes[Index].Category;
+    CurrentDirectory = TopLevelDirectory(Includes[Index].Filename);
   }
 
   if (Cursor && *Cursor >= IncludesEndOffset)
@@ -3913,7 +3938,9 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
         Trimmed.empty() &&
         (Style.IncludeStyle.IncludeBlocks == tooling::IncludeStyle::IBS_Merge ||
          Style.IncludeStyle.IncludeBlocks ==
-             tooling::IncludeStyle::IBS_Regroup);
+             tooling::IncludeStyle::IBS_Regroup ||
+         Style.IncludeStyle.IncludeBlocks ==
+             tooling::IncludeStyle::IBS_RegroupByDirectory);
 
     bool MergeWithNextLine = Trimmed.ends_with("\\");
     if (!FormattingOff && !MergeWithNextLine) {

@@ -201,6 +201,40 @@
 // CHECK-V81HVX-128B: #define __HVX__ 1
 // CHECK-V81HVX-128B: #define __hexagon__ 1
 
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv83 %s\
+// RUN: | FileCheck %s -check-prefix CHECK-V83
+// CHECK-V83: #define __HEXAGON_ARCH__ 83
+// CHECK-V83: #define __HEXAGON_PHYSICAL_SLOTS__ 4
+// CHECK-V83: #define __HEXAGON_V83__ 1
+// CHECK-V83: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv83 \
+// RUN: -target-feature +hvxv83 -target-feature +hvx-length128b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V83HVX-128B
+// CHECK-V83HVX-128B: #define __HEXAGON_ARCH__ 83
+// CHECK-V83HVX-128B: #define __HEXAGON_V83__ 1
+// CHECK-V83HVX-128B: #define __HVX_ARCH__ 83
+// CHECK-V83HVX-128B: #define __HVX_LENGTH__ 128
+// CHECK-V83HVX-128B: #define __HVX__ 1
+// CHECK-V83HVX-128B: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv85 %s\
+// RUN: | FileCheck %s -check-prefix CHECK-V85
+// CHECK-V85: #define __HEXAGON_ARCH__ 85
+// CHECK-V85: #define __HEXAGON_PHYSICAL_SLOTS__ 4
+// CHECK-V85: #define __HEXAGON_V85__ 1
+// CHECK-V85: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv85 \
+// RUN: -target-feature +hvxv85 -target-feature +hvx-length128b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V85HVX-128B
+// CHECK-V85HVX-128B: #define __HEXAGON_ARCH__ 85
+// CHECK-V85HVX-128B: #define __HEXAGON_V85__ 1
+// CHECK-V85HVX-128B: #define __HVX_ARCH__ 85
+// CHECK-V85HVX-128B: #define __HVX_LENGTH__ 128
+// CHECK-V85HVX-128B: #define __HVX__ 1
+// CHECK-V85HVX-128B: #define __hexagon__ 1
+
 // RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv67 \
 // RUN: -target-feature +hvxv67 -target-feature +hvx-length128b %s | FileCheck \
 // RUN: %s -check-prefix CHECK-ELF

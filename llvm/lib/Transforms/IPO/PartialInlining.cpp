@@ -723,13 +723,13 @@ bool PartialInlinerImpl::shouldPartialInline(
     return isInlineViable(*Callee).isSuccess();
 
   Function *Caller = CB.getCaller();
-  auto &CalleeTTI = GetTTI(*Callee);
+  auto &CallerTTI = GetTTI(*Caller);
   bool RemarksEnabled =
       Callee->getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
           DEBUG_TYPE);
-  InlineCost IC =
-      getInlineCost(CB, getInlineParams(), CalleeTTI, GetAssumptionCache,
-                    GetTLI, GetBFI, &PSI, RemarksEnabled ? &ORE : nullptr);
+  InlineCost IC = getInlineCost(CB, getInlineParams(CB.getContext()), CallerTTI,
+                                GetAssumptionCache, GetTLI, GetBFI, &PSI,
+                                RemarksEnabled ? &ORE : nullptr);
 
   if (IC.isAlways()) {
     ORE.emit([&]() {
@@ -763,7 +763,7 @@ bool PartialInlinerImpl::shouldPartialInline(
   const DataLayout &DL = Caller->getDataLayout();
 
   // The savings of eliminating the call:
-  int NonWeightedSavings = getCallsiteCost(CalleeTTI, CB, DL);
+  int NonWeightedSavings = getCallsiteCost(CallerTTI, CB, DL);
   BlockFrequency NormWeightedSavings(NonWeightedSavings);
 
   // Weighted saving is smaller than weighted cost, return false
@@ -801,7 +801,7 @@ PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
                                         TargetTransformInfo *TTI) {
   InstructionCost InlineCost = 0;
   const DataLayout &DL = BB->getDataLayout();
-  int InstrCost = InlineConstants::getInstrCost();
+  int InstrCost = InlineConstants::getInstrCost(BB->getContext());
   for (Instruction &I : *BB) {
     // Skip free instructions.
     switch (I.getOpcode()) {
@@ -880,7 +880,8 @@ PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) const {
   // additional unconditional branches. Those branches will be eliminated
   // later with bb layout. The cost should be adjusted accordingly:
   OutlinedFunctionCost -=
-      2 * InlineConstants::getInstrCost() * Cloner.OutlinedFunctions.size();
+      2 * InlineConstants::getInstrCost(Cloner.OrigFunc->getContext()) *
+      Cloner.OutlinedFunctions.size();
 
   InstructionCost OutliningRuntimeOverhead =
       OutliningFuncCallCost +

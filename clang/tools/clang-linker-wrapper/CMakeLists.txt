@@ -19,7 +19,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS LinkerWrapperOpts.td)
-tablegen(LLVM LinkerWrapperOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(LinkerWrapperOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LinkerWrapperOpts)
 
 if(NOT CLANG_BUILT_STANDALONE)

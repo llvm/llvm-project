@@ -61,8 +61,6 @@ struct Config {
   // LoadedPassPlugins is currently used by distributed thin-lto.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
   std::vector<std::string> PassPluginFilenames;
-  /// For adding passes that run right before codegen.
-  std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::function<void(PassBuilder &)> PassBuilderCallback;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;

@@ -13,6 +13,7 @@ set(ORC_RT_BEDROCK_SOURCES
   sps/AllSPSCI.cpp
   sps/CallSPSCI.cpp
   sps/GDBJITRegistrarSPSCI.cpp
+  sps/LookupInJITDylibSPS.cpp
   sps/MemoryAccessSPSCI.cpp
   sps/NativeDylibManagerSPSCI.cpp
   sps/SessionSPSCI.cpp

@@ -29,9 +29,9 @@ add_entrypoint_object(
     posix_spawn_file_actions_destroy.h
   DEPENDS
     .file_actions
+    libc.hdr.errno_macros
     libc.include.spawn
     libc.src.__support.CPP.new
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -42,9 +42,9 @@ add_entrypoint_object(
     posix_spawn_file_actions_adddup2.h
   DEPENDS
     .file_actions
+    libc.hdr.errno_macros
     libc.include.spawn
     libc.src.__support.CPP.new
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -55,9 +55,9 @@ add_entrypoint_object(
     posix_spawn_file_actions_addopen.h
   DEPENDS
     .file_actions
+    libc.hdr.errno_macros
     libc.include.spawn
     libc.src.__support.CPP.new
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -68,9 +68,9 @@ add_entrypoint_object(
     posix_spawn_file_actions_addclose.h
   DEPENDS
     .file_actions
+    libc.hdr.errno_macros
     libc.include.spawn
     libc.src.__support.CPP.new
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(

@@ -62,9 +62,9 @@ static cl::opt<unsigned> MinFunctionSize(
     cl::desc("Don't specialize functions that have less than this number of "
              "instructions"));
 
-static cl::opt<unsigned> MaxCodeSizeGrowth(
-    "funcspec-max-codesize-growth", cl::init(3), cl::Hidden, cl::desc(
-    "Maximum codesize growth allowed per function"));
+static cl::opt<unsigned>
+    MaxCodeSizeGrowth("funcspec-max-codesize-growth", cl::init(3), cl::Hidden,
+                      cl::desc("Maximum codesize growth allowed per function"));
 
 static cl::opt<unsigned> MinCodeSizeSavings(
     "funcspec-min-codesize-savings", cl::init(20), cl::Hidden,
@@ -1098,8 +1098,8 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
   if (!CalledFunction)
     return 0;
 
-  // Get TTI for the called function (used for the inline cost).
-  auto &CalleeTTI = (GetTTI)(*CalledFunction);
+  // Get TTI for the caller (used for the inline cost).
+  auto &CallerTTI = (GetTTI)(*A->getParent());
 
   // Look at all the call sites whose called value is the argument.
   // Specializing the function on the argument would allow these indirect
@@ -1107,6 +1107,10 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
   // would likely enable the called function to be inlined, specializing is a
   // good idea.
   int InliningBonus = 0;
+  // We apply a boost for performing indirect call promotion by increasing
+  // the default threshold by the threshold for indirect calls.
+  auto Params = getInlineParams(A->getContext());
+  Params.DefaultThreshold += InlineConstants::IndirectCallThreshold;
   for (User *U : A->users()) {
     if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
       continue;
@@ -1122,13 +1126,8 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
     // inlining looks profitable now. For example, one of its called
     // functions may be inlined into it, making the called function too large
     // to be inlined into this call site.
-    //
-    // We apply a boost for performing indirect call promotion by increasing
-    // the default threshold by the threshold for indirect calls.
-    auto Params = getInlineParams();
-    Params.DefaultThreshold += InlineConstants::IndirectCallThreshold;
     InlineCost IC =
-        getInlineCost(*CS, CalledFunction, Params, CalleeTTI, GetAC, GetTLI);
+        getInlineCost(*CS, CalledFunction, Params, CallerTTI, GetAC, GetTLI);
 
     // We clamp the bonus for this call to be between zero and the default
     // threshold.

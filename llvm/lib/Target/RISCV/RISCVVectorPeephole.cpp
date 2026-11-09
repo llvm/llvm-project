@@ -537,7 +537,6 @@ bool RISCVVectorPeepholeImpl::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
   MRI->constrainRegClass(MI.getOperand(2).getReg(),
                          MRI->getRegClass(MI.getOperand(0).getReg()));
   MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
-  MRI->clearKillFlags(MI.getOperand(2).getReg());
   MI.eraseFromParent();
   return true;
 }
@@ -788,8 +787,6 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
     MRI->constrainRegClass(
         MO.getReg(), True.getRegClassConstraint(MO.getOperandNo(), TII, TRI));
   }
-  // We should clear the IsKill flag since we have a new use now.
-  MRI->clearKillFlags(FalseReg);
   MI.eraseFromParent();
 
   // Cleanup all the COPYs on True's value. We have to manually do this because
@@ -938,7 +935,6 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
               Masked->getRegClassConstraint(MO.getOperandNo(), TII, TRI))
         MRI->constrainRegClass(MO.getReg(), RC);
     }
-    MRI->clearKillFlags(MaskReg);
     MI.eraseFromParent();
     Cmp.eraseFromParent();
     for (MachineInstr *CmpCopy : CmpCopies)

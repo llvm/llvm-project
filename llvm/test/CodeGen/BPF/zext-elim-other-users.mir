@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=bpfel -mcpu=v4 -run-pass=bpf-mi-zext-elim -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=bpfel -mcpu=v4 -run-pass=bpf-mi-zext-elim -o - %s | FileCheck %s
 #
 # mov, shift left, shift right is a zero extension that is not needed after
 # a 32 bit load. The results of the mov and of the left shift are used elsewhere

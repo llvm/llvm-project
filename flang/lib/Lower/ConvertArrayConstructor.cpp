@@ -503,15 +503,16 @@ namespace {
 /// evaluating an ac-value.
 template <typename T>
 struct LengthAndTypeCollector {
-  static mlir::Type collect(mlir::Location,
-                            Fortran::lower::AbstractConverter &converter,
-                            const Fortran::evaluate::ArrayConstructor<T> &,
-                            Fortran::lower::SymMap &,
-                            Fortran::lower::StatementContext &,
-                            mlir::SmallVectorImpl<mlir::Value> &) {
+  static mlir::Type
+  collect(mlir::Location, Fortran::lower::AbstractConverter &converter,
+          const Fortran::evaluate::ArrayConstructor<T> &arrayCtorExpr,
+          Fortran::lower::SymMap &, Fortran::lower::StatementContext &,
+          mlir::SmallVectorImpl<mlir::Value> &) {
+    const int kind{arrayCtorExpr.kind()};
     // Numerical and Logical types.
     return Fortran::lower::getFIRType(&converter.getMLIRContext(), T::category,
-                                      T::kind, /*lenParams*/ {});
+                                      kind,
+                                      /*lenParams*/ {});
   }
 };
 
@@ -530,16 +531,17 @@ struct LengthAndTypeCollector<Fortran::evaluate::SomeDerived> {
   }
 };
 
-template <int Kind>
 using Character =
-    Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, Kind>;
-template <int Kind>
-struct LengthAndTypeCollector<Character<Kind>> {
-  static mlir::Type collect(
-      mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-      const Fortran::evaluate::ArrayConstructor<Character<Kind>> &arrayCtorExpr,
-      Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
-      mlir::SmallVectorImpl<mlir::Value> &lengths) {
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>;
+template <>
+struct LengthAndTypeCollector<Character> {
+  static mlir::Type
+  collect(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+          const Fortran::evaluate::ArrayConstructor<Character> &arrayCtorExpr,
+          Fortran::lower::SymMap &symMap,
+          Fortran::lower::StatementContext &stmtCtx,
+          mlir::SmallVectorImpl<mlir::Value> &lengths) {
+    const int kind{arrayCtorExpr.kind()};
     llvm::SmallVector<Fortran::lower::LenParameterTy> typeLengths;
     if (const Fortran::evaluate::ExtentExpr *lenExpr = arrayCtorExpr.LEN()) {
       lengths.push_back(
@@ -550,7 +552,7 @@ struct LengthAndTypeCollector<Character<Kind>> {
     }
     return Fortran::lower::getFIRType(&converter.getMLIRContext(),
                                       Fortran::common::TypeCategory::Character,
-                                      Kind, typeLengths);
+                                      kind, typeLengths);
   }
 };
 } // namespace

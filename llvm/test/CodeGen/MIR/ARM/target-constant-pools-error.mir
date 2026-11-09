@@ -20,7 +20,7 @@ constants:
 body:             |
   bb.0.entry:
     %0 = LDRi12 %const.0, 0, 14, _ :: (load 4 from constant-pool)
-    %1 = PICLDR killed %0, 0, 14, _ :: (dereferenceable load 4 from @g)
+    %1 = PICLDR %0, 0, 14, _ :: (dereferenceable load 4 from @g)
     %r0 = COPY %1
     BX_RET 14, _, implicit %r0
 

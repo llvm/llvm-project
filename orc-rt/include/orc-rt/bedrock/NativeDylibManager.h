@@ -35,7 +35,7 @@ public:
   Create(Session &S, SimpleSymbolTable &ST,
          const char *InstanceName = "orc_rt_ci_NativeDylibManager_Instance",
          SimpleSymbolTable::MutatorFn AddInterface =
-             sps_ci::addNativeDylibManager);
+             sps::ci::addNativeDylibManager);
 
   /// Convenience constructor that adds default symbols to the given
   /// BootstrapInfo's symbols map.

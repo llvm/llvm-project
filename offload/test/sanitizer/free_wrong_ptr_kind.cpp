@@ -23,13 +23,13 @@ int main(void) {
 
 // clang-format off
 // CHECK: OFFLOAD ERROR: deallocation requires pinned host memory but allocation was managed memory: 0x
-// CHECK:  dataDelete
+// CHECK:  deleteData
 // CHECK:  llvm_omp_target_free_host
 // NDEBG: main
 // DEBUG:  main {{.*}}free_wrong_ptr_kind.cpp:[[@LINE-7]]
 //
 // CHECK: Last allocation of size 8 -> device pointer
-// CHECK:  dataAlloc
+// CHECK:  allocData
 // CHECK:  llvm_omp_target_alloc_shared
 // NDEBG:  main
 // DEBUG:  main {{.*}}free_wrong_ptr_kind.cpp:[[@LINE-14]]

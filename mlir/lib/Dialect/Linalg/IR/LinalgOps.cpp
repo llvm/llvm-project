@@ -4852,15 +4852,12 @@ verifyContractionDims(size_t iterationSpaceDims, ArrayRef<size_t> inOccurrences,
     //     for the output. In terms of einsum semantics such dims have a
     //     sensible meaning - namely an additional reduction per each such dim.
     //     By contrast, the ContractionOpInterface does not know about this
-    //     iter type - cf. inferContractionDims' supported dim kinds. Similarly,
-    //     while vector.contract's verifier accepts dims of this kind many of
-    //     its lowerings give up on encountering these dims.
+    //     iter type - cf. inferContractionDims' supported dim kinds.
     // TODO: Remove following once we have comprehensive support for input-only
     //       reduction dims, at both the linalg- and vector-dialect levels.
     if (inOccCount == 1 && outOccCount != 1)
-      return emitError()
-             << "iteration space dim at index " << dimIndex
-             << " is neither a contracting dim nor of parallel iteration type";
+      return emitError() << "reduction dim at index " << dimIndex
+                         << " must appear in both LHS and RHS";
   }
 
   if (!hasContractingDim)

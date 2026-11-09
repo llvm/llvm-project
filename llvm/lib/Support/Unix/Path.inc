@@ -924,11 +924,10 @@ void mapped_file_region::dontNeedImpl() {
   assert(Mode == mapped_file_region::readonly);
   if (!Mapping)
     return;
-#if defined(__MVS__) || defined(_AIX)
-    // If we don't have madvise, or it isn't beneficial, treat this as a no-op.
-#elif defined(POSIX_MADV_DONTNEED)
-  ::posix_madvise(Mapping, Size, POSIX_MADV_DONTNEED);
-#else
+#ifdef __linux__
+  // Linux's MADV_DONTNEED unmaps the pages and reduces RSS. Other systems
+  // treat it as a hint (macOS keeps the pages resident), and glibc and musl's
+  // posix_madvise ignore POSIX_MADV_DONTNEED.
   ::madvise(Mapping, Size, MADV_DONTNEED);
 #endif
 }
@@ -1174,7 +1173,7 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
       if ((Access & FA_Write) && (Disp != CD_OpenExisting)) {
-        int ccsid = CCSID_IBM_1047;
+        int ccsid = (Flags & OF_ForceUTF8) ? CCSID_UTF_8 : CCSID_IBM_1047;
         if (Stat.st_tag.ft_txtflag && Stat.st_tag.ft_ccsid != FT_UNTAGGED)
           ccsid = Stat.st_tag.ft_ccsid;
         if (auto EC = llvm::enableAutoConversion(ResultFD, ccsid))

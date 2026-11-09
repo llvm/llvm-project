@@ -377,6 +377,7 @@ tool_symbolizer_path_list = [
     "MSAN_SYMBOLIZER_PATH",
     "LSAN_SYMBOLIZER_PATH",
     "UBSAN_SYMBOLIZER_PATH",
+    "CSAN_SYMBOLIZER_PATH",
 ]
 
 if config.have_disable_symbolizer_path_search:
@@ -696,7 +697,7 @@ if config.android:
             % (adb, android_api_level_str)
         )
     android_api_level = min(android_api_level, int(config.android_api_level))
-    for required in [26, 28, 29, 30, 37]:
+    for required in [26, 28, 29, 30, 34, 37]:
         if android_api_level >= required:
             config.available_features.add("android-%s" % required)
     # FIXME: Replace with appropriate version when availible.

@@ -165,6 +165,9 @@ endif()
 # By creating the following targets here, subprojects that depend on
 # LLVM's tablegen-generated headers can always depend on this target
 # whether building in-tree with LLVM or not.
+if(NOT TARGET analysis_gen)
+  add_custom_target(analysis_gen)
+endif()
 if(NOT TARGET intrinsics_gen)
   add_custom_target(intrinsics_gen)
 endif()

@@ -3,6 +3,7 @@
 # instruction.
 ---
 name:            case11
+tracksRegLiveness: false
 # CHECK-LABEL: name: case11
 body:             |
   bb.0:
@@ -19,6 +20,7 @@ body:             |
 ...
 ---
 name:            case12
+tracksRegLiveness: false
 # CHECK-LABEL: name: case12
 body:             |
   bb.0:
@@ -35,6 +37,7 @@ body:             |
 ...
 ---
 name:            case13
+tracksRegLiveness: false
 # CHECK-LABEL: name: case13
 body:             |
   bb.0:
@@ -51,6 +54,7 @@ body:             |
 ...
 ---
 name:            case2
+tracksRegLiveness: false
 # CHECK-LABEL: name: case2
 body:             |
   bb.0:
@@ -63,6 +67,7 @@ body:             |
 ...
 ---
 name:            case3
+tracksRegLiveness: false
 # CHECK-LABEL: name: case3
 body:             |
   bb.0:
@@ -75,6 +80,7 @@ body:             |
 ...
 ---
 name:            case4
+tracksRegLiveness: false
 # CHECK-LABEL: name: case4
 body:             |
   bb.0:
@@ -87,6 +93,7 @@ body:             |
 ...
 ---
 name:            case41
+tracksRegLiveness: false
 # CHECK-LABEL: name: case41
 body:             |
   bb.0:

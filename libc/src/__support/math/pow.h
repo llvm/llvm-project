@@ -16,6 +16,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/is_integer.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
@@ -136,6 +137,7 @@ namespace math {
 //   drift up to ~7.8 ULPs (bounded theoretically by ~16 ULPs).
 
 LIBC_INLINE double pow(double x, double y) {
+  using namespace common_constants_internal;
   using namespace pow_internal;
   using FPBits = fputil::FPBits<double>;
 
@@ -351,13 +353,13 @@ LIBC_INLINE double pow(double x, double y) {
   if (LIBC_UNLIKELY(FPBits(y6_log2_x.hi).abs().get_val() >= UPPER_EXP_BOUND)) {
     if (FPBits(y6_log2_x.hi).sign() == Sign::POS) {
       if (y6_log2_x.hi > 1025.0 * SCALE)
-        return set_overflow(is_neg);
+        return fputil::set_overflow<double>(is_neg ? Sign::NEG : Sign::POS);
       scale = 0x1.0p600;
       y6_log2_x.hi -= 600.0 * SCALE;
     } else {
       if (y6_log2_x.hi <= -1021.0 * SCALE) {
         if (y6_log2_x.hi < -1076.0 * SCALE)
-          return set_underflow(is_neg);
+          return fputil::set_underflow<double>(is_neg ? Sign::NEG : Sign::POS);
         is_denorm = true;
       } else {
         scale = 0x1.0p-600;

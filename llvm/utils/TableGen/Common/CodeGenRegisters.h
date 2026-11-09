@@ -743,8 +743,41 @@ class CodeGenRegBank {
   std::vector<CodeGenRegisterClass *> RegClassesByCreationIndex;
   StringSet<> RegClassNames;
   DenseMap<const Record *, CodeGenRegisterClass *> Def2RC;
-  using RCKeyMap = std::map<CodeGenRegisterClass::Key, CodeGenRegisterClass *>;
+  // Key2RC is ordered like CodeGenRegisterClass::Key, ignoring artificial
+  // members. The keys hold the EnumValues of the members rather than the
+  // registers, so lookups don't load the members of the classes in the map.
+  struct RCKey {
+    std::vector<unsigned> Regs;
+    RegSizeInfoByHwMode RSI;
+  };
+
+  struct RCKeyRef {
+    ArrayRef<unsigned> Regs;
+    const RegSizeInfoByHwMode *RSI;
+  };
+
+  struct RCKeyLess {
+    using is_transparent = void;
+
+    static RCKeyRef ref(const RCKey &K) { return {K.Regs, &K.RSI}; }
+    static RCKeyRef ref(const RCKeyRef &K) { return K; }
+
+    template <typename L, typename R>
+    bool operator()(const L &LHS, const R &RHS) const {
+      RCKeyRef A = ref(LHS), B = ref(RHS);
+      if (A.Regs != B.Regs)
+        return std::lexicographical_compare(A.Regs.begin(), A.Regs.end(),
+                                            B.Regs.begin(), B.Regs.end());
+      return *A.RSI < *B.RSI;
+    }
+  };
+
+  using RCKeyMap = std::map<RCKey, CodeGenRegisterClass *, RCKeyLess>;
   RCKeyMap Key2RC;
+
+  // Return the EnumValues of the non-artificial registers in Members.
+  static std::vector<unsigned>
+  getNonArtificialEnumValues(const CodeGenRegister::Vec &Members);
 
   // Register categories.
   std::list<CodeGenRegisterCategory> RegCategories;

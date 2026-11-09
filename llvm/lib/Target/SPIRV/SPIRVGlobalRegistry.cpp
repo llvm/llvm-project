@@ -266,6 +266,7 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
   auto oldInsertPoint = MIRBuilder.getInsertPt();
+  assert(oldInsertPoint.isValid() && "Builder must have insertion point set!");
   MachineBasicBlock *OldMBB = &MIRBuilder.getMBB();
   MachineBasicBlock *NewMBB = &*MIRBuilder.getMF().begin();
 
@@ -360,8 +361,9 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorIdEXT(
     uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder) {
-  assert((NumElems < 2 || NumElems > 16 ||
-          (NumElems != 3 && NumElems != 4 && NumElems != 8)) &&
+  assert(NumElems != 2 && NumElems != 3 && NumElems != 4 &&
+         (!MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>().isKernel() ||
+          (NumElems != 8 && NumElems != 16)) &&
          "SPIR-V OpTypeVectorIdExt should only be used for extended vectors");
   return getOpTypeVectorImpl(NumElems, ElemType, MIRBuilder, true);
 }
@@ -1259,7 +1261,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       AccQual, ExplicitLayoutRequired, EmitIR);
     unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
     const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
-    if (isLongVectorEXT(Ty) &&
+    if (isLongVectorEXT(Ty, STI.isKernel()) &&
         STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
       return getOpTypeVectorIdEXT(NumElts, El, MIRBuilder);
     return getOpTypeVector(NumElts, El, MIRBuilder);

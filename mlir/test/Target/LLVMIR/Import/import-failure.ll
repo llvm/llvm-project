@@ -646,3 +646,17 @@ define void @reuse_b(ptr %q) {
 
 !0 = distinct !{!0, i32 42}
 !1 = distinct !{!1, i32 43}
+
+; // -----
+
+; A call stack id wider than 64 bits has no dense i64 slot, so the whole
+; `!callsite` node is dropped with a warning instead of being imported.
+; CHECK: warning: unhandled metadata: !{{[0-9]+}} = !{i128 1} on {{.*}}%p = call ptr @alloc(i64 16)
+define ptr @wide_callsite_id() {
+  %p = call ptr @alloc(i64 16), !callsite !0
+  ret ptr %p
+}
+
+declare ptr @alloc(i64)
+
+!0 = !{i128 1}

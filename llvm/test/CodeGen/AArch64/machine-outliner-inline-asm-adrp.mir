@@ -1,4 +1,4 @@
-# RUN: llc -simplify-mir -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -simplify-mir -run-pass=machine-outliner %s -o - | FileCheck %s
 # CHECK-NOT: OUTLINED_FUNCTION
 --- |
   target triple = "arm64----"

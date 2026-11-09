@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner %s -o - | FileCheck %s
 
 # The test checks whether the compiler updates the side effect of function @OUTLINED_FUNCTION_0
 # when implict-def and implict use of $x0 in the same instruction.

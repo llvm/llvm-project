@@ -1068,7 +1068,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
                                                      bool IsSigned) const {
   unsigned DivBits = getDivNumBits(I, Num, Den, 23, IsSigned);
 
-  if (DivBits > (IsSigned ? 23 : 22))
+  if (DivBits > (IsSigned ? 23u : 22u))
     return nullptr;
   return expandDivRemToFloatImpl(Builder, I, Num, Den, DivBits, IsDiv,
                                  IsSigned);
@@ -1090,7 +1090,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
   // Thus, we conservatively restrict expandDivRemToFloatImpl to
   // [-0x400000,0x3FFFFF] for IsSigned
   // [ 0x000000,0x3FFFFF] for !IsSigned.
-  assert(0 < DivBits && DivBits <= (IsSigned ? 23 : 22) &&
+  assert(0 < DivBits && DivBits <= (IsSigned ? 23u : 22u) &&
          "abs(Num) must be <= 0x400000 for expandDivRemToFloatImpl to work "
          "correctly");
 
@@ -1340,10 +1340,10 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     return nullptr;
 
   Value *Narrowed = nullptr;
-  if (NumDivBits <= (IsSigned ? 23 : 22)) {
+  if (NumDivBits <= (IsSigned ? 23u : 22u)) {
     Narrowed = expandDivRemToFloatImpl(Builder, I, Num, Den, NumDivBits, IsDiv,
                                        IsSigned);
-  } else if (NumDivBits <= (IsSigned ? 31 : 32)) {
+  } else if (NumDivBits <= (IsSigned ? 31u : 32u)) {
     // Do not use 32-bit division if dividend may be -2147483648.
     // Otherwise 32-bit division cannot be used safely.
     // -2147483648/1 and -2147483648/-1 are not equal,

@@ -10,7 +10,6 @@
 //  opcodes in DirectX Intermediate Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILIntrinsicExpansion.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -578,9 +577,8 @@ static Value *expandIsFPClass(CallInst *Orig) {
   Value *FBitCast = Builder.CreateBitCast(F, BitCastTy);
   switch (TCI->getZExtValue()) {
   case FPClassTest::fcNegZero: {
-    Value *NegZero =
-        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1),
-                         /*IsSigned=*/true);
+    Value *NegZero = ConstantInt::get(Builder.getIntNTy(BitWidth),
+                                      APInt::getSignMask(BitWidth));
     Value *RetVal;
     if (FNumElem) {
       Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);
@@ -1418,8 +1416,8 @@ static bool expansionIntrinsics(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
-                                              ModuleAnalysisManager &) {
+PreservedAnalyses DXILIntrinsicExpansionPass::run(Module &M,
+                                                  ModuleAnalysisManager &) {
   if (expansionIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

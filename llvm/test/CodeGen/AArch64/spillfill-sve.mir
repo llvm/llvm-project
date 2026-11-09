@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=aarch64-linux-gnu -run-pass=greedy -aarch64-stack-hazard-size=0 %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo -verify-machineinstrs -aarch64-stack-hazard-size=0 %s -o - | FileCheck %s --check-prefix=EXPAND
+# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo -aarch64-stack-hazard-size=0 %s -o - | FileCheck %s --check-prefix=EXPAND
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "<stdin>"

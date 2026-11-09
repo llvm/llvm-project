@@ -80,7 +80,7 @@ body:             |
     %0:gpr64common = COPY $x0
     %1:fpr64 = FMOVD0
     %2:gpr32 = MOVi32imm 1
-    %3:gpr64all = SUBREG_TO_REG killed %2, %subreg.sub_32
+    %3:gpr64all = SUBREG_TO_REG %2, %subreg.sub_32
 
   bb.1:
     successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -89,8 +89,8 @@ body:             |
     %6:fpr64 = PHI %1, %bb.0, %7, %bb.1
     %8:fpr64 = PHI %1, %bb.0, %6, %bb.1
     %9:fpr64 = nofpexcept FADDDrr %8, %1, implicit $fpcr
-    %10:fpr64 = nofpexcept FADDDrr killed %9, %6, implicit $fpcr
-    STRDui killed %10, %0, 0
+    %10:fpr64 = nofpexcept FADDDrr %9, %6, implicit $fpcr
+    STRDui %10, %0, 0
     %11:gpr64 = nsw SUBSXri %4, 1, 0, implicit-def $nzcv
     %5:gpr64all = COPY %11
     %7:fpr64 = FMOVDi 112

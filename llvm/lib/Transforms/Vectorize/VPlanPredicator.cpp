@@ -162,7 +162,7 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // Start inserting after the block's phis, which be replaced by blends later.
-  Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
+  Builder.setInsertPoint(VPBB->getFirstNonPhi());
 
   // Reuse the mask of the immediate dominator if the VPBB post-dominates the
   // immediate dominator.
@@ -310,6 +310,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     }
   }
 
+  Edges.remove_if([](const auto &X) { return match(X.second, m_Poison()); });
+
   return Edges;
 }
 
@@ -343,7 +345,7 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
     VPValue *EdgeMask;
     {
       VPBuilder::InsertPointGuard Guard(Builder);
-      Builder.setInsertPoint(Dst, getMaskInsertPoint(Dst));
+      Builder.setInsertPoint(getMaskInsertPoint(Dst));
       EdgeMask = createEdgeMask(Src, Dst);
     }
     Mask = Mask ? Builder.createOr(Mask, EdgeMask) : EdgeMask;
@@ -352,7 +354,7 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  Builder.setInsertPoint(VPBB, getMaskInsertPoint(VPBB));
+  Builder.setInsertPoint(getMaskInsertPoint(VPBB));
 
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())

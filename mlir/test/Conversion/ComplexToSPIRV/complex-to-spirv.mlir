@@ -300,3 +300,74 @@ func.func @complex_sign(%arg: complex<f32>) -> complex<f32> {
 //       CHECK:   %[[SELRE:.+]] = spirv.Select %[[ISZERO]], %[[RE]], %[[SIGNRE]] : i1, f32
 //       CHECK:   %[[SELIM:.+]] = spirv.Select %[[ISZERO]], %[[IM]], %[[SIGNIM]] : i1, f32
 //       CHECK:   %[[RESULT:.+]] = spirv.CompositeConstruct %[[SELRE]], %[[SELIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_sin(%arg: complex<f32>) -> complex<f32> {
+  %sin = complex.sin %arg : complex<f32>
+  return %sin : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_sin
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[SIN:.+]] = spirv.GL.Sin %[[RE]] : f32
+//       CHECK:   %[[COS:.+]] = spirv.GL.Cos %[[RE]] : f32
+//       CHECK:   %[[SINH:.+]] = spirv.GL.Sinh %[[IM]] : f32
+//       CHECK:   %[[COSH:.+]] = spirv.GL.Cosh %[[IM]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FMul %[[SIN]], %[[COSH]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FMul %[[COS]], %[[SINH]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_cos(%arg: complex<f32>) -> complex<f32> {
+  %cos = complex.cos %arg : complex<f32>
+  return %cos : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_cos
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[SIN:.+]] = spirv.GL.Sin %[[RE]] : f32
+//       CHECK:   %[[COS:.+]] = spirv.GL.Cos %[[RE]] : f32
+//       CHECK:   %[[SINH:.+]] = spirv.GL.Sinh %[[IM]] : f32
+//       CHECK:   %[[COSH:.+]] = spirv.GL.Cosh %[[IM]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FMul %[[COS]], %[[COSH]] : f32
+//       CHECK:   %[[MUL:.+]] = spirv.FMul %[[SIN]], %[[SINH]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FNegate %[[MUL]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @complex_sin_opencl(%arg: complex<f32>) -> complex<f32> {
+  %sin = complex.sin %arg : complex<f32>
+  return %sin : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_sin_opencl
+//       CHECK:   spirv.CL.sin
+//       CHECK:   spirv.CL.cos
+//       CHECK:   spirv.CL.sinh
+//       CHECK:   spirv.CL.cosh
+
+func.func @complex_cos_opencl(%arg: complex<f32>) -> complex<f32> {
+  %cos = complex.cos %arg : complex<f32>
+  return %cos : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_cos_opencl
+//       CHECK:   spirv.CL.sin
+//       CHECK:   spirv.CL.cos
+//       CHECK:   spirv.CL.sinh
+//       CHECK:   spirv.CL.cosh
+
+}

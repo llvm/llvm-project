@@ -97,7 +97,6 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics =
       new clang::DiagnosticsEngine(diagID, diagOpts,
                                    new clang::IgnoringDiagConsumer());
-  llvm::Triple triple(rawTriple);
   // TODO: Need to set various target options later to populate
   // 'TargetInfo' properly.
   clang::TargetOptions targetOptions;

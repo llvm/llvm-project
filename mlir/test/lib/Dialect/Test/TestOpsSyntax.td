@@ -484,6 +484,16 @@ def OpWithTwoDefaultBitEnumProps : TEST_Op<"op_with_two_default_bit_enum_props">
   let assemblyFormat = "($value1^)? ($value2^)? attr-dict";
 }
 
+def TestBitEnumSpacePropDefault : EnumProp<TestBitEnumSpace> {
+  let defaultValue = TestBitEnumSpace.cppType # "::None";
+}
+def OpWithDefaultSpaceBitEnumProp
+    : TEST_Op<"op_with_default_space_bit_enum_prop"> {
+  let arguments = (ins TestBitEnumSpacePropDefault:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "($value^)? (`tag` $tag^)? attr-dict";
+}
+
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";

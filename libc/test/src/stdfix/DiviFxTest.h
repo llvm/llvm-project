@@ -1,10 +1,18 @@
-//===-- Utility class to test divifx functions ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test divifx functions.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_DIVIFXTEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_DIVIFXTEST_H
 
 #include "test/UnitTest/Test.h"
 
@@ -151,7 +159,7 @@ public:
     }
   }
 
-  void testInvalidNumbers(DiviFxFunc func) {
+  void testInvalidNumbers([[maybe_unused]] DiviFxFunc func) {
 
     EXPECT_DEATH([func] { func(1, zero); }, WITH_SIGNAL(-1));
     if constexpr (has_integral) {
@@ -176,3 +184,5 @@ public:
   TEST_F(LlvmLibcDivi##Name##Test, EdgeCases) { testEdgeCases(&func); }        \
   static_assert(true, "Require semicolon.")
 #endif // LIBC_ADD_NULL_CHECKS
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_DIVIFXTEST_H

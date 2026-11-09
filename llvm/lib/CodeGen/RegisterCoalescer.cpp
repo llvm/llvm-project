@@ -2446,9 +2446,6 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     }
   }
 
-  // We don't track kills for reserved registers.
-  MRI->clearKillFlags(CP.getSrcReg());
-
   return true;
 }
 
@@ -3924,12 +3921,6 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
   // Join RHS into LHS.
   LHS.join(RHS, LHSVals.getAssignments(), RHSVals.getAssignments(), NewVNInfo);
-
-  // Kill flags are going to be wrong if the live ranges were overlapping.
-  // Eventually, we should simply clear all kill flags when computing live
-  // ranges. They are reinserted after register allocation.
-  MRI->clearKillFlags(LHS.reg());
-  MRI->clearKillFlags(RHS.reg());
 
   if (!EndPoints.empty()) {
     // Recompute the parts of the live range we had to remove because of

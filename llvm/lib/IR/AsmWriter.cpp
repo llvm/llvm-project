@@ -3659,6 +3659,9 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
       return "cold";
     case (uint8_t)AllocationType::Hot:
       return "hot";
+    case (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold:
+      // The contexts reaching the allocation could not be disambiguated.
+      return "ambiguous";
     }
     llvm_unreachable("Unexpected alloc type");
   };

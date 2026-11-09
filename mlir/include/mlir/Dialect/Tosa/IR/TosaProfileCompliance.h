@@ -111,7 +111,7 @@ public:
 
   void addType(Type t) { tyInfo.push_back(convertTypeToInfo(t)); }
   void addValue(Value v) { tyInfo.push_back(convertValueToInfo(v)); }
-  SmallVector<TypeInfo> getInfo() { return tyInfo; }
+  ArrayRef<TypeInfo> getInfo() const { return tyInfo; }
 
 private:
   TypeInfo convertTypeToInfo(Type type) {
@@ -161,11 +161,8 @@ public:
 
   // Accessor of the compliance info map.
   template <typename T>
-  std::unordered_map<std::string, SmallVector<OpComplianceInfo<T>>>
-  getProfileComplianceMap() {
-    // Only profile and extension compliance info are provided.
-    return {};
-  }
+  const std::unordered_map<std::string, SmallVector<OpComplianceInfo<T>>> &
+  getProfileComplianceMap() const;
 
   // Verify if the operation is allowed to be executed in the given target
   // environment.
@@ -177,7 +174,7 @@ public:
   LogicalResult checkProfileOrExtension(Operation *op,
                                         const tosa::TargetEnv &targetEnv);
 
-  bool isSameTypeInfo(TypeInfo a, TypeInfo b) {
+  bool isSameTypeInfo(const TypeInfo &a, const TypeInfo &b) {
     return a.typeID == b.typeID && a.bitWidth == b.bitWidth &&
            a.valueTypeID == b.valueTypeID && a.scaleTypeID == b.scaleTypeID &&
            a.blockShape == b.blockShape;
@@ -187,7 +184,7 @@ public:
   // to the operand type combination.
   template <typename T>
   SmallVector<OpComplianceInfo<T>>
-  findMatchedEntries(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
+  findMatchedEntries(Operation *op, ArrayRef<OpComplianceInfo<T>> compInfo);
 
   // Debug utilites.
   template <typename T>
@@ -207,6 +204,14 @@ private:
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;
 };
+
+template <>
+const OperationProfileComplianceMap &
+TosaProfileCompliance::getProfileComplianceMap<Profile>() const;
+
+template <>
+const OperationExtensionComplianceMap &
+TosaProfileCompliance::getProfileComplianceMap<Extension>() const;
 } // namespace tosa
 } // namespace mlir
 

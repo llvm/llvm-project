@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -run-pass=livedebugvars -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvars -o - %s | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 --- |

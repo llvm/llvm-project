@@ -100,6 +100,7 @@ set(supported_sources
   stop.cpp
   sum.cpp
   support.cpp
+  temporary-stack.cpp
   terminator.cpp
   tools.cpp
   transformational.cpp

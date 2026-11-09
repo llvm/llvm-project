@@ -1186,9 +1186,6 @@ private:
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
-  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
-  void DiagnoseInvalidCXXModuleImport();
-
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
   void CodeCompleteDirective(bool InConditional) override;
@@ -1544,7 +1541,6 @@ private:
   /// Diagnose a late-parsed attribute naming a parameter that it cannot, and
   /// return true if it must be dropped.
   bool checkLateAttributeParamRefs(const LateParsedAttribute &LPA,
-                                   const Decl *D,
                                    ArrayRef<const DeclRefExpr *> ParamRefs,
                                    bool ReenteredProtoParams);
 
@@ -1957,10 +1953,12 @@ private:
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);
 
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal) {
-    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              LateParsedAttrList *LateAttrs = nullptr) {
+    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC,
+                                LateAttrs);
   }
 
   /// ParseSpecifierQualifierList
@@ -1971,10 +1969,12 @@ private:
   /// [GNU]    attributes     specifier-qualifier-list[opt]
   /// \endverbatim
   ///
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-      AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS,
+                              ImplicitTypenameContext AllowImplicitTypename,
+                              AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseEnumSpecifier
   /// \verbatim
@@ -2681,7 +2681,8 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      llvm::function_ref<void()> CodeCompletionHandler = {});
+      llvm::function_ref<void()> CodeCompletionHandler = {},
+      LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseDirectDeclarator
   /// \verbatim

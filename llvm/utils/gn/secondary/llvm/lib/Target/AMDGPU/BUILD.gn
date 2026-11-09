@@ -231,6 +231,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "GCNPreRALongBranchReg.cpp",
     "GCNPreRAOptimizations.cpp",
     "GCNRegPressure.cpp",
+    "GCNRematStrategy.cpp",
     "GCNRewritePartialRegUses.cpp",
     "GCNSchedStrategy.cpp",
     "GCNSubtarget.cpp",

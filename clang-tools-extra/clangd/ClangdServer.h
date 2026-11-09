@@ -145,10 +145,6 @@ public:
     /// If there is no particular file (e.g. project loading) then it is empty.
     std::function<Context(PathRef)> ContextProvider;
 
-    /// The Options provider to use when running clang-tidy. If null, clang-tidy
-    /// checks will be disabled.
-    TidyProviderRef ClangTidyProvider;
-
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
     /// FIXME: If not set, should use the current working directory.
@@ -506,9 +502,6 @@ private:
   std::vector<std::unique_ptr<SymbolIndex>> MergedIdx;
   // Manage module files.
   ModulesBuilder *ModulesManager = nullptr;
-
-  // When set, provides clang-tidy options for a specific file.
-  TidyProviderRef ClangTidyProvider;
 
   bool UseDirtyHeaders = false;
 

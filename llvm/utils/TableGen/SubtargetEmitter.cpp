@@ -2073,7 +2073,7 @@ void SubtargetEmitter::emitGetMacroFusions(const std::string &ClassName,
      << "::getMacroFusions() const {\n";
   OS.indent(2) << "std::vector<MacroFusionPredTy> Fusions;\n";
   for (auto *Fusion : TGT.getMacroFusions()) {
-    std::string Name = Fusion->getNameInitAsString();
+    StringRef Name = CodeGenTarget::getMacroFusionName(Fusion);
     OS.indent(2) << "if (hasFeature(" << Target << "::" << Name
                  << ")) Fusions.push_back(llvm::is" << Name << ");\n";
   }

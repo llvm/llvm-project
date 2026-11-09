@@ -345,7 +345,7 @@ void GenerateAttrToValueVisitFunc() {
        << ">(\n"
        << "            [&](auto attrT) { return visitCirAttr(attrT); })\n"
        << "        .Default([this](mlir::Attribute attr) {\n"
-       << "          mlir::emitError(parentOp->getLoc(), \"unsupported CIR "
+       << "          mlir::emitError(parentLoc, \"unsupported CIR "
           "attribute in LLVM constant lowering\")\n"
        << "              << attr;\n"
        << "          return mlir::Value();\n"

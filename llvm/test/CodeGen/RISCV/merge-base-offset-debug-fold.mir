@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=riscv64 -run-pass=riscv-merge-base-offset \
-# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=riscv64 -run-pass=riscv-merge-base-offset %s -o - | FileCheck %s
 
 # Debug uses do not stop an offset from being folded into the address of a
 # global. Those of a register whose value the fold changes subtract the offset

@@ -26,7 +26,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVInstrInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

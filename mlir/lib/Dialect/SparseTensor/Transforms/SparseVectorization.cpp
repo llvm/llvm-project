@@ -54,10 +54,9 @@ static bool isInvariantArg(BlockArgument arg, Block *block) {
 static bool isInvariantValue(Value val, Block *block) {
   if (auto arg = dyn_cast<BlockArgument>(val))
     return isInvariantArg(arg, block);
-    
+
   return val.getDefiningOp()->getBlock() != block;
 }
-
 
 /// Returns true when `mem`'s most minor dimension has a statically known
 /// non-unit stride.

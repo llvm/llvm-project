@@ -340,8 +340,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
   SUnits.reserve(NumNodes * 2);
 
   // Add all nodes in depth first order.
-  SmallVector<SDNode*, 64> Worklist;
-  SmallPtrSet<SDNode*, 32> Visited;
+  SmallVector<SDNode *, 64> Worklist;
   Worklist.push_back(DAG->getRoot().getNode());
   DAG->getRoot().getNode()->setSchedulerWorklistVisited(true);
 

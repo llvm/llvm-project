@@ -239,9 +239,87 @@ define void @revec_sincosf_gap(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
   ret void
 }
 
+; Negative: the wider vector function is declared with another type.
+define void @revec_cosf_decl_mismatch(ptr noalias %x, ptr noalias %r) {
+; CHECK-LABEL: define void @revec_cosf_decl_mismatch(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; CHECK-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; CHECK-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_cosf(<4 x float> [[A]])
+; CHECK-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_cosf(<4 x float> [[B]])
+; CHECK-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; CHECK-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @revec_cosf_decl_mismatch(
+; DEFAULT-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; DEFAULT-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; DEFAULT-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; DEFAULT-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_cosf(<4 x float> [[A]])
+; DEFAULT-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_cosf(<4 x float> [[B]])
+; DEFAULT-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; DEFAULT-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds <4 x float>, ptr %x, i64 1
+  %r1p = getelementptr inbounds <4 x float>, ptr %r, i64 1
+  %a = load <4 x float>, ptr %x, align 16
+  %b = load <4 x float>, ptr %x1p, align 16
+  %va = call <4 x float> @amd_vrs4_cosf(<4 x float> %a)
+  %vb = call <4 x float> @amd_vrs4_cosf(<4 x float> %b)
+  store <4 x float> %va, ptr %r, align 16
+  store <4 x float> %vb, ptr %r1p, align 16
+  ret void
+}
+
+; Negative: the element type of the vector function does not match the scalar
+; function.
+define void @revec_expf_proto_mismatch(ptr noalias %x, ptr noalias %r) {
+; CHECK-LABEL: define void @revec_expf_proto_mismatch(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x half>, ptr [[R]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x half>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[VA:%.*]] = call <4 x half> @amd_vrs4_expf(<4 x half> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[VB:%.*]] = call <4 x half> @amd_vrs4_expf(<4 x half> [[TMP3]])
+; CHECK-NEXT:    store <4 x half> [[VA]], ptr [[R]], align 8
+; CHECK-NEXT:    store <4 x half> [[VB]], ptr [[R1P]], align 8
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @revec_expf_proto_mismatch(
+; DEFAULT-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x half>, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x half>, ptr [[R]], i64 1
+; DEFAULT-NEXT:    [[A:%.*]] = load <4 x half>, ptr [[X]], align 8
+; DEFAULT-NEXT:    [[B:%.*]] = load <4 x half>, ptr [[X1P]], align 8
+; DEFAULT-NEXT:    [[VA:%.*]] = call <4 x half> @amd_vrs4_expf(<4 x half> [[A]])
+; DEFAULT-NEXT:    [[VB:%.*]] = call <4 x half> @amd_vrs4_expf(<4 x half> [[B]])
+; DEFAULT-NEXT:    store <4 x half> [[VA]], ptr [[R]], align 8
+; DEFAULT-NEXT:    store <4 x half> [[VB]], ptr [[R1P]], align 8
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds <4 x half>, ptr %x, i64 1
+  %r1p = getelementptr inbounds <4 x half>, ptr %r, i64 1
+  %a = load <4 x half>, ptr %x, align 8
+  %b = load <4 x half>, ptr %x1p, align 8
+  %va = call <4 x half> @amd_vrs4_expf(<4 x half> %a)
+  %vb = call <4 x half> @amd_vrs4_expf(<4 x half> %b)
+  store <4 x half> %va, ptr %r, align 8
+  store <4 x half> %vb, ptr %r1p, align 8
+  ret void
+}
+
 declare float @sinf(float)
 declare <4 x float> @amd_vrs4_sinf(<4 x float>) #1
+declare <4 x half> @amd_vrs4_expf(<4 x half>) #1
 declare void @amd_vrs4_sincosf(<4 x float>, ptr, ptr) #2
+declare <4 x float> @amd_vrs4_cosf(<4 x float>) #1
+declare <8 x double> @amd_vrs8_cosf(<8 x double>) #1
 
 attributes #0 = { nounwind willreturn memory(none) }
 attributes #1 = { nounwind willreturn memory(none) }

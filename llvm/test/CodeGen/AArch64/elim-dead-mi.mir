@@ -26,7 +26,7 @@ body:             |
     successors: %bb.4(0x30000000), %bb.5(0x50000000)
 
     %0:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
-    CBZX killed %0, %bb.4
+    CBZX %0, %bb.4
     B %bb.5
 
   bb.1:
@@ -40,7 +40,7 @@ body:             |
   bb.2:
     successors: %bb.1(0x80000000)
     %3:gpr64common = ADDXrr %6, %2
-    %4:gpr32 = LDRBBui killed %3, 1 :: (load (s8) from %ir.scevgep)
+    %4:gpr32 = LDRBBui %3, 1 :: (load (s8) from %ir.scevgep)
     %5:gpr32all = COPY %4
     B %bb.1
 

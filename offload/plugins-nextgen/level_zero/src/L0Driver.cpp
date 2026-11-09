@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "L0Driver.h"
+#include "L0Context.h"
 #include "L0Plugin.h"
 
 namespace llvm::omp::target::plugin {

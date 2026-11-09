@@ -12,6 +12,7 @@ import {
   ModuleProperty,
   ModulesDataProvider,
 } from "./ui/modules-data-provider";
+import { registerStackFramesTracker } from "./ui/stack-frames-tracker";
 import { SymbolsProvider } from "./ui/symbols-provider";
 import { LaunchUriHandler } from "./uri-launch-handler";
 
@@ -54,6 +55,7 @@ export class LLDBDapExtension extends DisposableContext {
       ),
       vscode.window.registerUriHandler(new LaunchUriHandler()),
     );
+    registerStackFramesTracker(context);
 
     this.pushSubscription(
       vscode.commands.registerCommand(

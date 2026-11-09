@@ -32,7 +32,7 @@ body: |
     %1:gr64 = OR64ri8 %0, 7, implicit-def dead $eflags
     %2:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg :: (load (s64))
     %3:gr64 = OR64rr %2, %1, implicit-def dead $eflags
-    %4:gr32 = MOV32rm killed %3, 1, $noreg, 0, $fs :: (load (s32))
+    %4:gr32 = MOV32rm %3, 1, $noreg, 0, $fs :: (load (s32))
   ; CHECK-NOT:  orq {{.*}}GOTTPOFF{{.*}}
   ;
   ; What we actually expect:
@@ -62,7 +62,7 @@ body: |
     %1:gr64 = OR64ri8 %0, 7, implicit-def dead $eflags
     %2:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg :: (load (s64))
     %3:gr64 = AND64rr %2, %1, implicit-def dead $eflags
-    %4:gr32 = MOV32rm killed %3, 1, $noreg, 0, $fs :: (load (s32))
+    %4:gr32 = MOV32rm %3, 1, $noreg, 0, $fs :: (load (s32))
   ; CHECK-NOT:  andq {{.*}}GOTTPOFF{{.*}}
   ;
   ; What we actually expect:

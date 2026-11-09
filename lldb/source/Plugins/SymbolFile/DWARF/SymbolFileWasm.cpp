@@ -21,7 +21,10 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include <optional>
+#include <utility>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -69,6 +72,20 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
   // Built on demand to recover a mangled name from a declaration-only DIE.
   std::optional<llvm::DenseMap<ConstString, uint32_t>> demangled_index;
 
+  // The object file already has data symbols for exported variables. A
+  // variable that DWARF describes too must not get a second symbol.
+  llvm::DenseSet<std::pair<ConstString, addr_t>> existing_data_symbols;
+  for (size_t i = 0, n = symtab.GetNumSymbols(); i < n; ++i) {
+    Symbol *symbol = symtab.SymbolAtIndex(i);
+    if (!symbol || symbol->GetType() != eSymbolTypeData ||
+        !symbol->ValueIsAddress())
+      continue;
+    existing_data_symbols.insert(
+        {symbol->GetMangled().GetName(Mangled::ePreferMangled),
+         symbol->GetAddressRef().GetFileAddress()});
+  }
+
+  std::vector<Symbol> data_symbols;
   DWARFDebugInfo &debug_info = DebugInfo();
   const size_t num_units = debug_info.GetNumUnits();
   for (size_t i = 0; i < num_units; ++i) {
@@ -148,12 +165,12 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
       Address addr(*file_addr, section_list);
       if (!addr.IsSectionOffset())
         continue;
+      if (existing_data_symbols.contains({ConstString(name), *file_addr}))
+        continue;
 
       // Leave the size unset for Symtab to compute from the gap to the next
-      // symbol. Don't look the address up in the symtab here. That would build
-      // the address index before the remaining vtables are added, mis-sizing
-      // them.
-      symtab.AddSymbol(Symbol(
+      // symbol.
+      data_symbols.push_back(Symbol(
           /*symID=*/0, Mangled(ConstString(name)), eSymbolTypeData,
           /*external=*/true, /*is_debug=*/false, /*is_trampoline=*/false,
           /*is_artificial=*/false, AddressRange(addr, 0),
@@ -161,6 +178,12 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
           /*flags=*/0));
     }
   }
+
+  // Added after the loop: FindSymbolAtFileAddress above sizes the symbols
+  // without a size from the gap to the next symbol, and Symtab keeps those
+  // sizes.
+  for (const Symbol &symbol : data_symbols)
+    symtab.AddSymbol(symbol);
 }
 
 lldb::offset_t

@@ -18,6 +18,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1430,6 +1431,71 @@ CallInst *IRBuilderBase::CreateNonnullAssumption(Value *PtrValue) {
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create a nonnull assumption on a non-pointer?");
   return CreateAssumption(OperandBundleDef("nonnull", PtrValue));
+}
+
+CallInst *IRBuilderBase::CreateRangeAssumption(Value *Val,
+                                               ConstantRange Range) {
+  assert(isa<IntegerType>(Val->getType()) &&
+         "trying to create a range assumption on a non-integer?");
+  assert(!Range.isFullSet() &&
+         "trying to create a range assumption which doesn't assume anything?");
+  return CreateAssumption(
+      OperandBundleDef("range", ArrayRef<Value *>{Val, getInt(Range.getLower()),
+                                                  getInt(Range.getUpper())}));
+}
+
+Value *IRBuilderBase::CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                                const Twine &Name, GEPNoWrapFlags NW) {
+  const DataLayout &DL = getDataLayout();
+  if (auto *V = Folder.FoldGEP(DL, Ty, Ptr, IdxList, NW))
+    return V;
+
+  if (!CanonicalizeGEPs)
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList, NW), Name);
+
+  unsigned IdxSize = DL.getIndexTypeSizeInBits(Ptr->getType());
+  if (Ty->isIntegerTy(8) && IdxList[0]->getType()->isIntOrIntVectorTy(IdxSize))
+    return CreatePtrAdd(Ptr, IdxList[0], Name, NW);
+
+  auto GTI = gep_type_begin(Ty, IdxList), GTE = gep_type_end(Ty, IdxList);
+  for (; GTI != GTE; ++GTI) {
+    Value *Op = GTI.getOperand();
+    Type *IdxTy = Op->getType()->getWithNewBitWidth(IdxSize);
+    if (auto *OpC = dyn_cast<Constant>(Op)) {
+      // Skip zero indices, except for vector splats.
+      bool IsSplat = IdxTy->isVectorTy() && !Ptr->getType()->isVectorTy();
+      if (OpC->isNullValue() && !IsSplat)
+        continue;
+
+      if (StructType *STy = GTI.getStructTypeOrNull()) {
+        uint64_t OpValue = OpC->getUniqueInteger().getZExtValue();
+        uint64_t Offset = DL.getStructLayout(STy)->getElementOffset(OpValue);
+        if (!Offset && !IsSplat)
+          continue;
+
+        Constant *OffsetC = ConstantInt::get(IdxTy, Offset, /*IsSigned=*/false,
+                                             /*ImplicitTrunc=*/true);
+        Ptr = CreatePtrAdd(Ptr, OffsetC, Name, NW);
+        continue;
+      }
+    }
+
+    if (Op->getType() != IdxTy)
+      Op = CreateSExtOrTrunc(Op, IdxTy);
+
+    TypeSize Stride = GTI.getSequentialElementStride(DL);
+    auto *OpC = dyn_cast<ConstantInt>(Op);
+    if (OpC && !Stride.isScalable()) {
+      APInt StrideInt(IdxSize, Stride.getFixedValue(), /*IsSigned=*/false,
+                      /*ImplicitTrunc=*/true);
+      Ptr = CreatePtrAdd(
+          Ptr, ConstantInt::get(IdxTy, OpC->getValue() * StrideInt), Name, NW);
+      continue;
+    }
+
+    Ptr = CreateScaledPtrAdd(Ptr, Stride, Op, Name, NW);
+  }
+  return Ptr;
 }
 
 void IRBuilderFolder::anchor() {}

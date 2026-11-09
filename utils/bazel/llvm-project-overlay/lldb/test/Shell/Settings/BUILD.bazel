@@ -1,0 +1,17 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+# The other tests here build an inferior with %build or %clang_host, which the
+# bazel setup doesn't support yet, or run lldb itself through %lldb, which
+# sources the lit-lldb-init-quiet file CMake writes into the test execution
+# root. %lldb-noinit doesn't.
+lit_test(
+    name = "TestDefaultModuleCachePath.test.test",
+    srcs = ["TestDefaultModuleCachePath.test"],
+    data = ["//lldb/test/Shell:lit_data"],
+)

@@ -463,3 +463,68 @@ llvm.func @constant_resource_does_not_exist(%arg0: vector<4xi32>) {
   %1 = llvm.icmp "sgt" %arg0, %0 : vector<4xi32>
   llvm.return
 }
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_not_an_array(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected an array for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {llvm.memprof = 42} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_not_a_mib(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a memprof_mib for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {llvm.memprof = [42]} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @callsite_not_an_array(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a dense i64 array for llvm.callsite}}
+  %0 = llvm.call @alloc(%arg0) {llvm.callsite = 42} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_without_callsite(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected an llvm.callsite attribute alongside llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {
+    llvm.memprof = [#llvm.memprof_mib<call_stack = [7], alloc_type = "hot">]
+  } : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @memprof_empty(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected at least one memprof_mib for llvm.memprof}}
+  %0 = llvm.call @alloc(%arg0) {
+    llvm.callsite = array<i64: 7>,
+    llvm.memprof = []
+  } : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @alloc(i64) -> !llvm.ptr
+
+llvm.func @callsite_empty(%arg0: i64) -> !llvm.ptr {
+  // expected-error @below{{expected a non-empty call stack for llvm.callsite}}
+  %0 = llvm.call @alloc(%arg0) {llvm.callsite = array<i64>} : (i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}

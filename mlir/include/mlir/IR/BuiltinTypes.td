@@ -39,6 +39,7 @@ class Builtin_Type<string name, string typeMnemonic, list<Trait> traits = [],
 /// Type trait indicating that the type has value semantics.
 def ValueSemantics : NativeTypeTrait<"ValueSemantics"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
 }
 
 //===----------------------------------------------------------------------===//

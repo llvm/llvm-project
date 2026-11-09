@@ -2371,25 +2371,19 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
 
         // Refine captured select results only at uses in the matching branch.
         // Uses outside the if must retain the select result.
-        rewriter.replaceUsesWithIf(
+        changed |= rewriter.replaceUsesWithIf(
             selectOp.getResult(), selectOp.getTrueValue(),
             [&](OpOperand &selectUse) {
-              bool inThen =
-                  getParentType(selectUse.getOwner()->getParentRegion(), op,
-                                cache, op.getCondition().getParentRegion()) ==
-                  Parent::Then;
-              changed |= inThen;
-              return inThen;
+              return getParentType(
+                         selectUse.getOwner()->getParentRegion(), op, cache,
+                         op.getCondition().getParentRegion()) == Parent::Then;
             });
-        rewriter.replaceUsesWithIf(
+        changed |= rewriter.replaceUsesWithIf(
             selectOp.getResult(), selectOp.getFalseValue(),
             [&](OpOperand &selectUse) {
-              bool inElse =
-                  getParentType(selectUse.getOwner()->getParentRegion(), op,
-                                cache, op.getCondition().getParentRegion()) ==
-                  Parent::Else;
-              changed |= inElse;
-              return inElse;
+              return getParentType(
+                         selectUse.getOwner()->getParentRegion(), op, cache,
+                         op.getCondition().getParentRegion()) == Parent::Else;
             });
         break;
       }

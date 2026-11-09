@@ -30234,4 +30234,7 @@
 {"__alloc_token_123__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
 {"__alloc_token__Znwm.llvm.1234", "operator new(unsigned long) (.llvm.1234) (.alloc_token)"},
 {"__alloc_token_123__Z3foov", "foo() (.alloc_token)"},
+{"_Z1fILDu114EEvv", "void f<(char8_t)114>()"},
+{"_Z16ManglingTestNTTPILDB99_38EEvv", "void ManglingTestNTTP<(_BitInt(99))38>()"},
+{"_Z1fILDn0EEvv", "void f<nullptr>()"},
     // clang-format on

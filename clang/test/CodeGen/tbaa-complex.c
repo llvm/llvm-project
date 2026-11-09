@@ -3,7 +3,6 @@
 // RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 //
 // Check that we generate correct TBAA information for accesses to complex types.
-// FIXME: complex load/stores have no tbaa metadata
 
 // Verify that complex and scalar accesses to the same element type share the
 // same TBAA tag.
@@ -19,16 +18,16 @@
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !tbaa [[ANYPTR_TBAA6]]
 // CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[TMP0]], i32 0, i32 0
-// CHECK-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8, !tbaa [[DOUBLE_TBAA10:![0-9]+]]
 // CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[TMP0]], i32 0, i32 1
-// CHECK-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8, !tbaa [[DOUBLE_TBAA10]]
 // CHECK-NEXT:    [[LOCAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[LOCAL]], i32 0, i32 0
 // CHECK-NEXT:    [[LOCAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[LOCAL]], i32 0, i32 1
-// CHECK-NEXT:    store double [[DOTREAL]], ptr [[LOCAL_REALP]], align 8
-// CHECK-NEXT:    store double [[DOTIMAG]], ptr [[LOCAL_IMAGP]], align 8
+// CHECK-NEXT:    store double [[DOTREAL]], ptr [[LOCAL_REALP]], align 8, !tbaa [[DOUBLE_TBAA10]]
+// CHECK-NEXT:    store double [[DOTIMAG]], ptr [[LOCAL_IMAGP]], align 8, !tbaa [[DOUBLE_TBAA10]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D]]) #[[ATTR2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA8]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8, !tbaa [[DOUBLE_TBAA10:![0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8, !tbaa [[DOUBLE_TBAA10]]
 // CHECK-NEXT:    store double [[TMP2]], ptr [[D]], align 8, !tbaa [[DOUBLE_TBAA10]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D]]) #[[ATTR2]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LOCAL]]) #[[ATTR2]]
@@ -48,14 +47,14 @@ void load_double_complex_and_scalar(_Complex double *c, double *s) {
 // CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[ANYPTR_TBAA6]]
 // CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 0
-// CHECK-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load float, ptr [[DOTREALP]], align 4, !tbaa [[FLOAT_TBAA12:![0-9]+]]
 // CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP0]], i32 0, i32 1
-// CHECK-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load float, ptr [[DOTIMAGP]], align 4, !tbaa [[FLOAT_TBAA12]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[ANYPTR_TBAA6]]
 // CHECK-NEXT:    [[DOTREALP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[DOTIMAGP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    store float [[DOTREAL]], ptr [[DOTREALP1]], align 4
-// CHECK-NEXT:    store float [[DOTIMAG]], ptr [[DOTIMAGP2]], align 4
+// CHECK-NEXT:    store float [[DOTREAL]], ptr [[DOTREALP1]], align 4, !tbaa [[FLOAT_TBAA12]]
+// CHECK-NEXT:    store float [[DOTIMAG]], ptr [[DOTIMAGP2]], align 4, !tbaa [[FLOAT_TBAA12]]
 // CHECK-NEXT:    ret void
 //
 void load_float_complex(_Complex float *a, _Complex float *b) {
@@ -73,20 +72,20 @@ struct S {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8, !tbaa [[_ZTS1SPTR_TBAA12:![0-9]+]]
-// CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[_ZTS1SPTR_TBAA12]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[_ZTS1SPTR_TBAA12]]
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8, !tbaa [[_ZTS1SPTR_TBAA14:![0-9]+]]
+// CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[_ZTS1SPTR_TBAA14]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[_ZTS1SPTR_TBAA14]]
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CHECK-NEXT:    [[Z_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[Z]], i32 0, i32 0
-// CHECK-NEXT:    [[Z_REAL:%.*]] = load double, ptr [[Z_REALP]], align 8
+// CHECK-NEXT:    [[Z_REAL:%.*]] = load double, ptr [[Z_REALP]], align 8, !tbaa [[DOUBLE_TBAA10]]
 // CHECK-NEXT:    [[Z_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[Z]], i32 0, i32 1
-// CHECK-NEXT:    [[Z_IMAG:%.*]] = load double, ptr [[Z_IMAGP]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[_ZTS1SPTR_TBAA12]]
+// CHECK-NEXT:    [[Z_IMAG:%.*]] = load double, ptr [[Z_IMAGP]], align 8, !tbaa [[DOUBLE_TBAA10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[_ZTS1SPTR_TBAA14]]
 // CHECK-NEXT:    [[Z1:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    [[Z1_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[Z1]], i32 0, i32 0
 // CHECK-NEXT:    [[Z1_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[Z1]], i32 0, i32 1
-// CHECK-NEXT:    store double [[Z_REAL]], ptr [[Z1_REALP]], align 8
-// CHECK-NEXT:    store double [[Z_IMAG]], ptr [[Z1_IMAGP]], align 8
+// CHECK-NEXT:    store double [[Z_REAL]], ptr [[Z1_REALP]], align 8, !tbaa [[DOUBLE_TBAA10]]
+// CHECK-NEXT:    store double [[Z_IMAG]], ptr [[Z1_IMAGP]], align 8, !tbaa [[DOUBLE_TBAA10]]
 // CHECK-NEXT:    ret void
 //
 void load_double_complex_member(struct S *a, struct S *b) {
@@ -104,18 +103,18 @@ union U {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8, !tbaa [[_ZTS1UPTR_TBAA14:![0-9]+]]
-// CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[_ZTS1UPTR_TBAA14]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[_ZTS1UPTR_TBAA14]]
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8, !tbaa [[_ZTS1UPTR_TBAA16:![0-9]+]]
+// CHECK-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8, !tbaa [[_ZTS1UPTR_TBAA16]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !tbaa [[_ZTS1UPTR_TBAA16]]
 // CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[TMP0]], i32 0, i32 0
-// CHECK-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load double, ptr [[DOTREALP]], align 8, !tbaa [[CHAR_TBAA18:![0-9]+]]
 // CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[TMP0]], i32 0, i32 1
-// CHECK-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[_ZTS1UPTR_TBAA14]]
+// CHECK-NEXT:    [[DOTIMAG:%.*]] = load double, ptr [[DOTIMAGP]], align 8, !tbaa [[CHAR_TBAA18]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !tbaa [[_ZTS1UPTR_TBAA16]]
 // CHECK-NEXT:    [[DOTREALP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[DOTIMAGP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    store double [[DOTREAL]], ptr [[DOTREALP1]], align 8
-// CHECK-NEXT:    store double [[DOTIMAG]], ptr [[DOTIMAGP2]], align 8
+// CHECK-NEXT:    store double [[DOTREAL]], ptr [[DOTREALP1]], align 8, !tbaa [[CHAR_TBAA18]]
+// CHECK-NEXT:    store double [[DOTIMAG]], ptr [[DOTIMAGP2]], align 8, !tbaa [[CHAR_TBAA18]]
 // CHECK-NEXT:    ret void
 //
 void load_double_complex_union_member(union U *a, union U *b) {
@@ -130,8 +129,11 @@ void load_double_complex_union_member(union U *a, union U *b) {
 // CHECK: [[META9]] = !{!"p1 double", [[META7]], i64 0}
 // CHECK: [[DOUBLE_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
 // CHECK: [[META11]] = !{!"double", [[META4]], i64 0}
-// CHECK: [[_ZTS1SPTR_TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0}
-// CHECK: [[META13]] = !{!"p1 _ZTS1S", [[META7]], i64 0}
-// CHECK: [[_ZTS1UPTR_TBAA14]] = !{[[META15:![0-9]+]], [[META15]], i64 0}
-// CHECK: [[META15]] = !{!"p1 _ZTS1U", [[META7]], i64 0}
+// CHECK: [[FLOAT_TBAA12]] = !{[[META13:![0-9]+]], [[META13]], i64 0}
+// CHECK: [[META13]] = !{!"float", [[META4]], i64 0}
+// CHECK: [[_ZTS1SPTR_TBAA14]] = !{[[META15:![0-9]+]], [[META15]], i64 0}
+// CHECK: [[META15]] = !{!"p1 _ZTS1S", [[META7]], i64 0}
+// CHECK: [[_ZTS1UPTR_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
+// CHECK: [[META17]] = !{!"p1 _ZTS1U", [[META7]], i64 0}
+// CHECK: [[CHAR_TBAA18]] = !{[[META4]], [[META4]], i64 0}
 //.

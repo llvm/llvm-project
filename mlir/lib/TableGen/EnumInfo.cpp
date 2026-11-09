@@ -8,6 +8,7 @@
 
 #include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Attribute.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
@@ -145,6 +146,37 @@ bool EnumInfo::printBitEnumPrimaryGroups() const {
 
 bool EnumInfo::printBitEnumQuoted() const {
   return def->getValueAsBit("printBitEnumQuoted");
+}
+
+StringRef EnumInfo::getBitEnumSeparator() const {
+  return def->getValueAsString("separator");
+}
+
+EnumInfo::BitEnumSeparatorKind EnumInfo::getBitEnumSeparatorKind() const {
+  StringRef separator = getBitEnumSeparator().trim();
+  if (separator == "|")
+    return BitEnumSeparatorKind::VerticalBar;
+  if (separator == ",")
+    return BitEnumSeparatorKind::Comma;
+  if (separator.empty())
+    return BitEnumSeparatorKind::Space;
+  PrintFatalError(def->getLoc(),
+                  "bit enum separator must be '|', ',', or a space ' '");
+}
+
+StringRef EnumInfo::getBitEnumSeparatorParser() const {
+  switch (getBitEnumSeparatorKind()) {
+  case BitEnumSeparatorKind::VerticalBar:
+    return "parseOptionalVerticalBar";
+  case BitEnumSeparatorKind::Comma:
+    return "parseOptionalComma";
+  case BitEnumSeparatorKind::Space:
+    // Whitespace is not a token, so there is nothing to parse between cases.
+    PrintFatalError(def->getLoc(),
+                    "a bit enum with a space separator has no separator "
+                    "parser");
+  }
+  llvm_unreachable("unknown bit enum separator kind");
 }
 
 const Record &EnumInfo::getDef() const { return *def; }

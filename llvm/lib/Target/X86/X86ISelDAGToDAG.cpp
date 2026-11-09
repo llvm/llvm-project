@@ -5345,7 +5345,7 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
          "Unexpected VT!");
 
   // Look for equal and not equal compares.
-  ISD::CondCode CC = cast<CondCodeSDNode>(Setcc.getOperand(2))->get();
+  ISD::CondCode CC = Setcc.getOperandCondCode(2);
   if (CC != ISD::SETEQ && CC != ISD::SETNE)
     return false;
 

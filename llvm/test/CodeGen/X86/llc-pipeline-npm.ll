@@ -75,6 +75,7 @@
 ; O0-NEXT:     machine-sanmd
 ; O0-NEXT:     stack-frame-layout
 ; O0-NEXT:     x86-seses
+; O0-NEXT:     x86-indirect-thunks
 ; O0-NEXT:     x86-return-thunks
 ; O0-NEXT:     cfi-instr-inserter
 ; O0-NEXT:     x86-lvi-ret
@@ -191,6 +192,7 @@
 ; O2-NEXT:     fentry-insert
 ; O2-NEXT:     xray-instrumentation
 ; O2-NEXT:     patchable-function
+; O2-NEXT:     execution-domain-fix
 ; O2-NEXT:     break-false-deps
 ; O2-NEXT:     x86-indirect-branch-tracking
 ; O2-NEXT:     x86-insert-vzeroupper
@@ -208,6 +210,7 @@
 ; O2-NEXT:     machine-sanmd
 ; O2-NEXT:     stack-frame-layout
 ; O2-NEXT:     x86-seses
+; O2-NEXT:     x86-indirect-thunks
 ; O2-NEXT:     x86-return-thunks
 ; O2-NEXT:     cfi-instr-inserter
 ; O2-NEXT:     x86-lvi-ret
@@ -285,6 +288,7 @@
 ; O0-WINDOWS-NEXT:     machine-sanmd
 ; O0-WINDOWS-NEXT:     stack-frame-layout
 ; O0-WINDOWS-NEXT:     x86-seses
+; O0-WINDOWS-NEXT:     x86-indirect-thunks
 ; O0-WINDOWS-NEXT:     x86-return-thunks
 ; O0-WINDOWS-NEXT:     x86-avoid-trailing-call
 ; O0-WINDOWS-NEXT:     cfi-instr-inserter
@@ -406,6 +410,7 @@
 ; O3-WINDOWS-NEXT:     fentry-insert
 ; O3-WINDOWS-NEXT:     xray-instrumentation
 ; O3-WINDOWS-NEXT:     patchable-function
+; O3-WINDOWS-NEXT:     execution-domain-fix
 ; O3-WINDOWS-NEXT:     break-false-deps
 ; O3-WINDOWS-NEXT:     x86-indirect-branch-tracking
 ; O3-WINDOWS-NEXT:     x86-insert-vzeroupper
@@ -423,6 +428,7 @@
 ; O3-WINDOWS-NEXT:     machine-sanmd
 ; O3-WINDOWS-NEXT:     stack-frame-layout
 ; O3-WINDOWS-NEXT:     x86-seses
+; O3-WINDOWS-NEXT:     x86-indirect-thunks
 ; O3-WINDOWS-NEXT:     x86-return-thunks
 ; O3-WINDOWS-NEXT:     x86-avoid-trailing-call
 ; O3-WINDOWS-NEXT:     cfi-instr-inserter

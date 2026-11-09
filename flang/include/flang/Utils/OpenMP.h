@@ -72,7 +72,8 @@ std::string getCanonicalDefaultDeclareMapperName(fir::RecordType recordType);
 mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
     fir::RecordType recordType, llvm::StringRef mapperNameStr,
-    RecordMemberMapperMangler mangler = {});
+    RecordMemberMapperMangler mangler = {},
+    bool emitAllocatableMemberMaps = true);
 } // namespace Fortran::utils::openmp
 
 #endif // FORTRAN_UTILS_OPENMP_H_

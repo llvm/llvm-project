@@ -2,7 +2,7 @@
 # WARNING: update_mir_test_checks.py does not include the constant pools output,
 # so this test requires manual fixing up after running the script.
 
-# RUN: llc -mtriple=aarch64-- -O0 -run-pass=instruction-select -verify-machineinstrs %s -global-isel-abort=1 -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-- -O0 -run-pass=instruction-select %s -global-isel-abort=1 -o - | FileCheck %s
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"

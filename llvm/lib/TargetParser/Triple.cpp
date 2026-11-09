@@ -2613,6 +2613,16 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   }
 }
 
+DebuggerKind Triple::getDefaultDebuggerTuning() const {
+  if (isOSDarwin())
+    return DebuggerKind::LLDB;
+  if (isPS())
+    return DebuggerKind::SCE;
+  if (isOSAIX())
+    return DebuggerKind::DBX;
+  return DebuggerKind::GDB;
+}
+
 // HLSL triple environment orders are relied on in the front end
 static_assert(Triple::Vertex - Triple::Pixel == 1,
               "incorrect HLSL stage order");

@@ -139,7 +139,7 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   /// When true, rewrite any divisors of UDiv expressions that may be 0 to
   /// umax(Divisor, 1) to avoid introducing UB. If the divisor may be poison,
   /// freeze it first.
-  bool SafeUDivMode = false;
+  bool SafeUDivMode;
 
   typedef IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> BuilderType;
   BuilderType Builder;
@@ -191,11 +191,15 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
 
 public:
   /// Construct a SCEVExpander in "canonical" mode.
+  /// If \p SafeUDivMode is true, UDiv expressions are expanded such that they
+  /// cannot cause UB, by rewriting divisors that may be zero or poison to
+  /// umax(freeze(Divisor), 1).
   explicit SCEVExpander(ScalarEvolution &SE, const char *Name,
-                        bool PreserveLCSSA = true)
+                        bool PreserveLCSSA = true, bool SafeUDivMode = false)
       : SE(SE), DL(SE.getDataLayout()), IVName(Name),
         PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
         IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
+        SafeUDivMode(SafeUDivMode),
         Builder(SE.getModule(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {

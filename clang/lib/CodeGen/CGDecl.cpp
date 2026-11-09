@@ -310,7 +310,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   // Make sure the result is of the correct type.
   LangAS ExpectedAS = Ty.getAddressSpace();
   llvm::Constant *Addr = GV;
-  if (AS != ExpectedAS) {
+  if (AS != ExpectedAS && D.getTLSKind() == VarDecl::TLS_None) {
     Addr = performAddrSpaceCast(
         GV,
         llvm::PointerType::get(getLLVMContext(),

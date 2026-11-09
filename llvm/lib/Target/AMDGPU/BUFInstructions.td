@@ -2694,11 +2694,7 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
 }
 
 class VBUFFER_Real_gfx12<bits<8> op, BUF_Pseudo ps, string real_name> :
-    VBUFFER_Real<op, ps, real_name>,
-    SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12> {
-  let AssemblerPredicate = isGFX12Only;
-  let DecoderNamespace = "GFX12";
-}
+    VBUFFER_Real<op, ps, real_name>, Select<GFX12Gen, ps.PseudoInstr>;
 
 multiclass VBUFFER_MUBUF_Real_gfx12<bits<8> op, string real_name> {
   defvar ps = !cast<MUBUF_Pseudo>(NAME);
@@ -2724,11 +2720,8 @@ multiclass VBUFFER_MTBUF_Real_gfx12<bits<4> op, string real_name> {
 }
 
 class VBUFFER_Real_gfx13<bits<8> op, BUF_Pseudo ps, string real_name, bit isIndexed = 0> :
-    VBUFFER_Real<op, ps, real_name>,
-    SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX13> {
+    VBUFFER_Real<op, ps, real_name>, Select<GFX13Gen, ps.PseudoInstr> {
   let Inst{9-8} = cpol{8-7};
-  let AssemblerPredicate = isGFX13Only;
-  let DecoderNamespace = "GFX13";
   // For the indexed form the two MSBs of the 9-bit srsrc field select the kind
   // of index register; for the non-indexed form they are always 0.
   let Inst{49-48} = !if(isIndexed, !if(ps.has_srsrc, srsrc{8-7}, ?), 0x0);

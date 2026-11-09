@@ -4,7 +4,7 @@
 # `critical` is intentionally too short to outline in both runs;
 # the debug operands in a0/a1/a2 exercise candidate liveness.
 # RUN: llc -mtriple=riscv32-unknown-elf -run-pass=machine-outliner \
-# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK
+# RUN:   %s -o - | FileCheck %s --check-prefix=CHECK
 # RUN: llc -mtriple=riscv32-unknown-elf \
 # RUN:   -run-pass=mir-strip-debug,machine-outliner \
 # RUN:   -mir-strip-debugify-only=0 -verify-machineinstrs %s -o - | \

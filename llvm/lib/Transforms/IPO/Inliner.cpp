@@ -168,7 +168,7 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
     // The one we would get from the MAM can be invalidated as a result of the
     // inliner's activity.
     OwnedAdvisor = std::make_unique<DefaultInlineAdvisor>(
-        M, FAM, getInlineParams(),
+        M, FAM, getInlineParams(M.getContext()),
         InlineContext{LTOPhase, InlinePass::CGSCCInliner});
 
     if (!CGSCCInlineReplayFile.empty())

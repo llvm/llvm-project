@@ -256,7 +256,7 @@ static bool addOptional(Ctx &ctx, StringRef name, uint64_t value,
   Symbol *sym = ctx.symtab->find(name);
   if (!sym || sym->isDefined())
     return false;
-  sym->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+  sym->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
                             STV_HIDDEN, STT_FUNC, value,
                             /*size=*/0, /*section=*/nullptr});
   defined.push_back(cast<Defined>(sym));
@@ -1355,9 +1355,9 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
 void PPC64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.isLE)
-    elf::scanSection1<PPC64, ELF64LE>(*this, sec, shard);
+    elf::scanSection1<ELF64LE>(*this, sec, shard);
   else
-    elf::scanSection1<PPC64, ELF64BE>(*this, sec, shard);
+    elf::scanSection1<ELF64BE>(*this, sec, shard);
 
   // Sort relocations by offset for .toc sections. This is needed so that
   // sections addressed with small code model relocations come first.

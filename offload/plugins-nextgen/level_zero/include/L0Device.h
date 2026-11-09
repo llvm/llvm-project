@@ -25,7 +25,6 @@
 
 namespace llvm::omp::target::plugin {
 
-using OmpInteropTy = omp_interop_val_t *;
 class LevelZeroPluginTy;
 
 // clang-format off
@@ -544,14 +543,17 @@ public:
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                        bool *IsQueueWorkCompleted) override;
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       GenericProfilerTy *ProfilerPtr) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override;
   Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override;
   Expected<bool>
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
@@ -598,15 +600,9 @@ public:
 
   Expected<void *> getNativeHandle() override { return getZeDevice(); }
 
+  Expected<void *> getNativePlatformHandle() override { return getZeDriver(); }
+
   Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override;
-
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;
-  Error releaseInterop(omp_interop_val_t *Interop) override;
-
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override;
 };
 
 } // namespace llvm::omp::target::plugin

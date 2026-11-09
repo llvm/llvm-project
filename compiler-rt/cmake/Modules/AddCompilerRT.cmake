@@ -72,9 +72,10 @@ endfunction()
 #                                  CFLAGS <compile flags>
 #                                  DEFS <compile definitions>
 #                                  DEPS <dependencies>
+#                                  LINK_LIBS <linked libraries>
 #                                  ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_object_libraries name)
-  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;ADDITIONAL_HEADERS"
+  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;LINK_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
   if(APPLE)
@@ -107,6 +108,9 @@ function(add_compiler_rt_object_libraries name)
     add_library(${libname} OBJECT ${LIB_SOURCES})
     if(LIB_DEPS)
       add_dependencies(${libname} ${LIB_DEPS})
+    endif()
+    if(LIB_LINK_LIBS)
+      target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
     endif()
 
     # Strip out -msse3 if this isn't macOS.
