@@ -572,6 +572,10 @@ defm McastLoadInsts : AMDGPUSubtargetFeature<"mcast-load-insts",
   "Has multicast load instructions"
 >;
 
+defm LoadMonitorInsts : AMDGPUSubtargetFeature<"load-monitor-insts",
+  "Has flat_load_monitor_b* and global_load_monitor_b* instructions"
+>;
+
 defm AsyncLoadToLDSInsts : AMDGPUSubtargetFeature<"async-load-to-lds-insts",
   "Has global async load to LDS instructions"
 >;
@@ -1385,8 +1389,8 @@ defm 64BitLiterals : AMDGPUSubtargetFeature<"64-bit-literals",
   "Can use 64-bit literals with single DWORD instructions"
 >;
 
-defm 1024AddressableVGPRs : AMDGPUSubtargetFeature<"1024-addressable-vgprs",
-  "Has 1024 addressable VGPRs"
+defm VGPRMSBs : AMDGPUSubtargetFeature<"vgpr-msbs",
+  "Has MSB registers to address VGPRs that don't fit in the instruction encodings"
 >;
 
 defm SetregVGPRMSBFixup : AMDGPUGenericAnySubtargetFeature<"setreg-vgpr-msb-fixup",
@@ -1423,6 +1427,10 @@ defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts"
 defm CacheFillSize : AMDGPUSubtargetFeature<"cache-fill-size",
   "Has a cache fill size field in VMEM instructions indicating how much data is fetched on a cache miss",
   /*GenPredicate=*/0
+>;
+
+defm SAddPCI64Inst : AMDGPUSubtargetFeature<"s-add-pc-i64-inst",
+  "Has s_add_pc_i64 instruction"
 >;
 
 //===------------------------------------------------------------===//
@@ -1658,10 +1666,9 @@ def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "Target requires waits for loads and atomics before system scope stores"
 >;
 
-def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
-  "UseAddPC64Inst",
-  "true",
-  "Use s_add_pc_i64 instruction."
+defm UnusableSAddPCI64 : AMDGPUSubtargetFeature<"unusable-s-add-pc-i64",
+  "s_add_pc_i64 instruction is unusable by codegen",
+  GenPredicate=false
 >;
 
 defm GFX1250_STRICT : AMDGPUSubtargetFeature<"gfx1250-strict",
@@ -1690,6 +1697,11 @@ defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
 
 defm WaveMatchInsts : AMDGPUSubtargetFeature<"wave-match-insts",
   "Has v_wave_match_b32 instruction"
+>;
+
+defm NoMTypeNC : AMDGPUSubtargetFeature<"no-mtype-nc",
+  "Does not use MTYPE NC",
+  /*GenPredicate=*/0
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2485,7 +2497,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
    FeatureCuMode,
-   Feature1024AddressableVGPRs,
+   FeatureVGPRMSBs,
    Feature64BitLiterals,
    FeatureDLInsts,
    FeatureFmacF64Inst,
@@ -2522,6 +2534,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureTensorCvtLutInsts,
    FeatureTDMInsts,
    FeatureVPermPk16Hazard,
+   FeatureLoadMonitorInsts,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -2569,6 +2582,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
    FeatureVMulU64Inst,
+   FeatureSAddPCI64Inst,
 ]>;
 
 def FeatureISAVersion12_50_STRICT : FeatureSet<
@@ -2604,6 +2618,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
+   FeatureUnusableSAddPCI64,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2638,9 +2653,11 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
+   FeatureNoMTypeNC,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
+   FeatureUnusableSAddPCI64,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2673,12 +2690,12 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureBlock16ConversionScaleInsts,
    FeatureFP8E5M3Insts,
    FeatureSWMMACGfx1250Insts,
-   FeatureUseAddPC64Inst,
    FeatureTransCoexecutionHazard,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
@@ -2705,6 +2722,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureUnusableSAddPCI64,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2782,7 +2800,9 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBlock16ConversionScaleInsts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
-   FeatureIndexedResources
+   FeatureIndexedResources,
+   FeatureSAddPCI64Inst,
+   FeatureUnusableSAddPCI64,
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<
@@ -2819,7 +2839,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureGFX13Insts, FeatureGFX8Insts, FeatureGFX90AInsts,
   FeatureGFX940Insts, FeatureGFX950Insts, FeatureGFX9Insts,
   FeatureGWS, FeatureImageInsts, FeatureLdsBarrierArriveAtomic,
-  FeatureLerpInst, FeatureMAIInsts, FeatureMcastLoadInsts,
+  FeatureLerpInst, FeatureLoadMonitorInsts, FeatureMAIInsts, FeatureMcastLoadInsts,
   FeatureMqsadInsts, FeatureMqsadPkInsts, FeatureMsadInsts,
   FeatureOCPFP8ConversionInsts, FeaturePermlane16Insts, FeaturePermlane16Swap,
   FeaturePermlane32Swap, FeaturePkAddMinMaxInsts, FeaturePrngInst,
@@ -2835,7 +2855,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
-  FeatureAGPRAlloc, Feature1536VGPRs, Feature1024AddressableVGPRs,
+  FeatureAGPRAlloc, Feature1536VGPRs, FeatureVGPRMSBs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
   FeatureLDSAllocGranularity256,
   FeatureLDSAllocGranularity512,
