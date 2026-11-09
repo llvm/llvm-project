@@ -5,8 +5,15 @@
 
 # Equivalent to add_mlir_dialect(CIROps cir)
 set(LLVM_TARGET_DEFINITIONS CIROps.td)
-mlir_tablegen(CIROps.h.inc -gen-op-decls -op-shard-count=${CLANG_CIR_OP_SHARD_COUNT})
-mlir_tablegen(CIROps.cpp.inc -gen-op-defs -op-shard-count=${CLANG_CIR_OP_SHARD_COUNT})
+# The op partitions of CIROps.td (see CIRDialect.td), each generated into its
+# own header and source and compiled in its own translation unit.
+set(CLANG_CIR_OP_PARTITIONS
+  Core Symbols ControlFlow Arith Builtins Math Coroutine EH VectorMatrix
+  Complex ClassMembers)
+foreach(partition ${CLANG_CIR_OP_PARTITIONS})
+  mlir_tablegen(CIROps${partition}.h.inc -gen-op-decls -op-partition=${partition})
+  mlir_tablegen(CIROps${partition}.cpp.inc -gen-op-defs -op-partition=${partition})
+endforeach()
 mlir_tablegen(CIROpsTypes.h.inc -gen-typedef-decls)
 mlir_tablegen(CIROpsTypes.cpp.inc -gen-typedef-defs)
 mlir_tablegen(CIROpsDialect.h.inc -gen-dialect-decls)

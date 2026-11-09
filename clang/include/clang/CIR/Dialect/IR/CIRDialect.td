@@ -15,9 +15,34 @@
 
 include "mlir/IR/OpBase.td"
 
+// The op partitions of the dialect. Each one is generated into its own
+// CIROps<Partition>.h.inc / .cpp.inc and compiled in its own translation unit
+// (see "Natural Sharding" in mlir/docs/DefiningDialects/Operations.md). Ops in
+// CIROps.td pick a partition with `let partition = ...`, on the op, on its
+// base class or around a group of ops; ops that pick none are in `Core`.
+def CIR_CorePartition : Partition<"Core">;
+def CIR_SymbolsPartition : Partition<"Symbols">;
+def CIR_ControlFlowPartition : Partition<"ControlFlow">;
+def CIR_ArithPartition : Partition<"Arith">;
+def CIR_BuiltinsPartition : Partition<"Builtins">;
+def CIR_MathPartition : Partition<"Math">;
+def CIR_CoroutinePartition : Partition<"Coroutine">;
+def CIR_EHPartition : Partition<"EH">;
+def CIR_VectorMatrixPartition : Partition<"VectorMatrix">;
+def CIR_ComplexPartition : Partition<"Complex">;
+def CIR_ClassMembersPartition : Partition<"ClassMembers">;
+
 def CIR_Dialect : Dialect {
   let name = "cir";
   let useStrictPropertiesInAssemblyFormat = 1;
+
+  let opPartitions = [
+    CIR_CorePartition, CIR_SymbolsPartition, CIR_ControlFlowPartition,
+    CIR_ArithPartition, CIR_BuiltinsPartition, CIR_MathPartition,
+    CIR_CoroutinePartition, CIR_EHPartition, CIR_VectorMatrixPartition,
+    CIR_ComplexPartition, CIR_ClassMembersPartition
+  ];
+  let defaultOpPartition = CIR_CorePartition;
 
   // A short one-line summary of our dialect.
   let summary = "A high-level dialect for analyzing and optimizing Clang "

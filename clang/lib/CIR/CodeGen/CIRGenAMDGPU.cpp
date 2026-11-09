@@ -13,7 +13,7 @@
 #include "CIRGenModule.h"
 
 #include "clang/Basic/TargetOptions.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRDialectBase.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace clang;

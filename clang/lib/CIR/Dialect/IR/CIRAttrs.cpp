@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRDialectBase.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -1072,4 +1072,35 @@ void CIRDialect::registerAttributes() {
 #define GET_ATTRDEF_LIST
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
       >();
+}
+
+//===----------------------------------------------------------------------===//
+// AnnotationAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::AnnotationAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            mlir::StringAttr name, mlir::ArrayAttr args) {
+  if (!args)
+    return success();
+  for (mlir::Attribute arg : args) {
+    if (!isa<mlir::StringAttr, mlir::IntegerAttr>(arg))
+      return emitError() << "annotation args must be StringAttr or IntegerAttr,"
+                         << " got " << arg;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TypeInfoAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::TypeInfoAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::mlir::Type type, ::mlir::ArrayAttr typeInfoData) {
+
+  if (cir::ConstRecordAttr::verify(emitError, type, typeInfoData).failed())
+    return failure();
+
+  return success();
 }

@@ -6,20 +6,42 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header declares the custom directive parsers and printers implemented
-// in CIRDialect.cpp and referenced by the TableGen-generated CIR operation
-// definitions, which are compiled in separate shards.
+// This header declares the helpers shared by the CIROps<Partition>.cpp files:
+// the custom directive parsers and printers referenced by the
+// TableGen-generated op definitions, and the region terminator helpers. Each
+// is implemented in the partition file of the op it belongs to.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef CLANG_LIB_CIR_DIALECT_IR_CIROPDEFINITIONS_H
 #define CLANG_LIB_CIR_DIALECT_IR_CIROPDEFINITIONS_H
 
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRDialectBase.h"
 
 #include "mlir/IR/OpImplementation.h"
 
 namespace cir {
+class AssumeOp;
+class EhDispatchOp;
+class GlobalOp;
+class IndirectBrOp;
+class ScopeOp;
+class SwitchFlatOp;
+class TryOp;
+
+// Checks that omitting the terminator of `region` is valid and, if so, creates
+// and inserts the omitted `cir.yield` into the region. Implemented in
+// CIROpsControlFlow.cpp.
+mlir::LogicalResult ensureRegionTerm(mlir::OpAsmParser &parser,
+                                     mlir::Region &region, llvm::SMLoc errLoc);
+
+// True if the terminator of `r` should be omitted when printing.
+bool omitRegionTerm(mlir::Region &r);
+
+// Checks that the constant `attrType` is a valid initializer for `opType` on
+// `op` (a cir.const or cir.global). Implemented in CIROpsCore.cpp.
+mlir::LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
+                                       mlir::Attribute attrType);
 
 mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
                                                mlir::Region &region);

@@ -8,7 +8,8 @@
 
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRDialectBase.h"
+#include "clang/CIR/Dialect/IR/CIROpsControlFlow.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.cpp.inc"
 #include "llvm/Support/ErrorHandling.h"
 

@@ -447,6 +447,7 @@ def CIR_DynamicCastKind : CIR_I32Enum<
 def CIR_DynamicCastKindAttr
     : CIR_EnumAttr<CIR_DynamicCastKind, "dynamic_cast">;
 
+let partition = CIR_ClassMembersPartition in {
 def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let summary = "Perform dynamic cast on record pointers";
   let description = [{
@@ -532,6 +533,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let hasLLVMLowering = false;
   let hasCXXABILowering = true;
 }
+} // let partition = CIR_ClassMembersPartition
 
 //===----------------------------------------------------------------------===//
 // PtrStrideOp
@@ -1046,6 +1048,7 @@ defvar CIR_ReturnableScopes = [
   "CoroutineOp", "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
+let partition = CIR_ControlFlowPartition in {
 def CIR_ReturnOp : CIR_Op<"return", [
   ParentOneOf<CIR_ReturnableScopes>, Terminator
 ]> {
@@ -1185,6 +1188,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
   let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_ControlFlowPartition
 
 //===----------------------------------------------------------------------===//
 // YieldOp
@@ -1196,6 +1200,7 @@ defvar CIR_YieldableScopes = [
   "ScopeOp", "SwitchOp", "TernaryOp", "TryOp", "WhileOp"
 ];
 
+let partition = CIR_ControlFlowPartition in {
 def CIR_YieldOp : CIR_Op<"yield", [
   ReturnLike, Terminator, ParentOneOf<CIR_YieldableScopes>, NoMemoryEffect
 ]> {
@@ -1255,6 +1260,7 @@ def CIR_YieldOp : CIR_Op<"yield", [
 
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_ControlFlowPartition
 
 //===----------------------------------------------------------------------===//
 // BreakOp
@@ -1263,6 +1269,7 @@ def CIR_YieldOp : CIR_Op<"yield", [
 defvar CIR_LoopScopes = ["WhileOp", "DoWhileOp", "ForOp"];
 defvar CIR_BreakableScopes = !listconcat(CIR_LoopScopes, ["SwitchOp"]);
 
+let partition = CIR_ControlFlowPartition in {
 def CIR_BreakOp : CIR_Op<"break", [
   Terminator, AncestorOneOf<CIR_BreakableScopes>
 ]> {
@@ -1437,6 +1444,7 @@ def CIR_ScopeOp : CIR_EnterAnyRegionBranchOpBase<"scope", [
 
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_ControlFlowPartition
 
 //===----------------------------------------------------------------------===//
 // CleanupScopeOp
@@ -1461,6 +1469,7 @@ def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup"> {
   }];
 }
 
+let partition = CIR_ControlFlowPartition in {
 def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
@@ -1522,7 +1531,9 @@ def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_ControlFlowPartition
 
+let partition = CIR_ArithPartition in {
 //===----------------------------------------------------------------------===//
 // CmpThreeWayOp
 //===----------------------------------------------------------------------===//
@@ -1590,6 +1601,7 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_ArithPartition
 
 //===----------------------------------------------------------------------===//
 // SwitchOp
@@ -1604,6 +1616,7 @@ def CIR_CaseOpKind : CIR_I32Enum<"CaseOpKind", "case kind", [
 
 def CIR_CaseOpKindAttr : CIR_EnumAttr<CIR_CaseOpKind, "case">;
 
+let partition = CIR_ControlFlowPartition in {
 def CIR_CaseOp : CIR_EnterAnyRegionBranchOpBase<"case", [
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
@@ -1816,7 +1829,9 @@ def CIR_SwitchOp : CIR_EnterAnyRegionBranchOpBase<"switch", [
 
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_ControlFlowPartition
 
+let partition = CIR_BuiltinsPartition in {
 //===----------------------------------------------------------------------===//
 // IsConstantOp
 //===----------------------------------------------------------------------===//
@@ -1847,7 +1862,9 @@ def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
 
   let llvmOp = "IsConstantOp";
 }
+} // let partition = CIR_BuiltinsPartition
 
+let partition = CIR_ControlFlowPartition in {
 //===----------------------------------------------------------------------===//
 // SwitchFlatOp
 //===----------------------------------------------------------------------===//
@@ -2051,6 +2068,7 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let customLLVMLoweringConstructorDecl =
     LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
+} // let partition = CIR_ControlFlowPartition
 
 //===----------------------------------------------------------------------===//
 // Unary Operations
@@ -2064,6 +2082,7 @@ class CIR_UnaryOp<string mnemonic, Type type, list<Trait> traits = []>
         DeclareOpInterfaceMethods<CIR_UnaryOpInterface>
       ], traits)>
 {
+  let partition = CIR_ArithPartition;
   dag commonArgs = (ins type:$input);
 
   let arguments = commonArgs;
@@ -2210,6 +2229,7 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
   let llvmOp = "FNegOp";
 }
 
+let partition = CIR_ArithPartition in {
 //===----------------------------------------------------------------------===//
 // FreezeOp
 //===----------------------------------------------------------------------===//
@@ -2238,7 +2258,9 @@ def CIR_FreezeOp : CIR_Op<"freeze", [Pure, SameOperandsAndResultType]> {
 
   let llvmOp = "FreezeOp";
 }
+} // let partition = CIR_ArithPartition
 
+let partition = CIR_ControlFlowPartition in {
 //===----------------------------------------------------------------------===//
 // BrCondOp
 //===----------------------------------------------------------------------===//
@@ -2346,6 +2368,7 @@ def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
     attr-dict
   }];
 }
+} // let partition = CIR_ControlFlowPartition
 
 //===----------------------------------------------------------------------===//
 // Common loop op definitions
@@ -2354,6 +2377,7 @@ def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
 class CIR_LoopOpBase<string mnemonic> : CIR_Op<mnemonic, [
   LoopOpInterface, NoRegionArguments, LoopHintsRequireLoopId
 ]> {
+  let partition = CIR_ControlFlowPartition;
   let extraClassDefinition = [{
     void $cppClass::getSuccessorRegions(
         mlir::RegionBranchPoint point,
@@ -2645,6 +2669,7 @@ def CIR_CmpOpKind : CIR_I32Enum<"CmpOpKind", "compare operation kind", [
 
 def CIR_CmpOpKindAttr : CIR_EnumAttr<CIR_CmpOpKind, "cmp">;
 
+let partition = CIR_ArithPartition in {
 def CIR_CmpOp : CIR_Op<"cmp",
     !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
   let summary = "Compare two values and produce a boolean result";
@@ -2710,6 +2735,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
   let isLLVMLoweringRecursive = true;
   let hasCXXABILowering = true;
 }
+} // let partition = CIR_ArithPartition
 
 //===----------------------------------------------------------------------===//
 // Checked Binary Arithmetic Operations (with overflow)
@@ -2734,6 +2760,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
 // have different widths or signedness.
 class CIR_BinOpOverflow<string mnemonic, list<Trait> traits = []>
     : CIR_Op<mnemonic, !listconcat([Pure, SameTypeOperands], traits)> {
+  let partition = CIR_ArithPartition;
 
   let arguments = (ins
     CIR_IntType:$lhs,
@@ -2817,6 +2844,7 @@ class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = [],
         DeclareOpInterfaceMethods<CIR_BinaryOpInterface>
       ], traits)>
 {
+  let partition = CIR_ArithPartition;
   dag commonArgs = (ins
     type:$lhs,
     type:$rhs
@@ -3013,6 +3041,7 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
     : CIR_BinaryOp<mnemonic, type,
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
+  let partition = CIR_ArithPartition;
   let arguments = !con(commonArgs, (ins
       OptionalAttr<CIR_FenvAttr>:$fenv,
       OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
@@ -3264,6 +3293,7 @@ def CIR_MinOp : CIR_BinaryOp<"min", CIR_AnyIntOrVecOfIntType, [
   }];
 }
 
+let partition = CIR_ArithPartition in {
 //===----------------------------------------------------------------------===//
 // ShiftOp
 //===----------------------------------------------------------------------===//
@@ -3304,7 +3334,9 @@ def CIR_ShiftOp : CIR_Op<"shift", [Pure]> {
 
   let hasVerifier = 1;
 }
+} // let partition = CIR_ArithPartition
 
+let partition = CIR_ControlFlowPartition in {
 //===----------------------------------------------------------------------===//
 // SelectOp
 //===----------------------------------------------------------------------===//
@@ -3412,6 +3444,7 @@ def CIR_TernaryOp : CIR_EnterAnyRegionBranchOpBase<"ternary", [
 
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_ControlFlowPartition
 
 //===----------------------------------------------------------------------===//
 // GlobalOp
@@ -3470,6 +3503,7 @@ def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
   }];
 }
 
+let partition = CIR_SymbolsPartition in {
 def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
   SymbolName, SymbolVisibility,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -3657,7 +3691,9 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
     $name `:` qualified(type($addr)) attr-dict
   }];
 }
+} // let partition = CIR_SymbolsPartition
 
+let partition = CIR_ClassMembersPartition in {
 //===----------------------------------------------------------------------===//
 // VTableAddrPointOp
 //===----------------------------------------------------------------------===//
@@ -4067,6 +4103,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     }]>
   ];
 }
+} // let partition = CIR_ClassMembersPartition
 
 //===----------------------------------------------------------------------===//
 // GetMemberOp
@@ -4317,6 +4354,7 @@ def CIR_CallingConv : CIR_I32Enum<"CallingConv", "calling convention", [
 
 def CIR_CallingConvAttr : CIR_EnumAttr<CIR_CallingConv, "calling_conv">;
 
+let partition = CIR_SymbolsPartition in {
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, SymbolName, SymbolVisibility,
   FunctionOpInterface,
@@ -4680,6 +4718,7 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
     }]>,
   ];
 }
+} // let partition = CIR_SymbolsPartition
 
 //===----------------------------------------------------------------------===//
 // DeleteArrayOp
@@ -4742,6 +4781,7 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
   let hasCXXABILowering = true;
 }
 
+let partition = CIR_SymbolsPartition in {
 //===----------------------------------------------------------------------===//
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
@@ -4951,7 +4991,9 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
     }]>
   ];
 }
+} // let partition = CIR_SymbolsPartition
 
+let partition = CIR_CoroutinePartition in {
 //===----------------------------------------------------------------------===//
 // CoroutineOp
 //===----------------------------------------------------------------------===//
@@ -5037,6 +5079,7 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
   let hasLLVMLowering = false;
   let hasVerifier = 1;
 }
+} // let partition = CIR_CoroutinePartition
 
 //===----------------------------------------------------------------------===//
 // AwaitOp
@@ -5051,6 +5094,7 @@ def CIR_AwaitKind : CIR_I32Enum<"AwaitKind", "await kind", [
 
 def CIR_AwaitKindAttr : CIR_EnumAttr<CIR_AwaitKind, "await">;
 
+let partition = CIR_CoroutinePartition in {
 def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
   RecursivelySpeculatable, NoRegionArguments, HasAncestor<"CoroutineOp">
 ]> {
@@ -5155,6 +5199,7 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
   let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_CoroutinePartition
 
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsics
@@ -5163,6 +5208,7 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
 class CIR_CoroIntrinsicOp<string mnem, dag ins, dag outs,
                           list<Trait> traits = []>
                           : CIR_Op<"coro.intrinsic." # mnem, traits> {
+  let partition = CIR_CoroutinePartition;
   let hasLLVMLowering = 1;
   let arguments = ins;
   let results = outs;
@@ -5336,6 +5382,7 @@ def CIR_CoroSaveOp : CIR_CoroIntrinsicOp<"save",
   let llvmOp = "CoroSaveOp";
 }
 
+let partition = CIR_CoroutinePartition in {
 //===----------------------------------------------------------------------===//
 // Coroutine CoroExitOP
 //===----------------------------------------------------------------------===//
@@ -5372,6 +5419,7 @@ def CIR_CoroCleanupOp : CIR_Op<"coro.cleanup", [
   let assemblyFormat = "attr-dict";
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_CoroutinePartition
 
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsic PromiseOp
@@ -5439,6 +5487,7 @@ def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
   let llvmOp = "CoroDoneOp";
 }
 
+let partition = CIR_CoroutinePartition in {
 //===----------------------------------------------------------------------===//
 // CoroSuspendPoint
 //===----------------------------------------------------------------------===//
@@ -5486,6 +5535,7 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
 
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_CoroutinePartition
 
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsic NoopOp
@@ -5500,6 +5550,7 @@ def CIR_CoroNoopOp : CIR_CoroIntrinsicOp<"noop", (ins),
   let llvmOp = "CoroNoopOp";
 }
 
+let partition = CIR_BuiltinsPartition in {
 //===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
@@ -5572,6 +5623,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
     }
   }];
 }
+} // let partition = CIR_BuiltinsPartition
 
 //===----------------------------------------------------------------------===//
 // MemCpyOp && MemMoveOp
@@ -5580,6 +5632,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
 class CIR_MemOp<string mnemonic> : CIR_Op<mnemonic, [
   AllTypesMatch<["dst", "src"]>
 ]> {
+  let partition = CIR_BuiltinsPartition;
   dag commonArgs = (ins
     Arg<CIR_VoidPtrType, "", [MemWrite]>:$dst,
     Arg<CIR_VoidPtrType, "", [MemRead]>:$src
@@ -5663,6 +5716,7 @@ def CIR_MemMoveOp : CIR_MemOp<"libc.memmove"> {
   }];
 }
 
+let partition = CIR_BuiltinsPartition in {
 //===----------------------------------------------------------------------===//
 // MemSetOp
 //===----------------------------------------------------------------------===//
@@ -5907,6 +5961,7 @@ def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
   let hasVerifier = 1;
   let llvmOp = "LifetimeEndOp";
 }
+} // let partition = CIR_BuiltinsPartition
 
 //===----------------------------------------------------------------------===//
 // InlineAsmOp
@@ -5918,6 +5973,7 @@ def CIR_AsmFlavor : CIR_I32Enum<"AsmFlavor", "ATT or Intel",
 
 def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
+let partition = CIR_BuiltinsPartition in {
 def CIR_InlineAsmOp : CIR_Op<"asm",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
@@ -5991,6 +6047,7 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
 
   let hasCustomAssemblyFormat = 1;
 }
+} // let partition = CIR_BuiltinsPartition
 
 //===----------------------------------------------------------------------===//
 // UnreachableOp
@@ -6027,6 +6084,7 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
   let assemblyFormat = "attr-dict";
 }
 
+let partition = CIR_ClassMembersPartition in {
 //===----------------------------------------------------------------------===//
 // ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//
@@ -6332,7 +6390,9 @@ def CIR_GetMethodOp : CIR_Op<"get_method"> {
   let hasLLVMLowering = false;
   let hasCXXABILowering = true;
 }
+} // let partition = CIR_ClassMembersPartition
 
+let partition = CIR_VectorMatrixPartition in {
 //===----------------------------------------------------------------------===//
 // VecCreate
 //===----------------------------------------------------------------------===//
@@ -6424,6 +6484,7 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
 
   let hasFolder = 1;
 }
+} // let partition = CIR_VectorMatrixPartition
 
 //===----------------------------------------------------------------------===//
 // Vector reduction operations
@@ -6436,6 +6497,7 @@ class CIR_VecReduceOp<string mnemonic, Type inputType, string llvmOpName>
     "input", "result",
     "mlir::cast<cir::VectorType>($_self).getElementType()">
 ]> {
+  let partition = CIR_VectorMatrixPartition;
   let summary = "Reduce a vector using " # mnemonic;
   let description = [{
     Reduces the elements of a vector to a scalar of the vector element type.
@@ -6490,6 +6552,7 @@ class CIR_VecReduceFPOp<string mnemonic>
     "input", "result",
     "mlir::cast<cir::VectorType>($_self).getElementType()">
 ]> {
+  let partition = CIR_VectorMatrixPartition;
   let summary = "Reduce a floating-point vector using " # mnemonic;
   let arguments = (ins
     CIR_VectorOfFloatType:$input,
@@ -6516,6 +6579,7 @@ class CIR_VecReduceAccFPOp<string mnemonic>
     "input", "result",
     "mlir::cast<cir::VectorType>($_self).getElementType()">
 ]> {
+  let partition = CIR_VectorMatrixPartition;
   let summary = "Reduce a floating-point vector using " # mnemonic;
   let arguments = (ins
     CIR_AnyFloatType:$accumulator,
@@ -6533,6 +6597,7 @@ class CIR_VecReduceAccFPOp<string mnemonic>
 def CIR_VecReduceFAddOp : CIR_VecReduceAccFPOp<"fadd">;
 def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul">;
 
+let partition = CIR_VectorMatrixPartition in {
 //===----------------------------------------------------------------------===//
 // VecCmpOp
 //===----------------------------------------------------------------------===//
@@ -7033,12 +7098,14 @@ def CIR_MatrixTransposeOp : CIR_Op<"matrix.transpose", [
 
   let hasVerifier = 1;
 }
+} // let partition = CIR_VectorMatrixPartition
 
 //===----------------------------------------------------------------------===//
 // BaseClassAddrOp & DerivedClassAddrOp
 //===----------------------------------------------------------------------===//
 
 class CIR_ClassCastOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let partition = CIR_ClassMembersPartition;
   let arguments = (ins
     CIR_PointerType:$src_addr,
     IndexAttr:$offset,
@@ -7120,6 +7187,7 @@ def CIR_DerivedClassAddrOp : CIR_ClassCastOp<"derived_class_addr"> {
   }];
 }
 
+let partition = CIR_ClassMembersPartition in {
 //===----------------------------------------------------------------------===//
 // BaseDataMemberOp & DerivedDataMemberOp
 //===----------------------------------------------------------------------===//
@@ -7245,7 +7313,9 @@ def CIR_DerivedMethodOp : CIR_Op<"derived_method", [Pure]> {
   let hasLLVMLowering = false;
   let hasCXXABILowering = true;  
 }
+} // let partition = CIR_ClassMembersPartition
 
+let partition = CIR_ComplexPartition in {
 //===----------------------------------------------------------------------===//
 // ComplexCreateOp
 //===----------------------------------------------------------------------===//
@@ -7277,12 +7347,14 @@ def CIR_ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
   let hasVerifier = 1;
   let hasFolder = 1;
 }
+} // let partition = CIR_ComplexPartition
 
 //===----------------------------------------------------------------------===//
 // ComplexRealOp and ComplexImagOp
 //===----------------------------------------------------------------------===//
 
 class CIR_ComplexPartOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let partition = CIR_ComplexPartition;
   let results = (outs CIR_AnyIntOrBoolOrFloatType:$result);
   let arguments = (ins CIR_AnyComplexOrIntOrBoolOrFloatType:$operand);
 
@@ -7332,6 +7404,7 @@ def CIR_ComplexImagOp : CIR_ComplexPartOp<"complex.imag"> {
 //===----------------------------------------------------------------------===//
 
 class CIR_ComplexPartPtrOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let partition = CIR_ComplexPartition;
   let arguments = (ins CIR_PtrToComplexType:$operand);
   let results = (outs CIR_PtrToIntOrFloatType:$result);
 
@@ -7381,6 +7454,7 @@ def CIR_ComplexImagPtrOp : CIR_ComplexPartPtrOp<"complex.imag_ptr"> {
 
 class CIR_ComplexBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let partition = CIR_ComplexPartition;
   let arguments = (ins CIR_ComplexOfIntType:$lhs, CIR_ComplexOfIntType:$rhs);
   let results = (outs CIR_ComplexOfIntType:$result);
 
@@ -7451,6 +7525,7 @@ def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
 
 class CIR_ComplexFPBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let partition = CIR_ComplexPartition;
   let arguments = (ins
     CIR_ComplexOfFloatType:$lhs,
     CIR_ComplexOfFloatType:$rhs,
@@ -7509,6 +7584,7 @@ def CIR_ComplexRangeKindAttr
 
 class CIR_ComplexRangeBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let partition = CIR_ComplexPartition;
   let arguments = (ins
     CIR_ComplexOfFloatType:$lhs,
     CIR_ComplexOfFloatType:$rhs,
@@ -7574,6 +7650,7 @@ def CIR_ComplexFDivOp : CIR_ComplexRangeBinOp<"complex.fdiv"> {
   }];
 }
 
+let partition = CIR_ComplexPartition in {
 //===----------------------------------------------------------------------===//
 // ComplexConjOp
 //===----------------------------------------------------------------------===//
@@ -7601,6 +7678,7 @@ def CIR_ComplexConjOp
 
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_ComplexPartition
 
 //===----------------------------------------------------------------------===//
 // Bit Manipulation Operations
@@ -7608,6 +7686,7 @@ def CIR_ComplexConjOp
 
 class CIR_BitOpBase<string mnemonic, TypeConstraint operandTy>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let partition = CIR_ArithPartition;
   let arguments = (ins operandTy:$input);
   let results = (outs operandTy:$result);
 
@@ -7814,6 +7893,7 @@ def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
   let llvmOp = "ByteSwapOp";
 }
 
+let partition = CIR_ArithPartition in {
 //===----------------------------------------------------------------------===//
 // RotateOp
 //===----------------------------------------------------------------------===//
@@ -7854,6 +7934,7 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
 
   let hasFolder = 1;
 }
+} // let partition = CIR_ArithPartition
 
 //===----------------------------------------------------------------------===//
 // Funnel Shift Operations
@@ -7864,6 +7945,7 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
 // type.
 class CIR_FunnelShiftOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let partition = CIR_ArithPartition;
   let arguments = (ins
     CIR_AnyIntOrVecOfIntType:$a,
     CIR_AnyIntOrVecOfIntType:$b,
@@ -7974,6 +8056,7 @@ def FPClassTestEnum
 
 def CIR_FPClassTestAttr : CIR_EnumAttr<FPClassTestEnum, "fp_class">;
 
+let partition = CIR_ArithPartition in {
 def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
 
@@ -8006,6 +8089,7 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
     $src `,` enum($flags) `:` functional-type($src, $result) attr-dict
   }];
 }
+} // let partition = CIR_ArithPartition
 
 //===----------------------------------------------------------------------===//
 // Assume Operations
@@ -8022,6 +8106,7 @@ def CIR_AssumeBundleKind : CIR_I32Enum<
 def CIR_AssumeBundleKindAttr
     : CIR_EnumAttr<CIR_AssumeBundleKind, "assume_bundle">;
 
+let partition = CIR_BuiltinsPartition in {
 def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
   let description = [{
@@ -8225,7 +8310,9 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
       $ptr `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
   }];
 }
+} // let partition = CIR_BuiltinsPartition
 
+let partition = CIR_ArithPartition in {
 //===----------------------------------------------------------------------===//
 // PtrDiffOp
 //===----------------------------------------------------------------------===//
@@ -8262,6 +8349,7 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
     attr-dict
   }];
 }
+} // let partition = CIR_ArithPartition
 
 //===----------------------------------------------------------------------===//
 // Floating Point Ops
@@ -8273,6 +8361,7 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic,
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
 {
+  let partition = CIR_MathPartition;
   let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src,
                        OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
@@ -8544,6 +8633,7 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let constrainedLLVMIntrinsic = "";
 }
 
+let partition = CIR_MathPartition in {
 def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
   let summary = "Computes the absolute value of a signed integer";
   let description = [{
@@ -8572,6 +8662,7 @@ def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
 
   let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
 }
+} // let partition = CIR_MathPartition
 
 def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
   let summary = "Computes the floating-point floor value";
@@ -8595,6 +8686,7 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
 class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, CIR_FenvOpTraits>
 {
+  let partition = CIR_MathPartition;
   let arguments = (ins CIR_AnyFloatType:$src,
                        OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_IntType:$result);
@@ -8659,6 +8751,7 @@ def CIR_LlrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp"> {
 class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic,
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)> {
+  let partition = CIR_MathPartition;
   let summary = [{
     libc builtin equivalent ignoring floating-point exceptions and errno.
   }];
@@ -8769,6 +8862,7 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
   let constrainedLLVMIntrinsic = "atan2";
 }
 
+let partition = CIR_MathPartition in {
 def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {
   let summary = "Decomposes a floating-point value into significand and exponent";
   let description = [{
@@ -8809,11 +8903,13 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
     $src `:` type($src) `->` type($fractional) `,` type($integral) attr-dict
   }];
 }
+} // let partition = CIR_MathPartition
 
 class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic,
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
 {
+  let partition = CIR_MathPartition;
   let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
@@ -8893,6 +8989,7 @@ def CIR_FMulAddOp : CIR_TernaryFPToFPBuiltinOp<"fmuladd", "FMulAddOp"> {
 //===----------------------------------------------------------------------===//
 
 class CIR_VAOp<string mnemonic> : CIR_Op<mnemonic> {
+  let partition = CIR_BuiltinsPartition;
   let arguments = (ins CIR_PointerType:$arg_list);
 
   let assemblyFormat = [{
@@ -8961,6 +9058,7 @@ def CIR_VAEndOp : CIR_VAOp<"va_end"> {
   }];
 }
 
+let partition = CIR_BuiltinsPartition in {
 def CIR_VACopyOp : CIR_Op<"va_copy"> {
   let summary = "Copied a variable argument list";
   let description = [{
@@ -9032,6 +9130,7 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
     $arg_list attr-dict `:` functional-type(operands, $result)
   }];
 }
+} // let partition = CIR_BuiltinsPartition
 
 //===----------------------------------------------------------------------===//
 // ThrowOpBase
@@ -9044,6 +9143,7 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
 // any additional traits, successors and assembly format pieces.
 class CIR_ThrowOpBase<string mnemonic, list<Trait> traits = []>
     : CIR_Op<mnemonic, traits> {
+  let partition = CIR_EHPartition;
   let arguments = (ins
     Optional<CIR_PointerType>:$exception_ptr,
     OptionalAttr<FlatSymbolRefAttr>:$type_info,
@@ -9158,6 +9258,7 @@ def CIR_TryThrowOp : CIR_ThrowOpBase<"try_throw", [Terminator]> {
   let hasLLVMLowering = false;
 }
 
+let partition = CIR_EHPartition in {
 //===----------------------------------------------------------------------===//
 // AllocExceptionOp
 //===----------------------------------------------------------------------===//
@@ -9884,6 +9985,7 @@ def CIR_EndCatchOp : CIR_Op<"end_catch"> {
 
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_EHPartition
 
 //===----------------------------------------------------------------------===//
 // EH Operations: InitCatchParamOp
@@ -9903,6 +10005,7 @@ def CIR_InitCatchKind : CIR_I32Enum<
 
 def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
 
+let partition = CIR_EHPartition in {
 def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let summary = "Initialize a catch parameter from the exception pointer";
   let description = [{
@@ -10006,6 +10109,7 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
   let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
+} // let partition = CIR_EHPartition
 
 //===----------------------------------------------------------------------===//
 // TokenNoneOp
@@ -10052,6 +10156,7 @@ def CIR_AtomicFetchKind : CIR_I32Enum<
 def CIR_AtomicFetchKindAttr
     : CIR_EnumAttr<CIR_AtomicFetchKind, "atomic_fetch">;
 
+let partition = CIR_BuiltinsPartition in {
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   AllTypesMatch<["result", "val"]>,
   TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
@@ -10332,7 +10437,9 @@ def CIR_AtomicFenceOp : CIR_Op<"atomic.fence"> {
     (`syncscope` `(` enum($syncscope)^ `)`)? enum($ordering) attr-dict
   }];
 }
+} // let partition = CIR_BuiltinsPartition
 
+let partition = CIR_SymbolsPartition in {
 //===----------------------------------------------------------------------===//
 // BlockAddressOp
 //===----------------------------------------------------------------------===//
@@ -10368,7 +10475,9 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   let customLLVMLoweringConstructorDecl =
     LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
+} // let partition = CIR_SymbolsPartition
 
+let partition = CIR_BuiltinsPartition in {
 //===----------------------------------------------------------------------===//
 // CpuIdOp
 //===----------------------------------------------------------------------===//
@@ -10565,6 +10674,7 @@ def CIR_ClearPaddingOp : CIR_Op<"clear_padding", []> {
         $padding `)` `:` type($arg) `->` `(` `)` attr-dict
   }];
 }
+} // let partition = CIR_BuiltinsPartition
 
 include "clang/CIR/Dialect/IR/CIRStdOps.td"
 

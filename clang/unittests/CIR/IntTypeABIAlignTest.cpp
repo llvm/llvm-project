@@ -12,7 +12,7 @@
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRDialectBase.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/MathExtras.h"
 #include "gtest/gtest.h"

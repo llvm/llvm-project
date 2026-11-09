@@ -34,7 +34,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/CIRDataLayoutSpec.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRDialectBase.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/LowerToLLVM.h"

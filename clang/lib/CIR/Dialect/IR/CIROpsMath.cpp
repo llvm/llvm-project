@@ -1,4 +1,4 @@
-//===- CIROpDefinitions.cpp - Generated CIR op definitions ----------------===//
+//===- CIROpsMath.cpp - CIR ops in partition `Math` -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is the template for the CIROpDefinitions.<N>.cpp shards. Each shard
-// defines GET_OP_DEFS_<N> and includes the TableGen-generated definitions of
-// one subset of the CIR operations.
+// This file implements the CIR ops in partition `Math`, which are all
+// TableGen-generated.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsMath.h"
 
 #include "CIROpDefinitions.h"
 
@@ -21,4 +20,9 @@
 using namespace mlir;
 using namespace cir;
 
-#include "clang/CIR/Dialect/IR/CIROps.cpp.inc"
+//===----------------------------------------------------------------------===//
+// TableGen-generated op definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_OP_CLASSES
+#include "clang/CIR/Dialect/IR/CIROpsMath.cpp.inc"

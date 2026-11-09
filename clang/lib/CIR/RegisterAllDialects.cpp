@@ -16,7 +16,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/MLIRContext.h"
 
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRDialectBase.h"
 #include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
 #include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
 

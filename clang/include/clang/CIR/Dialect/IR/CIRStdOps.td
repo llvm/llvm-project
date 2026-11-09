@@ -19,6 +19,7 @@
 class CIR_StdOp<string functionName, dag args, dag res,
                 list<Trait> traits = [], string knownKind = "">
     : CIR_Op<"std." # functionName, traits # [CIR_StdOpInterface]> {
+  let partition = CIR_BuiltinsPartition;
   let arguments = !con(args, (ins FlatSymbolRefAttr:$original_fn));
   let results = res;
   let hasLLVMLowering = false;

@@ -205,10 +205,6 @@ if(CLANG_ENABLE_CIR)
     message(FATAL_ERROR
       "Cannot build ClangIR without MLIR enabled")
   endif()
-  # Number of translation units the TableGen-generated CIR operation
-  # definitions are split into. Shared by the CIROps.td TableGen invocations
-  # and the MLIRCIR library sources.
-  set(CLANG_CIR_OP_SHARD_COUNT 8)
 endif()
 
 include(CheckIncludeFile)
