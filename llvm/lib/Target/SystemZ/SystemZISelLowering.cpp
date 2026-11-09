@@ -5427,30 +5427,20 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
   // XPLINK: @@ALCAXP (lowerDYNAMIC_STACKALLOC_XPLINK) moves the frame header
   // (register save area and reserved words at SP + bias) down with the stack
   // pointer, and calls made while the stack pointer is lowered place their
-  // arguments over the old header. Copy the current header back to the
-  // restored stack pointer, otherwise the epilogue and the LE stack walk use
-  // a clobbered header (abend U4083). The restored stack pointer is never
-  // below the current one, so copying from the highest word down is safe even
-  // if the areas overlap.
+  // arguments over the old header. The current header must be copied back to
+  // the restored stack pointer, otherwise the epilogue and the LE stack walk
+  // use a clobbered header (abend U4083). No signal may be delivered while
+  // the stack pointer is changed and the header is copied, so this is done in
+  // a stub routine (emitted once per module by the AsmPrinter), which gets
+  // the new stack pointer in R1.
   if (Subtarget.isTargetXPLINK64()) {
-    auto &XRegs = Subtarget.getSpecialRegisters<SystemZXPLINK64Registers>();
-    uint64_t Bias = XRegs.getStackPointerBias();
-    SDValue OldSP = DAG.getCopyFromReg(
-        Chain, DL, Regs->getStackPointerRegister(), MVT::i64);
-    Chain = OldSP.getValue(1);
-    for (int I = XRegs.getCallFrameSize() / 8 - 1; I >= 0; --I) {
-      SDValue Offset = DAG.getConstant(Bias + 8 * I, DL, MVT::i64);
-      SDValue Word =
-          DAG.getLoad(MVT::i64, DL, Chain,
-                      DAG.getNode(ISD::ADD, DL, MVT::i64, OldSP, Offset),
-                      MachinePointerInfo());
-      Chain = DAG.getStore(Word.getValue(1), DL, Word,
-                           DAG.getNode(ISD::ADD, DL, MVT::i64, NewSP, Offset),
-                           MachinePointerInfo());
-    }
-  }
-
-  Chain = DAG.getCopyToReg(Chain, DL, Regs->getStackPointerRegister(), NewSP);
+    SDValue Glue;
+    Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R1D, NewSP, Glue);
+    Glue = Chain.getValue(1);
+    Chain = DAG.getNode(SystemZISD::XPLINK_STACKRESTORE, DL, MVT::Other, Chain,
+                        Glue);
+  } else
+    Chain = DAG.getCopyToReg(Chain, DL, Regs->getStackPointerRegister(), NewSP);
 
   if (StoreBackchain)
     Chain = DAG.getStore(Chain, DL, Backchain, getBackchainAddress(NewSP, DAG),

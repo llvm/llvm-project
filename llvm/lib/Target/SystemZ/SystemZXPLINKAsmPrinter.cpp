@@ -24,6 +24,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -156,6 +157,20 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
                     .addImm(2)
                     .addReg(0);
     break;
+
+  case SystemZ::XPLINK_STACKRESTORE: {
+    if (!StackRestoreStub)
+      report_fatal_error("stack restore without llvm.stackrestore in module");
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LARL)
+                                     .addReg(SystemZ::R6D)
+                                     .addExpr(MCSymbolRefExpr::create(
+                                         StackRestoreStub, OutContext)));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BASR).addReg(SystemZ::R7D).addReg(SystemZ::R6D));
+    emitCallInformation(CallType::BASR76);
+    return;
+  }
 
   case SystemZ::CallBASR_STACKEXT:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
@@ -688,7 +703,63 @@ void SystemZXPLINKAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const Function *MainFn = M.getFunction("main");
       MainFn && !MainFn->isDeclaration())
     emitCELQMAIN(*MainFn);
+  // Like CELQMAIN, the stack restore stub is emitted at the start of the file.
+  // It is needed by every function that uses llvm.stackrestore.
+  for (const Function &F : M)
+    if (F.getIntrinsicID() == Intrinsic::stackrestore && !F.use_empty()) {
+      emitStackRestoreStub();
+      break;
+    }
   AsmPrinter::emitStartOfAsmFile(M);
+}
+
+// Emit the stack restore stub. A stack restore must copy the frame header
+// (which @@ALCAXP moved down with the stack pointer) to the restored stack
+// pointer, and no signal may be delivered while the stack pointer is changed
+// and the header is copied. Language Environment delays signals while a stub
+// runs, so this is done in a stub routine: it has a stub entry marker
+// (preceded by 8 bytes of padding, so that the entry is 16 bytes after the
+// start, like for a normal routine), no PPA1 and no save area. It is called
+// with BASR 7,6, gets the new stack pointer in R1, and returns with B 2(7).
+// The new stack pointer is never below the current one, so copying from the
+// highest word down is safe even if the areas overlap.
+void SystemZXPLINKAsmPrinter::emitStackRestoreStub() {
+  const MCSubtargetInfo &STI = TM.getMCSubtargetInfo();
+  auto Emit = [&](const MCInst &Inst) {
+    OutStreamer->emitInstruction(Inst, STI);
+  };
+
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
+  OutStreamer->emitValueToAlignment(Align(8));
+  OutStreamer->AddComment("XPLINK Stub Entry Padding");
+  OutStreamer->emitIntValue(0, 8);
+  OutStreamer->AddComment("XPLINK Stub Entry Marker");
+  OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
+  OutStreamer->emitIntValueInHex(0x00C300C500C500, 7);
+  OutStreamer->AddComment("Mark Type C'4'");
+  OutStreamer->emitInt8(0xF4);
+  StackRestoreStub = OutContext.createTempSymbol("stackrestore");
+  OutStreamer->emitLabel(StackRestoreStub);
+
+  SystemZXPLINK64Registers Regs;
+  const int Bias = Regs.getStackPointerBias();
+  for (int I = Regs.getCallFrameSize() / 8 - 1; I >= 0; --I) {
+    int Disp = Bias + 8 * I;
+    Emit(MCInstBuilder(SystemZ::LG)
+             .addReg(SystemZ::R0D)
+             .addReg(SystemZ::R4D)
+             .addImm(Disp)
+             .addReg(0));
+    Emit(MCInstBuilder(SystemZ::STG)
+             .addReg(SystemZ::R0D)
+             .addReg(SystemZ::R1D)
+             .addImm(Disp)
+             .addReg(0));
+  }
+  Emit(MCInstBuilder(SystemZ::LGR).addReg(SystemZ::R4D).addReg(SystemZ::R1D));
+  Emit(MCInstBuilder(SystemZ::B).addReg(SystemZ::R7D).addImm(2).addReg(0));
+  OutStreamer->popSection();
 }
 
 void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {

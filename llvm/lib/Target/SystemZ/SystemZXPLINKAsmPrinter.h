@@ -99,6 +99,10 @@ class LLVM_LIBRARY_VISIBILITY SystemZXPLINKAsmPrinter
   void emitADASection();
   void emitIDRLSection(Module &M);
   void emitCELQMAIN(const Function &MainFn);
+  void emitStackRestoreStub();
+
+  /// Entry of the stack restore stub, if the module uses llvm.stackrestore.
+  MCSymbol *StackRestoreStub = nullptr;
   void emitCallInformation(CallType CT);
 
   SystemZTargetzOSStreamer *getTargetStreamer() {
