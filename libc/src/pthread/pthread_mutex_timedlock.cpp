@@ -1,9 +1,14 @@
-//===-- Linux implementation of the pthread_mutex_timedlock ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of the pthread_mutex_timedlock function.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/pthread/pthread_mutex_timedlock.h"
@@ -26,6 +31,7 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_timedlock,
   LIBC_CRASH_ON_NULLPTR(abstime);
   auto *m = reinterpret_cast<Mutex *>(mutex);
 
+  // According to POSIX.1, CLOCK_REALTIME is used for timedlock.
   auto timeout =
       internal::AbsTimeout::from_timespec(*abstime, /*is_realtime=*/true);
 
@@ -49,6 +55,8 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_timedlock,
     return ETIMEDOUT;
   case MutexError::DEADLOCK:
     return EDEADLK;
+  case MutexError::OVERFLOW:
+    return EAGAIN;
   default:
     return EINVAL;
   }
