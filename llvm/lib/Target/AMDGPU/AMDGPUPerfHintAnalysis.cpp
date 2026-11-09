@@ -26,32 +26,11 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-perf-hint"
-
-static cl::opt<unsigned>
-    MemBoundThresh("amdgpu-membound-threshold", cl::init(50), cl::Hidden,
-                   cl::desc("Function mem bound threshold in %"));
-
-static cl::opt<unsigned>
-    LimitWaveThresh("amdgpu-limit-wave-threshold", cl::init(50), cl::Hidden,
-                    cl::desc("Kernel limit wave threshold in %"));
-
-static cl::opt<unsigned>
-    IAWeight("amdgpu-indirect-access-weight", cl::init(1000), cl::Hidden,
-             cl::desc("Indirect access memory instruction weight"));
-
-static cl::opt<unsigned>
-    LSWeight("amdgpu-large-stride-weight", cl::init(1000), cl::Hidden,
-             cl::desc("Large stride memory access weight"));
-
-static cl::opt<unsigned>
-    LargeStrideThresh("amdgpu-large-stride-threshold", cl::init(64), cl::Hidden,
-                      cl::desc("Large stride memory access threshold"));
 
 STATISTIC(NumMemBound, "Number of functions marked as memory bound");
 STATISTIC(NumLimitWave, "Number of functions marked as needing limit wave");
@@ -62,9 +41,10 @@ struct AMDGPUPerfHint {
   friend AMDGPUPerfHintAnalysis;
 
 public:
-  AMDGPUPerfHint(AMDGPUPerfHintAnalysis::FuncInfoMap &FIM_,
+  AMDGPUPerfHint(const AMDGPUOptions &CLOpts,
+                 AMDGPUPerfHintAnalysis::FuncInfoMap &FIM_,
                  const SITargetLowering *TLI_)
-      : FIM(FIM_), TLI(TLI_) {}
+      : CLOpts(CLOpts), FIM(FIM_), TLI(TLI_) {}
 
   bool runOnFunction(Function &F);
 
@@ -74,7 +54,8 @@ private:
     const Value *Base = nullptr;
     int64_t Offset = 0;
     MemAccessInfo() = default;
-    bool isLargeStride(MemAccessInfo &Reference) const;
+    bool isLargeStride(MemAccessInfo &Reference,
+                       unsigned LargeStrideThresh) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     Printable print() const {
       return Printable([this](raw_ostream &OS) {
@@ -87,6 +68,8 @@ private:
 
   MemAccessInfo makeMemAccessInfo(Instruction *) const;
 
+  const AMDGPUOptions &CLOpts;
+
   MemAccessInfo LastAccess; // Last memory access info
 
   AMDGPUPerfHintAnalysis::FuncInfoMap &FIM;
@@ -96,8 +79,10 @@ private:
   const SITargetLowering *TLI;
 
   AMDGPUPerfHintAnalysis::FuncInfo *visit(const Function &F);
-  static bool isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &F);
-  static bool needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &F);
+  static bool isMemBound(const AMDGPUOptions &CLOpts,
+                         const AMDGPUPerfHintAnalysis::FuncInfo &F);
+  static bool needLimitWave(const AMDGPUOptions &CLOpts,
+                            const AMDGPUPerfHintAnalysis::FuncInfo &F);
 
   bool isIndirectAccess(const Instruction *Inst) const;
 
@@ -298,14 +283,15 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
 
   bool Changed = false;
 
-  if (isMemBound(*Info)) {
+  if (isMemBound(CLOpts, *Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " is memory bound\n");
     NumMemBound++;
     F.addFnAttr("amdgpu-memory-bound", "true");
     Changed = true;
   }
 
-  if (AMDGPU::isEntryFunctionCC(F.getCallingConv()) && needLimitWave(*Info)) {
+  if (AMDGPU::isEntryFunctionCC(F.getCallingConv()) &&
+      needLimitWave(CLOpts, *Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " needs limit wave\n");
     NumLimitWave++;
     F.addFnAttr("amdgpu-wave-limiter", "true");
@@ -315,18 +301,21 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
   return Changed;
 }
 
-bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
+bool AMDGPUPerfHint::isMemBound(const AMDGPUOptions &CLOpts,
+                                const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
   // Reverting optimal scheduling in favour of occupancy with basic block(s)
   // having dense global memory access can potentially hurt performance.
   if (FI.HasDenseGlobalMemAcc)
     return true;
 
-  return FI.MemInstCost * 100 / FI.InstCost > MemBoundThresh;
+  return FI.MemInstCost * 100 / FI.InstCost > CLOpts.membound_threshold;
 }
 
-bool AMDGPUPerfHint::needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
-  return ((FI.MemInstCost + FI.IAMInstCost * IAWeight +
-           FI.LSMInstCost * LSWeight) * 100 / FI.InstCost) > LimitWaveThresh;
+bool AMDGPUPerfHint::needLimitWave(const AMDGPUOptions &CLOpts,
+                                   const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
+  return ((FI.MemInstCost + FI.IAMInstCost * CLOpts.indirect_access_weight +
+           FI.LSMInstCost * CLOpts.large_stride_weight) *
+          100 / FI.InstCost) > CLOpts.limit_wave_threshold;
 }
 
 bool AMDGPUPerfHint::isGlobalAddr(const Value *V) const {
@@ -348,7 +337,8 @@ bool AMDGPUPerfHint::isLargeStride(const Instruction *Inst) {
   LLVM_DEBUG(dbgs() << "[isLargeStride] " << *Inst << '\n');
 
   MemAccessInfo MAI = makeMemAccessInfo(const_cast<Instruction *>(Inst));
-  bool IsLargeStride = MAI.isLargeStride(LastAccess);
+  bool IsLargeStride =
+      MAI.isLargeStride(LastAccess, CLOpts.large_stride_threshold);
   if (MAI.Base)
     LastAccess = std::move(MAI);
 
@@ -371,7 +361,7 @@ AMDGPUPerfHint::makeMemAccessInfo(Instruction *Inst) const {
 }
 
 bool AMDGPUPerfHint::MemAccessInfo::isLargeStride(
-    MemAccessInfo &Reference) const {
+    MemAccessInfo &Reference, unsigned LargeStrideThresh) const {
 
   if (!Base || !Reference.Base || Base != Reference.Base)
     return false;
@@ -409,7 +399,8 @@ bool AMDGPUPerfHintAnalysis::isMemoryBound(const Function *F) const {
   if (FI == FIM.end())
     return false;
 
-  return AMDGPUPerfHint::isMemBound(FI->second);
+  return AMDGPUPerfHint::isMemBound(
+      F->getContext().getLibraryOptions().get<AMDGPUOptions>(), FI->second);
 }
 
 bool AMDGPUPerfHintAnalysis::needsWaveLimiter(const Function *F) const {
@@ -417,7 +408,8 @@ bool AMDGPUPerfHintAnalysis::needsWaveLimiter(const Function *F) const {
   if (FI == FIM.end())
     return false;
 
-  return AMDGPUPerfHint::needLimitWave(FI->second);
+  return AMDGPUPerfHint::needLimitWave(
+      F->getContext().getLibraryOptions().get<AMDGPUOptions>(), FI->second);
 }
 
 bool AMDGPUPerfHintAnalysis::runOnSCC(const GCNTargetMachine &TM,
@@ -429,7 +421,7 @@ bool AMDGPUPerfHintAnalysis::runOnSCC(const GCNTargetMachine &TM,
       continue;
 
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
-    AMDGPUPerfHint Analyzer(FIM, ST.getTargetLowering());
+    AMDGPUPerfHint Analyzer(TM.getCLOpts(), FIM, ST.getTargetLowering());
 
     if (Analyzer.runOnFunction(*F))
       Changed = true;
@@ -454,7 +446,7 @@ bool AMDGPUPerfHintAnalysis::run(const GCNTargetMachine &TM,
         continue;
 
       const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-      AMDGPUPerfHint Analyzer(FIM, ST.getTargetLowering());
+      AMDGPUPerfHint Analyzer(TM.getCLOpts(), FIM, ST.getTargetLowering());
       if (Analyzer.runOnFunction(F))
         Changed = true;
     }

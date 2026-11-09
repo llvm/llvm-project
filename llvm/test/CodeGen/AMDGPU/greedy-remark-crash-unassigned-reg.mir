@@ -23,7 +23,7 @@ body:             |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr1
 
   ; Unassigned dest with subreg
-  undef %0.sub0:vreg_64 = COPY $vgpr0_vgpr1
+  undef %0.sub0:vreg_64 = COPY $vgpr0
 
   ; unassigned src and dest with subregs
   undef %1.sub1:vreg_64 = COPY %0.sub0

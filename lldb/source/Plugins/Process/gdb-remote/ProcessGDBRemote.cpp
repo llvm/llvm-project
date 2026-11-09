@@ -2156,6 +2156,15 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
+        } else if (reason == "dyld") {
+          if (llvm::Error error = LoadModules()) {
+            Log *log = GetLog(GDBRLog::Process);
+            LLDB_LOG_ERROR(log, std::move(error),
+                           "failed to load modules: {0}");
+          }
+          thread_sp->SetStopInfo(
+              StopInfo::CreateStopReasonDyld(*thread_sp, description.c_str()));
+          handled = true;
         }
       }
 
@@ -4700,8 +4709,12 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+  if (m_dyld_up.get() == nullptr) {
+    std::string plugin_name;
+    if (std::optional<LLDBSettings> settings = m_gdb_comm.GetLLDBSettings())
+      plugin_name = settings->dyld_plugin_name;
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, plugin_name));
+  }
   return m_dyld_up.get();
 }
 
@@ -6378,6 +6391,9 @@ lldb::ModuleSP ProcessGDBRemote::LoadModuleAtAddress(const FileSpec &file,
 
 llvm::Error ProcessGDBRemote::LoadModules() {
   using lldb_private::process_gdb_remote::ProcessGDBRemote;
+
+  if (m_dyld_up && m_dyld_up->HandleStopReasonDynamicLoader())
+    return llvm::ErrorSuccess();
 
   // request a list of loaded libraries from GDBServer
   llvm::Expected<LoadedModuleInfoList> module_list = GetLoadedModuleList();

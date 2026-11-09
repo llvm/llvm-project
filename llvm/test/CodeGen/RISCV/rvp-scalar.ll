@@ -4439,11 +4439,10 @@ define i64 @slx_i64(i64 %a, i64 %b, i64 %shamt) {
 define i64 @slxi_i64(i64 %a, i64 %b) {
 ; RV32-LABEL: slxi_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a4, 25
-; RV32-NEXT:    mv a2, a0
-; RV32-NEXT:    slx a1, a0, a4
-; RV32-NEXT:    slx a2, a3, a4
-; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    li a2, 7
+; RV32-NEXT:    srx a3, a0, a2
+; RV32-NEXT:    nsrli a1, a0, 7
+; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: slxi_i64:
@@ -4459,10 +4458,9 @@ define i64 @slxi_i64_large(i64 %a, i64 %b) {
 ; RV32-LABEL: slxi_i64_large:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    mv a1, a0
-; RV32-NEXT:    li a4, 7
-; RV32-NEXT:    mv a0, a3
-; RV32-NEXT:    slx a1, a3, a4
-; RV32-NEXT:    slx a0, a2, a4
+; RV32-NEXT:    li a0, 7
+; RV32-NEXT:    slx a1, a3, a0
+; RV32-NEXT:    nsrli a0, a2, 25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: slxi_i64_large:
@@ -4500,11 +4498,10 @@ define i64 @srx_i64(i64 %a, i64 %b, i64 %shamt) {
 define i64 @srxi_i64(i64 %a, i64 %b) {
 ; RV32-LABEL: srxi_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a1, a3
-; RV32-NEXT:    li a3, 25
-; RV32-NEXT:    srx a2, a1, a3
-; RV32-NEXT:    srx a1, a0, a3
-; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 7
+; RV32-NEXT:    slx a1, a3, a0
+; RV32-NEXT:    nsrli a0, a2, 25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: srxi_i64:
@@ -4520,12 +4517,10 @@ define i64 @srxi_i64(i64 %a, i64 %b) {
 define i64 @srxi_i64_large(i64 %a, i64 %b) {
 ; RV32-LABEL: srxi_i64_large:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a2, a0
-; RV32-NEXT:    li a0, 7
-; RV32-NEXT:    srx a3, a2, a0
-; RV32-NEXT:    srx a2, a1, a0
+; RV32-NEXT:    li a2, 7
+; RV32-NEXT:    srx a3, a0, a2
+; RV32-NEXT:    nsrli a1, a0, 7
 ; RV32-NEXT:    mv a0, a3
-; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: srxi_i64_large:
@@ -4549,11 +4544,10 @@ define i64 @slxi_i64_64(i64 %a, i64 %b) {
 define i64 @slxi_i64_89(i64 %a, i64 %b) {
 ; RV32-LABEL: slxi_i64_89:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a4, 25
-; RV32-NEXT:    mv a2, a0
-; RV32-NEXT:    slx a1, a0, a4
-; RV32-NEXT:    slx a2, a3, a4
-; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    li a2, 7
+; RV32-NEXT:    srx a3, a0, a2
+; RV32-NEXT:    nsrli a1, a0, 7
+; RV32-NEXT:    mv a0, a3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: slxi_i64_89:
@@ -4569,10 +4563,9 @@ define i64 @slxi_i64_103(i64 %a, i64 %b) {
 ; RV32-LABEL: slxi_i64_103:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    mv a1, a0
-; RV32-NEXT:    li a4, 7
-; RV32-NEXT:    mv a0, a3
-; RV32-NEXT:    slx a1, a3, a4
-; RV32-NEXT:    slx a0, a2, a4
+; RV32-NEXT:    li a0, 7
+; RV32-NEXT:    slx a1, a3, a0
+; RV32-NEXT:    nsrli a0, a2, 25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: slxi_i64_103:
@@ -4601,11 +4594,10 @@ define i64 @srxi_i64_64(i64 %a, i64 %b) {
 define i64 @srxi_i64_89(i64 %a, i64 %b) {
 ; RV32-LABEL: srxi_i64_89:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a1, a3
-; RV32-NEXT:    li a3, 25
-; RV32-NEXT:    srx a2, a1, a3
-; RV32-NEXT:    srx a1, a0, a3
-; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 7
+; RV32-NEXT:    slx a1, a3, a0
+; RV32-NEXT:    nsrli a0, a2, 25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: srxi_i64_89:
@@ -4621,12 +4613,10 @@ define i64 @srxi_i64_89(i64 %a, i64 %b) {
 define i64 @srxi_i64_103(i64 %a, i64 %b) {
 ; RV32-LABEL: srxi_i64_103:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mv a2, a0
-; RV32-NEXT:    li a0, 7
-; RV32-NEXT:    srx a3, a2, a0
-; RV32-NEXT:    srx a2, a1, a0
+; RV32-NEXT:    li a2, 7
+; RV32-NEXT:    srx a3, a0, a2
+; RV32-NEXT:    nsrli a1, a0, 7
 ; RV32-NEXT:    mv a0, a3
-; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: srxi_i64_103:

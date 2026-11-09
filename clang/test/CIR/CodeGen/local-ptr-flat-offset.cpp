@@ -22,7 +22,7 @@ void test() {
   use(it);
 }
 
-// CIR: cir.global "private" constant cir_private @__const._Z4testv.it =
+// CIR: cir.global "private" constant cir_private unnamed_addr @__const._Z4testv.it =
 // CIR-SAME: #cir.const_record<{#cir.global_offset<@gS, 4> : !cir.ptr<!rec_S>}>
 
 // CIR-LABEL: cir.func {{.*}} @_Z4testv()
