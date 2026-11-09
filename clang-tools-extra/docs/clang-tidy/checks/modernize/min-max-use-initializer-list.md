@@ -33,19 +33,13 @@ std::string b = std::max({std::ref(i), std::ref(j), std::ref(k)});
 
 # Options
 
-(modernize-min-max-use-initializer-list-include-style)=
-
 ```{option} IncludeStyle
 A string specifying which include-style is used, `llvm` or `google`. Default is `llvm`.
 ```
 
-(modernize-min-max-use-initializer-list-ignore-non-trivial-types)=
-
 ```{option} IgnoreNonTrivialTypes
 A boolean specifying whether to ignore non-trivial types. Default is `true`.
 ```
-
-(modernize-min-max-use-initializer-list-ignore-trivial-types-of-size-above)=
 
 ```{option} IgnoreTrivialTypesOfSizeAbove
 An integer specifying the size (in bytes) above which trivial types are
