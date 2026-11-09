@@ -224,6 +224,8 @@ Error decodePayload(
           "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
               Twine(static_cast<int>(Version)));
     Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
+    if (!Cur)
+      break;
     uint64_t NumBBRanges = 1;
     uint64_t NumBlocks = 0;
     uint32_t TotalNumBlocks = 0;

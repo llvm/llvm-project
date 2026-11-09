@@ -48,6 +48,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.sinbf16
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   sinf_test
   SUITE
     libc-math-smoke-tests
@@ -460,6 +473,7 @@ add_fp_unittest(
   HDRS
     CanonicalizeTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.canonicalizef128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
@@ -1595,8 +1609,10 @@ add_fp_unittest(
     exp10_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.exp10
-    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.exp10_double_eval
+    libc.src.__support.macros.attributes
 )
 
 add_fp_unittest(
@@ -2655,6 +2671,7 @@ add_fp_unittest(
   HDRS
     ModfTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.modff128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.basic_operations
@@ -3996,6 +4013,7 @@ add_fp_unittest(
   HDRS
     RemQuoTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.remquof128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
@@ -4714,8 +4732,10 @@ add_fp_unittest(
     logf_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.logf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.logf_double_eval
 )
 
 add_fp_unittest(
@@ -4764,8 +4784,10 @@ add_fp_unittest(
     log2f_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.log2f
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.log2f_double_eval
 )
 
 add_fp_unittest(
@@ -4801,8 +4823,10 @@ add_fp_unittest(
     log10f_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.log10f
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.log10f_double_eval
 )
 
 add_fp_unittest(
@@ -4864,8 +4888,10 @@ add_fp_unittest(
     log1pf_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.log1pf
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.math.log1pf_double_eval
 )
 
 add_fp_unittest(

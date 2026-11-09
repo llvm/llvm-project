@@ -806,28 +806,21 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "DWARFCFIChecker",
-    srcs = glob([
-        "lib/DWARFCFIChecker/*.cpp",
-        "lib/DWARFCFIChecker/*.h",
-    ]),
-    hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
-    copts = llvm_copts,
-    deps = [
-        ":BinaryFormat",
-        ":DebugInfoDWARFLowLevel",
-        ":MC",
-        ":Support",
-    ],
-)
-
 gentbl_cc_library(
     name = "MCCLOptionsTableGen",
     strip_include_prefix = "lib/MC",
     tbl_outs = {"lib/MC/MCCLOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "lib/MC/MCCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MCToolOptionsTableGen",
+    strip_include_prefix = "lib/MC",
+    tbl_outs = {"lib/MC/MCToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/MC/MCToolOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -847,6 +840,7 @@ cc_library(
         ":DebugInfoCodeView",
         ":DebugInfoDWARFLowLevel",
         ":MCCLOptionsTableGen",
+        ":MCToolOptionsTableGen",
         ":Option",
         ":Support",
         ":TargetParser",
@@ -1792,7 +1786,7 @@ gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/RISCV/RISCV.td",
+    td_file = "lib/Target/RISCV/RISCVTargetParserDef.td",
     deps = [
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
@@ -2405,10 +2399,22 @@ expand_template(
     template = "include/llvm/Transforms/IPO/InstrumentorVariables.inc.in",
 )
 
+gentbl_cc_library(
+    name = "IPOOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/IPO",
+    tbl_outs = {
+        "lib/Transforms/IPO/IPOOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/IPO/IPOOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "IPO",
     srcs = glob([
         "lib/Transforms/IPO/*.cpp",
+        "lib/Transforms/IPO/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Transforms/IPO/*.h",
@@ -2429,6 +2435,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOpenMP",
+        ":IPOOptionsTableGen",
         ":IRPrinter",
         ":IRReader",
         ":InstCombine",
@@ -2436,6 +2443,7 @@ cc_library(
         ":Linker",
         ":ObjCARC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",
@@ -3418,6 +3426,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/NVPTX/NVPTXGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":NVPTXOptionsTableGen",
+        ],
     },
     {
         "name": "PowerPC",
@@ -4227,6 +4238,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/MSP430/MSP430Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/MSP430/MSP430Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "NVPTXOptionsTableGen",
+    strip_include_prefix = "lib/Target/NVPTX",
+    tbl_outs = {"lib/Target/NVPTX/NVPTXOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/NVPTX/NVPTXOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -6234,7 +6254,6 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
-        ":DWARFCFIChecker",
         ":MC",
         ":MCDisassembler",
         ":MCParser",
