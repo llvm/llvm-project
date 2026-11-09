@@ -148,8 +148,6 @@ void f5(void) {
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @f5()
-// LLVM:   br label %[[SCOPE:.*]]
-// LLVM: [[SCOPE]]:
 // LLVM:   br label %[[LOOP:.*]]
 // LLVM: [[LOOP]]:
 // LLVM:   br i1 true, label %[[LOOP_BODY:.*]], label %[[LOOP_EXIT:.*]]

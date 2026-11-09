@@ -44,7 +44,6 @@ void while_cond_var(int n) {
 // LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
 // The loop header branches into the condition region or to the loop exit.
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
@@ -82,6 +81,8 @@ void while_cond_var(int n) {
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
 // LLVM:           i32 0, label %[[BACKEDGE:.*]]
 // LLVM:           i32 1, label %[[BREAK:.*]]
+// LLVM:       [[BACKEDGE]]:
+// LLVM:         br label %[[COND]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD]]:
@@ -93,8 +94,6 @@ void while_cond_var(int n) {
 // LLVM:       [[EHDTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[BACKEDGE]]:
-// LLVM:         br label %[[COND]]
 
 // OGCG-LABEL: define dso_local void @_Z14while_cond_vari(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:         %[[S:.*]] = alloca %struct.S
@@ -161,7 +160,6 @@ void while_cond_var_break() {
 // LLVM-LABEL: define dso_local void @_Z20while_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
@@ -262,7 +260,6 @@ void while_cond_var_continue() {
 // LLVM-LABEL: define dso_local void @_Z23while_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
@@ -369,7 +366,6 @@ void for_cond_var_break() {
 // LLVM-LABEL: define dso_local void @_Z18for_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
@@ -471,7 +467,6 @@ void for_cond_var_continue() {
 // LLVM-LABEL: define dso_local void @_Z21for_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
@@ -502,6 +497,8 @@ void for_cond_var_continue() {
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
 // LLVM:           i32 0, label %[[BACKEDGE1:.*]]
 // LLVM:           i32 1, label %[[BREAK:.*]]
+// LLVM:       [[BACKEDGE1]]:
+// LLVM:         br label %[[COND]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD]]:
@@ -513,8 +510,6 @@ void for_cond_var_continue() {
 // LLVM:       [[EHDTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[BACKEDGE1]]:
-// LLVM:         br label %[[COND]]
 
 // OGCG-LABEL: define dso_local void @_Z21for_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:         %[[S:.*]] = alloca %struct.S
@@ -581,7 +576,6 @@ void for_cond_var(int n) {
 // LLVM-LABEL: define dso_local void @_Z12for_cond_vari(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
@@ -595,8 +589,6 @@ void for_cond_var(int n) {
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
 // LLVM:       [[BODY]]:
-// LLVM:         br label %[[STEP:.*]]
-// LLVM:       [[STEP]]:
 // LLVM:         store i32 0, ptr %[[DEST:.*]], align 4
 // LLVM:         br label %[[CLEANUP:.*]]
 // LLVM:       [[COND_FALSE]]:
@@ -612,6 +604,8 @@ void for_cond_var(int n) {
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
 // LLVM:           i32 0, label %[[BACKEDGE1:.*]]
 // LLVM:           i32 1, label %[[BREAK:.*]]
+// LLVM:       [[BACKEDGE1]]:
+// LLVM:         br label %[[COND]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD]]:
@@ -623,8 +617,6 @@ void for_cond_var(int n) {
 // LLVM:       [[EHDTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[BACKEDGE1]]:
-// LLVM:         br label %[[COND]]
 
 // OGCG-LABEL: define dso_local void @_Z12for_cond_vari(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:         %[[S:.*]] = alloca %struct.S
@@ -703,7 +695,6 @@ void while_cond_var_temp(int n) {
 // LLVM:         %[[FLAG:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
 // LLVM:         %[[TMP:.*]] = alloca %struct.S
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
@@ -715,14 +706,14 @@ void while_cond_var_temp(int n) {
 // LLVM-NEXT:            to label %[[CH_CONT:.*]] unwind label %[[LPAD_TMP:.*]]
 // LLVM:       [[CH_CONT]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:         store i8 1, ptr %[[FLAG]], align 1
+// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD_OUTER]]
 // LLVM:       [[LPAD_TMP]]:
 // LLVM:         landingpad { ptr, i32 }
 // LLVM-NEXT:            cleanup
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // LLVM:         br label %[[EHCOMMON:.*]]
-// LLVM:         store i8 1, ptr %[[FLAG]], align 1
-// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD_OUTER]]
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
 // LLVM:       [[BODY]]:
@@ -741,6 +732,8 @@ void while_cond_var_temp(int n) {
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
 // LLVM:           i32 0, label %[[BACKEDGE:.*]]
 // LLVM:           i32 1, label %[[BREAK:.*]]
+// LLVM:       [[BACKEDGE]]:
+// LLVM:         br label %[[COND]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD_OUTER]]:
@@ -754,8 +747,6 @@ void while_cond_var_temp(int n) {
 // LLVM:       [[EHDTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[BACKEDGE]]:
-// LLVM:         br label %[[COND]]
 
 // OGCG-LABEL: define dso_local void @_Z19while_cond_var_tempi(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:         %[[S:.*]] = alloca %struct.S
@@ -857,12 +848,10 @@ void while_cond_var_nested(int n) {
 // LLVM:         %[[FLAG_OUTER:.*]] = alloca i8
 // LLVM:         %[[FLAG_INNER:.*]] = alloca i8
 // LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[OUTER_COND:.*]]
 // LLVM:       [[OUTER_COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[OUTER_EXIT:.*]]
 // LLVM:         store i8 0, ptr %[[FLAG_OUTER]], align 1
-// LLVM:         br label %{{.*}}
 // LLVM:         br label %[[INNER_COND:.*]]
 // LLVM:       [[INNER_COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[INNER_EXIT:.*]]
@@ -895,6 +884,8 @@ void while_cond_var_nested(int n) {
 // LLVM:         switch i32 %[[ISEL]], label %{{.*}}
 // LLVM:           i32 0, label %[[IBACKEDGE:.*]]
 // LLVM:           i32 1, label %[[IBREAK:.*]]
+// LLVM:       [[IBACKEDGE]]:
+// LLVM:         br label %[[INNER_COND]]
 // LLVM:       [[IBREAK]]:
 // LLVM:         br label %[[INNER_EXIT]]
 // LLVM:       [[INNER_LPAD]]:
@@ -907,8 +898,6 @@ void while_cond_var_nested(int n) {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[T]])
 // LLVM:         br label %{{.*}}
 // LLVM:         br label %[[OUTER_EH:.*]]
-// LLVM:       [[IBACKEDGE]]:
-// LLVM:         br label %[[INNER_COND]]
 // LLVM:       [[INNER_EXIT]]:
 // LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[OCTOR_CONT:.*]] unwind label %[[OUTER_LPAD:.*]]
@@ -934,6 +923,8 @@ void while_cond_var_nested(int n) {
 // LLVM:         switch i32 %[[OSEL]], label %{{.*}}
 // LLVM:           i32 0, label %[[OBACKEDGE:.*]]
 // LLVM:           i32 1, label %[[OBREAK:.*]]
+// LLVM:       [[OBACKEDGE]]:
+// LLVM:         br label %[[OUTER_COND]]
 // LLVM:       [[OBREAK]]:
 // LLVM:         br label %[[OUTER_EXIT]]
 // LLVM:       [[OUTER_LPAD]]:
@@ -947,8 +938,6 @@ void while_cond_var_nested(int n) {
 // LLVM:       [[EODTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:       [[OBACKEDGE]]:
-// LLVM:         br label %[[OUTER_COND]]
 
 // OGCG-LABEL: define dso_local void @_Z21while_cond_var_nestedi(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:         %[[S:.*]] = alloca %struct.S
@@ -1243,10 +1232,10 @@ void while_cond_var_extended_init_list() {
 // LLVM-NEXT:            to label %{{.*}} unwind label %[[PARTIAL_LPAD:.*]]
 // LLVM:         invoke void @_ZN1SC1Ev(
 // LLVM-NEXT:            to label %{{.*}} unwind label %[[PARTIAL_LPAD]]
+// LLVM:         store i8 1, ptr %[[FLAG]]
 // LLVM:       [[PARTIAL_LPAD]]:
 // LLVM:         landingpad { ptr, i32 }
 // LLVM:         call void @_ZN1SD1Ev(
-// LLVM:         store i8 1, ptr %[[FLAG]]
 // LLVM:         landingpad { ptr, i32 }
 // The partial-array cleanup and the loop's EH cleanup share this block, so the
 // whole array is destroyed only once the flag is set.

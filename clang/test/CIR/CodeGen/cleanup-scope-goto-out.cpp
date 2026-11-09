@@ -199,14 +199,12 @@ skip:
 // LLVM:           i32 0, label %[[FALL_DEST:.*]]
 // LLVM:           i32 1, label %[[GOTO_DEST:.*]]
 // LLVM:         ]
-// LLVM:       [[GOTO_DEST]]:
-// LLVM:         br label %[[USE_OUTER:.*]]
 // LLVM:       [[FALL_DEST]]:
-// LLVM:         br label %{{.*}}
+// LLVM:         br label %[[USE_OUTER:.*]]
+// LLVM:       [[GOTO_DEST]]:
+// LLVM:         br label %[[USE_OUTER]]
 // LLVM:       [[USE_OUTER]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[OUTER_ADDR:.*]])
-// LLVM:         br label %[[OUTER_DTOR_BB:.*]]
-// LLVM:       [[OUTER_DTOR_BB]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[OUTER_ADDR]])
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
 // LLVM:         ret void
@@ -296,12 +294,12 @@ end:;
 // LLVM:           i32 0, label %[[USE_OUTER:.*]]
 // LLVM:           i32 1, label %[[INNER_GOTO:.*]]
 // LLVM:         ]
-// LLVM:       [[INNER_GOTO]]:
-// LLVM:         store i32 1, ptr %{{.*}}
-// LLVM:         br label %[[OUTER_CLEANUP:.*]]
 // LLVM:       [[USE_OUTER]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[OUTER_ADDR]])
 // LLVM:         store i32 0, ptr %{{.*}}
+// LLVM:         br label %[[OUTER_CLEANUP:.*]]
+// LLVM:       [[INNER_GOTO]]:
+// LLVM:         store i32 1, ptr %{{.*}}
 // LLVM:         br label %[[OUTER_CLEANUP]]
 // LLVM:       [[OUTER_CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[OUTER_ADDR]])

@@ -53,16 +53,12 @@ void test_field_initializer() {
 // LLVM:   invoke void @_Z8mayThrowv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM:   [[INVOKE_CONT:.*]]:
-// LLVM:     br label %[[EXIT:.*]]
+// LLVM:     ret void
 // LLVM:   [[LPAD:.*]]:
 // LLVM:     %[[EXN:.*]] = landingpad { ptr, i32 }
 // LLVM:       cleanup
-// LLVM:       br label %[[EH_CLEANUP:.*]]
-// LLVM:   [[EH_CLEANUP:.*]]:
 // LLVM:     call void @_ZN9ContainedD1Ev(ptr {{.*}} %[[CONTAINED_ADDR]])
-// LLVM:     resume { ptr, i32 } %{{.*}}        
-// LLVM:   [[EXIT:.*]]:
-// LLVM:     ret void
+// LLVM:     resume { ptr, i32 } %{{.*}}
 
 // OGCG: define {{.*}} void @_ZN9ContainerC2Ev
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %{{.*}}

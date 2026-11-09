@@ -231,12 +231,12 @@ int test_non_trivial_exception_copy() {
 // LLVM:       [[T1L_GET_OK]]:
 // LLVM:         store i32 %{{.*}}
 // LLVM:         call void @_ZN11MyExceptionD1Ev(
+// LLVM:         call void @__cxa_end_catch()
 
 // LLVM:       [[T1L_GET_LPAD]]:
 // LLVM:         landingpad { ptr, i32 }
 // LLVM:                 cleanup
 // LLVM:         call void @_ZN11MyExceptionD1Ev(
-// LLVM:         call void @__cxa_end_catch()
 // LLVM:         call void @__cxa_end_catch()
 // LLVM:         resume { ptr, i32 }
 

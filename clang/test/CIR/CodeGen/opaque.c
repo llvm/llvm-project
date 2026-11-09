@@ -46,8 +46,6 @@ void foo2() {
 // LLVM:  br label %[[COND_RESULT]]
 // LLVM: [[COND_RESULT]]:
 // LLVM:  %[[RESULT:.*]] = phi { float, float } [ %[[TMP_B]], %[[COND_FALSE]] ], [ %[[TMP_A]], %[[COND_TRUE]] ]
-// LLVM:  br label %[[COND_END:.*]]
-// LLVM: [[COND_END]]:
 // LLVM:  store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4

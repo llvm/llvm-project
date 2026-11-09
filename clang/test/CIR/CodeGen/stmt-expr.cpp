@@ -35,14 +35,10 @@ void test1() {
 // LLVM:   %[[REF_TMP:.+]] = alloca %class.A, 
 // LLVM:   %[[TMP:.+]] = alloca %class.A, 
 // LLVM:   %[[A:.+]] = alloca %class.A, 
-// LLVM:   br label %[[LBL4:.+]]
-// LLVM: [[LBL4]]:
-// LLVM:     call void @_ZN1AC2Ev(ptr {{.*}} %[[A]])
-// LLVM:     call void @_ZN1AC2ERS_(ptr {{.*}} %[[REF_TMP]], ptr {{.*}} %[[A]])
-// LLVM:     br label %[[LBL5:.+]]
-// LLVM: [[LBL5]]:
-// LLVM:     call void @_ZN1A3FooEv(ptr {{.*}} %[[REF_TMP]])
-// LLVM:     ret void
+// LLVM:   call void @_ZN1AC2Ev(ptr {{.*}} %[[A]])
+// LLVM:   call void @_ZN1AC2ERS_(ptr {{.*}} %[[REF_TMP]], ptr {{.*}} %[[A]])
+// LLVM:   call void @_ZN1A3FooEv(ptr {{.*}} %[[REF_TMP]])
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z5test1v()
 // OGCG: entry:
@@ -75,12 +71,8 @@ void cleanup() {
 
 // LLVM: define dso_local void @_Z7cleanupv()
 // LLVM:   %[[WD:.+]] = alloca %struct.with_dtor, 
-// LLVM:   br label %[[LBL2:.+]]
-// LLVM: [[LBL2]]:
-// LLVM:     call void @_ZN9with_dtorD1Ev(ptr {{.*}} %[[WD]])
-// LLVM:     br label %[[LBL3:.+]]
-// LLVM: [[LBL3]]:
-// LLVM:     ret void
+// LLVM:   call void @_ZN9with_dtorD1Ev(ptr {{.*}} %[[WD]])
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z7cleanupv()
 // OGCG: entry:
@@ -106,12 +98,8 @@ void gnu_statement_extension() {
 // LLVM:   %[[B_ADDR:.*]] = alloca float, align 4
 // LLVM:   %[[TMP_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM:   %[[A_ADDR:.*]] = alloca { float, float }, align 4
-// LLVM:   br label %[[LABEL_1:.*]]
-// LLVM: [[LABEL_1]]:
 // LLVM:   %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM:   store { float, float } %[[TMP_A]], ptr %[[TMP_ADDR]], align 4
-// LLVM:   br label %[[LABEL_2:.*]]
-// LLVM: [[LABEL_2]]:
 // LLVM:   %[[TMP:.*]] = load { float, float }, ptr %[[TMP_ADDR]], align 4
 // LLVM:   %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
 // LLVM:   store float %[[REAL]], ptr %[[B_ADDR]], align 4

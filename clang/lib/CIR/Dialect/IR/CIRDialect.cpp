@@ -2211,8 +2211,8 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
   Block *src = op->getBlock();
   Block *dst = op.getDest();
 
-  // Do not fold self-loops.
-  if (src == dst)
+  // Do not fold self-loops, or loop back edges, which carry the loop metadata.
+  if (src == dst || op.getLoopIdAttr())
     return failure();
 
   // Only merge when this is the unique edge between the blocks.

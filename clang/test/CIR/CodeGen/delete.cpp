@@ -36,8 +36,6 @@ void test_sized_delete(SizedDelete *x) {
 // LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
 // LLVM: [[DELETE_NOTNULL]]:
 // LLVM:   call void @_ZN11SizedDeletedlEPvm(ptr noundef %[[X]], i64 noundef 4)
-// LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
-// LLVM: [[EXIT_CLEANUP_SCOPE]]:
 // LLVM:   br label %[[DELETE_END]]
 // LLVM: [[DELETE_END]]:
 // LLVM:   ret void
@@ -90,11 +88,7 @@ Container::~Container() { delete contents; }
 // LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
 // LLVM: [[DELETE_NOTNULL]]:
 // LLVM:   call void @_ZN8ContentsD2Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CONTENTS_PTR]])
-// LLVM:   br label %[[NORMAL_CLEANUP:.*]]
-// LLVM: [[NORMAL_CLEANUP]]:
 // LLVM:   call void @_ZdlPvm(ptr noundef %[[CONTENTS_PTR]], i64 noundef 1)
-// LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
-// LLVM: [[EXIT_CLEANUP_SCOPE]]:
 // LLVM:   br label %[[DELETE_END]]
 // LLVM: [[DELETE_END]]:
 // LLVM:   ret void

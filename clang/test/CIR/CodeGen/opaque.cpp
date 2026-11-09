@@ -66,8 +66,6 @@ void foo2() {
 // LLVM:  br label %[[COND_RESULT]]
 // LLVM: [[COND_RESULT]]:
 // LLVM:  %[[RESULT:.*]] = phi { float, float } [ %[[TMP_B]], %[[COND_FALSE]] ], [ %[[TMP_A]], %[[COND_TRUE]] ]
-// LLVM:  br label %[[COND_END:.*]]
-// LLVM: [[COND_END]]:
 // LLVM:  store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
@@ -135,8 +133,6 @@ void foo3() {
 // LLVM:  br label %[[COND_RESULT]]
 // LLVM: [[COND_RESULT]]:
 // LLVM:  %[[RESULT:.*]] = phi i32 [ %[[TMP_B]], %[[COND_FALSE]] ], [ %[[TMP_A]], %[[COND_TRUE]] ]
-// LLVM:  br label %[[COND_END:.*]]
-// LLVM: [[COND_END]]:
 // LLVM:  store i32 %[[RESULT]], ptr %[[C_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
@@ -185,8 +181,6 @@ void test_gnu_binary_lvalue_assign() {
 // LLVM:   br label %[[MERGE_BB]]
 // LLVM: [[MERGE_BB]]:
 // LLVM:   %[[PHI_PTR:.*]] = phi ptr [ %[[B]], %[[FALSE_BB]] ], [ %[[A]], %[[TRUE_BB]] ]
-// LLVM:   br label %[[CONT_BB:.*]]
-// LLVM: [[CONT_BB]]:
 // LLVM:   store i32 42, ptr %[[PHI_PTR]]
 
 // OGCG-LABEL: define{{.*}} void @_Z29test_gnu_binary_lvalue_assignv(
@@ -235,8 +229,6 @@ void test_gnu_binary_lvalue_compound() {
 // LLVM:   br label %[[MERGE_BB]]
 // LLVM: [[MERGE_BB]]:
 // LLVM:   %[[PTR:.*]] = phi ptr [ %[[B]], %[[FALSE_BB]] ], [ %[[A]], %[[TRUE_BB]] ]
-// LLVM:   br label %[[CONT:.*]]
-// LLVM: [[CONT]]:
 // LLVM:   %[[OLD:.*]] = load i32, ptr %[[PTR]]
 // LLVM:   %[[NEW:.*]] = add{{.*}} i32 %[[OLD]], 5
 // LLVM:   store i32 %[[NEW]], ptr %[[PTR]]
@@ -296,8 +288,6 @@ void test_gnu_binary_lvalue_ptr() {
 // LLVM:   br label %[[MERGE_BB]]
 // LLVM: [[MERGE_BB]]:
 // LLVM:   %[[PHI:.*]] = phi ptr [ %[[Q_LOAD]], %[[FALSE_BB]] ], [ %[[P_LOAD]], %[[TRUE_BB]] ]
-// LLVM:   br label %[[CONT:.*]]
-// LLVM: [[CONT]]:
 // LLVM:   store i32 99, ptr %[[PHI]]
 
 // OGCG-LABEL: define{{.*}} void @_Z26test_gnu_binary_lvalue_ptrv(

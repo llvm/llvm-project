@@ -31,12 +31,12 @@ err:
 // LLVM:   [[COND:%.*]] = load i32, ptr {{.*}}, align 4
 // LLVM:   [[CMP:%.*]] = icmp sgt i32 [[COND]], 5
 // LLVM:   br i1 [[CMP]], label %[[ERR:.*]], label %[[IFEND:.*]]
-// LLVM: [[IFEND]]:
-// LLVM:   store i32 0, ptr %[[RETVAL:.*]], align 4
+// LLVM: [[ERR]]:
+// LLVM:   store i32 -1, ptr %[[RETVAL:.*]], align 4
 // LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM:   ret i32 [[RET]]
-// LLVM: [[ERR]]:
-// LLVM:   store i32 -1, ptr %[[RETVAL]], align 4
+// LLVM: [[IFEND]]:
+// LLVM:   store i32 0, ptr %[[RETVAL]], align 4
 // LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM:   ret i32 [[RET]]
 
@@ -101,12 +101,10 @@ end2:
 // CIR:    cir.label "end2"
 
 // LLVM: define dso_local void @_Z19severalLabelsInARowi
-// LLVM:   br label %[[END1:.*]]
+// LLVM:   br label %[[END:.*]]
 // LLVM: [[UNRE:.*]]:                                                ; No predecessors!
-// LLVM:   br label %[[END2:.*]]
-// LLVM: [[END1]]:
-// LLVM:   br label %[[END2]]
-// LLVM: [[END2]]:
+// LLVM:   br label %[[END]]
+// LLVM: [[END]]:
 // LLVM:   ret
 
 // OGCG: define dso_local void @_Z19severalLabelsInARowi
@@ -167,10 +165,8 @@ extern "C" void multiple_non_case(int v) {
 // LLVM: define dso_local void @multiple_non_case
 // LLVM: [[SWDEFAULT:.*]]:
 // LLVM:   call void @action1()
-// LLVM:   br label %[[L2:.*]]
-// LLVM: [[L2]]:
 // LLVM:   call void @action2()
-// LLVM:   br label %[[BREAK:.*]]
+// LLVM:   ret void
 
 // OGCG: define dso_local void @multiple_non_case
 // OGCG: sw.default:
@@ -217,12 +213,10 @@ extern "C" void case_follow_label(int v) {
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
 // LLVM:   call void @action1()
-// LLVM:   br label %[[RET:.*]]
+// LLVM:   ret void
 // LLVM: [[SWDEFAULT]]:
 // LLVM:   call void @action2()
 // LLVM:   br label %[[LABEL]]
-// LLVM: [[RET]]:
-// LLVM:   ret void
 
 // OGCG: define dso_local void @case_follow_label
 // OGCG: sw.bb:
@@ -272,14 +266,10 @@ extern "C" void default_follow_label(int v) {
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
 // LLVM:   call void @action1()
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[LABEL:.*]]:
-// LLVM:   br label %[[SWDEFAULT]]
+// LLVM:   ret void
 // LLVM: [[SWDEFAULT]]:
 // LLVM:   call void @action2()
-// LLVM:   br label %[[LABEL]]
-// LLVM: [[RET]]:
-// LLVM:   ret void
+// LLVM:   br label %[[SWDEFAULT]]
 
 // OGCG: define dso_local void @default_follow_label
 // OGCG: sw.bb:

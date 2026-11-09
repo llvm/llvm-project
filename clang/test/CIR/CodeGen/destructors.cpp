@@ -111,30 +111,26 @@ void test_array_destructor() {
 // LLVM:   store ptr %[[ARR_PTR]], ptr %[[TMP]]
 // LLVM:   %[[END_PTR:.*]] = getelementptr %struct.array_element, ptr %[[ARR_PTR]], i64 5
 // LLVM:   br label %[[INIT_LOOP_BODY:.*]]
-// LLVM: [[INIT_LOOP_NEXT:.*]]:
-// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[TMP]]
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[END_PTR]]
-// LLVM:   br i1 %[[CMP]], label %[[INIT_LOOP_BODY]], label %[[INIT_LOOP_END:.*]]
 // LLVM: [[INIT_LOOP_BODY]]:
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[TMP]]
 // LLVM:   %[[NEXT:.*]] = getelementptr %struct.array_element, ptr %[[CUR]], i64 1
 // LLVM:   store ptr %[[NEXT]], ptr %[[TMP]]
-// LLVM:   br label %[[INIT_LOOP_NEXT:.*]]
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[TMP]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[END_PTR]]
+// LLVM:   br i1 %[[CMP]], label %[[INIT_LOOP_BODY]], label %[[INIT_LOOP_END:.*]]
 // LLVM: [[INIT_LOOP_END]]:
 // LLVM:   %[[ARR_BEGIN:.*]] = getelementptr %struct.array_element, ptr %[[ARR]], i32 0
 // LLVM:   %[[ARR_END:.*]] = getelementptr %struct.array_element, ptr %[[ARR_BEGIN]], i64 5
 // LLVM:   store ptr %[[ARR_END]], ptr %[[ARR_CUR]]
 // LLVM:   br label %[[DESTROY_LOOP_BODY:.*]]
-// LLVM: [[DESTROY_LOOP_NEXT:.*]]:
-// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[ARR_CUR]]
-// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[ARR_BEGIN]]
-// LLVM:   br i1 %[[CMP]], label %[[DESTROY_LOOP_BODY]], label %[[DESTROY_LOOP_END:.*]]
 // LLVM: [[DESTROY_LOOP_BODY]]:
 // LLVM:   %[[CUR2:.*]] = load ptr, ptr %[[ARR_CUR]]
 // LLVM:   %[[PREV:.*]] = getelementptr %struct.array_element, ptr %[[CUR2]], i64 -1
 // LLVM:   store ptr %[[PREV]], ptr %[[ARR_CUR]]
 // LLVM:   call void @_ZN13array_elementD1Ev(ptr {{.*}} %[[PREV]])
-// LLVM:   br label %[[DESTROY_LOOP_NEXT]]
+// LLVM:   %[[CUR:.*]] = load ptr, ptr %[[ARR_CUR]]
+// LLVM:   %[[CMP:.*]] = icmp ne ptr %[[CUR]], %[[ARR_BEGIN]]
+// LLVM:   br i1 %[[CMP]], label %[[DESTROY_LOOP_BODY]], label %[[DESTROY_LOOP_END:.*]]
 // LLVM: [[DESTROY_LOOP_END]]:
 // LLVM:   ret void
 

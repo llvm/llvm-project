@@ -108,8 +108,6 @@
 // LLVM-NEXT: %[[TMP6:.*]] = getelementptr i32, ptr addrspace(4) %[[ARR_ASCAST]], i32 0
 // LLVM-NEXT: %[[TMP7:.*]] = getelementptr i32, ptr addrspace(4) %[[TMP6]], i64 10
 // LLVM-NEXT: store ptr addrspace(4) %[[TMP7]], ptr addrspace(4) %[[APTR_ASCAST]], align 8
-// LLVM-NEXT: br label %[[TMP8:.*]]
-// LLVM: [[TMP8]]:
 // LLVM-NEXT: %[[TMP9:.*]] = load ptr addrspace(4), ptr addrspace(4) %[[APTR_ASCAST]], align 8
 // LLVM-NEXT: %[[TMP10:.*]] = getelementptr i32, ptr addrspace(4) %[[ARR_ASCAST]], i32 0
 // LLVM-NEXT: %[[TMP11:.*]] = getelementptr i32, ptr addrspace(4) %[[TMP10]], i64 168

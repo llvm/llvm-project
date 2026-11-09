@@ -229,9 +229,10 @@ void stmt_expr_return(bool cond) {
 // LLVM:   store i8 0, ptr %[[ACTIVE_ALLOCA]]
 // The active flag is checked and the cleanup conditionally fires.
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA5]])
-// LLVM:   ret void
 // Normal fallthrough path completes with the lambda destructor.
 // LLVM:   call void @"_ZZ16stmt_expr_returnbEN3$_0D1Ev"(ptr {{.*}} %[[LAM5]])
+// LLVM:   ret void
+// The early return path skips the lambda destructor.
 // LLVM:   ret void
 
 // LLVM-LABEL: define internal void @"_ZZ11capture_one1SEN3$_0D2Ev"(

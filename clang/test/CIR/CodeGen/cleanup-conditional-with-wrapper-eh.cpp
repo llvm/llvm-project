@@ -68,8 +68,6 @@ Wrapper makeWrapper() {
 // LLVM: define {{.*}} void @_Z11makeWrapperv(ptr {{.*}} sret(%struct.Wrapper) {{.*}} %[[RETVAL:.*]])
 // LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
 // LLVM:   %[[AGG_TMP0:.*]] = alloca %"struct.std::unique_ptr<Base>"
-// LLVM:   br label %[[INIT:.*]]
-// LLVM: [[INIT]]:
 // LLVM:   br i1 %{{.*}}, label %[[CONSTRUCT_TRUE:.*]], label %[[CONSTRUCT_FALSE:.*]]
 // LLVM: [[CONSTRUCT_TRUE]]:
 
@@ -105,6 +103,8 @@ Wrapper makeWrapper() {
 // LLVM: [[NORMAL_CLEANUP]]:
 // LLVM:   call void @_ZNSt10unique_ptrI4BaseED1Ev(ptr {{.*}} %[[AGG_TMP0]])
 // LLVM:   br label %[[DONE]]
+// LLVM: [[DONE]]:
+// LLVM:   ret void
 // LLVM: [[INVOKE_CLEANUP]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
@@ -116,8 +116,6 @@ Wrapper makeWrapper() {
 // LLVM:   br label %[[CLEANUP_DONE:.*]]
 // LLVM: [[CLEANUP_DONE]]:
 // LLVM:   resume
-// LLVM: [[DONE]]:
-// LLVM:   ret void
   
 // OGCG: define {{.*}} void @_Z11makeWrapperv(ptr{{.*}} sret(%struct.Wrapper) {{.*}} %[[RETVAL:.*]])
 // OGCG:   %[[RESULT_PTR:.*]] = alloca ptr
@@ -249,6 +247,7 @@ void APFixedPoint::add(int x) const {
 // LLVM:   br i1 %[[TF_B]], label %[[CLEANUP_T:.*]], label %[[AFTER_T:.*]]
 // LLVM: [[CLEANUP_T]]:
 // LLVM:   call void @_ZN5APIntD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// LLVM: [[AFTER_T]]:
 // LLVM: [[LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
@@ -263,7 +262,6 @@ void APFixedPoint::add(int x) const {
 // LLVM:   br i1 %[[TF_EH_B]], label %[[EH_CLEANUP_T:.*]], label %[[EH_AFTER_T:.*]]
 // LLVM: [[EH_CLEANUP_T]]:
 // LLVM:   call void @_ZN5APIntD1Ev(ptr {{.*}} %[[AGG_TMP]])
-// LLVM: [[AFTER_T]]:
 // LLVM: [[EH_AFTER_T]]:
 // LLVM:   call void @_ZN5APIntD1Ev(ptr {{.*}} %[[THISVAL]])
 // LLVM:   resume
@@ -405,6 +403,10 @@ void makeEntry() {
 // LLVM: [[DO_PATH_DTOR]]:
 // LLVM:   call void @_ZN4PathD1Ev(ptr {{.*}} %[[AGG_TMP0]])
 // LLVM:   br label %[[DONE_PATH]]
+// Iter is destroyed after Path on the normal path.
+// LLVM: [[DONE_PATH]]:
+// LLVM:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:   ret void
 // Unwinding out of an arm destroys Path the same way.
 // LLVM: [[LPAD_PATH]]:
 // LLVM:   landingpad { ptr, i32 }
@@ -414,15 +416,12 @@ void makeEntry() {
 // LLVM:   br i1 %[[EH_FLAG]], label %[[EH_PATH_DTOR:.*]], label %{{.*}}
 // LLVM: [[EH_PATH_DTOR]]:
 // LLVM:   call void @_ZN4PathD1Ev(ptr {{.*}} %[[AGG_TMP0]])
-// Iter is destroyed after Path, on the normal path and from its own
-// landingpad.
-// LLVM:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
+// On unwind, Iter is destroyed after Path and from its own landingpad.
 // LLVM: [[LPAD_ITER]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
 // LLVM:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   resume
-// LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z9makeEntryv(){{.*}} personality ptr @__gxx_personality_v0
 // OGCG:   %[[REF_TMP:.*]] = alloca %struct.Iter
@@ -579,17 +578,20 @@ void callCondArg(bool c) {
 // LLVM: [[EXTRA_CONT]]:
 // LLVM:   invoke void @_Z7consumeRK3ArgRK5Extra(ptr {{.*}} %[[ARG]], ptr {{.*}} %[[EXTRA]])
 // LLVM:           to label %[[CALL_CONT:.*]] unwind label %[[LPAD_CONSUME:.*]]
-// Normal path starts with Extra, the last temporary constructed.
+// Normal path starts with Extra, the last temporary constructed, continues
+// with Arg, and ends with the guarded AltArg.
 // LLVM: [[CALL_CONT]]:
 // LLVM:   call void @_ZN5ExtraD1Ev(ptr {{.*}} %[[EXTRA]])
+// LLVM:   call void @_ZN3ArgD1Ev(ptr {{.*}} %[[ARG]])
+// LLVM:   %[[BYTE:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVM:   %[[BOOL:.*]] = trunc i8 %[[BYTE]] to i1
+// LLVM:   br i1 %[[BOOL]], label %[[ALT_DTOR:.*]], label %{{.*}}
 // Unwinding from consume destroys Extra, then joins Arg's cleanup.
 // LLVM: [[LPAD_CONSUME]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
 // LLVM:   call void @_ZN5ExtraD1Ev(ptr {{.*}} %[[EXTRA]])
 // LLVM:   br label %[[EH_ARG:.*]]
-// Normal path continues with Arg.
-// LLVM:   call void @_ZN3ArgD1Ev(ptr {{.*}} %[[ARG]])
 // Unwinding from Extra's constructor skips ~Extra and joins the same pad.
 // LLVM: [[LPAD_EXTRA]]:
 // LLVM:   landingpad { ptr, i32 }
@@ -598,10 +600,6 @@ void callCondArg(bool c) {
 // LLVM: [[EH_ARG]]:
 // LLVM:   call void @_ZN3ArgD1Ev(ptr {{.*}} %[[ARG]])
 // LLVM:   br label %[[EH_ALT:.*]]
-// Normal path ends with the guarded AltArg.
-// LLVM:   %[[BYTE:.*]] = load i8, ptr %[[ACTIVE]]
-// LLVM:   %[[BOOL:.*]] = trunc i8 %[[BYTE]] to i1
-// LLVM:   br i1 %[[BOOL]], label %[[ALT_DTOR:.*]], label %{{.*}}
 // LLVM: [[ALT_DTOR]]:
 // LLVM:   call void @_ZN6AltArgD1Ev(ptr {{.*}} %[[ALT]])
 // The arms' pad skips ~Extra and ~Arg and joins the guarded AltArg directly.
@@ -802,20 +800,27 @@ void twoConditionals(bool c1, bool c2) {
 // LLVM:           to label %{{.*}} unwind label %[[LPAD_ARMS2]]
 // LLVM:   invoke void @_Z4takeRK3ArgRK3MidS1_(ptr {{.*}} %[[ARG1]], ptr {{.*}} %[[MID]], ptr {{.*}} %[[ARG2]])
 // LLVM:           to label %{{.*}} unwind label %[[LPAD_TAKE:.*]]
-// Normal path starts with Arg2, the last temporary constructed.
+// Normal path starts with Arg2, the last temporary constructed, and
+// continues with the guarded AltArg2.
 // LLVM:   call void @_ZN3ArgD1Ev(ptr {{.*}} %[[ARG2]])
+// LLVM:   %[[B2:.*]] = load i8, ptr %[[FLAG2]]
+// LLVM:   %[[C2:.*]] = trunc i8 %[[B2]] to i1
+// LLVM:   br i1 %[[C2]], label %[[ALT2_DTOR:.*]], label %[[AFTER_ALT2:.*]]
 // Unwinding from take destroys Arg2 and joins the second conditional's pad.
 // LLVM: [[LPAD_TAKE]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
 // LLVM:   call void @_ZN3ArgD1Ev(ptr {{.*}} %[[ARG2]])
 // LLVM:   br label %[[EH_ALT2:.*]]
-// Normal path continues with the guarded AltArg2.
-// LLVM:   %[[B2:.*]] = load i8, ptr %[[FLAG2]]
-// LLVM:   %[[C2:.*]] = trunc i8 %[[B2]] to i1
-// LLVM:   br i1 %[[C2]], label %[[ALT2_DTOR:.*]], label %{{.*}}
 // LLVM: [[ALT2_DTOR]]:
 // LLVM:   call void @_ZN6AltArgD1Ev(ptr {{.*}} %[[ALT2]])
+// Normal path then destroys Mid and Arg1, and ends with the guarded AltArg1.
+// LLVM: [[AFTER_ALT2]]:
+// LLVM:   call void @_ZN3MidD1Ev(ptr {{.*}} %[[MID]])
+// LLVM:   call void @_ZN3ArgD1Ev(ptr {{.*}} %[[ARG1]])
+// LLVM:   %[[B1:.*]] = load i8, ptr %[[FLAG1]]
+// LLVM:   %[[C1:.*]] = trunc i8 %[[B1]] to i1
+// LLVM:   br i1 %[[C1]], label %[[ALT1_DTOR:.*]], label %{{.*}}
 // The second conditional's arms skip ~Arg2 and enter at the same level.
 // LLVM: [[LPAD_ARMS2]]:
 // LLVM:   landingpad { ptr, i32 }
@@ -827,8 +832,7 @@ void twoConditionals(bool c1, bool c2) {
 // LLVM:   br i1 %[[EC2]], label %[[EH_ALT2_DTOR:.*]], label %{{.*}}
 // LLVM: [[EH_ALT2_DTOR]]:
 // LLVM:   call void @_ZN6AltArgD1Ev(ptr {{.*}} %[[ALT2]])
-// Normal path then Mid, and the unwind chain reaches Mid next as well.
-// LLVM:   call void @_ZN3MidD1Ev(ptr {{.*}} %[[MID]])
+// The unwind chain reaches Mid next as well.
 // LLVM:   call void @_ZN3MidD1Ev(ptr {{.*}} %[[MID]])
 // LLVM:   br label %[[EH_ARG1:.*]]
 // Unwinding from Mid's constructor skips ~Mid and joins Arg1's cleanup.
@@ -839,10 +843,6 @@ void twoConditionals(bool c1, bool c2) {
 // LLVM: [[EH_ARG1]]:
 // LLVM:   call void @_ZN3ArgD1Ev(ptr {{.*}} %[[ARG1]])
 // LLVM:   br label %[[EH_ALT1:.*]]
-// Normal path ends with the guarded AltArg1.
-// LLVM:   %[[B1:.*]] = load i8, ptr %[[FLAG1]]
-// LLVM:   %[[C1:.*]] = trunc i8 %[[B1]] to i1
-// LLVM:   br i1 %[[C1]], label %[[ALT1_DTOR:.*]], label %{{.*}}
 // LLVM: [[ALT1_DTOR]]:
 // LLVM:   call void @_ZN6AltArgD1Ev(ptr {{.*}} %[[ALT1]])
 // The first conditional's arms enter the outermost level directly.
