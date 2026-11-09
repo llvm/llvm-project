@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines FsetposChecker which finds 'fsetpos' calls that do not take
-// a 'pos' argument returned from 'fgetpos'.
+// a 'pos' argument returned from 'fgetpos' on the same file.
 // CERT SEI Rule FIO44-C
 //
 //===----------------------------------------------------------------------===//
@@ -60,9 +60,7 @@ public:
 /// value works even at assignments of 'fpos_t' type.)
 REGISTER_MAP_WITH_PROGRAMSTATE(FPosFile, SVal, SVal)
 
-namespace {
-
-SVal getFileVal(ProgramStateRef State, SVal LocVal, bool *IsInteger) {
+static SVal getFileVal(ProgramStateRef State, SVal LocVal, bool *IsInteger) {
   if (LocVal.isUndef())
     return UndefinedVal{};
   auto FPosLoc = LocVal.getAs<Loc>();
@@ -80,8 +78,6 @@ SVal getFileVal(ProgramStateRef State, SVal LocVal, bool *IsInteger) {
       return *V;
   return UnknownVal{};
 }
-
-} // namespace
 
 void FsetposChecker::checkPreCall(const CallEvent &Call,
                                   CheckerContext &C) const {
