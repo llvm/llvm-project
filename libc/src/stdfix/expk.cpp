@@ -98,7 +98,7 @@ LLVM_LIBC_FUNCTION(accum, expk, (accum x)) {
   //   exp( indices/16 - floor(indices / 16) - 0.0625 )
   accum exp_hi = EXP_HI[indices >> 4];
   accum exp_mid = EXP_MID[indices & 0xf];
-  // exp(x) ~ exp(hi) * exp(mid) * (1 + lo);
+  // exp(x) ~ exp(hi) * exp(mid) * (1 + lo + lo^2 / 2);
   accum l1 = 0x1.0p0k + (lo >> 1); // = 1 + lo / 2
   accum l2 = 0x1.0p0k + lo * l1;   // = 1 + lo * (1 + lo / 2) = 1 + lo + lo^2/2
   return exp_hi * (exp_mid * l2);
