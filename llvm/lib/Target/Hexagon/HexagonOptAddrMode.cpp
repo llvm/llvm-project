@@ -611,7 +611,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   MachineInstr *FirstReachedMI = FirstReachedUseSN.Addr->getCode();
   const MachineOperand FirstReachedMIImmOp = FirstReachedMI->getOperand(2);
   if (!FirstReachedMIImmOp.isImm())
-    return false;
+    return Changed;
 
   for (auto &I : AddiList) {
     NodeAddr<StmtNode *> CurrentInstSN = I.first;
@@ -644,9 +644,8 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
     // we create RAW dependence between the FirstReached Addi and the current
     // one, which could result in extra packets. So we only do this change if
     // we know the current Addi would get removed later
-    if (!usedInLoadStore(CurrentInstSN, NewOffset)) {
-      return false;
-    }
+    if (!usedInLoadStore(CurrentInstSN, NewOffset))
+      return Changed;
 
     // Verify whether the First Addi's definition register is still live when
     // we reach the current Addi
