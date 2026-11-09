@@ -1714,10 +1714,10 @@ struct UnrollDeinterleavePattern
           vector::DeinterleaveOp::create(rewriter, loc, sourceSlice);
 
       resultOdd = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, deinterleaveSlice.getRes1(), resultOdd, resultOffsets,
+          loc, deinterleaveSlice.getResultEven(), resultOdd, resultOffsets,
           resultStrides);
       resultEven = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, deinterleaveSlice.getRes2(), resultEven, resultOffsets,
+          loc, deinterleaveSlice.getResultOdd(), resultEven, resultOffsets,
           resultStrides);
     }
 

@@ -152,9 +152,7 @@ void f5(void) {
 // LLVM: [[SCOPE]]:
 // LLVM:   br label %[[LOOP:.*]]
 // LLVM: [[LOOP]]:
-// LLVM:   br i1 true, label %[[LOOP_STEP:.*]], label %[[LOOP_EXIT:.*]]
-// LLVM: [[LOOP_STEP]]:
-// LLVM:   br label %[[LOOP_BODY:.*]]
+// LLVM:   br i1 true, label %[[LOOP_BODY:.*]], label %[[LOOP_EXIT:.*]]
 // LLVM: [[LOOP_BODY]]:
 // LLVM:   br label %[[LOOP]]
 // LLVM: [[LOOP_EXIT]]:

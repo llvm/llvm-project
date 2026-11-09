@@ -158,6 +158,7 @@ void SPIRVModuleAnalysisImpl::setBaseInfo(const Module &M) {
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.InstrAuxDataRecords.clear();
+  MAI.DebugValueMIs.clear();
   MAI.Reqs.clear();
   MAI.Reqs.initAvailableCapabilities(*ST);
 
@@ -740,6 +741,10 @@ void SPIRVModuleAnalysisImpl::processOtherInstrs(const Module &M) {
 
     for (MachineBasicBlock &MBB : *MF)
       for (MachineInstr &MI : MBB) {
+        if (MI.isDebugValueLike()) {
+          MAI.DebugValueMIs.push_back(&MI);
+          continue;
+        }
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
@@ -1025,6 +1030,10 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
         getCapabilitiesEnabledByExtension(Extension);
     addAvailableCaps(EnabledCapabilities);
   }
+
+  // EXT and NV use the same capability.
+  if (ST.canUseExtension(Extension::SPV_EXT_shader_subgroup_partitioned))
+    addAvailableCaps({Capability::GroupNonUniformPartitionedNV});
 
   if (!ST.isShader()) {
     initAvailableCapabilitiesForOpenCL(ST);
@@ -1992,6 +2001,12 @@ void addInstrRequirements(const MachineInstr &MI,
     case SPIRV::GroupOperation::PartitionedReduceNV:
     case SPIRV::GroupOperation::PartitionedInclusiveScanNV:
     case SPIRV::GroupOperation::PartitionedExclusiveScanNV:
+      if (ST.canUseExtension(
+              SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned))
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned);
+      else
+        Reqs.addExtension(SPIRV::Extension::SPV_NV_shader_subgroup_partitioned);
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformPartitionedNV);
       break;
     }
