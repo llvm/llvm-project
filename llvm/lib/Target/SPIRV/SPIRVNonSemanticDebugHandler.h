@@ -38,6 +38,7 @@
 namespace llvm {
 
 class GlobalVariable;
+struct SPIRVOptions;
 class MachineDominatorTree;
 class SPIRVSubtarget;
 
@@ -60,6 +61,8 @@ class SPIRVSubtarget;
 ///   being printed, and the DebugDeclare and DebugValue anchored on it.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
+  const SPIRVOptions &CLOpts;
+
   static constexpr unsigned NSSet = static_cast<unsigned>(
       SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
 
