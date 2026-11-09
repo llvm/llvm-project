@@ -4,7 +4,9 @@
 ; can sneak in between two checked declarations.
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=msp430-none-elf < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CHECK %s
 
-; CHECK: declare void @_Unwind_Resume(ptr)
+; CHECK: @__stack_chk_guard = external global ptr
+; CHECK-NEXT: declare i16 @_Unwind_RaiseException(ptr)
+; CHECK-NEXT: declare void @_Unwind_Resume(ptr)
 ; CHECK-NEXT: declare double @__adddf3(double, double)
 ; CHECK-NEXT: declare float @__addsf3(float, float)
 ; CHECK-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -72,6 +74,9 @@
 ; CHECK-NEXT: declare i16 @__clzdi2(i64)
 ; CHECK-NEXT: declare i16 @__clzsi2(i32)
 ; CHECK-NEXT: declare i16 @__clzti2(i128)
+; CHECK-NEXT: declare i16 @__ctzdi2(i64)
+; CHECK-NEXT: declare i16 @__ctzsi2(i32)
+; CHECK-NEXT: declare i16 @__ctzti2(i128)
 ; CHECK-NEXT: declare void @__cxa_end_cleanup()
 ; CHECK-NEXT: declare double @__divdf3(double, double)
 ; CHECK-NEXT: declare i64 @__divdi3(i64, i64)
@@ -255,7 +260,6 @@
 ; CHECK-NEXT: declare float @__powisf2(float, i16)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16)
 ; CHECK-NEXT: declare void @__stack_chk_fail()
-; CHECK-NEXT: declare void @__stack_chk_guard(...)
 ; CHECK-NEXT: declare double @__subdf3(double, double)
 ; CHECK-NEXT: declare float @__subsf3(float, float)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128)

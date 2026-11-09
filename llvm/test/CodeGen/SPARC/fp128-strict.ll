@@ -1169,3 +1169,92 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) nounwind strictfp {
   %r = zext i1 %c to i32
   ret i32 %r
 }
+
+define void @fcmps_branch_f128(fp128 %a, fp128 %b) nounwind strictfp {
+; SOFT32-LABEL: fcmps_branch_f128:
+; SOFT32:       ! %bb.0: ! %entry
+; SOFT32-NEXT:    save %sp, -128, %sp
+; SOFT32-NEXT:    ldd [%i0+8], %f0
+; SOFT32-NEXT:    ldd [%i0], %f2
+; SOFT32-NEXT:    ldd [%i1], %f4
+; SOFT32-NEXT:    ldd [%i1+8], %f6
+; SOFT32-NEXT:    std %f0, [%fp+-8]
+; SOFT32-NEXT:    std %f2, [%fp+-16]
+; SOFT32-NEXT:    std %f4, [%fp+-32]
+; SOFT32-NEXT:    std %f6, [%fp+-24]
+; SOFT32-NEXT:    add %fp, -16, %o0
+; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    add %fp, -32, %o1
+; SOFT32-NEXT:    andcc %o0, 1, %g0
+; SOFT32-NEXT:    bne .LBB19_2
+; SOFT32-NEXT:    nop
+; SOFT32-NEXT:  ! %bb.1: ! %if.then
+; SOFT32-NEXT:    call foo
+; SOFT32-NEXT:    nop
+; SOFT32-NEXT:  .LBB19_2: ! %if.end
+; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    restore
+;
+; SOFT64-LABEL: fcmps_branch_f128:
+; SOFT64:       ! %bb.0: ! %entry
+; SOFT64-NEXT:    save %sp, -208, %sp
+; SOFT64-NEXT:    std %f2, [%fp+2039]
+; SOFT64-NEXT:    std %f0, [%fp+2031]
+; SOFT64-NEXT:    std %f4, [%fp+2015]
+; SOFT64-NEXT:    std %f6, [%fp+2023]
+; SOFT64-NEXT:    add %fp, 2031, %o0
+; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    add %fp, 2015, %o1
+; SOFT64-NEXT:    andcc %o0, 1, %g0
+; SOFT64-NEXT:    bne %icc, .LBB19_2
+; SOFT64-NEXT:    nop
+; SOFT64-NEXT:  ! %bb.1: ! %if.then
+; SOFT64-NEXT:    call foo
+; SOFT64-NEXT:    nop
+; SOFT64-NEXT:  .LBB19_2: ! %if.end
+; SOFT64-NEXT:    ret
+; SOFT64-NEXT:    restore
+;
+; HARD32-LABEL: fcmps_branch_f128:
+; HARD32:       ! %bb.0: ! %entry
+; HARD32-NEXT:    save %sp, -96, %sp
+; HARD32-NEXT:    ldd [%i1], %f0
+; HARD32-NEXT:    ldd [%i1+8], %f2
+; HARD32-NEXT:    ldd [%i0], %f4
+; HARD32-NEXT:    ldd [%i0+8], %f6
+; HARD32-NEXT:    fcmpeq %f4, %f0
+; HARD32-NEXT:    nop
+; HARD32-NEXT:    fbul .LBB19_2
+; HARD32-NEXT:    nop
+; HARD32-NEXT:  ! %bb.1: ! %if.then
+; HARD32-NEXT:    call foo
+; HARD32-NEXT:    nop
+; HARD32-NEXT:  .LBB19_2: ! %if.end
+; HARD32-NEXT:    ret
+; HARD32-NEXT:    restore
+;
+; HARD-LABEL: fcmps_branch_f128:
+; HARD:       ! %bb.0: ! %entry
+; HARD-NEXT:    save %sp, -176, %sp
+; HARD-NEXT:    fcmpeq %fcc0, %f0, %f4
+; HARD-NEXT:    fbul %fcc0, .LBB19_2
+; HARD-NEXT:    nop
+; HARD-NEXT:  ! %bb.1: ! %if.then
+; HARD-NEXT:    call foo
+; HARD-NEXT:    nop
+; HARD-NEXT:  .LBB19_2: ! %if.end
+; HARD-NEXT:    ret
+; HARD-NEXT:    restore
+entry:
+  %c = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"oge", metadata !"fpexcept.strict") strictfp
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  call void @foo() strictfp
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+declare void @foo()

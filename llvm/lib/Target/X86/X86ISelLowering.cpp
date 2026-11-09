@@ -34468,8 +34468,10 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
   assert((!N->isExpandingLoad() || Subtarget.hasAVX512()) &&
          "Expanding masked load is supported on AVX-512 target only!");
 
-  assert((!N->isExpandingLoad() || ScalarVT.getSizeInBits() >= 32) &&
-         "Expanding masked load is supported for 32 and 64-bit types only!");
+  assert((!N->isExpandingLoad() || Subtarget.hasVBMI2() ||
+          ScalarVT.getSizeInBits() >= 32) &&
+         "Expanding masked load is only supported for 32 and 64-bit types "
+         "without VBMI2!");
 
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
          "Cannot lower masked load op.");
@@ -34517,8 +34519,10 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   assert((!N->isCompressingStore() || Subtarget.hasAVX512()) &&
          "Compressing masked store is supported on AVX-512 target only!");
 
-  assert((!N->isCompressingStore() || ScalarVT.getSizeInBits() >= 32) &&
-         "Compressing masked store is supported for 32 and 64-bit types only!");
+  assert((!N->isCompressingStore() || Subtarget.hasVBMI2() ||
+          ScalarVT.getSizeInBits() >= 32) &&
+         "Compressing masked store is only supported for 32 and 64-bit types "
+         "without VBMI2!");
 
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
          "Cannot lower masked store op.");
@@ -60847,10 +60851,6 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDNode *N,
 static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                    const SDLoc &DL, EVT VT) {
   if (N0.getOpcode() != N1.getOpcode() || N0.getOpcode() != X86ISD::VPMADDWD)
-    return SDValue();
-
-  // TODO: Add 256/512-bit support once VPMADDWD combines with shuffles.
-  if (VT.getSizeInBits() > 128)
     return SDValue();
 
   unsigned NumElts = VT.getVectorNumElements();
