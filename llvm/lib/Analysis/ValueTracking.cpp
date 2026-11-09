@@ -5291,12 +5291,14 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
-static void computeKnownFPClassForFRem(const Operator *Op, const Value *LHS,
-                                       const Value *RHS,
+static void computeKnownFPClassForFRem(const Operator *Op,
                                        const APInt &DemandedElts,
                                        FPClassTest InterestedClasses,
                                        KnownFPClass &Known,
                                        const SimplifyQuery &Q, unsigned Depth) {
+  const Value *LHS = Op->getOperand(0);
+  const Value *RHS = Op->getOperand(1);
+
   FPClassTest InterestedLHS = fcNone;
   FPClassTest InterestedRHS = fcNone;
 
@@ -5636,8 +5638,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::experimental_constrained_frem: {
-      computeKnownFPClassForFRem(Op, II->getArgOperand(0), II->getArgOperand(1),
-                                 DemandedElts, InterestedClasses, Known, Q,
+      computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
                                  Depth);
       break;
     }
@@ -6328,8 +6329,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FRem: {
-    computeKnownFPClassForFRem(Op, Op->getOperand(0), Op->getOperand(1),
-                               DemandedElts, InterestedClasses, Known, Q,
+    computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
                                Depth);
     break;
   }
