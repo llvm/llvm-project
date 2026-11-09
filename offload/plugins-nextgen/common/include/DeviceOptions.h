@@ -28,7 +28,7 @@ template <typename T> struct DeviceOptionTy {
     return *this;
   }
 
-  void applyFromEnv() {
+  void readFromEnv() {
     Envar<T> Env(EnvName);
     if (!Env.isPresent())
       return;

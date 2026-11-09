@@ -13,8 +13,6 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include <cstdint>
-
 namespace llvm::omp::target::plugin {
 
 /// Runtime options of an AMDGPU device.
@@ -23,10 +21,6 @@ struct AMDGPUDeviceOptionsTy {
   DeviceOptionTy<bool> UseMultipleSdmaEngines{
       "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false};
 
-  /// Envar for controlling the number of HSA queues per device. High number of
-  /// queues may degrade performance.
-  DeviceOptionTy<uint32_t> NumQueues{"LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4};
-
   /// Get the defaults for architectures.
   static AMDGPUDeviceOptionsTy getDeviceDefaults(StringRef Arch, bool IsAPU) {
     AMDGPUDeviceOptionsTy Options;
@@ -34,10 +28,7 @@ struct AMDGPUDeviceOptionsTy {
     return Options;
   }
 
-  void applyFromEnv() {
-    UseMultipleSdmaEngines.applyFromEnv();
-    NumQueues.applyFromEnv();
-  }
+  void readFromEnv() { UseMultipleSdmaEngines.readFromEnv(); }
 };
 
 } // namespace llvm::omp::target::plugin
