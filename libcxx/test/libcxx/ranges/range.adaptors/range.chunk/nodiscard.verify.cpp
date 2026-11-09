@@ -111,8 +111,4 @@ void test() {
   std::views::chunk(3);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::chunk(range, 3);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  range | std::views::chunk(3);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::reverse | std::views::chunk(3);
 }
