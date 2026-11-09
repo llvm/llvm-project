@@ -50,6 +50,15 @@ static VectorType trimLeadingUnitDims(VectorType oldType,
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
+// Returns true if one of the leading `numDims` dims of `xferOp` may be out of
+// bounds. Dropping such a dim would make it a non-vector dim, and those must be
+// in bounds.
+static bool isLeadingDimOutOfBounds(VectorTransferOpInterface xferOp,
+                                    int64_t numDims) {
+  return llvm::any_of(llvm::seq<int64_t>(numDims),
+                      [&](int64_t dim) { return !xferOp.isDimInBounds(dim); });
+}
+
 /// Return a smallVector of size `rank` containing all zeros.
 static SmallVector<int64_t> splatZero(int64_t rank) {
   return SmallVector<int64_t>(rank, 0);
@@ -248,10 +257,7 @@ struct CastAwayTransferReadLeadingOneDim
     if (newType == oldType)
       return failure();
 
-    // The dropped dims become non-vector dims, which must be in bounds.
-    SmallVector<bool> inBounds = read.getInBoundsValues();
-    if (llvm::is_contained(
-            ArrayRef<bool>(inBounds).drop_back(newType.getRank()), false))
+    if (isLeadingDimOutOfBounds(read, oldType.getRank() - newType.getRank()))
       return rewriter.notifyMatchFailure(read, "dropped dim is out of bounds");
 
     AffineMap oldMap = read.getPermutationMap();
@@ -306,10 +312,7 @@ struct CastAwayTransferWriteLeadingOneDim
     if (newType == oldType)
       return failure();
 
-    // The dropped dims become non-vector dims, which must be in bounds.
-    SmallVector<bool> inBounds = write.getInBoundsValues();
-    if (llvm::is_contained(
-            ArrayRef<bool>(inBounds).drop_back(newType.getRank()), false))
+    if (isLeadingDimOutOfBounds(write, oldType.getRank() - newType.getRank()))
       return rewriter.notifyMatchFailure(write, "dropped dim is out of bounds");
 
     AffineMap oldMap = write.getPermutationMap();
