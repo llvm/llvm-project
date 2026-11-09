@@ -1053,13 +1053,22 @@ Argument *IRPosition::getAssociatedArgument() const {
   if (ArgNo < 0)
     return nullptr;
 
+  const auto &CB = cast<CallBase>(getAnchorValue());
+  auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
+
+  // Without callbacks, use the direct callee argument if available.
+  if (!Callee || !Callee->hasMetadata(LLVMContext::MD_callback)) {
+    if (Callee && Callee->arg_size() > unsigned(ArgNo))
+      return Callee->getArg(ArgNo);
+    return nullptr;
+  }
+
   // Use abstract call sites to make the connection between the call site
   // values and the ones in callbacks. If a callback was found that makes use
   // of the underlying call site operand, we want the corresponding callback
   // callee argument and not the direct callee argument.
   std::optional<Argument *> CBCandidateArg;
   SmallVector<const Use *, 4> CallbackUses;
-  const auto &CB = cast<CallBase>(getAnchorValue());
   AbstractCallSite::getCallbackUses(CB, CallbackUses);
   for (const Use *U : CallbackUses) {
     AbstractCallSite ACS(U);
@@ -1090,8 +1099,7 @@ Argument *IRPosition::getAssociatedArgument() const {
 
   // If no callbacks were found, or none used the underlying call site operand
   // exclusively, use the direct callee argument if available.
-  auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
-  if (Callee && Callee->arg_size() > unsigned(ArgNo))
+  if (Callee->arg_size() > unsigned(ArgNo))
     return Callee->getArg(ArgNo);
 
   return nullptr;
