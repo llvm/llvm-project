@@ -1,6 +1,7 @@
 ; RUN: not llubi --verbose --entry-function=stride_less_than_rows < %s 2>&1 | FileCheck %s --check-prefix=STRIDE
 ; RUN: not llubi --verbose --entry-function=poison_stride < %s 2>&1 | FileCheck %s --check-prefix=POISON-STRIDE
 ; RUN: not llubi --verbose --entry-function=wrapping_offset < %s 2>&1 | FileCheck %s --check-prefix=WRAP
+; RUN: not llubi --verbose --entry-function=mul_overflow < %s 2>&1 | FileCheck %s --check-prefix=MUL
 
 @a = global [8 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7]
 
@@ -35,5 +36,17 @@ define void @wrapping_offset() {
 ; WRAP-NEXT: error: Execution of function 'wrapping_offset' failed.
   %p = getelementptr i32, ptr @a, i64 1
   call void @llvm.matrix.column.major.store.v2i32.i64(<2 x i32> zeroinitializer, ptr %p, i64 -1, i1 false, i32 1, i32 2)
+  ret void
+}
+
+; Column 2 starts at 2 * 2^63 elements, which overflows the index type. The
+; multiplication by the stride is part of the nuw GEP index, so it is poison.
+define void @mul_overflow() {
+; MUL: Entering function: mul_overflow
+; MUL-NEXT: Stacktrace:
+; MUL-NEXT: #0   call void @llvm.matrix.column.major.store.v3i32.i64(<3 x i32> zeroinitializer, ptr @a, i64 -9223372036854775808, i1 false, i32 1, i32 3) at @mul_overflow <stdin>:{{[0-9]+}}
+; MUL-NEXT: Immediate UB detected: Invalid memory access with a poison pointer.
+; MUL-NEXT: error: Execution of function 'mul_overflow' failed.
+  call void @llvm.matrix.column.major.store.v3i32.i64(<3 x i32> zeroinitializer, ptr @a, i64 -9223372036854775808, i1 false, i32 1, i32 3)
   ret void
 }

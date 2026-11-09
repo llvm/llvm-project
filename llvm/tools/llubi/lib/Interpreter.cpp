@@ -1078,10 +1078,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     ArrayRef<AnyValue> Elems = Data.asAggregate();
     for (unsigned C = 0; C != Cols; ++C) {
       AnyValue AccumulatedOffset = AnyValue::poison();
+      // C * Stride is part of the nuw GEP index: overflow yields poison.
+      AnyValue ColIdx = mulNoWrap(StrideIdx,
+                                  APInt(IndexBW, C, /*IsSigned=*/false,
+                                        /*ImplicitTrunc=*/true),
+                                  /*HasNSW=*/false, /*HasNUW=*/true);
       AnyValue ColPtr = Ctx.computeScaledPtrAdd(
-          Ptr, StrideIdx * C, ElemSize,
-          GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap(),
-          AccumulatedOffset);
+          Ptr, ColIdx, ElemSize, GEPNoWrapFlags::all(), AccumulatedOffset);
       store(ColPtr, Align(1), Elems.slice(C * Rows, Rows).vec(), ColTy);
     }
     return AnyValue();
