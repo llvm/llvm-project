@@ -23,10 +23,10 @@ int main(int, char**) {
   for (int round = 0; round < 10; ++round) {
     static constexpr size_t iters = 32;
     std::atomic_size_t accum{0};
-    std::__pstl::__statpart::__apply(iters, &accum, [](void* context, std::size_t) {
-      std::__pstl::__statpart::__apply(iters, context, [](void* context, std::size_t) {
-        std::__pstl::__statpart::__apply(iters, context, [](void* context, std::size_t) {
-          static_cast<std::atomic_size_t*>(context)->fetch_add(1, std::memory_order_relaxed);
+    std::__pstl::__statpart::__apply(iters, &accum, [](void* context1, std::size_t) {
+      std::__pstl::__statpart::__apply(iters, context1, [](void* context2, std::size_t) {
+        std::__pstl::__statpart::__apply(iters, context2, [](void* context3, std::size_t) {
+          static_cast<std::atomic_size_t*>(context3)->fetch_add(1, std::memory_order_relaxed);
         });
       });
     });
