@@ -80,7 +80,7 @@ public:
         tosa::ReciprocalOp, tosa::PowOp, tosa::AddOp, tosa::SubOp,
         tosa::IntDivOp, tosa::MulOp, tosa::NegateOp, tosa::MaximumOp,
         tosa::MinimumOp, tosa::SelectOp>([](Operation *op) {
-      return !tosa::isConvertibleToLinalgElementwise(op);
+      return !tosa::isConvertibleToLinalgElementwise(op).has_value();
     });
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });

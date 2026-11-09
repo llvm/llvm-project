@@ -225,14 +225,12 @@ func.func @test_add_1d_broadcast_dynamic_to_static(%arg0: tensor<5xf32>, %arg1: 
 
 // CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (0)>
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0)>
-// NAMED: #[[$MAP0:.+]] = affine_map<(d0) -> (0)>
-// NAMED: #[[$MAP1:.+]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: @test_add_1d_broadcast_static_to_dynamic
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME: %[[ARG1:[0-9a-zA-Z_]*]]:
 // NAMED-LABEL: @test_add_1d_broadcast_static_to_dynamic
-// NAMED: linalg.elementwise <add>
-// NAMED-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]]
+// NAMED-NOT: linalg.elementwise
+// NAMED: tosa.add
 func.func @test_add_1d_broadcast_static_to_dynamic(%arg0: tensor<1xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
 
   // CHECK: %[[CONST0:.*]] = arith.constant 0 : index

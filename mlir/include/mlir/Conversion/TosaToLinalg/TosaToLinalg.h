@@ -13,11 +13,13 @@
 #ifndef MLIR_CONVERSION_TOSATOLINALG_TOSATOLINALG_H
 #define MLIR_CONVERSION_TOSATOLINALG_TOSATOLINALG_H
 
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
 
+#include <optional>
 #include <utility>
 
 namespace mlir {
@@ -60,9 +62,10 @@ void populateTosaToLinalgNamedConversionPatterns(
     const TypeConverter &converter, RewritePatternSet *patterns,
     const TosaToLinalgNamedOptions &options);
 
-/// Returns true if `op` is a TOSA elementwise operation that the
-/// TosaToLinalgNamed conversion can lower to a `linalg.elementwise` named op.
-bool isConvertibleToLinalgElementwise(Operation *op);
+/// Returns the `linalg.elementwise` kind that the TosaToLinalgNamed conversion
+/// lowers `op` to, or std::nullopt if `op` has no such counterpart.
+std::optional<linalg::ElementwiseKind>
+isConvertibleToLinalgElementwise(Operation *op);
 
 /// Caches the `arith.constant index` values created for a set of dimension
 /// indices so that broadcasting helpers can avoid emitting redundant

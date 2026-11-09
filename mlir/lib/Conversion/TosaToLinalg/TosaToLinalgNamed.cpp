@@ -132,25 +132,29 @@ getElementwiseKind(Operation *op, Type elementTy) {
     }
   }
 
-  // Select (ternary) is valid for any element type.
-  if (isa<tosa::SelectOp>(op))
+  // Select (ternary) for valid element types.
+  if ((isFloat || isSignlessInt || isBoolean) && isa<tosa::SelectOp>(op))
     return ElementwiseKind::select;
 
   return std::nullopt;
 }
 
-bool mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
+std::optional<linalg::ElementwiseKind>
+mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
   if (op->getNumResults() != 1)
-    return false;
+    return std::nullopt;
 
-  // TOSA has more strict requirements on operand shapes and broadcasting
-  // compared to generic linalg.elementwise operations. All shapes must
-  // have the same rank, so we don't need to check the operands types.
-  auto resultTy = dyn_cast<ShapedType>(op->getResult(0).getType());
-  if (!resultTy || !resultTy.hasRank())
-    return false;
+  // Make sure all operands and result have static sizes
+  for (Value operand : op->getOperands()) {
+    auto operandTy = dyn_cast<RankedTensorType>(operand.getType());
+    if (!operandTy || !operandTy.hasStaticShape())
+      return std::nullopt;
+  }
+  auto resultTy = dyn_cast<RankedTensorType>(op->getResult(0).getType());
+  if (!resultTy || !resultTy.hasStaticShape())
+    return std::nullopt;
 
-  return getElementwiseKind(op, resultTy.getElementType()).has_value();
+  return getElementwiseKind(op, resultTy.getElementType());
 }
 
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
@@ -743,7 +747,9 @@ public:
   LogicalResult
   matchAndRewrite(TosaOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    if (!isConvertibleToLinalgElementwise(op))
+    std::optional<linalg::ElementwiseKind> kind =
+        isConvertibleToLinalgElementwise(op);
+    if (!kind)
       return rewriter.notifyMatchFailure(
           op, "op has no linalg.elementwise counterpart");
 
@@ -751,8 +757,6 @@ public:
     auto resultTy = cast<RankedTensorType>(op.getType());
     const int64_t rank = resultTy.getRank();
 
-    std::optional<linalg::ElementwiseKind> kind =
-        getElementwiseKind(op, resultTy.getElementType());
     const unsigned arity =
         llvm::to_underlying(linalg::getArityGroupAndKind(*kind).arityGroup);
 
@@ -778,24 +782,9 @@ public:
     }
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
 
-    // Compute the runtime size of each dynamic output dimension. All operands
-    // share the result rank (SameOperandsAndResultRank) and any dimension of
-    // size 1 may be broadcast (ResultsBroadcastableShape), so reuse the generic
-    // TosaToLinalg helper, which correctly maxes over the broadcastable
-    // operands, instead of naively picking a single one.
-    IndexPool indexPool;
-    SmallVector<Value> dynSizes;
-    for (int64_t i = 0; i < rank; ++i) {
-      if (!resultTy.isDynamicDim(i))
-        continue;
-      OpFoldResult size =
-          computeTargetSize(rewriter, loc, indexPool, inputs, i).first;
-      dynSizes.push_back(getValueOrCreateConstantIndexOp(rewriter, loc, size));
-    }
-
-    Value emptyTensor =
-        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(),
-                                resultTy.getElementType(), dynSizes);
+    // Shapes are guaranteed static by isConvertibleToLinalgElementwise.
+    Value emptyTensor = tensor::EmptyOp::create(
+        rewriter, loc, resultTy.getShape(), resultTy.getElementType());
 
     rewriter.replaceOpWithNewOp<linalg::ElementwiseOp>(
         op, inputs, ValueRange{emptyTensor}, *kind,
