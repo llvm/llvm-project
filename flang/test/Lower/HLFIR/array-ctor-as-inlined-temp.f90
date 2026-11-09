@@ -1,5 +1,5 @@
 ! Test lowering of array constructors as inlined temporary.
-! RUN: bbc -emit-hlfir -o - %s | FileCheck %s --implicit-check-not=ArrayConstructor
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s --implicit-check-not=FortranAPushArrayConstructorValue
 
 subroutine test_simple(i)
   call takes_int([42, i])
