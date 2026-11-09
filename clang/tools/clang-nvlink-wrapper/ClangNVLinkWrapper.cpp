@@ -387,7 +387,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
       lto::createInProcessThinBackend(heavyweight_hardware_concurrency(Jobs));
 
   Conf.CPU = Args.getLastArgValue(OPT_arch);
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
+  Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple);
 
   Conf.RemarksFilename =
       Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);

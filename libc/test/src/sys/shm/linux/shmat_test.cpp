@@ -17,6 +17,7 @@
 #include "hdr/sys_shm_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "src/sys/shm/shmat.h"
+#include "src/sys/shm/shmdt.h"
 #include "src/sys/shm/shmget.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -49,8 +50,9 @@ TEST_F(LlvmLibcShmAtTest, AttachReadWriteAndReadOnly) {
   EXPECT_NE(ro_addr, rw_addr);
   EXPECT_EQ(*static_cast<const int *>(ro_addr), 42);
 
-  // TODO: Detach mappings with shmdt and remove the segment with shmctl
-  // once shmdt and shmctl are implemented.
+  EXPECT_THAT(LIBC_NAMESPACE::shmdt(rw_addr), Succeeds(0));
+  EXPECT_THAT(LIBC_NAMESPACE::shmdt(ro_addr), Succeeds(0));
+  // TODO: Remove the segment with shmctl once shmctl is implemented.
 }
 
 TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
@@ -69,8 +71,8 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithoutShmRndFails) {
                                     SHM_REMAP),
               Fails(EINVAL, SHM_FAILED));
 
-  // TODO: Detach mapping with shmdt and remove the segment with shmctl
-  // once shmdt and shmctl are implemented.
+  EXPECT_THAT(LIBC_NAMESPACE::shmdt(addr), Succeeds(0));
+  // TODO: Remove the segment with shmctl once shmctl is implemented.
 }
 
 TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
@@ -82,18 +84,18 @@ TEST_F(LlvmLibcShmAtTest, UnalignedAddrWithShmRndRoundsDown) {
   void *addr = LIBC_NAMESPACE::shmat(shmid, nullptr, 0);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_NE(addr, SHM_FAILED);
+  ASSERT_THAT(LIBC_NAMESPACE::shmdt(addr), Succeeds(0));
 
   // With SHM_RND, the unaligned address (addr + 1) is rounded down to the
-  // nearest multiple of SHMLBA (addr). SHM_REMAP replaces the existing mapping
-  // at addr since shmdt is not yet used to detach it first.
+  // nearest multiple of SHMLBA (addr).
   void *rounded_addr = LIBC_NAMESPACE::shmat(
-      shmid, static_cast<const char *>(addr) + 1, SHM_RND | SHM_REMAP);
+      shmid, static_cast<const char *>(addr) + 1, SHM_RND);
   ASSERT_ERRNO_SUCCESS();
   EXPECT_EQ(reinterpret_cast<uintptr_t>(rounded_addr) % SHMLBA, uintptr_t(0));
   EXPECT_EQ(rounded_addr, addr);
 
-  // TODO: Detach mapping with shmdt and remove the segment with shmctl
-  // once shmdt and shmctl are implemented.
+  EXPECT_THAT(LIBC_NAMESPACE::shmdt(rounded_addr), Succeeds(0));
+  // TODO: Remove the segment with shmctl once shmctl is implemented.
 }
 
 TEST_F(LlvmLibcShmAtTest, InvalidShmidReturnsEinval) {

@@ -143,6 +143,27 @@ public:
     return llvm::Error::success();
   }
 
+  /// This allows a language runtime to evaluate
+  /// DW_OP_entry_value(\p entry_value) in \p frame without call site
+  /// information from the caller, when the runtime knows the value the
+  /// register had on entry. For example, a runtime that unwinds the frame
+  /// with GetRuntimeUnwindPlan() may know how that value relates to the CFA.
+  ///
+  /// \param[in,out] following
+  ///     The operations after the DW_OP_entry_value. The runtime may
+  ///     evaluate the first of them together with the entry value, and
+  ///     consume them from the front, when it knows their combined result
+  ///     but not the entry value alone.
+  ///
+  /// \return
+  ///     The entry value, or std::nullopt to look it up in the call site
+  ///     parameters of the caller.
+  virtual std::optional<Value>
+  EvaluateEntryValue(StackFrame &frame, llvm::ArrayRef<uint8_t> entry_value,
+                     llvm::ArrayRef<uint8_t> &following) {
+    return std::nullopt;
+  }
+
   virtual void SetExceptionBreakpoints() {}
 
   virtual void ClearExceptionBreakpoints() {}
