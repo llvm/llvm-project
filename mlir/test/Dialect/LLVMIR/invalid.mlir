@@ -183,6 +183,27 @@ func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
 
 // -----
 
+func.func @load_range_non_integer(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
+  %1 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> f32
+}
+
+// -----
+
+func.func @load_range_bitwidth_mismatch(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
+  %1 = llvm.load %ptr range<i64, 0, 10> : !llvm.ptr -> i32
+}
+
+// -----
+
+func.func @load_range_empty_or_full(%ptr : !llvm.ptr) {
+  // expected-error@below {{expected range to be neither empty nor full}}
+  %1 = llvm.load %ptr range<i32, 5, 5> : !llvm.ptr -> i32
+}
+
+// -----
+
 func.func @store_syncscope(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
   "llvm.store"(%val, %ptr) <{syncscope = "singlethread"}> : (f32, !llvm.ptr) -> ()
@@ -993,6 +1014,14 @@ func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
 func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR integer type}}
   %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.ptr, f32
+  llvm.return
+}
+
+// -----
+
+func.func @atomicrmw_expected_float_ignore_denormal_mode(%i32_ptr : !llvm.ptr, %i32 : i32) {
+  // expected-error@+1 {{expected floating-point operation with 'ignore_denormal_mode'}}
+  %0 = llvm.atomicrmw ignore_denormal_mode add %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   llvm.return
 }
 
@@ -2589,5 +2618,24 @@ llvm.func @md_addrspacecast_int_operand() {
 llvm.func @nvvm_duplicate_fp_modifier(%a: f32, %b: f32) {
   // expected-error@+1 {{`ftz` clause can appear at most once in the expansion of the oilist directive}}
   %0 = nvvm.addf %a, %b ftz = true ftz = true : f32
+  llvm.return
+}
+
+// -----
+
+// expected-error@+1 {{expected '>'}}
+#loop_align_typed = #llvm.loop_annotation<align = 32 : i64>
+
+// -----
+
+// expected-error@+2 {{integer value too large}}
+// expected-error@+1 {{failed to parse LoopAnnotationAttr parameter 'align' which is to be a `uint32_t`}}
+#loop_align_too_large = #llvm.loop_annotation<align = 4294967296>
+
+// -----
+
+llvm.func @rocdl_asyncmark_unknown_stage() {
+  // expected-error@+1 {{custom op 'rocdl.asyncmark' expected string or keyword containing one of the following enum values for attribute 'stages' [all, tensor, global_load_async_to_lds, global_load_async_to_lds_mcast, global_store_async_from_lds, buffer_global_load]}}
+  rocdl.asyncmark stages = not_a_stage
   llvm.return
 }

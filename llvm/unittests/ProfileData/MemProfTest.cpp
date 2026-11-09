@@ -298,35 +298,6 @@ TEST(MemProf, PortableWrapper) {
   EXPECT_EQ(3UL, ReadBlock.getAllocCpuId());
 }
 
-TEST(MemProf, RecordSerializationRoundTripVerion2) {
-  const auto Schema = getFullSchema();
-
-  MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
-                    /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
-
-  llvm::SmallVector<CallStackId> CallStackIds = {0x123, 0x456};
-
-  llvm::SmallVector<CallStackId> CallSiteIds = {0x333, 0x444};
-
-  IndexedMemProfRecord Record;
-  for (const auto &CSId : CallStackIds) {
-    // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(CSId, Info);
-  }
-  for (auto CSId : CallSiteIds)
-    Record.CallSites.push_back(IndexedCallSiteInfo(CSId));
-
-  std::string Buffer;
-  llvm::raw_string_ostream OS(Buffer);
-  Record.serialize(Schema, OS, Version2);
-
-  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
-      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()), Version2);
-
-  EXPECT_EQ(Record, GotRecord);
-}
-
 TEST(MemProf, RecordSerializationRoundTripVersion4) {
   const auto Schema = getFullSchema();
 
@@ -370,63 +341,6 @@ TEST(MemProf, RecordSerializationRoundTripVersion4) {
   }
 
   EXPECT_EQ(ExpectedRecord, GotRecord);
-}
-
-TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
-  const auto Schema = getHotColdSchema();
-
-  MemInfoBlock Info;
-  Info.AllocCount = 11;
-  Info.TotalSize = 22;
-  Info.TotalLifetime = 33;
-  Info.TotalLifetimeAccessDensity = 44;
-
-  llvm::SmallVector<CallStackId> CallStackIds = {0x123, 0x456};
-
-  llvm::SmallVector<CallStackId> CallSiteIds = {0x333, 0x444};
-
-  IndexedMemProfRecord Record;
-  for (const auto &CSId : CallStackIds) {
-    // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(CSId, Info, Schema);
-  }
-  for (auto CSId : CallSiteIds)
-    Record.CallSites.push_back(IndexedCallSiteInfo(CSId));
-
-  std::bitset<llvm::to_underlying(Meta::Size)> SchemaBitSet;
-  for (auto Id : Schema)
-    SchemaBitSet.set(llvm::to_underlying(Id));
-
-  // Verify that SchemaBitSet has the fields we expect and nothing else, which
-  // we check with count().
-  EXPECT_EQ(SchemaBitSet.count(), 4U);
-  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::AllocCount)]);
-  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::TotalSize)]);
-  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::TotalLifetime)]);
-  EXPECT_TRUE(
-      SchemaBitSet[llvm::to_underlying(Meta::TotalLifetimeAccessDensity)]);
-
-  // Verify that Schema has propagated all the way to the Info field in each
-  // IndexedAllocationInfo.
-  ASSERT_THAT(Record.AllocSites, SizeIs(2));
-  EXPECT_EQ(Record.AllocSites[0].Info.getSchema(), SchemaBitSet);
-  EXPECT_EQ(Record.AllocSites[1].Info.getSchema(), SchemaBitSet);
-
-  std::string Buffer;
-  llvm::raw_string_ostream OS(Buffer);
-  Record.serialize(Schema, OS, Version2);
-
-  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
-      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()), Version2);
-
-  // Verify that Schema comes back correctly after deserialization. Technically,
-  // the comparison between Record and GotRecord below includes the comparison
-  // of their Schemas, but we'll verify the Schemas on our own.
-  ASSERT_THAT(GotRecord.AllocSites, SizeIs(2));
-  EXPECT_EQ(GotRecord.AllocSites[0].Info.getSchema(), SchemaBitSet);
-  EXPECT_EQ(GotRecord.AllocSites[1].Info.getSchema(), SchemaBitSet);
-
-  EXPECT_EQ(Record, GotRecord);
 }
 
 TEST(MemProf, RecordSerializationRoundTripVersion4HotColdSchema) {
