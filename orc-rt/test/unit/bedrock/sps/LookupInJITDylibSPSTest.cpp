@@ -33,7 +33,7 @@ namespace {
 
 // Declare the tag so that we can install the handler below. This must be
 // kept in sync with the tag definition in LookupInJITDylibSPS.cpp.
-extern "C" orc_rt_ControllerHandlerTag orc_rt_tag_sps_lookupSymbolsInJITDylib;
+extern "C" orc_rt_ControllerHandlerTag orc_rt_tag_sps_lookupInJITDylib;
 
 using LookupJITDylibSPSSig =
     SPSExpected<SPSSymbolLookupResult>(SPSExecutorAddr, SPSSymbolLookupSet);
@@ -95,7 +95,7 @@ static Expected<SymbolLookupResult> runLookup(orc_rt_WrapperFunction Handler,
                                               const SymbolLookupSet &LS) {
   Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
   DirectControllerAccess::HandlerMap HM;
-  HM[&orc_rt_tag_sps_lookupSymbolsInJITDylib] = Handler;
+  HM[&orc_rt_tag_sps_lookupInJITDylib] = Handler;
   S.attach(std::make_shared<DirectControllerAccess>(S, std::move(HM)),
            BootstrapInfo(S));
 
