@@ -314,12 +314,6 @@ public:
     return Feature == "spirv";
   }
 
-  // The LLVM SPIR-V backend defines no processors and accepts only "generic";
-  // The -target-cpu value used in BaseSPIRTargetInfo is only used by the
-  // frontend, and the backend / createTargetMachine should not use this
-  // -target-cpu value to (attempt to) construct an LLVM TargetMachine.
-  StringRef getBackendCPU() const override { return StringRef(); }
-
   virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
     // The generic space AS(4) is a superset of all the other address
     // spaces used by the backend target except constant address space.
