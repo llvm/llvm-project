@@ -41,7 +41,7 @@ public:
   }
 
   void test_range_with_step(ExpFunc func, T step, bool rel_error) {
-    constexpr int COUNT = 255;
+    constexpr int COUNT = 2047;
     constexpr double ERR = 3.0 * static_cast<double>(eps);
     double x_d = 0.0;
     T x = step;
@@ -50,6 +50,8 @@ public:
       x_d = static_cast<double>(x);
       double y_d = static_cast<double>(func(x));
       double result = LIBC_NAMESPACE::exp(x_d);
+      if (result > static_cast<double>(FXRep::MAX()))
+        result = static_cast<double>(FXRep::MAX());
       double errors = rel_error
                           ? LIBC_NAMESPACE::fputil::abs((y_d / result) - 1.0)
                           : LIBC_NAMESPACE::fputil::abs(y_d - result);
@@ -63,11 +65,11 @@ public:
   }
 
   void test_positive_range(ExpFunc func) {
-    test_range_with_step(func, T(0x1.0p-6), /*rel_error*/ true);
+    test_range_with_step(func, T(0x1.0p-7), /*rel_error*/ true);
   }
 
   void test_negative_range(ExpFunc func) {
-    test_range_with_step(func, T(-0x1.0p-6), /*rel_error*/ false);
+    test_range_with_step(func, T(-0x1.0p-7), /*rel_error*/ false);
   }
 };
 

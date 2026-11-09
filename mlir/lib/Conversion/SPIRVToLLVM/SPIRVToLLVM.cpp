@@ -346,21 +346,30 @@ collectAttrsForConversion(SourceOp op,
   return success();
 }
 
-class AccessChainPattern : public SPIRVToLLVMConversion<spirv::AccessChainOp> {
+template <typename SPIRVOp, bool InBounds>
+class AccessChainPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::AccessChainOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::AccessChainOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType =
-        getTypeConverter()->convertType(op.getComponentPtr().getType());
+        this->getTypeConverter()->convertType(op.getComponentPtr().getType());
     if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+    if (op.getIndices().empty()) {
+      rewriter.replaceOp(op, adaptor.getBasePtr());
+      return success();
+    }
+    auto elementType = this->getTypeConverter()->convertType(
+        cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
+    if (!elementType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     // To use GEP we need to add a first 0 index to go through the pointer.
     auto indices = llvm::to_vector<4>(adaptor.getIndices());
     Type indexType = op.getIndices().front().getType();
-    auto llvmIndexType = getTypeConverter()->convertType(indexType);
+    auto llvmIndexType = this->getTypeConverter()->convertType(indexType);
     if (!llvmIndexType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     Value zero =
@@ -368,12 +377,9 @@ public:
                                  rewriter.getIntegerAttr(llvmIndexType, 0));
     indices.insert(indices.begin(), zero);
 
-    auto elementType = getTypeConverter()->convertType(
-        cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
-    if (!elementType)
-      return rewriter.notifyMatchFailure(op, "type conversion failed");
-    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, dstType, elementType,
-                                             adaptor.getBasePtr(), indices);
+    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
+        op, dstType, elementType, adaptor.getBasePtr(), indices,
+        InBounds ? LLVM::GEPNoWrapFlags::inbounds : LLVM::GEPNoWrapFlags::none);
     return success();
   }
 };
@@ -2554,9 +2560,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       FPClassPattern<spirv::IsNormalOp, llvm::fcNormal>,
 
       // Memory ops
-      AccessChainPattern, AddressOfPattern, CopyMemoryPattern,
-      LoadStorePattern<spirv::LoadOp>, LoadStorePattern<spirv::StoreOp>,
-      VariablePattern,
+      AccessChainPattern<spirv::AccessChainOp, /*InBounds=*/false>,
+      AccessChainPattern<spirv::InBoundsAccessChainOp, /*InBounds=*/true>,
+      AddressOfPattern, CopyMemoryPattern, LoadStorePattern<spirv::LoadOp>,
+      LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
       CompositeExtractPattern, CompositeInsertPattern,

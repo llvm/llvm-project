@@ -1340,7 +1340,11 @@ llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
     HasCancel = TD->hasCancel();
   else if (const auto *TD = dyn_cast<OMPMasterTaskLoopDirective>(&D))
     HasCancel = TD->hasCancel();
+  else if (const auto *TD = dyn_cast<OMPMaskedTaskLoopDirective>(&D))
+    HasCancel = TD->hasCancel();
   else if (const auto *TD = dyn_cast<OMPParallelMasterTaskLoopDirective>(&D))
+    HasCancel = TD->hasCancel();
+  else if (const auto *TD = dyn_cast<OMPParallelMaskedTaskLoopDirective>(&D))
     HasCancel = TD->hasCancel();
 
   CodeGenFunction CGF(CGM, true);

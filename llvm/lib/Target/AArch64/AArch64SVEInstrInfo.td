@@ -1013,7 +1013,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm FMAX_ZPZI    : sve_fp_2op_i_p_zds_hfd<"FMAX_ZPmI", sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmax_p>;
   defm FMIN_ZPZI    : sve_fp_2op_i_p_zds_hfd<"FMIN_ZPmI", sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmin_p>;
 
-  let Predicates = [HasSVE, UseExperimentalZeroingPseudos] in {
+  let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
     defm FADD_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FADD_ZPmI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fadd>;
     defm FSUB_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FSUB_ZPmI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fsub>;
     defm FMUL_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FMUL_ZPmI", sve_fpimm_half_two, fpimm_half, fpimm_two, int_aarch64_sve_fmul>;
