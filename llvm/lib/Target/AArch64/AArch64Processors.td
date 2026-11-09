@@ -14,6 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 
+// The processor family only selects tuning, so a difference in it must not
+// prevent inlining. The features a family implies are checked on their own.
+let InlineBehavior = InlineIgnore in {
 def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                 "Cortex-A35 ARM processors">;
 
@@ -464,7 +467,8 @@ def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                     !listconcat(
                                     !listremove(TuneAppleA17.Implies,
                                     [FeatureStorePairSuppress]),
-                                    [FeatureFuseAppleSMECompute])>;
+                                    [FeatureFuseAppleSMECompute,
+                                     FeatureShiftMaddSlow])>;
 
 def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
                                     "Apple M5",
@@ -800,6 +804,7 @@ def TuneOryon  : SubtargetFeature<"oryon-1", "ARMProcFamily",
                                     FeaturePostRAScheduler,
                                     HasV8_6aOps,
                                     FeatureMaxInterleaveFactor4]>;
+}
 
 def ProcessorFeatures {
   list<SubtargetFeature> A320 = [HasV9_2aOps, FeatureNEON, FeatureMTE,

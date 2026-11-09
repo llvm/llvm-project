@@ -141,7 +141,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
     bool vtableHasLocalLinkage) {
   const VTableComponent &component = layout.vtable_components()[componentIndex];
 
-  CIRGenBuilderTy builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = cgm.getBuilder();
 
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 
@@ -473,6 +473,7 @@ cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *rd) {
   cir::GlobalOp vtt = cgm.createOrReplaceCXXRuntimeVariable(
       cgm.getLoc(rd->getSourceRange()), name, arrayType,
       cir::GlobalLinkageKind::ExternalLinkage, CharUnits::fromQuantity(align));
+  vtt.setUnnamedAddr(true);
   cgm.setGVProperties(vtt, rd);
   return vtt;
 }
@@ -535,8 +536,9 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
     };
 
     auto indicesAttr = mlir::ArrayAttr::get(mlirContext, indices);
-    cir::GlobalViewAttr init = cgm.getBuilder().getGlobalViewAttr(
-        cgm.getBuilder().getUInt8PtrTy(), vtable, indicesAttr);
+    CIRGenBuilderTy &bld = cgm.getBuilder();
+    auto init = bld.getGlobalViewAttr(bld.getUInt8PtrTy(), vtable, indicesAttr,
+                                      /*addressPoint=*/true);
 
     vttComponents.push_back(init);
   }
@@ -829,7 +831,10 @@ void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
   cir::FuncType calleeTy = callee.getFunctionType();
   mlir::Type retTy = calleeTy.getReturnType();
 
-  cir::CallOp call = builder.createCallOp(loc, callee, args);
+  assert(!cir::MissingFeatures::opCallAttrs());
+  cir::CallOp call =
+      builder.createCallOp(loc, callee, args, /*attrs=*/{}, /*argAttrs=*/{},
+                           /*resAttrs=*/{}, curFnInfo->getCallingConvention());
   call->setAttr(cir::CIRDialect::getMustTailAttrName(),
                 mlir::UnitAttr::get(builder.getContext()));
 

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++03 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -std=c++03 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -std=c++03 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
@@ -13,8 +13,8 @@ struct Pt {
 int tempObj(int i) { return Pt(i, i).v; }
 
 // CIR-LABEL: cir.func {{.*}}@_Z7tempObji(%arg0: !s32i
-// CIR:         %[[I:.*]] = cir.alloca "i"
 // CIR:         %[[RET:.*]] = cir.alloca "__retval"
+// CIR:         %[[I:.*]] = cir.alloca "i"
 // CIR:         %[[TMP:.*]] = cir.alloca "tmp"
 // CIR:         cir.store %arg0, %[[I]]
 // CIR:         %[[A:.*]] = cir.load align(4) %[[I]]
@@ -27,6 +27,8 @@ int tempObj(int i) { return Pt(i, i).v; }
 // CIR:         cir.return %[[RES]]
 
 // LLVM-LABEL: define {{.*}}i32 @_Z7tempObji
+// Classic codegen doesn't alloca for a return slot.
+// LLVMCIR:      %{{.+}} = alloca i32, align 4
 // LLVM:         %[[I_ADDR:.*]] = alloca i32
 // LLVM:         %[[TMP:.*]] = alloca %struct.Pt
 // LLVM:         store i32 %{{.*}}, ptr %[[I_ADDR]]
@@ -44,8 +46,8 @@ struct Conv {
 int construct(int i) { return Conv(i).y; }
 
 // CIR-LABEL: cir.func {{.*}}@_Z9constructi(%arg0: !s32i
-// CIR:         %[[I:.*]] = cir.alloca "i"
 // CIR:         %[[RET:.*]] = cir.alloca "__retval"
+// CIR:         %[[I:.*]] = cir.alloca "i"
 // CIR:         %[[TMP:.*]] = cir.alloca "tmp"
 // CIR:         cir.store %arg0, %[[I]]
 // CIR:         %[[A:.*]] = cir.load align(4) %[[I]]
@@ -57,6 +59,7 @@ int construct(int i) { return Conv(i).y; }
 // CIR:         cir.return %[[RES]]
 
 // LLVM-LABEL: define {{.*}}i32 @_Z9constructi
+// LLVMCIR:      %{{.+}} = alloca i32, align 4
 // LLVM:         %[[I_ADDR:.*]] = alloca i32
 // LLVM:         %[[TMP:.*]] = alloca %struct.Conv
 // LLVM:         store i32 %{{.*}}, ptr %[[I_ADDR]]
