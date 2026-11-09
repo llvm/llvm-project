@@ -1203,7 +1203,9 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
     // We're the complete constructor, so get the VTT by name.
     cir::GlobalOp vtt = cgm.getVTables().getAddrOfVTT(rd);
     return builder.createVTTAddrPoint(
-        loc, builder.getPointerTo(cgm.voidPtrTy),
+        loc,
+        builder.getPointerTo(convertType(getContext().VoidPtrTy),
+                             vtt.getAddrSpaceAttr()),
         mlir::FlatSymbolRefAttr::get(vtt.getSymNameAttr()), subVTTIndex);
   }
 }
