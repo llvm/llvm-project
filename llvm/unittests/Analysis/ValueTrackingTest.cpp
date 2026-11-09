@@ -1280,10 +1280,10 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_nnan_noundef) {
                 "  %A2 = call ninf noundef float @foo()\n"
                 "  ret void\n"
                 "}");
-  EXPECT_TRUE(canCreateUndefOrPoison(cast<Operator>(A)));
-  EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A));
-  EXPECT_TRUE(canCreateUndefOrPoison(cast<Operator>(A2)));
-  EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A2));
+  EXPECT_FALSE(canCreateUndefOrPoison(cast<Operator>(A)));
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A));
+  EXPECT_FALSE(canCreateUndefOrPoison(cast<Operator>(A2)));
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A2));
 }
 
 TEST_F(ValueTrackingTest, canCreatePoisonOrUndef) {

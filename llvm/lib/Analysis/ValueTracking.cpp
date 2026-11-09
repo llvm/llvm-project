@@ -8157,9 +8157,10 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
 
 static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
                                    bool ConsiderFlagsAndMetadata) {
-
+  const auto *CB = dyn_cast<CallBase>(Op);
+  bool CBHasNoundef = CB && CB->hasRetAttr(Attribute::NoUndef);
   if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
-      Op->hasPoisonGeneratingAnnotations())
+      Op->hasPoisonGeneratingAnnotations() && !CBHasNoundef)
     return true;
 
   unsigned Opcode = Op->getOpcode();
@@ -8195,7 +8196,6 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
     [[fallthrough]];
   case Instruction::CallBr:
   case Instruction::Invoke: {
-    const auto *CB = cast<CallBase>(Op);
     return !CB->hasRetAttr(Attribute::NoUndef) &&
            !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
   }
