@@ -50,6 +50,23 @@ namespace interp {
   return false;
 }
 
+static bool isFixedSizeIntegralType(PrimType T) {
+  switch (T) {
+  case PT_Sint8:
+  case PT_Uint8:
+  case PT_Sint16:
+  case PT_Uint16:
+  case PT_Sint32:
+  case PT_Uint32:
+  case PT_Sint64:
+  case PT_Uint64:
+  case PT_Bool:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static void discard(InterpStack &Stk, PrimType T) {
   TYPE_SWITCH(T, { Stk.discard<T>(); });
 }
@@ -200,6 +217,15 @@ static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
     S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
 }
 
+static bool diagnoseUnreadableObject(InterpState &S, CodePtr OpPC,
+                                     const Pointer &Ptr, AccessKinds AK) {
+  S.FFDiag(S.Current->getSource(OpPC),
+           diag::note_constexpr_access_unreadable_object)
+      << AK << Ptr.toDiagnosticString(S.getASTContext());
+  noteValueLocation(S, Ptr);
+  return false;
+}
+
 static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
   assert(Val.getFieldDesc()->isPrimitiveArray() &&
          Val.getFieldDesc()->getElemQualType()->isBooleanType() &&
@@ -251,7 +277,7 @@ static bool convertDoubleToFloatStrict(const APFloat &Src, Floating &Dst,
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
-  unsigned Depth = S.Current->getDepth();
+  unsigned Depth = S.FrameDepth;
   auto isStdCall = [](const FunctionDecl *F) -> bool {
     return F && F->isInStdNamespace() && F->getIdentifier() &&
            F->getIdentifier()->isStr("is_constant_evaluated");
@@ -426,6 +452,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
   PrimType ElemT = StrPtr.getFieldDesc()->getPrimType();
+  if (!isFixedSizeIntegralType(ElemT))
+    return false;
+
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemDataSize();
   if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
     return Invalid(S, OpPC);
@@ -433,7 +462,7 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
     const ASTContext &AC = S.getASTContext();
     unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
-    if (StrPtr.getFieldDesc()->getElemDataSize() != WCharSize)
+    if (ElemSize != WCharSize)
       return false;
   }
 
@@ -998,8 +1027,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
   // Write Result to ResultPtr and put Overflow on the stack.
   assignIntegral(S, ResultPtr, ResultT, Result);
-  if (ResultPtr.canBeInitialized())
-    ResultPtr.initialize();
+  ResultPtr.initialize();
 
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -1062,8 +1090,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignIntegral(S, CarryOutPtr, CarryOutT, CarryOut);
-  if (CarryOutPtr.canBeInitialized())
-    CarryOutPtr.initialize();
+  CarryOutPtr.initialize();
 
   assert(S.getASTContext().hasSimilarType(Call->getType(),
                                           Call->getArg(0)->getType()));
@@ -1432,6 +1459,19 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+/// Returns the alignment of the object Ptr points into.
+static CharUnits getBaseAlignment(const ASTContext &ASTCtx,
+                                  const Pointer &Ptr) {
+  CharUnits BaseAlignment;
+  if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
+    BaseAlignment = Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx);
+  else if (const auto *VD = Ptr.getRootVarDecl())
+    BaseAlignment = ASTCtx.getDeclAlign(VD);
+  else if (const auto *E = Ptr.getRootExpr())
+    BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
+  return BaseAlignment;
+}
+
 /// __builtin_assume_aligned(Ptr, Alignment[, ExtraOffset])
 static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
                                            const InterpFrame *Frame,
@@ -1456,14 +1496,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
 
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer() || Ptr.isOpaquePointer()) {
-    CharUnits BaseAlignment;
-    if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
-      BaseAlignment = Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx);
-    else if (const auto *VD = Ptr.getRootVarDecl())
-      BaseAlignment = ASTCtx.getDeclAlign(VD);
-    else if (const auto *E = Ptr.getRootExpr())
-      BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
-
+    CharUnits BaseAlignment = getBaseAlignment(ASTCtx, Ptr);
     if (BaseAlignment < Align) {
       S.CCEDiag(Call->getArg(0),
                 diag::note_constexpr_baa_insufficient_alignment)
@@ -2029,7 +2062,10 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (!isReadable(DestPtr) || !isReadable(SrcPtr))
+  if (!DestPtr.isBlockPointer())
+    return diagnoseUnreadableObject(S, OpPC, DestPtr, AK_Assign);
+
+  if (!isReadable(SrcPtr))
     return false;
 
   if (DestPtr.getType()->isIncompleteType()) {
@@ -2204,6 +2240,94 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const CallExpr *Call, bool IsBigEndian,
+                                  bool IsAligned) {
+  Pointer Ptr = S.Stk.pop<Pointer>();
+
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Read;
+    return false;
+  }
+
+  if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
+    return false;
+
+  if (!Ptr.isReadablePointerType())
+    return false;
+
+  if (IsAligned) {
+    CharUnits RequiredAlign =
+        S.getASTContext().getTypeAlignInChars(Call->getType());
+    CharUnits BaseAlignment = getBaseAlignment(S.getASTContext(), Ptr);
+    std::optional<size_t> LayoutOffset =
+        Ptr.computeLayoutOffset(S.getASTContext());
+    if (!LayoutOffset)
+      return false;
+    CharUnits PtrOffset = CharUnits::fromQuantity(*LayoutOffset);
+    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(PtrOffset);
+    if (PtrAlign < RequiredAlign) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_load8_unaligned)
+          << S.getASTContext().BuiltinInfo.getQuotedName(
+                 Call->getBuiltinCallee())
+          << RequiredAlign.getQuantity() << PtrAlign.getQuantity();
+      return false;
+    }
+  }
+
+  // A string pointer has no Descriptor; treat it as an array of its
+  // character type.
+  bool IsArray = Ptr.isStringPointer() || Ptr.getFieldDesc()->isArray();
+  QualType ElemTy = getElemType(Ptr);
+
+  if (IsArray)
+    Ptr = Ptr.expand();
+
+  uint64_t BaseIdx = Ptr.getIndex();
+  uint64_t ArraySize = Ptr.getNumElems();
+  uint64_t RemainingElems = ArraySize - BaseIdx;
+
+  unsigned ByteWidth = S.getASTContext().getTypeSize(Call->getType()) / 8;
+  if (ByteWidth > RemainingElems) {
+    uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, uint64_t(ByteWidth - 1));
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+        << LastIndex << /*array*/ !IsArray << ArraySize;
+    return false;
+  }
+
+  OptPrimType ElemT = S.getContext().classify(ElemTy);
+  if (!ElemT || !isIntegerOrBoolType(*ElemT))
+    return false;
+  uint64_t Result = 0;
+
+  if (IsArray) {
+    // C2y §7.18.21: result = sum(b_index * 2^(8*index)) for index in [0, N/8)
+    // where b_index = ptr[index] (LE) or ptr[N/8 - index - 1] (BE).
+    for (unsigned I = 0; I != ByteWidth; ++I) {
+      size_t SrcIdx = IsBigEndian ? (ByteWidth - I - 1) : I;
+      Pointer BytePtr = Ptr.atIndex(BaseIdx + SrcIdx);
+      if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
+        return false;
+      INT_TYPE_SWITCH(*ElemT, {
+        Result |= BytePtr.load<T>().toAPSInt().getZExtValue() << (8 * I);
+      });
+    }
+  } else {
+    assert(ByteWidth == 1 && "non-array pointer, expected a 1-byte load");
+    if (!CheckLoad(S, OpPC, Ptr, AK_Read))
+      return false;
+    INT_TYPE_SWITCH(*ElemT,
+                    { Result = Ptr.load<T>().toAPSInt().getZExtValue(); });
+  }
+
+  bool IsSigned = Call->getType()->isSignedIntegerType();
+  pushInteger(S, APSInt(APInt(ByteWidth * 8, Result), !IsSigned),
+              Call->getType());
+  return true;
+}
+
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
@@ -2222,6 +2346,10 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     pushInteger(S, 0, Call->getType());
     return true;
   }
+
+  if (PtrA.isFunctionPointer() || PtrB.isFunctionPointer())
+    return false;
+
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
@@ -2378,22 +2506,6 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   if (!isReadable(Ptr))
     return false;
 
-  if (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr) {
-    int64_t DesiredTrunc;
-    if (S.getASTContext().CharTy->isSignedIntegerType())
-      DesiredTrunc =
-          Desired.trunc(S.getASTContext().getCharWidth()).getSExtValue();
-    else
-      DesiredTrunc =
-          Desired.trunc(S.getASTContext().getCharWidth()).getZExtValue();
-    // strchr compares directly to the passed integer, and therefore
-    // always fails if given an int that is not a char.
-    if (Desired != DesiredTrunc) {
-      S.Stk.push<Pointer>();
-      return true;
-    }
-  }
-
   uint64_t DesiredVal;
   if (ID == Builtin::BIwmemchr || ID == Builtin::BI__builtin_wmemchr ||
       ID == Builtin::BIwcschr || ID == Builtin::BI__builtin_wcschr) {
@@ -2530,6 +2642,9 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
     if (!CheckDummy(S, OpPC, Ptr, AK_Read))
       return false;
   }
+
+  if (!Ptr.isBlockPointer())
+    return diagnoseUnreadableObject(S, OpPC, Ptr, AK_Read);
 
   // Check if we're currently running an initializer.
   if (S.initializingBlock(Ptr.block()))
@@ -4683,6 +4798,13 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_meta_is_type(InterpState &S, CodePtr OpPC,
+                                         const CallExpr *) {
+  const Reflect &R = S.Stk.pop<Reflect>();
+  S.Stk.push<Boolean>(Boolean::from(R.getKind() == ReflectionKind::Type));
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
@@ -5217,6 +5339,50 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_memreverse8:
   case Builtin::BI__builtin_stdc_memreverse8:
     return interp__builtin_stdc_memreverse8(S, OpPC, Frame, Call);
+
+  case Builtin::BIstdc_load8_leu8:
+  case Builtin::BIstdc_load8_leu16:
+  case Builtin::BIstdc_load8_leu32:
+  case Builtin::BIstdc_load8_leu64:
+  case Builtin::BIstdc_load8_les8:
+  case Builtin::BIstdc_load8_les16:
+  case Builtin::BIstdc_load8_les32:
+  case Builtin::BIstdc_load8_les64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/false,
+                                 /*IsAligned=*/false);
+
+  case Builtin::BIstdc_load8_aligned_leu8:
+  case Builtin::BIstdc_load8_aligned_leu16:
+  case Builtin::BIstdc_load8_aligned_leu32:
+  case Builtin::BIstdc_load8_aligned_leu64:
+  case Builtin::BIstdc_load8_aligned_les8:
+  case Builtin::BIstdc_load8_aligned_les16:
+  case Builtin::BIstdc_load8_aligned_les32:
+  case Builtin::BIstdc_load8_aligned_les64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/false,
+                                 /*IsAligned=*/true);
+
+  case Builtin::BIstdc_load8_beu8:
+  case Builtin::BIstdc_load8_beu16:
+  case Builtin::BIstdc_load8_beu32:
+  case Builtin::BIstdc_load8_beu64:
+  case Builtin::BIstdc_load8_bes8:
+  case Builtin::BIstdc_load8_bes16:
+  case Builtin::BIstdc_load8_bes32:
+  case Builtin::BIstdc_load8_bes64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
+                                 /*IsAligned=*/false);
+
+  case Builtin::BIstdc_load8_aligned_beu8:
+  case Builtin::BIstdc_load8_aligned_beu16:
+  case Builtin::BIstdc_load8_aligned_beu32:
+  case Builtin::BIstdc_load8_aligned_beu64:
+  case Builtin::BIstdc_load8_aligned_bes8:
+  case Builtin::BIstdc_load8_aligned_bes16:
+  case Builtin::BIstdc_load8_aligned_bes32:
+  case Builtin::BIstdc_load8_aligned_bes64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
+                                 /*IsAligned=*/true);
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
@@ -6796,6 +6962,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvttpd2dq256:
   case X86::BI__builtin_ia32_cvttps2dq256:
     return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
+
+  case Builtin::BI__builtin_meta_is_type:
+    return interp__builtin_meta_is_type(S, OpPC, Call);
+
   default:
     return Invalid(S, OpPC);
   }
@@ -6965,8 +7135,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
       }
 
       TYPE_SWITCH(*FT, DestField.deref<T>() = SrcField.deref<T>(););
-      if (DestField.canBeInitialized())
-        DestField.initialize();
+      DestField.initialize();
       if (Activate)
         DestField.activate();
       return true;

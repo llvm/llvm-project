@@ -5,12 +5,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC2_ARR:.*]] = #cir.const_array<[#cir.int<5> : !s32i], trailing_zeros> : !cir.array<!s32i x 2>
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC3_ARR:.*]] = #cir.const_array<[#cir.int<5> : !s32i, #cir.int<6> : !s32i]> : !cir.array<!s32i x 2>
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC4_ARR:.*]] = #cir.const_array<[#cir.const_array<[#cir.int<5> : !s32i]> : !cir.array<!s32i x 1>, #cir.const_array<[#cir.int<6> : !s32i]> : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC5_ARR:.*]] = #cir.const_array<[#cir.const_array<[#cir.int<5> : !s32i]> : !cir.array<!s32i x 1>], trailing_zeros> : !cir.array<!cir.array<!s32i x 1> x 2>
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC7_ARR:.*]] = #cir.zero : !cir.array<!cir.ptr<!s32i> x 1>
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[COMPLEX_ARR:.*]] = #cir.const_array<[#cir.const_complex<#cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>, #cir.const_complex<#cir.fp<3.300000e+00> : !cir.float, #cir.fp<4.400000e+00> : !cir.float> : !cir.complex<!cir.float>]> : !cir.array<!cir.complex<!cir.float> x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[FUNC2_ARR:.*]] = #cir.const_array<[#cir.int<5> : !s32i], trailing_zeros> : !cir.array<!s32i x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[FUNC3_ARR:.*]] = #cir.const_array<[#cir.int<5> : !s32i, #cir.int<6> : !s32i]> : !cir.array<!s32i x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[FUNC4_ARR:.*]] = #cir.const_array<[#cir.const_array<[#cir.int<5> : !s32i]> : !cir.array<!s32i x 1>, #cir.const_array<[#cir.int<6> : !s32i]> : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[FUNC5_ARR:.*]] = #cir.const_array<[#cir.const_array<[#cir.int<5> : !s32i]> : !cir.array<!s32i x 1>], trailing_zeros> : !cir.array<!cir.array<!s32i x 1> x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[FUNC7_ARR:.*]] = #cir.zero : !cir.array<!cir.ptr<!s32i> x 1>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[COMPLEX_ARR:.*]] = #cir.const_array<[#cir.const_complex<#cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>, #cir.const_complex<#cir.fp<3.300000e+00> : !cir.float, #cir.fp<4.400000e+00> : !cir.float> : !cir.complex<!cir.float>]> : !cir.array<!cir.complex<!cir.float> x 2>
 
 int a[10];
 // CIR: cir.global external @a = #cir.zero : !cir.array<!s32i x 10>
@@ -54,8 +54,7 @@ int dd[3][2] = {{1, 2}, {3, 4}, {5, 6}};
 int e[10] = {1, 2};
 // CIR: cir.global external @e = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>
 
-// FIXME: we should figure out how to lower this with a 'trailing-zeros' type thing, like classic codegen.
-// LLVM: @e = global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+// LLVM: @e = global <{ i32, i32, [8 x i32] }> <{ i32 1, i32 2, [8 x i32] zeroinitializer }>
 
 // OGCG: @e = global <{ i32, i32, [8 x i32] }> <{ i32 1, i32 2, [8 x i32] zeroinitializer }>
 
@@ -74,9 +73,11 @@ int g[16] = {1, 2, 3, 4, 5, 6, 7, 8};
 // CIR-SAME:                     #cir.int<7> : !s32i, #cir.int<8> : !s32i], trailing_zeros>
 // CIR-SAME:                     : !cir.array<!s32i x 16>
 
-// LLVM:       @g = global [16 x i32] [i32 1, i32 2, i32 3, i32 4, i32 5, 
-// LLVM-SAME:                          i32 6, i32 7, i32 8, i32 0, i32 0,
-// LLVM-SAME:                          i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+// LLVM:       @g = global <{ [8 x i32], [8 x i32] }>
+// LLVM-SAME:          <{ [8 x i32]
+// LLVM-SAME:              [i32 1, i32 2, i32 3, i32 4,
+// LLVM-SAME:               i32 5, i32 6, i32 7, i32 8],
+// LLVM-SAME:             [8 x i32] zeroinitializer }>
 
 // OGCG:       @g = global <{ [8 x i32], [8 x i32] }> 
 // OGCG-SAME:          <{ [8 x i32]
@@ -95,9 +96,11 @@ int h[16] = {1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0};
 // CIR-SAME:                     #cir.int<7> : !s32i, #cir.int<8> : !s32i], trailing_zeros>
 // CIR-SAME:                     : !cir.array<!s32i x 16>
 
-// LLVM:       @h = global [16 x i32] [i32 1, i32 2, i32 3, i32 4, i32 5, i32 6,
-// LLVM-SAME:                          i32 7, i32 8, i32 0, i32 0, i32 0, i32 0,
-// LLVM-SAME:                          i32 0, i32 0, i32 0, i32 0]
+// LLVM:       @h = global <{ [8 x i32], [8 x i32] }>
+// LLVM-SAME:          <{ [8 x i32]
+// LLVM-SAME:              [i32 1, i32 2, i32 3, i32 4,
+// LLVM-SAME:               i32 5, i32 6, i32 7, i32 8],
+// LLVM-SAME:             [8 x i32] zeroinitializer }>
 
 // OGCG:       @h = global <{ [8 x i32], [8 x i32] }>
 // OGCG-SAME:          <{ [8 x i32]

@@ -50,11 +50,11 @@ int foo() {
 // UDL function, and that the constexpr f1 and f2 functions both return a
 // constant value.
 
-// CHECK-NOT: define{{.*}} zeroext i8 @_ZN10Issue54578li3_UCEy
+// CHECK-NOT: define{{.*}} i8 @_ZN10Issue54578li3_UCEy
 // CHECK: define{{.*}} i32 @_ZN10Issue545783fooEv(
-// CHECK: define{{.*}} signext i8 @_ZN10Issue545782f1IcEEcT_(
+// CHECK: define{{.*}} i8 @_ZN10Issue545782f1IcEEcT_(
 // CHECK: ret i8 4
-// CHECK: define{{.*}} signext i8 @_ZN10Issue545782f2IcEEcT_(
+// CHECK: define{{.*}} i8 @_ZN10Issue545782f2IcEEcT_(
 // CHECK: ret i8 4
 }
 

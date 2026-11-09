@@ -12,6 +12,7 @@
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -155,14 +156,35 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
     // one. Take the modules it reports as loaded, which replaces the target's
     // executable with the process's.
     auto error = m_process->LoadModules();
+    if (!error)
+      return;
     LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
-    return;
-  }
 
-  // Request the process base address.
-  lldb::addr_t image_base = m_process->GetImageInfoAddress();
-  if (image_base == load_addr)
-    return;
+    // If the load address couldn't be determined (e.g. for a remote gdbstub
+    // target), fall back to the preferred load address/image base from the
+    // file if the process is live.
+    // This is a best-effort guess, if the image isn't loaded there the
+    // sections will have incorrect addresses and the slide will have to be
+    // specified manually.
+    if (!m_process->IsLiveDebugSession())
+      return;
+
+    ObjectFile *object_file = executable->GetObjectFile();
+    if (!object_file)
+      return;
+
+    load_addr = object_file->GetBaseAddress().GetFileAddress();
+    if (load_addr == LLDB_INVALID_ADDRESS)
+      return;
+
+    executable->ReportWarning(
+        "failed to get load address, assuming image base at {0:x}", load_addr);
+  } else {
+    // Request the process base address.
+    lldb::addr_t image_base = m_process->GetImageInfoAddress();
+    if (image_base == load_addr)
+      return;
+  }
 
   // Rebase the process's modules if there is a mismatch.
   UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_addr, false);

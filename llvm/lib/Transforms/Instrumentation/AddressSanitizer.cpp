@@ -350,10 +350,11 @@ static ShadowMapping getShadowMapping(const InstrumentationOptions &Opts,
   return Mapping;
 }
 
-void llvm::getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
+void llvm::getAddressSanitizerParams(const LLVMContext &Ctx,
+                                     const Triple &TargetTriple, int LongSize,
                                      bool IsKasan, uint64_t *ShadowBase,
                                      int *MappingScale, bool *OrShadowOffset) {
-  auto Mapping = getShadowMapping(InstrumentationOptions::Global, TargetTriple,
+  auto Mapping = getShadowMapping(getInstrumentationOptions(Ctx), TargetTriple,
                                   LongSize, IsKasan);
   *ShadowBase = Mapping.Offset;
   *MappingScale = Mapping.Scale;
@@ -1057,7 +1058,7 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
   if (checkIfAlreadyInstrumented(M, "nosanitize_address"))
     return PreservedAnalyses::all();
 
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   ModuleAddressSanitizer ModuleSanitizer(Opts, M, Options.InsertVersionCheck,
                                          Options.CompileKernel, Options.Recover,
                                          UseGlobalGC, UseOdrIndicator,
@@ -3533,8 +3534,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
   for (const auto &Desc : SVD) {
     AllocaInst *AI = Desc.AI;
     replaceDbgDeclare(AI, LocalStackBaseAlloca, DIB, DIExprFlags, Desc.Offset);
-    Value *NewAllocaPtr = IRB.CreatePtrAdd(
-        LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset));
+    Value *NewAllocaPtr =
+        IRB.CreatePtrAddWithUnsignedOffset(LocalStackBase, Desc.Offset);
     if (NewAllocaPtr->getType() != AI->getType())
       NewAllocaPtr = IRB.CreateAddrSpaceCast(NewAllocaPtr, AI->getType());
     AI->replaceAllUsesWith(NewAllocaPtr);
@@ -3546,16 +3547,16 @@ void FunctionStackPoisoner::processStaticAllocas() {
   IRB.CreateStore(ConstantInt::get(IntptrTy, kCurrentStackFrameMagic),
                   LocalStackBase);
   // Write the frame description constant to redzone[1].
-  Value *BasePlus1 = IRB.CreatePtrAdd(
-      LocalStackBase, ConstantInt::get(IntptrTy, ASan.LongSize / 8));
+  Value *BasePlus1 =
+      IRB.CreatePtrAddWithUnsignedOffset(LocalStackBase, ASan.LongSize / 8);
   GlobalVariable *StackDescriptionGlobal =
       createPrivateGlobalForString(*F.getParent(), DescriptionString,
                                    /*AllowMerging*/ true, genName("stack"));
   Value *Description = IRB.CreatePointerCast(StackDescriptionGlobal, IntptrTy);
   IRB.CreateStore(Description, BasePlus1);
   // Write the PC to redzone[2].
-  Value *BasePlus2 = IRB.CreatePtrAdd(
-      LocalStackBase, ConstantInt::get(IntptrTy, 2 * ASan.LongSize / 8));
+  Value *BasePlus2 =
+      IRB.CreatePtrAddWithUnsignedOffset(LocalStackBase, 2 * ASan.LongSize / 8);
   IRB.CreateStore(IRB.CreatePointerCast(&F, IntptrTy), BasePlus2);
 
   const auto &ShadowAfterScope = GetShadowBytesAfterScope(SVD, L);

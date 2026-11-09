@@ -12,7 +12,6 @@ from lldbsuite.test import lldbutil
 class BreakpointByLineAndColumnTestCase(TestBase):
     ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
     @skipIf(compiler="gcc", compiler_version=["<", "7.1"])
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def testBreakpointByLineAndColumn(self):
         self.build()
         src_file = lldb.SBFileSpec("main.cpp")
@@ -28,7 +27,6 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             in_then |= b_loc.GetColumn() == 50
         self.assertTrue(in_then)
 
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def testBreakpointByLineAndColumnUsingCLI(self):
         self.build()
         src_file = lldb.SBFileSpec("main.cpp")
@@ -65,7 +63,6 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             in_condition |= b_loc.GetColumn() < 30
         self.assertTrue(in_condition)
 
-    @skipIfWindows
     ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
     @skipIf(compiler="gcc", compiler_version=["<", "7.1"])
     def testBreakpointByLineAndColumnNearestCode(self):

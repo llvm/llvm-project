@@ -33,7 +33,7 @@ body:             |
     %1:fpr32 = COPY $s1
     %0:fpr32 = COPY $s0
     %3:fpr32 = nnan ninf nsz arcp contract afn reassoc FMULSrr %1, %0, implicit $fpcr
-    %4:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr killed %3, %2, implicit $fpcr
+    %4:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr %3, %2, implicit $fpcr
     $s0 = COPY %4
     RET_ReallyLR implicit $s0
 
@@ -73,7 +73,7 @@ body:             |
     %1:fpr32 = COPY $s1
     %0:fpr32 = COPY $s0
     %3:fpr32 = contract FMULSrr %1, %0, implicit $fpcr
-    %4:fpr32 = contract FADDSrr killed %3, %2, implicit $fpcr
+    %4:fpr32 = contract FADDSrr %3, %2, implicit $fpcr
     $s0 = COPY %4
     RET_ReallyLR implicit $s0
 
@@ -86,7 +86,7 @@ body:             |
 # CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
 # CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
 # CHECK-NEXT:   [[MUL:%.*]]:fpr32 = contract FMULSrr [[B]], [[A]], implicit $fpcr
-# CHECK-NEXT:   fpr32 = FADDSrr killed [[MUL]], [[C]], implicit $fpcr
+# CHECK-NEXT:   fpr32 = FADDSrr [[MUL]], [[C]], implicit $fpcr
 ---
 name:            scalar_fmadd_contract_op0
 alignment:       4
@@ -113,7 +113,7 @@ body:             |
     %1:fpr32 = COPY $s1
     %0:fpr32 = COPY $s0
     %3:fpr32 = contract FMULSrr %1, %0, implicit $fpcr
-    %4:fpr32 = FADDSrr killed %3, %2, implicit $fpcr
+    %4:fpr32 = FADDSrr %3, %2, implicit $fpcr
     $s0 = COPY %4
     RET_ReallyLR implicit $s0
 
@@ -153,7 +153,7 @@ body:             |
     %1:fpr32 = COPY $s1
     %0:fpr32 = COPY $s0
     %3:fpr32 = FMULSrr %1, %0, implicit $fpcr
-    %4:fpr32 = contract FADDSrr killed %3, %2, implicit $fpcr
+    %4:fpr32 = contract FADDSrr %3, %2, implicit $fpcr
     $s0 = COPY %4
     RET_ReallyLR implicit $s0
 
@@ -166,7 +166,7 @@ body:             |
 # CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
 # CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
 # CHECK-NEXT:   [[MUL:%.*]]:fpr32 = nsz FMULSrr [[B]], [[A]], implicit $fpcr
-# CHECK-NEXT:   fpr32 = nsz FADDSrr killed [[MUL]], [[C]], implicit $fpcr
+# CHECK-NEXT:   fpr32 = nsz FADDSrr [[MUL]], [[C]], implicit $fpcr
 
 ---
 name:            scalar_fmadd_nsz
@@ -194,7 +194,7 @@ body:             |
     %1:fpr32 = COPY $s1
     %0:fpr32 = COPY $s0
     %3:fpr32 = nsz FMULSrr %1, %0, implicit $fpcr
-    %4:fpr32 = nsz FADDSrr killed %3, %2, implicit $fpcr
+    %4:fpr32 = nsz FADDSrr %3, %2, implicit $fpcr
     $s0 = COPY %4
     RET_ReallyLR implicit $s0
 
@@ -233,7 +233,7 @@ body:             |
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
     %3:fpr128 = nnan ninf nsz arcp contract afn reassoc FMULv2f64 %1, %0, implicit $fpcr
-    %4:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %3, %2, implicit $fpcr
+    %4:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 
@@ -272,7 +272,7 @@ body:             |
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
     %3:fpr128 = contract FMULv2f64 %1, %0, implicit $fpcr
-    %4:fpr128 = contract FADDv2f64 killed %3, %2, implicit $fpcr
+    %4:fpr128 = contract FADDv2f64 %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 
@@ -285,7 +285,7 @@ body:             |
 # CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
 # CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
 # CHECK-NEXT:  [[MUL:%.*]]:fpr128 = contract FMULv2f64 [[B]], [[A]], implicit $fpcr
-# CHECK-NEXT:  fpr128 = FADDv2f64 killed [[MUL]], [[C]], implicit $fpcr
+# CHECK-NEXT:  fpr128 = FADDv2f64 [[MUL]], [[C]], implicit $fpcr
 ---
 name:            vector_fmadd_contract_op0
 alignment:       4
@@ -312,7 +312,7 @@ body:             |
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
     %3:fpr128 = contract FMULv2f64 %1, %0, implicit $fpcr
-    %4:fpr128 = FADDv2f64 killed %3, %2, implicit $fpcr
+    %4:fpr128 = FADDv2f64 %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 
@@ -352,7 +352,7 @@ body:             |
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
     %3:fpr128 = FMULv2f64 %1, %0, implicit $fpcr
-    %4:fpr128 = contract FADDv2f64 killed %3, %2, implicit $fpcr
+    %4:fpr128 = contract FADDv2f64 %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 
@@ -365,7 +365,7 @@ body:             |
 # CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
 # CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
 # CHECK-NEXT:  [[MUL:%.*]]:fpr128 = nsz FMULv2f64 [[B]], [[A]], implicit $fpcr
-# CHECK-NEXT:  fpr128 = nsz FADDv2f64 killed [[MUL]], [[C]], implicit $fpcr
+# CHECK-NEXT:  fpr128 = nsz FADDv2f64 [[MUL]], [[C]], implicit $fpcr
 ---
 name:            vector_fmadd_nsz
 alignment:       4
@@ -392,7 +392,7 @@ body:             |
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
     %3:fpr128 = nsz FMULv2f64 %1, %0, implicit $fpcr
-    %4:fpr128 = nsz FADDv2f64 killed %3, %2, implicit $fpcr
+    %4:fpr128 = nsz FADDv2f64 %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 

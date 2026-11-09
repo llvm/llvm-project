@@ -11,11 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpenMP/OffloadRTL.h"
+#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
+
+#include <thread>
 
 using namespace llvm::omp::target::debug;
 using llvm::omp::target::OmpPluginManager;
@@ -56,7 +59,10 @@ void initRuntime() {
     llvm::omp::target::ompt::connectLibrary();
 #endif
 
-    PM->init();
+    if (!OffloadPolicy::isOffloadDisabled())
+      PM->init();
+    else
+      ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
     PM->registerDelayedLibraries();
     // After all plugins are initialized, register atExit cleanup handlers.
     std::atexit([]() {
