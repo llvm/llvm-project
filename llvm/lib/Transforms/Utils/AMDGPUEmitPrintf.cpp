@@ -383,7 +383,7 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
       // 8-byte slots, also when the stored value is smaller.
       Value *ToStore = processNonStringArg(Args[i], Builder);
       [[maybe_unused]] StoreInst *StBuff =
-          Builder.CreateStore(ToStore, PtrToStore);
+          Builder.CreateAlignedStore(ToStore, PtrToStore, SlotAlign);
       LLVM_DEBUG(dbgs() << "inserting store to printf buffer:" << *StBuff
                         << '\n');
       PtrToStore = Builder.CreateConstInBoundsGEP1_32(

@@ -53,17 +53,17 @@ extern "C" __device__ int printf(const char *format, ...);
 // CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
 // CHECK-NEXT:    store i64 1107004088646384690, ptr addrspace(1) [[TMP20]], align 8
 // CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP20]], i32 8
-// CHECK-NEXT:    store i64 8, ptr addrspace(1) [[TMP21]], align 8
+// CHECK-NEXT:    store i64 8, ptr addrspace(1) [[TMP21]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 8
-// CHECK-NEXT:    store double 3.141590e+00, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK-NEXT:    store double 3.141590e+00, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
-// CHECK-NEXT:    store i64 8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 8
+// CHECK-NEXT:    store i64 8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
-// CHECK-NEXT:    store i64 4, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK-NEXT:    store i64 4, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
 // CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[PRINTBUFFNEXTPTR3]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], i64 [[TMP13]]
-// CHECK-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 8
+// CHECK-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], i32 8
 // CHECK-NEXT:    br label [[END_BLOCK]]
 //
@@ -109,17 +109,17 @@ extern "C" __device__ int printf(const char *format, ...);
 // CHECK_CONSTRAINED-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
 // CHECK_CONSTRAINED-NEXT:    store i64 1107004088646384690, ptr addrspace(1) [[TMP20]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP20]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store i64 8, ptr addrspace(1) [[TMP21]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 8, ptr addrspace(1) [[TMP21]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store double 3.141590e+00, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK_CONSTRAINED-NEXT:    store double 3.141590e+00, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store i64 8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store i64 4, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 4, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
 // CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[PRINTBUFFNEXTPTR3]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], i64 [[TMP13]]
-// CHECK_CONSTRAINED-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 8
+// CHECK_CONSTRAINED-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], i32 8
 // CHECK_CONSTRAINED-NEXT:    br label [[END_BLOCK]]
 //
@@ -173,11 +173,11 @@ __device__ const
 // CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP20]], i32 8
 // CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP21]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP13]]
-// CHECK-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
-// CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @_ZZ4foo2vE5shval to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 8
+// CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @_ZZ4foo2vE5shval to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
-// CHECK-NEXT:    store ptr [[LCVAL_ASCAST]], ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK-NEXT:    store ptr [[LCVAL_ASCAST]], ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
 // CHECK-NEXT:    br label [[END_BLOCK]]
 //
@@ -224,11 +224,11 @@ __device__ const
 // CHECK_CONSTRAINED-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP20]], i32 8
 // CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP21]], ptr align 1 [[TMP0]], i64 [[TMP11]], i1 false)
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP13]]
-// CHECK_CONSTRAINED-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK_CONSTRAINED-NEXT:    store ptr [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store ptr addrspacecast (ptr addrspace(3) @_ZZ4foo2vE5shval to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 8
+// CHECK_CONSTRAINED-NEXT:    store ptr addrspacecast (ptr addrspace(3) @_ZZ4foo2vE5shval to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store ptr [[LCVAL_ASCAST]], ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK_CONSTRAINED-NEXT:    store ptr [[LCVAL_ASCAST]], ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
 // CHECK_CONSTRAINED-NEXT:    br label [[END_BLOCK]]
 //
@@ -280,32 +280,32 @@ __device__ _BitInt(128) Int128 = 45637;
 // CHECK-NEXT:    store i64 7271852820361268873, ptr addrspace(1) [[TMP12]], align 8
 // CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP12]], i32 8
 // CHECK-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK-NEXT:    store i64 [[TMP14]], ptr addrspace(1) [[TMP13]], align 8
+// CHECK-NEXT:    store i64 [[TMP14]], ptr addrspace(1) [[TMP13]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i32 8
-// CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @_ZZ4foo3vE1s to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK-NEXT:    store ptr addrspacecast (ptr addrspace(3) @_ZZ4foo3vE1s to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
 // CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[CONV]] to i64
-// CHECK-NEXT:    store i64 [[TMP15]], ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], align 8
+// CHECK-NEXT:    store i64 [[TMP15]], ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], i32 8
-// CHECK-NEXT:    store i64 [[TMP2]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 8
+// CHECK-NEXT:    store i64 [[TMP2]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], i32 8
-// CHECK-NEXT:    store double [[CONV1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], align 8
+// CHECK-NEXT:    store double [[CONV1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], i32 8
-// CHECK-NEXT:    store double [[TMP4]], ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], align 8
+// CHECK-NEXT:    store double [[TMP4]], ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], i32 8
 // CHECK-NEXT:    [[TMP16:%.*]] = fpext half [[TMP5]] to double
-// CHECK-NEXT:    store double [[TMP16]], ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], align 8
+// CHECK-NEXT:    store double [[TMP16]], ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], i32 8
 // CHECK-NEXT:    [[TMP17:%.*]] = fpext bfloat [[TMP6]] to double
-// CHECK-NEXT:    store double [[TMP17]], ptr addrspace(1) [[PRINTBUFFNEXTPTR8]], align 8
+// CHECK-NEXT:    store double [[TMP17]], ptr addrspace(1) [[PRINTBUFFNEXTPTR8]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR8]], i32 8
 // CHECK-NEXT:    [[TMP18:%.*]] = zext i55 [[LOADEDV]] to i64
-// CHECK-NEXT:    store i64 [[TMP18]], ptr addrspace(1) [[PRINTBUFFNEXTPTR9]], align 8
+// CHECK-NEXT:    store i64 [[TMP18]], ptr addrspace(1) [[PRINTBUFFNEXTPTR9]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR9]], i32 8
 // CHECK-NEXT:    [[TMP19:%.*]] = zext i44 [[LOADEDV2]] to i64
-// CHECK-NEXT:    store i64 [[TMP19]], ptr addrspace(1) [[PRINTBUFFNEXTPTR10]], align 8
+// CHECK-NEXT:    store i64 [[TMP19]], ptr addrspace(1) [[PRINTBUFFNEXTPTR10]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR10]], i32 8
-// CHECK-NEXT:    store i128 [[TMP9]], ptr addrspace(1) [[PRINTBUFFNEXTPTR11]], align 8
+// CHECK-NEXT:    store i128 [[TMP9]], ptr addrspace(1) [[PRINTBUFFNEXTPTR11]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR12:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR11]], i32 16
 // CHECK-NEXT:    br label [[END_BLOCK]]
 //
@@ -340,32 +340,32 @@ __device__ _BitInt(128) Int128 = 45637;
 // CHECK_CONSTRAINED-NEXT:    store i64 7271852820361268873, ptr addrspace(1) [[TMP12]], align 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP12]], i32 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP14]], ptr addrspace(1) [[TMP13]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP14]], ptr addrspace(1) [[TMP13]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store ptr addrspacecast (ptr addrspace(3) @_ZZ4foo3vE1s to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK_CONSTRAINED-NEXT:    store ptr addrspacecast (ptr addrspace(3) @_ZZ4foo3vE1s to ptr), ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP15:%.*]] = zext i32 [[CONV]] to i64
-// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP15]], ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP15]], ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR3]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP2]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP2]], ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store double [[CONV1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], align 8
+// CHECK_CONSTRAINED-NEXT:    store double [[CONV1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store double [[TMP4]], ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], align 8
+// CHECK_CONSTRAINED-NEXT:    store double [[TMP4]], ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], i32 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP16:%.*]] = fpext half [[TMP5]] to double
-// CHECK_CONSTRAINED-NEXT:    store double [[TMP16]], ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], align 8
+// CHECK_CONSTRAINED-NEXT:    store double [[TMP16]], ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], i32 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP17:%.*]] = fpext bfloat [[TMP6]] to double
-// CHECK_CONSTRAINED-NEXT:    store double [[TMP17]], ptr addrspace(1) [[PRINTBUFFNEXTPTR8]], align 8
+// CHECK_CONSTRAINED-NEXT:    store double [[TMP17]], ptr addrspace(1) [[PRINTBUFFNEXTPTR8]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR8]], i32 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP18:%.*]] = zext i55 [[LOADEDV]] to i64
-// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP18]], ptr addrspace(1) [[PRINTBUFFNEXTPTR9]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP18]], ptr addrspace(1) [[PRINTBUFFNEXTPTR9]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR10:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR9]], i32 8
 // CHECK_CONSTRAINED-NEXT:    [[TMP19:%.*]] = zext i44 [[LOADEDV2]] to i64
-// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP19]], ptr addrspace(1) [[PRINTBUFFNEXTPTR10]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 [[TMP19]], ptr addrspace(1) [[PRINTBUFFNEXTPTR10]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR10]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store i128 [[TMP9]], ptr addrspace(1) [[PRINTBUFFNEXTPTR11]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i128 [[TMP9]], ptr addrspace(1) [[PRINTBUFFNEXTPTR11]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR12:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR11]], i32 16
 // CHECK_CONSTRAINED-NEXT:    br label [[END_BLOCK]]
 //
@@ -416,7 +416,7 @@ __device__ int foo3() {
 // CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
 // CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP18]], ptr align 1 [[TMP0]], i64 [[TMP10]], i1 false)
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP18]], i64 [[TMP12]]
-// CHECK-NEXT:    store i64 10, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK-NEXT:    store i64 10, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
 // CHECK-NEXT:    br label [[END_BLOCK]]
 //
@@ -460,7 +460,7 @@ __device__ int foo3() {
 // CHECK_CONSTRAINED-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
 // CHECK_CONSTRAINED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP18]], ptr align 1 [[TMP0]], i64 [[TMP10]], i1 false)
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP18]], i64 [[TMP12]]
-// CHECK_CONSTRAINED-NEXT:    store i64 10, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 10, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
 // CHECK_CONSTRAINED-NEXT:    br label [[END_BLOCK]]
 //
@@ -496,11 +496,11 @@ __device__ int foo4() {
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 8
 // CHECK-NEXT:    store ptr addrspace(3) [[TMP0]], ptr addrspace(1) [[TMP5]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i32 8
-// CHECK-NEXT:    store i64 1, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK-NEXT:    store i64 1, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
 // CHECK-NEXT:    store ptr addrspace(5) [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
-// CHECK-NEXT:    store i64 2, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK-NEXT:    store i64 2, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 4
 // CHECK-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
 // CHECK-NEXT:    br label [[END_BLOCK]]
 //
@@ -529,11 +529,11 @@ __device__ int foo4() {
 // CHECK_CONSTRAINED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 8
 // CHECK_CONSTRAINED-NEXT:    store ptr addrspace(3) [[TMP0]], ptr addrspace(1) [[TMP5]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store i64 1, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 1, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
 // CHECK_CONSTRAINED-NEXT:    store ptr addrspace(5) [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
-// CHECK_CONSTRAINED-NEXT:    store i64 2, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK_CONSTRAINED-NEXT:    store i64 2, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 4
 // CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
 // CHECK_CONSTRAINED-NEXT:    br label [[END_BLOCK]]
 //
