@@ -49,15 +49,14 @@ define void @store_i32_stride5_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vmovlhps {{.*#+}} xmm3 = xmm4[0],xmm3[0]
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
+; AVX-NEXT:    vblendps {{.*#+}} xmm3 = xmm3[0],xmm5[1],xmm3[2,3]
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm4[1,1],xmm0[1,1]
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,0]
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm5[0],xmm0[1,2,3]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm3[3,3,3,3]
-; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm5[1],xmm1[2,3]
-; AVX-NEXT:    vmovlps %xmm1, 32(%r9)
-; AVX-NEXT:    vmovaps %ymm0, (%r9)
-; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    vmovaps %xmm2, (%r9)
+; AVX-NEXT:    vmovaps %xmm0, 16(%r9)
+; AVX-NEXT:    vmovlps %xmm3, 32(%r9)
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: store_i32_stride5_vf2:

@@ -21,8 +21,11 @@
 #define CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRABIREWRITECONTEXT_H
 
 #include "mlir/ABI/ABIRewriteContext.h"
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/CIR/Dialect/Analysis/CIRAliasAnalysis.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
@@ -40,8 +43,12 @@ namespace cir {
 /// queries.  The DataLayout must outlive the rewrite context.
 class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
-  CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl)
-      : module(module), dl(dl) {}
+  CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl,
+                       bool enableNoundefAttrs)
+      : module(module), dl(dl), enableNoundefAttrs(enableNoundefAttrs),
+        cirDataLayout(module), aliasAnalysis(module) {
+    cir::registerCIRAliasAnalyses(aliasAnalysis, module);
+  }
 
   ~CIRABIRewriteContext() {
     assert(pendingParamSlots.empty() &&
@@ -111,6 +118,20 @@ private:
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
 
+  /// Whether extended and indirect arguments are marked llvm.noundef.  Set
+  /// from the enable_noundef_attrs field of the module's
+  /// #cir.lowering_options.
+  bool enableNoundefAttrs;
+
+  /// The CIR view of the module's data layout, which provides the store and
+  /// alloc sizes that \c dl does not.
+  cir::CIRDataLayout cirDataLayout;
+
+  /// Alias analysis over the module with the CIR implementations registered.
+  /// rewriteCallSite asks it whether a byval operand's storage is written
+  /// between its load and the call.
+  mlir::AliasAnalysis aliasAnalysis;
+
   /// Param-slot allocas that non-byval indirect parameters will
   /// replace, paired with the incoming pointer that replaces them.  The
   /// rewrite retypes the block argument but leaves the slot standing, because
@@ -120,6 +141,9 @@ private:
   llvm::SmallVector<std::pair<cir::AllocaOp, mlir::BlockArgument>>
       pendingParamSlots;
 };
+
+/// The signature the indirect call \p call reaches its callee through.
+cir::FuncType getIndirectCalleeType(cir::CIRCallOpInterface call);
 
 } // namespace cir
 

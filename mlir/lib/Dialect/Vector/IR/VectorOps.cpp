@@ -31,7 +31,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -47,7 +46,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 
 #include <cassert>
@@ -239,6 +237,14 @@ static bool isSplatWriteConsistentWithMaskedRead(vector::TransferWriteOp write,
 
 bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
                                      vector::TransferReadOp read) {
+  // An enclosing vector.mask may leave some lanes unwritten or padded, so the
+  // read may not see the written vector as a whole. This conservatively
+  // includes all-true masks. MaskOp::fold removes them during canonicalization,
+  // so this only matters when a caller such as transferOpflowOpt runs first.
+  // TODO: Account for compatible region masks instead of conservatively
+  // rejecting all region-masked operations.
+  if (defWrite.isMasked() || read.isMasked())
+    return false;
   return !defWrite.hasOutOfBoundsDim() &&
          defWrite.getIndices() == read.getIndices() &&
          defWrite.getVectorType() == read.getVectorType() &&
@@ -249,6 +255,15 @@ bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
 
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
                                      vector::TransferWriteOp priorWrite) {
+  // A write under an enclosing vector.mask may not overwrite all lanes of the
+  // prior write. This conservatively includes all-true masks, which
+  // MaskOp::fold removes during canonicalization. Only the later write needs
+  // checking: a region-masked prior write is still dead if the later write
+  // fully overwrites it.
+  // TODO: Handle a region-masked later write when it is known to fully
+  // overwrite the prior write.
+  if (write.isMasked())
+    return false;
   return priorWrite.getIndices() == write.getIndices() &&
          priorWrite.getMask() == write.getMask() &&
          priorWrite.getVectorType() == write.getVectorType() &&
@@ -584,12 +599,13 @@ ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
 void vector::MultiDimReductionOp::build(OpBuilder &builder,
                                         OperationState &result, Value source,
                                         Value acc, ArrayRef<bool> reductionMask,
-                                        CombiningKind kind) {
+                                        CombiningKind kind,
+                                        arith::FastMathFlags fastMathFlags) {
   SmallVector<int64_t> reductionDims;
   for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
-  build(builder, result, kind, source, acc, reductionDims);
+  build(builder, result, kind, source, acc, reductionDims, fastMathFlags);
 }
 
 OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
@@ -600,7 +616,7 @@ OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
 }
 
 std::optional<SmallVector<int64_t, 4>>
-MultiDimReductionOp::getShapeForUnroll() {
+MultiDimReductionOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getSourceVectorType().getShape());
 }
 
@@ -700,7 +716,7 @@ struct ElideUnitDimsInMultiDimReduction
 
     Value result =
         vector::makeArithReduction(rewriter, loc, reductionOp.getKind(), acc,
-                                   cast, /*fastmath=*/nullptr, mask);
+                                   cast, reductionOp.getFastmathAttr(), mask);
     rewriter.replaceOp(rootOp, result);
     return success();
   }
@@ -737,7 +753,7 @@ LogicalResult ReductionOp::verify() {
     return emitOpError("unsupported reduction rank: ") << rank;
 
   // Verify supported reduction kind.
-  Type eltType = getDest().getType();
+  Type eltType = getResult().getType();
   if (!isSupportedCombiningKind(getKind(), eltType))
     return emitOpError("unsupported reduction type '")
            << eltType << "' for kind '" << stringifyCombiningKind(getKind())
@@ -808,7 +824,8 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   return nullptr;
 }
 
-std::optional<SmallVector<int64_t, 4>> ReductionOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+ReductionOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getSourceVectorType().getShape());
 }
 
@@ -1121,6 +1138,24 @@ static LogicalResult verifyOutputShape(
   return success();
 }
 
+// Find a one-sided reduction dim, i.e. a reduction dim that is present in only
+// one of the inputs.
+static std::optional<int64_t>
+getOneSidedReductionDim(vector::ContractionOp *contract) {
+  auto maps = contract->getIndexingMapsArray();
+  AffineMap lhsMap = maps[0];
+  AffineMap rhsMap = maps[1];
+
+  for (auto [dim, attr] : llvm::enumerate(contract->getIteratorTypes())) {
+    auto iteratorType = cast<vector::IteratorTypeAttr>(attr).getValue();
+    if (iteratorType == vector::IteratorType::reduction &&
+        (!lhsMap.isFunctionOfDim(dim) || !rhsMap.isFunctionOfDim(dim)))
+      return dim;
+  }
+
+  return std::nullopt;
+}
+
 LogicalResult ContractionOp::verify() {
   VectorType lhsType = getLhsType();
   VectorType rhsType = getRhsType();
@@ -1160,6 +1195,12 @@ LogicalResult ContractionOp::verify() {
       return emitOpError("expected indexing map ")
              << index << " to be a projected permutation of its inputs";
   }
+
+  // TODO: For better code re-use, unify this with linalg.contract.
+  auto dimIdx = getOneSidedReductionDim(this);
+  if (dimIdx.has_value())
+    return emitOpError("reduction dim at index ")
+           << dimIdx.value() << " must appear in both LHS and RHS";
 
   auto contractingDimMap = getContractingDimMap();
   auto batchDimMap = getBatchDimMap();
@@ -1245,22 +1286,36 @@ static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
   return -1;
 }
 
+// For every contraction `dim` for which:
+//  * the corresponding iteratory type matches `targetIteratorType`,
+// returns a pair: <lhsIdx, rhsIdx>, where:
+//  * {lhs|rhs}Idx is the index of `dim` in the (result of) indexing map for
+//    {lhs|rhs}.
 static std::vector<std::pair<int64_t, int64_t>>
-getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
-          IteratorType targetIteratorType, MLIRContext *context) {
+getDimPairForIterTy(ContractionOp *contract, IteratorType targetIteratorType) {
+  SmallVector<AffineMap, 4> indexingMaps(contract->getIndexingMapsArray());
+  ArrayAttr iteratorTypes = contract->getIteratorTypes();
   std::vector<std::pair<int64_t, int64_t>> dimMap;
   for (const auto &it : llvm::enumerate(iteratorTypes)) {
     auto iteratorType = llvm::cast<IteratorTypeAttr>(it.value()).getValue();
     if (iteratorType != targetIteratorType)
       continue;
     // Search lhs/rhs map results for 'targetExpr'.
-    auto targetExpr = getAffineDimExpr(it.index(), context);
+    auto targetExpr = getAffineDimExpr(it.index(), contract->getContext());
     int64_t lhsDim = getResultIndex(indexingMaps[0], targetExpr);
     int64_t rhsDim = getResultIndex(indexingMaps[1], targetExpr);
     if (lhsDim >= 0 && rhsDim >= 0)
       dimMap.emplace_back(lhsDim, rhsDim);
   }
   return dimMap;
+}
+
+std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
+  return getDimPairForIterTy(this, IteratorType::reduction);
+}
+
+std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
+  return getDimPairForIterTy(this, IteratorType::parallel);
 }
 
 void ContractionOp::getIterationBounds(
@@ -1301,19 +1356,8 @@ void ContractionOp::getIterationIndexMap(
   }
 }
 
-std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::reduction,
-                   getContext());
-}
-
-std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::parallel,
-                   getContext());
-}
-
-std::optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+ContractionOp::getIterationShapeToUnroll() {
   SmallVector<int64_t, 4> shape;
   getIterationBounds(shape);
   return shape;
@@ -1484,32 +1528,34 @@ static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
 }
 
 /// Fold the result of chains of ExtractOp in place by simply concatenating the
-/// positions.
+/// positions. Both static and dynamic positions are supported.
+///
+/// BEFORE:
+/// ```mlir
+/// %0 = vector.extract %v[1, 2] : vector<3x4x5xf32>
+/// %1 = vector.extract %0[%idx, 3] : vector<5xf32>
+/// ```
+///
+/// AFTER:
+/// ```mlir
+/// %1 = vector.extract %v[1, 2, %idx, 3] : vector<3x4x5xf32>
+/// ```
 static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
   if (!extractOp.getSource().getDefiningOp<ExtractOp>())
     return failure();
 
-  // TODO: Canonicalization for dynamic position not implemented yet.
-  if (extractOp.hasDynamicPosition())
-    return failure();
-
-  SmallVector<int64_t> globalPosition;
+  SmallVector<OpFoldResult> globalPosition = extractOp.getMixedPosition();
   ExtractOp currentOp = extractOp;
-  ArrayRef<int64_t> extrPos = currentOp.getStaticPosition();
-  globalPosition.append(extrPos.rbegin(), extrPos.rend());
   while (ExtractOp nextOp = currentOp.getSource().getDefiningOp<ExtractOp>()) {
     currentOp = nextOp;
-    // TODO: Canonicalization for dynamic position not implemented yet.
-    if (currentOp.hasDynamicPosition())
-      return failure();
-    ArrayRef<int64_t> extrPos = currentOp.getStaticPosition();
-    globalPosition.append(extrPos.rbegin(), extrPos.rend());
+    SmallVector<OpFoldResult> pos = currentOp.getMixedPosition();
+    globalPosition.insert(globalPosition.begin(), pos.begin(), pos.end());
   }
-  extractOp.setOperand(0, currentOp.getSource());
-  // OpBuilder is only used as a helper to build an I64ArrayAttr.
-  OpBuilder b(extractOp.getContext());
-  std::reverse(globalPosition.begin(), globalPosition.end());
-  extractOp.setStaticPosition(globalPosition);
+  auto [staticPos, dynPos] = decomposeMixedValues(globalPosition);
+  Value source = currentOp.getSource();
+  extractOp->setOperands(
+      llvm::to_vector(llvm::concat<Value>(ValueRange(source), dynPos)));
+  extractOp.setStaticPosition(staticPos);
   return success();
 }
 
@@ -1634,6 +1680,10 @@ LogicalResult ExtractFromInsertTransposeChainState::handleTransposeOp() {
 
   if (!nextTransposeOp)
     return failure();
+
+  if (nextTransposeOp.getResultVectorType().getRank() == 0)
+    return success();
+
   AffineMap m = inversePermutation(AffineMap::getPermutationMap(
       nextTransposeOp.getPermutation(), extractOp.getContext()));
   extractPosition = applyPermutationMap(m, ArrayRef(extractPosition));
@@ -2622,7 +2672,7 @@ static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
 // FmaOp
 //===----------------------------------------------------------------------===//
 
-std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> FMAOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -2861,18 +2911,18 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
     return {};
 
   // DenseElementsAttr only supports int/index/float/complex types.
-  auto destVecType = fromElementsOp.getDest().getType();
-  auto destEltType = destVecType.getElementType();
-  if (!destEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(destEltType))
+  auto resVecType = fromElementsOp.getResult().getType();
+  auto resEltType = resVecType.getElementType();
+  if (!resEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(resEltType))
     return {};
 
   // Constant attributes might have a different type than the return type.
   // Convert them before creating the dense elements attribute.
   auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
-    return convertNumericAttr(attr, destEltType);
+    return convertNumericAttr(attr, resEltType);
   });
 
-  return DenseElementsAttr::get(destVecType, convertedElements);
+  return DenseElementsAttr::get(resVecType, convertedElements);
 }
 
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
@@ -3033,7 +3083,8 @@ void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-std::optional<SmallVector<int64_t, 4>> BroadcastOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+BroadcastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -4937,7 +4988,10 @@ public:
           getI64SubArray(op.getOffsets(), /*dropFront=*/rankDiff);
       SmallVector<int64_t> sizes =
           getI64SubArray(op.getSizes(), /*dropFront=*/rankDiff);
-      for (unsigned i = 0; i < srcRank; i++) {
+      // Slice attributes (i.e. offsets, sizes, etc) are only required for the
+      // leading/prefix source dimensions. This is why we use
+      // `offset.size()` instead of `srcRank` below.
+      for (unsigned i = 0; i < offsets.size(); i++) {
         if (srcVecType.getDimSize(i) == 1) {
           // In case this dimension was broadcasted *and* sliced, the offset
           // and size need to be updated now that there is no broadcast before
@@ -5394,9 +5448,9 @@ Type TransferReadOp::getExpectedMaskType() {
 //===----------------------------------------------------------------------===//
 // TransferReadOp: VectorTransferOpInterface methods.
 //===----------------------------------------------------------------------===//
-VectorType TransferReadOp::getVectorType() {
-  return cast<VectorType>(getVector().getType());
-}
+VectorType TransferReadOp::getVectorType() { return getResult().getType(); }
+
+Value TransferReadOp::getVector() { return getResult(); }
 
 template <typename TransferOp>
 static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
@@ -5563,7 +5617,8 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> TransferReadOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+TransferReadOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -5633,8 +5688,10 @@ struct TransferReadAfterWriteToBroadcast
     if (!readOp.hasPureTensorSemantics() || !defWrite.hasPureTensorSemantics())
       return failure();
     // Bail in the masked case (too complex atm and needed to properly account
-    // for padding).
-    if (readOp.getMask() || defWrite.getMask())
+    // for padding). This includes an enclosing vector.mask.
+    // TODO: Support mask operands and reads nested in vector.mask while
+    // properly accounting for padding.
+    if (readOp.getMask() || defWrite.getMask() || readOp.isMasked())
       return failure();
     // If indices are not the same a shift may be required, bail.
     if (readOp.getIndices() != defWrite.getIndices())
@@ -6016,7 +6073,8 @@ LogicalResult TransferWriteOp::fold(FoldAdaptor adaptor,
 //===----------------------------------------------------------------------===//
 // TransferWriteOp: other methods.
 //===----------------------------------------------------------------------===//
-std::optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+TransferWriteOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6282,7 +6340,7 @@ OpFoldResult LoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> LoadOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> LoadOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6333,7 +6391,7 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
   return memref::foldMemRefCast(*this);
 }
 
-std::optional<SmallVector<int64_t, 4>> StoreOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> StoreOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6528,7 +6586,7 @@ Type GatherOp::getExpectedMaskType() {
                          vecType.getScalableDims());
 }
 
-std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> GatherOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -6839,7 +6897,8 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-std::optional<SmallVector<int64_t, 4>> ShapeCastOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+ShapeCastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -7094,16 +7153,14 @@ public:
 
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
-      size_t numOperands = maskOperands.size();
 
-      auto maskOperandsToDrop =
-          (Side == UnitDimSide::Trailing)
-              ? maskOperands.take_back(numOperands - numDimsToDrop)
-              : maskOperands.take_front(numOperands - numDimsToDrop);
+      auto maskOperandsToDrop = (Side == UnitDimSide::Trailing)
+                                    ? maskOperands.take_back(numDimsToDrop)
+                                    : maskOperands.take_front(numDimsToDrop);
 
       // Check that every mask-dim-size to-be-dropped is constant and == 1. We
       // could also check for == 0, but that's left as a TODO.
-      if (llvm::all_of(maskOperandsToDrop, [](Value maskDim) {
+      if (llvm::any_of(maskOperandsToDrop, [](Value maskDim) {
             auto cst = maskDim.getDefiningOp<arith::ConstantIndexOp>();
             return !cst || (cst.value() != 1);
           }))
@@ -7119,12 +7176,11 @@ public:
 
     if (constantMaskOp) {
       auto maskDimSizes = constantMaskOp.getMaskDimSizes();
-      size_t numDims = maskDimSizes.size();
 
       ArrayRef<int64_t> maskDimSizesToDrop =
           (Side == UnitDimSide::Trailing)
-              ? maskDimSizes.take_back(numDims - numDimsToDrop)
-              : maskDimSizes.take_front(numDims - numDimsToDrop);
+              ? maskDimSizes.take_back(numDimsToDrop)
+              : maskDimSizes.take_front(numDimsToDrop);
 
       // Check that every mask-dim-size to-be-dropped is constant and == 1. We
       // could also check for == 0, but that's left as a TODO.
@@ -7347,7 +7403,7 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-std::optional<SmallVector<int64_t, 4>> BitCastOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>> BitCastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -7473,7 +7529,8 @@ LogicalResult vector::TransposeOp::verify() {
   return success();
 }
 
-std::optional<SmallVector<int64_t, 4>> TransposeOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+TransposeOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -7620,7 +7677,7 @@ public:
     if (!fromElementsOp)
       return failure();
 
-    VectorType srcTy = fromElementsOp.getDest().getType();
+    VectorType srcTy = fromElementsOp.getResult().getType();
     VectorType dstTy = transposeOp.getType();
 
     ArrayRef<int64_t> permutation = transposeOp.getPermutation();
@@ -8653,7 +8710,8 @@ OpFoldResult InterleaveOp::fold(FoldAdaptor adaptor) {
                                 splat.getSplatValue<Attribute>());
 }
 
-std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+InterleaveOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -8661,8 +8719,36 @@ std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
 // DeinterleaveOp
 //===----------------------------------------------------------------------===//
 
-std::optional<SmallVector<int64_t, 4>> DeinterleaveOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+DeinterleaveOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// VectorDialect canonicalization
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A broadcast of a scalar condition selects the same arm in every lane.
+struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto broadcast = select.getCondition().getDefiningOp<BroadcastOp>();
+    if (!broadcast || !broadcast.getSourceType().isSignlessInteger(1))
+      return failure();
+    rewriter.modifyOpInPlace(select, [&] {
+      select.getConditionMutable().assign(broadcast.getSource());
+    });
+    return success();
+  }
+};
+} // namespace
+
+void VectorDialect::getCanonicalizationPatterns(
+    RewritePatternSet &results) const {
+  results.add<SelectBroadcastCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//

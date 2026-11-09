@@ -200,7 +200,7 @@ m_scev_Trunc(const Op0_t &Op0) {
 
 /// Match a binary SCEV.
 template <typename SCEVTy, typename Op0_t, typename Op1_t,
-          SCEV::NoWrapFlags WrapFlags = SCEV::FlagNone, bool Commutable = false>
+          SCEVFlags WrapFlags = SCEV::FlagNone, bool Commutable = false>
 struct SCEVBinaryExpr_match {
   Op0_t Op0;
   Op1_t Op1;
@@ -222,7 +222,7 @@ struct SCEVBinaryExpr_match {
 };
 
 template <typename SCEVTy, typename Op0_t, typename Op1_t,
-          SCEV::NoWrapFlags WrapFlags = SCEV::FlagNone, bool Commutable = false>
+          SCEVFlags WrapFlags = SCEV::FlagNone, bool Commutable = false>
 inline SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, WrapFlags, Commutable>
 m_scev_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, WrapFlags, Commutable>(Op0,
@@ -233,6 +233,12 @@ template <typename Op0_t, typename Op1_t>
 inline SCEVBinaryExpr_match<SCEVAddExpr, Op0_t, Op1_t>
 m_scev_Add(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVAddExpr>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVAddExpr, Op0_t, Op1_t, SCEV::FlagNSW>
+m_scev_NSWAdd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVAddExpr, Op0_t, Op1_t, SCEV::FlagNSW>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

@@ -4,7 +4,7 @@
 # RUN: FileCheck %s < %t1
 
 saa  $2         # CHECK: :[[@LINE]]:1: error: too few operands for instruction
-saa  $2, $5, $6 # CHECK: :[[@LINE]]:12: error: unexpected token in argument list
+saa  $2, $5, $6 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
 
 saad $2         # CHECK: :[[@LINE]]:1: error: too few operands for instruction
-saad $2, $5, $6 # CHECK: :[[@LINE]]:12: error: unexpected token in argument list
+saad $2, $5, $6 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction

@@ -883,7 +883,7 @@ desired.
   void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(/*...*/) {
     // ...
 +   for (auto &PluginFN : CodeGenOpts.PassPlugins)
-+     if (auto PassPlugin = PassPlugin::Load(PluginFN))
++     if (auto PassPlugin = PassPlugin::load(PluginFN))
 +        PassPlugin->registerPassBuilderCallbacks(PB);
   }
 ```

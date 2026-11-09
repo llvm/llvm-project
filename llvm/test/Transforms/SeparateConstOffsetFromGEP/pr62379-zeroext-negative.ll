@@ -5,18 +5,20 @@
 
 @c = internal constant [4 x i32] [i32 0, i32 1, i32 2, i32 3]
 
-; FIXME: We could optimize this case, but we don't currently.  This test just
-; checks that we don't miscompile it.
+; Check that RHS subtraction constants are zero-extended before negation.
 define i32 @sub_positive(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: define i32 @sub_positive
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub nuw nsw i32 15, [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i32 [[B]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i32], ptr [[PTR]], i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[B]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP4]]
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -60
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[UGLYGEP1]], align 4
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   %0 = sub nuw nsw i32 15, %a

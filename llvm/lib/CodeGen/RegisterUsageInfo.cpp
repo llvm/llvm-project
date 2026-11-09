@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -22,17 +23,12 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
-
-// Defined in TargetPassConfig.cpp
-extern cl::opt<bool> PrintRegUsage;
 
 INITIALIZE_PASS(PhysicalRegisterUsageInfoWrapperLegacy, "reg-usage-info",
                 "Register Usage Information Storage", false, true)
@@ -49,7 +45,7 @@ bool PhysicalRegisterUsageInfo::doInitialization(Module &M) {
 }
 
 bool PhysicalRegisterUsageInfo::doFinalization(Module &M) {
-  if (PrintRegUsage)
+  if (getCodeGenOptions(M).print_regusage)
     print(errs());
 
   RegMasks.shrink_and_clear();

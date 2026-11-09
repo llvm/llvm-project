@@ -1864,7 +1864,7 @@ StreamChecker::ensureStreamNonNull(SVal StreamVal, const Expr *StreamE,
   std::tie(StateNotNull, StateNull) = CM.assumeDual(State, *Stream);
 
   if (!StateNotNull && StateNull) {
-    if (ExplodedNode *N = C.generateErrorNode(StateNull)) {
+    if (ExplodedNode *N = C.addSink(StateNull)) {
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT_FileNull, "Stream pointer might be NULL.", N);
       if (StreamE)
@@ -1930,7 +1930,7 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
   if (SS->isClosed()) {
     // Using a stream pointer after 'fclose' causes undefined behavior
     // according to cppreference.com .
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT_UseAfterClose, "Use of a stream that might be already closed", N);
       R->addVisitor<StreamClosedVisitor>(Sym);
@@ -1946,13 +1946,13 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
     // This should usually not occur because stream pointer is NULL.
     // But freopen can cause a state when stream pointer remains non-null but
     // failed to open.
-    ExplodedNode *N = C.generateErrorNode();
+    ExplodedNode *N = C.addSink();
     if (N) {
       C.emitReport(std::make_unique<PathSensitiveBugReport>(
           BT_UseAfterOpenFailed,
           "Stream might be invalid after "
-          "(re-)opening it has failed. "
-          "Can cause undefined behaviour.",
+          "(re-)opening it has failed; "
+          "can cause undefined behaviour",
           N));
       return nullptr;
     }
@@ -1965,8 +1965,8 @@ ProgramStateRef StreamChecker::ensureNoFilePositionIndeterminate(
     SVal StreamVal, CheckerContext &C, ProgramStateRef State) const {
   static const char *BugMessage =
       "File position of the stream might be 'indeterminate' "
-      "after a failed operation. "
-      "Can cause undefined behavior.";
+      "after a failed operation; "
+      "can cause undefined behavior";
 
   SymbolRef Sym = StreamVal.getAsSymbol();
   if (!Sym)
@@ -1997,7 +1997,7 @@ ProgramStateRef StreamChecker::ensureNoFilePositionIndeterminate(
 
     // Known or unknown error state without FEOF possible.
     // Stop analysis, report error.
-    if (ExplodedNode *N = C.generateErrorNode(State)) {
+    if (ExplodedNode *N = C.addSink(State)) {
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT_IndeterminatePosition, BugMessage, N);
       R->markInteresting(Sym);
@@ -2063,8 +2063,8 @@ void StreamChecker::reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         BT_StreamEof,
-        "Read function called when stream is in EOF state. "
-        "Function has no effect.",
+        "Read function called when stream is in EOF state; "
+        "function has no effect",
         N);
     R->markInteresting(StreamSym);
     C.emitReport(std::move(R));
@@ -2121,7 +2121,7 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
     std::unique_ptr<PathSensitiveBugReport> R =
         std::make_unique<PathSensitiveBugReport>(
             BT_ResourceLeak,
-            "Opened stream never closed. Potential resource leak.", Err,
+            "Opened stream never closed; potential resource leak", Err,
             LocUsedForUniqueing, StreamOpenNode->getStackFrame()->getDecl());
     R->markInteresting(LeakSym);
     R->addVisitor<NoStreamStateChangeVisitor>(LeakSym, this);

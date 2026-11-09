@@ -80,9 +80,11 @@ TypeSystemClike::DeclContextGetLanguage(void *opaque_decl_ctx) {
   return lldb::eLanguageTypeUnknown;
 }
 
+#ifndef NDEBUG
 bool TypeSystemClike::Verify(lldb::opaque_compiler_type_t type) {
   return false;
 }
+#endif
 
 bool TypeSystemClike::IsArrayType(lldb::opaque_compiler_type_t type,
                                   CompilerType *element_type, uint64_t *size,
