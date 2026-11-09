@@ -279,7 +279,7 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
 
   if (isStepConst) {
     APInt step = stepAttr.getValue();
-    if (isUnsigned ? step.ule(1) : step.sle(1))
+    if (isUnsigned ? step.ult(1) : step.slt(1))
       return failure();
   }
   if (matchPattern(lbVal, m_Constant(&lbAttr)) &&
@@ -289,7 +289,7 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
     APInt ub = ubAttr.getValue();
     APInt step = stepAttr.getValue();
 
-    if (isUnsigned ? ub.ult(lb) : ub.slt(lb))
+    if (isUnsigned ? ub.ule(lb) : ub.sle(lb))
       return failure();
 
     // Peeling is not needed if there is at most one iteration. scf.for requires
