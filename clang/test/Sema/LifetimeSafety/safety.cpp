@@ -4149,6 +4149,14 @@ struct S {
     this->p_ = &GLOBAL_INT;
     bar();
   }
+  void parenthesized_this_call() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}}
+    }                  // expected-note {{local variable 'num' is destroyed here}}
+    (this)->bar();     // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
+  }
 };
 
 struct T {
