@@ -243,11 +243,11 @@ static inline RT_API_ATTRS bool BesselJnUnderflows(BesselOrder nMin, T absX) {
     return false;
   }
   double ax{static_cast<double>(absX)};
-  if (absX != 0 && !(ax >= 2.2250738585072014e-308)) {
+  if (absX != 0 && !(ax >= MinValue<53, double>::get())) {
     return false; // NaN, or too small for a normal double
   }
   constexpr common::RealCharacteristics real{common::PrecisionOfRealKind(KIND)};
-  // log2 of half the least positive subnormal, minus a safety margin.
+  // ln of half the least positive subnormal, minus a safety margin.
   constexpr double ln2{0.6931471805599453};
   constexpr double lnZero{
       (1.0 - real.exponentBias - real.binaryPrecision - 2) * ln2};
@@ -363,15 +363,15 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   }
   elt(n2 - 1) = bn2_1;
 
-  // If J(n2, x) is zero (or flushed to zero) or J(n2 - 1, x) has lost most
-  // of its bits to underflow, the recursion below loses the lower orders
-  // (e.g. BESSEL_JN(1, 10000, 1.0) would be all zeros).
+  // If J(n2, x) is zero (or flushed to zero) or J(n2 - 1, x) is subnormal,
+  // the recursion below loses the lower orders (e.g. BESSEL_JN(1, 10000, 1.0)
+  // would be all zeros). A nonzero subnormal J(n2, x) alone is harmless.
   if (n2 - n1 >= 2 && absX < n2 &&
-      (bn2 == 0 || (bn2_1 < 0 ? -bn2_1 : bn2_1) * 1024 < minNormal)) {
+      (bn2 == 0 || (bn2_1 < minNormal && bn2_1 > -minNormal))) {
     if (!MillerBesselJn(n1, n2, MillerStart(n2), x, minNormal, elt)) {
       TinyXBesselJn(n1, n2, x, elt);
     }
-    // Keep the caller's values for the top two orders.
+    // Keep the caller's more accurate values for the top two orders.
     elt(n2) = bn2;
     elt(n2 - 1) = bn2_1;
     return;
@@ -389,7 +389,7 @@ static inline RT_API_ATTRS void DoBesselJn(Descriptor &result, int32_t n1,
   T bn_2 = bn2;
   T bn_1 = bn2_1;
   T twoOverX = 2.0 / x;
-  for (BesselOrder n{static_cast<BesselOrder>(n2) - 2}; n >= n1; --n) {
+  for (int n{n2 - 2}; n >= n1; --n) {
     auto bn = twoOverX * (n + 1) * bn_1 - bn_2;
     elt(n) = bn;
     bn_2 = bn_1;
