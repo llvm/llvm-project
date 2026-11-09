@@ -296,13 +296,18 @@ inline void Scheduler::worker_thread(size_t worker_index) noexcept {
     std::atomic_unsigned_lock_free::value_type epoch = m_epoch.load(); // Load the epoch before looking for work
     Task* task                                       = nullptr;
 
-    // Try to pop from own queue
-    if (!(task = m_queues[worker_index].pop())) {
-      // If there's no tasks in our queue - try to steal from other queues in a staggared manner
-      for (size_t i = 1; i != m_queues_count; ++i) // Loop over each queue but the one owned by the worker
-        if ((task = m_queues[(worker_index + i) % m_queues_count].steal())) {
-          break;
-        }
+    // The queue owned by the worker_thread must be empty at this time, thus there's no reason to try popping from it.
+    // The assertion below checks that. It's safe in this case to mutate the queue inside the assertion, since it'll
+    // either be reverted to the same state or popped from and the process is aborted afterwards anyway.
+    _LIBCPP_ASSERT_INTERNAL(
+        m_queues[worker_index].pop() == nullptr, "The worker's queue must be empty when it's looking for a new task");
+
+    // Try to steal from other queues in a staggered manner.
+    // Loop over each queue but the one owned by the worker.
+    for (size_t i = 1; i != m_queues_count; ++i) {
+      if ((task = m_queues[(worker_index + i) % m_queues_count].steal())) {
+        break;
+      }
     }
 
     if (task) {
