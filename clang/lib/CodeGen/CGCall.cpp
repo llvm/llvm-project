@@ -2284,8 +2284,6 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
   case FunctionType::RISCVNew:
     FuncAttrs.addAttribute("riscv_new");
     break;
-  default:
-    llvm_unreachable("Unimplemented RISC-V attribute type");
   }
 }
 
