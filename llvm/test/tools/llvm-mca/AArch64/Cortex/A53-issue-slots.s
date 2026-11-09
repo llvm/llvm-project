@@ -18,6 +18,14 @@
 #   Q-form fmul + scalar fadd           1
 #   Q-form fmul + fcmp                  1
 #   fdiv + 8 fmul                       the fmuls fit within the fdiv occupancy
+#   addv + addv                         1
+#   fadd + addv                         0.5
+#   dup (Q-form element) + fadd         0.5
+#   shrn + shrn                         0.5
+#   saba (64-bit) + saba                2
+#   saba (64-bit) + fadd                1
+#   saba (Q-form) + saba                2
+#   saba (Q-form) + fadd                1.5
 #
 # A Q-form takes the two-unit lane resource twice, which gives the right
 # throughput on its own, but llvm-mca does not make it hold both lanes in the
@@ -108,6 +116,46 @@ fmul s22, s1, s2
 fmul s23, s1, s2
 # LLVM-MCA-END
 
+# LLVM-MCA-BEGIN addv-addv
+addv b16, v1.8b
+addv b17, v1.8b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN fadd-addv
+fadd s16, s1, s2
+addv b17, v1.8b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN dupq-fadd
+dup v16.16b, v1.b[1]
+fadd s17, s1, s2
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN shrn-shrn
+shrn v16.8b, v1.8h, #3
+shrn v17.8b, v1.8h, #3
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN sabad-sabad
+saba v16.8b, v1.8b, v2.8b
+saba v17.8b, v1.8b, v2.8b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN sabad-fadd
+saba v16.8b, v1.8b, v2.8b
+fadd s17, s1, s2
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN sabaq-sabaq
+saba v16.16b, v1.16b, v2.16b
+saba v17.16b, v1.16b, v2.16b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN sabaq-fadd
+saba v16.16b, v1.16b, v2.16b
+fadd s17, s1, s2
+# LLVM-MCA-END
+
 # CHECK:      [0] Code Region - fadd-fadd
 
 # CHECK:      Iterations:        100
@@ -154,7 +202,7 @@ fmul s23, s1, s2
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.98
 # CHECK-NEXT: IPC:               0.98
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [4] Code Region - fadd-fmulidx
 
@@ -214,7 +262,7 @@ fmul s23, s1, s2
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.49
 # CHECK-NEXT: IPC:               0.49
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      [9] Code Region - faddq-fmul
 
@@ -287,3 +335,99 @@ fmul s23, s1, s2
 # CHECK-NEXT: uOps Per Cycle:    0.90
 # CHECK-NEXT: IPC:               0.90
 # CHECK-NEXT: Block RThroughput: 10.0
+
+# CHECK:      [15] Code Region - addv-addv
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      203
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 2.0
+
+# CHECK:      [16] Code Region - fadd-addv
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    1.92
+# CHECK-NEXT: IPC:               1.92
+# CHECK-NEXT: Block RThroughput: 1.0
+
+# CHECK:      [17] Code Region - dupq-fadd
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      105
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    1.90
+# CHECK-NEXT: IPC:               1.90
+# CHECK-NEXT: Block RThroughput: 1.0
+
+# CHECK:      [18] Code Region - shrn-shrn
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      102
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    1.96
+# CHECK-NEXT: IPC:               1.96
+# CHECK-NEXT: Block RThroughput: 1.0
+
+# CHECK:      [19] Code Region - sabad-sabad
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      403
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: Block RThroughput: 4.0
+
+# CHECK:      [20] Code Region - sabad-fadd
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      204
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.98
+# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: Block RThroughput: 2.0
+
+# CHECK:      [21] Code Region - sabaq-sabaq
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      401
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: Block RThroughput: 4.0
+
+# CHECK:      [22] Code Region - sabaq-fadd
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      200
+# CHECK-NEXT: Total Cycles:      254
+# CHECK-NEXT: Total uOps:        200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.79
+# CHECK-NEXT: IPC:               0.79
+# CHECK-NEXT: Block RThroughput: 2.5
