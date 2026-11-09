@@ -137,9 +137,5 @@ cir.func @cmp_fenv(%a: !cir.float, %b: !cir.float,
   // CHECK: cir.vec.cmp(le, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CHECK-NOT: fenv
   %4 = cir.vec.cmp(le, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-  // CHECK: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<strict_except = true>
-  %5 = cir.vec.fcmp(olt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<strict_except = true>
-  // CHECK: cir.vec.fcmp(oeq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<strict_except = true>
-  %6 = cir.vec.fcmp(oeq, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling fenv<strict_except = true>
   cir.return
 }

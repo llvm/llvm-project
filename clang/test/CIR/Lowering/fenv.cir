@@ -219,22 +219,16 @@ module {
     // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
     // CHECK: %[[CMP:.*]] = llvm.call_intrinsic "llvm.experimental.constrained.fcmps"(%{{.*}}, %{{.*}}, %[[PRED]], %[[EB]]) : (vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xi1>
     // CHECK: llvm.sext %[[CMP]] : vector<4xi1> to vector<4xi32>
-    %0 = cir.vec.fcmp(ogt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling
+    %0 = cir.vec.cmp(gt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
          fenv<strict_except = true>
     // CHECK: %[[PRED_EQ:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"oeq">
     // CHECK: %[[CMP_EQ:.*]] = llvm.call_intrinsic "llvm.experimental.constrained.fcmp"(%{{.*}}, %{{.*}}, %[[PRED_EQ]], %{{.*}}) : (vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xi1>
     // CHECK: llvm.sext %[[CMP_EQ]] : vector<4xi1> to vector<4xi32>
-    %1 = cir.vec.fcmp(oeq, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+    %1 = cir.vec.cmp(eq, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
          fenv<strict_except = true>
     // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : vector<4xf32>
     // CHECK: llvm.sext %{{.*}} : vector<4xi1> to vector<4xi32>
-    %2 = cir.vec.fcmp(olt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"olt">
-    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmp"
-    %3 = cir.vec.fcmp(olt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<strict_except = true>
-    // Without `fenv`, `signaling` has no effect.
-    // CHECK: llvm.fcmp "oeq" %{{.*}}, %{{.*}} : vector<4xf32>
-    %4 = cir.vec.fcmp(oeq, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling
+    %2 = cir.vec.cmp(lt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
     cir.return
   }
 
