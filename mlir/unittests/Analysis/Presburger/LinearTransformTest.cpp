@@ -30,7 +30,7 @@ void testColumnEchelonForm(const IntMatrix &m, unsigned expectedRank) {
       EXPECT_EQ(rowVec[col], 0);
       if (rowVec[col] != 0) {
         llvm::errs() << "Failed at input matrix:\n";
-        m.dump();
+        m.print(llvm::errs());
       }
     }
     if (rowVec[lastAllowedNonZeroCol] != 0)

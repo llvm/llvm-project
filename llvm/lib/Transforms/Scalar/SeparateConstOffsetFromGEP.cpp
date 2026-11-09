@@ -1082,12 +1082,12 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // offset from each is accumulated.
   Value *NewBase;
   const APInt *BaseOffset;
-  bool ExtractBase = match(GEP->getPointerOperand(),
-                           m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+  bool ExtractBase =
+      match(GEP->getPointerOperand(),
+            m_PtrAdd(*DL, m_Value(NewBase), m_APInt(BaseOffset)));
 
   unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
-  APInt BaseByteOffset =
-      ExtractBase ? BaseOffset->sextOrTrunc(IdxWidth) : APInt(IdxWidth, 0);
+  APInt BaseByteOffset = ExtractBase ? *BaseOffset : APInt(IdxWidth, 0);
 
   // The backend can already nicely handle the case where all indices are
   // constant.
@@ -1300,8 +1300,7 @@ bool SeparateConstOffsetFromGEPLegacyPass::runOnFunction(Function &F) {
 }
 
 bool SeparateConstOffsetFromGEP::run(Function &F) {
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   if (Opts.disable_separate_const_offset_from_gep)
     return false;
 
