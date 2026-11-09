@@ -366,9 +366,10 @@ Value *PHITransAddr::findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
                                                 BasicBlock *PredBB,
                                                 const DominatorTree *DT,
                                                 bool CondVal) const {
+  assert(DT && "Select-arm translation requires a dominator tree.");
   LinearExpression Target = decomposeLinearExpression(DL, Addr);
   Value *Base = Target.BasePtr;
-  if (isa<ConstantData>(Base))
+  if (!Target.Index || !Base->hasUseList())
     return nullptr;
   if (auto *BaseI = dyn_cast<Instruction>(Base);
       BaseI && BaseI->getParent() == CurBB)
@@ -376,41 +377,38 @@ Value *PHITransAddr::findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
 
   // Translate the index along the edge and fold its constant addends into the
   // offset. GEP offset arithmetic wraps, so no-wrap flags are not required.
-  if (Target.Index) {
-    PHITransAddr IndexAddr(Target.Index, DL, AC);
-    Value *Index = IndexAddr.translateSubExpr(Target.Index, CurBB, PredBB, DT,
-                                              Cond, CondVal);
-    if (!Index)
-      return nullptr;
-    Value *X;
-    const APInt *C;
-    while (match(Index, m_Add(m_Value(X), m_APInt(C)))) {
-      Target.Offset += Target.Scale * *C;
-      Index = X;
-    }
-    Target.Index = Index;
+  PHITransAddr IndexAddr(Target.Index, DL, AC);
+  Value *Index = IndexAddr.translateSubExpr(Target.Index, CurBB, PredBB, DT,
+                                            Cond, CondVal);
+  if (!Index)
+    return nullptr;
+  Value *X;
+  const APInt *C;
+  while (match(Index, m_AddLike(m_Value(X), m_APInt(C)))) {
+    Target.Offset += Target.Scale * *C;
+    Index = X;
   }
+  Target.Index = Index;
 
   // Look for an available GEP chain over the same base with an equal linear
   // expression.
-  auto MatchesTarget = [&](GetElementPtrInst *GEPI) {
-    LinearExpression E = decomposeLinearExpression(DL, GEPI);
-    return GEPI->getType() == Addr->getType() && E.BasePtr == Base &&
-           E.Index == Target.Index && E.Scale == Target.Scale &&
-           E.Offset == Target.Offset;
-  };
-  constexpr unsigned MaxCandidates = 32;
-  unsigned NumCandidates = 0;
+  static constexpr unsigned MaxGEPsToVisit = 32;
+  unsigned NumScanned = 0;
   SmallVector<Value *, 8> Worklist = {Base};
   while (!Worklist.empty()) {
-    for (User *U : Worklist.pop_back_val()->users()) {
+    Value *Ptr = Worklist.pop_back_val();
+    for (User *U : Ptr->users()) {
       auto *GEPI = dyn_cast<GetElementPtrInst>(U);
-      if (!GEPI || GEPI->getFunction() != CurBB->getParent() ||
-          (DT && !DT->dominates(GEPI->getParent(), PredBB)))
+      // Skip vector GEPs: decomposeLinearExpression requires a scalar pointer.
+      if (!GEPI || GEPI->getType() != Addr->getType() ||
+          GEPI->getFunction() != CurBB->getParent() ||
+          !DT->dominates(GEPI->getParent(), PredBB))
         continue;
-      if (++NumCandidates > MaxCandidates)
+      if (++NumScanned > MaxGEPsToVisit)
         return nullptr;
-      if (MatchesTarget(GEPI))
+      LinearExpression E = decomposeLinearExpression(DL, GEPI);
+      if (E.BasePtr == Base && E.Index == Target.Index &&
+          E.Scale == Target.Scale && E.Offset == Target.Offset)
         return GEPI;
       Worklist.push_back(GEPI);
     }
