@@ -80,7 +80,7 @@ protected:
     if (!Mod)
       return nullptr;
 
-    Mod->setDataLayout(TM.createDataLayout());
+    Mod->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
     if (MIR->parseMachineFunctions(*Mod, MMI)) {
       M.reset();
@@ -265,7 +265,7 @@ body:             |
   std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
-CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
+CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"domain"}
 CHECK-DAG: ![[MMSCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope0"}
 CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope1"}
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}
@@ -304,6 +304,7 @@ TEST_F(MachineMetadataTest, isMetaInstruction) {
 ...
 ---
 name:            test0
+tracksRegLiveness: false
 machineFunctionInfo
 body:             |
   bb.0:
@@ -475,7 +476,7 @@ body:             |
   std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
-CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
+CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"domain"}
 CHECK-DAG: ![[MMSCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope0"}
 CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope1"}
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}
@@ -514,7 +515,7 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %8:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
     %6:vreg_64 = COPY %8
-    %5:vgpr_32 = FLAT_LOAD_DWORD killed %6, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.p)
+    %5:vgpr_32 = FLAT_LOAD_DWORD %6, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.p)
 ...
 )MIR";
 
@@ -553,14 +554,13 @@ body:             |
       print([&](raw_ostream &OS) { Set0->printAsOperand(OS, M.get()); });
   std::string Set1ID =
       print([&](raw_ostream &OS) { Set1->printAsOperand(OS, M.get()); });
-  EXPECT_EQ(
-      "%5:vgpr_32 = FLAT_LOAD_DWORD killed %4, 0, 0, implicit $exec, implicit "
-      "$flat_scr :: (load (s32) from %ir.p, !alias.scope " +
-          Set0ID + ", !noalias " + Set1ID + ")",
-      print([&](raw_ostream &OS) {
-        MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
-                 /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
-      }));
+  EXPECT_EQ("%5:vgpr_32 = FLAT_LOAD_DWORD %4, 0, 0, implicit $exec, implicit "
+            "$flat_scr :: (load (s32) from %ir.p, !alias.scope " +
+                Set0ID + ", !noalias " + Set1ID + ")",
+            print([&](raw_ostream &OS) {
+              MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
+                       /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
+            }));
 
   std::vector<const MDNode *> Generated{Domain, Scope0, Scope1, Set0, Set1};
   // Examine machine metadata collected. They should match ones
@@ -579,13 +579,13 @@ body:             |
   std::string Output = print([&](raw_ostream &OS) { printMIR(OS, MMI, *MF); });
   std::string CheckString = R"(
 CHECK: machineMetadataNodes:
-CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
+CHECK-DAG: ![[MMDOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"domain"}
 CHECK-DAG: ![[MMSCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope0"}
 CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope1"}
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}
 CHECK-DAG: ![[MMSET1:[0-9]+]] = !{![[MMSCOPE1]]}
 CHECK: body:
-CHECK: %5:vgpr_32 = FLAT_LOAD_DWORD killed %4, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.p, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
+CHECK: %5:vgpr_32 = FLAT_LOAD_DWORD %4, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.p, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
 )";
   EXPECT_TRUE(checkOutput(CheckString, Output));
 }
@@ -606,7 +606,7 @@ body:             |
   bb.0:
     liveins: $r3
     %0:gprc = COPY $r3
-    %0 = RLWIMI killed %0, $r3, 1, 0, 30
+    %0 = RLWIMI %0, $r3, 1, 0, 30
     $r3 = COPY %0
     BLR8 implicit $r3, implicit $lr8, implicit $rm
 
@@ -636,7 +636,7 @@ body:             |
   bb.0:
     liveins: $r3
     %0:gprc = COPY $r3
-    %1:gprc = RLWIMI killed %0, $r3, 1, 0, 30
+    %1:gprc = RLWIMI %0, $r3, 1, 0, 30
     $r3 = COPY %1
     BLR8 implicit $r3, implicit $lr8, implicit $rm
 

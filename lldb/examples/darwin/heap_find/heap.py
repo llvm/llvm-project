@@ -1208,7 +1208,7 @@ struct $malloc_match {
 typedef struct callback_baton_t {
     range_callback_t callback;
     unsigned num_matches;
-    $malloc_match matches[2]; // Two items so they can be NULL terminated
+    $malloc_match matches[2]; // Two items so they can be null-terminated
     void *ptr;
 } callback_baton_t;
 range_callback_t range_callback = [](task_t task, void *baton, unsigned type, uintptr_t ptr_addr, uintptr_t ptr_size) -> void {

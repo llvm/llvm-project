@@ -98,6 +98,7 @@ class LLVM_LIBRARY_VISIBILITY SystemZXPLINKAsmPrinter
   void emitPPA2(Module &M);
   void emitADASection();
   void emitIDRLSection(Module &M);
+  void emitCELQMAIN(const Function &MainFn);
   void emitCallInformation(CallType CT);
 
   SystemZTargetzOSStreamer *getTargetStreamer() {

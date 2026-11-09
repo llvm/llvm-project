@@ -60,7 +60,7 @@ public:
   /// Construct with an option command string.
   ///
   /// \param[in] command
-  ///     A NULL terminated command that will be copied and split up
+  ///     A null-terminated command that will be copied and split up
   ///     into arguments.
   ///
   /// \see Args::SetCommandString(llvm::StringRef)
@@ -121,11 +121,11 @@ public:
 
   bool empty() const { return GetArgumentCount() == 0; }
 
-  /// Gets the NULL terminated C string argument pointer for the argument at
+  /// Gets the null-terminated C string argument pointer for the argument at
   /// index \a idx.
   ///
   /// \return
-  ///     The NULL terminated C string argument pointer if \a idx is a
+  ///     The null-terminated C string argument pointer if \a idx is a
   ///     valid argument index, NULL otherwise.
   const char *GetArgumentAtIndex(size_t idx) const;
 
@@ -149,7 +149,7 @@ public:
   ///     \endcode
   ///
   /// \return
-  ///     An array of NULL terminated C string argument pointers that
+  ///     An array of null-terminated C string argument pointers that
   ///     also has a terminating NULL C string pointer
   char **GetArgumentVector();
 
@@ -163,7 +163,7 @@ public:
   ///     \endcode
   ///
   /// \return
-  ///     An array of NULL terminate C string argument pointers that
+  ///     An array of null-terminated C string argument pointers that
   ///     also has a terminating NULL C string pointer
   const char **GetConstArgumentVector() const;
 

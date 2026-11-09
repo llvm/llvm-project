@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
@@ -28,8 +29,11 @@ TEST_F(LlvmLibcStrToFltTest, ClingerFastPathFloat32ExtendedExp) {
 
 TEST_F(LlvmLibcStrToFltTest, ClingerFastPathFloat32NegativeExp) {
   clinger_fast_path_test(1, -5, 0xa7c5ac, 110);
+  clinger_fast_path_test(1, -5, 0xa7c5ac, 110, internal::RoundDirection::Up);
+  clinger_fast_path_test(1, -5, 0xa7c5ac, 110, internal::RoundDirection::Down);
   clinger_fast_path_test(1, -10, 0xdbe6ff, 93);
   clinger_fast_path_fails_test(1, -15);
+  clinger_fast_path_fails_test(1, INT32_MIN);
 }
 
 // Check the fallback states for the algorithm:
@@ -49,6 +53,16 @@ TEST_F(LlvmLibcStrToFltTest, SimpleDecimalConversion32SpecificFailures) {
       "006492321624085354618647916449580656401309709382578858785341419448955413"
       "42930300743319094181060791015625e-46",
       0x0, 0, ERANGE);
+}
+
+TEST_F(LlvmLibcStrToFltTest, SimpleDecimalConversion32HugeExponents) {
+  // Decimal points beyond the valid input range of exp10_to_exp2 (646456636)
+  // must still be classified as out of range, and do so without looping.
+  simple_decimal_conversion_test("1e646456636", 0, 0xff, ERANGE);
+  simple_decimal_conversion_test("1e1000000000", 0, 0xff, ERANGE);
+  simple_decimal_conversion_test("16777217e2147483647", 0, 0xff, ERANGE);
+  simple_decimal_conversion_test("1e-646456636", 0, 0, ERANGE);
+  simple_decimal_conversion_test("1e-2147483647", 0, 0, ERANGE);
 }
 
 TEST(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {

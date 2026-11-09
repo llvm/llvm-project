@@ -2,6 +2,9 @@
 
 set(COPYPROF_SOURCES
   copyprof.cpp
+  copyprof_interceptors.cpp
+  copyprof_interceptors_memintrinsics.cpp
+  copyprof_preinit.cpp
   copyprof_reporting.cpp
   copyprof_shadow.cpp
   copyprof_stack.cpp
@@ -9,6 +12,7 @@ set(COPYPROF_SOURCES
 )
 
 set(COPYPROF_HEADERS
+  copyprof_interceptors.h
   copyprof_interface_internal.h
   copyprof_internal.h
   copyprof_reporting.h
@@ -54,8 +58,8 @@ if(SANITIZER_USE_SYMBOLS)
   foreach(arch ${COPYPROF_SUPPORTED_ARCH})
     add_sanitizer_rt_symbols(clang_rt.copyprof
       ARCHS ${arch}
+      PARENT_TARGET copyprof
       EXTRA copyprof.syms.extra)
-    add_dependencies(copyprof clang_rt.copyprof-${arch}-symbols)
   endforeach()
 endif()
 

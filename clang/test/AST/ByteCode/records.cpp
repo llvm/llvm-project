@@ -668,6 +668,27 @@ namespace C {
   static_assert(M4->a == nullptr);
   static_assert(M4->g2[0] == 0);
 }
+
+namespace D {
+  struct A {
+    char a;
+  };
+
+  template <typename T>
+  struct B {
+    constexpr T &bar() { return *static_cast<T *>(this); } // expected-note {{cannot cast object of dynamic type 'C<VirtualCalls::BaseToDerived::D::D>' to type 'VirtualCalls::BaseToDerived::D::D'}} \
+                                                           // ref-note {{cannot cast object of dynamic type 'C<D>' to type 'VirtualCalls::BaseToDerived::D::D'}}
+  };
+
+  template <typename T>
+  struct C : A , B<T> {};
+
+  struct D : B<D> {};
+
+  constexpr auto L = C<D>().bar(); // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{in call to}}
+}
+
 }
 
 
@@ -1250,6 +1271,41 @@ namespace InheritedConstructor {
     };
 
     constexpr S s(1);
+  }
+
+  namespace GH158529 {
+    /// Used to assert when popping the variadic arguments of an inherited
+    /// constructor, since the call site is a CXXInheritedCtorInitExpr.
+    struct foo {
+      constexpr foo(int, ...) {}
+    };
+    struct boo : foo {
+      using foo::foo;
+    };
+    struct bar : boo {
+      using boo::boo;
+    };
+    bar u(0, 1);
+
+    struct A {
+      int a;
+      constexpr A(int a, ...) : a(a) {}
+    };
+    struct B : A { using A::A; };
+    struct C : B { using B::B; };
+
+    constexpr B b(1, 2);
+    static_assert(b.a == 1, "");
+    constexpr C c(3, 4, 5);
+    static_assert(c.a == 3, "");
+    constexpr C c2(6, 7.5, 'c', 8L);
+    static_assert(c2.a == 6, "");
+
+    constexpr int f() {
+      C x(9, 10);
+      return x.a;
+    }
+    static_assert(f() == 9, "");
   }
 }
 
@@ -1963,15 +2019,13 @@ namespace ErroneousVoidDecl {
 
   template <typename F, typename C, typename N1, typename N2>
   constexpr bool check(const C &c, N1 *n1, N2 *n2) {
-    decltype(f(c, n1, n2)) *chk{}; // both-error {{no matching function}} \
-                                   // ref-note {{destroying object 'chk' whose lifetime has already ended}}
+    decltype(f(c, n1, n2)) *chk{}; // both-error {{no matching function}}
     return true;
   }
 
   template <int N> constexpr M<N> *bar() { return nullptr; }
   static_assert(check<S>([](int n) constexpr {}, bar<1u>(), bar<1u>())); // both-note {{in instantiation}} \
-                                                                         // ref-error {{not an integral constant expression}} \
-                                                                         // ref-note {{in call to}}
+                                                                         // both-error {{not an integral constant expression}}
 #endif
 }
 

@@ -308,9 +308,9 @@ public:
   ///
   /// \param section_list
   ///   A section list that allows lldb_private::Address objects to be filled
-  ///   in. The address information for symbols are serialized as file addresses
-  ///   and must be converted into Address objects with the right section and
-  ///   offset.
+  ///   in. Section-relative symbol addresses are serialized as a section ID
+  ///   and an offset within that section, and the section ID is looked up in
+  ///   this list.
   ///
   /// \param strtab
   ///   All strings in cache files are put into string tables for efficiency
@@ -318,7 +318,8 @@ public:
   ///   table offsets in the cache data.
   ///
   /// \return
-  ///   True if the symbol is successfully decoded, false otherwise.
+  ///   True if the symbol is successfully decoded, false otherwise, including
+  ///   when a serialized section ID is not found in \a section_list.
   bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
               const SectionList *section_list, const StringTableReader &strtab);
 
@@ -458,7 +459,7 @@ protected:
 
 #if __SIZEOF_POINTER__ == 8
 static_assert(
-    sizeof(lldb_private::Symbol) == 80,
+    sizeof(lldb_private::Symbol) == 72,
     "Symbol is a high volume data type, size must be increased with care");
 #endif
 

@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -acc-routine-to-gpu-func -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -acc-routine-to-gpu-func=device-type=nvidia -split-input-file | FileCheck %s --check-prefix=DEVICE-NVIDIA
 
 // CHECK: gpu.module @acc_gpu_module {
 // CHECK: gpu.func @host_foo
@@ -25,6 +26,25 @@ func.func @host_foo() attributes {acc.specialized_routine = #acc.specialized_rou
   return
 }
 func.func @host_bind() {
+  return
+}
+
+// -----
+
+// Routine does not name device_type(nvidia) so the bind("myname") under device_type(*)
+// applies and the pass does not clone `star_bound` into the GPU module
+// DEVICE-NVIDIA-LABEL: acc.routine @star_bind func(@star_bound)
+// DEVICE-NVIDIA: func.func @star_bound()
+// DEVICE-NVIDIA: gpu.module @acc_gpu_module {
+// DEVICE-NVIDIA-NEXT: gpu.func @host_foo_star
+// DEVICE-NVIDIA: gpu.return
+// DEVICE-NVIDIA-NOT: gpu.func @star_bound
+acc.routine @routine_seq_star func(@host_foo_star) seq
+acc.routine @star_bind func(@star_bound) seq bind("myname" [#acc.device_type<star>])
+func.func @host_foo_star() attributes {acc.specialized_routine = #acc.specialized_routine<@routine_seq_star, <seq>, "host_foo_star">} {
+  return
+}
+func.func @star_bound() {
   return
 }
 

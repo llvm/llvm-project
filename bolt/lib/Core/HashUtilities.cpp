@@ -117,7 +117,7 @@ std::string hashBlock(BinaryContext &BC, const BinaryBasicBlock &BB,
       HashString.push_back(0);
     } else {
       StringRef OpcodeName = BC.InstPrinter->getOpcodeName(Opcode);
-      HashString.append(OpcodeName.str());
+      HashString.append(OpcodeName.begin(), OpcodeName.end());
     }
 
     for (const MCOperand &Op : MCPlus::primeOperands(Inst))
@@ -167,7 +167,7 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
 std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
   // The hash is computed by creating a string of all lexicographically ordered
   // called function names.
-  std::vector<std::string> FunctionNames;
+  SmallVector<StringRef, 8> FunctionNames;
   for (const MCInst &Instr : BB) {
     // Skip non-call instructions.
     if (!BC.MIB->isCall(Instr))
@@ -175,12 +175,12 @@ std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
     const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
     if (!CallSymbol)
       continue;
-    FunctionNames.push_back(std::string(CallSymbol->getName()));
+    FunctionNames.push_back(CallSymbol->getName());
   }
-  std::sort(FunctionNames.begin(), FunctionNames.end());
+  llvm::sort(FunctionNames);
   std::string HashString;
-  for (const std::string &FunctionName : FunctionNames)
-    HashString.append(FunctionName);
+  for (StringRef FunctionName : FunctionNames)
+    HashString.append(FunctionName.begin(), FunctionName.end());
 
   return HashString;
 }
@@ -190,18 +190,17 @@ std::string
 hashBlockCalls(const DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>
                    &IdToYamlFunction,
                const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
-  std::vector<std::string> FunctionNames;
+  SmallVector<StringRef, 8> FunctionNames;
   for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
     auto It = IdToYamlFunction.find(CallSiteInfo.DestId);
     if (It == IdToYamlFunction.end())
       continue;
-    StringRef Name = NameResolver::dropNumNames(It->second->Name);
-    FunctionNames.push_back(std::string(Name));
+    FunctionNames.push_back(NameResolver::dropNumNames(It->second->Name));
   }
-  std::sort(FunctionNames.begin(), FunctionNames.end());
+  llvm::sort(FunctionNames);
   std::string HashString;
-  for (const std::string &FunctionName : FunctionNames)
-    HashString.append(FunctionName);
+  for (StringRef FunctionName : FunctionNames)
+    HashString.append(FunctionName.begin(), FunctionName.end());
 
   return HashString;
 }

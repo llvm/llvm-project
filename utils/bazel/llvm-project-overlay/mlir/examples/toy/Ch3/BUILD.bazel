@@ -58,6 +58,7 @@ cc_binary(
         ":ToyOpsIncGen",
         "//llvm:Support",
         "//mlir:Analysis",
+        "//mlir:BytecodeOpInterface",
         "//mlir:BytecodeReader",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
