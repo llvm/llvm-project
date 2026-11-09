@@ -2662,7 +2662,7 @@ class CXXConstructorDecl final
   /// code. While there is MORE room there now (19 bits), it was both unclear
   /// that 2^19 initializers would be sufficient, and it would be tempting to
   /// shrink it if we ever need another bit, which would be unacceptable.  So
-  /// it was determined that moving it into a full unsigned was the only 
+  /// it was determined that moving it into a full unsigned was the only
   /// acceptable option.
   ///
   /// An additional alternative we can do to negate that is to either store
