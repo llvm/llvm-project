@@ -3129,12 +3129,10 @@ bool sema::AnalysisBasedWarnings::shouldRunUnsafeBufferUsageAnalysis(
   const void *StateKey = D.getDiagStateKeyForLoc(Loc);
   auto &Cache = UnsafeBufferUsageCache[static_cast<unsigned>(
       D.getDiagStateSystemClassForLoc(Loc))];
-  auto It = Cache.find(StateKey);
-  if (It != Cache.end())
-    return It->second;
-  bool Enabled = isUnsafeBufferUsageAnalysisEnabledAt(S, Loc);
-  Cache[StateKey] = Enabled;
-  return Enabled;
+  auto [It, Inserted] = Cache.try_emplace(StateKey);
+  if (Inserted)
+    It->second = isUnsafeBufferUsageAnalysisEnabledAt(S, Loc);
+  return It->second;
 }
 
 /// \return true iff fix-its should be emitted along with -Wunsafe-buffer-usage
