@@ -27,10 +27,6 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include <set>
 
-namespace llvm {
-class TargetMachine;
-} // namespace llvm
-
 namespace Fortran {
 namespace common {
 class IntrinsicTypeDefaultKinds;
@@ -69,13 +65,13 @@ public:
          const Fortran::lower::LoweringOptions &loweringOptions,
          const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
          const Fortran::common::LanguageFeatureControl &languageFeatures,
-         const llvm::TargetMachine &targetMachine,
+         llvm::StringRef targetFeatures,
          const Fortran::frontend::TargetOptions &targetOptions,
          const Fortran::frontend::CodeGenOptions &codeGenOptions) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
                           loweringOptions, envDefaults, languageFeatures,
-                          targetMachine, targetOptions, codeGenOptions);
+                          targetFeatures, targetOptions, codeGenOptions);
   }
   ~LoweringBridge();
 
@@ -162,7 +158,7 @@ private:
       const Fortran::lower::LoweringOptions &loweringOptions,
       const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
       const Fortran::common::LanguageFeatureControl &languageFeatures,
-      const llvm::TargetMachine &targetMachine,
+      llvm::StringRef targetFeatures,
       const Fortran::frontend::TargetOptions &targetOptions,
       const Fortran::frontend::CodeGenOptions &codeGenOptions);
   LoweringBridge() = delete;
