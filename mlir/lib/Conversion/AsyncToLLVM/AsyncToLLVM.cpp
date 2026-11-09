@@ -65,6 +65,8 @@ static constexpr const char *kAwaitAllAndExecute =
     "mlirAsyncRuntimeAwaitAllInGroupAndExecute";
 static constexpr const char *kGetNumWorkerThreads =
     "mlirAsyncRuntimGetNumWorkerThreads";
+static constexpr const char *kAlignedAlloc = "mlirAsyncRuntimeAlignedAlloc";
+static constexpr const char *kAlignedFree = "mlirAsyncRuntimeAlignedFree";
 
 namespace {
 /// Async Runtime API function types.
@@ -394,8 +396,10 @@ public:
         LLVM::AndOp::create(rewriter, op->getLoc(), coroSize, negCoroAlign);
 
     // Allocate memory for the coroutine frame.
-    auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
-        rewriter, op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
+    Type i64 = rewriter.getI64Type();
+    auto allocFuncOp =
+        LLVM::lookupOrCreateFn(rewriter, op->getParentOfType<ModuleOp>(),
+                               kAlignedAlloc, {i64, i64}, ptrType);
     if (failed(allocFuncOp))
       return failure();
     auto coroAlloc = LLVM::CallOp::create(rewriter, loc, allocFuncOp.value(),
@@ -431,8 +435,9 @@ public:
         LLVM::CoroFreeOp::create(rewriter, loc, ptrType, adaptor.getOperands());
 
     // Free the memory.
-    auto freeFuncOp =
-        LLVM::lookupOrCreateFreeFn(rewriter, op->getParentOfType<ModuleOp>());
+    auto freeFuncOp = LLVM::lookupOrCreateFn(
+        rewriter, op->getParentOfType<ModuleOp>(), kAlignedFree, {ptrType},
+        LLVM::LLVMVoidType::get(op->getContext()));
     if (failed(freeFuncOp))
       return failure();
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFuncOp.value(),
