@@ -3,7 +3,7 @@
 ; the result. The arm is rebuilt with insertvalue, which casts each member to
 ; the result's member type, so all arms have the result's type.
 ; A PHI arm is rebuilt in its incoming block, once even when a switch lists
-; that block twice.
+; that block twice. An arm with only null pointers is kept as it is.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
@@ -25,6 +25,10 @@
 ; CHECK: %[[#W1:]] = OpCompositeInsert %[[#Q]] %[[#]] %[[#]] 1
 ; CHECK-NOT: OpCompositeInsert
 ; CHECK: OpPhi %[[#Q]] %[[#W1]] %[[#]] %[[#]] %[[#]]{{$}}
+
+; CHECK: OpFunction %[[#Q]]
+; CHECK-NOT: OpCompositeInsert
+; CHECK: OpSelect %[[#Q]]
 
 @g = addrspace(1) global i32 0
 
@@ -56,4 +60,9 @@ other:
 join:
   %p = phi %Q [ { ptr addrspace(1) @g, i32 1 }, %entry ], [ { ptr addrspace(1) @g, i32 1 }, %entry ], [ zeroinitializer, %other ]
   ret %Q %p
+}
+
+define %Q @null_only(i1 %c) {
+  %s = select i1 %c, %Q zeroinitializer, %Q { ptr addrspace(1) null, i32 1 }
+  ret %Q %s
 }

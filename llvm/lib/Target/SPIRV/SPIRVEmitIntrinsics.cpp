@@ -266,6 +266,8 @@ class SPIRVEmitIntrinsicsImpl
   Value *lowerUndefOrPoison(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
   void preprocessUndefsAndPoisons(IRBuilder<> &B);
   void insertCompositeAggregateArms(Instruction *I, IRBuilder<> &B);
+  bool hasDeducedPointee(Value *V);
+  Value *buildInsertValueChain(Constant *C, BasicBlock::iterator InsertPt);
   void insertPointerConstantArms(Function &Func);
   void simplifyNullAddrSpaceCasts();
 
@@ -1809,35 +1811,29 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
   }
 }
 
-static bool isStructOrArrayConstant(const Value *V) {
-  return isa<ConstantStruct, ConstantArray>(V);
+// True for a constant aggregate whose deduced type differs from its LLVM type,
+// i.e. one with a pointer member of known pointee type.
+bool SPIRVEmitIntrinsicsImpl::hasDeducedPointee(Value *V) {
+  auto *C = dyn_cast<ConstantAggregate>(V);
+  return C && deduceNestedTypeHelper(C, false) != C->getType();
 }
 
-static bool hasPointerMember(const Constant *C) {
-  return any_of(C->operands(), [](const Use &E) {
-    return E->getType()->isPointerTy() ||
-           (isStructOrArrayConstant(E.get()) &&
-            hasPointerMember(cast<Constant>(E.get())));
-  });
-}
-
-// A nested aggregate member with pointers gets its own chain.
-static Value *buildInsertValueChain(Constant *C,
-                                    BasicBlock::iterator InsertPt) {
+// A nested aggregate member with such pointers gets its own chain.
+Value *
+SPIRVEmitIntrinsicsImpl::buildInsertValueChain(Constant *C,
+                                               BasicBlock::iterator InsertPt) {
   Value *Composite = PoisonValue::get(C->getType());
   for (unsigned Idx = 0, E = C->getNumOperands(); Idx != E; ++Idx) {
     Value *Member = C->getOperand(Idx);
-    if (isStructOrArrayConstant(Member) &&
-        hasPointerMember(cast<Constant>(Member)))
+    if (hasDeducedPointee(Member))
       Member = buildInsertValueChain(cast<Constant>(Member), InsertPt);
     Composite = InsertValueInst::Create(Composite, Member, Idx, "", InsertPt);
   }
   return Composite;
 }
 
-// Rebuild each constant arm of an aggregate PHI/select/freeze that holds
-// pointers as an insertvalue chain. A constant's pointer members carry the
-// pointee types deduced for them anywhere in the module, so the constant can be
+// Rebuild each constant arm of an aggregate PHI/select/freeze whose pointer
+// members have known pointee types as an insertvalue chain. Such a constant is
 // a different SPIR-V type than the result; insertvalue casts each member to the
 // result's member type.
 void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
@@ -1849,8 +1845,7 @@ void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
     // same value, so build one chain per block.
     SmallDenseMap<BasicBlock *, Value *> PhiArms;
     for (Use &U : I.operands()) {
-      auto *C = dyn_cast<ConstantAggregate>(U.get());
-      if (!C || !hasPointerMember(C))
+      if (!hasDeducedPointee(U.get()))
         continue;
       if (Value *Arm =
               Phi ? PhiArms.lookup(Phi->getIncomingBlock(U)) : nullptr) {
@@ -1859,7 +1854,8 @@ void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
       }
       Instruction *InsertPt =
           Phi ? Phi->getIncomingBlock(U)->getTerminator() : &I;
-      Value *Composite = buildInsertValueChain(C, InsertPt->getIterator());
+      Value *Composite = buildInsertValueChain(cast<Constant>(U.get()),
+                                               InsertPt->getIterator());
       U.set(Composite);
       if (Phi)
         PhiArms[Phi->getIncomingBlock(U)] = Composite;
