@@ -1430,11 +1430,18 @@ public:
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
 
-      auto cmpOpKind = cir::CmpOpKind::ne;
       auto resultTy =
           mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
-      rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+        CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+        auto cmpOpKind = cir::FCmpOpKind::une;
+        lhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      } else {
+        auto cmpOpKind = cir::CmpOpKind::ne;
+        lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      }
       return builder.createAnd(loc, lhs, rhs);
     }
 
@@ -1478,11 +1485,18 @@ public:
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
 
-      auto cmpOpKind = cir::CmpOpKind::ne;
       auto resultTy =
           mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
-      rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+        CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+        auto cmpOpKind = cir::FCmpOpKind::une;
+        lhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      } else {
+        auto cmpOpKind = cir::CmpOpKind::ne;
+        lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      }
       return builder.createOr(loc, lhs, rhs);
     }
 
@@ -3133,6 +3147,12 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
     auto operVecTy = mlir::cast<cir::VectorType>(oper.getType());
     mlir::Value zeroVec = builder.getNullValue(operVecTy, loc);
     auto resultTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+    if (cir::isFPOrVectorOfFPType(operVecTy.getElementType())) {
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+      return builder.createVecFCompare(loc, resultTy, cir::FCmpOpKind::oeq,
+                                       oper, zeroVec);
+    }
+
     return builder.createVecCompare(loc, resultTy, cir::CmpOpKind::eq, oper,
                                     zeroVec);
   }

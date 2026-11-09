@@ -5908,7 +5908,9 @@ AArch64TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
   Align Alignment = MICA.getAlignment();
   const Instruction *I = MICA.getInst();
 
-  if (useNeonVector(DataTy) || !isLegalMaskedGatherScatter(DataTy))
+  // No need to call useNeonVector here since isLegalMaskedGatherScatter
+  // determines if we're using SVE for fixed-length vectors.
+  if (!isLegalMaskedGatherScatter(DataTy))
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
   auto *VT = cast<VectorType>(DataTy);
   auto LT = getTypeLegalizationCost(DataTy);
