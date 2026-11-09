@@ -927,8 +927,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SDValue Src = Op.getOperand(0);
     EVT SrcVT = Src.getValueType();
     auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
-    if (!SrcVT.isFixedLengthVector() || !CIdx ||
-        !CIdx->getAPIntValue().ult(SrcVT.getVectorNumElements()))
+    if (!SrcVT.isFixedLengthVector() || !CIdx)
       break;
 
     APInt DemandedSrcElts =
