@@ -60,6 +60,17 @@
 ; RUN: FileCheck %s --check-prefixes=PROBE-PROF,CHECK,WITHOUT-SUPPLEMENT
 ; PROBE-PROF: warning: {{.*}}.probe.prof: Pseudo probe based supplemental sample profiles are not supported
 
+; Case 8: Functions with neither entry-block samples nor head samples in the supplement are skipped, while entry-block body samples suffice when head samples are 0.
+; RUN: echo 'foo:2000:0' > %t.no_entry.prof
+; RUN: echo ' 3: 5' >> %t.no_entry.prof
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.no_entry.prof | \
+; RUN: FileCheck %s --check-prefixes=CHECK,WITHOUT-SUPPLEMENT
+; RUN: echo 'foo:2000:0' > %t.entry_body.prof
+; RUN: echo ' 0: 1000' >> %t.entry_body.prof
+; RUN: echo ' 3: 5' >> %t.entry_body.prof
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t.propeller -basic-block-section-match-infer -propeller-match-bbid -sample-profile-supplement=%t.entry_body.prof | \
+; RUN: FileCheck %s --check-prefixes=CHECK,WITH-SUPPLEMENT
+
 define void @foo(i1 zeroext %0) nounwind !dbg !4 {
   %2 = alloca i8, align 1
   %3 = zext i1 %0 to i8

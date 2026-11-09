@@ -374,7 +374,8 @@ void BasicBlockMatchingAndInference::supplementWithSampleProfile(
   FunctionSamplesQuery Query(*Samples, SampleReader->getRemapper());
 
   // Scale the weights of the supplemental profile so that the entry block
-  // weights of both profiles agree.
+  // weights of both profiles agree. Skip functions with neither entry-block
+  // samples nor head samples, since their scale is unknown.
   const MachineBasicBlock &EntryBB = MF.front();
   uint64_t PropellerEntryWeight =
       std::max<uint64_t>(MatchWeight.BlockWeights.lookup(&EntryBB), 1);
@@ -383,7 +384,8 @@ void BasicBlockMatchingAndInference::supplementWithSampleProfile(
     SampleEntryWeight = *W;
   if (SampleEntryWeight == 0)
     SampleEntryWeight = Samples->getHeadSamples();
-  SampleEntryWeight = std::max<uint64_t>(SampleEntryWeight, 1);
+  if (SampleEntryWeight == 0)
+    return;
 
   for (const MachineBasicBlock &MBB : MF) {
     // Only supplement blocks that have no samples in the Propeller profile, so
