@@ -129,6 +129,23 @@ static void testBesselJnHardCases(BesselFuncType<KIND> rtFunc) {
   if constexpr (KIND == 8) {
     rtFunc(result, 1, 150, 1.0, 0.0, 3.6728611e-306, __FILE__, __LINE__);
     EXPECT_NEAR(at(0), 0.4400505857449335, 1e-9);
+    // A nonzero subnormal J(n2) is still a good anchor.
+    rtFunc(result, 1843, 1845, 1000.0, 7.2479708360830727e-309,
+        2.4611931947110426e-308, __FILE__, __LINE__);
+    EXPECT_NEAR(at(0) / 8.3520834184858863e-308, 1.0, 1e-12);
+  }
+
+  // Orders near the ends of the 32-bit range: every element underflows.
+  constexpr std::int32_t minI{std::numeric_limits<std::int32_t>::min()};
+  constexpr std::int32_t maxI{std::numeric_limits<std::int32_t>::max()};
+  for (auto [n1, n2] :
+      {std::pair{1073741822, 1073741824}, std::pair{maxI - 2, maxI},
+          std::pair{minI, minI}, std::pair{minI, minI + 2}}) {
+    rtFunc(result, n1, n2, 1.0, 0.0, 0.0, __FILE__, __LINE__);
+    EXPECT_EQ(result.GetDimension(0).Extent(), n2 - n1 + 1);
+    for (int j{0}; j <= n2 - n1; ++j) {
+      EXPECT_EQ(at(j), 0.0);
+    }
   }
 
   // Tiny x: J(0) = 1 although J(2) and J(3) underflow.
@@ -217,6 +234,15 @@ TEST(Transformational, BesselJnFlushToZero) {
   _mm_setcsr(csr);
   EXPECT_NEAR(*result.ZeroBasedIndexedElement<double>(0), 0.440050586, 1e-8);
   EXPECT_NEAR(*result.ZeroBasedIndexedElement<double>(1), 0.114903485, 1e-8);
+  // The subnormal J(n2, x) reads as zero, so the recurrence must start
+  // far enough above n2 to be accurate there.
+  _mm_setcsr(csr | 0x8040);
+  RTNAME(BesselJn_8)(result, 1843, 1845, 1000.0, 7.2479708360830727e-309,
+      2.4611931947110426e-308, __FILE__, __LINE__);
+  _mm_setcsr(csr);
+  EXPECT_NEAR(
+      *result.ZeroBasedIndexedElement<double>(0) / 8.3520834184858863e-308, 1.0,
+      1e-12);
 }
 #endif
 
