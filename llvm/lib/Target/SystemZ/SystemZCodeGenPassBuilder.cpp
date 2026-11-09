@@ -10,6 +10,7 @@
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/IfConversion.h"
 #include "llvm/CodeGen/MachineCombiner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/PassInstrumentation.h"
@@ -55,7 +56,7 @@ void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     flushFPMsToMPM(PMW);
     addModulePass(SystemZAlignGlobalsPass(), PMW);
-    // TODO(boomanaiden154): Add SystemZTDCPass
+    addFunctionPass(SystemZTDCPass(getTM()), PMW);
     addFunctionPass(LoopDataPrefetchPass(), PMW);
   }
 
@@ -67,9 +68,8 @@ void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 Error SystemZCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   addMachineFunctionPass(SystemZISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
 
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZLDCleanupPass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZLDCleanupPass(), PMW);
 
   return Error::success();
 }
@@ -82,34 +82,31 @@ void SystemZCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
 }
 
 void SystemZCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZCopyPhysRegsPass
+  addMachineFunctionPass(SystemZCopyPhysRegsPass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPostRewrite(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZPostRewritePass
+  addMachineFunctionPass(SystemZPostRewritePass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
   // is not called).
-  if (getOptLevel() == CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZPostRewritePass
-  }
+  if (getOptLevel() == CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZPostRewritePass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add IfConverter
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(IfConverterPass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // Do instruction shortening before compare elimination because some
   // vector instructions will be shortened into opcodes that compare
   // elimination recognizes.
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZShortenInstPass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZShortenInstPass(), PMW);
 
   // We eliminate comparisons here rather than earlier because some
   // transformations can change the set of available CC values and we
@@ -134,9 +131,8 @@ void SystemZCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // Doing it so late makes it more likely that a register will be reused
   // between the comparison and the branch, but it isn't clear whether
   // preventing that would be a win or not.
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZElimComparePass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZElimComparePass(), PMW);
   // TODO(boomanaiden154): Add SystemZLongBranchPass
 
   // Do final scheduling after all other optimizations, to get an
