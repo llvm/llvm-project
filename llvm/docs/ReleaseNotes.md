@@ -266,6 +266,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
   `condition : value` pairs, along with their corresponding side effects,
   are left unresolved.
+* HwMode type expansion has been removed from CodeGenDAGPatterns. SelectionDAG
+  and GlobalISel handle HwModes during instruction selection. FastISel does not
+  support HwModes and will skip any patterns that use HwMode based types.
 
 ### Changes to Interprocedural Optimizations
 
@@ -396,6 +399,8 @@ Makes programs 10x faster by doing Special New Thing.
   global variant of Ascalon X without `Zvkng` and with reduced vector FP64
   throughput.
 * Removed X5 from the preserve_most register list.
+* Added `-mcpu=chipsalliance-veer-eh1` for the CHIPS Alliance VeeR EH1
+  processor.
 
 ### Changes to the WebAssembly Backend
 
@@ -513,6 +518,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* `llvm-mc` now supports `--verify[=<prefixes>]` to check diagnostics against `<prefix>-<kind> {{...}}` comments in the input instead of printing them.
+
 * `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
   A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
   `LLVM_PLUGIN_API_VERSION` is now 3.
@@ -524,6 +531,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 * llvm-mca no longer defaults -mcpu to "native"
 
+* The `llvm-mc --validate-cfi` option and the `DWARFCFIChecker` library have been removed.
+
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
@@ -532,6 +541,15 @@ Makes programs 10x faster by doing Special New Thing.
   uncompressed after garbage collection and deduplication, even if the input
   debug sections were compressed. They are now compressed using the input
   format by default.
+
+* llvm-strings now supports the `-e` (`--encoding`) option and by default prints
+  non-ASCII strings it finds, using the system's configured character set. The
+  prior behavior can be restored by specifying `-es` (`--encoding=s`), which is
+  mostly useful on large files when the searched-for strings are known ahead of
+  time to be ASCII, as it searches faster and gives the user fewer results to
+  sift through. The `-eutf8` is also available to search for UTF-8 strings,
+  which is mostly useful on Windows where configuring the system to use UTF-8 is
+  more involved than setting an environment variable.
 
 ### Changes to LLDB
 

@@ -27,6 +27,7 @@ def RegionKindInterface : OpInterface<"RegionKindInterface"> {
     with basic blocks, sequential semantics, and reachability.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/RegionKindInterface.h"];
 
   let methods = [
     StaticInterfaceMethod<
@@ -50,7 +51,9 @@ def RegionKindInterface : OpInterface<"RegionKindInterface"> {
   ];
 }
 
-def HasOnlyGraphRegion : NativeOpTrait<"HasOnlyGraphRegion">;
+def HasOnlyGraphRegion : NativeOpTrait<"HasOnlyGraphRegion"> {
+  let cppIncludes = ["mlir/IR/RegionKindInterface.h"];
+}
 
 // Op's regions that don't need a terminator: requires some other traits
 // so it defines a list that must be concatenated.

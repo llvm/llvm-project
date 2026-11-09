@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
+#include "clang/CIR/LoweringHelpers.h"
 
 namespace cir {
 
@@ -28,13 +29,14 @@ struct LLVMBlockAddressInfo;
 /// May use the datalayout for lowering attributes to-be-stored in memory. When
 /// the attribute may contain block address attributes, `blockInfoAddr` is used
 /// to resolve them.
-mlir::Value lowerCirAttrAsValue(mlir::Location parentLoc,
-                                mlir::ModuleOp parentModule,
-                                mlir::Attribute attr,
-                                mlir::ConversionPatternRewriter &rewriter,
-                                mlir::SymbolTableCollection &symbolTables,
-                                const mlir::TypeConverter *converter,
-                                LLVMBlockAddressInfo *blockInfoAddr = nullptr);
+mlir::Value
+lowerCirAttrAsValue(mlir::Location parentLoc, mlir::ModuleOp parentModule,
+                    mlir::Attribute attr,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    mlir::SymbolTableCollection &symbolTables,
+                    const mlir::TypeConverter *converter,
+                    const CIRPreConversionTypeMap &preConversionTypes,
+                    LLVMBlockAddressInfo *blockInfoAddr = nullptr);
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 

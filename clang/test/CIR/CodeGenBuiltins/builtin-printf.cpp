@@ -13,10 +13,10 @@
 // RUN: %clang_cc1 -std=c++11 -triple powerpc64le-linux-gnu -emit-llvm %s -o %t-ppc.ll
 // RUN: FileCheck --input-file=%t-ppc.ll %s -check-prefix=PPC-DEFAULT
 
-// CIR: cir.global "private" constant cir_private dso_local @".str" = #cir.const_array<"%s" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3> 
-// CIR: cir.global "private" constant cir_private dso_local @".str.1" = #cir.const_array<"%s %d\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7>
-// LLVM: @.str = private constant [3 x i8] c"%s\00"
-// LLVM: @.str.1 = private constant [7 x i8] c"%s %d\0A\00"
+// CIR: cir.global "private" constant cir_private dso_local unnamed_addr @".str" = #cir.const_array<"%s" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3> 
+// CIR: cir.global "private" constant cir_private dso_local unnamed_addr @".str.1" = #cir.const_array<"%s %d\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7>
+// LLVM: @.str = private unnamed_addr constant [3 x i8] c"%s\00"
+// LLVM: @.str.1 = private unnamed_addr constant [7 x i8] c"%s %d\0A\00"
 // OGCG: @.str = private unnamed_addr constant [3 x i8] c"%s\00"
 // OGCG: @.str.1 = private unnamed_addr constant [7 x i8] c"%s %d\0A\00"
 
