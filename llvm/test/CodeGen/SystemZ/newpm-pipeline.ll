@@ -31,8 +31,10 @@
 ; O0-NEXT:     systemz-isel
 ; O0-NEXT:     finalize-isel
 ; O0-NEXT:     localstackalloc
+; O0-NEXT:     systemz-copy-physregs
 ; O0-NEXT:     phi-node-elimination
 ; O0-NEXT:     regallocfast
+; O0-NEXT:     systemz-post-rewrite
 ; O0-NEXT:     remove-redundant-debug-values
 ; O0-NEXT:     fixup-statepoint-caller-saved
 ; O0-NEXT:     prolog-epilog
@@ -61,6 +63,7 @@
 ; O3-NEXT:   expand-ir-insts<O3>
 ; O3-NEXT: systemz-align-globals
 ; O3-NEXT: function
+; O3-NEXT:   systemz-tdc
 ; O3-NEXT:   loop-data-prefetch
 ; O3-NEXT:   atomic-expand
 ; O3-NEXT:   verify
@@ -87,6 +90,7 @@
 ; O3-NEXT: function
 ; O3-NEXT:   machine-function
 ; O3-NEXT:     systemz-isel
+; O3-NEXT:     systemz-ld-cleanup
 ; O3-NEXT:     finalize-isel
 ; O3-NEXT:     early-tailduplication
 ; O3-NEXT:     opt-phis
@@ -100,6 +104,7 @@
 ; O3-NEXT:     machine-sink
 ; O3-NEXT:     peephole-opt
 ; O3-NEXT:     dead-mi-elimination
+; O3-NEXT:     systemz-copy-physregs
 ; O3-NEXT:     detect-dead-lanes
 ; O3-NEXT:     init-undef
 ; O3-NEXT:     process-implicit-defs
@@ -114,6 +119,7 @@
 ; O3-NEXT:     greedy<all>
 ; O3-NEXT:     virt-reg-rewriter
 ; O3-NEXT:     stack-slot-coloring
+; O3-NEXT:     systemz-post-rewrite
 ; O3-NEXT:     machine-cp
 ; O3-NEXT:     machinelicm
 ; O3-NEXT:     remove-redundant-debug-values
