@@ -29,6 +29,7 @@
 #include <memory>
 #include <ranges>
 
+#include "../heap_helpers.h"
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
 
