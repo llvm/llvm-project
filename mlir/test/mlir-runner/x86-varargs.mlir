@@ -1,9 +1,7 @@
 // RUN: mlir-runner %s -e caller --entry-point-result=i32 | FileCheck %s
 // Varaidic argument list (va_list) and the extraction logics are ABI-specific.
-// REQUIRES: x86-native-target
+// REQUIRES: x86-native-target, target-x86_64
 // UNSUPPORTED: system-windows
-// https://github.com/llvm/llvm-project/issues/124541
-// XFAIL: target-x86
 
 // Check if variadic functions can be called and the correct variadic argument
 // can be extracted.
