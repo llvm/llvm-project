@@ -41,6 +41,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
@@ -1944,7 +1945,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // evaluation if that fails.
         SCEVUse ExitValue = SE->getSCEVAtExit(Inst, L, PN->getIncomingBlock(i));
         if (!SE->isLoopInvariant(ExitValue, L) ||
-            !Rewriter.isSafeToExpand(ExitValue))
+            !Rewriter.isSafeToExpandAt(ExitValue,
+                                       L->getLoopPreheader()->getTerminator()))
           continue;
 
         // Computing the value outside of the loop brings no benefit if it is
@@ -1967,9 +1969,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // and next SCEV may errneously get smaller cost.
 
         // Collect all the candidate PHINodes to be rewritten.
-        Instruction *InsertPt =
-          (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
-          &*Inst->getParent()->getFirstInsertionPt() : Inst;
+        Instruction *InsertPt = L->getLoopPreheader()->getTerminator();
         RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
       }
     }
@@ -2558,8 +2558,8 @@ bool llvm::collectCompressedPtrs(
 
       Type *AccessTy = getLoadStoreType(UserI);
 
-      // Disallow loads/stores of irregular types (like i4).
-      if (DL.getTypeAllocSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+      // Disallow loads/stores of scalable or irregular types (like i4).
+      if (AccessTy->isScalableTy() || hasIrregularType(AccessTy, DL))
         return false;
 
       Value *Ptr = getLoadStorePointerOperand(UserI);

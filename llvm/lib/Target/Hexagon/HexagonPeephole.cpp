@@ -250,7 +250,6 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
               if (unsigned PeepholeSrc = PeepholeMap.lookup(Reg0)) {
                 // Change the 1st operand and, flip the opcode.
                 MI.getOperand(0).setReg(PeepholeSrc);
-                MRI->clearKillFlags(PeepholeSrc);
                 int NewOp = QII->getInvertedPredicatedOpcode(MI.getOpcode());
                 MI.setDesc(QII->get(NewOp));
                 Changed = true;
@@ -286,7 +285,6 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
                   .addReg(POrig)
                   .add(MI.getOperand(S2))
                   .add(MI.getOperand(S1));
-              MRI->clearKillFlags(POrig);
               MI.eraseFromParent();
               Changed = true;
             }

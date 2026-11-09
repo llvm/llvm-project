@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 define void @range_prefetch(ptr %src, i64 %metadata) {
   ; CHECK: write argument to llvm.aarch64.range.prefetch must be 0 or 1

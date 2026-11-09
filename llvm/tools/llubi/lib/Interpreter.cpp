@@ -23,7 +23,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
@@ -115,6 +114,9 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
     return true;
   });
   if (!MO)
+    return true;
+
+  if (MO->getState() == MemoryObjectState::Freed)
     return true;
 
   const APInt &PtrAddr = Ptr.address();
@@ -974,6 +976,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     Consecutive,
     /// \p Ptr holds a separate pointer for each lane.
     PerLane,
+    /// \p Ptr is the base pointer and the offset increases on each active lane.
+    Compressed,
   };
 
   /// Implements the masked intrinsic family. For loads, \p Data holds the
@@ -984,7 +988,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                                         const AnyValue &Mask, AnyValue Data,
                                         MaskedAddrMode Mode) {
     const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store ||
-                         CB.getIntrinsicID() == Intrinsic::masked_scatter;
+                         CB.getIntrinsicID() == Intrinsic::masked_scatter ||
+                         CB.getIntrinsicID() == Intrinsic::masked_compressstore;
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
                        ->getScalarType();
@@ -1003,8 +1008,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     if (Mode != MaskedAddrMode::PerLane)
       LanePtr = Ptr;
     GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
-
-    bool IsExpandLoad = CB.getIntrinsicID() == Intrinsic::masked_expandload;
 
     for (auto [I, Lane] : enumerate(Data.asAggregate())) {
       if (Mode == MaskedAddrMode::PerLane)
@@ -1028,8 +1031,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         Flags = GEPNoWrapFlags::inBounds();
       }
 
-      if (Mode == MaskedAddrMode::Consecutive &&
-          (!IsExpandLoad || MaskLane == BooleanKind::True)) {
+      if (Mode == MaskedAddrMode::Consecutive ||
+          (Mode == MaskedAddrMode::Compressed &&
+           MaskLane == BooleanKind::True)) {
         AnyValue AccumulatedOffset = AnyValue::poison();
         LanePtr = Ctx.computePtrAdd(LanePtr, APInt(IndexBW, AccessSize), Flags,
                                     AccumulatedOffset);
@@ -1124,7 +1128,12 @@ public:
   void returnFromCallee() {
     if (hasProgramExited())
       return;
+
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
+    if (CB.doesNotReturn() || (CurrentFrame->ResolvedCallee &&
+                               CurrentFrame->ResolvedCallee->doesNotReturn()))
+      reportImmediateUB() << "Return from a noreturn function/callsite.";
+
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
       // RetVal is the oracle's result; use it to complete the load.
@@ -1957,7 +1966,6 @@ public:
              "oracle form must be handled earlier");
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::masked_load:
-    case Intrinsic::masked_expandload:
       return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
                                           MaskedAddrMode::Consecutive);
     case Intrinsic::masked_store:
@@ -1969,6 +1977,12 @@ public:
     case Intrinsic::masked_scatter:
       return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
                                           MaskedAddrMode::PerLane);
+    case Intrinsic::masked_expandload:
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                          MaskedAddrMode::Compressed);
+    case Intrinsic::masked_compressstore:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
+                                          MaskedAddrMode::Compressed);
     case Intrinsic::matrix_transpose: {
       const auto &Vec = Args[0].asAggregate();
       const unsigned Rows =
