@@ -184,6 +184,13 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` check by adding the
+  {option}`IgnoredParameterNames` option to skip parameters by name.
+  The `ZeroOnly` value of {option}`CommentIntegerLiterals` adds comments only to
+  integer literals with the value zero. The option still accepts `true` and
+  `false`.
+
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
   assignments inside GNU statement expressions unless they form the value of
@@ -274,6 +281,11 @@ infrastructure are described first, followed by tool-specific sections.
     instantiations, where the suggested `const` would break the move for
     instantiations with real move semantics.
 
+- Improved {doc}`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by matching
+  {option}`IgnoreHeaders` patterns containing `/` against header paths on
+  Windows.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.
@@ -300,6 +312,11 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
+
+- Fixed false positive in {doc}`modernize-use-emplace
+  <clang-tidy/checks/modernize/use-emplace>` check when a constructor argument
+  is `0` or `NULL` used as a null pointer, which an `emplace`-like method would
+  forward as an integer.
 
 - Improved {doc}`modernize-use-equals-default
   <clang-tidy/checks/modernize/use-equals-default>` check to also capture

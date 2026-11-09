@@ -17,6 +17,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -61,7 +62,7 @@ struct ImutKeyValueInfo {
 template <typename KeyT, typename ValT,
           typename ValInfo = ImutKeyValueInfo<KeyT, ValT>,
           bool Canonicalize = true>
-class ImmutableMap {
+class LLVM_ATTRIBUTE_WARN_UNUSED ImmutableMap {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;

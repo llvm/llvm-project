@@ -18,7 +18,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -6437,9 +6436,14 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
     return false;
   }
 
-  APInt NewSplatVal = SplatVal1->zext(Width * 2);
+  // The bitcast puts element 0 of the narrow vector in the low half of each
+  // wide element on little-endian targets, and in the high half on big-endian
+  // targets.
+  const APInt &LowHalf = DL->isLittleEndian() ? *SplatVal0 : *SplatVal1;
+  const APInt &HighHalf = DL->isLittleEndian() ? *SplatVal1 : *SplatVal0;
+  APInt NewSplatVal = HighHalf.zext(Width * 2);
   NewSplatVal <<= Width;
-  NewSplatVal |= SplatVal0->zext(Width * 2);
+  NewSplatVal |= LowHalf.zext(Width * 2);
   auto *NewSplat = ConstantVector::getSplat(
       ExtVTy->getElementCount(), ConstantInt::get(F.getContext(), NewSplatVal));
 
@@ -7135,10 +7139,16 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   SmallVector<int, 16> NewMask;
   NewMask.reserve(Mask0.size());
 
+  auto IsPoison = [InputNumElements](int M) {
+    return M < 0 || (unsigned)M >= InputNumElements;
+  };
+
   for (auto [M0, M1] : zip(Mask0, Mask1)) {
-    if (M0 >= 0 && M1 >= 0)
+    bool P0 = IsPoison(M0);
+    bool P1 = IsPoison(M1);
+    if (!P0 && !P1)
       NewMask.push_back(M0 - M1);
-    else if (M0 == -1 && M1 == -1)
+    else if (P0 && P1)
       continue;
     else
       return false;
