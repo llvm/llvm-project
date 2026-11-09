@@ -3979,8 +3979,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       std::optional<size_t> Limit = LexParenthesizedIntegerExpr();
       if (!Limit)
         return std::nullopt;
-      Result.MaybeLimitParam =
-          PPEmbedParameterLimit{*Limit, {ParamStartLoc, CurTok.getLocation()}};
+      Result.MaybeLimitParam = PPEmbedParameterLimit{*Limit};
     } else if (Parameter == "clang::offset") {
       if (Result.MaybeOffsetParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
@@ -3988,8 +3987,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       std::optional<size_t> Offset = LexParenthesizedIntegerExpr();
       if (!Offset)
         return std::nullopt;
-      Result.MaybeOffsetParam = PPEmbedParameterOffset{
-          *Offset, {ParamStartLoc, CurTok.getLocation()}};
+      Result.MaybeOffsetParam = PPEmbedParameterOffset{*Offset};
     } else if (Parameter == "prefix") {
       if (Result.MaybePrefixParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
@@ -3997,8 +3995,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       SmallVector<Token, 4> Soup;
       if (!LexParenthesizedBalancedTokenSoup(Soup))
         return std::nullopt;
-      Result.MaybePrefixParam = PPEmbedParameterPrefix{
-          std::move(Soup), {ParamStartLoc, CurTok.getLocation()}};
+      Result.MaybePrefixParam = PPEmbedParameterPrefix{std::move(Soup)};
     } else if (Parameter == "suffix") {
       if (Result.MaybeSuffixParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
@@ -4006,8 +4003,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       SmallVector<Token, 4> Soup;
       if (!LexParenthesizedBalancedTokenSoup(Soup))
         return std::nullopt;
-      Result.MaybeSuffixParam = PPEmbedParameterSuffix{
-          std::move(Soup), {ParamStartLoc, CurTok.getLocation()}};
+      Result.MaybeSuffixParam = PPEmbedParameterSuffix{std::move(Soup)};
     } else if (Parameter == "if_empty") {
       if (Result.MaybeIfEmptyParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
@@ -4015,8 +4011,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       SmallVector<Token, 4> Soup;
       if (!LexParenthesizedBalancedTokenSoup(Soup))
         return std::nullopt;
-      Result.MaybeIfEmptyParam = PPEmbedParameterIfEmpty{
-          std::move(Soup), {ParamStartLoc, CurTok.getLocation()}};
+      Result.MaybeIfEmptyParam = PPEmbedParameterIfEmpty{std::move(Soup)};
     } else {
       ++Result.UnrecognizedParams;
 

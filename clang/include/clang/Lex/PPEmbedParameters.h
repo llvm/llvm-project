@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_LEX_PPEMBEDPARAMETERS_H
 #define LLVM_CLANG_LEX_PPEMBEDPARAMETERS_H
 
-#include "clang/Lex/PPDirectiveParameter.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -21,52 +20,50 @@ namespace clang {
 
 /// Preprocessor extension embed parameter "clang::offset"
 /// `clang::offset( constant-expression )`
-class PPEmbedParameterOffset : public PPDirectiveParameter {
+class PPEmbedParameterOffset {
 public:
   size_t Offset;
 
-  PPEmbedParameterOffset(size_t Offset, SourceRange R)
-      : PPDirectiveParameter(R), Offset(Offset) {}
+  explicit PPEmbedParameterOffset(size_t Offset) : Offset(Offset) {}
 };
 
 /// Preprocessor standard embed parameter "limit"
 /// `limit( constant-expression )`
-class PPEmbedParameterLimit : public PPDirectiveParameter {
+class PPEmbedParameterLimit {
 public:
   size_t Limit;
 
-  PPEmbedParameterLimit(size_t Limit, SourceRange R)
-      : PPDirectiveParameter(R), Limit(Limit) {}
+  explicit PPEmbedParameterLimit(size_t Limit) : Limit(Limit) {}
 };
 
 /// Preprocessor standard embed parameter "prefix"
 /// `prefix( balanced-token-seq )`
-class PPEmbedParameterPrefix : public PPDirectiveParameter {
+class PPEmbedParameterPrefix {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterPrefix(SmallVectorImpl<Token> &&Tokens, SourceRange R)
-      : PPDirectiveParameter(R), Tokens(std::move(Tokens)) {}
+  explicit PPEmbedParameterPrefix(SmallVectorImpl<Token> &&Tokens)
+      : Tokens(std::move(Tokens)) {}
 };
 
 /// Preprocessor standard embed parameter "suffix"
 /// `suffix( balanced-token-seq )`
-class PPEmbedParameterSuffix : public PPDirectiveParameter {
+class PPEmbedParameterSuffix {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterSuffix(SmallVectorImpl<Token> &&Tokens, SourceRange R)
-      : PPDirectiveParameter(R), Tokens(std::move(Tokens)) {}
+  explicit PPEmbedParameterSuffix(SmallVectorImpl<Token> &&Tokens)
+      : Tokens(std::move(Tokens)) {}
 };
 
 /// Preprocessor standard embed parameter "if_empty"
 /// `if_empty( balanced-token-seq )`
-class PPEmbedParameterIfEmpty : public PPDirectiveParameter {
+class PPEmbedParameterIfEmpty {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterIfEmpty(SmallVectorImpl<Token> &&Tokens, SourceRange R)
-      : PPDirectiveParameter(R), Tokens(std::move(Tokens)) {}
+  explicit PPEmbedParameterIfEmpty(SmallVectorImpl<Token> &&Tokens)
+      : Tokens(std::move(Tokens)) {}
 };
 
 struct LexEmbedParametersResult {
