@@ -311,30 +311,28 @@ define amdgpu_ps i64 @s_sdiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_mul_i32 s12, s3, s8
 ; CHECK-NEXT:    s_mul_i32 s10, s2, s8
 ; CHECK-NEXT:    s_add_u32 s11, s12, s11
-; CHECK-NEXT:    s_sub_u32 s4, s4, s10
-; CHECK-NEXT:    s_cselect_b32 s10, 1, 0
-; CHECK-NEXT:    s_subb_u32 s12, s5, s11
+; CHECK-NEXT:    s_sub_u32 s12, s4, s10
+; CHECK-NEXT:    s_subb_u32 s13, s5, s11
 ; CHECK-NEXT:    s_sub_i32 s5, s5, s11
-; CHECK-NEXT:    s_cmp_ge_u32 s12, s3
+; CHECK-NEXT:    s_cmp_ge_u32 s13, s3
 ; CHECK-NEXT:    s_cselect_b32 s11, -1, 0
-; CHECK-NEXT:    s_cmp_ge_u32 s4, s2
-; CHECK-NEXT:    s_cselect_b32 s13, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s12, s3
-; CHECK-NEXT:    s_cselect_b32 s11, s13, s11
-; CHECK-NEXT:    s_sub_u32 s12, s4, s2
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s10, 0
-; CHECK-NEXT:    s_subb_u32 s5, s5, s3
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_subb_u32 s10, s5, 0
+; CHECK-NEXT:    s_cmp_ge_u32 s12, s2
+; CHECK-NEXT:    s_cselect_b32 s14, -1, 0
+; CHECK-NEXT:    s_cmp_eq_u32 s13, s3
+; CHECK-NEXT:    s_cselect_b32 s11, s14, s11
+; CHECK-NEXT:    s_sub_u32 s13, s12, s2
+; CHECK-NEXT:    s_sub_u32 s4, s4, s10
+; CHECK-NEXT:    s_subb_u32 s4, s5, s3
+; CHECK-NEXT:    s_sub_u32 s5, s12, s2
+; CHECK-NEXT:    s_subb_u32 s10, s4, 0
 ; CHECK-NEXT:    s_add_u32 s4, s8, 1
 ; CHECK-NEXT:    s_addc_u32 s5, s9, 0
 ; CHECK-NEXT:    s_cmp_ge_u32 s10, s3
-; CHECK-NEXT:    s_cselect_b32 s13, -1, 0
-; CHECK-NEXT:    s_cmp_ge_u32 s12, s2
+; CHECK-NEXT:    s_cselect_b32 s12, -1, 0
+; CHECK-NEXT:    s_cmp_ge_u32 s13, s2
 ; CHECK-NEXT:    s_cselect_b32 s2, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s10, s3
-; CHECK-NEXT:    s_cselect_b32 s10, s2, s13
+; CHECK-NEXT:    s_cselect_b32 s10, s2, s12
 ; CHECK-NEXT:    s_add_u32 s2, s4, 1
 ; CHECK-NEXT:    s_addc_u32 s3, s5, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s10, 0

@@ -287,43 +287,40 @@ define amdgpu_ps i64 @s_urem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_addc_u32 s5, s6, 0
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v0
 ; CHECK-NEXT:    s_add_i32 s6, s6, s5
-; CHECK-NEXT:    v_readfirstlane_b32 s7, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s5, v1
 ; CHECK-NEXT:    s_mul_i32 s6, s2, s6
-; CHECK-NEXT:    s_mul_i32 s5, s2, s4
+; CHECK-NEXT:    s_mul_i32 s7, s2, s4
 ; CHECK-NEXT:    s_mul_i32 s4, s3, s4
-; CHECK-NEXT:    s_add_i32 s6, s7, s6
-; CHECK-NEXT:    s_add_i32 s6, s6, s4
-; CHECK-NEXT:    s_sub_u32 s4, s0, s5
-; CHECK-NEXT:    s_cselect_b32 s7, 1, 0
+; CHECK-NEXT:    s_add_i32 s5, s5, s6
+; CHECK-NEXT:    s_add_i32 s6, s5, s4
+; CHECK-NEXT:    s_sub_u32 s4, s0, s7
 ; CHECK-NEXT:    s_subb_u32 s5, s1, s6
 ; CHECK-NEXT:    s_sub_i32 s1, s1, s6
 ; CHECK-NEXT:    s_cmp_ge_u32 s5, s3
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_cmp_ge_u32 s4, s2
 ; CHECK-NEXT:    s_cselect_b32 s6, -1, 0
+; CHECK-NEXT:    s_cmp_ge_u32 s4, s2
+; CHECK-NEXT:    s_cselect_b32 s8, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s5, s3
-; CHECK-NEXT:    s_cselect_b32 s6, s6, s0
+; CHECK-NEXT:    s_cselect_b32 s8, s8, s6
+; CHECK-NEXT:    s_sub_u32 s6, s4, s2
+; CHECK-NEXT:    s_sub_u32 s0, s0, s7
+; CHECK-NEXT:    s_subb_u32 s1, s1, s3
 ; CHECK-NEXT:    s_sub_u32 s0, s4, s2
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s7, 0
-; CHECK-NEXT:    s_subb_u32 s7, s1, s3
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 0
-; CHECK-NEXT:    s_subb_u32 s1, s7, 0
-; CHECK-NEXT:    s_cmp_ge_u32 s1, s3
+; CHECK-NEXT:    s_subb_u32 s7, s1, 0
+; CHECK-NEXT:    s_cmp_ge_u32 s7, s3
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
+; CHECK-NEXT:    s_cmp_ge_u32 s6, s2
 ; CHECK-NEXT:    s_cselect_b32 s9, -1, 0
-; CHECK-NEXT:    s_cmp_ge_u32 s0, s2
-; CHECK-NEXT:    s_cselect_b32 s10, -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s1, s3
-; CHECK-NEXT:    s_cselect_b32 s9, s10, s9
-; CHECK-NEXT:    s_sub_u32 s2, s0, s2
-; CHECK-NEXT:    s_cselect_b32 s10, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 0
-; CHECK-NEXT:    s_subb_u32 s3, s7, s3
-; CHECK-NEXT:    s_cmp_lg_u32 s10, 0
-; CHECK-NEXT:    s_subb_u32 s3, s3, 0
+; CHECK-NEXT:    s_cmp_eq_u32 s7, s3
+; CHECK-NEXT:    s_cselect_b32 s9, s9, s0
+; CHECK-NEXT:    s_sub_u32 s0, s6, s2
+; CHECK-NEXT:    s_sub_u32 s10, s4, s2
+; CHECK-NEXT:    s_subb_u32 s1, s1, s3
+; CHECK-NEXT:    s_sub_u32 s2, s6, s2
+; CHECK-NEXT:    s_subb_u32 s1, s1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s9, 0
-; CHECK-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
-; CHECK-NEXT:    s_cmp_lg_u32 s6, 0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[6:7]
+; CHECK-NEXT:    s_cmp_lg_u32 s8, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[4:5]
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_branch .LBB1_3

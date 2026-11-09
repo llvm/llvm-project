@@ -499,38 +499,32 @@ define amdgpu_ps i64 @s_uaddo_i64(i64 inreg %a, i64 inreg %b) {
 define amdgpu_ps <2 x i32> @s_uaddo_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %b) {
 ; GFX7-LABEL: s_uaddo_v2i32:
 ; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_add_u32 s4, s0, s2
+; GFX7-NEXT:    s_add_u32 s5, s1, s3
 ; GFX7-NEXT:    s_add_u32 s0, s0, s2
-; GFX7-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX7-NEXT:    s_addc_u32 s0, s4, 0
 ; GFX7-NEXT:    s_add_u32 s1, s1, s3
-; GFX7-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX7-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX7-NEXT:    s_addc_u32 s0, s0, 0
-; GFX7-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX7-NEXT:    s_addc_u32 s1, s1, 0
+; GFX7-NEXT:    s_addc_u32 s1, s5, 0
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_uaddo_v2i32:
 ; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_add_u32 s4, s0, s2
+; GFX8-NEXT:    s_add_u32 s5, s1, s3
 ; GFX8-NEXT:    s_add_u32 s0, s0, s2
-; GFX8-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX8-NEXT:    s_addc_u32 s0, s4, 0
 ; GFX8-NEXT:    s_add_u32 s1, s1, s3
-; GFX8-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX8-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX8-NEXT:    s_addc_u32 s0, s0, 0
-; GFX8-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX8-NEXT:    s_addc_u32 s1, s1, 0
+; GFX8-NEXT:    s_addc_u32 s1, s5, 0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_uaddo_v2i32:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_add_u32 s4, s0, s2
+; GFX9-NEXT:    s_add_u32 s5, s1, s3
 ; GFX9-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX9-NEXT:    s_addc_u32 s0, s4, 0
 ; GFX9-NEXT:    s_add_u32 s1, s1, s3
-; GFX9-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX9-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX9-NEXT:    s_addc_u32 s0, s0, 0
-; GFX9-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    s_addc_u32 s1, s5, 0
 ; GFX9-NEXT:    ; return to shader part epilog
   %uaddo = call {<2 x i32>, <2 x i1>} @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> %b)
   %add = extractvalue {<2 x i32>, <2 x i1>} %uaddo, 0

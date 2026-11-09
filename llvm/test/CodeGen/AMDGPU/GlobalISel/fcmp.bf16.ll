@@ -258,18 +258,14 @@ define amdgpu_ps <2 x i32> @fcmp_ogt_v2bf16_ss(<2 x bfloat> inreg %a, <2 x bfloa
 ; GFX9-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    s_lshl_b32 s1, s3, 16
 ; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s0, v0
+; GFX9-NEXT:    s_lshl_b32 s0, s2, 16
+; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    v_cmp_gt_f32_e64 s[2:3], s0, v0
 ; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX9-NEXT:    s_lshl_b32 s1, s2, 16
-; GFX9-NEXT:    s_lshl_b32 s2, s3, 16
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s1, v0
-; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX9-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX9-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX9-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX9-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX9-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;

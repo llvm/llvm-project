@@ -10,29 +10,26 @@
 define amdgpu_ps i32 @uaddo_clobber_between(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
 ; GFX7-LABEL: uaddo_clobber_between:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_add_u32 s0, s0, s1
-; GFX7-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX7-NEXT:    s_add_u32 s4, s0, s1
 ; GFX7-NEXT:    s_and_b32 s2, s2, s3
-; GFX7-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX7-NEXT:    s_cselect_b32 s0, s2, s0
+; GFX7-NEXT:    s_add_u32 s0, s0, s1
+; GFX7-NEXT:    s_cselect_b32 s0, s2, s4
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: uaddo_clobber_between:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_add_u32 s0, s0, s1
-; GFX10-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX10-NEXT:    s_add_u32 s4, s0, s1
 ; GFX10-NEXT:    s_and_b32 s2, s2, s3
-; GFX10-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX10-NEXT:    s_cselect_b32 s0, s2, s0
+; GFX10-NEXT:    s_add_u32 s0, s0, s1
+; GFX10-NEXT:    s_cselect_b32 s0, s2, s4
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: uaddo_clobber_between:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_add_co_u32 s0, s0, s1
-; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX12-NEXT:    s_add_co_u32 s4, s0, s1
 ; GFX12-NEXT:    s_and_b32 s2, s2, s3
-; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX12-NEXT:    s_cselect_b32 s0, s2, s0
+; GFX12-NEXT:    s_add_co_u32 s0, s0, s1
+; GFX12-NEXT:    s_cselect_b32 s0, s2, s4
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-GFX10-LABEL: uaddo_clobber_between:
@@ -53,39 +50,36 @@ define amdgpu_ps i32 @uaddo_clobber_between(i32 inreg %a, i32 inreg %b, i32 inre
 define amdgpu_ps i32 @uaddo_two_selects(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 inreg %d) {
 ; GFX7-LABEL: uaddo_two_selects:
 ; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_add_u32 s4, s0, s1
+; GFX7-NEXT:    s_and_b32 s5, s2, s3
+; GFX7-NEXT:    s_add_u32 s6, s0, s1
+; GFX7-NEXT:    s_cselect_b32 s4, s5, s4
+; GFX7-NEXT:    s_xor_b32 s3, s4, s3
 ; GFX7-NEXT:    s_add_u32 s0, s0, s1
-; GFX7-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX7-NEXT:    s_and_b32 s4, s2, s3
-; GFX7-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX7-NEXT:    s_cselect_b32 s0, s4, s0
-; GFX7-NEXT:    s_xor_b32 s0, s0, s3
-; GFX7-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX7-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX7-NEXT:    s_cselect_b32 s0, s3, s2
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: uaddo_two_selects:
 ; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_add_u32 s4, s0, s1
+; GFX10-NEXT:    s_and_b32 s5, s2, s3
+; GFX10-NEXT:    s_add_u32 s6, s0, s1
+; GFX10-NEXT:    s_cselect_b32 s4, s5, s4
+; GFX10-NEXT:    s_xor_b32 s3, s4, s3
 ; GFX10-NEXT:    s_add_u32 s0, s0, s1
-; GFX10-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX10-NEXT:    s_and_b32 s4, s2, s3
-; GFX10-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX10-NEXT:    s_cselect_b32 s0, s4, s0
-; GFX10-NEXT:    s_xor_b32 s0, s0, s3
-; GFX10-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX10-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX10-NEXT:    s_cselect_b32 s0, s3, s2
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: uaddo_two_selects:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_add_co_u32 s0, s0, s1
-; GFX12-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-NEXT:    s_and_b32 s4, s2, s3
-; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX12-NEXT:    s_cselect_b32 s0, s4, s0
+; GFX12-NEXT:    s_add_co_u32 s4, s0, s1
+; GFX12-NEXT:    s_and_b32 s5, s2, s3
+; GFX12-NEXT:    s_add_co_u32 s6, s0, s1
+; GFX12-NEXT:    s_cselect_b32 s4, s5, s4
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_xor_b32 s0, s0, s3
-; GFX12-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX12-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX12-NEXT:    s_xor_b32 s3, s4, s3
+; GFX12-NEXT:    s_add_co_u32 s0, s0, s1
+; GFX12-NEXT:    s_cselect_b32 s0, s3, s2
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-GFX10-LABEL: uaddo_two_selects:
