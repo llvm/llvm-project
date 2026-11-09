@@ -3495,9 +3495,9 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
 
   llvm::Type *RealVarTy = CGF.getTypes().ConvertTypeForMem(VD->getType());
   CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
-  Address Addr(V, RealVarTy, Alignment);
-  if (CGF.CGM.isGlobalVarInvariant(VD))
-    Addr.setInvariant(KnownInvariant);
+  Address Addr(V, RealVarTy, Alignment, NotKnownNonNull,
+               CGF.CGM.isGlobalVarInvariant(VD) ? KnownInvariant
+                                                : NotKnownInvariant);
   // Emit reference to the private copy of the variable if it is an OpenMP
   // threadprivate variable.
   if (CGF.getLangOpts().OpenMP && !CGF.getLangOpts().OpenMPSimd &&

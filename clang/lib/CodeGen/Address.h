@@ -156,9 +156,10 @@ protected:
 
 public:
   Address(llvm::Value *pointer, llvm::Type *elementType, CharUnits alignment,
-          KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
-      : Pointer(pointer, IsKnownNonNull), ElementType(elementType),
-        Alignment(alignment) {
+          KnownNonNull_t IsKnownNonNull = NotKnownNonNull,
+          KnownInvariant_t IsKnownInvariant = NotKnownInvariant)
+      : Pointer(pointer, IsKnownNonNull),
+        ElementType(elementType, IsKnownInvariant), Alignment(alignment) {
     assert(pointer != nullptr && "Pointer cannot be null");
     assert(elementType != nullptr && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
@@ -166,9 +167,11 @@ public:
 
   Address(llvm::Value *BasePtr, llvm::Type *ElementType, CharUnits Alignment,
           CGPointerAuthInfo PtrAuthInfo, llvm::Value *Offset,
-          KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
-      : Pointer(BasePtr, IsKnownNonNull), ElementType(ElementType),
-        Alignment(Alignment), PtrAuthInfo(PtrAuthInfo), Offset(Offset) {}
+          KnownNonNull_t IsKnownNonNull = NotKnownNonNull,
+          KnownInvariant_t IsKnownInvariant = NotKnownInvariant)
+      : Pointer(BasePtr, IsKnownNonNull),
+        ElementType(ElementType, IsKnownInvariant), Alignment(Alignment),
+        PtrAuthInfo(PtrAuthInfo), Offset(Offset) {}
 
   Address(RawAddress RawAddr)
       : Pointer(RawAddr.isValid() ? RawAddr.getPointer() : nullptr,
@@ -283,8 +286,7 @@ public:
   /// type.
   Address withAlignment(CharUnits NewAlignment) const {
     return Address(Pointer.getPointer(), getElementType(), NewAlignment,
-                   isKnownNonNull())
-        .setInvariant(isInvariant());
+                   isKnownNonNull(), isInvariant());
   }
 
   /// Return address with different element type, but same pointer and

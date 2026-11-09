@@ -6561,9 +6561,8 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     return Builder.CreateGEP(Addr, IdxList, elementType, Align, Name, NWFlags);
   }
 
-  return Address(EmitCheckedInBoundsGEP(
-                     Addr.getElementType(), Addr.emitRawPointer(*this), IdxList,
-                     SignedIndices, IsSubtraction, Loc, Name),
-                 elementType, Align)
-      .setInvariant(Addr.isInvariant());
+  return Address(
+      EmitCheckedInBoundsGEP(Addr.getElementType(), Addr.emitRawPointer(*this),
+                             IdxList, SignedIndices, IsSubtraction, Loc, Name),
+      elementType, Align, NotKnownNonNull, Addr.isInvariant());
 }

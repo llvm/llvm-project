@@ -87,8 +87,8 @@ class CGBuilderTy : public CGBuilderBaseTy {
     return Address(V, ElementTy,
                    Addr.getAlignment().alignmentAtOffset(
                        CharUnits::fromQuantity(Offset.getSExtValue())),
-                   IsInBounds ? Addr.isKnownNonNull() : NotKnownNonNull)
-        .setInvariant(Addr.isInvariant());
+                   IsInBounds ? Addr.isKnownNonNull() : NotKnownNonNull,
+                   Addr.isInvariant());
   }
 
 public:
@@ -203,13 +203,13 @@ public:
     if (!Addr.hasOffset())
       return Address(CreateAddrSpaceCast(Addr.getBasePointer(), Ty, Name),
                      ElementTy, Addr.getAlignment(), Addr.getPointerAuthInfo(),
-                     /*Offset=*/nullptr, Addr.isKnownNonNull())
-          .setInvariant(Addr.isInvariant());
+                     /*Offset=*/nullptr, Addr.isKnownNonNull(),
+                     Addr.isInvariant());
     // Eagerly force a raw address if these is an offset.
     return Address(
-               CreateAddrSpaceCast(Addr.emitRawPointer(*getCGF()), Ty, Name),
-               ElementTy, Addr.getAlignment(), Addr.isKnownNonNull())
-        .setInvariant(Addr.isInvariant());
+        CreateAddrSpaceCast(Addr.emitRawPointer(*getCGF()), Ty, Name),
+        ElementTy, Addr.getAlignment(), Addr.isKnownNonNull(),
+        Addr.isInvariant());
   }
 
   using CGBuilderBaseTy::CreatePointerBitCastOrAddrSpaceCast;
@@ -240,8 +240,7 @@ public:
                                    Index, Name),
                    ElTy->getElementType(Index),
                    Addr.getAlignment().alignmentAtOffset(Offset),
-                   Addr.isKnownNonNull())
-        .setInvariant(Addr.isInvariant());
+                   Addr.isKnownNonNull(), Addr.isInvariant());
   }
 
   /// Given
@@ -259,13 +258,12 @@ public:
     CharUnits EltSize =
         CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy->getElementType()));
 
-    return Address(CreateInBoundsGEP(
-                       Addr.getElementType(), Addr.getBasePointer(),
-                       {getSize(CharUnits::Zero()), getSize(Index)}, Name),
-                   ElTy->getElementType(),
-                   Addr.getAlignment().alignmentAtOffset(Index * EltSize),
-                   Addr.isKnownNonNull())
-        .setInvariant(Addr.isInvariant());
+    return Address(
+        CreateInBoundsGEP(Addr.getElementType(), Addr.getBasePointer(),
+                          {getSize(CharUnits::Zero()), getSize(Index)}, Name),
+        ElTy->getElementType(),
+        Addr.getAlignment().alignmentAtOffset(Index * EltSize),
+        Addr.isKnownNonNull(), Addr.isInvariant());
   }
 
   /// Given
@@ -279,11 +277,10 @@ public:
     const llvm::DataLayout &DL = BB->getDataLayout();
     CharUnits EltSize = CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy));
 
-    return Address(CreateInBoundsGEP(ElTy, Addr.getBasePointer(),
-                                     getSize(Index), Name),
-                   ElTy, Addr.getAlignment().alignmentAtOffset(Index * EltSize),
-                   Addr.isKnownNonNull())
-        .setInvariant(Addr.isInvariant());
+    return Address(
+        CreateInBoundsGEP(ElTy, Addr.getBasePointer(), getSize(Index), Name),
+        ElTy, Addr.getAlignment().alignmentAtOffset(Index * EltSize),
+        Addr.isKnownNonNull(), Addr.isInvariant());
   }
 
   /// Given
@@ -299,8 +296,8 @@ public:
 
     return Address(CreateGEP(ElTy, Addr.getBasePointer(), getSize(Index), Name),
                    Addr.getElementType(),
-                   Addr.getAlignment().alignmentAtOffset(Index * EltSize))
-        .setInvariant(Addr.isInvariant());
+                   Addr.getAlignment().alignmentAtOffset(Index * EltSize),
+                   NotKnownNonNull, Addr.isInvariant());
   }
 
   /// Create GEP with single dynamic index. The address alignment is reduced
@@ -312,24 +309,22 @@ public:
     CharUnits EltSize =
         CharUnits::fromQuantity(DL.getTypeAllocSize(Addr.getElementType()));
 
-    return Address(CreateGEP(Addr.getElementType(), Addr.emitRawPointer(CGF),
-                             Index, Name),
-                   Addr.getElementType(),
-                   Addr.getAlignment().alignmentOfArrayElement(EltSize))
-        .setInvariant(Addr.isInvariant());
+    return Address(
+        CreateGEP(Addr.getElementType(), Addr.emitRawPointer(CGF), Index, Name),
+        Addr.getElementType(),
+        Addr.getAlignment().alignmentOfArrayElement(EltSize), NotKnownNonNull,
+        Addr.isInvariant());
   }
 
   /// Given a pointer to i8, adjust it by a given constant offset.
   Address CreateConstInBoundsByteGEP(Address Addr, CharUnits Offset,
                                      const llvm::Twine &Name = "") {
     assert(Addr.getElementType() == TypeCache.Int8Ty);
-    return Address(CreateInBoundsGEP(Addr.getElementType(),
-                                     Addr.getBasePointer(), getSize(Offset),
-                                     Name),
-                   Addr.getElementType(),
-                   Addr.getAlignment().alignmentAtOffset(Offset),
-                   Addr.isKnownNonNull())
-        .setInvariant(Addr.isInvariant());
+    return Address(
+        CreateInBoundsGEP(Addr.getElementType(), Addr.getBasePointer(),
+                          getSize(Offset), Name),
+        Addr.getElementType(), Addr.getAlignment().alignmentAtOffset(Offset),
+        Addr.isKnownNonNull(), Addr.isInvariant());
   }
 
   Address CreateConstByteGEP(Address Addr, CharUnits Offset,
@@ -338,8 +333,8 @@ public:
     return Address(CreateGEP(Addr.getElementType(), Addr.getBasePointer(),
                              getSize(Offset), Name),
                    Addr.getElementType(),
-                   Addr.getAlignment().alignmentAtOffset(Offset))
-        .setInvariant(Addr.isInvariant());
+                   Addr.getAlignment().alignmentAtOffset(Offset),
+                   NotKnownNonNull, Addr.isInvariant());
   }
 
   using CGBuilderBaseTy::CreateConstInBoundsGEP2_32;
@@ -360,19 +355,17 @@ public:
                     llvm::GEPNoWrapFlags NW = llvm::GEPNoWrapFlags::none()) {
     llvm::Value *Ptr = emitRawPointerFromAddress(Addr);
     return Address(CreateGEP(Addr.getElementType(), Ptr, IdxList, Name, NW),
-                   ElementType, Align)
-        .setInvariant(Addr.isInvariant());
+                   ElementType, Align, NotKnownNonNull, Addr.isInvariant());
   }
 
   using CGBuilderBaseTy::CreateInBoundsGEP;
   Address CreateInBoundsGEP(Address Addr, ArrayRef<llvm::Value *> IdxList,
                             llvm::Type *ElementType, CharUnits Align,
                             const Twine &Name = "") {
-    return Address(CreateInBoundsGEP(Addr.getElementType(),
-                                     emitRawPointerFromAddress(Addr), IdxList,
-                                     Name),
-                   ElementType, Align, Addr.isKnownNonNull())
-        .setInvariant(Addr.isInvariant());
+    return Address(
+        CreateInBoundsGEP(Addr.getElementType(),
+                          emitRawPointerFromAddress(Addr), IdxList, Name),
+        ElementType, Align, Addr.isKnownNonNull(), Addr.isInvariant());
   }
 
   using CGBuilderBaseTy::CreateStructuredGEP;
@@ -391,11 +384,10 @@ public:
                             llvm::Type *ElementType, CharUnits Align,
                             const Twine &Name = "") {
 
-    return Address(CreateAccessChain(Logical, Addr.getElementType(),
-                                     emitRawPointerFromAddress(Addr), IdxList,
-                                     Name),
-                   ElementType, Align, Addr.isKnownNonNull())
-        .setInvariant(Addr.isInvariant());
+    return Address(
+        CreateAccessChain(Logical, Addr.getElementType(),
+                          emitRawPointerFromAddress(Addr), IdxList, Name),
+        ElementType, Align, Addr.isKnownNonNull(), Addr.isInvariant());
   }
 
   using CGBuilderBaseTy::CreateIsNull;
@@ -464,12 +456,12 @@ public:
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
-    return Address(CreatePreserveStructAccessIndex(
-                       ElTy, emitRawPointerFromAddress(Addr), Index, FieldIndex,
-                       DbgInfo),
-                   ElTy->getElementType(Index),
-                   Addr.getAlignment().alignmentAtOffset(Offset))
-        .setInvariant(Addr.isInvariant());
+    return Address(
+        CreatePreserveStructAccessIndex(ElTy, emitRawPointerFromAddress(Addr),
+                                        Index, FieldIndex, DbgInfo),
+        ElTy->getElementType(Index),
+        Addr.getAlignment().alignmentAtOffset(Offset), NotKnownNonNull,
+        Addr.isInvariant());
   }
 
   using CGBuilderBaseTy::CreatePreserveUnionAccessIndex;
