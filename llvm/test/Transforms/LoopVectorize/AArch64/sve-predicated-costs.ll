@@ -91,11 +91,11 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[P0]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP5]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [8 x i8], ptr [[TMP5]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[P1]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[TMP8]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD6:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP8]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD7:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP9]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @llvm.masked.udiv.nxv2i64(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i64> [[WIDE_MASKED_LOAD6]], <vscale x 2 x i1> [[TMP4]])
