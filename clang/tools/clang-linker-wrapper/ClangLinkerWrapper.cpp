@@ -1435,7 +1435,8 @@ getDeviceInput(const ArgList &Args) {
   // With --sycl-device-link no host link runs to report missing inputs, so
   // report them here. An input right after an option that is not known here
   // may be the value of a host linker option (e.g. '-z now'), so it is skipped
-  // as in a host link.
+  // as in a host link. Without the host linker's options, a file after an
+  // unknown flag option is skipped the same way.
   bool ReportMissingInputs = Args.hasArg(OPT_sycl_device_link);
   DenseSet<unsigned> UnknownOptionIndices;
   for (const opt::Arg *Arg : Args.filtered(OPT_UNKNOWN))
