@@ -518,8 +518,12 @@ void Sema::handleLambdaNumbering(
     Class->setLambdaContextDecl(ContextDecl);
 
   CXXRecordDecl::LambdaNumbering Numbering;
+  bool IsOpenMPOffload = getLangOpts().OpenMPIsTargetDevice ||
+                         !getLangOpts().OMPTargetTriples.empty();
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
-                getLangOpts().SYCLIsHost)) {
+                getLangOpts().SYCLIsHost ||
+                (IsOpenMPOffload &&
+                 !Class->getDeclContext()->getNonClosureAncestor()))) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
     // ODR. Both device- and host-compilation need to have a consistent naming
     // on kernel functions. As lambdas are potential part of these `__global__`
@@ -527,6 +531,8 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
+    // Also force for OpenMP offloading outside of functions, where target
+    // regions are named after the closure on both host and device.
     MCtx = getMangleNumberingContext(Class, ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;

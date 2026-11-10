@@ -11600,7 +11600,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   // An implicitly-defined constructor is only reachable from its uses.
   if (const auto *E = dyn_cast<CXXConstructExpr>(S)) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
-    if (!Ctor->isUserProvided())
+    if (!Ctor->isUserProvided() && ScannedImplicitCtors.insert(Ctor).second)
       scanConstructorForTargetRegions(Ctor, ParentName);
   }
 

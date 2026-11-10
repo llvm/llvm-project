@@ -480,6 +480,9 @@ protected:
   bool ShouldMarkAsGlobal = true;
   /// List of the emitted declarations.
   llvm::DenseSet<CanonicalDeclPtr<const Decl>> AlreadyEmittedTargetDecls;
+  /// Implicitly-defined constructors already scanned for target regions; only
+  /// lambdas can hold such regions there and they compute their own parent.
+  llvm::SmallPtrSet<const CXXConstructorDecl *, 8> ScannedImplicitCtors;
   /// List of the global variables with their addresses that should not be
   /// emitted for the target.
   llvm::StringMap<llvm::WeakTrackingVH> EmittedNonTargetVariables;

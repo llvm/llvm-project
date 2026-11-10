@@ -70,7 +70,7 @@ int instantiation = variable_template<1>;
 // Reproducer from GH136652.
 auto slice_work = [](__SIZE_TYPE__ device, float start, float end) {
 // CHECK-DAG: define internal void @{{"?}}__omp_offloading_{{.*}}clEmff_l[[#@LINE+2]]{{"?}}(
-// DEVICE-DAG: define weak_odr protected void @{{"?}}__omp_offloading_{{.*}}clEmff_l[[#@LINE+1]]{{"?}}(
+// DEVICE-DAG: define weak_odr protected void @__omp_offloading_{{.*}}_ZNKUlmffE_clEmff_l[[#@LINE+1]](
 #pragma omp target teams device(device)
   {
   }
@@ -109,15 +109,13 @@ template <class T> struct Holder {
   };
 };
 
-// Closures without a mangling number are named $_N in first-mangling order; the
-// device names those in initializers before any default argument. Keep this order.
 void use() {
   lambda();
   nested_lambda()();
   combined_directive();
   static_local();
-  slice_work(0, 0, 0);
   default_argument();
+  slice_work(0, 0, 0);
   LocalObject local_object;
   (void)local_object;
   Holder<int>::member(0);
