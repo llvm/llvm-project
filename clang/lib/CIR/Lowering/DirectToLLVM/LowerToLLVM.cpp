@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LowerToLLVM.h"
+#include "LowerToLLVMMetadata.h"
 #include "LowerToLLVMOpenCLMetadata.h"
 
 #include <array>
@@ -3112,11 +3113,11 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
 mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     cir::FuncOp func, bool includeFunctionOnlyAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
-  OpenCLFunctionMetadataLowering openCLMetadataLowering(func.getContext());
+  FunctionMetadataLowering metadataLowering(func.getContext());
   for (mlir::NamedAttribute attr : func->getDiscardableAttrs()) {
     if (isHandledDiscardableFuncAttr(attr))
       continue;
-    if (openCLMetadataLowering.lower(attr, includeFunctionOnlyAttrs))
+    if (metadataLowering.lower(attr, includeFunctionOnlyAttrs))
       continue;
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     result.push_back(attr);
@@ -3140,7 +3141,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
   }
 
   if (includeFunctionOnlyAttrs)
-    openCLMetadataLowering.appendAttrs(result);
+    metadataLowering.appendAttrs(result);
 
   return mlir::success();
 }
