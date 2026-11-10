@@ -11,7 +11,7 @@ define void @caller1() {
   ret void
 }
 
-define internal void @callee1() "target-features"="+egpr" {
+define internal void @callee1() "target-features"="+egpr,+avx10.1" {
 ; CHECK-LABEL: define internal void @callee1(
 ; CHECK-SAME: ) unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -19,7 +19,7 @@ define internal void @callee1() "target-features"="+egpr" {
   ret void
 }
 
-define void @caller2() "target-features"="+egpr" {
+define void @caller2() "target-features"="+egpr,+avx10.1" {
 ; CHECK-LABEL: define void @caller2(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    call void @callee2()
@@ -36,7 +36,7 @@ define internal void @callee2() {
   ret void
 }
 
-define void @caller3() "target-features"="+egpr" {
+define void @caller3() "target-features"="+egpr,+avx10.1" {
 ; CHECK-LABEL: define void @caller3(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    call fastcc void @callee3()
@@ -46,8 +46,65 @@ define void @caller3() "target-features"="+egpr" {
   ret void
 }
 
-define internal void @callee3() "target-features"="+egpr" {
+define internal void @callee3() "target-features"="+egpr,+avx10.1" {
 ; CHECK-LABEL: define internal fastcc void @callee3(
+; CHECK-SAME: ) unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+; Both caller and callee have EGPR but no AVX-512.
+define void @caller4() "target-features"="+egpr" {
+; CHECK-LABEL: define void @caller4(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    call fastcc void @callee4()
+; CHECK-NEXT:    ret void
+;
+  call void @callee4()
+  ret void
+}
+
+define internal void @callee4() "target-features"="+egpr" {
+; CHECK-LABEL: define internal fastcc void @callee4(
+; CHECK-SAME: ) unnamed_addr #[[ATTR1]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+; Callee has EGPR only, caller has EGPR and AVX-512.
+define void @caller5() "target-features"="+egpr,+avx10.1" {
+; CHECK-LABEL: define void @caller5(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:    call void @callee5()
+; CHECK-NEXT:    ret void
+;
+  call void @callee5()
+  ret void
+}
+
+define internal void @callee5() "target-features"="+egpr" {
+; CHECK-LABEL: define internal void @callee5(
+; CHECK-SAME: ) unnamed_addr #[[ATTR1]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+; Callee has EGPR and AVX-512, caller has AVX-512 only.
+define void @caller6() "target-features"="+avx10.1" {
+; CHECK-LABEL: define void @caller6(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    call void @callee6()
+; CHECK-NEXT:    ret void
+;
+  call void @callee6()
+  ret void
+}
+
+define internal void @callee6() "target-features"="+egpr,+avx10.1" {
+; CHECK-LABEL: define internal void @callee6(
 ; CHECK-SAME: ) unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
 ;
