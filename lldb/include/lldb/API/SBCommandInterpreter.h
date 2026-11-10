@@ -353,17 +353,21 @@ private:
 #ifndef SWIG
 class SBCommandPluginInterface {
 public:
-  virtual ~SBCommandPluginInterface() = default;
+  virtual ~SBCommandPluginInterface();
 
-  virtual bool DoExecute(lldb::SBDebugger /*debugger*/, char ** /*command*/,
-                         lldb::SBCommandReturnObject & /*result*/) {
-    return false;
-  }
+  virtual bool DoExecute(lldb::SBDebugger debugger, char **command,
+                         lldb::SBCommandReturnObject &result);
 };
 
 class SBCommand {
 public:
   SBCommand();
+
+  SBCommand(const lldb::SBCommand &rhs);
+
+  const lldb::SBCommand &operator=(const lldb::SBCommand &rhs);
+
+  ~SBCommand();
 
   explicit operator bool() const;
 
