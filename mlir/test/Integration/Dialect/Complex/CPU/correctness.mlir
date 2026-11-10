@@ -405,12 +405,22 @@ func.func @entry() {
     // CHECK-NEXT:  inf
     // CHECK-NEXT:  nan
     // (inf, nan)
-    (0x7F800000, 0x7FC00000)
+    (0x7F800000, 0x7FC00000),
     // CHECK-NEXT:  inf
     // CHECK-NEXT:  nan
-  ]> : tensor<9xcomplex<f32>>
+
+    // Preserve the imaginary part's sign.
+    // (1.0, 0.0)
+    (1.0, 0.0),
+    // CHECK-NEXT:  2.71828
+    // CHECK-NEXT:  {{^}}0
+    // (1.0, -0.0)
+    (1.0, 0x80000000)
+    // CHECK-NEXT:  2.71828
+    // CHECK-NEXT:  {{^}}-0
+  ]> : tensor<11xcomplex<f32>>
   %exp_test_cast = tensor.cast %exp_test
-    :  tensor<9xcomplex<f32>> to tensor<?xcomplex<f32>>
+    :  tensor<11xcomplex<f32>> to tensor<?xcomplex<f32>>
 
   %exp_func = func.constant @exp : (complex<f32>) -> complex<f32>
   call @test_unary(%exp_test_cast, %exp_func)
