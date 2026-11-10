@@ -320,14 +320,17 @@ class Scheduler {
   /// The BB that we are currently scheduling.
   BasicBlock *ScheduledBB = nullptr;
   /// The IDs of the callbacks we register with Sandbox IR.
-  std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
   std::optional<Context::CallbackID> MoveInstrCB;
   std::optional<Context::CallbackID> SetUseCB;
-  /// Called by Sandbox IR's callback system, after \p I has been created.
-  /// NOTE: This should run after DAG's callback has run.
-  // TODO: Perhaps call DAG's notify function from within this one?
-  LLVM_ABI void notifyCreateInstr(Instruction *I);
+  /// Called by DependencyGraph::notifyCreateInstr(), and not directly by the
+  /// Context because updating the scheduler is tightly coupled with the
+  /// update of the DAG. The update needs to happen in two parts: before the
+  /// bulk of the DAG updates and after it.
+  LLVM_ABI void notifyCreateInstrBeforeDAGUpdates(DGNode *N);
+  LLVM_ABI void notifyCreateInstrAfterDAGUpdates(DGNode *N);
+  friend class DependencyGraph; // for notifyCreateInstrPart*()
+
   /// Called by the callbacks when instruction \p I is about to get
   /// deleted.
   LLVM_ABI void notifyEraseInstr(Instruction *I);
@@ -376,14 +379,12 @@ class Scheduler {
 
 public:
   Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)
-      : DAG(Dir, AA, Ctx), Ctx(Ctx), Dir(Dir) {
+      : DAG(Dir, AA, Ctx, this), Ctx(Ctx), Dir(Dir) {
     // NOTE: The scheduler's callback depends on the DAG's callback running
     // before it and updating the DAG accordingly.
     EraseInstrCB = Ctx.registerEraseInstrCallback(
         [this](Instruction *I) { notifyEraseInstr(I); },
         /*BeforeCB=*/DAG.getEraseInstrCB());
-    CreateInstrCB = Ctx.registerCreateInstrCallback(
-        [this](Instruction *I) { notifyCreateInstr(I); });
     MoveInstrCB = Ctx.registerMoveInstrCallback(
         [this](Instruction *I, const BBIterator &To) {
           notifyMoveInstr(I, To);
@@ -392,8 +393,6 @@ public:
         [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
   }
   ~Scheduler() {
-    if (CreateInstrCB)
-      Ctx.unregisterCreateInstrCallback(*CreateInstrCB);
     if (EraseInstrCB)
       Ctx.unregisterEraseInstrCallback(*EraseInstrCB);
     if (MoveInstrCB)

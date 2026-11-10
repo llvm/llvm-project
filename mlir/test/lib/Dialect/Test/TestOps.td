@@ -3677,6 +3677,20 @@ def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
   let hasCustomAssemblyFormat = 1;
 }
 
+def TestWithBoundsRegionBranchOp : TEST_Op<"with_bounds_region_branch", [
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let description = [{
+    Forward the first input to the first region argument, and yield it to the
+    first result. The second region argument and second result have the range
+    of the second input.
+  }];
+  let arguments = (ins I32:$forwarded, I32:$value);
+  let results = (outs I32:$forwardedResult, I32:$inferredResult);
+  let regions = (region SizedRegion<1>:$body);
+}
+
 def TestIncrementOp : TEST_Op<"increment",
                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                          NoMemoryEffect, AllTypesMatch<["value", "result"]>]> {

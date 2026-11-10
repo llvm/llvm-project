@@ -213,6 +213,14 @@ public:
 };
 
 FunctionPass *createSystemZLDCleanupLegacyPass(SystemZTargetMachine &TM);
+
+class SystemZCopyPhysRegsPass
+    : public RequiredPassInfoMixin<SystemZCopyPhysRegsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createSystemZCopyPhysRegsLegacyPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 
@@ -235,13 +243,6 @@ public:
 ModulePass *createSystemZAlignGlobalsLegacyPass();
 
 void initializeSystemZAsmPrinterPass(PassRegistry &);
-
-class SystemZCopyPhysRegsPass
-    : public RequiredPassInfoMixin<SystemZCopyPhysRegsPass> {
-public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
-};
 
 void initializeSystemZCopyPhysRegsLegacyPass(PassRegistry &);
 void initializeSystemZDAGToDAGISelLegacyPass(PassRegistry &);

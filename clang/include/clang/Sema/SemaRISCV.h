@@ -39,6 +39,12 @@ public:
   void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
                            const llvm::StringMap<bool> &FeatureMap);
 
+  /// Check for conflicting RISC-V architecture state attributes (e.g. XSfmm
+  /// matrix state) between a caller and callee.
+  void checkConflictingStateAttributes(
+      const FunctionDecl *CallerFD, const FunctionDecl *FD,
+      const FunctionProtoType::ExtProtoInfo &CalleeExtInfo, SourceLocation Loc);
+
   bool isValidRVVBitcast(QualType srcType, QualType destType);
 
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);

@@ -254,4 +254,4 @@ for.end:
 !3 = distinct !{!3, !4}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" vscale_range(1,16) }
