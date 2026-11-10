@@ -685,6 +685,67 @@ def find_run_lines(test, lines):
     return run_lines
 
 
+LIT_DEFINE_RE = re.compile(
+    r"^\s*(?://|[;#])\s*(?:RE)?DEFINE:\s*(%\{[^}]+\})\s*=\s*(.*?)\s*$"
+)
+LIT_IF_RE = re.compile(
+    r"%if\s+(.*?)\s*%\{(.*?)%\}(?:\s*%else\s*%\{(.*?)%\})?"
+)
+# Expansion rounds before giving up, in case a definition refers to itself.
+MAX_LIT_DEFINE_ROUNDS = 10
+
+
+def expand_lit_defines(run_lines, input_lines):
+    """Expand lit "DEFINE: %{name} = value" substitutions in RUN lines.
+
+    REDEFINE is treated like DEFINE: the last value of a name is used for every
+    RUN line, not just the ones after it.
+    """
+    defs = {}
+    for line in input_lines:
+        m = LIT_DEFINE_RE.match(line)
+        if m:
+            defs[m.group(1)] = m.group(2)
+    out = []
+    for l in run_lines:
+        # Definitions may refer to other definitions, so expand until stable.
+        for _ in range(MAX_LIT_DEFINE_ROUNDS):
+            new = l
+            for name, value in defs.items():
+                new = new.replace(name, value)
+            if new == l:
+                break
+            l = new
+        else:
+            warn("DEFINE substitutions did not settle, check for a cycle: " + l)
+        out.append(l)
+    return out
+
+
+def expand_lit_ifs(run_lines, features):
+    """Resolve "%if <cond> %{ A %} [%else %{ B %}]" in RUN lines.
+
+    `features` are the available lit features. RUN lines that become empty are
+    dropped.
+    """
+    lit_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "lit")
+    if lit_dir not in sys.path:
+        sys.path.insert(0, lit_dir)
+    from lit.BooleanExpression import BooleanExpression
+
+    def pick(m):
+        enabled = BooleanExpression.evaluate(m.group(1), features)
+        taken = m.group(2) if enabled else m.group(3)
+        return (taken or "").strip()
+
+    out = []
+    for l in run_lines:
+        l = LIT_IF_RE.sub(pick, l)
+        if l.strip():
+            out.append(l)
+    return out
+
+
 def get_triple_from_march(march):
     triples = {
         "amdgcn": "amdgcn",
@@ -825,6 +886,47 @@ def scrub_body(body):
     # Strip trailing whitespace.
     body = SCRUB_TRAILING_WHITESPACE_TEST_RE.sub(r"", body)
     return body
+
+
+IR_FUNC_DEF_RE = re.compile(r"^define .*?^}$", re.M | re.S)
+IR_TYPE_DEF_RE = re.compile(r"^(%[\w.$-]+) = type\b", re.M)
+IR_LOCAL_RE = re.compile(r"%(?:[\w.$-]+|\"[^\"]*\")")
+IR_ATTR_GROUP_RE = re.compile(r"^attributes #\d+ = \{.*\}\n", re.M)
+IR_METADATA_RE = re.compile(r"^!(?:\d+|llvm\.[\w.]+) = .*\n", re.M)
+IR_LABEL_RE = re.compile(r"^([\w.$-]+):", re.M)
+
+
+def normalize_local_names(ir):
+    """Make the local value names of every function body canonical.
+
+    Drops a leading "entry:" label and renames local values (arguments and
+    instructions) to %0, %1, ... in order of first use. IR produced by
+    different pipelines (e.g. classic CodeGen vs. CIR) can then be compared
+    and share CHECK lines. Basic block labels and named types are kept. The
+    attribute group and module metadata definitions are removed as well: they
+    legitimately differ between pipelines and are not what these checks are
+    about.
+    """
+    ir = IR_METADATA_RE.sub("", IR_ATTR_GROUP_RE.sub("", ir))
+    types = set(IR_TYPE_DEF_RE.findall(ir))
+
+    def normalize(m):
+        body = m.group(0)
+        labels = {"%" + l for l in IR_LABEL_RE.findall(body)}
+        if "%entry" in labels and body.count("%entry") == 0:
+            body = re.sub(r"^entry:.*\n", "", body, count=1, flags=re.M)
+            labels.discard("%entry")
+        names = {}
+
+        def rename(n):
+            name = n.group(0)
+            if name in labels or name in types:
+                return name
+            return "%" + str(names.setdefault(name, len(names)))
+
+        return IR_LOCAL_RE.sub(rename, body)
+
+    return IR_FUNC_DEF_RE.sub(normalize, ir)
 
 
 def do_scrub(body, scrubber, scrubber_args, extra):
@@ -1263,8 +1365,10 @@ class GeneralizerInfo:
         regexp_prefix,
         regexp_suffix,
         no_meta_details=False,
+        func_keyword="define",
     ):
         self._version = version
+        self._func_keyword = func_keyword
         self._mode = mode
         self._nameless_values = nameless_values
 
@@ -1305,6 +1409,9 @@ class GeneralizerInfo:
 
     def get_version(self):
         return self._version
+
+    def get_func_keyword(self):
+        return self._func_keyword
 
     def is_ir(self):
         return self._mode == GeneralizerInfo.MODE_IR
@@ -2411,9 +2518,9 @@ def add_ir_checks(
     assert ginfo.is_ir()
     # Label format is based on IR string.
     if function_sig and ginfo.get_version() > 1:
-        function_def_regex = "define %s"
+        function_def_regex = ginfo.get_func_keyword() + " %s"
     elif function_sig:
-        function_def_regex = "define {{[^@]+}}%s"
+        function_def_regex = ginfo.get_func_keyword() + " {{[^@]+}}%s"
     else:
         function_def_regex = "%s"
     check_label_format = "{} %s-LABEL: {}@%s%s%s".format(

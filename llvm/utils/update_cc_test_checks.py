@@ -27,13 +27,49 @@ import subprocess
 import sys
 import tempfile
 
-from UpdateTestChecks import common
+from UpdateTestChecks import cir, common
 
 SUBST = {
     "%clang": [],
     "%clang_cc1": ["-cc1"],
     "%clangxx": ["--driver-mode=g++"],
 }
+
+
+# A lit.local.cfg substitution built on %clang_cc1, e.g. in AArch64/lit.local.cfg:
+#   config.substitutions.append(("%name", clang_cc1 + " -triple ... -o -"))
+LIT_CFG_CLANG_CC1_SUBST_RE = re.compile(
+    r"""config\.substitutions\.append\(\s*\(\s*["'](%\w+)["']\s*,"""
+    r"""\s*clang_cc1\s*\+\s*["']([^"']*)["']\s*\)\s*\)"""
+)
+LIT_SUITE_CONFIGS = ("lit.cfg.py", "lit.site.cfg.py")
+
+
+def get_local_substitutions(test_path):
+    """Return the %clang_cc1 based substitutions of the test's lit.local.cfg files.
+
+    Reads every lit.local.cfg from the test's directory up to the root of its
+    test suite, the nearest file winning. Reading them, rather than copying the
+    substitutions here, keeps both in sync. Other forms of substitution are
+    ignored.
+    """
+    found = {}
+    path = os.path.dirname(os.path.abspath(test_path))
+    while True:
+        cfg = os.path.join(path, "lit.local.cfg")
+        if os.path.isfile(cfg):
+            with open(cfg) as f:
+                for name, extra in LIT_CFG_CLANG_CC1_SUBST_RE.findall(f.read()):
+                    found.setdefault(name, extra)
+        parent = os.path.dirname(path)
+        if parent == path or any(
+            os.path.isfile(os.path.join(path, c)) for c in LIT_SUITE_CONFIGS
+        ):
+            break
+        path = parent
+    return {
+        name: SUBST["%clang_cc1"] + shlex.split(extra) for name, extra in found.items()
+    }
 
 
 def get_line2func_list(args, clang_args, globals_name_prefix):
@@ -221,6 +257,20 @@ def config():
         choices=["none", "smart", "all"],
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
     )
+    parser.add_argument(
+        "--lit-features",
+        default="",
+        help="Comma-separated lit features to treat as available when resolving "
+        "%%if in RUN lines (e.g. cir-enabled). Others are unavailable.",
+    )
+    # Keep this order: it is the order of the options in UTC_ARGS notes.
+    cir.add_arguments(parser)
+    parser.add_argument(
+        "--normalize-local-names",
+        action="store_true",
+        help="Drop the entry label and renumber local values before generating "
+        "checks, so that IR from different pipelines can share CHECK lines",
+    )
     parser.add_argument("tests", nargs="+")
     args = common.parse_commandline_args(parser)
     infer_dependent_args(args)
@@ -277,15 +327,30 @@ def get_function_body(
                     )
                     sys.exit(1)
                 extra_args[0] = args.opt
+            elif extra_args[0] == "cir-opt":
+                # Prefer the cir-opt built with this clang, then fall back to PATH.
+                cir_opt = os.path.join(os.path.dirname(args.clang), "cir-opt")
+                if find_executable(cir_opt):
+                    extra_args[0] = cir_opt
             raw_tool_output = common.invoke_tool(extra_args[0], extra_args[1:], f.name)
-    if "-emit-llvm" in clang_args:
+    # A body prefix legitimately sees new names: C and C++ mangle differently.
+    body_prefixes = cir.split_list(args.body_prefixes)
+    label_prefixes = [p for p in prefixes if p not in body_prefixes]
+    if cir.emits_cir(clang_args):
+        builder.process_run_line(
+            cir.CIR_FUNCTION_RE, cir.scrub_cir_body, raw_tool_output, prefixes
+        )
+        builder.processed_prefixes(label_prefixes)
+    elif "-emit-llvm" in clang_args:
+        if args.normalize_local_names:
+            raw_tool_output = common.normalize_local_names(raw_tool_output)
         builder.process_run_line(
             common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output, prefixes
         )
-        builder.processed_prefixes(prefixes)
+        builder.processed_prefixes(label_prefixes)
     else:
         print(
-            "The clang command line should include -emit-llvm as asm tests "
+            "The clang command line should include -emit-llvm or -emit-cir as asm tests "
             "are discouraged in Clang testsuite.",
             file=sys.stderr,
         )
@@ -315,7 +380,12 @@ def update_test(ti: common.TestInfo):
         "%S": os.path.dirname(ti.path),
     }
 
-    for l in ti.run_lines:
+    run_lines = common.expand_lit_defines(ti.run_lines, ti.input_lines)
+    features = [f for f in ti.args.lit_features.split(",") if f]
+    run_lines = common.expand_lit_ifs(run_lines, features)
+    subst = dict(SUBST)
+    subst.update(get_local_substitutions(ti.path))
+    for l in run_lines:
         commands = [cmd.strip() for cmd in l.split("|")]
 
         triple_in_cmd = None
@@ -326,7 +396,14 @@ def update_test(ti: common.TestInfo):
         # Parse executable args.
         exec_args = shlex.split(commands[0])
         # Execute non-clang runline.
-        if exec_args[0] not in SUBST:
+        if exec_args[0] not in subst and exec_args[0].startswith("%clang"):
+            common.error(
+                "unknown substitution {}: it is not defined by a lit.local.cfg "
+                "of this test".format(exec_args[0]),
+                test_file=ti.path,
+            )
+            sys.exit(1)
+        if exec_args[0] not in subst:
             # Do lit-like substitutions.
             for s in subs:
                 exec_args = [i.replace(s, subs[s]) if s in i else i for i in exec_args]
@@ -335,7 +412,7 @@ def update_test(ti: common.TestInfo):
         # This is a clang runline, apply %clang substitution rule, do lit-like substitutions,
         # and append args.clang_args
         clang_args = exec_args
-        clang_args[0:1] = SUBST[clang_args[0]]
+        clang_args[0:1] = subst[clang_args[0]]
         for s in subs:
             clang_args = [i.replace(s, subs[s]) if s in i else i for i in clang_args]
         clang_args += ti.args.clang_args
@@ -354,15 +431,32 @@ def update_test(ti: common.TestInfo):
 
     # Execute clang, generate LLVM IR, and extract functions.
 
+    run_list, body_prefixes = cir.select_run_lines(ti.args, ti.path, run_list)
     # Store only filechecked runlines.
     filecheck_run_list = [i for i in run_list if i[0]]
+    # LLVM IR and CIR need different generalizers, so each gets its own builder.
+    ir_run_list = [i for i in filecheck_run_list if not cir.emits_cir(i[1])]
+    cir_run_list = [i for i in filecheck_run_list if cir.emits_cir(i[1])]
+    cir.validate_output_formats(ir_run_list, cir_run_list, body_prefixes)
+    if cir_run_list and ti.args.include_generated_funcs:
+        common.error("--include-generated-funcs doesn't support -emit-cir")
+        sys.exit(1)
+
     ginfo = common.make_ir_generalizer(ti.args.version, ti.args.check_globals == "none")
     builder = common.FunctionTestBuilder(
-        run_list=filecheck_run_list,
+        run_list=ir_run_list,
         flags=ti.args,
         scrubber_args=[],
         path=ti.path,
         ginfo=ginfo,
+    )
+    cir_ginfo = cir.make_cir_generalizer(ti.args.version)
+    cir_builder = common.FunctionTestBuilder(
+        run_list=cir_run_list,
+        flags=ti.args,
+        scrubber_args=[],
+        path=ti.path,
+        ginfo=cir_ginfo,
     )
 
     global_tbaa_records_for_prefixes = {}
@@ -382,8 +476,9 @@ def update_test(ti: common.TestInfo):
 
         # Invoke external tool and extract function bodies.
         raw_tool_output = common.invoke_tool(ti.args.clang, clang_args, ti.path)
+        is_cir = cir.emits_cir(clang_args)
         get_function_body(
-            builder,
+            cir_builder if is_cir else builder,
             ti.args,
             ti.path,
             clang_args,
@@ -393,8 +488,9 @@ def update_test(ti: common.TestInfo):
         )
 
         # Extract TBAA metadata for later usage in check lines.
-        tbaa_map = common.get_tbaa_records(ti.args.version, raw_tool_output)
-        global_tbaa_records_for_prefixes[tuple(prefixes)] = tbaa_map
+        if not is_cir:
+            tbaa_map = common.get_tbaa_records(ti.args.version, raw_tool_output)
+            global_tbaa_records_for_prefixes[tuple(prefixes)] = tbaa_map
 
         # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
         # mangled names. Forward all clang args for now.
@@ -404,6 +500,17 @@ def update_test(ti: common.TestInfo):
             line2func_list[k].extend(v)
 
     func_dict = builder.finish_and_get_func_dict()
+    cir_func_dict = cir_builder.finish_and_get_func_dict()
+
+    def split_formats(clang_args):
+        if cir.emits_cir(clang_args):
+            return cir_func_dict, cir_ginfo
+        return func_dict, ginfo
+
+    # Normalized IR drops lines from the real output, which rules out -NEXT.
+    is_filtered = builder.is_filtered() or ti.args.normalize_local_names
+    # Global checks only exist for LLVM IR. Keeps non-FileChecked RUN lines.
+    global_run_list = [i for i in run_list if not cir.emits_cir(i[1])]
     global_vars_seen_dict = {}
     prefix_set = set([prefix for p in filecheck_run_list for prefix in p[0]])
     output_lines = []
@@ -442,7 +549,7 @@ def update_test(ti: common.TestInfo):
                 ginfo,
                 global_vars_seen_dict,
                 global_tbaa_records_for_prefixes,
-                is_filtered=builder.is_filtered(),
+                is_filtered=is_filtered,
             )
 
         if ti.args.check_globals != "none":
@@ -450,7 +557,7 @@ def update_test(ti: common.TestInfo):
                 common.add_global_checks(
                     builder.global_var_dict(),
                     "//",
-                    run_list,
+                    global_run_list,
                     output_lines,
                     ginfo,
                     global_vars_seen_dict,
@@ -498,6 +605,9 @@ def update_test(ti: common.TestInfo):
                     if args.functions is None or any(
                         re.search(regex, spell) for regex in args.functions
                     ):
+                        if body_prefixes:
+                            added.add(mangled)
+                            continue
                         last_line = output_lines[-1].strip()
                         while last_line == "//":
                             # Remove the comment line since we will generate a new  comment
@@ -512,7 +622,7 @@ def update_test(ti: common.TestInfo):
                                 common.add_global_checks(
                                     builder.global_var_dict(),
                                     "//",
-                                    run_list,
+                                    global_run_list,
                                     output_lines,
                                     ginfo,
                                     global_vars_seen_dict,
@@ -526,23 +636,42 @@ def update_test(ti: common.TestInfo):
                         if added:
                             output_lines.append("//")
                         added.add(mangled)
-                        generated_prefixes.extend(
-                            common.add_ir_checks(
-                                output_lines,
-                                "//",
-                                filecheck_run_list,
-                                func_dict,
-                                mangled,
-                                False,
-                                args.function_signature,
-                                ginfo,
-                                global_vars_seen_dict,
-                                global_tbaa_records_for_prefixes,
-                                is_filtered=builder.is_filtered(),
+                        for group_runs, group_dict, group_ginfo in (
+                            (ir_run_list, func_dict, ginfo),
+                            (cir_run_list, cir_func_dict, cir_ginfo),
+                        ):
+                            generated_prefixes.extend(
+                                common.add_ir_checks(
+                                    output_lines,
+                                    "//",
+                                    group_runs,
+                                    group_dict,
+                                    mangled,
+                                    False,
+                                    args.function_signature,
+                                    group_ginfo,
+                                    global_vars_seen_dict,
+                                    global_tbaa_records_for_prefixes,
+                                    is_filtered=is_filtered,
+                                )
                             )
-                        )
                         if line.rstrip("\n") == "//":
                             include_line = False
+                if body_prefixes and added:
+                    while output_lines[-1].strip() == "//":
+                        output_lines.pop()
+                    generated_prefixes.extend(
+                        cir.add_split_checks(
+                            output_lines,
+                            filecheck_run_list,
+                            added,
+                            body_prefixes,
+                            split_formats,
+                            global_vars_seen_dict,
+                        )
+                    )
+                    if line.rstrip("\n") == "//":
+                        include_line = False
 
             if include_line:
                 output_lines.append(line.rstrip("\n"))
@@ -552,7 +681,7 @@ def update_test(ti: common.TestInfo):
             common.add_global_checks(
                 builder.global_var_dict(),
                 "//",
-                run_list,
+                global_run_list,
                 output_lines,
                 ginfo,
                 global_vars_seen_dict,
