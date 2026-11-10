@@ -76,3 +76,22 @@
 
 // HOSTINC-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // HOSTINC: "-internal-externc-isystem" "{{[^"]*}}Inputs/basic_linux_tree/usr/include"
+
+// Host-only compilation must still receive ROCm toolkit include paths via the
+// late hook so that host code can use HIP runtime headers.
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpulib --cuda-host-only %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=HOSTONLY %s
+
+// HOSTONLY: "-internal-isystem" "{{[^"]*}}Inputs/rocm/include"
+// HOSTONLY: "-internal-isystem" "{{[^"]*}}Inputs/rocm/include/libhipcxx"
+
+// When using -foffload-via-llvm, vendor ROCm headers must not be added; LLVM's
+// own offload headers are used instead.
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpulib -foffload-via-llvm %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LLVMOFFLOAD %s
+
+// LLVMOFFLOAD-NOT: "-internal-isystem" "{{.*}}Inputs/rocm/include"
+// LLVMOFFLOAD-NOT: "{{.*}}Inputs/rocm/include/libhipcxx"
+// LLVMOFFLOAD-NOT: "-include" "__clang_hip_runtime_wrapper.h"
