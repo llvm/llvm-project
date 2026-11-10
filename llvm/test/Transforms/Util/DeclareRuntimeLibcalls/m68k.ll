@@ -6,6 +6,7 @@
 
 ; M68K: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; M68K-NEXT: @__stack_chk_guard = external global ptr
+; M68K-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; M68K-NEXT: declare void @_Unwind_Resume(ptr)
 ; M68K-NEXT: declare double @__adddf3(double, double)
 ; M68K-NEXT: declare float @__addsf3(float, float)
@@ -216,7 +217,7 @@
 ; M68K-NEXT: declare double @__powidf2(double, i32)
 ; M68K-NEXT: declare float @__powisf2(float, i32)
 ; M68K-NEXT: declare fp128 @__powitf2(fp128, i32)
-; M68K-NEXT: declare void @__stack_chk_fail()
+; M68K-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; M68K-NEXT: declare double @__subdf3(double, double)
 ; M68K-NEXT: declare float @__subsf3(float, float)
 ; M68K-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -414,6 +415,7 @@
 ; M68K-NEXT: declare float @tgammaf(float)
 ; M68K-NEXT: declare double @trunc(double)
 ; M68K-NEXT: declare float @truncf(float)
+; M68K-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; M68K-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; M68K-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; M68K-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

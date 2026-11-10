@@ -501,6 +501,23 @@ def PS_vloadrq_ai: Pseudo<(outs HvxQR:$Qd),
       (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
       Requires<[HasV60,UseHVX]>;
 
+// HLX vector load and store pseudos
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    accessSize = HLXVectorAccess, hasSideEffects = 0, mayLoad = 1, isHLX = 1 in
+def LX_L16b_pseudo : LDInst<
+    (outs HlxLR:$dst),
+    (ins IntRegs:$src),
+    "",
+    [], "", HLX_LD_tc_ld_SLOT1>;
+
+let Predicates = [UseHLX], isPseudo = 1, isCodeGenOnly = 1,
+    accessSize = HLXVectorAccess, hasSideEffects = 0, mayStore = 1, isHLX = 1 in
+def LX_S16b_pseudo : STInst<
+    (outs),
+    (ins IntRegs:$dst, HlxLR:$L),
+    "",
+    [], "", HLX_ST_tc_st_SLOT0>;
+
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
 class VSELInst<dag outs, dag ins, InstHexagon rootInst>

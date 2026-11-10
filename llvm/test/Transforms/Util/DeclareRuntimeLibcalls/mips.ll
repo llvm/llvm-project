@@ -252,7 +252,7 @@
 ; MIPS32-NEXT: declare double @__powidf2(double, i32 signext)
 ; MIPS32-NEXT: declare float @__powisf2(float, i32 signext)
 ; MIPS32-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
-; MIPS32-NEXT: declare void @__stack_chk_fail()
+; MIPS32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; MIPS32-NEXT: declare double @__subdf3(double, double)
 ; MIPS32-NEXT: declare float @__subsf3(float, float)
 ; MIPS32-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -452,6 +452,7 @@
 ; MIPS32-NEXT: declare float @tgammaf(float)
 ; MIPS32-NEXT: declare double @trunc(double)
 ; MIPS32-NEXT: declare float @truncf(float)
+; MIPS32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MIPS32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; MIPS32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; MIPS32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -680,7 +681,7 @@
 ; MIPS64-NEXT: declare float @__powisf2(float, i32 signext)
 ; MIPS64-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; MIPS64-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; MIPS64-NEXT: declare void @__stack_chk_fail()
+; MIPS64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; MIPS64-NEXT: declare double @__subdf3(double, double)
 ; MIPS64-NEXT: declare float @__subsf3(float, float)
 ; MIPS64-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -932,6 +933,7 @@
 ; MIPS64-NEXT: declare double @trunc(double)
 ; MIPS64-NEXT: declare float @truncf(float)
 ; MIPS64-NEXT: declare fp128 @truncl(fp128)
+; MIPS64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MIPS64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; MIPS64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; MIPS64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

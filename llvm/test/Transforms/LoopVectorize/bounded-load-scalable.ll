@@ -240,7 +240,7 @@ define i32 @bounded_load_bound64_user_ic(ptr %A, i64 %N) #0 {
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[INDEX]], 63
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8]] = add <vscale x 4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]

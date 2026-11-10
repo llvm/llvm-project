@@ -1,3 +1,4 @@
+c-reference-root: string/multibyte
 functions:
   c16rtomb:
     c-definition: 7.30.2.5
