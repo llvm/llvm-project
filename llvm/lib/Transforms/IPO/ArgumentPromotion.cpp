@@ -812,6 +812,7 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
 
 /// Return true if every value passed for Arg is private caller stack storage
 /// whose address does not escape except through the corresponding call.
+/// Reject anything that could change a field before or during the call.
 static bool isIsolatedCallerStorage(Argument &Arg,
                                     FunctionAnalysisManager &FAM) {
   Function &F = *Arg.getParent();
@@ -821,15 +822,9 @@ static bool isIsolatedCallerStorage(Argument &Arg,
     if (!isa<AllocaInst>(Root))
       return false;
 
-    // Follow pointer-manipulating instructions from the alloca. Loads and
-    // stores through the pointer are harmless, but any other use may expose the
-    // storage to code that could change a field before or during the call.
     SmallVector<Value *, 8> Worklist(1, Root);
-    SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
       Value *V = Worklist.pop_back_val();
-      if (!Visited.insert(V).second)
-        continue;
       for (Use &Use : V->uses()) {
         User *Usr = Use.getUser();
         if (isa<GetElementPtrInst>(Usr) || isa<BitCastInst>(Usr) ||
@@ -843,9 +838,6 @@ static bool isIsolatedCallerStorage(Argument &Arg,
             Use.getOperandNo() == StoreInst::getPointerOperandIndex())
           continue;
         if (auto *StorageCall = dyn_cast<CallBase>(Usr)) {
-          // The same private aggregate may feed more than one call to F. A
-          // candidate is transformed only after findArgParts establishes that
-          // F merely reads through this argument.
           if (StorageCall->getCalledFunction() == &F &&
               Use.getOperandNo() == Arg.getArgNo())
             continue;
@@ -856,49 +848,33 @@ static bool isIsolatedCallerStorage(Argument &Arg,
         return false;
       }
     }
-
-    // Also reject calls where another pointer argument may refer to the same
-    // object. The callee could otherwise modify the supposedly constant
-    // aggregate through that argument.
-    AAResults &AAR = FAM.getResult<AAManager>(*Call->getCaller());
-    for (unsigned I = 0; I != Call->arg_size(); ++I) {
-      if (I == Arg.getArgNo())
-        continue;
-      Value *Other = Call->getArgOperand(I);
-      if (!Other->getType()->isPointerTy() || isa<PoisonValue>(Other))
-        continue;
-      const Value *OtherRoot = getUnderlyingObject(Other);
-      if (OtherRoot == Root || AAR.alias(Root, Other) != AliasResult::NoAlias)
-        return false;
-    }
   }
   return true;
 }
 
 // Tracks constant and alloca values while walking MemorySSA.
 struct UnanimousValueState {
-  Constant *UnanimousValue = nullptr;
+  Constant *Value = nullptr;
   // True while all relevant stores yield the same constant.
-  bool IsUnanimousConstant = true;
+  bool IsConstant = true;
   // True while all relevant stores contain alloca pointers.
-  bool IsUnanimousAlloca = true;
+  bool IsAlloca = true;
   // True if we encounter a relevant store.
   bool SawStore = false;
 };
 
-/// This function handles these cases:
-/// 1. Access is a MemoryPhi
-///   Recurse into each incoming use of the MemoryPhi.
-/// 2. Access is a MemoryDef which stores a constant
-///   Set UnanimousValue if it is unset.
-///   If UnanimousValue is already set and does not match the stored
-///   constant, mark IsUnanimousConstant as false.
-/// 3. Access is a MemoryDef containing an alloca pointer store
-///   Set IsUnanimousAlloca to true.
-static bool findNextMemoryDefAndGetUnanimousValue(
+/// This function handles three cases:
+///
+/// - If Access is a MemoryPhi, recurse into each incoming memory access.
+/// - If Access is a MemoryDef that stores a constant, update Value and mark
+///   IsConstant as false if the constants disagree.
+/// - If Access is a MemoryDef that stores an alloca pointer, update
+///   IsAlloca.
+static bool findUnanimousValueFromMemoryAccess(
     MemoryAccess *Access, const MemoryLocation &Loc, Type *LoadTy,
     const DataLayout &DL, MemorySSA &MSSA, BatchAAResults &BAA,
-    SmallPtrSetImpl<MemoryAccess *> &Visited, UnanimousValueState &State) {
+    SmallPtrSetImpl<MemoryAccess *> &Visited,
+    UnanimousValueState &UnanimousState) {
 
   // Limit compile time for large memory graphs.
   constexpr unsigned MaxMemoryAccesses = 1000;
@@ -909,12 +885,12 @@ static bool findNextMemoryDefAndGetUnanimousValue(
 
   // Recurse through the incoming accesses of a MemoryPhi.
   if (auto *Phi = dyn_cast<MemoryPhi>(Access)) {
-    for (Use &IncomingUse : Phi->incoming_values()) {
-      auto *Incoming = cast<MemoryAccess>(IncomingUse.get());
+    for (Use &U : Phi->incoming_values()) {
+      auto *Incoming = cast<MemoryAccess>(U.get());
       MemoryAccess *Clobber =
           MSSA.getWalker()->getClobberingMemoryAccess(Incoming, Loc, BAA);
-      if (!findNextMemoryDefAndGetUnanimousValue(Clobber, Loc, LoadTy, DL, MSSA,
-                                                 BAA, Visited, State))
+      if (!findUnanimousValueFromMemoryAccess(Clobber, Loc, LoadTy, DL, MSSA,
+                                              BAA, Visited, UnanimousState))
         return false;
     }
     return true;
@@ -923,89 +899,63 @@ static bool findNextMemoryDefAndGetUnanimousValue(
   auto *Def = dyn_cast<MemoryDef>(Access);
   if (!Def)
     return false;
-
   auto *Store = dyn_cast<StoreInst>(Def->getMemoryInst());
   if (!Store)
     return false;
 
   MemoryLocation StoreLoc = MemoryLocation::get(Store);
   AliasResult AR = BAA.alias(StoreLoc, Loc);
-  // If this store writes to some other object or field, keep looking.
+  // Look past unrelated stores.
   if (AR == AliasResult::NoAlias) {
     MemoryAccess *Clobber = MSSA.getWalker()->getClobberingMemoryAccess(
         Def->getDefiningAccess(), Loc, BAA);
-    return findNextMemoryDefAndGetUnanimousValue(Clobber, Loc, LoadTy, DL, MSSA,
-                                                 BAA, Visited, State);
+    return findUnanimousValueFromMemoryAccess(Clobber, Loc, LoadTy, DL, MSSA,
+                                              BAA, Visited, UnanimousState);
   }
 
-  // This is a store to Loc. Determine whether it stores the unanimous
-  // constant or an alloca pointer.
-  State.SawStore = true;
+  // This is a store to Loc. Get the unanimous constant or alloca pointer.
+  UnanimousState.SawStore = true;
   std::optional<int64_t> Offset =
       Loc.Ptr->getPointerOffsetFrom(StoreLoc.Ptr, DL);
-  auto GetStoredConstant = [&]() -> Constant * {
-    if (!Offset || *Offset < 0 || !StoreLoc.Size.hasValue() ||
-        !Loc.Size.hasValue())
-      return nullptr;
 
-    uint64_t RelativeOffset = *Offset;
-    uint64_t StoreSize = StoreLoc.Size.getValue();
-    uint64_t LoadSize = Loc.Size.getValue();
-    if (RelativeOffset > StoreSize || LoadSize > StoreSize - RelativeOffset)
-      return nullptr;
-
-    auto *StoredValue = dyn_cast<Constant>(Store->getValueOperand());
-    if (!StoredValue)
-      return nullptr;
-
-    return ConstantFoldLoadFromConst(
-        StoredValue, LoadTy,
-        APInt(DL.getIndexTypeSizeInBits(Loc.Ptr->getType()), RelativeOffset),
-        DL);
-  };
-
-  // Get the store's constant with bounds checking.
-  if (State.IsUnanimousConstant) {
-    Constant *LoadedValue = GetStoredConstant();
+  if (UnanimousState.IsConstant) {
+    Constant *LoadedValue = nullptr;
+    if (Offset && *Offset >= 0 && StoreLoc.Size.hasValue() &&
+        Loc.Size.hasValue()) {
+      uint64_t RelativeOffset = *Offset;
+      uint64_t StoreSize = StoreLoc.Size.getValue();
+      uint64_t LoadSize = Loc.Size.getValue();
+      // Check the constant's bounds are within the store.
+      if (RelativeOffset <= StoreSize && LoadSize <= StoreSize - RelativeOffset)
+        if (auto *StoredValue = dyn_cast<Constant>(Store->getValueOperand()))
+          LoadedValue = ConstantFoldLoadFromConst(
+              StoredValue, LoadTy,
+              APInt(DL.getIndexTypeSizeInBits(Loc.Ptr->getType()),
+                    RelativeOffset),
+              DL);
+    }
     if (!LoadedValue ||
-        (State.UnanimousValue && State.UnanimousValue != LoadedValue))
-      State.IsUnanimousConstant = false;
+        (UnanimousState.Value && UnanimousState.Value != LoadedValue))
+      UnanimousState.IsConstant = false;
     else
-      State.UnanimousValue = LoadedValue;
+      UnanimousState.Value = LoadedValue;
   }
 
-  if (State.IsUnanimousAlloca) {
-    // Require an exact field-sized alloca pointer store. Accepting partial or
-    // wider stores would require extracting a pointer from the representation.
-    // Allocas are promoted to parameters later, so they do not need to be
-    // unanimous.
-    State.IsUnanimousAlloca =
-        Offset && *Offset == 0 && StoreLoc.Size.hasValue() &&
-        Loc.Size.hasValue() && StoreLoc.Size == Loc.Size &&
+  if (UnanimousState.IsAlloca) {
+    bool IsExactFieldStore = Offset && *Offset == 0 &&
+                             StoreLoc.Size.hasValue() && Loc.Size.hasValue() &&
+                             StoreLoc.Size == Loc.Size;
+    bool StoresAllocaPointer =
         Store->getValueOperand()->getType() == LoadTy &&
         isa<AllocaInst>(getUnderlyingObject(Store->getValueOperand()));
-  }
-  return State.IsUnanimousConstant || State.IsUnanimousAlloca;
-}
 
-// Check whether all MemorySSA paths for Loc resolve to the same constant or
-// to alloca pointer stores.
-static std::optional<UnanimousValueState>
-findUnanimousConstantsFromMemoryAccess(MemoryAccess *Access,
-                                       const MemoryLocation &Loc, Type *LoadTy,
-                                       const DataLayout &DL, MemorySSA &MSSA,
-                                       BatchAAResults &BAA) {
-  SmallPtrSet<MemoryAccess *, 32> Visited;
-  UnanimousValueState State{nullptr, true, LoadTy->isPointerTy(), false};
-  if (!findNextMemoryDefAndGetUnanimousValue(Access, Loc, LoadTy, DL, MSSA, BAA,
-                                             Visited, State) ||
-      !State.SawStore)
-    return std::nullopt;
-  return State;
+    UnanimousState.IsAlloca = IsExactFieldStore && StoresAllocaPointer;
+  }
+  return UnanimousState.IsConstant || UnanimousState.IsAlloca;
 }
 
 /// To prove that a caller C is passing in a constant struct,
-/// first use findUnanimousConstantsFromMemoryAccess to check that every
+/// first use findUnanimousValueFromMemoryAccess to check that every
 /// basic block internal to C converges to the same constant for each arg part
 /// when F is called.
 ///
@@ -1014,15 +964,17 @@ findUnanimousConstantsFromMemoryAccess(MemoryAccess *Access,
 ///
 ///  Allocas are permitted as they can be promoted through ordinary
 /// argument promotion.
-static bool findUnanimousConstantsFromArg(
-    Argument &Arg, SmallVectorImpl<OffsetAndArgPart> &Parts,
-    FunctionAnalysisManager &FAM, unsigned &NumAllocaParts) {
+static bool findUnanimousValuesFromArg(Argument &Arg,
+                                       SmallVectorImpl<OffsetAndArgPart> &Parts,
+                                       FunctionAnalysisManager &FAM,
+                                       unsigned &NumAllocaParts) {
   const DataLayout &DL = Arg.getParent()->getDataLayout();
   for (auto &[Offset, Part] : Parts) {
     TypeSize Size = DL.getTypeStoreSize(Part.Ty);
     Constant *UnanimousValue = nullptr;
     bool IsUnanimousConstant = true;
     bool IsUnanimousAlloca = Part.Ty->isPointerTy();
+
     for (User *U : Arg.getParent()->users()) {
       auto *Call = cast<CallBase>(U);
       Function &Caller = *Call->getFunction();
@@ -1031,45 +983,58 @@ static bool findUnanimousConstantsFromArg(
       MemorySSA &MSSA = FAM.getResult<MemorySSAAnalysis>(Caller).getMSSA();
 
       // Walk backwards through the memory state immediately before the call
+      // and search for stores and allocas to the ArgPart's Loc.
       IRBuilder<> Builder(Call);
-      Value *FieldPtr = Builder.CreatePtrAdd(
-          Call->getArgOperand(Arg.getArgNo()), Builder.getInt64(Offset));
-      auto *TemporaryGEP = dyn_cast<GetElementPtrInst>(FieldPtr);
-      MemoryLocation Loc(FieldPtr, LocationSize::precise(Size), AAMDNodes{});
+      GetElementPtrInst *TemporaryGEP =
+          cast<GetElementPtrInst>(Builder.CreatePtrAdd(
+              Call->getArgOperand(Arg.getArgNo()), Builder.getInt64(Offset)));
+      MemoryLocation Loc(TemporaryGEP, LocationSize::precise(Size),
+                         AAMDNodes{});
       MemoryAccess *CallAccess = MSSA.getMemoryAccess(Call);
       if (!CallAccess) {
-        if (TemporaryGEP)
-          TemporaryGEP->eraseFromParent();
+        TemporaryGEP->eraseFromParent();
         return false;
       }
+
       MemoryAccess *Start =
           cast<MemoryUseOrDef>(CallAccess)->getDefiningAccess();
       MemoryAccess *Clobber =
           MSSA.getWalker()->getClobberingMemoryAccess(Start, Loc, BAA);
-      std::optional<UnanimousValueState> Value =
-          findUnanimousConstantsFromMemoryAccess(Clobber, Loc, Part.Ty, DL,
-                                                 MSSA, BAA);
-      Constant *CallConstant =
-          Value && Value->IsUnanimousConstant ? Value->UnanimousValue : nullptr;
-      if (!CallConstant || (UnanimousValue && UnanimousValue != CallConstant))
-        IsUnanimousConstant = false;
-      else
-        UnanimousValue = CallConstant;
-      if (!Value || !Value->IsUnanimousAlloca)
-        IsUnanimousAlloca = false;
-      if (TemporaryGEP)
+      SmallPtrSet<MemoryAccess *, 32> Visited;
+      UnanimousValueState UnanimousState{nullptr, true, Part.Ty->isPointerTy(),
+                                         false};
+      bool Found = findUnanimousValueFromMemoryAccess(
+          Clobber, Loc, Part.Ty, DL, MSSA, BAA, Visited, UnanimousState);
+
+      if (!Found || !UnanimousState.SawStore) {
         TemporaryGEP->eraseFromParent();
+        return false;
+      }
+
+      if (UnanimousState.IsConstant) {
+        if (UnanimousValue && UnanimousValue != UnanimousState.Value)
+          IsUnanimousConstant = false;
+        if (!UnanimousValue)
+          UnanimousValue = UnanimousState.Value;
+      } else {
+        IsUnanimousConstant = false;
+      }
+
+      if (!UnanimousState.IsAlloca)
+        IsUnanimousAlloca = false;
+
+      TemporaryGEP->eraseFromParent();
     }
+
     if (IsUnanimousConstant)
       Part.ConstantValue = UnanimousValue;
     else if (IsUnanimousAlloca)
-      // Ordinary argument promotion can handle these remaining fields once
-      // the constant loads no longer count toward its argument limit.
       ++NumAllocaParts;
     else {
-      LLVM_DEBUG(dbgs() << "ArgPromotion of " << Arg << " failed: part at "
-                        << Offset << " in " << Arg.getParent()->getName()
-                        << " is neither a constant or stored alloca\n");
+      LLVM_DEBUG(
+          dbgs() << "Constant Propagation of " << Arg << " failed: part at "
+                 << Offset << " in " << Arg.getParent()->getName()
+                 << " is neither a unanimous constant or stored alloca\n");
       return false;
     }
   }
@@ -1082,6 +1047,7 @@ static bool propagateConstantParts(Argument &Arg,
 
   SmallVector<std::pair<LoadInst *, Constant *>, 16> LoadsToReplace;
   SmallVector<WeakTrackingVH, 16> DeadLoads;
+
   for (BasicBlock &BB : *Arg.getParent()) {
     for (Instruction &I : BB) {
       auto *Load = dyn_cast<LoadInst>(&I);
@@ -1199,10 +1165,10 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   auto &AAR = FAM.getResult<AAManager>(*F);
   const auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
 
-  // Large aggregates are deliberately not scalarized into many ABI arguments.
-  // Propagate their constant fields first and leave alloca fields for ordinary
+  // Aggregates with more than MaxElements parts aren't scalarized.
+  // Propagate their constant parts first and leave alloca fields for ordinary
   // promotion. To avoid blowing up compile time, bail if we have greater than
-  // 10 callers or 20 promotable aggregate fields.
+  // 10 callers or greater than 20 promotable aggregate fields.
   SmallVector<std::pair<Argument *, SmallVector<OffsetAndArgPart, 4>>, 2>
       ConstantAggregates;
   constexpr unsigned MaxConstantPropagationCalls = 10;
@@ -1230,18 +1196,19 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
         continue;
 
       unsigned NumAllocaParts = 0;
-      if (!findUnanimousConstantsFromArg(*PtrArg, Parts, FAM, NumAllocaParts))
+      if (!findUnanimousValuesFromArg(*PtrArg, Parts, FAM, NumAllocaParts))
         continue;
 
       // Constants do not consume ABI parameters. Apply the normal limit only
       // to the alloca fields that will actually be passed, and avoid this
-      // special path when it would propagate no constants.
+      // when it would propagate no constants.
       if (NumAllocaParts > MaxElements || NumAllocaParts == Parts.size())
         continue;
 
       ConstantAggregates.emplace_back(PtrArg, std::move(Parts));
     }
   }
+
   if (!ConstantAggregates.empty()) {
     for (auto &[Arg, Parts] : ConstantAggregates)
       CopiedConstants |= propagateConstantParts(*Arg, Parts);

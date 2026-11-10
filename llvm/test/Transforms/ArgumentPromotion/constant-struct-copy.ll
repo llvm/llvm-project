@@ -4,11 +4,15 @@
 ; RUN: opt -passes='cgscc(argpromotion,function(instcombine))' -disable-output %s
 
 @constant_pointer_global = internal global i8 0
+@escaped_descriptor = internal global ptr null
 
 @returned_function_pointer_alias = internal alias void (), ptr @returned_function_pointer_target
 
 declare i32 @read_other(ptr readonly)
+declare void @modify_other(ptr) memory(argmem: write)
 declare void @declared_function_pointer_target()
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 define internal i32 @constant_fields(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal i32 @constant_fields() {
@@ -196,6 +200,118 @@ entry:
   ret i32 %first
 }
 
+define internal i32 @too_many_alloca_parts(ptr readonly %descriptor) {
+; COPY-LABEL: define internal i32 @too_many_alloca_parts(
+; COPY-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[FIELD0:%.*]] = load ptr, ptr [[DESCRIPTOR]], align 8
+; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COPY-NEXT:    [[FIELD1:%.*]] = load ptr, ptr [[FIELD1_PTR]], align 8
+; COPY-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
+; COPY-NEXT:    [[FIELD2:%.*]] = load ptr, ptr [[FIELD2_PTR]], align 8
+; COPY-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 24
+; COPY-NEXT:    [[FIELD3:%.*]] = load i32, ptr [[FIELD3_PTR]], align 4
+; COPY-NEXT:    [[FIELD0_NULL:%.*]] = icmp eq ptr [[FIELD0]], null
+; COPY-NEXT:    [[FIELD1_NULL:%.*]] = icmp eq ptr [[FIELD1]], null
+; COPY-NEXT:    [[FIELD2_NULL:%.*]] = icmp eq ptr [[FIELD2]], null
+; COPY-NEXT:    [[FLAG0:%.*]] = zext i1 [[FIELD0_NULL]] to i32
+; COPY-NEXT:    [[FLAG1:%.*]] = zext i1 [[FIELD1_NULL]] to i32
+; COPY-NEXT:    [[FLAG2:%.*]] = zext i1 [[FIELD2_NULL]] to i32
+; COPY-NEXT:    [[SUM01:%.*]] = add i32 [[FLAG0]], [[FLAG1]]
+; COPY-NEXT:    [[SUM012:%.*]] = add i32 [[SUM01]], [[FLAG2]]
+; COPY-NEXT:    [[RESULT:%.*]] = add i32 [[SUM012]], [[FIELD3]]
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define internal i32 @too_many_alloca_parts(
+; FOLD-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[FIELD0:%.*]] = load ptr, ptr [[DESCRIPTOR]], align 8
+; FOLD-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; FOLD-NEXT:    [[FIELD1:%.*]] = load ptr, ptr [[FIELD1_PTR]], align 8
+; FOLD-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
+; FOLD-NEXT:    [[FIELD2:%.*]] = load ptr, ptr [[FIELD2_PTR]], align 8
+; FOLD-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 24
+; FOLD-NEXT:    [[FIELD3:%.*]] = load i32, ptr [[FIELD3_PTR]], align 4
+; FOLD-NEXT:    [[FIELD0_NULL:%.*]] = icmp eq ptr [[FIELD0]], null
+; FOLD-NEXT:    [[FIELD1_NULL:%.*]] = icmp eq ptr [[FIELD1]], null
+; FOLD-NEXT:    [[FIELD2_NULL:%.*]] = icmp eq ptr [[FIELD2]], null
+; FOLD-NEXT:    [[FLAG0:%.*]] = zext i1 [[FIELD0_NULL]] to i32
+; FOLD-NEXT:    [[FLAG1:%.*]] = zext i1 [[FIELD1_NULL]] to i32
+; FOLD-NEXT:    [[FLAG2:%.*]] = zext i1 [[FIELD2_NULL]] to i32
+; FOLD-NEXT:    [[SUM01:%.*]] = add nuw nsw i32 [[FLAG0]], [[FLAG1]]
+; FOLD-NEXT:    [[SUM012:%.*]] = add nuw nsw i32 [[SUM01]], [[FLAG2]]
+; FOLD-NEXT:    [[RESULT:%.*]] = add i32 [[SUM012]], [[FIELD3]]
+; FOLD-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %field0 = load ptr, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field1 = load ptr, ptr %field1.ptr, align 8
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 16
+  %field2 = load ptr, ptr %field2.ptr, align 8
+  %field3.ptr = getelementptr i8, ptr %descriptor, i64 24
+  %field3 = load i32, ptr %field3.ptr, align 4
+  %field0.null = icmp eq ptr %field0, null
+  %field1.null = icmp eq ptr %field1, null
+  %field2.null = icmp eq ptr %field2, null
+  %flag0 = zext i1 %field0.null to i32
+  %flag1 = zext i1 %field1.null to i32
+  %flag2 = zext i1 %field2.null to i32
+  %sum01 = add i32 %flag0, %flag1
+  %sum012 = add i32 %sum01, %flag2
+  %result = add i32 %sum012, %field3
+  ret i32 %result
+}
+
+define i32 @too_many_alloca_parts_caller() {
+; COPY-LABEL: define i32 @too_many_alloca_parts_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[FIRST:%.*]] = alloca i8, align 1
+; COPY-NEXT:    [[SECOND:%.*]] = alloca i8, align 1
+; COPY-NEXT:    [[THIRD:%.*]] = alloca i8, align 1
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [28 x i8], align 8
+; COPY-NEXT:    store ptr [[FIRST]], ptr [[DESCRIPTOR]], align 8
+; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COPY-NEXT:    store ptr [[SECOND]], ptr [[FIELD1_PTR]], align 8
+; COPY-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
+; COPY-NEXT:    store ptr [[THIRD]], ptr [[FIELD2_PTR]], align 8
+; COPY-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 24
+; COPY-NEXT:    store i32 10, ptr [[FIELD3_PTR]], align 4
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @too_many_alloca_parts(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @too_many_alloca_parts_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[FIRST:%.*]] = alloca i8, align 1
+; FOLD-NEXT:    [[SECOND:%.*]] = alloca i8, align 1
+; FOLD-NEXT:    [[THIRD:%.*]] = alloca i8, align 1
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [28 x i8], align 8
+; FOLD-NEXT:    store ptr [[FIRST]], ptr [[DESCRIPTOR]], align 8
+; FOLD-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 8
+; FOLD-NEXT:    store ptr [[SECOND]], ptr [[FIELD1_PTR]], align 8
+; FOLD-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 16
+; FOLD-NEXT:    store ptr [[THIRD]], ptr [[FIELD2_PTR]], align 8
+; FOLD-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 24
+; FOLD-NEXT:    store i32 10, ptr [[FIELD3_PTR]], align 4
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @too_many_alloca_parts(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %first = alloca i8, align 1
+  %second = alloca i8, align 1
+  %third = alloca i8, align 1
+  %descriptor = alloca [28 x i8], align 8
+  store ptr %first, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  store ptr %second, ptr %field1.ptr, align 8
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 16
+  store ptr %third, ptr %field2.ptr, align 8
+  %field3.ptr = getelementptr i8, ptr %descriptor, i64 24
+  store i32 10, ptr %field3.ptr, align 4
+  %result = call i32 @too_many_alloca_parts(ptr %descriptor)
+  ret i32 %result
+}
+
 define internal i32 @nonconstant_other_field(ptr readonly %descriptor) {
 ; COMMON-LABEL: define internal i32 @nonconstant_other_field(
 ; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
@@ -313,8 +429,6 @@ entry:
   ret i32 %result
 }
 
-; A store must cover the complete load. Do not propagate an i64 load from an
-; i32 defining store.
 define internal i64 @wider_load_than_store(ptr readonly %descriptor) {
 ; COMMON-LABEL: define internal i64 @wider_load_than_store(
 ; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
@@ -324,15 +438,11 @@ define internal i64 @wider_load_than_store(ptr readonly %descriptor) {
 ; COMMON-NEXT:    [[FIELD1:%.*]] = load i32, ptr [[FIELD1_PTR]], align 4
 ; COMMON-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
 ; COMMON-NEXT:    [[FIELD2:%.*]] = load i32, ptr [[FIELD2_PTR]], align 4
-; COMMON-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
-; COMMON-NEXT:    [[FIELD3:%.*]] = load i32, ptr [[FIELD3_PTR]], align 4
 ; COMMON-NEXT:    [[FIELD1_EXT:%.*]] = zext i32 [[FIELD1]] to i64
 ; COMMON-NEXT:    [[FIELD2_EXT:%.*]] = zext i32 [[FIELD2]] to i64
-; COMMON-NEXT:    [[FIELD3_EXT:%.*]] = zext i32 [[FIELD3]] to i64
 ; COMMON-NEXT:    [[SUM1:%.*]] = add i64 [[FIELD0]], [[FIELD1_EXT]]
 ; COMMON-NEXT:    [[SUM2:%.*]] = add i64 [[SUM1]], [[FIELD2_EXT]]
-; COMMON-NEXT:    [[SUM3:%.*]] = add i64 [[SUM2]], [[FIELD3_EXT]]
-; COMMON-NEXT:    ret i64 [[SUM3]]
+; COMMON-NEXT:    ret i64 [[SUM2]]
 ;
 entry:
   %field0 = load i64, ptr %descriptor, align 8
@@ -340,48 +450,99 @@ entry:
   %field1 = load i32, ptr %field1.ptr, align 4
   %field2.ptr = getelementptr i8, ptr %descriptor, i64 12
   %field2 = load i32, ptr %field2.ptr, align 4
-  %field3.ptr = getelementptr i8, ptr %descriptor, i64 16
-  %field3 = load i32, ptr %field3.ptr, align 4
   %field1.ext = zext i32 %field1 to i64
   %field2.ext = zext i32 %field2 to i64
-  %field3.ext = zext i32 %field3 to i64
   %sum1 = add i64 %field0, %field1.ext
   %sum2 = add i64 %sum1, %field2.ext
-  %sum3 = add i64 %sum2, %field3.ext
-  ret i64 %sum3
+  ret i64 %sum2
 }
 
 define i64 @wider_load_than_store_caller() {
 ; COPY-LABEL: define i64 @wider_load_than_store_caller() {
 ; COPY-NEXT:  [[ENTRY:.*:]]
-; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [20 x i8], align 8
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
 ; COPY-NEXT:    store i32 10, ptr [[DESCRIPTOR]], align 8
 ; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
 ; COPY-NEXT:    store <2 x i32> <i32 20, i32 30>, ptr [[FIELD1_PTR]], align 4
-; COPY-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
-; COPY-NEXT:    store i32 40, ptr [[FIELD3_PTR]], align 4
 ; COPY-NEXT:    [[RESULT:%.*]] = call i64 @wider_load_than_store(ptr [[DESCRIPTOR]])
 ; COPY-NEXT:    ret i64 [[RESULT]]
 ;
 ; FOLD-LABEL: define i64 @wider_load_than_store_caller() {
 ; FOLD-NEXT:  [[ENTRY:.*:]]
-; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [20 x i8], align 8
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
 ; FOLD-NEXT:    store i32 10, ptr [[DESCRIPTOR]], align 8
 ; FOLD-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 8
 ; FOLD-NEXT:    store <2 x i32> <i32 20, i32 30>, ptr [[FIELD1_PTR]], align 4
-; FOLD-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 16
-; FOLD-NEXT:    store i32 40, ptr [[FIELD3_PTR]], align 4
 ; FOLD-NEXT:    [[RESULT:%.*]] = call i64 @wider_load_than_store(ptr nonnull [[DESCRIPTOR]])
 ; FOLD-NEXT:    ret i64 [[RESULT]]
 ;
 entry:
-  %descriptor = alloca [20 x i8], align 8
+  %descriptor = alloca [16 x i8], align 8
   store i32 10, ptr %descriptor, align 8
   %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
   store <2 x i32> <i32 20, i32 30>, ptr %field1.ptr, align 4
-  %field3.ptr = getelementptr i8, ptr %descriptor, i64 16
-  store i32 40, ptr %field3.ptr, align 4
   %result = call i64 @wider_load_than_store(ptr %descriptor)
+  ret i64 %result
+}
+
+define internal i64 @negative_store_to_load_offset(ptr readonly %descriptor) {
+; COMMON-LABEL: define internal i64 @negative_store_to_load_offset(
+; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[FIELD0:%.*]] = load i64, ptr [[DESCRIPTOR]], align 4
+; COMMON-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
+; COMMON-NEXT:    [[FIELD1:%.*]] = load i64, ptr [[FIELD1_PTR]], align 8
+; COMMON-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 24
+; COMMON-NEXT:    [[FIELD2:%.*]] = load i64, ptr [[FIELD2_PTR]], align 8
+; COMMON-NEXT:    [[SUM01:%.*]] = add i64 [[FIELD0]], [[FIELD1]]
+; COMMON-NEXT:    [[SUM:%.*]] = add i64 [[SUM01]], [[FIELD2]]
+; COMMON-NEXT:    ret i64 [[SUM]]
+;
+entry:
+  %field0 = load i64, ptr %descriptor, align 4
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 16
+  %field1 = load i64, ptr %field1.ptr, align 8
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 24
+  %field2 = load i64, ptr %field2.ptr, align 8
+  %sum01 = add i64 %field0, %field1
+  %sum = add i64 %sum01, %field2
+  ret i64 %sum
+}
+
+define i64 @negative_store_to_load_offset_caller() {
+; COPY-LABEL: define i64 @negative_store_to_load_offset_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [32 x i8], align 8
+; COPY-NEXT:    [[OVERLAP:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 4
+; COPY-NEXT:    store i64 1229782938247303441, ptr [[OVERLAP]], align 4
+; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
+; COPY-NEXT:    store i64 20, ptr [[FIELD1_PTR]], align 8
+; COPY-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 24
+; COPY-NEXT:    store i64 30, ptr [[FIELD2_PTR]], align 8
+; COPY-NEXT:    [[RESULT:%.*]] = call i64 @negative_store_to_load_offset(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret i64 [[RESULT]]
+;
+; FOLD-LABEL: define i64 @negative_store_to_load_offset_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [32 x i8], align 8
+; FOLD-NEXT:    [[OVERLAP:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 4
+; FOLD-NEXT:    store i64 1229782938247303441, ptr [[OVERLAP]], align 4
+; FOLD-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 16
+; FOLD-NEXT:    store i64 20, ptr [[FIELD1_PTR]], align 8
+; FOLD-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 24
+; FOLD-NEXT:    store i64 30, ptr [[FIELD2_PTR]], align 8
+; FOLD-NEXT:    [[RESULT:%.*]] = call i64 @negative_store_to_load_offset(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret i64 [[RESULT]]
+;
+entry:
+  %descriptor = alloca [32 x i8], align 8
+  %overlap = getelementptr i8, ptr %descriptor, i64 4
+  store i64 1229782938247303441, ptr %overlap, align 4
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 16
+  store i64 20, ptr %field1.ptr, align 8
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 24
+  store i64 30, ptr %field2.ptr, align 8
+  %result = call i64 @negative_store_to_load_offset(ptr %descriptor)
   ret i64 %result
 }
 
@@ -534,8 +695,6 @@ call:
   ret i32 %result
 }
 
-; Do not propagate when one incoming memory state leaves the aggregate
-; uninitialized.
 define internal i32 @memory_phi_live_on_entry(ptr readonly %descriptor) {
 ; COMMON-LABEL: define internal i32 @memory_phi_live_on_entry(
 ; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
@@ -604,8 +763,164 @@ call:
   ret i32 %result
 }
 
-; Follow a cyclic MemoryPhi and prove that its initial and backedge stores
-; provide the same constants.
+define internal i32 @memory_phi_store_then_live_on_entry(
+; COMMON-LABEL: define internal i32 @memory_phi_store_then_live_on_entry(
+; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[FIELD0:%.*]] = load i32, ptr [[DESCRIPTOR]], align 4
+; COMMON-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 4
+; COMMON-NEXT:    [[FIELD1:%.*]] = load i32, ptr [[FIELD1_PTR]], align 4
+; COMMON-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COMMON-NEXT:    [[FIELD2:%.*]] = load i32, ptr [[FIELD2_PTR]], align 4
+; COMMON-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COMMON-NEXT:    [[FIELD3:%.*]] = load i32, ptr [[FIELD3_PTR]], align 4
+; COMMON-NEXT:    [[SUM01:%.*]] = add i32 [[FIELD0]], [[FIELD1]]
+; COMMON-NEXT:    [[SUM23:%.*]] = add i32 [[FIELD2]], [[FIELD3]]
+; COMMON-NEXT:    [[SUM:%.*]] = add i32 [[SUM01]], [[SUM23]]
+; COMMON-NEXT:    ret i32 [[SUM]]
+;
+  ptr readonly %descriptor) {
+entry:
+  %field0 = load i32, ptr %descriptor, align 4
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 4
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %field3.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field3 = load i32, ptr %field3.ptr, align 4
+  %sum01 = add i32 %field0, %field1
+  %sum23 = add i32 %field2, %field3
+  %sum = add i32 %sum01, %sum23
+  ret i32 %sum
+}
+
+define i32 @memory_phi_store_then_live_on_entry_caller(i1 %condition) {
+; COPY-LABEL: define i32 @memory_phi_store_then_live_on_entry_caller(
+; COPY-SAME: i1 [[CONDITION:%.*]]) {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; COPY-NEXT:    br i1 [[CONDITION]], label %[[INITIALIZE:.*]], label %[[UNINITIALIZED:.*]]
+; COPY:       [[INITIALIZE]]:
+; COPY-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; COPY-NEXT:    br label %[[CALL:.*]]
+; COPY:       [[UNINITIALIZED]]:
+; COPY-NEXT:    br label %[[CALL]]
+; COPY:       [[CALL]]:
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @memory_phi_store_then_live_on_entry(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @memory_phi_store_then_live_on_entry_caller(
+; FOLD-SAME: i1 [[CONDITION:%.*]]) {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; FOLD-NEXT:    br i1 [[CONDITION]], label %[[INITIALIZE:.*]], label %[[UNINITIALIZED:.*]]
+; FOLD:       [[INITIALIZE]]:
+; FOLD-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; FOLD-NEXT:    br label %[[CALL:.*]]
+; FOLD:       [[UNINITIALIZED]]:
+; FOLD-NEXT:    br label %[[CALL]]
+; FOLD:       [[CALL]]:
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @memory_phi_store_then_live_on_entry(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %descriptor = alloca [4 x i32], align 16
+  br i1 %condition, label %initialize, label %uninitialized
+
+initialize:
+  store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %descriptor, align 16
+  br label %call
+
+uninitialized:
+  br label %call
+
+call:
+  %result = call i32 @memory_phi_store_then_live_on_entry(ptr %descriptor)
+  ret i32 %result
+}
+
+define internal i32 @memory_phi_store_then_nonstore_def(
+; COMMON-LABEL: define internal i32 @memory_phi_store_then_nonstore_def(
+; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[FIELD0:%.*]] = load i32, ptr [[DESCRIPTOR]], align 4
+; COMMON-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 4
+; COMMON-NEXT:    [[FIELD1:%.*]] = load i32, ptr [[FIELD1_PTR]], align 4
+; COMMON-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COMMON-NEXT:    [[FIELD2:%.*]] = load i32, ptr [[FIELD2_PTR]], align 4
+; COMMON-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COMMON-NEXT:    [[FIELD3:%.*]] = load i32, ptr [[FIELD3_PTR]], align 4
+; COMMON-NEXT:    [[SUM01:%.*]] = add i32 [[FIELD0]], [[FIELD1]]
+; COMMON-NEXT:    [[SUM23:%.*]] = add i32 [[FIELD2]], [[FIELD3]]
+; COMMON-NEXT:    [[SUM:%.*]] = add i32 [[SUM01]], [[SUM23]]
+; COMMON-NEXT:    ret i32 [[SUM]]
+;
+  ptr readonly %descriptor) {
+entry:
+  %field0 = load i32, ptr %descriptor, align 4
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 4
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %field3.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field3 = load i32, ptr %field3.ptr, align 4
+  %sum01 = add i32 %field0, %field1
+  %sum23 = add i32 %field2, %field3
+  %sum = add i32 %sum01, %sum23
+  ret i32 %sum
+}
+
+define i32 @memory_phi_store_then_nonstore_def_caller(i1 %condition) {
+; COPY-LABEL: define i32 @memory_phi_store_then_nonstore_def_caller(
+; COPY-SAME: i1 [[CONDITION:%.*]]) {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; COPY-NEXT:    br i1 [[CONDITION]], label %[[INITIALIZE:.*]], label %[[CLOBBER:.*]]
+; COPY:       [[INITIALIZE]]:
+; COPY-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; COPY-NEXT:    br label %[[CALL:.*]]
+; COPY:       [[CLOBBER]]:
+; COPY-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; COPY-NEXT:    call void asm sideeffect "", "~{memory}"()
+; COPY-NEXT:    br label %[[CALL]]
+; COPY:       [[CALL]]:
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @memory_phi_store_then_nonstore_def(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @memory_phi_store_then_nonstore_def_caller(
+; FOLD-SAME: i1 [[CONDITION:%.*]]) {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; FOLD-NEXT:    br i1 [[CONDITION]], label %[[INITIALIZE:.*]], label %[[CLOBBER:.*]]
+; FOLD:       [[INITIALIZE]]:
+; FOLD-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; FOLD-NEXT:    br label %[[CALL:.*]]
+; FOLD:       [[CLOBBER]]:
+; FOLD-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; FOLD-NEXT:    call void asm sideeffect "", "~{memory}"() #[[ATTR3:[0-9]+]]
+; FOLD-NEXT:    br label %[[CALL]]
+; FOLD:       [[CALL]]:
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @memory_phi_store_then_nonstore_def(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %descriptor = alloca [4 x i32], align 16
+  br i1 %condition, label %initialize, label %clobber
+
+initialize:
+  store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %descriptor, align 16
+  br label %call
+
+clobber:
+  store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %descriptor, align 16
+  call void asm sideeffect "", "~{memory}"()
+  br label %call
+
+call:
+  %result = call i32 @memory_phi_store_then_nonstore_def(ptr %descriptor)
+  ret i32 %result
+}
+
 define internal i32 @loop_memory_phi(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal i32 @loop_memory_phi() {
 ; COPY-NEXT:  [[ENTRY:.*:]]
@@ -688,7 +1003,6 @@ exit:
   ret i32 %result
 }
 
-; Reject a cyclic MemoryPhi when the backedge stores a different constant.
 define internal i32 @loop_memory_phi_different(ptr readonly %descriptor) {
 ; COMMON-LABEL: define internal i32 @loop_memory_phi_different(
 ; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
@@ -864,8 +1178,6 @@ exit:
   ret i32 %result
 }
 
-; Ignore a store to separate caller-local storage while walking back to the
-; aggregate initialization.
 define internal i32 @unrelated_store(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal i32 @unrelated_store() {
 ; COPY-NEXT:  [[ENTRY:.*:]]
@@ -918,15 +1230,23 @@ entry:
   ret i32 %result
 }
 
-; Caller alias analysis proves that an incoming pointer cannot refer to a
-; caller-local alloca, allowing constants to propagate despite the additional
-; pointer argument.
-define internal i32 @aa_noalias_other_arg(ptr readonly %descriptor,
-                                          ptr readonly %other) {
-; COMMON-LABEL: define internal i32 @aa_noalias_other_arg(
-; COMMON-SAME: ptr readonly [[OTHER:%.*]]) {
-; COMMON:       [[OTHER_VALUE:%.*]] = call i32 @read_other(ptr [[OTHER]])
-; COMMON:       ret i32
+define internal i32 @aa_noalias_other_arg(ptr readonly %descriptor, ptr readonly %other) {
+; COPY-LABEL: define internal i32 @aa_noalias_other_arg(
+; COPY-SAME: ptr readonly [[OTHER:%.*]]) {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[OTHER_VALUE:%.*]] = call i32 @read_other(ptr [[OTHER]])
+; COPY-NEXT:    [[SUM01:%.*]] = add i32 10, 20
+; COPY-NEXT:    [[SUM23:%.*]] = add i32 30, 40
+; COPY-NEXT:    [[SUM:%.*]] = add i32 [[SUM01]], [[SUM23]]
+; COPY-NEXT:    [[RESULT:%.*]] = add i32 [[SUM]], [[OTHER_VALUE]]
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define internal i32 @aa_noalias_other_arg(
+; FOLD-SAME: ptr readonly [[OTHER:%.*]]) {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[OTHER_VALUE:%.*]] = call i32 @read_other(ptr [[OTHER]])
+; FOLD-NEXT:    [[RESULT:%.*]] = add i32 [[OTHER_VALUE]], 100
+; FOLD-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   %field0 = load i32, ptr %descriptor, align 4
@@ -945,10 +1265,19 @@ entry:
 }
 
 define i32 @aa_noalias_other_arg_caller(ptr %other) {
-; COMMON-LABEL: define i32 @aa_noalias_other_arg_caller(
-; COMMON-SAME: ptr [[OTHER:%.*]]) {
-; COMMON:       [[RESULT:%.*]] = call i32 @aa_noalias_other_arg(ptr [[OTHER]])
-; COMMON:       ret i32 [[RESULT]]
+; COPY-LABEL: define i32 @aa_noalias_other_arg_caller(
+; COPY-SAME: ptr [[OTHER:%.*]]) {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; COPY-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @aa_noalias_other_arg(ptr [[OTHER]])
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @aa_noalias_other_arg_caller(
+; FOLD-SAME: ptr [[OTHER:%.*]]) {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @aa_noalias_other_arg(ptr [[OTHER]])
+; FOLD-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   %descriptor = alloca [4 x i32], align 16
@@ -1018,8 +1347,8 @@ entry:
   ret i32 %result
 }
 
-; Different caller-local allocas are valid incoming values for an alloca part;
-; the pointer itself need not be unanimous.
+; Different caller-local allocas are valid incoming values for an alloca part
+; because allocas get promoted to args
 define internal i32 @alloca_memory_phi(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal i32 @alloca_memory_phi(
 ; COPY-SAME: i32 [[DESCRIPTOR_0_VAL_0_VAL:%.*]]) {
@@ -1050,7 +1379,7 @@ entry:
   ret i32 %sum3
 }
 
-define i32 @alloca_memory_phi_caller(i1 %condition, i32 %first.value,
+define i32 @alloca_memory_phi_caller(i1 %condition, i32 %first.value, i32 %second.value) {
 ; COPY-LABEL: define i32 @alloca_memory_phi_caller(
 ; COPY-SAME: i1 [[CONDITION:%.*]], i32 [[FIRST_VALUE:%.*]], i32 [[SECOND_VALUE:%.*]]) {
 ; COPY-NEXT:  [[ENTRY:.*:]]
@@ -1089,7 +1418,6 @@ define i32 @alloca_memory_phi_caller(i1 %condition, i32 %first.value,
 ; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @alloca_memory_phi(i32 [[DESCRIPTOR_SROA_0_0_SROA_SPECULATED]])
 ; FOLD-NEXT:    ret i32 [[RESULT]]
 ;
-  i32 %second.value) {
 entry:
   %first = alloca i32, align 4
   %second = alloca i32, align 4
@@ -1115,8 +1443,106 @@ call:
   ret i32 %result
 }
 
-; Pointer constants are propagated like other constants and are not confused
-; with caller-local alloca pointers.
+; One caller has an alloca and one has a null ptr: don't propagate.
+define internal i32 @mixed_alloca_and_constant_pointer(ptr readonly %descriptor) {
+; COMMON-LABEL: define internal i32 @mixed_alloca_and_constant_pointer(
+; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[POINTER:%.*]] = load ptr, ptr [[DESCRIPTOR]], align 8
+; COMMON-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COMMON-NEXT:    [[FIELD1:%.*]] = load i32, ptr [[FIELD1_PTR]], align 4
+; COMMON-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COMMON-NEXT:    [[FIELD2:%.*]] = load i32, ptr [[FIELD2_PTR]], align 4
+; COMMON-NEXT:    [[IS_NULL:%.*]] = icmp eq ptr [[POINTER]], null
+; COMMON-NEXT:    [[FLAG:%.*]] = zext i1 [[IS_NULL]] to i32
+; COMMON-NEXT:    [[SUM:%.*]] = add i32 [[FIELD1]], [[FIELD2]]
+; COMMON-NEXT:    [[RESULT:%.*]] = add i32 [[SUM]], [[FLAG]]
+; COMMON-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %pointer = load ptr, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %is.null = icmp eq ptr %pointer, null
+  %flag = zext i1 %is.null to i32
+  %sum = add i32 %field1, %field2
+  %result = add i32 %sum, %flag
+  ret i32 %result
+}
+
+define i32 @mixed_alloca_and_constant_pointer_alloca_caller() {
+; COPY-LABEL: define i32 @mixed_alloca_and_constant_pointer_alloca_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[PAYLOAD:%.*]] = alloca i8, align 1
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
+; COPY-NEXT:    store ptr [[PAYLOAD]], ptr [[DESCRIPTOR]], align 8
+; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COPY-NEXT:    store i32 10, ptr [[FIELD1_PTR]], align 4
+; COPY-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COPY-NEXT:    store i32 20, ptr [[FIELD2_PTR]], align 4
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @mixed_alloca_and_constant_pointer(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @mixed_alloca_and_constant_pointer_alloca_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[PAYLOAD:%.*]] = alloca i8, align 1
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
+; FOLD-NEXT:    store ptr [[PAYLOAD]], ptr [[DESCRIPTOR]], align 8
+; FOLD-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 8
+; FOLD-NEXT:    store i32 10, ptr [[FIELD1_PTR]], align 4
+; FOLD-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 12
+; FOLD-NEXT:    store i32 20, ptr [[FIELD2_PTR]], align 4
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @mixed_alloca_and_constant_pointer(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %payload = alloca i8, align 1
+  %descriptor = alloca [16 x i8], align 8
+  store ptr %payload, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  store i32 10, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 12
+  store i32 20, ptr %field2.ptr, align 4
+  %result = call i32 @mixed_alloca_and_constant_pointer(ptr %descriptor)
+  ret i32 %result
+}
+
+define i32 @mixed_alloca_and_constant_pointer_null_caller() {
+; COPY-LABEL: define i32 @mixed_alloca_and_constant_pointer_null_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
+; COPY-NEXT:    store ptr null, ptr [[DESCRIPTOR]], align 8
+; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COPY-NEXT:    store i32 10, ptr [[FIELD1_PTR]], align 4
+; COPY-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COPY-NEXT:    store i32 20, ptr [[FIELD2_PTR]], align 4
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @mixed_alloca_and_constant_pointer(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @mixed_alloca_and_constant_pointer_null_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [16 x i8], align 8
+; FOLD-NEXT:    store ptr null, ptr [[DESCRIPTOR]], align 8
+; FOLD-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 8
+; FOLD-NEXT:    store i32 10, ptr [[FIELD1_PTR]], align 4
+; FOLD-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 12
+; FOLD-NEXT:    store i32 20, ptr [[FIELD2_PTR]], align 4
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @mixed_alloca_and_constant_pointer(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %descriptor = alloca [16 x i8], align 8
+  store ptr null, ptr %descriptor, align 8
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 8
+  store i32 10, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 12
+  store i32 20, ptr %field2.ptr, align 4
+  %result = call i32 @mixed_alloca_and_constant_pointer(ptr %descriptor)
+  ret i32 %result
+}
+
 define internal i32 @constant_pointer_fields(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal i32 @constant_pointer_fields() {
 ; COPY-NEXT:  [[ENTRY:.*:]]
@@ -1232,7 +1658,7 @@ define i32 @unknown_memory_clobber_caller() {
 ; FOLD-NEXT:  [[ENTRY:.*:]]
 ; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
 ; FOLD-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
-; FOLD-NEXT:    call void asm sideeffect "", "~{memory}"() #[[ATTR1:[0-9]+]]
+; FOLD-NEXT:    call void asm sideeffect "", "~{memory}"() #[[ATTR3]]
 ; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @unknown_memory_clobber(ptr nonnull [[DESCRIPTOR]])
 ; FOLD-NEXT:    ret i32 [[RESULT]]
 ;
@@ -1244,11 +1670,9 @@ entry:
   ret i32 %result
 }
 
-; The same private aggregate may be passed to the callee more than once when
-; every call observes the same constants.
 define internal i32 @shared_aggregate_same(ptr readonly %descriptor)
 ; COPY-LABEL: define internal i32 @shared_aggregate_same(
-; COPY-SAME: ) #[[ATTR0:[0-9]+]] {
+; COPY-SAME: ) #[[ATTR1:[0-9]+]] {
 ; COPY-NEXT:  [[ENTRY:.*:]]
 ; COPY-NEXT:    [[SUM01:%.*]] = add i32 10, 20
 ; COPY-NEXT:    [[SUM23:%.*]] = add i32 30, 40
@@ -1256,7 +1680,7 @@ define internal i32 @shared_aggregate_same(ptr readonly %descriptor)
 ; COPY-NEXT:    ret i32 [[SUM]]
 ;
 ; FOLD-LABEL: define internal i32 @shared_aggregate_same(
-; FOLD-SAME: ) #[[ATTR0:[0-9]+]] {
+; FOLD-SAME: ) #[[ATTR1:[0-9]+]] {
 ; FOLD-NEXT:  [[ENTRY:.*:]]
 ; FOLD-NEXT:    ret i32 100
 ;
@@ -1301,11 +1725,9 @@ entry:
   ret i32 %result
 }
 
-; Reject a shared aggregate when an intervening store makes the constants
-; differ between calls.
 define internal i32 @shared_aggregate_changed(ptr readonly %descriptor)
 ; COMMON-LABEL: define internal i32 @shared_aggregate_changed(
-; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) #[[ATTR0:[0-9]+]] {
+; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) #[[ATTR1:[0-9]+]] {
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[FIELD0:%.*]] = load i32, ptr [[DESCRIPTOR]], align 4
 ; COMMON-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 4
@@ -1320,6 +1742,7 @@ define internal i32 @shared_aggregate_changed(ptr readonly %descriptor)
 ; COMMON-NEXT:    ret i32 [[SUM]]
 ;
   memory(argmem: read) {
+
 entry:
   %field0 = load i32, ptr %descriptor, align 4
   %field1.ptr = getelementptr i8, ptr %descriptor, i64 4
@@ -1365,8 +1788,6 @@ entry:
   ret i32 %result
 }
 
-; Walk nested and reconverging MemoryPhis whose incoming paths all provide the
-; same constants.
 define internal i32 @nested_memory_phi(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal i32 @nested_memory_phi() {
 ; COPY-NEXT:  [[ENTRY:.*:]]
@@ -1565,8 +1986,6 @@ entry:
   ret i32 %result
 }
 
-; The value stored at offset zero violates the load's range metadata, so the
-; load produces poison. Do not replace it with the raw stored constant.
 define internal i32 @poison_generating_metadata(ptr readonly %descriptor) {
 ; COMMON-LABEL: define internal i32 @poison_generating_metadata(
 ; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
@@ -1613,15 +2032,22 @@ entry:
   ret i32 %result
 }
 
-; Propagating the function pointer through an address-space cast would turn the
-; indirect call into a direct call without updating the lazy call graph
 define internal i32 @indirect_call_field(ptr readonly %descriptor) {
 ; COMMON-LABEL: define internal i32 @indirect_call_field(
 ; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
-; COMMON:       [[FP:%.*]] = load ptr addrspace(1), ptr [[DESCRIPTOR]], align 8
-; COMMON:       [[CAST:%.*]] = addrspacecast ptr addrspace(1) [[FP]] to ptr
-; COMMON:       [[RESULT:%.*]] = call i32 [[CAST]](i32
-; COMMON:       ret i32 [[RESULT]]
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[FP:%.*]] = load ptr addrspace(1), ptr [[DESCRIPTOR]], align 8
+; COMMON-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(1) [[FP]] to ptr
+; COMMON-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COMMON-NEXT:    [[FIELD1:%.*]] = load i32, ptr [[FIELD1_PTR]], align 4
+; COMMON-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COMMON-NEXT:    [[FIELD2:%.*]] = load i32, ptr [[FIELD2_PTR]], align 4
+; COMMON-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
+; COMMON-NEXT:    [[FIELD3:%.*]] = load i32, ptr [[FIELD3_PTR]], align 4
+; COMMON-NEXT:    [[SUM1:%.*]] = add i32 [[FIELD1]], [[FIELD2]]
+; COMMON-NEXT:    [[SUM2:%.*]] = add i32 [[SUM1]], [[FIELD3]]
+; COMMON-NEXT:    [[RESULT:%.*]] = call i32 [[CAST]](i32 [[SUM2]])
+; COMMON-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   %fp = load ptr addrspace(1), ptr %descriptor, align 8
@@ -1639,9 +2065,31 @@ entry:
 }
 
 define i32 @indirect_call_field_caller() {
-; COMMON-LABEL: define i32 @indirect_call_field_caller() {
-; COMMON:       [[RESULT:%.*]] = call i32 @indirect_call_field(ptr
-; COMMON:       ret i32 [[RESULT]]
+; COPY-LABEL: define i32 @indirect_call_field_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [24 x i8], align 8
+; COPY-NEXT:    store ptr addrspace(1) @indirect_call_target, ptr [[DESCRIPTOR]], align 8
+; COPY-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COPY-NEXT:    store i32 1, ptr [[FIELD1_PTR]], align 4
+; COPY-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COPY-NEXT:    store i32 2, ptr [[FIELD2_PTR]], align 4
+; COPY-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 16
+; COPY-NEXT:    store i32 3, ptr [[FIELD3_PTR]], align 4
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @indirect_call_field(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @indirect_call_field_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [24 x i8], align 8
+; FOLD-NEXT:    store ptr addrspace(1) @indirect_call_target, ptr [[DESCRIPTOR]], align 8
+; FOLD-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 8
+; FOLD-NEXT:    store i32 1, ptr [[FIELD1_PTR]], align 4
+; FOLD-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 12
+; FOLD-NEXT:    store i32 2, ptr [[FIELD2_PTR]], align 4
+; FOLD-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DESCRIPTOR]], i64 16
+; FOLD-NEXT:    store i32 3, ptr [[FIELD3_PTR]], align 4
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @indirect_call_field(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   %descriptor = alloca [24 x i8], align 8
@@ -1657,6 +2105,11 @@ entry:
 }
 
 define internal i32 @indirect_call_target(i32 %value) addrspace(1) {
+; COMMON-LABEL: define internal i32 @indirect_call_target(
+; COMMON-SAME: i32 [[VALUE:%.*]]) addrspace(1) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    ret i32 [[VALUE]]
+;
 entry:
   ret i32 %value
 }
@@ -1724,11 +2177,14 @@ entry:
 }
 
 define internal void @returned_function_pointer_target() {
+; COMMON-LABEL: define internal void @returned_function_pointer_target() {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    ret void
+;
 entry:
   ret void
 }
 
-; Function declarations don't prevent constant propagation.
 define internal { ptr, i32 } @returned_declared_function_pointer(ptr readonly %descriptor) {
 ; COPY-LABEL: define internal { ptr, i32 } @returned_declared_function_pointer() {
 ; COPY-NEXT:  [[ENTRY:.*:]]
@@ -1809,6 +2265,168 @@ entry:
   %sum23 = add i32 %field2, %field3
   %sum = add i32 %sum01, %sum23
   ret i32 %sum
+}
+
+define internal i32 @allowed_caller_storage_uses(ptr readonly %descriptor) {
+; COPY-LABEL: define internal i32 @allowed_caller_storage_uses() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[SUM01:%.*]] = add i32 10, 20
+; COPY-NEXT:    [[SUM23:%.*]] = add i32 30, 40
+; COPY-NEXT:    [[SUM:%.*]] = add i32 [[SUM01]], [[SUM23]]
+; COPY-NEXT:    ret i32 [[SUM]]
+;
+; FOLD-LABEL: define internal i32 @allowed_caller_storage_uses() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    ret i32 100
+;
+entry:
+  %field0 = load i32, ptr %descriptor, align 4
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 4
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %field3.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field3 = load i32, ptr %field3.ptr, align 4
+  %sum01 = add i32 %field0, %field1
+  %sum23 = add i32 %field2, %field3
+  %sum = add i32 %sum01, %sum23
+  ret i32 %sum
+}
+
+define i32 @allowed_caller_storage_uses_caller() {
+; COPY-LABEL: define i32 @allowed_caller_storage_uses_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; COPY-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; COPY-NEXT:    [[CALLER_LOAD:%.*]] = load i32, ptr [[DESCRIPTOR]], align 4
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @allowed_caller_storage_uses()
+; COPY-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    [[SUM:%.*]] = add i32 [[RESULT]], [[CALLER_LOAD]]
+; COPY-NEXT:    ret i32 [[SUM]]
+;
+; FOLD-LABEL: define i32 @allowed_caller_storage_uses_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @allowed_caller_storage_uses()
+; FOLD-NEXT:    [[SUM:%.*]] = add i32 [[RESULT]], 10
+; FOLD-NEXT:    ret i32 [[SUM]]
+;
+entry:
+  %descriptor = alloca [4 x i32], align 16
+  call void @llvm.lifetime.start.p0(i64 16, ptr %descriptor)
+  store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %descriptor, align 16
+  %caller.load = load i32, ptr %descriptor, align 4
+  %result = call i32 @allowed_caller_storage_uses(ptr %descriptor)
+  call void @llvm.lifetime.end.p0(i64 16, ptr %descriptor)
+  %sum = add i32 %result, %caller.load
+  ret i32 %sum
+}
+
+define internal i32 @unrelated_call_memory_def(ptr readonly %descriptor) {
+; COPY-LABEL: define internal i32 @unrelated_call_memory_def() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[SUM01:%.*]] = add i32 10, 20
+; COPY-NEXT:    [[SUM23:%.*]] = add i32 30, 40
+; COPY-NEXT:    [[SUM:%.*]] = add i32 [[SUM01]], [[SUM23]]
+; COPY-NEXT:    ret i32 [[SUM]]
+;
+; FOLD-LABEL: define internal i32 @unrelated_call_memory_def() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    ret i32 100
+;
+entry:
+  %field0 = load i32, ptr %descriptor, align 4
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 4
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %field3.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field3 = load i32, ptr %field3.ptr, align 4
+  %sum01 = add i32 %field0, %field1
+  %sum23 = add i32 %field2, %field3
+  %sum = add i32 %sum01, %sum23
+  ret i32 %sum
+}
+
+define i32 @unrelated_call_memory_def_caller() {
+; COPY-LABEL: define i32 @unrelated_call_memory_def_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; COPY-NEXT:    [[OTHER:%.*]] = alloca i32, align 4
+; COPY-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; COPY-NEXT:    call void @modify_other(ptr [[OTHER]])
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @unrelated_call_memory_def()
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @unrelated_call_memory_def_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[OTHER:%.*]] = alloca i32, align 4
+; FOLD-NEXT:    call void @modify_other(ptr nonnull [[OTHER]])
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @unrelated_call_memory_def()
+; FOLD-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %descriptor = alloca [4 x i32], align 16
+  %other = alloca i32, align 4
+  store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %descriptor, align 16
+  call void @modify_other(ptr %other)
+  %result = call i32 @unrelated_call_memory_def(ptr %descriptor)
+  ret i32 %result
+}
+
+define internal i32 @escaped_caller_storage(ptr readonly %descriptor) {
+; COMMON-LABEL: define internal i32 @escaped_caller_storage(
+; COMMON-SAME: ptr readonly [[DESCRIPTOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[FIELD0:%.*]] = load i32, ptr [[DESCRIPTOR]], align 4
+; COMMON-NEXT:    [[FIELD1_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 4
+; COMMON-NEXT:    [[FIELD1:%.*]] = load i32, ptr [[FIELD1_PTR]], align 4
+; COMMON-NEXT:    [[FIELD2_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 8
+; COMMON-NEXT:    [[FIELD2:%.*]] = load i32, ptr [[FIELD2_PTR]], align 4
+; COMMON-NEXT:    [[FIELD3_PTR:%.*]] = getelementptr i8, ptr [[DESCRIPTOR]], i64 12
+; COMMON-NEXT:    [[FIELD3:%.*]] = load i32, ptr [[FIELD3_PTR]], align 4
+; COMMON-NEXT:    [[SUM01:%.*]] = add i32 [[FIELD0]], [[FIELD1]]
+; COMMON-NEXT:    [[SUM23:%.*]] = add i32 [[FIELD2]], [[FIELD3]]
+; COMMON-NEXT:    [[SUM:%.*]] = add i32 [[SUM01]], [[SUM23]]
+; COMMON-NEXT:    ret i32 [[SUM]]
+;
+entry:
+  %field0 = load i32, ptr %descriptor, align 4
+  %field1.ptr = getelementptr i8, ptr %descriptor, i64 4
+  %field1 = load i32, ptr %field1.ptr, align 4
+  %field2.ptr = getelementptr i8, ptr %descriptor, i64 8
+  %field2 = load i32, ptr %field2.ptr, align 4
+  %field3.ptr = getelementptr i8, ptr %descriptor, i64 12
+  %field3 = load i32, ptr %field3.ptr, align 4
+  %sum01 = add i32 %field0, %field1
+  %sum23 = add i32 %field2, %field3
+  %sum = add i32 %sum01, %sum23
+  ret i32 %sum
+}
+
+define i32 @escaped_caller_storage_caller() {
+; COPY-LABEL: define i32 @escaped_caller_storage_caller() {
+; COPY-NEXT:  [[ENTRY:.*:]]
+; COPY-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; COPY-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; COPY-NEXT:    store ptr [[DESCRIPTOR]], ptr @escaped_descriptor, align 8
+; COPY-NEXT:    [[RESULT:%.*]] = call i32 @escaped_caller_storage(ptr [[DESCRIPTOR]])
+; COPY-NEXT:    ret i32 [[RESULT]]
+;
+; FOLD-LABEL: define i32 @escaped_caller_storage_caller() {
+; FOLD-NEXT:  [[ENTRY:.*:]]
+; FOLD-NEXT:    [[DESCRIPTOR:%.*]] = alloca [4 x i32], align 16
+; FOLD-NEXT:    store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr [[DESCRIPTOR]], align 16
+; FOLD-NEXT:    store ptr [[DESCRIPTOR]], ptr @escaped_descriptor, align 8
+; FOLD-NEXT:    [[RESULT:%.*]] = call i32 @escaped_caller_storage(ptr nonnull [[DESCRIPTOR]])
+; FOLD-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %descriptor = alloca [4 x i32], align 16
+  store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %descriptor, align 16
+  store ptr %descriptor, ptr @escaped_descriptor, align 8
+  %result = call i32 @escaped_caller_storage(ptr %descriptor)
+  ret i32 %result
 }
 
 !0 = !{i32 0, i32 5}
