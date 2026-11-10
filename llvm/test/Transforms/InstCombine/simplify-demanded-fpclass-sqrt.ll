@@ -91,6 +91,25 @@ define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt__no_nsub__dynamic_d
   ret float %result
 }
 
+; Under NSZ the sign is irrelevant, so this folds to +0.0 instead of copysign.
+define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_nsz__ftpz_dapz(float %x) #2 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_nsz__ftpz_dapz(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call nsz float @llvm.sqrt.f32(float %x)
+  ret float %result
+}
+
+define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_nsz__dynamic_dynamic(float %x) #1 {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_nsz__dynamic_dynamic(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call nsz float @llvm.sqrt.f32(float %x)
+  ret float %result
+}
+
 define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt_insert_point(float %x) {
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_insert_point(
 ; CHECK-SAME: float [[X:%.*]]) {

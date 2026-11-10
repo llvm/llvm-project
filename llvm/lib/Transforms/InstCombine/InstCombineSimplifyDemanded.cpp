@@ -3330,21 +3330,25 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Known = KnownFPClass::sqrt(KnownSrc, Mode, HasNSZ);
       Known.knownNot(~DemandedMask);
 
-      // This copysign fold is only valid if the input does not change sign,
-      // which fails if input denormal flushing can change the sign. This is the
-      // case with negative-subnormals flushing to positive-zero under DAPZ.
-      if (Known.getKnownFPClasses() == fcZero &&
-          (!Mode.inputsMayBePositiveZero() ||
-           KnownSrc.isKnownNever(fcNegSubnormal))) {
+      if (Known.getKnownFPClasses() == fcZero) {
+        // We don't care if denormal flushing flips the sign under NSZ.
         if (HasNSZ)
           return ConstantFP::getZero(VTy);
-        IRBuilderBase::InsertPointGuard Guard(Builder);
-        Builder.SetInsertPoint(CI);
 
-        Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
-                                                 CI->getArgOperand(0), FMF);
-        Copysign->takeName(CI);
-        return Copysign;
+        // This copysign fold is only valid if the input does not change sign,
+        // which fails if input denormal flushing can change the sign. This is
+        // the case with negative-subnormals flushing to positive-zero under
+        // DAPZ.
+        if (!Mode.inputsMayBePositiveZero() ||
+            KnownSrc.isKnownNever(fcNegSubnormal)) {
+          IRBuilderBase::InsertPointGuard Guard(Builder);
+          Builder.SetInsertPoint(CI);
+
+          Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
+                                                   CI->getArgOperand(0), FMF);
+          Copysign->takeName(CI);
+          return Copysign;
+        }
       }
 
       // TODO: fold sqrt(x) -> x when x is nan | pinf | zero

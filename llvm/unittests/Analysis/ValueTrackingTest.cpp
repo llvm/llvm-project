@@ -2428,8 +2428,6 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
       "  ret float %A\n"
       "}\n");
 
-  // nsz does not make a -0.0 result poison, so it is ignored and does not
-  // refine the known class of the result.
   const FPClassTest SqrtMask = fcPosInf | fcPosNormal | fcZero | fcNan;
 
   {

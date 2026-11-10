@@ -518,7 +518,7 @@ public:
 
   /// Propagate known class for sqrt
   LLVM_ABI static KnownFPClass sqrt(const KnownFPClass &Src, DenormalMode Mode,
-                                    bool MayBeNSZ);
+                                    bool MayBeNSZ = true);
 
   /// Propagate known class for log/log2/log10
   ///
