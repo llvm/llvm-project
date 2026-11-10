@@ -307,6 +307,9 @@ Makes programs 10x faster by doing Special New Thing.
   ARM64 ABI (calling convention, callee saved registers, stack probing and SEH
   unwind information) and produces PE/COFF objects.
 
+* Added support for the Apple M6, A20 Pro, and S11 CPUs (exposed as,
+  respectively, `apple-m6`, `apple-a20`, and `apple-s11`)
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
