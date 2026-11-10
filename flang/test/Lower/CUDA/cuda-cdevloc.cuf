@@ -8,7 +8,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPtestcdevloc(
 ! CHECK-SAME: %[[A_ARG:.*]]: !fir.ref<!fir.array<10xi32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>{{.*}}}
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_ARG]](%{{.*}}) dummy_scope %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFtestcdevlocEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_ARG]](%{{.*}}) dummy_scope %{{.*}} uniq_name("_QFtestcdevlocEa") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%c1{{.*}})  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[A1]] : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK: %[[CDEVPTR:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>

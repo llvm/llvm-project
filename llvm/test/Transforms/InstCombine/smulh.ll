@@ -149,6 +149,22 @@ define <16 x i16> @one_smulh_v16i16_commute(<16 x i16> %a0) {
   ret <16 x i16> %1
 }
 
+define i1 @one_smulh_i1(i1 %a0) {
+; CHECK-LABEL: @one_smulh_i1(
+; CHECK-NEXT:    ret i1 false
+;
+  %1 = call i1 @llvm.smulh.i1(i1 %a0, i1 1)
+  ret i1 %1
+}
+
+define <2 x i1> @one_smulh_v2i1_commute(<2 x i1> %a0) {
+; CHECK-LABEL: @one_smulh_v2i1_commute(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %1 = call <2 x i1> @llvm.smulh.v2i1(<2 x i1> splat (i1 1), <2 x i1> %a0)
+  ret <2 x i1> %1
+}
+
 ;
 ; Constant Folding
 ;
@@ -191,9 +207,7 @@ define <32 x i16> @fold_smulh_v32i16() {
 
 define <8 x i64> @elts_smulh_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: @elts_smulh_v8i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[A0:%.*]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[A1:%.*]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.smulh.v8i64(<8 x i64> [[TMP1]], <8 x i64> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.smulh.v8i64(<8 x i64> [[TMP1:%.*]], <8 x i64> [[TMP2:%.*]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <8 x i64> [[TMP4]]
 ;

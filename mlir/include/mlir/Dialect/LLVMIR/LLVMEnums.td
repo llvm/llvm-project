@@ -84,21 +84,6 @@ def AsmATTOrIntel : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// ProfileCountType
-//===----------------------------------------------------------------------===//
-
-def ProfileCountReal : I64EnumAttrCase<
-  /*string sym=*/"Real", /*int val=*/0, /*string str=*/"real">;
-def ProfileCountSynthetic : I64EnumAttrCase<
-  /*string sym=*/"Synthetic", /*int val=*/1, /*string str=*/"synthetic">;
-def ProfileCountTypeAttr : I64EnumAttr<
-  /*string name=*/"ProfileCountType",
-  /*string description=*/"real or synthetic function entry count",
-  /*list<I64EnumAttrCase> cases=*/[ProfileCountReal, ProfileCountSynthetic]> {
-  let cppNamespace = "::mlir::LLVM";
-}
-
-//===----------------------------------------------------------------------===//
 // Atomic Operations
 //===----------------------------------------------------------------------===//
 
@@ -961,9 +946,7 @@ def GEPNoWrapFlags : I32BitEnum<
   let printBitEnumPrimaryGroups = 1;
 }
 
-def GEPNoWrapFlagsProp : EnumProp<GEPNoWrapFlags> {
-  let defaultValue = interfaceType # "::none";
-}
+def GEPNoWrapFlagsProp : DefaultValuedEnumProp<GEPNoWrapFlags, GEPNone>;
 
 //===----------------------------------------------------------------------===//
 // TLSModel

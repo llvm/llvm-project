@@ -852,7 +852,14 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
 
   explicit DIE(dwarf::Tag Tag) : Tag(Tag) {}
 
+  /// Get parent of a (possibly placeholder) DIE.
+  DIE *getRawParent() const;
+
 public:
+  /// Internal tag for temporary containers. Such DIEs must be removed before
+  /// abbreviation generation or emission.
+  static constexpr dwarf::Tag PlaceholderTag = dwarf::DW_TAG_null;
+
   DIE() = delete;
   DIE(const DIE &RHS) = delete;
   DIE(DIE &&RHS) = delete;
@@ -861,6 +868,11 @@ public:
 
   static DIE *get(BumpPtrAllocator &Alloc, dwarf::Tag Tag) {
     return new (Alloc) DIE(Tag);
+  }
+
+  /// Create a temporary placeholder DIE.
+  static DIE *getPlaceholder(BumpPtrAllocator &Alloc) {
+    return DIE::get(Alloc, PlaceholderTag);
   }
 
   // Accessors.
@@ -878,6 +890,9 @@ public:
     return Size;
   }
   bool hasChildren() const { return !Children.empty(); }
+
+  /// Returns true if DIE is a temporary placeholder.
+  bool isPlaceholder() const { return getTag() == PlaceholderTag; }
 
   using child_iterator = IntrusiveBackList<DIE>::iterator;
   using const_child_iterator = IntrusiveBackList<DIE>::const_iterator;
@@ -926,18 +941,16 @@ public:
   computeOffsetsAndAbbrevs(const dwarf::FormParams &FormParams,
                            DIEAbbrevSet &AbbrevSet, unsigned CUOffset);
 
-  /// Climb up the parent chain to get the compile unit or type unit DIE that
-  /// this DIE belongs to.
+  /// Climb up the parent chain to get the unit DIE that this DIE belongs to.
   ///
-  /// \returns the compile or type unit DIE that owns this DIE, or NULL if
-  /// this DIE hasn't been added to a unit DIE.
+  /// \returns the unit DIE that owns this DIE, or NULL if this DIE hasn't been
+  /// added to a unit DIE.
   LLVM_ABI const DIE *getUnitDie() const;
 
-  /// Climb up the parent chain to get the compile unit or type unit that this
-  /// DIE belongs to.
+  /// Climb up the parent chain to get the unit that this DIE belongs to.
   ///
-  /// \returns the DIEUnit that represents the compile or type unit that owns
-  /// this DIE, or NULL if this DIE hasn't been added to a unit DIE.
+  /// \returns the DIEUnit that represents the unit that owns this DIE, or NULL
+  /// if this DIE hasn't been added to a unit DIE.
   LLVM_ABI DIEUnit *getUnit() const;
 
   void setOffset(unsigned O) { Offset = O; }
@@ -945,18 +958,27 @@ public:
 
   /// Add a child to the DIE.
   DIE &addChild(DIE *Child) {
-    assert(!Child->getParent() && "Child should be orphaned");
+    assert(!Child->getRawParent() && "Child should be orphaned");
     Child->Owner = this;
     Children.push_back(*Child);
     return Children.back();
   }
 
   DIE &addChildFront(DIE *Child) {
-    assert(!Child->getParent() && "Child should be orphaned");
+    assert(!Child->getRawParent() && "Child should be orphaned");
     Child->Owner = this;
     Children.push_front(*Child);
     return Children.front();
   }
+
+  /// Remove \p Child from the children of this DIE. Takes constant time if
+  /// \p Child is the first child, and linear time otherwise.
+  LLVM_ABI void removeChild(DIE &Child);
+
+  /// Move all children of \p Other to this DIE, preserving their order.
+  /// If \p AtFront is true, the moved children are placed before the existing
+  /// children of this DIE, otherwise after them.
+  LLVM_ABI void takeChildren(DIE &Other, bool AtFront = false);
 
   /// Find a value in the DIE with the attribute given.
   ///
@@ -969,13 +991,13 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
-/// Represents a compile or type unit.
+/// Represents a DWARF unit.
 class DIEUnit {
-  /// The compile unit or type unit DIE. This variable must be an instance of
-  /// DIE so that we can calculate the DIEUnit from any DIE by traversing the
-  /// parent backchain and getting the Unit DIE, and then casting itself to a
-  /// DIEUnit. This allows us to be able to find the DIEUnit for any DIE without
-  /// having to store a pointer to the DIEUnit in each DIE instance.
+  /// The unit DIE. This variable must be an instance of DIE so that we can
+  /// calculate the DIEUnit from any DIE by traversing the parent backchain
+  /// until we reach the DIE whose Owner is this DIEUnit. This allows us to be
+  /// able to find the DIEUnit for any DIE without having to store a pointer to
+  /// the DIEUnit in each DIE instance.
   DIE Die;
   /// The section this unit will be emitted in. This may or may not be set to
   /// a valid section depending on the client that is emitting DWARF.

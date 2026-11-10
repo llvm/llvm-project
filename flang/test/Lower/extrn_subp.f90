@@ -35,7 +35,7 @@ end function
 
 ! CHECK-LABEL: func.func @_QQmain() {
 ! CHECK:         %[[PTR6_ADDR:.*]] = fir.address_of(@_QMm1Eptr6) : !fir.ref<!fir.boxproc<() -> ()>>
-! CHECK:         %[[PTR6:.*]]:2 = hlfir.declare %[[PTR6_ADDR]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMm1Eptr6"}
+! CHECK:         %[[PTR6:.*]]:2 = hlfir.declare %[[PTR6_ADDR]] uniq_name("_QMm1Eptr6") fortran_attrs<pointer>
 ! CHECK:         %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK:         %[[TMP:.*]]:3 = hlfir.associate %[[C10]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:         %[[P:.*]] = fir.load %[[PTR6]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
@@ -45,14 +45,14 @@ end function
 
 ! CHECK-LABEL: func.func @_QPsub(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}) {
 ! CHECK:         %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:         %[[A:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QFsubEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[A:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[SCOPE]] arg 1 uniq_name("_QFsubEa") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         return
 
 ! CHECK-LABEL: func.func @_QPfun(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}) -> i32 {
 ! CHECK:         %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:         %[[A:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QFfunEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[A:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[SCOPE]] arg 1 uniq_name("_QFfunEa") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         %[[FUN_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "fun", uniq_name = "_QFfunEfun"}>
-! CHECK:         %[[FUN:.*]]:2 = hlfir.declare %[[FUN_ALLOCA]] {uniq_name = "_QFfunEfun"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[FUN:.*]]:2 = hlfir.declare %[[FUN_ALLOCA]] uniq_name("_QFfunEfun") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         %[[C2:.*]] = arith.constant 2 : i32
 ! CHECK:         %[[LOAD_A:.*]] = fir.load %[[A]]#0 : !fir.ref<i32>
 ! CHECK:         %[[MUL:.*]] = arith.muli %[[C2]], %[[LOAD_A]] : i32

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIRegisterInfo.h"
-#include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
@@ -31,29 +30,6 @@ using namespace llvm;
 
 #define GET_REGINFO_TARGET_DESC
 #include "AMDGPUGenRegisterInfo.inc"
-
-static cl::opt<bool> EnableSpillSGPRToVGPR(
-  "amdgpu-spill-sgpr-to-vgpr",
-  cl::desc("Enable spilling SGPRs to VGPRs"),
-  cl::ReallyHidden,
-  cl::init(true));
-
-static cl::opt<bool> EnableSpillCFISavedRegs(
-    "amdgpu-spill-cfi-saved-regs",
-    cl::desc("Enable spilling the registers required for CFI emission"),
-    cl::ReallyHidden, cl::init(false));
-
-static cl::opt<unsigned> StressVGPRLimit(
-    "amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
-    cl::desc("Limit VGPRs to N registers by reserving the rest"));
-
-static cl::opt<unsigned> StressAGPRLimit(
-    "amdgpu-stress-agpr", cl::Hidden, cl::init(0),
-    cl::desc("Limit AGPRs to N registers by reserving the rest"));
-
-static cl::opt<unsigned> StressSGPRLimit(
-    "amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
-    cl::desc("Limit SGPRs to N registers by reserving the rest"));
 
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
@@ -350,7 +326,8 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
                             ST.getAMDGPUDwarfFlavour(),
                             /*PC=*/0,
                             ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
-      ST(ST), SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {
+      ST(ST), SpillSGPRToVGPR(ST.getCLOpts().spill_sgpr_to_vgpr),
+      isWave32(ST.isWave32()) {
 
   assert(getSubRegIndexLaneMask(AMDGPU::sub0).getAsInteger() == 3 &&
          getSubRegIndexLaneMask(AMDGPU::sub31).getAsInteger() == (3ULL << 62) &&
@@ -568,12 +545,8 @@ const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
   return AMDGPU_AllVectorRegs_RegMask;
 }
 
-const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
-  return AMDGPU_AllAllocatableSRegs_RegMask;
-}
-
-unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
-                                              unsigned NumRegs) {
+unsigned SIRegisterInfo::getSubRegFromChannel(uint64_t Channel,
+                                              uint64_t NumRegs) {
   assert(NumRegs < SubRegFromChannelTableWidthMap.size());
   unsigned NumRegIndex = SubRegFromChannelTableWidthMap[NumRegs];
   assert(NumRegIndex && "Not implemented");
@@ -582,7 +555,7 @@ unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
 }
 
 bool SIRegisterInfo::isCFISavedRegsSpillEnabled() const {
-  return EnableSpillCFISavedRegs;
+  return ST.getCLOpts().spill_cfi_saved_regs;
 }
 
 MCRegister
@@ -659,8 +632,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve SGPRs.
   //
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
-  if (StressSGPRLimit.getNumOccurrences() && StressSGPRLimit < MaxNumSGPRs)
-    MaxNumSGPRs = StressSGPRLimit;
+  if (auto Limit = ST.getCLOpts().stress_sgpr; Limit && *Limit < MaxNumSGPRs)
+    MaxNumSGPRs = *Limit;
   unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isSGPRClass(&RC)) {
@@ -719,10 +692,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
 
   // Stress test: override VGPR/AGPR limits.
-  if (StressVGPRLimit.getNumOccurrences() && StressVGPRLimit < MaxNumVGPRs)
-    MaxNumVGPRs = StressVGPRLimit;
-  if (StressAGPRLimit.getNumOccurrences() && StressAGPRLimit < MaxNumAGPRs)
-    MaxNumAGPRs = StressAGPRLimit;
+  if (auto Limit = ST.getCLOpts().stress_vgpr; Limit && *Limit < MaxNumVGPRs)
+    MaxNumVGPRs = *Limit;
+  if (auto Limit = ST.getCLOpts().stress_agpr; Limit && *Limit < MaxNumAGPRs)
+    MaxNumAGPRs = *Limit;
 
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isVGPRClass(&RC)) {
@@ -976,16 +949,16 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   if (ST.hasFlatScratchEnabled()) {
     // FIXME: Make sure scc isn't live in.
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_I32), BaseReg)
-        .addReg(OffsetReg, RegState::Kill)
+        .addReg(OffsetReg)
         .addReg(FIReg)
         .setOperandDead(3); // scc
     return BaseReg;
   }
 
   TII->getAddNoCarry(*MBB, Ins, DL, BaseReg)
-    .addReg(OffsetReg, RegState::Kill)
-    .addReg(FIReg)
-    .addImm(0); // clamp bit
+      .addReg(OffsetReg)
+      .addReg(FIReg)
+      .addImm(0); // clamp bit
 
   return BaseReg;
 }
@@ -4274,7 +4247,7 @@ const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
 
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
                                            ArrayRef<MCPhysReg> Order,
-                                           SmallVectorImpl<MCPhysReg> &Hints,
+                                           SmallSetVector<MCPhysReg, 16> &Hints,
                                            const MachineFunction &MF,
                                            const VirtRegMap *VRM,
                                            const LiveRegMatrix *Matrix) const {
@@ -4301,7 +4274,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     if (PairedPhys)
       // isLo(Paired) is implicitly true here from the API of
       // getMatchingSuperReg.
-      Hints.push_back(PairedPhys);
+      Hints.insert(PairedPhys);
     return false;
   }
   case AMDGPURI::Size16: {
@@ -4316,7 +4289,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
     // First prefer the paired physreg.
     if (PairedPhys)
-      Hints.push_back(PairedPhys);
+      Hints.insert(PairedPhys);
     else {
       // Add all the lo16 physregs.
       // When the Paired operand has not yet been assigned a physreg it is
@@ -4328,7 +4301,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
           continue;
         if (AMDGPU::VGPR_16RegClass.contains(PhysReg) &&
             !MRI.isReserved(PhysReg))
-          Hints.push_back(PhysReg);
+          Hints.insert(PhysReg);
       }
     }
     return false;
@@ -4486,19 +4459,20 @@ MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const 
 }
 
 const TargetRegisterClass *
-SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
+SIRegisterInfo::getRegClassForSizeOnBank(uint64_t Size,
                                          const RegisterBank &RB) const {
+  unsigned SizeEnc = static_cast<unsigned>(Size);
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
     return getVGPRClassForBitWidth(
-        std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size));
+        std::max(ST.useRealTrue16Insts() ? 16u : 32u, SizeEnc));
   case AMDGPU::VCCRegBankID:
     assert(Size == 1);
     return getWaveMaskRegClass();
   case AMDGPU::SGPRRegBankID:
-    return getSGPRClassForBitWidth(std::max(32u, Size));
+    return getSGPRClassForBitWidth(std::max(32u, SizeEnc));
   case AMDGPU::AGPRRegBankID:
-    return getAGPRClassForBitWidth(std::max(32u, Size));
+    return getAGPRClassForBitWidth(std::max(32u, SizeEnc));
   default:
     llvm_unreachable("unknown register bank");
   }
@@ -4584,18 +4558,18 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
   return Def;
 }
 
-MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
+MCRegister SIRegisterInfo::get32BitRegister(MCRegister Reg) const {
   assert(getRegSizeInBits(*getPhysRegBaseClass(Reg)) <= 32);
 
   for (const TargetRegisterClass *RC :
        {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
         &AMDGPU::AGPR_32RegClass}) {
-    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
+    if (MCRegister Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
       return Super;
   }
-  if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,
-                                            &AMDGPU::VGPR_32RegClass)) {
-      return Super;
+  if (MCRegister Super =
+          getMatchingSuperReg(Reg, AMDGPU::hi16, &AMDGPU::VGPR_32RegClass)) {
+    return Super;
   }
 
   return AMDGPU::NoRegister;

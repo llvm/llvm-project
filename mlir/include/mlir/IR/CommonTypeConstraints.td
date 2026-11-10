@@ -34,6 +34,12 @@ def IsVectorOfAnyRankTypePred : CPred<"::llvm::isa<::mlir::VectorType>($_self)">
 // Whether a type is a fixed-length VectorType.
 def IsFixedVectorOfAnyRankTypePred : CPred<[{::llvm::isa<::mlir::FixedVectorType>($_self)}]>;
 
+// Whether a type is a rank 1 VectorType (i.e. 1D vector).
+def IsVectorOfRank1Pred : And<[
+  CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
+  CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() == 1">
+]>;
+
 // Whether a type is a scalable VectorType.
 def IsVectorTypeWithAnyDimScalablePred
         : CPred<[{::llvm::isa<::mlir::ScalableVectorType>($_self)}]>;
@@ -379,6 +385,8 @@ def F8E8M0FNU : Type<CPred<"::llvm::isa<::mlir::Float8E8M0FNUType>($_self)">, "f
                 BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
 def F8E5M3FNU : Type<CPred<"::llvm::isa<::mlir::Float8E5M3FNUType>($_self)">, "f8E5M3FNU type">,
                 BuildableType<"$_builder.getType<Float8E5M3FNUType>()">;
+def MXI8 : Type<CPred<"::llvm::isa<::mlir::MXI8Type>($_self)">, "mxi8 type">,
+           BuildableType<"$_builder.getType<MXI8Type>()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
@@ -482,6 +490,10 @@ class FixedVectorOfAnyRank<list<Type> allowedTypes> :
 class ScalableVectorOfAnyRank<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypeWithAnyDimScalablePred,
           "scalable vector", "::mlir::VectorType">;
+
+class ScalableVectorOfRank1<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, And<[IsVectorTypeWithAnyDimScalablePred,
+  IsVectorOfRank1Pred]>, "scalable 1D vector", "::mlir::VectorType">;
 
 // Any vector with a single trailing scalable dimension, with an element type in
 // the `allowedTypes` list.
@@ -767,7 +779,7 @@ def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
 
 def AnyFixedVectorOfAnyRank : FixedVectorOfAnyRank<[AnyType]>;
 
-def AnyScalableVectorOfAnyRank : ScalableVectorOfAnyRank<[AnyType]>;
+def AnyScalableVectorOfRank1 : ScalableVectorOfRank1<[AnyType]>;
 
 // Shaped types.
 

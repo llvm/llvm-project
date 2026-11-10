@@ -332,7 +332,7 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[EVL_BASED_IV]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP22]], i32 -1
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP22]], i64 -1
 ; CHECK-NEXT:    [[INTERLEAVE_EVL:%.*]] = mul nuw nsw i32 [[TMP10]], 2
 ; CHECK-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP13]], <vscale x 8 x i1> splat (i1 true), i32 [[INTERLEAVE_EVL]])
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.vector.deinterleave2.nxv8i8(<vscale x 8 x i8> [[WIDE_VP_LOAD]])
@@ -379,14 +379,14 @@ exit:
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
-; CHECK: [[META5]] = distinct !{[[META5]], !"LVerDomain"}
+; CHECK: [[META5]] = distinct !{[[META5]], i1 false, !"LVerDomain"}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META5]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
 ; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]]}
-; CHECK: [[META12]] = distinct !{[[META12]], !"LVerDomain"}
+; CHECK: [[META12]] = distinct !{[[META12]], i1 false, !"LVerDomain"}
 ; CHECK: [[META13]] = !{[[META14:![0-9]+]]}
 ; CHECK: [[META14]] = distinct !{[[META14]], [[META12]]}
 ; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]], [[META2]]}

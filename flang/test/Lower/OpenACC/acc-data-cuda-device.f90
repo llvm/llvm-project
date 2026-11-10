@@ -48,7 +48,7 @@ subroutine test_data_generic
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_data_generic
-! CHECK: %[[HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_data_genericEmapped"}
+! CHECK: %[[HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_data_genericEmapped")
 ! CHECK: fir.call @_QP__host_sub
 ! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[HOST]]#0
 ! CHECK: acc.data dataOperands(%[[COPYIN]]
@@ -143,7 +143,7 @@ subroutine test_kernel_launch
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_kernel_launch
-! CHECK: %[[HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_kernel_launchEmapped"}
+! CHECK: %[[HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_kernel_launchEmapped")
 ! CHECK: acc.data
 ! CHECK: %[[LAUNCH_ARG:.*]] = fir.convert %[[HOST]]#0
 ! CHECK: cuf.kernel_launch @_QPkernel{{.*}}(%[[LAUNCH_ARG]]

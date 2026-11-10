@@ -89,9 +89,17 @@ NB_MODULE(_mlirExecutionEngine, m) {
             libPaths.reserve(sharedLibPaths.size());
             for (const std::string &path : sharedLibPaths)
               libPaths.push_back({path.c_str(), path.length()});
-            MlirExecutionEngine executionEngine = mlirExecutionEngineCreate(
-                module.get(), optLevel, libPaths.size(), libPaths.data(),
-                enableObjectDump, enablePIC);
+
+            // Access any Python objects before releasing the GIL.
+            MlirModule mlirModule = module.get();
+
+            MlirExecutionEngine executionEngine;
+            {
+              nb::gil_scoped_release release;
+              executionEngine = mlirExecutionEngineCreate(
+                  mlirModule, optLevel, libPaths.size(), libPaths.data(),
+                  enableObjectDump, enablePIC);
+            }
             if (mlirExecutionEngineIsNull(executionEngine))
               throw std::runtime_error(
                   "Failure while creating the ExecutionEngine.");

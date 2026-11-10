@@ -10,9 +10,9 @@ include "llvm/Option/LibraryOptions.td"
 
 def CGDataOptions : OptionsStruct;
 
-defm : BoolField<"codegen-data-generate", "0",
+defm : BoolField<"codegen-data-generate", "false",
   "Emit CodeGen Data into custom sections">;
-defm : BoolField<"codegen-data-thinlto-two-rounds", "0",
+defm : BoolField<"codegen-data-thinlto-two-rounds", "false",
   "Enable two-round ThinLTO code generation. "
   "The first round emits codegen data, while the second round uses the emitted codegen data for further optimizations">;
 defm : ValueField<"codegen-data-use-path", "StringRef", "",
@@ -32,11 +32,11 @@ defm : ValueField<"global-merging-min-merges", "unsigned", "2",
   "Minimum number of similar functions with the same hash required for merging">;
 defm : ValueField<"global-merging-param-overhead", "double", "2.0",
   "The overhead cost associated with each parameter when merging functions">;
-defm : BoolField<"global-merging-skip-no-params", "1",
+defm : BoolField<"global-merging-skip-no-params", "true",
   "Skip merging functions with no parameters">;
-defm : BoolField<"indexed-codegen-data-lazy-loading", "0",
+defm : BoolField<"indexed-codegen-data-lazy-loading", "false",
   "Lazily load indexed CodeGenData. "
   "Enable to save memory and time for final consumption of the indexed CodeGenData in production">;
-defm : BoolField<"indexed-codegen-data-read-function-map-names", "1",
+defm : BoolField<"indexed-codegen-data-read-function-map-names", "true",
   "Read function map names in indexed CodeGenData. "
   "Can be disabled to save memory and time for final consumption of the indexed CodeGenData in production">;

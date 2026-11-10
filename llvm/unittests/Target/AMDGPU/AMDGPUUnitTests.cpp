@@ -10,6 +10,7 @@
 #include "AMDGPUGenSubtargetInfo.inc"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
@@ -354,6 +355,21 @@ TEST_F(AMDGPUTestBase, TestReverseComposeSubRegIndices) {
       }
     }
   }
+}
+
+TEST_F(AMDGPUTestBase, TestDefaultDepCtrEncodingPerSubtarget) {
+  auto TM1010 = createAMDGPUTargetMachine(
+      Triple(Triple::amdgpu, Triple::AMDGPUSubArch1010), "", "");
+  auto TM1030 = createAMDGPUTargetMachine(
+      Triple(Triple::amdgpu, Triple::AMDGPUSubArch1030), "", "");
+  if (!TM1010 || !TM1030)
+    return;
+  const MCSubtargetInfo &STI1010 = TM1010->getMCSubtargetInfo();
+  const MCSubtargetInfo &STI1030 = TM1030->getMCSubtargetInfo();
+
+  EXPECT_EQ(AMDGPU::DepCtr::getDefaultDepCtrEncoding(STI1010), 0xff1f);
+  EXPECT_EQ(AMDGPU::DepCtr::getDefaultDepCtrEncoding(STI1030), 0xff9f);
+  EXPECT_EQ(AMDGPU::DepCtr::getDefaultDepCtrEncoding(STI1010), 0xff1f);
 }
 
 TEST_F(AMDGPUTestBase, TestGetNamedOperandIdx) {

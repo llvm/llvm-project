@@ -25,6 +25,7 @@
 namespace llvm {
 
 class AMDGPUTargetMachine;
+struct AMDGPUOptions;
 class GCNSubtarget;
 class InstCombiner;
 class Loop;
@@ -39,6 +40,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   friend BaseT;
 
+  const AMDGPUOptions &CLOpts;
   Triple TargetTriple;
 
   const TargetSubtargetInfo *ST;
@@ -66,6 +68,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   friend BaseT;
 
+  const AMDGPUOptions &CLOpts;
   const GCNSubtarget *ST;
   const SITargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
@@ -175,7 +178,14 @@ public:
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const override;
 
-  bool isInlineAsmSourceOfDivergence(const CallInst *CI,
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
+
+  bool isInlineAsmSourceOfDivergence(const CallBase *CB,
                                      ArrayRef<unsigned> Indices = {}) const;
 
   using BaseT::getVectorInstrCost;

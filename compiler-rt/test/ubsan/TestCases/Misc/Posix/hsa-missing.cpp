@@ -1,4 +1,4 @@
-// RUN: %clangxx -fsanitize=undefined -shared-libsan %s -o %t
+// RUN: %clangxx -fsanitize=undefined -shared-libsan %s -ldl -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // The shared runtime exports the HSA wrappers to every program. Without HSA

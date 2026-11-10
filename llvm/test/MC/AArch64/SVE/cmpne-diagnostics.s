@@ -66,12 +66,12 @@ cmpne p0.d, p0/z, z0.s, z0.s
 // Invalid immediate range
 
 cmpne p0.s, p0/z, z0.s, #-17
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-16, 15].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-16, 15].
 // CHECK-NEXT: cmpne p0.s, p0/z, z0.s, #-17
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 cmpne p0.s, p0/z, z0.s, #16
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-16, 15].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-16, 15].
 // CHECK-NEXT: cmpne p0.s, p0/z, z0.s, #16
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

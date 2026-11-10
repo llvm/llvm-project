@@ -14,8 +14,10 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -30,11 +32,6 @@ using namespace PatternMatch;
 STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
-static cl::opt<unsigned> MaxCopiedFromConstantUsers(
-    "instcombine-max-copied-from-constant-users", cl::init(300),
-    cl::desc("Maximum users to visit in copy from constant transform"),
-    cl::Hidden);
-
 /// isOnlyCopiedFromConstantMemory - Recursively walk the uses of a (derived)
 /// pointer to an alloca.  Ignore any reads of the pointer, return false if we
 /// see any stores or other unknown uses.  If we see pointer arithmetic, keep
@@ -42,10 +39,9 @@ static cl::opt<unsigned> MaxCopiedFromConstantUsers(
 /// the uses.  If we see a memcpy/memmove that targets an unoffseted pointer to
 /// the alloca, and if the source pointer is a pointer to a constant memory
 /// location, we can optimize this.
-static bool
-isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
-                               MemTransferInst *&TheCopy,
-                               SmallVectorImpl<Instruction *> &ToDelete) {
+static bool isOnlyCopiedFromConstantMemory(
+    AAResults *AA, AllocaInst *V, MemTransferInst *&TheCopy,
+    SmallVectorImpl<Instruction *> &ToDelete, unsigned MaxUsers) {
   // We track lifetime intrinsics as we encounter them.  If we decide to go
   // ahead and replace the value with the memory location, this lets the caller
   // quickly eliminate the markers.
@@ -58,7 +54,7 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
     ValueAndIsOffset Elem = Worklist.pop_back_val();
     if (!Visited.insert(Elem).second)
       continue;
-    if (Visited.size() > MaxCopiedFromConstantUsers)
+    if (Visited.size() > MaxUsers)
       return false;
 
     const auto [Value, IsOffset] = Elem;
@@ -160,11 +156,11 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
 /// can replace any uses of the alloca with uses of the memory location
 /// directly.
 static MemTransferInst *
-isOnlyCopiedFromConstantMemory(AAResults *AA,
-                               AllocaInst *AI,
-                               SmallVectorImpl<Instruction *> &ToDelete) {
+isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *AI,
+                               SmallVectorImpl<Instruction *> &ToDelete,
+                               unsigned MaxUsers) {
   MemTransferInst *TheCopy = nullptr;
-  if (isOnlyCopiedFromConstantMemory(AA, AI, TheCopy, ToDelete))
+  if (isOnlyCopiedFromConstantMemory(AA, AI, TheCopy, ToDelete, MaxUsers))
     return TheCopy;
   return nullptr;
 }
@@ -199,6 +195,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
                                                 nullptr, AI.getName());
       New->setAlignment(AI.getAlign());
       New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
+      New->copyMetadata(AI);
 
       replaceAllDbgUsesWith(AI, *New, *New, DT);
       return IC.replaceInstUsesWith(AI, New);
@@ -524,7 +521,7 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
 
     // Get the first instruction in the entry block.
     BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
-    BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrDbg();
+    BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrPseudoProbe();
     if (&*FirstInst != &AI) {
       // If the entry block doesn't start with a zero-size alloca then move
       // this one to the start of the entry block.  There is no problem with
@@ -553,7 +550,8 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   // constructs like "void foo() { int A[] = {1,2,3,4,5,6,7,8,9...}; }" if 'A'
   // is only subsequently read.
   SmallVector<Instruction *, 4> ToDelete;
-  if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(AA, &AI, ToDelete)) {
+  if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(
+          AA, &AI, ToDelete, CLOpts.max_copied_from_constant_users)) {
     Value *TheSrc = Copy->getSource();
     Align AllocaAlign = AI.getAlign();
     Align SourceAlign = getOrEnforceKnownAlignment(
@@ -807,7 +805,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     // arrays of arbitrary size but this has a terrible impact on compile time.
     // The threshold here is chosen arbitrarily, maybe needs a little bit of
     // tuning.
-    if (NumElements > IC.MaxArraySizeForCombine)
+    if (NumElements > IC.CLOpts.maxarray_size)
       return nullptr;
 
     const DataLayout &DL = IC.getDataLayout();
@@ -1101,6 +1099,45 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V, bool UseProvenance,
   return nullptr;
 }
 
+/// load (gep (select Cond, TrueC, FalseC), IndexC)
+///   --> select Cond, (load TrueC'), (load FalseC')
+/// Only done when both arms fold to a constant, which makes this profitable
+/// regardless of the use count of the select: no new load is created.
+static Instruction *foldLoadOfSelectOfConstPtrs(LoadInst &LI,
+                                                const DataLayout &DL) {
+  Value *Op = LI.getOperand(0);
+  // In canonical IR the pattern is load (select) or load (gep (select)).
+  Value *Base = Op;
+  if (auto *GEP = dyn_cast<GEPOperator>(Base))
+    Base = GEP->getPointerOperand();
+  Value *Cond;
+  Constant *TrueC, *FalseC;
+  if (!match(Base,
+             m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
+    return nullptr;
+
+  APInt Offset(DL.getIndexTypeSizeInBits(Op->getType()), 0);
+  if (Op->stripAndAccumulateConstantOffsets(DL, Offset,
+                                            /*AllowNonInbounds=*/true) != Base)
+    return nullptr;
+
+  // Stripping an addrspacecast may have changed the index width.
+  if (DL.getIndexTypeSizeInBits(Base->getType()) != Offset.getBitWidth())
+    return nullptr;
+
+  Constant *TrueVal =
+      ConstantFoldLoadFromConstPtr(TrueC, LI.getType(), Offset, DL);
+  if (!TrueVal)
+    return nullptr;
+  Constant *FalseVal =
+      ConstantFoldLoadFromConstPtr(FalseC, LI.getType(), Offset, DL);
+  if (!FalseVal)
+    return nullptr;
+
+  return SelectInst::Create(Cond, TrueVal, FalseVal, "", nullptr,
+                            cast<Instruction>(Base));
+}
+
 Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   Value *Op = LI.getOperand(0);
   if (Value *Res = simplifyLoadInst(&LI, Op, SQ.getWithInstruction(&LI)))
@@ -1194,6 +1231,9 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
       }
     }
   }
+
+  if (Instruction *Res = foldLoadOfSelectOfConstPtrs(LI, DL))
+    return Res;
 
   if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Op, /*UseProvenance=*/true))
@@ -1414,7 +1454,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     // arrays of arbitrary size but this has a terrible impact on compile time.
     // The threshold here is chosen arbitrarily, maybe needs a little bit of
     // tuning.
-    if (NumElements > IC.MaxArraySizeForCombine)
+    if (NumElements > IC.CLOpts.maxarray_size)
       return false;
 
     const DataLayout &DL = IC.getDataLayout();
@@ -1526,9 +1566,8 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   for (unsigned ScanInsts = 6; BBI != SI.getParent()->begin() && ScanInsts;
        --ScanInsts) {
     --BBI;
-    // Don't count debug info directives, lest they affect codegen,
-    // and we skip pointer-to-pointer bitcasts, which are NOPs.
-    if (BBI->isDebugOrPseudoInst()) {
+    // Don't count pseudo probes, lest they affect codegen.
+    if (isa<PseudoProbeInst>(BBI)) {
       ScanInsts++;
       continue;
     }
@@ -1591,9 +1630,11 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   }
 
   // store undef, Ptr -> noop
-  // FIXME: This is technically incorrect because it might overwrite a poison
-  // value. Change to PoisonValue once #52930 is resolved.
-  if (isa<UndefValue>(Val))
+  // Non-byte-sized stores of undef (e.g. i12) are padded with zeros, so we
+  // can't remove the instruction.
+  // FIXME: It's incorrect to overwrite poison with undef
+  if (isa<PoisonValue>(Val) ||
+      (isa<UndefValue>(Val) && DL.typeSizeEqualsStoreSize(Val->getType())))
     return eraseInstFromFunction(SI);
 
   // Replace byte constants with integer constants in stores.
@@ -1696,8 +1737,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   StoreInst *OtherStore = nullptr;
   if (isa<UncondBrInst>(BBI)) {
     --BBI;
-    // Skip over debugging info and pseudo probes.
-    while (BBI->isDebugOrPseudoInst()) {
+    // Skip over pseudo probes.
+    while (isa<PseudoProbeInst>(BBI)) {
       if (BBI==OtherBB->begin())
         return false;
       --BBI;
