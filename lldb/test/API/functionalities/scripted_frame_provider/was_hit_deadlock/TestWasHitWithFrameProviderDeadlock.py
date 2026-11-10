@@ -30,7 +30,6 @@ from lldbsuite.test.lldbtest import *
 class TestWasHitWithFrameProviderDeadlock(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     @skipIfWasm  # the was_hit callback increments the value with an expression
     def test_was_hit_with_frame_provider_no_deadlock(self):
         """

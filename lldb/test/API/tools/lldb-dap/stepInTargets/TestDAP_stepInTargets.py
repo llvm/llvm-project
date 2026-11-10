@@ -9,7 +9,6 @@ from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StepInTargetsArgs
 
 
 class TestDAP_stepInTargets(DAPTestCaseBase):
-    @expectedFailureAll(oslist=["windows"])
     @skipIf(archs=no_match(["x86_64"]))
     # InstructionControlFlowKind for ARM is not supported yet.
     # On Windows, lldb-dap seems to ignore targetId when stepping into functions.

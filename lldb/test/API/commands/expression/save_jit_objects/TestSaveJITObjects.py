@@ -22,7 +22,6 @@ class SaveJITObjectsTestCase(TestBase):
             os.remove(j)
         return
 
-    @expectedFailureAll(oslist=["windows"], debug_info=no_match(["pdb"]))
     def test_save_jit_objects(self):
         self.build()
         os.chdir(self.getBuildDir())

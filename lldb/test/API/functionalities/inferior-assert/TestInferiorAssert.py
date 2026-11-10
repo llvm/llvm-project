@@ -11,11 +11,6 @@ from lldbsuite.test.lldbtest import *
 class AssertingInferiorTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
-        debug_info=no_match(["pdb"]),
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
-    )
-    @expectedFailureAll(
-        oslist=["windows"],
         archs=["aarch64"],
         bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
@@ -28,11 +23,6 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
-        debug_info=no_match(["pdb"]),
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
-    )
-    @expectedFailureAll(
-        oslist=["windows"],
         archs=["aarch64"],
         bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
@@ -42,11 +32,6 @@ class AssertingInferiorTestCase(TestBase):
         self.build()
         self.inferior_asserting_registers()
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        debug_info=no_match(["pdb"]),
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
-    )
     @expectedFailureAll(
         oslist=["windows"],
         archs=["aarch64"],
@@ -76,11 +61,6 @@ class AssertingInferiorTestCase(TestBase):
 
     @expectedFailureAll(
         oslist=["windows"],
-        debug_info=no_match(["pdb"]),
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
-    )
-    @expectedFailureAll(
-        oslist=["windows"],
         archs=["aarch64"],
         bugnumber="github.com/llvm/llvm-project/issues/224600",
     )
@@ -96,11 +76,6 @@ class AssertingInferiorTestCase(TestBase):
         self.build()
         self.inferior_asserting_expr()
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        debug_info=no_match(["pdb"]),
-        bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows",
-    )
     @expectedFailureAll(
         oslist=["windows"],
         archs=["aarch64"],
