@@ -757,12 +757,11 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   unsigned ScratchRegs[] = {RISCV::X6, RISCV::X7};
   unsigned NextReg = RISCV::X28;
   auto isRegAvailable = [&](unsigned Reg) {
-    // if cf-protection=branch is enabled, x7 is reserved for the zicfilp
+    // If cf-protection=branch is enabled, x7 is reserved for the zicfilp
     // extension and cannot be used as scratch register.
-    if (MI.getMF()
-            ->getInfo<RISCVMachineFunctionInfo>()
-            ->hasCFProtectionBranch() &&
-        Reg == RISCV::X7)
+    if (Reg == RISCV::X7 && MI.getMF()
+                                ->getInfo<RISCVMachineFunctionInfo>()
+                                ->hasCFProtectionBranch())
       return false;
     return Reg != AddrReg && !STI->isRegisterReservedByUser(Reg);
   };

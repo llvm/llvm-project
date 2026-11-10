@@ -4,7 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -riscv-landing-pad-label=778899 \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefix=RV64I
 
-;; check that KCFI does not use the t2/x7 register when branch protection is enabled as it is reserved for zicfilp.
+;; Check that KCFI does not use the t2/x7 register when branch protection 
+;; is enabled as it is reserved for zicfilp.
 
 define i32 @test_call(ptr %f, i32 %x) nounwind {
 ; RV32I-LABEL: test_call:
