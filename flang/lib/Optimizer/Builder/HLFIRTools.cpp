@@ -1007,19 +1007,6 @@ mlir::Value hlfir::inlineElementalOp(
           mlir::Value inlined = inlineElementalOp(
               loc, builder, elementalIface, clonedApplyIndices, mapper,
               mustRecursivelyInline, cleanups);
-          // The applied elemental may yield a variable (e.g. a vector
-          // subscripted designator element), while hlfir.apply always
-          // produces a value. Convert the variable so that users expecting
-          // a value remain valid.
-          if (inlined.getType() != apply.getType()) {
-            hlfir::Entity inlinedEntity{inlined};
-            if (inlinedEntity.isVariable()) {
-              if (fir::isa_trivial(apply.getType()))
-                inlined = hlfir::loadTrivialScalar(loc, builder, inlinedEntity);
-              else
-                inlined = hlfir::AsExprOp::create(builder, loc, inlined);
-            }
-          }
           mapper.map(apply.getResult(), inlined);
           continue;
         }
@@ -1406,6 +1393,11 @@ hlfir::convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
 ///    %hlfir.yield_element %value : T
 ///  }
 /// ```
+///
+/// For non trivial types (derived types, characters, polymorphic entities),
+/// the element is not loaded but copied into an hlfir.expr with an
+/// hlfir.as_expr so that the hlfir.elemental yields a value and the read of
+/// the element is visible in the hlfir.elemental body memory effects.
 hlfir::ElementalOp
 hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
                           hlfir::ElementalAddrOp elementalAddrOp) {
@@ -1428,6 +1420,8 @@ hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
         elementalAddrOp.getBody().back().getTerminator());
     hlfir::Entity newAddr{mapper.lookupOrDefault(yield.getEntity())};
     hlfir::Entity element = hlfir::loadTrivialScalar(l, b, newAddr);
+    if (element.isVariable())
+      element = hlfir::Entity{hlfir::AsExprOp::create(b, l, element)};
     if (yield.getCleanup().empty())
       return {element, std::nullopt};
     return {element, getElementCleanup(yield.getCleanup(), b, mapper)};

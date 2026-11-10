@@ -521,6 +521,17 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
     if (elementalLoopNest)
       builder.setInsertionPointAfter(elementalLoopNest->outerOp);
   } else {
+    // Inside WHERE, an inlined hlfir.elemental may produce its element value
+    // with an hlfir.as_expr copy of a variable (e.g. vector subscripted
+    // designator element). Assign directly from the variable to avoid a
+    // temporary for each element: the scheduling already accounted for the
+    // read effect of the hlfir.as_expr.
+    if (whereLoopNest.has_value())
+      if (auto asExpr = rhsEntity.getDefiningOp<hlfir::AsExprOp>())
+        if (!asExpr.isMove() && asExpr->use_empty()) {
+          rhsEntity = hlfir::Entity{asExpr.getVar()};
+          asExpr->erase();
+        }
     // TODO: preserve allocatable assignment aspects for forall once
     // they are conveyed in hlfir.region_assign.
     auto assignOp = hlfir::AssignOp::create(builder, loc, rhsEntity, lhsEntity);

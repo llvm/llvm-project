@@ -67,4 +67,34 @@ contains
 ! CHECK:             %[[ELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  typeparams %{{.*}} : ({{.*}}, i64, index) -> !fir.ref<!fir.char<1,4>>
 ! CHECK:             %[[VAL:.*]] = hlfir.as_expr %[[ELT]] : (!fir.ref<!fir.char<1,4>>) -> !hlfir.expr<!fir.char<1,4>>
 ! CHECK:             hlfir.no_reassoc %[[VAL]] : !hlfir.expr<!fir.char<1,4>>
+
+  ! Direct assignment: the element is assigned without an hlfir.as_expr copy.
+  subroutine assign_derived(dd, de, idx, msk)
+    type(t) :: dd(3), de(3)
+    integer :: idx(3)
+    logical :: msk(3)
+    where (msk) de = dd(idx)
+  end subroutine
+! CHECK-LABEL: func.func @_QMwhere_vector_subscript_valuePassign_derived(
+! CHECK:         fir.do_loop
+! CHECK:           fir.if
+! CHECK:             %[[ELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : ({{.*}}, i64) -> !fir.ref<!fir.type<_QMwhere_vector_subscript_valueTt{v:i32}>>
+! CHECK-NOT:         hlfir.as_expr
+! CHECK:             hlfir.assign %[[ELT]] to %{{.*}} : !fir.ref<!fir.type<_QMwhere_vector_subscript_valueTt{v:i32}>>, !fir.ref<!fir.type<_QMwhere_vector_subscript_valueTt{v:i32}>>
+
+  ! Assumed-shape dummies are used because explicit-shape character dummies
+  ! (passed as fir.boxchar) are conservatively assumed to alias with the
+  ! other dummies, which would cause the RHS to be saved before the loop.
+  subroutine assign_character(cc, cd, idx, msk)
+    character(4) :: cc(:), cd(:)
+    integer :: idx(:)
+    logical :: msk(:)
+    where (msk) cd = cc(idx)
+  end subroutine
+! CHECK-LABEL: func.func @_QMwhere_vector_subscript_valuePassign_character(
+! CHECK:         fir.do_loop
+! CHECK:           fir.if
+! CHECK:             %[[ELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  typeparams %{{.*}} : ({{.*}}, i64, index) -> !fir.ref<!fir.char<1,4>>
+! CHECK-NOT:         hlfir.as_expr
+! CHECK:             hlfir.assign %[[ELT]] to %{{.*}} : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
 end module
