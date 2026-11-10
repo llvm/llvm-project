@@ -28712,8 +28712,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
     for (SDValue V : Interleave->op_values())
       Ops.push_back(IsScalable ? V
                                : convertToScalableVector(DAG, ContainerVT, V));
-    SDValue Pred = getPredicateForVector(DAG, DL, SubVecTy);
-    Ops.push_back(Pred);
+    Ops.push_back(getPredicateForVector(DAG, DL, SubVecTy));
     Ops.push_back(BaseStore->getBasePtr());
   }
   SDValue NewStore = DAG.getMemIntrinsicNode(
@@ -31917,8 +31916,7 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
   SmallVector<LoadSDNode *, 4> Loads;
   for (const SDValue &Operand : N->op_values()) {
     auto *Load = dyn_cast<LoadSDNode>(Operand);
-    if (!Load || !Operand.hasOneUse() || !ISD::isNormalLoad(Load) ||
-        Load->getMemoryVT() != SubVecTy)
+    if (!Load || !Operand.hasOneUse() || !ISD::isNormalLoad(Load))
       return SDValue();
     Loads.push_back(Load);
   }
