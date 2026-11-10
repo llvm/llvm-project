@@ -157,3 +157,98 @@ loop.latch:
 exit:
   ret void
 }
+
+; Speculatable call without nounwind/willreturn kept in the header, as its
+; result is used outside the loop.
+define i64 @speculatable_call_live_out(ptr noalias %a, ptr align 8 dereferenceable(160) %pred) {
+; CHECK-LABEL: define i64 @speculatable_call_live_out(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr align 8 dereferenceable(160) [[PRED:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH1:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP_LATCH1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i64, ptr [[PRED]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i64> [[WIDE_LOAD]], splat (i64 500)
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i64> @vspec(<4 x i64> [[VEC_IND]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[LOOP_LATCH1]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
+; CHECK:       [[VECTOR_BODY_SKIPPABLE]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP6]], i64 0
+; CHECK-NEXT:    store i64 [[TMP12]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP6]], i64 1
+; CHECK-NEXT:    store i64 [[TMP13]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[TMP6]], i64 2
+; CHECK-NEXT:    store i64 [[TMP14]], ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[TMP6]], i64 3
+; CHECK-NEXT:    store i64 [[TMP15]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    br label %[[LOOP_LATCH1]]
+; CHECK:       [[LOOP_LATCH1]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP7]], [[TMP16]]
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP6]], i64 3
+; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP7]], i64 0, i64 4
+; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP20]], 20
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP20]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i64, ptr [[PRED]], i64 [[IV]]
+; CHECK-NEXT:    [[EE_VAL:%.*]] = load i64, ptr [[EE_ADDR]], align 8
+; CHECK-NEXT:    [[EE_COND:%.*]] = icmp sgt i64 [[EE_VAL]], 500
+; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[C:%.*]] = call i64 @spec(i64 [[IV]])
+; CHECK-NEXT:    [[A_ADDR:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[C]], ptr [[A_ADDR]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 20
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ [[C]], %[[LOOP_LATCH]] ], [ [[TMP18]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %ee.addr = getelementptr inbounds nuw i64, ptr %pred, i64 %iv
+  %ee.val = load i64, ptr %ee.addr, align 8
+  %ee.cond = icmp sgt i64 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %loop.latch
+
+loop.latch:
+  %c = call i64 @spec(i64 %iv)
+  %a.addr = getelementptr inbounds nuw i64, ptr %a, i64 %iv
+  store i64 %c, ptr %a.addr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %loop.header
+
+exit:
+  %r = phi i64 [ 0, %loop.header ], [ %c, %loop.latch ]
+  ret i64 %r
+}
+
+declare i64 @spec(i64) #0
+declare <4 x i64> @vspec(<4 x i64>)
+
+attributes #0 = { speculatable memory(none) "vector-function-abi-variant"="_ZGV_LLVM_N4v_spec(vspec)" }

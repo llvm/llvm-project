@@ -35,6 +35,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -109,6 +110,21 @@ placementName(fir::AllocationPlacement placement) {
   return "?";
 }
 
+/// Placement made by the passes that legacy mode emulates: the stack-arrays
+/// pass under -fstack-arrays, and the memory-allocation-opt pass otherwise.
+static fir::AllocationPlacement
+decideLegacyPlacement(const fir::AllocationInfo &info, bool stackArrays,
+                      bool dynamicArrayOnHeap) {
+  using P = fir::AllocationPlacement;
+  if (stackArrays)
+    return info.isCurrentlyOnStack || fir::isInOffloadRegion(info.context)
+               ? P::Leave
+               : P::Stack;
+  return info.isCurrentlyOnStack && dynamicArrayOnHeap && info.isDynamic
+             ? P::Heap
+             : P::Leave;
+}
+
 /// Return true if \p placement leaves the allocation on the stack.
 static bool endsUpOnStack(fir::AllocationPlacement placement,
                           bool isCurrentlyOnStack) {
@@ -152,6 +168,14 @@ void AllocationPlacementPass::runOnOperation() {
                                smallArrayThresholdBytes);
   fir::overrideIfExplicitlySet(basePolicy.totalStackLimitBytes,
                                totalStackLimitBytes);
+  // In legacy mode, a function that opted out of -fstack-arrays in its own
+  // policy (device code, where the stack is tiny) is handled as if
+  // -fstack-arrays was not set, so -fdynamic-heap-array applies to it.
+  if (legacy)
+    if (std::optional<fir::AllocationPolicy> localPolicy =
+            fir::getLocalAllocationPolicy(func))
+      if (!localPolicy->stackArrays)
+        basePolicy.stackArrays = false;
 
   auto module = func->getParentOfType<mlir::ModuleOp>();
   std::optional<mlir::DataLayout> dl =
@@ -161,15 +185,6 @@ void AllocationPlacementPass::runOnOperation() {
   std::optional<fir::KindMapping> kindMap;
   if (module)
     kindMap = fir::getKindMapping(module);
-
-  // Analysis of which fir.allocmem can be safely moved to the stack, and where.
-  auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
-  const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps =
-      analysis.getCandidateOps(func);
-  if (!candidateOps) {
-    signalPassFailure();
-    return;
-  }
 
   // Walk allocations in deterministic program order, maintaining the running
   // per-function stack budget while collecting the conversions to perform.
@@ -194,10 +209,13 @@ void AllocationPlacementPass::runOnOperation() {
     }
 
     // Arrays are placed in both directions. Constant-length scalar characters
-    // are only moved from the heap to the stack; scalar allocas are left alone.
+    // are only moved from the heap to the stack; scalar allocas are left alone,
+    // except that, like the memory-allocation-opt pass, legacy mode may move
+    // any allocation with a runtime size to the heap.
     mlir::Type inTy = alloca ? alloca.getInType() : allocmem.getAllocatedType();
     if (!mlir::isa<fir::SequenceType>(inTy) &&
-        !(allocmem && fir::isStackArraysCandidateType(inTy)))
+        !(allocmem && fir::isStackArraysCandidateType(inTy)) &&
+        !(legacy && alloca && alloca.isDynamic()))
       return;
 
     fir::AllocationInfo info;
@@ -213,10 +231,15 @@ void AllocationPlacementPass::runOnOperation() {
 
     // A hook, if provided, fully overrides the default policy; it may delegate
     // back to decideAllocationPlacement after adjusting the policy.
-    fir::AllocationPlacement placement =
-        placementHook
-            ? placementHook(info, basePolicy, stackBytesUsed)
-            : fir::decideAllocationPlacement(info, basePolicy, stackBytesUsed);
+    fir::AllocationPlacement placement;
+    if (placementHook)
+      placement = placementHook(info, basePolicy, stackBytesUsed);
+    else if (legacy)
+      placement = decideLegacyPlacement(info, basePolicy.stackArrays,
+                                        dynamicArrayOnHeap);
+    else
+      placement =
+          fir::decideAllocationPlacement(info, basePolicy, stackBytesUsed);
 
     // Account for the decision in the running stack budget, with the same
     // figure the decision used (size plus worst-case alignment padding).
@@ -239,10 +262,25 @@ void AllocationPlacementPass::runOnOperation() {
 
     if (alloca && placement == fir::AllocationPlacement::Heap)
       allocasToHeap.insert(op);
-    else if (allocmem && placement == fir::AllocationPlacement::Stack &&
-             candidateOps->contains(op))
+    else if (allocmem && placement == fir::AllocationPlacement::Stack)
       allocmemsToStack.push_back(op);
   });
+
+  // Analysis of which fir.allocmem can be safely moved to the stack, and
+  // where. It is only needed, and only paid for, when some fir.allocmem should
+  // move to the stack.
+  const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps = nullptr;
+  if (!allocmemsToStack.empty()) {
+    auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
+    candidateOps = analysis.getCandidateOps(func);
+    if (!candidateOps) {
+      signalPassFailure();
+      return;
+    }
+    llvm::erase_if(allocmemsToStack, [&](mlir::Operation *op) {
+      return !candidateOps->contains(op);
+    });
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "allocation-placement: " << func.getSymName()
                           << ": " << allocasToHeap.size() << " stack->heap, "

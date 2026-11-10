@@ -44,8 +44,9 @@ void addCfgConversionPass(mlir::PassManager &pm,
 
 void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
-    return fir::createMemoryAllocationOpt(
-        {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
+    fir::MemoryAllocationOptOptions options;
+    options.dynamicArrayOnHeap = dynamicArrayStackToHeapAllocation;
+    return fir::createMemoryAllocationOpt(options);
   });
 }
 
@@ -231,12 +232,15 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   pm.addPass(fir::createCudaHeapAllocPromotion(
       fir::CudaHeapAllocPromotionOptions{pc.StackArrays}));
 
-  if (enableAllocationPlacement)
+  if (enableAllocationPlacement) {
     pm.addPass(fir::createAllocationPlacement());
-  else if (pc.StackArrays)
-    pm.addPass(fir::createStackArrays());
-  else
-    fir::addMemoryAllocationOpt(pm);
+  } else if (pc.StackArrays || !disableFirMao) {
+    fir::AllocationPlacementOptions options;
+    options.legacy = true;
+    options.stackArrays = pc.StackArrays;
+    options.dynamicArrayOnHeap = dynamicArrayStackToHeapAllocation;
+    pm.addPass(fir::createAllocationPlacement(options));
+  }
 
   // FIR Inliner Callback
   pc.invokeFIRInlinerCallback(pm, pc.OptLevel);

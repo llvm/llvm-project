@@ -424,7 +424,10 @@ void VPPredicator::run() {
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
 
   for (VPBasicBlock *VPBB : Blocks) {
-    // The header and successors of a kept branch need no block masks.
+    // Introduce the mask for VPBB, which may introduce needed edge masks, and
+    // convert all phi recipes of VPBB to blend recipes unless VPBB is the
+    // header.
+    // Successors of a kept header branch need no block masks.
     if (VPBB != Header &&
         !(KeepHeaderBranch && is_contained(Header->getSuccessors(), VPBB)))
       createBlockInMask(VPBB);
@@ -446,8 +449,8 @@ void VPPredicator::run() {
     if (VPBB != Header)
       convertPhisToBlends(VPBB);
 
-  // Linearize in reverse postorder, preserving a kept header branch. This
-  // places the skipped region before the merge.
+  // Linearize the blocks of the loop into one serial chain.
+  // Preserve a kept header branch, placing the skipped region before the merge.
   VPBlockBase *PrevVPBB = nullptr;
   for (VPBasicBlock *VPBB : drop_begin(Blocks, KeepHeaderBranch ? 1 : 0)) {
     auto Successors = to_vector(VPBB->getSuccessors());

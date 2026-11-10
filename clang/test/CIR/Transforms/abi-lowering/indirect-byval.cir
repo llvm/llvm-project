@@ -802,9 +802,8 @@ module attributes {
   // CHECK-NEXT:   cir.call @takes_big_align16(%[[SLOT]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.align = 16 : i64, llvm.byval = !rec_Big, llvm.noundef
 
-  // The slot underneath the cast is aligned well enough, but the rewritten
-  // parameter is a pointer in the default address space, so the operand
-  // cannot be handed on and a slot of its own is filled instead.
+  // The operand is loaded through an address_space cast of a slot that already
+  // has the rewritten parameter's type, so the slot itself is handed on.
   cir.func @caller_byval_through_addrspace(%s: !rec_Big)
       requires_call_conv_lowering attributes { test_classify = #passthrough } {
     %raw = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
@@ -817,14 +816,13 @@ module attributes {
     cir.return
   }
 
-  // CHECK:      cir.func{{.*}} @caller_byval_through_addrspace
-  // CHECK:        %[[RAW:.*]] = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:        %[[AS:.*]] = cir.cast address_space %[[RAW]]
-  // CHECK:        %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK-NEXT:   cir.copy %[[AS]] align(8) to %[[SLOT]] align(8)
-  // CHECK-SAME:     : !cir.ptr<!rec_Big, target_address_space(5)>, !cir.ptr<!rec_Big>
-  // CHECK-NEXT:   %{{.*}} = cir.call @takes_big(%[[SLOT]]) :
-  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
+  // CHECK:      cir.func{{.*}} @caller_byval_through_addrspace(%[[S:.*]]: !rec_Big)
+  // CHECK-NEXT:   %[[RAW:.*]] = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[AS:.*]] = cir.cast address_space %[[RAW]] : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[S]], %[[AS]] : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   %{{.*}} = cir.call @takes_big(%[[RAW]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
+  // CHECK-NEXT:   cir.return
 
   // One load feeding both byval operands is forwarded to both, and erased
   // once, since neither hand-off reads it.  byval makes each callee a copy

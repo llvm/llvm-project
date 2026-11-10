@@ -1506,6 +1506,14 @@ void DwarfDebug::endModule() {
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
 
+  // All functions have been processed, so it is known now which subprograms
+  // have abstract DIEs. Move DIEs of function-local entities created while
+  // processing functions to their final parents.
+  AllFunctionsProcessed = true;
+  for (DwarfFile *Holder : {&InfoHolder, &SkeletonHolder})
+    for (const auto &CU : Holder->getUnits())
+      CU->resolvePendingLocalScopeDIEs();
+
   const Module *M = MMI->getModule();
 
   // Collect global variables info.
@@ -3276,6 +3284,17 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
   if (!DwarfExpr.canAddGlobalAddress() &&
       any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
         return Entry.isGlobalAddress();
+      }))
+    return;
+
+  // DW_OP_LLVM_implicit_pointer is only lowered for single-location variables
+  // (see DwarfCompileUnit::emitImplicitPointerLocation). In a location list,
+  // bail before anything is written, otherwise the register part of the
+  // location gets emitted without the implicit pointer and describes the
+  // wrong thing. The range is dropped instead, i.e. optimized out there.
+  if (DIExpr &&
+      any_of(DIExpr->expr_ops(), [](const DIExpression::ExprOperand &Op) {
+        return Op.getOp() == dwarf::DW_OP_LLVM_implicit_pointer;
       }))
     return;
 
