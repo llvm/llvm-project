@@ -167,7 +167,6 @@ public:
   MaybeExpr Analyze(const parser::AllocateObject &);
   MaybeExpr Analyze(const parser::PointerObject &);
   MaybeExpr Analyze(const parser::ConditionalExpr &);
-  MaybeExpr Analyze(const parser::AllocateShapeSpecListOrBounds &x);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -534,10 +533,7 @@ public:
         std::get<std::optional<parser::ScalarIntConstantExpr>>(x.t)};
     return !init || !parser::IsBOZLiteral(*init);
   }
-  bool Pre(const parser::AllocateShapeSpecListOrBounds &x) {
-    exprAnalyzer_.Analyze(x);
-    return false;
-  }
+  bool Pre(const parser::AllocateShapeSpecListOrBounds &);
   bool Pre(const parser::DataStmtObject &);
   void Post(const parser::DataStmtObject &);
   bool Pre(const parser::DataImpliedDo &);

@@ -4990,73 +4990,6 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
   return ExprOrVariable(x, parser::FindSourceLocation(x));
 }
 
-MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecListOrBounds &x) {
-  auto &shapeSpecList{
-    std::get<std::list<parser::AllocateShapeSpec>>(x.u)};
-  if(shapeSpecList.size() == 0) {
-    return std::nullopt;
-  }
-
-  if(shapeSpecList.size() == 1) {
-    // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
-    const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
-    const auto &lowerBoundOpt = std::get<0>(shapeSpecList.front().t);
-    const auto *lowerBound = lowerBoundOpt ? &*lowerBoundOpt : nullptr;
-
-    bool foundArray{false};
-    // We want to rewrite as an AllocateShapeBoundsSpec even if 
-    // the element type is wrong (say a real instead of integer), so 
-    // analyze as an unwrapped Expr for its rank, then analyze as 
-    // an Integer<Indirection<Expr>>.
-    if(MaybeExpr analyzedExpr = Analyze(upperBound.thing.thing.value());
-       analyzedExpr && (analyzedExpr->Rank() > 0)) {
-      foundArray = true;
-      Analyze(upperBound.thing);  
-    } 
-    if(lowerBound) {
-      if(MaybeExpr analyzedExpr = Analyze(lowerBound->thing.thing.value());
-         analyzedExpr && analyzedExpr->Rank() > 0) {
-        foundArray = true;
-        Analyze(lowerBound->thing);
-      }
-    }
-
-    if(foundArray) {
-      // Get the IntExpr from the upper bound (BoundExpr.thing is the IntExpr)
-      auto &mutableUpperBound{const_cast<parser::BoundExpr&>(upperBound)};
-      parser::IntExpr upperIntExpr{std::move(mutableUpperBound.thing)};
-
-      // Handle optional lower bound
-      std::optional<parser::IntExpr> lowerIntExpr;
-      if(lowerBound) {
-        auto &mutableLowerBound{const_cast<parser::BoundExpr&>(*lowerBound)};
-        lowerIntExpr = std::move(mutableLowerBound.thing);
-      }
-
-      parser::AllocateShapeBoundsSpec boundsExpr{
-          std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
-      auto &mutableListOrBounds{const_cast<parser::AllocateShapeSpecListOrBounds&>(x)};
-      mutableListOrBounds.u = std::move(boundsExpr);
-
-      // Say("TODO: AllocateShapeBoundsSpec semantic chekcs in check-allocate.cpp"_err_en_US);
-      return std::nullopt;
-    }
-  }
-
-  // Analyze each AllocateShapeSpec, as a Scalar<Int<Expr>>
-  for(auto it = shapeSpecList.begin(); it != shapeSpecList.end(); ++it) {
-    const auto &upperBound{std::get<1>(it->t)};
-    Analyze(upperBound);
-    const auto &lowerBoundOpt{std::get<0>(it->t)};
-    if(lowerBoundOpt) {
-      Analyze(*lowerBoundOpt);
-    }
-  }
-
-  return std::nullopt;
-}
-
-
 Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
     TypeCategory category,
     const std::optional<parser::KindSelector> &selector) {
@@ -6453,6 +6386,48 @@ bool CheckMisparsedArrayElement(
 }
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}
+
+// F'2023 R933: the parenthesized bounds of an allocation are either an
+// allocate-shape-spec-list of scalar bounds, or a single
+// [lower-bounds-expr :] upper-bounds-expr whose bounds are rank-1 integer
+// arrays (either of which may also be a scalar that is broadcast).  The two
+// can't be told apart without knowing the ranks of the bounds, so the parser
+// always produces an allocate-shape-spec-list.  When that list has a single
+// allocate-shape-spec with an array-valued bound, rewrite it here into an
+// AllocateShapeBoundsSpec.  This can't be left to RewriteParseTree(), which
+// runs before expressions are analyzed, and it must be done before the bounds
+// are analyzed as scalar-int-exprs, which would reject the arrays.
+bool ExprChecker::Pre(const parser::AllocateShapeSpecListOrBounds &x) {
+  const auto *shapeSpecs{
+      std::get_if<std::list<parser::AllocateShapeSpec>>(&x.u)};
+  if (shapeSpecs && shapeSpecs->size() == 1) {
+    // Analyze the bare expressions to get their ranks; the results are cached
+    // in the parse tree, and their types are checked when the bounds are
+    // visited below.
+    auto isArray{[&](const parser::BoundExpr &bound) {
+      auto expr{exprAnalyzer_.Analyze(parser::UnwrapRef<parser::Expr>(bound))};
+      return expr && expr->Rank() > 0;
+    }};
+    const auto &shapeSpec{shapeSpecs->front()};
+    const auto &lower{std::get<0>(shapeSpec.t)};
+    bool lowerIsArray{lower && isArray(*lower)};
+    bool upperIsArray{isArray(std::get<1>(shapeSpec.t))};
+    if (lowerIsArray || upperIsArray) {
+      auto &mutableX{const_cast<parser::AllocateShapeSpecListOrBounds &>(x)};
+      auto &mutableShapeSpec{
+          std::get<std::list<parser::AllocateShapeSpec>>(mutableX.u).front()};
+      std::optional<parser::IntExpr> lowerBounds;
+      if (auto &mutableLower{std::get<0>(mutableShapeSpec.t)}) {
+        lowerBounds.emplace(std::move(mutableLower->thing));
+      }
+      parser::IntExpr upperBounds{
+          std::move(std::get<1>(mutableShapeSpec.t).thing)};
+      mutableX.u = parser::AllocateShapeBoundsSpec{
+          std::move(lowerBounds), std::move(upperBounds)};
+    }
+  }
+  return true; // analyze the bounds, whichever form they have
+}
 
 bool ExprChecker::Pre(const parser::DataStmtObject &obj) {
   exprAnalyzer_.set_inDataStmtObject(true);
