@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/CPP/utility.h"
 #include "src/__support/macros/attributes.h" // for LIBC_INLINE
 #include "src/__support/macros/config.h"
 
@@ -23,15 +24,24 @@ class CString {
   cpp::string str;
 
 public:
-  // These constructors can be implemented iff required.
-  CString() = delete;
+  LIBC_INLINE CString() = default;
   CString(const CString &) = delete;
-  CString(CString &&) = delete;
+  CString &operator=(const CString &) = delete;
+  LIBC_INLINE CString(CString &&) = default;
+  LIBC_INLINE CString &operator=(CString &&) = default;
 
-  LIBC_INLINE CString(cpp::string in_str) : str(in_str) {}
+  LIBC_INLINE CString(const char *cstr) : str(cstr) {}
+  LIBC_INLINE CString(cpp::string in_str) : str(cpp::move(in_str)) {}
 
-  LIBC_INLINE operator const char *() const { return str.c_str(); }
-  LIBC_INLINE operator cpp::string_view() const { return str; }
+  LIBC_INLINE const char *c_str() const LIBC_LIFETIMEBOUND {
+    return str.c_str();
+  }
+  LIBC_INLINE operator const char *() const LIBC_LIFETIMEBOUND {
+    return str.c_str();
+  }
+  LIBC_INLINE operator cpp::string_view() const LIBC_LIFETIMEBOUND {
+    return str;
+  }
 };
 
 } // namespace LIBC_NAMESPACE_DECL

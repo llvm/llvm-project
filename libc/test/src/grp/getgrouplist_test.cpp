@@ -128,8 +128,9 @@ TEST_F(LlvmLibcGrpTest, UserNotFound) {
 }
 
 TEST_F(LlvmLibcGrpTest, NonexistentFile) {
-  LIBC_NAMESPACE::grp::TESTONLY_set_group_path(
-      libc_make_test_file_path("getgrouplist_missing.test"));
+  const auto missing_path =
+      libc_make_test_file_path("getgrouplist_missing.test");
+  LIBC_NAMESPACE::grp::TESTONLY_set_group_path(missing_path);
 
   gid_t groups[5];
   int ngroups = 5;

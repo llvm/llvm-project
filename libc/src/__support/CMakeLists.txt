@@ -162,6 +162,9 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.utility
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(

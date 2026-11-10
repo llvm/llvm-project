@@ -56,8 +56,8 @@ TEST_F(LlvmLibcGrpTest, InitgroupsNonexistentUser) {
 }
 
 TEST_F(LlvmLibcGrpTest, InitgroupsNonexistentFile) {
-  LIBC_NAMESPACE::grp::TESTONLY_set_group_path(
-      libc_make_test_file_path("initgroups_missing.test"));
+  const auto missing_path = libc_make_test_file_path("initgroups_missing.test");
+  LIBC_NAMESPACE::grp::TESTONLY_set_group_path(missing_path);
 
   if (LIBC_NAMESPACE::getuid() == 0) {
     EXPECT_THAT(LIBC_NAMESPACE::initgroups("anyuser", 1000), Succeeds(0));

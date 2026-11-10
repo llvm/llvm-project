@@ -107,6 +107,17 @@ libc_test(
 )
 
 libc_test(
+    name = "c_string_test",
+    srcs = ["c_string_test.cpp"],
+    deps = [
+        "//libc:__support_c_string",
+        "//libc:__support_cpp_string",
+        "//libc:__support_cpp_string_view",
+        "//libc:__support_cpp_utility",
+    ],
+)
+
+libc_test(
     name = "char_vector_test",
     srcs = ["char_vector_test.cpp"],
     deps = [

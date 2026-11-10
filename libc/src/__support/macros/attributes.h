@@ -198,6 +198,12 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_NO_UNIQUE_ADDRESS
 #endif
 
+#if __has_cpp_attribute(clang::lifetimebound)
+#define LIBC_LIFETIMEBOUND [[clang::lifetimebound]]
+#else
+#define LIBC_LIFETIMEBOUND
+#endif
+
 #if __has_attribute(trivial_abi)
 #define LIBC_TRIVIAL_ABI [[clang::trivial_abi]]
 #else

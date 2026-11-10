@@ -277,6 +277,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  c_string_test
+  SUITE
+    libc-support-tests
+  SRCS
+    c_string_test.cpp
+  DEPENDS
+    libc.src.__support.c_string
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.utility
+)
+
+add_libc_test(
   char_vector_test
   SUITE
     libc-support-tests

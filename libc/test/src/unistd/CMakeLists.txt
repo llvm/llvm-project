@@ -133,6 +133,7 @@ add_libc_test(
     libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
     libc.src.__support.CPP.string_view
+    libc.src.__support.c_string
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.copy_file_range
