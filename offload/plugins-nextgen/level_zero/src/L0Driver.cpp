@@ -77,13 +77,6 @@ Error L0DriverTy::init() {
     CleanupOnError();
     return Err;
   }
-  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions(),
-                                               zeContext)) {
-    if (auto DeinitErr = EventPool.deinit())
-      Err = joinErrors(std::move(Err), std::move(DeinitErr));
-    CleanupOnError();
-    return Err;
-  }
 
   ODBG(OLDT_Init) << "APIs supported by the context with dlopen: ";
   ODBG(OLDT_Init) << "  zeCommandListAppendLaunchKernelWithArguments: "
@@ -125,22 +118,30 @@ Error L0DriverTy::init() {
   ODBG(OLDT_Init) << "Driver version is " << DriverVersion;
 
   DefaultUserCtx = std::make_unique<LevelZeroPluginContextTy>(
-      Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, zeDriver,
-      zeContext, /*OwnsZeContext=*/false);
+      Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, *this, zeContext,
+      /*OwnsZeContext=*/false);
+  if (auto Err = DefaultUserCtx->initAllocators()) {
+    if (auto DeinitErr = DefaultUserCtx->deinit())
+      Err = joinErrors(std::move(Err), std::move(DeinitErr));
+    DefaultUserCtx.reset();
+    if (auto DeinitErr = EventPool.deinit())
+      Err = joinErrors(std::move(Err), std::move(DeinitErr));
+    CleanupOnError();
+    return Err;
+  }
 
   return Plugin::success();
 }
 
 Error L0DriverTy::deinit() {
-  // Release the default context (drains its queue cache) before zeContext.
+  // Release the default context (drains its queue cache and frees its host
+  // pool) before zeContext.
   if (DefaultUserCtx) {
     if (auto Err = DefaultUserCtx->deinit())
       return Err;
     DefaultUserCtx.reset();
   }
   if (auto Err = EventPool.deinit())
-    return Err;
-  if (auto Err = HostMemAllocator.deinit())
     return Err;
   if (zeContext)
     CALL_ZE_RET_ERROR(zeContextDestroy, zeContext);
