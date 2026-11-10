@@ -30,13 +30,12 @@ define i64 @shl_trunc_sext_const(i64 %x) {
   ret i64 %r
 }
 
-; R1: sll.w fold creates an opaque LoongArchISD::SLL_W before the shift amount
-; folds to a constant; slli.w (1) -> ori+sll.w (2).
+; The shift amount is folded to a constant after the SHL is formed; make
+; sure this still selects slli.w instead of materializing the amount for sll.w.
 define i64 @r1(i64 %x, i64 %y) {
 ; CHECK-LABEL: r1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ori $a1, $zero, 1
-; CHECK-NEXT:    sll.w $a0, $a0, $a1
+; CHECK-NEXT:    slli.w $a0, $a0, 1
 ; CHECK-NEXT:    ret
   %o = or i64 %y, 1
   %m = and i64 %o, 1
@@ -45,11 +44,12 @@ define i64 @r1(i64 %x, i64 %y) {
   %r = sext i32 %tr to i64
   ret i64 %r
 }
-; Shift amount is provably 0: addi.w (1) -> sll.w $a0,$a0,$zero (1, but not removable).
+; The shift amount is known to be zero: use addi.w instead of
+; sll.w $a0, $a0, $zero.
 define i64 @r1_zero(i64 %x, i64 %y) {
 ; CHECK-LABEL: r1_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll.w $a0, $a0, $zero
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ret
   %y1 = lshr i64 %y, 63
   %n = icmp slt i64 %y1, 0
@@ -60,14 +60,13 @@ define i64 @r1_zero(i64 %x, i64 %y) {
   ret i64 %r
 }
 
-; R2: xor path always emits (add (setcc CC), -1), even when CC is one of the
-; slt+xori forms; slt+sub.d (2) -> slt+xori+addi.d (3).
+; A boolean xor with 1 in a sign-extension should reuse the inverted
+; compare, yielding slt + sub.d.
 define i64 @r2(i64 %a, i64 %b) {
 ; CHECK-LABEL: r2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a0, $a0, $a1
-; CHECK-NEXT:    xori $a0, $a0, 1
-; CHECK-NEXT:    addi.d $a0, $a0, -1
+; CHECK-NEXT:    sub.d $a0, $zero, $a0
 ; CHECK-NEXT:    ret
   %ge = icmp sge i64 %a, %b
   %z = zext i1 %ge to i64
@@ -77,15 +76,14 @@ define i64 @r2(i64 %a, i64 %b) {
   ret i64 %r
 }
 
-; R3: the sext_inreg combine pre-empts the generic
-; (sub X, (sext_inreg Y, i1)) -> (add X, (and Y, 1)); 3 -> 4.
+; Subtracting a sign-extended boolean should fold to a single compare and
+; an add.
 define signext i32 @r3(i64 %a, i64 %b, i32 signext %c) {
 ; CHECK-LABEL: r3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor $a0, $a0, $a1
-; CHECK-NEXT:    sltu $a0, $zero, $a0
-; CHECK-NEXT:    sub.d $a0, $a2, $a0
-; CHECK-NEXT:    addi.w $a0, $a0, 1
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    add.w $a0, $a2, $a0
 ; CHECK-NEXT:    ret
   %ne = icmp ne i64 %a, %b
   %z = zext i1 %ne to i32
@@ -96,16 +94,15 @@ define signext i32 @r3(i64 %a, i64 %b, i32 signext %c) {
   ret i32 %r
 }
 
-; R4: xor path keeps (setcc ne) although (setcc eq) already exists, so two
-; compares (sltui + sltu) instead of one; 4 -> 5.
+; The inverted compare should reuse the existing eq compare, so only one
+; compare is needed.
 define i64 @r4(i64 %a, i64 %b) {
 ; CHECK-LABEL: r4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor $a0, $a0, $a1
-; CHECK-NEXT:    sltui $a1, $a0, 1
-; CHECK-NEXT:    sltu $a0, $zero, $a0
-; CHECK-NEXT:    addi.d $a0, $a0, -1
-; CHECK-NEXT:    xor $a0, $a0, $a1
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    sub.d $a1, $zero, $a0
+; CHECK-NEXT:    xor $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %eq = icmp eq i64 %a, %b
   %ze = zext i1 %eq to i64
@@ -118,17 +115,16 @@ define i64 @r4(i64 %a, i64 %b) {
   ret i64 %r
 }
 
-; R6: the early rewrite blocks the generic
-; (xor (sext_inreg X), (sext_inreg Y)) -> (sext_inreg (xor X, Y)); 5 -> 6.
+; xor of two sign-extended booleans should fold into a single sign
+; extension.
 define i64 @r6(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: r6:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor $a0, $a0, $a2
-; CHECK-NEXT:    sltui $a0, $a0, 1
-; CHECK-NEXT:    addi.d $a0, $a0, -1
-; CHECK-NEXT:    andi $a1, $a1, 1
-; CHECK-NEXT:    sub.d $a1, $zero, $a1
+; CHECK-NEXT:    sltu $a0, $zero, $a0
 ; CHECK-NEXT:    xor $a0, $a0, $a1
+; CHECK-NEXT:    andi $a0, $a0, 1
+; CHECK-NEXT:    sub.d $a0, $zero, $a0
 ; CHECK-NEXT:    ret
   %ne = icmp ne i64 %a, %c
   %s1 = sext i1 %ne to i64
