@@ -152,6 +152,7 @@ TOP-NEXT:    DW_AT_call_origin
 TOP-NEXT:    DW_AT_call_return_pc (0x00000000000004d4)
 
 TOP:       DW_AT_name ("Inputs/mergeable-libs/client.c")
+TOP:       DW_AT_APPLE_origin ("/path/to/libclient.dylib")
 TOP:       DW_TAG_subprogram
 TOP-NEXT:    DW_AT_low_pc (0x00000000000004e0)
 TOP:         DW_AT_name ("display")
@@ -163,6 +164,7 @@ TOP-NEXT:    DW_AT_call_origin {{.*}} "bar"
 TOP-NEXT:    DW_AT_call_return_pc (0x00000000000004fc)
 
 TOP:       DW_AT_name ("Inputs/mergeable-libs/foo.c")
+TOP:       DW_AT_APPLE_origin ("/path/to/libclient.dylib")
 TOP:       DW_TAG_variable
 TOP-NEXT:    DW_AT_name ("foo_global")
 TOP:         DW_AT_location (DW_OP_addr 0x1000)
@@ -189,6 +191,7 @@ TOP-NEXT:    DW_AT_low_pc (0x0000000000000568)
 TOP:         DW_AT_name ("foo_unused")
 
 TOP:       DW_AT_name ("Inputs/mergeable-libs/bar.c")
+TOP:       DW_AT_APPLE_origin ("/path/to/libclient.dylib")
 TOP:       DW_TAG_variable
 TOP-NEXT:    DW_AT_name ("bar_counter")
 TOP:         DW_AT_location (DW_OP_addr 0x1028)

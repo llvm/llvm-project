@@ -127,6 +127,16 @@ void DIEAttributeCloner::clone() {
     Source.clear();
   }
 
+  // A unit merged out of a library tells which library it comes from.
+  if (InputDIEIdx == 0 && OutUnit.isCompileUnit() && !AttrInfo.HasAppleOrigin) {
+    std::optional<StringRef> InstallName =
+        InUnit.getContainingFile().Addresses->getLibraryInstallName();
+    if (InstallName)
+      AttrOutOffset += addStringAttr(
+          dwarf::DW_AT_APPLE_origin,
+          InUnit.getGlobalData().getStringPool().insert(*InstallName).first);
+  }
+
   // We convert source strings into the indexed form for DWARFv5.
   // Check if original unit already has DW_AT_str_offsets_base
   // attribute.
@@ -229,6 +239,15 @@ size_t DIEAttributeCloner::cloneStringAttr(
   else if (AttrSpec.Attr == dwarf::DW_AT_MIPS_linkage_name ||
            AttrSpec.Attr == dwarf::DW_AT_linkage_name)
     AttrInfo.MangledName = StringInPool;
+  else if (AttrSpec.Attr == dwarf::DW_AT_APPLE_origin) {
+    // The library being merged is where the unit now comes from.
+    AttrInfo.HasAppleOrigin = true;
+    std::optional<StringRef> InstallName =
+        InUnit.getContainingFile().Addresses->getLibraryInstallName();
+    if (InstallName)
+      StringInPool =
+          InUnit.getGlobalData().getStringPool().insert(*InstallName).first;
+  }
 
   if (AttrSpec.Form == dwarf::DW_FORM_line_strp) {
     if (OutUnit.isTypeUnit()) {
@@ -244,24 +263,27 @@ size_t DIEAttributeCloner::cloneStringAttr(
         .second;
   }
 
+  return addStringAttr(AttrSpec.Attr, StringInPool);
+}
+
+size_t DIEAttributeCloner::addStringAttr(dwarf::Attribute Attr,
+                                         StringEntry *String) {
   if (Use_DW_FORM_strp) {
     if (OutUnit.isTypeUnit()) {
-      DebugInfoOutputSection.notePatch(
-          DebugTypeStrPatch{AttrOutOffset, OutDIE,
-                            InUnit.getDieTypeEntry(InputDIEIdx), StringInPool});
+      DebugInfoOutputSection.notePatch(DebugTypeStrPatch{
+          AttrOutOffset, OutDIE, InUnit.getDieTypeEntry(InputDIEIdx), String});
     } else {
       DebugInfoOutputSection.notePatchWithOffsetUpdate(
-          DebugStrPatch{{AttrOutOffset}, StringInPool}, PatchesOffsets);
+          DebugStrPatch{{AttrOutOffset}, String}, PatchesOffsets);
     }
 
-    return Generator
-        .addStringPlaceholderAttribute(AttrSpec.Attr, dwarf::DW_FORM_strp)
+    return Generator.addStringPlaceholderAttribute(Attr, dwarf::DW_FORM_strp)
         .second;
   }
 
   return Generator
-      .addIndexedStringAttribute(AttrSpec.Attr, dwarf::DW_FORM_strx,
-                                 OutUnit->getDebugStrIndex(StringInPool))
+      .addIndexedStringAttribute(Attr, dwarf::DW_FORM_strx,
+                                 OutUnit->getDebugStrIndex(String))
       .second;
 }
 
