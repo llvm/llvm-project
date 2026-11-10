@@ -9,9 +9,6 @@
 // Checks that CallConvLowering classifies AMDGPU kernel arguments under the
 // kernel convention.
 
-// TODO(cir): Add multi-field aggregates, passed byref in addrspace(4), once
-// CallConvLowering supports IndirectAliased.
-
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
 
@@ -19,6 +16,14 @@ typedef struct { int i; } i32_wrapper_t;
 typedef struct { i32_wrapper_t w; } nested_t;
 typedef struct { float f[1]; } f32_array1_t;
 typedef struct { float *x; } ptr_wrapper_t;
+typedef struct { int a; int b; } pair_t;
+typedef struct {} empty_t;
+typedef struct { float *x; int n; } ptr_pair_t;
+
+// Unlike ptr_wrapper_t, the pointer field is not coerced to addrspace(1).
+// CIR: !rec_ptr_pair_t = !cir.struct<"ptr_pair_t" {data !cir.ptr<!cir.float>, data !s32i}>
+// LLVM: %struct.ptr_pair_t = type { ptr, i32 }
+
 typedef float float3 __attribute__((ext_vector_type(3)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef short short4 __attribute__((ext_vector_type(4)));
@@ -107,6 +112,37 @@ __global__ void kern_array1(f32_array1_t a) {}
 
 // CIR: cir.func {{.*}}@_Z11kern_array112f32_array1_t(%arg0: !cir.float{{.*}}){{.*}}cc(amdgpu_kernel)
 // LLVM: define {{.*}}amdgpu_kernel void @_Z11kern_array112f32_array1_t(float %{{.*}})
+
+// A multi-field struct is read in place from the kernarg segment, addrspace(4).
+__global__ void kern_pair(pair_t p) {}
+
+// CIR: cir.func {{.*}}@_Z9kern_pair6pair_t(%[[PAIR:[^:]+]]: !cir.ptr<!rec_pair_t, target_address_space(4)> {{.*}}llvm.byref = !rec_pair_t{{.*}}cc(amdgpu_kernel)
+// CIR:   cir.copy %[[PAIR]] align(4) to %{{.*}} align(4) : !cir.ptr<!rec_pair_t, target_address_space(4)>, !cir.ptr<!rec_pair_t>
+// LLVM: define {{.*}}amdgpu_kernel void @_Z9kern_pair6pair_t(ptr addrspace(4) noundef byref(%struct.pair_t) align 4 %[[PAIR:.*]])
+// LLVM:   call void @llvm.memcpy.{{.*}}(ptr{{.*}} align 4 %{{.*}}, ptr addrspace(4) align 4 %[[PAIR]], i64 8, i1 false)
+
+// Kernels do not drop an empty struct. It is read from the kernarg segment.
+__global__ void kern_empty(empty_t e) {}
+
+// CIR: cir.func {{.*}}@_Z10kern_empty7empty_t(%[[E:[^:]+]]: !cir.ptr<!rec_empty_t, target_address_space(4)> {{.*}}llvm.byref = !rec_empty_t{{.*}}cc(amdgpu_kernel)
+// CIR:   cir.copy %[[E]] align(1) to %{{.*}} align(1) : !cir.ptr<!rec_empty_t, target_address_space(4)>, !cir.ptr<!rec_empty_t>
+// LLVM: define {{.*}}amdgpu_kernel void @_Z10kern_empty7empty_t(ptr addrspace(4) noundef byref(%struct.empty_t) align 1 %[[E:.*]])
+// LLVM:   call void @llvm.memcpy.{{.*}}(ptr{{.*}} align 1 %{{.*}}, ptr addrspace(4) align 1 %[[E]], i64 1, i1 false)
+
+// A _Complex is an aggregate, so it is read in place too.
+__global__ void kern_cfloat(_Complex float c) {}
+
+// CIR: cir.func {{.*}}@_Z11kern_cfloatCf(%[[C:[^:]+]]: !cir.ptr<!cir.complex<!cir.float>, target_address_space(4)> {{.*}}llvm.byref = !cir.complex<!cir.float>{{.*}}cc(amdgpu_kernel)
+// CIR-NEXT:   cir.load %[[C]] : !cir.ptr<!cir.complex<!cir.float>, target_address_space(4)>, !cir.complex<!cir.float>
+// LLVM: define {{.*}}amdgpu_kernel void @_Z11kern_cfloatCf(ptr addrspace(4) noundef byref({ float, float }) align 4 %{{.*}})
+
+// A pointer inside a multi-field struct stays generic.
+__global__ void kern_ptr_pair(ptr_pair_t p) {}
+
+// CIR: cir.func {{.*}}@_Z13kern_ptr_pair10ptr_pair_t(%[[P:[^:]+]]: !cir.ptr<!rec_ptr_pair_t, target_address_space(4)> {{.*}}llvm.byref = !rec_ptr_pair_t{{.*}}cc(amdgpu_kernel)
+// CIR:   cir.copy %[[P]] align(8) to %{{.*}} align(8) : !cir.ptr<!rec_ptr_pair_t, target_address_space(4)>, !cir.ptr<!rec_ptr_pair_t>
+// LLVM: define {{.*}}amdgpu_kernel void @_Z13kern_ptr_pair10ptr_pair_t(ptr addrspace(4) noundef byref(%struct.ptr_pair_t) align 8 %[[P:.*]])
+// LLVM:   call void @llvm.memcpy.{{.*}}(ptr{{.*}} align 8 %{{.*}}, ptr addrspace(4) align 8 %[[P]], i64 16, i1 false)
 
 // Kernel arguments are read from the kernarg segment, so sub-word integers
 // and bool are not extended, unlike in a device function.
