@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -29,6 +28,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -90,6 +90,72 @@ static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {
   val.setType(typeWithLayout);
 }
 
+/// Whether all the regions `region` branches to (`targets`) are already in
+/// `visitedRegions`, so that the consumers of what it passes on are visited
+/// first.
+static bool isReady(Region *region,
+                    const DenseMap<Region *, SmallPtrSet<Region *, 2>> &targets,
+                    const SetVector<Region *> &visitedRegions) {
+  auto it = targets.find(region);
+  if (it == targets.end())
+    return true;
+  for (Region *target : it->second)
+    if (!visitedRegions.contains(target))
+      return false;
+  return true;
+}
+
+/// Returns the regions of `op` in the order a backward walk visits them: a
+/// region after all the regions it branches to, and otherwise in reverse
+/// program order. A cycle of regions (e.g. scf.while's before and after) is
+/// broken at a region that exits to `op`.
+static SmallVector<Region *> getBackwardRegionOrder(Operation *op) {
+  SmallVector<Region *> regions;
+  for (Region &region : llvm::reverse(op->getRegions()))
+    regions.push_back(&region);
+  auto regionOp = dyn_cast<RegionBranchOpInterface>(op);
+  if (!regionOp)
+    return regions;
+
+  // For each region, the other regions it may branch to; and the regions that
+  // may exit to `op`.
+  DenseMap<Region *, SmallPtrSet<Region *, 2>> targets;
+  SmallPtrSet<Region *, 2> exits;
+  for (Region *region : regions) {
+    SmallVector<RegionSuccessor> successors;
+    regionOp.getSuccessorRegions(*region, successors);
+    for (const RegionSuccessor &successor : successors) {
+      if (successor.isOperation())
+        exits.insert(region);
+      else if (successor.getSuccessor() != region)
+        targets[region].insert(successor.getSuccessor());
+    }
+  }
+
+  SetVector<Region *> visitedRegions;
+  while (visitedRegions.size() < regions.size()) {
+    auto unvisited = llvm::make_filter_range(regions, [&](Region *region) {
+      return !visitedRegions.contains(region);
+    });
+    // Prefer a region whose targets are all visited. In a cycle, break it at a
+    // region exiting to the op, or else at the first unvisited one.
+    auto findFirst = [&](auto pred) -> Region * {
+      auto it = llvm::find_if(unvisited, pred);
+      return it == unvisited.end() ? nullptr : *it;
+    };
+    Region *chosen = findFirst([&](Region *region) {
+      return isReady(region, targets, visitedRegions);
+    });
+    if (!chosen)
+      chosen =
+          findFirst([&](Region *region) { return exits.contains(region); });
+    if (!chosen)
+      chosen = *unvisited.begin();
+    visitedRegions.insert(chosen);
+  }
+  return visitedRegions.takeVector();
+}
+
 /// Visits the ops of `region` backward; see xegpu::walkBackward.
 static void walkRegionBackward(Region &region,
                                xegpu::BackwardLayoutVisitor &visitor) {
@@ -101,15 +167,10 @@ static void walkRegionBackward(Region &region,
   SmallVector<Block *> blocks(rpot.begin(), rpot.end());
   for (Block *block : llvm::reverse(blocks)) {
     for (Operation &op : llvm::reverse(*block)) {
-      // The regions of an op are walked before the op, in reverse program
-      // order, except for scf.while's (see xegpu::walkBackward).
-      if (isa<scf::WhileOp>(op)) {
-        for (Region &nested : op.getRegions())
-          walkRegionBackward(nested, visitor);
-      } else {
-        for (Region &nested : llvm::reverse(op.getRegions()))
-          walkRegionBackward(nested, visitor);
-      }
+      // The regions of an op are walked before the op, against its control
+      // flow (see xegpu::walkBackward).
+      for (Region *nested : getBackwardRegionOrder(&op))
+        walkRegionBackward(*nested, visitor);
       auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(&op);
       if (terminator && isa<RegionBranchOpInterface>(op.getParentOp()))
         visitor.visitTerminator(terminator);
@@ -123,8 +184,10 @@ static void walkRegionBackward(Region &region,
 
 void xegpu::walkBackward(Operation *root, BackwardLayoutVisitor &visitor) {
   root->walk([&](FunctionOpInterface funcOp) {
-    if (!funcOp.isExternal())
-      walkRegionBackward(funcOp.getFunctionBody(), visitor);
+    if (funcOp.isExternal())
+      return;
+    walkRegionBackward(funcOp.getFunctionBody(), visitor);
+    visitor.visitFunction(funcOp);
   });
 }
 

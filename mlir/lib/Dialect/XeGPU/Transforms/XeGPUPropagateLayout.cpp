@@ -68,8 +68,8 @@ namespace {
 /// recovery: in reverse program order, nested regions before their parent op.
 /// So an op is reached only after every consumer of its results, except a
 /// consumer reached through a loop back edge (scf.for's yield -> iter_arg) or,
-/// for scf.while, whose before region is walked first, through scf.condition ->
-/// after region.
+/// for scf.while, whose regions are walked against its control flow (before
+/// region first), through scf.condition -> after region.
 /// Each op therefore makes a one-time decision:
 ///   - each result takes the layout demanded by its nearest consumer in
 ///     program order. Consumers are visited from the farthest to the nearest,
@@ -135,6 +135,7 @@ private:
   void visitRegularOp(Operation *op) override;
   void visitTerminator(RegionBranchTerminatorOpInterface terminator) override;
   void visitRegionOp(RegionBranchOpInterface regionOp) override;
+  void visitFunction(FunctionOpInterface funcOp) override;
 
   //===--------------------------------------------------------------------===//
   // Transfer functions: given the layouts the consumers demand of an op's
@@ -1239,21 +1240,14 @@ LogicalResult LayoutPropagation::run() {
   xegpu::walkBackward(scopeRoot, *this);
   // An anchor op with no determinable layout cannot be lowered; stop before
   // the forward fill fabricates degenerate layouts from unlabeled values.
-  if (propagationFailed)
-    return failure();
-  SmallVector<FunctionOpInterface> funcOps;
-  scopeRoot->walk([&](FunctionOpInterface funcOp) {
-    if (!funcOp.isExternal())
-      funcOps.push_back(funcOp);
-  });
-  for (FunctionOpInterface funcOp : funcOps) {
-    if (failed(updateFunctionSignature(
-            funcOp, [&](Value val) { return getLayout(val); }))) {
-      funcOp->emitError("Failed to update operation with the layout.");
-      return failure();
-    }
-  }
-  return success();
+  return failure(propagationFailed);
+}
+
+void LayoutPropagation::visitFunction(FunctionOpInterface funcOp) {
+  // The arguments are decided once the whole body has been visited.
+  if (failed(updateFunctionSignature(
+          funcOp, [&](Value val) { return getLayout(val); })))
+    markFailure(funcOp, "Failed to update operation with the layout.");
 }
 
 void LayoutPropagation::visitRegularOp(Operation *op) {
@@ -1428,8 +1422,9 @@ void LayoutPropagation::visitRegionOp(RegionBranchOpInterface regionOp) {
   };
   for (Region &region : regionOp->getRegions())
     for (Block &block : region)
-      if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
-              block.getTerminator()))
+      if (auto terminator =
+              dyn_cast_if_present<RegionBranchTerminatorOpInterface>(
+                  block.empty() ? nullptr : &block.back()))
         (void)fillRegionBoundaryFromTerminator(terminator, getDecidedLayout,
                                                FillTarget::RegionResults);
 }
