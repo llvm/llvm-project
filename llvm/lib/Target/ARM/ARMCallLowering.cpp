@@ -105,10 +105,9 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
            "Unsupported size");
 
     LLT p0 = LLT::pointer(0, 32);
-    LLT s32 = LLT::scalar(32);
     auto SPReg = MIRBuilder.buildCopy(p0, Register(ARM::SP));
 
-    auto OffsetReg = MIRBuilder.buildConstant(s32, Offset);
+    auto OffsetReg = MIRBuilder.buildConstant(LLT::integer(32), Offset);
 
     auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
 
@@ -161,8 +160,8 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     assert(VA.isRegLoc() && "Value should be in reg");
     assert(NextVA.isRegLoc() && "Value should be in reg");
 
-    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
-                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::float32()),
+                          MRI.createGenericVirtualRegister(LLT::float32())};
     MIRBuilder.buildUnmerge(NewRegs, Arg.Regs[0]);
 
     bool IsLittle = MIRBuilder.getMF().getSubtarget<ARMSubtarget>().isLittle();
@@ -273,7 +272,7 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
       MemTy = LLT::scalar(32);
       assert(MRI.getType(ValVReg).isScalar() && "Only scalars supported atm");
 
-      auto LoadVReg = buildLoad(LLT::scalar(32), Addr, MemTy, MPO);
+      auto LoadVReg = buildLoad(LLT::integer(32), Addr, MemTy, MPO);
       MIRBuilder.buildTrunc(ValVReg, LoadVReg);
     } else {
       // If the value is not extended, a simple load will suffice.
@@ -311,8 +310,15 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
       // We cannot create a truncating copy, nor a trunc of a physical register.
       // Therefore, we need to copy the content of the physical register into a
       // virtual one and then truncate that.
-      auto PhysRegToVReg = MIRBuilder.buildCopy(LLT::scalar(LocSize), PhysReg);
-      MIRBuilder.buildTrunc(ValVReg, PhysRegToVReg);
+      auto PhysRegToVReg = MIRBuilder.buildCopy(LLT::integer(LocSize), PhysReg);
+      LLT ValTy = MRI.getType(ValVReg);
+      LLT ValITy = ValTy.changeToInteger();
+      if (ValTy == ValITy) {
+        MIRBuilder.buildTrunc(ValVReg, PhysRegToVReg);
+      } else {
+        auto T = MIRBuilder.buildTrunc(ValITy, PhysRegToVReg);
+        MIRBuilder.buildBitcast(ValVReg, T);
+      }
     }
   }
 
@@ -338,8 +344,8 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
     assert(VA.isRegLoc() && "Value should be in reg");
     assert(NextVA.isRegLoc() && "Value should be in reg");
 
-    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
-                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::float32()),
+                          MRI.createGenericVirtualRegister(LLT::float32())};
 
     assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
     assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);

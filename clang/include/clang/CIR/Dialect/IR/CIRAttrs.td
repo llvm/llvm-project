@@ -171,11 +171,14 @@ def CIR_ArgPassingKind : CIR_I32Enum<
 ]>;
 
 def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
-    // record_align is consumed as an llvm::Align, whose constructor asserts a
-    // non-zero power of two.
+    // Both alignments are consumed as llvm::Align, whose constructor asserts
+    // a non-zero power of two.
     PredAttrTrait<"record_align must be a non-zero power of two",
                   CPred<"$record_align != 0 && "
-                        "::llvm::isPowerOf2_64($record_align)">>
+                        "::llvm::isPowerOf2_64($record_align)">>,
+    PredAttrTrait<"unadjusted_align must be a non-zero power of two",
+                  CPred<"$unadjusted_align != 0 && "
+                        "::llvm::isPowerOf2_64($unadjusted_align)">>
   ]> {
   let summary = "ABI layout metadata for a record type";
   let description = [{
@@ -190,6 +193,10 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `record_align_in_bytes`: from `ASTRecordLayout::getAlignment()`.
       Needed because CIR's DataLayout cannot account for
       `__attribute__((aligned(N)))`.
+    - `unadjusted_align`: the alignment the members give the record before an
+      alignment attribute on the record raises it.  AAPCS64 sizes argument slots
+      using this alignment.  This field is not printed when it is equal to
+      `record_align`.
     - `transparent_union`: whether the record is a union with
       `__attribute__((transparent_union))`, which is passed as its first
       member.  False, the default, is omitted from the printed form.
@@ -215,6 +222,7 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     EnumParameter<CIR_ArgPassingKind>:$arg_passing_kind,
     "bool":$has_trivial_dtor,
     "uint64_t":$record_align,
+    "uint64_t":$unadjusted_align,
     DefaultValuedParameter<"bool", "false">:$transparent_union
   );
 
@@ -223,18 +231,13 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
                      "bool":$has_trivial_dtor,
                      "uint64_t":$record_align), [{
       return $_get($_ctxt, arg_passing_kind, has_trivial_dtor, record_align,
+                   /*unadjusted_align=*/record_align,
                    /*transparent_union=*/false);
     }]>
   ];
 
-  let assemblyFormat = [{
-    `<`
-      `arg_passing_kind` `=` $arg_passing_kind `,`
-      `has_trivial_dtor` `=` $has_trivial_dtor `,`
-      `record_align` `=` $record_align
-      (`,` `transparent_union` `=` $transparent_union^)?
-    `>`
-  }];
+  // Printing and parsing available in CIRAttrs.cpp.
+  let hasCustomAssemblyFormat = 1;
 
   let canHaveIllegalCXXABIType = 0;
 }
@@ -1134,6 +1137,22 @@ def CIR_FastMathFlags : CIR_I32BitEnum<
 }
 
 def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
+
+//===----------------------------------------------------------------------===//
+// OverflowFlags
+//===----------------------------------------------------------------------===//
+
+// `nuw` is listed first so the flags print in LLVM IR order, `nuw nsw`.
+def CIR_OFNone : I32BitEnumCaseNone<"None", "none">;
+def CIR_OFNoSignedWrap : I32BitEnumCaseBit<"NoSignedWrap", 0, "nsw">;
+def CIR_OFNoUnsignedWrap : I32BitEnumCaseBit<"NoUnsignedWrap", 1, "nuw">;
+
+def CIR_OverflowFlags : CIR_I32BitEnum<
+    "OverflowFlags", "integer overflow flags", [
+  CIR_OFNone, CIR_OFNoUnsignedWrap, CIR_OFNoSignedWrap
+]> {
+  let separator = " ";
+}
 
 //===----------------------------------------------------------------------===//
 // GlobalViewAttr
@@ -2710,14 +2729,23 @@ def CIR_LoweringOptionsAttr
     `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
     `ClangABI` gains an enumerator every Clang release (see
     `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
-    single toolchain.
+    single toolchain. `no_trapping_math` is true when
+    `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
     `sanitize_address`, `sanitize_kernel_address` and `sanitize_hwaddress`
     mirror the like-named bits of `LangOptions::Sanitize`.
 
     The following fields come from `CodeGenOptions`.
     `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
     which calling convention lowering reads when it decides whether an
-    argument is `noundef`.
+    argument is `noundef`. `ssp_buffer_size` mirrors
+    `CodeGenOptions::SSPBufferSize`.
+
+    `LowerToLLVM` turns `no_trapping_math` and `ssp_buffer_size` into the
+    `"no-trapping-math"` and `"stack-protector-buffer-size"` LLVM function
+    attributes of every function not marked `runtime_func`. A `strictfp`
+    function does not get `"no-trapping-math"`, since a pragma such as
+    `float_control(except, on)` can make its FP operations observe exceptions
+    even when the TU-wide default ignores them.
 
     Example:
     ```
@@ -2727,7 +2755,8 @@ def CIR_LoweringOptionsAttr
       openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
       long_double_size = 0, sanitize_address = false,
       sanitize_kernel_address = false, sanitize_hwaddress = false,
-      enable_noundef_attrs = false>} { }
+      enable_noundef_attrs = false, no_trapping_math = true,
+      ssp_buffer_size = 8>} { }
     ```
   }];
 
@@ -2746,7 +2775,9 @@ def CIR_LoweringOptionsAttr
     "bool":$sanitize_address,
     "bool":$sanitize_kernel_address,
     "bool":$sanitize_hwaddress,
-    "bool":$enable_noundef_attrs
+    "bool":$enable_noundef_attrs,
+    "bool":$no_trapping_math,
+    "uint32_t":$ssp_buffer_size
   );
 
   let assemblyFormat = [{
@@ -2754,7 +2785,7 @@ def CIR_LoweringOptionsAttr
                $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
                $clang_abi_compat, $long_double_size, $sanitize_address,
                $sanitize_kernel_address, $sanitize_hwaddress,
-               $enable_noundef_attrs) `>`
+               $enable_noundef_attrs, $no_trapping_math, $ssp_buffer_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

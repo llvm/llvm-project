@@ -47,6 +47,7 @@ _EXTRA_DATA = {
             "ELF/minidebuginfo-no-lzma.yaml",
             "ELF/minidebuginfo-set-and-hit-breakpoint.test",
             "ELF/stt-tls-symbol.yaml",
+            "ELF/unterminated-symbol-name.yaml",
             "MachO/section-overflow-binary.test",
             "MachO/symtab.yaml",
             "MachO/unterminated-symbol-name.yaml",

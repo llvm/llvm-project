@@ -1,6 +1,7 @@
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix="PARSE-TREE" %s
 !RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
+!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix="PARSE-TREE" %s
 
 subroutine sub1
   integer :: r
@@ -150,3 +151,23 @@ end program p
 !PARSE-TREE: | OmpClauseList -> OmpClause -> NoOpenmp
 !PARSE-TREE: | Flags = {}
 !PARSE-TREE: ImplicitPart ->
+
+subroutine assumes_absent
+  !$omp assumes absent(parallel, barrier)
+  !$omp assumes absent(target enter data)
+end subroutine assumes_absent
+
+!UNPARSE: SUBROUTINE assumes_absent
+!UNPARSE: !$OMP ASSUMES ABSENT(PARALLEL,BARRIER)
+!UNPARSE: !$OMP ASSUMES ABSENT(TARGET ENTER DATA)
+!UNPARSE: END SUBROUTINE assumes_absent
+
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = assumes
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Absent -> OmpAbsentClause -> llvm::omp::Directive = parallel
+!PARSE-TREE: | llvm::omp::Directive = barrier
+!PARSE-TREE: | Flags = {}
+!PARSE-TREE: OpenMPDeclarativeConstruct -> OmpAssumesDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = assumes
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Absent -> OmpAbsentClause -> llvm::omp::Directive = target enter data
+!PARSE-TREE: | Flags = {}
