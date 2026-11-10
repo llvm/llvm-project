@@ -282,18 +282,16 @@ public:
 
     OS << "(";
     if (!Sig.DN.IsKernel) {
-      const char *Sep = "";
+      ListSeparator LS;
       for (const PISA::FunctionParameter &Param : Sig.FunctionParams) {
-        OS << Sep << ".reg ";
+        OS << LS << ".reg ";
         emitTypeString(Param.Ty, OS);
         OS << " " << Param.Prefix << Param.Idx;
-        Sep = ", ";
       }
     } else {
-      const char *Sep = "";
-      unsigned I = 0;
-      for (const PISA::KernelParameter &Param : Sig.KernelParams) {
-        OS << Sep << ".param[" << Param.Size << "] ";
+      ListSeparator LS;
+      for (const auto &[I, Param] : enumerate(Sig.KernelParams)) {
+        OS << LS << ".param[" << Param.Size << "] ";
         if (Param.hasAlign())
           OS << ".align(" << Param.Align << ") ";
         if (Param.hasAS())
@@ -306,8 +304,6 @@ public:
           OS << "%" << Param.ArgName;
         else
           OS << "%arg" << I;
-        I++;
-        Sep = ", ";
       }
     }
 
@@ -335,11 +331,10 @@ public:
     printName(OS, Dcl.DN.Name);
 
     OS << "(";
-    const char *Sep = "";
+    ListSeparator LS;
     for (const PISA::FunctionDeclParam &Param : Dcl.FunctionParams) {
-      OS << Sep << ".reg ";
+      OS << LS << ".reg ";
       emitTypeString(Param.Ty, OS);
-      Sep = ", ";
     }
     OS << ");";
   }
@@ -378,11 +373,9 @@ public:
 
       // Do not use range syntax if only 5 or fewer registers were declared
       if (TI.RegCounter - TI.RegStart <= 5) {
-        for (unsigned I = TI.RegStart; I < TI.RegCounter; ++I) {
-          if (I != TI.RegStart)
-            OS << ", ";
-          OS << TI.Prefix << I;
-        }
+        ListSeparator LS;
+        for (unsigned I = TI.RegStart; I < TI.RegCounter; ++I)
+          OS << LS << TI.Prefix << I;
         OS << ";\n";
       } else {
         OS << TI.Prefix << "<" << TI.RegStart << "~" << (TI.RegCounter)
