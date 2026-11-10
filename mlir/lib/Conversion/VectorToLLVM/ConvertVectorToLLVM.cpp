@@ -943,37 +943,46 @@ public:
 
     // Floating-point reductions: add/mul/min/max
     Value result;
-    if (kind == vector::CombiningKind::ADD) {
+    switch (kind) {
+    case vector::CombiningKind::ADD:
       result = lowerReductionWithStartValue<LLVM::vector_reduce_fadd,
                                             ReductionNeutralZero>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MUL) {
+      break;
+    case vector::CombiningKind::MUL:
       result = lowerReductionWithStartValue<LLVM::vector_reduce_fmul,
                                             ReductionNeutralFPOne>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MINIMUMF) {
+      break;
+    case vector::CombiningKind::MINIMUMF:
       result =
           createFPReductionComparisonOpLowering<LLVM::vector_reduce_fminimum>(
               rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MAXIMUMF) {
+      break;
+    case vector::CombiningKind::MAXIMUMF:
       result =
           createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmaximum>(
               rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MINNUMF) {
+      break;
+    case vector::CombiningKind::MINNUMF:
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmin>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MAXNUMF) {
+      break;
+    case vector::CombiningKind::MAXNUMF:
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MAXIMUMNUMF) {
+      break;
+    case vector::CombiningKind::MAXIMUMNUMF:
       result = createFPReductionComparisonOpLowering<
           LLVM::vector_reduce_fmaximumnum>(rewriter, loc, llvmType, operand,
                                            acc, fmf);
-    } else if (kind == vector::CombiningKind::MINIMUMNUMF) {
+      break;
+    case vector::CombiningKind::MINIMUMNUMF:
       result = createFPReductionComparisonOpLowering<
           LLVM::vector_reduce_fminimumnum>(rewriter, loc, llvmType, operand,
                                            acc, fmf);
-    } else {
+      break;
+    default:
       return failure();
     }
 

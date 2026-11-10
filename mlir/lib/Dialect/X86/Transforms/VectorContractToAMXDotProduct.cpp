@@ -901,16 +901,12 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
 //     - Shuffle them as we packed using vpunpack
 //     - Load C matrix and do arith.add with the shuffle
 //     - Store back into C matrix
-struct VectorContractToAMXDotProduct
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
+  using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
     unsigned int blockingFactor =
         contractOp.getLhsType().getElementType().isBF16() ? 2 : 4;
@@ -1815,7 +1811,6 @@ struct VectorContractToAMXDotProduct
     return success();
   }
 };
-
 } // namespace
 
 void x86::populateVectorContractToAMXDotProductPatterns(

@@ -915,7 +915,7 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
 
   // TODO: the code below assumes the default contraction, make sure it supports
   // other kinds before enabling this lowering.
-  if (op.getKind() != vector::CombiningKind::ADD) {
+  if (!op.isAdd()) {
     return rewriter.notifyMatchFailure(
         op, "contractions other than 'add' not supported");
   }
