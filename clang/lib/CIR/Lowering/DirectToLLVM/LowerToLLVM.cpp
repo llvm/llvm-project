@@ -2327,7 +2327,7 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     return emitTypeConversionError(baseClassOp, baseClassOp.getType());
   mlir::Value derivedAddr = adaptor.getSrcAddr();
   llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
-      adaptor.getOffset().getZExtValue()};
+      static_cast<int32_t>(adaptor.getOffset().getZExtValue())};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (adaptor.getOffset().getZExtValue() == 0) {
@@ -2368,7 +2368,8 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
     rewriter.replaceOp(derivedClassOp, baseAddr);
     return mlir::success();
   }
-  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {offsetVal};
+  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
+      static_cast<int32_t>(offsetVal)};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (derivedClassOp.getAssumeNotNull()) {
@@ -3198,6 +3199,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
       attributes);
   aliasOp.setVisibility_(
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
+  if (op.getUnnamedAddr())
+    aliasOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Global);
   {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.createBlock(&aliasOp.getInitializerRegion());
@@ -3280,6 +3283,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       comdatAttr, attributes);
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
+
+  if (op.getUnnamedAddr())
+    fn.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Global);
 
   if (cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
     fn.setMemoryEffectsAttr(convertMemoryEffects(fn.getContext(), effects));
@@ -3922,64 +3928,45 @@ static bool isIntTypeUnsigned(mlir::Type type) {
 // Binary Op Lowering
 //===----------------------------------------------------------------------===//
 
-template <typename BinOp>
-static mlir::LLVM::IntegerOverflowFlags intOverflowFlag(BinOp op) {
-  if (op.getNoUnsignedWrap())
-    return mlir::LLVM::IntegerOverflowFlags::nuw;
-  if (op.getNoSignedWrap())
-    return mlir::LLVM::IntegerOverflowFlags::nsw;
-  return mlir::LLVM::IntegerOverflowFlags::none;
-}
-
-/// Lower an arithmetic op that supports saturation, overflow flags, and an FP
-/// Lower an integer Add/Sub op that may use saturating-arithmetic semantics.
-template <typename UIntSatOp, typename SIntSatOp, typename IntOp,
-          typename CIROp>
-static mlir::LogicalResult
-lowerSaturatableArithOp(CIROp op, mlir::Value lhs, mlir::Value rhs,
-                        mlir::ConversionPatternRewriter &rewriter) {
-  const mlir::Type eltType = elementTypeIfVectorOrMatrix(op.getRhs().getType());
-  assert(cir::isIntOrBoolType(eltType) &&
-         "saturatable arith op expects integer operand types");
-  if (op.getSaturated()) {
-    if (isIntTypeUnsigned(eltType))
-      rewriter.replaceOpWithNewOp<UIntSatOp>(op, lhs, rhs);
-    else
-      rewriter.replaceOpWithNewOp<SIntSatOp>(op, lhs, rhs);
-    return mlir::success();
-  }
-  rewriter.replaceOpWithNewOp<IntOp>(op, lhs, rhs, intOverflowFlag(op));
-  return mlir::success();
+static mlir::LLVM::IntegerOverflowFlags
+convertOverflowFlags(cir::OverflowFlags flags) {
+  mlir::LLVM::IntegerOverflowFlags result =
+      mlir::LLVM::IntegerOverflowFlags::none;
+  if (bitEnumContainsAny(flags, cir::OverflowFlags::NoSignedWrap))
+    result = result | mlir::LLVM::IntegerOverflowFlags::nsw;
+  if (bitEnumContainsAny(flags, cir::OverflowFlags::NoUnsignedWrap))
+    result = result | mlir::LLVM::IntegerOverflowFlags::nuw;
+  return result;
 }
 
 mlir::LogicalResult CIRToLLVMAddOpLowering::matchAndRewrite(
     cir::AddOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  return lowerSaturatableArithOp<mlir::LLVM::UAddSat, mlir::LLVM::SAddSat,
-                                 mlir::LLVM::AddOp>(op, adaptor.getLhs(),
-                                                    adaptor.getRhs(), rewriter);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(
+      op, adaptor.getLhs(), adaptor.getRhs(),
+      convertOverflowFlags(op.getOverflowFlags()));
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMSubOpLowering::matchAndRewrite(
     cir::SubOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  return lowerSaturatableArithOp<mlir::LLVM::USubSat, mlir::LLVM::SSubSat,
-                                 mlir::LLVM::SubOp>(op, adaptor.getLhs(),
-                                                    adaptor.getRhs(), rewriter);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(
+      op, adaptor.getLhs(), adaptor.getRhs(),
+      convertOverflowFlags(op.getOverflowFlags()));
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMMulOpLowering::matchAndRewrite(
     cir::MulOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(cir::isIntOrBoolType(
-             elementTypeIfVectorOrMatrix(op.getRhs().getType())) &&
-         "cir.mul expects integer operand types");
   rewriter.replaceOpWithNewOp<mlir::LLVM::MulOp>(
-      op, adaptor.getLhs(), adaptor.getRhs(), intOverflowFlag(op));
+      op, adaptor.getLhs(), adaptor.getRhs(),
+      convertOverflowFlags(op.getOverflowFlags()));
   return mlir::success();
 }
 
-/// Lower an integer Div/Rem op to its signed or unsigned LLVM counterpart.
+/// Lower an integer op to its signed or unsigned LLVM counterpart.
 template <typename UIntOp, typename SIntOp, typename CIROp>
 static mlir::LogicalResult
 lowerIntBinaryOp(CIROp op, mlir::Value lhs, mlir::Value rhs,
@@ -3992,6 +3979,20 @@ lowerIntBinaryOp(CIROp op, mlir::Value lhs, mlir::Value rhs,
   else
     rewriter.replaceOpWithNewOp<SIntOp>(op, lhs, rhs);
   return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAddSatOpLowering::matchAndRewrite(
+    cir::AddSatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerIntBinaryOp<mlir::LLVM::UAddSat, mlir::LLVM::SAddSat>(
+      op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+}
+
+mlir::LogicalResult CIRToLLVMSubSatOpLowering::matchAndRewrite(
+    cir::SubSatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerIntBinaryOp<mlir::LLVM::USubSat, mlir::LLVM::SSubSat>(
+      op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
 }
 
 mlir::LogicalResult CIRToLLVMDivOpLowering::matchAndRewrite(
@@ -5637,7 +5638,8 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
     return emitTypeConversionError(op, op.getType());
   auto eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   llvm::SmallVector<mlir::LLVM::GEPArg> offsets =
-      llvm::SmallVector<mlir::LLVM::GEPArg>{op.getIndex()};
+      llvm::SmallVector<mlir::LLVM::GEPArg>{
+          static_cast<int32_t>(op.getIndex())};
   rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
       op, targetType, eltType, adaptor.getVptr(), offsets,
       mlir::LLVM::GEPNoWrapFlags::inbounds);

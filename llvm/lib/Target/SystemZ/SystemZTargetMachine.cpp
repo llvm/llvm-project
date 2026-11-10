@@ -31,10 +31,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMachineCombinerPass(
-    "systemz-machine-combiner",
-    cl::desc("Enable the machine combiner pass"),
-    cl::init(true), cl::Hidden);
+cl::opt<bool>
+    EnableMachineCombinerPass("systemz-machine-combiner",
+                              cl::desc("Enable the machine combiner pass"),
+                              cl::init(true), cl::Hidden);
 
 static cl::opt<bool> GenericSched(
     "generic-sched", cl::Hidden, cl::init(false),
@@ -47,6 +47,7 @@ LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeSystemZAlignGlobalsLegacyPass(PR);
   initializeSystemZAsmPrinterPass(PR);
   initializeSystemZElimComparePass(PR);
   initializeSystemZShortenInstPass(PR);
@@ -226,7 +227,7 @@ public:
 
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createSystemZAlignGlobalsPass());
+    addPass(createSystemZAlignGlobalsLegacyPass());
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }
@@ -237,7 +238,8 @@ void SystemZPassConfig::addIRPasses() {
 }
 
 bool SystemZPassConfig::addInstSelector() {
-  addPass(createSystemZISelDag(getSystemZTargetMachine(), getOptLevel()));
+  addPass(
+      createSystemZISelDagLegacyPass(getSystemZTargetMachine(), getOptLevel()));
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createSystemZLDCleanupPass(getSystemZTargetMachine()));

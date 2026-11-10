@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
@@ -44,6 +45,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   RegisterTargetMachine<SPIRVTargetMachine> X(getTheSPIRV32Target());
   RegisterTargetMachine<SPIRVTargetMachine> Y(getTheSPIRV64Target());
   RegisterTargetMachine<SPIRVTargetMachine> Z(getTheSPIRVLogicalTarget());
+  static opt::RegisterLibraryOptions<SPIRVOptions> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
@@ -88,6 +90,8 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      CLOpts(cl::LibraryOptionsContext::get<SPIRVOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
       Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
@@ -267,17 +271,6 @@ bool SPIRVPassConfig::addRegBankSelect() {
   disablePass(&RegBankSelectLegacy::ID);
   return false;
 }
-
-// Deprecated flag kept for backward compatibility. NSDI emission is now handled
-// by SPIRVNonSemanticDebugHandler, registered in SPIRVAsmPrinter::
-// doInitialization() when the module contains debug info (llvm.dbg.cu).
-// TODO: Remove this option after a deprecation period. Callers that used
-// -spv-emit-nonsemantic-debug-info should switch to -g.
-static cl::opt<bool> SPVEnableNonSemanticDI(
-    "spv-emit-nonsemantic-debug-info",
-    cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
-             "instructions"),
-    cl::init(false));
 
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {

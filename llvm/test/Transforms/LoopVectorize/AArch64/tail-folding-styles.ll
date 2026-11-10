@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; Test the different tail folding styles.
 
-define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features" = "+sve" {
+define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features" = "+sve" vscale_range(1,16) {
 ; NONE-LABEL: @simple_memset_tailfold(
 ; NONE-NEXT:  entry:
 ; NONE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
