@@ -1463,8 +1463,6 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86ThisCall:
   case CC_X86FastCall:
   case CC_X86VectorCall:
-    return CCCR_Ignore;
-  // AAPCS-VFP is the default convention on Windows on ARM.
   case CC_AAPCS_VFP:
     return CCCR_Ignore;
   case CC_C:
