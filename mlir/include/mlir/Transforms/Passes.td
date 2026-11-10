@@ -47,6 +47,20 @@ def CanonicalizerPass : Pass<"canonicalize"> {
            "Max. iterations between applying patterns / simplifying regions">,
     Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
            "Max. number of pattern rewrites within an iteration">,
+    Option<"deadCodeElimination", "dead-code-elimination",
+           "mlir::GreedyDeadCodeElimination",
+           /*default=*/"mlir::GreedyDeadCodeElimination::All",
+           "Which trivially dead operations to erase. Region simplification, "
+           "unless disabled, still removes dead values.",
+             [{::llvm::cl::values(
+               clEnumValN(mlir::GreedyDeadCodeElimination::Disabled, "disabled",
+                "Erase no dead operation."),
+               clEnumValN(mlir::GreedyDeadCodeElimination::NewlyDead,
+                "newly-dead",
+                "Erase only operations that rewriting left dead."),
+               clEnumValN(mlir::GreedyDeadCodeElimination::All, "all",
+                "Erase every trivially dead operation.")
+              )}]>,
     Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
            "Test only: Fail pass on non-convergence to detect cyclic pattern">,
     Option<"cseBetweenIterations", "cse-between-iterations", "bool",

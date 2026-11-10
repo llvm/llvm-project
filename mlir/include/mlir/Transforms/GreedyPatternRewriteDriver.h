@@ -39,6 +39,20 @@ enum class GreedySimplifyRegionLevel {
   Aggressive
 };
 
+/// Which trivially dead operations the greedy rewriter erases.
+enum class GreedyDeadCodeElimination {
+  /// Erase no dead operation. An operation is erased only by a pattern or by
+  /// folding it away.
+  Disabled,
+  /// Erase only operations that rewriting left dead. Operations whose results
+  /// were unused before rewriting are kept. applyOpPatternsGreedily records
+  /// only the operations it is given, so another unused operation that a
+  /// rewrite modifies can still be erased.
+  NewlyDead,
+  /// Erase every trivially dead operation.
+  All
+};
+
 /// This class allows control over how the GreedyPatternRewriteDriver works.
 class GreedyRewriteConfig {
 public:
@@ -130,6 +144,17 @@ public:
     return *this;
   }
 
+  /// Which trivially dead operations are erased while greedily rewriting.
+  /// Region simplification, if enabled, still removes dead values.
+  GreedyDeadCodeElimination getDeadCodeElimination() const {
+    return deadCodeElimination;
+  }
+  GreedyRewriteConfig &
+  setDeadCodeElimination(GreedyDeadCodeElimination elimination) {
+    deadCodeElimination = elimination;
+    return *this;
+  }
+
   /// If set to "true", constants are CSE'd (even across multiple regions that
   /// are in a parent-ancestor relationship).
   bool isConstantCSEEnabled() const { return cseConstants; }
@@ -171,6 +196,8 @@ private:
   GreedyRewriteStrictness strictness = GreedyRewriteStrictness::AnyOp;
   RewriterBase::Listener *listener = nullptr;
   bool fold = true;
+  GreedyDeadCodeElimination deadCodeElimination =
+      GreedyDeadCodeElimination::All;
   bool cseConstants = true;
   bool cseBetweenIterations = false;
 };

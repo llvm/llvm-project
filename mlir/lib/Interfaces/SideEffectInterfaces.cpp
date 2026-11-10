@@ -157,11 +157,17 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
 }
 
 void DeadnessCache::invalidate(Operation *op) {
+  // Nothing to drop before the first query, e.g. while dead code elimination
+  // is disabled in the greedy rewriter.
+  if (cache.empty())
+    return;
   op->walk([&](Operation *nested) { cache.erase(nested); });
   invalidateAncestors(op);
 }
 
 void DeadnessCache::invalidateAncestors(Operation *op) {
+  if (cache.empty())
+    return;
   // An ancestor may report nested effects through its own effect interface,
   // without querying the intermediate cache entries. A missing entry cannot
   // stop invalidation of its ancestors.

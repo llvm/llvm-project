@@ -492,6 +492,10 @@ protected:
   /// Add the given operation and its ancestors to the worklist.
   void addToWorklist(Operation *op);
 
+  /// With GreedyDeadCodeElimination::NewlyDead, record `op` if none of its
+  /// results is used, so that it is never erased as dead.
+  void recordIfUnused(Operation *op);
+
   /// Notify the driver that the specified operation may have been modified
   /// in-place. The operation is added to the worklist.
   void notifyOperationModified(Operation *op) override;
@@ -548,6 +552,10 @@ private:
   /// simplifications.
   void addOperandsToWorklist(Operation *op);
 
+  /// Return whether the dead code elimination mode allows erasing `op` once it
+  /// is trivially dead.
+  bool mayEraseIfDead(Operation *op) const;
+
   /// Notify the driver that the given block was inserted.
   void notifyBlockInserted(Block *block, Region *previous,
                            Region::iterator previousIt) override;
@@ -573,6 +581,10 @@ private:
   PatternApplicator matcher;
 
   DeadnessListener deadnessListener;
+
+  /// Operations whose results were unused before rewriting. With
+  /// GreedyDeadCodeElimination::NewlyDead, these are never erased as dead.
+  llvm::SmallPtrSet<Operation *, 8> initiallyUnusedOps;
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   ExpensiveChecks expensiveChecks;
@@ -868,7 +880,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     });
 
     // If the operation is trivially dead - remove it.
-    if (deadnessListener.isOpTriviallyDead(op)) {
+    if (mayEraseIfDead(op) && deadnessListener.isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
       changed = true;
 
@@ -1116,6 +1128,24 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
   }
 }
 
+void GreedyPatternRewriteDriver::recordIfUnused(Operation *op) {
+  if (config.getDeadCodeElimination() == GreedyDeadCodeElimination::NewlyDead &&
+      op->use_empty())
+    initiallyUnusedOps.insert(op);
+}
+
+bool GreedyPatternRewriteDriver::mayEraseIfDead(Operation *op) const {
+  switch (config.getDeadCodeElimination()) {
+  case GreedyDeadCodeElimination::Disabled:
+    return false;
+  case GreedyDeadCodeElimination::NewlyDead:
+    return !initiallyUnusedOps.contains(op);
+  case GreedyDeadCodeElimination::All:
+    return true;
+  }
+  llvm_unreachable("unknown dead code elimination mode");
+}
+
 void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
   LLVM_DEBUG({
     logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
@@ -1138,6 +1168,7 @@ void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
 
   addOperandsToWorklist(op);
   worklist.remove(op);
+  initiallyUnusedOps.erase(op);
 
   if (config.getStrictness() != GreedyRewriteStrictness::AnyOp)
     strictModeFilteredOps.erase(op);
@@ -1196,6 +1227,8 @@ RegionPatternRewriteDriver::RegionPatternRewriteDriver(
   if (config.getStrictness() != GreedyRewriteStrictness::AnyOp) {
     region.walk([&](Operation *op) { strictModeFilteredOps.insert(op); });
   }
+  if (config.getDeadCodeElimination() == GreedyDeadCodeElimination::NewlyDead)
+    region.walk([&](Operation *op) { recordIfUnused(op); });
 #ifndef NDEBUG
   // Verify that the region is within the configured scope (if any).
   if (Region *scope = config.getScope()) {
@@ -1404,6 +1437,8 @@ MultiOpPatternRewriteDriver::MultiOpPatternRewriteDriver(
       survivingOps(survivingOps) {
   if (config.getStrictness() != GreedyRewriteStrictness::AnyOp)
     strictModeFilteredOps.insert_range(ops);
+  for (Operation *op : ops)
+    recordIfUnused(op);
 
   if (survivingOps) {
     survivingOps->clear();
