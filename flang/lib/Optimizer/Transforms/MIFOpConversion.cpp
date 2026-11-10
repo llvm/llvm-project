@@ -1695,9 +1695,7 @@ struct MIFEventQueryOpConversion
         builder.createFunction(loc, getPRIFProcName("event_query"), ftype);
 
     mlir::Value count = builder.createTemporary(loc, i64Ty);
-    mlir::Value stat = op.getStat();
-    if (!stat)
-      stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
+    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
 
     mlir::Value cptrEvent =
         convertRefTypeToCPtrType(builder, loc, op.getEvent());

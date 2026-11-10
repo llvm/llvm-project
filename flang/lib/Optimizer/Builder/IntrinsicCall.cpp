@@ -4044,6 +4044,7 @@ IntrinsicLibrary::genEtime(std::optional<mlir::Type> resultType,
 
 // EVENT_QUERY
 void IntrinsicLibrary::genEventQuery(llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled(loc, options);
   assert(args.size() == 3);
 
   mlir::Value eventVarPtr = fir::getBase(args[0]);
