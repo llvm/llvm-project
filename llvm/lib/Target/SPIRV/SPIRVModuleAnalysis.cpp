@@ -845,10 +845,39 @@ void SPIRVModuleAnalysisImpl::numberRegistersGlobally(const Module &M) {
   }
 }
 
+static void addQuadControlRequirements(SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST,
+                                       StringRef Feature) {
+  if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    report_fatal_error(Twine(Feature) + " requires SPIR-V 1.3", false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    report_fatal_error(Twine(Feature) + " requires the following SPIR-V "
+                                        "extension: SPV_KHR_quad_control",
+                       false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence))
+    report_fatal_error("SPV_KHR_quad_control requires the following SPIR-V "
+                       "extension: SPV_KHR_maximal_reconvergence",
+                       false);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_quad_control);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+}
+
 // RequirementHandler implementations.
 void SPIRV::RequirementHandler::getAndAddRequirements(
     SPIRV::OperandCategory::OperandCategory Category, uint32_t i,
     const SPIRVSubtarget &ST) {
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      (i == SPIRV::ExecutionMode::QuadDerivativesKHR ||
+       i == SPIRV::ExecutionMode::RequireFullQuadsKHR))
+    addQuadControlRequirements(*this, ST,
+                               getSymbolicOperandMnemonic(Category, i));
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR &&
+      !ST.canUseExtension(SPIRV::Extension::SPV_KHR_compute_shader_derivatives))
+    report_fatal_error(
+        "DerivativeGroupQuadsKHR requires the following SPIR-V extension: "
+        "SPV_KHR_compute_shader_derivatives",
+        false);
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
@@ -1765,6 +1794,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
       break;
     }
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(SPIRV::InstructionSet::NonSemantic_DebugBreak)) {
+      // Non-semantic instruction sets no longer require
+      // SPV_KHR_non_semantic_info as of SPIR-V 1.6
+      if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+      break;
+    }
     if (MI.getOperand(3).getImm() ==
         static_cast<int64_t>(SPIRV::OpenCLExtInst::printf)) {
       addPrintfRequirements(MI, Reqs, ST);
@@ -2139,6 +2176,10 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
+    break;
+  case SPIRV::OpGroupNonUniformQuadAllKHR:
+    addQuadControlRequirements(Reqs, ST, "OpGroupNonUniformQuadAllKHR");
+    Reqs.addCapability(SPIRV::Capability::QuadControlKHR);
     break;
   case SPIRV::OpGroupNonUniformRotateKHR:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))

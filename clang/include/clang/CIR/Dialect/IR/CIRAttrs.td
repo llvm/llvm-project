@@ -29,6 +29,7 @@ include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
 class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<CIR_Dialect, name, traits> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRAttrs.h"];
   let mnemonic = attrMnemonic;
   // Setting this to 0 will make the CXXABILowering always consider this
   // attribute 'legal', so that it won't require any transformation. This should
@@ -1139,6 +1140,22 @@ def CIR_FastMathFlags : CIR_I32BitEnum<
 def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
+// OverflowFlags
+//===----------------------------------------------------------------------===//
+
+// `nuw` is listed first so the flags print in LLVM IR order, `nuw nsw`.
+def CIR_OFNone : I32BitEnumCaseNone<"None", "none">;
+def CIR_OFNoSignedWrap : I32BitEnumCaseBit<"NoSignedWrap", 0, "nsw">;
+def CIR_OFNoUnsignedWrap : I32BitEnumCaseBit<"NoUnsignedWrap", 1, "nuw">;
+
+def CIR_OverflowFlags : CIR_I32BitEnum<
+    "OverflowFlags", "integer overflow flags", [
+  CIR_OFNone, CIR_OFNoUnsignedWrap, CIR_OFNoSignedWrap
+]> {
+  let separator = " ";
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
@@ -1584,10 +1601,14 @@ def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
 // VisibilityKind
 //===----------------------------------------------------------------------===//
 
+def CIR_VisibilityDefault : I32EnumCase<"Default", 0, "default">;
+def CIR_VisibilityHidden : I32EnumCase<"Hidden", 1, "hidden">;
+def CIR_VisibilityProtected : I32EnumCase<"Protected", 2, "protected">;
+
 def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
-  I32EnumCase<"Default", 0, "default">,
-  I32EnumCase<"Hidden", 1, "hidden">,
-  I32EnumCase<"Protected", 2, "protected">
+  CIR_VisibilityDefault,
+  CIR_VisibilityHidden,
+  CIR_VisibilityProtected
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -1658,6 +1679,28 @@ def CIR_FramePointerKindAttr
     }
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// MaxWorkGroupSizeAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MaxWorkGroupSizeAttr
+    : CIR_Attr<"MaxWorkGroupSize", "max_work_group_size"> {
+  let summary = "Maximum kernel work-group size";
+  let description = [{
+    Stores the maximum work-group size of a kernel, emitted to LLVM IR as
+    `max_work_group_size` function metadata.
+  }];
+
+  let parameters = (ins
+    "uint32_t":$x,
+    "uint32_t":$y,
+    "uint32_t":$z
+  );
+
+  let assemblyFormat = "`<` $x `,` $y `,` $z `>`";
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//

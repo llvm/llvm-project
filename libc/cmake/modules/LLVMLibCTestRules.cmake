@@ -861,6 +861,9 @@ function(create_libc_test fq_target_name)
     ${fq_build_target_name}
     ${fq_deps_list}
   )
+  if(TARGET libc-headers)
+    add_dependencies(${fq_build_target_name} libc-headers)
+  endif()
 
   # 5. Add test runner target
   _add_libc_test_runner(

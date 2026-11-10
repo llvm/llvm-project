@@ -74,6 +74,7 @@ private:
 
   void initAvailableExtInstSets();
   void accountForAMDShaderTrinaryMinmax();
+  void accountForNonSemanticDebugBreak();
 
 public:
   // This constructor initializes the data members to match that

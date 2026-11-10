@@ -246,6 +246,8 @@ class LongDoubleLibcallImpl<string libcall_basename, string Name = NAME>
                        ProvidesF128.ReturnType);
   let ArgumentTypes = !foreach(Ty, ProvidesF128.ArgumentTypes,
                                !if(!eq(Ty, FP128), LDbl, Ty));
+  let ParamPointeeTypes = !foreach(Ty, ProvidesF128.ParamPointeeTypes,
+                                   !if(!eq(Ty, FP128), LDbl, Ty));
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used

@@ -15,7 +15,7 @@ int One_(void) __attribute__((alias("__One")));
 
 // Declare target aliasee: emitted on the device.
 // CIR-DAG: cir.func weak hidden @Two() -> !s32i alias(@__Two)
-// CIR-DAG: cir.func hidden dso_local @Two_() -> !s32i alias(@__Two)
+// CIR-DAG: cir.func hidden @Two_() -> !s32i alias(@__Two)
 // LLVM-DAG: @Two = weak hidden alias i32 (), ptr @__Two
 // LLVM-DAG: @Two_ = hidden alias i32 (), ptr @__Two
 // OGCG-DAG: @Two = weak hidden alias i32 (), ptr @__Two

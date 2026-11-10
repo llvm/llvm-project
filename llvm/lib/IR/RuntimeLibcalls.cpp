@@ -499,6 +499,48 @@ RuntimeLibcallsInfo::getVariableType(LLVMContext &Ctx, const Triple &TT,
   return convertToIRType(ProtoTypes[1], Ctx, TT, DL, LongDoubleFmt);
 }
 
+FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
+    Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(!isVariable(LibcallImpl) && "not a function declaration");
+
+  const DataLayout &DL = M.getDataLayout();
+  auto [FuncTy, FuncAttrs] =
+      getFunctionTy(M.getContext(), M.getTargetTriple(), DL, LibcallImpl);
+
+  // TODO: Every libcall should have a known signature.
+  if (!FuncTy) {
+    FuncTy = FunctionType::get(Type::getVoidTy(M.getContext()), {},
+                               /*IsVarArg=*/true);
+  }
+
+  StringRef Name = getLibcallImplName(LibcallImpl);
+  if (GlobalValue *GV = M.getNamedValue(Name))
+    return {FuncTy, GV};
+
+  Function *F = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
+                                 DL.getProgramAddressSpace(), Name, &M);
+  F->setAttributes(FuncAttrs);
+  F->setCallingConv(getLibcallImplCallingConv(LibcallImpl));
+  return {FuncTy, F};
+}
+
+GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(
+    Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(isVariable(LibcallImpl) && "not a variable declaration");
+
+  StringRef Name = getLibcallImplName(LibcallImpl);
+  if (GlobalValue *GV = M.getNamedValue(Name))
+    return GV;
+
+  Type *VarTy = getVariableType(M.getContext(), M.getTargetTriple(),
+                                M.getDataLayout(), LibcallImpl);
+  return new GlobalVariable(
+      M, VarTy, /*isConstant=*/false, GlobalValue::ExternalLinkage, nullptr,
+      Name, nullptr,
+      isThreadLocalVariable(LibcallImpl) ? GlobalValue::InitialExecTLSModel
+                                         : GlobalValue::NotThreadLocal);
+}
+
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                    const DataLayout &DL,

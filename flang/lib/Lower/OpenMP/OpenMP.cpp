@@ -6761,8 +6761,7 @@ static std::string getDefinedOperatorOpName(
     const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
   return common::visit(
       common::visitors{
-          [&](const clause::DefinedOperator::IntrinsicOperator &intrOp)
-              -> std::string {
+          [&](const clause::IntrinsicOperator &intrOp) -> std::string {
             // Directive side of the intrinsic-operator USER reduction naming
             // contract (clause side:
             // ReductionProcessor::processReductionArguments site 2). A user
