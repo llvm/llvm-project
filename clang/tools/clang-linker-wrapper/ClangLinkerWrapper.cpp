@@ -1092,6 +1092,45 @@ Error handleOverrideImages(
   return Error::success();
 }
 
+/// Writes the result of --sycl-device-link to the output file. The wrapped SYCL
+/// device object is the final output, so the host linker is not run.
+Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
+                               ArrayRef<StringRef> WrappedFiles,
+                               const ArgList &Args) {
+  if (WrappedFiles.size() > 1)
+    return createStringError("expected a single wrapped SYCL device object, "
+                             "got %zu",
+                             WrappedFiles.size());
+
+  Triple HostTriple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+  StringRef File;
+  if (WrappedFiles.empty()) {
+    // No device code was linked. Emit an empty host object with no runtime
+    // registration, so the output can still be used in the host link.
+    LLVMContext Context;
+    Module M("offload.wrapper.module", Context);
+    M.setTargetTriple(HostTriple);
+    M.setDataLayout(HostTriple.computeDataLayout());
+    auto FileOrErr = compileModule(LibraryOptions, M, OFK_SYCL);
+    if (!FileOrErr)
+      return FileOrErr.takeError();
+    File = *FileOrErr;
+  } else {
+    File = WrappedFiles.front();
+  }
+
+  if (Verbose || DryRun)
+    printCommands(
+        {HostTriple.isOSWindows() ? "copy" : "cp", File, ExecutableName});
+  if (DryRun)
+    return Error::success();
+
+  if (std::error_code EC = sys::fs::copy_file(File, ExecutableName))
+    return createFileError(ExecutableName, EC);
+  return Error::success();
+}
+
 /// Transforms all the extracted offloading input files into an image that can
 /// be registered by the runtime. If NeedsWrapping is false, writes bundled
 /// output directly without wrapping or host linking.
@@ -1612,6 +1651,22 @@ int main(int Argc, char **Argv) {
     // linking.
     bool EmitFatbinOnly = Args.hasArg(OPT_emit_fatbin_only);
 
+    // With --sycl-device-link, the wrapped device object is the output and the
+    // host linker is not run.
+    bool SYCLDeviceLink = Args.hasArg(OPT_sycl_device_link);
+    if (SYCLDeviceLink) {
+      if (EmitFatbinOnly)
+        reportError(createStringError(
+            "--sycl-device-link cannot be used with --emit-fatbin-only"));
+      for (const SmallVector<OffloadFile> &Files : *DeviceInputFiles)
+        for (const OffloadFile &File : Files)
+          if (OffloadKind Kind = File.getBinary()->getOffloadKind();
+              Kind != OFK_SYCL)
+            reportError(createStringError(
+                "--sycl-device-link requires SYCL device code, got '%s'",
+                getOffloadKindName(Kind).str().c_str()));
+    }
+
     // Link and process the device images. The function may emit a direct fat
     // binary if --emit-fatbin-only is specified.
     auto FilesOrErr = linkAndWrapDeviceFiles(LibraryOptions, *DeviceInputFiles,
@@ -1619,8 +1674,12 @@ int main(int Argc, char **Argv) {
     if (!FilesOrErr)
       reportError(FilesOrErr.takeError());
 
-    // Run the host linking job with the rendered arguments.
-    if (!EmitFatbinOnly) {
+    if (SYCLDeviceLink) {
+      if (Error Err =
+              emitSYCLDeviceLinkOutput(LibraryOptions, *FilesOrErr, Args))
+        reportError(std::move(Err));
+    } else if (!EmitFatbinOnly) {
+      // Run the host linking job with the rendered arguments.
       if (Error Err = runLinker(*FilesOrErr, Args))
         reportError(std::move(Err));
     }

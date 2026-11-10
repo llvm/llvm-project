@@ -69,6 +69,12 @@ def emit_fatbin_only
       Flags<[WrapperOnlyOption]>,
       HelpText<"Emit fat binary directly without wrapping or host linking">;
 
+def sycl_device_link
+    : Flag<["--"], "sycl-device-link">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Link and wrap SYCL device code into a host object without "
+               "running the host linker">;
+
 def no_canonical_prefixes : Flag<["--"], "no-canonical-prefixes">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Do not resolve symbolic links, turn relative paths into absolute ones, or do anything else to identify the executable">;
