@@ -30,15 +30,15 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n){
 ; WITH-PCLMUL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
 ; WITH-PCLMUL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
 ; WITH-PCLMUL-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
-; WITH-PCLMUL-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP4]], i64 2
+; WITH-PCLMUL-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP4]], i64 16
 ; WITH-PCLMUL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP4]], align 8
 ; WITH-PCLMUL-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x i64>, ptr [[TMP7]], align 8
-; WITH-PCLMUL-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP5]], i64 2
+; WITH-PCLMUL-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP5]], i64 16
 ; WITH-PCLMUL-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
 ; WITH-PCLMUL-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x i64>, ptr [[TMP8]], align 8
 ; WITH-PCLMUL-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD]], <2 x i64> [[WIDE_LOAD6]])
 ; WITH-PCLMUL-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD5]], <2 x i64> [[WIDE_LOAD7]])
-; WITH-PCLMUL-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP6]], i64 2
+; WITH-PCLMUL-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP6]], i64 16
 ; WITH-PCLMUL-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP6]], align 8
 ; WITH-PCLMUL-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP11]], align 8
 ; WITH-PCLMUL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

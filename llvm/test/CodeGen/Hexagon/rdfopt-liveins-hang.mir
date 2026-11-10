@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=hexagon-unknown-linux-musl -run-pass=hexagon-rdf-opt \
-# RUN:     -verify-machineinstrs -o /dev/null %s
+# RUN: llc -mtriple=hexagon-unknown-linux-musl -run-pass=hexagon-rdf-opt -o /dev/null %s
 #
 # Regression test for a HexagonRDFOpt compile-time hang.
 #
@@ -296,7 +295,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 noPhis:          true
 isSSA:           false

@@ -19,6 +19,7 @@ def ValueBoundsOpInterface : OpInterface<"ValueBoundsOpInterface"> {
     in terms of other values that are stored in the constraint set.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ValueBoundsOpInterface.h"];
   let methods = [
     InterfaceMethod<
       /*desc=*/[{

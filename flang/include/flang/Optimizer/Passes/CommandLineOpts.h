@@ -20,10 +20,6 @@
 /// allocations should always be on the heap.
 extern llvm::cl::opt<bool> dynamicArrayStackToHeapAllocation;
 
-/// Shared option in tools to set a maximum value for the number of elements in
-/// a compile-time sized array that can be allocated on the stack.
-extern llvm::cl::opt<std::size_t> arrayStackAllocationThreshold;
-
 /// Shared option in tools to ignore missing runtime type descriptor objects
 /// when translating FIR to LLVM. The resulting program will crash if the
 /// runtime needs the derived type descriptors, this is only a debug option to
@@ -55,6 +51,8 @@ extern llvm::cl::opt<bool> disableCfgConversion;
 extern llvm::cl::opt<bool> disableFirAliasTags;
 extern llvm::cl::opt<bool> disableFirLICM;
 extern llvm::cl::opt<bool> disableFirMao;
+extern llvm::cl::opt<unsigned> loopTripCountVersioningMaxSectionExtent;
+extern llvm::cl::opt<unsigned> loopTripCountVersioningMaxUnrolledOps;
 extern llvm::cl::opt<bool> useOldAliasTags;
 extern llvm::cl::opt<bool> forceNoAlias;
 

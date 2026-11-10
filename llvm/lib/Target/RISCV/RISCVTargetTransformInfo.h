@@ -102,6 +102,8 @@ public:
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
                                     Instruction *Inst = nullptr) const override;
+  bool preferLoopExitWithEqualityComparison(
+      const ICmpInst &Cond, const APInt &PostIncExitValue) const override;
   InstructionCost
   getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                       Type *Ty, TTI::TargetCostKind CostKind) const override;
@@ -472,7 +474,7 @@ public:
     case RecurKind::FMaximumNum:
     case RecurKind::FAddChainWithSubs:
       return false;
-    case RecurKind::None:
+    default:
       llvm_unreachable("Unknown reduction kind.");
     }
   }
@@ -584,6 +586,9 @@ public:
   bool
   shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
                                        const Attribute &Attr) const override;
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const override;
 
   std::optional<Instruction *>
   instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;

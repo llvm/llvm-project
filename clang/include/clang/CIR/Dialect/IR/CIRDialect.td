@@ -99,6 +99,11 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTrapFuncNameAttrName() { return "trap_func_name"; }
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
+    // Marks a runtime library function (classic codegen's
+    // CreateRuntimeFunction). Unlike every other function, it does not get the
+    // TU-wide default function attributes recorded in
+    // #cir.lowering_options.
+    static llvm::StringRef getRuntimeFuncAttrName() { return "runtime_func"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
     static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
@@ -107,6 +112,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
+    static llvm::StringRef getAMDGPUFlatWorkGroupSizeAttrName() { return "cir.amdgpu-flat-work-group-size"; }
+    static llvm::StringRef getAMDGPUWavesPerEUAttrName() { return "cir.amdgpu-waves-per-eu"; }
     // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
     // can build the runtime-registration globals without doing file I/O.
     static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }
@@ -117,13 +124,16 @@ def CIR_Dialect : Dialect {
     // unit imports, as #cir.cxx_module_init attributes in the order the global
     // init function calls them, precomputed by CIRGen for the same reason.
     static llvm::StringRef getCXXModuleImportedInitsAttrName() { return "cir.cxx_module_imported_inits"; }
-    // LangOptions facts that post-CIRGen lowering consumes, serialized by
-    // CIRGen so a reloaded .cir module is self-describing without a live
-    // clang::LangOptions. See #cir.lowering_lang_options.
-    static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
+    // LangOptions and CodeGenOptions facts that post-CIRGen lowering
+    // consumes, serialized by CIRGen so a reloaded .cir module is
+    // self-describing without a live clang::LangOptions or
+    // clang::CodeGenOptions. See #cir.lowering_options.
+    static llvm::StringRef getLoweringOptionsAttrName() { return "cir.lowering_options"; }
     // Platform SDK version from -target-sdk-version, as printed by
     // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
     static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
+    // Hash of the -cuid compilation unit ID. Absent when no CUID was given.
+    static llvm::StringRef getCUIDHashAttrName() { return "cir.cuid_hash"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 
@@ -149,14 +159,6 @@ def CIR_Dialect : Dialect {
     mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
     void printType(mlir::Type type,
                    mlir::DialectAsmPrinter &printer) const override;
-
-    /// Returns true if \p ty and every type nested in it are CIR types.
-    /// Memoized, since FuncType verification re-queries the same records.
-    bool isPureCIRType(mlir::Type ty) const;
-
-  private:
-    mutable llvm::DenseMap<mlir::Type, bool> pureCIRTypeCache;
-    mutable std::mutex pureCIRTypeCacheMutex;
   }];
 }
 

@@ -35,3 +35,43 @@ subroutine f01(x)
   enddo
 end
 
+! The operation in an iteration offset must be + or -, in any position of the
+! iteration vector.
+subroutine f02(x)
+  interface operator(.myop.)
+    integer function myop(a, b)
+      integer, intent(in) :: a, b
+    end function
+  end interface
+  integer :: x(10, 10)
+  !$omp do ordered(2)
+  do i = 1, 10
+    do j = 1, 10
+!ERROR: The operation in the iteration offset must be + or -
+      !$omp ordered doacross(sink: i*1, j-1)
+!ERROR: The operation in the iteration offset must be + or -
+      !$omp ordered doacross(sink: i+1, j/2)
+!A user-defined operator is not + or - either.
+!ERROR: The operation in the iteration offset must be + or -
+      !$omp ordered doacross(sink: i .myop. 1, j-1)
+      x(i, j) = 0
+    enddo
+  enddo
+  !$omp end do
+end
+
+! Both + and -, and an absent offset, are accepted.
+subroutine f03(x)
+  integer :: x(10, 10)
+  !$omp do ordered(2)
+  do i = 1, 10
+    do j = 1, 10
+      !$omp ordered doacross(sink: i+1, j-1)
+      !$omp ordered doacross(sink: i-1, j+1)
+      !$omp ordered doacross(sink: i, j)
+      x(i, j) = 0
+    enddo
+  enddo
+  !$omp end do
+end
+

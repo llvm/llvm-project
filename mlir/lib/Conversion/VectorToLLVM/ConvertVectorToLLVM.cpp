@@ -861,7 +861,7 @@ public:
   matchAndRewrite(vector::ReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = adaptor.getVector();
     Value acc = adaptor.getAcc();
@@ -1028,7 +1028,7 @@ public:
       ConversionPatternRewriter &rewriter) const override {
     auto reductionOp = cast<ReductionOp>(maskableOp.getOperation());
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = reductionOp.getVector();
     Value acc = reductionOp.getAcc();

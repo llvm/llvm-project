@@ -122,8 +122,8 @@ body:             |
 
     %4:gr32 = COPY $esi
     %2:gr64 = COPY $rdi
-    %3:gr64 = COPY killed %2
-    %5:gr32 = COPY killed %4
+    %3:gr64 = COPY %2
+    %5:gr32 = COPY %4
     DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !16
     DBG_INSTR_REF !29, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), dbg-instr-ref(1, 0), dbg-instr-ref(2, 0), debug-location !16
     JMP_1 %bb.3

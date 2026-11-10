@@ -659,6 +659,14 @@ void __ubsan::handleInvalidBuiltin(InvalidBuiltinData *Data,
 
   if (Data->Kind == BCK_AssumePassedFalse)
     Diag(Loc, DL_Error, ET, "assumption is violated during execution");
+  else if (Data->Kind == BCK_NonUniformLane)
+    Diag(Loc, DL_Error, ET,
+         "lane index passed to __builtin_amdgcn_readlane() is not uniform "
+         "across active lanes");
+  else if (Data->Kind == BCK_InactiveLane)
+    Diag(Loc, DL_Error, ET,
+         "lane index passed to __builtin_amdgcn_wave_shuffle() refers to an "
+         "inactive lane");
   else
     Diag(Loc, DL_Error, ET,
          "passing zero to __builtin_%0(), which is not a valid argument")
