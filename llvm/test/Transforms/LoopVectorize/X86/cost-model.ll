@@ -585,8 +585,10 @@ define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x ptr> [[TMP21]], ptr [[TMP20]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp ne <2 x ptr> [[TMP18]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <2 x ptr> [[TMP22]], splat (ptr null)
-; CHECK-NEXT:    [[TMP25]] = or <2 x i1> [[VEC_PHI]], [[TMP23]]
-; CHECK-NEXT:    [[TMP26]] = or <2 x i1> [[VEC_PHI3]], [[TMP24]]
+; CHECK-NEXT:    [[TMP30:%.*]] = freeze <2 x i1> [[TMP23]]
+; CHECK-NEXT:    [[TMP31:%.*]] = freeze <2 x i1> [[TMP24]]
+; CHECK-NEXT:    [[TMP25]] = or <2 x i1> [[VEC_PHI]], [[TMP30]]
+; CHECK-NEXT:    [[TMP26]] = or <2 x i1> [[VEC_PHI3]], [[TMP31]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
