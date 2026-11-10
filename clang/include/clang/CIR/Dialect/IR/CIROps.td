@@ -5388,6 +5388,27 @@ def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic AwaitSuspendHandleOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAwaitSuspendHandleOp :
+    CIR_CoroIntrinsicOp<"await.suspend.handle",
+      (ins CIR_AnyPtrType:$awaiter,
+           CIR_VoidPtrType:$frame,
+           CIR_PtrToFunc:$wrapper),
+      (outs)> {
+  let summary = "Represents llvm.coro.await.suspend.handle";
+  let description = [{
+    Performs an await-suspend operation that returns another coroutine handle.
+    The wrapper invokes await_suspend using the awaiter and current coroutine
+    frame. The returned handle identifies the coroutine resumed by symmetric
+    transfer.
+  }];
+
+  let llvmOp = "CoroAwaitSuspendHandleOp";
+}
+
+//===----------------------------------------------------------------------===//
 // Coroutine intrinsic SaveOp
 //===----------------------------------------------------------------------===//
 

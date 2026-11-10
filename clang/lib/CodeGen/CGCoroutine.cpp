@@ -20,14 +20,14 @@
 using namespace clang;
 using namespace CodeGen;
 
-using llvm::Value;
 using llvm::BasicBlock;
+using llvm::Value;
 
 namespace {
 enum class AwaitKind { Init, Normal, Yield, Final };
 static constexpr llvm::StringLiteral AwaitKindStr[] = {"init", "await", "yield",
                                                        "final"};
-}
+} // namespace
 
 struct clang::CodeGen::CGCoroData {
   // What is the current await expression kind and how many
@@ -217,15 +217,15 @@ static bool StmtCanThrow(const Stmt *S) {
 //  See llvm's docs/Coroutines.md for more details.
 //
 namespace {
-  struct LValueOrRValue {
-    LValue LV;
-    RValue RV;
-  };
-}
-static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Coro,
-                                    CoroutineSuspendExpr const &S,
-                                    AwaitKind Kind, AggValueSlot aggSlot,
-                                    bool ignoreResult, bool forLValue) {
+struct LValueOrRValue {
+  LValue LV;
+  RValue RV;
+};
+} // namespace
+static LValueOrRValue
+emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Coro,
+                      CoroutineSuspendExpr const &S, AwaitKind Kind,
+                      AggValueSlot aggSlot, bool ignoreResult, bool forLValue) {
   auto *E = S.getCommonExpr();
 
   auto CommonBinder =
@@ -380,13 +380,15 @@ RValue CodeGenFunction::EmitCoawaitExpr(const CoawaitExpr &E,
                                         bool ignoreResult) {
   return emitSuspendExpression(*this, *CurCoro.Data, E,
                                CurCoro.Data->CurrentAwaitKind, aggSlot,
-                               ignoreResult, /*forLValue*/false).RV;
+                               ignoreResult, /*forLValue*/ false)
+      .RV;
 }
 RValue CodeGenFunction::EmitCoyieldExpr(const CoyieldExpr &E,
                                         AggValueSlot aggSlot,
                                         bool ignoreResult) {
   return emitSuspendExpression(*this, *CurCoro.Data, E, AwaitKind::Yield,
-                               aggSlot, ignoreResult, /*forLValue*/false).RV;
+                               aggSlot, ignoreResult, /*forLValue*/ false)
+      .RV;
 }
 
 void CodeGenFunction::EmitCoreturnStmt(CoreturnStmt const &S) {
@@ -402,10 +404,10 @@ void CodeGenFunction::EmitCoreturnStmt(CoreturnStmt const &S) {
   EmitBranchThroughCleanup(CurCoro.Data->FinalJD);
 }
 
-
 #ifndef NDEBUG
-static QualType getCoroutineSuspendExprReturnType(const ASTContext &Ctx,
-  const CoroutineSuspendExpr *E) {
+static QualType
+getCoroutineSuspendExprReturnType(const ASTContext &Ctx,
+                                  const CoroutineSuspendExpr *E) {
   const auto *RE = E->getResumeExpr();
   // Is it possible for RE to be a CXXBindTemporaryExpr wrapping
   // a MemberCallExpr?
@@ -475,24 +477,27 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
   return Fn;
 }
 
-LValue
-CodeGenFunction::EmitCoawaitLValue(const CoawaitExpr *E) {
-  assert(getCoroutineSuspendExprReturnType(getContext(), E)->isReferenceType() &&
-         "Can't have a scalar return unless the return type is a "
-         "reference type!");
+LValue CodeGenFunction::EmitCoawaitLValue(const CoawaitExpr *E) {
+  assert(
+      getCoroutineSuspendExprReturnType(getContext(), E)->isReferenceType() &&
+      "Can't have a scalar return unless the return type is a "
+      "reference type!");
   return emitSuspendExpression(*this, *CurCoro.Data, *E,
-                               CurCoro.Data->CurrentAwaitKind, AggValueSlot::ignored(),
-                               /*ignoreResult*/false, /*forLValue*/true).LV;
+                               CurCoro.Data->CurrentAwaitKind,
+                               AggValueSlot::ignored(),
+                               /*ignoreResult*/ false, /*forLValue*/ true)
+      .LV;
 }
 
-LValue
-CodeGenFunction::EmitCoyieldLValue(const CoyieldExpr *E) {
-  assert(getCoroutineSuspendExprReturnType(getContext(), E)->isReferenceType() &&
-         "Can't have a scalar return unless the return type is a "
-         "reference type!");
-  return emitSuspendExpression(*this, *CurCoro.Data, *E,
-                               AwaitKind::Yield, AggValueSlot::ignored(),
-                               /*ignoreResult*/false, /*forLValue*/true).LV;
+LValue CodeGenFunction::EmitCoyieldLValue(const CoyieldExpr *E) {
+  assert(
+      getCoroutineSuspendExprReturnType(getContext(), E)->isReferenceType() &&
+      "Can't have a scalar return unless the return type is a "
+      "reference type!");
+  return emitSuspendExpression(*this, *CurCoro.Data, *E, AwaitKind::Yield,
+                               AggValueSlot::ignored(),
+                               /*ignoreResult*/ false, /*forLValue*/ true)
+      .LV;
 }
 
 // Hunts for the parameter reference in the parameter copy/move declaration.
@@ -512,51 +517,51 @@ public:
     }
   }
 };
-}
+} // namespace
 
 // This class replaces references to parameters to their copies by changing
 // the addresses in CGF.LocalDeclMap and restoring back the original values in
 // its destructor.
 
 namespace {
-  struct ParamReferenceReplacerRAII {
-    CodeGenFunction::DeclMapTy SavedLocals;
-    CodeGenFunction::DeclMapTy& LocalDeclMap;
+struct ParamReferenceReplacerRAII {
+  CodeGenFunction::DeclMapTy SavedLocals;
+  CodeGenFunction::DeclMapTy &LocalDeclMap;
 
-    ParamReferenceReplacerRAII(CodeGenFunction::DeclMapTy &LocalDeclMap)
-        : LocalDeclMap(LocalDeclMap) {}
+  ParamReferenceReplacerRAII(CodeGenFunction::DeclMapTy &LocalDeclMap)
+      : LocalDeclMap(LocalDeclMap) {}
 
-    void addCopy(DeclStmt const *PM) {
-      // Figure out what param it refers to.
+  void addCopy(DeclStmt const *PM) {
+    // Figure out what param it refers to.
 
-      assert(PM->isSingleDecl());
-      VarDecl const*VD = static_cast<VarDecl const*>(PM->getSingleDecl());
-      Expr const *InitExpr = VD->getInit();
-      GetParamRef Visitor;
-      Visitor.Visit(const_cast<Expr*>(InitExpr));
-      assert(Visitor.Expr);
-      DeclRefExpr *DREOrig = Visitor.Expr;
-      auto *PD = DREOrig->getDecl();
+    assert(PM->isSingleDecl());
+    VarDecl const *VD = static_cast<VarDecl const *>(PM->getSingleDecl());
+    Expr const *InitExpr = VD->getInit();
+    GetParamRef Visitor;
+    Visitor.Visit(const_cast<Expr *>(InitExpr));
+    assert(Visitor.Expr);
+    DeclRefExpr *DREOrig = Visitor.Expr;
+    auto *PD = DREOrig->getDecl();
 
-      auto it = LocalDeclMap.find(PD);
-      assert(it != LocalDeclMap.end() && "parameter is not found");
-      SavedLocals.insert({ PD, it->second });
+    auto it = LocalDeclMap.find(PD);
+    assert(it != LocalDeclMap.end() && "parameter is not found");
+    SavedLocals.insert({PD, it->second});
 
-      auto copyIt = LocalDeclMap.find(VD);
-      assert(copyIt != LocalDeclMap.end() && "parameter copy is not found");
-      it->second = copyIt->getSecond();
+    auto copyIt = LocalDeclMap.find(VD);
+    assert(copyIt != LocalDeclMap.end() && "parameter copy is not found");
+    it->second = copyIt->getSecond();
+  }
+
+  ~ParamReferenceReplacerRAII() {
+    for (auto &&SavedLocal : SavedLocals) {
+      LocalDeclMap.insert({SavedLocal.first, SavedLocal.second});
     }
+  }
+};
+} // namespace
 
-    ~ParamReferenceReplacerRAII() {
-      for (auto&& SavedLocal : SavedLocals) {
-        LocalDeclMap.insert({SavedLocal.first, SavedLocal.second});
-      }
-    }
-  };
-}
-
-// For WinEH exception representation backend needs to know what funclet coro.end
-// belongs to. That information is passed in a funclet bundle.
+// For WinEH exception representation backend needs to know what funclet
+// coro.end belongs to. That information is passed in a funclet bundle.
 static SmallVector<llvm::OperandBundleDef, 1>
 getBundlesForCoroEnd(CodeGenFunction &CGF) {
   SmallVector<llvm::OperandBundleDef, 1> BundleList;
@@ -595,7 +600,7 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
     }
   }
 };
-}
+} // namespace
 
 namespace {
 // Make sure to call coro.delete on scope exit.
@@ -649,7 +654,7 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
   }
   explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
 };
-}
+} // namespace
 
 namespace {
 struct GetReturnObjectManager {
@@ -956,8 +961,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // If not, return OnAllocFailure object.
     EmitBlock(RetOnFailureBB);
     EmitStmt(RetOnAllocFailure);
-  }
-  else {
+  } else {
     Builder.CreateBr(InitBB);
   }
 
@@ -1061,8 +1065,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
       if (ContBB)
         EmitBlock(ContBB);
-    }
-    else {
+    } else {
       emitBodyAndFallthrough(*this, S, S.getBody());
     }
 
@@ -1185,12 +1188,10 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
   // coro.alloc, coro.begin and coro.free intrinsics to refer to it.
   if (IID == llvm::Intrinsic::coro_id) {
     createCoroData(*this, CurCoro, Call, E);
-  }
-  else if (IID == llvm::Intrinsic::coro_begin) {
+  } else if (IID == llvm::Intrinsic::coro_begin) {
     if (CurCoro.Data)
       CurCoro.Data->CoroBegin = Call;
-  }
-  else if (IID == llvm::Intrinsic::coro_free) {
+  } else if (IID == llvm::Intrinsic::coro_free) {
     // Remember the last coro_free as we need it to build the conditional
     // deletion of the coroutine frame.
     if (CurCoro.Data)
