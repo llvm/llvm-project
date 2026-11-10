@@ -93,17 +93,16 @@ static void setLocation(Region &region, Location loc) {
 
 // Complex multiplication mixes the real and imaginary parts, so a reduction
 // of that operator cannot be lowered as two independent component reductions.
-// The element type may be wrapped in a container (scalar or array storage).
-static bool typeContainsComplex(Type type) {
-  if (isa<ComplexType>(type))
-    return true;
-  bool found = false;
-  type.walkImmediateSubElements([](Attribute) {},
-                                [&](Type nested) {
-                                  if (!found)
-                                    found = typeContainsComplex(nested);
-                                });
-  return found;
+// Keep unwrapping pointer-like types so a reference to a reference still
+// reports the element type.
+static bool isComplexReductionType(Type type) {
+  while (auto ptrTy = dyn_cast<acc::PointerLikeType>(type)) {
+    Type elementType = ptrTy.getElementType();
+    if (!elementType || elementType == type)
+      return false;
+    type = elementType;
+  }
+  return isa<ComplexType>(type);
 }
 
 static void saveVarName(StringRef name, Value dst) {
@@ -378,7 +377,7 @@ LogicalResult ACCRecipeMaterialization::materialize(
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
     if (recipe.getReductionOperator() == acc::ReductionOperator::AccMul &&
-        typeContainsComplex(recipe.getType())) {
+        isComplexReductionType(recipe.getType())) {
       (void)accSupport.emitNYI(loc, "reduction: complex multiply reduction");
       return failure();
     }
