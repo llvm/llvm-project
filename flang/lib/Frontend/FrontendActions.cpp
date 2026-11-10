@@ -218,7 +218,7 @@ bool CodeGenAction::beginSourceFileAction() {
   fir::omp::registerOpenMPExtensions(registry);
   mlirCtx->appendDialectRegistry(registry);
 
-  const auto &targetOpts = ci.getInvocation().getTargetOpts();
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
 
   // If the input is an MLIR file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::MLIR) {
