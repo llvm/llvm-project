@@ -329,6 +329,13 @@ public:
   /// successor. Use `getLattice` to read lattices, including those of captured
   /// values. Changes to the lattices read through this callback revisit this
   /// hook. The callback is valid only for the duration of this call.
+  ///
+  /// For example, for an `scf.for` body, the region successor is the loop body
+  /// and the non-successor input is the induction variable. Its lattice is in
+  /// `nonSuccessorInputLattices` and must be computed or updated by this hook.
+  /// Use `getLattice` to read the lattices of the lower bound, upper bound, and
+  /// step when they are needed to infer the induction variable's lattice.
+  ///
   /// By default, this method marks all lattice elements as having reached a
   /// pessimistic fixpoint.
   virtual void
