@@ -122,6 +122,7 @@ define i1 @test_zext_v8i1_to_v16i1(<16 x i32> %a, <16 x i32> %b) nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovb %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
@@ -143,6 +144,7 @@ define i1 @test_zext_v16i1_to_v32i1(<32 x i16> %a, <32 x i16> %b) nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    vpcmpneqw %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
@@ -164,6 +166,7 @@ define i1 @test_zext_v32i1_to_v64i1(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    vpcmpneqb %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovd %k0, %k0
 ; CHECK-NEXT:    kmovq %k0, (%rsp) ## 8-byte Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq _f
