@@ -107,31 +107,39 @@ struct CopyCandidate {
   acc::CopyoutOp copyoutOp;
 };
 
-/// Converted copyins are appended so the remaining implicit copies are issued
-/// first. This is done because this pass relies on alias analysis, which
-/// takes advantage of Fortran aliasing rules: for example, dummy arguments do
-/// not alias. However, if they did alias, then we are now depending on the
-/// order ACCImplicitData decided to map, because a copyin followed by a copy
-/// is not the same as a copy followed by a copyin (since only the first data
-/// action maps, everything else updates the counter). By issuing the copies
-/// before the copyins, we can ensure we do not break anything even if we
-/// relied on the language rules to do the optimization.
-static void
-appendConvertedCopyins(Operation *regionOp,
-                       const llvm::SmallPtrSetImpl<Operation *> &converted) {
+/// Remaining copies that follow the first converted copyin are moved in front
+/// of it, so the copies are issued first. This is done because this pass relies
+/// on alias analysis, which takes advantage of Fortran aliasing rules: for
+/// example, dummy arguments do not alias. However, if they did alias, then we
+/// are now depending on the order ACCImplicitData decided to map, because a
+/// copyin followed by a copy is not the same as a copy followed by a copyin
+/// (since only the first data action maps, everything else updates the
+/// counter). By issuing the copies before the copyins, we can ensure we do not
+/// break anything even if we relied on the language rules to do the
+/// optimization. The other operands keep their relative order.
+static void moveCopiesBeforeConvertedCopyins(
+    Operation *regionOp, const llvm::SmallPtrSetImpl<Operation *> &converted) {
   SmallVector<Value> operands(acc::getDataOperands(regionOp));
-  SmallVector<Value> copyins;
-  llvm::erase_if(operands, [&](Value value) {
+  auto isConverted = [&](Value value) {
     Operation *def = value.getDefiningOp();
-    if (!def || !converted.contains(def))
-      return false;
-    copyins.push_back(value);
-    return true;
-  });
-  if (copyins.empty())
+    return def && converted.contains(def);
+  };
+  auto first = llvm::find_if(operands, isConverted);
+  if (first == operands.end())
     return;
-  operands.append(copyins);
-  acc::getMutableDataOperands(regionOp).assign(operands);
+
+  SmallVector<Value> result(operands.begin(), first);
+  SmallVector<Value> copies;
+  SmallVector<Value> rest;
+  for (Value value : llvm::make_range(first, operands.end())) {
+    auto copyin = dyn_cast_or_null<acc::CopyinOp>(value.getDefiningOp());
+    bool isCopy =
+        copyin && acc::getDataClause(copyin) == acc::DataClause::acc_copy;
+    (isCopy ? copies : rest).push_back(value);
+  }
+  result.append(copies);
+  result.append(rest);
+  acc::getMutableDataOperands(regionOp).assign(result);
 }
 
 class ACCOptimizeDataMapping
@@ -200,16 +208,18 @@ public:
     for (Operation *op : llvm::reverse(tempOps))
       op->erase();
 
-    // Every optimized copyin is moved to the end of each data-operand list
-    // that contains it. This is always legal, even for a derived type and its
-    // components.
-    // ACCImplicitData maps the derived-type object before a component. A
-    // write to a component aliases that object, so the object is not
-    // optimized and stays before the component. A component that is
-    // optimized is appended with the object, in the same order, or behind
-    // an object that stayed. A write to one component does not alias a
-    // different component, but it still keeps the object in front of the
-    // component that moves.
+    // Each construct that lists a converted copyin moves its remaining copies
+    // in front of its first converted copyin. This is always legal, even for
+    // a derived type and its components. ACCImplicitData maps the
+    // derived-type object before a component. A write to a component aliases
+    // that object, so the object is not optimized and its copy stays before
+    // the component. When the object and a component are both optimized, they
+    // keep their relative order. A write to one component does not alias a
+    // different component, but the object still stays in front of both.
+    // A derived-type object may contain a pointer to a different object. A
+    // deep copy of that target could be reordered relative to the object and
+    // break the mapping order. This cannot happen now: only implicit copies
+    // are optimized, and implicit deep copy is not enabled.
     llvm::SmallPtrSet<Operation *, 16> regions;
     for (Operation *copyin : converted) {
       Value accVar = acc::getAccVar(cast<acc::CopyinOp>(copyin));
@@ -218,7 +228,7 @@ public:
           regions.insert(user);
     }
     for (Operation *regionOp : regions)
-      appendConvertedCopyins(regionOp, converted);
+      moveCopiesBeforeConvertedCopyins(regionOp, converted);
   }
 };
 

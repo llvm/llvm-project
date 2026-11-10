@@ -24,9 +24,9 @@ func.func @test_array_read_and_write() {
   return
 }
 
-// The converted copyin is appended to the data operands. The copy owns the
-// mapping when the two name the same memory, so the copyout still copies it
-// back. The operations themselves stay in place.
+// The remaining copy is moved in front of the converted copyin in the data
+// operands. The copy owns the mapping when the two name the same memory, so
+// the copyout still copies it back. The operations themselves stay in place.
 // CHECK-LABEL: func.func @test_array_read_and_write
 // CHECK: %[[R:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xi32>>) implicit(true) name("readonly")
 // CHECK: %[[W:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xi32>>) dataClause(acc_copy) implicit(true) name("written")
@@ -39,8 +39,9 @@ func.func @test_array_read_and_write() {
 // Fortran does not allow an intent(in) dummy to alias an intent(out) dummy,
 // so alias analysis treats x and y as unmodified and their implicit copies
 // become copyins. A caller can still pass one actual for both, as in
-// "call apply(x, y, x)". Appending the copyins leaves result, which stays a
-// copy, as the first data operand. That copy creates the mapping, so the
+// "call apply(x, y, x)". Moving the copies in front of the first converted
+// copyin leaves result, which stays a copy, as the first data operand. That
+// copy creates the mapping, so the
 // result is still copied back. The operations themselves stay in place.
 func.func @test_dummy_copyin_ordering(
     %arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "x"},
@@ -264,3 +265,32 @@ func.func @test_multiple_owners() {
 // CHECK: %[[P:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) implicit(true) name("param")
 // CHECK: acc.delete accPtr(%[[P]] : !fir.ref<i32>) dataClause(acc_copyin) implicit(true) name("param")
 // CHECK: acc.copyout accPtr(%[[R]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("readonly")
+
+// -----
+
+// The copy of a is moved in front of the converted copyin of idx and the
+// present of idx. The present still follows the copyin that creates its data.
+func.func @test_copy_moved_before_present() {
+  %ia = fir.alloca i32 {bindc_name = "idx"}
+  %idx = fir.declare %ia uniq_name("_QFEidx") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %aa = fir.alloca i32 {bindc_name = "a"}
+  %a = fir.declare %aa uniq_name("_QFEa") : (!fir.ref<i32>) -> !fir.ref<i32>
+  %ic = acc.copyin varPtr(%idx : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("idx") -> !fir.ref<i32>
+  %ip = acc.present varPtr(%idx : !fir.ref<i32>) implicit(true) name("idx") -> !fir.ref<i32>
+  %ac = acc.copyin varPtr(%a : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("a") -> !fir.ref<i32>
+  acc.parallel dataOperands(%ic, %ip, %ac : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
+    %v = fir.load %ip : !fir.ref<i32>
+    fir.store %v to %ac : !fir.ref<i32>
+    acc.yield
+  }
+  acc.copyout accPtr(%ac : !fir.ref<i32>) to varPtr(%a : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("a")
+  acc.copyout accPtr(%ic : !fir.ref<i32>) to varPtr(%idx : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("idx")
+  return
+}
+
+// CHECK-LABEL: func.func @test_copy_moved_before_present
+// CHECK: %[[IC:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) implicit(true) name("idx")
+// CHECK: %[[IP:.*]] = acc.present varPtr(%{{.*}} : !fir.ref<i32>) implicit(true) name("idx")
+// CHECK: %[[AC:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_copy) implicit(true) name("a")
+// CHECK: acc.parallel dataOperands(%[[AC]], %[[IC]], %[[IP]] :
+// CHECK: acc.delete accPtr(%[[IC]] : !fir.ref<i32>) dataClause(acc_copyin) implicit(true) name("idx")
