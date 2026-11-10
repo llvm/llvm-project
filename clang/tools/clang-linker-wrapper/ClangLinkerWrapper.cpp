@@ -1715,19 +1715,23 @@ int main(int Argc, char **Argv) {
 
   llvm::Triple Triple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
-  // The last '/out:' in any case names the output if there is no -o.
-  StringRef COFFOutput;
-  for (const opt::Arg *Arg : Args.filtered(OPT_out, OPT_INPUT)) {
-    if (Arg->getOption().matches(OPT_out))
-      COFFOutput = Arg->getValue();
-    else if (std::optional<StringRef> Value =
-                 getCOFFOptionValue(Arg->getValue(), "out:", Triple))
-      COFFOutput = *Value;
+  StringRef Output;
+  if (Triple.isOSWindows()) {
+    // As with link.exe, the last of -o and '/out:' in any case names the
+    // output, e.g. for clang-cl '/link /out:'.
+    for (const opt::Arg *Arg : Args.filtered(OPT_o, OPT_out, OPT_INPUT)) {
+      if (!Arg->getOption().matches(OPT_INPUT))
+        Output = Arg->getValue();
+      else if (std::optional<StringRef> Value =
+                   getCOFFOptionValue(Arg->getValue(), "out:", Triple))
+        Output = *Value;
+    }
+  } else {
+    Output = Args.hasArg(OPT_o) ? Args.getLastArgValue(OPT_o)
+                                : Args.getLastArgValue(OPT_out);
   }
-  if (Args.hasArg(OPT_o))
-    ExecutableName = Args.getLastArgValue(OPT_o, "a.out");
-  else if (!COFFOutput.empty())
-    ExecutableName = COFFOutput;
+  if (!Output.empty())
+    ExecutableName = Output;
   else
     ExecutableName = Triple.isOSWindows() ? "a.exe" : "a.out";
 
