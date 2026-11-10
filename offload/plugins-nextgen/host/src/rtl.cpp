@@ -345,8 +345,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
   }
+  /// All operations are synchronous, so there is never pending work.
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
-    return true;
+    return false;
   }
   Expected<bool> isEventCompleteImpl(void *Event,
                                      AsyncInfoWrapperTy &AsyncInfo) override {
