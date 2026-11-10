@@ -50,6 +50,21 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
   using StorageType = typename FPBits::StorageType;
 
+  static size_t
+  first_mismatching_lane(OutType expected,
+                         LIBC_NAMESPACE::cpp::simd<OutType> actual) {
+    constexpr size_t LANES =
+        LIBC_NAMESPACE::cpp::internal::native_vector_size<OutType>;
+    for (size_t lane = 0; lane < LANES; ++lane) {
+      bool correct = TOL == 0 ? TEST_FP_EQ(expected, actual[lane])
+                              : LIBC_NAMESPACE::testing::within_ulp_tolerance(
+                                    expected, actual[lane], TOL);
+      if (!correct)
+        return lane;
+    }
+    return LANES;
+  }
+
   // Check in a range, return the number of failures.
   uint64_t check(StorageType start, StorageType stop,
                  LIBC_NAMESPACE::fputil::testing::RoundingMode rounding) {
@@ -65,13 +80,10 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
 
       LIBC_NAMESPACE::cpp::simd<FloatType> vec_x(x);
       LIBC_NAMESPACE::cpp::simd<OutType> vec_result = VectorFunc(vec_x);
-      OutType vec_res = vec_result[0];
       OutType scalar_result = ScalarFunc(x);
-      bool correct = TOL == 0 ? TEST_FP_EQ(scalar_result, vec_res)
-                              : LIBC_NAMESPACE::testing::within_ulp_tolerance(
-                                    scalar_result, vec_res, TOL);
-
-      if (!correct) {
+      size_t lane = first_mismatching_lane(scalar_result, vec_result);
+      if (lane < LIBC_NAMESPACE::cpp::internal::native_vector_size<OutType>) {
+        OutType vec_res = vec_result[lane];
         if constexpr (TOL == 0)
           EXPECT_FP_EQ(scalar_result, vec_res);
         else
