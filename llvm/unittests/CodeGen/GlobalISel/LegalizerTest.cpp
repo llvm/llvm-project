@@ -235,12 +235,14 @@ TEST_F(AMDGPUGISelMITest, TruncTruncArtifactLegality) {
     if (!TM)
       GTEST_SKIP();
 
-    LLT S16 = LLT::scalar(16);
-    LLT S32 = LLT::scalar(32);
-    LLT S64 = LLT::scalar(64);
+    LLT I16 = LLT::integer(16);
+    LLT I32 = LLT::integer(32);
+    LLT I64 = LLT::integer(64);
+    MRI->setType(Copies[0], I32);
+    MRI->setType(Copies[1], I32);
     LegalizerInfo LI;
     auto &Rules = LI.getActionDefinitionsBuilder(TargetOpcode::G_TRUNC)
-                      .legalFor({{S32, S64}, {S16, S32}});
+                      .legalFor({{I32, I64}, {I16, I32}});
     switch (Action) {
     case Legal:
       Rules.alwaysLegal();
@@ -249,7 +251,7 @@ TEST_F(AMDGPUGISelMITest, TruncTruncArtifactLegality) {
       Rules.lower();
       break;
     case Custom:
-      Rules.customFor({{S16, S64}});
+      Rules.customFor({{I16, I64}});
       break;
     case Unsupported:
       Rules.unsupported();
@@ -258,9 +260,9 @@ TEST_F(AMDGPUGISelMITest, TruncTruncArtifactLegality) {
       llvm_unreachable("unexpected test action");
     }
 
-    auto Src = B.buildMergeValues(S64, {Copies[0], Copies[1]});
-    auto Inner = B.buildTrunc(S32, Src);
-    auto Outer = B.buildTrunc(S16, Inner);
+    auto Src = B.buildMergeValues(I64, {Copies[0], Copies[1]});
+    auto Inner = B.buildTrunc(I32, Src);
+    auto Outer = B.buildTrunc(I16, Inner);
     LegalizationArtifactCombiner Combiner(B, *MRI, LI);
     SmallVector<MachineInstr *> DeadInsts;
     SmallVector<Register> UpdatedDefs;
@@ -287,21 +289,23 @@ TEST_F(AMDGPUGISelMITest, TruncTruncBuildVectorArtifact) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S32 = LLT::scalar(32);
-  LLT S64 = LLT::scalar(64);
-  LLT V2S32 = LLT::fixed_vector(2, S32);
-  LLT V2S48 = LLT::fixed_vector(2, 48);
-  LLT V2S64 = LLT::fixed_vector(2, S64);
+  LLT I32 = LLT::integer(32);
+  LLT I64 = LLT::integer(64);
+  LLT V2I32 = LLT::fixed_vector(2, I32);
+  LLT V2I48 = LLT::fixed_vector(2, LLT::integer(48));
+  LLT V2I64 = LLT::fixed_vector(2, I64);
+  MRI->setType(Copies[0], I32);
+  MRI->setType(Copies[1], I32);
   LegalizerInfo LI;
   LI.getActionDefinitionsBuilder(TargetOpcode::G_TRUNC)
-      .legalFor({{S32, S64}, {V2S48, V2S64}, {V2S32, V2S48}});
+      .legalFor({{I32, I64}, {V2I48, V2I64}, {V2I32, V2I48}});
   LI.getActionDefinitionsBuilder(TargetOpcode::G_BUILD_VECTOR)
-      .legalFor({{V2S32, S32}});
+      .legalFor({{V2I32, I32}});
 
-  auto Src = B.buildMergeValues(S64, {Copies[0], Copies[1]});
-  auto Vector = B.buildBuildVector(V2S64, {Src.getReg(0), Src.getReg(0)});
-  auto Inner = B.buildTrunc(V2S48, Vector);
-  auto Outer = B.buildTrunc(V2S32, Inner);
+  auto Src = B.buildMergeValues(I64, {Copies[0], Copies[1]});
+  auto Vector = B.buildBuildVector(V2I64, {Src.getReg(0), Src.getReg(0)});
+  auto Inner = B.buildTrunc(V2I48, Vector);
+  auto Outer = B.buildTrunc(V2I32, Inner);
   LegalizationArtifactCombiner Combiner(B, *MRI, LI);
   SmallVector<MachineInstr *> DeadInsts;
   SmallVector<Register> UpdatedDefs;
@@ -314,7 +318,7 @@ TEST_F(AMDGPUGISelMITest, TruncTruncBuildVectorArtifact) {
   for (unsigned I = 0; I != Result.getNumSources(); ++I) {
     auto *Trunc = MRI->getVRegDef(Result.getSourceReg(I));
     EXPECT_EQ(Src.getReg(0), cast<GTrunc>(Trunc)->getSrcReg());
-    EXPECT_EQ(S32, MRI->getType(Result.getSourceReg(I)));
+    EXPECT_EQ(I32, MRI->getType(Result.getSourceReg(I)));
   }
 }
 
