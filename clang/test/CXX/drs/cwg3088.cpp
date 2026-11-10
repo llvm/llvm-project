@@ -456,15 +456,11 @@ namespace cwg3088 { // cwg3088: partial
 // Identifiers with special meaning introduced in C++11
 
 #define final
-// since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #undef final // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define final()
-// since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define override
-// since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #undef override // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define override()
-// since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 
 // Attributes introduced in C++11
 

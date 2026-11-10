@@ -203,7 +203,7 @@ int final;
 // In C mode, we do not diagnose use of C++ keywords when used as a macro name
 // because that does not conflict with C++ (the macros will be replaced before
 // the keyword is seen by the parser).
-#define this 12 // cxx-warning {{keyword is hidden by macro definition}}
+#define this 12 // cxx-error {{keyword is hidden by macro definition}}
 
 // FIXME: These tests are disabled for C++ because it causes a crash.
 // See GH114815.

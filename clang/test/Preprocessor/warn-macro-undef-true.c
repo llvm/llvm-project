@@ -23,7 +23,7 @@
 /* undef-true-warning@#3 {{'true' is not defined, evaluates to 0}} */
 #endif
 
-#define true 1 /* c23-keyword-warning {{keyword is hidden by macro definition}} */
+#define true 1 /* c23-keyword-error {{keyword is hidden by macro definition}} */
 
 #define FOO true
 #if FOO

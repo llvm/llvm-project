@@ -445,7 +445,7 @@ def note_pp_ambiguous_macro_chosen : Note<
 def note_pp_ambiguous_macro_other : Note<
   "other definition of %0">;
 def warn_pp_macro_hides_keyword : ExtWarn<
-  "keyword is hidden by macro definition">, InGroup<KeywordAsMacro>;
+  "keyword is hidden by macro definition">, InGroup<KeywordAsMacro>, DefaultError;
 def ext_pp_macro_name_is_keyword : Extension<
   "keyword or identifier with special meaning is used as a macro name">,
   InGroup<KeywordAsMacroUndef>;

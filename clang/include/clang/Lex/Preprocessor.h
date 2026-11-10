@@ -750,6 +750,13 @@ private:
   SourceLocation MaxTokensOverrideLoc;
 
 public:
+  /// Diagnose the definition \p MI of a macro named like a contextual keyword
+  /// (e.g. 'final', 'module') that was expanded at \p ExpandLoc in a position
+  /// where the identifier would have its special meaning. Each definition is
+  /// diagnosed at most once.
+  void diagnoseContextualKeywordMacro(IdentifierInfo *II, const MacroInfo *MI,
+                                      SourceLocation ExpandLoc);
+
   struct PreambleSkipInfo {
     SourceLocation HashTokenLoc;
     SourceLocation IfTokenLoc;
@@ -892,6 +899,10 @@ private:
         : Tok(Tok), MD(MD), Range(Range) {}
   };
   SmallVector<MacroExpandsInfo, 2> DelayedMacroExpandsCallbacks;
+
+  /// Macro definitions of contextual keywords that have already been diagnosed
+  /// by diagnoseContextualKeywordMacro, to avoid duplicate diagnostics.
+  llvm::DenseSet<const MacroInfo *> DiagnosedContextualKeywordMacros;
 
   /// Information about a name that has been used to define a module macro.
   struct FullModuleMacroInfo {

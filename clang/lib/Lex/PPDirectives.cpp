@@ -206,8 +206,6 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
     return isFeatureTestMacro(Text) ? MD_NoWarn : MD_ReservedMacro;
   if (II->isKeyword(Lang))
     return MD_KeywordDef;
-  if (Lang.CPlusPlus11 && (Text == "override" || Text == "final"))
-    return MD_KeywordDef;
   if (isReservedCXXAttributeName(PP, II))
     return MD_ReservedAttributeIdentifier;
   return MD_NoWarn;
