@@ -151,6 +151,55 @@ static mlir::Value makeScopedAtomicXchg(CIRGenFunction &cgf,
 std::optional<mlir::Value>
 CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   switch (builtinId) {
+  case NVPTX::BI__mma_bf16_m16n16k16_mma_f32: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address dst = emitPointerWithAlignment(expr->getArg(0));
+    Address srcA = emitPointerWithAlignment(expr->getArg(1));
+    Address srcB = emitPointerWithAlignment(expr->getArg(2));
+    Address srcC = emitPointerWithAlignment(expr->getArg(3));
+    auto layout = expr->getArg(4)->getIntegerConstantExpr(getContext());
+    auto satf = expr->getArg(5)->getIntegerConstantExpr(getContext());
+    if (!layout || layout->getSExtValue() < 0 || layout->getSExtValue() > 3 ||
+        !satf || satf->getSExtValue())
+      return std::nullopt;
+    static constexpr const char *layouts[] = {"row.row", "row.col", "col.row",
+                                              "col.col"};
+    std::string intrinsic = "nvvm.wmma.m16n16k16.mma.";
+    intrinsic += layouts[layout->getSExtValue()];
+    intrinsic += ".bf16";
+    mlir::Type abTy = builder.getSInt32Ty();
+    llvm::SmallVector<mlir::Value, 16> values;
+    for (Address src : {srcA, srcB}) {
+      for (unsigned i = 0; i < 4; ++i) {
+        mlir::Value ptr = builder.createPtrStride(loc, src.emitRawPointer(),
+                                                  builder.getSInt32(i, loc));
+        mlir::Value value = builder.createAlignedLoad(
+            loc, src.getElementType(), ptr, CharUnits::fromQuantity(4));
+        values.push_back(builder.createBitcast(value, abTy));
+      }
+    }
+    for (unsigned i = 0; i < 8; ++i) {
+      mlir::Value ptr = builder.createPtrStride(loc, srcC.emitRawPointer(),
+                                                builder.getSInt32(i, loc));
+      mlir::Value value = builder.createAlignedLoad(
+          loc, srcC.getElementType(), ptr, CharUnits::fromQuantity(4));
+      values.push_back(builder.createBitcast(value, builder.getSingleTy()));
+    }
+    llvm::SmallVector<mlir::Type, 8> members(8, builder.getSingleTy());
+    auto resultTy = cir::StructType::get(
+        builder.getContext(), members, /*packed=*/false, /*is_class=*/false,
+        cir::RecordType::getAllDataKinds(members));
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, intrinsic, resultTy, values);
+    for (unsigned i = 0; i < 8; ++i) {
+      mlir::Value value = cir::ExtractMemberOp::create(builder, loc, result, i);
+      value = builder.createBitcast(value, dst.getElementType());
+      mlir::Value ptr = builder.createPtrStride(loc, dst.emitRawPointer(),
+                                                builder.getSInt32(i, loc));
+      builder.createStore(loc, value, Address{ptr, CharUnits::fromQuantity(4)});
+    }
+    return result;
+  }
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
@@ -540,7 +589,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__bmma_m8n8k128_mma_xor_popc_b1:
   case NVPTX::BI__bmma_m8n8k128_mma_and_popc_b1:
   case NVPTX::BI__dmma_m8n8k4_mma_f64:
-  case NVPTX::BI__mma_bf16_m16n16k16_mma_f32:
   case NVPTX::BI__mma_bf16_m8n32k16_mma_f32:
   case NVPTX::BI__mma_bf16_m32n8k16_mma_f32:
   case NVPTX::BI__mma_tf32_m16n16k8_mma_f32:
