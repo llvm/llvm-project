@@ -1,0 +1,13 @@
+--- a/config.h.in
++++ b/config.h.in
+@@ -264,6 +264,10 @@
+
+ /* Build float128 functions with __float128 fallback */
+ #undef MPFR_WANT_FLOAT128
++#if !defined(MPFR_WANT_FLOAT128) && (defined(__x86_64__) || defined(__i386__))
++#define MPFR_WANT_FLOAT128 2
++#define mpfr_float128 __float128
++#endif
+
+ /* Want formally proven code */
+ #undef MPFR_WANT_PROVEN_CODE
