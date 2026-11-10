@@ -1441,6 +1441,7 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   AtomicCmpXchgInst *NewCI = Builder.CreateAtomicCmpXchg(
       PMV.AlignedAddr, FullWord_Cmp, FullWord_NewVal, PMV.AlignedAddrAlignment,
       CI->getSuccessOrdering(), CI->getFailureOrdering(), CI->getSyncScopeID());
+  copyMetadataForAtomic(*NewCI, *CI);
   NewCI->setVolatile(CI->isVolatile());
   // When we're building a strong cmpxchg, we need a loop, so you
   // might think we could use a weak cmpxchg inside. But, using strong
@@ -1624,6 +1625,7 @@ AtomicExpandImpl::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
   auto *NewCI = Builder.CreateAtomicCmpXchg(
       Addr, NewCmp, NewNewVal, CI->getAlign(), CI->getSuccessOrdering(),
       CI->getFailureOrdering(), CI->getSyncScopeID());
+  copyMetadataForAtomic(*NewCI, *CI);
   NewCI->setVolatile(CI->isVolatile());
   NewCI->setWeak(CI->isWeak());
   LLVM_DEBUG(dbgs() << "Replaced " << *CI << " with " << *NewCI << "\n");

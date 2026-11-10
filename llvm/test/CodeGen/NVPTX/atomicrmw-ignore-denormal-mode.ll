@@ -126,7 +126,7 @@ define float @fadd_f32_generic_ieee_no_md(ptr %addr, float %val) {
 ; ALLOW-NEXT:    atom.relaxed.sys.add.f32 %r2, [%rd1], %r1;
 ; ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; ALLOW-NEXT:    ret;
-  %r = atomicrmw fadd ptr %addr, float %val monotonic
+  %r = atomicrmw fadd ptr %addr, float %val monotonic, !noalias.addrspace !999
   ret float %r
 }
 
@@ -142,7 +142,7 @@ define float @fadd_f32_generic_ieee_md(ptr %addr, float %val) {
 ; CHECK-NEXT:    atom.relaxed.sys.add.f32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %r = atomicrmw fadd ptr %addr, float %val monotonic, !atomic.ignore.denormal.mode !0
+  %r = atomicrmw fadd ptr %addr, float %val monotonic, !atomic.ignore.denormal.mode !0, !noalias.addrspace !999
   ret float %r
 }
 
@@ -259,3 +259,6 @@ attributes #0 = { denormal_fpenv(float: preservesign) }
 attributes #1 = { denormal_fpenv(preservesign, float: ieee) }
 
 !0 = !{}
+
+; Native atomic instruction tests exclude thread-private local memory.
+!999 = !{i32 5, i32 6}

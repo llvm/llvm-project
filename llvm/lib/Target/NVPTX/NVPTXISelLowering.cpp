@@ -41,6 +41,7 @@
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -53,6 +54,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
@@ -68,6 +70,7 @@
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Utils/LowerAtomic.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -8166,6 +8169,86 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
                                      *AI->getFunction(), IgnoreDenormalMode,
                                      STI);
+}
+
+NVPTXTargetLowering::AtomicExpansionKind
+NVPTXTargetLowering::shouldExpandAtomicCmpXchgInIR(
+    const AtomicCmpXchgInst *CI) const {
+  if (CI->getPointerAddressSpace() != NVPTXAS::ADDRESS_SPACE_GENERIC)
+    return AtomicExpansionKind::None;
+
+  if (const MDNode *MD = CI->getMetadata(LLVMContext::MD_noalias_addrspace)) {
+    const APInt LocalAS(32, NVPTXAS::ADDRESS_SPACE_LOCAL);
+    for (unsigned I = 0, E = MD->getNumOperands(); I != E; I += 2) {
+      const APInt &Low =
+          mdconst::extract<ConstantInt>(MD->getOperand(I))->getValue();
+      const APInt &High =
+          mdconst::extract<ConstantInt>(MD->getOperand(I + 1))->getValue();
+      if (ConstantRange(Low, High).contains(LocalAS))
+        return AtomicExpansionKind::None;
+    }
+  }
+
+  return AtomicExpansionKind::CustomExpand;
+}
+
+void NVPTXTargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
+  // PTX atom instructions do not support local memory, even through a generic
+  // pointer. Local memory is private to a thread, so use plain loads/stores on
+  // that path and retain the atomic for global/shared memory.
+  IRBuilder<> Builder(CI);
+  LLVMContext &Ctx = CI->getContext();
+  Value *Addr = CI->getPointerOperand();
+  Value *IsLocal = Builder.CreateIntrinsic(Intrinsic::nvvm_isspacep_local,
+                                         {Addr}, nullptr, "is.local");
+  BasicBlock *BB = CI->getParent();
+  Function *F = BB->getParent();
+  BasicBlock *ExitBB = BB->splitBasicBlock(CI->getIterator(), "cmpxchg.end");
+  BasicBlock *LocalBB = BasicBlock::Create(Ctx, "cmpxchg.local", F, ExitBB);
+  BasicBlock *AtomicBB = BasicBlock::Create(Ctx, "cmpxchg.atomic", F, ExitBB);
+
+  BB->getTerminator()->eraseFromParent();
+  Builder.SetInsertPoint(BB);
+  Builder.CreateCondBr(IsLocal, LocalBB, AtomicBB);
+
+  Builder.SetInsertPoint(LocalBB);
+  Value *LocalAddr = Builder.CreateAddrSpaceCast(
+      Addr, PointerType::get(Ctx, NVPTXAS::ADDRESS_SPACE_LOCAL));
+  auto [Old, Success] =
+      buildCmpXchgValue(Builder, LocalAddr, CI->getCompareOperand(),
+                       CI->getNewValOperand(), CI->getAlign(), CI->isVolatile());
+  Value *LocalResult = nullptr;
+  if (!CI->use_empty()) {
+    LocalResult = Builder.CreateInsertValue(PoisonValue::get(CI->getType()), Old, 0);
+    LocalResult = Builder.CreateInsertValue(LocalResult, Success, 1);
+  }
+  Builder.CreateBr(ExitBB);
+
+  CI->removeFromParent();
+  CI->insertInto(AtomicBB, AtomicBB->end());
+  // AtomicExpand visits the new blocks as well. Exclude local memory on the
+  // remaining atomic so it is not expanded again, while retaining any existing
+  // address-space exclusions. Normal fence/partword lowering then applies only
+  // to the atomic path.
+  MDNode *NotLocal = MDBuilder(Ctx).createRange(
+      APInt(32, NVPTXAS::ADDRESS_SPACE_LOCAL),
+      APInt(32, NVPTXAS::ADDRESS_SPACE_LOCAL + 1));
+  if (MDNode *Existing = CI->getMetadata(LLVMContext::MD_noalias_addrspace)) {
+    if (MDNode *Merged = MDNode::getMostGenericRange(Existing, NotLocal))
+      NotLocal = Merged;
+  }
+  CI->setMetadata(LLVMContext::MD_noalias_addrspace, NotLocal);
+  Builder.SetInsertPoint(AtomicBB);
+  Builder.CreateBr(ExitBB);
+
+  if (LocalResult) {
+    Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+    PHINode *Result = Builder.CreatePHI(CI->getType(), 2);
+    CI->replaceAllUsesWith(Result);
+    Result->addIncoming(LocalResult, LocalBB);
+    Result->addIncoming(CI, AtomicBB);
+    Result->takeName(CI);
+  }
 }
 
 // clang-format off

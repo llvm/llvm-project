@@ -5482,7 +5482,7 @@ define i32 @add_acq_rel_i32_generic_cta(ptr %addr, i32 %val) {
 ; SM70-NEXT:    atom.acq_rel.cta.add.u32 %r2, [%rd1], %r1;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
-        %retval = atomicrmw add ptr  %addr, i32 %val syncscope("block") acq_rel
+        %retval = atomicrmw add ptr  %addr, i32 %val syncscope("block") acq_rel, !noalias.addrspace !999
         ret i32 %retval
 }
 
@@ -5497,7 +5497,7 @@ define i64 @add_acq_rel_i64_generic_cta(ptr %addr, i64 %val) {
 ; SM70-NEXT:    atom.acq_rel.cta.add.u64 %rd3, [%rd1], %rd2;
 ; SM70-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM70-NEXT:    ret;
-        %retval = atomicrmw add ptr  %addr, i64 %val syncscope("block") acq_rel
+        %retval = atomicrmw add ptr  %addr, i64 %val syncscope("block") acq_rel, !noalias.addrspace !999
         ret i64 %retval
 }
 
@@ -5513,7 +5513,7 @@ define i32 @min_acq_rel_i32_generic_cta(ptr %addr, i32 %val) {
 ; SM70-NEXT:    atom.acq_rel.cta.min.s32 %r2, [%rd1], %r1;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
-        %retval = atomicrmw min ptr  %addr, i32 %val syncscope("block") acq_rel
+        %retval = atomicrmw min ptr  %addr, i32 %val syncscope("block") acq_rel, !noalias.addrspace !999
         ret i32 %retval
 }
 
@@ -5529,7 +5529,7 @@ define i32 @umax_acq_rel_i32_generic_cta(ptr %addr, i32 %val) {
 ; SM70-NEXT:    atom.acq_rel.cta.max.u32 %r2, [%rd1], %r1;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-NEXT:    ret;
-        %retval = atomicrmw umax ptr  %addr, i32 %val syncscope("block") acq_rel
+        %retval = atomicrmw umax ptr  %addr, i32 %val syncscope("block") acq_rel, !noalias.addrspace !999
         ret i32 %retval
 }
 
@@ -5557,7 +5557,7 @@ define i32 @nand_acq_rel_i32_generic_cta(ptr %addr, i32 %val) {
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r1;
 ; SM70-NEXT:    ret;
-        %retval = atomicrmw nand ptr  %addr, i32 %val syncscope("block") acq_rel
+        %retval = atomicrmw nand ptr  %addr, i32 %val syncscope("block") acq_rel, !noalias.addrspace !999
         ret i32 %retval
 }
 
@@ -5584,7 +5584,7 @@ define i64 @nand_acq_rel_i64_generic_cta(ptr %addr, i64 %val) {
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; SM70-NEXT:    ret;
-        %retval = atomicrmw nand ptr  %addr, i64 %val syncscope("block") acq_rel
+        %retval = atomicrmw nand ptr  %addr, i64 %val syncscope("block") acq_rel, !noalias.addrspace !999
         ret i64 %retval
 }
 
@@ -5658,7 +5658,7 @@ define float @fadd_acq_rel_float_generic_cta(ptr %addr, float %val) {
 ; SM70-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.add.f32 %r2, [%rd1], %r1;
 ; SM70-FTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM70-FTZ-ALLOW-NEXT:    ret;
-        %retval = atomicrmw fadd ptr  %addr, float %val syncscope("block") acq_rel
+        %retval = atomicrmw fadd ptr  %addr, float %val syncscope("block") acq_rel, !noalias.addrspace !999
         ret float %retval
 }
 
@@ -5673,7 +5673,7 @@ define double @fadd_acq_rel_double_generic_cta(ptr %addr, double %val) {
 ; SM70-NEXT:    atom.acq_rel.cta.add.f64 %rd3, [%rd1], %rd2;
 ; SM70-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM70-NEXT:    ret;
-        %retval = atomicrmw fadd ptr  %addr, double %val syncscope("block") acq_rel
+        %retval = atomicrmw fadd ptr  %addr, double %val syncscope("block") acq_rel, !noalias.addrspace !999
         ret double %retval
 }
 
@@ -5873,3 +5873,6 @@ define double @fadd_acq_rel_double_shared_cta(ptr addrspace(3) %addr, double %va
         ret double %retval
 }
 
+
+; Native atomic instruction tests exclude thread-private local memory.
+!999 = !{i32 5, i32 6}
