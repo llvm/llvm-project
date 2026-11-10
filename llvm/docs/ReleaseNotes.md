@@ -498,6 +498,14 @@ Makes programs 10x faster by doing Special New Thing.
   alternative to `LLVMParseCommandLineOptions()` that also captures any error
   during parsing.
 
+* Added the following functions to query and create constant range attributes or constant range list attributes:
+  * `LLVMIsConstantRangeAttribute()`
+  * `LLVMGetConstantRangeAttributeValue()`
+  * `LLVMCreateConstantRangeListAttribute()`
+  * `LLVMIsConstantRangeListAttribute()`
+  * `LLVMGetConstantRangeListAttributeCount()`
+  * `LLVMGetConstantRangeListAttributeValueAtIndex()`
+
 ### Changes to the CodeGen infrastructure
 
 * `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR

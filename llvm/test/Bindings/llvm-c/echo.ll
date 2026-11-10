@@ -275,6 +275,8 @@ define i32 @scalablevectorops(i32, <vscale x 4 x i32>) {
   ret i32 %j
 }
 
+declare range(i32 -1, 7) i32 @attributes(ptr noalias captures(none) byval(i64) initializes((0, 4), (8, 12)) "foo" "bar"="1,2,3")
+
 declare void @personalityFn()
 
 define void @exn() personality ptr @personalityFn {
