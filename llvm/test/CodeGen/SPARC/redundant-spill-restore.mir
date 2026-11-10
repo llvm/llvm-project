@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=sparcv9 -run-pass=greedy %s -o - | FileCheck %s
+# RUN: llc -mtriple=sparcv9 -passes=greedy %s -o - | FileCheck %s
 
 # Even though both accesses use the same spill slot and assigned register,
 # the 32-bit store/load does not preserve the full 64-bit register value and

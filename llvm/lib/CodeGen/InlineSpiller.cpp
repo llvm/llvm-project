@@ -134,7 +134,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
                       DenseMap<MachineBasicBlock *, Register> &SpillsToIns);
 
   bool isFullSlotStore(const MachineInstr &MI, int FI) const;
-  SmallPtrSet<VNInfo *, 16> collectUsedSpillValues() const;
+  SmallPtrSet<VNInfo *, 8> collectUsedSpillValues() const;
 
 public:
   HoistSpillHelper(const Spiller::RequiredAnalyses &Analyses,
@@ -533,6 +533,21 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   return true;
 }
 
+static Register getAssignedReg(const VirtRegMap &VRM, Register Reg) {
+  return Reg.isVirtual() ? Register(VRM.getPhys(Reg)) : Reg;
+}
+
+/// Return true if \p Other reads every physical register that \p MI reads,
+/// except \p Ignore.
+static bool readsPhysRegsOf(const MachineInstr &Other, const MachineInstr &MI,
+                            Register Ignore) {
+  return all_of(MI.all_uses(), [&](const MachineOperand &MO) {
+    Register Reg = MO.getReg();
+    return !Reg.isPhysical() || Reg == Ignore ||
+           Other.readsRegister(Reg, /*TRI=*/nullptr);
+  });
+}
+
 /// Replace \p Restore with a copy to forward the value if \p Store saved the
 /// same physical register to the same slot and that register still holds the
 /// value. Returns true if the forwarding was successful, false otherwise.
@@ -540,12 +555,10 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
                                                  MachineInstr &Restore) {
   // Establish that Restore and Store are both eligible for forwarding check
   // that physical register, store/load size and stack slot match.
-  if (Restore.isBundled() || Store.isBundled())
-    return false;
   int LoadFI;
   TypeSize LoadSize = TypeSize::getZero();
   Register LoadReg = TII.isLoadFromStackSlot(Restore, LoadFI, LoadSize);
-  if (!LoadReg.isValid())
+  if (!LoadReg)
     return false;
 
   MachineOperand *LoadOperand = Restore.findRegisterDefOperand(LoadReg, &TRI);
@@ -555,11 +568,11 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
   int StoreFI;
   TypeSize StoreSize = TypeSize::getZero();
   Register StoreReg = TII.isStoreToStackSlot(Store, StoreFI, StoreSize);
-  if (!StoreReg.isValid())
+  if (!StoreReg)
     return false;
 
   MachineOperand *StoreOperand = Store.findRegisterUseOperand(StoreReg, &TRI);
-  if (!StoreOperand || StoreOperand->getSubReg())
+  if (!StoreOperand || StoreOperand->getSubReg() || StoreOperand->isUndef())
     return false;
 
   if (StoreFI != LoadFI || !MF.getFrameInfo().isSpillSlotObjectIndex(LoadFI))
@@ -571,36 +584,13 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
       LoadSize * 8 != TRI.getRegSizeInBits(LoadReg, MRI))
     return false;
 
-  if (Restore.hasOrderedMemoryRef() || Store.hasOrderedMemoryRef())
-    return false;
-
-  // A predicated access may not execute, so the slot contents are unknown.
-  if (TII.isPredicated(Restore) || TII.isPredicated(Store))
-    return false;
-
-  auto GetAssignedReg = [&](Register Reg) -> Register {
-    if (Reg.isVirtual()) {
-      if (!VRM.hasPhys(Reg))
-        return Register();
-      return VRM.getPhys(Reg);
-    }
-    return Reg;
-  };
-  Register PhysReg = GetAssignedReg(LoadReg);
-  if (!PhysReg.isValid() || PhysReg != GetAssignedReg(StoreReg))
+  Register PhysReg = getAssignedReg(VRM, LoadReg);
+  if (!PhysReg || PhysReg != getAssignedReg(VRM, StoreReg))
     return false;
 
   // Both accesses must read the same physical registers.
-  auto GetPhysInputs = [&](const MachineInstr &MI) {
-    SmallVector<Register, 4> Inputs;
-    for (const MachineOperand &MO : MI.all_uses())
-      if (MO.getReg().isPhysical() && MO.getReg() != StoreReg)
-        Inputs.push_back(MO.getReg());
-    sort(Inputs);
-    return Inputs;
-  };
-  SmallVector<Register, 4> Inputs = GetPhysInputs(Store);
-  if (Inputs != GetPhysInputs(Restore))
+  if (!readsPhysRegsOf(Store, Restore, StoreReg) ||
+      !readsPhysRegsOf(Restore, Store, StoreReg))
     return false;
 
   MachineBasicBlock &MBB = *Restore.getParent();
@@ -617,13 +607,11 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
   if (!Adjacent) {
     if (!Matrix)
       return false;
-    Inputs.push_back(PhysReg);
     for (const MachineInstr &GapMI : Gap)
       for (const MachineOperand &Def : GapMI.all_defs()) {
-        Register DefReg = GetAssignedReg(Def.getReg());
-        if (DefReg.isValid() && any_of(Inputs, [&](Register Input) {
-              return TRI.regsOverlap(DefReg, Input);
-            }))
+        Register DefReg = getAssignedReg(VRM, Def.getReg());
+        if (DefReg && (TRI.regsOverlap(DefReg, PhysReg) ||
+                       Store.readsRegister(DefReg, &TRI)))
           return false;
       }
     // The saved register must keep its value across the gap.
@@ -1708,8 +1696,7 @@ void HoistSpillHelper::addDeadSpillCandidate(const MachineInstr &Spill,
 
 /// Return true if \p MI unconditionally overwrites all of stack slot \p FI.
 bool HoistSpillHelper::isFullSlotStore(const MachineInstr &MI, int FI) const {
-  if (MI.peekDebugInstrNum() || MI.isBundled() || MI.hasOrderedMemoryRef() ||
-      MI.mayLoad() || TII.isPredicated(MI) || !MI.all_defs().empty())
+  if (MI.peekDebugInstrNum() || MI.mayLoad() || !MI.all_defs().empty())
     return false;
   int StoreFI;
   TypeSize Size = TypeSize::getZero();
@@ -1730,8 +1717,8 @@ bool HoistSpillHelper::isFullSlotStore(const MachineInstr &MI, int FI) const {
 /// Collect the original values that stack accesses may read from slots
 /// created by this spiller. Only spill code accesses those slots, and a full
 /// store writes the original value live at that point.
-SmallPtrSet<VNInfo *, 16> HoistSpillHelper::collectUsedSpillValues() const {
-  SmallPtrSet<VNInfo *, 16> Used;
+SmallPtrSet<VNInfo *, 8> HoistSpillHelper::collectUsedSpillValues() const {
+  SmallPtrSet<VNInfo *, 8> Used;
   SmallVector<std::pair<LiveInterval *, VNInfo *>, 16> Worklist;
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB.instrs()) {
@@ -2071,7 +2058,7 @@ void HoistSpillHelper::hoistAllSpills() {
       Virt2SiblingsMap[Original].insert(Reg);
   }
 
-  SmallPtrSet<VNInfo *, 16> UsedValues;
+  SmallPtrSet<VNInfo *, 8> UsedValues;
   if (!DeadSpillCandidates.empty())
     UsedValues = collectUsedSpillValues();
 
