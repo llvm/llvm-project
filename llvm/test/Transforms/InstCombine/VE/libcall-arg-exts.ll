@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=instcombine -S -mtriple=ve-unknown | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S -mtriple=ve | FileCheck %s
 
 ; Check that i32 parameters of generated libcalls have the proper extension
 ; attributes.
