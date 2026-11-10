@@ -4024,26 +4024,14 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
   AttributorConfig AC(CGUpdater);
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = false;
-  static constexpr const char *AllowedIDs[] = {
-      &AAWillReturn::ID,
-      &AANoUnwind::ID,
-      &AANoRecurse::ID,
-      &AANoSync::ID,
-      &AANoFree::ID,
-      &AANoReturn::ID,
-      &AAMemoryLocation::ID,
-      &AAMemoryBehavior::ID,
-      &AAUnderlyingObjects::ID,
-      &AANoCapture::ID,
-      &AAInterFnReachability::ID,
-      &AAIntraFnReachability::ID,
-      &AACallEdges::ID,
-      &AANoFPClass::ID,
-      &AAMustProgress::ID,
-      &AANonNull::ID,
-      &AADenormalFPMath::ID,
-  };
-  static constexpr AAKindSet Allowed(AllowedIDs);
+  static constexpr AAKindSet Allowed =
+      AAKindSet::get<&AAWillReturn::ID, &AANoUnwind::ID, &AANoRecurse::ID,
+                     &AANoSync::ID, &AANoFree::ID, &AANoReturn::ID,
+                     &AAMemoryLocation::ID, &AAMemoryBehavior::ID,
+                     &AAUnderlyingObjects::ID, &AANoCapture::ID,
+                     &AAInterFnReachability::ID, &AAIntraFnReachability::ID,
+                     &AACallEdges::ID, &AANoFPClass::ID, &AAMustProgress::ID,
+                     &AANonNull::ID, &AADenormalFPMath::ID>();
   AC.Allowed = Allowed;
   AC.UseLiveness = false;
 
