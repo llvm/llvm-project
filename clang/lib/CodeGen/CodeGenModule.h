@@ -362,7 +362,9 @@ private:
   llvm::Module &TheModule;
   DiagnosticsEngine &Diags;
   const TargetInfo &Target;
-  /// Canonical target features for functions without a target attribute.
+  /// Lazily cached target features for functions without a target attribute.
+  /// An invalid attribute means that the defaults were computed but no
+  /// target-features attribute needs to be emitted.
   std::optional<llvm::Attribute> DefaultTargetFeatures;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;

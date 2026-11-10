@@ -3508,7 +3508,16 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   const auto *TC = FD ? FD->getAttr<TargetClonesAttr>() : nullptr;
   bool AddedAttr = false;
-  bool CacheDefaultFeatures = false;
+  auto GetTargetFeaturesAttr = [&](std::vector<std::string> Features) {
+    llvm::erase_if(Features, [&](const std::string &F) {
+      return getTarget().isReadOnlyFeature(F.substr(1));
+    });
+    if (Features.empty())
+      return llvm::Attribute();
+    llvm::sort(Features);
+    return llvm::Attribute::get(getLLVMContext(), "target-features",
+                                llvm::join(Features, ","));
+  };
   if (TD || TV || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
@@ -3568,14 +3577,12 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       // report all builtins as supported, but that union is meaningless in the
       // emitted IR.
     } else if (SetTargetFeatures) {
-      if (DefaultTargetFeatures) {
-        if (DefaultTargetFeatures->isValid()) {
-          Attrs.addAttribute(*DefaultTargetFeatures);
-          AddedAttr = true;
-        }
-      } else {
-        Features = getTarget().getTargetOpts().Features;
-        CacheDefaultFeatures = true;
+      if (!DefaultTargetFeatures)
+        DefaultTargetFeatures =
+            GetTargetFeaturesAttr(getTarget().getTargetOpts().Features);
+      if (DefaultTargetFeatures->isValid()) {
+        Attrs.addAttribute(*DefaultTargetFeatures);
+        AddedAttr = true;
       }
     }
   }
@@ -3588,19 +3595,10 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     Attrs.addAttribute("tune-cpu", TuneCPU);
     AddedAttr = true;
   }
-  if (CacheDefaultFeatures)
-    DefaultTargetFeatures = llvm::Attribute();
   if (!Features.empty() && SetTargetFeatures) {
-    llvm::erase_if(Features, [&](const std::string& F) {
-       return getTarget().isReadOnlyFeature(F.substr(1));
-    });
-    if (!Features.empty()) {
-      llvm::sort(Features);
-      llvm::Attribute FeatureAttr = llvm::Attribute::get(
-          getLLVMContext(), "target-features", llvm::join(Features, ","));
+    llvm::Attribute FeatureAttr = GetTargetFeaturesAttr(std::move(Features));
+    if (FeatureAttr.isValid()) {
       Attrs.addAttribute(FeatureAttr);
-      if (CacheDefaultFeatures)
-        DefaultTargetFeatures = FeatureAttr;
       AddedAttr = true;
     }
   }
