@@ -1701,12 +1701,13 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     SmallVector<MachineOperand *, 16> DbgUsers;
     for (auto &MOUse : MRI.use_operands(Def.getReg())) {
       MachineInstr *DbgValue = MOUse.getParent();
-      // Ignore partially formed DBG_VALUEs.
-      if ((DbgValue->isNonListDebugValue() &&
-           DbgValue->getNumOperands() == 4) ||
-          DbgValue->isDebugValueList()) {
-        DbgUsers.push_back(&MOUse);
-      }
+      // Ignore partially formed DBG_VALUEs (a complete one has 4 operands:
+      // location, offset, variable and expression).
+      if (!DbgValue->isDebugValueList() &&
+          !(DbgValue->isNonListDebugValue() &&
+            DbgValue->getNumOperands() == 4))
+        continue;
+      DbgUsers.push_back(&MOUse);
     }
 
     if (!DbgUsers.empty()) {

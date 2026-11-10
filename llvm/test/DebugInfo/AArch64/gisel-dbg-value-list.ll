@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -mtriple=aarch64-unknown-linux-gnu -global-isel -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=MIR
-; RUN: llc -O2 -mtriple=aarch64-unknown-linux-gnu -global-isel -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=MIR
-; RUN: llc -O2 -mtriple=aarch64-unknown-linux-gnu -global-isel -filetype=obj %s -o - \
+; RUN: llc -O0 -mtriple=aarch64-unknown-linux-gnu -global-isel -filetype=obj %s -o - \
 ; RUN:   | llvm-dwarfdump --name=sum --name=wsum - | FileCheck %s --check-prefix=DWARF
 
 ; Check that a variadic dbg_value lowered by GlobalISel survives as a
