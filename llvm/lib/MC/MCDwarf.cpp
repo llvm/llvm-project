@@ -661,9 +661,10 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
     trackMD5Usage(Checksum.has_value());
     HasAnySource |= Source.has_value();
   }
-  if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
-    return 0;
   if (FileNumber == 0) {
+    if (DwarfVersion >= 5 &&
+        isRootFile(RootFile, Directory, FileName, Checksum))
+      return 0;
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.
     FileNumber = MCDwarfFiles.empty() ? 1 : MCDwarfFiles.size();
