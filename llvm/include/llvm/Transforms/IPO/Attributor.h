@@ -953,9 +953,10 @@ private:
     case IRPosition::IRP_CALL_SITE_ARGUMENT: {
       // Only call site arguments can be associated with a callback callee
       // argument.
-      if (CallbackCalleeArgIfApplicable)
+      if (CallbackCalleeArgIfApplicable) {
         if (Argument *Arg = getAssociatedArgument())
           return Arg->getArgNo();
+      }
       Use &U = *getAsUsePtr();
       return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
     }
