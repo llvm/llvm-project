@@ -579,6 +579,15 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
   return emitError() << "expected MemRefType or TestMemrefType";
 }
 
+::mlir::LogicalResult TestUnshapedType::verifyCompatibleBufferType(
+    ::mlir::bufferization::BufferLikeType bufferType,
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
+  auto memref = dyn_cast<MemRefType>(bufferType);
+  if (!memref)
+    return emitError() << "expected MemRefType";
+  return mlir::success(getElementType() == memref.getElementType());
+}
+
 //===----------------------------------------------------------------------===//
 // TestTypeNewlineAndIndent
 //===----------------------------------------------------------------------===//

@@ -204,3 +204,12 @@ func.func @invalid_type_to_tensor(%b: memref<1x2x3x4xf16>) {
     : memref<1x2x3x4xf16> to tensor<1x2x3x4xf32>
   return
 }
+
+// -----
+
+func.func @invalid_unshaped_buffer(%t: tensor<4xf32>) {
+  // expected-error @below{{'bufferization.to_buffer' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{expected a shaped buffer type}}
+  %b = bufferization.to_buffer %t : tensor<4xf32> to !test.test_unshaped<f32>
+  return
+}
