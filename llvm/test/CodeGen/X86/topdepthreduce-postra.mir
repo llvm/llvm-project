@@ -4,6 +4,7 @@
 # Check that postmisched's TopDepthReduce heuristic moves the DEC32r later
 # because of the dependency on eax
 name: test
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test

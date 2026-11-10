@@ -108,9 +108,9 @@ define amdgpu_ps i64 @fptoui_bf16_i64_v(bfloat %a) {
 ; GFX6789-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX6789-NEXT:    v_floor_f32_e32 v1, v1
-; GFX6789-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; GFX6789-NEXT:    v_fma_f32 v0, v1, v2, v0
+; GFX6789-NEXT:    v_floor_f32_e32 v2, v1
+; GFX6789-NEXT:    v_mov_b32_e32 v3, 0xcf800000
+; GFX6789-NEXT:    v_fma_f32 v0, v2, v3, v0
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v1
@@ -122,11 +122,11 @@ define amdgpu_ps i64 @fptoui_bf16_i64_v(bfloat %a) {
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX12-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX12-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX12-NEXT:    v_floor_f32_e32 v1, v1
-; GFX12-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v1
+; GFX12-NEXT:    v_floor_f32_e32 v2, v1
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX12-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX12-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -139,11 +139,11 @@ define amdgpu_ps i64 @fptoui_bf16_i64_v(bfloat %a) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX1250-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX1250-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX1250-NEXT:    v_floor_f32_e32 v1, v1
-; GFX1250-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v1
+; GFX1250-NEXT:    v_floor_f32_e32 v2, v1
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX1250-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v2
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %r = fptoui bfloat %a to i64
@@ -156,9 +156,9 @@ define amdgpu_ps i64 @fptoui_bf16_i64_s(bfloat inreg %a) {
 ; GFX6789-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, s0
 ; GFX6789-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX6789-NEXT:    v_floor_f32_e32 v1, v1
-; GFX6789-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; GFX6789-NEXT:    v_fma_f32 v0, v1, v2, v0
+; GFX6789-NEXT:    v_floor_f32_e32 v2, v1
+; GFX6789-NEXT:    v_mov_b32_e32 v3, 0xcf800000
+; GFX6789-NEXT:    v_fma_f32 v0, v2, v3, v0
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v1
@@ -170,9 +170,9 @@ define amdgpu_ps i64 @fptoui_bf16_i64_s(bfloat inreg %a) {
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX12-NEXT:    s_trunc_f32 s0, s0
 ; GFX12-NEXT:    s_mul_f32 s1, s0, 0x2f800000
-; GFX12-NEXT:    s_floor_f32 s1, s1
-; GFX12-NEXT:    s_fmac_f32 s0, s1, 0xcf800000
+; GFX12-NEXT:    s_floor_f32 s2, s1
 ; GFX12-NEXT:    s_cvt_u32_f32 s1, s1
+; GFX12-NEXT:    s_fmac_f32 s0, s2, 0xcf800000
 ; GFX12-NEXT:    s_cvt_u32_f32 s0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -185,9 +185,9 @@ define amdgpu_ps i64 @fptoui_bf16_i64_s(bfloat inreg %a) {
 ; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX1250-NEXT:    s_trunc_f32 s0, s0
 ; GFX1250-NEXT:    s_mul_f32 s1, s0, 0x2f800000
-; GFX1250-NEXT:    s_floor_f32 s1, s1
-; GFX1250-NEXT:    s_fmac_f32 s0, s1, 0xcf800000
+; GFX1250-NEXT:    s_floor_f32 s2, s1
 ; GFX1250-NEXT:    s_cvt_u32_f32 s1, s1
+; GFX1250-NEXT:    s_fmac_f32 s0, s2, 0xcf800000
 ; GFX1250-NEXT:    s_cvt_u32_f32 s0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %r = fptoui bfloat %a to i64
@@ -335,11 +335,10 @@ define amdgpu_ps <2 x i16> @fptoui_v2bf16_v2i16_v(<2 x bfloat> %a) {
 ; GFX6-LABEL: fptoui_v2bf16_v2i16_v:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -396,7 +395,6 @@ define amdgpu_ps <2 x i16> @fptoui_v2bf16_v2i16_s(<2 x bfloat> inreg %a) {
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX6-NEXT:    s_or_b32 s0, s0, s1
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -445,20 +443,20 @@ define amdgpu_ps <2 x i64> @fptoui_v2bf16_v2i64_v(<2 x bfloat> %a) {
 ; GFX6789:       ; %bb.0:
 ; GFX6789-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX6789-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX6789-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX6789-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_mul_f32_e32 v2, 0x2f800000, v0
-; GFX6789-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v1
-; GFX6789-NEXT:    v_floor_f32_e32 v2, v2
-; GFX6789-NEXT:    v_mov_b32_e32 v3, 0xcf800000
-; GFX6789-NEXT:    v_floor_f32_e32 v4, v4
-; GFX6789-NEXT:    v_fma_f32 v0, v2, v3, v0
-; GFX6789-NEXT:    v_fma_f32 v1, v4, v3, v1
+; GFX6789-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6789-NEXT:    v_floor_f32_e32 v3, v2
+; GFX6789-NEXT:    v_mov_b32_e32 v4, 0xcf800000
+; GFX6789-NEXT:    v_trunc_f32_e32 v1, v1
+; GFX6789-NEXT:    v_fma_f32 v0, v3, v4, v0
+; GFX6789-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v1
+; GFX6789-NEXT:    v_floor_f32_e32 v5, v3
+; GFX6789-NEXT:    v_fma_f32 v1, v5, v4, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX6789-NEXT:    v_cvt_u32_f32_e32 v3, v4
+; GFX6789-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX6789-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s2, v1
@@ -472,18 +470,18 @@ define amdgpu_ps <2 x i64> @fptoui_v2bf16_v2i64_v(<2 x bfloat> %a) {
 ; GFX12-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX12-NEXT:    v_dual_mul_f32 v3, 0x2f800000, v1 :: v_dual_lshlrev_b32 v0, 16, v0
 ; GFX12-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v3
+; GFX12-NEXT:    v_floor_f32_e32 v5, v3
 ; GFX12-NEXT:    v_mul_f32_e32 v2, 0x2f800000, v0
-; GFX12-NEXT:    v_fmac_f32_e32 v1, 0xcf800000, v3
-; GFX12-NEXT:    v_floor_f32_e32 v2, v2
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v3, v3
-; GFX12-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX12-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v2
+; GFX12-NEXT:    v_fmac_f32_e32 v1, 0xcf800000, v5
+; GFX12-NEXT:    v_floor_f32_e32 v4, v2
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX12-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v4
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -498,17 +496,17 @@ define amdgpu_ps <2 x i64> @fptoui_v2bf16_v2i64_v(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX1250-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX1250-NEXT:    v_dual_mul_f32 v2, 0x2f800000, v0 :: v_dual_mul_f32 v3, 0x2f800000, v1
-; GFX1250-NEXT:    v_floor_f32_e32 v2, v2
-; GFX1250-NEXT:    v_floor_f32_e32 v3, v3
-; GFX1250-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v2
+; GFX1250-NEXT:    v_floor_f32_e32 v4, v2
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX1250-NEXT:    v_fmac_f32_e32 v1, 0xcf800000, v3
-; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX1250-NEXT:    v_floor_f32_e32 v5, v3
+; GFX1250-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v4
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX1250-NEXT:    v_fmac_f32_e32 v1, 0xcf800000, v5
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX1250-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX1250-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %r = fptoui <2 x bfloat> %a to <2 x i64>
@@ -521,15 +519,15 @@ define amdgpu_ps <2 x i64> @fptoui_v2bf16_v2i64_s(<2 x bfloat> inreg %a) {
 ; GFX6789-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX6789-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, s0
-; GFX6789-NEXT:    s_lshl_b32 s0, s1, 16
-; GFX6789-NEXT:    v_trunc_f32_e32 v3, s0
 ; GFX6789-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX6789-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v3
-; GFX6789-NEXT:    v_floor_f32_e32 v1, v1
-; GFX6789-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; GFX6789-NEXT:    v_floor_f32_e32 v4, v4
-; GFX6789-NEXT:    v_fma_f32 v0, v1, v2, v0
-; GFX6789-NEXT:    v_fma_f32 v2, v4, v2, v3
+; GFX6789-NEXT:    v_floor_f32_e32 v2, v1
+; GFX6789-NEXT:    v_mov_b32_e32 v3, 0xcf800000
+; GFX6789-NEXT:    s_lshl_b32 s0, s1, 16
+; GFX6789-NEXT:    v_fma_f32 v0, v2, v3, v0
+; GFX6789-NEXT:    v_trunc_f32_e32 v2, s0
+; GFX6789-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v2
+; GFX6789-NEXT:    v_floor_f32_e32 v5, v4
+; GFX6789-NEXT:    v_fma_f32 v2, v5, v3, v2
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v2, v2
@@ -549,12 +547,12 @@ define amdgpu_ps <2 x i64> @fptoui_v2bf16_v2i64_s(<2 x bfloat> inreg %a) {
 ; GFX12-NEXT:    s_trunc_f32 s2, s1
 ; GFX12-NEXT:    s_mul_f32 s1, s0, 0x2f800000
 ; GFX12-NEXT:    s_mul_f32 s3, s2, 0x2f800000
-; GFX12-NEXT:    s_floor_f32 s1, s1
-; GFX12-NEXT:    s_floor_f32 s3, s3
-; GFX12-NEXT:    s_fmac_f32 s0, s1, 0xcf800000
-; GFX12-NEXT:    s_fmac_f32 s2, s3, 0xcf800000
+; GFX12-NEXT:    s_floor_f32 s4, s1
+; GFX12-NEXT:    s_floor_f32 s5, s3
 ; GFX12-NEXT:    s_cvt_u32_f32 s1, s1
 ; GFX12-NEXT:    s_cvt_u32_f32 s3, s3
+; GFX12-NEXT:    s_fmac_f32 s0, s4, 0xcf800000
+; GFX12-NEXT:    s_fmac_f32 s2, s5, 0xcf800000
 ; GFX12-NEXT:    s_cvt_u32_f32 s0, s0
 ; GFX12-NEXT:    s_cvt_u32_f32 s2, s2
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -572,12 +570,12 @@ define amdgpu_ps <2 x i64> @fptoui_v2bf16_v2i64_s(<2 x bfloat> inreg %a) {
 ; GFX1250-NEXT:    s_trunc_f32 s2, s1
 ; GFX1250-NEXT:    s_mul_f32 s1, s0, 0x2f800000
 ; GFX1250-NEXT:    s_mul_f32 s3, s2, 0x2f800000
-; GFX1250-NEXT:    s_floor_f32 s1, s1
-; GFX1250-NEXT:    s_floor_f32 s3, s3
-; GFX1250-NEXT:    s_fmac_f32 s0, s1, 0xcf800000
-; GFX1250-NEXT:    s_fmac_f32 s2, s3, 0xcf800000
+; GFX1250-NEXT:    s_floor_f32 s4, s1
+; GFX1250-NEXT:    s_floor_f32 s5, s3
 ; GFX1250-NEXT:    s_cvt_u32_f32 s1, s1
 ; GFX1250-NEXT:    s_cvt_u32_f32 s3, s3
+; GFX1250-NEXT:    s_fmac_f32 s0, s4, 0xcf800000
+; GFX1250-NEXT:    s_fmac_f32 s2, s5, 0xcf800000
 ; GFX1250-NEXT:    s_cvt_u32_f32 s0, s0
 ; GFX1250-NEXT:    s_cvt_u32_f32 s2, s2
 ; GFX1250-NEXT:    ; return to shader part epilog
@@ -589,13 +587,12 @@ define amdgpu_ps <3 x i16> @fptoui_v3bf16_v3i16_v(<3 x bfloat> %a) {
 ; GFX6-LABEL: fptoui_v3bf16_v3i16_v:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX6-NEXT:    v_cvt_u32_f32_e32 v2, v2
+; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v2
@@ -752,33 +749,33 @@ define amdgpu_ps <3 x i64> @fptoui_v3bf16_v3i64_v(<3 x bfloat> %a) {
 ; GFX6789:       ; %bb.0:
 ; GFX6789-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX6789-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX6789-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX6789-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX6789-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX6789-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v0
-; GFX6789-NEXT:    v_mul_f32_e32 v5, 0x2f800000, v2
+; GFX6789-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX6789-NEXT:    v_floor_f32_e32 v4, v3
+; GFX6789-NEXT:    v_mov_b32_e32 v5, 0xcf800000
+; GFX6789-NEXT:    v_trunc_f32_e32 v2, v2
+; GFX6789-NEXT:    v_fma_f32 v0, v4, v5, v0
+; GFX6789-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v2
+; GFX6789-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6789-NEXT:    v_floor_f32_e32 v6, v4
+; GFX6789-NEXT:    v_trunc_f32_e32 v1, v1
+; GFX6789-NEXT:    v_fma_f32 v2, v6, v5, v2
 ; GFX6789-NEXT:    v_mul_f32_e32 v6, 0x2f800000, v1
-; GFX6789-NEXT:    v_floor_f32_e32 v3, v3
-; GFX6789-NEXT:    v_mov_b32_e32 v4, 0xcf800000
-; GFX6789-NEXT:    v_floor_f32_e32 v5, v5
-; GFX6789-NEXT:    v_floor_f32_e32 v6, v6
-; GFX6789-NEXT:    v_fma_f32 v0, v3, v4, v0
-; GFX6789-NEXT:    v_fma_f32 v2, v5, v4, v2
-; GFX6789-NEXT:    v_fma_f32 v1, v6, v4, v1
+; GFX6789-NEXT:    v_floor_f32_e32 v7, v6
+; GFX6789-NEXT:    v_fma_f32 v1, v7, v5, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX6789-NEXT:    v_cvt_u32_f32_e32 v5, v5
+; GFX6789-NEXT:    v_cvt_u32_f32_e32 v4, v4
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX6789-NEXT:    v_cvt_u32_f32_e32 v4, v6
+; GFX6789-NEXT:    v_cvt_u32_f32_e32 v5, v6
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX6789-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX6789-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX6789-NEXT:    v_readfirstlane_b32 s3, v4
 ; GFX6789-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX6789-NEXT:    v_readfirstlane_b32 s5, v4
+; GFX6789-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: fptoui_v3bf16_v3i64_v:
@@ -788,27 +785,27 @@ define amdgpu_ps <3 x i64> @fptoui_v3bf16_v3i64_v(<3 x bfloat> %a) {
 ; GFX12-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX12-NEXT:    v_dual_mul_f32 v5, 0x2f800000, v2 :: v_dual_lshlrev_b32 v0, 16, v0
 ; GFX12-NEXT:    v_trunc_f32_e32 v0, v0
-; GFX12-NEXT:    v_floor_f32_e32 v5, v5
+; GFX12-NEXT:    v_floor_f32_e32 v8, v5
 ; GFX12-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v0
-; GFX12-NEXT:    v_fmac_f32_e32 v2, 0xcf800000, v5
-; GFX12-NEXT:    v_floor_f32_e32 v3, v3
-; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v5, v5
-; GFX12-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX12-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v3
-; GFX12-NEXT:    v_trunc_f32_e32 v1, v1
+; GFX12-NEXT:    v_fmac_f32_e32 v2, 0xcf800000, v8
+; GFX12-NEXT:    v_floor_f32_e32 v6, v3
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX12-NEXT:    v_cvt_u32_f32_e32 v2, v2
+; GFX12-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v6
+; GFX12-NEXT:    v_trunc_f32_e32 v1, v1
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX12-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    v_floor_f32_e32 v4, v4
-; GFX12-NEXT:    v_fmac_f32_e32 v1, 0xcf800000, v4
+; GFX12-NEXT:    v_floor_f32_e32 v7, v4
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v4, v4
-; GFX12-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX12-NEXT:    v_fmac_f32_e32 v1, 0xcf800000, v7
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v4
+; GFX12-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX12-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -826,23 +823,23 @@ define amdgpu_ps <3 x i64> @fptoui_v3bf16_v3i64_v(<3 x bfloat> %a) {
 ; GFX1250-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v0
 ; GFX1250-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX1250-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v1
-; GFX1250-NEXT:    v_floor_f32_e32 v3, v3
+; GFX1250-NEXT:    v_floor_f32_e32 v6, v3
 ; GFX1250-NEXT:    v_mul_f32_e32 v5, 0x2f800000, v2
-; GFX1250-NEXT:    v_floor_f32_e32 v4, v4
-; GFX1250-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v3
-; GFX1250-NEXT:    v_floor_f32_e32 v5, v5
-; GFX1250-NEXT:    v_fmac_f32_e32 v1, 0xcf800000, v4
+; GFX1250-NEXT:    v_floor_f32_e32 v7, v4
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v4, v4
-; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX1250-NEXT:    v_fmac_f32_e32 v2, 0xcf800000, v5
+; GFX1250-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v6
+; GFX1250-NEXT:    v_floor_f32_e32 v8, v5
+; GFX1250-NEXT:    v_fmac_f32_e32 v1, 0xcf800000, v7
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v5, v5
-; GFX1250-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1250-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX1250-NEXT:    v_fmac_f32_e32 v2, 0xcf800000, v8
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1250-NEXT:    v_readfirstlane_b32 s5, v4
-; GFX1250-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX1250-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX1250-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX1250-NEXT:    ; return to shader part epilog

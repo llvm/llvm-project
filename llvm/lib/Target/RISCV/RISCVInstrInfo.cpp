@@ -15,11 +15,11 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVStateAttributes.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -69,7 +69,7 @@ namespace llvm::RISCV {
 RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
     : RISCVGenInstrInfo(STI, RegInfo, RISCV::ADJCALLSTACKDOWN,
                         RISCV::ADJCALLSTACKUP),
-      RegInfo(STI.getHwMode()), STI(STI) {}
+      RegInfo(STI.getHwMode(), STI.getUserReservedXRegs()), STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
 #include "RISCVGenInstrInfo.inc"
@@ -1716,9 +1716,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .add(RHS)
           .addReg(RegZ)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -1737,9 +1734,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .addReg(RegZ)
           .add(LHS)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -2976,11 +2970,6 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   DebugLoc MergedLoc =
       DILocation::getMergedLocation(Root.getDebugLoc(), Prev.getDebugLoc());
 
-  // We need to clear kill flags since we may be extending the live range past
-  // a kill.
-  MRI.clearKillFlags(Mul1.getReg());
-  MRI.clearKillFlags(Mul2.getReg());
-
   MachineInstrBuilder MIB = BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
                                 .addReg(Mul1.getReg())
                                 .addReg(Mul2.getReg())
@@ -3868,7 +3857,8 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
     return false;
 
   // Otherwise, try to save X5 into t1-t6 (MachineOutlinerRegSave).
-  if (STI.getCLOpts().outliner_regsave && findRegisterToSaveX5To(C, RegInfo))
+  if (STI.getCLOpts().outliner_regsave && !C.getMF()->isOutlined() &&
+      findRegisterToSaveX5To(C, RegInfo))
     return false;
 
   return true;
@@ -5105,7 +5095,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
   } else if (int ShXAmount, ShiftAmount;
-             STI.hasShlAdd(3) &&
+             STI.hasStdExtZba() &&
              (ShXAmount = isShifted359(Amount, ShiftAmount)) != 0) {
     // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;

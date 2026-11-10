@@ -467,6 +467,11 @@ private:
   Instruction *foldAndOrOfSelectUsingImpliedCond(Value *Op, SelectInst &SI,
                                                  bool IsAnd);
 
+  /// Given that \p CondVal is known to be \p CondIsTrue, try to simplify
+  /// \p SI to one of its arms.
+  Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI, Value *CondVal,
+                                               bool CondIsTrue);
+
   Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
 
   /// Simplify \p V given that it is known to be non-null.
@@ -759,6 +764,10 @@ public:
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantAllowPoison(ICmpInst &Cmp,
                                                    const APInt &C);
+  /// Match Op0 Pred Op1 on binops with a removable common operand.
+  bool matchCommonBinOpOperands(Value *Op0, Value *Op1, CmpInst::Predicate Pred,
+                                Value *&LHS, Value *&RHS,
+                                const SimplifyQuery &Q);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
                                   Value *Z, CmpPredicate Pred);

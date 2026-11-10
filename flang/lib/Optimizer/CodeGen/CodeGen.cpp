@@ -72,6 +72,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace fir {
@@ -370,8 +371,23 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, memRef, varAttr,
-                                         nullptr);
+        mlir::Value addr = memRef;
+        mlir::LLVM::DIExpressionAttr expr;
+        // A variable whose storage address is returned by a call has no stack
+        // slot to point at, and a declare on an SSA value only describes it
+        // where that value is live. Spill the address to a slot and deref it.
+        if (addr.getDefiningOp<mlir::LLVM::CallOp>()) {
+          mlir::Value slot = this->genAllocaAndAddrCastWithType(
+              fusedLoc, addr.getType(), defaultAlign, rewriter);
+          mlir::LLVM::StoreOp::create(rewriter, fusedLoc, addr, slot);
+          addr = slot;
+          expr = mlir::LLVM::DIExpressionAttr::get(
+              rewriter.getContext(),
+              {mlir::LLVM::DIExpressionElemAttr::get(
+                  rewriter.getContext(), llvm::dwarf::DW_OP_deref, {})});
+        }
+        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, addr, varAttr,
+                                         expr);
       }
     }
     rewriter.replaceOp(declareOp, memRef);
@@ -4429,6 +4445,30 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
       // feed to the fir declare operation. Thus, during codegen, we can
       // simply erase is as it is no longer used.
       rewriter.eraseOp(undef);
+      return mlir::success();
+    }
+    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(undef.getType())) {
+      // A fir.box value is lowered as the address of its descriptor storage,
+      // and fir.load/fir.store of a box copy the descriptor through that
+      // address. An undefined box must therefore be valid storage holding an
+      // undefined descriptor, not an undefined address.
+      mlir::Location loc = undef.getLoc();
+      mlir::Type llvmBoxTy = lowerTy().convertBoxTypeAsStruct(boxTy);
+      mlir::Value storage =
+          genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign, rewriter);
+      if (boxTy.isAssumedRank()) {
+        // Copies of an assumed-rank descriptor are sized from its rank, which
+        // must therefore stay within the storage.
+        mlir::Type rankTy = getBoxEleTy(llvmBoxTy, {kRankPosInBox});
+        mlir::LLVM::GEPOp rankAddr =
+            genGEP(loc, llvmBoxTy, rewriter, storage, 0, kRankPosInBox);
+        mlir::Value zero = mlir::LLVM::ConstantOp::create(
+            rewriter, loc, rankTy, rewriter.getIntegerAttr(rankTy, 0));
+        auto storeOp =
+            mlir::LLVM::StoreOp::create(rewriter, loc, zero, rankAddr);
+        attachTBAATag(storeOp, boxTy, nullptr, rankAddr);
+      }
+      rewriter.replaceOp(undef, storage);
       return mlir::success();
     }
     rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
