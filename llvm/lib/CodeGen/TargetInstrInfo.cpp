@@ -878,31 +878,33 @@ static void transferImplicitOperands(MachineInstr *MI,
   Register DstReg = MI->getOperand(0).getReg();
   bool DefinesDst = CopyMI->definesRegister(DstReg, TRI);
   for (const MachineOperand &MO : MI->implicit_operands()) {
-    // If the last instruction does not define the whole copy result, the copy
-    // was split and other instructions must have defined parts of the copy
-    // result. Adding an implicit def overlapping the copy result to the last
-    // instruction would redefine the parts defined by the other instructions,
-    // so we only define the parts outside the copy result.
+    // If the copy was split, an implicit def overlapping the copy result would
+    // redefine the parts written by the earlier instructions.
+    // So we should only define the parts outside the copy result.
     if (!DefinesDst && MO.isDef() && TRI->regsOverlap(DstReg, MO.getReg())) {
       Register Reg = MO.getReg();
-      if (TRI->isSubRegisterEq(DstReg, Reg))
+      // Collect the lanes of the subregs that do not overlap with Dst.
+      LaneBitmask UncoveredLanes;
+      for (MCSubRegIndexIterator SRI(Reg, TRI); SRI.isValid(); ++SRI)
+        if (!TRI->regsOverlap(SRI.getSubReg(), DstReg))
+          UncoveredLanes |= TRI->getSubRegIndexLaneMask(SRI.getSubRegIndex());
+      if (UncoveredLanes.none())
         continue;
 
-      unsigned SubIdx = TRI->getSubRegIndex(Reg, DstReg);
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       SmallVector<unsigned, 4> Indexes;
-      if (SubIdx && RC &&
-          TRI->getCoveringSubRegIndexes(
-              RC, RC->getLaneMask() & ~TRI->getSubRegIndexLaneMask(SubIdx),
-              Indexes)) {
-        for (unsigned Idx : Indexes)
-          CopyMI->addOperand(MachineOperand::CreateReg(
-              TRI->getSubReg(Reg, Idx), /*isDef=*/true, /*isImp=*/true,
-              /*isKill=*/false, MO.isDead()));
-        continue;
-      }
-      // Fall back to adding the implicit def as is if the parts outside the
-      // copy result cannot be represented as subregisters.
+      [[maybe_unused]] bool Covered =
+          RC && TRI->getCoveringSubRegIndexes(RC, UncoveredLanes, Indexes);
+      assert(
+          Covered &&
+          "Failed to find subregs covering the lanes outside the copy result");
+
+      // Add implicit-def for corresponding sub-registers.
+      for (unsigned Idx : Indexes)
+        CopyMI->addOperand(MachineOperand::CreateReg(
+            TRI->getSubReg(Reg, Idx), /*isDef=*/true, /*isImp=*/true,
+            /*isKill=*/false, MO.isDead()));
+      continue;
     }
 
     CopyMI->addOperand(MO);
