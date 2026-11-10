@@ -43,6 +43,10 @@ constexpr signed auto Long = 1L; // expected-error {{illegal storage class on fi
 // expected-error@-1 {{cannot combine with previous 'constexpr' declaration specifier}}
 _Static_assert(_Generic(Ulong, long : 1));
 _Static_assert(_Generic(CompoundLiteral, int : 1));
+// GH54014: a compound literal that is directly converted to an rvalue isn't a
+// read of the (modifiable) compound literal object, unless it is volatile.
+constexpr int *CompoundLiteralPtr = (int *){nullptr};
+constexpr int CompoundLiteralVolatile = (volatile int){1}; // expected-error {{constexpr variable 'CompoundLiteralVolatile' must be initialized by a constant expression}}
 _Static_assert(_Generic(DoubleCast, double : 1));
 _Static_assert(_Generic(String, char* : 1));
 
