@@ -546,6 +546,7 @@ bool X86LowerAMXIntrinsics::lowerTileLoadStore(Instruction *TileLoadStore) {
   BasicBlock *End =
       SplitBlock(InsertI->getParent(), InsertI, &DTU, LI, nullptr, "continue");
   IRBuilder<> Builder(TileLoadStore);
+  Builder.disableGEPCanonicalization();
   Value *ResVec = createTileLoadStoreLoops<IsTileLoad>(
       Start, End, Builder, M, NDWord, Ptr, StrideDWord,
       IsTileLoad ? nullptr : Tile);

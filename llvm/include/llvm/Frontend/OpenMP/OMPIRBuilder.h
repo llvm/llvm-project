@@ -526,7 +526,9 @@ public:
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
       : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()),
-        IsFinalized(false) {}
+        IsFinalized(false) {
+    Builder.disableGEPCanonicalization();
+  }
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {

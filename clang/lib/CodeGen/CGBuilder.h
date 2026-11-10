@@ -94,19 +94,27 @@ public:
   CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C)
       : CGBuilderBaseTy(CGM.getModule(),
                         llvm::TargetFolder(CGM.getDataLayout())),
-        TypeCache(CGM) {}
+        TypeCache(CGM) {
+    disableGEPCanonicalization();
+  }
   CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C,
               const CGBuilderInserterTy &Inserter)
       : CGBuilderBaseTy(CGM.getModule(),
                         llvm::TargetFolder(CGM.getDataLayout()), Inserter),
-        TypeCache(CGM) {}
+        TypeCache(CGM) {
+    disableGEPCanonicalization();
+  }
   CGBuilderTy(const CodeGenModule &CGM, llvm::Instruction *I)
       : CGBuilderBaseTy(I->getIterator(),
                         llvm::TargetFolder(CGM.getDataLayout())),
-        TypeCache(CGM) {}
+        TypeCache(CGM) {
+    disableGEPCanonicalization();
+  }
   CGBuilderTy(const CodeGenModule &CGM, llvm::BasicBlock *BB)
       : CGBuilderBaseTy(BB, llvm::TargetFolder(CGM.getDataLayout())),
-        TypeCache(CGM) {}
+        TypeCache(CGM) {
+    disableGEPCanonicalization();
+  }
 
   llvm::ConstantInt *getSize(CharUnits N) {
     return llvm::ConstantInt::getSigned(TypeCache.SizeTy, N.getQuantity());

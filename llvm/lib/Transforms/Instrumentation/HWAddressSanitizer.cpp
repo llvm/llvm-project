@@ -1338,6 +1338,7 @@ void HWAddressSanitizer::instrumentStack(OptimizationRemarkEmitter &ORE,
     auto *AI = KV.first;
     memtag::AllocaInfo &Info = KV.second;
     IRBuilder<> IRB(AI->getNextNode());
+    IRB.disableGEPCanonicalization();
 
     // Replace uses of the alloca with tagged address.
     Value *Tag = getAllocaTag(IRB, StackTag, N);
@@ -1529,6 +1530,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(InsertPt);
+  EntryIRB.disableGEPCanonicalization();
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ Opts.hwasan_record_stack_history !=
                        RecordStackHistoryMode::none &&

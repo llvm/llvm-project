@@ -1603,6 +1603,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     return false;
 
   IRBuilder<> Builder(AA.Alloca);
+  Builder.disableGEPCanonicalization();
 
   const Function &ContainingFunction = *AA.Alloca->getParent()->getParent();
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, ContainingFunction);

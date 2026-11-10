@@ -9459,6 +9459,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   }
 
   IRBuilder<> Builder(BB);
+  Builder.disableGEPCanonicalization();
   Instruction *Terminator = BB->getTerminator();
   Builder.SetInsertPoint(Terminator);
   switch (Terminator->getOpcode()) {

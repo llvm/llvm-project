@@ -569,6 +569,7 @@ bool RISCVGatherScatterLoweringImpl::tryCreateStridedLoadStore(
     return false;
 
   IRBuilder Builder(PtrI->getIterator(), InstSimplifyFolder(*DL));
+  Builder.disableGEPCanonicalization();
 
   Value *BasePtr, *Stride;
   std::tie(BasePtr, Stride) = determineBaseAndStride(PtrI, Builder);

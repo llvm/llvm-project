@@ -3481,7 +3481,10 @@ struct DelayedIRBuilder {
   std::optional<IRBuilder<>> Builder;
 
   DelayedIRBuilder() = default;
-  DelayedIRBuilder(Module &M) { Builder.emplace(M); }
+  DelayedIRBuilder(Module &M) {
+    Builder.emplace(M);
+    Builder->disableGEPCanonicalization();
+  }
 
   void initUsingInsertionBlock(BasicBlock *BB) {
     if (Builder)
@@ -3491,6 +3494,7 @@ struct DelayedIRBuilder {
       if (Function *F = BB->getParent()) {
         if (Module *M = F->getParent()) {
           Builder.emplace(*M);
+          Builder->disableGEPCanonicalization();
           return;
         }
       }

@@ -2093,6 +2093,7 @@ Value *DataFlowSanitizer::loadNextOrigin(BasicBlock::iterator Pos,
                                          Align OriginAlign,
                                          Value **OriginAddr) {
   IRBuilder<> IRB(Pos);
+  IRB.disableGEPCanonicalization();
   *OriginAddr =
       IRB.CreateGEP(OriginTy, *OriginAddr, ConstantInt::get(IntptrTy, 1));
   return IRB.CreateAlignedLoad(OriginTy, *OriginAddr, OriginAlign);
@@ -2125,6 +2126,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
       ShadowSize == 4 ? Type::getInt32Ty(*DFS.Ctx) : Type::getInt64Ty(*DFS.Ctx);
 
   IRBuilder<> IRB(Pos);
+  IRB.disableGEPCanonicalization();
   Value *CombinedWideShadow =
       IRB.CreateAlignedLoad(WideShadowTy, ShadowAddr, ShadowAlign);
 
@@ -2269,6 +2271,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOriginSansLoadTracking(
   }
   case 2: {
     IRBuilder<> IRB(Pos);
+    IRB.disableGEPCanonicalization();
     Value *ShadowAddr1 = IRB.CreateGEP(DFS.PrimitiveShadowTy, ShadowAddr,
                                        ConstantInt::get(DFS.IntptrTy, 1));
     Value *Load =
@@ -2489,6 +2492,7 @@ void DFSanFunction::storeOrigin(BasicBlock::iterator Pos, Value *Addr,
   const Align OriginAlignment = getOriginAlign(InstAlignment);
   Value *CollapsedShadow = collapseToPrimitiveShadow(Shadow, Pos);
   IRBuilder<> IRB(Pos);
+  IRB.disableGEPCanonicalization();
   if (auto *ConstantShadow = dyn_cast<Constant>(CollapsedShadow)) {
     if (!ConstantShadow->isNullValue())
       paintOrigin(IRB, updateOrigin(Origin, IRB), StoreOriginAddr, Size,
@@ -2506,6 +2510,7 @@ void DFSanFunction::storeOrigin(BasicBlock::iterator Pos, Value *Addr,
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
         Cmp, &*IRB.GetInsertPoint(), false, DFS.OriginStoreWeights, &DTU);
     IRBuilder<> IRBNew(CheckTerm);
+    IRBNew.disableGEPCanonicalization();
     paintOrigin(IRBNew, updateOrigin(Origin, IRBNew), StoreOriginAddr, Size,
                 OriginAlignment);
     ++NumOriginStores;
@@ -2556,6 +2561,7 @@ void DFSanFunction::storePrimitiveShadowOrigin(Value *Addr, uint64_t Size,
   }
 
   IRBuilder<> IRB(Pos);
+  IRB.disableGEPCanonicalization();
   Value *ShadowAddr, *OriginAddr;
   std::tie(ShadowAddr, OriginAddr) =
       DFS.getShadowOriginAddress(Addr, InstAlignment, Pos);
@@ -3038,6 +3044,7 @@ void DFSanVisitor::addOriginArguments(Function &F, CallBase &CB,
 
 bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
   IRBuilder<> IRB(&CB);
+  IRB.disableGEPCanonicalization();
   switch (DFSF.DFS.getWrapperKind(&F)) {
   case DataFlowSanitizer::WK_Warning:
     CB.setCalledFunction(&F);

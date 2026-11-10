@@ -383,6 +383,7 @@ public:
 
     LLVMContext &Ctx = M.getContext();
     IRBuilder<> Builder(M);
+    Builder.disableGEPCanonicalization();
     Type *I32 = Type::getInt32Ty(Ctx);
 
     for (size_t Index = 0; Index < ModuleScopeVariables.size(); Index++) {
@@ -837,6 +838,7 @@ public:
     if (!KernelsThatIndirectlyAllocateDynamicLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
       IRBuilder<> Builder(M);
+      Builder.disableGEPCanonicalization();
       Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
 
       std::vector<Constant *> newDynamicLDS;

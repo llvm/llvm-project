@@ -1962,6 +1962,7 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     };
 
     IRBuilder<> Builder(CurLoop->getHeader()->getFirstNonPHIIt());
+    Builder.disableGEPCanonicalization();
 
     // Create the CRC PHI, and initialize its incoming value to the initial
     // value of CRC.

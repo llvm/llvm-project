@@ -353,6 +353,7 @@ bool ExpandVariadics::runOnModule(Module &M) {
 
   const DataLayout &DL = M.getDataLayout();
   IRBuilder<> Builder(M);
+  Builder.disableGEPCanonicalization();
 
   // Lowering needs to run on all functions exactly once.
   // Optimize could run on functions containing va_start exactly once.
