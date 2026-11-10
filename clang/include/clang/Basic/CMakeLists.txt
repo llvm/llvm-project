@@ -22,6 +22,7 @@ endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
 clang_diag_gen(AST)
+clang_diag_gen(CodeGen)
 clang_diag_gen(Comment)
 clang_diag_gen(Common)
 clang_diag_gen(CrossTU)
@@ -105,6 +106,10 @@ clang_tablegen(BuiltinsARM.inc -gen-clang-builtins
 clang_tablegen(BuiltinsAMDGPU.inc -gen-clang-builtins
   SOURCE BuiltinsAMDGPU.td
   TARGET ClangBuiltinsAMDGPU)
+
+clang_tablegen(BuiltinsAVR.inc -gen-clang-builtins
+  SOURCE BuiltinsAVR.td
+  TARGET ClangBuiltinsAVR)
 
 clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td

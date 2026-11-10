@@ -22,7 +22,7 @@ def FoldTensorSubsetOpsPass : Pass<"fold-tensor-subset-ops"> {
 
   }];
   let dependentDialects = [
-      "affine::AffineDialect", "tensor::TensorDialect", "vector::VectorDialect"
+      "affine::AffineDialect", "vector::VectorDialect"
   ];
 }
 

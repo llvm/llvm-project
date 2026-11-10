@@ -16,6 +16,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include <list>
 #include <map>
 #include <optional>
@@ -235,8 +236,7 @@ public:
   const DeclTypeSpec *FindType(const DeclTypeSpec &) const;
   const DeclTypeSpec &MakeNumericType(TypeCategory, KindExpr &&kind);
   const DeclTypeSpec &MakeLogicalType(KindExpr &&kind);
-  const DeclTypeSpec &MakeCharacterType(
-      ParamValue &&length, KindExpr &&kind = KindExpr{0});
+  const DeclTypeSpec &MakeCharacterType(ParamValue &&length, KindExpr &&kind);
   DeclTypeSpec &MakeDerivedType(DeclTypeSpec::Category, DerivedTypeSpec &&);
   const DeclTypeSpec &MakeTypeStarType();
   const DeclTypeSpec &MakeClassStarType();
@@ -275,9 +275,26 @@ public:
   bool hasSAVE() const { return hasSAVE_; }
   void set_hasSAVE(bool yes = true) { hasSAVE_ = yes; }
 
+  const std::set<llvm::omp::Directive> &ompAssumesAbsent() const {
+    return ompAssumesAbsent_;
+  }
+  void add_ompAssumesAbsent(llvm::omp::Directive directive) {
+    ompAssumesAbsent_.insert(directive);
+  }
+
   // The range of the source of this and nested scopes.
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
   void AddSourceRange(parser::CharBlock);
+
+  // Record objects that have a device mapping in this OpenACC construct.
+  // Unlike a CUDA data attribute, this does not change the storage denoted by
+  // ordinary references to the object in the construct.
+  void AddOpenACCMappedSymbol(const Symbol &symbol) {
+    openACCMappedSymbols_.insert(symbol.GetUltimate());
+  }
+  bool IsOpenACCMappedSymbol(const Symbol &symbol) const {
+    return openACCMappedSymbols_.count(symbol.GetUltimate()) != 0;
+  }
 
   // Attempts to find a match for a derived type instance
   const DeclTypeSpec *FindInstantiatedDerivedType(const DerivedTypeSpec &,
@@ -316,6 +333,8 @@ private:
   std::list<DeclTypeSpec> declTypeSpecs_;
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
+  UnorderedSymbolSet openACCMappedSymbols_;
+  std::set<llvm::omp::Directive> ompAssumesAbsent_;
   DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
   parser::Message::Reference instantiationContext_;
   bool hasSAVE_{false}; // scope has a bare SAVE statement

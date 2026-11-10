@@ -7,8 +7,8 @@
 
 // CIR-DAG: !rec_Param2 = !cir.struct<"Param2" incomplete>
 // CIR-DAG: !rec_Ret1 = !cir.struct<"Ret1" incomplete>
-// CIR-DAG: !rec_S1 = !cir.struct<"S1" {!cir.vptr}>
-// CIR-DAG: !rec_S2 = !cir.struct<"S2" {!cir.vptr}>
+// CIR-DAG: !rec_S1 = !cir.struct<"S1" {data !cir.vptr}>
+// CIR-DAG: !rec_S2 = !cir.struct<"S2" {data !cir.vptr}>
 // LLVMCIR-DAG: %struct.Ret1 = type {}
 // LLVMCIR-DAG: %struct.Param2 = type {}
 
@@ -58,9 +58,9 @@ void S2::key() {}
 // LLVM-SAME: ptr @_ZN2S28badParamE6Param2] }
 
 
-// CIR: cir.func private @_ZN2S19badReturnEv(!cir.ptr<!rec_S1> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> !rec_Ret1
+// CIR: cir.func private unnamed_addr @_ZN2S19badReturnEv(!cir.ptr<!rec_S1> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> !rec_Ret1
 // LLVMCIR: declare %struct.Ret1 @_ZN2S19badReturnEv(ptr noundef nonnull align 8 dereferenceable(8))
 // OGCG: declare void @_ZN2S19badReturnEv()
-// CIR: cir.func private @_ZN2S28badParamE6Param2(!cir.ptr<!rec_S2> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !rec_Param2)
+// CIR: cir.func private unnamed_addr @_ZN2S28badParamE6Param2(!cir.ptr<!rec_S2> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !rec_Param2)
 // LLVMCIR: declare void @_ZN2S28badParamE6Param2(ptr noundef nonnull align 8 dereferenceable(8), %struct.Param2)
 // OGCG: declare void @_ZN2S28badParamE6Param2() unnamed_addr

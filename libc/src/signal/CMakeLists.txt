@@ -17,10 +17,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  killpg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.killpg
+)
+
+add_entrypoint_object(
   sigaction
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sigaction
+)
+
+add_entrypoint_object(
+  sigpending
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigpending
 )
 
 add_entrypoint_object(
@@ -38,10 +52,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sigsuspend
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigsuspend
+)
+
+add_entrypoint_object(
   pthread_sigmask
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.pthread_sigmask
+)
+
+add_entrypoint_object(
+  pthread_kill
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pthread_kill
 )
 
 add_entrypoint_object(
@@ -77,4 +105,11 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sigdelset
+)
+
+add_entrypoint_object(
+  sigismember
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigismember
 )

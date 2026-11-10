@@ -30,6 +30,7 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -248,7 +249,10 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     // If this token's spelling is a pp-identifier, check to see if it is
     // 'defined' or if it is a macro.  Note that we check here because many
     // keywords are pp-identifiers, so we can't check the kind.
-    if (IdentifierInfo *II = PeekTok.getIdentifierInfo()) {
+    // Pragma operators can produce annotation tokens, which have no
+    // IdentifierInfo and should be diagnosed as invalid expression tokens.
+    if (!PeekTok.isAnnotation() && PeekTok.getIdentifierInfo()) {
+      IdentifierInfo *II = PeekTok.getIdentifierInfo();
       // Handle "defined X" and "defined(X)".
       if (II->isStr("defined"))
         return EvaluateDefined(Result, PeekTok, DT, ValueLive, PP);
@@ -328,12 +332,13 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     }
 
     // 'z/uz' literals are a C++23 feature.
-    if (Literal.isSizeT)
-      PP.Diag(PeekTok, PP.getLangOpts().CPlusPlus
-                           ? PP.getLangOpts().CPlusPlus23
-                                 ? diag::warn_cxx20_compat_size_t_suffix
-                                 : diag::ext_cxx23_size_t_suffix
-                           : diag::err_cxx23_size_t_suffix);
+    if (Literal.isSizeT) {
+      if (PP.getLangOpts().CPlusPlus) {
+        PP.DiagCompat(PeekTok, diag_compat::size_t_suffix);
+      } else {
+        PP.Diag(PeekTok, diag::err_cxx23_size_t_suffix);
+      }
+    }
 
     // 'wb/uwb' literals are a C23 feature.
     // '__wb/__uwb' are a C++ extension.
@@ -600,7 +605,10 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
     // identifier is undefined. If we've already seen one, there's no point in
     // continuing with the rest of the expression. Besides saving work, this
     // also prevents calling undefined function-like macros.
-    PP.DiscardUntilEndOfDirective(PeekTok);
+    // If the directive already ended (e.g. due to unclosed '('), there is
+    // nothing left to discard.
+    if (PeekTok.isNot(tok::eod))
+      PP.DiscardUntilEndOfDirective(PeekTok);
     return true;
   }
 
@@ -891,7 +899,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   // to recursively expand in order to get more gcc-list behavior, so we force
   // DisableMacroExpansion to false and restore it when we're done parsing the
   // expression.
-  bool DisableMacroExpansionAtStartOfDirective = DisableMacroExpansion;
+  llvm::scope_exit RestoreMacroExpansion(
+      [this, Old = DisableMacroExpansion] { DisableMacroExpansion = Old; });
   DisableMacroExpansion = false;
 
   // Peek ahead one token.
@@ -907,9 +916,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     // Parse error, skip the rest of the macro line.
     if (Tok.isNot(tok::eod))
       DiscardUntilEndOfDirective(Tok);
-
-    // Restore 'DisableMacroExpansion'.
-    DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
 
     // We cannot trust the source range from the value because there was a
     // parse error. Track the range manually -- the end of the directive is the
@@ -931,8 +937,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     if (DT.State == DefinedTracker::NotDefinedMacro)
       IfNDefMacro = DT.TheMacro;
 
-    // Restore 'DisableMacroExpansion'.
-    DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
     bool IsNonZero = ResVal.Val != 0;
     SourceRange ValRange = ResVal.getRange();
     return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds,
@@ -947,8 +951,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     if (Tok.isNot(tok::eod))
       DiscardUntilEndOfDirective(Tok);
 
-    // Restore 'DisableMacroExpansion'.
-    DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
     return {std::nullopt,
             false,
             DT.IncludedUndefinedIds,
@@ -966,8 +968,6 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
   EvaluatedDefined = EvaluatedDefined || DT.State != DefinedTracker::Unknown;
 
-  // Restore 'DisableMacroExpansion'.
-  DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
   bool IsNonZero = ResVal.Val != 0;
   SourceRange ValRange = ResVal.getRange();
   return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds, ValRange};

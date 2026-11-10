@@ -195,6 +195,18 @@ void RTNAME(EnableFPETraps)(uint32_t excepts) {
 // bit 24: FZ   -- single, double precision flush to zero bit
 // bit 19: FZ16 -- half precision flush to zero bit [not currently relevant]
 #define _FPU_FPCR_FZ_MASK_ 0x01080000
+#if defined(__aarch64__) && defined(__CUDACC__) && \
+    __CUDACC_VER_MAJOR__ == 12 && __CUDACC_VER_MINOR__ == 0
+// glibc's _FPU_GETCW/_FPU_SETCW expand to __builtin_aarch64_[gs]et_fpcr,
+// which CUDA 12.0 does not recognize. Access FPCR directly.
+#define FLANG_RT_GET_FPCR(fpcr) \
+  __asm__ __volatile__("mrs %0, fpcr" : "=r"(fpcr))
+#define FLANG_RT_SET_FPCR(fpcr) \
+  __asm__ __volatile__("msr fpcr, %0" : : "r"(fpcr))
+#else
+#define FLANG_RT_GET_FPCR(fpcr) _FPU_GETCW(fpcr)
+#define FLANG_RT_SET_FPCR(fpcr) _FPU_SETCW(fpcr)
+#endif
 #endif
 
 bool RTNAME(GetUnderflowMode)(void) {
@@ -202,7 +214,7 @@ bool RTNAME(GetUnderflowMode)(void) {
   return _MM_GET_FLUSH_ZERO_MODE() == _MM_FLUSH_ZERO_OFF;
 #elif defined(_FPU_GETCW)
   uint64_t fpcr;
-  _FPU_GETCW(fpcr);
+  FLANG_RT_GET_FPCR(fpcr);
   return (fpcr & _FPU_FPCR_FZ_MASK_) == 0;
 #else
   return false;
@@ -213,13 +225,13 @@ void RTNAME(SetUnderflowMode)(bool flag) {
   _MM_SET_FLUSH_ZERO_MODE(flag ? _MM_FLUSH_ZERO_OFF : _MM_FLUSH_ZERO_ON);
 #elif defined(_FPU_GETCW)
   uint64_t fpcr;
-  _FPU_GETCW(fpcr);
+  FLANG_RT_GET_FPCR(fpcr);
   if (flag) {
     fpcr &= ~_FPU_FPCR_FZ_MASK_;
   } else {
     fpcr |= _FPU_FPCR_FZ_MASK_;
   }
-  _FPU_SETCW(fpcr);
+  FLANG_RT_SET_FPCR(fpcr);
 #endif
 }
 
@@ -231,7 +243,13 @@ size_t RTNAME(GetModesTypeSize)(void) {
 #endif
 }
 size_t RTNAME(GetStatusTypeSize)(void) {
-  return sizeof(fenv_t); // byte size of ieee_status_type data
+  // byte size of ieee_status_type data
+#if defined(_AIX)
+  // the raw FPSCR double is needed for trap-enable bit round-trip
+  return sizeof(fenv_t) + sizeof(double);
+#else
+  return sizeof(fenv_t);
+#endif
 }
 
 } // extern "C"

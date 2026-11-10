@@ -33,6 +33,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
     edges. By default, type equality is used.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -72,11 +73,11 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
       }],
       "::std::optional<::mlir::BlockArgument>", "getSuccessorBlockArgument",
       (ins "unsigned":$operandIndex), [{
-        ::mlir::Operation *opaqueOp = $_op;
-        for (unsigned i = 0, e = opaqueOp->getNumSuccessors(); i != e; ++i) {
+        auto branch = ::mlir::cast<::mlir::BranchOpInterface>(*$_raw_op);
+        for (unsigned i = 0, e = $_raw_op->getNumSuccessors(); i != e; ++i) {
           if (::std::optional<::mlir::BlockArgument> arg = ::mlir::detail::getBranchSuccessorArgument(
-                $_op.getSuccessorOperands(i), operandIndex,
-                opaqueOp->getSuccessor(i)))
+                branch.getSuccessorOperands(i), operandIndex,
+                $_raw_op->getSuccessor(i)))
             return arg;
         }
         return ::std::nullopt;
@@ -93,26 +94,13 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
     InterfaceMethod<[{
         This method is called to compare types along control-flow edges. By
         default, the types are checked as equal.
+
+        Note: Operations that do not support a certain type for successor
+        operands at all should return "false" if `lhs` / `rhs` is that type.
       }],
       "bool", "areTypesCompatible",
       (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
        [{ return lhs == rhs; }]
-    >,
-    InterfaceMethod<[{
-        Returns true if a value of the given type may be appended to the
-        forwarded operands of the successor at the given index, i.e. whether
-        the operation could pass such a value along the corresponding
-        control-flow edge. Transformations that thread new values across a
-        branch, such as block merging, must check this before appending to
-        `getSuccessorOperands`: an operation whose successor operands are
-        constrained to a subset of types (the LLVM dialect terminators, for
-        example, only forward LLVM-compatible values) would otherwise be
-        rewritten into an operation that no longer verifies. The default
-        implementation accepts any type.
-      }],
-      "bool", "mayForwardTypeToSuccessor",
-      (ins "unsigned":$index, "::mlir::Type":$type), [{}],
-      /*defaultImplementation=*/[{ return true; }]
     >,
   ];
 
@@ -194,6 +182,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     is a successor operand.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -440,6 +429,7 @@ def RegionBranchTerminatorOpInterface :
     may have region successors.)
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -513,6 +503,7 @@ def SelectLikeOpInterface : OpInterface<"SelectLikeOpInterface"> {
     the operation works element-wise.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -549,6 +540,7 @@ def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
     to have an attribute of type DenseI32ArrayAttr named branch_weights.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [InterfaceMethod<
                      /*desc=*/"Returns the branch weights",
@@ -613,6 +605,7 @@ def WeightedRegionBranchOpInterface
     to have an attribute of type DenseI32ArrayAttr named branch_weights.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [InterfaceMethod<
                      /*desc=*/"Returns the region weights",

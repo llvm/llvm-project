@@ -338,7 +338,7 @@ define float @fadd_sel_op0(i1 %b, float %x) {
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], float -inf, float +inf
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %s = select i1 %b, float 0xFFF0000000000000, float 0x7FF0000000000000
+  %s = select i1 %b, float -inf, float +inf
   %r = fadd nnan float %s, %x
   ret float %r
 }
@@ -350,7 +350,7 @@ define float @fadd_sel_op0_use(i1 %b, float %x) {
 ; CHECK-NEXT:    [[R:%.*]] = fadd nnan float [[S]], [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %s = select i1 %b, float 0xFFF0000000000000, float 0x7FF0000000000000
+  %s = select i1 %b, float -inf, float +inf
   call void @use_f32(float %s)
   %r = fadd nnan float %s, %x
   ret float %r

@@ -1,4 +1,4 @@
-# RUN: llc %s -mtriple aarch64-- -o - -run-pass regbankselect | FileCheck %s
+# RUN: llc %s -mtriple aarch64-- -o - -run-pass reg-bank-select | FileCheck %s
 ---
 # CHECK-LABEL: foo
 # Check that we produce a valid mapping for REG_SEQUENCE.

@@ -21,7 +21,7 @@ define amdgpu_kernel void @v_atomicrmw_fadd_bf16(ptr addrspace(1) %out, i1 %in, 
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_lshl_b32 s4, 0xffff, s2
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-TRUE16-NEXT:    s_not_b32 s3, s4

@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class NumberOfThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -124,11 +124,12 @@ class NumberOfThreadsTestCase(TestBase):
                 continue
 
             # If we aren't stopped out the thread breakpoint try to resume.
+            index_id = thread.GetIndexID()
             if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
-                self.runCmd("thread continue %d" % (i + 1))
+                self.runCmd("thread continue %d" % index_id)
             self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
 
-            expect_threads += " #%d" % (i + 1)
+            expect_threads += " #%d" % index_id
 
         # Construct our expected back trace string
         expect_string = "10 thread(s)%s" % (expect_threads)

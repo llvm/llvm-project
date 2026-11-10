@@ -34,8 +34,7 @@ void function() {
 // expected-note@#5 {{while substituting deduced template arguments into function template 'compare' [with IteratorL = Object *, IteratorR = Object *]}}
 
 // expected-note@#4 {{candidate template ignored: constraints not satisfied [with IteratorL = Object *, IteratorR = Object *]}}
-// We don't know exactly the substituted type for `lhs == rhs`, thus a placeholder 'expr-type' is emitted.
-// expected-note@#3 {{because 'convertible_to<expr-type, bool>' would be invalid}}
+// expected-note@#3 {{because 'convertible_to<bool, bool>' evaluated to false}}
 
 namespace GH131530 {
 
@@ -73,4 +72,17 @@ namespace GH138823 {
   template <ConceptB Foo> void bar(Foo);
 
   void test() { bar(1); }
+}
+
+namespace GH222954 {
+
+template <typename T> struct foo {};
+template <typename T>
+concept bar = foo<T>::baz;
+
+static_assert(requires { requires bar<int>; });
+// expected-error@-1 {{static assertion failed}}
+// expected-note@-2 {{because 'int' does not satisfy 'bar'}}
+// expected-note@-5 {{because 'bar<int>' would be invalid}}
+
 }

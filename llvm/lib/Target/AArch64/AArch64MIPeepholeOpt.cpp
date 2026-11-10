@@ -301,7 +301,12 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   if (MI.getOperand(2).getSubReg())
     return false;
 
-  MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
+  Register DefReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
+  if (!DefReg.isVirtual() || !SrcReg.isVirtual())
+    return false;
+
+  MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
   if (!SrcMI)
     return false;
 
@@ -344,10 +349,7 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
     return false;
 
-  Register DefReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(2).getReg();
   MRI->replaceRegWith(DefReg, SrcReg);
-  MRI->clearKillFlags(SrcReg);
   LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
   MI.eraseFromParent();
 
@@ -512,8 +514,10 @@ bool AArch64MIPeepholeOptImpl::visitADDSSUBS(OpcodePair PosOpcs,
           return std::nullopt;
         // Check conditional uses last since it is expensive for scanning
         // proceeding instructions
-        MachineInstr &SrcMI = *MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
-        std::optional<UsedNZCV> NZCVUsed = examineCFlagsUse(SrcMI, MI, *TRI);
+        MachineInstr *SrcMI = MRI->getVRegDef(MI.getOperand(1).getReg());
+        if (!SrcMI)
+          return std::nullopt;
+        std::optional<UsedNZCV> NZCVUsed = examineCFlagsUse(*SrcMI, MI, *TRI);
         if (!NZCVUsed || NZCVUsed->C || NZCVUsed->V)
           return std::nullopt;
         return OP;
@@ -565,9 +569,10 @@ bool AArch64MIPeepholeOptImpl::checkMovImmInstr(MachineInstr &MI,
 
   // If the MOV has multiple uses, do not split the immediate because it causes
   // more instructions.
-  if (!MRI->hasOneUse(MovMI->getOperand(0).getReg()))
+  if (!MRI->hasOneNonDBGUse(MovMI->getOperand(0).getReg()))
     return false;
-  if (SubregToRegMI && !MRI->hasOneUse(SubregToRegMI->getOperand(0).getReg()))
+  if (SubregToRegMI &&
+      !MRI->hasOneNonDBGUse(SubregToRegMI->getOperand(0).getReg()))
     return false;
 
   // It is OK to perform this peephole optimization.
@@ -646,10 +651,27 @@ bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
     MI.getOperand(0).setReg(DstReg);
   }
 
+  auto SalvageDebugUses = [&](Register Reg, int64_t Val) {
+    for (MachineOperand &MO : make_early_inc_range(MRI->use_operands(Reg))) {
+      MachineInstr &DbgMI = *MO.getParent();
+      if (!DbgMI.isDebugValue())
+        continue;
+      // An immediate cannot express a value in memory at that address.
+      if (DbgMI.isNonListDebugValue() && DbgMI.isIndirectDebugValue())
+        DbgMI.setDebugValueUndef();
+      else
+        MO.ChangeToImmediate(Val);
+    }
+  };
+
   // Record the MIs need to be removed.
   MI.eraseFromParent();
-  if (SubregToRegMI)
+  if (SubregToRegMI) {
+    SalvageDebugUses(SubregToRegMI->getOperand(0).getReg(), Imm);
     SubregToRegMI->eraseFromParent();
+  }
+  SalvageDebugUses(MovMI->getOperand(0).getReg(),
+                   MovMI->getOperand(1).getImm());
   MovMI->eraseFromParent();
 
   return true;
@@ -715,9 +737,23 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     MachineOperand &SrcOp = MI->getOperand(1);
     if (!SrcOp.isReg())
       return false;
-    if (SrcOp.getSubReg())
-      return false;
     Register SrcReg = SrcOp.getReg();
+    if (SrcOp.getSubReg()) {
+      // If operand is defined by a LD1/2/3/4 that define a D subreg tuple
+      // then upper bits of the tuple's registers are implicitly zeroed
+      // and the FMOV is unneeded.
+      if (!SrcReg.isVirtual())
+        return false;
+
+      MachineInstr *SrcDef = MRI->getUniqueVRegDef(SrcReg);
+      if (!SrcDef || SrcDef->getOpcode() <= TargetOpcode::GENERIC_OP_END ||
+          SrcDef->getDesc().isPseudo() || !SrcDef->mayLoad())
+        return false;
+
+      const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
+      return RC == &AArch64::DDRegClass || RC == &AArch64::DDDRegClass ||
+             RC == &AArch64::DDDDRegClass;
+    }
     auto IsGPR64Like = [&]() -> bool {
       if (SrcReg.isVirtual())
         return AArch64::GPR64allRegClass.hasSubClassEq(
@@ -739,7 +775,6 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
                 TII->get(TargetOpcode::COPY), NewSrc)
             .addReg(SrcReg, getKillRegState(SrcKill));
         SrcReg = NewSrc;
-        SrcKill = true;
       }
     } else if (!AArch64::GPR64RegClass.contains(SrcReg)) {
       return false;
@@ -761,10 +796,12 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   //
   //  %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
   //  %6:fpr128 = IMPLICIT_DEF
-  //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
-  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
-  MachineInstr *Low64MI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
-  if (Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
+  //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
+  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, %3:fpr128, 0
+  if (MI.getOperand(2).getImm() != 1)
+    return false;
+  MachineInstr *Low64MI = MRI->getVRegDef(MI.getOperand(1).getReg());
+  if (!Low64MI || Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
   Low64MI = MRI->getUniqueVRegDef(Low64MI->getOperand(2).getReg());
   if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI, TII))
@@ -775,14 +812,14 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   //
   //  %2:fpr64 = MOVID 0
   //  %4:fpr128 = IMPLICIT_DEF
-  //  %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64, %subreg.dsub
-  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+  //  %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), %2:fpr64, %subreg.dsub
+  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, %3:fpr128, 0
   // or
   //  %5:fpr128 = MOVIv2d_ns 0
   //  %6:fpr64 = COPY %5.dsub:fpr128
   //  %8:fpr128 = IMPLICIT_DEF
-  //  %7:fpr128 = INSERT_SUBREG %8:fpr128(tied-def 0), killed %6:fpr64, %subreg.dsub
-  //  %11:fpr128 = INSvi64lane %9:fpr128(tied-def 0), 1, killed %7:fpr128, 0
+  //  %7:fpr128 = INSERT_SUBREG %8:fpr128(tied-def 0), %6:fpr64, %subreg.dsub
+  //  %11:fpr128 = INSvi64lane %9:fpr128(tied-def 0), 1, %7:fpr128, 0
   MachineInstr *High64MI = MRI->getUniqueVRegDef(MI.getOperand(3).getReg());
   if (!High64MI || High64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
@@ -801,7 +838,6 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
   MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
-  MRI->clearKillFlags(NewDef);
   MI.eraseFromParent();
 
   return true;
@@ -817,8 +853,6 @@ bool AArch64MIPeepholeOptImpl::visitFMOVDr(MachineInstr &MI) {
   Register OldDef = MI.getOperand(0).getReg();
   Register NewDef = MI.getOperand(1).getReg();
   LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
-  MRI->clearKillFlags(OldDef);
-  MRI->clearKillFlags(NewDef);
   MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
   MI.eraseFromParent();
@@ -902,7 +936,7 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
     if (SrcMI->getOpcode() != AArch64::SBFMXri ||
         SrcMI->getOperand(2).getImm() != 0 ||
         SrcMI->getOperand(3).getImm() != 31)
-      return AArch64::NoRegister;
+      return Register();
     return SrcMI->getOperand(1).getReg();
   };
   // Look for SUBREG_TO_REG(ORRWrr(WZR, COPY(X.sub_32)))
@@ -910,16 +944,16 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
     if (SrcMI->getOpcode() != AArch64::SUBREG_TO_REG ||
         SrcMI->getOperand(2).getImm() != AArch64::sub_32 ||
         !MRI->hasOneNonDBGUse(SrcMI->getOperand(1).getReg()))
-      return AArch64::NoRegister;
+      return Register();
     MachineInstr *Orr = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
     if (!Orr || Orr->getOpcode() != AArch64::ORRWrr ||
         Orr->getOperand(1).getReg() != AArch64::WZR ||
         !MRI->hasOneNonDBGUse(Orr->getOperand(2).getReg()))
-      return AArch64::NoRegister;
+      return Register();
     MachineInstr *Cpy = MRI->getUniqueVRegDef(Orr->getOperand(2).getReg());
     if (!Cpy || Cpy->getOpcode() != AArch64::COPY ||
         Cpy->getOperand(1).getSubReg() != AArch64::sub_32)
-      return AArch64::NoRegister;
+      return Register();
     DeadInstrs.insert(Orr);
     return Cpy->getOperand(1).getReg();
   };

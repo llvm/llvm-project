@@ -334,8 +334,8 @@ exit:
 define void @small_trip_count_loop(ptr %arg, ptr %arg2) {
 ; CHECK-LABEL: @small_trip_count_loop(
 ; CHECK-NEXT:  iter.check:
-; CHECK-NEXT:    [[ARG3:%.*]] = ptrtoaddr ptr [[ARG:%.*]] to i64
 ; CHECK-NEXT:    [[ARG21:%.*]] = ptrtoaddr ptr [[ARG2:%.*]] to i64
+; CHECK-NEXT:    [[ARG3:%.*]] = ptrtoaddr ptr [[ARG:%.*]] to i64
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[ARG21]], [[ARG3]]
@@ -451,11 +451,10 @@ define void @trip_count_based_on_ptrtoint(i64 %x) "target-cpu"="apple-m1" {
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 0, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 32
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT5:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ 0, [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT5:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX3]], 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[NEXT_GEP4]], align 4

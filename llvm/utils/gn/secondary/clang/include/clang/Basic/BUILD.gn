@@ -21,6 +21,7 @@ write_cmake_config("version") {
 diag_groups = [
   "Analysis",
   "AST",
+  "CodeGen",
   "Comment",
   "Common",
   "CrossTU",
@@ -142,6 +143,10 @@ clang_tablegen("AttributeSpellingList") {
 }
 
 clang_tablegen("Builtins") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsAVR") {
   args = [ "-gen-clang-builtins" ]
 }
 

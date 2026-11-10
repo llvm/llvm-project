@@ -160,6 +160,7 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   bool IsLifetimeMarker = Kind & LifetimeMarker;
   bool IsFakeUse = Kind & FakeUse;
   bool IsSEHFinallyCleanup = Kind & SEHFinallyCleanup;
+  bool IsStackRestore = Kind & StackRestore;
 
   // Per C++ [except.terminate], it is implementation-defined whether none,
   // some, or all cleanups are called before std::terminate. Thus, when
@@ -186,6 +187,8 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
     Scope->setFakeUse();
   if (IsSEHFinallyCleanup)
     Scope->setSEHFinallyCleanup();
+  if (IsStackRestore)
+    Scope->setStackRestore();
 
   // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
   // If exceptions are disabled/ignored and SEH is not in use, then there is no
@@ -754,7 +757,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
     EHStack.popCleanup(); // safe because there are no fixups
     assert(EHStack.getNumBranchFixups() == 0 ||
            EHStack.hasNormalCleanups());
-    if (NormalDeactivateOrigIP.isSet())
+    if (NormalDeactivateOrigIP.isValid())
       Builder.restoreIP(NormalDeactivateOrigIP);
     return;
   }
@@ -796,11 +799,11 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
       // If we are deactivating a normal cleanup then we don't have a
       // fallthrough. Restore original IP to emit CPP scope ends in the correct
       // block.
-      if (NormalDeactivateOrigIP.isSet())
+      if (NormalDeactivateOrigIP.isValid())
         Builder.restoreIP(NormalDeactivateOrigIP);
       if (Builder.GetInsertBlock() && !IsSEHFinallyCleanup)
         EmitSehCppScopeEnd();
-      if (NormalDeactivateOrigIP.isSet())
+      if (NormalDeactivateOrigIP.isValid())
         NormalDeactivateOrigIP = Builder.saveAndClearIP();
     }
     destroyOptimisticNormalEntry(*this, Scope);
@@ -1027,7 +1030,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
     }
   }
 
-  if (NormalDeactivateOrigIP.isSet())
+  if (NormalDeactivateOrigIP.isValid())
     Builder.restoreIP(NormalDeactivateOrigIP);
   assert(EHStack.hasNormalCleanups() || EHStack.getNumBranchFixups() == 0);
 
@@ -1046,7 +1049,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
     SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
     llvm::CleanupPadInst *CPI = nullptr;
 
-    const EHPersonality &Personality = EHPersonality::get(*this);
+    const EHPersonality &Personality = getEHPersonality(*this);
     if (Personality.usesFuncletPads()) {
       llvm::Value *ParentPad = CurrentFuncletPad;
       if (!ParentPad)
@@ -1348,10 +1351,8 @@ static void EmitSehScope(CodeGenFunction &CGF,
 // Invoke a llvm.seh.scope.begin at the beginning of a CPP scope for -EHa
 void CodeGenFunction::EmitSehCppScopeBegin() {
   assert(getLangOpts().EHAsynch);
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
-      CGM.CreateRuntimeFunction(FTy, "llvm.seh.scope.begin");
+      CGM.getIntrinsic(llvm::Intrinsic::seh_scope_begin);
   EmitSehScope(*this, SehCppScope);
 }
 
@@ -1359,29 +1360,23 @@ void CodeGenFunction::EmitSehCppScopeBegin() {
 //   llvm.seh.scope.end is emitted before popCleanup, so it's "invoked"
 void CodeGenFunction::EmitSehCppScopeEnd() {
   assert(getLangOpts().EHAsynch);
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
-      CGM.CreateRuntimeFunction(FTy, "llvm.seh.scope.end");
+      CGM.getIntrinsic(llvm::Intrinsic::seh_scope_end);
   EmitSehScope(*this, SehCppScope);
 }
 
 // Invoke a llvm.seh.try.begin at the beginning of a SEH scope for -EHa
 void CodeGenFunction::EmitSehTryScopeBegin() {
   assert(getLangOpts().EHAsynch);
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
-      CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.begin");
+      CGM.getIntrinsic(llvm::Intrinsic::seh_try_begin);
   EmitSehScope(*this, SehCppScope);
 }
 
 // Invoke a llvm.seh.try.end at the end of a SEH scope for -EHa
 void CodeGenFunction::EmitSehTryScopeEnd() {
   assert(getLangOpts().EHAsynch);
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
-      CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.end");
+      CGM.getIntrinsic(llvm::Intrinsic::seh_try_end);
   EmitSehScope(*this, SehCppScope);
 }

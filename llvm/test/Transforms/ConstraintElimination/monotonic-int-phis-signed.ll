@@ -11,7 +11,7 @@ define void @signed_iv_step_1(i64 %end) {
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ -10, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -46,7 +46,7 @@ define void @signed_iv_step_4(i64 %count) {
 ; CHECK-LABEL: define void @signed_iv_step_4(
 ; CHECK-SAME: i64 [[COUNT:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END:%.*]] = shl nsw i64 [[COUNT]], 2
+; CHECK-NEXT:    [[END:%.*]] = shl nuw nsw i64 [[COUNT]], 2
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sgt i64 [[COUNT]], -1
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
@@ -130,7 +130,7 @@ define void @signed_iv_step_4_start_4(i64 %count) {
 ; CHECK-LABEL: define void @signed_iv_step_4_start_4(
 ; CHECK-SAME: i64 [[COUNT:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END:%.*]] = shl nsw i64 [[COUNT]], 2
+; CHECK-NEXT:    [[END:%.*]] = shl nuw nsw i64 [[COUNT]], 2
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sgt i64 [[COUNT]], 0
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
@@ -171,7 +171,7 @@ define void @signed_iv_step_4_start_4_missing_precond(i64 %count) {
 ; CHECK-LABEL: define void @signed_iv_step_4_start_4_missing_precond(
 ; CHECK-SAME: i64 [[COUNT:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END:%.*]] = shl nsw i64 [[COUNT]], 2
+; CHECK-NEXT:    [[END:%.*]] = shl nuw nsw i64 [[COUNT]], 2
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sgt i64 [[COUNT]], -1
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
@@ -218,7 +218,7 @@ define void @signed_iv_step_minus1(i64 %end) {
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 10, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:

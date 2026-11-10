@@ -152,8 +152,8 @@ public:
     return realpathCached(Path, ec);
   }
 #ifndef _WIN32
-  mode_t lstatCached(StringRef Path);
-  std::optional<std::string> readlinkCached(StringRef Path);
+  LLVM_ABI mode_t lstatCached(StringRef Path);
+  LLVM_ABI std::optional<std::string> readlinkCached(StringRef Path);
 #endif
   LLVM_ABI std::optional<std::string>
   realpathCached(StringRef Path, std::error_code &ec, StringRef base = "",

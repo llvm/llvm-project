@@ -39,9 +39,7 @@ entry:
 define <8 x i64> @test_mm512_cvtne2ps2bf16_512_concat(<16 x float> %A, <16 x float> %B) {
 ; CHECK-LABEL: test_mm512_cvtne2ps2bf16_512_concat:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvtneps2bf16 %zmm0, %ymm0 # encoding: [0x62,0xf2,0x7e,0x48,0x72,0xc0]
-; CHECK-NEXT:    vcvtneps2bf16 %zmm1, %ymm1 # encoding: [0x62,0xf2,0x7e,0x48,0x72,0xc9]
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x1a,0xc1,0x01]
+; CHECK-NEXT:    vcvtne2ps2bf16 %zmm0, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x77,0x48,0x72,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
   %0 = tail call <16 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.512(<16 x float> %A)

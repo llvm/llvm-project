@@ -109,7 +109,10 @@ public:
     bool m_timeout_modified;
   };
 
-  GDBRemoteCommunication();
+  /// Construct a GDB-remote communication channel named \p name.
+  ///
+  /// The name identifies the channel in packet logs.
+  explicit GDBRemoteCommunication(llvm::StringRef name);
 
   ~GDBRemoteCommunication() override;
 
@@ -166,6 +169,12 @@ protected:
                       // a single process
 
   std::string m_bytes;
+  /// Where CheckForPacket resumes its search for the '#' that ends the first
+  /// packet in m_bytes. Nonzero only while that packet is incomplete.
+  size_t m_hash_search_start = 0;
+  /// m_bytes.size() when m_hash_search_start was recorded, so CheckForPacket
+  /// can assert that nothing else changed m_bytes.
+  size_t m_hash_search_bytes_size = 0;
   std::recursive_mutex m_bytes_mutex;
   CompressionType m_compression_type;
 
@@ -199,6 +208,9 @@ protected:
   bool DecompressPacket();
 
 private:
+  /// The communication channel name included in packet logs.
+  const std::string m_name;
+
 #if HAVE_LIBCOMPRESSION
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;

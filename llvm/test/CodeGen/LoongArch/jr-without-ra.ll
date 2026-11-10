@@ -38,65 +38,17 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    alsl.d $a6, $a6, $s2, 4
 ; CHECK-NEXT:    pcalau12i $s2, %pc_hi20(.LJTI0_0)
 ; CHECK-NEXT:    addi.d $s2, $s2, %pc_lo12(.LJTI0_0)
-; CHECK-NEXT:    ori $s3, $zero, 1
-; CHECK-NEXT:    ori $s4, $zero, 50
+; CHECK-NEXT:    ori $s3, $zero, 50
+; CHECK-NEXT:    ori $s4, $zero, 1
 ; CHECK-NEXT:    ori $s5, $zero, 3
 ; CHECK-NEXT:    lu32i.d $s5, 262144
-; CHECK-NEXT:    b .LBB0_4
+; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:    .p2align 4, , 16
-; CHECK-NEXT:  .LBB0_1: # %sw.bb27.i.i
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    ori $s7, $zero, 1
-; CHECK-NEXT:  .LBB0_2: # %if.else.i106
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    alsl.d $s8, $s1, $s1, 3
-; CHECK-NEXT:    alsl.d $s1, $s8, $s1, 1
-; CHECK-NEXT:    add.d $s1, $t0, $s1
-; CHECK-NEXT:    ldx.bu $s7, $s1, $s7
-; CHECK-NEXT:  .LBB0_3: # %phy_tssi_get_ofdm_de.exit
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    st.b $zero, $t6, 0
-; CHECK-NEXT:    st.b $s6, $t4, 0
-; CHECK-NEXT:    st.b $zero, $fp, 0
-; CHECK-NEXT:    st.b $zero, $t2, 0
-; CHECK-NEXT:    st.b $zero, $a1, 0
-; CHECK-NEXT:    st.b $zero, $t3, 0
-; CHECK-NEXT:    st.b $s7, $a5, 0
-; CHECK-NEXT:    ori $s1, $zero, 1
-; CHECK-NEXT:    move $s6, $a3
-; CHECK-NEXT:  .LBB0_4: # %for.body
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    beqz $a4, .LBB0_9
-; CHECK-NEXT:  # %bb.5: # %calc_6g.i
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    move $s6, $zero
-; CHECK-NEXT:    bnez $zero, .LBB0_8
-; CHECK-NEXT:  # %bb.6: # %calc_6g.i
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    slli.d $s7, $zero, 3
-; CHECK-NEXT:    ldx.d $s7, $s2, $s7
-; CHECK-NEXT:    jr $s7
-; CHECK-NEXT:  .LBB0_7: # %sw.bb12.i.i
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    ori $s6, $zero, 1
-; CHECK-NEXT:  .LBB0_8: # %if.else58.i
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
+; CHECK-NEXT:  .LBB0_1: # %if.else58.i
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    ldx.bu $s6, $a6, $s6
-; CHECK-NEXT:    b .LBB0_11
-; CHECK-NEXT:    .p2align 4, , 16
-; CHECK-NEXT:  .LBB0_9: # %if.end.i
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    andi $s6, $s6, 255
-; CHECK-NEXT:    bltu $s4, $s6, .LBB0_15
-; CHECK-NEXT:  # %bb.10: # %if.end.i
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    sll.d $s6, $s3, $s6
-; CHECK-NEXT:    and $s7, $s6, $s5
-; CHECK-NEXT:    move $s6, $s0
-; CHECK-NEXT:    beqz $s7, .LBB0_15
-; CHECK-NEXT:  .LBB0_11: # %phy_tssi_get_ofdm_trim_de.exit
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    move $s7, $zero
+; CHECK-NEXT:  .LBB0_2: # %phy_tssi_get_ofdm_trim_de.exit
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    st.b $zero, $t8, 0
 ; CHECK-NEXT:    slli.d $s8, $t1, 2
 ; CHECK-NEXT:    alsl.d $s8, $t1, $s8, 1
@@ -106,23 +58,45 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    st.b $zero, $a7, 0
 ; CHECK-NEXT:    st.b $zero, $t7, 0
 ; CHECK-NEXT:    st.b $s8, $a0, 0
-; CHECK-NEXT:    bnez $s3, .LBB0_13
-; CHECK-NEXT:  # %bb.12: # %phy_tssi_get_ofdm_trim_de.exit
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    addi.w $s8, $zero, -41
-; CHECK-NEXT:    slli.d $s8, $s8, 3
-; CHECK-NEXT:    pcalau12i $ra, %pc_hi20(.LJTI0_1)
-; CHECK-NEXT:    addi.d $ra, $ra, %pc_lo12(.LJTI0_1)
-; CHECK-NEXT:    ldx.d $s8, $ra, $s8
-; CHECK-NEXT:    jr $s8
-; CHECK-NEXT:  .LBB0_13: # %phy_tssi_get_ofdm_trim_de.exit
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    bnez $s3, .LBB0_1
-; CHECK-NEXT:  # %bb.14: # %phy_tssi_get_ofdm_trim_de.exit
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    bnez $zero, .LBB0_3
-; CHECK-NEXT:    b .LBB0_2
-; CHECK-NEXT:  .LBB0_15: # %sw.bb9.i.i
+; CHECK-NEXT:    ori $s7, $zero, 1
+; CHECK-NEXT:    alsl.d $s8, $s1, $s1, 3
+; CHECK-NEXT:    alsl.d $s1, $s8, $s1, 1
+; CHECK-NEXT:    add.d $s1, $t0, $s1
+; CHECK-NEXT:    ldx.bu $s7, $s1, $s7
+; CHECK-NEXT:    st.b $zero, $t6, 0
+; CHECK-NEXT:    st.b $s6, $t4, 0
+; CHECK-NEXT:    st.b $zero, $fp, 0
+; CHECK-NEXT:    st.b $zero, $t2, 0
+; CHECK-NEXT:    st.b $zero, $a1, 0
+; CHECK-NEXT:    st.b $zero, $t3, 0
+; CHECK-NEXT:    st.b $s7, $a5, 0
+; CHECK-NEXT:    ori $s1, $zero, 1
+; CHECK-NEXT:    move $s6, $a3
+; CHECK-NEXT:  .LBB0_3: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    beqz $a4, .LBB0_6
+; CHECK-NEXT:  # %bb.4: # %calc_6g.i
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    move $s6, $zero
+; CHECK-NEXT:    slli.d $s7, $zero, 3
+; CHECK-NEXT:    ldx.d $s7, $s2, $s7
+; CHECK-NEXT:    jr $s7
+; CHECK-NEXT:  .LBB0_5: # %sw.bb12.i.i
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    ori $s6, $zero, 1
+; CHECK-NEXT:    b .LBB0_1
+; CHECK-NEXT:    .p2align 4, , 16
+; CHECK-NEXT:  .LBB0_6: # %if.end.i
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    andi $s6, $s6, 255
+; CHECK-NEXT:    bltu $s3, $s6, .LBB0_8
+; CHECK-NEXT:  # %bb.7: # %if.end.i
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    sll.d $s6, $s4, $s6
+; CHECK-NEXT:    and $s7, $s6, $s5
+; CHECK-NEXT:    move $s6, $s0
+; CHECK-NEXT:    bnez $s7, .LBB0_2
+; CHECK-NEXT:  .LBB0_8: # %sw.bb9.i.i
 ; CHECK-NEXT:    ld.d $s8, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $s7, $sp, 16 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $s6, $sp, 24 # 8-byte Folded Reload

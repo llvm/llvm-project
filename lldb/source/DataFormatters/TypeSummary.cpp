@@ -319,9 +319,9 @@ std::string ScriptedSummaryFormat::GetName() { return m_class_name; }
 
 BytecodeSummaryFormat::BytecodeSummaryFormat(
     const TypeSummaryImpl::Flags &flags,
-    std::unique_ptr<llvm::MemoryBuffer> bytecode)
-    : TypeSummaryImpl(Kind::eBytecode, flags), m_bytecode(std::move(bytecode)) {
-}
+    std::unique_ptr<llvm::MemoryBuffer> bytecode, uint32_t version)
+    : TypeSummaryImpl(Kind::eBytecode, flags), m_bytecode(std::move(bytecode)),
+      m_version(version) {}
 
 bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
                                          std::string &retval,
@@ -339,7 +339,7 @@ bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
   FormatterBytecode::ControlStack control({m_bytecode->getBuffer()});
   FormatterBytecode::DataStack data({valobj->GetSP()});
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sig_summary);
+      control, data, FormatterBytecode::sig_summary, m_version);
   if (error) {
     retval = llvm::toString(std::move(error));
     return false;
@@ -357,6 +357,8 @@ bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
     os << *u;
   else if (auto i = std::get_if<int64_t>(&top))
     os << *i;
+  else if (auto ap = std::get_if<llvm::APSInt>(&top))
+    os << *ap;
   else if (auto valobj = std::get_if<ValueObjectSP>(&top)) {
     if (!valobj->get())
       os << "empty object";

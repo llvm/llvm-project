@@ -27,8 +27,9 @@ ArrayDtor arrDtor[16];
 
 // CIR: cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16>
 // CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}) {
+// CIR:   %[[ARR:.*]] = cir.cast bitcast %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR:   %[[CONST16:.*]] = cir.const #cir.int<16> : !u64i
-// CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!rec_ArrayDtor>
+// CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> -> !cir.ptr<!rec_ArrayDtor>
 // CIR:   %[[END:.*]] = cir.ptr_stride %[[BEGIN]], %[[CONST16]] : (!cir.ptr<!rec_ArrayDtor>, !u64i) -> !cir.ptr<!rec_ArrayDtor>
 // CIR:   %[[CUR_ADDR:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
 // CIR:   cir.store %[[END]], %[[CUR_ADDR]] : !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
@@ -52,10 +53,10 @@ ArrayDtor arrDtor[16];
 // CIR:   %[[DTOR:.*]] = cir.get_global @__cxx_global_array_dtor : !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[ARR_CAST:.*]] = cir.cast bitcast %[[ARR]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> -> !cir.ptr<!void>
-// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[ARR_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[ARR_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
-// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) {
+// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) #{{[0-9]+}} {
 // LLVM:   %[[BEGIN:.*]] = getelementptr %struct.ArrayDtor, ptr %[[ARR_ARG]], i32 0
 // LLVM:   %[[END:.*]] = getelementptr %struct.ArrayDtor, ptr %[[BEGIN]], i64 16
 // LLVM:   %[[CUR_ADDR:.*]] = alloca ptr
@@ -75,7 +76,7 @@ ArrayDtor arrDtor[16];
 // LLVM:   ret void
 // LLVM: }
 //
-// LLVM: define internal void @__cxx_global_var_init() {
+// LLVM: define internal void @__cxx_global_var_init() #{{[0-9]+}} {
 // LLVM:   call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @arrDtor, ptr @__dso_handle)
 
 // Note: OGCG defines these functions in reverse order of CIR->LLVM.
@@ -105,7 +106,7 @@ ArrayDtor arrDtor[16];
 // CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 
-// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]()
+// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]() #{{[0-9]+}}
 // LLVM:   call void @__cxx_global_var_init()
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]() {{.*}} section ".text.startup" {
