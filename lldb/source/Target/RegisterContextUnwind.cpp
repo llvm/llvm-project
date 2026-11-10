@@ -1315,16 +1315,16 @@ bool RegisterContextUnwind::IsSkipFrame() const {
 bool RegisterContextUnwind::IsTrapHandler(Process *process) const {
   // See if signal-frame CFI exists at m_current_pc.
   ModuleSP module_sp = m_current_pc.GetModule();
-  if (!m_current_pc.IsValid() || !module_sp || !module_sp->GetObjectFile())
-    return false;
-
-  DWARFCallFrameInfo *eh_frame = module_sp->GetUnwindTable().GetEHFrameInfo();
-  if (!eh_frame)
-    return false;
-
-  std::unique_ptr<UnwindPlan> plan_up = eh_frame->GetUnwindPlan(m_current_pc);
-  return plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
-         plan_up->PlanValidAtAddress(m_current_pc);
+  if (m_current_pc.IsValid() && module_sp && module_sp->GetObjectFile()) {
+    if (DWARFCallFrameInfo *eh_frame =
+            module_sp->GetUnwindTable().GetEHFrameInfo()) {
+      std::unique_ptr<UnwindPlan> plan_up =
+          eh_frame->GetUnwindPlan(m_current_pc);
+      if (plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
+          plan_up->PlanValidAtAddress(m_current_pc))
+        return true;
+    }
+  }
 
   // Check trap handler names provided by platform.
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
