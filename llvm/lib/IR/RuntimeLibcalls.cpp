@@ -428,6 +428,8 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     RetAttrs = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
   if (isInRegStruct(LastID))
     RetAttrs = RetAttrs.addAttribute(Ctx, Attribute::InReg);
+  RetAttrs = RetAttrs.addAttributes(
+      Ctx, getLibcallImplRetAttributes(Ctx, LibcallImpl));
 
   SmallVector<Type *, 4> ArgTys;
   SmallVector<AttributeSet, 4> ArgAttrs;
@@ -545,11 +547,6 @@ std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                    const DataLayout &DL,
                                    RTLIB::LibcallImpl LibcallImpl) const {
-  static constexpr Attribute::AttrKind MemoryFnAttrs[] = {
-      Attribute::NoUnwind, Attribute::WillReturn};
-  static constexpr Attribute::AttrKind CommonPtrArgAttrs[] = {
-      Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
-
   switch (LibcallImpl) {
   // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
@@ -592,71 +589,6 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
             : static_cast<Type *>(StructType::get(ScalarTy, ScalarTy));
 
     return {FunctionType::get(RetTy, {ScalarTy}, false), Attrs};
-  }
-  case RTLIB::impl_malloc:
-  case RTLIB::impl_calloc: {
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : MemoryFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addAttribute(Attribute::NoFree);
-
-    AllocFnKind AllocKind = AllocFnKind::Alloc;
-    if (LibcallImpl == RTLIB::impl_malloc)
-      AllocKind |= AllocFnKind::Uninitialized;
-
-    // TODO: Set memory attribute
-    FuncAttrBuilder.addAllocKindAttr(AllocKind);
-    FuncAttrBuilder.addAttribute("alloc-family", "malloc");
-    FuncAttrBuilder.addAllocSizeAttr(0, LibcallImpl == RTLIB::impl_malloc
-                                            ? std::nullopt
-                                            : std::make_optional(1));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    {
-      AttrBuilder ArgAttrBuilder(Ctx);
-      for (Attribute::AttrKind AK : CommonPtrArgAttrs)
-        ArgAttrBuilder.addAttribute(AK);
-
-      Attrs = Attrs.addRetAttribute(Ctx, Attribute::NoUndef);
-      Attrs = Attrs.addRetAttribute(Ctx, Attribute::NoAlias);
-      Attrs = Attrs.addParamAttribute(Ctx, 0, Attribute::NoUndef);
-      if (LibcallImpl == RTLIB::impl_calloc)
-        Attrs = Attrs.addParamAttribute(Ctx, 1, Attribute::NoUndef);
-    }
-
-    IntegerType *SizeT = getSizeTType(Ctx, DL);
-    PointerType *PtrTy = PointerType::get(Ctx, 0);
-    SmallVector<Type *, 2> ArgTys = {SizeT};
-    if (LibcallImpl == RTLIB::impl_calloc)
-      ArgTys.push_back(SizeT);
-
-    return {FunctionType::get(PtrTy, ArgTys, false), Attrs};
-  }
-  case RTLIB::impl_free: {
-    // TODO: Set memory attribute
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : MemoryFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-
-    FuncAttrBuilder.addAllocKindAttr(AllocFnKind::Free);
-    FuncAttrBuilder.addAttribute("alloc-family", "malloc");
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    {
-      AttrBuilder ArgAttrBuilder(Ctx);
-      ArgAttrBuilder.addAttribute(Attribute::NoUndef);
-      ArgAttrBuilder.addAttribute(Attribute::AllocatedPointer);
-      ArgAttrBuilder.addCapturesAttr(CaptureInfo::none());
-      Attrs = Attrs.addParamAttributes(Ctx, 0, ArgAttrBuilder);
-    }
-
-    return {FunctionType::get(Type::getVoidTy(Ctx), {PointerType::get(Ctx, 0)},
-                              false),
-            Attrs};
   }
   case RTLIB::impl___aeabi_idivmod:
   case RTLIB::impl___aeabi_uidivmod:

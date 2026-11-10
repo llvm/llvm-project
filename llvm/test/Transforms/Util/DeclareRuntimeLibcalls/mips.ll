@@ -348,7 +348,7 @@
 ; MIPS32-NEXT: declare float @atanf(float)
 ; MIPS32-NEXT: declare void @cabs(...)
 ; MIPS32-NEXT: declare void @cabsf(...)
-; MIPS32-NEXT: declare noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
+; MIPS32-NEXT: declare noalias noundef ptr @calloc(i32 noundef signext, i32 noundef signext) [[CALLOC_ATTRS:#[0-9]+]]
 ; MIPS32-NEXT: declare double @cbrt(double)
 ; MIPS32-NEXT: declare float @cbrtf(float)
 ; MIPS32-NEXT: declare double @ceil(double)
@@ -408,7 +408,7 @@
 ; MIPS32-NEXT: declare i32 @lrintf(float)
 ; MIPS32-NEXT: declare i32 @lround(double)
 ; MIPS32-NEXT: declare i32 @lroundf(float)
-; MIPS32-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
+; MIPS32-NEXT: declare noalias noundef ptr @malloc(i32 noundef signext) [[MALLOC_ATTRS:#[0-9]+]]
 ; MIPS32-NEXT: declare ptr @memcpy(ptr, ptr, i32 signext)
 ; MIPS32-NEXT: declare ptr @memmove(ptr, ptr, i32 signext)
 ; MIPS32-NEXT: declare ptr @memset(ptr, i32 signext, i32 signext)

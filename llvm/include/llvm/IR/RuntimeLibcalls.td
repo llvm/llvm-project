@@ -690,9 +690,30 @@ def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
-def MALLOC : RuntimeLibcall<Ptr, [SizeT]>;
-def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
-def FREE : RuntimeLibcall<Void, [Ptr]>;
+def MallocFamily : AllocFamilyAttr<"malloc">;
+
+def MALLOC : RuntimeLibcall<Ptr, [SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
+                 AllocSizeAttr<0>, MallocFamily];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
+def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 AllocKindAttr<"AllocFnKind::Alloc">, AllocSizeAttr<0, "1">,
+                 MallocFamily];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef], [NoUndef]];
+}
+
+def FREE : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Free">,
+                 MallocFamily];
+  let ParamAttrs = [[AllocatedPointer, NoUndef, CapturesNone]];
+}
+
 def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]>;
 def STRLEN : RuntimeLibcall<SizeT, [Ptr]>;
 
