@@ -119,7 +119,8 @@ private:
   struct NT_FILE_Entry {
     lldb::addr_t start;
     lldb::addr_t end;
-    lldb::addr_t file_ofs;
+    lldb::addr_t file_ofs; // Page offset as encoded in NT_FILE.
+    lldb::addr_t file_bytes_ofs;
     std::string path;
   };
 
