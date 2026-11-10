@@ -1120,7 +1120,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       m_nt_file_entries.clear();
       lldb::offset_t offset = 0;
       const uint64_t count = note.data.GetAddress(&offset);
-      const lldb::addr_t page_size = note.data.GetAddress(&offset);
+      const lldb::addr_t page_size = note.data.GetAddress(&offset); // Skip page size
       for (uint64_t i = 0; i < count; ++i) {
         NT_FILE_Entry entry;
         entry.start = note.data.GetAddress(&offset);
