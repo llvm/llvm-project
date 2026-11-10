@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=ISEL
 ; RUN: llc -global-isel -mtriple=amdgpu9.50-amd-amdhsa -stop-after=finalize-isel %s -o - | FileCheck %s --check-prefix=ISEL
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa %s -o - | FileCheck %s --check-prefix=ASM --implicit-check-not=buffer_inv
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa %s -o - | FileCheck %s --check-prefix=ASM
+; RUN: llc -global-isel -mtriple=amdgpu9.50-amd-amdhsa %s -o - | FileCheck %s --check-prefix=ASM
+; RUN: llc -enable-new-pm -mtriple=amdgpu9.50-amd-amdhsa %s -o - | FileCheck %s --check-prefix=ASM
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa %s -o - | FileCheck %s --check-prefix=NO-PAD --implicit-check-not=buffer_inv
 
 ; Both instruction selectors keep the hint in the arm that requests padding.
 ; ISEL-LABEL: name: hint_counter_intrinsic
@@ -9,10 +12,28 @@
 ; ISEL-NEXT: PAD_WAITCNT 0, 1
 ; ISEL: bb.{{[0-9]+}}.join:
 
-; The hint itself emits nothing.
+; The padding belongs to the skipped edge, not beside the extra load, so the
+; store of %a only waits for the older of two outstanding loads.
 ; ASM-LABEL: hint_counter_intrinsic:
-; ASM: s_waitcnt vmcnt(0)
+; ASM: global_load_dword
+; ASM: s_cbranch_scc1 [[PAD:\.LBB[0-9]+_[0-9]+]]
+; ASM: global_load_dword
+; ASM-NOT: buffer_inv
+; ASM: [[JOIN:\.LBB[0-9]+_[0-9]+]]:
+; ASM-NEXT: s_waitcnt vmcnt(1)
 ; ASM-NEXT: global_store_dword
+; ASM: s_endpgm
+; ASM: [[PAD]]:
+; ASM-NEXT: buffer_inv
+; ASM-NEXT: s_branch [[JOIN]]
+
+; Without BUFFER_INV, the hint is ignored and the store waits for both loads.
+; NO-PAD-LABEL: hint_counter_intrinsic:
+; NO-PAD: ; %long
+; NO-PAD: global_load_dword
+; NO-PAD-NEXT: ; pad_waitcnt(0, 1)
+; NO-PAD: s_waitcnt vmcnt(0)
+; NO-PAD-NEXT: global_store_dword
 define amdgpu_kernel void @hint_counter_intrinsic(ptr addrspace(1) %data,
                                                   ptr addrspace(1) %out,
                                                   i32 %condition) {

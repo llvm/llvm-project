@@ -195,6 +195,7 @@ add_llvm_target(AMDGPUCodeGen
   SIProgramInfo.cpp
   SIRegisterInfo.cpp
   SIShrinkInstructions.cpp
+  SIWaitcntPadding.cpp
   SIWholeQuadMode.cpp
   SIPostRA16BitMovFolding.cpp
 

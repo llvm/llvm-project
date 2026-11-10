@@ -2621,7 +2621,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
     The iglp_opt strategy implementations are subject to change.
 * - llvm.amdgcn.pad.waitcnt
-  - Optional exact-count hint to add counter events on the opposite edge of a supported single-block triangle or diamond arm. Both i32 arguments are immediate: counter 0 selects LOAD/VM and count selects the exact number of extra events. The hint itself emits no event and grants no permission to weaken a wait.
+  - Optional exact-count hint to add counter events on the opposite edge of a supported single-block triangle or diamond arm. Both i32 arguments are immediate: counter 0 selects LOAD/VM and count selects the exact number of extra events. The current implementation emits BUFFER_INV 0 on targets supporting that instruction and accepts counts 1 through the hardware wait limit minus one (1..62 on gfx942/gfx950).
+
+    The backend materializes accepted hints immediately before waitcnt insertion, which then analyzes the padding like any other counter event. The hint itself emits no event and grants no permission to weaken a wait. Zero, invalid counts/selectors, optnone or opt-bisect skipped functions, unsupported shapes/targets, and repeated valid requests for one controlling branch are ignored. Accepted requests require an unambiguous arm in the same innermost loop as its branch and join; loop-header/latch joins are excluded. Profitability and later padding removal are not automated.
 
     Available through __builtin_amdgcn_pad_waitcnt(counter, count) and rocdl.pad.waitcnt.
 * - llvm.amdgcn.s.getpc

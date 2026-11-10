@@ -290,6 +290,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIRegisterInfo.cpp",
     "SIShrinkInstructions.cpp",
     "SISpillUtils.cpp",
+    "SIWaitcntPadding.cpp",
     "SIWholeQuadMode.cpp",
   ]
 }

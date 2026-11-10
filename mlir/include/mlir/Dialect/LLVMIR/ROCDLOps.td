@@ -838,11 +838,15 @@ def ROCDL_PadWaitcntOp
   let description = [{
     Requests exactly `count` extra counter events on the opposite edge of a
     supported triangle or diamond. Counter 0 selects LOAD/VM. `counter` must be
-    0 and `count` must be positive. The hint itself issues no event and does
-    not authorize weaker waits.
+    0 and `count` must be positive. The current backend supports `BUFFER_INV 0`
+    and accepts counts 1..62 on gfx942/gfx950. Out-of-range, unsupported,
+    ambiguous, and repeated requests are ignored.
+    The hint itself issues no event and does not authorize weaker waits.
 
     Both arguments are immediate attributes. The operation lowers to
-    `llvm.amdgcn.pad.waitcnt`.
+    `llvm.amdgcn.pad.waitcnt`. The backend materializes accepted hints
+    immediately before waitcnt insertion, which then analyzes the padding and
+    preserves completion and ordering requirements.
 
     Example:
     ```mlir
