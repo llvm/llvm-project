@@ -5437,6 +5437,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "exp2bf16",
+    hdrs = ["exp2bf16.h"],
+    deps = [
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
     name = "exp_double_eval",
     hdrs = ["exp_double_eval.h"],
     deps = [
