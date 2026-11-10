@@ -29,6 +29,7 @@ include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
 class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<CIR_Dialect, name, traits> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRAttrs.h"];
   let mnemonic = attrMnemonic;
   // Setting this to 0 will make the CXXABILowering always consider this
   // attribute 'legal', so that it won't require any transformation. This should
