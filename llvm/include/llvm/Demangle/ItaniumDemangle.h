@@ -4161,6 +4161,18 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
     if (Qual.empty())
       return nullptr;
 
+    auto ParseChild = [&]() -> Node * {
+      // Clang mangles the builtin Objective-C types id and Class like the
+      // classes objc_object and objc_class. When they are vendor qualified
+      // (e.g. id<Protocol>), only the qualified type is a substitution
+      // candidate.
+      if (consumeIf("11objc_object"))
+        return make<NameType>("objc_object");
+      if (consumeIf("10objc_class"))
+        return make<NameType>("objc_class");
+      return getDerived().parseQualifiedType();
+    };
+
     // extension            ::= U <objc-name> <objc-type>  # objc-type<identifier>
     if (starts_with(Qual, "objcproto")) {
       constexpr size_t Len = sizeof("objcproto") - 1;
@@ -4173,7 +4185,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
       }
       if (Proto.empty())
         return nullptr;
-      Node *Child = getDerived().parseQualifiedType();
+      Node *Child = ParseChild();
       if (Child == nullptr)
         return nullptr;
       return make<ObjCProtoName>(Child, Proto);
@@ -4186,7 +4198,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
         return nullptr;
     }
 
-    Node *Child = getDerived().parseQualifiedType();
+    Node *Child = ParseChild();
     if (Child == nullptr)
       return nullptr;
     return make<VendorExtQualType>(Child, Qual, TA);

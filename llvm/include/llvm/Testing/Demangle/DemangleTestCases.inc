@@ -29747,6 +29747,13 @@
 {"_Z1rM1GFivEMS_KFivES_M1HFivES1_4whatIKS_E5what2IS8_ES3_", "r(int (G::*)(), int (G::*)() const, G, int (H::*)(), int (G::*)(), what<G const>, what2<G const>, int (G::*)() const)"},
 {"_Z1fPU11objcproto1A11objc_object", "f(id<A>)"},
 {"_Z1fPKU11objcproto1A7NSArray", "f(NSArray<A> const*)"},
+// The builtin type in a vendor qualified id or Class (e.g. id<A> or
+// __kindof Class) isn't a substitution candidate.
+{"_Z1fPU11objcproto1A11objc_object1SS1_", "f(id<A>, S, S)"},
+{"_Z1fPU11objcproto1A11objc_objectS0_P11objc_object", "f(id<A>, id<A>, objc_object*)"},
+{"_Z1fPU11objcproto1A10objc_class1SS1_", "f(objc_class<A>*, S, S)"},
+{"_Z1fPU8__kindof10objc_class1SS1_", "f(objc_class __kindof*, S, S)"},
+{"_Z1gPU8__kindofU11objcproto1A11objc_object1SS1_", "g(objc_object<A> __kindof*, S, S)"},
 {"_ZNK1AIJ1Z1Y1XEEcv1BIJDpPT_EEIJS2_S1_S0_EEEv", "A<Z, Y, X>::operator B<X*, Y*, Z*><X, Y, Z>() const"},
 {"_ZNK3Ncr6Silver7Utility6detail12CallOnThreadIZ53-[DeploymentSetupController handleManualServerEntry:]E3$_5EclIJEEEDTclclL_ZNS2_4getTIS4_EERT_vEEspclsr3stdE7forwardIT_Efp_EEEDpOSA_", "decltype(-[DeploymentSetupController handleManualServerEntry:]::$_5& Ncr::Silver::Utility::detail::getT<-[DeploymentSetupController handleManualServerEntry:]::$_5>()()()) Ncr::Silver::Utility::detail::CallOnThread<-[DeploymentSetupController handleManualServerEntry:]::$_5>::operator()<>() const"},
 {"_Zli2_xy", "operator\"\" _x(unsigned long long)"},
