@@ -233,23 +233,39 @@ public:
 
 class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
   static constexpr const HWEvents
-      WaitEventMaskForInstPreGFX12[AMDGPU::NUM_INST_CNTS] = {
+      WaitEventMaskForInstWithoutVscnt[AMDGPU::NUM_INST_CNTS] = {
+          // LOAD_CNT
           HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
-              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS,
+              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS |
+              HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
+          // DS_CNT
           HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
               HWEvents::SQ_MESSAGE,
+          // EXP_CNT
           HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
               HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
               HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE};
+
+  // Hardware with VScnt has non-empty STORE_CNT wait events.
+  static constexpr const HWEvents
+      WaitEventMaskForInstWithVscnt[AMDGPU::NUM_INST_CNTS] = {
+          // LOAD_CNT
+          HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
+              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS,
+          // DS_CNT
+          HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
+              HWEvents::SQ_MESSAGE,
+          // EXP_CNT
+          HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
+              HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
+              HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
+          // STORE_CNT
           HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
           HWEvents::NONE};
 
 public:
@@ -265,14 +281,8 @@ public:
                         const WaitcntBrackets &ScoreBrackets) override;
 
   HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
-    // Targets without a separate store counter count stores in LOAD_CNT
-    // (see below), so STORE_CNT has no events of its own there.
-    if (T == AMDGPU::STORE_CNT && !ST.hasVscnt())
-      return HWEvents::NONE;
-    HWEvents EVs = WaitEventMaskForInstPreGFX12[T];
-    if (T == AMDGPU::LOAD_CNT && !ST.hasVscnt())
-      EVs |= WaitEventMaskForInstPreGFX12[AMDGPU::STORE_CNT];
-    return EVs;
+    return ST.hasVscnt() ? WaitEventMaskForInstWithVscnt[T]
+                         : WaitEventMaskForInstWithoutVscnt[T];
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
@@ -531,8 +541,7 @@ public:
   void simplifyVmemInvOnlyWait(AMDGPU::Waitcnt &Wait) const {
     // LOAD_CNT also includes store events on targets without VScnt.
     HWEvents LoadEvents =
-        PendingEvents & (Context->getWaitEvents(AMDGPU::LOAD_CNT) -
-                         Context->getWaitEvents(AMDGPU::STORE_CNT));
+        PendingEvents & Context->getWaitEvents(AMDGPU::LOAD_CNT);
     if (LoadEvents == HWEvents::VMEM_INV_ACCESS)
       Wait.clear(AMDGPU::LOAD_CNT);
   }
