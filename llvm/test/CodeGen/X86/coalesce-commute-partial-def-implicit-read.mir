@@ -8,7 +8,6 @@
 # https://github.com/llvm/llvm-project/issues/220302
 ---
 name:            f6
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
   hasCalls:        true

@@ -14,7 +14,6 @@
 ...
 ---
 name:            debug_instrs_do_not_count
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rdi' }

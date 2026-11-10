@@ -57,7 +57,6 @@
 ---
 name:            zext_i1_to_i8
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -85,7 +84,6 @@ body:             |
 ---
 name:            zext_i1_to_i16
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -113,7 +111,6 @@ body:             |
 ---
 name:            zext_i1_to_i32
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -140,7 +137,6 @@ body:             |
 ---
 name:            zext_i1_to_i64
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -168,7 +164,6 @@ body:             |
 ---
 name:            zext_i8_to_i16
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -196,7 +191,6 @@ body:             |
 ---
 name:            zext_i8_to_i32
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -223,7 +217,6 @@ body:             |
 ---
 name:            zext_i8_to_i64
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -251,7 +244,6 @@ body:             |
 ---
 name:            zext_i16_to_i32
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -278,7 +270,6 @@ body:             |
 ---
 name:            zext_i16_to_i64
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -306,7 +297,6 @@ body:             |
 ---
 name:            zext_i32_to_i64
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

@@ -42,7 +42,6 @@
 
 name:            test_objc_retainAutoreleaseReturnedValue
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   stackSize:       8
   offsetAdjustment: -8
@@ -75,7 +74,6 @@ body:             |
 #
 name:            test_objc_unsafeClaimAutoreleasedReturnValue
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   stackSize:       8
   offsetAdjustment: -8
@@ -110,7 +108,6 @@ body:             |
 #
 name:            test_objc_unsafeClaimAutoreleasedReturnValue_2_args
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   stackSize:       8
   offsetAdjustment: -8
@@ -146,7 +143,6 @@ body:             |
 #
 name:            test_ret_void
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   stackSize:       8
   offsetAdjustment: -8

@@ -7,7 +7,6 @@
 
 ---
 name: subloop_speculation
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: subloop_speculation
   ; CHECK: bb.0:

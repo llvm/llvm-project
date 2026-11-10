@@ -5,7 +5,6 @@ name:            main4k
 # CHECK-LABEL: name: main4k
 
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    8
 stack:
