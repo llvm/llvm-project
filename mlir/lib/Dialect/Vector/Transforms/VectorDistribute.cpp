@@ -253,6 +253,24 @@ static Value tryReuseArgBuffer(SmallVectorImpl<std::pair<Value, bool>> &buffers,
   return Value();
 }
 
+/// Return true if `block` is part of a CFG cycle, which
+/// `LoopLikeOpInterface` does not cover.
+static bool isBlockInCFGLoop(Block *block) {
+  llvm::SmallSetVector<Block *, 4> visited;
+  SmallVector<Block *> worklist(block->getSuccessors().begin(),
+                                block->getSuccessors().end());
+  while (!worklist.empty()) {
+    Block *current = worklist.pop_back_val();
+    if (current == block)
+      return true;
+    if (!visited.insert(current))
+      continue;
+    for (Block *succ : current->getSuccessors())
+      worklist.push_back(succ);
+  }
+  return false;
+}
+
 namespace {
 /// Rewrite a WarpExecuteOnLane0Op into a predicated scf.if op where the single
 /// thread `laneId` executes the entirety of the computation.
@@ -312,11 +330,12 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
     SmallVector<Value> bbArgReplacements;
     // Pool of args buffers paired with a "consumed" flag, so Step 5 can try
     // to reuse them for yielded values' transit buffers. Skip reuse inside a
-    // loop: thread convergence is only guaranteed within a barrier, so the
-    // next iteration's arg stores could race with this iteration's result
-    // loads.
+    // loop (structured or CFG): thread convergence is only guaranteed within
+    // a barrier, so the next iteration's arg stores could race with this
+    // iteration's result loads.
     SmallVector<std::pair<Value, /*consumed=*/bool>> reusableArgBuffers;
-    bool canReuseArgBuffers = !warpOp->getParentOfType<LoopLikeOpInterface>();
+    bool canReuseArgBuffers = !warpOp->getParentOfType<LoopLikeOpInterface>() &&
+                              !isBlockInCFGLoop(warpOp->getBlock());
     if (canReuseArgBuffers)
       reusableArgBuffers.reserve(warpOp.getArgs().size());
     for (const auto &it : llvm::enumerate(warpOp.getArgs())) {
