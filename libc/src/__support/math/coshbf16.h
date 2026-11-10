@@ -52,8 +52,7 @@ LIBC_INLINE bfloat16 coshbf16(bfloat16 x) {
   // We bound the cases below by comparing the bits of |x| as an integer.
   uint16_t x_abs_uint = x_bits.abs().uintval();
 
-  constexpr uint16_t ONE_UINT = 0x3F80;         // 0x1p0 = 1.0
-  constexpr uint16_t ONE_NEXT_UP_UINT = 0x3F81; // 0x1.02p0 = 1.0078125
+  constexpr uint16_t ONE_UINT = 0x3F80; // 0x1p0 = 1.0
 
   // For 0 < |x| <= 0.0879, cosh(x) = 1 + x^2/2 + ... lies strictly between 1
   // and the next bfloat16 above 1, and is closer to 1. So the result is 1 in
@@ -65,6 +64,7 @@ LIBC_INLINE bfloat16 coshbf16(bfloat16 x) {
       return FPBits(ONE_UINT).get_val();
 
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    constexpr uint16_t ONE_NEXT_UP_UINT = 0x3F81; // 0x1.02p0 = 1.0078125
     if (fputil::fenv_is_round_up())
       return FPBits(ONE_NEXT_UP_UINT).get_val();
 #endif
