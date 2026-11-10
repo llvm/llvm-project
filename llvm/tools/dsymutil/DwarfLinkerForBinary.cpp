@@ -1312,16 +1312,24 @@ bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
       ValidDebugInfoRelocs, BaseOffset, BaseOffset + Data.size());
 
   for (const ValidReloc &CurReloc : Relocs) {
-    assert(CurReloc.Offset - BaseOffset < Data.size());
-    assert(CurReloc.Offset - BaseOffset + CurReloc.Size <= Data.size());
+    uint64_t RelocOffset = CurReloc.Offset - BaseOffset;
     char Buf[8];
+    // Only a relocation map which does not describe this DWARF holds a
+    // relocation running past the end of the DIE it starts in.
+    if (CurReloc.Size > sizeof(Buf) ||
+        CurReloc.Size > Data.size() - RelocOffset) {
+      Linker.reportWarning("ignoring relocation at offset 0x" +
+                               Twine::utohexstr(CurReloc.Offset) +
+                               ", which does not fit its DIE",
+                           SrcFileName);
+      continue;
+    }
     uint64_t Value = relocate(CurReloc);
     for (unsigned I = 0; I != CurReloc.Size; ++I) {
       unsigned Index = IsLittleEndian ? I : (CurReloc.Size - I - 1);
       Buf[I] = uint8_t(Value >> (Index * 8));
     }
-    assert(CurReloc.Size <= sizeof(Buf));
-    memcpy(&Data[CurReloc.Offset - BaseOffset], Buf, CurReloc.Size);
+    memcpy(&Data[RelocOffset], Buf, CurReloc.Size);
   }
   return Relocs.size() > 0;
 }
