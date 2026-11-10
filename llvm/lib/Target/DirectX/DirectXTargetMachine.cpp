@@ -17,6 +17,7 @@
 #include "DXILSignatureAnalysis.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
+#include "DirectXAsmPrinter.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"

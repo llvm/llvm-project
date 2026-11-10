@@ -24,6 +24,8 @@ MODULE_ANALYSIS("dxil-signature-analysis", dxil::SignatureAnalysis())
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("dxil-asm-printer-begin", DXILAsmPrinterBeginPass())
+MODULE_PASS("dxil-asm-printer-end", DXILAsmPrinterEndPass())
 MODULE_PASS("dxil-cbuffer-access", DXILCBufferAccessPass())
 MODULE_PASS("dxil-container-globals", DXILContainerGlobalsPass())
 MODULE_PASS("dxil-container-pdb", DXILContainerPDBPass())
@@ -55,3 +57,9 @@ FUNCTION_PASS("dxil-remove-unused-resources", DXILRemoveUnusedResourcesPass())
 FUNCTION_PASS("dxil-resource-access", DXILResourceAccessPass())
 FUNCTION_PASS("dxil-legalize", DXILLegalizePass())
 #undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("dxil-asm-printer", DXILAsmPrinterPass())
+#undef MACHINE_FUNCTION_PASS
