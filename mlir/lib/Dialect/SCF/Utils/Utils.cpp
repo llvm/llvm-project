@@ -296,8 +296,8 @@ void mlir::generateUnrolledLoop(
     Block *loopBodyBlock, Value iv, uint64_t unrollFactor,
     function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
-    ValueRange iterArgs, ValueRange yieldedValues,
-    IRMapping *clonedToSrcOpsMap) {
+    ValueRange iterArgs, ValueRange yieldedValues, IRMapping *clonedToSrcOpsMap,
+    SmallVectorImpl<SmallVector<Value>> *unrolledYieldedValues) {
 
   // Check if the op was cloned from another source op, and return it if found
   // (or the same op if not found)
@@ -352,6 +352,9 @@ void mlir::generateUnrolledLoop(
     // Update yielded values.
     for (unsigned i = 0, e = lastYielded.size(); i < e; i++)
       lastYielded[i] = operandMap.lookupOrDefault(yieldedValues[i]);
+    if (unrolledYieldedValues)
+      unrolledYieldedValues->emplace_back(lastYielded.begin(),
+                                          lastYielded.end());
   }
 
   // Make sure we annotate the Ops in the original body. We do this last so that
@@ -1702,6 +1705,30 @@ mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   return tripCounts;
 }
 
+/// Makes `reduceOp` reduce the values of all the copies of the unrolled loop
+/// body, combining `unrolledReduced` into `reduced` with the reduction
+/// functions.
+static void
+combineUnrolledReductions(RewriterBase &rewriter, scf::ReduceOp reduceOp,
+                          SmallVector<Value> reduced,
+                          ArrayRef<SmallVector<Value>> unrolledReduced) {
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(reduceOp);
+  for (auto [idx, reduction] : llvm::enumerate(reduceOp.getReductions())) {
+    Block &reduceBlock = reduction.front();
+    for (ArrayRef<Value> copyReduced : unrolledReduced) {
+      IRMapping mapping;
+      mapping.map(reduceBlock.getArgument(0), reduced[idx]);
+      mapping.map(reduceBlock.getArgument(1), copyReduced[idx]);
+      for (Operation &reduceBodyOp : reduceBlock.without_terminator())
+        rewriter.clone(reduceBodyOp, mapping);
+      reduced[idx] = mapping.lookupOrDefault(
+          cast<scf::ReduceReturnOp>(reduceBlock.getTerminator()).getResult());
+    }
+  }
+  rewriter.modifyOpInPlace(reduceOp, [&]() { reduceOp->setOperands(reduced); });
+}
+
 FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
     scf::ParallelOp op, ArrayRef<uint64_t> unrollFactors,
     RewriterBase &rewriter,
@@ -1748,6 +1775,18 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
   for (auto step : *maybeFoldSteps)
     steps.push_back(static_cast<size_t>(*getConstantIntValue(step)));
 
+  // The unrolled iterations share the reduction functions, which therefore
+  // cannot use values computed by an iteration.
+  auto reduceOp = cast<scf::ReduceOp>(op.getBody()->getTerminator());
+  SetVector<Value> usedByReductions;
+  getUsedValuesDefinedAbove(reduceOp.getReductions(), usedByReductions);
+  if (!llvm::all_of(usedByReductions, [&](Value value) {
+        return op.isDefinedOutsideOfLoop(value);
+      }))
+    return rewriter.notifyMatchFailure(
+        op, "Reduction functions using values defined in the loop are not "
+            "supported");
+
   for (unsigned dimIdx = firstLoopDimIdx; dimIdx < numLoops; dimIdx++) {
     const uint64_t unrollFactor = unrollFactors[dimIdx - firstLoopDimIdx];
     if (unrollFactor == 1)
@@ -1758,6 +1797,8 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
 
     ValueRange iterArgs = ValueRange(op.getRegionIterArgs());
     auto yieldedValues = op.getBody()->getTerminator()->getOperands();
+    SmallVector<Value> reduced(yieldedValues);
+    SmallVector<SmallVector<Value>> unrolledReduced;
 
     generateUnrolledLoop(
         op.getBody(), op.getInductionVars()[dimIdx], unrollFactor,
@@ -1769,7 +1810,13 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
           return affine::AffineApplyOp::create(b, iv.getLoc(), map,
                                                ValueRange{iv});
         },
-        /*annotateFn*/ annotateFn, iterArgs, yieldedValues, &clonedToSrcOpsMap);
+        /*annotateFn*/ annotateFn, iterArgs, yieldedValues, &clonedToSrcOpsMap,
+        &unrolledReduced);
+
+    // The terminator reduces a single value per reduction, while each copy of
+    // the body computes its own.
+    combineUnrolledReductions(rewriter, reduceOp, std::move(reduced),
+                              unrolledReduced);
 
     // Update loop step
     auto prevInsertPoint = rewriter.saveInsertionPoint();
