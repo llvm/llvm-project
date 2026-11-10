@@ -709,7 +709,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
           foldable.push_back(d->unwindEntry());
     } else {
       // Give a unique ID to everything else.
-      isec->icfEqClass[0] = ++icfUniqueID;
+      isec->icfEqClass[0] = isec->icfEqClass[1] = ++icfUniqueID;
     }
   }
   parallelForEach(foldable, [](ConcatInputSection *isec) {
