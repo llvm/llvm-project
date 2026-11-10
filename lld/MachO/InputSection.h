@@ -310,6 +310,9 @@ bool isClassRefsSection(const InputSection *);
 bool isSelRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
+bool usesAuthGot(const InputSection *);
+const AuthInfo *getImplicitAuthInfo(const InputSection *isec,
+                                    const Symbol *sym);
 
 extern std::vector<ConcatInputSection *> inputSections;
 // This is used as a counter for specifying input order for input sections.
@@ -372,6 +375,7 @@ constexpr const char staticInit[] = "__StaticInit";
 constexpr const char stringTable[] = "__string_table";
 constexpr const char stubHelper[] = "__stub_helper";
 constexpr const char stubs[] = "__stubs";
+constexpr const char authStubs[] = "__auth_stubs";
 constexpr const char swift[] = "__swift";
 constexpr const char symbolTable[] = "__symbol_table";
 constexpr const char textCoalNt[] = "__textcoal_nt";

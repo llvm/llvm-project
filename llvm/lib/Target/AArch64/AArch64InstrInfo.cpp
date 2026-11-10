@@ -1333,8 +1333,6 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
     if (FoldedOpc) {
       FalseReg = NewReg;
       Opc = FoldedOpc;
-      // Extend the live range of NewReg.
-      MRI.clearKillFlags(NewReg);
     }
   }
 
@@ -1571,6 +1569,8 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_PACSignLR:
     case AArch64::SEH_SaveAnyRegI:
     case AArch64::SEH_SaveAnyRegIP:
+    case AArch64::SEH_SaveAnyRegQ:
+    case AArch64::SEH_SaveAnyRegQX:
     case AArch64::SEH_SaveAnyRegQP:
     case AArch64::SEH_SaveAnyRegQPX:
     case AArch64::SEH_AllocZ:
@@ -3692,6 +3692,8 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     NumBytes = 8;
     break;
 
+  case AArch64::LDURSi:
+  case AArch64::STURSi:
   case AArch64::LDURWi:
   case AArch64::LDURSWi:
   case AArch64::STURWi:
@@ -3748,9 +3750,13 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     OffsetScale = 8;
     break;
 
+  case AArch64::LDRSroX:
+  case AArch64::STRSroX:
   case AArch64::LDRWroX:
   case AArch64::LDRSWroX:
   case AArch64::STRWroX:
+  case AArch64::LDRSui:
+  case AArch64::STRSui:
   case AArch64::LDRWui:
   case AArch64::LDRSWui:
   case AArch64::STRWui:
@@ -4022,6 +4028,12 @@ static unsigned regOffsetOpcode(unsigned Opcode) {
   case AArch64::STURXi:
   case AArch64::STRXui:
     return AArch64::STRXroX;
+  case AArch64::LDURSi:
+  case AArch64::LDRSui:
+    return AArch64::LDRSroX;
+  case AArch64::STURSi:
+  case AArch64::STRSui:
+    return AArch64::STRSroX;
   case AArch64::LDURWi:
   case AArch64::LDRWui:
     return AArch64::LDRWroX;
@@ -4096,6 +4108,12 @@ unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
   case AArch64::STURXi:
     Scale = 8;
     return AArch64::STRXui;
+  case AArch64::LDURSi:
+    Scale = 4;
+    return AArch64::LDRSui;
+  case AArch64::STURSi:
+    Scale = 4;
+    return AArch64::STRSui;
   case AArch64::LDURWi:
     Scale = 4;
     return AArch64::LDRWui;
@@ -4151,6 +4169,8 @@ unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
   case AArch64::STRXui:
     Scale = 8;
     return Opcode;
+  case AArch64::LDRSui:
+  case AArch64::STRSui:
   case AArch64::LDRWui:
   case AArch64::LDRSWui:
   case AArch64::STRWui:
@@ -4189,6 +4209,8 @@ unsigned unscaledOffsetOpcode(unsigned Opcode) {
   case AArch64::STURDi:
   case AArch64::LDURXi:
   case AArch64::STURXi:
+  case AArch64::LDURSi:
+  case AArch64::STURSi:
   case AArch64::LDURWi:
   case AArch64::LDURSWi:
   case AArch64::STURWi:
@@ -4217,6 +4239,10 @@ unsigned unscaledOffsetOpcode(unsigned Opcode) {
     return AArch64::LDURXi;
   case AArch64::STRXui:
     return AArch64::STURXi;
+  case AArch64::LDRSui:
+    return AArch64::LDURSi;
+  case AArch64::STRSui:
+    return AArch64::STURSi;
   case AArch64::LDRWui:
     return AArch64::LDURWi;
   case AArch64::LDRSWui:
@@ -4283,6 +4309,14 @@ static unsigned offsetExtendOpcode(unsigned Opcode) {
   case AArch64::STURXi:
   case AArch64::STRXui:
     return AArch64::STRXroW;
+  case AArch64::LDRSroX:
+  case AArch64::LDURSi:
+  case AArch64::LDRSui:
+    return AArch64::LDRSroW;
+  case AArch64::STRSroX:
+  case AArch64::STURSi:
+  case AArch64::STRSui:
+    return AArch64::STRSroW;
   case AArch64::LDRWroX:
   case AArch64::LDURWi:
   case AArch64::LDRWui:
@@ -5541,6 +5575,8 @@ bool AArch64InstrInfo::hasBTISemantics(const MachineInstr &MI) {
   case AArch64::HLT:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
+  case AArch64::PACIASPPC:
+  case AArch64::PACIBSPPC:
     // Implicit BTI behavior.
     return true;
   case AArch64::PAUTH_PROLOGUE:
@@ -8982,7 +9018,6 @@ genIndexedMultiply(MachineInstr &Root,
     Dup = MRI.getUniqueVRegDef(Dup->getOperand(1).getReg());
 
   Register DupSrcReg = Dup->getOperand(1).getReg();
-  MRI.clearKillFlags(DupSrcReg);
   MRI.constrainRegClass(DupSrcReg, RC);
 
   unsigned DupSrcLane = Dup->getOperand(2).getImm();
@@ -10544,6 +10579,25 @@ outliningCandidatesSigningKeyConsensus(const outliner::Candidate &a,
   return MFIa->shouldSignWithBKey() == MFIb->shouldSignWithBKey();
 }
 
+static bool outliningCandidatesPAuthLRConsensus(const outliner::Candidate &a,
+                                                const outliner::Candidate &b) {
+  const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
+  const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
+
+  const AArch64Subtarget &SubtargetA =
+      a.getMF()->getSubtarget<AArch64Subtarget>();
+  const AArch64Subtarget &SubtargetB =
+      b.getMF()->getSubtarget<AArch64Subtarget>();
+
+  // Return true only if branch-protection-pauth-lr attributes match
+  // and +pauth-lr feature is enabled for both.
+  if (MFIa->branchProtectionPAuthLR() != MFIb->branchProtectionPAuthLR())
+    return false;
+
+  return !MFIa->branchProtectionPAuthLR() ||
+         SubtargetA.hasPAuthLR() == SubtargetB.hasPAuthLR();
+}
+
 static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
                                                 const outliner::Candidate &b) {
   const AArch64Subtarget &SubtargetA =
@@ -10654,8 +10708,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // We only allow outlining for functions having exactly matching return
   // address signing attributes, i.e., all share the same value for the
-  // attribute "sign-return-address" and all share the same type of key they
-  // are signed with.
+  // attribute "sign-return-address", all share the same type of key they
+  // are signed with & all share the same pauth-lr attributes.
   // Additionally we require all functions to simultaneously either support
   // v8.3a features or not. Otherwise an outlined function could get signed
   // using dedicated v8.3 instructions and a call from a function that doesn't
@@ -10664,10 +10718,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
           RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
           [](const outliner::Candidate &a, const outliner::Candidate &b) {
             // Return true if a and b are non-equal w.r.t. return address
-            // signing or support of v8.3a features
+            // signing, support of v8.3a features or support of pauth-lr
             if (outliningCandidatesSigningScopeConsensus(a, b) &&
                 outliningCandidatesSigningKeyConsensus(a, b) &&
-                outliningCandidatesV8_3OpsConsensus(a, b)) {
+                outliningCandidatesV8_3OpsConsensus(a, b) &&
+                outliningCandidatesPAuthLRConsensus(a, b)) {
               return false;
             }
             return true;
@@ -11085,6 +11140,8 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(CFn.getFnAttribute("ptrauth-returns"));
   if (CFn.hasFnAttribute("ptrauth-auth-traps"))
     F.addFnAttr(CFn.getFnAttribute("ptrauth-auth-traps"));
+  if (CFn.hasFnAttribute("branch-protection-pauth-lr"))
+    F.addFnAttr(CFn.getFnAttribute("branch-protection-pauth-lr"));
   // Since all candidates belong to the same module, just copy the
   // function-level attributes of an arbitrary function.
   if (CFn.hasFnAttribute("sign-return-address"))
@@ -11268,6 +11325,8 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   case AArch64::PACIBSP:
   case AArch64::PACIASPPC:
   case AArch64::PACIBSPPC:
+  case AArch64::PACNBIASPPC:
+  case AArch64::PACNBIBSPPC:
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
   case AArch64::AUTIASPPCi:

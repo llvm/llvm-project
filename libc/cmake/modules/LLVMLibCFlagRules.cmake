@@ -25,7 +25,6 @@
 # To completely disable a flag FLAG_NAME expansion, set the variable
 #   SKIP_FLAG_EXPANSION_FLAG_NAME=TRUE in this file.
 
-
 function(extract_flag_modifier input_flag output_flag modifier)
   if(${input_flag} MATCHES "__NO$")
     string(REGEX REPLACE "__NO$" "" flag "${input_flag}")

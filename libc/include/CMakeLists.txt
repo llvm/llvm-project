@@ -949,9 +949,11 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_shm_macros
+    .llvm-libc-types.key_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.shmatt_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.struct_shmid_ds
     .llvm-libc-types.time_t
     .stdint
     .sys_ipc
@@ -1103,8 +1105,9 @@ add_header_macro(
   sys/uio.h
   DEPENDS
     .llvm_libc_common_h
-    .llvm-libc-types.struct_iovec
+    .llvm-libc-types.pid_t
     .llvm-libc-types.ssize_t
+    .llvm-libc-types.struct_iovec
 )
 
 add_header_macro(
