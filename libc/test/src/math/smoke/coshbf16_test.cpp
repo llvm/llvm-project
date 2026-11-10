@@ -37,8 +37,8 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::coshbf16(neg_inf));
     EXPECT_MATH_ERRNO(0);
 
-    // cosh(+-0) = 1 exactly.
-    bfloat16 one = FPBits::one().get_val();
+    // cosh(+-0) = 1 exactly
+    bfloat16 one = FPBits(uint16_t(0x3F80)).get_val(); // 0x1p0
     EXPECT_FP_EQ_ALL_ROUNDING(one, LIBC_NAMESPACE::coshbf16(zero));
     EXPECT_MATH_ERRNO(0);
 
@@ -46,51 +46,57 @@ public:
     EXPECT_MATH_ERRNO(0);
   }
 
-  // For small values, cosh(x) rounds to 1 (or to the next value above 1 when
-  // rounding upward, since cosh(x) > 1 for x != 0).
+  // For 0 < |x| <= 0.0879, cosh(x) is strictly between 1 and the next bfloat16
+  // above 1, and is closer to 1. So the result is 1 in all rounding modes
+  // except for RU, where it is the next value above 1.
   void test_small_values() {
-    bfloat16 one = FPBits::one().get_val();
-    bfloat16 one_plus_ulp = FPBits(uint16_t(0x3f81)).get_val();
+    bfloat16 one = FPBits(uint16_t(0x3F80)).get_val();         // 0x1p0
+    bfloat16 one_next_up = FPBits(uint16_t(0x3F81)).get_val(); // 0x1.02p0
 
-    // Largest inputs (in magnitude) that still round to 1, and the smallest
-    // subnormal.
-    EXPECT_FP_EQ(one,
-                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x0001)).get_val()));
-    EXPECT_FP_EQ(one,
-                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x8001)).get_val()));
-    EXPECT_FP_EQ(one,
-                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x3db4)).get_val()));
-    EXPECT_FP_EQ(one,
-                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0xbdb4)).get_val()));
+    // Largest |x| for which cosh(x) still rounds to 1 in RN.
+    bfloat16 rounds_to_one_bound =
+        FPBits(uint16_t(0x3DB4)).get_val(); // 0x1.68p-4
+    // Smallest |x| for which cosh(x) rounds to the next value above 1 in RN.
+    bfloat16 rounds_above_one_bound =
+        FPBits(uint16_t(0x3DB5)).get_val(); // 0x1.6ap-4
 
-    // cosh(x) > 1 for x != 0, so only round-up moves the result above 1.
-    bfloat16 small = FPBits(uint16_t(0x0001)).get_val();
-    EXPECT_FP_EQ_ROUNDING_NEAREST(one, LIBC_NAMESPACE::coshbf16(small));
-    EXPECT_FP_EQ_ROUNDING_UPWARD(one_plus_ulp, LIBC_NAMESPACE::coshbf16(small));
-    EXPECT_FP_EQ_ROUNDING_DOWNWARD(one, LIBC_NAMESPACE::coshbf16(small));
-    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(one, LIBC_NAMESPACE::coshbf16(small));
+    EXPECT_FP_EQ_ROUNDING_NEAREST(one, LIBC_NAMESPACE::coshbf16(min_denormal));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(one_next_up,
+                                 LIBC_NAMESPACE::coshbf16(min_denormal));
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(one, LIBC_NAMESPACE::coshbf16(min_denormal));
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(one,
+                                      LIBC_NAMESPACE::coshbf16(min_denormal));
 
-    // First input whose result no longer rounds to 1 in round-to-nearest.
-    EXPECT_FP_EQ(one_plus_ulp,
-                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x3db5)).get_val()));
-    EXPECT_FP_EQ(one_plus_ulp,
-                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0xbdb5)).get_val()));
+    EXPECT_FP_EQ_ROUNDING_NEAREST(one,
+                                  LIBC_NAMESPACE::coshbf16(neg_min_denormal));
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        one, LIBC_NAMESPACE::coshbf16(rounds_to_one_bound));
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        one, LIBC_NAMESPACE::coshbf16(-rounds_to_one_bound));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(one_next_up,
+                                 LIBC_NAMESPACE::coshbf16(rounds_to_one_bound));
+
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        one_next_up, LIBC_NAMESPACE::coshbf16(rounds_above_one_bound));
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        one_next_up, LIBC_NAMESPACE::coshbf16(-rounds_above_one_bound));
   }
 
+  // cosh(x) overflows bfloat16 for |x| >= 89.5. cosh(x) > 0 for all x, so the
+  // overflow is always to +Inf, regardless of the sign of x.
   void test_overflow() {
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        inf, LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x42b3)).get_val()),
-        FE_OVERFLOW);
+    bfloat16 overflow_bound = FPBits(uint16_t(0x42B3)).get_val(); // 0x1.66p6
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::coshbf16(overflow_bound),
+                                FE_OVERFLOW);
+    EXPECT_MATH_ERRNO(ERANGE);
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::coshbf16(-overflow_bound),
+                                FE_OVERFLOW);
     EXPECT_MATH_ERRNO(ERANGE);
 
     EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::coshbf16(max_normal),
                                 FE_OVERFLOW);
-    EXPECT_MATH_ERRNO(ERANGE);
-
-    // cosh is even: large negative inputs overflow to +inf as well.
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        inf, LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0xc2b3)).get_val()),
-        FE_OVERFLOW);
     EXPECT_MATH_ERRNO(ERANGE);
 
     EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::coshbf16(neg_max_normal),
