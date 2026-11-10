@@ -48,6 +48,11 @@
 // RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o /nologo \
 // RUN:   /IGNORE:4078 '/LIBPATH:C:\dir' /OUT:C:/dir/a.exe -o %t.dev.obj
 // RUN: llvm-readobj --file-header %t.dev.obj | FileCheck %s --check-prefix=WIN
+// link.exe options are case-insensitive, so /OUT: names the output too.
+// RUN: rm -f %t.out.obj
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
+// RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o /OUT:%t.out.obj
+// RUN: llvm-readobj --file-header %t.out.obj | FileCheck %s --check-prefix=WIN
 // WIN: Format: COFF-x86-64
 
 // link.exe options are case-insensitive, and link.exe also searches LIB.
