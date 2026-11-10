@@ -289,7 +289,7 @@ static bool checkFnAllocKind(const Function *F, AllocFnKind Wanted) {
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
 bool llvm::isAllocationFn(const Value *V, const TargetLibraryInfo *TLI) {
-  // Allocation functions return a pointer to the new block of memory.
+  // Allocation calls must return ptr. Exit early if this doesn't.
   if (!V->getType()->isPointerTy())
     return false;
   return getAllocationData(V, AnyAlloc, TLI).has_value() ||
@@ -298,6 +298,7 @@ bool llvm::isAllocationFn(const Value *V, const TargetLibraryInfo *TLI) {
 bool llvm::isAllocationFn(
     const Value *V,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
+  // Allocation calls must return ptr. Exit early if this doesn't.
   if (!V->getType()->isPointerTy())
     return false;
   return getAllocationData(V, AnyAlloc, GetTLI).has_value() ||
@@ -307,6 +308,7 @@ bool llvm::isAllocationFn(
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
 bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
+  // Allocation calls must return ptr. Exit early if this doesn't.
   if (!V->getType()->isPointerTy())
     return false;
   return getAllocationData(V, AllocLike, TLI).has_value() ||
@@ -543,9 +545,8 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
 }
 
 Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  // Deallocation functions, both known library functions and those marked with
-  // allockind("free"), return void. Check this first to quickly skip the
-  // attribute and TLI queries below for most calls.
+  // Exit early for functions which don't return void. The allockind("free")
+  // attribute requires this, and it's much cheaper to check that TLI.
   if (!CB->getType()->isVoidTy())
     return nullptr;
 
