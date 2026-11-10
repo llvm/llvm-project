@@ -918,6 +918,12 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
   EmitStoreOfScalar(value, lvalue, /* isInitialization */ true);
 }
 
+static bool canEmitAsSingleStore(llvm::Constant *Init) {
+  return isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
+         isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
+         isa<llvm::ConstantExpr>(Init) || isa<llvm::GlobalValue>(Init);
+}
+
 /// Decide whether we can emit the non-zero parts of the specified initializer
 /// with equal or fewer than NumStores scalar stores.
 static bool canEmitInitWithFewStoresAfterBZero(llvm::Constant *Init,
@@ -927,9 +933,7 @@ static bool canEmitInitWithFewStoresAfterBZero(llvm::Constant *Init,
       isa<llvm::ConstantPointerNull>(Init) ||
       isa<llvm::UndefValue>(Init))
     return true;
-  if (isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
-      isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
-      isa<llvm::ConstantExpr>(Init))
+  if (canEmitAsSingleStore(Init))
     return Init->isNullValue() || NumStores--;
 
   // See if we can emit each element.
@@ -964,9 +968,7 @@ void CodeGenFunction::emitStoresForInitAfterBZero(llvm::Constant *Init,
   assert(!Init->isNullValue() && !isa<llvm::UndefValue>(Init) &&
          "called emitStoresForInitAfterBZero for zero or undef value.");
 
-  if (isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
-      isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
-      isa<llvm::ConstantExpr>(Init)) {
+  if (canEmitAsSingleStore(Init)) {
     auto *I = Builder.CreateStore(Init, Loc, isVolatile);
     addInstToCurrentSourceAtom(I, nullptr);
     if (IsAutoInit)
