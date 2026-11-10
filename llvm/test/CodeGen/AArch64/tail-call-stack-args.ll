@@ -194,3 +194,43 @@ define void @wrapper_func_heterogeneous_partial(i64 %0, i64 %1, i64 %2, i64 %3, 
   tail call void @func_heterogeneous(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, { i64, i32, i16 } %updated)
   ret void
 }
+
+declare void @func_fp_aggregate(double, double, double, double, double, double, double, double, [2 x double])
+
+define void @wrapper_func_fp_aggregate(double %0, double %1, double %2, double %3, double %4, double %5, double %6, double %7, [2 x double] %8) {
+; CHECK-LABEL: wrapper_func_fp_aggregate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b func_fp_aggregate
+  tail call void @func_fp_aggregate(double %0, double %1, double %2, double %3, double %4, double %5, double %6, double %7, [2 x double] %8)
+  ret void
+}
+
+declare void @func_vec_stack(<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, [2 x <4 x i32>])
+
+define void @wrapper_func_vec_stack(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, <4 x i32> %3, <4 x i32> %4, <4 x i32> %5, <4 x i32> %6, <4 x i32> %7, [2 x <4 x i32>] %8) {
+; CHECK-LABEL: wrapper_func_vec_stack:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b func_vec_stack
+  tail call void @func_vec_stack(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, <4 x i32> %3, <4 x i32> %4, <4 x i32> %5, <4 x i32> %6, <4 x i32> %7, [2 x <4 x i32>] %8)
+  ret void
+}
+
+declare tailcc void @func_tailcc_aggregate(i64, i64, i64, i64, i64, i64, i64, i64, [2 x i64])
+
+define tailcc void @wrapper_func_tailcc_aggregate_same_size(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8) {
+; CHECK-LABEL: wrapper_func_tailcc_aggregate_same_size:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b func_tailcc_aggregate
+  tail call tailcc void @func_tailcc_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8)
+  ret void
+}
+
+define tailcc void @wrapper_func_tailcc_aggregate_diff_size(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8, i64 %extra) {
+; CHECK-LABEL: wrapper_func_tailcc_aggregate_diff_size:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp x8, x9, [sp]
+; CHECK-NEXT:    stp x8, x9, [sp, #16]!
+; CHECK-NEXT:    b func_tailcc_aggregate
+  tail call tailcc void @func_tailcc_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8)
+  ret void
+}
