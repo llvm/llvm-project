@@ -16,11 +16,12 @@
 #ifndef OFFLOAD_PLUGINS_NEXTGEN_COMMON_INCLUDE_GENERICPROFILER_H
 #define OFFLOAD_PLUGINS_NEXTGEN_COMMON_INCLUDE_GENERICPROFILER_H
 
-#include "Shared/APITypes.h"
-
+#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <tuple>
+
+struct __tgt_async_info;
 
 namespace llvm {
 namespace omp {

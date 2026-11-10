@@ -122,7 +122,7 @@ protected:
     auto loc = UnknownLoc::get(&context);
     auto result =
         parseClassificationAttr(attr, [&]() { return mlir::emitError(loc); });
-    EXPECT_TRUE(result.has_value())
+    EXPECT_TRUE(succeeded(result))
         << "parseClassificationAttr failed: " << lastError;
     return result.value_or(FunctionClassification{});
   }
@@ -133,7 +133,7 @@ protected:
     lastError.clear();
     auto result =
         parseClassificationAttr(attr, [&]() { return mlir::emitError(loc); });
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(failed(result));
     EXPECT_NE(lastError.find(expectedSubstr.str()), std::string::npos)
         << "expected error containing '" << expectedSubstr << "' but got '"
         << lastError << "'";

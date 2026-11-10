@@ -68,6 +68,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_BUILD_VECTOR_OR_SPLAT(N);
     break;
   case ISD::EXTRACT_SUBVECTOR: R = ScalarizeVecRes_EXTRACT_SUBVECTOR(N); break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    R = ScalarizeVecRes_VECTOR_SHUFFLE_VAR(N);
+    break;
   case ISD::FP_ROUND:          R = ScalarizeVecRes_FP_ROUND(N); break;
   case ISD::CONVERT_FROM_ARBITRARY_FP:
     R = ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(N);
@@ -547,6 +550,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
                      N->getOperand(0), N->getOperand(1));
 }
 
+SDValue DAGTypeLegalizer::ScalarizeVecRes_VECTOR_SHUFFLE_VAR(SDNode *N) {
+  // Index 0 is the only in-range index.
+  return GetScalarizedVector(N->getOperand(0));
+}
+
 SDValue DAGTypeLegalizer::ScalarizeVecRes_FP_ROUND(SDNode *N) {
   SDLoc DL(N);
   SDValue Op = N->getOperand(0);
@@ -964,6 +972,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::FAKE_USE:
     Res = ScalarizeVecOp_FAKE_USE(N);
+    break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    // Index 0 is the only in-range index.
+    Res = N->getOperand(0);
     break;
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:
@@ -1571,6 +1583,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::VECTOR_COMPRESS:
     SplitVecRes_VECTOR_COMPRESS(N, Lo, Hi);
+    break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    SplitVecRes_VECTOR_SHUFFLE_VAR(N, Lo, Hi);
     break;
   case ISD::SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
@@ -3076,6 +3091,13 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   std::tie(Lo, Hi) = DAG.SplitVector(Compressed, DL);
 }
 
+void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE_VAR(SDNode *N, SDValue &Lo,
+                                                      SDValue &Hi) {
+  // TODO: Split into half-width shuffles when the target lowers them natively.
+  SDValue Res = TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
+  std::tie(Lo, Hi) = DAG.SplitVector(Res, SDLoc(N));
+}
+
 void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
   assert(N->getValueType(0).isVector() &&
          N->getOperand(0).getValueType().isVector() &&
@@ -4023,6 +4045,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_COMPRESS:
     Res = SplitVecOp_VECTOR_COMPRESS(N, OpNo);
     break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = SplitVecOp_VECTOR_SHUFFLE_VAR(N, OpNo);
+    break;
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
@@ -4244,6 +4269,15 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo) {
 
   EVT VecVT = N->getValueType(0);
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VecVT, Lo, Hi);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_SHUFFLE_VAR(SDNode *N,
+                                                        unsigned OpNo) {
+  // The only possibility for an illegal operand is the mask, since result type
+  // legalization would have handled this node already otherwise.
+  assert(OpNo == 1 && "Illegal operand must be mask");
+  // TODO: Legalize the mask type instead once a target lowers the node.
+  return TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
@@ -5483,6 +5517,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::VECTOR_COMPRESS:
     Res = WidenVecRes_VECTOR_COMPRESS(N);
+    break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = WidenVecRes_VECTOR_SHUFFLE_VAR(N);
     break;
   case ISD::MLOAD:
     Res = WidenVecRes_MLOAD(cast<MaskedLoadSDNode>(N));
@@ -7152,6 +7189,17 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_COMPRESS(SDNode *N) {
                      WideMask, WidePassthru);
 }
 
+SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_SHUFFLE_VAR(SDNode *N) {
+  // Only indices that were out of range can select the new source elements.
+  SDValue Src = GetWidenedVector(N->getOperand(0));
+  EVT WideVT = Src.getValueType();
+  EVT WideMaskVT = WideVT.changeVectorElementType(
+      *DAG.getContext(),
+      N->getOperand(1).getValueType().getVectorElementType());
+  SDValue Mask = ModifyToType(N->getOperand(1), WideMaskVT);
+  return DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, SDLoc(N), WideVT, Src, Mask);
+}
+
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
   EVT VT = N->getValueType(0);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
@@ -8125,6 +8173,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = WidenVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Res = WidenVecOp_VECTOR_SHUFFLE_VAR(N, OpNo);
     break;
   case ISD::VECTOR_MATCH:
     Res = WidenVecOp_VECTOR_MATCH(N, OpNo);
@@ -9202,6 +9253,15 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
 
   return DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, N->getValueType(0),
                      WideMask);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_SHUFFLE_VAR(SDNode *N,
+                                                        unsigned OpNo) {
+  // The only possibility for an illegal operand is the mask, since result type
+  // legalization would have handled this node already otherwise.
+  assert(OpNo == 1 && "Illegal operand must be mask");
+  // TODO: Legalize the mask type instead once a target lowers the node.
+  return TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
