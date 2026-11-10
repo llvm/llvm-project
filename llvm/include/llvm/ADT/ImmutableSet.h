@@ -1088,7 +1088,7 @@ template <typename T> struct ImutContainerInfo<T *> : ImutProfileInfo<T *> {
 
 template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>,
           bool Canonicalize = true>
-class ImmutableSet {
+class LLVM_ATTRIBUTE_WARN_UNUSED ImmutableSet {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;

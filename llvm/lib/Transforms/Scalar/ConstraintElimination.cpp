@@ -419,6 +419,11 @@ public:
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
 
+  /// Returns true if \p V is known to be negative, false if \p V is known to be
+  /// nonnegative, or std::nullopt if neither the signed system nor
+  /// ValueTracking can prove it.
+  std::optional<bool> getKnownSign(Value *V);
+
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
 
@@ -1158,6 +1163,20 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
     return CI->getValue().isStrictlyPositive();
   return ::isKnownPositive(V, DL) ||
          doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
+}
+
+std::optional<bool> ConstraintInfo::getKnownSign(Value *V) {
+  KnownBits Known = computeKnownBits(V, DL);
+  if (Known.isNonNegative())
+    return false;
+  if (Known.isNegative())
+    return true;
+  Constant *Zero = ConstantInt::get(V->getType(), 0);
+  if (doesHold(CmpInst::ICMP_SGE, V, Zero))
+    return false;
+  if (doesHold(CmpInst::ICMP_SLT, V, Zero))
+    return true;
+  return std::nullopt;
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -2635,12 +2654,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         // If samesign is present on the ICmp, simply flip the sign of the
         // predicate, transferring the information from the signed system to the
         // unsigned system, and viceversa.
-        if (Pred.hasSameSign())
+        if (Pred.hasSameSign()) {
           Info.addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B,
                        CB.NumIn, CB.NumOut, DFSInStack);
-        else
+          // The operands also have the same sign: if one of them is known to
+          // be non-negative (or negative), so is the other.
+          if (A->getType()->isIntegerTy()) {
+            std::optional<bool> ASign = Info.getKnownSign(A);
+            std::optional<bool> BSign = Info.getKnownSign(B);
+            if (ASign.has_value() != BSign.has_value()) {
+              bool IsNegative = ASign ? *ASign : *BSign;
+              Value *OtherOp = ASign ? B : A;
+              Info.addFact(IsNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE,
+                           OtherOp, Constant::getNullValue(A->getType()),
+                           CB.NumIn, CB.NumOut, DFSInStack);
+            }
+          }
+        } else {
           Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
                                      DFSInStack);
+        }
       }
 
       // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an

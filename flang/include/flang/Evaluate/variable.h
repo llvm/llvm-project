@@ -445,7 +445,7 @@ private:
   int kind_;
 };
 
-FOR_EACH_CHARACTER_KIND(extern template class Designator, )
+extern template class Designator<Type<TypeCategory::Character>>;
 
 class DescriptorInquiry {
 public:

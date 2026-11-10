@@ -130,8 +130,8 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
     return nullptr;
 
   ctx.synthesizedSymbols.push_back(s);
-  s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
-                          stOther, STT_NOTYPE, val,
+  s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
+                          STT_NOTYPE, val,
                           /*size=*/0, sec});
   s->isUsedInRegularObj = true;
   return cast<Defined>(s);
@@ -143,7 +143,7 @@ void elf::addReservedSymbols(Ctx &ctx) {
   if (ctx.arg.emachine == EM_MIPS) {
     auto addAbsolute = [&](StringRef name) {
       Symbol *sym =
-          ctx.symtab->addSymbol(Defined{ctx, ctx.internalFile, name, STB_GLOBAL,
+          ctx.symtab->addSymbol(Defined{ctx.internalFile, name, STB_GLOBAL,
                                         STV_HIDDEN, STT_NOTYPE, 0, 0, nullptr});
       sym->isUsedInRegularObj = true;
       return cast<Defined>(sym);
@@ -196,7 +196,7 @@ void elf::addReservedSymbols(Ctx &ctx) {
     if (ctx.arg.emachine == EM_PPC64)
       gotOff = 0x8000;
 
-    s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+    s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
                             STV_HIDDEN, STT_NOTYPE, gotOff, /*size=*/0,
                             ctx.out.elfHeader.get()});
     ctx.sym.globalOffsetTable = cast<Defined>(s);
@@ -482,8 +482,8 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
         llvm::none_of(syms, [](Symbol *s) { return s->isFile(); })) {
       InputFile *file = ctx.objectFiles[i];
       ctx.in.symTab->addSymbol(
-          makeDefined(ctx, file, sys::path::filename(file->getName()),
-                      STB_LOCAL, /*stOther=*/0, STT_FILE, /*value=*/0,
+          makeDefined(file, sys::path::filename(file->getName()), STB_LOCAL,
+                      /*stOther=*/0, STT_FILE, /*value=*/0,
                       /*size=*/0, nullptr));
     }
     for (Symbol *sym : syms)
@@ -529,7 +529,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     // Set the symbol to be relative to the output section so that its st_value
     // equals the output section address. Note, there may be a gap between the
     // start of the output section and isec.
-    ctx.in.symTab->addSymbol(makeDefined(ctx, isec->file, "", STB_LOCAL,
+    ctx.in.symTab->addSymbol(makeDefined(isec->file, "", STB_LOCAL,
                                          /*stOther=*/0, STT_SECTION,
                                          /*value=*/0, /*size=*/0, &osec));
   }
@@ -1841,7 +1841,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // https://sourceware.org/ml/binutils/2002-03/msg00360.html
     if (ctx.in.dynamic->parent) {
       Symbol *s = ctx.symtab->addSymbol(Defined{
-          ctx, ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
+          ctx.internalFile, "_DYNAMIC", STB_WEAK, STV_HIDDEN, STT_NOTYPE,
           /*value=*/0, /*size=*/0, ctx.in.dynamic.get()});
       s->isUsedInRegularObj = true;
     }
@@ -1883,7 +1883,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       // define _TLS_MODULE_BASE_ relative to the first TLS section.
       Symbol *s = ctx.symtab->find("_TLS_MODULE_BASE_");
       if (s && s->isUndefined()) {
-        s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+        s->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
                                 STV_HIDDEN, STT_TLS, /*value=*/0, 0,
                                 /*section=*/nullptr});
         ctx.sym.tlsModuleBase = cast<Defined>(s);
