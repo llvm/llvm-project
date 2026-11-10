@@ -787,8 +787,15 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
                  const ArgList &Args, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Wrap bundled images");
 
+  // With --sycl-device-link, the wrapped images are already linked. They must
+  // not be found and linked again if the output goes through another wrapped
+  // host link, so they are embedded as finalized images.
+  bool IsFinalizedImage = Kind == OFK_SYCL && Args.hasArg(OPT_sycl_device_link);
+
   // We use the discrete tools if we are in verbose mode with '--save-temps'.
-  if (Verbose && SaveTemps && !Args.hasArg(OPT_print_wrapped_module))
+  // llvm-offload-wrapper cannot embed finalized images.
+  if (Verbose && SaveTemps && !Args.hasArg(OPT_print_wrapped_module) &&
+      !IsFinalizedImage)
     return wrapDeviceImagesVerbose(Buffers, Args, Kind);
 
   SmallVector<ArrayRef<char>, 4> BuffersToWrap;
@@ -824,8 +831,8 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
   case OFK_SYCL: {
     // TODO: fill these options once the Driver supports them.
     offloading::SYCLJITOptions Options;
-    if (Error Err =
-            offloading::wrapSYCLBinaries(M, BuffersToWrap.front(), Options))
+    if (Error Err = offloading::wrapSYCLBinaries(M, BuffersToWrap.front(),
+                                                 Options, IsFinalizedImage))
       return std::move(Err);
     break;
   }
@@ -1446,8 +1453,16 @@ getDeviceInput(const ArgList &Args) {
     if (!Filename && Arg->getOption().matches(OPT_library))
       return createStringError("unable to find library -l%s", Arg->getValue());
 
-    if (!Filename || !sys::fs::exists(*Filename) ||
-        sys::fs::is_directory(*Filename))
+    if (!Filename || !sys::fs::exists(*Filename)) {
+      // With --sycl-device-link there is no host link to report missing
+      // inputs.
+      if (Args.hasArg(OPT_sycl_device_link))
+        return createFileError(
+            Arg->getValue(),
+            std::make_error_code(std::errc::no_such_file_or_directory));
+      continue;
+    }
+    if (sys::fs::is_directory(*Filename))
       continue;
 
     // Unlike `--whole-archive`, `/wholearchive:` applies to a single library.
@@ -1658,13 +1673,17 @@ int main(int Argc, char **Argv) {
       if (EmitFatbinOnly)
         reportError(createStringError(
             "--sycl-device-link cannot be used with --emit-fatbin-only"));
+      auto CheckKind = [](OffloadKind Kind) {
+        if (Kind != OFK_SYCL)
+          reportError(createStringError(
+              "--sycl-device-link requires SYCL device code, got '%s'",
+              getOffloadKindName(Kind).str().c_str()));
+      };
       for (const SmallVector<OffloadFile> &Files : *DeviceInputFiles)
         for (const OffloadFile &File : Files)
-          if (OffloadKind Kind = File.getBinary()->getOffloadKind();
-              Kind != OFK_SYCL)
-            reportError(createStringError(
-                "--sycl-device-link requires SYCL device code, got '%s'",
-                getOffloadKindName(Kind).str().c_str()));
+          CheckKind(File.getBinary()->getOffloadKind());
+      for (StringRef Override : Args.getAllArgValues(OPT_override_image))
+        CheckKind(getOffloadKind(Override.split('=').first));
     }
 
     // Link and process the device images. The function may emit a direct fat
