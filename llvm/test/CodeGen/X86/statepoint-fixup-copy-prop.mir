@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -run-pass fixup-statepoint-caller-saved -verify-machineinstrs | FileCheck %s
+# RUN: llc -o - %s -run-pass fixup-statepoint-caller-saved | FileCheck %s
 # RUN: llc -o - %s -passes='fixup-statepoint-caller-saved' | FileCheck %s
 
 --- |

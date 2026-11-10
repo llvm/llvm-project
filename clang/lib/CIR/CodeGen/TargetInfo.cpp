@@ -146,6 +146,21 @@ public:
         &getABIInfo().cgt.getMLIRContext(),
         cir::LangAddressSpace::OffloadPrivate);
   }
+
+  // In some addrspaces for AMDGPU, null isn't 0 (such as local and private),
+  // thus we need an addrspacecast from Generic to emit correct null value for
+  // these addrspaces.
+  mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                             QualType qt, mlir::Location loc) const override {
+    CIRGenBuilderTy &builder = cgm.getBuilder();
+    if (cgm.getASTContext().getTargetNullPointerValue(qt) == 0)
+      return builder.getNullPtr(ptrTy, loc);
+
+    cir::PointerType genericPtrTy =
+        builder.getPointerTo(ptrTy.getPointee(), LangAS::opencl_generic);
+    return builder.createAddrSpaceCast(
+        loc, builder.getNullPtr(genericPtrTy, loc), ptrTy);
+  }
 };
 
 } // namespace
@@ -174,7 +189,7 @@ clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<X8664TargetCIRGenInfo>(cgt);
 }
 
-ABIInfo::~ABIInfo() noexcept = default;
+ABIInfo::~ABIInfo() = default;
 
 bool TargetCIRGenInfo::isNoProtoCallVariadic(
     const FunctionNoProtoType *fnType) const {

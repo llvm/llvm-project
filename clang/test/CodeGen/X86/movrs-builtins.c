@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown -target-feature +movrs \
 // RUN: -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown -target-feature +movrs -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s %}
 
 #include <immintrin.h>
 #include <stddef.h>
