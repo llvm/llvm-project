@@ -604,27 +604,33 @@ void OmpStructureChecker::CheckAtomicVariable(const SomeExpr &atom,
         source, "%s %s should be a scalar"_err_en_US, what, atom.AsFortran());
   }
 
-  std::vector<SomeExpr> dsgs{GetTopLevelDesignators(atom)};
-
-  // Procedure references are valid if they return a pointer to a scalar.
-  // Just return if we don't have exactly one designator - other checks will
-  // diagnose any actual errors.
-  if (dsgs.size() != 1) {
+  // For a function reference, check the type of the function result, not the
+  // types of the arguments.
+  if (const auto *procRef{evaluate::UnwrapProcedureRef(atom)}) {
+    if (const Symbol *proc{procRef->proc().GetSymbol()}) {
+      if (const Symbol *result{FindFunctionResult(*proc)}) {
+        CheckAtomicType(
+            *result, source, what, atom.AsFortran(), checkTypeOnPointer);
+      }
+    }
     return;
   }
 
-  SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
-  if (syms.empty()) {
+  const Symbol *sym{evaluate::GetLastSymbol(atom)};
+  if (!sym) {
     return;
   }
+  // A variable in an OpenMP region can have a symbol made for that region,
+  // which doesn't have attributes like POINTER and ALLOCATABLE. Check the
+  // ultimate symbol instead.
+  const Symbol &ultimate{sym->GetUltimate()};
 
-  CheckAtomicType(
-      syms.back(), source, what, atom.AsFortran(), checkTypeOnPointer);
+  CheckAtomicType(ultimate, source, what, atom.AsFortran(), checkTypeOnPointer);
 
   // [6.0:194:25]
   // x must not have the ALLOCATABLE attribute. This doesn't apply to v.
   if (!isCapture && !IsArrayElement(atom) && !ExtractComplexPart(atom)) {
-    if (IsAllocatable(syms.back())) {
+    if (IsAllocatable(ultimate)) {
       context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
           atom.AsFortran());
     }

@@ -177,3 +177,60 @@ subroutine f13(x)
   !ERROR: Capture variable v should have an intrinsic type
   v = x
 end
+
+subroutine f14(x, c)
+  integer :: x, v
+  character :: c
+  interface
+    function q(c) result(r)
+      character :: c
+      integer, pointer :: r
+    end
+  end interface
+
+  ! x and v can be function references. The types of the arguments don't
+  ! matter. Expect no diagnostics.
+  !$omp atomic read
+  v = q(c)
+
+  !$omp atomic read
+  q(c) = x
+end
+
+subroutine f15(x, v)
+  type t
+    integer :: i
+  end type
+  type(t), pointer :: x, v
+  integer, allocatable :: y
+  integer :: w
+
+  ! Variables in a parallel region are checked the same way as outside it.
+  !$omp parallel
+  !$omp atomic read
+  v => x
+
+  !$omp atomic read
+  !ERROR: Atomic variable y cannot be ALLOCATABLE
+  w = y
+  !$omp end parallel
+end
+
+subroutine f16(x, y)
+  class(*), pointer :: x
+  integer, allocatable :: y
+  integer :: v
+
+  ! An associate name doesn't have the POINTER or ALLOCATABLE attribute of
+  ! its selector. Expect no diagnostics.
+  select type (a => x)
+  type is (integer)
+    !$omp atomic read
+    v = a
+  end select
+
+  associate (b => y)
+    !$omp atomic read
+    v = b
+  end associate
+end
