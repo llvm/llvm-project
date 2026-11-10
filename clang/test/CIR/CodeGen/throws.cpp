@@ -7,7 +7,7 @@
 
 int throw_in_global_init = (throw 1, 0);
 
-// CIR-LABEL: cir.func internal private @__cxx_global_var_init() {
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init(){{.*}} {
 // CIR-NEXT:    cir.scope {
 // CIR:           cir.throw
 // CIR-NEXT:      cir.unreachable
@@ -17,7 +17,7 @@ int throw_in_global_init = (throw 1, 0);
 // CIR-NEXT:    }
 // CIR-NEXT:    cir.return
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init()
+// LLVM-LABEL: define internal void @__cxx_global_var_init() #{{[0-9]+}}
 // LLVM:         call void @__cxa_throw
 // LLVM-NEXT:    unreachable
 // LLVM:         store i32 0, ptr @throw_in_global_init
@@ -31,7 +31,7 @@ int throw_in_global_init = (throw 1, 0);
 
 int trap_in_global_init = (__builtin_trap(), 1);
 
-// CIR-LABEL: cir.func internal private @__cxx_global_var_init.1() {
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.1(){{.*}} {
 // CIR-NEXT:    cir.scope {
 // CIR:           cir.trap
 // CIR:         ^bb1:
@@ -39,7 +39,7 @@ int trap_in_global_init = (__builtin_trap(), 1);
 // CIR-NEXT:    }
 // CIR-NEXT:    cir.return
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.1()
+// LLVM-LABEL: define internal void @__cxx_global_var_init.1() #{{[0-9]+}}
 // LLVM:         call void @llvm.trap()
 // LLVM-NEXT:    unreachable
 // LLVM:         store i32 1, ptr @trap_in_global_init
@@ -56,7 +56,7 @@ struct ThrowInGlobalCtorArg {
 };
 ThrowInGlobalCtorArg throw_in_global_ctor_arg = ThrowInGlobalCtorArg((throw 1, 0));
 
-// CIR-LABEL: cir.func internal private @__cxx_global_var_init.2() {
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.2(){{.*}} {
 // CIR-NEXT:    cir.scope {
 // CIR:           cir.throw
 // CIR-NEXT:      cir.unreachable
@@ -66,7 +66,7 @@ ThrowInGlobalCtorArg throw_in_global_ctor_arg = ThrowInGlobalCtorArg((throw 1, 0
 // CIR-NEXT:    }
 // CIR-NEXT:    cir.return
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.2()
+// LLVM-LABEL: define internal void @__cxx_global_var_init.2() #{{[0-9]+}}
 // LLVM:         call void @__cxa_throw
 // LLVM-NEXT:    unreachable
 // LLVM:         call void @_ZN20ThrowInGlobalCtorArgC1Ei
@@ -81,7 +81,7 @@ ThrowInGlobalCtorArg throw_in_global_ctor_arg = ThrowInGlobalCtorArg((throw 1, 0
 inline int throw_in_inline_global = (throw 1, 0);
 int use_throw_in_inline_global() { return throw_in_inline_global; }
 
-// CIR-LABEL: cir.func comdat("throw_in_inline_global") internal private @__cxx_global_var_init.3() {
+// CIR-LABEL: cir.func comdat("throw_in_inline_global") internal private @__cxx_global_var_init.3(){{.*}} {
 // CIR:         cir.call @__cxa_guard_acquire
 // CIR:         cir.cleanup.scope {
 // CIR-NEXT:      cir.scope {
@@ -95,7 +95,7 @@ int use_throw_in_inline_global() { return throw_in_inline_global; }
 // CIR-NEXT:    } cleanup eh {
 // CIR-NEXT:      cir.call @__cxa_guard_abort
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.3() comdat($throw_in_inline_global)
+// LLVM-LABEL: define internal void @__cxx_global_var_init.3() #{{[0-9]+}} comdat($throw_in_inline_global)
 // LLVM:         call i32 @__cxa_guard_acquire
 // LLVM:         invoke void @__cxa_throw
 // LLVM:         call void @__cxa_guard_abort
@@ -105,7 +105,7 @@ template <class X> struct ThrowInTemplateStatic {
 };
 int use_throw_in_template_static() { return ThrowInTemplateStatic<int>::w; }
 
-// CIR-LABEL: cir.func comdat("_ZN21ThrowInTemplateStaticIiE1wE") internal private @__cxx_global_var_init.4() {
+// CIR-LABEL: cir.func comdat("_ZN21ThrowInTemplateStaticIiE1wE") internal private @__cxx_global_var_init.4(){{.*}} {
 // CIR:         cir.if {{.*}} {
 // CIR:           cir.scope {
 // CIR:             cir.throw
@@ -117,7 +117,7 @@ int use_throw_in_template_static() { return ThrowInTemplateStatic<int>::w; }
 // CIR-NEXT:    }
 // CIR-NEXT:    cir.return
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.4() comdat($_ZN21ThrowInTemplateStaticIiE1wE)
+// LLVM-LABEL: define internal void @__cxx_global_var_init.4() #{{[0-9]+}} comdat($_ZN21ThrowInTemplateStaticIiE1wE)
 // LLVM:         call void @__cxa_throw
 // LLVM-NEXT:    unreachable
 // LLVM:         store i32 0, ptr @_ZN21ThrowInTemplateStaticIiE1wE

@@ -1721,6 +1721,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v2i32, Legal);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
+    setOperationAction(ISD::BITCAST, MVT::f64, Expand);
 
     // And we need to promote i64 loads/stores into vector load/store
     setOperationAction(ISD::LOAD, MVT::i64, Custom);
@@ -2831,18 +2832,61 @@ static SDValue LowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG,
 static SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG,
                                const SparcTargetLowering &TLI,
                                bool hasHardQuad) {
-  EVT OpVT = Op.getOperand(Op->isStrictFPOpcode() ? 1 : 0).getValueType();
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
+  EVT OpVT = Src.getValueType();
   assert(OpVT == MVT::i32 || OpVT == MVT::i64);
 
-  // Expand if it does not involve f128 or the target has support for
-  // quad floating point instructions and the operand type is legal.
-  if (Op.getValueType() != MVT::f128 || (hasHardQuad && TLI.isTypeLegal(OpVT)))
-    return SDValue();
+  // Expand f128 operations to fp128 ABI calls if there is no hardware quad
+  // support or the operand type is illegal.
+  if (VT == MVT::f128 && (!hasHardQuad || !TLI.isTypeLegal(OpVT)))
+    return TLI.LowerF128Op(Op, DAG,
+                           OpVT == MVT::i32 ? RTLIB::UINTTOFP_I32_F128
+                                            : RTLIB::UINTTOFP_I64_F128,
+                           1);
 
-  return TLI.LowerF128Op(Op, DAG,
-                         OpVT == MVT::i32 ? RTLIB::UINTTOFP_I32_F128
-                                          : RTLIB::UINTTOFP_I64_F128,
-                         1);
+  // When i64 is legal, zero-extend an i32 operand and use the signed 64-bit
+  // conversion (fxtos/fxtod/fxtoq). The generic i32 expansion builds the
+  // double 0x43300000:x and subtracts 2^52, which yields -0.0 for an input of
+  // 0 when rounding toward negative infinity.
+  if (OpVT == MVT::i32 && TLI.isTypeLegal(MVT::i64)) {
+    SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Src);
+    if (IsStrict)
+      return DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {VT, MVT::Other},
+                         {Op.getOperand(0), Ext});
+    return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Ext);
+  }
+
+  // For i64 to f64, the generic non-strict expansion splits the operand into
+  // 2^84 and 2^52 biased halves, which also yields -0.0 for an input of 0 when
+  // rounding toward negative infinity. Use the same sequence as the strict
+  // expansion instead: if the sign bit is set, halve the operand keeping the
+  // low bit sticky, convert with fxtod and double the result. This is correct
+  // in all rounding modes and avoids the constant pool load.
+  if (!IsStrict && OpVT == MVT::i64 && VT == MVT::f64 &&
+      TLI.isTypeLegal(MVT::i64)) {
+    if (Op->getFlags().hasNonNeg())
+      return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Src);
+
+    EVT SetCCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                         MVT::i64);
+    SDValue SignBitTest = DAG.getSetCC(
+        dl, SetCCVT, Src, DAG.getConstant(0, dl, MVT::i64), ISD::SETLT);
+    SDValue Shr = DAG.getNode(ISD::SRL, dl, MVT::i64, Src,
+                              DAG.getShiftAmountConstant(1, MVT::i64, dl));
+    SDValue And = DAG.getNode(ISD::AND, dl, MVT::i64, Src,
+                              DAG.getConstant(1, dl, MVT::i64));
+    SDValue Or = DAG.getNode(ISD::OR, dl, MVT::i64, And, Shr);
+    SDValue InCvt = DAG.getSelect(dl, MVT::i64, SignBitTest, Or, Src);
+    SDValue Cvt = DAG.getNode(ISD::SINT_TO_FP, dl, MVT::f64, InCvt);
+    SDValue Dbl = DAG.getNode(ISD::FADD, dl, MVT::f64, Cvt, Cvt);
+    return DAG.getSelect(dl, MVT::f64, SignBitTest, Dbl, Cvt);
+  }
+
+  // Otherwise, use the generic expansion.
+  return SDValue();
 }
 
 // Lower a constrained FP compare. The quiet form uses fcmp and the signaling
@@ -2885,6 +2929,65 @@ static SDValue LowerSTRICT_FSETCC(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues({Res, Chain}, dl);
 }
 
+// If this is a br_cc on the result of a constrained FP compare that was
+// lowered into a STRICT_CMPFCC*/SELECT_FCC pair, set Chain and Glue so that
+// the branch can test the FP condition codes directly instead of
+// materializing the result and comparing it against zero.
+//
+// The compare is glued to the branch, so nothing may be scheduled between
+// them, and the branch's chain must come straight from the compare. That is
+// the case if the compare's output chain feeds only the branch. If it instead
+// reaches the branch through a token factor used only by the branch, emit a
+// new compare chained after the token factor's other operands and branch on
+// that. Those operands were not ordered with respect to the compare, and the
+// original compare and its select become dead.
+static bool LookThroughStrictSetCC(SDValue &Chain, SDValue LHS, SDValue RHS,
+                                   ISD::CondCode CC, unsigned &SPCC,
+                                   SDValue &Glue, const SDLoc &DL,
+                                   SelectionDAG &DAG) {
+  if (CC != ISD::SETNE || !isNullConstant(RHS) ||
+      LHS.getOpcode() != SPISD::SELECT_FCC || !LHS.hasOneUse() ||
+      !isOneConstant(LHS.getOperand(0)) || !isNullConstant(LHS.getOperand(1)))
+    return false;
+
+  SDNode *Cmp = LHS.getOperand(3).getNode();
+  switch (Cmp->getOpcode()) {
+  case SPISD::STRICT_CMPFCC:
+  case SPISD::STRICT_CMPFCCS:
+  case SPISD::STRICT_CMPFCC_V9:
+  case SPISD::STRICT_CMPFCCS_V9:
+    break;
+  default:
+    return false;
+  }
+
+  SDValue CmpChain(Cmp, 0);
+  if (!CmpChain.hasOneUse())
+    return false;
+
+  if (Chain == CmpChain) {
+    Glue = SDValue(Cmp, 1);
+  } else if (Chain.getOpcode() == ISD::TokenFactor && Chain.hasOneUse() &&
+             is_contained(Chain->op_values(), CmpChain)) {
+    SmallVector<SDValue, 8> Ops;
+    for (SDValue Op : Chain->op_values())
+      if (Op != CmpChain)
+        Ops.push_back(Op);
+    Ops.push_back(Cmp->getOperand(0));
+    SDValue InChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Ops);
+    SDValue NewCmp =
+        DAG.getNode(Cmp->getOpcode(), DL, Cmp->getVTList(),
+                    {InChain, Cmp->getOperand(1), Cmp->getOperand(2)});
+    Chain = NewCmp.getValue(0);
+    Glue = NewCmp.getValue(1);
+  } else {
+    return false;
+  }
+
+  SPCC = LHS.getConstantOperandVal(2);
+  return true;
+}
+
 static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
                           const SparcTargetLowering &TLI, bool hasHardQuad,
                           bool isV9, bool is64Bit) {
@@ -2896,10 +2999,30 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
   unsigned Opc, SPCC = ~0U;
 
+  // A brcond on the result of a lowered setcc is expanded into
+  // br_cc (and X, 1), 0, setne. When X is a SELECT_[IF]CC of 1 and 0 the and
+  // is a no-op, so look through it.
+  if (CC == ISD::SETNE && isNullConstant(RHS) && LHS.getOpcode() == ISD::AND &&
+      isOneConstant(LHS.getOperand(1)) && LHS.hasOneUse()) {
+    SDValue Sel = LHS.getOperand(0);
+    if ((Sel.getOpcode() == SPISD::SELECT_ICC ||
+         Sel.getOpcode() == SPISD::SELECT_XCC ||
+         Sel.getOpcode() == SPISD::SELECT_FCC) &&
+        isOneConstant(Sel.getOperand(0)) && isNullConstant(Sel.getOperand(1)))
+      LHS = Sel;
+  }
+
   // If this is a br_cc of a "setcc", and if the setcc got lowered into
   // an CMP[IF]CC/SELECT_[IF]CC pair, find the original compared values.
   LookThroughSetCC(LHS, RHS, CC, SPCC);
   assert(LHS.getValueType() == RHS.getValueType());
+
+  // Likewise for a constrained FP compare, branch on the FP condition codes.
+  SDValue StrictCmpFlag;
+  if (LookThroughStrictSetCC(Chain, LHS, RHS, CC, SPCC, StrictCmpFlag, dl, DAG))
+    return DAG.getNode(isV9 ? SPISD::BRFCC_V9 : SPISD::BRFCC, dl, MVT::Other,
+                       Chain, Dest, DAG.getConstant(SPCC, dl, MVT::i32),
+                       StrictCmpFlag);
 
   // Get the condition flag.
   SDValue CompareFlag;
