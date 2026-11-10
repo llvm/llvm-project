@@ -381,12 +381,15 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
   FindInterveningFrames(*next_func, *prev_func, exe_ctx, target, return_pc,
                         path, images, log);
 
-  // Push synthetic tail call frames.
+  // Push synthetic tail call frames. A tail call reuses its caller's frame, so
+  // each one takes the CFA of the younger frame that replaced it.
+  const addr_t prev_cfa = prev_frame.m_id.GetCallFrameAddressWithMetadata();
+  uint32_t tail_call_depth = 0;
   for (const auto &calleeInfo : llvm::reverse(path)) {
     Function *callee = calleeInfo.callee.function;
     uint32_t frame_idx = m_frames.size();
     uint32_t concrete_frame_idx = next_frame.GetConcreteFrameIndex();
-    addr_t cfa = LLDB_INVALID_ADDRESS;
+    addr_t cfa = prev_cfa;
     bool cfa_is_valid = false;
     addr_t pc = calleeInfo.address;
     // If the callee address refers to the call instruction, we do not want to
@@ -400,6 +403,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
         m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
         cfa_is_valid, pc, StackFrame::Kind::Regular, artificial,
         behaves_like_zeroth_frame, &sc);
+    synth_frame->m_id.SetTailCallDepth(++tail_call_depth);
     synth_frame->m_frame_list_id = GetIdentifier();
     m_frames.push_back(synth_frame);
     LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
