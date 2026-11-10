@@ -36,20 +36,10 @@ LIBC_INLINE bfloat16 coshbf16(bfloat16 x) {
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits x_bits(x);
 
-  // We first check for NaN
-  if (LIBC_UNLIKELY(x_bits.is_nan())) {
-    // If it is a signaling NaN, then we raise an FE_INVALID exception
-    // and return a quiet NaN
-    if (x_bits.is_signaling_nan()) {
-      fputil::raise_except_if_required(FE_INVALID);
-      return FPBits::quiet_nan().get_val();
-    }
-    // If not, just return the NaN
-    return x;
-  }
-
   // cosh is an even function, cosh(-x) = cosh(x), so we only need |x|.
   // We bound the cases below by comparing the bits of |x| as an integer.
+  // NaN and Inf have the largest bits of |x|, so they are handled together with
+  // the overflow case below.
   uint16_t x_abs_uint = x_bits.abs().uintval();
 
   constexpr uint16_t ONE_UINT = 0x3F80; // 0x1p0 = 1.0
@@ -75,6 +65,17 @@ LIBC_INLINE bfloat16 coshbf16(bfloat16 x) {
   // overflow is always to +Inf, regardless of the sign of x.
   constexpr uint16_t OVERFLOW_ABS_BOUND = 0x42B3; // 0x1.66p6 = 89.5
   if (LIBC_UNLIKELY(x_abs_uint >= OVERFLOW_ABS_BOUND)) {
+    if (x_bits.is_nan()) {
+      // If it is a signaling NaN, then we raise an FE_INVALID exception
+      // and return a quiet NaN
+      if (x_bits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      // If not, just return the NaN
+      return x;
+    }
+
     // cosh(+-Inf) = +Inf
     if (x_bits.is_inf())
       return FPBits::inf().get_val();
