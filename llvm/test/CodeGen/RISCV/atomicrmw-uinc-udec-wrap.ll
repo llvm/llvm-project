@@ -411,20 +411,20 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV32IA-NEXT:  .LBB2_1: # %atomicrmw.start
 ; RV32IA-NEXT:    # =>This Loop Header: Depth=1
 ; RV32IA-NEXT:    # Child Loop BB2_3 Depth 2
-; RV32IA-NEXT:    mv a3, a2
-; RV32IA-NEXT:    sltu a2, a2, a1
-; RV32IA-NEXT:    addi a4, a3, 1
-; RV32IA-NEXT:    neg a2, a2
-; RV32IA-NEXT:    and a4, a2, a4
+; RV32IA-NEXT:    sltu a3, a2, a1
+; RV32IA-NEXT:    addi a4, a2, 1
+; RV32IA-NEXT:    neg a3, a3
+; RV32IA-NEXT:    mv a5, a2
+; RV32IA-NEXT:    and a3, a3, a4
 ; RV32IA-NEXT:  .LBB2_3: # %atomicrmw.start
 ; RV32IA-NEXT:    # Parent Loop BB2_1 Depth=1
 ; RV32IA-NEXT:    # => This Inner Loop Header: Depth=2
 ; RV32IA-NEXT:    lr.w.aqrl a2, (a0)
-; RV32IA-NEXT:    bne a2, a3, .LBB2_1
+; RV32IA-NEXT:    bne a2, a5, .LBB2_1
 ; RV32IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; RV32IA-NEXT:    sc.w.rl a5, a4, (a0)
-; RV32IA-NEXT:    bnez a5, .LBB2_3
+; RV32IA-NEXT:    sc.w.rl a4, a3, (a0)
+; RV32IA-NEXT:    bnez a4, .LBB2_3
 ; RV32IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV32IA-NEXT:  # %bb.2: # %atomicrmw.end
 ; RV32IA-NEXT:    mv a0, a2
@@ -669,20 +669,20 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV64IA-NEXT:  .LBB3_1: # %atomicrmw.start
 ; RV64IA-NEXT:    # =>This Loop Header: Depth=1
 ; RV64IA-NEXT:    # Child Loop BB3_3 Depth 2
-; RV64IA-NEXT:    mv a3, a2
-; RV64IA-NEXT:    sltu a2, a2, a1
-; RV64IA-NEXT:    addi a4, a3, 1
-; RV64IA-NEXT:    neg a2, a2
-; RV64IA-NEXT:    and a4, a2, a4
+; RV64IA-NEXT:    sltu a3, a2, a1
+; RV64IA-NEXT:    addi a4, a2, 1
+; RV64IA-NEXT:    neg a3, a3
+; RV64IA-NEXT:    mv a5, a2
+; RV64IA-NEXT:    and a3, a3, a4
 ; RV64IA-NEXT:  .LBB3_3: # %atomicrmw.start
 ; RV64IA-NEXT:    # Parent Loop BB3_1 Depth=1
 ; RV64IA-NEXT:    # => This Inner Loop Header: Depth=2
 ; RV64IA-NEXT:    lr.d.aqrl a2, (a0)
-; RV64IA-NEXT:    bne a2, a3, .LBB3_1
+; RV64IA-NEXT:    bne a2, a5, .LBB3_1
 ; RV64IA-NEXT:  # %bb.4: # %atomicrmw.start
 ; RV64IA-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; RV64IA-NEXT:    sc.d.rl a5, a4, (a0)
-; RV64IA-NEXT:    bnez a5, .LBB3_3
+; RV64IA-NEXT:    sc.d.rl a4, a3, (a0)
+; RV64IA-NEXT:    bnez a4, .LBB3_3
 ; RV64IA-NEXT:  # %bb.5: # %atomicrmw.start
 ; RV64IA-NEXT:  # %bb.2: # %atomicrmw.end
 ; RV64IA-NEXT:    mv a0, a2
