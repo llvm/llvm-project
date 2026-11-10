@@ -1694,12 +1694,28 @@ func.func @extract_from_shape_of_memref_no_fold(%arg0: memref<?xf32>) -> index {
 // poison when the result depends entirely on the poison operand, and leave
 // the op alone otherwise.
 
-// With only one poison operand, the other extents are still known: no fold.
-// CHECK-LABEL: func @concat_poison
-func.func @concat_poison() -> tensor<4xindex> {
-  // CHECK: shape.concat
+// concat with a poison rhs is poison.
+// CHECK-LABEL: func @concat_poison_rhs
+// CHECK-NOT: shape.concat
+// CHECK: %[[P:.*]] = ub.poison : tensor<4xindex>
+// CHECK: return %[[P]]
+func.func @concat_poison_rhs() -> tensor<4xindex> {
   %lhs = shape.const_shape [0, 1] : tensor<2xindex>
   %rhs = ub.poison : tensor<2xindex>
+  %0 = shape.concat %lhs, %rhs : tensor<2xindex>, tensor<2xindex> -> tensor<4xindex>
+  return %0 : tensor<4xindex>
+}
+
+// -----
+
+// concat with a poison lhs is poison.
+// CHECK-LABEL: func @concat_poison_lhs
+// CHECK-NOT: shape.concat
+// CHECK: %[[P:.*]] = ub.poison : tensor<4xindex>
+// CHECK: return %[[P]]
+func.func @concat_poison_lhs() -> tensor<4xindex> {
+  %lhs = ub.poison : tensor<2xindex>
+  %rhs = shape.const_shape [0, 1] : tensor<2xindex>
   %0 = shape.concat %lhs, %rhs : tensor<2xindex>, tensor<2xindex> -> tensor<4xindex>
   return %0 : tensor<4xindex>
 }
@@ -1753,8 +1769,8 @@ func.func @num_elements_poison() -> index {
 // CHECK: return %[[P]], %[[P]]
 func.func @split_at_poison_shape() -> (!shape.shape, !shape.shape) {
   %c2 = arith.constant 2 : index
-  %0 = ub.poison : !shape.shape
-  %head, %tail = "shape.split_at"(%0, %c2) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
+  %poison = ub.poison : !shape.shape
+  %head, %tail = "shape.split_at"(%poison, %c2) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 }
 
@@ -1766,9 +1782,9 @@ func.func @split_at_poison_shape() -> (!shape.shape, !shape.shape) {
 // CHECK: %[[P:.*]] = ub.poison : !shape.shape
 // CHECK: return %[[P]], %[[P]]
 func.func @split_at_poison_index() -> (!shape.shape, !shape.shape) {
-  %c2 = ub.poison : index
+  %poison = ub.poison : index
   %0 = shape.const_shape [2, 3, 4, 5] : !shape.shape
-  %head, %tail = "shape.split_at"(%0, %c2) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
+  %head, %tail = "shape.split_at"(%0, %poison) : (!shape.shape, index) -> (!shape.shape, !shape.shape)
   return %head, %tail : !shape.shape, !shape.shape
 }
 

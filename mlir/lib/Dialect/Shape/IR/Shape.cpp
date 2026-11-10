@@ -877,8 +877,8 @@ void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
-  // concat(poison, poison) is poison.
-  if (isa_and_present<ub::PoisonAttr>(adaptor.getLhs()) &&
+  // concat with a poison operand is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getLhs()) ||
       isa_and_present<ub::PoisonAttr>(adaptor.getRhs()))
     return ub::PoisonAttr::get(getContext());
   auto lhs = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getLhs());
