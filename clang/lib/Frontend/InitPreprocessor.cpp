@@ -1518,12 +1518,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
       Builder.defineMacro("__OFFLOAD_ARCH_IGCA__", Twine(IGCA.getTarget()));
       if (IGCA.isAnyCompute())
         Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE__");
-      else if (IGCA.isAnyRender())
+      if (IGCA.isAnyRender())
         Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER__");
 
       if (IGCA.isComputeExact())
         Builder.defineMacro("__OFFLOAD_ARCH_IGCA_COMPUTE_EXACT__");
-      else if (IGCA.isRenderExact())
+      if (IGCA.isRenderExact())
         Builder.defineMacro("__OFFLOAD_ARCH_IGCA_RENDER_EXACT__");
     }
   }
