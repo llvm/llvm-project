@@ -98,45 +98,31 @@ RegEncoder::RegBank RegEncoder::getRegBank(unsigned NumElts, unsigned EltSize) {
   case 5:
     if (EltSize == 32)
       return RegBank::RegV5_32;
-    else
-      llvm_unreachable("Unknown element size!");
-    break;
+    llvm_unreachable("Unknown element size!");
   case 6:
     if (EltSize == 32)
       return RegBank::RegV6_32;
-    else
-      llvm_unreachable("Unknown element size!");
-    break;
+    llvm_unreachable("Unknown element size!");
   case 7:
     if (EltSize == 32)
       return RegBank::RegV7_32;
-    else
-      llvm_unreachable("Unknown element size!");
-    break;
+    llvm_unreachable("Unknown element size!");
   case 8:
     if (EltSize == 32)
       return RegBank::RegV8_32;
-    else
-      llvm_unreachable("Unknown element size!");
-    break;
+    llvm_unreachable("Unknown element size!");
   case 16:
     if (EltSize == 32)
       return RegBank::RegV16_32;
-    else
-      llvm_unreachable("Unknown element size!");
-    break;
+    llvm_unreachable("Unknown element size!");
   case 32:
     if (EltSize == 32)
       return RegBank::RegV32_32;
-    else
-      llvm_unreachable("Unknown element size!");
-    break;
+    llvm_unreachable("Unknown element size!");
   case 64:
     if (EltSize == 32)
       return RegBank::RegV64_32;
-    else
-      llvm_unreachable("Unknown element size!");
-    break;
+    llvm_unreachable("Unknown element size!");
   default:
     llvm_unreachable("Unknown number of elements!");
     return RegBank::NUM_BANK;
