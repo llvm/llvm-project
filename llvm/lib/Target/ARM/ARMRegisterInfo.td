@@ -327,7 +327,9 @@ def GPRsp : RegisterClass<"ARM", [i32], 32, (add SP)> {
 // where LR is the only legal loop counter register.
 def GPRlr : RegisterClass<"ARM", [i32], 32, (add LR)>;
 
-def GPRip : RegisterClass<"ARM", [i32], 32, (add R12)>;
+def GPRip : RegisterClass<"ARM", [i32], 32, (add R12)> {
+  let isAllocatable = 0;
+}
 
 // restricted GPR register class. Many Thumb2 instructions allow the full
 // register range for operands, but have undefined behaviours when PC
