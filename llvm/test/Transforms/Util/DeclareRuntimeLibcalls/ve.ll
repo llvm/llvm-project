@@ -1,7 +1,4 @@
 ; REQUIRES: ve-registered-target
-; Strip blank lines and inline attribute comments so the declaration
-; stream is contiguous and can be checked with -NEXT: no unexpected call
-; can sneak in between two checked declarations.
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=ve < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck %s
 
 ; CHECK: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
