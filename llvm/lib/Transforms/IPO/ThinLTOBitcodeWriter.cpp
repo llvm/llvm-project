@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -30,9 +31,14 @@ using namespace llvm;
 namespace {
 
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
-// changing visibility and appending the given ModuleId.
+// changing visibility and appending ".llvm" + ModuleId (matching
+// ModuleSummaryIndex::getGlobalNameForLocal so downstream PGO, SamplePGO,
+// MemProf, and linker symbol canonicalization strip the promotion suffix).
 void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
                       SetVector<GlobalValue *> *PromoteExtra = nullptr) {
+  assert(ModuleId.starts_with(".") &&
+         "Expected getUniqueModuleId to return a leading dot");
+  StringRef ModuleHashStr = ModuleId.drop_front();
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
   for (auto &ExportGV : ExportM.global_values()) {
     if (!ExportGV.hasLocalLinkage())
@@ -52,7 +58,8 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       }
     }
 
-    std::string NewName = (Name + ModuleId).str();
+    std::string NewName =
+        ModuleSummaryIndex::getGlobalNameForLocal(Name, ModuleHashStr);
 
     if (const auto *C = ExportGV.getComdat())
       if (C->getName() == Name)
