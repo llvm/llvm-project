@@ -1071,7 +1071,7 @@ define void @memmove_p1_p3(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    global_store_dwordx4 v[12:13], v[8:11], off
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB7_2
-; CHECK-NEXT:  .LBB7_3: ; %Flow9
+; CHECK-NEXT:  .LBB7_3: ; %Flow10
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
@@ -1096,7 +1096,7 @@ define void @memmove_p1_p3(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    global_store_byte v[3:4], v7, off
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB7_5
-; CHECK-NEXT:  .LBB7_6: ; %Flow7
+; CHECK-NEXT:  .LBB7_6: ; %Flow8
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1285,7 +1285,7 @@ define void @memmove_p1_p5(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    global_store_dwordx4 v[12:13], v[8:11], off
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB9_2
-; CHECK-NEXT:  .LBB9_3: ; %Flow9
+; CHECK-NEXT:  .LBB9_3: ; %Flow10
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
@@ -1310,7 +1310,7 @@ define void @memmove_p1_p5(ptr addrspace(1) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    global_store_byte v[3:4], v7, off
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB9_5
-; CHECK-NEXT:  .LBB9_6: ; %Flow7
+; CHECK-NEXT:  .LBB9_6: ; %Flow8
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1491,7 +1491,7 @@ define void @memmove_p3_p1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v7, 16, v7
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB11_2
-; CHECK-NEXT:  .LBB11_3: ; %Flow9
+; CHECK-NEXT:  .LBB11_3: ; %Flow10
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
@@ -1516,7 +1516,7 @@ define void @memmove_p3_p1(ptr addrspace(3) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB11_5
-; CHECK-NEXT:  .LBB11_6: ; %Flow7
+; CHECK-NEXT:  .LBB11_6: ; %Flow8
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1682,7 +1682,7 @@ define void @memmove_p3_p4(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v7, 16, v7
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB13_2
-; CHECK-NEXT:  .LBB13_3: ; %Flow9
+; CHECK-NEXT:  .LBB13_3: ; %Flow10
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
@@ -1707,7 +1707,7 @@ define void @memmove_p3_p4(ptr addrspace(3) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB13_5
-; CHECK-NEXT:  .LBB13_6: ; %Flow7
+; CHECK-NEXT:  .LBB13_6: ; %Flow8
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1750,7 +1750,7 @@ define void @memmove_p3_p5(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v6, 16, v6
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB14_2
-; CHECK-NEXT:  .LBB14_3: ; %Flow14
+; CHECK-NEXT:  .LBB14_3: ; %Flow15
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
@@ -1773,7 +1773,7 @@ define void @memmove_p3_p5(ptr addrspace(3) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB14_5
-; CHECK-NEXT:  .LBB14_6: ; %Flow12
+; CHECK-NEXT:  .LBB14_6: ; %Flow13
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -1963,7 +1963,7 @@ define void @memmove_p5_p1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    s_or_b32 s7, vcc_lo, s7
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB16_2
-; CHECK-NEXT:  .LBB16_3: ; %Flow9
+; CHECK-NEXT:  .LBB16_3: ; %Flow10
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
@@ -1988,7 +1988,7 @@ define void @memmove_p5_p1(ptr addrspace(5) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB16_5
-; CHECK-NEXT:  .LBB16_6: ; %Flow7
+; CHECK-NEXT:  .LBB16_6: ; %Flow8
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -2029,7 +2029,7 @@ define void @memmove_p5_p3(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    s_or_b32 s7, vcc_lo, s7
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB17_2
-; CHECK-NEXT:  .LBB17_3: ; %Flow14
+; CHECK-NEXT:  .LBB17_3: ; %Flow15
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
@@ -2052,7 +2052,7 @@ define void @memmove_p5_p3(ptr addrspace(5) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB17_5
-; CHECK-NEXT:  .LBB17_6: ; %Flow12
+; CHECK-NEXT:  .LBB17_6: ; %Flow13
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -2093,7 +2093,7 @@ define void @memmove_p5_p4(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    s_or_b32 s7, vcc_lo, s7
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB18_2
-; CHECK-NEXT:  .LBB18_3: ; %Flow9
+; CHECK-NEXT:  .LBB18_3: ; %Flow10
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 s7, 0
 ; CHECK-NEXT:    s_mov_b32 s6, exec_lo
@@ -2118,7 +2118,7 @@ define void @memmove_p5_p4(ptr addrspace(5) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 1, v0
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s7
 ; CHECK-NEXT:    s_cbranch_execnz .LBB18_5
-; CHECK-NEXT:  .LBB18_6: ; %Flow7
+; CHECK-NEXT:  .LBB18_6: ; %Flow8
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:

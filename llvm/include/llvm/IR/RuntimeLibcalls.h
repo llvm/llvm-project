@@ -48,6 +48,8 @@ template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
 };
 
 class LibcallLoweringInfo;
+class GlobalValue;
+class Module;
 class Type;
 
 namespace Intrinsic {
@@ -215,6 +217,38 @@ public:
   LLVM_ABI std::pair<FunctionType *, AttributeList>
   getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
                 RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the value type of \p LibcallImpl if it is a global variable
+  /// rather than a function, or nullptr otherwise.
+  LLVM_ABI Type *getVariableType(LLVMContext &Ctx, const Triple &TT,
+                                 const DataLayout &DL,
+                                 RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the declaration of \p LibcallImpl in \p M. If \p M does not
+  /// contain a global with its name, a function is inserted with the
+  /// signature, attributes and calling convention of \p LibcallImpl. If the
+  /// signature is unknown, the function is declared as void(...).
+  LLVM_ABI FunctionCallee
+  getOrInsertLibcallDecl(Module &M, RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the global for the variable \p LibcallImpl in \p M. If \p M does
+  /// not contain a global with its name, a global variable is inserted with
+  /// the type and thread local mode of \p LibcallImpl.
+  LLVM_ABI GlobalValue *
+  getOrInsertImplGlobal(Module &M, RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns true if \p LibcallImpl is a global variable rather than a
+  /// function.
+  static bool isVariable(RTLIB::LibcallImpl LibcallImpl) {
+    RTLIB::FuncArgTypeID ID = SignatureTable[SignatureOffset[LibcallImpl]];
+    return ID == RTLIB::Variable || ID == RTLIB::ThreadLocalVariable;
+  }
+
+  /// \returns true if \p LibcallImpl is a thread local variable.
+  static bool isThreadLocalVariable(RTLIB::LibcallImpl LibcallImpl) {
+    return SignatureTable[SignatureOffset[LibcallImpl]] ==
+           RTLIB::ThreadLocalVariable;
+  }
 
   /// Return the unmasked variant of the masked vector libcall \p LC, or
   /// RTLIB::UNKNOWN_LIBCALL if \p LC is not a masked vector libcall.

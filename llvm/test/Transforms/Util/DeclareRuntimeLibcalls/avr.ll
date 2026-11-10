@@ -4,7 +4,8 @@
 ; can sneak in between two checked declarations.
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=avr-none < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CHECK %s
 
-; CHECK: declare double @__adddf3(double, double) addrspace(1)
+; CHECK: @__stack_chk_guard = external global ptr
+; CHECK-NEXT: declare double @__adddf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__addsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__addtf3(fp128, fp128) addrspace(1)
 ; CHECK-NEXT: declare i64 @__ashldi3(i64, i16) addrspace(1)
@@ -71,11 +72,14 @@
 ; CHECK-NEXT: declare i16 @__clzdi2(i64) addrspace(1)
 ; CHECK-NEXT: declare i16 @__clzsi2(i32) addrspace(1)
 ; CHECK-NEXT: declare i16 @__clzti2(i128) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzdi2(i64) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzsi2(i32) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzti2(i128) addrspace(1)
 ; CHECK-NEXT: declare double @__divdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare i64 @__divdi3(i64, i64) addrspace(1)
-; CHECK-NEXT: declare cc86 void @__divmodhi4(...) addrspace(1)
-; CHECK-NEXT: declare cc86 void @__divmodqi4(...) addrspace(1)
-; CHECK-NEXT: declare void @__divmodsi4(...) addrspace(1)
+; CHECK-NEXT: declare cc86 inreg { i16, i16 } @__divmodhi4(i16, i16) addrspace(1) [[DIVMOD_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare cc86 inreg { i8, i8 } @__divmodqi4(i8 signext, i8 signext) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare inreg { i32, i32 } @__divmodsi4(i32, i32) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare float @__divsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__divtf3(fp128, fp128) addrspace(1)
 ; CHECK-NEXT: declare i128 @__divti3(i128, i128) addrspace(1)
@@ -207,7 +211,6 @@
 ; CHECK-NEXT: declare float @__powisf2(float, i16) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16) addrspace(1)
 ; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1)
-; CHECK-NEXT: declare void @__stack_chk_guard(...) addrspace(1)
 ; CHECK-NEXT: declare double @__subdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__subsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128) addrspace(1)
@@ -281,9 +284,9 @@
 ; CHECK-NEXT: declare half @__trunctfhf2(fp128) addrspace(1)
 ; CHECK-NEXT: declare float @__trunctfsf2(fp128) addrspace(1)
 ; CHECK-NEXT: declare i64 @__udivdi3(i64, i64) addrspace(1)
-; CHECK-NEXT: declare cc86 void @__udivmodhi4(...) addrspace(1)
-; CHECK-NEXT: declare cc86 void @__udivmodqi4(...) addrspace(1)
-; CHECK-NEXT: declare void @__udivmodsi4(...) addrspace(1)
+; CHECK-NEXT: declare cc86 inreg { i16, i16 } @__udivmodhi4(i16, i16) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare cc86 inreg { i8, i8 } @__udivmodqi4(i8 zeroext, i8 zeroext) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare inreg { i32, i32 } @__udivmodsi4(i32, i32) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare i128 @__udivti3(i128, i128) addrspace(1)
 ; CHECK-NEXT: declare i64 @__umoddi3(i64, i64) addrspace(1)
 ; CHECK-NEXT: declare i128 @__umodti3(i128, i128) addrspace(1)
@@ -400,6 +403,7 @@
 ; CHECK-NEXT: declare float @tgammaf(float) addrspace(1)
 ; CHECK-NEXT: declare double @trunc(double) addrspace(1)
 ; CHECK-NEXT: declare float @truncf(float) addrspace(1)
+; CHECK-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
