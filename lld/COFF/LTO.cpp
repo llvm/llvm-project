@@ -69,8 +69,8 @@ lto::Config BitcodeCompiler::createConfig() {
 
   // Use static reloc model on 32-bit x86 because it usually results in more
   // compact code, and because there are also known code generation bugs when
-  // using the PIC model (see PR34306). Also on 32-bit ARM, where PIC turns the
-  // /GS cookie load into a PC-relative movw/movt pair that COFF cannot express.
+  // using the PIC model (see PR34306). Also on 32-bit ARM, where COFF has no
+  // relocation for PIC's PC-relative movw/movt.
   if (ctx.config.machine == COFF::IMAGE_FILE_MACHINE_I386 ||
       ctx.config.machine == COFF::IMAGE_FILE_MACHINE_ARMNT)
     c.RelocModel = Reloc::Static;

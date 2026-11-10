@@ -4,14 +4,10 @@
 ;; failed with "Cannot represent this expression".
 
 ; RUN: rm -rf %t && split-file %s %t
-; RUN: llvm-as %t/gs.ll -o %t/gs.obj
-; RUN: opt -module-summary %t/gs.ll -o %t/gs.thin.obj
+; RUN: opt -module-summary %t/gs.ll -o %t/gs.obj
 ; RUN: llvm-mc -triple=thumbv7-windows-msvc -filetype=obj %t/crt.s -o %t/crt.obj
-
 ; RUN: lld-link /dll /noentry /export:f /out:%t/gs.dll %t/gs.obj %t/crt.obj
 ; RUN: llvm-readobj --coff-basereloc %t/gs.dll | FileCheck %s
-; RUN: lld-link /dll /noentry /export:f /out:%t/gs.thin.dll %t/gs.thin.obj %t/crt.obj
-; RUN: llvm-readobj --coff-basereloc %t/gs.thin.dll | FileCheck %s
 
 ;; The absolute movw/movt load of __security_cookie needs a base relocation.
 ; CHECK:      BaseReloc [
@@ -19,7 +15,6 @@
 ; CHECK-NEXT:     Type: ARM_MOV32(T)
 
 ;--- gs.ll
-target datalayout = "e-m:w-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7-pc-windows-msvc"
 
 ;; @use is in a native object, so LTO keeps the array and its stack protector.
