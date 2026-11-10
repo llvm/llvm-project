@@ -216,8 +216,9 @@ void CoarrayChecker::Leave(const parser::SyncImagesStmt &x) {
         context_.Say(parser::FindSourceLocation(imageSet), // C1174
             "An image-set that is an int-expr must be a scalar or a rank-one array"_err_en_US);
       }
-      if (const auto *someInt{
-              std::get_if<evaluate::Expr<evaluate::SomeInteger>>(&expr->u)};
+      if (const auto *someInt{std::get_if<
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>>>(
+              &expr->u)};
           someInt && evaluate::IsActuallyConstant(*someInt)) {
         auto converted{evaluate::Fold(context_.foldingContext(),
             evaluate::ConvertToType<evaluate::SubscriptInteger>(

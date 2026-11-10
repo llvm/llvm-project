@@ -800,15 +800,17 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
       return std::nullopt;
 
   // The io-implied-do bounds and index are scalar integer expressions
-  // (enforced by semantics), so each narrows to Expr<SomeInteger>
+  // (enforced by semantics), so each narrows to
+  // Expr<Type<TypeCategory::Integer>>
   auto toSubscript = [](const Fortran::lower::SomeExpr &expr) {
     return Fortran::evaluate::ConvertToType<
         Fortran::evaluate::SubscriptInteger>(
         Fortran::evaluate::SubscriptIntegerKind,
-        Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
+        Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>{
             DEREF(Fortran::evaluate::UnwrapExpr<
-                  Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>>(
-                expr))});
+                  Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                      Fortran::common::TypeCategory::Integer>>>(expr))});
   };
   Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> lowerSub =
       toSubscript(*lowerExpr);

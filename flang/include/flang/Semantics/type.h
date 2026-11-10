@@ -31,8 +31,10 @@ struct Keyword;
 namespace Fortran::evaluate { // avoid including all of Evaluate/tools.h
 template <typename T>
 std::optional<bool> AreEquivalentInInterface(const Expr<T> &, const Expr<T> &);
-extern template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
-    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
+extern template std::optional<bool>
+AreEquivalentInInterface<Type<TypeCategory::Integer>>(
+    const Expr<Type<TypeCategory::Integer>> &,
+    const Expr<Type<TypeCategory::Integer>> &);
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -47,7 +49,8 @@ using SourceName = parser::CharBlock;
 using TypeCategory = common::TypeCategory;
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 using MaybeExpr = std::optional<SomeExpr>;
-using SomeIntExpr = evaluate::Expr<evaluate::SomeInteger>;
+using SomeIntExpr =
+    evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>>;
 using MaybeIntExpr = std::optional<SomeIntExpr>;
 using SubscriptIntExpr = evaluate::Expr<evaluate::SubscriptInteger>;
 using MaybeSubscriptIntExpr = std::optional<SubscriptIntExpr>;

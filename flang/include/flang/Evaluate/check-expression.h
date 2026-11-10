@@ -38,8 +38,6 @@ bool IsConstantExpr(const A &, const FoldingContext * = nullptr);
 extern template bool IsConstantExpr(
     const Expr<SomeType> &, const FoldingContext *);
 extern template bool IsConstantExpr(
-    const Expr<SomeInteger> &, const FoldingContext *);
-extern template bool IsConstantExpr(
     const Expr<SubscriptInteger> &, const FoldingContext *);
 extern template bool IsConstantExpr(
     const StructureConstructor &, const FoldingContext *);
@@ -53,8 +51,6 @@ bool IsScopeInvariantExpr(const A &, const FoldingContext * = nullptr);
 extern template bool IsScopeInvariantExpr(
     const Expr<SomeType> &, const FoldingContext *);
 extern template bool IsScopeInvariantExpr(
-    const Expr<SomeInteger> &, const FoldingContext *);
-extern template bool IsScopeInvariantExpr(
     const Expr<SubscriptInteger> &, const FoldingContext *);
 
 // Predicate: true when an expression actually is a typed Constant<T>,
@@ -62,7 +58,6 @@ extern template bool IsScopeInvariantExpr(
 // expressions, including BOZ literals.
 template <typename A> bool IsActuallyConstant(const A &);
 extern template bool IsActuallyConstant(const Expr<SomeType> &);
-extern template bool IsActuallyConstant(const Expr<SomeInteger> &);
 extern template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
 extern template bool IsActuallyConstant(
     const std::optional<Expr<SubscriptInteger>> &);
@@ -103,17 +98,11 @@ void CheckSpecificationExpr(const A &, const semantics::Scope &,
 extern template void CheckSpecificationExpr(const Expr<SomeType> &x,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
-extern template void CheckSpecificationExpr(const Expr<SomeInteger> &x,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
 extern template void CheckSpecificationExpr(const Expr<SubscriptInteger> &x,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeType>> &x, const semantics::Scope &,
-    FoldingContext &, bool forElementalFunctionResult);
-extern template void CheckSpecificationExpr(
-    const std::optional<Expr<SomeInteger>> &x, const semantics::Scope &,
     FoldingContext &, bool forElementalFunctionResult);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &x, const semantics::Scope &,

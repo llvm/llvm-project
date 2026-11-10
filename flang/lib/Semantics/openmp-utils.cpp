@@ -1174,12 +1174,6 @@ namespace {
 // parentheses).
 struct ArrayExpressionRecognizer {
   template <TypeCategory C>
-  static bool isArrayExpression(
-      const evaluate::Expr<evaluate::SomeKind<C>> &x) {
-    return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
-  }
-
-  template <TypeCategory C>
   static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C>> &x) {
     return common::visit([](auto &&s) { return isArrayExpression(s); },
         evaluate::match::deparen(x).u);
