@@ -116,6 +116,8 @@ public:
 
   virtual uint64_t getMaxMemIntrinsicInlineSizeThreshold() const { return 64; }
 
+  virtual uint64_t getMaxBoundedMemSetInlineSize() const { return 0; }
+
   // Although this default value is arbitrary, it is not random. It is assumed
   // that a condition that evaluates the same way by a higher percentage than
   // this is best represented as control flow. Therefore, the default value N
@@ -317,6 +319,11 @@ public:
 
   virtual bool isLegalICmpImmediate(int64_t Imm) const { return false; }
 
+  virtual bool preferLoopExitWithEqualityComparison(const ICmpInst &,
+                                                    const APInt &) const {
+    return false;
+  }
+
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace,
@@ -368,6 +375,11 @@ public:
     return false;
   }
 
+  virtual bool isLegalSpeculativeLoad(Type *DataType,
+                                      unsigned AddressSpace) const {
+    return false;
+  }
+
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) const {
     // By default, assume nontemporal memory stores are available for stores
     // that are aligned and have a size that is a power of 2.
@@ -412,7 +424,8 @@ public:
 
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
-                               const SmallBitVector &OpcodeMask) const {
+                               const SmallBitVector &OpcodeMask,
+                               ArrayRef<const Value *> Scalars) const {
     return false;
   }
 
@@ -421,6 +434,13 @@ public:
   }
 
   virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
+  virtual bool
+  hasMultiVectorLoadStore(unsigned NumVectors, TTI::MaskSource Mask,
+                          VectorType *VectorTy, bool IsStore,
+                          std::optional<Instruction::CastOps> CastHint) const {
     return false;
   }
 
@@ -576,8 +596,6 @@ public:
   }
 
   virtual bool haveFastSqrt(Type *Ty) const { return false; }
-
-  virtual bool haveFastClmul(IntegerType *Ty) const { return false; }
 
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
     return true;
@@ -738,7 +756,7 @@ public:
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-      ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) const {
+      ArrayRef<const Value *> Args, const Instruction *CtxI = nullptr) const {
     // Widenable conditions will eventually lower into constants, so some
     // operations with them will be trivially optimized away.
     auto IsWidenableCondition = [](const Value *V) {
@@ -775,10 +793,11 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                                          unsigned Opcode1,
-                                          const SmallBitVector &OpcodeMask,
-                                          TTI::TargetCostKind CostKind) const {
+  virtual InstructionCost
+  getAltInstrCost(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+                  const SmallBitVector &OpcodeMask,
+                  TTI::TargetCostKind CostKind,
+                  ArrayRef<const Value *> Scalars) const {
     return InstructionCost::getInvalid();
   }
 
@@ -786,7 +805,7 @@ public:
       TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
       TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
       VectorType *SubTp, ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr,
+      const Instruction *CtxI = nullptr,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
@@ -938,10 +957,6 @@ public:
     case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
     case Intrinsic::arithmetic_fence:
-    case Intrinsic::dbg_assign:
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
@@ -995,6 +1010,7 @@ public:
     case Intrinsic::vp_gather:
     case Intrinsic::masked_compressstore:
     case Intrinsic::masked_expandload:
+    case Intrinsic::speculative_load:
       return 1;
     }
     return InstructionCost::getInvalid();
@@ -1216,6 +1232,12 @@ public:
     return false;
   }
 
+  virtual bool isProfitableToSinkOperands(Instruction *I,
+                                          SmallVectorImpl<Use *> &Ops,
+                                          const LoopInfo *) const {
+    return isProfitableToSinkOperands(I, Ops);
+  }
+
   virtual bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }
 
   virtual TargetTransformInfo::VPLegalization
@@ -1240,11 +1262,6 @@ public:
   }
 
   virtual unsigned getMaxNumArgs() const { return UINT_MAX; }
-
-  virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                               Type *ArrayType) const {
-    return 0;
-  }
 
   virtual void collectKernelLaunchBounds(
       const Function &F,

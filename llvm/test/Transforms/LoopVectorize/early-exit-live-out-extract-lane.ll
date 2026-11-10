@@ -144,10 +144,10 @@ define i8 @early_exit_live_out_with_distinct_scalar_parts() {
 ; VF1IC2:       [[VECTOR_EARLY_EXIT]]:
 ; VF1IC2-NEXT:    [[TMP11:%.*]] = mul i8 [[TMP3]], 7
 ; VF1IC2-NEXT:    [[TMP12:%.*]] = mul i8 [[TMP4]], 7
-; VF1IC2-NEXT:    [[TMP13:%.*]] = icmp eq i1 [[TMP6]], false
+; VF1IC2-NEXT:    [[TMP13:%.*]] = icmp eq i1 [[TMP8]], false
 ; VF1IC2-NEXT:    [[TMP14:%.*]] = zext i1 [[TMP13]] to i64
 ; VF1IC2-NEXT:    [[TMP15:%.*]] = add i64 1, [[TMP14]]
-; VF1IC2-NEXT:    [[TMP16:%.*]] = icmp eq i1 [[TMP5]], false
+; VF1IC2-NEXT:    [[TMP16:%.*]] = icmp eq i1 [[TMP7]], false
 ; VF1IC2-NEXT:    [[TMP17:%.*]] = zext i1 [[TMP16]] to i64
 ; VF1IC2-NEXT:    [[TMP18:%.*]] = add i64 0, [[TMP17]]
 ; VF1IC2-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP17]], 1
@@ -190,9 +190,9 @@ define i8 @early_exit_live_out_with_distinct_scalar_parts() {
 ; VF4IC2:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC2-NEXT:    [[TMP9:%.*]] = mul <4 x i8> [[WIDE_LOAD]], splat (i8 7)
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = mul <4 x i8> [[WIDE_LOAD2]], splat (i8 7)
-; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP3]], i1 false)
+; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
 ; VF4IC2-NEXT:    [[TMP11:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE]]
-; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
+; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP4]], i1 false)
 ; VF4IC2-NEXT:    [[TMP12:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE3]]
 ; VF4IC2-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE3]], 4
 ; VF4IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[TMP11]]

@@ -53,7 +53,6 @@ def Tosa_Dialect : Dialect {
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -62,6 +61,7 @@ def Tosa_Dialect : Dialect {
 
 class Tosa_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<Tosa_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/Tosa/IR/TosaOps.h"];
   let mnemonic = attrMnemonic;
 }
 

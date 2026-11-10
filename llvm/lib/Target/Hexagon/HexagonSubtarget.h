@@ -57,6 +57,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueStores = false;
   bool UseSmallData = false;
   bool UseZRegOps = false;
+  bool UseHLXOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
   bool UseHVXFloatingPoint = false;
@@ -98,7 +99,7 @@ public:
   };
 
 private:
-  enum HexagonProcFamilyEnum { Others, TinyCore };
+  enum HexagonProcFamilyEnum { Others, TinyCore, HLX2048B };
 
   std::string CPUString;
   HexagonProcFamilyEnum HexagonProcFamily = Others;
@@ -232,6 +233,9 @@ public:
   bool useHVXV79Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V79;
   }
+  bool useHVXV79OpsOnly() const {
+    return HexagonHVXVersion == Hexagon::ArchEnum::V79;
+  }
   bool hasV81Ops() const {
     return getHexagonArchVersion() >= Hexagon::ArchEnum::V81;
   }
@@ -240,6 +244,24 @@ public:
   }
   bool useHVXV81Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V81;
+  }
+  bool hasV83Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V83;
+  }
+  bool hasV83OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V83;
+  }
+  bool useHVXV83Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V83;
+  }
+  bool hasV85Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V85;
+  }
+  bool hasV85OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V85;
+  }
+  bool useHVXV85Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V85;
   }
 
   bool useAudioOps() const { return UseAudioOps; }
@@ -251,6 +273,10 @@ public:
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
   bool useZRegOps() const { return UseZRegOps; }
+  bool useHLXOps() const { return UseHLXOps; }
+  bool useHLX2048BOps() const {
+    return UseHLXOps && HexagonProcFamily == HLX2048B;
+  }
   bool useCabac() const { return UseCabac; }
 
   bool isTinyCore() const { return HexagonProcFamily == TinyCore; }

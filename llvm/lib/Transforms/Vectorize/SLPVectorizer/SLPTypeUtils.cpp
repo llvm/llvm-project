@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -150,6 +151,11 @@ unsigned getNumberOfPartsOrRegs(bool QueryNumParts,
   if (divideCeil(Sz, NumElts) != NumParts)
     return 1;
   return NumParts;
+}
+
+bool isTypeLimitNeutral(const Value *V, bool IsMax, const DataLayout &DL) {
+  SimplifyQuery SQ(DL);
+  return IsMax ? isKnownNonNegative(V, SQ) : isKnownNegative(V, SQ);
 }
 
 } // namespace llvm::slpvectorizer

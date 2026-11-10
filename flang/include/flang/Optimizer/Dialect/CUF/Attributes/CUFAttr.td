@@ -16,7 +16,9 @@
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "mlir/IR/EnumAttr.td"
 
-class cuf_Attr<string name> : AttrDef<CUFDialect, name>;
+class cuf_Attr<string name> : AttrDef<CUFDialect, name> {
+  let cppIncludes = ["flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"];
+}
 
 def cuf_DataAttribute : I32EnumAttr<
     "DataAttribute",
@@ -72,6 +74,29 @@ def cuf_ClusterDimsAttr : cuf_Attr<"ClusterDims"> {
     "mlir::IntegerAttr":$x,
     "mlir::IntegerAttr":$y,
     "mlir::IntegerAttr":$z
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def cuf_LaunchConfigAttr : cuf_Attr<"LaunchConfig"> {
+  let mnemonic = "launch_config";
+  let summary = "Launch configuration of a kernel directive as written";
+  let description = [{
+    Records how a `cuf.kernel` directive spelled its launch configuration so
+    that later stages can report it: the number of dimensions the directive
+    names, and each grid dimension as written. A grid dimension left to the
+    compiler is spelled `*`, a constant by its value, and a variable by its
+    name.
+
+    ```mlir
+    #cuf.launch_config<dims = 2 : i64, grid = ["*", "*"]>
+    ```
+  }];
+
+  let parameters = (ins
+    "mlir::IntegerAttr":$dims,
+    "mlir::ArrayAttr":$grid
   );
 
   let assemblyFormat = "`<` struct(params) `>`";

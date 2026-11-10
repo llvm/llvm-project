@@ -8,11 +8,124 @@
 
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/DJB.h"
 #include <limits>
 #include <map>
 
 namespace llvm {
 namespace dwarf_linker {
+
+bool hasImplicitAddressLocation(const DWARFDie &Die) {
+  std::optional<DWARFFormValue> Location = Die.find(dwarf::DW_AT_location);
+  if (!Location)
+    return false;
+
+  std::optional<ArrayRef<uint8_t>> Block = Location->getAsBlock();
+  if (!Block)
+    return false;
+
+  DWARFUnit *U = Die.getDwarfUnit();
+  DataExtractor Data(*Block, U->getContext().isLittleEndian());
+  DWARFExpression Expression(Data, U->getAddressByteSize(),
+                             U->getFormParams().Format);
+  return !Expression.isMemoryLocation() &&
+         any_of(Expression, [](const DWARFExpression::Operation &Op) {
+           return !Op.isError() && (Op.getCode() == dwarf::DW_OP_addr ||
+                                    Op.getCode() == dwarf::DW_OP_addrx);
+         });
+}
+
+bool isStaticDataMember(const DWARFDie &Die) {
+  assert(Die.getTag() == dwarf::DW_TAG_member && "expected a DW_TAG_member");
+
+  if (!dwarf::toUnsigned(Die.find(dwarf::DW_AT_declaration), 0))
+    return false;
+
+  // A member that has a location occupies storage in the record regardless of
+  // how else it is marked, so it is the absence of a location that makes this a
+  // pure declaration. Zero is a valid offset, so only the attribute's presence
+  // matters, not its value.
+  return !Die.find(
+      {dwarf::DW_AT_data_member_location, dwarf::DW_AT_data_bit_offset});
+}
+
+bool isIdentifiedByChildren(dwarf::Tag Tag) {
+  switch (Tag) {
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_enumeration_type:
+  case dwarf::DW_TAG_interface_type:
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_union_type:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isIdentifyingChild(const DWARFDie &Die) {
+  // Units disagree on implicit member functions and on how static data
+  // members are spelled.
+  switch (Die.getTag()) {
+  case dwarf::DW_TAG_member:
+    return !isStaticDataMember(Die);
+  case dwarf::DW_TAG_enumerator:
+  case dwarf::DW_TAG_inheritance:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)> ResolveRef,
+    bool IsScope) {
+  const char *Name = nullptr;
+  if (Error Err = finiteLoop([&]() -> Expected<bool> {
+        if (const char *CurrentName = Die.getName(DINameKind::ShortName))
+          Name = CurrentName;
+
+        std::optional<DWARFFormValue> Ref;
+        if (!(Ref = Die.find(dwarf::DW_AT_specification)) &&
+            !(Ref = Die.find(dwarf::DW_AT_abstract_origin)))
+          return false;
+
+        if (!Ref->isFormClass(DWARFFormValue::FC_Reference))
+          return false;
+
+        DWARFDie RefDie = ResolveRef(Die, *Ref);
+        if (!RefDie)
+          return false;
+
+        Die = RefDie;
+        return true;
+      }))
+    consumeError(std::move(Err));
+
+  if (!Name && Die.getTag() == dwarf::DW_TAG_namespace)
+    Name = "(anonymous namespace)";
+
+  DWARFDie Parent = Die.getParent();
+  if (!Parent || dwarf::isUnitType(Parent.getTag()) ||
+      Parent.getTag() == dwarf::DW_TAG_module)
+    return djbHash(Name ? Name : "", djbHash(IsScope ? "" : "::"));
+
+  return djbHash(
+      Name ? Name : "",
+      djbHash(Name ? "::" : "", hashFullyQualifiedName(Parent, ResolveRef,
+                                                       /*IsScope=*/true)));
+}
+
+uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)>
+        ResolveRef) {
+  return hashFullyQualifiedName(Die, ResolveRef, /*IsScope=*/false);
+}
 
 void buildStmtSeqOffsetToFirstRowIndex(
     const DWARFDebugLine::LineTable &LT,

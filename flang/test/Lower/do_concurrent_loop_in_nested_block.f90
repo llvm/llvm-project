@@ -13,7 +13,7 @@ subroutine loop_in_nested_block
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPloop_in_nested_block() {
-! CHECK:         %[[OUTER_J_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Ej"}
+! CHECK:         %[[OUTER_J_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}Ej")
 ! CHECK:         fir.do_concurrent {
 ! CHECK:           fir.do_concurrent.loop {{.*}} local(@{{.*}} %[[OUTER_J_DECL]]#0 -> %[[LOCAL_J_ARG:.*]] : !fir.ref<i32>) {
 ! CHECK:             %[[LOCAL_J_DECL:.*]]:2 = hlfir.declare %[[LOCAL_J_ARG]]

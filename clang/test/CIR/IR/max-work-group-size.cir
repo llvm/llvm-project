@@ -1,0 +1,9 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+module {
+  cir.func @kernel() attributes {cir.max_work_group_size = #cir.max_work_group_size<256, 1, 1>} {
+    cir.return
+  }
+}
+
+// CHECK: cir.func @kernel() attributes {cir.max_work_group_size = #cir.max_work_group_size<256, 1, 1>}

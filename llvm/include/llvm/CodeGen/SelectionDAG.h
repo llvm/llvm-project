@@ -85,6 +85,7 @@ class SDDbgValue;
 class SDDbgOperand;
 class SDDbgLabel;
 class SelectionDAG;
+struct SelectionDAGOptions;
 class SelectionDAGTargetInfo;
 class TargetLibraryInfo;
 class TargetLowering;
@@ -230,6 +231,7 @@ class SelectionDAG {
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
   const LibcallLoweringInfo *Libcalls = nullptr;
+  const SelectionDAGOptions *DAGOpts = nullptr;
 
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
@@ -526,6 +528,7 @@ public:
   /// available, otherwise return nullptr.
   const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
+  const SelectionDAGOptions &getSelectionDAGOptions() const { return *DAGOpts; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
 
@@ -2081,6 +2084,13 @@ public:
                                           EVT VT, ArrayRef<SDValue> Ops,
                                           SDNodeFlags Flags = SDNodeFlags());
 
+  /// Constant fold a node with multiple results, returning a MERGE_VALUES of
+  /// the folded results on success.
+  LLVM_ABI SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
+                                          SDVTList VTList,
+                                          ArrayRef<SDValue> Ops,
+                                          SDNodeFlags Flags = SDNodeFlags());
+
   /// Fold floating-point operations when all operands are constants and/or
   /// undefined.
   LLVM_ABI SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -2443,12 +2453,14 @@ public:
   /// +nan are considered positive, -0.0, -inf and -nan are not.
   LLVM_ABI bool cannotBeOrderedNegativeFP(SDValue Op) const;
 
-  /// Check if a use of a float value is insensitive to signed zeros.
+  /// Check if the user of \p Use produces the same result regardless of the
+  /// sign of a zero in the used float operand.
   LLVM_ABI bool canIgnoreSignBitOfZero(const SDUse &Use) const;
 
-  /// Check if \p Op has no-signed-zeros, or all users (limited to checking two
-  /// for compile-time performance) are insensitive to signed zeros.
-  LLVM_ABI bool canIgnoreSignBitOfZero(SDValue Op) const;
+  /// Check if all uses of \p Op (limited to checking two for compile-time
+  /// performance) are insensitive to signed zeros. An nsz flag on \p Op does
+  /// not necessarily permit this.
+  LLVM_ABI bool canIgnoreSignBitOfZeroResult(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the
@@ -2550,14 +2562,24 @@ public:
   /// 'Bytes' bytes from a location that is 'Dist' units away from the
   /// location that the 'Base' load is loading from.
   LLVM_ABI bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
-                                               unsigned Bytes, int Dist) const;
+                                               TypeSize Bytes, int Dist) const;
+  bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
+                                      unsigned Bytes, int Dist) const {
+    return areNonVolatileConsecutiveLoads(LD, Base, TypeSize::getFixed(Bytes),
+                                          Dist);
+  }
 
   /// Return true if stores are next to each other and can be merged. Check that
   /// both are nonvolatile and if \p ST is storing \p Bytes bytes to a location
   /// that is \p Dist units away from the location that \p Base is storing to.
   LLVM_ABI bool areNonVolatileConsecutiveStores(StoreSDNode *ST,
                                                 StoreSDNode *Base,
-                                                unsigned Bytes, int Dist) const;
+                                                TypeSize Bytes, int Dist) const;
+  bool areNonVolatileConsecutiveStores(StoreSDNode *ST, StoreSDNode *Base,
+                                       unsigned Bytes, int Dist) const {
+    return areNonVolatileConsecutiveStores(ST, Base, TypeSize::getFixed(Bytes),
+                                           Dist);
+  }
 
   /// Infer alignment of a load / store address. Return std::nullopt if it
   /// cannot be inferred.
@@ -2711,6 +2733,8 @@ public:
 
   LLVM_ABI bool shouldOptForSize() const;
 
+  LLVM_ABI const BasicBlock *getBasicBlock() const;
+
   /// Get the (commutative) identity element for the given opcode, if it exists.
   LLVM_ABI SDValue getIdentityElement(unsigned Opcode, const SDLoc &DL, EVT VT,
                                       SDNodeFlags Flags);
@@ -2757,7 +2781,7 @@ public:
   }
 
   LLVM_ABI SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
-                                         SDValue InChain, const SDLoc &DLoc);
+                                         SDValue InChain, SDNode *Node);
 
   /// Returns the maximum runtime number of elements in VT if known, or 0
   /// otherwise.

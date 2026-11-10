@@ -1,0 +1,8 @@
+## This test checks the error message displayed if zstd compression
+## is requested, but LLVM is built without zstd.
+
+# UNSUPPORTED: zstd
+
+# RUN: not llvm-dwarfutil --compress-debug-sections=zstd - - 2>&1 | FileCheck %s
+
+# CHECK: error: LLVM was not built with LLVM_ENABLE_ZSTD or did not find zstd at build time

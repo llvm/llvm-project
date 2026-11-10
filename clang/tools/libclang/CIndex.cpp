@@ -1574,6 +1574,7 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 
   case BuiltinType::Void:
   case BuiltinType::NullPtr:
+  case BuiltinType::MetaInfo:
   case BuiltinType::Dependent:
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   case BuiltinType::Id:
@@ -1597,6 +1598,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
@@ -5492,6 +5495,11 @@ CXString clang_getCursorSpelling(CXCursor C) {
           clang_getCursorBinaryOperatorKind(C));
     }
 
+    if (C.kind == CXCursor_UnaryOperator) {
+      return clang_getUnaryOperatorKindSpelling(
+          clang_getCursorUnaryOperatorKind(C));
+    }
+
     const Decl *D = getDeclFromExpr(getCursorExpr(C));
     if (D)
       return getDeclSpelling(D);
@@ -6514,6 +6522,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPParallelGenericLoopDirective");
   case CXCursor_OMPTargetParallelGenericLoopDirective:
     return cxstring::createRef("OMPTargetParallelGenericLoopDirective");
+  case CXCursor_OMPTargetGenericLoopDirective:
+    return cxstring::createRef("OMPTargetGenericLoopDirective");
   case CXCursor_OverloadCandidate:
     return cxstring::createRef("OverloadCandidate");
   case CXCursor_TypeAliasTemplateDecl:

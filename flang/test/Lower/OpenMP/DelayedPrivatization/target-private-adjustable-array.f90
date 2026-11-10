@@ -37,7 +37,7 @@ end subroutine target_adjustable_array
 ! CPU-NEXT:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]] : (![[DESC_TYPE]], index) -> (index, index, index)
 ! CPU-NEXT:  %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! CPU-NEXT:  %[[PRIVATE_MEM:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS]]#1
-! CPU-NEXT:  %4:2 = hlfir.declare %3(%2) {[[NAME_ATTR:.*]]} : (![[HEAP_ARRAY_TYPE:.*]], !fir.shape<1>) -> (![[DESC_TYPE]], ![[HEAP_ARRAY_TYPE]])
+! CPU-NEXT:  %4:2 = hlfir.declare %3(%2) uniq_name([[NAME_ATTR:.*]]) : (![[HEAP_ARRAY_TYPE:.*]], !fir.shape<1>) -> (![[DESC_TYPE]], ![[HEAP_ARRAY_TYPE]])
 ! CPU:      omp.yield(%[[PRIV_ALLOC]] : ![[TYPE]])
 ! CPU-NEXT: } dealloc {
 ! CPU-NEXT: ^bb0(%[[PRIV_ARG:.*]]: ![[TYPE]]):
@@ -56,7 +56,7 @@ end subroutine target_adjustable_array
 ! GPU-HEAP-NEXT:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0]] : (![[DESC_TYPE]], index) -> (index, index, index)
 ! GPU-HEAP-NEXT:  %[[SHAPE:.*]] = fir.shape %[[BOX_DIMS]]#1 : (index) -> !fir.shape<1>
 ! GPU-HEAP-NEXT:  %[[PRIVATE_MEM:.*]] = fir.allocmem !fir.array<?xi32>, %[[BOX_DIMS]]#1
-! GPU-HEAP-NEXT:  %4:2 = hlfir.declare %3(%2) {[[NAME_ATTR:.*]]} : (![[HEAP_ARRAY_TYPE:.*]], !fir.shape<1>) -> (![[DESC_TYPE]], ![[HEAP_ARRAY_TYPE]])
+! GPU-HEAP-NEXT:  %4:2 = hlfir.declare %3(%2) uniq_name([[NAME_ATTR:.*]]) : (![[HEAP_ARRAY_TYPE:.*]], !fir.shape<1>) -> (![[DESC_TYPE]], ![[HEAP_ARRAY_TYPE]])
 ! GPU-HEAP:      omp.yield(%[[PRIV_ALLOC]] : ![[TYPE]])
 ! GPU-HEAP-NEXT: } dealloc {
 ! GPU-HEAP-NEXT: ^bb0(%[[PRIV_ARG:.*]]: ![[TYPE]]):

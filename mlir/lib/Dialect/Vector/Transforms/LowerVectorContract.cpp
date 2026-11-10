@@ -646,6 +646,13 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
   if (vectorContractLowering != vector::VectorContractLowering::Dot)
     return failure();
 
+  // A scalable dst dim can't be unrolled with a static trip count; check
+  // before any IR is created below.
+  if (auto dstType = dyn_cast<VectorType>(op.getResultType());
+      dstType && dstType.isScalable())
+    return rewriter.notifyMatchFailure(
+        op, "cannot unroll a scalable dimension in dot-product lowering");
+
   auto iteratorTypes = op.getIteratorTypes().getValue();
   static constexpr std::array<int64_t, 2> perm = {1, 0};
   Location loc = op.getLoc();
@@ -1001,7 +1008,6 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
 }
 
 // Lower one parallel dimension.
-// Incidentally also tolerates unit-size (hence trivial) reduction dimensions.
 // TODO: consider reusing existing contract unrolling
 FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
                                                       vector::ContractionOp op,
@@ -1042,19 +1048,10 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
       diag << "expected either lhsIndex=" << lhsIndex
            << " or rhsIndex=" << rhsIndex << " to be nonnegative";
     });
-  // value_or(-1) means that we tolerate a dimension not appearing
-  // in the result map. That can't happen for actual parallel iterators, but
-  // the caller ContractionOpLowering::matchAndRewrite is currently calling
-  // lowerParallel also for the case of unit-size reduction dims appearing only
-  // on one of LHS or RHS, not both. At the moment, such cases are created by
-  // CastAwayContractionLeadingOneDim, so we need to either support that or
-  // modify that pattern.
+
   int64_t resIndex = getResultIndex(iMap[2], iterIndex).value_or(-1);
-  if (resIndex == -1 && dimSize != 1)
-    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
-      diag << "expected the dimension for iterIndex=" << iterIndex
-           << " to either appear in the result map, or to be a unit dimension";
-    });
+  assert(resIndex != -1 && "A dimension missing from the accumulator indexing "
+                           "map is not a parallel dim!");
 
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
@@ -1095,10 +1092,11 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
-  if (isa<VectorType>(resType))
+  auto resVectorType = dyn_cast<VectorType>(resType);
+  if (resVectorType && resVectorType.getRank() != 0)
     return rewriter.notifyMatchFailure(op,
                                        "did not expect a VectorType result");
-  bool isInt = isa<IntegerType>(resType);
+  bool isInt = isa<IntegerType>(getElementTypeOrSelf(resType));
   // Use iterator index 0.
   int64_t iterIndex = 0;
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
@@ -1130,12 +1128,19 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
     auto kind = vector::CombiningKind::ADD;
 
     Value acc = op.getAcc();
+    // vector.reduction takes a scalar accumulator.
+    if (resVectorType)
+      acc = vector::ExtractOp::create(rewriter, loc, acc, ArrayRef<int64_t>{});
     Operation *reductionOp =
         acc ? vector::ReductionOp::create(rewriter, loc, kind, m, acc,
                                           op.getFastmath())
             : vector::ReductionOp::create(rewriter, loc, kind, m,
                                           op.getFastmath());
-    return maskOperation(rewriter, reductionOp, mask)->getResult(0);
+    Value reduced = maskOperation(rewriter, reductionOp, mask)->getResult(0);
+    if (resVectorType)
+      reduced =
+          vector::BroadcastOp::create(rewriter, loc, resVectorType, reduced);
+    return reduced;
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {

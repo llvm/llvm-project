@@ -65,7 +65,7 @@ define <4 x i8> @test_punzipo_v4i8(<8 x i8> %a) {
 define <2 x i16> @test_punzipe_v2i16(<4 x i16> %a) {
 ; RV32-LABEL: test_punzipe_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_punzipe_v2i16:
@@ -79,7 +79,7 @@ define <2 x i16> @test_punzipe_v2i16(<4 x i16> %a) {
 define <2 x i16> @test_punzipo_v2i16(<4 x i16> %a) {
 ; RV32-LABEL: test_punzipo_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvth.h a0, a0
+; RV32-NEXT:    ppairo.h a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_punzipo_v2i16:
@@ -181,10 +181,9 @@ define <8 x i8> @test_unzip8p_v8i8_partial_poison(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    srli a4, a2, 16
 ; RV32-NEXT:    ppaire.b a2, a2, a4
 ; RV32-NEXT:    srli a3, a3, 16
-; RV32-NEXT:    ppaire.b a3, a0, a3
 ; RV32-NEXT:    srli a4, a1, 16
+; RV32-NEXT:    ppaire.b a3, a0, a3
 ; RV32-NEXT:    ppaire.b a4, a1, a4
-; RV32-NEXT:    ppaire.b a0, a0, a0
 ; RV32-NEXT:    pack a1, a2, a3
 ; RV32-NEXT:    pack a0, a0, a4
 ; RV32-NEXT:    ret
@@ -204,7 +203,6 @@ define <8 x i8> @test_unzip8hp_v8i8_partial_poison(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    srli a2, a2, 8
 ; RV32-NEXT:    ppaire.b a2, a2, a4
 ; RV32-NEXT:    srli a3, a3, 8
-; RV32-NEXT:    ppaire.b a3, a3, a0
 ; RV32-NEXT:    srli a4, a0, 24
 ; RV32-NEXT:    srli a0, a0, 8
 ; RV32-NEXT:    srli a1, a1, 24
@@ -226,7 +224,6 @@ define <4 x i16> @test_unzip16p_v4i16_partial_poison(<4 x i16> %a, <4 x i16> %b)
 ; RV32-LABEL: test_unzip16p_v4i16_partial_poison:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pack a1, a2, a3
-; RV32-NEXT:    pack a0, a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_unzip16p_v4i16_partial_poison:
@@ -290,7 +287,7 @@ define i32 @test_punzipo_v4i8_coerce(i64 %a.coerce) {
 define i32 @test_punzipe_v2i16_coerce(i64 %a.coerce) {
 ; RV32-LABEL: test_punzipe_v2i16_coerce:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_punzipe_v2i16_coerce:
@@ -306,7 +303,7 @@ define i32 @test_punzipe_v2i16_coerce(i64 %a.coerce) {
 define i32 @test_punzipo_v2i16_coerce(i64 %a.coerce) {
 ; RV32-LABEL: test_punzipo_v2i16_coerce:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvth.h a0, a0
+; RV32-NEXT:    ppairo.h a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_punzipo_v2i16_coerce:
