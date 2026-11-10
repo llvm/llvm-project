@@ -2752,8 +2752,11 @@ def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
   let description = [{
     Represents a C/C++ `__attribute__((annotate(...)))` in CIR. Global
     variables and functions carry these in their `annotations` attribute; local
-    variables, parameters, and record fields use them through the
-    `cir.var_annotation` and `cir.ptr_annotation` operations.
+    variables, parameters, record fields, and `__builtin_annotation` use them
+    through the `cir.var_annotation`, `cir.ptr_annotation`, and
+    `cir.annotation` operations. The source file and line of an annotation are
+    taken from the location of the operation that carries it, and its strings
+    are emitted as globals in the `llvm.metadata` section.
 
     Example C code:
     ```c

@@ -8203,22 +8203,10 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
 def CIR_VarAnnotationOp : CIR_Op<"var_annotation"> {
   let summary = "Annotate the storage of a local variable or parameter";
   let description = [{
-    The `cir.var_annotation` operation attaches an
-    `__attribute__((annotate(...)))` annotation to the storage of a local
-    variable or a function parameter. `addr` is the address of that storage.
-
-    The annotation's source file and line are taken from the operation's
-    location.
-
-    This operation lowers to `llvm.var.annotation`. The annotation strings and
-    arguments are emitted as globals in the `llvm.metadata` section during
-    lowering.
-
-    Example:
+    Attaches an `annotate` attribute to the local variable or parameter stored
+    at `addr`. Corresponds to `llvm.var.annotation`.
 
     ```
-    // int x __attribute__((annotate("on_local", 7)));
-    %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
     cir.var_annotation %0 [#cir.annotation<"on_local", [7 : i32]>]
         : !cir.ptr<!s32i>
     ```
@@ -8238,26 +8226,13 @@ def CIR_VarAnnotationOp : CIR_Op<"var_annotation"> {
 def CIR_PtrAnnotationOp : CIR_Op<"ptr_annotation", [
   AllTypesMatch<["addr", "result"]>
 ]> {
-  let summary = "Annotate a pointer to an annotated record field";
+  let summary = "Annotate a pointer to a record field";
   let description = [{
-    The `cir.ptr_annotation` operation attaches an
-    `__attribute__((annotate(...)))` annotation to a pointer to a record
-    field. The result is the same pointer, and later accesses to the field must
-    use the result.
-
-    The annotation's source file and line are taken from the operation's
-    location.
-
-    This operation lowers to `llvm.ptr.annotation`. The annotation strings and
-    arguments are emitted as globals in the `llvm.metadata` section during
-    lowering.
-
-    Example:
+    Returns `addr` annotated with the `annotate` attribute of a record field;
+    accesses to the field use the result. Corresponds to `llvm.ptr.annotation`.
 
     ```
-    // struct S { int v __attribute__((annotate("on_field"))); };
-    %1 = cir.get_member %0[0] {name = "v"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
-    %2 = cir.ptr_annotation %1 [#cir.annotation<"on_field">] : !cir.ptr<!s32i>
+    %1 = cir.ptr_annotation %0 [#cir.annotation<"on_field">] : !cir.ptr<!s32i>
     ```
   }];
 
@@ -8278,19 +8253,10 @@ def CIR_AnnotationOp : CIR_Op<"annotation", [
 ]> {
   let summary = "Annotate an integer value";
   let description = [{
-    The `cir.annotation` operation attaches an annotation string to an integer
-    value. The result is the same value. It corresponds to the
-    `__builtin_annotation` builtin.
-
-    The annotation's source file and line are taken from the operation's
-    location. The annotation carries no arguments.
-
-    This operation lowers to `llvm.annotation`.
-
-    Example:
+    Returns `value` annotated with a string, as `__builtin_annotation` does.
+    The annotation takes no arguments. Corresponds to `llvm.annotation`.
 
     ```
-    // __builtin_annotation(x, "on_builtin")
     %1 = cir.annotation %0 [#cir.annotation<"on_builtin">] : !s32i
     ```
   }];
