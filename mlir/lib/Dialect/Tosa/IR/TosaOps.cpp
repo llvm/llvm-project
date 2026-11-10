@@ -2695,18 +2695,16 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
   llvm::SmallVector<int64_t> newShapeValue;
+  // A shape that is not a compile-time constant, or that contains a dimension
+  // which cannot describe a TOSA tensor (a negative value other than the
+  // inferable -1, or zero), cannot be used to infer the result type. Fall back
+  // to dynamic dimensions and let tosa-validate diagnose the shape. Such a
+  // dimension must not reach RankedTensorType::get().
   if (!tosa::getConstShapeValues(adaptor.getShape().getDefiningOp(),
-                                 newShapeValue)) {
-    auto rank = cast<tosa::shapeType>(adaptor.getShape().getType()).getRank();
-    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
-    return success();
-  }
-
-  // An out-of-range dimension must not reach RankedTensorType::get(). Fall back
-  // to dynamic dimensions and let tosa-validate diagnose the shape.
-  if (llvm::any_of(newShapeValue,
-                   [](int64_t dim) { return dim < kInferableDimSize; })) {
+                                 newShapeValue) ||
+      llvm::any_of(newShapeValue, [](int64_t dim) {
+        return dim == 0 || dim < kInferableDimSize;
+      })) {
     auto rank = cast<tosa::shapeType>(adaptor.getShape().getType()).getRank();
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
@@ -2732,15 +2730,6 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     if (ShapedType::isStatic(val)) {
       staticMul *= val;
     }
-  }
-
-  // A zero-sized dimension makes the product zero, so resolving an inferable
-  // dimension would divide by zero. Leave the dynamic dimensions uninferred;
-  // the shape is diagnosed as invalid by tosa-validate.
-  if (staticMul == 0) {
-    inferredReturnShapes.push_back(
-        ShapedTypeComponents(newShapeValue, inputType));
-    return success();
   }
 
   // Determine the length of the dynamic dimension.

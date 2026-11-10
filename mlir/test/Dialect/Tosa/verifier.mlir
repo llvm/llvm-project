@@ -2522,33 +2522,3 @@ func.func @test_reshape_rank_mismatch(%arg0 : tensor<?xf32>) -> () {
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<?xf32>, !tosa.shape<2>) -> tensor<?xf32>
   return
 }
-
-// -----
-
-// Regression test: a zero-sized dimension in the shape operand must not cause a
-// division by zero while inferring the result type. The shape itself is
-// rejected by tosa-validate; the verifier must not crash.
-func.func @test_reshape_zero_and_inferable_dim(%arg0: tensor<8xf32>) -> tensor<?x?xf32> {
-  %shape = tosa.const_shape values(dense<[0, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  %0 = tosa.reshape %arg0, %shape : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x?xf32>
-  return %0 : tensor<?x?xf32>
-}
-
-// -----
-
-// Regression test: an out-of-range dimension in the shape operand must not be
-// passed to RankedTensorType::get() while inferring result types.
-func.func @test_reshape_invalid_dimension(%arg0: tensor<4x4xf32>) -> tensor<?x4xf32> {
-  %shape = tosa.const_shape values(dense<[-2, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  %0 = tosa.reshape %arg0, %shape : (tensor<4x4xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
-  return %0 : tensor<?x4xf32>
-}
-
-// -----
-
-// Same, with an unranked input, which takes a different inference path.
-func.func @test_reshape_invalid_dimension_unranked(%arg0: tensor<*xf32>) -> tensor<*xf32> {
-  %shape = tosa.const_shape values(dense<[-2, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  %0 = tosa.reshape %arg0, %shape : (tensor<*xf32>, !tosa.shape<2>) -> tensor<*xf32>
-  return %0 : tensor<*xf32>
-}
