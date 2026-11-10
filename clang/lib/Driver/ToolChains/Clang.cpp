@@ -10140,6 +10140,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     for (auto Input : Inputs)
       CmdArgs.push_back(Input.getFilename());
   } else {
+    // With -fsycl-link, the wrapper writes the wrapped SYCL device object to
+    // the output and does not run the host link command.
+    if (C.isOffloadingHostKind(Action::OFK_SYCL) &&
+        Args.hasArg(options::OPT_fsycl_link))
+      CmdArgs.push_back("--sycl-device-link");
     for (const char *LinkArg : LinkCommand->getArguments())
       CmdArgs.push_back(LinkArg);
   }

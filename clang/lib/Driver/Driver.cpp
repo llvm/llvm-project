@@ -1132,6 +1132,23 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     if (Active)
       Kinds.insert(Kind);
 
+  // -fsycl-link links SYCL device code into a host object, so it needs both
+  // the host and the device side of a SYCL compilation.
+  if (Arg *A = C.getInputArgs().getLastArgNoClaim(options::OPT_fsycl_link)) {
+    if (!IsSYCL)
+      Diag(clang::diag::err_drv_argument_only_allowed_with)
+          << A->getSpelling() << "-fsycl";
+    else if (const Arg *OnlyArg = C.getInputArgs().getLastArgNoClaim(
+                 options::OPT_offload_device_only,
+                 options::OPT_offload_host_only)) {
+      // Report the spelling that was used, e.g. -fsycl-device-only.
+      if (OnlyArg->getAlias())
+        OnlyArg = OnlyArg->getAlias();
+      Diag(clang::diag::err_drv_argument_not_allowed_with)
+          << A->getSpelling() << OnlyArg->getSpelling();
+    }
+  }
+
   // We currently don't support any kind of mixed offloading.
   if (Kinds.size() > 1) {
     Diag(clang::diag::err_drv_mix_offload)

@@ -106,3 +106,29 @@ space attributes for pointers:
 ```C++
 //TODO: add support for __attribute__((opencl_global_host)) and __attribute__((opencl_global_device)).
 ```
+
+## Separate device link
+
+`-fsycl-link` links the SYCL device code of its inputs and wraps the resulting
+device image into a host object. The host linker is not run. The object is
+then used in a later host link, which can be done by any host linker.
+
+```console
+clang++ -fsycl -c a.cpp b.cpp
+clang++ -fsycl -fsycl-link a.o b.o -o dev.o
+clang++ main.o a.o b.o dev.o -L<libsycl dir> -lLLVMSYCL -o app
+```
+
+The host link does not use `-fsycl`. With `-fsycl`, the device code in `a.o`
+and `b.o` would be linked and registered a second time.
+
+If the inputs contain no device code, the output is an empty object without
+SYCL runtime registration.
+
+Device code in a static library is only extracted when the host link would
+use the archive member. To device link a whole library, pass it with
+`-Wl,--whole-archive libfoo.a -Wl,--no-whole-archive`.
+
+The output of `-fsycl-link` is not yet supported in a static library: nothing
+in it is referenced by the host code, so the host linker does not pull it out
+of the archive and the device images are never registered.
