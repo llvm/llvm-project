@@ -243,6 +243,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
 
   MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
   DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
+  StartOffset = SE.applyLoopGuards(StartOffset, LoopGuards);
 
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
