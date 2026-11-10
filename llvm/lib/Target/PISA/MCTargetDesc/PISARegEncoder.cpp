@@ -134,7 +134,7 @@ static constexpr unsigned NumTypeBits = 3;
 static constexpr unsigned NumBankBits = 5;
 static constexpr unsigned NumRegBits = 24;
 static_assert(RegEncoder::NUM_TYPE < 5, "need to update encoding");
-static_assert(static_cast<unsigned>(RegEncoder::RegBank::NUM_BANK) < 32,
+static_assert(static_cast<unsigned>(RegEncoder::RegBank::NUM_BANK) <= 32,
               "need to update encoding");
 
 RegEncoder::RegType RegEncoder::getRegType(uint8_t TSFlags) {
