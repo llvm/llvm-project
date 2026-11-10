@@ -2559,7 +2559,7 @@ bool llvm::collectCompressedPtrs(
   assert(L.isInnermost() && "Expected innermost loop!");
 
   const DataLayout &DL = SE.getDataLayout();
-  const SCEV *ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
+  SCEVUse ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
   ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
 
   auto GetCompressedPtrSCEV = [&](Value *Ptr,
