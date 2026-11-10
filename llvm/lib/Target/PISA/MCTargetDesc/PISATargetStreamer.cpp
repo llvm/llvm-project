@@ -512,35 +512,9 @@ LLT DataTypes::getLLTFromType(const DataType &Ty) {
 std::string DataTypes::getPrefixFromLLT(LLT Ty) {
   unsigned NumElts = Ty.isScalar() ? 1 : Ty.getNumElements();
   unsigned EltSize = Ty.getScalarSizeInBits();
-  std::string Prefix = "%";
-
-  const DenseMap<unsigned, StringRef> VectorPrefixes = {
-      {1, ""},   {2, "v2"}, {3, "v3"},   {4, "v4"},   {5, "v5"},  {6, "v6"},
-      {7, "v7"}, {8, "v8"}, {16, "v16"}, {32, "v32"}, {64, "v64"}};
-
-  DenseMap<unsigned, StringRef>::const_iterator VectorPrefix =
-      VectorPrefixes.find(NumElts);
-  if (VectorPrefix != VectorPrefixes.end())
-    Prefix += VectorPrefix->second;
-  else
-    llvm_unreachable("Unsupported PISA vector size");
-
-  const DenseMap<unsigned, StringRef> ScalarPrefixes = {
-      {1, "p"},  // Predicate
-      {8, "b"},  // Byte
-      {16, "h"}, // Half-word
-      {32, "w"}, // Word
-      {64, "d"}, // Double-word
-      {128, "q"} // Quad-word
-  };
-
-  DenseMap<unsigned, StringRef>::const_iterator ScalarPrefix =
-      ScalarPrefixes.find(EltSize);
-  if (ScalarPrefix != ScalarPrefixes.end())
-    Prefix += ScalarPrefix->second;
-  else
-    llvm_unreachable("Unsupported PISA scalar size");
-  return Prefix;
+  PISA::RegEncoder::RegBank Bank =
+      PISA::RegEncoder::getRegBank(NumElts, EltSize);
+  return PISA::RegEncoder::getPrefixFromBank(Bank);
 }
 
 DataType DataTypes::getTypeFromPrefix(std::string Prefix) {
