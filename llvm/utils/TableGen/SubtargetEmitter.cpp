@@ -17,6 +17,7 @@
 #include "Common/PredicateExpander.h"
 #include "Common/SubtargetFeatureInfo.h"
 #include "Common/Utils.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1292,6 +1293,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
     return;
 
   LLVM_DEBUG(dbgs() << "\n+++ SCHED CLASSES (GenSchedClassTables) +++\n");
+  MapVector<const Record *, bool> RedundantInstRWs;
   for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
     LLVM_DEBUG(SC.dump(&SchedModels));
 
@@ -1328,10 +1330,10 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
     }
     IdxVec Writes = SC.Writes;
     IdxVec Reads = SC.Reads;
+    const Record *RWDef = nullptr;
     if (!SC.InstRWs.empty()) {
       // This class has a default ReadWrite list which can be overridden by
       // InstRW definitions.
-      const Record *RWDef = nullptr;
       for (const Record *RW : SC.InstRWs) {
         const Record *RWModelDef = RW->getValueAsDef("SchedModel");
         if (&ProcModel == &SchedModels.getProcModel(RWModelDef)) {
@@ -1369,6 +1371,25 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       PrintFatalError(ProcModel.ModelDef->getLoc(),
                       Twine("Processor does not define resources for ") +
                           RW->TheDef->getName());
+    if (RWDef && ProcModel.ModelDef->getValueAsBit("WarnRedundantInstRW")) {
+      bool Redundant = false;
+      if (!SC.Writes.empty() &&
+          SCDesc.NumMicroOps != MCSchedClassDesc::InvalidNumMicroOps) {
+        MCSchedClassDesc BaseDesc{};
+        SchedClassEntries BaseEntries;
+        Redundant =
+            !genSchedClassEntries(SC.Writes, SC.Reads, ProcModel, BaseDesc,
+                                  BaseEntries) &&
+            BaseDesc.NumMicroOps == SCDesc.NumMicroOps &&
+            BaseDesc.BeginGroup == SCDesc.BeginGroup &&
+            BaseDesc.EndGroup == SCDesc.EndGroup &&
+            BaseDesc.RetireOOO == SCDesc.RetireOOO &&
+            BaseEntries.WriteProcResources == Entries.WriteProcResources &&
+            BaseEntries.WriteLatencies == Entries.WriteLatencies &&
+            BaseEntries.ReadAdvanceEntries == Entries.ReadAdvanceEntries;
+      }
+      RedundantInstRWs.try_emplace(RWDef, true).first->second &= Redundant;
+    }
     auto &[WriteProcResources, WriteLatencies, WriterNames,
            ReadAdvanceEntries] = Entries;
     // Add the information for this SchedClass to the global tables using basic
@@ -1421,6 +1442,11 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       llvm::append_range(SchedTables.ReadAdvanceEntries, ReadAdvanceEntries);
     }
   }
+  for (const auto &[RWDef, Redundant] : RedundantInstRWs)
+    if (Redundant)
+      PrintWarning(RWDef->getLoc(), "InstRW on " + ProcModel.ModelName +
+                                        " matches the base SchedRW of all "
+                                        "its instructions");
 }
 
 // Emit SchedClass tables for all processors and associated global tables.
