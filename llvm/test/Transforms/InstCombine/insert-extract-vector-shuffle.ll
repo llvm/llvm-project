@@ -7,18 +7,7 @@
 define <4 x i32> @chain(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-LABEL: define <4 x i32> @chain(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i32> [[IDX]], i64 0
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I3]]
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %i0 = extractelement <4 x i32> %idx, i64 0
@@ -39,18 +28,7 @@ define <4 x i32> @chain(<4 x i32> %src, <4 x i32> %idx) {
 define <4 x float> @chain_fp(<4 x float> %src, <4 x i64> %idx) {
 ; CHECK-LABEL: define <4 x float> @chain_fp(
 ; CHECK-SAME: <4 x float> [[SRC:%.*]], <4 x i64> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i64> [[IDX]], i64 0
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[SRC]], i64 [[I0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x float> poison, float [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i64> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[SRC]], i64 [[I1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x float> [[V0]], float [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i64> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x float> [[SRC]], i64 [[I2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x float> [[V1]], float [[E2]], i64 2
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i64> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x float> [[SRC]], i64 [[I3]]
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[V2]], float [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x float> @llvm.vector.shuffle.v4f32.v4i64(<4 x float> [[SRC]], <4 x i64> [[IDX]])
 ; CHECK-NEXT:    ret <4 x float> [[V3]]
 ;
   %i0 = extractelement <4 x i64> %idx, i64 0
@@ -72,22 +50,7 @@ define <4 x float> @chain_fp(<4 x float> %src, <4 x i64> %idx) {
 define <4 x i32> @chain_zext(<4 x i32> %src, <4 x i8> %idx) {
 ; CHECK-LABEL: define <4 x i32> @chain_zext(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i8> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i8> [[IDX]], i64 0
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[I0]] to i64
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i64 [[Z0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i8> [[IDX]], i64 1
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[I1]] to i64
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i64 [[Z1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i8> [[IDX]], i64 2
-; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[I2]] to i64
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i64 [[Z2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i8> [[IDX]], i64 3
-; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[I3]] to i64
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i64 [[Z3]]
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i8(<4 x i32> [[SRC]], <4 x i8> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %i0 = extractelement <4 x i8> %idx, i64 0
@@ -112,22 +75,7 @@ define <4 x i32> @chain_zext(<4 x i32> %src, <4 x i8> %idx) {
 define <4 x i32> @chain_sext(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-LABEL: define <4 x i32> @chain_sext(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i32> [[IDX]], i64 0
-; CHECK-NEXT:    [[S0:%.*]] = sext i32 [[I0]] to i64
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i64 [[S0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[S1:%.*]] = sext i32 [[I1]] to i64
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i64 [[S1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = sext i32 [[I2]] to i64
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i64 [[S2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[S3:%.*]] = sext i32 [[I3]] to i64
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i64 [[S3]]
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %i0 = extractelement <4 x i32> %idx, i64 0
@@ -152,18 +100,7 @@ define <4 x i32> @chain_sext(<4 x i32> %src, <4 x i32> %idx) {
 define <4 x i32> @chain_out_of_order(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-LABEL: define <4 x i32> @chain_out_of_order(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i32> [[IDX]], i64 0
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I3]]
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %i2 = extractelement <4 x i32> %idx, i64 2
@@ -185,18 +122,7 @@ define <4 x i32> @chain_out_of_order(<4 x i32> %src, <4 x i32> %idx) {
 define <4 x i32> @chain_overwritten_base(<4 x i32> %src, <4 x i32> %idx, <4 x i32> %base) {
 ; CHECK-LABEL: define <4 x i32> @chain_overwritten_base(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]], <4 x i32> [[BASE:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i32> [[IDX]], i64 0
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I3]]
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %i0 = extractelement <4 x i32> %idx, i64 0
@@ -218,18 +144,7 @@ define <4 x i32> @chain_overwritten_base(<4 x i32> %src, <4 x i32> %idx, <4 x i3
 define <4 x i32> @chain_overwritten_lane(<4 x i32> %src, <4 x i32> %idx, i32 %x) {
 ; CHECK-LABEL: define <4 x i32> @chain_overwritten_lane(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i32> [[IDX]], i64 0
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I0]]
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[V4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V4:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V4]]
 ;
   %v = insertelement <4 x i32> poison, i32 %x, i64 0
@@ -258,16 +173,7 @@ define <4 x i32> @chain_extract_multiuse(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i32> [[IDX]], i64 0
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I0]]
 ; CHECK-NEXT:    call void @use(i32 [[E0]])
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I3]]
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %i0 = extractelement <4 x i32> %idx, i64 0
@@ -290,22 +196,7 @@ define <4 x i32> @chain_extract_multiuse(<4 x i32> %src, <4 x i32> %idx) {
 define <4 x i32> @chain_sext_min_width(<4 x i32> %src, <4 x i2> %idx) {
 ; CHECK-LABEL: define <4 x i32> @chain_sext_min_width(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i2> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i2> [[IDX]], i64 0
-; CHECK-NEXT:    [[S0:%.*]] = sext i2 [[I0]] to i3
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i3 [[S0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i2> [[IDX]], i64 1
-; CHECK-NEXT:    [[S1:%.*]] = sext i2 [[I1]] to i3
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i3 [[S1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i2> [[IDX]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = sext i2 [[I2]] to i3
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i3 [[S2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i2> [[IDX]], i64 3
-; CHECK-NEXT:    [[S3:%.*]] = sext i2 [[I3]] to i3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i3 [[S3]]
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i2(<4 x i32> [[SRC]], <4 x i2> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
   %i0 = extractelement <4 x i2> %idx, i64 0
@@ -330,18 +221,7 @@ define <4 x i32> @chain_sext_min_width(<4 x i32> %src, <4 x i2> %idx) {
 define <3 x i32> @chain_sext_non_pow2(<3 x i32> %src, <3 x i2> %idx) {
 ; CHECK-LABEL: define <3 x i32> @chain_sext_non_pow2(
 ; CHECK-SAME: <3 x i32> [[SRC:%.*]], <3 x i2> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <3 x i2> [[IDX]], i64 0
-; CHECK-NEXT:    [[S0:%.*]] = sext i2 [[I0]] to i3
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <3 x i32> [[SRC]], i3 [[S0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <3 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <3 x i2> [[IDX]], i64 1
-; CHECK-NEXT:    [[S1:%.*]] = sext i2 [[I1]] to i3
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <3 x i32> [[SRC]], i3 [[S1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <3 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <3 x i2> [[IDX]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = sext i2 [[I2]] to i3
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <3 x i32> [[SRC]], i3 [[S2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <3 x i32> [[V1]], i32 [[E2]], i64 2
+; CHECK-NEXT:    [[V2:%.*]] = call <3 x i32> @llvm.vector.shuffle.v3i32.v3i2(<3 x i32> [[SRC]], <3 x i2> [[IDX]])
 ; CHECK-NEXT:    ret <3 x i32> [[V2]]
 ;
   %i0 = extractelement <3 x i2> %idx, i64 0
@@ -363,15 +243,7 @@ define <3 x i32> @chain_sext_non_pow2(<3 x i32> %src, <3 x i2> %idx) {
 define <4 x i32> @chain_partial_poison_base(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-LABEL: define <4 x i32> @chain_partial_poison_base(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i32> [[IDX]], i64 0
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[E2]], i64 2
+; CHECK-NEXT:    [[V2:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    ret <4 x i32> [[V2]]
 ;
   %i0 = extractelement <4 x i32> %idx, i64 0
@@ -390,16 +262,8 @@ define <4 x i32> @chain_partial_poison_base(<4 x i32> %src, <4 x i32> %idx) {
 define <4 x i32> @chain_then_insert(<4 x i32> %src, <4 x i32> %idx, i32 %x) {
 ; CHECK-LABEL: define <4 x i32> @chain_then_insert(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[V4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
+; CHECK-NEXT:    [[V4:%.*]] = insertelement <4 x i32> [[V3]], i32 [[X]], i64 0
 ; CHECK-NEXT:    ret <4 x i32> [[V4]]
 ;
   %i0 = extractelement <4 x i32> %idx, i64 0
@@ -422,18 +286,10 @@ define <4 x i32> @chain_then_insert(<4 x i32> %src, <4 x i32> %idx, i32 %x) {
 define <4 x i32> @chain_then_other_chain(<4 x i32> %src, <4 x i32> %idx, <4 x i32> %src2, <4 x i32> %idx2) {
 ; CHECK-LABEL: define <4 x i32> @chain_then_other_chain(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]], <4 x i32> [[SRC2:%.*]], <4 x i32> [[IDX2:%.*]]) {
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I3]]
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    [[J0:%.*]] = extractelement <4 x i32> [[IDX2]], i64 0
 ; CHECK-NEXT:    [[F0:%.*]] = extractelement <4 x i32> [[SRC2]], i32 [[J0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[F0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[W0:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[W0:%.*]] = insertelement <4 x i32> [[V3]], i32 [[F0]], i64 0
 ; CHECK-NEXT:    ret <4 x i32> [[W0]]
 ;
   %i0 = extractelement <4 x i32> %idx, i64 0
@@ -457,18 +313,7 @@ define <4 x i32> @chain_then_other_chain(<4 x i32> %src, <4 x i32> %idx, <4 x i3
 define <4 x i32> @chain_root_multiuse(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-LABEL: define <4 x i32> @chain_root_multiuse(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I0:%.*]] = extractelement <4 x i32> [[IDX]], i64 0
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I0]]
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[V0]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x i32> [[V1]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[I3:%.*]] = extractelement <4 x i32> [[IDX]], i64 3
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I3]]
-; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x i32> [[V2]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[V3:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
 ; CHECK-NEXT:    call void @usev(<4 x i32> [[V3]])
 ; CHECK-NEXT:    ret <4 x i32> [[V3]]
 ;
@@ -491,8 +336,8 @@ define <4 x i32> @chain_root_multiuse(<4 x i32> %src, <4 x i32> %idx) {
 define i32 @chain_extract_lane(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-LABEL: define i32 @chain_extract_lane(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[E2]]
 ;
   %i0 = extractelement <4 x i32> %idx, i64 0
@@ -514,8 +359,8 @@ define i32 @chain_extract_lane(<4 x i32> %src, <4 x i32> %idx) {
 define i32 @extract_vector_shuffle(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-LABEL: define i32 @extract_vector_shuffle(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]]) {
-; CHECK-NEXT:    [[S:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
-; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[S]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[IDX]], i64 2
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src, <4 x i32> %idx)
@@ -543,10 +388,7 @@ define <4 x i32> @insert_into_vector_shuffle(<4 x i32> %src, <4 x i32> %idx) {
 ; CHECK-LABEL: define <4 x i32> @insert_into_vector_shuffle(
 ; CHECK-SAME: <4 x i32> [[SRC:%.*]], <4 x i32> [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[S:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[SRC]], <4 x i32> [[IDX]])
-; CHECK-NEXT:    [[I1:%.*]] = extractelement <4 x i32> [[IDX]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SRC]], i32 [[I1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x i32> [[S]], i32 [[E1]], i64 1
-; CHECK-NEXT:    ret <4 x i32> [[V1]]
+; CHECK-NEXT:    ret <4 x i32> [[S]]
 ;
   %s = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src, <4 x i32> %idx)
   %i1 = extractelement <4 x i32> %idx, i64 1
