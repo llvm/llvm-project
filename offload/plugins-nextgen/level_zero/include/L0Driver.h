@@ -94,9 +94,8 @@ private:
 
 /// Per-driver state: driver handle and version, extension dispatchers, the
 /// event pool, and a driver-wide ze_context. The ze_context is shared with
-/// the default plugin context used by the libomptarget path. Contexts created
-/// through olCreateContext are separate LevelZeroPluginContextTy objects (see
-/// L0Context.h).
+/// the default plugin context. Contexts created through olCreateContext are
+/// separate LevelZeroPluginContextTy objects (see L0Context.h).
 class L0DriverTy {
   /// The plugin that created this driver.
   LevelZeroPluginTy &Plugin;

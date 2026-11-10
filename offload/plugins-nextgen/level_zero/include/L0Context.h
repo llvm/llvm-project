@@ -25,9 +25,8 @@ class L0DeviceTy;
 /// Plugin-side context for Level Zero. Owns a ze_context_handle_t that is
 /// scoped to the set of devices grouped by the user through olCreateContext,
 /// together with per-device and host memory pools bound to that ze_context.
-/// Each driver also keeps a device-less default context, used by the
-/// libomptarget path, which borrows the driver's ze_context and only has a
-/// host pool.
+/// Each driver also keeps a device-less default context, which borrows the
+/// driver's ze_context and only has a host pool.
 class LevelZeroPluginContextTy final : public PluginContextTy {
 public:
   LevelZeroPluginContextTy(GenericPluginTy &Plugin,
