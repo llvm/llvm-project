@@ -8435,13 +8435,6 @@ bool CombinerHelper::matchMulByZeroOneVector(MachineInstr &MI,
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, VecTy}))
     return false;
 
-  // Preserve potential multiply-add/subtract fusion.
-  for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Dst)) {
-    if (UseMI.getOpcode() == TargetOpcode::G_ADD ||
-        UseMI.getOpcode() == TargetOpcode::G_SUB)
-      return false;
-  }
-
   unsigned ElemBits = VecTy.getScalarSizeInBits();
 
   // Multiplication is commutative: check both operands for a mask.
