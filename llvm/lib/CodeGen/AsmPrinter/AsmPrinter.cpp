@@ -1711,9 +1711,22 @@ void AsmPrinter::emitKCFITrapEntry(const MachineFunction &MF,
 
 void AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   const Function &F = MF.getFunction();
-  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_kcfi_type))
-    emitGlobalConstant(F.getDataLayout(),
-                       mdconst::extract<ConstantInt>(MD->getOperand(0)));
+  const MDNode *MD = F.getMetadata(LLVMContext::MD_kcfi_type);
+  if (!MD)
+    return;
+  const auto *TypeId = mdconst::extract<ConstantInt>(MD->getOperand(0));
+  // Prefix data has already started the function's atom, so the type id
+  // joins it.
+  if (F.hasPrefixData()) {
+    emitGlobalConstant(F.getDataLayout(), TypeId);
+    return;
+  }
+  // Otherwise the type id needs the same treatment as prefix data: with
+  // subsections-via-symbols, a bare word before the function belongs to the
+  // atom of the function before it, which the linker may move (a cold
+  // function, an order file) or dead-strip, leaving the indirect call check
+  // to read whatever is now there.
+  emitFunctionPrefix({TypeId});
 }
 
 void AsmPrinter::emitPseudoProbe(const MachineInstr &MI) {
