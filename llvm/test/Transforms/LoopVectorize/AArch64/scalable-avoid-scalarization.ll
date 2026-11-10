@@ -78,5 +78,5 @@ L.exit:
   ret void
 }
 
-attributes #0 = { nofree norecurse noreturn nosync nounwind "target-features"="+sve" }
+attributes #0 = { nofree norecurse noreturn nosync nounwind "target-features"="+sve" vscale_range(1,16) }
 

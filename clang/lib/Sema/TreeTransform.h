@@ -1045,7 +1045,8 @@ public:
 
   /// Build a new matrix type given the element type and dimensions.
   QualType RebuildConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                     unsigned NumColumns);
+                                     unsigned NumColumns,
+                                     SourceLocation AttributeLoc);
 
   /// Build a new matrix type given the type and dependently-defined
   /// dimensions.
@@ -1136,9 +1137,7 @@ public:
   QualType RebuildDecltypeType(Expr *Underlying, SourceLocation Loc);
 
   QualType RebuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                   SourceLocation Loc,
-                                   SourceLocation EllipsisLoc,
-                                   bool FullySubstituted,
+                                   SourceLocation Loc, bool FullySubstituted,
                                    ArrayRef<QualType> Expansions = {});
 
   /// Build a new C++11 auto type.
@@ -1705,6 +1704,18 @@ public:
         Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
   }
 
+  /// Build a new OpenMP metadirective.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildOMPMetaDirective(SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     ArrayRef<OMPTraitInfo *> TraitInfos,
+                                     ArrayRef<Stmt *> Variants) {
+    return getSema().OpenMP().ActOnOpenMPMetaDirective(StartLoc, EndLoc,
+                                                       TraitInfos, Variants);
+  }
+
   /// Build a new OpenMP informational directive.
   StmtResult RebuildOMPInformationalDirective(OpenMPDirectiveKind Kind,
                                               DeclarationNameInfo DirName,
@@ -1822,6 +1833,14 @@ public:
                                      SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPPartialClause(Factor, StartLoc,
                                                        LParenLoc, EndLoc);
+  }
+
+  /// Build a new OpenMP 'depth' clause.
+  OMPClause *RebuildOMPDepthClause(Expr *Depth, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPDepthClause(Depth, StartLoc, LParenLoc,
+                                                     EndLoc);
   }
 
   OMPClause *
@@ -3533,9 +3552,10 @@ public:
   /// By default, builds a new default field initialization expression, which
   /// does not require any semantic analysis. Subclasses may override this
   /// routine to provide different behavior.
-  ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc,
-                                       FieldDecl *Field) {
-    return getSema().BuildCXXDefaultInitExpr(Loc, Field);
+  ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                       Expr *RewrittenInit) {
+    return CXXDefaultInitExpr::Create(getSema().Context, Loc, Field,
+                                      getSema().CurContext, RewrittenInit);
   }
 
   /// Build a new C++ zero-initialization expression.
@@ -3872,8 +3892,8 @@ public:
   concepts::NestedRequirement *
   RebuildNestedRequirement(StringRef InvalidConstraintEntity,
                            const ASTConstraintSatisfaction &Satisfaction) {
-    return SemaRef.BuildNestedRequirement(InvalidConstraintEntity,
-                                          Satisfaction);
+    return new (getSema().Context)
+        concepts::NestedRequirement(InvalidConstraintEntity, &Satisfaction);
   }
 
   concepts::NestedRequirement *RebuildNestedRequirement(Expr *Constraint) {
@@ -5320,7 +5340,6 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
         PackLocIterator;
 
       TemplateArgumentListInfo *PackOutput = &Outputs;
-      TemplateArgumentListInfo New;
 
       if (TransformTemplateArguments(
               PackLocIterator(*this, In.getArgument().pack_begin()),
@@ -5457,7 +5476,7 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
       // that required a substituion first.
       bool SawPackTypes =
           llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
-            return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+            return isa<const SubstBuiltinTemplatePackType *>(P.first);
           });
       if (!SawPackTypes) {
         Info.Expand = false;
@@ -6288,7 +6307,7 @@ TreeTransform<Derived>::TransformConstantMatrixType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ElementType != T->getElementType()) {
     Result = getDerived().RebuildConstantMatrixType(
-        ElementType, T->getNumRows(), T->getNumColumns());
+        ElementType, T->getNumRows(), T->getNumColumns(), TL.getAttrNameLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -7277,8 +7296,7 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
       if (NotYetExpanded) {
         FullySubstituted = false;
         QualType Out = getDerived().RebuildPackIndexingType(
-            Pack, IndexExpr.get(), SourceLocation(), TL.getEllipsisLoc(),
-            FullySubstituted);
+            Pack, IndexExpr.get(), TL.getBeginLoc(), FullySubstituted);
         if (Out.isNull())
           return QualType();
 
@@ -7316,8 +7334,8 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
   QualType Result = getDerived().TransformType(TLB, TL.getPatternLoc());
 
   QualType Out = getDerived().RebuildPackIndexingType(
-      Result, IndexExpr.get(), SourceLocation(), TL.getEllipsisLoc(),
-      FullySubstituted, SubtitutedTypes);
+      Result, IndexExpr.get(), TL.getBeginLoc(), FullySubstituted,
+      SubtitutedTypes);
   if (Out.isNull())
     return Out;
 
@@ -7846,6 +7864,15 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
           getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
       if (equivalentType.isNull())
         return QualType();
+    }
+
+    if (SemaRef.getLangOpts().HLSL) {
+      if (oldType->getAttrKind() == attr::HLSLRowMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::RowMajor);
+      else if (oldType->getAttrKind() == attr::HLSLColumnMajor)
+        equivalentType = SemaRef.Context.getMatrixTypeWithLayout(
+            equivalentType, MatrixType::LayoutKind::ColumnMajor);
     }
 
     // Check whether we can add nullability; it is only represented as
@@ -8773,7 +8800,7 @@ TreeTransform<Derived>::TransformIndirectGotoStmt(IndirectGotoStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
-  if (!S->hasLabelTarget())
+  if (!S->isNamed())
     return S;
 
   Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
@@ -8788,7 +8815,7 @@ TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
-  if (!S->hasLabelTarget())
+  if (!S->isNamed())
     return S;
 
   Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
@@ -10056,12 +10083,45 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
-  // TODO: Fix This
-  llvm::omp::Version OMPVersion =
-      getDerived().getSema().getLangOpts().getOpenMPVersion();
-  SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
-  return StmtError();
+  // Every variant is a complete directive (or the plain associated statement),
+  // so it is transformed on its own.
+  SmallVector<Stmt *, 4> Variants;
+  for (Stmt *V : D->variants()) {
+    StmtResult NewV = getDerived().TransformStmt(V);
+    if (NewV.isInvalid())
+      return StmtError();
+    Variants.push_back(NewV.get());
+  }
+
+  // Copy the trait infos and transform their score and condition expressions.
+  // The implicit 'otherwise' trait info is added back by Sema.
+  ArrayRef<OMPTraitInfo *> OldTraitInfos = D->traitInfos();
+  if (D->hasImplicitOtherwise())
+    OldTraitInfos = OldTraitInfos.drop_back();
+  SmallVector<OMPTraitInfo *, 4> TraitInfos;
+  for (const OMPTraitInfo *OldTI : OldTraitInfos) {
+    OMPTraitInfo &TI = getSema().getASTContext().getNewOMPTraitInfo();
+    TI = *OldTI;
+    auto TransformScoreOrCondition = [&](Expr *&E, bool IsScore) {
+      if (!E)
+        return false;
+      EnterExpressionEvaluationContext Ctx(
+          getSema(),
+          IsScore ? Sema::ExpressionEvaluationContext::ConstantEvaluated
+                  : Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      ExprResult ER = getDerived().TransformExpr(E);
+      if (!ER.isUsable())
+        return true;
+      E = ER.get();
+      return false;
+    };
+    if (TI.anyScoreOrCondition(TransformScoreOrCondition))
+      return StmtError();
+    TraitInfos.push_back(&TI);
+  }
+
+  return getDerived().RebuildOMPMetaDirective(D->getBeginLoc(), D->getEndLoc(),
+                                              TraitInfos, Variants);
 }
 
 template <typename Derived>
@@ -10144,6 +10204,17 @@ StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPSplitDirective(OMPSplitDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPFlattenDirective(OMPFlattenDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
       D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
@@ -10931,6 +11002,17 @@ TreeTransform<Derived>::TransformOMPTargetParallelGenericLoopDirective(
   return Res;
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_loop, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMP clause transformation
 //===----------------------------------------------------------------------===//
@@ -11101,6 +11183,20 @@ TreeTransform<Derived>::TransformOMPPartialClause(OMPPartialClause *C) {
     return C;
   return RebuildOMPPartialClause(Factor, C->getBeginLoc(), C->getLParenLoc(),
                                  C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPDepthClause(OMPDepthClause *C) {
+  ExprResult T = getDerived().TransformExpr(C->getDepth());
+  if (T.isInvalid())
+    return nullptr;
+  Expr *Depth = T.get();
+  bool Changed = Depth != C->getDepth();
+
+  if (!Changed && !getDerived().AlwaysRebuild())
+    return C;
+  return RebuildOMPDepthClause(Depth, C->getBeginLoc(), C->getLParenLoc(),
+                               C->getEndLoc());
 }
 
 template <typename Derived>
@@ -13596,7 +13692,20 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
-  assert(false && "not implemented yet");
+
+  switch (E->getKind()) {
+  case ReflectionKind::Type: {
+    TypeSourceInfo *NewT = getDerived().TransformType(
+        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
+    if (!NewT)
+      return ExprError();
+    return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);
+  }
+  case ReflectionKind::Null:
+    llvm_unreachable("A null reflection should not reach here");
+  }
+
+  assert(false && "unknown or unimplemented reflection entities");
   return ExprError();
 }
 
@@ -15238,11 +15347,23 @@ TreeTransform<Derived>::TransformCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   if (!Field)
     return ExprError();
 
+  ExprResult InitRes;
+  if (E->hasRewrittenInit()) {
+    // The initializer can refer to `this` and to other members, so it has to
+    // be transformed in the scope of the field's class.
+    Sema::CXXThisScopeRAII ThisScope(SemaRef, Field->getParent(), Qualifiers());
+    InitRes = getDerived().TransformExpr(E->getRewrittenExpr());
+    if (InitRes.isInvalid())
+      return ExprError();
+  }
+
   if (!getDerived().AlwaysRebuild() && Field == E->getField() &&
-      E->getUsedContext() == SemaRef.CurContext)
+      E->getUsedContext() == SemaRef.CurContext &&
+      InitRes.get() == E->getExpr())
     return E;
 
-  return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field);
+  return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field,
+                                                InitRes.get());
 }
 
 template<typename Derived>
@@ -18158,9 +18279,17 @@ TreeTransform<Derived>::RebuildDependentSizedExtVectorType(QualType ElementType,
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildConstantMatrixType(
-    QualType ElementType, unsigned NumRows, unsigned NumColumns) {
-  return SemaRef.Context.getConstantMatrixType(ElementType, NumRows,
-                                               NumColumns);
+    QualType ElementType, unsigned NumRows, unsigned NumColumns,
+    SourceLocation AttributeLoc) {
+  ASTContext &Ctx = SemaRef.Context;
+  QualType SizeTy = Ctx.getSizeType();
+  unsigned SizeWidth = Ctx.getIntWidth(SizeTy);
+  IntegerLiteral *RowExpr = IntegerLiteral::Create(
+      Ctx, llvm::APInt(SizeWidth, NumRows), SizeTy, AttributeLoc);
+  IntegerLiteral *ColumnExpr = IntegerLiteral::Create(
+      Ctx, llvm::APInt(SizeWidth, NumColumns), SizeTy, AttributeLoc);
+  return SemaRef.BuildMatrixType(ElementType, RowExpr, ColumnExpr,
+                                 AttributeLoc);
 }
 
 template <typename Derived>
@@ -18262,9 +18391,8 @@ QualType TreeTransform<Derived>::RebuildDecltypeType(Expr *E, SourceLocation) {
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildPackIndexingType(
     QualType Pattern, Expr *IndexExpr, SourceLocation Loc,
-    SourceLocation EllipsisLoc, bool FullySubstituted,
-    ArrayRef<QualType> Expansions) {
-  return SemaRef.BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc,
+    bool FullySubstituted, ArrayRef<QualType> Expansions) {
+  return SemaRef.BuildPackIndexingType(Pattern, IndexExpr, Loc,
                                        FullySubstituted, Expansions);
 }
 

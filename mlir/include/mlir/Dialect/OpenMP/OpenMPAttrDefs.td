@@ -19,6 +19,7 @@ include "mlir/IR/CommonAttrConstraints.td"
 class OpenMP_Attr<string name, string attrMnemonic, list<Trait> traits = [],
                   string baseCppClass = "::mlir::Attribute">
     : AttrDef<OpenMP_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/OpenMP/OpenMPOpsAttributes.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -68,6 +69,16 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// ReductionModifierArrayAttr
+//===----------------------------------------------------------------------===//
+
+def ReductionModifierArrayAttr
+    : TypedArrayAttrBase<ReductionModifierAttr,
+                         "array of reduction modifiers"> {
+  let constBuilderCall = ?;
 }
 
 //===----------------------------------------------------------------------===//

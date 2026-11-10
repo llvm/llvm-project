@@ -50,12 +50,15 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeGlobalISel(PR);
   initializeBPFAsmPrinterPass(PR);
   initializeBPFCheckAndAdjustIRLegacyPass(PR);
+  initializeBPFFuncTableLegacyPass(PR);
   initializeBPFMIPeepholeLegacyPass(PR);
   initializeBPFMIExpandStackArgPseudosLegacyPass(PR);
   initializeBPFMIPreEmitPeepholeLegacyPass(PR);
   initializeBPFDAGToDAGISelLegacyPass(PR);
   initializeBPFMISimplifyPatchableLegacyPass(PR);
   initializeBPFMIPreEmitCheckingLegacyPass(PR);
+  initializeBPFUnwindPreparePass(PR);
+  initializeBPFUnwindLowerPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -68,7 +71,7 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<BPFTargetLoweringObjectFileELF>()),
@@ -113,10 +116,15 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void BPFPassConfig::addIRPasses() {
+  const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
+
   addPass(createAtomicExpandLegacyPass());
   addPass(createBPFCheckAndAdjustIRLegacyPass());
+  if (Subtarget->hasFuncTable())
+    addPass(createBPFFuncTablePass());
 
   TargetPassConfig::addIRPasses();
+  addPass(createBPFUnwindPreparePass());
 }
 
 TargetTransformInfo
@@ -147,6 +155,7 @@ void BPFPassConfig::addMachineSSAOptimization() {
 }
 
 void BPFPassConfig::addPreEmitPass() {
+  addPass(createBPFUnwindLowerPass());
   addPass(createBPFMIPreEmitCheckingLegacyPass());
   if (!DisableMIPeephole) {
     addPass(createBPFMIExpandStackArgPseudosLegacyPass());

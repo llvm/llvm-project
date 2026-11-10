@@ -9,6 +9,7 @@
 #include <detail/offload/offload_utils.hpp>
 
 #include <cassert>
+#include <cstdint>
 #include <limits>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -54,12 +55,18 @@ backend convertBackend(ol_platform_backend_t Backend) {
   switch (Backend) {
   case OL_PLATFORM_BACKEND_LEVEL_ZERO:
     return backend::level_zero;
-  case OL_PLATFORM_BACKEND_CUDA:
-    return backend::cuda;
-  case OL_PLATFORM_BACKEND_AMDGPU:
-    return backend::hip;
   default:
     throw exception(make_error_code(errc::runtime), "Unsupported backend");
+  }
+}
+
+bool isBackendSupported(ol_platform_backend_t Backend) {
+  switch (Backend) {
+  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
+  case OL_PLATFORM_BACKEND_HOST:
+    return true;
+  default:
+    return false;
   }
 }
 

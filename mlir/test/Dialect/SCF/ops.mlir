@@ -441,3 +441,13 @@ func.func @switch(%arg0: index) -> i32 {
 
   return %0 : i32
 }
+
+func.func @std_parallel_loop_unsigned(%arg0 : index, %arg1 : index,
+                                      %arg2 : index) {
+  scf.parallel unsigned (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @std_parallel_loop_unsigned
+//  CHECK-NEXT:   scf.parallel unsigned (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {

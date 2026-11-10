@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
@@ -474,6 +473,9 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
   auto *N = getOrCreateNode(I);
   auto *MemN = dyn_cast<MemDGNode>(N);
 
+  if (Sched)
+    Sched->notifyCreateInstrBeforeDAGUpdates(N);
+
   // Update the MemDGNode chain if this is a memory node.
   if (MemN != nullptr) {
     if (auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false)) {
@@ -499,6 +501,10 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
            MemDGNodeIntervalBuilder::make(BelowIntvl, *this))
         scanAndAddDeps(BelowN, Interval<MemDGNode>(MemN, MemN));
     }
+  }
+
+  if (Sched != nullptr) {
+    Sched->notifyCreateInstrAfterDAGUpdates(N);
   }
 }
 
@@ -600,6 +606,10 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
     }
     // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
   }
+
+  if (Sched != nullptr)
+    Sched->notifyEraseInstr(I);
+
   // Finally erase the Node.
   InstrToNodeMap.erase(I);
 }
@@ -650,7 +660,7 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   }
 }
 
-Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
+Interval<Instruction> DependencyGraph::extend(BndlRef<Instruction *> Instrs) {
   if (Instrs.empty())
     return {};
 

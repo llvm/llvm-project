@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Defines OpenACC codegen attributes (GPU parallel dimensions used for
-// privatization, barrier management, and loop work-sharing, plus active
-// parallel dimensions for predication analysis).
+// privatization, barrier management, and loop work-sharing, active
+// parallel dimensions for predication analysis, and loop chunk size).
 //
 //===----------------------------------------------------------------------===//
 
@@ -101,6 +101,15 @@ def OpenACC_GPUBlockRedundantAttr
     parallelism may be assigned, and during GPU code generation its enclosing
     block dimensions are treated as active (not predicated away).
   }];
+}
+
+def OpenACC_ChunkSizeAttr : OpenACC_Attr<"ChunkSize", "chunk_size"> {
+  let summary = "Static gang chunk size for an OpenACC loop.";
+  let description = [{
+    Records the constant chunk size from an OpenACC `gang(static:N)` clause.
+  }];
+  let parameters = (ins "int64_t":$chunk_size);
+  let assemblyFormat = "`<` $chunk_size `>`";
 }
 
 def OpenACC_ActiveParDimsAttr

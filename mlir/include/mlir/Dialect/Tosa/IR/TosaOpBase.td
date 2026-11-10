@@ -61,6 +61,7 @@ def Tosa_Dialect : Dialect {
 
 class Tosa_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<Tosa_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/Tosa/IR/TosaOps.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -484,9 +485,6 @@ class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
 // for multiple zero points in convolution ops.
 class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
     : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
-      [SameVariadicOperandSize, NoMemoryEffect])> {
-  let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
-}
+      [SameVariadicOperandSize, NoMemoryEffect])> {}
 
 #endif // TOSA_OP_BASE

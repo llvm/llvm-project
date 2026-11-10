@@ -105,8 +105,6 @@ LLVM_ABI bool getUniqueBasicBlockSectionNames();
 
 LLVM_ABI bool getSeparateNamedSections();
 
-LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
-
 LLVM_ABI llvm::VectorLibrary getVectorLibrary();
 
 LLVM_ABI bool getEnableStackSizeSection();
@@ -116,8 +114,6 @@ LLVM_ABI bool getEnableAddrsig();
 LLVM_ABI bool getEnableCallGraphSection();
 
 LLVM_ABI bool getEmitCallSiteInfo();
-
-LLVM_ABI bool getEnableMachineFunctionSplitter();
 
 LLVM_ABI bool getEnableStaticDataPartitioning();
 
@@ -163,13 +159,14 @@ LLVM_ABI llvm::BasicBlockSection
 getBBSectionsMode(llvm::TargetOptions &Options);
 
 /// Common utility function tightly tied to the options listed here. Initializes
-/// a TargetOptions object with CodeGen flags and returns it.
+/// a TargetOptions object with CodeGen options and returns it.
 /// \p TheTriple is used to determine the default value for options if
 ///    options are not explicitly specified. If those triple dependant options
 ///    value do not have effect for your component, a default Triple() could be
 ///    passed in.
 LLVM_ABI TargetOptions
-InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
+getTargetOptions(const cl::LibraryOptionsContext &LibraryOptions,
+                 const llvm::Triple &TheTriple);
 
 LLVM_ABI std::string getCPUStr();
 
@@ -195,7 +192,7 @@ LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
 /// line. This can be used for tools that do not need further customization of
 /// the TargetOptions.
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
-    const Triple &TargetTriple,
+    const cl::LibraryOptionsContext &LibraryOptions, const Triple &TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
 /// Conditionally enables the collection of LLVM statistics during the tool run,

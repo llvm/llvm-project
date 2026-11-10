@@ -340,6 +340,15 @@ func.func @extract_strided_slice_scalable(%arg0: vector<4x[8]x16xf32>) -> vector
   indexing_maps = #contraction_to_scalar_accesses,
   iterator_types = ["reduction"]
 }
+// CHECK-LABEL: @contraction_to_0d_vector
+func.func @contraction_to_0d_vector(%arg0: vector<10xf32>, %arg1: vector<10xf32>, %acc: vector<f32>) -> vector<f32> {
+  // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"], kind = #vector.kind<add>} %{{.*}}, %{{.*}}, %{{.*}} : vector<10xf32>, vector<10xf32> into vector<f32>
+  %0 = vector.contract #contraction_to_scalar_trait %arg0, %arg1, %acc
+    : vector<10xf32>, vector<10xf32> into vector<f32>
+  // CHECK:      return %[[X]] : vector<f32>
+  return %0 : vector<f32>
+}
+
 // CHECK-LABEL: @contraction_to_scalar
 func.func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32 {
   // CHECK:      %[[C0:.*]] = arith.constant 0.000000e+00 : f32
@@ -624,6 +633,10 @@ func.func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   vector.reduction <minimumf>, %arg0 : vector<16xf32> into f32
   // CHECK:    %[[X1:.*]] = vector.reduction <maximumf>, %{{.*}} : vector<16xf32> into f32
   %1 = vector.reduction <maximumf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction <minimumnumf>, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <minimumnumf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    %[[X2:.*]] = vector.reduction <maximumnumf>, %{{.*}} : vector<16xf32> into f32
+  %2 = vector.reduction <maximumnumf>, %arg0 : vector<16xf32> into f32
   // CHECK:    return %[[X0]] : f32
   return %0 : f32
 }
@@ -921,8 +934,8 @@ func.func @multi_reduction(%0: vector<4x8x16x32xf32>, %acc0: vector<4x16xf32>,
   // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [1, 3] : vector<4x8x16x32xf32> to vector<4x16xf32>
   %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
     vector<4x8x16x32xf32> to vector<4x16xf32>
-  // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [0, 1] : vector<4x16xf32> to f32
-  %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
+  // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} fastmath<reassoc> [0, 1] : vector<4x16xf32> to f32
+  %2 = vector.multi_reduction <add>, %1, %acc1 fastmath<reassoc> [0, 1] :
     vector<4x16xf32> to f32
   return %2 : f32
 }

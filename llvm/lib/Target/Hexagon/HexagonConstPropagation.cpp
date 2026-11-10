@@ -1870,9 +1870,7 @@ namespace {
     bool evaluateHexExt(const MachineInstr &MI, const CellMap &Inputs,
           CellMap &Outputs);
     bool evaluateHexVector1(const MachineInstr &MI, const CellMap &Inputs,
-          CellMap &Outputs);
-    bool evaluateHexVector2(const MachineInstr &MI, const CellMap &Inputs,
-          CellMap &Outputs);
+                            CellMap &Outputs);
 
     void replaceAllRegUsesWith(Register FromReg, Register ToReg);
     bool rewriteHexBranch(MachineInstr &BrI, const CellMap &Inputs);
@@ -3019,7 +3017,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                     .addReg(R1.Reg, getRegState(Acc), R1.SubReg);
         }
         replaceAllRegUsesWith(DefR.Reg, NewR);
-        MRI->clearKillFlags(NewR);
         Changed = true;
         break;
       }
@@ -3085,7 +3082,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                   .addReg(SR.Reg, getRegState(SO), SR.SubReg);
       }
       replaceAllRegUsesWith(DefR.Reg, NewR);
-      MRI->clearKillFlags(NewR);
       Changed = true;
     }
     break;
@@ -3117,7 +3113,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                   .addReg(SR.Reg, getRegState(SO), SR.SubReg);
       }
       replaceAllRegUsesWith(DefR.Reg, NewR);
-      MRI->clearKillFlags(NewR);
       Changed = true;
     }
     break;

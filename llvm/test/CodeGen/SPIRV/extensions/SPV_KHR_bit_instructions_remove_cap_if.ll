@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown --spirv-ext=+SPV_KHR_bit_instructions %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability Shader
 ; CHECK-NOT: OpCapability BitInstructions

@@ -64,8 +64,7 @@ SystemZFrameLowering::SystemZFrameLowering(StackDirection D, Align StackAl,
 
 std::unique_ptr<SystemZFrameLowering>
 SystemZFrameLowering::create(const SystemZSubtarget &STI) {
-  unsigned PtrSz =
-      STI.getTargetLowering()->getTargetMachine().getPointerSize(0);
+  unsigned PtrSz = 8;
   if (STI.isTargetXPLINK64())
     return std::make_unique<SystemZXPLINKFrameLowering>(PtrSz);
   return std::make_unique<SystemZELFFrameLowering>(PtrSz);
@@ -801,9 +800,12 @@ void SystemZELFFrameLowering::inlineStackProbe(
     MachineMemOperand *MMO = MF.getMachineMemOperand(MachinePointerInfo(),
       MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad, 8, Align(1));
     BuildMI(InsMBB, InsPt, DL, ZII->get(SystemZ::CG))
-      .addReg(SystemZ::R0D, RegState::Undef)
-      .addReg(SystemZ::R15D).addImm(Size - 8).addReg(0)
-      .addMemOperand(MMO);
+        .addReg(SystemZ::R0D, RegState::Undef)
+        .addReg(SystemZ::R15D)
+        .addImm(Size - 8)
+        .addReg(0)
+        .setOperandDead(4)
+        .addMemOperand(MMO);
   };
 
   bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
@@ -1554,7 +1556,11 @@ void SystemZXPLINKFrameLowering::determineFrameLayout(
       static_cast<SystemZXPLINK64Registers *>(Subtarget.getSpecialRegisters());
 
   uint64_t StackSize = MFFrame.getStackSize();
-  if (StackSize == 0)
+  // A function which saves callee-saved registers needs a register save area of
+  // its own, even if it has no other stack objects. Otherwise the registers are
+  // stored relative to the unchanged stack pointer, i.e. into the save area of
+  // the caller's DSA.
+  if (StackSize == 0 && MFFrame.getCalleeSavedInfo().empty())
     return;
 
   // Add the size of the register save area and the reserved area to the size.

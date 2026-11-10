@@ -23,10 +23,10 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -57,27 +57,13 @@ enum ID {
 };
 
 namespace rc_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
 } // namespace rc_opt
 
-class RcOptTable : public opt::GenericOptTable {
+class RcOptTable : public opt::OptTable {
 public:
-  RcOptTable()
-      : GenericOptTable(rc_opt::OptionStrTable, rc_opt::OptionPrefixesTable,
-                        rc_opt::InfoTable,
-                        /* IgnoreCase = */ true) {}
+  RcOptTable() : OptTable(rc_opt::optionTables(), /* IgnoreCase = */ true) {}
 };
 
 enum Windres_ID {
@@ -88,29 +74,14 @@ enum Windres_ID {
 };
 
 namespace windres_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "WindresOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "WindresOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(WINDRES_, __VA_ARGS__),
-#include "WindresOpts.inc"
-#undef OPTION
-};
 } // namespace windres_opt
 
-class WindresOptTable : public opt::GenericOptTable {
+class WindresOptTable : public opt::OptTable {
 public:
   WindresOptTable()
-      : GenericOptTable(windres_opt::OptionStrTable,
-                        windres_opt::OptionPrefixesTable,
-                        windres_opt::InfoTable,
-                        /* IgnoreCase = */ false) {}
+      : OptTable(windres_opt::optionTables(), /* IgnoreCase = */ false) {}
 };
 
 static ExitOnError ExitOnErr;

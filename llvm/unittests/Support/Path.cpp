@@ -1516,6 +1516,9 @@ TEST_F(FileSystemTest, Resize) {
   fs::file_status Status;
   ASSERT_NO_ERROR(fs::status(FD, Status));
   ASSERT_EQ(Status.getSize(), 123U);
+  ErrorOr<uint64_t> Size = fs::file_size(fs::convertFDToNativeFile(FD));
+  ASSERT_TRUE(!!Size);
+  ASSERT_EQ(*Size, 123U);
   ::close(FD);
   ASSERT_NO_ERROR(fs::remove(TempPath));
 }

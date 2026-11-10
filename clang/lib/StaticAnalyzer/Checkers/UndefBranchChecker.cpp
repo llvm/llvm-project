@@ -71,7 +71,7 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
 
   // Generate a sink node, which implicitly marks both outgoing branches as
   // infeasible.
-  ExplodedNode *N = Ctx.generateErrorNode();
+  ExplodedNode *N = Ctx.addSink();
   if (!N)
     return;
   // What's going on here: we want to highlight the subexpression of the

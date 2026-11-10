@@ -271,6 +271,17 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(ASC);
   }
 
+  // An integer address taken before CoroBegin must be recomputed from the
+  // frame just like a pointer alias, or it keeps the stack address.
+  void visitPtrToIntInst(PtrToIntInst &I) {
+    Base::visitPtrToIntInst(I);
+    handleAlias(I);
+  }
+
+  // Unlike ptrtoint, ptrtoaddr does not capture provenance, so the alloca
+  // cannot be written through it and it is not an escape.
+  void visitPtrToAddrInst(PtrToAddrInst &I) { handleAlias(I); }
+
   void visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     // The base visitor will adjust Offset accordingly.
     Base::visitGetElementPtrInst(GEPI);
@@ -306,7 +317,8 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
 
   bool getMayWriteBeforeCoroBegin() const { return MayWriteBeforeCoroBegin; }
 
-  DenseMap<Instruction *, std::optional<APInt>> getAliasesCopy() const {
+  SmallMapVector<Instruction *, std::optional<APInt>, 4>
+  getAliasesCopy() const {
     assert(getShouldLiveOnFrame() && "This method should only be called if the "
                                      "alloca needs to live on the frame.");
     for (const auto &P : AliasOffetMap)
@@ -323,7 +335,7 @@ private:
   // All alias to the original AllocaInst, created before CoroBegin and used
   // after CoroBegin. Each entry contains the instruction and the offset in the
   // original Alloca. They need to be recreated after CoroBegin off the frame.
-  DenseMap<Instruction *, std::optional<APInt>> AliasOffetMap{};
+  SmallMapVector<Instruction *, std::optional<APInt>, 4> AliasOffetMap{};
   SmallPtrSet<Instruction *, 4> Users{};
   SmallPtrSet<IntrinsicInst *, 2> LifetimeStarts{};
   SmallVector<BasicBlock *> LifetimeStartBBs{};

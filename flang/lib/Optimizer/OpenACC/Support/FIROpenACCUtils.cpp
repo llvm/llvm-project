@@ -762,6 +762,13 @@ bool fir::acc::isValidSymbolUse(mlir::Operation *user,
           fir::FIROpsDialect::getFirRuntimeAttrName()))
     return true;
 
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::intrinsic>(
+          definingOp))
+    return true;
+
+  if (fir::hasBindcAttr(definingOp))
+    return true;
+
   if (auto cufProcAttr = definingOp->getAttrOfType<cuf::ProcAttributeAttr>(
           cuf::getProcAttrName())) {
     if (cufProcAttr.getValue() != cuf::ProcAttribute::Host)
@@ -771,8 +778,9 @@ bool fir::acc::isValidSymbolUse(mlir::Operation *user,
   return false;
 }
 
-bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
-  if (mlir::acc::isValidValueUse(val, region))
+bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region,
+                               mlir::SymbolTableCollection *symbolTables) {
+  if (mlir::acc::isValidValueUse(val, region, symbolTables))
     return true;
 
   if (isFIRPassByValueScalar(val.getType()))
@@ -782,6 +790,29 @@ bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
   // CUF kernel. Thus they need neither to be device data nor to be mapped.
   if (isCUFKernelRegion(region) && isTriviallyCopyableScalarType(val.getType()))
     return true;
+
+  // The address of a global (e.g. a common block) that is used in the region
+  // only as the `storage` operand of fir.declare ops merely describes where
+  // the declared members live. It is not an access to the whole global, so it
+  // must not be implicitly mapped: that would clash with explicit mappings of
+  // the individual members. The address is rematerialized in the region.
+  if (val.getDefiningOp<fir::AddrOfOp>()) {
+    bool onlyStorageUses = true, anyUse = false;
+    for (mlir::OpOperand &use : val.getUses()) {
+      mlir::Operation *user = use.getOwner();
+      if (!region.isAncestor(user->getParentRegion()))
+        continue;
+      anyUse = true;
+      auto declareOp = mlir::dyn_cast<fir::DeclareOp>(user);
+      if (!declareOp || declareOp.getStorage() != val ||
+          declareOp.getMemref() == val) {
+        onlyStorageUses = false;
+        break;
+      }
+    }
+    if (anyUse && onlyStorageUses)
+      return true;
+  }
 
   mlir::Type type = val.getType();
   if (mlir::acc::isPointerLikeType(type) || mlir::acc::isMappableType(type) ||
