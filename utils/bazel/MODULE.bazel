@@ -37,6 +37,7 @@ bazel_dep(name = "xz", version = "5.4.5.bcr.9", repo_name = "llvm_xz")
 bazel_dep(name = "emsdk", version = "6.0.2", dev_dependency = True)
 bazel_dep(name = "llvm", version = "0.8.24", dev_dependency = True)
 bazel_dep(name = "wolfd_bazel_compile_commands", version = "0.5.2", dev_dependency = True)
+
 single_version_override(
     module_name = "mpfr",
     patch_strip = 1,
@@ -44,6 +45,7 @@ single_version_override(
         "//patches:mpfr_float128.patch",
     ],
 )
+
 single_version_override(
     module_name = "wolfd_bazel_compile_commands",
     patch_strip = 1,
