@@ -53,7 +53,7 @@ static bool runCGProfilePass(Module &M, FunctionAnalysisManager &FAM,
                           Function *CalledF, uint64_t NewCount) {
     if (NewCount == 0)
       return;
-    // An intrinsic is never a real symbol, even if it is lowered to a call.
+    // An intrinsic has no symbol, even when it becomes a libcall.
     if (!CalledF || CalledF->isIntrinsic() || !TTI.isLoweredToCall(CalledF) ||
         CalledF->hasDLLImportStorageClass())
       return;
