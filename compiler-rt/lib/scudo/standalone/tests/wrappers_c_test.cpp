@@ -435,7 +435,7 @@ TEST_F(ScudoWrappersCTest, MallocFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_DEATH) {
+  if constexpr (VERIFY_FREE_SIZED_DEATH) {
     SCUDO_EXPECT_DEATH(free_sized(P, Size - 1), "");
     SCUDO_EXPECT_DEATH(free_sized(P, Size + 1), "");
 
@@ -457,7 +457,7 @@ TEST_F(ScudoWrappersCTest, MallocFreeSized) {
   free_sized(P, Size);
   verifyDeallocHookPtr(P);
 
-  if (VERIFY_FREE_SIZED_DEATH)
+  if constexpr (VERIFY_FREE_SIZED_DEATH)
     SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
 }
 
@@ -471,7 +471,7 @@ TEST_F(ScudoWrappersCTest, AlignedAllocFreeAlignedSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_ALIGNED_SIZED_DEATH) {
+  if constexpr (VERIFY_FREE_ALIGNED_SIZED_DEATH) {
     // Verify abort on incorrect size.
     SCUDO_EXPECT_DEATH(free_aligned_sized(P, Alignment, Size - 1), "");
     SCUDO_EXPECT_DEATH(free_aligned_sized(P, Alignment, Size + 1), "");
@@ -508,7 +508,7 @@ TEST_F(ScudoWrappersCDeathTest, MallocFreeAlignedSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_ALIGNED_SIZED_TYPE_DEATH) {
+  if constexpr (VERIFY_FREE_ALIGNED_SIZED_TYPE_DEATH) {
     // Verify abort on type mismatch (unaligned alloc/aligned free).
     SCUDO_EXPECT_DEATH(free_aligned_sized(P, 8, Size), "");
   }
@@ -527,7 +527,7 @@ TEST_F(ScudoWrappersCDeathTest, AlignedAllocFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_TYPE_DEATH) {
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
     // Verify abort on type mismatch (aligned alloc/unaligned free).
     SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
   }
@@ -547,7 +547,7 @@ TEST_F(ScudoWrappersCDeathTest, PosixMemalignFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_TYPE_DEATH) {
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
     // Verify abort on type mismatch (aligned alloc/unaligned free).
     SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
   }
@@ -566,7 +566,7 @@ TEST_F(ScudoWrappersCDeathTest, MemalignFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_TYPE_DEATH) {
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
     // Verify abort on type mismatch (aligned alloc/unaligned free).
     SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
   }
@@ -584,7 +584,7 @@ TEST_F(ScudoWrappersCDeathTest, PvallocFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_TYPE_DEATH) {
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
     // Verify abort on type mismatch (aligned alloc/unaligned free).
     SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
   }
@@ -603,7 +603,7 @@ TEST_F(ScudoWrappersCDeathTest, VallocFreeSized) {
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
 
-  if (VERIFY_FREE_SIZED_TYPE_DEATH) {
+  if constexpr (VERIFY_FREE_SIZED_TYPE_DEATH) {
     // Verify abort on type mismatch (aligned alloc/unaligned free).
     SCUDO_EXPECT_DEATH(free_sized(P, Size), "");
   }
