@@ -1,4 +1,3 @@
-// Ported from DXC's CodeGenSPIRV/semantic.unsigned-nonzero-base-instance.vs.hlsl.
 // With -fvk-support-nonzero-base-instance, SV_InstanceID is
 // InstanceIndex - BaseInstance. Without it, SV_InstanceID is a raw load of
 // InstanceIndex (see SV_InstanceID.vs.hlsl).
