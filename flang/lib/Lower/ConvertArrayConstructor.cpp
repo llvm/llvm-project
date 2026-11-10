@@ -249,7 +249,10 @@ public:
                  hlfir::Entity value) {
     assert(value.isScalar() && "cannot use hlfir.elemental with array values");
     assert(elementalOp && "array constructor must contain an outer implied-do");
-    mlir::Value elementResult = value;
+    // Turn variables into values before the implied-do body clean-ups, which
+    // may release the storage of the variable.
+    mlir::Value elementResult =
+        hlfir::genElementalYieldValue(loc, builder, value);
     if (fir::isa_trivial(elementResult.getType()))
       elementResult =
           builder.createConvert(loc, exprType.getElementType(), elementResult);

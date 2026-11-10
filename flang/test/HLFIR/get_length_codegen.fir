@@ -36,7 +36,8 @@ func.func @i32_length(%char: !fir.boxchar<1>, %shape : i32, %len : i32) -> index
   %14 = fir.shape %shape : (i32) -> !fir.shape<1>
   %15 = hlfir.elemental %14 typeparams %len unordered : (!fir.shape<1>, i32) -> !hlfir.expr<?x!fir.char<1,?>> {
   ^bb0(%arg0: index):
-    hlfir.yield_element %char : !fir.boxchar<1>
+    %yechar = hlfir.as_expr %char : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+    hlfir.yield_element %yechar : !hlfir.expr<!fir.char<1,?>>
   }
   %18 = hlfir.get_length %15 : (!hlfir.expr<?x!fir.char<1,?>>) -> index
   hlfir.destroy %15 : !hlfir.expr<?x!fir.char<1,?>>

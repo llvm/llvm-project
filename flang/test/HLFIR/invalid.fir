@@ -1738,3 +1738,29 @@ func.func @copy_in_bad_alignment(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.
   return
 }
 
+// -----
+
+func.func @bad_yield_element_address(%x: !fir.ref<!fir.array<10xi32>>) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %0 = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {
+  ^bb0(%i: index):
+    %1 = hlfir.designate %x (%i) : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+    // expected-error@+1 {{'hlfir.yield_element' op must yield a value, not an address or descriptor}}
+    hlfir.yield_element %1 : !fir.ref<i32>
+  }
+  return
+}
+
+// -----
+
+func.func @bad_yield_element_boxchar(%c: !fir.boxchar<1>) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %0 = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<10x!fir.char<1,?>> {
+  ^bb0(%i: index):
+    // expected-error@+1 {{'hlfir.yield_element' op must yield a value, not an address or descriptor}}
+    hlfir.yield_element %c : !fir.boxchar<1>
+  }
+  return
+}

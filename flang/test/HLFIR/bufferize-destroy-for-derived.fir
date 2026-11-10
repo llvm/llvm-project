@@ -14,7 +14,8 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.bo
     %6 = fir.call @_QPelem1(%5) fastmath<contract> : (!fir.ref<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>) -> !fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>
     fir.save_result %6 to %0 : !fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>, !fir.ref<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>
     %7:2 = hlfir.declare %0 uniq_name(".tmp.func_result") : (!fir.ref<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>)
-    hlfir.yield_element %7#0 : !fir.ref<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>
+    %ye7 = hlfir.as_expr %7#0 : (!fir.ref<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>) -> !hlfir.expr<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>
+    hlfir.yield_element %ye7 : !hlfir.expr<!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>
   }
   hlfir.assign %4 to %1#0 : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>>
   hlfir.destroy %4 : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>
@@ -42,7 +43,8 @@ func.func @_QPtest2(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.bo
     %6 = fir.call @_QPelem2(%5) fastmath<contract> : (!fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>) -> !fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>
     fir.save_result %6 to %0 : !fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>, !fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>
     %7:2 = hlfir.declare %0 uniq_name(".tmp.func_result") : (!fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>)
-    hlfir.yield_element %7#0 : !fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>
+    %ye7 = hlfir.as_expr %7#0 : (!fir.ref<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>) -> !hlfir.expr<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>
+    hlfir.yield_element %ye7 : !hlfir.expr<!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>
   }
   hlfir.assign %4 to %1#0 : !hlfir.expr<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>
   hlfir.destroy %4 finalize : !hlfir.expr<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>
@@ -76,7 +78,8 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>
     %6 = fir.call @_QPelem3(%5) fastmath<contract> : (!fir.ref<!fir.type<_QMtypesTt3{x:f32}>>) -> !fir.type<_QMtypesTt3{x:f32}>
     fir.save_result %6 to %0 : !fir.type<_QMtypesTt3{x:f32}>, !fir.ref<!fir.type<_QMtypesTt3{x:f32}>>
     %7:2 = hlfir.declare %0 uniq_name(".tmp.func_result") : (!fir.ref<!fir.type<_QMtypesTt3{x:f32}>>) -> (!fir.ref<!fir.type<_QMtypesTt3{x:f32}>>, !fir.ref<!fir.type<_QMtypesTt3{x:f32}>>)
-    hlfir.yield_element %7#0 : !fir.ref<!fir.type<_QMtypesTt3{x:f32}>>
+    %ye7 = hlfir.as_expr %7#0 : (!fir.ref<!fir.type<_QMtypesTt3{x:f32}>>) -> !hlfir.expr<!fir.type<_QMtypesTt3{x:f32}>>
+    hlfir.yield_element %ye7 : !hlfir.expr<!fir.type<_QMtypesTt3{x:f32}>>
   }
   hlfir.assign %4 to %1#0 : !hlfir.expr<?x!fir.type<_QMtypesTt3{x:f32}>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>
   hlfir.destroy %4 finalize : !hlfir.expr<?x!fir.type<_QMtypesTt3{x:f32}>>

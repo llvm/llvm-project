@@ -97,4 +97,45 @@ contains
 ! CHECK:             %[[ELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  typeparams %{{.*}} : ({{.*}}, i64, index) -> !fir.ref<!fir.char<1,4>>
 ! CHECK-NOT:         hlfir.as_expr
 ! CHECK:             hlfir.assign %[[ELT]] to %{{.*}} : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
+
+  ! The RHS reads the LHS through the vector subscript: the read must be seen
+  ! by the scheduling so that the RHS is saved before the assignment.
+  subroutine overlap_character(cc, idx, msk)
+    character(4) :: cc(:)
+    integer :: idx(:)
+    logical :: msk(:)
+    where (msk) cc = cc(idx)
+  end subroutine
+! CHECK-LABEL: func.func @_QMwhere_vector_subscript_valuePoverlap_character(
+! CHECK:         %[[STACK:.*]] = fir.call @_FortranACreateValueStack(
+! CHECK:         fir.do_loop
+! CHECK:           fir.if
+! CHECK:             %[[ELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  typeparams %{{.*}} : ({{.*}}, i64, index) -> !fir.ref<!fir.char<1,4>>
+! CHECK:             hlfir.as_expr %[[ELT]] : (!fir.ref<!fir.char<1,4>>) -> !hlfir.expr<!fir.char<1,4>>
+! CHECK:             fir.call @_FortranAPushValue(%[[STACK]],
+! CHECK:         fir.do_loop
+! CHECK:           fir.if
+! CHECK:             fir.call @_FortranAValueAt(%[[STACK]],
+! CHECK:             hlfir.assign %{{.*}} to %{{.*}} : !fir.heap<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
+! CHECK:         fir.call @_FortranADestroyValueStack(%[[STACK]])
+
+  subroutine overlap_derived_parens(de, idx, msk)
+    type(t) :: de(:)
+    integer :: idx(:)
+    logical :: msk(:)
+    where (msk) de = (de(idx))
+  end subroutine
+! CHECK-LABEL: func.func @_QMwhere_vector_subscript_valuePoverlap_derived_parens(
+! CHECK:         %[[STACK:.*]] = fir.call @_FortranACreateValueStack(
+! CHECK:         fir.do_loop
+! CHECK:           fir.if
+! CHECK:             %[[ELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : ({{.*}}, i64) -> !fir.ref<!fir.type<_QMwhere_vector_subscript_valueTt{v:i32}>>
+! CHECK:             %[[VAL:.*]] = hlfir.as_expr %[[ELT]] : (!fir.ref<!fir.type<_QMwhere_vector_subscript_valueTt{v:i32}>>) -> !hlfir.expr<!fir.type<_QMwhere_vector_subscript_valueTt{v:i32}>>
+! CHECK:             hlfir.no_reassoc %[[VAL]]
+! CHECK:             fir.call @_FortranAPushValue(%[[STACK]],
+! CHECK:         fir.do_loop
+! CHECK:           fir.if
+! CHECK:             fir.call @_FortranAValueAt(%[[STACK]],
+! CHECK:             hlfir.assign %{{.*}} to %{{.*}} : !fir.heap<!fir.type<_QMwhere_vector_subscript_valueTt{v:i32}>>, !fir.ref<!fir.type<_QMwhere_vector_subscript_valueTt{v:i32}>>
+! CHECK:         fir.call @_FortranADestroyValueStack(%[[STACK]])
 end module

@@ -17,7 +17,8 @@ func.func @_QFPtest(%arg0: !fir.boxchar<1> {fir.bindc_name = "a"}) {
     %14 = fir.convert %arg1 : (index) -> i32
     %15 = fir.convert %14 : (i32) -> i64
     %16 = hlfir.designate %3#0 (%15)  typeparams %c1 : (!fir.ref<!fir.array<10x!fir.char<1>>>, i64, index) -> !fir.ref<!fir.char<1>>
-    hlfir.yield_element %16 : !fir.ref<!fir.char<1>>
+    %ye16 = hlfir.as_expr %16 : (!fir.ref<!fir.char<1>>) -> !hlfir.expr<!fir.char<1>>
+    hlfir.yield_element %ye16 : !hlfir.expr<!fir.char<1>>
   }
   %6:3 = hlfir.associate %5(%4) typeparams %c1 uniq_name("adapt.valuebyref") : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
   hlfir.end_associate %6#1, %6#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1
@@ -28,7 +29,8 @@ func.func @_QFPtest(%arg0: !fir.boxchar<1> {fir.bindc_name = "a"}) {
     %14 = fir.convert %arg1 : (index) -> i32
     %15 = fir.convert %14 : (i32) -> i64
     %16 = hlfir.designate %3#0 (%15)  typeparams %c1 : (!fir.ref<!fir.array<10x!fir.char<1>>>, i64, index) -> !fir.ref<!fir.char<1>>
-    hlfir.yield_element %16 : !fir.ref<!fir.char<1>>
+    %ye16 = hlfir.as_expr %16 : (!fir.ref<!fir.char<1>>) -> !hlfir.expr<!fir.char<1>>
+    hlfir.yield_element %ye16 : !hlfir.expr<!fir.char<1>>
   }
   %11:3 = hlfir.associate %10(%9) typeparams %c1 uniq_name("adapt.valuebyref") : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
   hlfir.end_associate %11#1, %11#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1
@@ -49,7 +51,8 @@ func.func @_QFPtest(%arg0: !fir.boxchar<1> {fir.bindc_name = "a"}) {
 // CHECK:             %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (index) -> i32
 // CHECK:             %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> i64
 // CHECK:             %[[VAL_11:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_10]])  typeparams %[[VAL_1]] : (!fir.ref<!fir.array<10x!fir.char<1>>>, i64, index) -> !fir.ref<!fir.char<1>>
-// CHECK:             hlfir.yield_element %[[VAL_11]] : !fir.ref<!fir.char<1>>
+// CHECK:             %[[VAL_11B:.*]] = hlfir.as_expr %[[VAL_11]] : (!fir.ref<!fir.char<1>>) -> !hlfir.expr<!fir.char<1>>
+// CHECK:             hlfir.yield_element %[[VAL_11B]] : !hlfir.expr<!fir.char<1>>
 // CHECK:           }
 // CHECK:           %[[VAL_12:.*]]:3 = hlfir.associate %[[VAL_7]](%[[VAL_5]]) typeparams %[[VAL_1]] uniq_name("adapt.valuebyref") : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
 // CHECK:           hlfir.end_associate %[[VAL_12]]#1, %[[VAL_12]]#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1
@@ -59,7 +62,8 @@ func.func @_QFPtest(%arg0: !fir.boxchar<1> {fir.bindc_name = "a"}) {
 // CHECK:             %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (index) -> i32
 // CHECK:             %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> i64
 // CHECK:             %[[VAL_17:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_16]])  typeparams %[[VAL_1]] : (!fir.ref<!fir.array<10x!fir.char<1>>>, i64, index) -> !fir.ref<!fir.char<1>>
-// CHECK:             hlfir.yield_element %[[VAL_17]] : !fir.ref<!fir.char<1>>
+// CHECK:             %[[VAL_17B:.*]] = hlfir.as_expr %[[VAL_17]] : (!fir.ref<!fir.char<1>>) -> !hlfir.expr<!fir.char<1>>
+// CHECK:             hlfir.yield_element %[[VAL_17B]] : !hlfir.expr<!fir.char<1>>
 // CHECK:           }
 // CHECK:           %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_13]](%[[VAL_5]]) typeparams %[[VAL_1]] uniq_name("adapt.valuebyref") : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
 // CHECK:           hlfir.end_associate %[[VAL_18]]#1, %[[VAL_18]]#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1

@@ -362,6 +362,13 @@ using ElementalKernelResult =
     std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>;
 using ElementalKernelGenerator = std::function<ElementalKernelResult(
     mlir::Location, fir::FirOpBuilder &, mlir::ValueRange)>;
+/// Return a value for the scalar \p entity that can be yielded by an
+/// hlfir.elemental: trivial scalar variables are loaded, and other variables
+/// are copied into an hlfir.expr with an hlfir.as_expr. Values are returned
+/// unchanged.
+hlfir::Entity genElementalYieldValue(mlir::Location loc,
+                                     fir::FirOpBuilder &builder,
+                                     hlfir::Entity entity);
 /// Generate an hlfir.elementalOp given call back to generate the element
 /// value for each iteration and its explicit cleanup, if any. The cleanup
 /// callback is emitted in the yield_element cleanup region.

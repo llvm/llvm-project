@@ -398,7 +398,8 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
   %11 = hlfir.elemental %4 typeparams %c1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<10x!fir.char<1>> {
   ^bb0(%arg1: index):
     %44 = fir.undefined !fir.ref<!fir.char<1>>
-    hlfir.yield_element %44 : !fir.ref<!fir.char<1>>
+    %ye44 = hlfir.as_expr %44 : (!fir.ref<!fir.char<1>>) -> !hlfir.expr<!fir.char<1>>
+    hlfir.yield_element %ye44 : !hlfir.expr<!fir.char<1>>
   }
   %12:3 = hlfir.associate %11(%4) typeparams %c1 {adapt.valuebyref} : (!hlfir.expr<10x!fir.char<1>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.ref<!fir.array<10x!fir.char<1>>>, i1)
   hlfir.end_associate %12#1, %12#2 : !fir.ref<!fir.array<10x!fir.char<1>>>, i1
