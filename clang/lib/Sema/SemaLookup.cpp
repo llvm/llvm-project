@@ -2910,14 +2910,16 @@ namespace {
       return ClassesTransitive.insert(RD);
     }
 
-    // Record that 'RD' is being processed, so we don't re-visit this multiple.
-    // Return false if we've already seen this.
+    // Save that `RD` is being processed, so that we don't attempt to re-visit
+    // this multiple times. Returns 'false' if we've already visited this, and
+    // shouldn't do so again.
     bool addClassVisited(CXXRecordDecl *RD) {
       return ClassesVisited.insert(RD).second;
     }
 
-    // Record that 'FnType' is being processed, so we don't re-visit this
-    // multiple. Return false if we've already seen this.
+    // Save that `FnType` is being processed, so that we don't attempt to
+    // re-visit this multiple times. Returns 'false' if we've already visited
+    // this, and shouldn't do so again.
     bool addFunctionTypeVisited(const Type *FnType) {
       return FunctionTypesVisited.insert(FnType).second;
     }

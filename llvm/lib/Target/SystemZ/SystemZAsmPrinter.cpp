@@ -21,6 +21,7 @@
 #include "SystemZSubtarget.h"
 #include "SystemZXPLINKAsmPrinter.h"
 #include "TargetInfo/SystemZTargetInfo.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -647,4 +648,34 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeSystemZAsmPrinter() {
   TargetRegistry::RegisterAsmPrinter(getTheSystemZTarget(),
                                      createSystemZAsmPrinter);
+}
+
+PreservedAnalyses SystemZAsmPrinterBeginPass::run(Module &M,
+                                                  ModuleAnalysisManager &MAM) {
+  SystemZAsmPrinter &AsmPrinter = static_cast<SystemZAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+SystemZAsmPrinterPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  SystemZAsmPrinter &AsmPrinter = static_cast<SystemZAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses SystemZAsmPrinterEndPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  SystemZAsmPrinter &AsmPrinter = static_cast<SystemZAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

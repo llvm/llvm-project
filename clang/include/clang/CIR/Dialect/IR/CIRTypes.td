@@ -28,6 +28,7 @@ include "mlir/IR/EnumAttr.td"
 class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
     : TypeDef<CIR_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRTypes.h"];
   let mnemonic = typeMnemonic;
 }
 
