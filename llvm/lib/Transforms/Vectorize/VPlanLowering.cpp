@@ -428,7 +428,7 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
   Index = StepTy->isIntegerTy()
               ? Builder.createScalarZExtOrTrunc(
                     Index, StepTy, DebugLoc::getCompilerGenerated())
-              : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
+              : Builder.createScalarCast(Instruction::UIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());
   VPIRFlags::WrapFlagsTy Flags = R->getNoWrapFlags();
   switch (R->getInductionKind()) {

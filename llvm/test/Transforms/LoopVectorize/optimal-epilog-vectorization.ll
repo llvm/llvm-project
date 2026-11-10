@@ -924,7 +924,7 @@ define void @fadd_and_fsub_inductions_same_start_and_step(ptr noalias %A, ptr no
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sitofp i64 [[N_VEC]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp i64 [[N_VEC]] to float
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float 1.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast float 0.000000e+00, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast float 0.000000e+00, [[TMP2]]
@@ -954,7 +954,7 @@ define void @fadd_and_fsub_inductions_same_start_and_step(ptr noalias %A, ptr no
 ; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi float [ [[TMP4]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sitofp i64 [[N_VEC5]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = uitofp i64 [[N_VEC5]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast float 1.000000e+00, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast float 0.000000e+00, [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fsub fast float 0.000000e+00, [[TMP10]]
