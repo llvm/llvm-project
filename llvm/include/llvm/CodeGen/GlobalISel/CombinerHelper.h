@@ -998,8 +998,9 @@ public:
   LLVM_ABI bool matchShuffleDisjointMask(MachineInstr &MI,
                                          BuildFnTy &MatchInfo) const;
 
-  LLVM_ABI bool matchMulByZeroOneVector(MachineInstr &MI,
-                                        BuildFnTy &MatchInfo) const;
+  /// \returns true if \p Reg is a fixed vector constant whose elements are all
+  /// 0 or 1.
+  LLVM_ABI bool isZeroOrOneVector(Register Reg) const;
 
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction def'd on \p MO from the function.

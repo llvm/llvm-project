@@ -2604,14 +2604,14 @@ def combine_shuffle_disjoint_mask : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
 >;
 
-// Replace multiplication by a vector of zeros and ones with an AND mask.
-// For example: G_MUL X, <1, 0> -> G_AND X, <-1, 0>.
+// Fold (mul x, <0/1...>) -> (and x, (sub 0, <0/1...>)). Negating a vector of
+// zeros and ones gives a mask of zeros and all-ones, which constant folds.
 def mul_by_zero_one_vector : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (G_MUL $dst, $lhs, $rhs):$root,
-         [{ return Helper.matchMulByZeroOneVector(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
->;
+  (defs root:$dst),
+  (match (G_MUL $dst, $x, $mask),
+         [{ return Helper.isZeroOrOneVector(${mask}.getReg()); }]),
+  (apply (G_SUB $neg, 0, $mask),
+         (G_AND $dst, $x, $neg))>;
 
 // match_extract_of_element and insert_vector_elt_oob must be the first!
 def vector_ops_combines: GICombineGroup<[
