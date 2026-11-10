@@ -137,6 +137,7 @@
 ; O3-NEXT:     fentry-insert
 ; O3-NEXT:     xray-instrumentation
 ; O3-NEXT:     patchable-function
+; O3-NEXT:     systemz-shorten-inst
 ; O3-NEXT:     postmisched
 ; O3-NEXT:     funclet-layout
 ; O3-NEXT:     remove-loads-into-fake-uses

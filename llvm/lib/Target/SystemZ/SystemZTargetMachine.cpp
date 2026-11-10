@@ -50,10 +50,9 @@ LLVMInitializeSystemZTarget() {
   initializeSystemZAlignGlobalsLegacyPass(PR);
   initializeSystemZAsmPrinterPass(PR);
   initializeSystemZElimComparePass(PR);
-  initializeSystemZShortenInstPass(PR);
+  initializeSystemZShortenInstLegacyPass(PR);
   initializeSystemZLongBranchPass(PR);
   initializeSystemZLDCleanupLegacyPass(PR);
-  initializeSystemZShortenInstPass(PR);
   initializeSystemZPostRewriteLegacyPass(PR);
   initializeSystemZTDCLegacyPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
@@ -281,7 +280,7 @@ void SystemZPassConfig::addPreEmitPass() {
   // vector instructions will be shortened into opcodes that compare
   // elimination recognizes.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZShortenInstPass(getSystemZTargetMachine()));
+    addPass(createSystemZShortenInstLegacyPass(getSystemZTargetMachine()));
 
   // We eliminate comparisons here rather than earlier because some
   // transformations can change the set of available CC values and we

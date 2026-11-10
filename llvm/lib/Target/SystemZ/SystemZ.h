@@ -202,7 +202,15 @@ public:
 FunctionPass *createSystemZISelDagLegacyPass(SystemZTargetMachine &TM,
                                              CodeGenOptLevel OptLevel);
 FunctionPass *createSystemZElimComparePass(SystemZTargetMachine &TM);
-FunctionPass *createSystemZShortenInstPass(SystemZTargetMachine &TM);
+
+class SystemZShortenInstPass
+    : public OptionalPassInfoMixin<SystemZShortenInstPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createSystemZShortenInstLegacyPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLongBranchPass(SystemZTargetMachine &TM);
 
 class SystemZLDCleanupPass
@@ -258,7 +266,7 @@ void initializeSystemZElimComparePass(PassRegistry &);
 void initializeSystemZLDCleanupLegacyPass(PassRegistry &);
 void initializeSystemZLongBranchPass(PassRegistry &);
 void initializeSystemZPostRewriteLegacyPass(PassRegistry &);
-void initializeSystemZShortenInstPass(PassRegistry &);
+void initializeSystemZShortenInstLegacyPass(PassRegistry &);
 void initializeSystemZTDCLegacyPass(PassRegistry &);
 void initializeSystemZAlignGlobalsLegacyPass(PassRegistry &);
 

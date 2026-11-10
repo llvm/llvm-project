@@ -105,9 +105,8 @@ void SystemZCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // Do instruction shortening before compare elimination because some
   // vector instructions will be shortened into opcodes that compare
   // elimination recognizes.
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZShortenInstPass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZShortenInstPass(), PMW);
 
   // We eliminate comparisons here rather than earlier because some
   // transformations can change the set of available CC values and we
