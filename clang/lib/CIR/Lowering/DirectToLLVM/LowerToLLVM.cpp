@@ -1222,8 +1222,11 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
       unsigned indexBits = *layout.getTypeIndexBitwidth(
           mlir::cast<mlir::LLVM::LLVMPointerType>(addrOp.getType()));
       gep.setNoWrapFlags(mlir::LLVM::GEPNoWrapFlags::inbounds);
+
       gep.setInrangeAttr(mlir::LLVM::ConstantRangeAttr::get(
-          rewriter.getContext(), indexBits, -offset, size - offset));
+          rewriter.getContext(),
+          llvm::APInt(indexBits, -offset, /*isSigned=*/true),
+          llvm::APInt(indexBits, size - offset, /*isSigned=*/true)));
     }
     addrOp = gep;
   }
