@@ -5559,14 +5559,23 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
 bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
                                            const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (Opc != AMDGPU::S_MONITOR_SLEEP_gfx12 ||
-      !getSTI().hasFeature(AMDGPU::FeatureNoSleepForever))
+  if (Opc != AMDGPU::S_MONITOR_SLEEP_gfx12)
     return true;
 
   int ImmIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::simm16);
-  if (Inst.getOperand(ImmIdx).getImm() & 0x8000) {
+  int64_t Sleep = Inst.getOperand(ImmIdx).getImm();
+  // Accept the sign-extended spelling emitted for negative i16 operands.
+  if (isUInt<32>(Sleep) && isInt<16>(SignExtend64<32>(Sleep)))
+    Sleep = SignExtend64<32>(Sleep);
+  if (getSTI().hasFeature(AMDGPU::FeatureNoSleepForever) && (Sleep & 0x8000)) {
     Error(getOperandLoc(Operands, ImmIdx),
           "sleep forever is unsupported on the target");
+    return false;
+  }
+  if (getSTI().hasFeature(AMDGPU::FeatureMonitorSleep7BitDuration) &&
+      (Sleep < INT16_MIN || Sleep > UINT16_MAX || (Sleep & 0x7f80))) {
+    Error(getOperandLoc(Operands, ImmIdx),
+          "sleep duration must be in range [0, 127] on this target");
     return false;
   }
 
