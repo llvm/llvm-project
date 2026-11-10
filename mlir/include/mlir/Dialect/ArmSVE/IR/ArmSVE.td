@@ -243,8 +243,8 @@ def FmlaOp : ArmSVE_Op<"fmla", [Pure,
   let description = [{
     FMLA: Floating-point fused multiply-add by indexed element
 
-    Below is a summary from the official documentation.for the
-    corresponding[SVE instruction](https://support.arm.com/documentation/111108/2025-12/SVE-Instructions/FMLA--indexed---Floating-point-fused-multiply-add-by-indexed-element-?lang=en)
+    Below is a summary from the official documentation for the corresponding
+    [SVE instruction](https://support.arm.com/documentation/111108/2026-09/SVE-Instructions/FMLA--indexed---Floating-point-fused-multiply-add-by-indexed-element-)
 
     ```
     This instruction multiplies all floating-point elements within each 128-bit
