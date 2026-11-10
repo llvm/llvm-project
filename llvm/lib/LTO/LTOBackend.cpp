@@ -476,7 +476,7 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     if (Plugin->invokePreCodeGenCallback(Mod, *TM, Conf.CGFileType,
                                          *Stream->OS)) {
       if (Error Err = Stream->commit())
-        reportFatalUsageError(std::move(Err));
+        report_fatal_error(std::move(Err));
       return;
     }
   }
