@@ -20,6 +20,7 @@ add_mlir_translation_library(MLIRLLVMToLLVMIRTranslation
   LLVMToLLVMIRTranslation.cpp
 
   LINK_COMPONENTS
+  Analysis
   Core
 
   LINK_LIBS PUBLIC

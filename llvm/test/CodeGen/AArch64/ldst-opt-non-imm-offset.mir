@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=aarch64-ldst-opt %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-ldst-opt %s -o - | FileCheck %s
 --- |
   @g = common dso_local global i32 0, align 4
 

@@ -246,8 +246,8 @@ public:
                       Register &SrcReg2, int64_t &Mask,
                       int64_t &Value) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       Register, Register, Register, int &, int &,
-                       int &) const override;
+                       Register, Register, Register,
+                       SelectExpansion &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
@@ -283,7 +283,7 @@ public:
       Register DestReg, int FrameIdx, const TargetRegisterClass *RC,
       Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   bool useMachineCombiner() const override { return true; }

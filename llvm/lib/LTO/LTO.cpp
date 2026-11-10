@@ -1199,11 +1199,6 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
             auto IT = IRSpecifiedGUIDs.insert({VI.name(), VI.getGUID()});
             (void)IT;
             assert(IT.second);
-            if (auto GRIt = GlobalResolutions->find(VI.name());
-                GRIt != GlobalResolutions->end() &&
-                Prevailing.count(VI.name())) {
-              GRIt->second.setGUID(VI.getGUID());
-            }
           }))
     return Err;
   LLVM_DEBUG(dbgs() << "Module " << BMID << "\n");
@@ -1224,6 +1219,7 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     if (!Sym.getIRName().empty() &&
         (R.Prevailing || R.FinalDefinitionInLinkageUnit)) {
       if (R.Prevailing) {
+        (*GlobalResolutions)[Sym.getName()].setGUID(GUID);
         ThinLTO.setPrevailingModuleForGUID(GUID, BMID);
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.
@@ -2245,7 +2241,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   thinLTOPropagateFunctionAttrs(ThinLTO.CombinedIndex, isPrevailing);
 
-  generateParamAccessSummary(ThinLTO.CombinedIndex);
+  generateParamAccessSummary(Conf.LibraryOptions, ThinLTO.CombinedIndex);
 
   if (llvm::timeTraceProfilerEnabled())
     llvm::timeTraceProfilerEnd();
@@ -2296,7 +2292,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     return BackendProcess->wait();
   };
 
-  if (!cgdata::thinLTOTwoRounds()) {
+  if (!cgdata::thinLTOTwoRounds(RegularLTO.Ctx.getLibraryOptions())) {
     std::unique_ptr<ThinBackendProc> BackendProc =
         ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                         AddStream, Cache, BitcodeLibFuncs);
@@ -2327,7 +2323,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     return E;
 
   LLVM_DEBUG(dbgs() << "[TwoRounds] Merging codegen data\n");
-  auto CombinedHashOrErr = cgdata::mergeCodeGenData(*CG.getResult());
+  auto CombinedHashOrErr = cgdata::mergeCodeGenData(
+      RegularLTO.Ctx.getLibraryOptions(), *CG.getResult());
   if (Error E = CombinedHashOrErr.takeError())
     return E;
   auto CombinedHash = *CombinedHashOrErr;

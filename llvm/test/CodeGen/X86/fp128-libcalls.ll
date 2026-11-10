@@ -105,7 +105,7 @@ define dso_local void @Test128Add(fp128 %d1, fp128 %d2) nounwind {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 16(%ebp), %edx
 ; WIN-X86-NEXT:    movl 20(%ebp), %esi
 ; WIN-X86-NEXT:    movl 24(%ebp), %edi
@@ -236,7 +236,7 @@ define dso_local void @Test128_1Add(fp128 %d1) nounwind {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 16(%ebp), %esi
 ; WIN-X86-NEXT:    movl 20(%ebp), %edi
 ; WIN-X86-NEXT:    movl _vf128, %edx
@@ -362,7 +362,7 @@ define dso_local void @Test128Sub(fp128 %d1, fp128 %d2) nounwind {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 16(%ebp), %edx
 ; WIN-X86-NEXT:    movl 20(%ebp), %esi
 ; WIN-X86-NEXT:    movl 24(%ebp), %edi
@@ -493,7 +493,7 @@ define dso_local void @Test128_1Sub(fp128 %d1) nounwind {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 16(%ebp), %esi
 ; WIN-X86-NEXT:    movl 20(%ebp), %edi
 ; WIN-X86-NEXT:    movl _vf128, %edx
@@ -619,7 +619,7 @@ define dso_local void @Test128Mul(fp128 %d1, fp128 %d2) nounwind {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 16(%ebp), %edx
 ; WIN-X86-NEXT:    movl 20(%ebp), %esi
 ; WIN-X86-NEXT:    movl 24(%ebp), %edi
@@ -750,7 +750,7 @@ define dso_local void @Test128_1Mul(fp128 %d1) nounwind {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 16(%ebp), %esi
 ; WIN-X86-NEXT:    movl 20(%ebp), %edi
 ; WIN-X86-NEXT:    movl _vf128, %edx
@@ -876,7 +876,7 @@ define dso_local void @Test128Div(fp128 %d1, fp128 %d2) nounwind {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 16(%ebp), %edx
 ; WIN-X86-NEXT:    movl 20(%ebp), %esi
 ; WIN-X86-NEXT:    movl 24(%ebp), %edi
@@ -1007,7 +1007,7 @@ define dso_local void @Test128_1Div(fp128 %d1) nounwind {
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    subl $64, %esp
 ; WIN-X86-NEXT:    movl 16(%ebp), %esi
 ; WIN-X86-NEXT:    movl 20(%ebp), %edi
 ; WIN-X86-NEXT:    movl _vf128, %edx

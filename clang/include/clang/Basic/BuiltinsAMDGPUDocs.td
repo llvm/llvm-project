@@ -614,28 +614,40 @@ Requires target feature ``wmma-f4-insts`` and wave32.
 
 def DocCatAVLoadStore : DocumentationCategory<"Available/Visible Memory Access Builtins"> {
   let Content = [{
-These builtins perform 128-bit global or flat memory loads and stores with
-available/visible (AV) semantics.
+These builtins perform global or flat memory loads and
+stores with available/visible (AV) semantics.
 }];
 }
 
-def DocAVLoadB128 : Documentation {
+class DocAVLoadBase<string width> : Documentation {
   let Category = DocCatAVLoadStore;
-  let Content = [{
-Loads 128 bits (4 x i32) from the pointer ``ptr``. The pointer must be in
-the global or generic address space. The ``scope`` argument specifies the
-synchronization scope using a ``__MEMORY_SCOPE_*`` constant.
-}];
+  let Content = !strconcat("\nLoads ", width, [{ bits from the pointer ``ptr``.
+The pointer must be in the global or generic address space. The ``scope``
+argument specifies the synchronization scope using a ``__MEMORY_SCOPE_*``
+constant.
+}]);
 }
 
-def DocAVStoreB128 : Documentation {
+def DocAVLoadB8   : DocAVLoadBase<"8">;
+def DocAVLoadB16  : DocAVLoadBase<"16">;
+def DocAVLoadB32  : DocAVLoadBase<"32">;
+def DocAVLoadB64  : DocAVLoadBase<"64">;
+def DocAVLoadB128 : DocAVLoadBase<"128">;
+
+class DocAVStoreBase<string width> : Documentation {
   let Category = DocCatAVLoadStore;
-  let Content = [{
-Stores 128 bits (4 x i32) of ``data`` to the pointer ``ptr``. The pointer
-must be in the global or generic address space. The ``scope`` argument
-specifies the synchronization scope using a ``__MEMORY_SCOPE_*`` constant.
-}];
+  let Content = !strconcat("\nStores ", width, [{ bits of ``data`` to the pointer
+``ptr``. The pointer must be in the global or generic address space. The
+``scope`` argument specifies the synchronization scope using a
+``__MEMORY_SCOPE_*`` constant.
+}]);
 }
+
+def DocAVStoreB8   : DocAVStoreBase<"8">;
+def DocAVStoreB16  : DocAVStoreBase<"16">;
+def DocAVStoreB32  : DocAVStoreBase<"32">;
+def DocAVStoreB64  : DocAVStoreBase<"64">;
+def DocAVStoreB128 : DocAVStoreBase<"128">;
 
 //===----------------------------------------------------------------------===//
 // Wave Data Exchange Builtins
@@ -657,6 +669,26 @@ and wave64 without requiring the caller to compute byte offsets.
 If the index is outside the valid range ``[0, wavefront_size)``, it wraps
 around modulo the wavefront size. Reading from an inactive lane returns a
 nondeterministic value.
+}];
+}
+
+def DocExclusiveScan : Documentation {
+  let Category = DocCatWaveDataExchange;
+  let Content = [{
+Performs an exclusive prefix scan of ``src0`` within a subgroup of lanes. Each
+lane receives the running combination of the ``src0`` values of all earlier
+lanes in its subgroup, walking from the lowest to the highest lane index.
+"Exclusive" means a lane's own ``src0`` is not included in its result, so the
+first (lowest) lane of each subgroup receives the operation's identity value.
+
+``src1`` is a 32-bit subgroup mask: bit N is set when lane N belongs to the same
+subgroup as the current lane.
+
+The combining operation is named by the builtin (``sum``, ``xor``, ``or``,
+``and``, ``min``, ``max``).
+
+In wave64 mode the two 32-lane halves of the wave are scanned independently. The
+builtins are convergent: all lanes of a subgroup must execute them together.
 }];
 }
 

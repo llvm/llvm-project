@@ -770,6 +770,7 @@ TEST(LlvmLibcUIntClassTest, FullMulTests) {
   } while (0)
 
 TEST(LlvmLibcUIntClassTest, QuickMulHiTests) {
+  TEST_QUICK_MUL_HI(64, 1);
   TEST_QUICK_MUL_HI(128, 1);
   TEST_QUICK_MUL_HI(192, 2);
   TEST_QUICK_MUL_HI(256, 3);

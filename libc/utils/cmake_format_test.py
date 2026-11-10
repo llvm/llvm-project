@@ -242,6 +242,62 @@ class TestRule9_CleanlinessAndFileHygiene(unittest.TestCase):
         self.assertEqual(cmake_format.format_cmake_content(""), "")
         self.assertEqual(cmake_format.format_cmake_content("   \n\n  \t "), "")
 
+    def test_9_4_collapse_consecutive_blank_lines(self):
+        """Rule 9.4: Multiple consecutive blank lines are collapsed to a single blank line."""
+        code = (
+            "# Header comment\n\n\n"
+            "set(FOO bar)\n\n"
+            "   \n\t\n"
+            "if(FOO)\n\n\n"
+            "  add_entrypoint_object(\n"
+            "    target\n\n\n"
+            "    SRCS\n"
+            "      s1.cpp\n"
+            "  )\n"
+            "endif()\n"
+        )
+        expected = (
+            "# Header comment\n\n"
+            "set(FOO bar)\n\n"
+            "if(FOO)\n\n"
+            "  add_entrypoint_object(\n"
+            "    target\n\n"
+            "    SRCS\n"
+            "      s1.cpp\n"
+            "  )\n"
+            "endif()\n"
+        )
+        self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
+    def test_9_5_strip_leading_blank_lines(self):
+        """Rule 9.5: Leading blank lines at the start of a file are stripped."""
+        self.assertEqual(
+            cmake_format.format_cmake_content("\n\nset(FOO bar)\n"),
+            "set(FOO bar)\n",
+        )
+        self.assertEqual(
+            cmake_format.format_cmake_content("  \n\t\n# Header\n\nset(FOO bar)\n"),
+            "# Header\n\nset(FOO bar)\n",
+        )
+
+    def test_9_6_preserve_blank_lines_in_multiline_literals(self):
+        """Rule 9.6: Consecutive blank lines inside quoted strings, bracket args, and bracket comments are preserved."""
+        code = (
+            "#[=[\n\n\n"
+            "  Comment block\n\n\n"
+            "]=]\n\n\n"
+            'set(DOC "line1\n\n\nline2")\n\n\n'
+            "set(RAW [=[raw1\n\n\nraw2]=])\n"
+        )
+        expected = (
+            "#[=[\n\n\n"
+            "  Comment block\n\n\n"
+            "]=]\n\n"
+            'set(DOC "line1\n\n\nline2")\n\n'
+            "set(RAW [=[raw1\n\n\nraw2]=])\n"
+        )
+        self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
 
 class TestDynamicSchemaLearning(unittest.TestCase):
     """Dynamic Schema Learning Tests."""
@@ -277,6 +333,29 @@ set(CUSTOM_MULTI_VALUE_ARGS MULT_A MULT_B)
         self.assertIn("OPT_A", ctx.learned_options)
         self.assertIn("SING_A", ctx.learned_one_value)
         self.assertIn("MULT_A", ctx.learned_multi_value)
+
+    def test_llvm_libc_mode_prefixed_schema_learning(self):
+        """Verifies OVERLAY_<arg> and FULL_BUILD_<arg> variants are learned from LLVM_LIBC_*_ARGS."""
+        code = """
+set(LLVM_LIBC_COMMON_OPTIONAL_ARGS FULL_BUILD_ONLY OVERLAY_ONLY)
+set(LLVM_LIBC_OPTIONAL_ARGS NEED_MPFR)
+set(LLVM_LIBC_SINGLE_VALUE_ARGS SUITE)
+set(LLVM_LIBC_MULTI_VALUE_ARGS DEPENDS COMPILE_OPTIONS)
+"""
+        ctx = cmake_format.FormatterContext()
+        cmake_format.scan_dynamic_schemas(code, ctx=ctx)
+        self.assertIn("FULL_BUILD_ONLY", ctx.learned_options)
+        self.assertNotIn("OVERLAY_FULL_BUILD_ONLY", ctx.learned_options)
+        self.assertIn("NEED_MPFR", ctx.learned_options)
+        self.assertIn("OVERLAY_NEED_MPFR", ctx.learned_options)
+        self.assertIn("FULL_BUILD_NEED_MPFR", ctx.learned_options)
+        self.assertIn("SUITE", ctx.learned_one_value)
+        self.assertIn("OVERLAY_SUITE", ctx.learned_one_value)
+        self.assertIn("FULL_BUILD_SUITE", ctx.learned_one_value)
+        self.assertIn("OVERLAY_DEPENDS", ctx.learned_multi_value)
+        self.assertIn("FULL_BUILD_COMPILE_OPTIONS", ctx.learned_multi_value)
+        self.assertIn("OVERLAY_DEPENDS", ctx.list_keywords)
+        self.assertIn("FULL_BUILD_COMPILE_OPTIONS", ctx.list_keywords)
 
     def test_cache_variable_exclusion(self):
         """Verifies cache variable declarations like set(FOO "" CACHE STRING "...") are excluded."""
@@ -544,6 +623,61 @@ class TestFileWriting(unittest.TestCase):
             check=True,
         )
         self.assertEqual(proc.stdout, expected)
+
+    def test_dry_run_diff_outputs_pure_diff(self):
+        """--dry-run --diff exits 1 and outputs only the unified diff."""
+        import subprocess
+        import tempfile
+
+        code = "add_library(foo  STATIC\n  a.c\n)\n"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(code)
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    os.path.join(SCRIPT_DIR, "cmake_format.py"),
+                    "--dry-run",
+                    "--diff",
+                    path,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertTrue(proc.stdout.startswith("--- a/"))
+            self.assertNotIn("Formatting needed:", proc.stdout)
+            self.assertNotIn("file(s) need formatting.", proc.stdout)
+
+    def test_parse_error_exits_nonzero(self):
+        """A file with a CMake syntax error causes the CLI to exit with code 1."""
+        import subprocess
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write('set(FOO "unterminated)\n')
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    os.path.join(SCRIPT_DIR, "cmake_format.py"),
+                    "--dry-run",
+                    "--diff",
+                    path,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertEqual(proc.stdout, "")
+            self.assertIn("Error parsing file", proc.stderr)
 
 
 if __name__ == "__main__":

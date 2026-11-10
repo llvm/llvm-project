@@ -65,10 +65,10 @@ define i32 @findlast_add_expr(ptr %a, i32 %n) {
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], %[[VEC_EPILOG_ITER_CHECK]] ], [ -1, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[BC_MERGE_RDX]], -1
-; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i32 0, i32 [[BC_MERGE_RDX]]
 ; CHECK-NEXT:    [[N_MOD_VF10:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC11:%.*]] = sub i32 [[N]], [[N_MOD_VF10]]
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[BC_MERGE_RDX]], -1
+; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i32 0, i32 [[BC_MERGE_RDX]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP21]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i32> poison, i32 [[VEC_EPILOG_RESUME_VAL]], i64 0

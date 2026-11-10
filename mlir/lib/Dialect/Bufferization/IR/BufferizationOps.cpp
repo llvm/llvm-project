@@ -52,12 +52,19 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
     for (auto it : zip(sourceStrides, targetStrides))
       if (dynamicToStatic(std::get<0>(it), std::get<1>(it)))
         return false;
+    // A cast cannot safely zero out a non-zero offset. If the source has a
+    // non-identity layout (e.g., a subview with a dynamic offset) and the
+    // destination requires identity layout (zero offset, unit strides), a cast
+    // would silently strip the offset and cause incorrect loads in the callee.
+    // Fall through to the alloc+copy path instead.
+    if (!source.getLayout().isIdentity() && target.getLayout().isIdentity())
+      return false;
     return true;
   };
 
   // Note: If `areCastCompatible`, a cast is valid, but may fail at runtime. To
   // ensure that we only generate casts that always succeed at runtime, we check
-  // a fix extra conditions in `isGuaranteedCastCompatible`.
+  // a few extra conditions in `isGuaranteedCastCompatible`.
   if (memref::CastOp::areCastCompatible(srcType, destType) &&
       isGuaranteedCastCompatible(srcType, destType)) {
     Value casted = *options.castFn(b, value.getLoc(), destType, value);

@@ -73,6 +73,17 @@ let cppNamespace = "::cir" in {
                       /*defaultImplementation=*/[{
                         return $_op.getInlineKindAttrName();
                       }]>,
+      InterfaceMethod<"Return the calling convention of the call site",
+                      "cir::CallingConv", "getCallingConv", (ins), [{}],
+                      /*defaultImplementation=*/[{
+                        return $_op.getCallingConv();
+                      }]>,
+      InterfaceMethod<"Set the calling convention of the call site",
+                      "void", "setCallingConv",
+                      (ins "cir::CallingConv":$callingConv), [{}],
+                      /*defaultImplementation=*/[{
+                        $_op.setCallingConv(callingConv);
+                      }]>,
     ];
   }
 
@@ -169,7 +180,15 @@ let cppNamespace = "::cir" in {
       InterfaceMethod<"",
       "bool", "hasComdat", (ins), [{}],
       /*defaultImplementation=*/[{
-        return static_cast<bool>($_op.getComdat());
+        return $_op.getComdat().has_value();
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setSelfComdat", (ins), [{}],
+      /*defaultImplementation=*/[{
+        // A special case of Comdat, where we set it to be an empty string,
+        // where the comdat is the comdat group of the current symbol.
+        return $_op.setComdat(::llvm::StringRef(""));
       }]
       >,
       InterfaceMethod<"",

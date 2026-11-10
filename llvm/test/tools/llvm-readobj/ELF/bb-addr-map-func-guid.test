@@ -1,0 +1,103 @@
+## This test checks how we handle the function GUID feature (version 6) with
+## the --bb-addr-map option.
+
+# RUN: yaml2obj %s -o %t1.o
+# RUN: llvm-readobj %t1.o --bb-addr-map 2>&1 | FileCheck %s
+
+## Check that a section truncated in the middle of the GUID can be handled.
+# RUN: yaml2obj %s -DSIZE=7 -o %t2.o
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2.o --check-prefix=TRUNCATED
+
+# CHECK:      BBAddrMap [
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x11110
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     GUID: 0x1122334455667788
+# CHECK-NEXT:     BB Ranges [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: 0x11110
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 0
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0x1
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: Yes
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+## The GUID is not printed when the feature is disabled.
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x22220
+# CHECK-NEXT:     Name: bar
+# CHECK-NEXT:     BB Ranges [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: 0x22220
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 1
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0x2
+# CHECK-NEXT:             HasReturn: Yes
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+# TRUNCATED:      BBAddrMap [
+# TRUNCATED-NEXT:   warning: '[[FILE]]': unable to dump BB addr map section: unexpected end of data at offset 0x7 while reading [0x3, 0xb) in SHT_LLVM_BB_ADDR_MAP section with index 2
+# TRUNCATED-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    ShSize: [[SIZE=<none>]]
+    Link:   .text
+    Entries:
+      - Version:  6
+        Feature:  0x100
+        FuncGUID: 0x1122334455667788
+        BBRanges:
+          - BaseAddress: 0x11110
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      0x2
+      - Version:  6
+        BBRanges:
+          - BaseAddress: 0x22220
+            BBEntries:
+              - ID:            1
+                AddressOffset: 0x0
+                Size:          0x2
+                Metadata:      0x1
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Value:   0x11110
+  - Name:    bar
+    Section: .text
+    Type:    STT_FUNC
+    Value:   0x22220

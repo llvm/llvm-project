@@ -900,11 +900,11 @@ define void @test_zext_store(i56 %arg, ptr %p) {
 
 !0 = !{!1}
 !1 = !{!1, !2}
-!2 = !{!2}
+!2 = !{!2, i1 false}
 
 !3 = !{!4}
 !4 = !{!4, !5}
-!5 = !{!5}
+!5 = !{!5, i1 false}
 
 !6 = !{!7, !7, i64 0}
 !7 = !{!"short", !8, i64 0}
@@ -913,6 +913,6 @@ define void @test_zext_store(i56 %arg, ptr %p) {
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]]}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false}
 ; CHECK: [[META3]] = !{}
 ;.

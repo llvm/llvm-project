@@ -28,6 +28,14 @@
 #    error "__cpp_lib_constexpr_iterator should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_make_reverse_iterator
 #    error "__cpp_lib_make_reverse_iterator should not be defined before c++14"
 #  endif
@@ -60,6 +68,14 @@
 
 #  ifdef __cpp_lib_constexpr_iterator
 #    error "__cpp_lib_constexpr_iterator should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_make_reverse_iterator
@@ -103,6 +119,14 @@
 
 #  ifdef __cpp_lib_constexpr_iterator
 #    error "__cpp_lib_constexpr_iterator should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_make_reverse_iterator
@@ -152,6 +176,14 @@
 #  endif
 #  if __cpp_lib_constexpr_iterator != 201811L
 #    error "__cpp_lib_constexpr_iterator should have the value 201811L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_make_reverse_iterator
@@ -212,6 +244,14 @@
 #    error "__cpp_lib_constexpr_iterator should have the value 201811L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_hardened_common_iterator
+#    error "__cpp_lib_hardened_common_iterator should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_hardened_counted_iterator
+#    error "__cpp_lib_hardened_counted_iterator should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_make_reverse_iterator
 #    error "__cpp_lib_make_reverse_iterator should be defined in c++23"
 #  endif
@@ -270,6 +310,32 @@
 #    error "__cpp_lib_constexpr_iterator should have the value 201811L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_common_iterator
+#      error "__cpp_lib_hardened_common_iterator should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_common_iterator != 202506L
+#      error "__cpp_lib_hardened_common_iterator should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_common_iterator
+#      error "__cpp_lib_hardened_common_iterator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_counted_iterator
+#      error "__cpp_lib_hardened_counted_iterator should be defined in c++26"
+#    endif
+#    if __cpp_lib_hardened_counted_iterator != 202506L
+#      error "__cpp_lib_hardened_counted_iterator should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_counted_iterator
+#      error "__cpp_lib_hardened_counted_iterator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_make_reverse_iterator
 #    error "__cpp_lib_make_reverse_iterator should be defined in c++26"
 #  endif
@@ -326,6 +392,32 @@
 #  endif
 #  if __cpp_lib_constexpr_iterator != 201811L
 #    error "__cpp_lib_constexpr_iterator should have the value 201811L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_common_iterator
+#      error "__cpp_lib_hardened_common_iterator should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_common_iterator != 202506L
+#      error "__cpp_lib_hardened_common_iterator should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_common_iterator
+#      error "__cpp_lib_hardened_common_iterator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_hardened_counted_iterator
+#      error "__cpp_lib_hardened_counted_iterator should be defined in c++29"
+#    endif
+#    if __cpp_lib_hardened_counted_iterator != 202506L
+#      error "__cpp_lib_hardened_counted_iterator should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_hardened_counted_iterator
+#      error "__cpp_lib_hardened_counted_iterator should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_make_reverse_iterator

@@ -1,10 +1,10 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -fclangir -fcuda-is-device \
 // RUN: -emit-cir %s -o - | FileCheck --check-prefix=CIR %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -fclangir -fcuda-is-device \
 // RUN: -emit-llvm %s -o - | FileCheck --check-prefix=LLVM %s
 //
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -emit-llvm %s \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -fcuda-is-device -emit-llvm %s \
 // RUN: -o - | FileCheck --check-prefix=LLVM %s
 
 // Checks that builtins returning an i1 can be used as bool results implicitly.

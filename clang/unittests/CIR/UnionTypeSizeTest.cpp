@@ -98,13 +98,13 @@ TEST_F(UnionTypeSizeTest, IsLayoutIdenticalNoPadding) {
 TEST_F(UnionTypeSizeTest, IsLayoutIdenticalDifferentPadding) {
   IntType i32 = IntType::get(&context, 32, true);
   IntType i8 = IntType::get(&context, 8, false);
-  IntType i16 = IntType::get(&context, 16, false);
+  cir::ArrayType i8x2 = cir::ArrayType::get(i8, 2);
   mlir::Type members[] = {i32};
   auto ty1 = UnionType::get(&context, getName("Upad1"));
   ty1.complete(members, /*packed=*/false, /*padding=*/i8,
                RecordType::getAllDataKinds(members));
   auto ty2 = UnionType::get(&context, getName("Upad2"));
-  ty2.complete(members, /*packed=*/false, /*padding=*/i16,
+  ty2.complete(members, /*packed=*/false, /*padding=*/i8x2,
                RecordType::getAllDataKinds(members));
   EXPECT_FALSE(ty1.isLayoutIdentical(ty2));
 }

@@ -494,9 +494,8 @@ define ptr @shl_add_or(i64 %a, ptr %ptr) {
 ; CHECK-SAME: i64 [[A:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], 2
-; CHECK-NEXT:    [[OR2:%.*]] = add i64 [[SHL]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[PTR]], i64 [[OR2]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[PTR]], i64 [[SHL]]
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 52
 ; CHECK-NEXT:    ret ptr [[P3]]
 ;
 entry:
@@ -504,8 +503,7 @@ entry:
   %add = add i64 %shl, 12
   %or = or disjoint i64 %add, 1
   ; ((a << 2) + 12) and 1 have no common bits. Therefore,
-  ; SeparateConstOffsetFromGEP is able to extract the 12.
-  ; TODO(jingyue): We could reassociate the expression to combine 12 and 1.
+  ; SeparateConstOffsetFromGEP can extract and combine both 12 and 1.
   %p = getelementptr float, ptr %ptr, i64 %or
   ret ptr %p
 }
@@ -534,13 +532,15 @@ entry:
   ret ptr %ptr2
 }
 
-; Check that we can see through explicit trunc() instruction.
+; The GEP index is sign-extended to pointer size. Do not look through the
+; truncation. This case will be canonicalized by other passes anyway.
 define ptr @trunk_explicit(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: define ptr @trunk_explicit(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3216
+; CHECK-NEXT:    [[IDX0:%.*]] = trunc i64 1 to i32
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX0]] to i64
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds [[STRUCT0:%.*]], ptr [[PTR]], i64 [[IDXPROM]], i32 3, i64 [[IDX]], i32 1
 ; CHECK-NEXT:    ret ptr [[PTR21]]
 ;
 entry:

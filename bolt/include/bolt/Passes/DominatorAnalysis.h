@@ -55,9 +55,20 @@ public:
       });
       if (HasDominatedPred && HasNonDominatedPred)
         Result.insert_range(Candidates);
-      if ((*this->getStateAt(ProgramPoint::getLastPointAt(BB)))[DomIdx] &&
-          BB.succ_begin() == BB.succ_end())
-        Result.insert(ProgramPoint::getLastPointAt(BB));
+      ProgramPoint LastPoint = ProgramPoint::getLastPointAt(BB);
+      if ((*this->getStateAt(LastPoint))[DomIdx]) {
+        bool IsExit = BB.succ_begin() == BB.succ_end();
+        // Conditional tail calls (e.g. introduced by IndirectCallPromotion)
+        // exit the function via an edge to an external symbol that is not
+        // represented as a CFG successor, so treat them as additional exits
+        // and add them to the dominance frontier.  See issue #236353.
+        if (LastPoint.isInst() &&
+            this->BC.MIB->isTerminator(*LastPoint.getInst()) &&
+            this->BC.MIB->getConditionalTailCall(*LastPoint.getInst()))
+          IsExit = true;
+        if (IsExit)
+          Result.insert(LastPoint);
+      }
     }
     return Result;
   }

@@ -17,6 +17,7 @@
 // RUN:   FileCheck -check-prefix=SRAMECC-OFF %s
 // SRAMECC-OFF: "-mno-sramecc"
 
+
 // Test that target ID takes precedence over explicit flags
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -mno-xnack %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=TARGETID-OVERRIDES-XNACK %s

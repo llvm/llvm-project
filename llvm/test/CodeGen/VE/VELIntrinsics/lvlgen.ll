@@ -69,7 +69,7 @@ define void @stable_vl(i32 %evl, ptr %P, ptr %Q) {
 ; Function Attrs: nounwind
 define void @call_invl(i32 %evl, ptr %P, ptr %Q) {
 ; CHECK-LABEL: call_invl:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s19, 296(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s20, 304(, %s11) # 8-byte Folded Spill

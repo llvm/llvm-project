@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestVLA(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "8.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_variable_list(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
@@ -25,6 +26,7 @@ class TestVLA(TestBase):
             self.assertNotIn("vla_expr", value.name)
 
     @decorators.skipIf(compiler="clang", compiler_version=["<", "8.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_vla(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(

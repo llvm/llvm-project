@@ -27,7 +27,7 @@
 
 # ARMAP:      Archive map
 # ARMAP-NEXT: s_func in func.o (flags: 0x00000006 [64-bit + XPLink])
-# ARMAP-NEXT: s_data in data.o (flags: 0x00000003 [XPLink + WSA])
+# ARMAP-NEXT: s_data in data.o (flags: 0x00000007 [64-bit + XPLink + WSA])
 
 ## 2. Test that basic archive operations still work on a GOFF archive.
 ##    llvm-ar t should list exactly the expected member names and nothing else.

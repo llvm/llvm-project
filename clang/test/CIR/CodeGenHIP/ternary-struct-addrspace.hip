@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o - | FileCheck %s
 
 // Verify that a ternary expression returning a struct parameter from a
 // __device__ function produces a well-typed cir.ternary: both branch yields

@@ -2590,3 +2590,30 @@ func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:           fir.store %[[BOX_OUTARR]] to %[[REF_BOX_OUTARR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
 // CHECK:           return
 // CHECK:         }
+
+// -----
+
+// Call to MAXVAL with 1D I128 array is replaced, and the INTEGER(16) identity
+// is not truncated to 64 bits.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @maxval_1d_array_i128(%arg0: !fir.ref<!fir.array<10xi128>>) -> i128 {
+    %c10 = arith.constant 10 : index
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xi128>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi128>>
+    %3 = fir.absent !fir.box<i1>
+    %c0 = arith.constant 0 : index
+    %4 = fir.zero_bits !fir.ref<i8>
+    %c5_i32 = arith.constant 5 : i32
+    %5 = fir.convert %2 : (!fir.box<!fir.array<10xi128>>) -> !fir.box<none>
+    %6 = fir.convert %c0 : (index) -> i32
+    %7 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+    %8 = fir.call @_FortranAMaxvalInteger16(%5, %4, %c5_i32, %6, %7) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i128
+    return %8 : i128
+  }
+  func.func private @_FortranAMaxvalInteger16(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i128 attributes {fir.runtime}
+}
+
+// CHECK-LABEL:   func.func @maxval_1d_array_i128(
+// CHECK:           fir.call @_FortranAMaxvalInteger16x1_simplified(
+// CHECK-LABEL:   func.func private @_FortranAMaxvalInteger16x1_simplified(
+// CHECK:           arith.constant -170141183460469231731687303715884105728 : i128

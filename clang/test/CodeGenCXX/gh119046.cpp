@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -triple x86_64-elf-gnu %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++2a -triple x86_64-elf-gnu %s -emit-llvm -o - | FileCheck %s %}
 
 struct S {
     consteval void operator()() {}

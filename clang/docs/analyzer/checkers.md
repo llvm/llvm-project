@@ -3774,30 +3774,6 @@ void test() {
 }
 ```
 
-(alpha-unix-simplestream)=
-
-#### alpha.unix.SimpleStream (C)
-
-Check for misuses of stream APIs. Check for misuses of stream APIs: `fopen, fclose`
-(demo checker, the subject of the demo ([Slides](https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf) ,
-[Video](https://youtu.be/kdxlsP5QVPw)) by Anna Zaks and Jordan Rose presented at the
-[2012 LLVM Developers' Meeting](https://llvm.org/devmtg/2012-11/)).
-
-```c
-void test() {
-  FILE *F = fopen("myfile.txt", "w");
-} // warn: opened file is never closed
-
-void test() {
-  FILE *F = fopen("myfile.txt", "w");
-
-  if (F)
-    fclose(F);
-
-  fclose(F); // warn: closing a previously closed file stream
-}
-```
-
 (alpha-unix-cstring-bufferoverlap)=
 
 #### alpha.unix.cstring.BufferOverlap (C)

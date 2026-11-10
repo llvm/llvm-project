@@ -58,12 +58,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/ACCSpecializePatterns.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -79,7 +81,6 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 /// Fold acc.on_device with a constant device type in device code.
 class FoldAccOnDeviceOpConversion : public OpRewritePattern<acc::OnDeviceOp> {
   using OpRewritePattern<acc::OnDeviceOp>::OpRewritePattern;
@@ -110,6 +111,12 @@ class ACCSpecializeForDevice
 public:
   using ACCSpecializeForDeviceBase<
       ACCSpecializeForDevice>::ACCSpecializeForDeviceBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCSpecializeForDeviceBase<ACCSpecializeForDevice>::getDependentDialects(
+        registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override {
     func::FuncOp func = getOperation();
@@ -151,7 +158,6 @@ public:
     }
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//

@@ -332,6 +332,14 @@ void MappedFileRegionArena::destroyImpl() {
     }
   }
 
+#ifdef _WIN32
+  // Always unmap to
+  // - avoid address space leak;
+  // - avoid data loss for sparse files.
+  if (Region)
+    Region.unmap();
+#endif
+
   auto Close = [](std::optional<int> &FD) {
     if (FD) {
       sys::fs::file_t File = sys::fs::convertFDToNativeFile(*FD);
@@ -434,9 +442,9 @@ ErrorOr<FileSizeInfo> FileSizeInfo::get(sys::fs::file_t File) {
 #else
   // Fallback: assume the file is fully allocated. Note: this may result in
   // data loss on out-of-space.
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(File, Status))
-    return EC;
-  return FileSizeInfo{Status.getSize(), Status.getSize()};
+  ErrorOr<uint64_t> FileSize = sys::fs::file_size(File);
+  if (!FileSize)
+    return FileSize.getError();
+  return FileSizeInfo{*FileSize, *FileSize};
 #endif
 }

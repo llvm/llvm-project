@@ -124,10 +124,10 @@ body:             |
     %0:g8rc = COPY $x0
     %2:gprc = LI 44
     %3:gprc = COPY %1.sub_32
-    %4:gprc = ADD4 killed $r0, killed %2
+    %4:gprc = ADD4 killed $r0, %2
     ; CHECK: li 3, 44
     ; CHECK: add 3, 0, 3
-    %5:g8rc = EXTSW_32_64 killed %4
+    %5:g8rc = EXTSW_32_64 %4
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -178,10 +178,10 @@ body:             |
     %0:g8rc = COPY $x0
     %2:gprc = COPY %0.sub_32
     %3:gprc = LI 44
-    %4:gprc = ADD4 killed %3, killed $r0
+    %4:gprc = ADD4 %3, killed $r0
     ; CHECK: li 3, 44
     ; CHECK: add 3, 3, 0
-    %5:g8rc = EXTSW_32_64 killed %4
+    %5:g8rc = EXTSW_32_64 %4
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -232,9 +232,9 @@ body:             |
     %0:g8rc = COPY $x3
     %2:gprc = COPY %0.sub_32
     $r0 = LI 44
-    %4:gprc = ADD4 killed $r0, killed %2
+    %4:gprc = ADD4 killed $r0, %2
     ; CHECK: addi 3, 3, 44
-    %5:g8rc = EXTSW_32_64 killed %4
+    %5:g8rc = EXTSW_32_64 %4
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
@@ -285,9 +285,9 @@ body:             |
     %0:g8rc = COPY $x3
     %2:gprc = COPY %0.sub_32
     $r0 = LI 44
-    %4:gprc = ADD4 killed %2, killed $r0
+    %4:gprc = ADD4 %2, killed $r0
     ; CHECK: addi 3, 3, 44
-    %5:g8rc = EXTSW_32_64 killed %4
+    %5:g8rc = EXTSW_32_64 %4
     $x3 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 

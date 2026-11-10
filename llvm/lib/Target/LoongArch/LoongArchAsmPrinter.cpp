@@ -52,7 +52,7 @@ void LoongArchAsmPrinter::emitStartOfAsmFile(Module &M) {
   StringRef ABIName = M.getTargetABIFromMD();
   if (!ABIName.empty()) {
     getTargetStreamer().setTargetABI(LoongArchABI::computeTargetABI(
-        TM.getTargetTriple(), TM.getMCSubtargetInfo().getFeatureBits(),
+        M.getTargetTriple(), TM.getMCSubtargetInfo().getFeatureBits(),
         ABIName));
   }
 }

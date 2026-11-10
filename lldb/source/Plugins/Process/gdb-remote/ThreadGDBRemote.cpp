@@ -367,7 +367,7 @@ ThreadGDBRemote::GetSiginfo(size_t max_size) const {
                                    "qXfer:siginfo:read not supported");
 
   llvm::Expected<std::string> response =
-      gdb_process->m_gdb_comm.ReadExtFeature("siginfo", "");
+      gdb_process->m_gdb_comm.ReadSiginfo(GetProtocolID());
   if (!response)
     return response.takeError();
 

@@ -26,7 +26,7 @@ function test_func_result() result(x)
   x = 42
 end function
 ! CHECK-LABEL: func.func @_QPtest_func_result
-! CHECK:       hlfir.declare {{.*}} "_QFtest_func_resultEx"
+! CHECK:       hlfir.declare {{.*}}uniq_name("_QFtest_func_resultEx")
 ! CHECK-NOT:   fir.store
 ! CHECK:       hlfir.assign
 ! CHECK:       return
@@ -40,7 +40,7 @@ program test_main_prog
   n = 1
 end program
 ! CHECK-LABEL: func.func @_QQmain
-! CHECK:       hlfir.declare {{.*}} "_QFEn"
+! CHECK:       hlfir.declare {{.*}}uniq_name("_QFEn")
 ! CHECK-NOT:   fir.store
 ! CHECK:       hlfir.assign
 ! CHECK:       return
@@ -57,9 +57,9 @@ subroutine test_runtime_array(res, n)
   res = x(1) + ctrl
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_runtime_array
-! CHECK:       hlfir.declare {{.*}} "_QFtest_runtime_arrayEctrl"
+! CHECK:       hlfir.declare {{.*}}uniq_name("_QFtest_runtime_arrayEctrl")
 ! CHECK:       arith.constant -1431655766 : i32
-! CHECK:       hlfir.declare {{.*}} "_QFtest_runtime_arrayEx"
+! CHECK:       hlfir.declare {{.*}}uniq_name("_QFtest_runtime_arrayEx")
 ! CHECK-NOT:   arith.constant -1431655766 : i32
 ! CHECK-NOT:   fir.do_loop
 ! CHECK:       return
@@ -76,9 +76,9 @@ subroutine test_char_array(res)
   ctrl = 0
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_char_array
-! CHECK:       hlfir.declare {{.*}} "_QFtest_char_arrayEctrl"
+! CHECK:       hlfir.declare {{.*}}uniq_name("_QFtest_char_arrayEctrl")
 ! CHECK:       arith.constant -1431655766 : i32
-! CHECK:       hlfir.declare {{.*}} "_QFtest_char_arrayEx"
+! CHECK:       hlfir.declare {{.*}}uniq_name("_QFtest_char_arrayEx")
 ! CHECK-NOT:   arith.constant -1431655766 : i32
 ! CHECK-NOT:   fir.do_loop
 ! CHECK:       return
@@ -97,9 +97,9 @@ subroutine test_pointer_comp(res)
   res = ctrl
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_pointer_comp
-! CHECK:       hlfir.declare {{.*}} "_QFtest_pointer_compEctrl"
+! CHECK:       hlfir.declare {{.*}}uniq_name("_QFtest_pointer_compEctrl")
 ! CHECK:       arith.constant -1431655766 : i32
-! CHECK:       hlfir.declare {{.*}} "_QFtest_pointer_compEx"
+! CHECK:       hlfir.declare {{.*}}uniq_name("_QFtest_pointer_compEx")
 ! CHECK-NOT:   arith.constant -1431655766 : i32
 ! CHECK-NOT:   fir.do_loop
 ! CHECK:       return

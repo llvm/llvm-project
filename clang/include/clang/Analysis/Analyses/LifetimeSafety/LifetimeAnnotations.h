@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -62,6 +63,12 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
 /// lifetimebound, either due to an explicit lifetimebound attribute on the
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
+
+/// Check if a function has a lifetime_capture_by attribute on its declaration
+/// or its function type (which represents the implicit 'this' parameter for
+/// methods). Returns the attribute if found, nullptr otherwise.
+const LifetimeCaptureByAttr *
+getCaptureByAttrFromFunctionType(const FunctionDecl *FD);
 
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
@@ -136,6 +143,16 @@ bool isInvalidationMethod(const CXXMethodDecl &MD);
 // (e.g., destructors via implicit 'this', std::destroy_at).
 bool destructsFirstArg(const FunctionDecl &FD);
 
+/// Returns true if the function allocates memory that must be freed by the
+/// caller (e.g. functions annotated with `ownership_returns`, such as
+/// `__attribute__((ownership_returns(malloc)))`).
+bool isAllocatingFunction(const FunctionDecl &FD);
+
+/// Returns true if the function frees memory it takes ownership of (e.g.
+/// functions annotated with `ownership_takes`, such as
+/// `__attribute__((ownership_takes(malloc, 1)))`).
+bool isFreeingFunction(const FunctionDecl &FD);
+
 /// Returns true for standard library callable wrappers (e.g., std::function)
 /// that can propagate the stored lambda's origins.
 bool isStdCallableWrapperType(const CXXRecordDecl *RD);
@@ -144,6 +161,10 @@ bool isStdCallableWrapperType(const CXXRecordDecl *RD);
 /// refers to the same object as the argument, so all origins propagate from
 /// argument to result.
 bool isStdReferenceCast(const FunctionDecl *FD);
+
+/// Skips parentheses and implicit casts. Unlike IgnoreParenImpCasts(), stops at
+/// a MaterializeTemporaryExpr, which owns the storage of a temporary.
+const Expr *ignoreParensAndImpCasts(const Expr *E);
 
 } // namespace clang::lifetimes
 

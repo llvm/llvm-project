@@ -35,7 +35,8 @@ RUN apt-get update && \
     gnupg \
     cmake \
     m4 \
-    linux-libc-dev && \
+    linux-libc-dev \
+    qemu-system-arm && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

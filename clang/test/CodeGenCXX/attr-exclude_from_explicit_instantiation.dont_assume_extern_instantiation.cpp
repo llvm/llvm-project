@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -O0 -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -emit-llvm -O0 -o - %s | FileCheck %s %}
 
 // Test that we do not assume that entities marked with the
 // exclude_from_explicit_instantiation attribute are instantiated

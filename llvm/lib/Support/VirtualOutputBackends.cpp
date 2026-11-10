@@ -22,7 +22,6 @@
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 #include "llvm/Support/VirtualOutputError.h"
@@ -369,18 +368,6 @@ Error OnDiskOutputFile::initializeStream() {
 }
 
 namespace {
-class OpenFileRAII {
-  static const int InvalidFd = -1;
-
-public:
-  int Fd = InvalidFd;
-
-  ~OpenFileRAII() {
-    if (Fd != InvalidFd)
-      llvm::sys::Process::SafelyCloseFileDescriptor(Fd);
-  }
-};
-
 enum class FileDifference : uint8_t {
   /// The source and destination paths refer to the exact same file.
   IdenticalFile,
@@ -398,54 +385,61 @@ areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
   if (sys::fs::equivalent(Source, Destination))
     return FileDifference::IdenticalFile;
 
-  OpenFileRAII SourceFile;
-  sys::fs::file_status SourceStatus;
+  Expected<sys::fs::file_t> SourceFile = sys::fs::openNativeFileForRead(Source);
   // If we can't open the source file, fail.
-  if (std::error_code EC = sys::fs::openFileForRead(Source, SourceFile.Fd))
-    return convertToOutputError(Source, EC);
+  if (!SourceFile)
+    return convertToOutputError(Source,
+                                errorToErrorCode(SourceFile.takeError()));
 
-  // If we can't stat the source file, fail.
-  if (std::error_code EC = sys::fs::status(SourceFile.Fd, SourceStatus))
-    return convertToOutputError(Source, EC);
+  llvm::scope_exit CloseSourceFile([&]() { sys::fs::closeFile(*SourceFile); });
 
-  OpenFileRAII DestFile;
-  sys::fs::file_status DestStatus;
+  ErrorOr<uint64_t> SourceSize = sys::fs::file_size(*SourceFile);
+  // If we can't get the the source size, fail.
+  if (!SourceSize)
+    return convertToOutputError(Source, SourceSize.getError());
+
+  Expected<sys::fs::file_t> DestFile =
+      sys::fs::openNativeFileForRead(Destination);
   // If we can't open the destination file, report different.
-  if (std::error_code Error =
-          sys::fs::openFileForRead(Destination, DestFile.Fd))
+  if (!DestFile) {
+    consumeError(DestFile.takeError());
     return FileDifference::DifferentContents;
+  }
 
-  // If we can't open the destination file, report different.
-  if (std::error_code Error = sys::fs::status(DestFile.Fd, DestStatus))
+  llvm::scope_exit CloseDestFile([&]() { sys::fs::closeFile(*DestFile); });
+
+  ErrorOr<uint64_t> DestSize = sys::fs::file_size(*DestFile);
+  // If we can't get the destination size, report different.
+  if (!DestSize)
     return FileDifference::DifferentContents;
 
   // If the files are different sizes, they must be different.
-  uint64_t Size = SourceStatus.getSize();
-  if (Size != DestStatus.getSize())
+  if (*SourceSize != *DestSize)
     return FileDifference::DifferentContents;
 
   // If both files are zero size, they must be the same.
-  if (Size == 0)
+  if (*SourceSize == 0)
     return FileDifference::SameContents;
 
   // The two files match in size, so we have to compare the bytes to determine
   // if they're the same.
   std::error_code SourceRegionErr;
   sys::fs::mapped_file_region SourceRegion(
-      sys::fs::convertFDToNativeFile(SourceFile.Fd),
-      sys::fs::mapped_file_region::readonly, Size, 0, SourceRegionErr);
+      *SourceFile, sys::fs::mapped_file_region::readonly, *SourceSize, 0,
+      SourceRegionErr);
   if (SourceRegionErr)
     return convertToOutputError(Source, SourceRegionErr);
 
   std::error_code DestRegionErr;
-  sys::fs::mapped_file_region DestRegion(
-      sys::fs::convertFDToNativeFile(DestFile.Fd),
-      sys::fs::mapped_file_region::readonly, Size, 0, DestRegionErr);
+  sys::fs::mapped_file_region DestRegion(*DestFile,
+                                         sys::fs::mapped_file_region::readonly,
+                                         *DestSize, 0, DestRegionErr);
 
   if (DestRegionErr)
     return FileDifference::DifferentContents;
 
-  if (memcmp(SourceRegion.const_data(), DestRegion.const_data(), Size) != 0)
+  if (memcmp(SourceRegion.const_data(), DestRegion.const_data(), *SourceSize) !=
+      0)
     return FileDifference::DifferentContents;
 
   return FileDifference::SameContents;

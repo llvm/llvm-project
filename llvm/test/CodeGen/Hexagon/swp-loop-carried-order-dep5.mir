@@ -99,11 +99,11 @@ body:             |
     %1:intregs = PHI %6, %bb.3, %4, %bb.2
     %10:intregs = L2_loadri_io %0, 0 :: (load (s32) from %ir.lsr.iv15, !tbaa !5)
     %11:intregs = L2_loadri_io %1, 0 :: (load (s32) from %ir.lsr.iv14, !tbaa !5)
-    %12:intregs = nsw A2_add killed %11, killed %10
+    %12:intregs = nsw A2_add %11, %10
     %4:intregs = S2_storeri_pi %1, 4, %12 :: (store (s32) into %ir.lsr.iv14, !tbaa !5)
     %13:intregs = L2_loadri_io %0, 0 :: (load (s32) from %ir.lsr.iv15, !tbaa !5)
-    %14:intregs = nsw A2_add killed %13, %12
-    %5:intregs = S2_storeri_pi %0, 4, killed %14 :: (store (s32) into %ir.lsr.iv15, !tbaa !5)
+    %14:intregs = nsw A2_add %13, %12
+    %5:intregs = S2_storeri_pi %0, 4, %14 :: (store (s32) into %ir.lsr.iv15, !tbaa !5)
     ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
     J2_jump %bb.1, implicit-def $pc
 ...

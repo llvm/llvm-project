@@ -186,6 +186,7 @@ enum Kind {
   kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
+  kw_wasm_emscripten_invokecc,
   kw_graalcc,
   kw_riscv_vector_cc,
   kw_riscv_vls_cc,
@@ -431,6 +432,7 @@ enum Kind {
   kw_unknown,
   kw_critical,
   kw_relbf,
+  kw_indirect,
   kw_variable,
   kw_vTableFuncs,
   kw_virtFunc,
@@ -484,6 +486,7 @@ enum Kind {
   kw_versions,
   kw_memProf,
   kw_notcold,
+  kw_ambiguous,
 
   // GV's with __attribute__((no_sanitize("address"))), or things in
   // -fsanitize-ignorelist when built with ASan.

@@ -19,6 +19,7 @@
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/ProfCorrelatorKind.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -36,10 +37,6 @@ class ObjectFile;
 /// to their functions.
 class InstrProfCorrelator {
 public:
-  /// Indicate if we should use the debug info or profile metadata sections to
-  /// correlate.
-  enum ProfCorrelatorKind { NONE, DEBUG_INFO, BINARY };
-
   LLVM_ABI static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
   get(StringRef Filename, ProfCorrelatorKind FileKind,
       const object::BuildIDFetcher *BIDFetcher = nullptr,

@@ -403,7 +403,7 @@ namespace {
 /// Converts `shape.reduce` to `scf.for`.
 struct ReduceOpConverter : public OpConversionPattern<shape::ReduceOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(shape::ReduceOp op, OpAdaptor adaptor,

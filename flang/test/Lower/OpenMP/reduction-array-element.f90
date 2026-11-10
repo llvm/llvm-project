@@ -16,7 +16,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPreduction_literal
 ! CHECK: omp.wsloop {{.*}} reduction(byref @[[BOX_RED]] {{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>) {
-! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFreduction_literalEa"} : (!fir.ref<!fir.box<!fir.array<4xi32>>>)
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QFreduction_literalEa") : (!fir.ref<!fir.box<!fir.array<4xi32>>>)
 ! CHECK: fir.load %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>
 ! CHECK: hlfir.designate %{{.*}} (%c2) {{.*}} -> !fir.ref<i32>
 
@@ -44,8 +44,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPreduction_arrays
 ! CHECK: omp.wsloop {{.*}} reduction(byref @[[BOX_RED]] {{.*}}, byref @[[BOX_RED]] {{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>, !fir.ref<!fir.box<!fir.array<4xi32>>>) {
-! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFreduction_arraysEa"} : (!fir.ref<!fir.box<!fir.array<4xi32>>>)
-! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFreduction_arraysEb"} : (!fir.ref<!fir.box<!fir.array<4xi32>>>)
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QFreduction_arraysEa") : (!fir.ref<!fir.box<!fir.array<4xi32>>>)
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QFreduction_arraysEb") : (!fir.ref<!fir.box<!fir.array<4xi32>>>)
 ! CHECK: hlfir.designate %{{.*}} (%c2{{.*}}) {{.*}} -> !fir.ref<i32>
 
 subroutine reduction_variable(a, n, j)
@@ -58,7 +58,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPreduction_variable
 ! CHECK: omp.wsloop {{.*}} reduction(byref @[[BOX_RED]] {{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>) {
-! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFreduction_variableEa"} : (!fir.ref<!fir.box<!fir.array<4xi32>>>)
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QFreduction_variableEa") : (!fir.ref<!fir.box<!fir.array<4xi32>>>)
 ! CHECK: hlfir.designate %{{.*}} (%{{.*}}) {{.*}} -> !fir.ref<i32>
 
 subroutine reduction_do_simd(a, n)

@@ -15,10 +15,13 @@
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/PosixApi.h"
 
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 
 using namespace lldb_private;
 
@@ -29,20 +32,28 @@ const char *FileSystem::PATH_CONVERSION_ERROR =
 
 Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
   Status error;
-  std::wstring wsrc, wdst;
-  if (!llvm::ConvertUTF8toWide(src.GetPath(), wsrc) ||
+  llvm::SmallVector<wchar_t, MAX_PATH> wsrc, wdst_long;
+  std::wstring wdst;
+  if (llvm::sys::windows::widenPath(src.GetPath(), wsrc) ||
+      llvm::sys::windows::widenPath(dst.GetPath(), wdst_long) ||
       !llvm::ConvertUTF8toWide(dst.GetPath(), wdst))
     error = Status::FromErrorString(PATH_CONVERSION_ERROR);
   if (error.Fail())
     return error;
-  DWORD attrib = ::GetFileAttributesW(wdst.c_str());
+  DWORD attrib = ::GetFileAttributesW(wdst_long.data());
   if (attrib == INVALID_FILE_ATTRIBUTES) {
     error = Status(::GetLastError(), lldb::eErrorTypeWin32);
     return error;
   }
   bool is_directory = !!(attrib & FILE_ATTRIBUTE_DIRECTORY);
   DWORD flag = is_directory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
-  BOOL result = ::CreateSymbolicLinkW(wsrc.c_str(), wdst.c_str(), flag);
+  // The link stores its target as given. widenPath makes a long relative
+  // target absolute, which would change what the link points to, so only an
+  // absolute target gets the "\\?\" prefix.
+  const wchar_t *target = llvm::sys::path::is_absolute(dst.GetPath())
+                              ? wdst_long.data()
+                              : wdst.c_str();
+  BOOL result = ::CreateSymbolicLinkW(wsrc.data(), target, flag);
   if (!result)
     error = Status(::GetLastError(), lldb::eErrorTypeWin32);
   return error;
@@ -50,32 +61,37 @@ Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
 
 Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   Status error;
-  std::wstring wsrc;
-  if (!llvm::ConvertUTF8toWide(src.GetPath(), wsrc)) {
+  llvm::SmallVector<wchar_t, MAX_PATH> wsrc;
+  if (llvm::sys::windows::widenPath(src.GetPath(), wsrc)) {
     error = Status::FromErrorString(PATH_CONVERSION_ERROR);
     return error;
   }
 
   HANDLE h = ::CreateFileW(
-      wsrc.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+      wsrc.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
       OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
   if (h == INVALID_HANDLE_VALUE) {
     error = Status(::GetLastError(), lldb::eErrorTypeWin32);
     return error;
   }
 
-  std::vector<wchar_t> buf(PATH_MAX + 1);
+  llvm::SmallVector<wchar_t, MAX_PATH> buf(MAX_PATH + 1);
   // Subtract 1 from the path length since this function does not add a null
-  // terminator.
+  // terminator. The result is an extended-length ("\\?\") path.
   DWORD result = ::GetFinalPathNameByHandleW(
       h, buf.data(), buf.size() - 1, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+  while (result >= buf.size() - 1) {
+    buf.resize(result + 1);
+    result = ::GetFinalPathNameByHandleW(
+        h, buf.data(), buf.size() - 1, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+  }
   std::string path;
   if (result == 0)
     error = Status(::GetLastError(), lldb::eErrorTypeWin32);
-  else if (!llvm::convertWideToUTF8(buf.data(), path))
+  else if (!llvm::convertWideToUTF8(std::wstring(buf.data(), result), path))
     error = Status::FromErrorString(PATH_CONVERSION_ERROR);
   else
-    dst.SetFile(path, FileSpec::Style::native);
+    dst.SetFile(StripExtendedLengthPrefix(path), FileSpec::Style::native);
 
   ::CloseHandle(h);
   return error;
@@ -87,24 +103,25 @@ Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
 }
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {
-  std::wstring wpath, wmode;
-  if (!llvm::ConvertUTF8toWide(path, wpath))
+  llvm::SmallVector<wchar_t, MAX_PATH> wpath;
+  std::wstring wmode;
+  if (llvm::sys::windows::widenPath(path, wpath))
     return nullptr;
   if (!llvm::ConvertUTF8toWide(mode, wmode))
     return nullptr;
   FILE *file;
-  if (_wfopen_s(&file, wpath.c_str(), wmode.c_str()) != 0)
+  if (_wfopen_s(&file, wpath.data(), wmode.c_str()) != 0)
     return nullptr;
   return file;
 }
 
 int FileSystem::Open(const char *path, int flags, int mode) {
-  std::wstring wpath;
-  if (!llvm::ConvertUTF8toWide(path, wpath))
+  llvm::SmallVector<wchar_t, MAX_PATH> wpath;
+  if (llvm::sys::windows::widenPath(path, wpath))
     return -1;
   // All other bits are rejected by _wsopen_s
   mode = mode & (_S_IREAD | _S_IWRITE);
   int result;
-  ::_wsopen_s(&result, wpath.c_str(), flags, _SH_DENYNO, mode);
+  ::_wsopen_s(&result, wpath.data(), flags, _SH_DENYNO, mode);
   return result;
 }

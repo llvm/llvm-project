@@ -313,7 +313,7 @@ define nofpclass(nan ninf nnorm nsub nzero) half @ret_no_negative_no_nan__fptrun
 define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 ; CHECK-NEXT:    [[ZERO:%.*]] = call float @returns_zero_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan float [[ZERO]] to half
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc nnan ninf float [[ZERO]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %zero = call float @returns_zero_f32()
@@ -324,7 +324,7 @@ define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero() {
 define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero_or_nan() {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_no_snan__fptrunc__always_zero_or_nan() {
 ; CHECK-NEXT:    [[ZERO_OR_NAN:%.*]] = call float @returns_zero_or_nan_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc float [[ZERO_OR_NAN]] to half
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc ninf float [[ZERO_OR_NAN]] to half
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %zero.or.nan = call float @returns_zero_or_nan_f32()
@@ -619,4 +619,48 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unkn
   %select = select i1 %cond, float %snan, float %unknown0
   %result = fptrunc float %select to half
   ret half %result
+}
+
+define i1 @f32_subnormal_to_f16_not_normal(float nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: define i1 @f32_subnormal_to_f16_not_normal(
+; CHECK-SAME: float nofpclass(nan inf norm) [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %narrow = fptrunc float %x to half
+  %normal = call i1 @llvm.is.fpclass.f16(half %narrow, i32 264)
+  ret i1 %normal
+}
+
+define i1 @f64_subnormal_to_f32_not_normal(double nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: define i1 @f64_subnormal_to_f32_not_normal(
+; CHECK-SAME: double nofpclass(nan inf norm) [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %narrow = fptrunc double %x to float
+  %normal = call i1 @llvm.is.fpclass.f32(float %narrow, i32 264)
+  ret i1 %normal
+}
+
+define i1 @f32_subnormal_to_bf16_can_be_normal(float nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: define i1 @f32_subnormal_to_bf16_can_be_normal(
+; CHECK-SAME: float nofpclass(nan inf norm) [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = fptrunc float [[X]] to bfloat
+; CHECK-NEXT:    [[NORMAL:%.*]] = call i1 @llvm.is.fpclass.bf16(bfloat [[NARROW]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[NORMAL]]
+;
+  %narrow = fptrunc float %x to bfloat
+  %normal = call i1 @llvm.is.fpclass.bf16(bfloat %narrow, i32 264)
+  ret i1 %normal
+}
+
+define i1 @f32_normal_to_f16_can_be_normal(float nofpclass(nan inf sub zero) %x) {
+; CHECK-LABEL: define i1 @f32_normal_to_f16_can_be_normal(
+; CHECK-SAME: float nofpclass(nan inf zero sub) [[X:%.*]]) {
+; CHECK-NEXT:    [[NARROW:%.*]] = fptrunc float [[X]] to half
+; CHECK-NEXT:    [[NORMAL:%.*]] = call i1 @llvm.is.fpclass.f16(half [[NARROW]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[NORMAL]]
+;
+  %narrow = fptrunc float %x to half
+  %normal = call i1 @llvm.is.fpclass.f16(half %narrow, i32 264)
+  ret i1 %normal
 }

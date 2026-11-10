@@ -217,7 +217,7 @@ implementation (which is very often glibc).
 
 - Run math smoke and unit tests:
 ```
-  $ ninja libc-math-unittests
+  $ ninja libc-math-tests
 ```
 
 - Build and Run a specific unit test:

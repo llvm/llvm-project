@@ -202,7 +202,7 @@ void test_explanation(int x, int y) {
     return;
   case 4:
     if (x != 0)
-      __single_val_0(x); // expected-warning{{is out of the accepted range; It should be zero [}}
+      __single_val_0(x); // expected-warning{{is out of the accepted range; it should be zero [}}
     return;
   case 5:
     if (x == 3)
@@ -230,7 +230,7 @@ void test_explanation(int x, int y) {
     return;
   case 11:
     if (__test_case_range_1_2__4_6(x) == 4)
-      __range_1_2__4_6(x); // expected-warning{{is out of the accepted range; It should be 1 or 2 or between 4 and 6 [}}
+      __range_1_2__4_6(x); // expected-warning{{is out of the accepted range; it should be 1 or 2 or between 4 and 6 [}}
     return;
   }
 }

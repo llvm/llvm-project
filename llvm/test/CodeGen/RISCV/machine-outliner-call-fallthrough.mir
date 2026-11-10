@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir < %s \
 # RUN: | FileCheck -check-prefix=RV32 %s
-# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir < %s \
 # RUN: | FileCheck -check-prefix=RV64 %s
 
 # Check a normal outlined call at the end of a block that falls through to its

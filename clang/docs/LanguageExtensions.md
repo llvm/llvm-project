@@ -1782,8 +1782,10 @@ More information can be found [here](Modules.md).
 | `= delete ("should have a reason");`          | \_\_cpp_deleted_function           | C++26         | C++03         |
 | Variadic Friends                              | \_\_cpp_variadic_friend            | C++26         | C++03         |
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
+| `#embed`                                      | \_\_cpp_pp_embed                   | C++26         | C++03         |
 |``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
 | Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
+| Defaulted postfix `++` and `--` operators     |                                    | C++2d         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
 | `_Complex` (N693)                             |                                    | C99           | C89, C++      |
 | `_Bool` (N815)                                |                                    | C99           | C89           |
@@ -1807,7 +1809,7 @@ More information can be found [here](Modules.md).
 | `_Thread_local` (N1364)                       |                                    | C11           | C89, C++      |
 | Array & element qualification (N2607)         |                                    | C23           | C89           |
 | Attributes (N2335)                            |                                    | C23           | C89           |
-| `#embed` (N3017)                              |                                    | C23           | C89, C++      |
+| `#embed` (N3017)                              |                                    | C23           | C89           |
 | Enum with fixed underlying type (N3030)       |                                    | C23           | C89           |
 | `#warning` (N2686)                            |                                    | C23           | C89           |
 | `_BitInt` (N3035)                             |                                    | C23           | C89, C++      |
@@ -1880,6 +1882,35 @@ template <typename...> struct TypeList;
 // The resulting type is TypeList<int, double, char>
 template <typename ...ExtraTypes>
 using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double, ExtraTypes...>...>;
+```
+
+**Limitations**:
+
+- This builtin can only be used inside a template.
+- The resulting pack is currently only supported for expansion in template argument lists and base specifiers.
+- This builtin cannot be assigned to a template template parameter.
+
+### \_\_builtin_sort_pack
+
+```c++
+template <class... Ts>
+using __builtin_sort_pack = ...;
+```
+
+This alias takes a template parameter pack `Ts` and produces a new unexpanded pack containing the same types
+sorted by [`__builtin_type_order`](#builtin-type-order).
+
+The resulting pack can be expanded in contexts like template argument lists or base specifiers.
+
+**Example of Use**:
+
+```c++
+template <typename...> struct TypeList;
+
+// Combined with `__builtin_dedup_pack` to canonicalize a type list.
+template <typename ...ExtraTypes>
+using MyTypeList = TypeList<
+    __builtin_sort_pack<__builtin_dedup_pack<int, double, ExtraTypes...>...>...>;
 ```
 
 **Limitations**:
@@ -2056,9 +2087,11 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
   These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
-- `__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
-  implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`, 
+- (builtin-type-order)=
+  `__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
+  implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`,
   and `std::strong_ordering::equal` if they are the same type.
+  The order is stable across translation units for a given platform/ABI.
 
 In addition, the following expression traits are supported:
 
@@ -5266,6 +5299,11 @@ This means that arbitrary integer values stored in pointer-type variables must
 not be passed to these builtins. For those use cases, the builtins can still be
 used, but the operation must be performed on the pointer cast to `uintptr_t`.
 
+Null pointers are considered to be aligned to any requested alignment.
+Therefore, `__builtin_is_aligned` evaluates to true for null pointer
+arguments, and `__builtin_align_up` and `__builtin_align_down` preserve
+the null pointer value.
+
 If Clang can determine that the alignment is not a power of two at compile time,
 it will result in a compilation failure. If the alignment argument is not a
 power of two at run time, the behavior of these builtins is undefined.
@@ -5460,28 +5498,37 @@ returns the bit at the position of the current lane. It is almost equivalent to
 `(mask & (1 << lane_id)) != 0`, except that its behavior is only defined if
 the given mask has the same value for all active lanes of the current wave.
 
-#### \_\_builtin_amdgcn_av\_{load,store}\_b128
+#### \_\_builtin_amdgcn_av\_{load,store}\_{b8,b16,b32,b64,b128}
 
 Signature:
 
 ```c
+typedef __attribute__((__vector_size__(2 * sizeof(unsigned int)))) unsigned int v2u;
 typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u;
 
+unsigned char __builtin_amdgcn_av_load_b8(unsigned char *src, int scope);
+unsigned short __builtin_amdgcn_av_load_b16(unsigned short *src, int scope);
+unsigned int __builtin_amdgcn_av_load_b32(unsigned int *src, int scope);
+v2u __builtin_amdgcn_av_load_b64(v2u *src, int scope);
 v4u __builtin_amdgcn_av_load_b128(v4u *src, int scope);
 
+void __builtin_amdgcn_av_store_b8(unsigned char *dst, unsigned char data, int scope);
+void __builtin_amdgcn_av_store_b16(unsigned short *dst, unsigned short data, int scope);
+void __builtin_amdgcn_av_store_b32(unsigned int *dst, unsigned int data, int scope);
+void __builtin_amdgcn_av_store_b64(v2u *dst, v2u data, int scope);
 void __builtin_amdgcn_av_store_b128(v4u *dst, v4u data, int scope);
 ```
 
-Load or store a vector of 4 unsigned integers from or to memory with cache
-behavior specified by `scope`, which is one of the `__MEMORY_SCOPE_*` macros
-defined for {ref}`scoped atomic builtins <langext-c11-atomic>`.
+Load or store 8, 16, 32, 64 or 128 bits from or to memory with cache behavior
+specified by `scope`, which is one of the `__MEMORY_SCOPE_*` macros defined for
+{ref}`scoped atomic builtins <langext-c11-atomic>`.
 
 The pointer argument must point to the global or generic address space.
 
 These builtins are supported on gfx9, gfx10, gfx11, and gfx12 targets.
 
-They map to the LLVM intrinsics `llvm.amdgcn.av.load.b128` and
-`llvm.amdgcn.av.store.b128` documented in [User Guide for AMDGPU Backend](https://llvm.org/docs/AMDGPUUsage.html).
+They map to the LLVM intrinsics `llvm.amdgcn.av.load.b{8,16,32,64,128}` and
+`llvm.amdgcn.av.store.b{8,16,32,64,128}` documented in [User Guide for AMDGPU Backend](https://llvm.org/docs/AMDGPUUsage.html).
 
 ### ARM/AArch64 Language Extensions
 

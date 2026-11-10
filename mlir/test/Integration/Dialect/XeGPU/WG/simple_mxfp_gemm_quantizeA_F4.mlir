@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri"
+// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri binary-format=skip"
 // RUN-DISABLED: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=workgroup zebin-chip=cri" \
 // RUN-DISABLED: | mlir-runner \
 // RUN-DISABLED:   --shared-libs=%mlir_levelzero_runtime \
@@ -26,7 +26,8 @@ module @gemm attributes {gpu.container_module} {
     // along the K dimension with block size 32. B and its scale are passed in
     // pre-quantized (packed ui8 fp4 and f8E8M0). The quantized values are then
     // consumed by xegpu.dpas_mx.
-    gpu.func @gemm_mxfp(%arg0: memref<256x4096xbf16>, %arg1: memref<2048x256xi8>, %arg3: memref<128x256xf8E8M0FNU>, %arg4: memref<256x256xf32>) kernel {
+    gpu.func @gemm_mxfp(%arg0: memref<256x4096xbf16>, %arg1: memref<2048x256xi8>, %arg3: memref<128x256xf8E8M0FNU>, %arg4: memref<256x256xf32>) kernel attributes
+      {known_block_size = array<i32: 64, 1, 1>}  {
       %c0 = arith.constant 0 : index
       %mstep = arith.constant 32 : index
       %nstep = arith.constant 32 : index

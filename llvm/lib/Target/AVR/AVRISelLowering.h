@@ -33,8 +33,8 @@ public:
     return MVT::i8;
   }
 
-  MVT::SimpleValueType getCmpLibcallReturnType() const override {
-    return MVT::i8;
+  IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const override {
+    return Type::getInt8Ty(Ctx);
   }
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;

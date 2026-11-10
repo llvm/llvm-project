@@ -14,7 +14,7 @@ end program
 ! NO_OMP-NOT: AutomapToTargetDataPass
 ! NO_OMP-NOT: MapInfoFinalizationPass
 ! NO_OMP-NOT: GenericLoopConversionPass
-! NO_OMP-NOT: InlineHLFIRAssign
+! NO_OMP: InlineHLFIRAssign
 ! NO_OMP-NOT: LowerWorkshare
 ! NO_OMP-NOT: LowerWorkdistribute
 ! NO_OMP-NOT: SimdOnlyPass
@@ -30,7 +30,7 @@ end program
 ! FULL: AutomapToTargetDataPass
 ! FULL: MapInfoFinalizationPass
 ! FULL: GenericLoopConversionPass
-! FULL-NOT: InlineHLFIRAssign
+! FULL: InlineHLFIRAssign
 ! FULL: LowerWorkshare
 ! FULL: LowerWorkdistribute
 ! FULL-NOT: SimdOnlyPass
@@ -47,7 +47,7 @@ end program
 ! SIMD-NOT: AutomapToTargetDataPass
 ! SIMD-NOT: MapInfoFinalizationPass
 ! SIMD-NOT: GenericLoopConversionPass
-! SIMD-NOT: InlineHLFIRAssign
+! SIMD: InlineHLFIRAssign
 ! SIMD-NOT: LowerWorkshare
 ! SIMD-NOT: LowerWorkdistribute
 ! SIMD: SimdOnlyPass

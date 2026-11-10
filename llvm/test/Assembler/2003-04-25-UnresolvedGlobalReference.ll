@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -o /dev/null
+; RUN: llvm-as %s -disable-output
 ; RUN: verify-uselistorder %s
 ; There should be absolutely no problem with this testcase.
 

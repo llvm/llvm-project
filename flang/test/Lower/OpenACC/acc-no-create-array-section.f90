@@ -14,7 +14,7 @@ end subroutine
 ! CHECK:           %[[NOCREATE_0:.*]] = acc.nocreate var(%{{.*}} : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUNDS_0]]) name("a(11:20)") -> !fir.box<!fir.array<?xf32>>
 ! CHECK:           acc.parallel dataOperands(%[[NOCREATE_0]] : !fir.box<!fir.array<?xf32>>) {
 ! CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[NOCREATE_0]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-! CHECK:             %[[DECLARE_2:.*]]:2 = hlfir.declare %[[BOX_ADDR_0]](%[[SHAPE_0]]) {uniq_name = "_QFfooEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK:             %[[DECLARE_2:.*]]:2 = hlfir.declare %[[BOX_ADDR_0]](%[[SHAPE_0]]) uniq_name("_QFfooEa") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK:             fir.call @_QPbar(%[[DECLARE_2]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
 ! CHECK:             acc.yield
 ! CHECK:           }

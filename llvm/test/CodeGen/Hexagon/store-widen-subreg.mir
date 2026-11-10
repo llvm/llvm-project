@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=hexagon -run-pass=hexagon-widen-stores -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass=hexagon-widen-stores %s -o - | FileCheck %s
 
 # Test that store widening correctly handles DoubleRegs operands with subreg
 # in S2_addasl_rrri instruction. The widening pass should preserve the subreg

@@ -332,7 +332,8 @@ define i1 @test_both_signed_and_unsigned_conds_needed_in_reproducer(ptr %src, pt
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %0 = icmp sge i16 %N, 0
 ; CHECK-NEXT:   call void @llvm.assume(i1 %0)
-; CHECK-NEXT:   %src.end = getelementptr inbounds i8, ptr %src, i16 %N
+; CHECK-NEXT:   %src.end.idx = sext i16 %N to i64
+; CHECK-NEXT:   %src.end = getelementptr inbounds i8, ptr %src, i64 %src.end.idx
 ; CHECK-NEXT:   %cmp.src.start = icmp ule ptr %src, %src.end
 ; CHECK-NEXT:   ret i1 %cmp.src.start
 ; CHECK-NEXT: }
@@ -342,7 +343,8 @@ entry:
   br i1 %N.pos, label %then, label %else
 
 then:
-  %src.end = getelementptr inbounds i8, ptr %src, i16 %N
+  %src.end.idx = sext i16 %N to i64
+  %src.end = getelementptr inbounds i8, ptr %src, i64 %src.end.idx
   %cmp.src.start = icmp ule ptr %src, %src.end
   ret i1 %cmp.src.start
 

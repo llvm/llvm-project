@@ -21,6 +21,7 @@
 #include "caml/alloc.h"
 #include "caml/custom.h"
 #include "caml/version.h"
+#include "llvm-c/Core.h"
 
 #if OCAML_VERSION < 41200
 /* operations on OCaml option values, defined by OCaml 4.12 */
@@ -57,11 +58,14 @@ void *from_val_array(value Elements);
 #define Use_val(v) ((LLVMUseRef)from_val(v))
 #define BasicBlock_val(v) ((LLVMBasicBlockRef)from_val(v))
 #define MemoryBuffer_val(v) ((LLVMMemoryBufferRef)from_val(v))
+#define DataLayout_val(v) (*(LLVMTargetDataRef *)(Data_custom_val(v)))
 
 /* Convert a C pointer to an OCaml option */
 value ptr_to_option(void *Ptr);
 
 /* Convert a C string into an OCaml string */
 value cstr_to_string(const char *Str, mlsize_t Len);
+
+value llvm_alloc_data_layout(LLVMTargetDataRef DataLayout);
 
 #endif // LLVM_LLVM_OCAML_H

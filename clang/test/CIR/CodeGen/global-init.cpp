@@ -37,16 +37,16 @@ struct NeedsCtor {
 
 NeedsCtor needsCtor;
 
-// CIR-BEFORE-LPP: cir.global external @needsCtor = ctor : !rec_NeedsCtor {
+// CIR-BEFORE-LPP: cir.global external @needsCtor = #cir.zero : !rec_NeedsCtor ctor {
 // CIR-BEFORE-LPP:   %[[THIS:.*]] = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN9NeedsCtorC1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsCtor> {{.*}}) -> ()
 
 // CIR: cir.global external @needsCtor = #cir.zero : !rec_NeedsCtor
-// CIR: cir.func internal private @__cxx_global_var_init() {
+// CIR: cir.func internal private @__cxx_global_var_init(){{.*}} {
 // CIR:   %0 = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
 // CIR:   cir.call @_ZN9NeedsCtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtor> {{.*}}) -> ()
 
-// LLVM: define internal void @__cxx_global_var_init()
+// LLVM: define internal void @__cxx_global_var_init() #{{[0-9]+}}
 // LLVM:   call void @_ZN9NeedsCtorC1Ev(ptr noundef nonnull align 1 dereferenceable(1) @needsCtor)
 
 // OGCG: define internal void @__cxx_global_var_init() {{.*}} section ".text.startup" {
@@ -64,7 +64,7 @@ NeedsDtor needsDtor;
 // CIR-BEFORE-LPP:   cir.call @_ZN9NeedsDtorD1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsDtor>) -> ()
 
 // CIR: cir.global external @needsDtor = #cir.zero : !rec_NeedsDtor
-// CIR: cir.func internal private @__cxx_global_var_init.1() {
+// CIR: cir.func internal private @__cxx_global_var_init.1(){{.*}} {
 // CIR:   %[[OBJ:.*]] = cir.get_global @needsDtor : !cir.ptr<!rec_NeedsDtor>
 // CIR:   %[[DTOR:.*]] = cir.get_global @_ZN9NeedsDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_NeedsDtor>)>>
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_NeedsDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
@@ -72,7 +72,7 @@ NeedsDtor needsDtor;
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[OBJ_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
-// LLVM: define internal void @__cxx_global_var_init.1() {
+// LLVM: define internal void @__cxx_global_var_init.1() #{{[0-9]+}} {
 // LLVM:   call i32 @__cxa_atexit(ptr @_ZN9NeedsDtorD1Ev, ptr @needsDtor, ptr @__dso_handle)
 
 // OGCG: define internal void @__cxx_global_var_init.1() {{.*}} section ".text.startup" {
@@ -85,7 +85,7 @@ struct NeedsCtorDtor {
 
 NeedsCtorDtor needsCtorDtor;
 
-// CIR-BEFORE-LPP: cir.global external @needsCtorDtor = ctor : !rec_NeedsCtorDtor {
+// CIR-BEFORE-LPP: cir.global external @needsCtorDtor = #cir.zero : !rec_NeedsCtorDtor ctor {
 // CIR-BEFORE-LPP:   %[[THIS:.*]] = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN13NeedsCtorDtorC1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsCtorDtor> {{.*}}) -> ()
 // CIR-BEFORE-LPP: } dtor {
@@ -93,7 +93,7 @@ NeedsCtorDtor needsCtorDtor;
 // CIR-BEFORE-LPP:   cir.call @_ZN13NeedsCtorDtorD1Ev(%[[THIS]]) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
 
 // CIR: cir.global external @needsCtorDtor = #cir.zero : !rec_NeedsCtorDtor
-// CIR: cir.func internal private @__cxx_global_var_init.2() {
+// CIR: cir.func internal private @__cxx_global_var_init.2(){{.*}} {
 // CIR:   %[[OBJ:.*]] = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
 // CIR:   cir.call @_ZN13NeedsCtorDtorC1Ev(%[[OBJ]]) : (!cir.ptr<!rec_NeedsCtorDtor> {{.*}}) -> ()
 // CIR:   %[[OBJ:.*]] = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
@@ -103,7 +103,7 @@ NeedsCtorDtor needsCtorDtor;
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[OBJ_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
-// LLVM: define internal void @__cxx_global_var_init.2() {
+// LLVM: define internal void @__cxx_global_var_init.2() #{{[0-9]+}} {
 // LLVM:   call void @_ZN13NeedsCtorDtorC1Ev(ptr noundef nonnull align 1 dereferenceable(1) @needsCtorDtor)
 // LLVM:   call i32 @__cxa_atexit(ptr @_ZN13NeedsCtorDtorD1Ev, ptr @needsCtorDtor, ptr @__dso_handle)
 
@@ -115,7 +115,7 @@ float num;
 float _Complex a = {num, num};
 
 // CIR-BEFORE-LPP: cir.global external @num = #cir.fp<0.000000e+00> : !cir.float
-// CIR-BEFORE-LPP: cir.global external @a = ctor : !cir.complex<!cir.float> {
+// CIR-BEFORE-LPP: cir.global external @a = #cir.zero : !cir.complex<!cir.float> ctor {
 // CIR-BEFORE-LPP:  %[[THIS:.*]] = cir.get_global @a : !cir.ptr<!cir.complex<!cir.float>>
 // CIR-BEFORE-LPP:  %[[NUM:.*]] = cir.get_global @num : !cir.ptr<!cir.float>
 // CIR-BEFORE-LPP:  %[[REAL:.*]] = cir.load{{.*}} %[[NUM]] : !cir.ptr<!cir.float>, !cir.float
@@ -136,7 +136,7 @@ float _Complex a = {num, num};
 // CIR:   %[[COMPLEX_VAL:.*]] = cir.complex.create %[[REAL]], %[[IMAG]] : !cir.float -> !cir.complex<!cir.float>
 // CIR:   cir.store{{.*}} %[[COMPLEX_VAL]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: define internal void @__cxx_global_var_init.3()
+// LLVM: define internal void @__cxx_global_var_init.3() #{{[0-9]+}}
 // LLVM:   %[[REAL:.*]] = load float, ptr @num, align 4
 // LLVM:   %[[IMAG:.*]] = load float, ptr @num, align 4
 // LLVM:   %[[TMP_COMPLEX_VAL:.*]] = insertvalue { float, float } {{.*}}, float %[[REAL]], 0
@@ -152,7 +152,7 @@ float _Complex a = {num, num};
 float fp;
 int i = (int)fp;
 
-// CIR-BEFORE-LPP: cir.global external @i = ctor : !s32i {
+// CIR-BEFORE-LPP: cir.global external @i = #cir.int<0> : !s32i ctor {
 // CIR-BEFORE-LPP:   %[[I:.*]] = cir.get_global @i : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:   %[[FP:.*]] = cir.get_global @fp : !cir.ptr<!cir.float>
 // CIR-BEFORE-LPP:   %[[FP_VAL:.*]] = cir.load{{.*}} %[[FP]] : !cir.ptr<!cir.float>, !cir.float
@@ -167,7 +167,7 @@ int i = (int)fp;
 // CIR:   %[[FP_I32:.*]] = cir.cast float_to_int %[[TMP_FP]] : !cir.float -> !s32i
 // CIR:   cir.store{{.*}} %[[FP_I32]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define internal void @__cxx_global_var_init.4()
+// LLVM: define internal void @__cxx_global_var_init.4() #{{[0-9]+}}
 // LLVM:   %[[TMP_FP:.*]] = load float, ptr @fp, align 4
 // LLVM:   %[[FP_I32:.*]] = fptosi float %[[TMP_FP]] to i32
 // LLVM:   store i32 %[[FP_I32]], ptr @i, align 4
@@ -193,9 +193,10 @@ ArrayDtor arrDtor[16];
 // CIR-BEFORE-LPP:        }
 
 // CIR: cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16>
-// CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}) {
+// CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}){{.*}} {
+// CIR:   %[[ARR:.*]] = cir.cast bitcast %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR:   %[[CONST16:.*]] = cir.const #cir.int<16> : !u64i
-// CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!rec_ArrayDtor>
+// CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> -> !cir.ptr<!rec_ArrayDtor>
 // CIR:   %[[END:.*]] = cir.ptr_stride %[[BEGIN]], %[[CONST16]] : (!cir.ptr<!rec_ArrayDtor>, !u64i) -> !cir.ptr<!rec_ArrayDtor>
 // CIR:   %[[CUR_ADDR:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
 // CIR:   cir.store %[[END]], %[[CUR_ADDR]] : !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
@@ -214,7 +215,7 @@ ArrayDtor arrDtor[16];
 // CIR:   cir.return
 // CIR: }
 //
-// CIR: cir.func internal private @__cxx_global_var_init.5() {
+// CIR: cir.func internal private @__cxx_global_var_init.5(){{.*}} {
 // CIR:   %[[ARR:.*]] = cir.get_global @arrDtor : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR:   %[[DTOR:.*]] = cir.get_global @__cxx_global_array_dtor : !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
@@ -222,7 +223,7 @@ ArrayDtor arrDtor[16];
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
 // CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[ARR_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 
-// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) {
+// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[ARR_ARG:.*]]) #{{[0-9]+}} {
 // LLVM:   %[[BEGIN:.*]] = getelementptr %struct.ArrayDtor, ptr %[[ARR_ARG]], i32 0
 // LLVM:   %[[END:.*]] = getelementptr %struct.ArrayDtor, ptr %[[BEGIN]], i64 16
 // LLVM:   %[[CUR_ADDR:.*]] = alloca ptr
@@ -242,7 +243,7 @@ ArrayDtor arrDtor[16];
 // LLVM:   ret void
 // LLVM: }
 //
-// LLVM: define internal void @__cxx_global_var_init.5() {
+// LLVM: define internal void @__cxx_global_var_init.5() #{{[0-9]+}} {
 // LLVM:   call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @arrDtor, ptr @__dso_handle)
 
 // Note: OGCG defines these functions in reverse order of CIR->LLVM.
@@ -270,7 +271,7 @@ ArrayDtor arrDtor[16];
 int globalInt;
 double &&globalDoubleRef = static_cast<double &&>(globalInt);
 // CIR-BEFORE-LPP: cir.global external @globalInt = #cir.int<0> : !s32i
-// CIR-BEFORE-LPP: cir.global external @globalDoubleRef = ctor : !cir.ptr<!cir.double> {
+// CIR-BEFORE-LPP: cir.global external @globalDoubleRef = #cir.ptr<null> : !cir.ptr<!cir.double> ctor {
 // CIR-BEFORE-LPP:   %[[GET_SELF:.*]] = cir.get_global @globalDoubleRef : !cir.ptr<!cir.ptr<!cir.double>>
 // CIR-BEFORE-LPP:   %[[GET_BACKING_VAR:.*]] = cir.get_global @_ZGR15globalDoubleRef_ : !cir.ptr<!cir.double>
 // CIR-BEFORE-LPP:   %[[GET_INT_VAR:.*]] = cir.get_global @globalInt : !cir.ptr<!s32i>
@@ -282,7 +283,7 @@ double &&globalDoubleRef = static_cast<double &&>(globalInt);
 
 // CIR: cir.global external @globalInt = #cir.int<0> : !s32i
 // CIR: cir.global external @globalDoubleRef = #cir.ptr<null> : !cir.ptr<!cir.double>
-// CIR: cir.func internal private @__cxx_global_var_init.6() {
+// CIR: cir.func internal private @__cxx_global_var_init.6(){{.*}} {
 // CIR:   %[[GET_SELF:.*]] = cir.get_global @globalDoubleRef : !cir.ptr<!cir.ptr<!cir.double>>
 // CIR:   %[[GET_BACKING_VAR:.*]] = cir.get_global @_ZGR15globalDoubleRef_ : !cir.ptr<!cir.double>
 // CIR:   %[[GET_INT_VAR:.*]] = cir.get_global @globalInt : !cir.ptr<!s32i>
@@ -292,7 +293,7 @@ double &&globalDoubleRef = static_cast<double &&>(globalInt);
 // CIR:   cir.store align(8) %[[GET_BACKING_VAR]], %[[GET_SELF]] : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
 // CIR: cir.global "private" internal @_ZGR15globalDoubleRef_ = #cir.fp<0.000000e+00> : !cir.double
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.6()
+// LLVM-LABEL: define internal void @__cxx_global_var_init.6() #{{[0-9]+}}
 // LLVM:   %[[GET_INT_VAR:.*]] = load i32, ptr @globalInt, align 4
 // LLVM:   %[[CAST:.*]] = sitofp i32 %[[GET_INT_VAR]] to double
 // LLVM:   store double %[[CAST]], ptr @_ZGR15globalDoubleRef_, align 8
@@ -306,7 +307,7 @@ double &&globalDoubleRef = static_cast<double &&>(globalInt);
 
 // Common init function for all globals with default priority
 
-// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
+// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]](){{.*}} {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.1() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.2() : () -> ()
@@ -315,7 +316,7 @@ double &&globalDoubleRef = static_cast<double &&>(globalInt);
 // CIR:   cir.call @__cxx_global_var_init.5() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.6() : () -> ()
 
-// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME]]()
+// LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME]]() #{{[0-9]+}}
 // LLVM:   call void @__cxx_global_var_init()
 // LLVM:   call void @__cxx_global_var_init.1()
 // LLVM:   call void @__cxx_global_var_init.2()

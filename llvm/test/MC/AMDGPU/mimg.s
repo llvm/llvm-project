@@ -14,27 +14,27 @@
 // Image Load/Store
 //===----------------------------------------------------------------------===//
 
-image_load    v[4:6], v[237:240], s[28:35] dmask:0x7 unorm
+image_load v[4:6], v[237:240], s[28:35] dmask:0x7 unorm
 // GCN:  image_load v[4:6], v[237:240], s[28:35] dmask:0x7 unorm ; encoding: [0x00,0x17,0x00,0xf0,0xed,0x04,0x07,0x00]
 
-image_load    v4, v237, s[28:35]
+image_load v4, v237, s[28:35]
 // GCN:  image_load v4, v237, s[28:35] ; encoding: [0x00,0x00,0x00,0xf0,0xed,0x04,0x07,0x00]
 
-image_load    v4, v[237:238], s[28:35]
+image_load v4, v[237:238], s[28:35]
 // GCN:  image_load v4, v[237:238], s[28:35] ; encoding: [0x00,0x00,0x00,0xf0,0xed,0x04,0x07,0x00]
 
-image_load    v4, v[237:239], s[28:35]
+image_load v4, v[237:239], s[28:35]
 // GCN:  image_load v4, v[237:239], s[28:35] ; encoding: [0x00,0x00,0x00,0xf0,0xed,0x04,0x07,0x00]
 
-image_load    v4, v[237:240], s[28:35]
+image_load v4, v[237:240], s[28:35]
 // GCN:  image_load v4, v[237:240], s[28:35] ; encoding: [0x00,0x00,0x00,0xf0,0xed,0x04,0x07,0x00]
 
-image_load    v[4:7], v[237:240], s[28:35] dmask:0x7 tfe
+image_load v[4:7], v[237:240], s[28:35] dmask:0x7 tfe
 // GCN:  image_load v[4:7], v[237:240], s[28:35] dmask:0x7 tfe ; encoding: [0x00,0x07,0x01,0xf0,0xed,0x04,0x07,0x00]
 
 // Verify support of all possible modifiers.
 // FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
-image_load    v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 tfe lwe da d16
+image_load v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 tfe lwe da d16
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: d16 modifier is not supported on this GPU
 // VI:     image_load v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 tfe lwe da d16 ; encoding: [0x00,0xf1,0x03,0xf2,0x01,0x05,0x02,0x80]
 // NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
@@ -47,37 +47,37 @@ image_load v5, v[1:4], s[8:15] r128
 // SICIVI: image_load v5, v[1:4], s[8:15] r128 ; encoding: [0x00,0x80,0x00,0xf0,0x01,0x05,0x02,0x00]
 // NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
-image_store   v[193:195], v[237:240], s[28:35] dmask:0x7 unorm
+image_store v[193:195], v[237:240], s[28:35] dmask:0x7 unorm
 // GCN: image_store v[193:195], v[237:240], s[28:35] dmask:0x7 unorm ; encoding: [0x00,0x17,0x20,0xf0,0xed,0xc1,0x07,0x00]
 
-image_store   v193, v237, s[28:35]
+image_store v193, v237, s[28:35]
 // GCN: image_store v193, v237, s[28:35] ; encoding: [0x00,0x00,0x20,0xf0,0xed,0xc1,0x07,0x00]
 
-image_store   v193, v[237:238], s[28:35]
+image_store v193, v[237:238], s[28:35]
 // GCN: image_store v193, v[237:238], s[28:35] ; encoding: [0x00,0x00,0x20,0xf0,0xed,0xc1,0x07,0x00]
 
-image_store   v193, v[237:239], s[28:35]
+image_store v193, v[237:239], s[28:35]
 // GCN: image_store v193, v[237:239], s[28:35] ; encoding: [0x00,0x00,0x20,0xf0,0xed,0xc1,0x07,0x00]
 
-image_store   v193, v[237:240], s[28:35]
+image_store v193, v[237:240], s[28:35]
 // GCN: image_store v193, v[237:240], s[28:35] ; encoding: [0x00,0x00,0x20,0xf0,0xed,0xc1,0x07,0x00]
 
-image_store   v[193:194], v[237:240], s[28:35] tfe
+image_store v[193:194], v[237:240], s[28:35] tfe
 // GCN: image_store v[193:194], v[237:240], s[28:35] tfe ; encoding: [0x00,0x00,0x21,0xf0,0xed,0xc1,0x07,0x00]
 
 // Verify support of all possible modifiers.
 // FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
-image_store   v5, v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 lwe da d16
+image_store v5, v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 lwe da d16
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: d16 modifier is not supported on this GPU
 // VI:     image_store v5, v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 lwe da d16 ; encoding: [0x00,0xf1,0x22,0xf2,0x01,0x05,0x02,0x80]
 // NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
-image_store    v5, v[1:4], s[8:15] d16
+image_store v5, v[1:4], s[8:15] d16
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: d16 modifier is not supported on this GPU
 // GFX89:  image_store v5, v[1:4], s[8:15] d16 ; encoding: [0x00,0x00,0x20,0xf0,0x01,0x05,0x02,0x80]
 
 // FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
-image_store    v5, v[1:4], s[8:15] r128
+image_store v5, v[1:4], s[8:15] r128
 // SICIVI: image_store v5, v[1:4], s[8:15] r128 ; encoding: [0x00,0x80,0x20,0xf0,0x01,0x05,0x02,0x00]
 // NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
@@ -306,30 +306,30 @@ image_store_mip_pck v252, v[2:3], s[12:19] dmask:0x1 a16
 // Image Sample
 //===----------------------------------------------------------------------===//
 
-image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 unorm
+image_sample v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 unorm
 // GCN: image_sample v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 unorm ; encoding: [0x00,0x17,0x80,0xf0,0xed,0xc1,0x27,0x00]
 
-image_sample  v193, v237, s[28:35], s[4:7]
+image_sample v193, v237, s[28:35], s[4:7]
 // GCN: image_sample v193, v237, s[28:35], s[4:7] ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x00]
 
-image_sample  v193, v[237:238], s[28:35], s[4:7]
+image_sample v193, v[237:238], s[28:35], s[4:7]
 // GCN: image_sample v193, v[237:238], s[28:35], s[4:7] ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x00]
 
-image_sample  v193, v[237:239], s[28:35], s[4:7]
+image_sample v193, v[237:239], s[28:35], s[4:7]
 // GCN: image_sample v193, v[237:239], s[28:35], s[4:7] ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x00]
 
-image_sample  v193, v[237:240], s[28:35], s[4:7]
+image_sample v193, v[237:240], s[28:35], s[4:7]
 // GCN: image_sample v193, v[237:240], s[28:35], s[4:7] ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x00]
 
-image_sample  v[193:194], v[237:240], s[28:35], s[4:7] tfe
+image_sample v[193:194], v[237:240], s[28:35], s[4:7] tfe
 // GCN: image_sample v[193:194], v[237:240], s[28:35], s[4:7] tfe ; encoding: [0x00,0x00,0x81,0xf0,0xed,0xc1,0x27,0x00]
 
 // FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
-image_sample  v193, v[237:240], s[28:35], s[4:7] r128
+image_sample v193, v[237:240], s[28:35], s[4:7] r128
 // SICIVI: image_sample v193, v[237:240], s[28:35], s[4:7] r128 ; encoding: [0x00,0x80,0x80,0xf0,0xed,0xc1,0x27,0x00]
 // NOGFX9: :[[@LINE-2]]:{{[0-9]+}}: error: r128 modifier is not supported on this GPU
 
-image_sample  v193, v[237:240], s[28:35], s[4:7] d16
+image_sample v193, v[237:240], s[28:35], s[4:7] d16
 // NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: d16 modifier is not supported on this GPU
 // GFX89:  image_sample v193, v[237:240], s[28:35], s[4:7] d16 ; encoding: [0x00,0x00,0x80,0xf0,0xed,0xc1,0x27,0x80]
 
@@ -337,7 +337,7 @@ image_sample  v193, v[237:240], s[28:35], s[4:7] d16
 // Image Sample: d16 packed
 //===----------------------------------------------------------------------===//
 
-image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
+image_sample v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
 // NOSICI:   error: d16 modifier is not supported on this GPU
 // GFX8_0:   image_sample v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 d16 ; encoding: [0x00,0x07,0x80,0xf0,0xed,0xc1,0x27,0x80]
 // NOGFX8_1: :[[@LINE-3]]:{{[0-9]+}}: error: image data size does not match dmask, d16 and tfe
@@ -347,7 +347,7 @@ image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
 // Image Sample: d16 unpacked
 //===----------------------------------------------------------------------===//
 
-image_sample  v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
+image_sample v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16
 // NOSICI:   error: d16 modifier is not supported on this GPU
 // NOGFX8_0: :[[@LINE-2]]:{{[0-9]+}}: error: image data size does not match dmask and tfe
 // GFX8_1:   image_sample v[193:194], v[237:240], s[28:35], s[4:7] dmask:0x7 d16 ; encoding: [0x00,0x07,0x80,0xf0,0xed,0xc1,0x27,0x80]

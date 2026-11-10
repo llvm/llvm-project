@@ -7,6 +7,7 @@
 //
 //   * `MatrixSubscriptExpr` index computation
 //   * `MatrixSingleSubscriptExpr` row extraction
+//   * `CK_HLSLElementwiseCast` matrix construction
 //   * `__builtin_hlsl_mul` matrix-multiply transpose insertion
 //   * `__builtin_hlsl_transpose` row/col dimension swap
 //   * `CK_HLSLMatrixTruncation` shuffle mask
@@ -26,6 +27,32 @@ export float subscript_rm(int row, int col, row_major float2x3 m) {
 // CHECK: [[IDX:%.*]] = add i32 [[OFFSET]], [[ROW]]
 // CHECK: extractelement <6 x float> %{{.*}}, i32 [[IDX]]
 
+// Matrix out parameters point directly to storage, so their element indices
+// must use the declared memory layout.
+export void write_row_major_element(out row_major float2x3 m, float value) {
+  m[0][1] = value;
+}
+// CHECK-LABEL: define void @_Z23write_row_major_element{{.*}}(
+// CHECK: [[M_PTR:%.*]] = load ptr, ptr %m.addr
+// CHECK: [[ELEMENT_ADDR:%.*]] = getelementptr <6 x float>, ptr [[M_PTR]], i32 0, i32 1
+// CHECK: store float %{{.*}}, ptr [[ELEMENT_ADDR]]
+
+export float call_write_row_major_element(float value) {
+  column_major float2x3 source = {1, 2, 3, 4, 5, 6};
+  write_row_major_element(source, value);
+  return source._m01;
+}
+// CHECK-LABEL: define {{.*}} float @_Z28call_write_row_major_element
+// CHECK: [[SOURCE:%.*]] = alloca [3 x <2 x float>]
+// CHECK-NEXT: [[OUT_TEMP:%.*]] = alloca <6 x float>
+// CHECK: call void @_Z23write_row_major_element{{.*}}(ptr {{.*}} [[OUT_TEMP]], float {{.*}})
+// CHECK-NEXT: [[ROW_MAJOR:%.*]] = load <6 x float>, ptr [[OUT_TEMP]]
+// CHECK-NEXT: [[TO_COLUMN_MAJOR:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[ROW_MAJOR]], i32 3, i32 2)
+// CHECK-NEXT: store <6 x float> [[TO_COLUMN_MAJOR]], ptr [[SOURCE]]
+// CHECK: [[CANONICAL:%.*]] = load <6 x float>, ptr [[SOURCE]]
+// CHECK-NEXT: [[ELEMENT:%.*]] = extractelement <6 x float> [[CANONICAL]], i32 2
+// CHECK-NEXT: ret float [[ELEMENT]]
+
 // -----------------------------------------------------------------------------
 // MatrixSubscriptExpr indexing: column-major attr -> Col*NumRows + Row
 // -----------------------------------------------------------------------------
@@ -40,8 +67,8 @@ export float subscript_cm(int row, int col, column_major float2x3 m) {
 // CHECK: extractelement <6 x float> %{{.*}}, i32 [[IDX]]
 
 // -----------------------------------------------------------------------------
-// MatrixSingleSubscriptExpr (row extraction): attribute selects the per-element
-// index formula even when the TU default disagrees.
+// MatrixSingleSubscriptExpr (row extraction) uses canonical column-major
+// indexing even when the destination storage layout is row-major.
 // -----------------------------------------------------------------------------
 
 // Row extraction also indexes the canonical column-major prvalue.
@@ -65,6 +92,20 @@ export float3 row_extract_cm(int row, column_major float2x3 m) {
 // CHECK: add i32 0, [[ROW]]
 // CHECK: add i32 2, [[ROW]]
 // CHECK: add i32 4, [[ROW]]
+
+// -----------------------------------------------------------------------------
+// CK_HLSLElementwiseCast produces a canonical column-major register value.
+// An explicit row-major destination affects only the subsequent memory store.
+// -----------------------------------------------------------------------------
+typedef row_major float2x2 RowMajorMatrix;
+
+export float cast_row_major(float4 v) {
+  RowMajorMatrix m = (RowMajorMatrix)v;
+  return m[0][1];
+}
+// CHECK-LABEL: define {{.*}} float @_Z14cast_row_major
+// CHECK: [[SECOND:%.*]] = extractelement <4 x float> %{{.*}}, i32 1
+// CHECK: insertelement <4 x float> %{{.*}}, float [[SECOND]], i64 2
 
 // -----------------------------------------------------------------------------
 // __builtin_hlsl_mul (vector * matrix): row-major operand triggers a transpose

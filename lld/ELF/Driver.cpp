@@ -223,7 +223,7 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
 }
 
 // Opens a file and create a file object. Path has to be resolved already.
-// Every regular input (not binary-format or linker scripts) is recorded as a
+// Every regular input (not linker scripts) is recorded as a
 // LoadJob. Inside createFiles() jobs batch up and are expanded in parallel at
 // the end. Outside createFiles() (e.g. addDependentLibrary during parseFiles)
 // the single job is expanded immediately.
@@ -235,26 +235,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   MemoryBufferRef mbref = *buffer;
 
-  if (ctx.arg.formatBinary) {
-    loadJobs.push_back({mbref,
-                        path,
-                        LoadJob::Binary,
-                        /*inWholeArchive=*/false,
-                        /*lazy=*/false,
-                        /*asNeeded=*/false,
-                        /*withLOption=*/false,
-                        nextGroupId,
-                        {},
-                        {},
-                        {}});
-  } else {
-    auto magic = identify_magic(mbref.getBuffer());
-    if (magic == file_magic::unknown) {
+  LoadJob::Kind kind = LoadJob::Binary;
+  if (!ctx.arg.formatBinary) {
+    switch (identify_magic(mbref.getBuffer())) {
+    case file_magic::unknown:
       readLinkerScript(ctx, mbref);
       return;
-    }
-    LoadJob::Kind kind;
-    switch (magic) {
     case file_magic::archive:
       kind = LoadJob::Archive;
       break;
@@ -275,18 +261,18 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       Err(ctx) << path << ": unknown file type";
       return;
     }
-    loadJobs.push_back({mbref,
-                        path,
-                        kind,
-                        inWholeArchive,
-                        inLib,
-                        ctx.arg.asNeeded,
-                        withLOption,
-                        nextGroupId,
-                        {},
-                        {},
-                        {}});
   }
+  loadJobs.push_back({mbref,
+                      path,
+                      kind,
+                      inWholeArchive,
+                      inLib,
+                      ctx.arg.asNeeded,
+                      withLOption,
+                      nextGroupId,
+                      {},
+                      {},
+                      {}});
   if (!isInGroup)
     ++nextGroupId;
   if (!deferLoad)
@@ -415,6 +401,10 @@ static void checkOptions(Ctx &ctx) {
     else if (!ctx.arg.isRela)
       ErrAlways(ctx) << "-z mark-plt requires -z rela";
   }
+
+  if (ctx.arg.emachine == EM_CUDA && !ctx.arg.ltoEmitAsm && !ctx.arg.emitLLVM)
+    ErrAlways(ctx) << "CUDA input is only supported with --lto-emit-asm or "
+                      "--lto-emit-llvm";
 
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
@@ -699,6 +689,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
+  initLLVM();
   readConfigs(ctx, args);
   checkZOptions(ctx, args);
 
@@ -716,7 +707,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope("ExecuteLinker");
 
-    initLLVM();
     createFiles(args);
     if (errCount(ctx))
       return;
@@ -1368,7 +1358,9 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
+  // have been called.
+  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
@@ -1525,7 +1517,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   ctx.arg.mmapOutputFile =
-      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
   ctx.arg.oFormatBinary = isOutputFormatBinary(ctx, args);
@@ -2678,7 +2670,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
-      Defined(ctx, s->file, StringRef(), s->binding, s->stOther, s->type,
+      Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
               /*value=*/0, s->size, bss)
           .overwrite(*s);
     }
@@ -2739,6 +2731,11 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err) {
           Err(ctx) << f << ": could not decode addrsig section: " << err;
+          break;
+        }
+        if (symIndex >= syms.size()) {
+          Err(ctx) << f << ": out of range symbol index " << symIndex
+                   << " in addrsig section";
           break;
         }
         markAddrsig(icfSafe, syms[symIndex]);
@@ -3019,8 +3016,6 @@ static void readSecurityNotes(Ctx &ctx) {
       ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_RISCV)
     return;
 
-  ctx.arg.andFeatures = -1;
-
   StringRef referenceFileName;
   if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
@@ -3042,6 +3037,14 @@ static void readSecurityNotes(Ctx &ctx) {
       return {ctx, DiagLevel::None};
     return {ctx, toDiagLevel(policy)};
   };
+
+  // We start with a mask with all bits set, unless we have no true object
+  // file like in ld -b binary invocations.
+  if (!ctx.objectFiles.empty())
+    ctx.arg.andFeatures = -1;
+  else
+    ctx.arg.andFeatures = 0;
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -3203,50 +3206,13 @@ static void readSecurityNotes(Ctx &ctx) {
           << "dependencies have the GCS marking.";
 }
 
-static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
-
-static void postParseObjectFile(ELFFileBase *file) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->postParse();
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->postParse();
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->postParse();
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->postParse();
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
-
 // Objects that support Dynamic Debugging contain an ELF Dynamic Debugging
 // section that embeds an unoptimized ELF file with debug information. We
 // extract these embedded ELF files to make a consolidated unoptimized
 // relocatable ELF file to embed in an ELF Dynamic Debugging section in the
 // output. See llvm/docs/DynamicDebugging.md for more details.
-template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
+template <class ELFT>
+static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   Ctx dctx;
   LinkerScript script(dctx);
   dctx.e.initialize(ctx.e.outs(), ctx.e.errs(), ctx.e.exitEarly,
@@ -3267,11 +3233,14 @@ template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
   if (errCount(ctx))
     return;
 
+  auto saveArg = [&](const Twine &arg) { return dctx.saver.save(arg).data(); };
   std::vector<const char *> args{
       dctx.arg.progName.data(), "-r", "-o", "-",
-      dctx.saver.save(Twine("-O") + Twine(ctx.arg.optimize)).data()};
+      saveArg(Twine("-O") + Twine(ctx.arg.optimize))};
   if (ctx.arg.resolveGroups)
     args.push_back("--force-group-allocation");
+  for (const auto &ws : wrapped)
+    args.push_back(saveArg(Twine("--wrap=") + ws.sym->getName()));
   dctx.driver.linkerMain(args);
   if (errCount(dctx) > 0 || !dctx.dynDbgOutput) {
     Err(ctx) << "failed to create relocatable dynamic debug object";
@@ -3372,9 +3341,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
   parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/false);
+    cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
   });
-  parallelForEach(ctx.objectFiles, postParseObjectFile);
+  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->postParse();
+  });
   parallelForEach(ctx.bitcodeFiles,
                   [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx.nonPrevailingSyms) {
@@ -3466,9 +3437,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // more file will be added.
   auto newObjectFiles = ArrayRef(ctx.objectFiles).slice(numObjsBeforeLTO);
   parallelForEach(newObjectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/true);
+    cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
   });
-  parallelForEach(newObjectFiles, postParseObjectFile);
+  parallelForEach(newObjectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->postParse();
+  });
   for (const DuplicateSymbol &d : ctx.duplicates)
     reportDuplicate(ctx, *d.sym, d.file, d.section, d.value);
 
@@ -3584,7 +3557,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   if (ctx.hasDynDbg) {
     llvm::TimeTraceScope timeScope("Link dynamic debugging");
-    linkDynamicDebug<ELFT>(ctx);
+    linkDynamicDebug<ELFT>(ctx, wrapped);
     if (errCount(ctx))
       return;
   }

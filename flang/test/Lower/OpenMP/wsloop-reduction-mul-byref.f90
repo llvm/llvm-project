@@ -82,9 +82,9 @@
 
 ! CHECK-LABEL:   func.func @_QPsimple_int_reduction() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_int_reductionEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFsimple_int_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFsimple_int_reductionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_int_reductionEx"}>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsimple_int_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFsimple_int_reductionEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel {
@@ -93,8 +93,8 @@
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_5:.*]] : !fir.ref<i32>) reduction(byref @multiply_reduction_byref_i32 %[[VAL_3]]#0 -> %[[VAL_10:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_11:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
-! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_int_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_int_reductionEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFsimple_int_reductionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFsimple_int_reductionEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 hlfir.assign %[[VAL_11]] to %[[VAL_6]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_13:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_14:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
@@ -118,9 +118,9 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsimple_real_reduction() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_real_reductionEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFsimple_real_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFsimple_real_reductionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFsimple_real_reductionEx"}>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsimple_real_reductionEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFsimple_real_reductionEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : f32, !fir.ref<f32>
 ! CHECK:           omp.parallel {
@@ -129,8 +129,8 @@ end subroutine
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_5:.*]] : !fir.ref<i32>) reduction(byref @multiply_reduction_byref_f32 %[[VAL_3]]#0 -> %[[VAL_10:.*]] : !fir.ref<f32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_11:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
-! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_real_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_real_reductionEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFsimple_real_reductionEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFsimple_real_reductionEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:                 hlfir.assign %[[VAL_11]] to %[[VAL_6]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_13:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<f32>
 ! CHECK:                 %[[VAL_14:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
@@ -155,9 +155,9 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsimple_int_reduction_switch_order() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_int_reduction_switch_orderEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFsimple_int_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFsimple_int_reduction_switch_orderEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFsimple_int_reduction_switch_orderEx"}>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsimple_int_reduction_switch_orderEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFsimple_int_reduction_switch_orderEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel {
@@ -166,8 +166,8 @@ end subroutine
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_5:.*]] : !fir.ref<i32>) reduction(byref @multiply_reduction_byref_i32 %[[VAL_3]]#0 -> %[[VAL_10:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_11:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
-! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_int_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_int_reduction_switch_orderEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFsimple_int_reduction_switch_orderEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFsimple_int_reduction_switch_orderEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 hlfir.assign %[[VAL_11]] to %[[VAL_6]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_13:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_14:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<i32>
@@ -191,9 +191,9 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPsimple_real_reduction_switch_order() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFsimple_real_reduction_switch_orderEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFsimple_real_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFsimple_real_reduction_switch_orderEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFsimple_real_reduction_switch_orderEx"}>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFsimple_real_reduction_switch_orderEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFsimple_real_reduction_switch_orderEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_4]] to %[[VAL_3]]#0 : f32, !fir.ref<f32>
 ! CHECK:           omp.parallel {
@@ -202,8 +202,8 @@ end subroutine
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_5:.*]] : !fir.ref<i32>) reduction(byref @multiply_reduction_byref_f32 %[[VAL_3]]#0 -> %[[VAL_10:.*]] : !fir.ref<f32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_11:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
-! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFsimple_real_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_real_reduction_switch_orderEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFsimple_real_reduction_switch_orderEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] uniq_name("_QFsimple_real_reduction_switch_orderEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:                 hlfir.assign %[[VAL_11]] to %[[VAL_6]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_13:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> f32
@@ -228,13 +228,13 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPmultiple_int_reductions_same_type() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_int_reductions_same_typeEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFmultiple_int_reductions_same_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFmultiple_int_reductions_same_typeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_int_reductions_same_typeEx"}>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFmultiple_int_reductions_same_typeEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFmultiple_int_reductions_same_typeEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFmultiple_int_reductions_same_typeEy"}>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFmultiple_int_reductions_same_typeEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFmultiple_int_reductions_same_typeEy") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "z", uniq_name = "_QFmultiple_int_reductions_same_typeEz"}>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmultiple_int_reductions_same_typeEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFmultiple_int_reductions_same_typeEz") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_8]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i32
@@ -247,10 +247,10 @@ end subroutine
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_11:.*]] : !fir.ref<i32>) reduction(byref @multiply_reduction_byref_i32 %[[VAL_3]]#0 -> %[[VAL_16:.*]], byref @multiply_reduction_byref_i32 %[[VAL_5]]#0 -> %[[VAL_17:.*]], byref @multiply_reduction_byref_i32 %[[VAL_7]]#0 -> %[[VAL_18:.*]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_19:.*]]) : i32 = (%[[VAL_13]]) to (%[[VAL_14]]) inclusive step (%[[VAL_15]]) {
-! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFmultiple_int_reductions_same_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = "_QFmultiple_int_reductions_same_typeEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFmultiple_int_reductions_same_typeEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFmultiple_int_reductions_same_typeEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] uniq_name("_QFmultiple_int_reductions_same_typeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_16]] uniq_name("_QFmultiple_int_reductions_same_typeEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_17]] uniq_name("_QFmultiple_int_reductions_same_typeEy") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_18]] uniq_name("_QFmultiple_int_reductions_same_typeEz") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 hlfir.assign %[[VAL_19]] to %[[VAL_12]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_23:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_24:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<i32>
@@ -286,13 +286,13 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPmultiple_real_reductions_same_type() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_real_reductions_same_typeEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFmultiple_real_reductions_same_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFmultiple_real_reductions_same_typeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFmultiple_real_reductions_same_typeEx"}>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFmultiple_real_reductions_same_typeEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFmultiple_real_reductions_same_typeEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca f32 <{bindc_name = "y", uniq_name = "_QFmultiple_real_reductions_same_typeEy"}>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFmultiple_real_reductions_same_typeEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFmultiple_real_reductions_same_typeEy") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca f32 <{bindc_name = "z", uniq_name = "_QFmultiple_real_reductions_same_typeEz"}>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmultiple_real_reductions_same_typeEz"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFmultiple_real_reductions_same_typeEz") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           hlfir.assign %[[VAL_8]] to %[[VAL_3]]#0 : f32, !fir.ref<f32>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 1.000000e+00 : f32
@@ -305,10 +305,10 @@ end subroutine
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_11:.*]] : !fir.ref<i32>) reduction(byref @multiply_reduction_byref_f32 %[[VAL_3]]#0 -> %[[VAL_16:.*]], byref @multiply_reduction_byref_f32 %[[VAL_5]]#0 -> %[[VAL_17:.*]], byref @multiply_reduction_byref_f32 %[[VAL_7]]#0 -> %[[VAL_18:.*]] : !fir.ref<f32>, !fir.ref<f32>, !fir.ref<f32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_19:.*]]) : i32 = (%[[VAL_13]]) to (%[[VAL_14]]) inclusive step (%[[VAL_15]]) {
-! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QFmultiple_real_reductions_same_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = "_QFmultiple_real_reductions_same_typeEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFmultiple_real_reductions_same_typeEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFmultiple_real_reductions_same_typeEz"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] uniq_name("_QFmultiple_real_reductions_same_typeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_16]] uniq_name("_QFmultiple_real_reductions_same_typeEx") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_17]] uniq_name("_QFmultiple_real_reductions_same_typeEy") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_18]] uniq_name("_QFmultiple_real_reductions_same_typeEz") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:                 hlfir.assign %[[VAL_19]] to %[[VAL_12]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_23:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<f32>
 ! CHECK:                 %[[VAL_24:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<i32>
@@ -347,15 +347,15 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPmultiple_reductions_different_type() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFmultiple_reductions_different_typeEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFmultiple_reductions_different_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFmultiple_reductions_different_typeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca f64 <{bindc_name = "w", uniq_name = "_QFmultiple_reductions_different_typeEw"}>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFmultiple_reductions_different_typeEw"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFmultiple_reductions_different_typeEw") : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFmultiple_reductions_different_typeEx"}>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFmultiple_reductions_different_typeEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] uniq_name("_QFmultiple_reductions_different_typeEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.alloca i64 <{bindc_name = "y", uniq_name = "_QFmultiple_reductions_different_typeEy"}>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFmultiple_reductions_different_typeEy"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] uniq_name("_QFmultiple_reductions_different_typeEy") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca f32 <{bindc_name = "z", uniq_name = "_QFmultiple_reductions_different_typeEz"}>
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFmultiple_reductions_different_typeEz"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] uniq_name("_QFmultiple_reductions_different_typeEz") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i32
 ! CHECK:           hlfir.assign %[[VAL_10]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 1 : i64
@@ -370,11 +370,11 @@ end subroutine
 ! CHECK:             %[[VAL_18:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_14:.*]] : !fir.ref<i32>) reduction(byref @multiply_reduction_byref_i32 %[[VAL_5]]#0 -> %[[VAL_19:.*]], byref @multiply_reduction_byref_i64 %[[VAL_7]]#0 -> %[[VAL_20:.*]], byref @multiply_reduction_byref_f32 %[[VAL_9]]#0 -> %[[VAL_21:.*]], byref @multiply_reduction_byref_f64 %[[VAL_3]]#0 -> %[[VAL_22:.*]] : !fir.ref<i32>, !fir.ref<i64>, !fir.ref<f32>, !fir.ref<f64>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_23:.*]]) : i32 = (%[[VAL_16]]) to (%[[VAL_17]]) inclusive step (%[[VAL_18]]) {
-! CHECK:                 %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] {uniq_name = "_QFmultiple_reductions_different_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFmultiple_reductions_different_typeEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = "_QFmultiple_reductions_different_typeEy"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:                 %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_21]] {uniq_name = "_QFmultiple_reductions_different_typeEz"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_22]] {uniq_name = "_QFmultiple_reductions_different_typeEw"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:                 %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] uniq_name("_QFmultiple_reductions_different_typeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_19]] uniq_name("_QFmultiple_reductions_different_typeEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_20]] uniq_name("_QFmultiple_reductions_different_typeEy") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:                 %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_21]] uniq_name("_QFmultiple_reductions_different_typeEz") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_22]] uniq_name("_QFmultiple_reductions_different_typeEw") : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:                 hlfir.assign %[[VAL_23]] to %[[VAL_15]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_28:.*]] = fir.load %[[VAL_24]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_29:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<i32>

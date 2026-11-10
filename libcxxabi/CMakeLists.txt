@@ -13,6 +13,13 @@ if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
     "at least 3.31.0 now to avoid issues in the future.")
 endif()
 
+# GCC 16's module scanning redirects standard header includes to libstdc++
+# headers, which fails when using libc++ headers.
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=127940
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND POLICY CMP0155)
+  cmake_policy(SET CMP0155 OLD)
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc++abi")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")

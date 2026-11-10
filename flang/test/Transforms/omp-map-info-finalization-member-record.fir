@@ -16,8 +16,8 @@
 !t2 = !fir.type<_QFTt2{b:!fir.type<_QFTt1{a:!fir.box<!fir.heap<i32>>}>}>
 
 func.func @test_member_map_not_direct_target_operand(%arg0: !fir.ref<!t2>, %arg1: !fir.ref<!t2>) {
-  %0:2 = hlfir.declare %arg0 {uniq_name = "_QFEvar1"} : (!fir.ref<!t2>) -> (!fir.ref<!t2>, !fir.ref<!t2>)
-  %1:2 = hlfir.declare %arg1 {uniq_name = "_QFEvar2"} : (!fir.ref<!t2>) -> (!fir.ref<!t2>, !fir.ref<!t2>)
+  %0:2 = hlfir.declare %arg0 uniq_name("_QFEvar1") : (!fir.ref<!t2>) -> (!fir.ref<!t2>, !fir.ref<!t2>)
+  %1:2 = hlfir.declare %arg1 uniq_name("_QFEvar2") : (!fir.ref<!t2>) -> (!fir.ref<!t2>, !fir.ref<!t2>)
 
   %b1 = hlfir.designate %0#0{"b"} : (!fir.ref<!t2>) -> !fir.ref<!t1>
   %b2 = hlfir.designate %1#0{"b"} : (!fir.ref<!t2>) -> !fir.ref<!t1>

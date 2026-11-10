@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <sycl/__impl/handler.hpp>
+
 #include <detail/context_impl.hpp>
 #include <detail/handler_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 #include <detail/queue_impl.hpp>
-#include <sycl/__impl/handler.hpp>
+
+#include <cstring>
+#include <functional>
+#include <memory>
+#include <utility>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -26,7 +32,7 @@ static void checkCommandGroupFunction(
 }
 
 void handler::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
-                               void *ArgData, size_t ArgSize) {
+                               void *ArgData, std::size_t ArgSize) {
   checkCommandGroupFunction(MImpl.MCGF, MImpl.MQueue.getContext());
   MImpl.MArgData.resize(ArgSize);
   std::memcpy(MImpl.MArgData.data(), ArgData, ArgSize);
@@ -40,7 +46,7 @@ void handler::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
 }
 
 void handler::setKernelRange(const detail::UnifiedRangeView &Range) {
-  MImpl.MRange = convertToOlRange(Range);
+  MImpl.MRange = detail::convertToOlRange(Range);
 }
 
 void handler::memcpy(void *dest, const void *src, std::size_t numBytes) {
@@ -51,12 +57,31 @@ void handler::memcpy(void *dest, const void *src, std::size_t numBytes) {
   };
 }
 
+void handler::prefetch(const void *ptr, std::size_t numBytes) {
+  checkCommandGroupFunction(MImpl.MCGF, MImpl.MQueue.getContext());
+  MImpl.MCGF = [this, ptr, numBytes]() {
+    return MImpl.MQueue.prefetch(ptr, numBytes,
+                                 detail::getSyclObjImpls(MDepEvents));
+  };
+}
+
 std::shared_ptr<detail::EventImpl> handler::finalize() {
   if (MImpl.MCGF)
     return MImpl.MCGF();
 
   auto EventsImpl = detail::getSyclObjImpls(MDepEvents);
   return MImpl.MQueue.submitWait(EventsImpl);
+}
+
+void handler::fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                       std::size_t Count) {
+  checkCommandGroupFunction(MImpl.MCGF, MImpl.MQueue.getContext());
+  MImpl.MFillPattern.resize(PatternSize);
+  std::memcpy(MImpl.MFillPattern.data(), Pattern, PatternSize);
+  MImpl.MCGF = [this, Ptr, PatternSize, Count]() {
+    return MImpl.MQueue.fill(Ptr, MImpl.MFillPattern.data(), PatternSize, Count,
+                             detail::getSyclObjImpls(MDepEvents));
+  };
 }
 
 _LIBSYCL_END_NAMESPACE_SYCL

@@ -25,7 +25,7 @@
 ; CHECK-DAG: %[[I89]] = OpFunction
 
 ; CHECK: %[[Foo]] = OpFunction
-; CHECK-4: OpFunctionParameter
+; CHECK-COUNT-4: OpFunctionParameter
 
 ; CHECK: %[[Arg1:.*]] = OpPhi %[[TyPtrStruct2]]
 ; CHECK: %[[VTbl:.*]] = OpBitcast %[[TyPtrPtrFun]] %[[#]]

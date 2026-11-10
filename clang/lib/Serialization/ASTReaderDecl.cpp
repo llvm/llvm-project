@@ -2333,7 +2333,7 @@ RedeclarableResult ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
 
 void ASTDeclReader::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   D->setExplicitSpecifier(Record.readExplicitSpec());
-  D->Ctor = readDeclAs<CXXConstructorDecl>();
+  D->CtorAndKind.setPointer(readDeclAs<CXXConstructorDecl>());
   VisitFunctionDecl(D);
   D->setDeductionCandidateKind(
       static_cast<DeductionCandidate>(Record.readInt()));

@@ -97,6 +97,7 @@ protected:
 
   bool MadeChange;
   UniformityInfo *UA = nullptr;
+  bool UseCSELocal = false;
 
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

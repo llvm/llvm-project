@@ -185,11 +185,11 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakFunctionDeclarationParameters);
   CHECK_PARSE_BOOL(BreakStringLiterals);
+  CHECK_PARSE_BOOL(CompactCaseLabels);
   CHECK_PARSE_BOOL(CompactNamespaces);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
-  CHECK_PARSE_BOOL(IndentAccessModifiers);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentExportBlock);
@@ -254,6 +254,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyRecord);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyNamespace);
+  CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtEndOfBlock);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtEndOfFile);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfBlock);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfFile);
@@ -1029,6 +1030,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               AllowShortIfStatementsOnASingleLine,
               FormatStyle::SIS_WithoutElse);
 
+  Style.IndentAccessModifiers = FormatStyle::IAMS_Always;
+  CHECK_PARSE("IndentAccessModifiers: Never", IndentAccessModifiers,
+              FormatStyle::IAMS_Never);
+  CHECK_PARSE("IndentAccessModifiers: Always", IndentAccessModifiers,
+              FormatStyle::IAMS_Always);
+  CHECK_PARSE("IndentAccessModifiers: AfterFirstAccessModifier",
+              IndentAccessModifiers,
+              FormatStyle::IAMS_AfterFirstAccessModifier);
+  CHECK_PARSE("IndentAccessModifiers: false", IndentAccessModifiers,
+              FormatStyle::IAMS_Never);
+  CHECK_PARSE("IndentAccessModifiers: true", IndentAccessModifiers,
+              FormatStyle::IAMS_Always);
+
   Style.IndentExternBlock = FormatStyle::IEBS_NoIndent;
   CHECK_PARSE("IndentExternBlock: AfterExternBlock", IndentExternBlock,
               FormatStyle::IEBS_AfterExternBlock);
@@ -1153,6 +1167,15 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("WhitespaceSensitiveMacros: ['STRINGIZE', 'ASSERT']",
               WhitespaceSensitiveMacros,
               std::vector<std::string>({"STRINGIZE", "ASSERT"}));
+
+  CHECK_PARSE("IncludeBlocks: Merge", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Merge);
+  CHECK_PARSE("IncludeBlocks: Regroup", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Regroup);
+  CHECK_PARSE("IncludeBlocks: Preserve", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Preserve);
+  CHECK_PARSE("IncludeBlocks: RegroupByDirectory", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_RegroupByDirectory);
 
   Style.IncludeStyle.IncludeCategories.clear();
   std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {

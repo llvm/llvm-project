@@ -1,9 +1,14 @@
-//===-- Tests for pthread_equal -------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Tests for pthread_equal.
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/stdint_proxy.h" // uintptr_t
@@ -44,6 +49,12 @@ TEST_MAIN() {
   auto main_thread = LIBC_NAMESPACE::pthread_self();
   pthread_id_np_t main_thread_id = LIBC_NAMESPACE::pthread_getthreadid_np();
 
+  pthread_t null_thread = PTHREAD_NULL;
+  ASSERT_NE(LIBC_NAMESPACE::pthread_equal(null_thread, null_thread), 0);
+  ASSERT_NE(LIBC_NAMESPACE::pthread_equal(main_thread, main_thread), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(main_thread, null_thread), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(null_thread, main_thread), 0);
+
   // The idea here is that, we start a child thread which will immediately
   // wait on |mutex|. The main thread will update the global |child_thread| var
   // and unlock |mutex|. This will give the child thread a chance to compare
@@ -54,8 +65,10 @@ TEST_MAIN() {
   pthread_id_np_t th_id;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&th, nullptr, child_func, &result),
             0);
-  // This new thread should of course not be equal to the main thread.
+  // This new thread should of course not be equal to the main thread or null.
   ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(th, main_thread), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(th, null_thread), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_equal(null_thread, th), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_getunique_np(&th, &th_id), 0);
   ASSERT_NE(th_id, main_thread_id);
 

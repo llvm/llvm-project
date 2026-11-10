@@ -8,9 +8,9 @@
 ! CHECK:         %[[unbox:.*]]:2 = fir.unboxchar %[[arg0]]
 ! CHECK:         %[[addr:.*]] = fir.convert %[[unbox]]#0
 ! CHECK:         %[[c:.*]]:2 = hlfir.declare %[[addr]](%{{.*}}) typeparams %{{.*}}
-! CHECK:         %[[test:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtestEtest"}
+! CHECK:         %[[test:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtestEtest")
 ! CHECK:         %[[slice:.*]] = hlfir.designate %[[c]]#0 (%c1{{.*}}:%c1{{.*}}:%c1{{.*}}) substr %c1{{.*}}, %c8{{.*}}
-! CHECK:         %[[const:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.1x8xc1.0"}
+! CHECK:         %[[const:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QQro.1x8xc1.0") fortran_attrs<parameter>
 ! CHECK:         %[[res:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<1x!fir.logical<4>> {
 ! CHECK:         ^bb0(%[[idx:.*]]: index):
 ! CHECK:           %[[lhs_addr:.*]] = hlfir.designate %[[slice]] (%[[idx]])

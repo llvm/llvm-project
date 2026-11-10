@@ -8,76 +8,71 @@ define i32 @combine_add_zext_xor(i32 inreg %cond) {
 ; GFX1010-LABEL: combine_add_zext_xor:
 ; GFX1010:       ; %bb.0: ; %.entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX1010-NEXT:    s_mov_b32 s5, 0
-; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
+; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
+; GFX1010-NEXT:    s_mov_b32 s4, 0
+; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
+; GFX1010-NEXT:    s_and_b32 vcc_lo, exec_lo, s5
 ; GFX1010-NEXT:    s_branch .LBB0_2
 ; GFX1010-NEXT:  .LBB0_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GFX1010-NEXT:    s_xor_b32 s6, s6, -1
-; GFX1010-NEXT:    s_and_b32 s6, s6, exec_lo
-; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX1010-NEXT:    s_add_i32 s7, s5, s6
-; GFX1010-NEXT:    s_cmpk_gt_i32 s5, 0xfbe6
-; GFX1010-NEXT:    s_mov_b32 s5, s7
+; GFX1010-NEXT:    s_xor_b32 s5, s5, -1
+; GFX1010-NEXT:    s_and_b32 s5, s5, exec_lo
+; GFX1010-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX1010-NEXT:    s_add_i32 s6, s4, s5
+; GFX1010-NEXT:    s_cmpk_gt_i32 s4, 0xfbe6
+; GFX1010-NEXT:    s_mov_b32 s4, s6
 ; GFX1010-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GFX1010-NEXT:  .LBB0_2: ; %.a
 ; GFX1010-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1010-NEXT:    s_and_b32 s6, s4, exec_lo
-; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX1010-NEXT:    s_cmp_lg_u32 s6, 1
-; GFX1010-NEXT:    ; implicit-def: $sgpr6
-; GFX1010-NEXT:    s_cbranch_scc1 .LBB0_1
+; GFX1010-NEXT:    ; implicit-def: $sgpr5
+; GFX1010-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GFX1010-NEXT:  ; %bb.3: ; %bb
 ; GFX1010-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GFX1010-NEXT:    v_mov_b32_e32 v0, s5
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1010-NEXT:    buffer_load_dword v0, v0, s[4:7], 64 offen glc
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
-; GFX1010-NEXT:    v_readfirstlane_b32 s6, v0
-; GFX1010-NEXT:    s_cmp_eq_u32 s6, 0
-; GFX1010-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX1010-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX1010-NEXT:    s_cmp_eq_u32 s5, 0
+; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
 ; GFX1010-NEXT:    s_branch .LBB0_1
 ; GFX1010-NEXT:  .LBB0_4: ; %.exit
-; GFX1010-NEXT:    v_mov_b32_e32 v0, s6
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: combine_add_zext_xor:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1100-NEXT:    s_mov_b32 s1, 0
-; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1100-NEXT:    s_mov_b32 s0, 0
+; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
 ; GFX1100-NEXT:    s_branch .LBB0_2
-; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB0_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GFX1100-NEXT:    s_xor_b32 s2, s2, -1
+; GFX1100-NEXT:    s_xor_b32 s1, s1, -1
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1100-NEXT:    s_add_i32 s3, s1, s2
-; GFX1100-NEXT:    s_cmpk_gt_i32 s1, 0xfbe6
-; GFX1100-NEXT:    s_mov_b32 s1, s3
+; GFX1100-NEXT:    s_and_b32 s1, s1, exec_lo
+; GFX1100-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX1100-NEXT:    s_add_i32 s2, s0, s1
+; GFX1100-NEXT:    s_cmpk_gt_i32 s0, 0xfbe6
+; GFX1100-NEXT:    s_mov_b32 s0, s2
 ; GFX1100-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GFX1100-NEXT:  .LBB0_2: ; %.a
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1100-NEXT:    s_and_b32 s2, s0, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1100-NEXT:    ; implicit-def: $sgpr2
-; GFX1100-NEXT:    s_cbranch_scc1 .LBB0_1
+; GFX1100-NEXT:    ; implicit-def: $sgpr1
+; GFX1100-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GFX1100-NEXT:  ; %bb.3: ; %bb
 ; GFX1100-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GFX1100-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1100-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1100-NEXT:    buffer_load_b32 v0, v0, s[0:3], 64 offen glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1100-NEXT:    s_cmp_eq_u32 s2, 0
-; GFX1100-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX1100-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX1100-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
 ; GFX1100-NEXT:    s_branch .LBB0_1
 ; GFX1100-NEXT:  .LBB0_4: ; %.exit
-; GFX1100-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1100-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   br label %.a
@@ -110,76 +105,71 @@ define i32 @combine_sub_zext_xor(i32 inreg %cond) {
 ; GFX1010-LABEL: combine_sub_zext_xor:
 ; GFX1010:       ; %bb.0: ; %.entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX1010-NEXT:    s_mov_b32 s5, 0
-; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
+; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
+; GFX1010-NEXT:    s_mov_b32 s4, 0
+; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
+; GFX1010-NEXT:    s_and_b32 vcc_lo, exec_lo, s5
 ; GFX1010-NEXT:    s_branch .LBB1_2
 ; GFX1010-NEXT:  .LBB1_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GFX1010-NEXT:    s_xor_b32 s6, s6, -1
-; GFX1010-NEXT:    s_and_b32 s6, s6, exec_lo
-; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX1010-NEXT:    s_sub_i32 s7, s5, s6
-; GFX1010-NEXT:    s_cmpk_gt_i32 s5, 0xfbe6
-; GFX1010-NEXT:    s_mov_b32 s5, s7
+; GFX1010-NEXT:    s_xor_b32 s5, s5, -1
+; GFX1010-NEXT:    s_and_b32 s5, s5, exec_lo
+; GFX1010-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX1010-NEXT:    s_sub_i32 s6, s4, s5
+; GFX1010-NEXT:    s_cmpk_gt_i32 s4, 0xfbe6
+; GFX1010-NEXT:    s_mov_b32 s4, s6
 ; GFX1010-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GFX1010-NEXT:  .LBB1_2: ; %.a
 ; GFX1010-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1010-NEXT:    s_and_b32 s6, s4, exec_lo
-; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX1010-NEXT:    s_cmp_lg_u32 s6, 1
-; GFX1010-NEXT:    ; implicit-def: $sgpr6
-; GFX1010-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX1010-NEXT:    ; implicit-def: $sgpr5
+; GFX1010-NEXT:    s_cbranch_vccnz .LBB1_1
 ; GFX1010-NEXT:  ; %bb.3: ; %bb
 ; GFX1010-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GFX1010-NEXT:    v_mov_b32_e32 v0, s5
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX1010-NEXT:    buffer_load_dword v0, v0, s[4:7], 64 offen glc
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
-; GFX1010-NEXT:    v_readfirstlane_b32 s6, v0
-; GFX1010-NEXT:    s_cmp_eq_u32 s6, 0
-; GFX1010-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX1010-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX1010-NEXT:    s_cmp_eq_u32 s5, 0
+; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
 ; GFX1010-NEXT:    s_branch .LBB1_1
 ; GFX1010-NEXT:  .LBB1_4: ; %.exit
-; GFX1010-NEXT:    v_mov_b32_e32 v0, s6
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: combine_sub_zext_xor:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1100-NEXT:    s_mov_b32 s1, 0
-; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1100-NEXT:    s_mov_b32 s0, 0
+; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
 ; GFX1100-NEXT:    s_branch .LBB1_2
-; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB1_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GFX1100-NEXT:    s_xor_b32 s2, s2, -1
+; GFX1100-NEXT:    s_xor_b32 s1, s1, -1
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1100-NEXT:    s_sub_i32 s3, s1, s2
-; GFX1100-NEXT:    s_cmpk_gt_i32 s1, 0xfbe6
-; GFX1100-NEXT:    s_mov_b32 s1, s3
+; GFX1100-NEXT:    s_and_b32 s1, s1, exec_lo
+; GFX1100-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX1100-NEXT:    s_sub_i32 s2, s0, s1
+; GFX1100-NEXT:    s_cmpk_gt_i32 s0, 0xfbe6
+; GFX1100-NEXT:    s_mov_b32 s0, s2
 ; GFX1100-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GFX1100-NEXT:  .LBB1_2: ; %.a
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1100-NEXT:    s_and_b32 s2, s0, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX1100-NEXT:    ; implicit-def: $sgpr2
-; GFX1100-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX1100-NEXT:    ; implicit-def: $sgpr1
+; GFX1100-NEXT:    s_cbranch_vccnz .LBB1_1
 ; GFX1100-NEXT:  ; %bb.3: ; %bb
 ; GFX1100-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GFX1100-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1100-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1100-NEXT:    buffer_load_b32 v0, v0, s[0:3], 64 offen glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1100-NEXT:    s_cmp_eq_u32 s2, 0
-; GFX1100-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX1100-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX1100-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
 ; GFX1100-NEXT:    s_branch .LBB1_1
 ; GFX1100-NEXT:  .LBB1_4: ; %.exit
-; GFX1100-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1100-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   br label %.a
@@ -212,27 +202,26 @@ define i32 @combine_add_zext_or(i32 inreg %cond) {
 ; GFX1010-LABEL: combine_add_zext_or:
 ; GFX1010:       ; %bb.0: ; %.entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX1010-NEXT:    s_mov_b32 s4, 0
-; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
+; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
+; GFX1010-NEXT:    s_mov_b32 s5, 0
+; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
+; GFX1010-NEXT:    s_and_b32 s4, exec_lo, s4
 ; GFX1010-NEXT:    s_branch .LBB2_2
 ; GFX1010-NEXT:  .LBB2_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GFX1010-NEXT:    s_cmpk_gt_i32 s4, 0xfbe6
+; GFX1010-NEXT:    s_cmpk_gt_i32 s5, 0xfbe6
 ; GFX1010-NEXT:    s_cselect_b32 s7, -1, 0
-; GFX1010-NEXT:    s_add_i32 s4, s4, 1
+; GFX1010-NEXT:    s_add_i32 s5, s5, 1
 ; GFX1010-NEXT:    s_and_b32 vcc_lo, exec_lo, s7
 ; GFX1010-NEXT:    s_cbranch_vccz .LBB2_4
 ; GFX1010-NEXT:  .LBB2_2: ; %.a
 ; GFX1010-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1010-NEXT:    s_and_b32 s6, s5, exec_lo
-; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX1010-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX1010-NEXT:    s_mov_b32 vcc_lo, s4
 ; GFX1010-NEXT:    ; implicit-def: $sgpr6
-; GFX1010-NEXT:    s_cbranch_scc1 .LBB2_1
+; GFX1010-NEXT:    s_cbranch_vccnz .LBB2_1
 ; GFX1010-NEXT:  ; %bb.3: ; %bb
 ; GFX1010-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GFX1010-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX1010-NEXT:    buffer_load_dword v0, v0, s[4:7], 64 offen glc
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-NEXT:    v_cmp_eq_u32_e64 s6, 0, v0
@@ -247,28 +236,27 @@ define i32 @combine_add_zext_or(i32 inreg %cond) {
 ; GFX1100-LABEL: combine_add_zext_or:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1100-NEXT:    s_mov_b32 s0, 0
-; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1100-NEXT:    s_mov_b32 s1, 0
+; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
 ; GFX1100-NEXT:    s_branch .LBB2_2
 ; GFX1100-NEXT:  .LBB2_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GFX1100-NEXT:    s_cmpk_gt_i32 s0, 0xfbe6
+; GFX1100-NEXT:    s_cmpk_gt_i32 s1, 0xfbe6
 ; GFX1100-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX1100-NEXT:    s_add_i32 s0, s0, 1
+; GFX1100-NEXT:    s_add_i32 s1, s1, 1
 ; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB2_4
 ; GFX1100-NEXT:  .LBB2_2: ; %.a
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1100-NEXT:    s_and_b32 s2, s1, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX1100-NEXT:    s_mov_b32 vcc_lo, s0
 ; GFX1100-NEXT:    ; implicit-def: $sgpr2
-; GFX1100-NEXT:    s_cbranch_scc1 .LBB2_1
+; GFX1100-NEXT:    s_cbranch_vccnz .LBB2_1
 ; GFX1100-NEXT:  ; %bb.3: ; %bb
 ; GFX1100-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GFX1100-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1100-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1100-NEXT:    buffer_load_b32 v0, v0, s[0:3], 64 offen glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-NEXT:    v_cmp_eq_u32_e64 s2, 0, v0
@@ -312,27 +300,26 @@ define i32 @combine_sub_zext_or(i32 inreg %cond) {
 ; GFX1010-LABEL: combine_sub_zext_or:
 ; GFX1010:       ; %bb.0: ; %.entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX1010-NEXT:    s_mov_b32 s4, 0
-; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
+; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
+; GFX1010-NEXT:    s_mov_b32 s5, 0
+; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
+; GFX1010-NEXT:    s_and_b32 s4, exec_lo, s4
 ; GFX1010-NEXT:    s_branch .LBB3_2
 ; GFX1010-NEXT:  .LBB3_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB3_2 Depth=1
-; GFX1010-NEXT:    s_cmpk_gt_i32 s4, 0xfbe6
+; GFX1010-NEXT:    s_cmpk_gt_i32 s5, 0xfbe6
 ; GFX1010-NEXT:    s_cselect_b32 s7, -1, 0
-; GFX1010-NEXT:    s_add_i32 s4, s4, -1
+; GFX1010-NEXT:    s_add_i32 s5, s5, -1
 ; GFX1010-NEXT:    s_and_b32 vcc_lo, exec_lo, s7
 ; GFX1010-NEXT:    s_cbranch_vccz .LBB3_4
 ; GFX1010-NEXT:  .LBB3_2: ; %.a
 ; GFX1010-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1010-NEXT:    s_and_b32 s6, s5, exec_lo
-; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX1010-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX1010-NEXT:    s_mov_b32 vcc_lo, s4
 ; GFX1010-NEXT:    ; implicit-def: $sgpr6
-; GFX1010-NEXT:    s_cbranch_scc1 .LBB3_1
+; GFX1010-NEXT:    s_cbranch_vccnz .LBB3_1
 ; GFX1010-NEXT:  ; %bb.3: ; %bb
 ; GFX1010-NEXT:    ; in Loop: Header=BB3_2 Depth=1
-; GFX1010-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX1010-NEXT:    buffer_load_dword v0, v0, s[4:7], 64 offen glc
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-NEXT:    v_cmp_eq_u32_e64 s6, 0, v0
@@ -347,28 +334,27 @@ define i32 @combine_sub_zext_or(i32 inreg %cond) {
 ; GFX1100-LABEL: combine_sub_zext_or:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1100-NEXT:    s_mov_b32 s0, 0
-; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1100-NEXT:    s_mov_b32 s1, 0
+; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
 ; GFX1100-NEXT:    s_branch .LBB3_2
 ; GFX1100-NEXT:  .LBB3_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB3_2 Depth=1
-; GFX1100-NEXT:    s_cmpk_gt_i32 s0, 0xfbe6
+; GFX1100-NEXT:    s_cmpk_gt_i32 s1, 0xfbe6
 ; GFX1100-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX1100-NEXT:    s_add_i32 s0, s0, -1
+; GFX1100-NEXT:    s_add_i32 s1, s1, -1
 ; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB3_4
 ; GFX1100-NEXT:  .LBB3_2: ; %.a
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1100-NEXT:    s_and_b32 s2, s1, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX1100-NEXT:    s_mov_b32 vcc_lo, s0
 ; GFX1100-NEXT:    ; implicit-def: $sgpr2
-; GFX1100-NEXT:    s_cbranch_scc1 .LBB3_1
+; GFX1100-NEXT:    s_cbranch_vccnz .LBB3_1
 ; GFX1100-NEXT:  ; %bb.3: ; %bb
 ; GFX1100-NEXT:    ; in Loop: Header=BB3_2 Depth=1
-; GFX1100-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1100-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1100-NEXT:    buffer_load_b32 v0, v0, s[0:3], 64 offen glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-NEXT:    v_cmp_eq_u32_e64 s2, 0, v0
@@ -412,30 +398,29 @@ define i32 @combine_add_zext_and(i32 inreg %cond) {
 ; GFX1010-LABEL: combine_add_zext_and:
 ; GFX1010:       ; %bb.0: ; %.entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX1010-NEXT:    s_mov_b32 s4, 0
-; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
+; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
+; GFX1010-NEXT:    s_mov_b32 s5, 0
+; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
+; GFX1010-NEXT:    s_and_b32 s4, exec_lo, s4
 ; GFX1010-NEXT:    s_branch .LBB4_2
 ; GFX1010-NEXT:  .LBB4_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; GFX1010-NEXT:    s_cmpk_gt_i32 s4, 0xfbe6
+; GFX1010-NEXT:    s_cmpk_gt_i32 s5, 0xfbe6
 ; GFX1010-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX1010-NEXT:    s_and_b32 s6, s6, s7
 ; GFX1010-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1010-NEXT:    s_and_b32 vcc_lo, exec_lo, s7
-; GFX1010-NEXT:    s_add_i32 s4, s4, s6
+; GFX1010-NEXT:    s_add_i32 s5, s5, s6
 ; GFX1010-NEXT:    s_cbranch_vccz .LBB4_4
 ; GFX1010-NEXT:  .LBB4_2: ; %.a
 ; GFX1010-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1010-NEXT:    s_and_b32 s6, s5, exec_lo
-; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX1010-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX1010-NEXT:    s_mov_b32 vcc_lo, s4
 ; GFX1010-NEXT:    ; implicit-def: $sgpr6
-; GFX1010-NEXT:    s_cbranch_scc1 .LBB4_1
+; GFX1010-NEXT:    s_cbranch_vccnz .LBB4_1
 ; GFX1010-NEXT:  ; %bb.3: ; %bb
 ; GFX1010-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; GFX1010-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX1010-NEXT:    buffer_load_dword v0, v0, s[4:7], 64 offen glc
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-NEXT:    v_readfirstlane_b32 s6, v0
@@ -449,33 +434,32 @@ define i32 @combine_add_zext_and(i32 inreg %cond) {
 ; GFX1100-LABEL: combine_add_zext_and:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1100-NEXT:    s_mov_b32 s0, 0
-; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1100-NEXT:    s_mov_b32 s1, 0
+; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
 ; GFX1100-NEXT:    s_branch .LBB4_2
 ; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB4_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; GFX1100-NEXT:    s_cmpk_gt_i32 s0, 0xfbe6
+; GFX1100-NEXT:    s_cmpk_gt_i32 s1, 0xfbe6
 ; GFX1100-NEXT:    s_cselect_b32 s3, -1, 0
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_and_b32 s2, s2, s3
 ; GFX1100-NEXT:    s_and_b32 s2, s2, exec_lo
 ; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
-; GFX1100-NEXT:    s_add_i32 s0, s0, s2
+; GFX1100-NEXT:    s_add_i32 s1, s1, s2
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB4_4
 ; GFX1100-NEXT:  .LBB4_2: ; %.a
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1100-NEXT:    s_and_b32 s2, s1, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX1100-NEXT:    s_mov_b32 vcc_lo, s0
 ; GFX1100-NEXT:    ; implicit-def: $sgpr2
-; GFX1100-NEXT:    s_cbranch_scc1 .LBB4_1
+; GFX1100-NEXT:    s_cbranch_vccnz .LBB4_1
 ; GFX1100-NEXT:  ; %bb.3: ; %bb
 ; GFX1100-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; GFX1100-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1100-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1100-NEXT:    buffer_load_b32 v0, v0, s[0:3], 64 offen glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-NEXT:    v_readfirstlane_b32 s2, v0
@@ -517,30 +501,29 @@ define i32 @combine_sub_zext_and(i32 inreg %cond) {
 ; GFX1010-LABEL: combine_sub_zext_and:
 ; GFX1010:       ; %bb.0: ; %.entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX1010-NEXT:    s_mov_b32 s4, 0
-; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
+; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
+; GFX1010-NEXT:    s_mov_b32 s5, 0
+; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
+; GFX1010-NEXT:    s_and_b32 s4, exec_lo, s4
 ; GFX1010-NEXT:    s_branch .LBB5_2
 ; GFX1010-NEXT:  .LBB5_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; GFX1010-NEXT:    s_cmpk_gt_i32 s4, 0xfbe6
+; GFX1010-NEXT:    s_cmpk_gt_i32 s5, 0xfbe6
 ; GFX1010-NEXT:    s_cselect_b32 s7, -1, 0
 ; GFX1010-NEXT:    s_and_b32 s6, s6, s7
 ; GFX1010-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX1010-NEXT:    s_and_b32 vcc_lo, exec_lo, s7
-; GFX1010-NEXT:    s_sub_i32 s4, s4, s6
+; GFX1010-NEXT:    s_sub_i32 s5, s5, s6
 ; GFX1010-NEXT:    s_cbranch_vccz .LBB5_4
 ; GFX1010-NEXT:  .LBB5_2: ; %.a
 ; GFX1010-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1010-NEXT:    s_and_b32 s6, s5, exec_lo
-; GFX1010-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX1010-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX1010-NEXT:    s_mov_b32 vcc_lo, s4
 ; GFX1010-NEXT:    ; implicit-def: $sgpr6
-; GFX1010-NEXT:    s_cbranch_scc1 .LBB5_1
+; GFX1010-NEXT:    s_cbranch_vccnz .LBB5_1
 ; GFX1010-NEXT:  ; %bb.3: ; %bb
 ; GFX1010-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; GFX1010-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1010-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX1010-NEXT:    buffer_load_dword v0, v0, s[4:7], 64 offen glc
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-NEXT:    v_readfirstlane_b32 s6, v0
@@ -554,33 +537,32 @@ define i32 @combine_sub_zext_and(i32 inreg %cond) {
 ; GFX1100-LABEL: combine_sub_zext_and:
 ; GFX1100:       ; %bb.0: ; %.entry
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1100-NEXT:    s_mov_b32 s0, 0
-; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1100-NEXT:    s_mov_b32 s1, 0
+; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
 ; GFX1100-NEXT:    s_branch .LBB5_2
 ; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB5_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; GFX1100-NEXT:    s_cmpk_gt_i32 s0, 0xfbe6
+; GFX1100-NEXT:    s_cmpk_gt_i32 s1, 0xfbe6
 ; GFX1100-NEXT:    s_cselect_b32 s3, -1, 0
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_and_b32 s2, s2, s3
 ; GFX1100-NEXT:    s_and_b32 s2, s2, exec_lo
 ; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
-; GFX1100-NEXT:    s_sub_i32 s0, s0, s2
+; GFX1100-NEXT:    s_sub_i32 s1, s1, s2
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB5_4
 ; GFX1100-NEXT:  .LBB5_2: ; %.a
 ; GFX1100-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1100-NEXT:    s_and_b32 s2, s1, exec_lo
-; GFX1100-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX1100-NEXT:    s_mov_b32 vcc_lo, s0
 ; GFX1100-NEXT:    ; implicit-def: $sgpr2
-; GFX1100-NEXT:    s_cbranch_scc1 .LBB5_1
+; GFX1100-NEXT:    s_cbranch_vccnz .LBB5_1
 ; GFX1100-NEXT:  ; %bb.3: ; %bb
 ; GFX1100-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; GFX1100-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1100-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1100-NEXT:    buffer_load_b32 v0, v0, s[0:3], 64 offen glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-NEXT:    v_readfirstlane_b32 s2, v0

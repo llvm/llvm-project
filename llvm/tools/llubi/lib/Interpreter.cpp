@@ -17,12 +17,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
@@ -77,9 +77,9 @@ static void applyAlignAttr(AnyValue &V, Align Alignment) {
   });
 }
 
-static bool violatesNoUndefAttr(AnyValue &V) {
+static bool violatesNoUndefAttr(const AnyValue &V) {
   bool ContainsPoison = false;
-  forEachScalarValue(V, [&](AnyValue &Scalar) {
+  forEachScalarValue(const_cast<AnyValue &>(V), [&](const AnyValue &Scalar) {
     if (Scalar.isPoison()) {
       ContainsPoison = true;
       return;
@@ -114,6 +114,9 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
     return true;
   });
   if (!MO)
+    return true;
+
+  if (MO->getState() == MemoryObjectState::Freed)
     return true;
 
   const APInt &PtrAddr = Ptr.address();
@@ -919,6 +922,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return AnyValue();
   }
 
+  /// Returns the oracle function if \p CB is an llvm.speculative.load in
+  /// oracle form, nullptr otherwise.
+  static Function *getSpeculativeLoadOracle(const CallBase &CB) {
+    return CB.getIntrinsicID() == Intrinsic::speculative_load
+               ? dyn_cast<Function>(CB.getArgOperand(2))
+               : nullptr;
+  }
+
   AnyValue callSpeculativeLoadIntrinsic(CallBase &CB, const AnyValue &Ptr,
                                         const AnyValue &NumBytes) {
     Type *RetTy = CB.getType();
@@ -957,6 +968,126 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       copy(MO->getBytes().slice(Offset, N), Bytes.begin() + Start);
     }
     return Ctx.fromBytes(Bytes, RetTy);
+  }
+
+  /// How masked memory intrinsics compute the address of each lane.
+  enum class MaskedAddrMode {
+    /// \p Ptr is the base pointer and lane I accesses element I after it.
+    Consecutive,
+    /// \p Ptr holds a separate pointer for each lane.
+    PerLane,
+    /// \p Ptr is the base pointer and the offset increases on each active lane.
+    Compressed,
+  };
+
+  /// Implements the masked intrinsic family. For loads, \p Data holds the
+  /// pass-through values and is updated with the loaded lanes; for stores, it
+  /// holds the values to store. Lane addresses are computed according to \p
+  /// Mode.
+  AnyValue callMaskedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
+                                        const AnyValue &Mask, AnyValue Data,
+                                        MaskedAddrMode Mode) {
+    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store ||
+                         CB.getIntrinsicID() == Intrinsic::masked_scatter ||
+                         CB.getIntrinsicID() == Intrinsic::masked_compressstore;
+    StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
+    Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
+                       ->getScalarType();
+    // TODO: Support element types that are not a whole number of bytes.
+    if (Mode != MaskedAddrMode::PerLane &&
+        !DL.typeSizeEqualsStoreSize(ElemTy)) {
+      reportError() << IntrinsicName << " with element type " << *ElemTy
+                    << " is not supported.";
+      return AnyValue();
+    }
+
+    const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
+    const unsigned IndexBW =
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(IsStore ? 1 : 0)->getType());
+    AnyValue LanePtr;
+    if (Mode != MaskedAddrMode::PerLane)
+      LanePtr = Ptr;
+    GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
+
+    for (auto [I, Lane] : enumerate(Data.asAggregate())) {
+      if (Mode == MaskedAddrMode::PerLane)
+        LanePtr = Ptr.asAggregate()[I];
+      BooleanKind MaskLane = getMaskLane(Mask, I);
+
+      if (MaskLane == BooleanKind::Poison) {
+        reportImmediateUB() << "Poison mask lane in " << IntrinsicName << '.';
+        return AnyValue();
+      }
+
+      assert(MaskLane == BooleanKind::True || MaskLane == BooleanKind::False);
+
+      if (MaskLane == BooleanKind::True) {
+        if (IsStore)
+          store(LanePtr, Align(1), Lane, ElemTy);
+        else
+          Lane = load(LanePtr, Align(1), ElemTy, /*NoUndef=*/false);
+        // The first enabled base pointer may not be inbounds, but pointers
+        // after that must be inbounds.
+        Flags = GEPNoWrapFlags::inBounds();
+      }
+
+      if (Mode == MaskedAddrMode::Consecutive ||
+          (Mode == MaskedAddrMode::Compressed &&
+           MaskLane == BooleanKind::True)) {
+        AnyValue AccumulatedOffset = AnyValue::poison();
+        LanePtr = Ctx.computePtrAdd(LanePtr, APInt(IndexBW, AccessSize), Flags,
+                                    AccumulatedOffset);
+      }
+    }
+
+    return IsStore ? AnyValue() : Data;
+  }
+
+  /// Implements llvm.matrix.column.major.store. Column C of \p Data is stored
+  /// as a <Rows x ElemTy> vector at an inbounds nuw GEP of C * \p Stride
+  /// elements from \p Ptr.
+  AnyValue callMatrixColumnMajorStoreIntrinsic(CallBase &CB,
+                                               const AnyValue &Ptr,
+                                               const AnyValue &Stride,
+                                               const AnyValue &Data) {
+    // TODO: Handle isvolatile argument.
+    StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
+    const unsigned Rows =
+        cast<ConstantInt>(CB.getArgOperand(4))->getZExtValue();
+    const unsigned Cols =
+        cast<ConstantInt>(CB.getArgOperand(5))->getZExtValue();
+    if (Stride.isPoison()) {
+      reportImmediateUB() << IntrinsicName << " with poison stride.";
+      return AnyValue();
+    }
+    const APInt &StrideInt = Stride.asInteger();
+    if (StrideInt.ult(Rows)) {
+      reportImmediateUB() << IntrinsicName << " with stride "
+                          << StrideInt.getZExtValue()
+                          << " less than the number of rows " << Rows << '.';
+      return AnyValue();
+    }
+
+    Type *ElemTy = CB.getArgOperand(0)->getType()->getScalarType();
+    auto *ColTy = FixedVectorType::get(ElemTy, Rows);
+    const unsigned IndexBW =
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(1)->getType());
+    const APInt StrideIdx = StrideInt.zextOrTrunc(IndexBW);
+    const APInt ElemSize(IndexBW, Ctx.getEffectiveTypeAllocSize(ElemTy),
+                         /*isSigned=*/false, /*implicitTrunc=*/true);
+    ArrayRef<AnyValue> Elems = Data.asAggregate();
+    for (unsigned C = 0; C != Cols; ++C) {
+      AnyValue AccumulatedOffset = AnyValue::poison();
+      // C * Stride is part of the nuw GEP index: overflow yields poison.
+      AnyValue ColIdx = mulNoWrap(StrideIdx,
+                                  APInt(IndexBW, C, /*IsSigned=*/false,
+                                        /*ImplicitTrunc=*/true),
+                                  /*HasNSW=*/false, /*HasNUW=*/true);
+      AnyValue ColPtr = Ctx.computeScaledPtrAdd(
+          Ptr, ColIdx, ElemSize, GEPNoWrapFlags::all(), AccumulatedOffset);
+      store(ColPtr, Align(1), Elems.slice(C * Rows, Rows).vec(), ColTy);
+    }
+    return AnyValue();
   }
 
 public:
@@ -1042,9 +1173,25 @@ public:
   }
 
   void returnFromCallee() {
+    if (hasProgramExited())
+      return;
+
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
-    CurrentFrame->CalleeArgs.clear();
+    if (CB.doesNotReturn() || (CurrentFrame->ResolvedCallee &&
+                               CurrentFrame->ResolvedCallee->doesNotReturn()))
+      reportImmediateUB() << "Return from a noreturn function/callsite.";
+
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+    if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
+      // RetVal is the oracle's result; use it to complete the load.
+      handleAttributes(Oracle->getReturnType(), RetVal, AttributeSet(),
+                       Oracle->getAttributes().getRetAttrs());
+      RetVal =
+          callSpeculativeLoadIntrinsic(CB, CurrentFrame->CalleeArgs[0], RetVal);
+      if (hasProgramExited())
+        return;
+    }
+    CurrentFrame->CalleeArgs.clear();
     if (Type *RetTy = CB.getType(); !RetTy->isVoidTy()) {
       // Handle attributes on the return value (Attributes from resolved callee
       // should be applied if available).
@@ -1080,23 +1227,49 @@ public:
           auto GetBundleArg = [&](uint32_t Offset) -> Value * {
             return OBU.Inputs[Offset];
           };
+          // Bail out on "cold"()
           if (OBU.Inputs.empty())
             continue;
           Value *WasOnVal = GetBundleArg(0);
+          const AnyValue &WasOn = getValue(WasOnVal);
+          auto Kind = getBundleAttrFromOBU(OBU);
+          switch (Kind) {
+          case BundleAttr::Ignore:
+            continue;
+          case BundleAttr::NoUndef:
+            if (violatesNoUndefAttr(WasOn))
+              reportImmediateUB()
+                  << "The value " << WasOn << " violates noundef assumption.";
+            break;
+          case BundleAttr::Range: {
+            AnyValue V = WasOn;
+            const APInt &Lower = cast<ConstantInt>(OBU.Inputs[1])->getValue();
+            const APInt &Upper = cast<ConstantInt>(OBU.Inputs[2])->getValue();
+            applyRangeAttr(V, ConstantRange(Lower, Upper));
+            if (violatesNoUndefAttr(V))
+              reportImmediateUB() << "The value " << WasOn << " violates range("
+                                  << Lower << ", " << Upper << ") assumption.";
+            break;
+          }
+          default:
+            // Other assumptions on pointers or
+            // unrecognized ones.
+            break;
+          }
+          if (hasProgramExited())
+            break;
+
           // Bail out on unrecognized operand bundles.
           if (!WasOnVal->getType()->isPointerTy())
             continue;
           unsigned AS = WasOnVal->getType()->getPointerAddressSpace();
-          const AnyValue &WasOn = getValue(WasOnVal);
           if (WasOn.isPoison()) {
             reportImmediateUB() << "Assume on poison pointer.";
             break;
           }
           const Pointer &WasOnPtr = WasOn.asPointer();
-          Attribute::AttrKind Kind =
-              Attribute::getAttrKindFromName(OBU.getTagName());
           switch (Kind) {
-          case Attribute::Alignment: {
+          case BundleAttr::Align: {
             // Alignment assumptions should have 2 or 3 arguments.
             APInt Alignment = getIntNonPoison(getValue(GetBundleArg(1)));
             APInt CheckedAddr = WasOnPtr.address();
@@ -1118,13 +1291,13 @@ public:
                   << ") assumption.";
             break;
           }
-          case Attribute::NonNull:
+          case BundleAttr::NonNull:
             if (WasOnPtr.isNullPtr(AS, DL))
               reportImmediateUB()
                   << "The pointer " << WasOn << " violates nonnull assumption.";
             break;
-          case Attribute::Dereferenceable:
-          case Attribute::DereferenceableOrNull: {
+          case BundleAttr::Dereferenceable:
+          case BundleAttr::DereferenceableOrNull: {
             APInt DereferenceableBytes =
                 getIntNonPoison(getValue(GetBundleArg(1)));
             // Only n > 0 implies that the pointer is dereferenceable.
@@ -1132,9 +1305,9 @@ public:
               break;
             if (violatesDereferenceableBytesAttr(
                     WasOn, DereferenceableBytes.getLimitedValue(),
-                    Kind == Attribute::DereferenceableOrNull, AS, Ctx))
+                    Kind == BundleAttr::DereferenceableOrNull, AS, Ctx))
               reportImmediateUB() << "The pointer " << WasOn << " violates "
-                                  << (Kind == Attribute::DereferenceableOrNull
+                                  << (Kind == BundleAttr::DereferenceableOrNull
                                           ? "dereferenceable_or_null("
                                           : "dereferenceable(")
                                   << DereferenceableBytes << ") assumption.";
@@ -1358,6 +1531,22 @@ public:
             }
           });
     }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return IID == Intrinsic::smulh ? APIntOps::mulhs(LHS, RHS)
+                                           : APIntOps::mulhu(LHS, RHS);
+          });
+    case Intrinsic::pdep:
+    case Intrinsic::pext:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &Val, const APInt &Mask) -> AnyValue {
+            return IID == Intrinsic::pdep ? APIntOps::pdep(Val, Mask)
+                                          : APIntOps::pext(Val, Mask);
+          });
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
@@ -1553,6 +1742,42 @@ public:
       for (uint64_t I = 0; I != Len; ++I) {
         Res.push_back(
             APInt(BitWidth, I, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::get_active_lane_mask: {
+      if (Args[0].isPoison() || Args[1].isPoison())
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      // Lane I is active iff Base + I < N without wrapping, i.e. iff Base < N
+      // and I < N - Base, where N - Base cannot wrap.
+      const APInt &Base = Args[0].asInteger();
+      const APInt &N = Args[1].asInteger();
+      const uint32_t Len =
+          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
+      const uint32_t NumActive =
+          Base.uge(N) ? 0 : (N - Base).getLimitedValue(Len);
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      Res.insert(Res.end(), NumActive, AnyValue::boolean(true));
+      Res.insert(Res.end(), Len - NumActive, AnyValue::boolean(false));
+      return std::move(Res);
+    }
+    case Intrinsic::mask_beforefirst: {
+      const auto &Mask = Args[0].asAggregate();
+      std::vector<AnyValue> Res;
+      Res.reserve(Mask.size());
+      bool SeenActive = false;
+      for (const AnyValue &Lane : Mask) {
+        switch (Lane.asBoolean()) {
+        case BooleanKind::True:
+          SeenActive = true;
+          break;
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::getPoisonValue(Ctx, RetTy);
+        }
+        Res.push_back(AnyValue::boolean(!SeenActive));
       }
       return std::move(Res);
     }
@@ -1784,13 +2009,43 @@ public:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
     case Intrinsic::speculative_load:
-      // TODO: Support the oracle form.
-      if (isa<Function>(CB.getArgOperand(2))) {
-        Handler.onUnrecognizedInstruction(CB);
-        setFailed();
-        return AnyValue();
-      }
+      assert(!getSpeculativeLoadOracle(CB) &&
+             "oracle form must be handled earlier");
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
+    case Intrinsic::masked_load:
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                          MaskedAddrMode::Consecutive);
+    case Intrinsic::masked_store:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
+                                          MaskedAddrMode::Consecutive);
+    case Intrinsic::masked_gather:
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                          MaskedAddrMode::PerLane);
+    case Intrinsic::masked_scatter:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
+                                          MaskedAddrMode::PerLane);
+    case Intrinsic::masked_expandload:
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                          MaskedAddrMode::Compressed);
+    case Intrinsic::masked_compressstore:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
+                                          MaskedAddrMode::Compressed);
+    case Intrinsic::matrix_transpose: {
+      const auto &Vec = Args[0].asAggregate();
+      const unsigned Rows =
+          cast<ConstantInt>(CB.getArgOperand(1))->getZExtValue();
+      const unsigned Cols =
+          cast<ConstantInt>(CB.getArgOperand(2))->getZExtValue();
+      // Column I of the result is row I of the column-major input.
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size());
+      for (unsigned I = 0; I != Rows; ++I)
+        for (unsigned J = 0; J != Cols; ++J)
+          Res.push_back(Vec[J * Rows + I]);
+      return std::move(Res);
+    }
+    case Intrinsic::matrix_column_major_store:
+      return callMatrixColumnMajorStoreIntrinsic(CB, Args[1], Args[2], Args[0]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
@@ -1827,10 +2082,9 @@ public:
         return AnyValue::poison();
 
       const APInt &Cnt = Args[0].asInteger();
-      const uint64_t VF = VFC->getZExtValue();
-      const bool Scalable = ScalableC->isOne();
-
-      const uint64_t MaxLanes = Ctx.getEVL(ElementCount::get(VF, Scalable));
+      uint64_t MaxLanes = VFC->getZExtValue();
+      if (ScalableC->isOne())
+        MaxLanes *= Ctx.getVScale();
 
       uint64_t Res = 0;
       if (!Cnt.isZero()) {
@@ -1864,7 +2118,7 @@ public:
         case BooleanKind::False:
           break;
         case BooleanKind::Poison:
-          return AnyValue::poison();
+          return AnyValue::getPoisonValue(Ctx, RetTy);
         }
       }
 
@@ -1962,8 +2216,8 @@ public:
       return AnyValue();
     }
 
-    if (auto LibCallRes =
-            Lib.executeLibcall(LF, CB.getName(), CB.getType(), CalleeArgs))
+    if (auto LibCallRes = Lib.executeLibcall(LF, CB.getName(),
+                                             CB.getFunctionType(), CalleeArgs))
       return *LibCallRes;
 
     if (ExitInfo)
@@ -2113,6 +2367,7 @@ public:
       Value *CalledOperand = CB.getCalledOperand();
       if (isNoopInlineAsm(CalledOperand, CB.getType())) {
         CurrentFrame->ResolvedCallee = nullptr;
+        CurrentFrame->CalleeRetVal = AnyValue();
         returnFromCallee();
         return;
       }
@@ -2186,6 +2441,13 @@ public:
           }
           assert(I < Callee->arg_size() &&
                  "Byval pointers cannot be passed via variadic arguments.");
+          if (Ctx.exceedsMaxObjectSize(Size, ArgTy->getPointerAddressSpace())) {
+            reportImmediateUB()
+                << "Byval argument with size that exceeds the maximum object "
+                   "size. Size: "
+                << Size;
+            return;
+          }
           auto Obj = Ctx.allocate(
               Size, AllocAlign->value(), Callee->getArg(I)->getName(),
               ArgTy->getPointerAddressSpace(), MemInitKind::Uninitialized,
@@ -2212,6 +2474,15 @@ public:
     }
 
     CurrentFrame->ResolvedCallee = Callee;
+    ArrayRef<AnyValue> Args = CalleeArgs;
+    if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
+      Args = Args.drop_front(3);
+      for (auto [Arg, ArgVal] :
+           zip_equal(Oracle->args(), MutableArrayRef(CalleeArgs).drop_front(3)))
+        handleAttributes(Arg.getType(), ArgVal, AttributeSet(),
+                         Arg.getAttributes());
+      Callee = Oracle;
+    }
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
       returnFromCallee();
@@ -2228,7 +2499,6 @@ public:
       }
       assert(!Callee->empty() && "Expected a defined function.");
       // Suspend the current frame and push the callee frame onto the stack.
-      ArrayRef<AnyValue> Args = CurrentFrame->CalleeArgs;
       AnyValue &RetVal = CurrentFrame->CalleeRetVal;
       CurrentFrame->State = FrameState::Pending;
       CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
@@ -2598,13 +2868,18 @@ public:
   }
 
   void visitICmpInst(ICmpInst &I) {
+    Type *OpTy = I.getOperand(0)->getType();
+    unsigned AddrWidth =
+        OpTy->isPtrOrPtrVectorTy() ? DL.getAddressSizeInBits(OpTy) : 0;
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      const APInt &LHSVal =
-          LHS.isPointer() ? LHS.asPointer().address() : LHS.asInteger();
-      const APInt &RHSVal =
-          RHS.isPointer() ? RHS.asPointer().address() : RHS.asInteger();
+      const APInt &LHSVal = LHS.isPointer()
+                                ? LHS.asPointer().address().trunc(AddrWidth)
+                                : LHS.asInteger();
+      const APInt &RHSVal = RHS.isPointer()
+                                ? RHS.asPointer().address().trunc(AddrWidth)
+                                : RHS.asInteger();
       if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
         return AnyValue::poison();
       return AnyValue::boolean(
@@ -2708,6 +2983,13 @@ public:
             << Size.asInteger();
         return;
       }
+    }
+    if (Ctx.exceedsMaxObjectSize(AllocSize, AI.getAddressSpace())) {
+      reportImmediateUB()
+          << "Alloca with allocation size that exceeds the maximum object "
+             "size. Size: "
+          << AllocSize;
+      return;
     }
     // If it is used by llvm.lifetime.start, it should be initially dead.
     bool IsInitiallyDead = any_of(AI.users(), [](User *U) {
@@ -2861,6 +3143,35 @@ public:
     Ctx.toBytes(getValue(BCI.getOperand(0)), BCI.getOperand(0)->getType(),
                 Bytes);
     setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
+  }
+
+  void visitBitInsertInst(BitInsertInst &BII) {
+    ByteValue Res = getValue(BII.getOperand(0)).asByte();
+    auto &Val = getValue(BII.getOperand(1));
+    auto &Offset = getValue(BII.getOperand(2));
+    Type *ValTy = BII.getOperand(1)->getType();
+    uint64_t NumBits = DL.getTypeSizeInBits(ValTy).getFixedValue();
+    uint64_t OffsetInBits =
+        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
+    if (Offset.isPoison() || OffsetInBits + NumBits > Res.getBitWidth()) {
+      setResult(BII, AnyValue::getPoisonValue(Ctx, BII.getType()));
+      return;
+    }
+    Ctx.insertBits(Res, OffsetInBits, Val, ValTy);
+    setResult(BII, std::move(Res));
+  }
+
+  void visitBitExtractInst(BitExtractInst &BEI) {
+    auto &Src = getValue(BEI.getOperand(0)).asByte();
+    auto &Offset = getValue(BEI.getOperand(1));
+    uint64_t NumBits = DL.getTypeSizeInBits(BEI.getType()).getFixedValue();
+    uint64_t OffsetInBits =
+        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
+    if (Offset.isPoison() || OffsetInBits + NumBits > Src.getBitWidth()) {
+      setResult(BEI, AnyValue::getPoisonValue(Ctx, BEI.getType()));
+      return;
+    }
+    setResult(BEI, Ctx.extractBits(Src, OffsetInBits, BEI.getType()));
   }
 
   void visitFreezeInst(FreezeInst &FI) {

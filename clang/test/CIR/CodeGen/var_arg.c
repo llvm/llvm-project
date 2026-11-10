@@ -59,6 +59,7 @@ int varargs(int count, ...) {
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
 // LLVM-LABEL: define dso_local i32 @varargs(i32 noundef %{{.+}}, ...)
+// LLVMCIR: %[[RET_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}, align 16
 // LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}, align 4
@@ -108,6 +109,7 @@ int stdarg_start(int count, ...) {
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
 // LLVM-LABEL: define dso_local i32 @stdarg_start(i32 noundef %{{.+}}, ...)
+// LLVMCIR: %[[RET_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}, align 16
 // LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}, align 4
@@ -176,6 +178,7 @@ int varargs_new(char *fmt, ...) {
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
 // LLVM-LABEL: define dso_local i32 @varargs_new(ptr noundef %{{.+}}, ...)
+// LLVMCIR: %[[RET_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[FMT_ADDR:.+]] = alloca ptr{{.*}}, align 8
 // LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}, align 16
 // LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}, align 4
@@ -318,7 +321,7 @@ short varargs_short(int count, ...) {
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s16i>
 // CIR:   cir.load align(2) %[[RESULT_P]] : !cir.ptr<!s16i>, !s16i
 
-// LLVM-LABEL: define dso_local signext i16 @varargs_short(i32 noundef %{{.*}}, ...)
+// LLVM-LABEL: define dso_local i16 @varargs_short(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[GP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 0
 // LLVMCIR: %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 4
 // OGCG:    %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 16

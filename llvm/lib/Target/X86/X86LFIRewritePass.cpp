@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -43,21 +42,8 @@ static void alignToBundle(MachineBasicBlock &MBB) {
 
 // Returns true if MBB may be reached by an indirect branch (does not include
 // jump table targets).
-static bool isIndirectlyReachable(MachineFunction &MF,
-                                  const MachineBasicBlock &MBB) {
-  if (MBB.hasAddressTaken() || MBB.isEHPad())
-    return true;
-
-  // With SJLJ exception handling, the dispatch block jumps indirectly to the
-  // block holding the call site's landing pad label, which is no longer marked
-  // as an EH pad by that point.
-  if (MF.getTarget().Options.ExceptionModel == ExceptionHandling::SjLj)
-    for (const MachineInstr &MI : MBB)
-      if (MI.isEHLabel() &&
-          MF.hasCallSiteLandingPad(MI.getOperand(0).getMCSymbol()))
-        return true;
-
-  return false;
+static bool isIndirectlyReachable(const MachineBasicBlock &MBB) {
+  return MBB.hasAddressTaken() || MBB.isEHPad();
 }
 
 static void alignIndirectBranchTargets(MachineFunction &MF) {
@@ -66,14 +52,17 @@ static void alignIndirectBranchTargets(MachineFunction &MF) {
 
   // Blocks that are the target of a jump table are not considered
   // address-taken by LLVM, but they are still reached by an indirect branch.
+  // This also covers the SJLJ landing pads, which EmitSjLjDispatchBlock puts
+  // into a jump table.
   if (const MachineJumpTableInfo *JTI = MF.getJumpTableInfo())
     for (const MachineJumpTableEntry &JTE : JTI->getJumpTables())
       for (MachineBasicBlock *MBB : JTE.MBBs)
         alignToBundle(*MBB);
 
-  for (MachineBasicBlock &MBB : MF)
-    if (isIndirectlyReachable(MF, MBB))
+  for (MachineBasicBlock &MBB : MF) {
+    if (isIndirectlyReachable(MBB))
       alignToBundle(MBB);
+  }
 }
 
 bool X86LFIRewriteLegacy::runOnMachineFunction(MachineFunction &MF) {

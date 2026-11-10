@@ -75,6 +75,7 @@ public:
                        Status &error) override;
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                 Status &error) override;
+  bool DoCanAllocateMemory() override { return true; }
   Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   lldb::addr_t GetImageInfoAddress() override;
@@ -112,7 +113,9 @@ public:
 
 protected:
   /// Block until the stdio read thread has surfaced everything currently
-  /// buffered in the ConPTY/pipe to the process's STDOUT cache.
+  /// buffered in the pipe to the process's STDOUT cache. With the process
+  /// stopped, that is all it wrote to a pipe. A ConPTY may still be rendering.
+  /// That output arrives after the stop.
   void DrainProcessStdout();
 
   size_t PutSTDIN(const char *src, size_t src_len, Status &error) override;

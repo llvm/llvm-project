@@ -481,19 +481,22 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
-Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
+Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical,
+                              bool KeyImportedAliasesByAliasGUID) {
   for (Function &F : M) {
     // Function may not have a name: like using asm("") to overwrite the name.
     // Ignore in this case.
     if (!F.hasName())
       continue;
     auto IRPGOFuncName = getIRPGOObjectName(F, InLTO);
-    if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical))
+    if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical,
+                                  KeyImportedAliasesByAliasGUID))
       return E;
     // Also use getPGOFuncName() so that we can find records from older profiles
     auto PGOFuncName = getPGOFuncName(F, InLTO);
     if (PGOFuncName != IRPGOFuncName)
-      if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical))
+      if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical,
+                                    KeyImportedAliasesByAliasGUID))
         return E;
   }
 
@@ -630,7 +633,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
 }
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
-                                       bool AddCanonical) {
+                                       bool AddCanonical,
+                                       bool KeyImportedAliasesByAliasGUID) {
   // Key each name by its own hash, so profiles that recorded that name can find
   // the function. This is called once per name, e.g. a second time with the
   // deprecated PGO name, for profiles from older compilers.
@@ -646,8 +650,18 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   // Also key the function by its GUID, if it has one. The GUID is the hash of
   // the function's name when the GUID was assigned, so this still finds the
   // function if LTO has renamed it since. This used to need !PGOFuncName.
-  if (auto GUID = F.getGUIDIfAssigned();
-      GUID && *GUID != Function::getGUIDAssumingExternalLinkage(PGOFuncName))
+  // If requested, key an imported copy of an alias by the alias's GUID instead
+  // of the aliasee's GUID retained in its !guid metadata (see create()).
+  std::optional<GlobalValue::GUID> GUID;
+  MDNode *AliasGUIDMD = KeyImportedAliasesByAliasGUID
+                            ? F.getMetadata("thinlto_alias_guid")
+                            : nullptr;
+  if (AliasGUIDMD)
+    GUID = mdconst::extract<ConstantInt>(AliasGUIDMD->getOperand(0))
+               ->getZExtValue();
+  else
+    GUID = F.getGUIDIfAssigned();
+  if (GUID && *GUID != Function::getGUIDAssumingExternalLinkage(PGOFuncName))
     MD5FuncMap.emplace_back(*GUID, &F);
 
   if (!AddCanonical)
