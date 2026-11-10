@@ -23,22 +23,22 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, posix_close, (int fd, int flag)) {
+  static_assert(POSIX_CLOSE_RESTART == 0);
+
   auto result = linux_syscalls::close(fd);
 
   if (!result.has_value()) {
     int error = result.error();
-#if POSIX_CLOSE_RESTART == 0
     // If POSIX_CLOSE_RESTART is zero, posix_close shall not return an EINTR
     // error. On Linux, the descriptor is released immediately, but background
     // state flush may be interrupted. Map EINTR to EINPROGRESS per POSIX.
     if (error == EINTR)
       error = EINPROGRESS;
-#endif
     libc_errno = error;
     return -1;
   }
 
-  if (flag != 0 && flag != POSIX_CLOSE_RESTART) {
+  if (flag != 0) {
     libc_errno = EINVAL;
     return -1;
   }
