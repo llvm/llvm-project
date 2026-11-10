@@ -16,6 +16,7 @@
 #include "MCTargetDesc/PISARegEncoder.h"
 #include "PISAInstPrinter.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -218,9 +219,9 @@ public:
       OS << "[" << GV.Dcl.Size << "]";
     } else {
       OS << " = { ";
-      for (uint64_t I = 0; I < GV.Init.Initializer.size(); ++I) {
-        const PISA::VariableInit::InitElement &X = GV.Init.Initializer[I];
-        OS << ((I == 0) ? "" : ", ");
+      ListSeparator LS;
+      for (const auto &[I, X] : enumerate(GV.Init.Initializer)) {
+        OS << LS;
         DenseMap<uint64_t, PISA::VariableInit::SpecialEntry>::const_iterator
             Iter = GV.Init.Exprs.find(I);
         if (Iter != GV.Init.Exprs.end()) {
