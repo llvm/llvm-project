@@ -2614,6 +2614,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   //   vdpbf16ps (AVX512-BF16)
   //   vdpphps (AVX10.2)
   // 512-bit shapes are split in two when only the VEX encoding is available.
+  // Without VNNI, the signed i16 dot product uses pmaddwd + paddd instead.
   if (!Subtarget.useSoftFloat()) {
     bool HasVNNI = Subtarget.hasVNNI() || Subtarget.hasAVXVNNI();
     bool HasVNNIINT8 = Subtarget.hasAVXVNNIINT8() || Subtarget.hasAVX10_2();
@@ -2628,6 +2629,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       if (HasVNNI) {
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, AccVT, I8VT,
                                   Custom);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, AccVT, I16VT,
+                                  Custom);
+      } else if (Subtarget.hasSSE2() && !Subtarget.isPMADDWDSlow() &&
+                 (AccVT != MVT::v16i32 || Subtarget.useBWIRegs())) {
+        // Mark v8i32 on SSE targets too, as the combines only check the types
+        // after one step of type legalization.
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, AccVT, I16VT,
                                   Custom);
       }
@@ -2861,6 +2868,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::VECREDUCE_OR,
                        ISD::VECREDUCE_XOR,
                        ISD::VECREDUCE_MUL,
+                       ISD::PARTIAL_REDUCE_SMLA,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::FP_TO_SINT,
@@ -34818,7 +34826,7 @@ static SDValue LowerPARTIAL_REDUCE_FMLA(SDValue Op,
 }
 
 /// Lower an i8 x i8 -> i32 or i16 x i16 -> i32 partial reduction to the
-/// matching VNNI dot product.
+/// matching VNNI dot product, or to PMADDWD for i16 x i16 -> i32 without VNNI.
 static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -34828,6 +34836,22 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   bool IsI8 = LHS.getSimpleValueType().getScalarType() == MVT::i8;
+
+  // Without VNNI, PMADDWD sign extends the i16 elements, multiplies them and
+  // adds each adjacent pair of products into an i32 lane. The partial
+  // reduction doesn't fix which products are added together, so add the
+  // accumulator to that. Like VPDPWSSD, the i32 sums wrap.
+  if (Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA && !IsI8 &&
+      !Subtarget.hasVNNI() && !Subtarget.hasAVXVNNI()) {
+    auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
+                             ArrayRef<SDValue> Ops) {
+      MVT ResVT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
+      return DAG.getNode(X86ISD::VPMADDWD, DL, ResVT, Ops[0], Ops[1]);
+    };
+    SDValue MAdd =
+        SplitOpsAndApply(DAG, Subtarget, DL, VT, {LHS, RHS}, PMADDWDBuilder);
+    return DAG.getNode(ISD::ADD, DL, VT, Acc, MAdd);
+  }
 
   // Pick the instruction, and whether the 512-bit EVEX and the VEX encodings
   // exist for it.
@@ -64297,6 +64321,24 @@ static SDValue FixupMMXIntrinsicTypes(SDNode *N, SelectionDAG &DAG) {
   }
   return SDValue();
 }
+
+// The generic combines only check the partial reduction types after one step
+// of type legalization, so without VNNI they can form an i16 SMLA whose inputs
+// still need widening (<4 x i16> inputs with a <4 x i32> accumulator). The
+// type legalizer can't widen those inputs, so expand the partial reduction.
+static SDValue combinePARTIAL_REDUCE_SMLA(SDNode *N, SelectionDAG &DAG,
+                                          const X86Subtarget &Subtarget) {
+  if (Subtarget.hasVNNI() || Subtarget.hasAVXVNNI())
+    return SDValue();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT InVT = N->getOperand(1).getValueType();
+  if (InVT.getScalarType() != MVT::i16 ||
+      TLI.getTypeAction(*DAG.getContext(), InVT) !=
+          TargetLowering::TypeWidenVector)
+    return SDValue();
+  return TLI.expandPartialReduceMLA(N, DAG);
+}
+
 static SDValue combineINTRINSIC_WO_CHAIN(SDNode *N, SelectionDAG &DAG,
                                          TargetLowering::DAGCombinerInfo &DCI) {
   if (!DCI.isBeforeLegalize())
@@ -64561,6 +64603,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PCLMULQDQ:   return combinePCLMULQDQ(N, DAG, DCI);
   case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);
+  case ISD::PARTIAL_REDUCE_SMLA:
+    return combinePARTIAL_REDUCE_SMLA(N, DAG, Subtarget);
   case ISD::INTRINSIC_VOID:  return combineINTRINSIC_VOID(N, DAG, DCI);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT: return combineFP_TO_xINT_SAT(N, DAG, Subtarget);

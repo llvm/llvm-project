@@ -198,8 +198,8 @@ exit:
 ; Without VNNI, the signed i16 dot product is a PMADDWD and an ADD.
 define i32 @dot_s16s16_vf8_sse2(ptr readonly %a, ptr readonly %b) #8 {
 ; CHECK-LABEL: 'dot_s16s16_vf8_sse2'
-; CHECK:  Cost of 2 for VF 8: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 2 for VF 8: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
+; CHECK:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
+; CHECK:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
 ;
 entry:
   br label %loop
@@ -225,8 +225,8 @@ exit:
 
 define i32 @dot_s16s16_vf16_avx(ptr readonly %a, ptr readonly %b) #9 {
 ; CHECK-LABEL: 'dot_s16s16_vf16_avx'
-; CHECK:  Cost of 8 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 8 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
+; CHECK:  Cost of 8 for VF 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
+; CHECK:  Cost of 8 for VF 16: EXPRESSION vp<[[VP8]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
 ;
 entry:
   br label %loop
@@ -252,8 +252,8 @@ exit:
 
 define i32 @dot_s16s16_vf16_avx2(ptr readonly %a, ptr readonly %b) #10 {
 ; CHECK-LABEL: 'dot_s16s16_vf16_avx2'
-; CHECK:  Cost of 2 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 2 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
+; CHECK:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
+; CHECK:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
 ;
 entry:
   br label %loop
@@ -279,8 +279,8 @@ exit:
 
 define i32 @dot_s16s16_vf32_avx512bw(ptr readonly %a, ptr readonly %b) #5 {
 ; CHECK-LABEL: 'dot_s16s16_vf32_avx512bw'
-; CHECK:  Cost of 2 for VF 32: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 2 for VF 32: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
+; CHECK:  Cost of 2 for VF 32: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
+; CHECK:  Cost of 2 for VF 32: EXPRESSION vp<[[VP8]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> sext to i32))
 ;
 entry:
   br label %loop
