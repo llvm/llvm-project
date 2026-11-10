@@ -1,5 +1,5 @@
-// REQUIRES: icu || iconv
-// RUN: %clang_cc1 -triple s390x-none-zos -fexec-charset Shift_JIS %s -std=c++23 -fsyntax-only -verify
+// REQUIRES: icu
+// RUN: %clang_cc1 -fexec-charset Shift_JIS %s -std=c++23 -fsyntax-only -verify
 
 struct string_view {
   const char *D;
