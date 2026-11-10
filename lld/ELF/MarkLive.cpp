@@ -32,6 +32,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <mutex>
 #include <variant>
 #include <vector>
 
@@ -553,15 +554,14 @@ static void processSectionEdges(
     fn(sec.nextInSectionGroup, 0);
 }
 
-// Parallel mark using level-synchronized BFS with depth-limited inline
-// recursion. Each parallelFor iteration processes a subtree up to depth 3
-// (DFS for cache locality), then queues deeper discoveries for the next level.
+// Level-synchronous marking with depth-first workers and work sharing on idle.
+// Each level is a parallelFor round: workers claim chunks of the level and walk
+// depth-first for cache locality. Once one runs out of chunks, the others move
+// their stacks to the next level.
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   const size_t numThreads = parallel::getThreadCount();
-  auto visit = [&](InputSection &sec, int depth,
-                   SmallVector<InputSection *, 0> &localQueue,
-                   auto &self) -> void {
+  auto visit = [&](InputSection &sec, SmallVector<InputSection *, 0> &stack) {
     processSectionEdges<ELFT>(
         ctx, sec, cNamedSections,
         [&](InputSectionBase *target, uint64_t offset) {
@@ -572,28 +572,43 @@ void MarkLive<ELFT, TrackWhyLive>::markParallel() {
           if (part.load(std::memory_order_relaxed) != 0 ||
               part.exchange(1, std::memory_order_relaxed) != 0)
             return;
-          if (auto *s = dyn_cast<InputSection>(target)) {
-            if (depth < 3)
-              self(*s, depth + 1, localQueue, self);
-            else
-              localQueue.push_back(s);
-          }
+          if (auto *s = dyn_cast<InputSection>(target))
+            stack.push_back(s);
         });
   };
 
+  SmallVector<InputSection *, 0> level;
   while (!queue.empty()) {
-    auto queues =
-        std::make_unique<SmallVector<InputSection *, 0>[]>(numThreads);
-    // Workers claim items off a shared counter and accumulate deeper
-    // discoveries into their own local queue, merged into `queue` below.
-    std::atomic<ptrdiff_t> next{ptrdiff_t(queue.size())};
+    level.clear();
+    std::swap(level, queue);
+    std::mutex mu;
+    std::atomic<bool> anyIdle{false};
+    const size_t chunkSize =
+        std::clamp<size_t>(level.size() / (4 * numThreads), 1, 64);
+    // Shard i first takes chunk i, so `nextChunk` starts at chunk `numThreads`.
+    std::atomic<size_t> nextChunk{numThreads * chunkSize};
     parallelFor(0, numThreads, [&](size_t shard) {
-      for (ptrdiff_t i; (i = next.fetch_sub(1, std::memory_order_relaxed)) > 0;)
-        visit(*queue[i - 1], 0, queues[shard], visit);
+      SmallVector<InputSection *, 0> stack;
+      size_t visited = 0;
+      for (size_t begin = shard * chunkSize, end = level.size(); begin < end;
+           begin = nextChunk.fetch_add(chunkSize, std::memory_order_relaxed)) {
+        stack.append(level.begin() + begin,
+                     level.begin() + std::min(begin + chunkSize, end));
+        while (!stack.empty()) {
+          visit(*stack.pop_back_val(), stack);
+          // Share the stack only after 256 visits in this level: each level
+          // ends with a barrier, and sharing sooner would add many levels on
+          // deep, narrow graphs.
+          if (++visited >= 256 && !stack.empty() &&
+              anyIdle.load(std::memory_order_relaxed)) {
+            std::lock_guard<std::mutex> lock(mu);
+            queue.append(stack);
+            stack.clear();
+          }
+        }
+      }
+      anyIdle.store(true, std::memory_order_relaxed);
     });
-    queue.clear();
-    for (size_t t = 0; t < numThreads; ++t)
-      queue.append(std::move(queues[t]));
   }
 }
 
