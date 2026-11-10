@@ -228,7 +228,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckString)) << *MF;
 }
 
-TEST_F(AArch64GISelMITest, TruncTruncArtifactLegality) {
+TEST_F(AMDGPUGISelMITest, TruncTruncArtifactLegality) {
   for (LegalizeAction Action : {Legal, Lower, Custom, Unsupported}) {
     SCOPED_TRACE(Action);
     setUp();
@@ -258,7 +258,7 @@ TEST_F(AArch64GISelMITest, TruncTruncArtifactLegality) {
       llvm_unreachable("unexpected test action");
     }
 
-    auto Src = B.buildCopy(S64, Copies[0]);
+    auto Src = B.buildMergeValues(S64, {Copies[0], Copies[1]});
     auto Inner = B.buildTrunc(S32, Src);
     auto Outer = B.buildTrunc(S16, Inner);
     LegalizationArtifactCombiner Combiner(B, *MRI, LI);
@@ -282,7 +282,7 @@ TEST_F(AArch64GISelMITest, TruncTruncArtifactLegality) {
   }
 }
 
-TEST_F(AArch64GISelMITest, TruncTruncBuildVectorArtifact) {
+TEST_F(AMDGPUGISelMITest, TruncTruncBuildVectorArtifact) {
   setUp();
   if (!TM)
     GTEST_SKIP();
@@ -298,7 +298,7 @@ TEST_F(AArch64GISelMITest, TruncTruncBuildVectorArtifact) {
   LI.getActionDefinitionsBuilder(TargetOpcode::G_BUILD_VECTOR)
       .legalFor({{V2S32, S32}});
 
-  auto Src = B.buildCopy(S64, Copies[0]);
+  auto Src = B.buildMergeValues(S64, {Copies[0], Copies[1]});
   auto Vector = B.buildBuildVector(V2S64, {Src.getReg(0), Src.getReg(0)});
   auto Inner = B.buildTrunc(V2S48, Vector);
   auto Outer = B.buildTrunc(V2S32, Inner);
