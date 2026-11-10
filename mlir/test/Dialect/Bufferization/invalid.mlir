@@ -9,6 +9,15 @@ func.func @alloc_tensor_missing_dims(%arg0: index)
 
 // -----
 
+func.func @alloc_tensor_unranked_dims(%arg0: index)
+{
+  // expected-error @+1 {{takes dynamic sizes and a size hint only for a ranked tensor result}}
+  %0 = bufferization.alloc_tensor(%arg0) : tensor<*xf32>
+  return
+}
+
+// -----
+
 // expected-note @+1 {{prior use here}}
 func.func @alloc_tensor_type_mismatch(%t: tensor<?xf32>) {
   // expected-error @+1{{expects different type than prior uses: 'tensor<5xf32>' vs 'tensor<?xf32>'}}

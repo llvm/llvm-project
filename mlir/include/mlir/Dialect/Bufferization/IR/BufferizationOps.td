@@ -41,6 +41,9 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     If `copy` is specified, no dynamic sizes should be passed, since they are
     the same as the dynamic sizes of the `copy` operand.
 
+    The result may be any tensor-like type. `dynamic_sizes` and `size_hint`
+    apply only to a ranked tensor result.
+
     `alloc_tensor` is a helper op for bufferization. The operation is provided
     as an anchor that marks the beginning of a new tensor SSA use-def chain. It
     can be used to control in-place bufferization decisions during One-Shot
@@ -85,42 +88,42 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   }];
 
   let arguments = (ins Variadic<Index>:$dynamic_sizes,
-                       Optional<AnyTensor>:$copy,
+                       Optional<Bufferization_TensorLikeTypeInterface>:$copy,
                        Optional<Index>:$size_hint,
                        OptionalAttr<AnyAttr>:$memory_space);
 
-  let results = (outs AnyTensor:$result);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$result);
 
   let extraClassDeclaration = [{
-    RankedTensorType getType() {
-      return ::llvm::cast<RankedTensorType>(getResult().getType());
-    }
-
-    // Return true if the size of the tensor is dynamic at `idx`
+    // Return true if the size of the tensor is dynamic at `idx`. Requires a
+    // ranked tensor result.
     bool isDynamicDim(unsigned idx) {
-      return getType().isDynamicDim(idx);
+      assert(::llvm::isa<RankedTensorType>(getType()) &&
+             "expected a ranked tensor result");
+      return ::llvm::cast<RankedTensorType>(getType()).isDynamicDim(idx);
     }
 
     // Return the argument position that contains the dynamic size of
-    // the tensor at dimension `idx`. Asserts that the shape is
-    // dynamic at that `idx`.
+    // the tensor at dimension `idx`. Requires a ranked tensor result that is
+    // dynamic at `idx`.
     unsigned getIndexOfDynamicSize(unsigned idx) {
       assert(!getCopy() && "no dim sizes specified when copying a tensor");
       assert(isDynamicDim(idx) && "expected dynamic size");
-      ArrayRef<int64_t> shape = getType().getShape();
+      ArrayRef<int64_t> shape =
+          ::llvm::cast<RankedTensorType>(getType()).getShape();
       return std::count_if(shape.begin(), shape.begin() + idx,
                            ShapedType::isDynamic);
     }
 
     // Return the Value of the dynamic size of the tensor at dimension
-    // `idx`. Asserts that the shape is dynamic at that `idx.
+    // `idx`. Requires a ranked tensor result that is dynamic at `idx`.
     Value getDynamicSize(OpBuilder &b, unsigned idx);
 
-    // Assert that the size of the result tensor is static at `idx`
-    // and return the shape.
+    // Return the static size of the tensor at dimension `idx`. Requires a
+    // ranked tensor result that is static at `idx`.
     int64_t getStaticSize(unsigned idx) {
       assert(!isDynamicDim(idx) && "expected static size");
-      return getType().getShape()[idx];
+      return ::llvm::cast<RankedTensorType>(getType()).getShape()[idx];
     }
   }];
 
@@ -135,6 +138,15 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     // Build an op without `size_hint`.
     OpBuilder<(ins "TensorType":$type, "ValueRange":$dynamicSizes,
                    "Value":$copy, "IntegerAttr":$memory_space)>,
+
+    // Build an op without `memory_space` or `size_hint`.
+    OpBuilder<(ins "TensorLikeType":$type, "ValueRange":$dynamicSizes,
+                   "Value":$copy)>,
+
+    // Build an op; the other builders call this one.
+    OpBuilder<(ins "TensorLikeType":$type, "ValueRange":$dynamicSizes,
+                   "Value":$copy, "Value":$size_hint,
+                   "Attribute":$memory_space)>,
   ];
 
   let hasCanonicalizer = 1;

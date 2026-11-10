@@ -17,6 +17,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
@@ -567,8 +568,10 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
     return mlir::success(valid);
   }
 
+  // A builtin memref may leave an extent of the tensor dynamic.
   if (auto builtinMemref = dyn_cast<MemRefType>(bufferType)) {
-    const bool valid = getShape() == builtinMemref.getShape() &&
+    const bool valid = succeeded(verifyCompatibleShape(
+                           getShape(), builtinMemref.getShape())) &&
                        getElementType() == builtinMemref.getElementType();
     return mlir::success(valid);
   }
