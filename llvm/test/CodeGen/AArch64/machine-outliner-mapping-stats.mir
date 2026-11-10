@@ -17,7 +17,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
