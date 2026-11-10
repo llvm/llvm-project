@@ -1436,11 +1436,19 @@ getDeviceInput(const ArgList &Args) {
   // report them here. An input right after an option that is not known here
   // may be the value of a host linker option (e.g. '-z now'), so it is skipped
   // as in a host link. Without the host linker's options, a file after an
-  // unknown flag option is skipped the same way.
+  // unknown flag option is skipped the same way. The '--' separator is not an
+  // option.
   bool ReportMissingInputs = Args.hasArg(OPT_sycl_device_link);
   DenseSet<unsigned> UnknownOptionIndices;
   for (const opt::Arg *Arg : Args.filtered(OPT_UNKNOWN))
-    UnknownOptionIndices.insert(Arg->getIndex());
+    if (Arg->getSpelling() != "--")
+      UnknownOptionIndices.insert(Arg->getIndex());
+  // COFF linker options such as '/nologo' are parsed as inputs. Unlike a path,
+  // they have no further path separator.
+  auto IsCOFFLinkerOption = [&](StringRef Input) {
+    return HostTriple.isOSWindows() && Input.starts_with("/") &&
+           Input.find_first_of("/\\", 1) == StringRef::npos;
+  };
 
   for (const opt::Arg *Arg :
        Args.filtered(OPT_INPUT, OPT_library, OPT_wholearchive_file,
@@ -1462,7 +1470,8 @@ getDeviceInput(const ArgList &Args) {
 
     if (!Filename || !sys::fs::exists(*Filename)) {
       if (ReportMissingInputs &&
-          !UnknownOptionIndices.contains(Arg->getIndex() - 1))
+          !UnknownOptionIndices.contains(Arg->getIndex() - 1) &&
+          !IsCOFFLinkerOption(Arg->getValue()))
         return createFileError(
             Filename ? *Filename : Arg->getValue(),
             make_error_code(errc::no_such_file_or_directory));
