@@ -52,12 +52,16 @@ public:
     bfloat16 one = FPBits::one().get_val();
     bfloat16 one_plus_ulp = FPBits(uint16_t(0x3f81)).get_val();
 
-    for (uint16_t u : {uint16_t(0x0001), uint16_t(0x3db4)}) {
-      for (uint16_t sign : {uint16_t(0x0000), uint16_t(0x8000)}) {
-        bfloat16 x = FPBits(static_cast<uint16_t>(u | sign)).get_val();
-        EXPECT_FP_EQ(one, LIBC_NAMESPACE::coshbf16(x));
-      }
-    }
+    // Largest inputs (in magnitude) that still round to 1, and the smallest
+    // subnormal.
+    EXPECT_FP_EQ(one,
+                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x0001)).get_val()));
+    EXPECT_FP_EQ(one,
+                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x8001)).get_val()));
+    EXPECT_FP_EQ(one,
+                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x3db4)).get_val()));
+    EXPECT_FP_EQ(one,
+                 LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0xbdb4)).get_val()));
 
     // First input whose result no longer rounds to 1 in round-to-nearest.
     EXPECT_FP_EQ(one_plus_ulp,
