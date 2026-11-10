@@ -191,7 +191,7 @@ defm : BoolField<"ctx-prof-promote-alwaysinline", "false",
 // PartialInlining.cpp
 // Used to determine when an edge is considered cold. Default is set to 10%. ie.
 // if the branch probability is 10% or less, then it is deemed as 'cold'.
-defm : ValueField<"cold-branch-ratio", "float", "0.1",
+defm : ValueField<"cold-branch-ratio", "float", "0.1f",
   "Minimum BranchProbability to consider a region cold">;
 defm : ValueField<"max-num-inline-blocks", "unsigned", "5",
   "Max number of blocks to be partially inlined">;
@@ -205,7 +205,7 @@ defm : ValueField<"min-block-execution", "unsigned", "100",
 // its inlining cost compared to the original function.  Default is set at 10%.
 // ie. if the cold region reduces the inlining cost of the original function by
 // at least 10%.
-defm : ValueField<"min-region-size-ratio", "float", "0.1",
+defm : ValueField<"min-region-size-ratio", "float", "0.1f",
   "Minimum ratio comparing relative sizes of each outline candidate and original function">;
 defm : BoolField<"mr-partial-inlining", "true",
   "Enable multi-region partial inlining">;

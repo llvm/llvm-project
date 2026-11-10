@@ -1369,6 +1369,20 @@ static Intrinsic::ID shouldUpgradeNVPTXTMAReductionIntrinsics(StringRef Name) {
       .Default(Intrinsic::not_intrinsic);
 }
 
+static Intrinsic::ID
+shouldUpgradeNVVMBarrierMulticastIntrinsic(Function *F, StringRef Name) {
+  if (!Name.consume_front("mbarrier.") ||
+      !Name.consume_back(".space.cluster") || F->arg_size() != 2)
+    return Intrinsic::not_intrinsic;
+
+  Intrinsic::ID IID = F->getIntrinsicID();
+  if (IID == Intrinsic::not_intrinsic ||
+      Intrinsic::getType(F->getContext(), IID) == F->getFunctionType())
+    return Intrinsic::not_intrinsic;
+
+  return IID;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
                                                               StringRef Name) {
   if (Name.consume_front("mapa.shared.cluster"))
@@ -2137,6 +2151,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       // llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>* =>
       // llvm.nvvm.cp.async.bulk.tensor.reduce.<shape>*
       IID = shouldUpgradeNVPTXTMAReductionIntrinsics(Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
+      // Upgrade the shared::cluster mbarrier expect_tx/complete_tx/arrive*
+      // intrinsics to the forms carrying the 32-bit multicast CTA mask and
+      // the is-multicast flag.
+      IID = shouldUpgradeNVVMBarrierMulticastIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
@@ -6321,6 +6344,37 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Args.insert(Args.end() - 1, Builder.getInt32(*RedOp));
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
+  }
+    // clang-format off
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cluster: {
+    // clang-format on
+    SmallVector<Value *, 8> Args(CI->args());
+    Args.push_back(Builder.getInt32(0)); // cta-mask
+    Args.push_back(Builder.getFalse());  // is-multicast
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
   }
   case Intrinsic::nvvm_mbarrier_init: {
     SmallVector<Value *, 3> Args(CI->args());
