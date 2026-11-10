@@ -7,11 +7,11 @@
 ; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=amdgpu9.00-unknown-amdhsa -cost-kind=code-size -S 2>&1 | FileCheck -check-prefixes=GFX900-SIZE %s
 ; END.
 
-; Packed-f32 pair-formation cost for v_pk_*_f32. On targets with packed FP32 ops
-; a compute-fed <N x float> insert costs one v_mov_b32 at any width, only for
-; throughput, while a load-fed lane stays free. On targets without packed FP32
-; (GFX900) all inserts remain free, and i32 inserts are unaffected on every
-; target.
+; Packed-f32 pair-formation cost for v_pk_*_f32. A compute-fed insert costs one
+; v_mov_b32 on targets with packed f32 ops when the value has another scalar
+; user. A single-use value is written straight into the lane, so the inserts
+; below are free. A load-fed lane stays free. GFX900 has no packed f32 ops, so
+; every insert is free, and i32 inserts are unaffected on every target.
 
 define void @insert_f32_load_fed(ptr %p, ptr %q) {
 ; GFX90A-LABEL: 'insert_f32_load_fed'
@@ -80,18 +80,18 @@ define void @insert_f32_load_fed(ptr %p, ptr %q) {
 define void @insert_f32_compute_fed(float %a, float %b) {
 ; GFX90A-LABEL: 'insert_f32_compute_fed'
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = fadd float %a, %b
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = insertelement <2 x float> poison, float %c, i32 0
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4 = insertelement <4 x float> poison, float %c, i32 1
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8 = insertelement <8 x float> poison, float %c, i32 3
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16 = insertelement <16 x float> poison, float %c, i32 7
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2 = insertelement <2 x float> poison, float %c, i32 0
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4 = insertelement <4 x float> poison, float %c, i32 1
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8 = insertelement <8 x float> poison, float %c, i32 3
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16 = insertelement <16 x float> poison, float %c, i32 7
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX1250-LABEL: 'insert_f32_compute_fed'
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = fadd float %a, %b
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = insertelement <2 x float> poison, float %c, i32 0
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4 = insertelement <4 x float> poison, float %c, i32 1
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8 = insertelement <8 x float> poison, float %c, i32 3
-; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16 = insertelement <16 x float> poison, float %c, i32 7
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v2 = insertelement <2 x float> poison, float %c, i32 0
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v4 = insertelement <4 x float> poison, float %c, i32 1
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v8 = insertelement <8 x float> poison, float %c, i32 3
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v16 = insertelement <16 x float> poison, float %c, i32 7
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX900-LABEL: 'insert_f32_compute_fed'
