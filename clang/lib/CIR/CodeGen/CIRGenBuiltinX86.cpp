@@ -54,7 +54,7 @@ struct X86FCmpInfo {
 static X86FCmpInfo getX86FCmpInfo(unsigned cc) {
   bool inverseSig = cc & 0x10;
   const auto createVal = [inverseSig](cir::FCmpOpKind kind, bool isSignaling) {
-    return X86FCmpInfo{kind, inverseSig ^ isSignaling};
+    return X86FCmpInfo{kind, static_cast<bool>(inverseSig ^ isSignaling)};
   };
   switch (cc & 0xf) {
   case 0x00:
