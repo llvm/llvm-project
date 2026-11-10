@@ -131,9 +131,8 @@ void SystemZCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // Doing it so late makes it more likely that a register will be reused
   // between the comparison and the branch, but it isn't clear whether
   // preventing that would be a win or not.
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZElimComparePass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZElimComparePass(), PMW);
   // TODO(boomanaiden154): Add SystemZLongBranchPass
 
   // Do final scheduling after all other optimizations, to get an

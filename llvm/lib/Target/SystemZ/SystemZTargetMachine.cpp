@@ -49,7 +49,7 @@ LLVMInitializeSystemZTarget() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeSystemZAlignGlobalsLegacyPass(PR);
   initializeSystemZAsmPrinterPass(PR);
-  initializeSystemZElimComparePass(PR);
+  initializeSystemZElimCompareLegacyPass(PR);
   initializeSystemZShortenInstLegacyPass(PR);
   initializeSystemZLongBranchPass(PR);
   initializeSystemZLDCleanupLegacyPass(PR);
@@ -306,7 +306,7 @@ void SystemZPassConfig::addPreEmitPass() {
   // between the comparison and the branch, but it isn't clear whether
   // preventing that would be a win or not.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZElimComparePass(getSystemZTargetMachine()));
+    addPass(createSystemZElimCompareLegacyPass(getSystemZTargetMachine()));
   addPass(createSystemZLongBranchPass(getSystemZTargetMachine()));
 
   // Do final scheduling after all other optimizations, to get an
