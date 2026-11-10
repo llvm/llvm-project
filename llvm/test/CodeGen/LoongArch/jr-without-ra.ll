@@ -79,7 +79,7 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    move $s6, $zero
 ; CHECK-NEXT:    slli.d $s7, $zero, 3
-; CHECK-NEXT:    ldx.d $s7, $s2, $s7
+; CHECK-NEXT:    ldx.d $s7, $s7, $s2
 ; CHECK-NEXT:    jr $s7
 ; CHECK-NEXT:  .LBB0_5: # %sw.bb12.i.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
