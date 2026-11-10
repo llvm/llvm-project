@@ -1607,11 +1607,13 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
       // The index of A is the index of B plus A's distance to B in multiples
       // of the size.
-      int IndexA =
+      int64_t IndexA =
           GroupB->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
 
-      // Try to insert A into B's group.
-      if (GroupB->insertMember(A, IndexA, DesA.Alignment)) {
+      // Try to insert A into B's group. insertMember takes an int32_t index, so
+      // reject A if IndexA does not fit.
+      if (isInt<32>(IndexA) &&
+          GroupB->insertMember(A, IndexA, DesA.Alignment)) {
         LLVM_DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
                           << "    into the interleave group with" << *B
                           << '\n');
