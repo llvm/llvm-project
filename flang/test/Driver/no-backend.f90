@@ -4,9 +4,9 @@
 ! RUN: %flang_fc1 -triple sparc-unknown-unknown -emit-hlfir %s -o - | FileCheck %s --check-prefix=FIR
 ! RUN: %flang_fc1 -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -triple sparc-unknown-unknown -O2 -emit-llvm %s -o - | FileCheck %s
-! RUN: %flang_fc1 -triple sparc-unknown-unknown -emit-llvm-bc %s -o %t.bc
-! RUN: not %flang_fc1 -triple sparc-unknown-unknown -emit-obj %s -o %t.o 2>&1 | FileCheck %s --check-prefix=ERROR
-! RUN: not %flang_fc1 -triple sparc-unknown-unknown -S %s -o %t.s 2>&1 | FileCheck %s --check-prefix=ERROR
+! RUN: %flang_fc1 -triple sparc-unknown-unknown -emit-llvm-bc %s -o /dev/null
+! RUN: not %flang_fc1 -triple sparc-unknown-unknown -emit-obj %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERROR
+! RUN: not %flang_fc1 -triple sparc-unknown-unknown -S %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERROR
 
 ! FIR: llvm.target_triple = "sparc-unknown-unknown"
 ! CHECK: target triple = "sparc-unknown-unknown"
