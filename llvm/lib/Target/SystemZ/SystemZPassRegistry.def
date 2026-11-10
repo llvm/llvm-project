@@ -17,6 +17,8 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("systemz-align-globals", SystemZAlignGlobalsPass())
+MODULE_PASS("systemz-asm-printer-begin", SystemZAsmPrinterBeginPass())
+MODULE_PASS("systemz-asm-printer-end", SystemZAsmPrinterEndPass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS
@@ -28,6 +30,7 @@ FUNCTION_PASS("systemz-tdc", SystemZTDCPass(*this))
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("systemz-asm-printer", SystemZAsmPrinterPass())
 MACHINE_FUNCTION_PASS("systemz-copy-physregs", SystemZCopyPhysRegsPass())
 MACHINE_FUNCTION_PASS("systemz-elim-compare", SystemZElimComparePass())
 MACHINE_FUNCTION_PASS("systemz-isel", SystemZISelDAGToDAGPass(*this, getOptLevel()))

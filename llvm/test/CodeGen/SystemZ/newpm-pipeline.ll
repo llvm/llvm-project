@@ -26,6 +26,7 @@
 ; O0-NEXT:   safe-stack
 ; O0-NEXT:   stack-protector
 ; O0-NEXT:   verify
+; O0-NEXT: systemz-asm-printer-begin
 ; O0-NEXT: function
 ; O0-NEXT:   machine-function
 ; O0-NEXT:     systemz-isel
@@ -50,7 +51,9 @@
 ; O0-NEXT:     machine-sanmd
 ; O0-NEXT:     stack-frame-layout
 ; O0-NEXT:     verify
+; O0-NEXT:     systemz-asm-printer
 ; O0-NEXT:   free-machine-function
+; O0-NEXT: systemz-asm-printer-end
 
 ; O3: require<MachineModuleAnalysis>
 ; O3-NEXT: require<profile-summary>
@@ -88,6 +91,7 @@
 ; O3-NEXT:   safe-stack
 ; O3-NEXT:   stack-protector
 ; O3-NEXT:   verify
+; O3-NEXT: systemz-asm-printer-begin
 ; O3-NEXT: function
 ; O3-NEXT:   machine-function
 ; O3-NEXT:     systemz-isel
@@ -149,4 +153,6 @@
 ; O3-NEXT:     machine-sanmd
 ; O3-NEXT:     stack-frame-layout
 ; O3-NEXT:     verify
+; O3-NEXT:     systemz-asm-printer
 ; O3-NEXT:   free-machine-function
+; O3-NEXT: systemz-asm-printer-end

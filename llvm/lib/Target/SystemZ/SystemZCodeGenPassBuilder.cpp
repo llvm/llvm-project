@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZ.h"
+#include "SystemZAsmPrinter.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
@@ -143,15 +144,15 @@ void SystemZCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 }
 
 void SystemZCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZAsmPrinterBegin
+  addModulePass(SystemZAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void SystemZCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZAsmPrinter
+  addMachineFunctionPass(SystemZAsmPrinterPass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZAsmPrinterEnd
+  addModulePass(SystemZAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace
