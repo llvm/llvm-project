@@ -44,7 +44,7 @@ define i16 @f1(ptr %src, i16 %b) {
 ; a register and use the sequence above.
 define i16 @f2(ptr %src) {
 ; CHECK-LABEL: f2:
-; CHECK: lhi [[VALUE:%r[0-9]+]], -25536
+; CHECK: llill [[VALUE:%r[0-9]+]], 40000
 ; CHECK: risbg {{%r[0-9]+}}, [[VALUE]], 32, 47, 16
 ; CHECK: br %r14
 ;

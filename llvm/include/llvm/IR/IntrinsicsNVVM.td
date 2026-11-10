@@ -2497,9 +2497,23 @@ foreach op = ["expect_tx", "complete_tx"] in {
       defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
                             llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
 
+      // The shared::cluster form additionally carries a 32-bit CTA mask and a
+      // constant is-multicast flag.
+      defvar args_ty = !if(!eq(space, "space_cta"),
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty],  // tx-count
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty,   // tx-count
+                            llvm_i32_ty,   // cta-mask
+                            llvm_i1_ty]);  // is-multicast
+      defvar mc_props = !if(!eq(space, "space_cta"),
+                            []<IntrinsicProperty>,
+                            [ImmArg<ArgIndex<3>>]);
+
       def int_nvvm_mbarrier_ # suffix :
-          Intrinsic<[], [mbar_addr_ty, llvm_i32_ty],
-          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+          Intrinsic<[], args_ty,
+          !listconcat([IntrConvergent, IntrArgMemOnly, IntrNoCallback],
+                      mc_props)>;
     } // space
   } // scope
 } // op
@@ -2513,19 +2527,31 @@ foreach op = ["arrive", "arrive_expect_tx",
       defvar suffix = StrJoin<"_", [scope, space]>.ret;
       defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
                             llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
-      defvar args_ty = [mbar_addr_ty, // mbar_address_ptr
-                        llvm_i32_ty]; // tx-count
 
       // mbarriers in shared_cluster space cannot return any value.
       defvar mbar_ret_ty = !if(!eq(space, "space_cta"),
                               [llvm_i64_ty], []<LLVMType>);
 
+      // The shared::cluster form additionally carries a 32-bit CTA mask and a
+      // constant is-multicast flag.
+      defvar args_ty = !if(!eq(space, "space_cta"),
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty],  // count
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty,   // count
+                            llvm_i32_ty,   // cta-mask
+                            llvm_i1_ty]);  // is-multicast
+      defvar mc_props = !if(!eq(space, "space_cta"),
+                            []<IntrinsicProperty>,
+                            [ImmArg<ArgIndex<3>>]);
+
       def int_nvvm_mbarrier_ # op # "_" # suffix:
           Intrinsic<mbar_ret_ty, args_ty,
-          [IntrConvergent, IntrNoCallback]>;
+          !listconcat([IntrConvergent, IntrNoCallback], mc_props)>;
       def int_nvvm_mbarrier_ # op # "_relaxed_" # suffix :
           Intrinsic<mbar_ret_ty, args_ty,
-          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+          !listconcat([IntrConvergent, IntrArgMemOnly, IntrNoCallback],
+                      mc_props)>;
     } // space
   } // scope
 } // op
@@ -3768,7 +3794,7 @@ foreach cta_group = ["cg1", "cg2"] in {
      llvm_i1_ty],       // is_exclusive
     [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
      WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-     ImmArg<ArgIndex<2>>,
+     ImmArg<ArgIndex<2>, DefaultValue<0>>,
      ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_dealloc_ # cta_group : Intrinsic<[],
@@ -3776,7 +3802,7 @@ foreach cta_group = ["cg1", "cg2"] in {
      llvm_i32_ty,       // num_columns
      llvm_i1_ty],       // is_exclusive
     [IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
-     ImmArg<ArgIndex<2>>,
+     ImmArg<ArgIndex<2>, DefaultValue<0>>,
      ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_relinq_alloc_permit_ # cta_group : Intrinsic<[], [],

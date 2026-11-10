@@ -453,6 +453,26 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   emitStoreOfScalar(src.getValue(), dst, isInit);
 }
 
+static std::optional<LValue> emitDeclTargetVarDeclLValue(CIRGenFunction &cgf,
+                                                         const Expr *e,
+                                                         const VarDecl *vd) {
+  std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> res =
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(vd);
+  if (!res)
+    return std::nullopt;
+  // MT_Local uses direct access.
+  if (*res == OMPDeclareTargetDeclAttr::MT_Local)
+    return std::nullopt;
+  // MT_To/MT_Enter without unified memory use direct access.
+  if ((*res == OMPDeclareTargetDeclAttr::MT_To ||
+       *res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+      !cgf.cgm.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())
+    return std::nullopt;
+  cgf.cgm.errorNYI(e->getSourceRange(),
+                   "emitDeclTargetVarDeclLValue: indirect access");
+  return std::nullopt;
+}
+
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                       const VarDecl *vd) {
   QualType t = e->getType();
@@ -463,8 +483,9 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
-  if (cgf.getLangOpts().OpenMP)
-    cgf.cgm.errorNYI(e->getSourceRange(), "emitGlobalVarDeclLValue: OpenMP");
+  if (cgf.getLangOpts().OpenMPIsTargetDevice)
+    if (std::optional<LValue> lv = emitDeclTargetVarDeclLValue(cgf, e, vd))
+      return *lv;
 
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar.
@@ -862,8 +883,11 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   // IR value to a vector here allows the rest of codegen to behave as normal.
   if (getLangOpts().HLSL &&
       !mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) {
-    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: HLSL");
-    return {};
+    auto dstTy = cir::VectorType::get(
+        vec.getType(), llvm::ElementCount::get(1, /*Scalable=*/false));
+    cir::ConstantOp poison =
+        builder.getConstant(loc, cir::PoisonAttr::get(dstTy));
+    vec = builder.createInsertElement(loc, poison, vec, /*idx=*/0);
   }
 
   assert((mlir::isa<cir::VectorType, cir::MatrixType>(vec.getType())) &&
@@ -949,9 +973,11 @@ Address CIRGenFunction::emitExtVectorElementLValue(LValue lv,
   return Address(elementValue, vectorElementTy, alignment);
 }
 
-static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
-  assert(!cir::MissingFeatures::weakRefReference());
-  return cgm.getAddrOfFunction(gd);
+cir::FuncOp CIRGenModule::getRawFunctionPointer(GlobalDecl gd) {
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+  if (fd->hasAttr<WeakRefAttr>())
+    return cast_or_null<cir::FuncOp>(getWeakRefReference(fd));
+  return getAddrOfFunction(gd);
 }
 
 static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
@@ -1013,14 +1039,16 @@ LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field) {
 static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                      GlobalDecl gd) {
   const FunctionDecl *fd = cast<FunctionDecl>(gd.getDecl());
-  cir::FuncOp funcOp = emitFunctionDeclPointer(cgf.cgm, gd);
+  cir::FuncOp funcOp = cgf.cgm.getFunctionPointer(gd);
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
   CharUnits align = cgf.getContext().getDeclAlign(fd);
 
   assert(!cir::MissingFeatures::sanitizers());
 
   mlir::Type fnTy = funcOp.getFunctionType();
-  mlir::Type ptrTy = cir::PointerType::get(fnTy);
+  mlir::ptr::MemorySpaceAttrInterface fnAddrSpace =
+      cgf.cgm.getTypes().getPointerAddressSpace(fd->getType());
+  mlir::Type ptrTy = cir::PointerType::get(fnTy, fnAddrSpace);
   mlir::Value addr;
 
   // On the HIP host, a reference to a __global__ kernel must resolve to the
@@ -1044,7 +1072,7 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
     fnTy = cgf.convertType(fd->getType());
-    ptrTy = cir::PointerType::get(fnTy);
+    ptrTy = cir::PointerType::get(fnTy, fnAddrSpace);
 
     addr = cir::CastOp::create(cgf.getBuilder(), addr.getLoc(), ptrTy,
                                cir::CastKind::bitcast, addr);
@@ -1170,8 +1198,20 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           !e->getLocation().isValid()) &&
          "Should not use decl without marking it used!");
 
-  if (nd->hasAttr<WeakRefAttr>())
-    cgm.errorNYI(nd->getSourceRange(), "emitGlobal: WeakRefAttr");
+  // A weakref variable refers to its alias target. Weakref functions are
+  // handled by getRawFunctionPointer.
+  if (const auto *vd = dyn_cast<VarDecl>(nd);
+      vd && vd->hasAttr<WeakRefAttr>()) {
+    auto aliasee =
+        mlir::cast_or_null<cir::GlobalOp>(cgm.getWeakRefReference(vd));
+    if (!aliasee)
+      return LValue();
+    mlir::Value v =
+        builder.createGetGlobal(getLoc(e->getSourceRange()), aliasee);
+    Address addr(v, convertTypeForMem(vd->getType()),
+                 getContext().getDeclAlign(vd));
+    return makeAddrLValue(addr, ty, AlignmentSource::Decl);
+  }
 
   if (const auto *vd = dyn_cast<VarDecl>(nd)) {
     // Checks for omitted feature handling
@@ -1528,11 +1568,11 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    OverflowBehavior overflowBehavior = getLangOpts().PointerOverflowDefined
-                                            ? OverflowBehavior::None
-                                            : OverflowBehavior::NoSignedWrap;
+    cir::OverflowFlags overflowFlags = getLangOpts().PointerOverflowDefined
+                                           ? cir::OverflowFlags::None
+                                           : cir::OverflowFlags::NoSignedWrap;
     idx = builder.createMul(cgm.getLoc(e->getExprLoc()), idx, numElements,
-                            overflowBehavior);
+                            overflowFlags);
 
     addr = emitArraySubscriptPtr(*this, cgm.getLoc(e->getBeginLoc()),
                                  cgm.getLoc(e->getEndLoc()), addr, e->getType(),
@@ -1827,11 +1867,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_AtomicToNonAtomic:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat: {
-    cgm.errorNYI(e->getSourceRange(),
-                 std::string("emitCastLValue for unhandled cast kind: ") +
-                     e->getCastKindName());
-
-    return {};
+    return emitLValue(e->getSubExpr());
   }
 
   case CK_AddressSpaceConversion: {
@@ -2409,7 +2445,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
       if (!clone) {
         // Create a forward declaration - the body will be generated in
         // generateCode when the function definition is processed
-        cir::FuncOp calleeFunc = emitFunctionDeclPointer(cgm, gd);
+        cir::FuncOp calleeFunc = cgm.getRawFunctionPointer(gd);
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToStart(cgm.getModule().getBody());
 
@@ -2434,7 +2470,9 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
       return CIRGenCallee::forBuiltin(builtinID, fd);
   }
 
-  cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
+  cir::FuncOp callee = cgm.getRawFunctionPointer(gd);
+  if (!callee)
+    return CIRGenCallee();
 
   if ((cgm.getLangOpts().CUDA || cgm.getLangOpts().HIP) &&
       !cgm.getLangOpts().CUDAIsDevice && fd->hasAttr<CUDAGlobalAttr>()) {
@@ -2666,6 +2704,10 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   }
 
   CIRGenCallee callee = emitCallee(e->getCallee());
+
+  // emitCallee has already diagnosed (errorNYI) why there is no callee.
+  if (callee.isInvalid())
+    return getUndefRValue(e->getType());
 
   if (callee.isBuiltin())
     return emitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), e,
