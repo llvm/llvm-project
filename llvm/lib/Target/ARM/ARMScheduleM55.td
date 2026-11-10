@@ -93,6 +93,7 @@ def CortexM55Model : SchedMachineModel {
   let UnsupportedFeatures = [IsARM, HasNEON, HasDotProd, HasMatMulInt8, HasZCZ,
                              IsNotMClass, HasV8, HasV8_3a, HasTrustZone, HasDFB,
                              IsWindows];
+  let WarnRedundantInstRW = 0;
 }
 
 

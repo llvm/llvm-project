@@ -30,6 +30,7 @@ def C1PremiumModel : SchedMachineModel {
                                                      HasSVEBFSCALE,
                                                      HasCPA, HasCSSC,
                                                      HasMOPS, HasMOPS_GO]);
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

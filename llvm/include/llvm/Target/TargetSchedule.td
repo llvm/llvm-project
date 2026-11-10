@@ -104,7 +104,7 @@ class SchedMachineModel {
 
   // Warn about InstRWs that resolve to the same entries as the base SchedRW.
   // FIXME: Remove when all in tree targets are clean with the warning enabled.
-  bit WarnRedundantInstRW = false;
+  bit WarnRedundantInstRW = true;
 
   // A processor may only implement part of published ISA, due to either new ISA
   // extensions, (e.g. Pentium 4 doesn't have AVX) or implementation

@@ -29,6 +29,7 @@ def NeoverseN1Model : SchedMachineModel {
                                                     SVEUnsupported.F,
                                                     [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO,
                                                      HasFPv2]);
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

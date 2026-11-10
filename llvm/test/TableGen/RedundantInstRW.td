@@ -21,11 +21,11 @@ let OutOperandList = (outs), InOperandList = (ins) in {
   def Inst_Off : Instruction { let SchedRW = [WriteA]; }
 }
 
-def ModelOn : SchedMachineModel {
+def ModelOn : SchedMachineModel { let CompleteModel = 0; }
+def ModelOff : SchedMachineModel {
   let CompleteModel = 0;
-  let WarnRedundantInstRW = true;
+  let WarnRedundantInstRW = 0;
 }
-def ModelOff : SchedMachineModel { let CompleteModel = 0; }
 
 def UnitOn : ProcResource<1> { let SchedModel = ModelOn; }
 def UnitOff : ProcResource<1> { let SchedModel = ModelOff; }
