@@ -193,7 +193,6 @@ defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
 defm out_of_bounds_subscripts : OptOutFC1FFlag<"out-of-bounds-subscripts",
   "Accept a constant subscript that is out of bounds, with a warning (default)",
   "Reject a constant subscript that is out of bounds with an error">;
-defm enumeration_type : OptInFC1FFlag<"enumeration-type", "Enables F2023 ENUMERATION TYPE (experimental; FIR lowering is incomplete)">;
 defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-scalars-strict",
   "Require explicit data clauses for all variables (including scalars) under OpenACC DEFAULT(NONE)",
   "Allow scalars without explicit data clauses under OpenACC DEFAULT(NONE) (default, pre-OpenACC-3.2 behavior)">;
@@ -278,6 +277,10 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
 
+defm loop_tripcount_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-trip-count",
+  PosFlag<SetTrue, [], [], "Create constant-trip-count versions of array section loops">,
+   NegFlag<SetFalse, [], [], "Do not create constant-trip-count loops (default)">>;
+
 defm stack_repack_arrays
     : BoolOptionWithoutMarshalling<
           "f", "stack-repack-arrays",
@@ -313,6 +316,12 @@ def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Grou
 def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
   HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
       Values<"none, host, device">;
+
+def fimplicit_default_mapper_allocatable_members : Flag<["-"], "fimplicit-default-mapper-allocatable-members">,
+  Group<f_Group>, HelpText<"Enable implicit allocatable member maps in compiler-generated OpenMP default mappers">;
+def fno_implicit_default_mapper_allocatable_members : Flag<["-"], "fno-implicit-default-mapper-allocatable-members">,
+  Group<f_Group>, HelpText<"Disable implicit allocatable member maps in compiler-generated OpenMP default mappers">;
+
 
 def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Group<gfortran_Group>, Alias<module_dir>;

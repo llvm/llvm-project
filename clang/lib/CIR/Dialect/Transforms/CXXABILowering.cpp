@@ -66,6 +66,11 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
           >(attr))
     return true;
 
+  // A distinct attribute (such as the id of a loop) is only an identity, so
+  // there is nothing in it to lower.
+  if (isa<mlir::DistinctAttr>(attr))
+    return true;
+
   // Data Member and method are ALWAYS illegal.
   if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
           attr))
@@ -321,13 +326,15 @@ public:
       loweredResultTypes.push_back(typeConverter->convertType(result));
     loweredOpState.addTypes(loweredResultTypes);
 
-    // Lower all regions
+    // Convert all regions before moving any blocks.
+    for (mlir::Region &region : op->getRegions()) {
+      if (mlir::failed(
+              rewriter.convertRegionTypes(&region, *getTypeConverter())))
+        return mlir::failure();
+    }
     for (mlir::Region &region : op->getRegions()) {
       mlir::Region *loweredRegion = loweredOpState.addRegion();
       rewriter.inlineRegionBefore(region, *loweredRegion, loweredRegion->end());
-      if (mlir::failed(
-              rewriter.convertRegionTypes(loweredRegion, *getTypeConverter())))
-        return mlir::failure();
     }
 
     // Clone the operation with lowered operand types and result types
@@ -583,6 +590,11 @@ mlir::LogicalResult CIRFuncOpABILowering::matchAndRewrite(
       cir::FuncType::get(signatureConversion.getConvertedTypes(),
                          loweredResultType, /*isVarArg=*/opFuncType.isVarArg());
 
+  // Convert the body types before moving it.
+  if (mlir::failed(rewriter.convertRegionTypes(
+          &op.getBody(), *getTypeConverter(), &signatureConversion)))
+    return mlir::failure();
+
   // Create a new cir.func operation for the CXXABI-lowered function.
   cir::FuncOp loweredFuncOp = rewriter.cloneWithoutRegions(op);
   loweredFuncOp.setFunctionType(loweredFuncType);
@@ -593,9 +605,6 @@ mlir::LogicalResult CIRFuncOpABILowering::matchAndRewrite(
       });
   rewriter.inlineRegionBefore(op.getBody(), loweredFuncOp.getBody(),
                               loweredFuncOp.end());
-  if (mlir::failed(rewriter.convertRegionTypes(
-          &loweredFuncOp.getBody(), *getTypeConverter(), &signatureConversion)))
-    return mlir::failure();
 
   rewriter.eraseOp(op);
   return mlir::success();
@@ -675,7 +684,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   // total-size computation), so it must dominate both regions.
   mlir::Value deletePtr;
   mlir::Value numElements;
-  cir::PointerType ptrTy;
+  auto ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
   clang::CharUnits cookieSize;
   mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
   unsigned ptrWidth =
@@ -683,14 +692,14 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
 
   if (cookieRequired) {
-    ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
     clang::CharUnits elementAlign =
         clang::CharUnits::fromQuantity(op.getElementAlign());
     cxxABI.readArrayCookie(loc, loweredAddress, elementAlign, dl, cirBuilder,
                            numElements, deletePtr, cookieSize);
   } else {
-    deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
-                                    cir::CastKind::bitcast, loweredAddress);
+    deletePtr = cir::CastOp::create(
+        rewriter, loc, cirBuilder.getVoidPtrTy(ptrTy.getAddrSpace()),
+        cir::CastKind::bitcast, loweredAddress);
   }
 
   // Create a cleanup scope to wrap the ArrayDtor operation (if needed) and
@@ -717,12 +726,11 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
       /*bodyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location l) {
         if (dtorFn) {
-          auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
           auto arrayDtor = cir::ArrayDtor::create(
               b, l, loweredAddress, numElements,
               [&](mlir::OpBuilder &bb, mlir::Location ll) {
                 mlir::Value arg =
-                    bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
+                    bb.getInsertionBlock()->addArgument(ptrTy, ll);
                 auto dtorCall = cir::CallOp::create(
                     bb, ll, dtorFn, cir::VoidType(), mlir::ValueRange{arg});
                 dtorCall.setCallingConv(getCalleeCallingConv(dtorFn));
@@ -939,11 +947,19 @@ void CXXABILoweringPass::runOnOperation() {
   mlir::MLIRContext *ctx = mod.getContext();
 
   std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
-  // If lower module is not available, skip the ABI lowering pass.
-  if (!lowerModule) {
-    mod.emitWarning("Cannot create a CIR lower module, skipping the ")
-        << getName() << " pass";
-    return;
+  assert(lowerModule && "LowerModule shouldn't be null");
+  if (!lowerModule->hasTarget()) {
+    mod.emitError() << getArgument() << " requires a module with a supported '"
+                    << cir::CIRDialect::getTripleAttrName() << "' attribute";
+    return signalPassFailure();
+  }
+
+  if (!lowerModule->hasCXXABI()) {
+    mod.emitError() << "C++ ABI '"
+                    << clang::TargetCXXABI::getSpelling(
+                           lowerModule->getCXXABIKind())
+                    << "' is not yet supported by CIR";
+    return signalPassFailure();
   }
 
   mlir::DataLayout dataLayout(mod);
@@ -965,7 +981,12 @@ void CXXABILoweringPass::runOnOperation() {
   ops.push_back(mod);
   cir::collectUnreachable(mod, ops);
 
-  if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
+  // One-shot conversion (no pattern rollback): rewrites materialize
+  // immediately, skipping the IRRewrite/value-mapping bookkeeping.
+  mlir::ConversionConfig config;
+  config.allowPatternRollback = false;
+  if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns),
+                                          config)))
     signalPassFailure();
 
   typeConverter.restoreRecordTypeNames();

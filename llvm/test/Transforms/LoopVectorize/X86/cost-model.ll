@@ -1026,6 +1026,8 @@ exit:
 @dst.arr.a = external global [10 x double]
 @dst.arr.b = external global [15 x double]
 
+; Force VF 4, as extracting the mask for the replicated store makes
+; vectorization unprofitable otherwise.
 define void @known_deref_load_tail_folding() #4 {
 ; CHECK-LABEL: define void @known_deref_load_tail_folding(
 ; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
@@ -1097,7 +1099,7 @@ loop:
   store double 0.000000e+00, ptr %dst.select, align 8
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 12
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !4
 
 exit:
   ret void
@@ -1114,3 +1116,5 @@ attributes #4 = { "target-cpu"="haswell" }
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
 !2 = !{!"llvm.loop.vectorize.scalable.disable"}
 !3 = !{!"llvm.loop.vectorize.enable"}
+!4 = distinct !{!4, !5}
+!5 = !{!"llvm.loop.vectorize.width", i32 4}

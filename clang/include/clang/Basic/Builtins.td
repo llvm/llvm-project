@@ -38,6 +38,14 @@ class MemReverse8Template : Template<
     ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
     ["u8",      "u16",      "u32",      "u64"]>;
 
+class Load8UnsignedTemplate : Template<
+    ["uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t"],
+    ["8",             "16",             "32",             "64"]>;
+
+class Load8SignedTemplate : Template<
+    ["int_least8_t", "int_least16_t", "int_least32_t", "int_least64_t"],
+    ["8",            "16",            "32",            "64"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -1001,6 +1009,43 @@ def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Templa
   let Spellings = ["stdc_memreverse8"];
   let Attributes = [NoThrow, Pure, Const, Constexpr];
   let Prototype = "T(T)";
+}
+
+class Load8Common : LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
+  let Prototype = "T(unsigned char const*)";
+}
+
+def StdcLoad8LeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_leu"];
+}
+
+def StdcLoad8BeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_beu"];
+}
+
+def StdcLoad8AlignedLeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_aligned_leu"];
+}
+
+def StdcLoad8AlignedBeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_aligned_beu"];
+}
+
+def StdcLoad8LeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_les"];
+}
+
+def StdcLoad8BeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_bes"];
+}
+
+def StdcLoad8AlignedLeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_aligned_les"];
+}
+
+def StdcLoad8AlignedBeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_aligned_bes"];
 }
 
 
@@ -4816,7 +4861,7 @@ def Assume : Builtin {
 
 def AssumeSeparateStorage : Builtin {
   let Spellings = ["__builtin_assume_separate_storage"];
-  let Attributes = [NoThrow, Constexpr];
+  let Attributes = [NoThrow];
   let Prototype = "void(void const volatile*, void const volatile*)";
 }
 
@@ -5534,12 +5579,6 @@ def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(__hlsl_resource_t, uint32_t&)";
 }
 
-def HLSLAll : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_all"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "bool(...)";
-}
-
 def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_and"];
   let Attributes = [NoThrow, Const];
@@ -5550,12 +5589,6 @@ def HLSLOr : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_or"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
-}
-
-def HLSLAny : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_any"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "bool(...)";
 }
 
 def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
@@ -5744,10 +5777,52 @@ def HLSLWavePrefixSum : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveMultiPrefixBitAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_bit_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveMultiPrefixBitOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_bit_or"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveMultiPrefixBitXor : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_bit_xor"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveMultiPrefixCountBits : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_count_bits"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "unsigned int(bool, _ExtVector<4, unsigned int>)";
+}
+
+def HLSLWaveMultiPrefixProduct : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_product"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveMultiPrefixSum : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_sum"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLWavePrefixProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_prefix_product"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
+}
+
+def HLSLQuadAll : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_quad_all"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
 }
 
 def HLSLQuadReadAcrossX : LangBuiltin<"HLSL_LANG"> {
@@ -6047,3 +6122,8 @@ def CountedByRef : Builtin {
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "int(...)";
 }
+
+//===----------------------------------------------------------------------===//
+// C++26 reflection metafunctions.
+//===----------------------------------------------------------------------===//
+include "clang/Basic/BuiltinsMeta.td"

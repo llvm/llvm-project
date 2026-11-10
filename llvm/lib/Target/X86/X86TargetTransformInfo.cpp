@@ -69,38 +69,6 @@ using namespace llvm;
 //
 //===----------------------------------------------------------------------===//
 
-// Helper struct to store/access costs for each cost kind.
-// TODO: Move this to allow other targets to use it?
-namespace {
-struct CostKindCosts {
-  unsigned RecipThroughputCost = ~0U;
-  unsigned LatencyCost = ~0U;
-  unsigned CodeSizeCost = ~0U;
-  unsigned SizeAndLatencyCost = ~0U;
-
-  std::optional<unsigned>
-  operator[](TargetTransformInfo::TargetCostKind Kind) const {
-    unsigned Cost = ~0U;
-    switch (Kind) {
-    case TargetTransformInfo::TCK_RecipThroughput:
-      Cost = RecipThroughputCost;
-      break;
-    case TargetTransformInfo::TCK_Latency:
-      Cost = LatencyCost;
-      break;
-    case TargetTransformInfo::TCK_CodeSize:
-      Cost = CodeSizeCost;
-      break;
-    case TargetTransformInfo::TCK_SizeAndLatency:
-      Cost = SizeAndLatencyCost;
-      break;
-    }
-    if (Cost == ~0U)
-      return std::nullopt;
-    return Cost;
-  }
-};
-} // namespace
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
 
@@ -2316,6 +2284,16 @@ InstructionCost X86TTIImpl::getShuffleCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  static const CostKindTblEntry AVX512BWInLaneShuffleTbl[] = {
+      {TTI::SK_PermuteTwoSrc, MVT::v64i8, {2, 2, 2, 2}}, // 2*vpshufb + vpor
+  };
+
+  if (IsInLaneShuffle && ST->hasBWI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWInLaneShuffleTbl, Kind, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512BWShuffleTbl[] = {
     { TTI::SK_Broadcast, MVT::v32i16, { 1, 3, 1, 1 } }, // vpbroadcastw
     { TTI::SK_Broadcast, MVT::v32f16, { 1, 3, 1, 1 } }, // vpbroadcastw
@@ -4188,18 +4166,21 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
 
-/// Returns true if the square root is divided into with the reciprocal
-/// allowed and the target replaces the pair with the rsqrt* based estimate.
-static bool isFoldedIntoRsqrtEstimate(const IntrinsicCostAttributes &ICA,
-                                      const X86TargetLowering &TLI,
-                                      const DataLayout &DL) {
+/// Returns true if \p V is the square root, divided into with the reciprocal
+/// allowed, and the target replaces the pair with the rsqrt* based estimate,
+/// costed with the division. The estimate is formed for the legalized type
+/// \p VT.
+static bool isFoldedIntoRsqrtEstimate(const Value *V,
+                                      const X86TargetLowering &TLI, MVT VT,
+                                      TTI::TargetCostKind CostKind) {
   using namespace PatternMatch;
-  const IntrinsicInst *II = ICA.getInst();
-  if (!II || !II->hasOneUse() ||
+  if (CostKind != TTI::TCK_RecipThroughput && CostKind != TTI::TCK_Latency)
+    return false;
+  const auto *II = dyn_cast_if_present<IntrinsicInst>(V);
+  if (!II || II->getIntrinsicID() != Intrinsic::sqrt || !II->hasOneUse() ||
       !match(II->user_back(), m_FDiv(m_Value(), m_Specific(II))) ||
       !cast<FPMathOperator>(II->user_back())->hasAllowReciprocal())
     return false;
-  EVT VT = TLI.getValueType(DL, ICA.getReturnType());
   return TLI.hasSqrtEstimate(VT, /*Reciprocal=*/true) &&
          TLI.getRecipEstimateSqrtEnabled(VT, *II->getFunction()) !=
              TargetLoweringBase::ReciprocalEstimate::Disabled;
@@ -5193,9 +5174,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::sqrt:
     // The estimate sequence is costed with the division it is folded into.
-    if ((CostKind == TTI::TCK_RecipThroughput ||
-         CostKind == TTI::TCK_Latency) &&
-        isFoldedIntoRsqrtEstimate(ICA, *TLI, DL))
+    if (isFoldedIntoRsqrtEstimate(ICA.getInst(), *TLI,
+                                  getTypeLegalizationCost(RetTy).second,
+                                  CostKind))
       return TTI::TCC_Free;
     ISD = ISD::FSQRT;
     break;
@@ -5595,6 +5576,16 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
   MVT MScalarTy = LT.second.getScalarType();
   unsigned LegalVectorBitWidth = LT.second.getSizeInBits();
   InstructionCost Cost = 0;
+  // The square roots, folded with the divisions into the estimate, are
+  // computed separately to be inserted.
+  if (Insert && !VL.empty())
+    for (unsigned I : seq(DemandedElts.getBitWidth()))
+      if (DemandedElts[I] &&
+          isFoldedIntoRsqrtEstimate(VL[I], *TLI, MScalarTy, CostKind))
+        Cost += getIntrinsicInstrCost(
+            IntrinsicCostAttributes(Intrinsic::sqrt, VL[I]->getType(),
+                                    {VL[I]->getType()}),
+            CostKind);
 
   constexpr unsigned LaneBitWidth = 128;
   assert((LegalVectorBitWidth < LaneBitWidth ||
@@ -6085,6 +6076,14 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     { Intrinsic::masked_expandload,    MVT::v16i16, { 2, 8, 1, 3 } },
     { Intrinsic::masked_expandload,    MVT::v32i16, { 2, 9, 1, 3 } },
 
+    { Intrinsic::masked_expandload,    MVT::v8f16,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16f16, { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v32f16, { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_expandload,    MVT::v8bf16, { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16bf16,{ 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v32bf16,{ 2, 9, 1, 3 } },
+
     { Intrinsic::masked_compressstore, MVT::v16i8,  { 3,10, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v32i8,  { 3,11, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v64i8,  { 3,12, 1, 8 } },
@@ -6092,6 +6091,14 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     { Intrinsic::masked_compressstore, MVT::v8i16,  { 3,10, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v16i16, { 3,11, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v32i16, { 3,12, 1, 8 } },
+
+    { Intrinsic::masked_compressstore, MVT::v8f16,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v16f16, { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v32f16, { 3,12, 1, 8 } },
+
+    { Intrinsic::masked_compressstore, MVT::v8bf16, { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v16bf16,{ 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v32bf16,{ 3,12, 1, 8 } },
   };
 
   static const CostKindTblEntry AVX512CostTable[] = {
@@ -7433,6 +7440,9 @@ bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const {
 
   if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
     return true;
+
+  if (ScalarTy->isHalfTy() || ScalarTy->isBFloatTy())
+    return ST->hasVBMI2();
 
   if (!ScalarTy->isIntegerTy())
     return false;

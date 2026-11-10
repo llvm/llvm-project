@@ -100,7 +100,9 @@ public:
                      builder.getContext(),
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Variable, isExtern, isConstant,
-                     vd->hasAttr<HIPManagedAttr>()));
+                     vd->hasAttr<HIPManagedAttr>(),
+                     /*surfTexType=*/0,
+                     /*normalized=*/false));
     deviceVars.push_back({
         var,
         vd,
@@ -108,8 +110,8 @@ public:
     });
   }
 
-  void registerDeviceSurf(const VarDecl *vd, cir::GlobalOp &var,
-                          bool isExtern) {
+  void registerDeviceSurf(const VarDecl *vd, cir::GlobalOp &var, bool isExtern,
+                          int32_t surfaceType) {
     auto &builder = cgm.getBuilder();
 
     var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
@@ -118,7 +120,8 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Surface, isExtern,
                      /*isConstant=*/false,
-                     /*isManaged=*/false));
+                     /*isManaged=*/false, surfaceType,
+                     /*normalized=*/false));
 
     deviceVars.push_back({
         var,
@@ -127,7 +130,8 @@ public:
     });
   }
 
-  void registerDeviceTex(const VarDecl *vd, cir::GlobalOp &var, bool isExtern) {
+  void registerDeviceTex(const VarDecl *vd, cir::GlobalOp &var, bool isExtern,
+                         int32_t textureType, bool normalized) {
     auto &builder = cgm.getBuilder();
 
     var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
@@ -136,7 +140,7 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Texture, isExtern,
                      /*isConstant=*/false,
-                     /*isManaged=*/false));
+                     /*isManaged=*/false, textureType, normalized));
 
     deviceVars.push_back({
         var,
@@ -346,18 +350,30 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
 
 void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
                                          FunctionArgList &args) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  StringRef kernelName = cgm.getMangledName(
+      cgf.curGD.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
+  auto kernelNameAttr = cir::CUDAKernelNameAttr::get(
+      builder.getContext(), builder.getStringAttr(kernelName));
+  fn->setDiscardableAttr(cir::CUDAKernelNameAttr::getMnemonic(),
+                         kernelNameAttr);
 
   if (auto globalOp =
           llvm::dyn_cast<cir::GlobalOp>(kernelHandles[fn.getSymName()])) {
-    CIRGenBuilderTy &builder = cgm.getBuilder();
     mlir::Type fnPtrTy = globalOp.getSymType();
     auto sym = mlir::FlatSymbolRefAttr::get(fn.getSymNameAttr());
     auto gv = cir::GlobalViewAttr::get(fnPtrTy, sym);
 
     globalOp->setAttr("initial_value", gv);
-    globalOp->removeAttr("sym_visibility");
     globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                        cgm.getPointerAlign().getQuantity()));
+
+    // The stub's linkage is only final once it is defined, so the handle
+    // takes it over here.
+    globalOp.setLinkage(fn.getLinkage());
+    mlir::SymbolTable::setSymbolVisibility(
+        globalOp, cgm.getMLIRVisibilityFromCIRLinkage(fn.getLinkage()));
+    cgm.setDSOLocal(static_cast<mlir::Operation *>(globalOp));
   }
 
   // CUDA 9.0 changed the way to launch kernels.
@@ -418,6 +434,13 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
   globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                      cgm.getPointerAlign().getQuantity()));
 
+  // Inherit visibility and comdat from the kernel's declaration.
+  auto *fd = cast<FunctionDecl>(gd.getDecl());
+  cgm.setGVProperties(globalOp, fd);
+  FunctionTemplateDecl *ft = fd->getPrimaryTemplate();
+  if (!ft || ft->isThisDeclarationADefinition())
+    cgm.maybeSetTrivialComdat(*fd, globalOp);
+
   // Store references
   kernelHandles[fn.getSymName()] = globalOp;
   kernelStubs[globalOp] = fn;
@@ -437,14 +460,11 @@ void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
   // counterparts. It's not clear yet whether it's nvcc's bug or
   // a feature, but we've got to do the same for compatibility.
   if (d->hasAttr<CUDADeviceAttr>() || d->hasAttr<CUDAConstantAttr>() ||
-      d->hasAttr<CUDASharedAttr>()) {
+      d->hasAttr<CUDASharedAttr>() ||
+      d->getType()->isCUDADeviceBuiltinSurfaceType() ||
+      d->getType()->isCUDADeviceBuiltinTextureType()) {
     linkage = cir::GlobalLinkageKind::InternalLinkage;
   }
-
-  if (d->getType()->isCUDADeviceBuiltinSurfaceType() ||
-      d->getType()->isCUDADeviceBuiltinTextureType())
-    cgm.errorNYI(d->getSourceRange(),
-                 "internalizeDeviceSideVar: CUDA Surface/Texture support");
 }
 
 std::string CIRGenNVCUDARuntime::getDeviceSideName(const NamedDecl *nd) {
@@ -505,14 +525,37 @@ void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
   } else if (vd->getType()->isCUDADeviceBuiltinSurfaceType()) {
     // Builtin surfaces and their template arguments are also registered
     // with CUDA runtime.
+    const auto *td = cast<ClassTemplateSpecializationDecl>(
+        vd->getType()->castAsCXXRecordDecl());
+    const TemplateArgumentList &args = td->getTemplateArgs();
+
+    assert(args.size() == 2 &&
+           "Unexpected number of template arguments of CUDA device "
+           "builtin surface type.");
+
+    llvm::APSInt surfaceType = args[1].getAsIntegral();
+
     if (!vd->hasExternalStorage())
-      registerDeviceSurf(vd, var, !vd->hasDefinition());
+      registerDeviceSurf(vd, var, !vd->hasDefinition(),
+                         surfaceType.getSExtValue());
 
   } else if (vd->getType()->isCUDADeviceBuiltinTextureType()) {
     // Builtin textures and their template arguments are also registered
     // with CUDA runtime.
+    const auto *td = cast<ClassTemplateSpecializationDecl>(
+        vd->getType()->castAsCXXRecordDecl());
+    const TemplateArgumentList &args = td->getTemplateArgs();
+
+    assert(args.size() == 3 &&
+           "Unexpected number of template arguments of CUDA device "
+           "builtin texture type.");
+
+    llvm::APSInt textureType = args[1].getAsIntegral();
+    llvm::APSInt normalized = args[2].getAsIntegral();
+
     if (!vd->hasExternalStorage())
-      registerDeviceTex(vd, var, !vd->hasDefinition());
+      registerDeviceTex(vd, var, !vd->hasDefinition(),
+                        textureType.getSExtValue(), normalized.getZExtValue());
   }
 }
 
@@ -525,15 +568,19 @@ void CIRGenNVCUDARuntime::handleGlobalReplace(cir::GlobalOp oldGV,
 }
 
 /// Whether this translation unit has anything for the CUDA runtime to register.
-/// These are the same two attributes LoweringPrepare collects to decide whether
-/// to build a module ctor, so both sides answer the question from one source.
+/// Like LoweringPrepare, count only kernel stub definitions and device
+/// variables carrying registration metadata, not kernel declarations or
+/// launch-site calls.
 static bool hasEntitiesToRegister(mlir::ModuleOp module) {
   // A walk, not a scan of the module body, so this stays in agreement with the
   // recursive walk LoweringPrepare collects them with.
   return module
       ->walk([](mlir::Operation *op) {
-        if (op->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()) ||
-            op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
+        if (auto fn = mlir::dyn_cast<cir::FuncOp>(op);
+            fn && !fn.isDeclaration() &&
+            fn->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()))
+          return mlir::WalkResult::interrupt();
+        if (op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
           return mlir::WalkResult::interrupt();
         return mlir::WalkResult::advance();
       })

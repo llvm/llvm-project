@@ -1290,16 +1290,16 @@ Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
     //   = X + IndexDelta * S
     // Bump = (i' - i) * S
 
-    // Common case 1: if (i' - i) is 1, Bump = S.
-    if (IndexDelta == 1)
-      return C.Stride;
-    // Common case 2: if (i' - i) is -1, Bump = -S.
-    if (IndexDelta.isAllOnes())
-      return Builder.CreateNeg(C.Stride);
-
     IntegerType *DeltaType =
         IntegerType::get(Basis.Ins->getContext(), IndexDelta.getBitWidth());
     Value *ExtendedStride = Builder.CreateSExtOrTrunc(C.Stride, DeltaType);
+
+    // Common case 1: if (i' - i) is 1, Bump = S.
+    if (IndexDelta == 1)
+      return ExtendedStride;
+    // Common case 2: if (i' - i) is -1, Bump = -S.
+    if (IndexDelta.isAllOnes())
+      return Builder.CreateNeg(ExtendedStride);
 
     return CreateMul(ExtendedStride, C.Delta);
   }
@@ -1406,8 +1406,7 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
   auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   return StraightLineStrengthReduce(Opts, DL, DT, SE, TTI).runOnFunction(F);
 }
 
@@ -1458,8 +1457,7 @@ StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   if (!StraightLineStrengthReduce(Opts, DL, DT, SE, TTI).runOnFunction(F))
     return PreservedAnalyses::all();
 

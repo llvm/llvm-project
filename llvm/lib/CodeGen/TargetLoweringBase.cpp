@@ -717,8 +717,9 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
-      RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
+      RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
                          TM.getTargetTriple().getDefaultFloatABI(),
+                         TM.getTargetTriple().getDefaultLongDoubleFormat(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
         STI.initLibcallLoweringInfo(Info);
@@ -951,7 +952,9 @@ void TargetLoweringBase::initActions() {
                        Expand);
 
     // Only some target support these vector operations. Default them to Expand.
-    setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
+    setOperationAction(
+        {ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH, ISD::VECTOR_SHUFFLE_VAR}, VT,
+        Expand);
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                        Expand);
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Expand);
@@ -1054,19 +1057,6 @@ EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
   assert(ShiftVT.getSizeInBits() >= Log2_32_Ceil(LHSTy.getSizeInBits()) &&
          "ShiftVT is still too small!");
   return ShiftVT;
-}
-
-bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
-  assert(isTypeLegal(VT));
-  switch (Op) {
-  default:
-    return false;
-  case ISD::SDIV:
-  case ISD::UDIV:
-  case ISD::SREM:
-  case ISD::UREM:
-    return true;
-  }
 }
 
 bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,
@@ -1249,13 +1239,13 @@ unsigned TargetLoweringBase::getVectorTypeBreakdownMVT(
 
   // Scalable vectors cannot be scalarized, so splitting or widening is
   // required.
-  if (VT.isScalableVector() && !isPowerOf2_32(EC.getKnownMinValue()))
+  if (VT.isScalableVector() && !EC.isPowerOf2())
     llvm_unreachable(
         "Splitting or widening of non-power-of-2 MVTs is not implemented.");
 
   // FIXME: We don't support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EC.getKnownMinValue())) {
+  if (!EC.isPowerOf2()) {
     // Split EC to unit size (scalable property is preserved).
     NumVectorRegs = EC.getKnownMinValue();
     EC = ElementCount::getFixed(1);
@@ -1406,7 +1396,7 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
   // Compute the set of all super-register classes.
   BitVector SuperRegRC(TRI->getNumRegClasses());
-  for (SuperRegClassIterator RCI(RC, TRI); RCI.isValid(); ++RCI)
+  for (SuperRegClassIterator RCI(RC); RCI.isValid(); ++RCI)
     SuperRegRC.setBitsInMask(RCI.getMask());
 
   // Find the first legal register class with the largest spill size.
@@ -1585,7 +1575,7 @@ void TargetLoweringBase::computeRegisterProperties(
     }
 
     case TypeWidenVector:
-      if (isPowerOf2_32(EC.getKnownMinValue())) {
+      if (EC.isPowerOf2()) {
         // Try to widen the vector.
         for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
           MVT SVT = (MVT::SimpleValueType) nVT;
@@ -1748,7 +1738,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdownImpl(
 
   // FIXME: We don't generically support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EltCnt.getKnownMinValue())) {
+  if (!EltCnt.isPowerOf2()) {
     assert(VT.isFixedLengthVector() && "Expected a fixed-length vector VT");
     unsigned NumElts = EltCnt.getKnownMinValue();
 
@@ -2074,9 +2064,9 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
   }
 }
 
-Value *
-TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                                       bool UseTLS) const {
+Value *TargetLoweringBase::getDefaultSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls,
+    bool UseTLS) const {
   // compiler-rt provides a variable with a magic name.  Targets that do not
   // link with compiler-rt may also provide such a variable.
   Module *M = IRB.getModule();
@@ -2122,7 +2112,7 @@ Value *TargetLoweringBase::getSafeStackPointerLocation(
   RTLIB::LibcallImpl SafestackPointerAddressImpl =
       Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
   if (SafestackPointerAddressImpl == RTLIB::Unsupported)
-    return getDefaultSafeStackPointerLocation(IRB, true);
+    return getDefaultSafeStackPointerLocation(IRB, Libcalls, true);
 
   Module *M = IRB.getModule();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
@@ -2226,8 +2216,7 @@ void TargetLoweringBase::insertSSPDeclarations(
             !M.getTargetTriple().isOSCygMing() &&
             !(M.getTargetTriple().isPPC64() &&
               M.getTargetTriple().isOSFreeBSD()) &&
-            (!M.getTargetTriple().isOSDarwin() ||
-             TM.getRelocationModel() == Reloc::Static))
+            !M.getTargetTriple().isOSDarwin())
           GV->setDSOLocal(true);
 
         return GV;
