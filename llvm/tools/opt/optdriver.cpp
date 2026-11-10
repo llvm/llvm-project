@@ -378,6 +378,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "generic-to-nvvm",
       "expand-memcmp",
       "loop-reduce",
+      "loop-unroll",
       "lower-amx-type",
       "lower-amx-intrinsics",
       "polyhedral-info",
