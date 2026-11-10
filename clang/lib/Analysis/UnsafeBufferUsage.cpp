@@ -2411,7 +2411,7 @@ public:
     auto *MCE = dyn_cast<CXXMemberCallExpr>(Operand);
     if (!MCE || !isDataFunction(MCE))
       return false;
-    if (!isUnsafeCast(CE, Ctx))
+    if (!isUnsafePointerCast(CE, Ctx))
       return false;
     Result.addNode(OpTag, DynTypedNode::create(*CE));
     return true;
@@ -2444,7 +2444,8 @@ private:
 
   // Returns true if `CE` casts the pointer returned by `data()` to a pointer to
   // a larger type, or if the size of either pointee type cannot be determined.
-  static bool isUnsafeCast(const ExplicitCastExpr *CE, const ASTContext &Ctx) {
+  static bool isUnsafePointerCast(const ExplicitCastExpr *CE,
+                                  const ASTContext &Ctx) {
     QualType DestType = CE->getType();
     if (!isa<PointerType>(DestType))
       return false;
