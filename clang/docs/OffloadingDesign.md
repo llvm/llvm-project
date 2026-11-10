@@ -405,12 +405,12 @@ static const __tgt_bin_desc BinDesc = {
 
 #### Global Constructor and Destructor
 
-The global constructor (`.omp_offloading.descriptor_reg()`) registers the
+The global constructor (`.llvm_offloading.descriptor_reg()`) registers the
 device images with the runtime by calling the `__tgt_register_lib()` runtime
 function. The constructor is explicitly defined in `.text.startup` section and
 is run once when the program starts. Similarly, the global destructor
-(`.omp_offloading.descriptor_unreg()`) calls `__tgt_unregister_lib()` for
-the destructor and is also defined in `.text.startup` section and run when the
+(`.llvm_offloading.descriptor_unreg()`) calls `__tgt_unregister_lib()` for the
+destructor and is also defined in `.text.startup` section and run when the
 program exits.
 
 ### Offloading Example
