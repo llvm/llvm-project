@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
 // Accesses through `noalias` pointer arguments (Fortran dummy arguments) must
 // not be moved across points where OpenMP implies a flush. The `noalias`
@@ -218,4 +218,23 @@ llvm.func @in_parallel(%arg0: !llvm.ptr {llvm.noalias}) {
     omp.terminator
   }
   llvm.return
+}
+
+// -----
+
+// The start and the end of a target data region are task scheduling points.
+// CHECK-LABEL: define void @target_data(
+// CHECK-SAME: ptr noalias %[[A:[0-9]+]], ptr %{{[0-9]+}})
+// CHECK: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+// CHECK: call void @__tgt_target_data_begin_mapper(
+// CHECK: call void @__tgt_target_data_end_mapper(
+// CHECK-NEXT: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @target_data(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr) {
+    %0 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    omp.target_data map_entries(%0 : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
 }

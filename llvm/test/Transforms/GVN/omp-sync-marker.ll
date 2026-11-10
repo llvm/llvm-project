@@ -1,5 +1,7 @@
 ; RUN: opt -passes=gvn,dse -S < %s | FileCheck %s
 
+@g = global i32 0
+
 declare void @ext()
 
 ; The marker may write to %p, so %p has to be loaded again after it.
@@ -58,4 +60,18 @@ define i32 @other_memory(ptr noalias %p, ptr noalias %q) {
   %b = load i32, ptr %q
   %c = add i32 %a, %b
   ret i32 %c
+}
+
+; The store before the marker isn't dead, and the marker isn't removed either,
+; even though @g is overwritten after it.
+define void @not_dead() {
+; CHECK-LABEL: @not_dead(
+; CHECK-NEXT:    store i32 1, ptr @g, align 4
+; CHECK-NEXT:    call void @llvm.omp.sync.marker.p0(ptr @g)
+; CHECK-NEXT:    store i32 2, ptr @g, align 4
+; CHECK-NEXT:    ret void
+  store i32 1, ptr @g
+  call void @llvm.omp.sync.marker.p0(ptr @g)
+  store i32 2, ptr @g
+  ret void
 }

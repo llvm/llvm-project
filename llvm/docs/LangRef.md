@@ -27700,7 +27700,7 @@ has externally observable side effects.
 This is an overloaded intrinsic.
 
 ```
-declare void @llvm.omp.sync.marker.p0(ptr captures(none) <ptr>) nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.omp.sync.marker.p0(ptr captures(none) <ptr>) nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ```
 
 ##### Overview:
@@ -27719,7 +27719,9 @@ A pointer to the memory to keep ordered.
 
 The intrinsic doesn't generate any code. Optimizers must assume that it reads
 and writes the memory that `<ptr>` points to, so accesses to that memory can't
-be moved across it. It doesn't capture `<ptr>`.
+be moved across it. It also counts as accessing inaccessible memory, so it is
+not removed as a dead store when the memory is overwritten after it. It doesn't
+capture `<ptr>`.
 
 (llvm_pseudoprobe)=
 

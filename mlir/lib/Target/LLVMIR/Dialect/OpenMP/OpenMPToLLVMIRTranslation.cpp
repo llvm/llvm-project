@@ -1006,7 +1006,7 @@ static void emitSyncMarkers(llvm::IRBuilderBase &builder,
 
 /// Returns true if \p op is nested in a construct whose region is outlined into
 /// a separate function (e.g. omp.parallel or omp.task). The arguments of that
-/// function are not dummy arguments, so there is nothing to pin.
+/// function are not dummy arguments, so there is nothing to mark.
 static bool isInOutlinedRegion(Operation *op) {
   return static_cast<bool>(
       op->getParentOfType<omp::OutlineableOpenMPOpInterface>());
@@ -1057,11 +1057,11 @@ static bool isAtomicWithFlush(Operation *op) {
 /// Returns true if \p op implies a flush of all variables on entry, on exit or
 /// both: constructs with an implicit barrier, critical and ordered, task
 /// scheduling points (task generation, including target tasks, taskwait,
-/// taskyield, end of taskgroup), cancellation, entry to and exit from parallel
-/// and teams, and atomic operations that are not relaxed. For worksharing
-/// constructs and scope the flush comes from the barrier at the end, which
-/// `nowait` removes. Explicit `omp.flush` is handled with the op, since a flush
-/// with a list only applies to the listed variables.
+/// taskyield, end of taskgroup, start and end of target data), cancellation,
+/// entry to and exit from parallel and teams, and atomic operations that are
+/// not relaxed. For worksharing constructs and scope the flush comes from the
+/// barrier at the end, which `nowait` removes. Explicit `omp.flush` is handled
+/// with the op, since a flush with a list only applies to the listed variables.
 static bool impliesFlushAll(Operation *op, bool isTargetDevice) {
   if (auto single = dyn_cast<omp::SingleOp>(op))
     return !single.getNowait();
@@ -1073,8 +1073,8 @@ static bool impliesFlushAll(Operation *op, bool isTargetDevice) {
     return !scope.getNowait();
   if (auto workshare = dyn_cast<omp::WorkshareOp>(op))
     return !workshare.getNowait();
-  if (isa<omp::TargetOp, omp::TargetEnterDataOp, omp::TargetExitDataOp,
-          omp::TargetUpdateOp>(op))
+  if (isa<omp::TargetOp, omp::TargetDataOp, omp::TargetEnterDataOp,
+          omp::TargetExitDataOp, omp::TargetUpdateOp>(op))
     return !isTargetDevice;
   if (isAtomicWithFlush(op))
     return true;

@@ -2126,11 +2126,13 @@ def int_donothing : DefaultAttrsIntrinsic<[], [], [IntrNoMem]>;
 def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 
 // Marks a point where an OpenMP flush is implied for the memory that the
-// argument points to. It counts as reading and writing that memory, but doesn't
-// capture the pointer and generates no code.
-def int_omp_sync_marker : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
-                                                [IntrArgMemOnly,
-                                                 NoCapture<ArgIndex<0>>]>;
+// argument points to. It counts as reading and writing that memory. It also
+// counts as accessing inaccessible memory, so that it is never removed as a
+// dead store. It doesn't capture the pointer and generates no code.
+def int_omp_sync_marker
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                            [IntrInaccessibleMemOrArgMemOnly,
+                             NoCapture<ArgIndex<0>>]>;
 
 // The pseudoprobe intrinsic works as a place holder to the block it probes.
 // Like the sideeffect intrinsic defined above, this intrinsic is treated by the
