@@ -1292,30 +1292,87 @@ static bool isSeparateDebugFile(const ObjectFile &Obj) {
   });
 }
 
+// Like unwrapOrError, but report a warning and return std::nullopt instead of
+// terminating the dump: a corrupt separate debug file should not prevent
+// disassembling the object file.
+template <typename T>
+static std::optional<T> unwrapOrWarn(Expected<T> E, StringRef FileName) {
+  if (!E) {
+    reportWarning(toString(E.takeError()), FileName);
+    return std::nullopt;
+  }
+  return *E;
+}
+
 // Add the symbols of the separate debug file DebugObj to the sections of Obj.
-// Like GNU objdump, match the sections by name, as the section indices of the
-// two files are not guaranteed to agree.
+// The section indices of the two files are not guaranteed to agree, so match
+// the sections by name and check that they describe the same section (like
+// GNU objdump's is_same_section()).
 static void addSeparateDebugFileSymbols(
     const ObjectFile &Obj, const ObjectFile &DebugObj,
-    std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
-  StringMap<SectionRef> SectionsByName;
-  for (const SectionRef &Sec : Obj.sections())
-    SectionsByName.try_emplace(unwrapOrError(Sec.getName(), Obj.getFileName()),
-                               Sec);
+    std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
+    function_ref<void(const ObjectFile &, SymbolRef, SectionRef, StringRef)>
+        AddMappingSymbol) {
 
-  const StringRef FileName = DebugObj.getFileName();
-  for (const SymbolRef &Symbol : DebugObj.symbols()) {
-    // Skip STT_FILE, STT_SECTION and mapping symbols.
-    if (cantFail(Symbol.getFlags()) & SymbolRef::SF_FormatSpecific)
+  StringMap<SectionRef> SectionsByName;
+  for (SectionRef Sec : Obj.sections()) {
+    auto SecName = unwrapOrWarn(Sec.getName(), Obj.getFileName());
+    if (!SecName)
       continue;
-    if (unwrapOrError(Symbol.getName(), FileName).empty())
+    SectionsByName.try_emplace(*SecName, Sec);
+  }
+
+  const StringRef DebugFileName = DebugObj.getFileName();
+  bool WarnedMismatch = false;
+  for (SymbolRef Symbol : DebugObj.symbols()) {
+    std::optional<StringRef> NameOrNull =
+        unwrapOrWarn(Symbol.getName(), DebugFileName);
+    if (!NameOrNull || NameOrNull->empty())
       continue;
-    section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
+    StringRef Name = *NameOrNull;
+
+    auto SecIOrNull = unwrapOrWarn(Symbol.getSection(), DebugFileName);
+    if (!SecIOrNull)
+      continue;
+    section_iterator SecI = *SecIOrNull;
     if (SecI == DebugObj.section_end())
       continue;
-    auto It = SectionsByName.find(unwrapOrError(SecI->getName(), FileName));
-    if (It != SectionsByName.end())
-      AllSymbols[It->second].push_back(createSymbolInfo(DebugObj, Symbol));
+
+    auto SecNameOrNull = unwrapOrWarn(SecI->getName(), DebugFileName);
+    if (!SecNameOrNull)
+      continue;
+    auto It = SectionsByName.find(*SecNameOrNull);
+    if (It == SectionsByName.end())
+      continue;
+
+    SectionRef Target = It->second;
+    // The debug file is expected to describe the same binary; otherwise its
+    // symbol addresses are meaningless for Obj.
+    if (Target.getAddress() != SecI->getAddress() ||
+        Target.getSize() != SecI->getSize()) {
+      if (!WarnedMismatch) {
+        reportWarning("section '" + *SecNameOrNull +
+                          "' does not match the section of the same name in '" +
+                          Obj.getFileName() + "'",
+                      DebugFileName);
+        WarnedMismatch = true;
+      }
+      continue;
+    }
+
+    auto FlagsOrNull = unwrapOrWarn(Symbol.getFlags(), DebugFileName);
+    if (!FlagsOrNull)
+      continue;
+    if (*FlagsOrNull & SymbolRef::SF_FormatSpecific) {
+      // STT_FILE and STT_SECTION are useless for disassembly, but mapping
+      // symbols decide how the section is decoded, so keep those.
+      if (Name.size() > 1 && Name[0] == '$' && strchr("adtx", Name[1]) &&
+          hasMappingSymbols(DebugObj))
+        AddMappingSymbol(DebugObj, Symbol, Target, Name.drop_front());
+      continue;
+    }
+
+    AllSymbols[Target].push_back(createSymbolInfo(DebugObj, Symbol));
   }
 }
 
@@ -1918,6 +1975,24 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         std::make_unique<std::map<SectionRef, RISCVISASymSection>>();
   }
   const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(&Obj);
+
+  // Add a mapping symbol defined in SymObj to Target, a section of Obj. Kind is
+  // the part of the symbol name that follows the leading '$'. SymObj is either
+  // Obj itself or a separate debug file describing it.
+  auto AddMappingSymbol = [&](const ObjectFile &SymObj, SymbolRef Symbol,
+                              SectionRef Target, StringRef Kind) {
+    const uint64_t Offset = cantFail(Symbol.getAddress()) - Target.getAddress();
+    AllMappingSymbols[Target].emplace_back(Offset, Kind[0]);
+    // For RISC-V "$x<ISAString>" symbols, resolve the ISA string to a
+    // DisassemblerTarget once and record the pointer so per-instruction
+    // lookups are a single binary search.
+    if (ISATargets && Kind[0] == 'x' && Kind.size() > 1)
+      (*AllRISCVISAMappingSymbols)[Target].emplace_back(
+          Offset, ISATargets->get(PrimaryTarget, Kind.substr(1)));
+    AllSymbols[Target].push_back(
+        createSymbolInfo(SymObj, Symbol, /*MappingSymbol=*/true));
+  };
+
   for (const SymbolRef &Symbol : Obj.symbols()) {
     Expected<StringRef> NameOrErr = Symbol.getName();
     if (!NameOrErr) {
@@ -1940,23 +2015,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           hasMappingSymbols(Obj)) {
         section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
         if (SecI != Obj.section_end()) {
-          uint64_t SectionAddr = SecI->getAddress();
-          uint64_t Address = cantFail(Symbol.getAddress());
           StringRef Name = *NameOrErr;
-          if (Name.consume_front("$") && Name.size() &&
-              strchr("adtx", Name[0])) {
-            AllMappingSymbols[*SecI].emplace_back(Address - SectionAddr,
-                                                  Name[0]);
-            // For RISC-V "$x<ISAString>" symbols, resolve the ISA string to a
-            // DisassemblerTarget once and record the pointer so per-instruction
-            // lookups are a single binary search.
-            if (isRISCVElf(Obj) && Name[0] == 'x' && Name.size() > 1)
-              (*AllRISCVISAMappingSymbols)[*SecI].emplace_back(
-                  Address - SectionAddr,
-                  ISATargets->get(PrimaryTarget, Name.substr(1)));
-            AllSymbols[*SecI].push_back(
-                createSymbolInfo(Obj, Symbol, /*MappingSymbol=*/true));
-          }
+          if (Name.consume_front("$") && Name.size() && strchr("adtx", Name[0]))
+            AddMappingSymbol(Obj, Symbol, *SecI, Name);
         }
       }
       continue;
@@ -1987,7 +2048,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   }
 
   if (AllSymbols.empty() && SeparateDebugObj)
-    addSeparateDebugFileSymbols(Obj, *SeparateDebugObj, AllSymbols);
+    addSeparateDebugFileSymbols(Obj, *SeparateDebugObj, AllSymbols,
+                                AddMappingSymbol);
 
   if (AllSymbols.empty() && Obj.isELF())
     addDynamicElfSymbols(cast<ELFObjectFileBase>(Obj), AllSymbols);

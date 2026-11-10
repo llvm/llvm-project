@@ -1,0 +1,73 @@
+## Mapping symbols stored in a separate debug file still control how the
+## original section is disassembled: $x selects code, $d selects data.
+
+# RUN: rm -rf %t && mkdir -p %t/debug/.build-id/aa
+# RUN: yaml2obj %s --docnum=1 -o %t/stripped
+# RUN: yaml2obj %s --docnum=2 -o %t/debug/.build-id/aa/bbccddee.debug
+# RUN: llvm-objdump -d --no-debuginfod --debug-file-directory %t/debug \
+# RUN:   %t/stripped | FileCheck %s --check-prefix=CHECK
+# RUN: llvm-objdump -d --show-all-symbols --no-debuginfod \
+# RUN:   --debug-file-directory %t/debug %t/stripped | \
+# RUN:   FileCheck %s --check-prefixes=CHECK,ALL
+
+# CHECK:       Disassembly of section .text:
+# CHECK-EMPTY:
+# ALL-NEXT:    <$x>:
+# CHECK-NEXT:  <func>:
+# CHECK-NEXT:  {{.*}}nop
+# CHECK-EMPTY:
+# ALL-NEXT:    <$d>:
+# CHECK-NEXT:  <msg>:
+# CHECK-NEXT:  {{.*}}.word
+
+--- !ELF
+# stripped binary. Build ID aabbccddee.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+Sections:
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 4
+    Notes:
+      - Name: GNU
+        Desc: 'aabbccddee'
+        Type: NT_GNU_BUILD_ID
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+## nop; "Hell".
+    Content: '1F2003D548656C6C'
+
+--- !ELF
+# separate debug file with the mapping symbols.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+Sections:
+  - Name:    .text
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    8
+Symbols:
+  - Name:    func
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+  - Name:    '$x'
+    Section: .text
+    Value:   0x1000
+  - Name:    '$d'
+    Section: .text
+    Value:   0x1004
+  - Name:    msg
+    Section: .text
+    Value:   0x1004
