@@ -2276,7 +2276,9 @@ static bool handleFirstArgMinOrMax(
 
 bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
                                                OptimizationRemarkEmitter *ORE,
-                                               Loop *TheLoop) {
+                                               Loop *TheLoop,
+                                               PredicatedScalarEvolution &PSE) {
+  VPWidenIntOrFpInductionRecipe *WidenIterIV = nullptr;
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     auto *MinOrMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
@@ -2395,8 +2397,19 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
            "cannot handle inloop/ordered reductions yet");
 
     if (RecurrenceDescriptor::isFindLastRecurrenceKind(
-            FindIVPhiR->getRecurrenceKind()))
+            FindIVPhiR->getRecurrenceKind())) {
+      if (!WidenIterIV) {
+        Type *Ty = Plan.getTripCount()->getScalarType();
+        VPIRValue *One = Plan.getConstantInt(Ty, 1);
+        WidenIterIV = new VPWidenIntOrFpInductionRecipe(
+            /*IV=*/nullptr, One, One, &Plan.getVF(),
+            InductionDescriptor::getCanonicalIntInduction(Ty, *PSE.getSE()),
+            VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false),
+            DebugLoc::getUnknown());
+        WidenIterIV->insertBefore(FindIVPhiR);
+      }
       return false;
+    }
 
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
     // on its ComputeReductionResult. SMax/UMax indicates FindLast.
