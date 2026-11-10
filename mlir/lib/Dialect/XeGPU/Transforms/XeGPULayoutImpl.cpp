@@ -1484,8 +1484,8 @@ computeReductionLaneLayoutAndData(
 
     // Cap laneLayout using srcShape.
     for (int i = 0; i < srcRank; ++i)
-      laneLayout[i] = std::min(
-          laneLayout[i], std::max<int64_t>(1, srcShape[i] / laneData[i]));
+      laneLayout[i] = std::min(laneLayout[i],
+                               std::max<int64_t>(1, srcShape[i] / laneData[i]));
 
     // Assign spare lanes only when the innermost source dimension is reduced,
     // matching the distribution typically used by memory loads and DPAS
