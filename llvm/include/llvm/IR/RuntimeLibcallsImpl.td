@@ -168,14 +168,20 @@ def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
 }
 
 def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
-def InaccessibleOrErrnoMem : MemoryEffects<NoModRef> {
+def InaccessibleMemOrErrnoWrite : MemoryEffects<NoModRef> {
   let InaccessibleMem = ModRef;
-  let ErrnoMem = ModRef;
+  let ErrnoMem = Mod;
 }
 
 def InaccessibleOrArgMem : MemoryEffects<NoModRef> {
   let ArgMem = ModRef;
   let InaccessibleMem = ModRef;
+}
+
+def InaccessibleOrArgMemOrErrnoWrite : MemoryEffects<NoModRef> {
+  let ArgMem = ModRef;
+  let InaccessibleMem = ModRef;
+  let ErrnoMem = Mod;
 }
 
 class ValueAttr<list<AttrProperty> props, string expr>
