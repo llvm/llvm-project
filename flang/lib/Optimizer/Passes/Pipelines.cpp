@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Passes/Pipelines.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
@@ -208,7 +209,8 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   pm.addPass(fir::createSimplifyRegionLite());
   if (pc.OptLevel != llvm::OptimizationLevel::O0) {
     // These passes may increase code size.
-    pm.addPass(fir::createSimplifyIntrinsics());
+    pm.addPass(fir::createSimplifyIntrinsics(
+        {/*enableExperimental=*/false, pc.CompensatedSum}));
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
     if (enableConstantArgumentGlobalisation)
       pm.addPass(fir::createConstantArgumentGlobalisationOpt());
@@ -318,11 +320,21 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    addNestedPassToAllTopLevelOperations(pm, [&]() {
-      return hlfir::createSimplifyHLFIRIntrinsics(
-          {/*allowNewSideEffects=*/false, config.fpMaxminBehavior});
-    });
   }
+
+  using ScopeKind = hlfir::HLFIRIntrinsicSimplificationScope;
+  ScopeKind scope;
+  if (config.CompensatedSum)
+    scope =
+        config.optimizeArrayExpression ? ScopeKind::ExceptSum : ScopeKind::None;
+  else
+    scope =
+        config.optimizeArrayExpression ? ScopeKind::All : ScopeKind::SumOnly;
+
+  addNestedPassToAllTopLevelOperations(pm, [&]() {
+    return hlfir::createSimplifyHLFIRIntrinsics(
+        {/*allowNewSideEffects=*/false, config.fpMaxminBehavior, scope});
+  });
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createInlineElementals);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
@@ -334,7 +346,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     // and allow introducing operations with new side effects.
     addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createSimplifyHLFIRIntrinsics(
-          {/*allowNewSideEffects=*/true, config.fpMaxminBehavior});
+          {/*allowNewSideEffects=*/true, config.fpMaxminBehavior, scope});
     });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createPropagateFortranVariableAttributes);

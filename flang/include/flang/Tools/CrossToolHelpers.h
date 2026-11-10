@@ -150,11 +150,13 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     SplitDwarfFile = opts.SplitDwarfFile;
     DwarfDebugFlags = opts.DwarfDebugFlags;
     DebugNameTable = opts.getDebugNameTable();
+    CompensatedSum = opts.CompensatedSum;
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
   /// Enable HLFIR optimizations; expensive ones still require O3.
   bool optimizeArrayExpression;
+  bool CompensatedSum = false; ///< Preserve compensated real/complex SUM.
   bool StackArrays = false; ///< convert memory allocations to alloca.
   bool EnableSafeTrampoline{false}; ///< Use runtime trampoline pool (W^X).
   bool Underscoring = true; ///< add underscores to function names.

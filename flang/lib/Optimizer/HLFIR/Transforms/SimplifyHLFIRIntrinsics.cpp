@@ -3442,44 +3442,56 @@ public:
         mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<TransposeAsElementalConversion>(context);
-    patterns.insert<ReductionConversion<hlfir::SumOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::ProductOp>>(context);
-    patterns.insert<ArrayShiftConversion<hlfir::CShiftOp>>(context);
-    patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
-    patterns.insert<CmpCharOpConversion>(context);
-    patterns.insert<IndexOpConversion>(context);
-    patterns.insert<CharTrimOpConversion>(context);
-    patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::AllOp>>(context);
-    patterns.insert<ExtremumReductionConversion<hlfir::MaxlocOp>>(
-        context, this->fpMaxminBehavior);
-    patterns.insert<ExtremumReductionConversion<hlfir::MinlocOp>>(
-        context, this->fpMaxminBehavior);
-    patterns.insert<ExtremumReductionConversion<hlfir::MaxvalOp>>(
-        context, this->fpMaxminBehavior);
-    patterns.insert<ExtremumReductionConversion<hlfir::MinvalOp>>(
-        context, this->fpMaxminBehavior);
 
-    // If forceMatmulAsElemental is false, then hlfir.matmul inlining
-    // will introduce hlfir.eval_in_mem operation with new memory side
-    // effects. This conflicts with CSE and optimized bufferization, e.g.:
-    //   A(1:N,1:N) =  A(1:N,1:N) - MATMUL(...)
-    // If we introduce hlfir.eval_in_mem before CSE, then the current
-    // MLIR CSE won't be able to optimize the trivial loads of 'N' value
-    // that happen before and after hlfir.matmul.
-    // If 'N' loads are not optimized, then the optimized bufferization
-    // won't be able to prove that the slices of A are identical
-    // on both sides of the assignment.
-    // This is actually the CSE problem, but we can work it around
-    // for the time being.
-    if (forceMatmulAsElemental || this->allowNewSideEffects)
-      patterns.insert<MatmulConversion<hlfir::MatmulOp>>(context);
+    const bool simplifySum =
+        this->scope == hlfir::HLFIRIntrinsicSimplificationScope::All ||
+        this->scope == hlfir::HLFIRIntrinsicSimplificationScope::SumOnly;
+    const bool simplifyOtherIntrinsics =
+        this->scope == hlfir::HLFIRIntrinsicSimplificationScope::All ||
+        this->scope == hlfir::HLFIRIntrinsicSimplificationScope::ExceptSum;
 
-    patterns.insert<DotProductConversion>(context);
-    patterns.insert<ReshapeAsElementalConversion>(context);
+    if (simplifySum)
+      patterns.insert<ReductionConversion<hlfir::SumOp>>(context);
+
+    if (simplifyOtherIntrinsics) {
+      patterns.insert<TransposeAsElementalConversion>(context);
+      patterns.insert<ReductionConversion<hlfir::ProductOp>>(context);
+      patterns.insert<ArrayShiftConversion<hlfir::CShiftOp>>(context);
+      patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
+      patterns.insert<CmpCharOpConversion>(context);
+      patterns.insert<IndexOpConversion>(context);
+      patterns.insert<CharTrimOpConversion>(context);
+      patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
+      patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
+      patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
+      patterns.insert<ReductionConversion<hlfir::AllOp>>(context);
+      patterns.insert<ExtremumReductionConversion<hlfir::MaxlocOp>>(
+          context, this->fpMaxminBehavior);
+      patterns.insert<ExtremumReductionConversion<hlfir::MinlocOp>>(
+          context, this->fpMaxminBehavior);
+      patterns.insert<ExtremumReductionConversion<hlfir::MaxvalOp>>(
+          context, this->fpMaxminBehavior);
+      patterns.insert<ExtremumReductionConversion<hlfir::MinvalOp>>(
+          context, this->fpMaxminBehavior);
+
+      // If forceMatmulAsElemental is false, then hlfir.matmul inlining
+      // will introduce hlfir.eval_in_mem operation with new memory side
+      // effects. This conflicts with CSE and optimized bufferization, e.g.:
+      //   A(1:N,1:N) =  A(1:N,1:N) - MATMUL(...)
+      // If we introduce hlfir.eval_in_mem before CSE, then the current
+      // MLIR CSE won't be able to optimize the trivial loads of 'N' value
+      // that happen before and after hlfir.matmul.
+      // If 'N' loads are not optimized, then the optimized bufferization
+      // won't be able to prove that the slices of A are identical
+      // on both sides of the assignment.
+      // This is actually the CSE problem, but we can work it around
+      // for the time being.
+      if (forceMatmulAsElemental || this->allowNewSideEffects)
+        patterns.insert<MatmulConversion<hlfir::MatmulOp>>(context);
+
+      patterns.insert<DotProductConversion>(context);
+      patterns.insert<ReshapeAsElementalConversion>(context);
+    }
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {

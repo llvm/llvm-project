@@ -65,6 +65,7 @@ CODEGENOPT(DebugInfoForProfiling, 1, 0)  ///< Emit extra debug info to make samp
 CODEGENOPT(PseudoProbeForProfiling, 1, 0) ///< Emit pseudo probes for sample profiling.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Append MD5 hash to internal linkage symbols.
 CODEGENOPT(ImplicitDefaultMapperAllocatableMembers, 1, 1) ///< Map allocatable members in generated OpenMP default mappers.
+CODEGENOPT(CompensatedSum, 1, 0) ///< Use compensated algorithm for SUM for REAL and COMPLEX.
 
 CODEGENOPT(Underscoring, 1, 1)
 ENUM_CODEGENOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, Fortran::common::FPMaxminBehavior::Legacy)
