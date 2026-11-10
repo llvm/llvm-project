@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/DirectiveNameParser.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -25,8 +24,8 @@ DirectiveNameParser::DirectiveNameParser(SourceLanguage L) {
     // Parse "ORDERED" as OMPD_ordered_standalone.
     if (D == OMPD_ordered_blockassoc)
       continue;
-    for (unsigned Ver : getOpenMPVersions())
-      insertName(getOpenMPDirectiveName(D, Ver), D);
+    for (Version V : getOpenMPVersions())
+      insertName(getOpenMPDirectiveName(D, V), D);
   }
 }
 

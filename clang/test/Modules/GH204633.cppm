@@ -9,7 +9,7 @@
 // parser accepts this as a Clang module definition, while the C++ parser
 // diagnoses it as a malformed module declaration.
 //--- original.cppm
-// expected-error@+3 {{unexpected preprocessing token '{' after module name}}
+// expected-error@+3 {{unexpected '{' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 // expected-error@+2 {{module directive must end with a ';'}}
 // expected-error@+1 {{definition of module 'M' is not available}}
 module M {}

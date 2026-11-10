@@ -44,6 +44,14 @@ NestedBuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
   return Result;
 }
 
+NestedBuildNamespace
+NestedBuildNamespace::makeLinkUnit(llvm::StringRef LinkUnitId) {
+  NestedBuildNamespace Result;
+  Result.Namespaces.push_back(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, LinkUnitId));
+  return Result;
+}
+
 bool NestedBuildNamespace::empty() const { return Namespaces.empty(); }
 
 bool NestedBuildNamespace::operator==(const NestedBuildNamespace &Other) const {

@@ -129,6 +129,8 @@ class ExprPointeeResolve {
         return (resolveExpr(BO->getLHS()) || resolveExpr(BO->getRHS()));
       if (BO->getOpcode() == BO_AddAssign || BO->getOpcode() == BO_SubAssign)
         return resolveExpr(BO->getLHS());
+      if (BO->getOpcode() == BO_Assign)
+        return (resolveExpr(BO->getLHS()) || resolveExpr(BO->getRHS()));
       if (BO->isCommaOp())
         return resolveExpr(BO->getRHS());
       return false;

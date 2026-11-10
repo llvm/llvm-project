@@ -1,5 +1,54 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
+func.func @mxi8_dense_wrong_width() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xmxi8> : [1 : i16]>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_dense_signed_storage() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xmxi8> : [1 : si8]>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_dense_float_storage() -> () {
+  // expected-error @+1 {{incompatible attribute for element type}}
+  "foo"(){bar = dense<tensor<1xmxi8> : [1.0 : f32]>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_dense_hex_wrong_size() -> () {
+  // expected-error @+1 {{elements hex data size is invalid for provided type}}
+  "foo"(){bar = dense<"0x807F"> : tensor<3xmxi8>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_sparse_hex_wrong_size() -> () {
+  // expected-error @+1 {{elements hex data size is invalid for provided type}}
+  "foo"(){bar = sparse<0, "0x807F"> : tensor<1xmxi8>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_sparse_out_of_range() -> () {
+  // expected-error @+1 {{integer constant out of range for type}}
+  "foo"(){bar = sparse<0, 256> : tensor<1xmxi8>} : () -> ()
+}
+
+// -----
+
+func.func @mxi8_sparse_float_value() -> () {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0, 1.0> : tensor<1xmxi8>} : () -> ()
+}
+
+// -----
+
 func.func @elementsattr_non_tensor_type() -> () {
   "foo"(){bar = dense<[4]> : i32} : () -> () // expected-error {{elements literal must be a shaped type}}
 }
@@ -674,4 +723,29 @@ func.func @expect_to_parse_literal() {
   // expected-error@below {{expected string token, got 23}}
   %0 = arith.constant dense<[23]> : tensor<1x!unknown<>>
   return
+}
+
+// -----
+
+// f8E8M0FNU has no encoding for a negative value. Converting the literal used
+// to keep the sign bit, and printing the result asserted in APFloat.
+func.func @negative_literal_without_signed_repr() {
+  // expected-error@below {{negative floating point literal for a type with no signed representation}}
+  %0 = arith.constant -2.000000e+00 : f8E8M0FNU
+  return
+}
+
+// -----
+
+func.func @negative_elements_literal_without_signed_repr() {
+  // expected-error@below {{negative floating point literal for a type with no signed representation}}
+  %0 = arith.constant dense<[1.000000e+00, -2.000000e+00]> : tensor<2xf8E8M0FNU>
+  return
+}
+
+// -----
+
+func.func @string_in_int_tensor() {
+  // expected-error @+1 {{expected integer elements, but parsed string}}
+  "foo"() {bar = dense<["oops"]> : tensor<1xi1>} : () -> ()
 }

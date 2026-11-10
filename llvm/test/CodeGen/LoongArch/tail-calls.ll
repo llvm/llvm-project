@@ -44,9 +44,8 @@ define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK-NEXT:    pcalau12i $a2, %got_pc_hi20(callee_indirect1)
 ; CHECK-NEXT:    ld.d $a2, $a2, %got_pc_lo12(callee_indirect1)
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
-; CHECK-NEXT:    sltui $a0, $a0, 1
-; CHECK-NEXT:    masknez $a1, $a1, $a0
-; CHECK-NEXT:    maskeqz $a0, $a2, $a0
+; CHECK-NEXT:    maskeqz $a1, $a1, $a0
+; CHECK-NEXT:    masknez $a0, $a2, $a0
 ; CHECK-NEXT:    or $a0, $a0, $a1
 ; CHECK-NEXT:    jr $a0
 entry:

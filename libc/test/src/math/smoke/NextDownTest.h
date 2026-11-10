@@ -24,21 +24,27 @@ public:
   void testNaN(NextDownFunc func) { ASSERT_FP_EQ(func(aNaN), aNaN); }
 
   void testBoundaries(NextDownFunc func) {
-    ASSERT_FP_EQ(zero, func(min_denormal));
+    EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(min_denormal), 0);
 
     ASSERT_FP_EQ(neg_min_denormal, func(zero));
     ASSERT_FP_EQ(neg_min_denormal, func(neg_zero));
 
-    ASSERT_FP_EQ(neg_max_normal, func(neg_max_normal));
+    EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, func(neg_max_normal), 0);
     ASSERT_FP_EQ(neg_inf, func(neg_inf));
 
     ASSERT_FP_EQ(max_normal, func(inf));
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        FPBits::min_normal(Sign::NEG).get_val(),
+        func(FPBits::max_subnormal(Sign::NEG).get_val()), 0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(FPBits::max_subnormal().get_val(),
+                                func(FPBits::min_normal().get_val()), 0);
   }
 };
 
-#define LIST_NEXTDOWN_TESTS(T, func)                                           \
-  using LlvmLibcNextDownTest = NextDownTestTemplate<T>;                        \
-  TEST_F(LlvmLibcNextDownTest, TestNaN) { testNaN(&func); }                    \
-  TEST_F(LlvmLibcNextDownTest, TestBoundaries) { testBoundaries(&func); }
+#define LIST_NEXTDOWN_TESTS(Name, T, func)                                     \
+  using LlvmLibc##Name##Test = NextDownTestTemplate<T>;                        \
+  TEST_F(LlvmLibc##Name##Test, TestNaN) { testNaN(&func); }                    \
+  TEST_F(LlvmLibc##Name##Test, TestBoundaries) { testBoundaries(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_NEXTDOWNTEST_H

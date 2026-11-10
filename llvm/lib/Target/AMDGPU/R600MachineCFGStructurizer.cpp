@@ -1004,8 +1004,10 @@ int R600MachineCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
   // We assume a single ExitBlk
   MBBVector ExitBlks;
   LoopRep->getExitBlocks(ExitBlks);
+#ifndef NDEBUG
   SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet(llvm::from_range, ExitBlks);
   assert(ExitBlkSet.size() == 1);
+#endif
   MachineBasicBlock *ExitBlk = *ExitBlks.begin();
   assert(ExitBlk && "Loop has several exit block");
   MBBVector LatchBlks;

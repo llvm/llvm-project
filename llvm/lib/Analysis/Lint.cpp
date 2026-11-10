@@ -264,14 +264,25 @@ void Lint::visitCallBase(CallBase &I) {
 
         // Check that ABI attributes for the function and call-site match.
         unsigned ArgNo = AI->getOperandNo();
-        Attribute::AttrKind ABIAttributes[] = {
-            Attribute::ZExt,         Attribute::SExt,     Attribute::InReg,
-            Attribute::ByVal,        Attribute::ByRef,    Attribute::InAlloca,
-            Attribute::Preallocated, Attribute::StructRet};
         AttributeList CallAttrs = I.getAttributes();
-        for (Attribute::AttrKind Attr : ABIAttributes) {
+        for (Attribute::AttrKind Attr :
+             drop_begin(enum_seq(Attribute::None, Attribute::EndAttrKinds,
+                                 force_iteration_on_noniterable_enum))) {
+          if (!Attribute::isABIAttr(Attr))
+            continue;
+
           Attribute CallAttr = CallAttrs.getParamAttr(ArgNo, Attr);
           Attribute FnAttr = F->getParamAttribute(ArgNo, Attr);
+
+          if ((Attr == Attribute::ZExt || Attr == Attribute::SExt) &&
+              CallAttr.isValid() && !FnAttr.isValid()) {
+            // As an exception, allow zeroext/signext at the call-site, while
+            // missing on the function. This means that the caller extends,
+            // while the callee does not assume extension. The call-site
+            // extension is redundant in that case, but perfectly well-defined.
+            continue;
+          }
+
           Check(CallAttr.isValid() == FnAttr.isValid(),
                 Twine("Undefined behavior: ABI attribute ") +
                     Attribute::getNameFromAttrKind(Attr) +

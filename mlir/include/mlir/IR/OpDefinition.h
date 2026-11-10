@@ -123,7 +123,9 @@ public:
   }
 
   /// Dump this operation.
-  void dump() { state->dump(); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump();
+#endif
 
   /// The source location the operation was defined or derived from.
   Location getLoc() { return state->getLoc(); }
@@ -1567,11 +1569,7 @@ namespace op_definition_impl {
 /// trait types `Traits`.
 template <template <typename T> class... Traits>
 inline bool hasTrait(TypeID traitID) {
-  TypeID traitIDs[] = {TypeID::get<Traits>()...};
-  for (unsigned i = 0, e = sizeof...(Traits); i != e; ++i)
-    if (traitIDs[i] == traitID)
-      return true;
-  return false;
+  return ((traitID == TypeID::get<Traits>()) || ...);
 }
 template <>
 inline bool hasTrait<>(TypeID traitID) {
@@ -1647,7 +1645,12 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 template <typename... Ts>
 LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
                          SmallVectorImpl<OpFoldResult> &results) {
-  return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
+  // Reuse one no-op specialization for traits without a folder.
+  return success(
+      (succeeded(
+           foldTrait<std::conditional_t<detect_has_any_fold_trait<Ts>::value,
+                                        Ts, void>>(op, operands, results)) ||
+       ...));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1680,7 +1683,11 @@ LogicalResult verifyTrait(Operation *op) {
 /// Given a set of traits, return the result of verifying the given operation.
 template <typename... Ts>
 LogicalResult verifyTraits(Operation *op) {
-  return success((succeeded(verifyTrait<Ts>(op)) && ...));
+  // Avoid instantiating an identical no-op verifier for each absent hook.
+  return success(
+      (succeeded(verifyTrait<std::conditional_t<
+                     detect_has_verify_trait<Ts>::value, Ts, void>>(op)) &&
+       ...));
 }
 
 /// Verify the given trait if it provides a region verifier.
@@ -1696,7 +1703,12 @@ LogicalResult verifyRegionTrait(Operation *op) {
 /// given operation.
 template <typename... Ts>
 LogicalResult verifyRegionTraits(Operation *op) {
-  return success((succeeded(verifyRegionTrait<Ts>(op)) && ...));
+  // Avoid instantiating an identical no-op verifier for each absent hook.
+  return success(
+      (succeeded(
+           verifyRegionTrait<std::conditional_t<
+               detect_has_verify_region_trait<Ts>::value, Ts, void>>(op)) &&
+       ...));
 }
 } // namespace op_definition_impl
 
@@ -1864,6 +1876,18 @@ private:
   using detect_has_print_properties =
       llvm::is_detected<has_print_properties, T>;
 
+  /// Trait to check if T provides a generated printer for the key-value
+  /// spelling of `prop-dict`.
+  template <typename T, typename... Args>
+  using has_print_properties_as_key_value_list =
+      decltype(T::_odsPrintPropertiesAsKeyValueList(
+          std::declval<MLIRContext *>(), std::declval<OpAsmPrinter &>(),
+          std::declval<const typename PropertiesSelector<T>::type &>(),
+          std::declval<ArrayRef<StringRef>>()));
+  template <typename T>
+  using detect_has_print_properties_as_key_value_list =
+      llvm::is_detected<has_print_properties_as_key_value_list, T>;
+
   /// Trait to check if parseProperties(OpAsmParser, T) exist
   template <typename T, typename... Args>
   using has_parse_properties = decltype(parseProperties(
@@ -1871,6 +1895,16 @@ private:
   template <typename T>
   using detect_has_parse_properties =
       llvm::is_detected<has_parse_properties, T>;
+
+  /// Trait to check if T provides a generated parser for the key-value
+  /// spelling of `prop-dict`.
+  template <typename T, typename... Args>
+  using has_parse_properties_from_key_value_list =
+      decltype(T::parsePropertiesFromKeyValueList(
+          std::declval<OpAsmParser &>(), std::declval<OperationState &>()));
+  template <typename T>
+  using detect_has_parse_properties_from_key_value_list =
+      llvm::is_detected<has_parse_properties_from_key_value_list, T>;
 
   /// Trait to check if T provides a 'ConcreteEntity' type alias.
   template <typename T>
@@ -1915,10 +1949,14 @@ private:
     return detail::InterfaceMap::template get<Traits<ConcreteType>...>();
   }
 
-  /// Return the internal implementations of each of the OperationName
-  /// hooks.
-  /// Implementation of `FoldHookFn` OperationName hook.
-  static OperationName::FoldHookFn getFoldHookFn() {
+  using FoldHookFn = LogicalResult (*)(Operation *, ArrayRef<Attribute>,
+                                       SmallVectorImpl<OpFoldResult> &);
+  using HasTraitFn = bool (*)(TypeID);
+  using PrintAssemblyFn = void (*)(Operation *, OpAsmPrinter &, StringRef);
+  using VerifyInvariantsFn = LogicalResult (*)(Operation *);
+
+  /// Return the internal implementations of each of the OperationName hooks.
+  static constexpr FoldHookFn getFoldHookFn() {
     // If the operation is single result and defines a `fold` method.
     if constexpr (llvm::is_one_of<OpTrait::OneResult<ConcreteType>,
                                   Traits<ConcreteType>...>::value &&
@@ -1991,13 +2029,11 @@ private:
     return result;
   }
 
-  /// Implementation of `GetHasTraitFn`
-  static OperationName::HasTraitFn getHasTraitFn() {
+  static constexpr HasTraitFn getHasTraitFn() {
     return
         [](TypeID id) { return op_definition_impl::hasTrait<Traits...>(id); };
   }
-  /// Implementation of `PrintAssemblyFn` OperationName hook.
-  static OperationName::PrintAssemblyFn getPrintAssemblyFn() {
+  static constexpr PrintAssemblyFn getPrintAssemblyFn() {
     if constexpr (detect_has_print<ConcreteType>::value)
       return [](Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
         OpState::printOpName(op, p, defaultDialect);
@@ -2026,23 +2062,28 @@ public:
                                         InferredProperties<T> &properties) {}
 
   /// Print the operation properties with names not included within
-  /// 'elidedProps'. Unless overridden, this method will try to dispatch to a
-  /// `printProperties` free-function if it exists, and otherwise by converting
-  /// the properties to an Attribute.
+  /// 'elidedProps'. Unless overridden, this method first tries to dispatch to a
+  /// `printProperties` free-function, then to the generated per-field printer,
+  /// and finally converts the properties to an Attribute.
   template <typename T>
   static void printProperties(MLIRContext *ctx, OpAsmPrinter &p,
                               const T &properties,
                               ArrayRef<StringRef> elidedProps = {}) {
     if constexpr (detect_has_print_properties<T>::value)
       return printProperties(p, properties, elidedProps);
+    if constexpr (detect_has_print_properties_as_key_value_list<
+                      ConcreteType>::value)
+      return ConcreteType::_odsPrintPropertiesAsKeyValueList(ctx, p, properties,
+                                                             elidedProps);
     genericPrintProperties(
         p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
   }
 
-  /// Parses 'prop-dict' for the operation. Unless overridden, the method will
-  /// parse the properties using the generic property dictionary using the
-  /// '<{ ... }>' syntax. The resulting properties are stored within the
-  /// property structure of 'result', accessible via 'getOrAddProperties'.
+  /// Parses 'prop-dict' for the operation. Generated parsers accept a keyed
+  /// list whose values use their custom assembly parsers, as well as the
+  /// legacy generic '<{ ... }>' dictionary syntax. The resulting properties
+  /// are stored within the property structure of 'result', accessible via
+  /// 'getOrAddProperties'.
   template <typename T = ConcreteType>
   static ParseResult parseProperties(OpAsmParser &parser,
                                      OperationState &result) {
@@ -2050,6 +2091,9 @@ public:
       return parseProperties(
           parser, result.getOrAddProperties<InferredProperties<T>>());
     }
+
+    if constexpr (detect_has_parse_properties_from_key_value_list<T>::value)
+      return T::parsePropertiesFromKeyValueList(parser, result);
 
     Attribute propertyDictionary;
     if (genericParseProperties(parser, propertyDictionary))
@@ -2090,8 +2134,8 @@ private:
         failed(op_definition_impl::verifyTraits<Traits<ConcreteType>...>(op)) ||
         failed(cast<ConcreteType>(op).verify()));
   }
-  static OperationName::VerifyInvariantsFn getVerifyInvariantsFn() {
-    return static_cast<LogicalResult (*)(Operation *)>(&verifyInvariants);
+  static constexpr VerifyInvariantsFn getVerifyInvariantsFn() {
+    return &verifyInvariants;
   }
   /// Implementation of `VerifyRegionInvariantsFn` OperationName hook.
   static LogicalResult verifyRegionInvariants(Operation *op) {
@@ -2102,15 +2146,14 @@ private:
             op)) ||
         failed(cast<ConcreteType>(op).verifyRegions()));
   }
-  static OperationName::VerifyRegionInvariantsFn getVerifyRegionInvariantsFn() {
-    return static_cast<LogicalResult (*)(Operation *)>(&verifyRegionInvariants);
+  static constexpr VerifyInvariantsFn getVerifyRegionInvariantsFn() {
+    return &verifyRegionInvariants;
   }
 
   static constexpr bool hasNoDataMembers() {
-    // Checking that the derived class does not define any member by comparing
-    // its size to an ad-hoc EmptyOp.
-    class EmptyOp : public Op<EmptyOp, Traits...> {};
-    return sizeof(ConcreteType) == sizeof(EmptyOp);
+    // Compare with the existing base instead of instantiating the traits again
+    // for an otherwise unused operation type.
+    return sizeof(ConcreteType) == sizeof(Op);
   }
 
   /// Allow access to internal implementation methods.

@@ -19,12 +19,12 @@ acc.private.recipe @privatization_memref_i64 : memref<i64> init {
 func.func @private_i64(%arg0 : memref<i64>) {
   %c16 = arith.constant 16 : index
   %c1 = arith.constant 1 : index
-  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) -> memref<i64> {implicit = true, name = ""}
+  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) implicit(true) name("") -> memref<i64>
   acc.loop private(%priv : memref<i64>) control(%siv : index) = (%c1 : index) to (%c16 : index) step (%c1 : index) {
     %iv_i64 = arith.index_cast %siv : index to i64
     memref.store %iv_i64, %priv[] : memref<i64>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -37,13 +37,13 @@ func.func @private_i64(%arg0 : memref<i64>) {
 func.func @par_private_i64(%arg0 : memref<i64>) {
   %c16 = arith.constant 16 : index
   %c1 = arith.constant 1 : index
-  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) -> memref<i64> {implicit = true, name = ""}
+  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) implicit(true) name("") -> memref<i64>
   acc.parallel private(%priv : memref<i64>) {
     acc.loop control(%siv : index) = (%c1 : index) to (%c16 : index) step (%c1 : index) {
       %iv_i64 = arith.index_cast %siv : index to i64
       memref.store %iv_i64, %priv[] : memref<i64>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   return

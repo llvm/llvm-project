@@ -1,6 +1,3 @@
-```{contents}
-:local: true
-```
 
 # AMDGPU Support
 

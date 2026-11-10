@@ -12,4 +12,4 @@ _g0:
 // CHECK:      Name:            .bss
 // CHECK-NEXT: VirtualSize:     0
 // CHECK-NEXT: VirtualAddress:  0
-// CHECK-NEXT: RawDataSize:     4
+// CHECK-NEXT: RawDataSize:     0x4

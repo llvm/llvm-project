@@ -26,6 +26,7 @@ concept can_increment = requires(T t) {
 template <class T>
 void f() {
   static_assert(requires(T t) { ++t; }); // cxx20-error {{static assertion failed due to requirement 'requires (bool t) { <<error-expression>>; }'}}
+  // cxx20-note@-1 {{because '++t' would be invalid}}
 }
 
 int main() {

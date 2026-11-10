@@ -29,6 +29,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -95,10 +96,12 @@ namespace {
 // save off initial state at the beginning, and restore it at the end
 struct InitializePythonRAII {
 public:
-  InitializePythonRAII() {
+  llvm::Error DoInitialize() {
+    const bool was_initialized = Py_IsInitialized();
+
     // The table of built-in modules can only be extended before Python is
     // initialized.
-    if (!Py_IsInitialized()) {
+    if (!was_initialized) {
 #ifdef LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE
       // Python's readline is incompatible with libedit being linked into lldb.
       // Provide a patched version local to the embedded interpreter.
@@ -110,43 +113,63 @@ public:
     }
 
 #if LLDB_EMBED_PYTHON_HOME
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
+    if (!was_initialized) {
+      PyConfig config;
+      PyConfig_InitPythonConfig(&config);
 
-    static std::string g_python_home = []() -> std::string {
-      if (llvm::sys::path::is_absolute(LLDB_PYTHON_HOME))
-        return LLDB_PYTHON_HOME;
+      static std::string g_python_home = []() -> std::string {
+        if (llvm::sys::path::is_absolute(LLDB_PYTHON_HOME))
+          return LLDB_PYTHON_HOME;
 
-      FileSpec spec = HostInfo::GetShlibDir();
-      if (!spec)
-        return {};
-      spec.AppendPathComponent(LLDB_PYTHON_HOME);
-      return spec.GetPath();
-    }();
-    if (!g_python_home.empty()) {
-      PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
+        FileSpec spec = HostInfo::GetShlibDir();
+        if (!spec)
+          return {};
+        spec.AppendPathComponent(LLDB_PYTHON_HOME);
+        return spec.GetPath();
+      }();
+      if (!g_python_home.empty()) {
+        PyStatus status = PyConfig_SetBytesString(&config, &config.home,
+                                                  g_python_home.c_str());
+        if (PyStatus_Exception(status)) {
+          PyConfig_Clear(&config);
+          return llvm::createStringError(
+              "failed to set the Python config: '%s'", status.err_msg);
+        }
+      }
+
+      config.install_signal_handlers = 0;
+      PyStatus status = Py_InitializeFromConfig(&config);
+      PyConfig_Clear(&config);
+      if (PyStatus_Exception(status))
+        return llvm::createStringError("Python failed to initialize: '%s'",
+                                       status.err_msg);
     }
-
-    config.install_signal_handlers = 0;
-    Py_InitializeFromConfig(&config);
-    PyConfig_Clear(&config);
 #else
-    Py_InitializeEx(/*install_sigs=*/0);
+    if (!was_initialized)
+      Py_InitializeEx(/*install_sigs=*/0);
+    if (!Py_IsInitialized())
+      return llvm::createStringError("Python failed to initialize");
 #endif
+
+    m_python_initialized = true;
 
     // The only case we should go further and acquire the GIL: it is unlocked.
     PyGILState_STATE gil_state = PyGILState_Ensure();
     if (gil_state != PyGILState_UNLOCKED)
-      return;
+      return llvm::Error::success();
 
     m_was_already_initialized = true;
     m_gil_state = gil_state;
     LLDB_LOG_VERBOSE(
         GetLog(LLDBLog::Script), "Ensured PyGILState. Previous state = {0}",
         m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
+    return llvm::Error::success();
   }
 
   ~InitializePythonRAII() {
+    if (!m_python_initialized)
+      return;
+
     if (m_was_already_initialized) {
       LLDB_LOG_VERBOSE(GetLog(LLDBLog::Script),
                        "Releasing PyGILState. Returning to state = {0}",
@@ -162,6 +185,7 @@ public:
 private:
   PyGILState_STATE m_gil_state = PyGILState_UNLOCKED;
   bool m_was_already_initialized = false;
+  bool m_python_initialized = false;
 };
 
 #if LLDB_USE_PYTHON_SET_INTERRUPT
@@ -663,6 +687,19 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 }
 
 void ScriptInterpreterPython::Initialize() {
+  llvm::Expected<ScriptInterpreterRuntimeLoader &> loader =
+      ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython);
+  if (!loader) {
+    PluginManager::SetScriptInterpreterError(lldb::eScriptLanguagePython,
+                                             loader.takeError());
+    return;
+  }
+  if (llvm::Error error = loader->Load()) {
+    PluginManager::SetScriptInterpreterError(lldb::eScriptLanguagePython,
+                                             std::move(error));
+    return;
+  }
+
 #if LLDB_ENABLE_MTE
   // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
   // (MTE) and crashes.
@@ -677,11 +714,21 @@ void ScriptInterpreterPython::Initialize() {
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
 #endif
+
+  // Bring the interpreter up before registering, so a Python that refuses to
+  // initialize leaves no plugin claiming eScriptLanguagePython behind.
+  // GetScriptInterpreterForLanguage then hands out ScriptInterpreterNone and
+  // the rest of lldb keeps working without scripting.
+  if (llvm::Error error = ScriptInterpreterPythonImpl::Initialize()) {
+    PluginManager::SetScriptInterpreterError(lldb::eScriptLanguagePython,
+                                             std::move(error));
+    return;
+  }
+
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(),
       lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,
       ScriptInterpreterPythonImpl::GetPythonDir);
-  ScriptInterpreterPythonImpl::Initialize();
   ScriptInterpreterPythonInterfaces::Initialize();
 }
 
@@ -972,18 +1019,20 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
     auto data_up = std::make_unique<WatchpointOptions::CommandData>();
     data_up->user_source.SplitIntoLines(data);
 
-    if (GenerateWatchpointCommandCallbackData(data_up->user_source,
-                                              data_up->script_source,
-                                              /*is_callback=*/false)) {
+    if (llvm::Error error = GenerateWatchpointCommandCallbackData(
+            data_up->user_source, data_up->script_source,
+            /*is_callback=*/false)) {
+      if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
+        LockedStreamFile locked_stream = error_sp->Lock();
+        locked_stream << "error: " << llvm::toString(std::move(error)) << "\n";
+      } else {
+        llvm::consumeError(std::move(error));
+      }
+    } else {
       auto baton_sp =
           std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
       wp_options->SetCallback(
           ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
-    } else if (!batch_mode) {
-      if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
-        LockedStreamFile locked_stream = error_sp->Lock();
-        locked_stream.Printf("Warning: No command attached to breakpoint.\n");
-      }
     }
     m_active_io_handler = eIOHandlerNone;
   } break;
@@ -991,7 +1040,8 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
 }
 
 lldb::ScriptInterpreterSP
-ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger) {
+ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger,
+                                            lldb::ScriptLanguage) {
   return std::make_shared<ScriptInterpreterPythonImpl>(debugger);
 }
 
@@ -1087,8 +1137,10 @@ bool ScriptInterpreterPythonImpl::RedirectTerminalHandleThroughLock(
   // terminal) promptly: the pipe descriptor is not a tty, so the default
   // buffering would hold output back until the buffer filled.
   PyObject *pipe_file = PyFile_FromFd(
-      redirect->GetWriteDescriptor(), nullptr, mode, /*buffering=*/1,
-      /*encoding=*/nullptr, /*errors=*/"ignore", /*newline=*/nullptr,
+      PythonFile::TranslateFdToPython(redirect->GetWriteDescriptor()), nullptr,
+      mode, /*buffering=*/1,
+      /*encoding=*/nullptr, /*errors=*/"ignore",
+      /*newline=*/nullptr,
       /*closefd=*/0);
   if (!pipe_file) {
     // Fall back to the raw descriptor. That reopens the statusline race, so
@@ -1434,7 +1486,7 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
   return false;
 }
 
-void ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
+llvm::Error ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
   LLDB_SCOPED_TIMER();
 
   Debugger &debugger = m_debugger;
@@ -1446,12 +1498,13 @@ void ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
   // loop, so we won't do it.
 
   if (!debugger.GetInputFile().IsValid())
-    return;
+    return llvm::Error::success();
 
   IOHandlerSP io_handler_sp(new IOHandlerPythonInterpreter(debugger, this));
   if (io_handler_sp) {
     debugger.RunIOHandlerAsync(io_handler_sp);
   }
+  return llvm::Error::success();
 }
 
 bool ScriptInterpreterPythonImpl::Interrupt() {
@@ -1685,21 +1738,17 @@ void ScriptInterpreterPythonImpl::CollectDataForWatchpointCommandCallback(
       "    ", *this, wp_options);
 }
 
-Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
+llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
     BreakpointOptions &bp_options, const char *function_name,
     StructuredData::ObjectSP extra_args_sp) {
-  Status error;
   // For now just cons up a oneliner that calls the provided function.
   std::string function_signature = function_name;
 
   llvm::Expected<unsigned> maybe_args =
       GetMaxPositionalArgumentsForCallable(function_name);
-  if (!maybe_args) {
-    error = Status::FromErrorStringWithFormat(
-        "could not get num args: %s",
-        llvm::toString(maybe_args.takeError()).c_str());
-    return error;
-  }
+  if (!maybe_args)
+    return llvm::createStringErrorV("could not get num args: {0}",
+                                    llvm::fmt_consume(maybe_args.takeError()));
   size_t max_args = *maybe_args;
 
   bool uses_extra_args = false;
@@ -1707,45 +1756,39 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
     uses_extra_args = true;
     function_signature += "(frame, bp_loc, extra_args, internal_dict)";
   } else if (max_args >= 3) {
-    if (extra_args_sp) {
-      error = Status::FromErrorStringWithFormat(
+    if (extra_args_sp)
+      return llvm::createStringError(
           "cannot pass extra_args to a three argument callback");
-      return error;
-    }
     uses_extra_args = false;
     function_signature += "(frame, bp_loc, internal_dict)";
   } else {
-    error = Status::FromErrorStringWithFormat("expected 3 or 4 argument "
-                                              "function, %s can only take %zu",
-                                              function_name, max_args);
-    return error;
+    return llvm::createStringErrorV(
+        "expected 3 or 4 argument function, {0} can only take {1}",
+        function_name, max_args);
   }
 
-  SetBreakpointCommandCallback(bp_options, function_signature.c_str(),
-                               extra_args_sp, uses_extra_args,
-                               /*is_callback=*/true);
-  return error;
+  return SetBreakpointCommandCallback(bp_options, function_signature.c_str(),
+                                      extra_args_sp, uses_extra_args,
+                                      /*is_callback=*/true);
 }
 
-Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options,
     std::unique_ptr<BreakpointOptions::CommandData> &cmd_data_up) {
-  Status error;
-  error = GenerateBreakpointCommandCallbackData(cmd_data_up->user_source,
-                                                cmd_data_up->script_source,
-                                                /*has_extra_args=*/false,
-                                                /*is_callback=*/false);
-  if (error.Fail()) {
-    return error;
-  }
+  Status error = GenerateBreakpointCommandCallbackData(
+      cmd_data_up->user_source, cmd_data_up->script_source,
+      /*has_extra_args=*/false,
+      /*is_callback=*/false);
+  if (error.Fail())
+    return error.takeError();
   auto baton_sp =
       std::make_shared<BreakpointOptions::CommandBaton>(std::move(cmd_data_up));
   bp_options.SetCallback(
       ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
-  return error;
+  return llvm::Error::success();
 }
 
-Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
     bool is_callback) {
   return SetBreakpointCommandCallback(bp_options, command_body_text, {},
@@ -1753,7 +1796,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
 }
 
 // Set a Python one-liner as the callback for the breakpoint.
-Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
     BreakpointOptions &bp_options, const char *command_body_text,
     StructuredData::ObjectSP extra_args_sp, bool uses_extra_args,
     bool is_callback) {
@@ -1767,18 +1810,17 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
   Status error = GenerateBreakpointCommandCallbackData(
       data_up->user_source, data_up->script_source, uses_extra_args,
       is_callback);
-  if (error.Success()) {
-    auto baton_sp =
-        std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
-    bp_options.SetCallback(
-        ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
-    return error;
-  }
-  return error;
+  if (error.Fail())
+    return error.takeError();
+  auto baton_sp =
+      std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
+  bp_options.SetCallback(
+      ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
+  return llvm::Error::success();
 }
 
 // Set a Python one-liner as the callback for the watchpoint.
-void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
+llvm::Error ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *user_input, bool is_callback) {
   auto data_up = std::make_unique<WatchpointOptions::CommandData>();
 
@@ -1790,13 +1832,15 @@ void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
   data_up->user_source.AppendString(user_input);
   data_up->script_source.assign(user_input);
 
-  if (GenerateWatchpointCommandCallbackData(
-          data_up->user_source, data_up->script_source, is_callback)) {
-    auto baton_sp =
-        std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
-    wp_options->SetCallback(
-        ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
-  }
+  if (llvm::Error error = GenerateWatchpointCommandCallbackData(
+          data_up->user_source, data_up->script_source, is_callback))
+    return error;
+
+  auto baton_sp =
+      std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
+  wp_options->SetCallback(
+      ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
+  return llvm::Error::success();
 }
 
 Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
@@ -2152,26 +2196,27 @@ Status ScriptInterpreterPythonImpl::GenerateBreakpointCommandCallbackData(
   return error;
 }
 
-bool ScriptInterpreterPythonImpl::GenerateWatchpointCommandCallbackData(
+llvm::Error ScriptInterpreterPythonImpl::GenerateWatchpointCommandCallbackData(
     StringList &user_input, std::string &output, bool is_callback) {
   static uint32_t num_created_functions = 0;
   user_input.RemoveBlankLines();
   StreamString sstr;
 
   if (user_input.GetSize() == 0)
-    return false;
+    return llvm::createStringError("No input data.");
 
   std::string auto_generated_function_name(GenerateUniqueName(
       "lldb_autogen_python_wp_callback_func_", num_created_functions));
   sstr.Printf("def %s (frame, wp, internal_dict):",
               auto_generated_function_name.c_str());
 
-  if (!GenerateFunction(sstr.GetData(), user_input, is_callback).Success())
-    return false;
+  if (Status error = GenerateFunction(sstr.GetData(), user_input, is_callback);
+      error.Fail())
+    return error.takeError();
 
   // Store the name of the auto-generated function to be called.
   output.assign(auto_generated_function_name);
-  return true;
+  return llvm::Error::success();
 }
 
 bool ScriptInterpreterPythonImpl::GetScriptedSummary(
@@ -2797,7 +2842,7 @@ ScriptInterpreterPythonImpl::AcquireInterpreterLock() {
   return py_lock;
 }
 
-void ScriptInterpreterPythonImpl::Initialize() {
+llvm::Error ScriptInterpreterPythonImpl::Initialize() {
   LLDB_SCOPED_TIMER();
 
   // RAII-based initialization which correctly handles multiple-initialization,
@@ -2805,6 +2850,8 @@ void ScriptInterpreterPythonImpl::Initialize() {
   // restoring various other pieces of state that can get mucked with during
   // initialization.
   InitializePythonRAII initialize_guard;
+  if (llvm::Error error = initialize_guard.DoInitialize())
+    return error;
 
   LLDBSwigPyInit();
 
@@ -2846,6 +2893,7 @@ void ScriptInterpreterPythonImpl::Initialize() {
                   "lldb_setup_sigint_handler();\n"
                   "del lldb_setup_sigint_handler\n");
 #endif
+  return llvm::Error::success();
 }
 
 void ScriptInterpreterPythonImpl::AddToSysPath(AddLocation location,

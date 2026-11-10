@@ -42,7 +42,7 @@ ASM_FUNCTION_ARM_RE = re.compile(
 )
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
-    r'^(?P<func>_?[a-zA-Z][^:]*):[ \t]*(\/\/[ \t]*@"?(?P=func)"?)?( (Function|Tail Call))?\n'
+    r'^(?P<func>_*[a-zA-Z][^:]*):[ \t]*(\/\/[ \t]*@"?(?P=func)"?)?( (Function|Tail Call))?\n'
     r"(?:[ \t]+.cfi_startproc\n)?"  # drop optional cfi noise
     r"(?P<body>.*?)"
     # This list is incomplete
@@ -211,7 +211,7 @@ ASM_FUNCTION_ARM_IOS_RE = re.compile(
 )
 
 ASM_FUNCTION_WASM_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
+    r'^(?P<func>_?[^:\n]+):(?:[ \t]*#+[ \t]*@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"
     r"^\s*(\.Lfunc_end[0-9]+:\n|end_function)",
     flags=(re.M | re.S),
@@ -307,10 +307,10 @@ def scrub_asm_x86(asm, args):
     else:
         asm = SCRUB_X86_SHUFFLES_RE.sub(r"\1 {{.*#+}} \2", asm)
 
-    # Detect stack spills and reloads and hide their exact offset and whether
-    # they used the stack pointer or frame pointer.
-    asm = SCRUB_X86_SPILL_RELOAD_RE.sub(r"{{[-0-9]+}}(%\1{{[sb]}}p)\2", asm)
     if getattr(args, "x86_scrub_sp", True):
+        # Detect stack spills and reloads and hide their exact offset and whether
+        # they used the stack pointer or frame pointer.
+        asm = SCRUB_X86_SPILL_RELOAD_RE.sub(r"{{[-0-9]+}}(%\1{{[sb]}}p)\2", asm)
         # Generically match the stack offset of a memory operand.
         asm = SCRUB_X86_SP_RE.sub(r"{{[0-9]+}}(%\1)", asm)
     if getattr(args, "x86_scrub_rip", False):

@@ -1,16 +1,14 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports padded, packed, and over-aligned record shapes.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
 // CIR-DAG: !rec_Param2 = !cir.struct<"Param2" incomplete>
 // CIR-DAG: !rec_Ret1 = !cir.struct<"Ret1" incomplete>
-// CIR-DAG: !rec_S1 = !cir.struct<"S1" {!cir.vptr}>
-// CIR-DAG: !rec_S2 = !cir.struct<"S2" {!cir.vptr}>
+// CIR-DAG: !rec_S1 = !cir.struct<"S1" {data !cir.vptr}>
+// CIR-DAG: !rec_S2 = !cir.struct<"S2" {data !cir.vptr}>
 // LLVMCIR-DAG: %struct.Ret1 = type {}
 // LLVMCIR-DAG: %struct.Param2 = type {}
 
@@ -60,9 +58,9 @@ void S2::key() {}
 // LLVM-SAME: ptr @_ZN2S28badParamE6Param2] }
 
 
-// CIR: cir.func private @_ZN2S19badReturnEv(!cir.ptr<!rec_S1> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> !rec_Ret1
+// CIR: cir.func private unnamed_addr @_ZN2S19badReturnEv(!cir.ptr<!rec_S1> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> !rec_Ret1
 // LLVMCIR: declare %struct.Ret1 @_ZN2S19badReturnEv(ptr noundef nonnull align 8 dereferenceable(8))
 // OGCG: declare void @_ZN2S19badReturnEv()
-// CIR: cir.func private @_ZN2S28badParamE6Param2(!cir.ptr<!rec_S2> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !rec_Param2)
+// CIR: cir.func private unnamed_addr @_ZN2S28badParamE6Param2(!cir.ptr<!rec_S2> {llvm.align = 8 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}, !rec_Param2)
 // LLVMCIR: declare void @_ZN2S28badParamE6Param2(ptr noundef nonnull align 8 dereferenceable(8), %struct.Param2)
 // OGCG: declare void @_ZN2S28badParamE6Param2() unnamed_addr

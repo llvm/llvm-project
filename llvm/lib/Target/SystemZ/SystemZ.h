@@ -15,10 +15,14 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZ_H
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 class FunctionPass;
+class ModulePass;
 class PassRegistry;
 class SystemZTargetMachine;
 
@@ -189,8 +193,13 @@ static inline bool isImmHF(uint64_t Val) {
 }
 } // end namespace SystemZ
 
-FunctionPass *createSystemZISelDag(SystemZTargetMachine &TM,
-                                   CodeGenOptLevel OptLevel);
+class SystemZISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  SystemZISelDAGToDAGPass(SystemZTargetMachine &TM, CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createSystemZISelDagLegacyPass(SystemZTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel);
 FunctionPass *createSystemZElimComparePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZShortenInstPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLongBranchPass(SystemZTargetMachine &TM);
@@ -198,6 +207,14 @@ FunctionPass *createSystemZLDCleanupPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
+
+class SystemZAlignGlobalsPass
+    : public RequiredPassInfoMixin<SystemZAlignGlobalsPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createSystemZAlignGlobalsLegacyPass();
 
 void initializeSystemZAsmPrinterPass(PassRegistry &);
 void initializeSystemZCopyPhysRegsPass(PassRegistry &);
@@ -208,6 +225,7 @@ void initializeSystemZLongBranchPass(PassRegistry &);
 void initializeSystemZPostRewritePass(PassRegistry &);
 void initializeSystemZShortenInstPass(PassRegistry &);
 void initializeSystemZTDCPassPass(PassRegistry &);
+void initializeSystemZAlignGlobalsLegacyPass(PassRegistry &);
 
 namespace SYSTEMZAS {
 enum : unsigned { PTR32 = 1 };

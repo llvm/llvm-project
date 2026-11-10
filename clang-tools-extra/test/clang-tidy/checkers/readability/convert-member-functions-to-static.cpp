@@ -74,6 +74,12 @@ class A {
     return static_field;
   }
 
+  int lifetime_bound() const [[clang::lifetimebound]] {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'lifetime_bound' can be made static
+    // CHECK-FIXES: static int lifetime_bound() {{\[\[}}clang::lifetimebound{{\]\]}} {
+    return static_field;
+  }
+
   static int out_of_line_already_static();
 
   void out_of_line_call_static();

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs -verify -fexperimental-lifetime-safety-c %s
-// RUN: %clang_cc1 -fsyntax-only -Werror=lifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Werror=lifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs -fno-lifetime-safety-c %s
 
 int *identity(int *p __attribute__((lifetimebound))) { return p; }
 
@@ -63,7 +63,7 @@ void lifetimebound_call(void) {
   {
     int i;
     p = identity(&i); // expected-warning {{local variable 'i' does not live long enough}} \
-                      // expected-note {{result of call to 'identity' aliases the storage of local variable 'i' because parameter 'p' is lifetimebound}}
+                      // expected-note {{result of call to 'identity' aliases the storage of local variable 'i' because parameter 'p' is marked as lifetimebound}}
   }                   // expected-note {{local variable 'i' is destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 }
@@ -94,8 +94,8 @@ void conditional_operator_lifetimebound(int cond) {
   {
     int a, b;
     p = identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}} \
-                              // expected-note {{result of call to 'identity' aliases the storage of local variable 'a' because parameter 'p' is lifetimebound}} \
-                              // expected-note {{result of call to 'identity' aliases the storage of local variable 'b' because parameter 'p' is lifetimebound}}
+                              // expected-note {{result of call to 'identity' aliases the storage of local variable 'a' because parameter 'p' is marked as lifetimebound}} \
+                              // expected-note {{result of call to 'identity' aliases the storage of local variable 'b' because parameter 'p' is marked as lifetimebound}}
                       : &b);  // expected-warning {{local variable 'b' does not live long enough}}
   }                           // expected-note {{local variable 'a' is destroyed here}} \
                               // expected-note {{local variable 'b' is destroyed here}}

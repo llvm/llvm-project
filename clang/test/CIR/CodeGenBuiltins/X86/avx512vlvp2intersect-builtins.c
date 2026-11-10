@@ -1,13 +1,11 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll  -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll  -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vp2intersect -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
@@ -15,9 +13,9 @@
 
 #include <immintrin.h>
 
-// CIR: !rec_anon_struct = !cir.struct<{!cir.vector<8 x !cir.int<s, 1>>, !cir.vector<8 x !cir.int<s, 1>>}>
-// CIR: !rec_anon_struct1 = !cir.struct<{!cir.vector<4 x !cir.int<s, 1>>, !cir.vector<4 x !cir.int<s, 1>>}>
-// CIR: !rec_anon_struct2 = !cir.struct<{!cir.vector<2 x !cir.int<s, 1>>, !cir.vector<2 x !cir.int<s, 1>>}>
+// CIR: !rec_anon_struct = !cir.struct<{data !cir.vector<8 x !cir.int<s, 1>>, data !cir.vector<8 x !cir.int<s, 1>>}>
+// CIR: !rec_anon_struct1 = !cir.struct<{data !cir.vector<4 x !cir.int<s, 1>>, data !cir.vector<4 x !cir.int<s, 1>>}>
+// CIR: !rec_anon_struct2 = !cir.struct<{data !cir.vector<2 x !cir.int<s, 1>>, data !cir.vector<2 x !cir.int<s, 1>>}>
 void test_mm256_2intersect_epi32(__m256i a, __m256i b, __mmask8 *m0, __mmask8 *m1) {
   // CIR-LABEL: mm256_2intersect_epi32
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.d.256" %{{.*}}, %{{.*}} : (!cir.vector<8 x !s32i>, !cir.vector<8 x !s32i>) -> !rec_anon_struct

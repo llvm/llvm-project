@@ -17,6 +17,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 
+namespace clang {
+class LifetimeBoundAttr;
+} // namespace clang
+
 namespace clang ::lifetimes {
 
 // This function is needed because Decl::isInStdNamespace will return false for
@@ -60,17 +64,22 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
+/// Check if a function has a lifetime_capture_by attribute on its declaration
+/// or its function type (which represents the implicit 'this' parameter for
+/// methods). Returns the attribute if found, nullptr otherwise.
+const LifetimeCaptureByAttr *
+getCaptureByAttrFromFunctionType(const FunctionDecl *FD);
+
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
 
+/// Stores the callee and normalized arguments for a function call.
 struct FunctionCallInfo {
   const FunctionDecl *FD = nullptr;
   llvm::SmallVector<const Expr *, 4> Args;
-};
 
-/// Returns the callee and arguments corresponding to Call. For instance member
-/// calls, Args includes the implicit object argument as argument 0.
-FunctionCallInfo getFunctionCallInfo(const Expr *Call);
+  explicit FunctionCallInfo(const Expr *Call);
+};
 
 /// Returns the parameter corresponding to argument I when the argument should
 /// be tracked for lifetime safety.
@@ -111,6 +120,11 @@ bool isGslPointerType(QualType QT);
 bool isGslOwnerType(QualType QT);
 bool isGslOwnerType(const CXXRecordDecl *RD);
 
+// Tells whether the given constructor belongs to an Owner type and the
+// parameter is of pointer type. This is useful to disable inference on owning
+// pointers being captured by owners.
+bool isOwnerPtrCtor(const CXXConstructorDecl *Ctor, const ParmVarDecl *PVD);
+
 // Returns true if the given method is std::unique_ptr::release().
 // This is treated as a move in lifetime analysis to avoid false-positives
 // when ownership is manually transferred.
@@ -129,6 +143,16 @@ bool isInvalidationMethod(const CXXMethodDecl &MD);
 // (e.g., destructors via implicit 'this', std::destroy_at).
 bool destructsFirstArg(const FunctionDecl &FD);
 
+/// Returns true if the function allocates memory that must be freed by the
+/// caller (e.g. functions annotated with `ownership_returns`, such as
+/// `__attribute__((ownership_returns(malloc)))`).
+bool isAllocatingFunction(const FunctionDecl &FD);
+
+/// Returns true if the function frees memory it takes ownership of (e.g.
+/// functions annotated with `ownership_takes`, such as
+/// `__attribute__((ownership_takes(malloc, 1)))`).
+bool isFreeingFunction(const FunctionDecl &FD);
+
 /// Returns true for standard library callable wrappers (e.g., std::function)
 /// that can propagate the stored lambda's origins.
 bool isStdCallableWrapperType(const CXXRecordDecl *RD);
@@ -137,6 +161,10 @@ bool isStdCallableWrapperType(const CXXRecordDecl *RD);
 /// refers to the same object as the argument, so all origins propagate from
 /// argument to result.
 bool isStdReferenceCast(const FunctionDecl *FD);
+
+/// Skips parentheses and implicit casts. Unlike IgnoreParenImpCasts(), stops at
+/// a MaterializeTemporaryExpr, which owns the storage of a temporary.
+const Expr *ignoreParensAndImpCasts(const Expr *E);
 
 } // namespace clang::lifetimes
 

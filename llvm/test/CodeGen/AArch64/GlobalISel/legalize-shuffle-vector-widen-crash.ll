@@ -9,16 +9,6 @@ define i32 @bar() {
 ; CHECK-LABEL: bar:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    umov.b w8, v0[0]
-; CHECK-NEXT:    umov.b w9, v0[1]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    umov.b w8, v0[2]
-; CHECK-NEXT:    mov.s v1[1], w9
-; CHECK-NEXT:    umov.b w9, v0[3]
-; CHECK-NEXT:    movi.4s v0, #1
-; CHECK-NEXT:    mov.s v1[2], w8
-; CHECK-NEXT:    mov.s v1[3], w9
-; CHECK-NEXT:    and.16b v0, v1, v0
 ; CHECK-NEXT:    addv.4s s0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret

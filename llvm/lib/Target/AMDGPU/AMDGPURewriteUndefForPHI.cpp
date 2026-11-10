@@ -140,23 +140,24 @@ bool rewritePHIs(Function &F, UniformityInfo &UA, DominatorTree *DT) {
       }
       // We only need to replace the undef for the PHI which is merging
       // defined/undefined values from divergent threads.
-      // TODO: We should still be able to replace undef value if the unique
-      // value is a Constant.
-      if (!UniqueDefinedIncoming || Undefs.empty() ||
-          UA.isUniformTerminator(DominateBB->getTerminator()))
+      if (!UniqueDefinedIncoming || Undefs.empty())
         continue;
 
-      // We only replace the undef when DominateBB truly dominates all the
-      // other predecessors with undefined incoming value. Make sure DominateBB
-      // dominates BB so that UniqueDefinedIncoming is available in BB and
-      // afterwards.
-      if (DT->dominates(DominateBB, &BB) && all_of(Undefs, [&](BasicBlock *UD) {
-            return DT->dominates(DominateBB, UD);
-          })) {
-        PHI.replaceAllUsesWith(UniqueDefinedIncoming);
-        ToBeDeleted.push_back(&PHI);
-        Changed = true;
-      }
+      // For non-constant incoming values, require DominateBB to have a
+      // divergent terminator and to dominate BB and every predecessor with an
+      // undefined incoming value. Constants are available everywhere and don't
+      // require these checks.
+      if (!isa<Constant>(UniqueDefinedIncoming) &&
+          (UA.isUniformTerminator(DominateBB->getTerminator()) ||
+           !DT->dominates(DominateBB, &BB) ||
+           any_of(Undefs, [&](BasicBlock *UD) {
+             return !DT->dominates(DominateBB, UD);
+           })))
+        continue;
+
+      PHI.replaceAllUsesWith(UniqueDefinedIncoming);
+      ToBeDeleted.push_back(&PHI);
+      Changed = true;
     }
   }
 
