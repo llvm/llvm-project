@@ -12,7 +12,6 @@ add_libc_test(
     libc.hdr.stdio_macros
     libc.src.__support.CPP.scope
     libc.src.__support.macros.properties.os
-    libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
@@ -39,7 +38,6 @@ add_libc_test(
     fileop_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.src.errno.errno
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -113,8 +111,9 @@ add_libc_test(
     setvbuf_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.src.errno.errno
+    libc.src.stdio.clearerr
     libc.src.stdio.fclose
+    libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fwrite
@@ -130,7 +129,6 @@ add_libc_test(
     unlocked_fileop_test.cpp
   DEPENDS
     libc.include.stdio
-    libc.src.errno.errno
     libc.src.stdio.clearerr_unlocked
     libc.src.stdio.fclose
     libc.src.stdio.feof_unlocked
@@ -155,7 +153,6 @@ add_libc_test(
     libc.hdr.types.off_t
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -182,9 +179,10 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.hdr.errno_macros
     libc.hdr.types.off_t
     libc.hdr.types.size_t
-    libc.src.errno.errno
+    libc.hdr.types.ssize_t
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -455,7 +453,6 @@ add_libc_test(
     perror_test.cpp
   DEPENDS
     libc.src.stdio.perror
-    libc.src.errno.errno
 )
 
 add_libc_test(
@@ -487,7 +484,6 @@ set(fopen_test_deps)
 if(LIBC_TARGET_OS STREQUAL "linux")
   list(APPEND fopen_test_deps
     libc.hdr.fcntl_macros
-    libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.stdio.fileno
     libc.src.stdio.remove
@@ -536,7 +532,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     DEPENDS
       libc.hdr.sys_stat_macros
       libc.include.unistd
-      libc.src.errno.errno
       libc.src.fcntl.open
       libc.src.stdio.remove
       libc.src.sys.stat.mkdirat
@@ -553,7 +548,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       rename_test.cpp
     DEPENDS
       libc.hdr.sys_stat_macros
-      libc.src.errno.errno
       libc.src.fcntl.open
       libc.src.stdio.rename
       libc.src.unistd.access
@@ -574,7 +568,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.hdr.sys_stat_macros
       libc.hdr.unistd_macros
       libc.src.__support.CPP.scope
-      libc.src.errno.errno
       libc.src.fcntl.open
       libc.src.stdio.renameat
       libc.src.unistd.access
@@ -583,7 +576,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
-
 
   add_libc_test(
     fdopen_test
@@ -639,7 +631,6 @@ add_libc_test(
   DEPENDS
     libc.include.stdio
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
     libc.src.stdio.ferror
@@ -660,7 +651,6 @@ add_libc_test(
   DEPENDS
     libc.include.stdio
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.ferror
     libc.src.stdio.ferror_unlocked
@@ -685,7 +675,6 @@ add_libc_test(
   DEPENDS
     libc.include.stdio
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
     libc.src.stdio.ferror
@@ -745,7 +734,6 @@ add_libc_test(
     libc.hdr.types.size_t
     libc.hdr.types.wint_t
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
     libc.src.stdio.fgetpos
@@ -780,7 +768,6 @@ add_libc_test(
     libc.hdr.types.size_t
     libc.hdr.types.wint_t
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
     libc.src.stdio.ferror

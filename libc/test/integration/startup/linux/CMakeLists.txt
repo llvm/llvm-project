@@ -51,7 +51,6 @@ add_integration_test(
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
-    libc.src.errno.errno
     libc.src.sys.mman.mmap
 )
 

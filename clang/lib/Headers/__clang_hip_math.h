@@ -167,6 +167,9 @@ float __exp10f(float __x) {
 }
 
 __DEVICE__
+float __exp2f(float __x) { return __builtin_amdgcn_exp2f(__x); }
+
+__DEVICE__
 float __expf(float __x) {
   const float __log2_e = 0x1.715476p+0;
   return __builtin_amdgcn_exp2f(__log2_e * __x);
@@ -1284,6 +1287,7 @@ double __fma_rn(double __x, double __y, double __z) {
 #endif // !defined(__cplusplus) && __STDC_VERSION__ >= 201112L
 
 #if defined(__cplusplus)
+#ifndef __OPENMP_AMDGCN__
 template <class T> __DEVICE__ T min(T __arg1, T __arg2) {
   return (__arg1 < __arg2) ? __arg1 : __arg2;
 }
@@ -1291,6 +1295,7 @@ template <class T> __DEVICE__ T min(T __arg1, T __arg2) {
 template <class T> __DEVICE__ T max(T __arg1, T __arg2) {
   return (__arg1 > __arg2) ? __arg1 : __arg2;
 }
+#endif
 
 __DEVICE__ int min(int __arg1, int __arg2) {
   return (__arg1 < __arg2) ? __arg1 : __arg2;

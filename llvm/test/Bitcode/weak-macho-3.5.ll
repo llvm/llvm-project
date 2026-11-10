@@ -8,4 +8,4 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; CHECK: target triple = "x86_64-apple-macosx10.9.0"
 
 @x = weak global i32 0
-; CHECK: @x = weak global i32 0{{$}}
+; CHECK: @x = weak global i32 0, !guid !{{[0-9]+}}

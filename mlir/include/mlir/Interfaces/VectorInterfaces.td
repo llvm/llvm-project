@@ -20,6 +20,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
     Encodes properties of an operation on vectors that can be unrolled.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/VectorInterfaces.h"];
 
   let methods = [
     InterfaceMethod<
@@ -81,6 +82,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     transfer (see `getPermutationMap`).
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/VectorInterfaces.h"];
 
   let methods = [
     InterfaceMethod<

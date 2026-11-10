@@ -131,10 +131,9 @@ jobs:
       artifact-name: ab-results-${{ matrix.lnt-machine }}
       lnt-artifact-name: lnt-reports-${{ matrix.lnt-machine }}
 
-  # Submit the results of each machine to LNT, which allows linking to LNT's comparison page in the report.
-  # Machines whose benchmarks didn't complete have no reports, so submitting them fails too.
+  # Submit the results of all machines to LNT, which allows linking to LNT's comparison page in the report.
+  # Nothing is submitted for machines whose benchmarks didn't complete (since they have no report).
   submit:
-    name: Submit ${{ matrix.lnt-machine }}
     needs:
       - extract-info
       - run-benchmarks
@@ -142,14 +141,11 @@ jobs:
     if: ${{ !cancelled() && needs.extract-info.result == 'success' }}
     permissions:
       contents: read
-    strategy:
-      matrix:
-        include: ${{ fromJSON(needs.extract-info.outputs.matrix) }}
-      fail-fast: false
     uses: $/.github/workflows/lnt-submit.yml
     with:
-      artifact-name: lnt-reports-${{ matrix.lnt-machine }}
-      test-suite: libcxx
+      artifacts: lnt-reports-*
+      project: libcxx
+      test-suite: microbenchmarks
     secrets:
       LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
 
@@ -185,7 +181,8 @@ jobs:
           RESULTS_DIR: ${{ runner.temp }}/results
           LNT_REPORTS_DIR: ${{ runner.temp }}/lnt-reports
           LNT_URL: https://lnt.llvm.org
-          LNT_TEST_SUITE: libcxx
+          LNT_PROJECT: libcxx
+          LNT_TEST_SUITE: microbenchmarks
           BASELINE: ${{ needs.extract-info.outputs.baseline }}
           CANDIDATE: ${{ needs.extract-info.outputs.candidate }}
         with:
@@ -197,6 +194,7 @@ jobs:
             // Return a link to the comparison of the baseline and the candidate on LNT, or nothing if there are no
             // results for that machine.
             function lnt_comparison(machine) {
+              const project = process.env.LNT_PROJECT;
               const suite = process.env.LNT_TEST_SUITE;
               const dir = path.join(process.env.LNT_REPORTS_DIR, `lnt-reports-${machine}`);
               if (!fs.existsSync(dir)) {
@@ -213,6 +211,7 @@ jobs:
               const url = new URL('/compare', process.env.LNT_URL);
               for (const [side, commit] of [['a', process.env.BASELINE], ['b', process.env.CANDIDATE]]) {
                 const runs = reports.filter(r => r.commit.value === commit);
+                url.searchParams.append(`project_${side}`, project);
                 url.searchParams.append(`suite_${side}`, suite);
                 url.searchParams.append(`machine_${side}`, reports[0].machine.name);
                 url.searchParams.append(`commit_${side}`, commit);
