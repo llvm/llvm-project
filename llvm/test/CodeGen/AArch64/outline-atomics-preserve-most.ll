@@ -13,7 +13,11 @@
 ; RUN: llc -mtriple=aarch64-unknown-fuchsia -O0 -global-isel=0 -mattr=+outline-atomics,+outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=O0
 ; RUN: llc -mtriple=aarch64-unknown-fuchsia -mattr=+outline-atomics,+outline-atomics-preserve-most -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CSRMASK
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+outline-atomics,+outline-atomics-preserve-most -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CSRMASK
+; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+outline-atomics,+outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=DARWIN-ASM
 ; RUN: llc -mtriple=arm64ec-pc-windows-msvc -mattr=+outline-atomics,+outline-atomics-preserve-most -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=ARM64EC
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+lse,+outline-atomics,+outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=LSE
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=-outline-atomics,+outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=NO-OUTLINE
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+outline-atomics,+outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=NOX5X14
 
 ; Verify that live GPRs are held in preserved x5-x14 across 1/2/4/8-byte
 ; outline-atomic libcalls without callee-saved stack spills.
@@ -22,13 +26,28 @@ define i64 @ldadd4_preserves_gprs(ptr %p, i32 %v, i64 %a, i64 %b, i64 %c, i64 %d
 ; DEFAULT:       stp x24, x23,
 ; DEFAULT:       stp x22, x21,
 ; DEFAULT:       stp x20, x19,
-; DEFAULT:       bl __aarch64_ldadd4_acq_rel
+; DEFAULT:       bl __aarch64_ldadd4_acq_rel{{$}}
 ;
 ; PRESERVE-LABEL: ldadd4_preserves_gprs:
 ; PRESERVE-NOT:   stp x
-; PRESERVE:       bl __aarch64_ldadd4_acq_rel_preservemost
+; PRESERVE:       bl __aarch64_ldadd4_acq_rel_preservemost{{$}}
 ; PRESERVE-NOT:   ldp x
 ; PRESERVE:       ret
+;
+; DARWIN-ASM-LABEL: _ldadd4_preserves_gprs:
+; DARWIN-ASM-NOT:   x19
+; DARWIN-ASM-NOT:   x20
+; DARWIN-ASM:       bl ___aarch64_ldadd4_acq_rel_preservemost{{$}}
+; DARWIN-ASM:       ret
+;
+; LSE-LABEL: ldadd4_preserves_gprs:
+; LSE-NOT:   __aarch64_
+; LSE:       ldaddal w{{[0-9]+}}, w{{[0-9]+}}, [x0]
+;
+; NO-OUTLINE-LABEL: ldadd4_preserves_gprs:
+; NO-OUTLINE-NOT:   __aarch64_
+; NO-OUTLINE:       ldaxr w{{[0-9]+}}, [x0]
+; NO-OUTLINE:       stlxr w{{[0-9]+}}, w{{[0-9]+}}, [x0]
 ;
 ; GISEL-LABEL: ldadd4_preserves_gprs:
 ; GISEL-NOT:   stp x
@@ -57,7 +76,7 @@ define i64 @ldadd4_preserves_gprs(ptr %p, i32 %v, i64 %a, i64 %b, i64 %c, i64 %d
 define i128 @cas16_preserves_gprs(ptr %p, i128 %exp, i128 %des, i64 %extra) nounwind {
 ; DEFAULT-LABEL: cas16_preserves_gprs:
 ; DEFAULT:       stp {{.*}}x19
-; DEFAULT:       bl __aarch64_cas16_acq_rel
+; DEFAULT:       bl __aarch64_cas16_acq_rel{{$}}
 ;
 ; PRESERVE-LABEL: cas16_preserves_gprs:
 ; PRESERVE-NOT:   x19
@@ -88,7 +107,7 @@ define i128 @cas16_preserves_gprs(ptr %p, i128 %exp, i128 %des, i64 %extra) noun
 define <4 x i32> @swp8_preserves_simd(ptr %p, i64 %v, <4 x i32> %vec0, <4 x i32> %vec1) nounwind {
 ; DEFAULT-LABEL: swp8_preserves_simd:
 ; DEFAULT:       stp q{{[0-9]+}}, q{{[0-9]+}}, [sp
-; DEFAULT:       bl __aarch64_swp8_rel
+; DEFAULT:       bl __aarch64_swp8_rel{{$}}
 ;
 ; PRESERVE-LABEL: swp8_preserves_simd:
 ; PRESERVE-NOT:   stp q
@@ -127,6 +146,11 @@ define i64 @exact_x4_x5_x14_x15_x16_x17_and_nzcv_boundary(ptr %p, i32 %v, i64 %x
 ;
 ; O0-LABEL: exact_x4_x5_x14_x15_x16_x17_and_nzcv_boundary:
 ; O0:       bl __aarch64_ldclr4_relax_preservemost
+;
+; NOX5X14-LABEL: exact_x4_x5_x14_x15_x16_x17_and_nzcv_boundary:
+; NOX5X14-NOT:   {{mov|str|stp|ldr|ldp}} {{.*}}x5{{[,\]\n]|$}}
+; NOX5X14-NOT:   {{mov|str|stp|ldr|ldp}} {{.*}}x14{{[,\]\n]|$}}
+; NOX5X14:       ret
   %cmp = icmp eq i64 %x, %y
   %r4 = call i64 asm sideeffect "", "={x4}"()
   %r5 = call i64 asm sideeffect "", "={x5}"()

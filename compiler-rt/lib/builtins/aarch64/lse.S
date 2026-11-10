@@ -121,8 +121,7 @@ HIDDEN(___aarch64_have_lse_atomics)
 // the AAPCS64 and aarch64_outline_atomics_preservemost calling conventions.
 #define PRESERVEMOST_NAME(BASE) GLUE2(NAME(BASE), _preservemost)
 #define DEFINE_PRESERVEMOST_ALIAS(BASE)                                        \
-  DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS_UNMANGLED(PRESERVEMOST_NAME(BASE),  \
-                                                     NAME(BASE))
+  DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS(PRESERVEMOST_NAME(BASE), NAME(BASE))
 #else
 #define DEFINE_PRESERVEMOST_ALIAS(BASE)
 #endif
