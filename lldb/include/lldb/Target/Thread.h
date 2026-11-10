@@ -1049,10 +1049,15 @@ public:
 
   /// Gets the outer-most return value from the completed plans
   ///
+  /// \param[out] is_thrown_error
+  ///     If not null, set to whether the value is an error the function threw
+  ///     instead of returning.
+  ///
   /// \return
   ///     A ValueObjectSP, either empty if there is no return value,
   ///     or containing the return value.
-  lldb::ValueObjectSP GetReturnValueObject() const;
+  lldb::ValueObjectSP
+  GetReturnValueObject(bool *is_thrown_error = nullptr) const;
 
   /// Gets the outer-most expression variable from the completed plans
   ///

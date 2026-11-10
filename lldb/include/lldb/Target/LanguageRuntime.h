@@ -185,6 +185,32 @@ public:
     return {};
   }
 
+  /// Where to find the error a function throws, as recorded by
+  /// GetThrownErrorLocation before the function returns.
+  struct ThrownErrorLocation {
+    /// The location of the error, if it is known before the function returns.
+    std::optional<Value> location;
+    /// Whether the location can only be read after the function returns, for
+    /// example from a register in the caller.
+    bool read_after_return = false;
+  };
+
+  /// Called with \p frame stopped in a function that a step out is about to
+  /// leave, to record where an error thrown by that function will be found.
+  virtual ThrownErrorLocation GetThrownErrorLocation(StackFrame &frame) {
+    return {};
+  }
+
+  /// Called with \p frame stopped in the caller once the step out completes.
+  ///
+  /// \return
+  ///     std::nullopt if the function did not throw. Otherwise the thrown
+  ///     error, which is null if the error could not be read.
+  virtual std::optional<lldb::ValueObjectSP>
+  GetThrownError(StackFrame &frame, const ThrownErrorLocation &location) {
+    return std::nullopt;
+  }
+
   static lldb::BreakpointSP
   CreateExceptionBreakpoint(Target &target, lldb::LanguageType language,
                             bool catch_bp, bool throw_bp,
