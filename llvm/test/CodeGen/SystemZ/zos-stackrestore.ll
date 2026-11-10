@@ -9,7 +9,8 @@
 
 declare void @use(ptr)
 
-; The stub copies the header from the highest word down and sets R4.
+; The stub copies the header in blocks of 32 bytes from the highest block down
+; and sets R4. It is called with BASR 3,3 and returns with B 2(3).
 ; CHECK:      * XPLINK Stub Entry Padding
 ; CHECK-NEXT:  DC XL8'0000000000000000'
 ; CHECK-NEXT: * XPLINK Stub Entry Marker
@@ -18,16 +19,12 @@ declare void @use(ptr)
 ; CHECK-NEXT: * Mark Type C'4'
 ; CHECK-NEXT:  DC XL1'F4'
 ; CHECK-NEXT: [[STUB:L#stackrestore[0-9]+]] DS 0H
-; CHECK-NEXT:  lg 0,2168(4)
-; CHECK-NEXT:  stg 0,2168(1)
-; CHECK-NEXT:  lg 0,2160(4)
-; CHECK-NEXT:  stg 0,2160(1)
-; CHECK:       lg 0,2056(4)
-; CHECK-NEXT:  stg 0,2056(1)
-; CHECK-NEXT:  lg 0,2048(4)
-; CHECK-NEXT:  stg 0,2048(1)
+; CHECK-NEXT:  mvc 2144(32,1),2144(4)
+; CHECK-NEXT:  mvc 2112(32,1),2112(4)
+; CHECK-NEXT:  mvc 2080(32,1),2080(4)
+; CHECK-NEXT:  mvc 2048(32,1),2048(4)
 ; CHECK-NEXT:  lgr 4,1
-; CHECK-NEXT:  b 2(7)
+; CHECK-NEXT:  b 2(3)
 ; CHECK-NOT:  Stub Entry Marker
 
 ; The stack restore calls the stub with the saved stack pointer in R1.
@@ -38,9 +35,9 @@ declare void @use(ptr)
 ; CHECK:       la 1,2240(4)
 ; CHECK:       basr 7,6
 ; CHECK:       lgr 1,[[SP]]
-; CHECK-NEXT:  larl 6,[[STUB]]
-; CHECK-NEXT:  basr 7,6
-; CHECK-NEXT:  bcr 0,0
+; CHECK-NEXT:  larl 3,[[STUB]]
+; CHECK-NEXT:  basr 3,3
+; CHECK-NEXT:  bcr 0,7
 ; CHECK:       basr 7,6
 ; CHECK:       lmg 4,11,2048(4)
 define void @f(i64 %n) {
@@ -54,7 +51,7 @@ define void @f(i64 %n) {
 
 ; A second stack restore uses the same stub.
 ; CHECK-LABEL: g DS 0H
-; CHECK:       larl 6,[[STUB]]
+; CHECK:       larl 3,[[STUB]]
 define void @g(i64 %n) {
   %sp = call ptr @llvm.stacksave.p0()
   %p = alloca i8, i64 %n, align 8

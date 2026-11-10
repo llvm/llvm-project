@@ -5432,7 +5432,7 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
   // use a clobbered header (abend U4083). No signal may be delivered while
   // the stack pointer is changed and the header is copied, so this is done in
   // a stub routine (emitted once per module by the AsmPrinter), which gets
-  // the new stack pointer in R1.
+  // the new stack pointer in R1 and is called with BASR 3,3.
   if (Subtarget.isTargetXPLINK64()) {
     SDValue Glue;
     Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R1D, NewSP, Glue);
