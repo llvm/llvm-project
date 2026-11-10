@@ -235,17 +235,21 @@ configure_file(AST/gen_ast_dump_json_test.py
 add_custom_target(clang-test-depends DEPENDS ${CLANG_TEST_DEPS})
 set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang/Tests")
 
-add_lit_testsuite(check-clang "Running the Clang regression tests"
+add_lit_testsuite(check-clang "Running the Clang regression and unit tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   #LIT ${LLVM_LIT}
   DEPENDS ${CLANG_TEST_DEPS}
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 
-# Skip CIR and Unit/CIR. check-clang still discovers the CIR regression
-# tests, and the Clang-Unit suite runs CIRUnitTests with the other unit
-# tests. check-clang-cir runs both, and its dependencies are limited to
-# the tools those tests invoke.
+# Skip CIR and Unit/CIR so that check-clang-cir and check-clang-cir-unit can
+# be independently added as build targets with a subset of dependencies. This
+# allows CIR testing to be run, for example, as part of MLIR CI testing without
+# building the complete set of dependencies needed by check-clang.
+#
+# check-clang still discovers the CIR regression tests, and the Clang-Unit suite
+# runs CIRUnitTests with the other unit tests. check-clang-cir runs both, and
+# its dependencies are limited to the tools those tests invoke.
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CLANG_TEST_DEPS}
   FOLDER "Clang tests/Suites"
@@ -253,8 +257,6 @@ add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 if(CLANG_ENABLE_CIR)
-  # These tools are resolved while loading clang/test/lit.cfg.py, or invoked
-  # directly by tests under clang/test/CIR.
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/Unit/CIR/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/Unit/CIR/lit.site.cfg.py
@@ -269,6 +271,8 @@ if(CLANG_ENABLE_CIR)
     "SHLIBDIR"
     )
 
+  # These tools are resolved while loading clang/test/lit.cfg.py, or invoked
+  # directly by tests under clang/test/CIR.
   set(CLANG_CIR_TEST_DEPS
     clang
     cir-opt
