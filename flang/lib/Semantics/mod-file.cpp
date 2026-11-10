@@ -223,6 +223,7 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   // Re-exported reduction modules are tracked per module file, so reset the set
   // (like usedNonIntrinsicModules_) now that this module's uses are emitted.
   reexportedReductionModules_.clear();
+  reexportedDECStructureModules_.clear();
   all << useExtraAttrs_.str();
   useExtraAttrs_.str().clear();
   all << decls_.str();
@@ -1053,6 +1054,21 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
       }
       return;
     }
+  }
+  // A DEC STRUCTURE's name has slashes (e.g. "/s/") and cannot be written in a
+  // USE only-list, so re-export it by a plain USE of its module. A private
+  // structure is not re-exported, as the plain USE would make it public.
+  if (ultimate.has<DerivedTypeDetails>() &&
+      ultimate.get<DerivedTypeDetails>().isDECStructure()) {
+    if (!symbol.attrs().test(Attr::PRIVATE)) {
+      auto &structUse{symbol.get<UseDetails>()};
+      const Symbol &reexportModule{GetUsedModule(structUse)};
+      if (reexportedDECStructureModules_.insert(reexportModule).second) {
+        uses_ << "use " << reexportModule.name() << '\n';
+        usedNonIntrinsicModules_.insert(reexportModule);
+      }
+    }
+    return;
   }
   auto &details{symbol.get<UseDetails>()};
   auto &use{details.symbol()};
