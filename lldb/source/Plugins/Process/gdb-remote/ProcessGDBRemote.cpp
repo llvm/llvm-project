@@ -1695,8 +1695,7 @@ bool ProcessGDBRemote::UpdateThreadIDList() {
   ThreadInfosSP threads_info_sp = *m_jthreadsinfo.Lock();
   if (threads_info_sp) {
     // If we have the JSON threads info, we can get the thread list from that
-    StructuredData::Array *thread_infos =
-        threads_info_sp->json_sp->GetAsArray();
+    StructuredData::Array *thread_infos = threads_info_sp->GetArray();
     if (thread_infos && thread_infos->GetSize() > 0) {
       m_thread_ids.clear();
       m_thread_pcs.clear();
@@ -1840,35 +1839,45 @@ std::optional<size_t> ProcessGDBRemote::FindThreadIDIndex(lldb::tid_t tid) {
   return it->second;
 }
 
+ProcessGDBRemote::ThreadInfos::ThreadInfos(StructuredData::ObjectSP json_sp)
+    : m_json_sp(std::move(json_sp)) {
+  StructuredData::Array *array = m_json_sp->GetAsArray();
+  if (!array)
+    return;
+  const size_t n = array->GetSize();
+  m_thread_dicts.reserve(n);
+  for (size_t i = 0; i < n; ++i) {
+    StructuredData::Dictionary *thread_dict =
+        array->GetItemAtIndex(i)->GetAsDictionary();
+    lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+    // If a reply lists a thread more than once, use its first entry.
+    if (thread_dict && thread_dict->GetValueForKeyAsInteger("tid", tid))
+      m_thread_dicts.try_emplace(tid, thread_dict);
+  }
+}
+
+StructuredData::Dictionary *
+ProcessGDBRemote::ThreadInfos::FindThread(lldb::tid_t tid) const {
+  auto it = m_thread_dicts.find(tid);
+  return it == m_thread_dicts.end() ? nullptr : it->second;
+}
+
 ProcessGDBRemote::ThreadInfosSP
 ProcessGDBRemote::IndexThreadInfos(StructuredData::ObjectSP json_sp) {
   if (!json_sp)
     return nullptr;
-  auto thread_infos = std::make_shared<ThreadInfos>();
-  if (StructuredData::Array *array = json_sp->GetAsArray()) {
-    const size_t n = array->GetSize();
-    thread_infos->thread_dicts.reserve(n);
-    for (size_t i = 0; i < n; ++i) {
-      StructuredData::Dictionary *thread_dict =
-          array->GetItemAtIndex(i)->GetAsDictionary();
-      lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
-      // If a reply lists a thread more than once, use its first entry.
-      if (thread_dict && thread_dict->GetValueForKeyAsInteger("tid", tid))
-        thread_infos->thread_dicts.try_emplace(tid, thread_dict);
-    }
-  }
-  thread_infos->json_sp = std::move(json_sp);
-  return thread_infos;
+  return std::make_shared<const ThreadInfos>(std::move(json_sp));
 }
 
 bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
     ThreadGDBRemote *thread, const ThreadInfosSP &thread_infos_sp) {
   if (!thread_infos_sp)
     return false;
-  auto it = thread_infos_sp->thread_dicts.find(thread->GetID());
-  if (it == thread_infos_sp->thread_dicts.end())
+  StructuredData::Dictionary *thread_dict =
+      thread_infos_sp->FindThread(thread->GetID());
+  if (!thread_dict)
     return false;
-  return SetThreadStopInfo(it->second, thread->shared_from_this()) != nullptr;
+  return SetThreadStopInfo(thread_dict, thread->shared_from_this()) != nullptr;
 }
 
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
