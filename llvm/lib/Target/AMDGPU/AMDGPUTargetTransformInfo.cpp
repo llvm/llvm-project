@@ -2295,8 +2295,8 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
     auto [NoWrapFromMax, NoPartialOOB] =
         getKnownBufferOobProperties(*ST, DL, I, Bytes);
-    MaxBytes = AMDGPU::getMaxBufferIntrinsicWidth(*ST, DL, Src, Alignment,
-                                                  NoWrapFromMax, NoPartialOOB) /
+    MaxBytes = ST->getMaxBufferIntrinsicWidth(DL, Src, Alignment, NoWrapFromMax,
+                                              NoPartialOOB) /
                8;
   }
   if (Alignment < 4 && !HasUnalignedAccess)
