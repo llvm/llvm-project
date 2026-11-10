@@ -7,13 +7,19 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GFX900,GISEL-GFX900 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.06 < %s | FileCheck -check-prefixes=FMAMIX,GFX9-FMAMIX,GFX906,GISEL-GFX906 %s
 
-; V_{MAD,FMA}_MIX{LO,HI} round the exact result of the multiply or
-; multiply-add directly to f16. They do not round to f32 first, so folding an
-; fptrunc of an f32 multiply or multiply-add into them removes a rounding step
-; and can change the result. That is only allowed when both the operation and
-; the fptrunc have the contract flag. gfx803 has no mix instructions. gfx900
-; uses V_MAD_MIX* and needs both f32 and f16 denormals off, hence the
-; denormal_fpenv attribute below.
+; V_FMA_MIX{LO,HI} round the exact result of the multiply or multiply-add
+; directly to f16. They do not round to f32 first, so folding an fptrunc of an
+; f32 multiply or multiply-add into them removes a rounding step and can change
+; the result. That is only allowed when both the operation and the fptrunc have
+; the contract flag.
+;
+; V_MAD_MIX{LO,HI} (gfx900) round the product to f32, like V_MAD_F32, and then
+; round the sum directly to f16. For a plain multiply that is exactly an
+; fptrunc of an f32 multiply, so that fold needs no flags, but the multiply-add
+; fold still needs contract.
+;
+; gfx803 has no mix instructions. gfx900 needs both f32 and f16 denormals off
+; for V_MAD_MIX*, hence the denormal_fpenv attribute below.
 
 define half @fptrunc_fmul_to_f16(float %a, float %b) #0 {
 ; GFX803-LABEL: fptrunc_fmul_to_f16:
@@ -26,8 +32,7 @@ define half @fptrunc_fmul_to_f16(float %a, float %b) #0 {
 ; GFX900-LABEL: fptrunc_fmul_to_f16:
 ; GFX900:       ; %bb.0: ; %.entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, neg(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-FMAMIX-LABEL: fptrunc_fmul_to_f16:
@@ -87,8 +92,7 @@ define half @fptrunc_fmul_to_f16_half_contract(float %a, float %b) #0 {
 ; GFX900-LABEL: fptrunc_fmul_to_f16_half_contract:
 ; GFX900:       ; %bb.0: ; %.entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, neg(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-FMAMIX-LABEL: fptrunc_fmul_to_f16_half_contract:
@@ -123,8 +127,7 @@ define half @fptrunc_fmul_to_f16_round_contract(float %a, float %b) #0 {
 ; GFX900-LABEL: fptrunc_fmul_to_f16_round_contract:
 ; GFX900:       ; %bb.0: ; %.entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, neg(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-FMAMIX-LABEL: fptrunc_fmul_to_f16_round_contract:
@@ -182,14 +185,12 @@ define <2 x half> @fptrunc_fmul_to_f16_hi(float %a, float %b, half %lo) #0 {
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX900-LABEL: fptrunc_fmul_to_f16_hi:
-; SDAG-GFX900:       ; %bb.0: ; %.entry
-; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX900-NEXT:    v_mul_f32_e32 v0, v0, v1
-; SDAG-GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-GFX900-NEXT:    s_mov_b32 s4, 0x5040100
-; SDAG-GFX900-NEXT:    v_perm_b32 v0, v0, v2, s4
-; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: fptrunc_fmul_to_f16_hi:
+; GFX900:       ; %bb.0: ; %.entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mad_mixhi_f16 v2, v0, v1, neg(0)
+; GFX900-NEXT:    v_mov_b32_e32 v0, v2
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX906-LABEL: fptrunc_fmul_to_f16_hi:
 ; SDAG-GFX906:       ; %bb.0: ; %.entry
@@ -217,14 +218,6 @@ define <2 x half> @fptrunc_fmul_to_f16_hi(float %a, float %b, half %lo) #0 {
 ; GFX1100-NEXT:    v_cvt_f16_f32_e32 v0.h, v0
 ; GFX1100-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX900-LABEL: fptrunc_fmul_to_f16_hi:
-; GISEL-GFX900:       ; %bb.0: ; %.entry
-; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX900-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GISEL-GFX900-NEXT:    v_cvt_f16_f32_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; GISEL-GFX900-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX906-LABEL: fptrunc_fmul_to_f16_hi:
 ; GISEL-GFX906:       ; %bb.0: ; %.entry
@@ -293,8 +286,7 @@ define half @fptrunc_fmul_narrow_to_f16(half %a, half %b) #0 {
 ; GFX900-LABEL: fptrunc_fmul_narrow_to_f16:
 ; GFX900:       ; %bb.0: ; %.entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, neg(0) op_sel_hi:[1,1,0]
-; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, neg(0) op_sel_hi:[1,1,0]
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-FMAMIX-LABEL: fptrunc_fmul_narrow_to_f16:
@@ -330,14 +322,12 @@ define <2 x half> @fptrunc_fmul_narrow_to_f16_hi(half %a, half %b, half %lo) #0 
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX900-LABEL: fptrunc_fmul_narrow_to_f16_hi:
-; SDAG-GFX900:       ; %bb.0: ; %.entry
-; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, neg(0) op_sel_hi:[1,1,0]
-; SDAG-GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SDAG-GFX900-NEXT:    s_mov_b32 s4, 0x5040100
-; SDAG-GFX900-NEXT:    v_perm_b32 v0, v0, v2, s4
-; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: fptrunc_fmul_narrow_to_f16_hi:
+; GFX900:       ; %bb.0: ; %.entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mad_mixhi_f16 v2, v0, v1, neg(0) op_sel_hi:[1,1,0]
+; GFX900-NEXT:    v_mov_b32_e32 v0, v2
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX906-LABEL: fptrunc_fmul_narrow_to_f16_hi:
 ; SDAG-GFX906:       ; %bb.0: ; %.entry
@@ -365,14 +355,6 @@ define <2 x half> @fptrunc_fmul_narrow_to_f16_hi(half %a, half %b, half %lo) #0 
 ; GFX1100-NEXT:    v_cvt_f16_f32_e32 v0.h, v0
 ; GFX1100-NEXT:    v_mov_b16_e32 v0.l, v2.l
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX900-LABEL: fptrunc_fmul_narrow_to_f16_hi:
-; GISEL-GFX900:       ; %bb.0: ; %.entry
-; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, neg(0) op_sel_hi:[1,1,0]
-; GISEL-GFX900-NEXT:    v_cvt_f16_f32_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; GISEL-GFX900-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX906-LABEL: fptrunc_fmul_narrow_to_f16_hi:
 ; GISEL-GFX906:       ; %bb.0: ; %.entry
@@ -405,8 +387,7 @@ define half @fptrunc_fmul_half_narrow_to_f16(half %a, float %b) #0 {
 ; GFX900-LABEL: fptrunc_fmul_half_narrow_to_f16:
 ; GFX900:       ; %bb.0: ; %.entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, neg(0) op_sel_hi:[1,0,0]
-; GFX900-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT:    v_mad_mixlo_f16 v0, v0, v1, neg(0) op_sel_hi:[1,0,0]
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-FMAMIX-LABEL: fptrunc_fmul_half_narrow_to_f16:
