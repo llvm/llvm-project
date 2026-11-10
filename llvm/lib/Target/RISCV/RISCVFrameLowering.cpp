@@ -2701,10 +2701,6 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
             .setMIFlag(MachineInstr::FrameDestroy)
             .addDef(RISCV::X2, RegState::ImplicitDefine);
 
-    // The restore function clobbers X6, but PseudoTAILX7 only defines X7.
-    if (TailOpc == RISCV::PseudoTAILX7)
-      NewMI.addDef(RISCV::X6, RegState::ImplicitDefine);
-
     // Add registers restored as implicit defined.
     for (auto &CS : CSI)
       NewMI.addDef(CS.getReg(), RegState::ImplicitDefine);
