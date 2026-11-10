@@ -504,9 +504,8 @@ DataType DataTypes::getTypeFromLLT(LLT Ty) {
 }
 
 LLT DataTypes::getLLTFromType(const DataType &Ty) {
-  if (Ty.NumElts == 1) {
+  if (Ty.NumElts == 1)
     return LLT::integer(Ty.EltSize);
-  }
   return LLT::vector(ElementCount::getFixed(Ty.NumElts), Ty.EltSize);
 }
 
