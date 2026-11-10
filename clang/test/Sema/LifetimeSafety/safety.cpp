@@ -2963,6 +2963,26 @@ void indexing_with_static_operator() {
   use(x);  // expected-note 2 {{later used here}}
 
 }
+
+struct Table {
+  static const int &operator[](const int &key [[clang::lifetimebound]]);
+};
+
+const int &returned_from_static_subscript(const Table &table) {
+  int key = 1;
+  return table[key]; // expected-warning {{stack memory associated with local variable 'key' is returned}} \
+                     // expected-note {{returned here}}
+}
+
+void dangling_from_static_subscript(const Table &table) {
+  const int *p;
+  {
+    int key = 1;
+    p = &table[key]; // expected-warning {{local variable 'key' does not live long enough}} \
+                     // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'key' because parameter 'key' is marked as lifetimebound}}
+  }                  // expected-note {{local variable 'key' is destroyed here}}
+  use(*p);           // expected-note {{later used here}}
+}
 } // namespace static_call_operator
 
 namespace track_origins_for_lifetimebound_record_type {
