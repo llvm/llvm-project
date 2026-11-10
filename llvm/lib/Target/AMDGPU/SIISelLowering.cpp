@@ -11953,8 +11953,8 @@ static void foldAsyncLDSOffset(SDValue Op, SelectionDAG &DAG, SDLoc DL) {
   SmallVector<SDValue, 7> Ops(N->ops());
   for (unsigned OpIdx : {2, 3}) {
     EVT VT = Ops[OpIdx].getValueType();
-    Ops[OpIdx] = DAG.getNode(ISD::ADD, DL, VT, Ops[OpIdx],
-                             DAG.getSignedConstant(Offset, DL, VT));
+    Ops[OpIdx] = DAG.getMemBasePlusOffset(
+        Ops[OpIdx], DAG.getSignedConstant(Offset, DL, VT), DL);
   }
   Ops[4] = DAG.getTargetConstant(0, DL, MVT::i32);
   DAG.UpdateNodeOperands(N, Ops);
