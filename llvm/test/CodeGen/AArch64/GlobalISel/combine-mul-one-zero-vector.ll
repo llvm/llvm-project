@@ -4,9 +4,8 @@
 define <2 x i32> @mul_mask_rhs(<2 x i32> %a) {
 ; CHECK-LABEL: mul_mask_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.s[1], wzr
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    movi d1, #0x000000ffffffff
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %r = mul <2 x i32> %a, <i32 1, i32 0>
   ret <2 x i32> %r
@@ -15,9 +14,8 @@ define <2 x i32> @mul_mask_rhs(<2 x i32> %a) {
 define <2 x i32> @mul_mask_lhs(<2 x i32> %a) {
 ; CHECK-LABEL: mul_mask_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.s[1], wzr
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    movi d1, #0x000000ffffffff
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %r = mul <2 x i32> <i32 1, i32 0>, %a
   ret <2 x i32> %r
@@ -27,11 +25,11 @@ define <2 x i32> @sdiv_const_vec(<2 x i32> %a) {
 ; CHECK-LABEL: sdiv_const_vec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI2_1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    movi d2, #0x000000ffffffff
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_1]
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    mov v0.s[1], wzr
+; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-NEXT:    shrn v1.2s, v1.2d, #32
 ; CHECK-NEXT:    add v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]

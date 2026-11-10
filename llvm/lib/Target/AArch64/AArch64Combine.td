@@ -464,24 +464,6 @@ def AArch64PostLegalizerLowering
                         unmerge_duplanes]> {
 }
 
-// Turn an AND that clears the second lane of a v2i32 into an insert of zero,
-// which selects to a single "mov v.s[1], wzr". Skip ANDs that feed a G_OR,
-// since the AND/OR pair is better matched as a bitwise select.
-def and_clear_second_lane : GICombineRule<
-  (defs root:$dst),
-  (match
-    (G_BUILD_VECTOR $mask, (i32 -1), (i32 0)),
-    (G_AND v2i32:$dst, $src, $mask),
-    [{
-      for (MachineInstr &UseMI : MRI.use_nodbg_instructions(${dst}.getReg()))
-        if (UseMI.getOpcode() == TargetOpcode::G_OR)
-          return false;
-      return true;
-    }]),
-  (apply
-    (G_INSERT_VECTOR_ELT $dst, $src, (i32 0), (i64 1)))
->;
-
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
@@ -494,7 +476,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_by_zero_one_vector, and_clear_second_lane,
+                        mul_by_zero_one_vector,
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
