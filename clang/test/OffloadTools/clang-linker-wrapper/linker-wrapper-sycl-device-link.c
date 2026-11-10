@@ -53,6 +53,13 @@
 // RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
 // RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o /OUT:%t.out.obj
 // RUN: llvm-readobj --file-header %t.out.obj | FileCheck %s --check-prefix=WIN
+// As with link.exe, the last of -o and /out: names the output, e.g. for
+// clang-cl '/link /out:'.
+// RUN: rm -f %t.last.obj
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
+// RUN:   --sycl-device-link --linker-path=link.exe -o %t.first.exe %t.sycl.o \
+// RUN:   /Out:%t.last.obj
+// RUN: llvm-readobj --file-header %t.last.obj | FileCheck %s --check-prefix=WIN
 // WIN: Format: COFF-x86-64
 
 // link.exe options are case-insensitive, and link.exe also searches LIB.
