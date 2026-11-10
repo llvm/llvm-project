@@ -13,6 +13,7 @@
 #include "dsymutil.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Chrono.h"
@@ -95,6 +96,10 @@ private:
   const char *CurrentFunctionName;
   uint64_t CurrentFunctionAddress;
 
+  /// Maps the libraries described by N_LIB entries to the debug map objects
+  /// of their dSYMs, or to null if no usable dSYM was found.
+  StringMap<DebugMapObject *> LibDebugMapObjects;
+
   std::unique_ptr<DebugMap> parseOneBinary(const MachOObjectFile &MainBinary,
                                            StringRef BinaryPath);
   void handleStabDebugMap(
@@ -107,6 +112,12 @@ private:
   void
   switchToNewLibDebugMapObject(StringRef Filename,
                                sys::TimePoint<std::chrono::seconds> Timestamp);
+  /// Make the DWARF file \p DWARFName of the dSYM at \p DSYMPath the debug map
+  /// object of the library \p Filename, if both it and its relocation map are
+  /// usable.
+  bool loadLibDebugMapObject(StringRef Filename,
+                             sys::TimePoint<std::chrono::seconds> Timestamp,
+                             StringRef DSYMPath, StringRef DWARFName);
   void resetParserState();
   uint64_t getMainBinarySymbolAddress(StringRef Name);
   std::vector<StringRef> getMainBinarySymbolNames(uint64_t Value);
@@ -238,15 +249,81 @@ void MachODebugMapParser::switchToNewDebugMapObject(
   loadCurrentObjectFileSymbols(*Object);
 }
 
+/// Returns whether every relocation of \p RM fits in the section of \p Obj it
+/// applies to. A relocation map describing another DWARF would not.
+static bool relocationsFitSections(const RelocationMap &RM,
+                                   const object::MachOObjectFile &Obj) {
+  uint64_t DebugInfoSize = 0;
+  uint64_t DebugAddrSize = 0;
+  for (const object::SectionRef &Section : Obj.sections()) {
+    Expected<StringRef> Name = Section.getName();
+    if (!Name) {
+      consumeError(Name.takeError());
+      continue;
+    }
+    if (*Name == "__debug_info")
+      DebugInfoSize = Section.getSize();
+    else if (*Name == "__debug_addr")
+      DebugAddrSize = Section.getSize();
+  }
+
+  auto Fits = [](uint64_t SectionSize) {
+    return [SectionSize](const ValidReloc &Reloc) {
+      uint64_t Size = Reloc.Size;
+      uint64_t Offset = Reloc.Offset;
+      return (Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
+             Offset <= SectionSize && Size <= SectionSize - Offset;
+    };
+  };
+  return all_of(RM.debugInfoRelocations(), Fits(DebugInfoSize)) &&
+         all_of(RM.debugAddrRelocations(), Fits(DebugAddrSize));
+}
+
 /// Create a new DebugMapObject of type MachO::N_LIB.
 /// This function resets the state of the parser that was
 /// referring to the last object file and sets everything
 /// up to add symbols to the new one.
 void MachODebugMapParser::switchToNewLibDebugMapObject(
     StringRef Filename, sys::TimePoint<std::chrono::seconds> Timestamp) {
+  // A merged library has an N_LIB entry ahead of each of its object files.
+  if (CurrentDebugMapObject &&
+      CurrentDebugMapObject->getType() == MachO::N_LIB &&
+      CurrentDebugMapObject->getInstallName() == Filename)
+    return;
+
+  // Unless a dSYM of the library is found, the N_OSO entries which follow
+  // describe the object files of the library, which are linked instead.
+  addCommonSymbols();
+  resetParserState();
+
+  // A library is looked for once, and keeps its debug map object.
+  auto [LibIt, IsNewLib] = LibDebugMapObjects.try_emplace(Filename, nullptr);
+  if (!IsNewLib) {
+    DebugMapObject *LibObject = LibIt->second;
+    if (!LibObject)
+      return;
+    auto ObjectEntry =
+        BinHolder.getObjectEntry(LibObject->getObjectFilename(), Timestamp);
+    if (!ObjectEntry) {
+      Warning("unable to open object file: " +
+                  toString(ObjectEntry.takeError()),
+              LibObject->getObjectFilename());
+      return;
+    }
+    auto Object =
+        ObjectEntry->getObjectAs<MachOObjectFile>(Result->getTriple());
+    if (!Object) {
+      Warning("unable to open object file: " + toString(Object.takeError()),
+              LibObject->getObjectFilename());
+      return;
+    }
+    CurrentDebugMapObject = LibObject;
+    loadCurrentObjectFileSymbols(*Object);
+    return;
+  }
 
   if (DSYMSearchPaths.empty()) {
-    Warning("no dSYM search path was specified");
+    Warning("no dSYM search path was specified", Filename);
     return;
   }
 
@@ -281,84 +358,81 @@ void MachODebugMapParser::switchToNewLibDebugMapObject(
   }
 
   for (auto DSYMSearchPath : DSYMSearchPaths) {
-    SmallString<256> Path(DSYMSearchPath);
-    SmallString<256> FallbackPath(Path);
-
-    SmallString<256> DSYMPath(ProductName);
-    DSYMPath.append(".dSYM");
-    sys::path::append(DSYMPath, "Contents", "Resources", "DWARF");
-
-    if (!VariantSuffix.empty()) {
-      sys::path::append(Path, DSYMPath, VariantLeafName);
-      sys::path::append(FallbackPath, DSYMPath, LeafName);
-    } else {
-      sys::path::append(Path, DSYMPath, LeafName);
-    }
-
-    auto ObjectEntry = BinHolder.getObjectEntry(Path, Timestamp);
-    if (!ObjectEntry) {
-      auto Err = ObjectEntry.takeError();
-      Warning("unable to open object file: " + toString(std::move(Err)),
-              Path.str());
-      if (!VariantSuffix.empty()) {
-        ObjectEntry = BinHolder.getObjectEntry(FallbackPath, Timestamp);
-        if (!ObjectEntry) {
-          auto Err = ObjectEntry.takeError();
-          Warning("unable to open object file: " + toString(std::move(Err)),
-                  FallbackPath.str());
-          continue;
-        }
-        Path.assign(FallbackPath);
-      } else {
-        continue;
-      }
-    }
-
-    auto Object =
-        ObjectEntry->getObjectAs<MachOObjectFile>(Result->getTriple());
-    if (!Object) {
-      auto Err = Object.takeError();
-      Warning("unable to open object file: " + toString(std::move(Err)),
-              Path.str());
-      continue;
-    }
-
-    if (CurrentDebugMapObject &&
-        CurrentDebugMapObject->getType() == MachO::N_LIB &&
-        CurrentDebugMapObject->getObjectFilename() == Path) {
+    SmallString<256> DSYMPath(DSYMSearchPath);
+    sys::path::append(DSYMPath, ProductName + ".dSYM");
+    if (!VariantLeafName.empty() &&
+        loadLibDebugMapObject(Filename, Timestamp, DSYMPath, VariantLeafName))
       return;
-    }
-
-    addCommonSymbols();
-    resetParserState();
-
-    CurrentDebugMapObject =
-        &Result->addDebugMapObject(Path, Timestamp, MachO::N_LIB);
-
-    CurrentDebugMapObject->setInstallName(Filename);
-
-    SmallString<256> RMPath(DSYMSearchPath);
-    sys::path::append(RMPath, ProductName);
-    RMPath.append(".dSYM");
-    StringRef ArchName = Triple::getArchName(Result->getTriple().getArch(),
-                                             Result->getTriple().getSubArch());
-    sys::path::append(RMPath, "Contents", "Resources", "Relocations", ArchName);
-    sys::path::append(RMPath, LeafName);
-    RMPath.append(".yml");
-    const auto &RelocMapPtrOrErr =
-        RelocationMap::parseYAMLRelocationMap(RMPath, PathPrefix);
-    if (auto EC = RelocMapPtrOrErr.getError()) {
-      Warning("cannot parse relocation map file: " + EC.message(),
-              RMPath.str());
+    if (loadLibDebugMapObject(Filename, Timestamp, DSYMPath, LeafName))
       return;
-    }
-    CurrentDebugMapObject->setRelocationMap(*RelocMapPtrOrErr->get());
-
-    loadCurrentObjectFileSymbols(*Object);
-
-    // Found and loaded new dSYM file
-    return;
   }
+
+  Warning("no usable dSYM of the library was found in the dSYM search paths, "
+          "linking its object files instead",
+          Filename);
+}
+
+bool MachODebugMapParser::loadLibDebugMapObject(
+    StringRef Filename, sys::TimePoint<std::chrono::seconds> Timestamp,
+    StringRef DSYMPath, StringRef DWARFName) {
+  SmallString<256> Path(DSYMPath);
+  sys::path::append(Path, "Contents", "Resources", "DWARF", DWARFName);
+
+  auto ObjectEntry = BinHolder.getObjectEntry(Path, Timestamp);
+  if (!ObjectEntry) {
+    // Most of the places to look at are expected to be empty.
+    std::string Msg;
+    bool IsMissing = false;
+    handleAllErrors(ObjectEntry.takeError(), [&](const ErrorInfoBase &E) {
+      IsMissing |=
+          E.convertToErrorCode() == std::errc::no_such_file_or_directory;
+      Msg = E.message();
+    });
+    if (!IsMissing)
+      Warning("unable to open object file: " + Msg, Path);
+    return false;
+  }
+
+  auto Object = ObjectEntry->getObjectAs<MachOObjectFile>(Result->getTriple());
+  if (!Object) {
+    Warning("unable to open object file: " + toString(Object.takeError()),
+            Path);
+    return false;
+  }
+
+  // The relocation map describes the DWARF of the dSYM it is named after,
+  // which is the variant's if there is one.
+  SmallString<256> RMPath(DSYMPath);
+  StringRef ArchName = Triple::getArchName(Result->getTriple().getArch(),
+                                           Result->getTriple().getSubArch());
+  sys::path::append(RMPath, "Contents", "Resources", "Relocations");
+  sys::path::append(RMPath, ArchName, DWARFName + ".yml");
+  auto RelocMapPtrOrErr =
+      RelocationMap::parseYAMLRelocationMap(RMPath, PathPrefix);
+  if (!RelocMapPtrOrErr) {
+    Warning("cannot parse relocation map file: " +
+                RelocMapPtrOrErr.getError().message(),
+            RMPath);
+    return false;
+  }
+  // Without relocations, no debug info of the library could be merged.
+  if ((*RelocMapPtrOrErr)->getNumberOfEntries() == 0) {
+    Warning("relocation map file has no relocation", RMPath);
+    return false;
+  }
+  if (!relocationsFitSections(**RelocMapPtrOrErr, *Object)) {
+    Warning("relocation map file does not match the DWARF of the dSYM", RMPath);
+    return false;
+  }
+
+  CurrentDebugMapObject =
+      &Result->addDebugMapObject(Path, Timestamp, MachO::N_LIB);
+  CurrentDebugMapObject->setInstallName(Filename);
+  CurrentDebugMapObject->setRelocationMap(**RelocMapPtrOrErr);
+  LibDebugMapObjects[Filename] = CurrentDebugMapObject;
+
+  loadCurrentObjectFileSymbols(*Object);
+  return true;
 }
 
 static std::string getArchName(const object::MachOObjectFile &Obj) {
@@ -383,6 +457,7 @@ MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
                                     StringRef BinaryPath) {
   Result = std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath,
                                       MainBinary.getUuid());
+  LibDebugMapObjects.clear();
   loadMainBinarySymbols(MainBinary);
   MainBinaryStrings = MainBinary.getStringTableData();
 
