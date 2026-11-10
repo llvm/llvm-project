@@ -204,22 +204,22 @@ cl::opt<bool>
 
 cl::opt<int> ProfileInlineGrowthLimit(
     "sample-profile-inline-growth-limit", cl::Hidden, cl::init(12),
-    cl::desc("The size growth ratio limit for proirity-based sample profile "
+    cl::desc("The size growth ratio limit for priority-based sample profile "
              "loader inlining."));
 
 cl::opt<int> ProfileInlineLimitMin(
     "sample-profile-inline-limit-min", cl::Hidden, cl::init(100),
     cl::desc("The lower bound of size growth limit for "
-             "proirity-based sample profile loader inlining."));
+             "priority-based sample profile loader inlining."));
 
 cl::opt<int> ProfileInlineLimitMax(
     "sample-profile-inline-limit-max", cl::Hidden, cl::init(10000),
     cl::desc("The upper bound of size growth limit for "
-             "proirity-based sample profile loader inlining."));
+             "priority-based sample profile loader inlining."));
 
 cl::opt<int> SampleHotCallSiteThreshold(
     "sample-profile-hot-inline-threshold", cl::Hidden, cl::init(3000),
-    cl::desc("Hot callsite threshold for proirity-based sample profile loader "
+    cl::desc("Hot callsite threshold for priority-based sample profile loader "
              "inlining."));
 
 cl::opt<int> SampleColdCallSiteThreshold(
@@ -231,7 +231,7 @@ static cl::opt<unsigned> ProfileICPRelativeHotness(
     "sample-profile-icp-relative-hotness", cl::Hidden, cl::init(25),
     cl::desc(
         "Relative hotness percentage threshold for indirect "
-        "call promotion in proirity-based sample profile loader inlining."));
+        "call promotion in priority-based sample profile loader inlining."));
 
 static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
     "sample-profile-icp-relative-hotness-skip", cl::Hidden, cl::init(1),

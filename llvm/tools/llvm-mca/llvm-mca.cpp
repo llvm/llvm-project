@@ -377,7 +377,7 @@ int main(int argc, char **argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions, &MCScheduleOptions});
+  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions});
 
   // Parse flags and initialize target options.
   cl::LibraryOptionsContext LibraryOptions;
