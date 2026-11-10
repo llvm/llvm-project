@@ -115,13 +115,19 @@ public:
 
 private:
   TypeInfo convertTypeToInfo(Type type) {
+    // Treat the deprecated TOSA type as builtin mxi8 for compliance checks.
+    const auto getTypeID = [](Type type) {
+      if (isa<tosa::mxint8Type>(type))
+        return MXI8Type::getTypeID();
+      return type.getTypeID();
+    };
     if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type)) {
       Type valueTy = blockScaledTy.getValueType();
       Type scaleTy = blockScaledTy.getScaleType();
-      return {type.getTypeID(), tosa::getBitWidth(valueTy), valueTy.getTypeID(),
+      return {type.getTypeID(), tosa::getBitWidth(valueTy), getTypeID(valueTy),
               scaleTy.getTypeID(), blockScaledTy.getBlockShape()};
     }
-    return {type.getTypeID(), tosa::getBitWidth(type)};
+    return {getTypeID(type), tosa::getBitWidth(type)};
   }
 
   TypeInfo convertValueToInfo(Value value) {

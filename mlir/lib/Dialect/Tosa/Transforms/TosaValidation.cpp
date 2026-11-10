@@ -1684,7 +1684,7 @@ LogicalResult TosaValidation::validateValidElementType(Operation *op, Type type,
     }
   } else if (isa<tosa::shapeType>(type))
     return success();
-  else if (isa<tosa::mxint8Type, tosa::BlockScaledType>(type))
+  else if (isa<MXI8Type, tosa::mxint8Type, tosa::BlockScaledType>(type))
     return success();
 
   return op->emitOpError() << "is not profile-aligned: element type " << type
