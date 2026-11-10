@@ -24,7 +24,8 @@ namespace COFF {
 enum MachineTypes : unsigned;
 }
 
-// Returns the /machine: name, or "unknown" for unsupported machine types.
+// Returns a user-readable string for the input machine type,
+// or "unknown" for machine types not supported by this function.
 LLVM_ABI StringRef machineToStr(COFF::MachineTypes MT);
 
 // Maps /machine: arguments to a MachineTypes value.
