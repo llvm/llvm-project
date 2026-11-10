@@ -45,10 +45,8 @@ define i32 @test1() {
   ret i32 %v
 }
 
-; FIXME: This is incorrect - @weak2 is not exact, but only the first function
-; in the SCC (@exact2) is checked for exactness.
 ; CHECK-LABEL: Function: test2
-; CHECK: NoModRef:  Ptr: i32* @g	<->  call void @exact2()
+; CHECK: Both ModRef:  Ptr: i32* @g	<->  call void @exact2()
 define i32 @test2() {
   store i32 1, ptr @g
   call void @exact2()
