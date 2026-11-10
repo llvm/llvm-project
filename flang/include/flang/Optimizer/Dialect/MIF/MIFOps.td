@@ -647,8 +647,8 @@ def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments]> {
 def mif_EventQueryOp : mif_Op<"event_query", []> {
   let summary = "Query the count of an event on the calling image.";
   let description = [{
-    Argument: `event` shall be a coarray of type EVENT_TYPE from the intrinsic
-      module ISO_FORTRAN_ENV.
+    Argument: `event` shall be a noncoindexed variable of type EVENT_TYPE from the 
+      intrinsic module ISO_FORTRAN_ENV.
     Result: `count` shall be an integer scalar and indicate the current count
       of event variables.
   }];
