@@ -443,6 +443,8 @@ public:
   static Interval<MemDGNode> makeEmpty() { return {}; }
 };
 
+class Scheduler;
+
 class DependencyGraph {
 private:
   DenseMap<Instruction *, std::unique_ptr<DGNode>> InstrToNodeMap;
@@ -450,8 +452,9 @@ private:
   Interval<Instruction> DAGInterval;
 
   SchedDirection Dir;
-
   Context *Ctx = nullptr;
+  Scheduler *Sched = nullptr;
+
   std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
   std::optional<Context::CallbackID> MoveInstrCB;
@@ -516,8 +519,10 @@ private:
 
 public:
   /// This constructor also registers callbacks.
-  DependencyGraph(SchedDirection Dir, AAResults &AA, Context &Ctx)
-      : Dir(Dir), Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
+  DependencyGraph(SchedDirection Dir, AAResults &AA, Context &Ctx,
+                  Scheduler *Sched = nullptr)
+      : Dir(Dir), Ctx(&Ctx), Sched(Sched),
+        BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
         [this](Instruction *I) { notifyCreateInstr(I); });
     EraseInstrCB = Ctx.registerEraseInstrCallback(
