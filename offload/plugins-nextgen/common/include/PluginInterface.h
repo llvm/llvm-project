@@ -124,6 +124,11 @@ struct AsyncInfoWrapperTy {
   /// provide a __tgt_async_info.
   bool isSynchronous() const { return AsyncInfoPtr == &LocalAsyncInfo; }
 
+  /// Note that a kernel trace entry referencing this wrapper's async info was
+  /// recorded. If the async info is the wrapper's local one, finalize() will
+  /// drop that reference before the local object is destroyed.
+  void setKernelTraced() { KernelTraced = true; }
+
   /// Get the queue.
   template <typename Ty> Ty getQueueAs() {
     static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
@@ -157,6 +162,7 @@ private:
   GenericDeviceTy &Device;
   __tgt_async_info LocalAsyncInfo;
   __tgt_async_info *AsyncInfoPtr;
+  bool KernelTraced = false;
 };
 
 enum class DeviceInfo {
@@ -471,6 +477,15 @@ struct KernelTraceInfoRecordTy {
                __tgt_async_info *AsyncInfo) {
     KTIs[Idx] = {Kernel, std::move(StackTrace), AsyncInfo};
     Idx = (Idx + 1) % size();
+  }
+
+  /// Drop the references to \p AsyncInfo from all entries, keeping the rest of
+  /// the information (kernel, launch trace) available for error reporting.
+  void clearAsyncInfo(const __tgt_async_info *AsyncInfo) {
+    for (auto &KTI : KTIs) {
+      if (KTI.AsyncInfo == AsyncInfo)
+        KTI.AsyncInfo = nullptr;
+    }
   }
 
   /// Return the \p I'th last kernel trace info.
