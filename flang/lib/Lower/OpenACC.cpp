@@ -141,6 +141,10 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                   bool unwrapBoxAddr = false, mlir::Value isPresent = {},
                   mlir::acc::DataClauseModifier modifiers =
                       mlir::acc::DataClauseModifier::none) {
+  if (mlir::isa<fir::BoxCharType>(baseAddr.getType()))
+    TODO(loc, "OpenACC mapping of scalar CHARACTER variable with "
+              "runtime-determined length or host association");
+
   mlir::Value varPtrPtr;
   llvm::SmallVector<mlir::Value, 8> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;

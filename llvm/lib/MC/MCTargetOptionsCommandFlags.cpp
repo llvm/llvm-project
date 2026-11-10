@@ -49,6 +49,7 @@ llvm::mc::getMCTargetOptions(const cl::LibraryOptionsContext &C) {
   Options.MCSaveTempLabels = Opts.save_temp_labels;
   Options.Crel = Opts.crel;
   Options.ImplicitMapSyms = Opts.implicit_mapsyms;
+  Options.MachORelocatableDwarf = Opts.macho_relocatable_dwarf;
   Options.X86RelaxRelocations = Opts.x86_relax_relocations;
   Options.X86Sse2Avx = Opts.x86_sse2avx;
   Options.DisableIntegratedAS = Opts.no_integrated_as;
