@@ -197,7 +197,6 @@
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Support/raw_ostream.h"
@@ -212,25 +211,6 @@ using namespace llvm;
 using namespace AMDGPU;
 
 namespace {
-
-cl::opt<bool> SuperAlignLDSGlobals(
-    "amdgpu-super-align-lds-globals",
-    cl::desc("Increase alignment of LDS if it is not on align boundary"),
-    cl::init(true), cl::Hidden);
-
-enum class LoweringKind { module, table, kernel, hybrid };
-cl::opt<LoweringKind> LoweringKindLoc(
-    "amdgpu-lower-module-lds-strategy",
-    cl::desc("Specify lowering strategy for function LDS access:"), cl::Hidden,
-    cl::init(LoweringKind::hybrid),
-    cl::values(
-        clEnumValN(LoweringKind::table, "table", "Lower via table lookup"),
-        clEnumValN(LoweringKind::module, "module", "Lower via module struct"),
-        clEnumValN(
-            LoweringKind::kernel, "kernel",
-            "Lower variables reachable from one kernel, otherwise abort"),
-        clEnumValN(LoweringKind::hybrid, "hybrid",
-                   "Lower via mixture of above strategies")));
 
 template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
   llvm::sort(V, [](const auto *L, const auto *R) {
@@ -574,16 +554,17 @@ public:
     return OrderedKernels;
   }
 
-  static void partitionVariablesIntoIndirectStrategies(
+  void partitionVariablesIntoIndirectStrategies(
       Module &M, GVUsesInfoTy const &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly,
       DenseSet<GlobalVariable *> &ModuleScopeVariables,
       DenseSet<GlobalVariable *> &TableLookupVariables,
       DenseSet<GlobalVariable *> &KernelAccessVariables,
       DenseSet<GlobalVariable *> &DynamicVariables) {
+    LDSLoweringKind LoweringKind = TM.getCLOpts().lower_module_lds_strategy;
 
     GlobalVariable *HybridModuleRoot =
-        LoweringKindLoc != LoweringKind::hybrid
+        LoweringKind != LDSLoweringKind::hybrid
             ? nullptr
             : chooseBestVariableForModuleStrategy(
                   M.getDataLayout(), LDSToKernelsThatNeedToAccessItIndirectly);
@@ -607,16 +588,16 @@ public:
         continue;
       }
 
-      switch (LoweringKindLoc) {
-      case LoweringKind::module:
+      switch (LoweringKind) {
+      case LDSLoweringKind::module:
         ModuleScopeVariables.insert(GV);
         break;
 
-      case LoweringKind::table:
+      case LDSLoweringKind::table:
         TableLookupVariables.insert(GV);
         break;
 
-      case LoweringKind::kernel:
+      case LDSLoweringKind::kernel:
         if (K.second.size() == 1) {
           KernelAccessVariables.insert(GV);
         } else {
@@ -627,7 +608,7 @@ public:
         }
         break;
 
-      case LoweringKind::hybrid: {
+      case LDSLoweringKind::hybrid: {
         if (GV == HybridModuleRoot) {
           assert(K.second.size() != 1);
           ModuleScopeVariables.insert(GV);
@@ -1260,10 +1241,10 @@ private:
 
   // Increase the alignment of LDS globals if necessary to maximise the chance
   // that we can use aligned LDS instructions to access them.
-  static bool superAlignLDSGlobals(Module &M) {
+  bool superAlignLDSGlobals(Module &M) {
     const DataLayout &DL = M.getDataLayout();
     bool Changed = false;
-    if (!SuperAlignLDSGlobals) {
+    if (!TM.getCLOpts().super_align_lds_globals) {
       return Changed;
     }
 

@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -338,9 +339,9 @@ void MapVector<KeyT, ValueT, MapType, VectorType, N>::remove_if(Function Pred) {
 /// A MapVector that performs no allocations if smaller than a certain
 /// size.
 template <typename KeyT, typename ValueT, unsigned N>
-struct SmallMapVector : MapVector<KeyT, ValueT, DenseMap<KeyT, unsigned>,
-                                  SmallVector<std::pair<KeyT, ValueT>, N>, N> {
-};
+struct LLVM_ATTRIBUTE_WARN_UNUSED SmallMapVector
+    : MapVector<KeyT, ValueT, DenseMap<KeyT, unsigned>,
+                SmallVector<std::pair<KeyT, ValueT>, N>, N> {};
 
 template <typename KeyT, typename ValueT,
           typename MapType = DenseMap<KeyT, unsigned>,

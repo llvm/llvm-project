@@ -11,9 +11,14 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include <cstdint>
 #include <optional>
 
 namespace llvm {
+
+namespace dxbc::SourceInfo::Contents {
+enum class CompressionType : uint16_t;
+} // namespace dxbc::SourceInfo::Contents
 
 // Forward-declared so that Analysis headers can include this one. Fields of
 // these types default to the zero enumerator.

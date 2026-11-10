@@ -92,18 +92,21 @@ namespace llvm {
 namespace bolt {
 
 static bool
-hasAArch64ExclusiveMemop(BinaryFunction &Function,
-                         DenseSet<const BinaryBasicBlock *> &BBToSkip) {
+hasExclusiveMemop(BinaryFunction &Function,
+                  DenseMap<const BinaryBasicBlock *, bool> &BBToSkip) {
   // FIXME ARMv8-a architecture reference manual says that software must avoid
   // having any explicit memory accesses between exclusive load and associated
   // store instruction. So for now skip instrumentation for basic blocks that
   // have these instructions, since it might lead to runtime deadlock.
+  // BBToSkip maps each such block to whether it is entered with an exclusive
+  // load still pending, where even a counter at the start of the block is
+  // unsafe.
   BinaryContext &BC = Function.getBinaryContext();
   std::queue<std::pair<BinaryBasicBlock *, bool>> BBQueue; // {BB, isLoad}
   DenseSet<BinaryBasicBlock *> Visited;
 
   if (Function.getLayout().block_begin() == Function.getLayout().block_end())
-    return 0;
+    return false;
 
   BinaryBasicBlock *BBfirst = *Function.getLayout().block_begin();
   BBQueue.push({BBfirst, false});
@@ -115,9 +118,15 @@ hasAArch64ExclusiveMemop(BinaryFunction &Function,
     if (!Visited.insert(BB).second)
       continue;
 
+    const bool EnteredInRegion = IsLoad;
+    // An empty block entered inside a region has no instruction to mark it
+    // in the loop below.
+    if (EnteredInRegion && BB->empty())
+      BBToSkip.try_emplace(BB, true);
+
     for (const MCInst &Inst : *BB) {
       // Two loads one after another - skip whole function
-      if (BC.MIB->isAArch64ExclusiveLoad(Inst) && IsLoad) {
+      if (BC.MIB->isExclusiveLoad(Inst) && IsLoad) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
                  << " has two exclusive loads. Ignoring the function.\n";
@@ -125,10 +134,10 @@ hasAArch64ExclusiveMemop(BinaryFunction &Function,
         return true;
       }
 
-      if (BC.MIB->isAArch64ExclusiveLoad(Inst))
+      if (BC.MIB->isExclusiveLoad(Inst))
         IsLoad = true;
 
-      if (IsLoad && BBToSkip.insert(BB).second) {
+      if (IsLoad && BBToSkip.try_emplace(BB, EnteredInRegion).second) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: skip BB " << BB->getName()
                  << " due to exclusive instruction in function "
@@ -136,7 +145,7 @@ hasAArch64ExclusiveMemop(BinaryFunction &Function,
         }
       }
 
-      if (!IsLoad && BC.MIB->isAArch64ExclusiveStore(Inst)) {
+      if (!IsLoad && BC.MIB->isExclusiveStore(Inst)) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
                  << " has exclusive store without corresponding load. Ignoring "
@@ -145,8 +154,8 @@ hasAArch64ExclusiveMemop(BinaryFunction &Function,
         return true;
       }
 
-      if (IsLoad && (BC.MIB->isAArch64ExclusiveStore(Inst) ||
-                     BC.MIB->isAArch64ExclusiveClear(Inst)))
+      if (IsLoad &&
+          (BC.MIB->isExclusiveStore(Inst) || BC.MIB->isExclusiveClear(Inst)))
         IsLoad = false;
     }
 
@@ -371,8 +380,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (BC.isMachO() && Function.hasName("___GLOBAL_init_65535/1"))
     return;
 
-  DenseSet<const BinaryBasicBlock *> BBToSkip;
-  if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function, BBToSkip))
+  DenseMap<const BinaryBasicBlock *, bool> BBToSkip;
+  if ((BC.isAArch64() || BC.isRISCV()) && hasExclusiveMemop(Function, BBToSkip))
     return;
 
   SplitWorklistTy SplitWorklist;
@@ -579,6 +588,14 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (!opts::ConservativeInstrumentation) {
     for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
       BinaryBasicBlock &BB = *BBI;
+
+      // The counter goes at the start of the block, so unlike the edge
+      // counters above, it only has to stay out of blocks entered inside an
+      // exclusive region (mapped to true in BBToSkip). A block that starts a
+      // region keeps its counter, which runs before the exclusive load.
+      if (BBToSkip.lookup(&BB))
+        continue;
+
       auto STIt = STOutSet.find(&BB);
       if (STIt == STOutSet.end() || STIt->second.empty())
         instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,
