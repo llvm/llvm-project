@@ -1538,20 +1538,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  coshbf16_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    coshbf16_test.cpp
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.math.coshbf16
-)
-
-add_fp_unittest(
   exp2bf16_test
   SUITE
     libc-math-smoke-tests
@@ -5004,6 +4990,20 @@ add_fp_unittest(
     libc.src.math.coshf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  coshbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    coshbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.math.coshbf16
 )
 
 add_fp_unittest(

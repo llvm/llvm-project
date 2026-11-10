@@ -1306,16 +1306,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  coshbf16
-  SRCS
-    coshbf16.cpp
-  HDRS
-    ../coshbf16.h
-  DEPENDS
-    libc.src.__support.math.coshbf16
-)
-
-add_entrypoint_object(
   exp2bf16
   SRCS
     exp2bf16.cpp
@@ -3926,6 +3916,16 @@ add_entrypoint_object(
     ../coshf.h
   DEPENDS
     libc.src.__support.math.coshf
+)
+
+add_entrypoint_object(
+  coshbf16
+  SRCS
+    coshbf16.cpp
+  HDRS
+    ../coshbf16.h
+  DEPENDS
+    libc.src.__support.math.coshbf16
 )
 
 add_entrypoint_object(

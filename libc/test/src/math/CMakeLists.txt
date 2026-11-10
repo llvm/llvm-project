@@ -1400,18 +1400,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  coshbf16_test
-  NEED_MPFR
-  SUITE
-    libc-math-tests
-  SRCS
-    coshbf16_test.cpp
-  DEPENDS
-    libc.src.math.coshbf16
-    libc.src.__support.FPUtil.bfloat16
-)
-
-add_fp_unittest(
   exp2bf16_test
   NEED_MPFR
   SUITE
@@ -2654,6 +2642,18 @@ add_fp_unittest(
     libc.src.math.coshf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  coshbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    coshbf16_test.cpp
+  DEPENDS
+    libc.src.math.coshbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
