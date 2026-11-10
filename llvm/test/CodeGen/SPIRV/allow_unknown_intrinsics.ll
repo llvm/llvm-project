@@ -11,7 +11,7 @@
 ; The test checks command-line option which allows to represent unknown
 ; intrinsics as external function calls in SPIR-V.
 
-; CHECK-ERROR: LLVM ERROR: unable to legalize instruction: %3:iid(s64) = G_READCYCLECOUNTER (in function: foo)
+; CHECK-ERROR: LLVM ERROR: unable to legalize instruction: %3:iid(i64) = G_READCYCLECOUNTER (in function: foo)
 
 ; CHECK: Name %[[READCYCLECOUNTER:[0-9]+]] "spirv.llvm_readcyclecounter"
 ; CHECK: Name %[[SOME_CUSTOM_INTRINSIC:[0-9]+]] "spirv.llvm_some_custom_intrinsic"
