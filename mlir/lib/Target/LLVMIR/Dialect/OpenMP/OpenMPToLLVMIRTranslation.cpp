@@ -986,7 +986,17 @@ convertOmpMaster(Operation &opInst, llvm::IRBuilderBase &builder,
 /// `noalias` argument that never escapes.
 static void emitSyncMarkers(llvm::IRBuilderBase &builder,
                             llvm::ArrayRef<llvm::Value *> ptrs,
-                            const llvm::DebugLoc &loc) {
+                            llvm::DebugLoc loc) {
+  if (ptrs.empty())
+    return;
+  // The location of a construct like omp.target can belong to the function its
+  // region is outlined into. Use a location in this function instead.
+  llvm::DISubprogram *subprogram =
+      builder.GetInsertBlock()->getParent()->getSubprogram();
+  if (loc && loc->getInlinedAtScope()->getSubprogram() != subprogram)
+    loc = subprogram ? llvm::DebugLoc(llvm::DILocation::get(
+                           subprogram->getContext(), 0, 0, subprogram))
+                     : llvm::DebugLoc();
   for (llvm::Value *ptr : ptrs)
     llvm::cast<llvm::CallInst>(
         builder.CreateIntrinsic(llvm::Intrinsic::omp_sync_marker,
@@ -1024,15 +1034,35 @@ collectNoAliasPointerArgs(Operation *op, llvm::IRBuilderBase &builder) {
   return ptrs;
 }
 
+/// Returns true if \p op is an atomic operation whose memory order makes it a
+/// release or acquire flush. A relaxed atomic operation only orders accesses
+/// to its own variable.
+static bool isAtomicWithFlush(Operation *op) {
+  // The atomic operations in a capture are translated as part of it.
+  if (isa_and_present<omp::AtomicCaptureOp>(op->getParentOp()))
+    return false;
+  std::optional<omp::ClauseMemoryOrderKind> order =
+      llvm::TypeSwitch<Operation *, std::optional<omp::ClauseMemoryOrderKind>>(
+          op)
+          .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
+                omp::AtomicCaptureOp, omp::AtomicCompareOp>(
+              [](auto atomicOp) { return atomicOp.getMemoryOrder(); })
+          .Default(
+              [](Operation *) -> std::optional<omp::ClauseMemoryOrderKind> {
+                return std::nullopt;
+              });
+  return order && *order != omp::ClauseMemoryOrderKind::Relaxed;
+}
+
 /// Returns true if \p op implies a flush of all variables on entry, on exit or
 /// both: constructs with an implicit barrier, critical and ordered, task
-/// scheduling points (task generation, taskwait, taskyield, end of taskgroup),
-/// cancellation, and entry to and exit from parallel and teams. For
-/// worksharing constructs and scope the flush comes from the barrier at the
-/// end, which `nowait` removes. Explicit `omp.flush` is handled with the op,
-/// since a flush with a list only applies to the listed variables. Target
-/// constructs are not handled yet.
-static bool impliesFlushAll(Operation *op) {
+/// scheduling points (task generation, including target tasks, taskwait,
+/// taskyield, end of taskgroup), cancellation, entry to and exit from parallel
+/// and teams, and atomic operations that are not relaxed. For worksharing
+/// constructs and scope the flush comes from the barrier at the end, which
+/// `nowait` removes. Explicit `omp.flush` is handled with the op, since a flush
+/// with a list only applies to the listed variables.
+static bool impliesFlushAll(Operation *op, bool isTargetDevice) {
   if (auto single = dyn_cast<omp::SingleOp>(op))
     return !single.getNowait();
   if (auto sections = dyn_cast<omp::SectionsOp>(op))
@@ -1043,6 +1073,11 @@ static bool impliesFlushAll(Operation *op) {
     return !scope.getNowait();
   if (auto workshare = dyn_cast<omp::WorkshareOp>(op))
     return !workshare.getNowait();
+  if (isa<omp::TargetOp, omp::TargetEnterDataOp, omp::TargetExitDataOp,
+          omp::TargetUpdateOp>(op))
+    return !isTargetDevice;
+  if (isAtomicWithFlush(op))
+    return true;
   return isa<omp::BarrierOp, omp::CriticalOp, omp::OrderedOp,
              omp::OrderedRegionOp, omp::ParallelOp, omp::TeamsOp, omp::TaskOp,
              omp::TaskloopContextOp, omp::TaskwaitOp, omp::TaskyieldOp,
@@ -10816,7 +10851,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
   // markers get the location of the construct: translating it may leave the
   // debug location of an outlined function in the builder.
   llvm::SmallVector<llvm::Value *> syncPtrs;
-  if (impliesFlushAll(op))
+  if (impliesFlushAll(op, ompBuilder->Config.isTargetDevice()))
     syncPtrs = collectNoAliasPointerArgs(op, builder);
   llvm::DebugLoc opDebugLoc = builder.getCurrentDebugLocation();
   emitSyncMarkers(builder, syncPtrs, opDebugLoc);

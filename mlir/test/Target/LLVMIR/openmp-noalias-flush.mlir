@@ -148,6 +148,55 @@ llvm.func @flush_list(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.no
   llvm.return
 }
 
+// Atomic operations that are not relaxed imply a flush.
+// CHECK-LABEL: define void @atomic_acquire(
+// CHECK-SAME: ptr noalias %[[A:[0-9]+]], ptr %{{[0-9]+}}, ptr %{{[0-9]+}})
+// CHECK: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+// CHECK: load atomic i32, ptr %{{[0-9]+}} acquire
+// CHECK: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+// CHECK-NEXT: ret void
+llvm.func @atomic_acquire(%arg0: !llvm.ptr {llvm.noalias}, %x: !llvm.ptr, %v: !llvm.ptr) {
+  omp.atomic.read %v = %x memory_order(acquire) : !llvm.ptr, !llvm.ptr, i32
+  llvm.return
+}
+
+// CHECK-LABEL: define void @atomic_release(
+// CHECK-SAME: ptr noalias %[[A:[0-9]+]], ptr %{{[0-9]+}}, i32 %{{[0-9]+}})
+// CHECK: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+// CHECK: store atomic i32 %{{[0-9]+}}, ptr %{{[0-9]+}} release
+// CHECK: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+// CHECK-NEXT: ret void
+llvm.func @atomic_release(%arg0: !llvm.ptr {llvm.noalias}, %x: !llvm.ptr, %e: i32) {
+  omp.atomic.write %x = %e memory_order(release) : !llvm.ptr, i32
+  llvm.return
+}
+
+// Relaxed atomic operations and masked don't imply a flush.
+// CHECK-LABEL: define void @no_flush(
+// CHECK-NOT: @llvm.omp.sync.marker
+// CHECK: ret void
+llvm.func @no_flush(%arg0: !llvm.ptr {llvm.noalias}, %x: !llvm.ptr, %v: !llvm.ptr) {
+  omp.atomic.read %v = %x memory_order(relaxed) : !llvm.ptr, !llvm.ptr, i32
+  omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+  omp.masked {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// Generating a target task is a task scheduling point.
+// CHECK-LABEL: define void @target(
+// CHECK-SAME: ptr noalias %[[A:[0-9]+]])
+// CHECK: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+// CHECK: call void @__omp_offloading_{{.*}}_target_l{{[0-9]+}}(
+// CHECK-NEXT: call void @llvm.omp.sync.marker.p0(ptr %[[A]])
+llvm.func @target(%arg0: !llvm.ptr {llvm.noalias}) {
+  omp.target kernel_type(generic) {
+    omp.terminator
+  }
+  llvm.return
+}
+
 // The parallel construct is marked in the enclosing function. Constructs in
 // the outlined region aren't, since its arguments aren't dummy arguments.
 // CHECK-LABEL: define void @in_parallel(
