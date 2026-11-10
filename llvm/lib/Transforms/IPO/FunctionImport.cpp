@@ -2305,8 +2305,27 @@ Expected<bool> FunctionImporter::importFunctions(
     // from linked IR, it creates attribute-less declarations for aliases, and
     // it does not copy metadata from source definitions.
     for (auto &DI : DeclInfos) {
-      if (DestModule.getNamedValue(DI.Name))
+      // Record the GUID of the original value, which may differ from the GUID
+      // computed from the current name if it was a promoted local. This allows
+      // the declaration to be located via the GUID, e.g. by MemProf ICP.
+      auto SetGUID = [&](Function *F) {
+        F->setMetadata(
+            LLVMContext::MD_guid,
+            MDNode::get(DestModule.getContext(),
+                        {ConstantAsMetadata::get(ConstantInt::get(
+                            Type::getInt64Ty(DestModule.getContext()),
+                            DI.GUID))}));
+      };
+      if (GlobalValue *Existing = DestModule.getNamedValue(DI.Name)) {
+        // A declaration created by the IRMover as a side effect of linking an
+        // imported definition that references it (e.g. a vtable initializer)
+        // does not carry the original GUID, so attach it here.
+        if (auto *ExistingF = dyn_cast<Function>(Existing);
+            ExistingF && ExistingF->isDeclaration() &&
+            !ExistingF->getMetadata(LLVMContext::MD_guid))
+          SetGUID(ExistingF);
         continue;
+      }
       Function *F = Function::Create(DI.Ty, GlobalValue::ExternalLinkage,
                                      DI.AddrSpace, DI.Name, &DestModule);
       F->setCallingConv(DI.CC);
@@ -2315,14 +2334,7 @@ Expected<bool> FunctionImporter::importFunctions(
       // setDSOLocal(false) is not allowed on an implicitly dso_local value.
       F->setVisibility(DI.Visibility);
       F->setDSOLocal(DI.DSOLocal);
-      // Record the GUID of the original value, which may differ from the GUID
-      // computed from the current name if it was a promoted local. This allows
-      // the declaration to be located via the GUID, e.g. by MemProf ICP.
-      F->setMetadata(LLVMContext::MD_guid,
-                     MDNode::get(DestModule.getContext(),
-                                 {ConstantAsMetadata::get(ConstantInt::get(
-                                     Type::getInt64Ty(DestModule.getContext()),
-                                     DI.GUID))}));
+      SetGUID(F);
       NumImportedFunctionDecls++;
     }
   }
