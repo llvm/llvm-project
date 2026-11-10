@@ -24,14 +24,15 @@ declare { ptr, i1 } @llvm.type.checked.load.relative(ptr, i32, metadata)
 
 ; Model a C++ vtable, which is only used through the alias @vt.rel.
 ; @vt.rel.local becomes live only through the alias, and @f.rel must be kept.
-; CHECK: @vt.rel.local = private unnamed_addr constant { [1 x i32] }
-; CHECK-SAME: { [1 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @f.rel to i64), i64 ptrtoint (ptr @vt.rel.local to i64)) to i32)] }
-@vt.rel.local = private unnamed_addr constant { [1 x i32] } { [1 x i32] [
-  i32 trunc (i64 sub (i64 ptrtoint (ptr @f.rel to i64), i64 ptrtoint (ptr @vt.rel.local to i64)) to i32)
+; CHECK: @vt.rel.local = private unnamed_addr constant { [2 x i32] }
+; CHECK-SAME: { [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @f.rel1 to i64), i64 ptrtoint (ptr @vt.rel.local to i64)) to i32), i32 0] }
+@vt.rel.local = private unnamed_addr constant { [2 x i32] } { [2 x i32] [
+  i32 trunc (i64 sub (i64 ptrtoint (ptr @f.rel1 to i64), i64 ptrtoint (ptr @vt.rel.local to i64)) to i32),
+  i32 trunc (i64 sub (i64 ptrtoint (ptr @f.rel2 to i64), i64 ptrtoint (ptr @vt.rel.local to i64)) to i32)
 ]}, align 4, !type !6, !vcall_visibility !2
 
-; CHECK: @vt.rel = internal unnamed_addr alias { [1 x i32] }, ptr @vt.rel.local
-@vt.rel = internal unnamed_addr alias { [1 x i32] }, ptr @vt.rel.local
+; CHECK: @vt.rel = internal unnamed_addr alias { [2 x i32] }, ptr @vt.rel.local
+@vt.rel = internal unnamed_addr alias { [2 x i32] }, ptr @vt.rel.local
 
 ; CHECK: define internal void @f.live(
 define internal void @f.live(ptr %obj) {
@@ -49,9 +50,14 @@ define internal void @f.late(ptr %obj) {
   ret void
 }
 
-; CHECK: define internal void @f.rel(
-define internal void @f.rel(ptr %obj) {
-  ret void
+; CHECK: define internal i32 @f.rel1(
+define internal i32 @f.rel1(ptr %obj) {
+  ret i32 1
+}
+
+; CHECK-NOT: define internal i32 @f.rel2(
+define internal i32 @f.rel2(ptr %obj) {
+  ret i32 2
 }
 
 define void @test(ptr %obj) {
