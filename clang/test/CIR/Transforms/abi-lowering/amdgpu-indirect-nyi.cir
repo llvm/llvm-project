@@ -13,7 +13,7 @@ module attributes {
 } {
 
   // A return past the register budget goes through an sret in addrspace(5).
-  cir.func @ret_big(%arg0: !cir.ptr<!rec_Big>) -> !rec_Big {
+  cir.func @ret_big(%arg0: !cir.ptr<!rec_Big>) -> !rec_Big requires_call_conv_lowering {
     %0 = cir.load %arg0 : !cir.ptr<!rec_Big>, !rec_Big
     cir.return %0 : !rec_Big
   }

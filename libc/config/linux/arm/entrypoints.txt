@@ -417,6 +417,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.canonicalizef128
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.cbrtbf16
@@ -588,6 +589,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lroundl
     libc.src.math.modf
     libc.src.math.modff
+    libc.src.math.modff128
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
@@ -616,6 +618,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remainderl
     libc.src.math.remquo
     libc.src.math.remquof
+    libc.src.math.remquof128
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
@@ -683,6 +686,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
   libc.src.math.acosbf16
+  libc.src.math.acoshbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -731,6 +735,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
+  libc.src.math.log10p1bf16
   libc.src.math.log_bf16
   libc.src.math.logbbf16
   libc.src.math.lrintbf16
@@ -751,6 +756,8 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
+  libc.src.math.sinbf16
+  libc.src.math.sinhbf16
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
   libc.src.math.truncbf16

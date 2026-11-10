@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
@@ -84,22 +85,21 @@ void SampleProfileReader::dump(raw_ostream &OS) {
   if (!DataAccessProfileData || DataAccessProfileData->empty())
     return;
 
-  OS << "DataAccessProfiles:\n"
-     << "  SampledRecords:\n";
-
+  OS << "DataAccessProfiles:\n";
+  memprof::YamlDataAccessProfData YamlData;
   for (const auto &[SymHandleRef, RecordRef] :
-       DataAccessProfileData->getRecords()) {
-    OS << "    - Symbol: " << std::get<StringRef>(SymHandleRef) << "\n"
-       << "      AccessCount: " << RecordRef.AccessCount << "\n";
+       DataAccessProfileData->getRecords())
+    YamlData.Records.emplace_back(SymHandleRef, RecordRef.AccessCount,
+                                  RecordRef.Locations);
 
-    if (RecordRef.Locations.empty())
-      continue;
+  for (StringRef ColdSymbol : DataAccessProfileData->getKnownColdSymbols())
+    YamlData.KnownColdSymbols.push_back(ColdSymbol.str());
 
-    OS << "      Locations:\n";
-    for (const auto &Loc : RecordRef.Locations)
-      OS << "        - FileName: " << Loc.FileName << "\n"
-         << "          Line: " << Loc.Line << "\n";
-  }
+  for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
+    YamlData.KnownColdStrHashes.push_back(Hash);
+
+  yaml::Output Yout(OS);
+  Yout << YamlData;
 }
 
 static void dumpFunctionProfileJson(const FunctionSamples &S,
@@ -567,32 +567,38 @@ SampleProfileReaderText::readDataAccessProfiles(line_iterator &LI) {
   if ((++LI).is_at_eof())
     return sampleprof_error::success;
 
+  StringRef YamlBuf(LI->begin(), Buffer->getBufferEnd() - LI->begin());
+  memprof::YamlDataAccessProfData YamlData;
+  yaml::Input Yin(YamlBuf);
+  Yin >> YamlData;
+  if (Yin.error())
+    return sampleprof_error::malformed;
+
   DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
-  while (!LI.is_at_eof()) {
-    auto [SymName, AccessCountStr] = LI->rsplit(':');
-    uint64_t AccessCount = 0;
-    if (SymName.empty() || SymName.starts_with(' ') || AccessCountStr.empty() ||
-        AccessCountStr.getAsInteger(10, AccessCount)) {
-      reportError(LI.line_number(), "Expected 'symbol:count', found " + *LI);
+  for (const auto &Record : YamlData.Records) {
+    memprof::SymbolHandleRef SymRef =
+        std::holds_alternative<std::string>(Record.SymHandle)
+            ? memprof::SymbolHandleRef(std::get<std::string>(Record.SymHandle))
+            : memprof::SymbolHandleRef(std::get<uint64_t>(Record.SymHandle));
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            SymRef, Record.AccessCount, Record.Locations)) {
+      reportError(LI.line_number(), toString(std::move(E)));
       return sampleprof_error::malformed;
     }
+  }
 
-    SmallVector<memprof::SourceLocation> Locations;
-    while (!(++LI).is_at_eof() && (*LI)[0] == ' ') {
-      auto [FileName, LineNumStr] = LI->trim().rsplit(':');
-      uint32_t LineNum = 0;
-      if (FileName.empty() || LineNumStr.empty() ||
-          LineNumStr.getAsInteger(10, LineNum)) {
-        reportError(LI.line_number(), "Expected 'filename:line', found " + *LI);
-        return sampleprof_error::malformed;
-      }
-
-      Locations.emplace_back(FileName, LineNum);
+  for (const uint64_t Hash : YamlData.KnownColdStrHashes) {
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Hash)) {
+      reportError(LI.line_number(), toString(std::move(E)));
+      return sampleprof_error::malformed;
     }
+  }
 
-    if (Error E = DataAccessProfileData->setDataAccessProfile(
-            SymName, AccessCount, Locations))
-      consumeError(std::move(E));
+  for (const std::string &Sym : YamlData.KnownColdSymbols) {
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Sym)) {
+      reportError(LI.line_number(), toString(std::move(E)));
+      return sampleprof_error::malformed;
+    }
   }
 
   return sampleprof_error::success;

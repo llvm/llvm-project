@@ -5,6 +5,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -113,6 +114,48 @@ Error DataAccessProfData::addKnownSymbolWithoutSamples(
   KnownColdSymbols.insert(
       saveStringToMap(StrToIndexMap, Saver, *CanonicalName).first);
   return Error::success();
+}
+
+void DataAccessProfData::merge(const DataAccessProfData &Other,
+                               uint64_t Weight) {
+  for (const auto &[SymHandleRef, RecordRef] : Other.getRecords()) {
+    const bool IsStringLiteral = std::holds_alternative<uint64_t>(SymHandleRef);
+    uint64_t RecordID;
+    SymbolHandleRef Key;
+    if (IsStringLiteral) {
+      RecordID = std::get<uint64_t>(SymHandleRef);
+      Key = RecordID;
+      KnownColdHashes.remove(RecordID);
+    } else {
+      StringRef CanonicalName = std::get<StringRef>(SymHandleRef);
+      std::tie(Key, RecordID) =
+          saveStringToMap(StrToIndexMap, Saver, CanonicalName);
+      KnownColdSymbols.remove(CanonicalName);
+    }
+
+    internal::DataAccessProfRecordRef &Record =
+        Records.try_emplace(Key, RecordID, 0, IsStringLiteral).first->second;
+    Record.AccessCount = SaturatingMultiplyAdd(RecordRef.AccessCount, Weight,
+                                               Record.AccessCount);
+
+    for (const internal::SourceLocationRef &Loc : RecordRef.Locations) {
+      internal::SourceLocationRef SavedLoc(
+          saveStringToMap(StrToIndexMap, Saver, Loc.FileName).first, Loc.Line);
+      if (!llvm::is_contained(Record.Locations, SavedLoc))
+        Record.Locations.push_back(SavedLoc);
+    }
+  }
+
+  for (StringRef ColdSym : Other.getKnownColdSymbols()) {
+    if (!Records.contains(ColdSym))
+      KnownColdSymbols.insert(
+          saveStringToMap(StrToIndexMap, Saver, ColdSym).first);
+  }
+
+  for (uint64_t ColdHash : Other.getKnownColdHashes()) {
+    if (!Records.contains(ColdHash))
+      KnownColdHashes.insert(ColdHash);
+  }
 }
 
 Error DataAccessProfData::deserialize(const unsigned char *&Ptr) {
