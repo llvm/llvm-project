@@ -6,11 +6,6 @@
 ; instruction offset to the LDS address. An offset outside 0..0xffff is added
 ; to both addresses instead and the instruction gets offset 0.
 
-declare void @llvm.amdgcn.global.load.async.to.lds.b128(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1), ptr addrspace(3), i32, i32)
-declare void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32, i32)
-
 define amdgpu_ps void @load_b128_offset_0x10100(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
 ; SDAG-LABEL: load_b128_offset_0x10100:
 ; SDAG:       ; %bb.0: ; %entry
