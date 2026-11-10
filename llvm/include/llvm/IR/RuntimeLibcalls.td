@@ -249,6 +249,8 @@ foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
   def UREM_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
 }
 
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def MULO_#IntTy.Suffix
@@ -259,14 +261,24 @@ foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
                  TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def SDIVREM_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = MathFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
+  }
 }
 
 foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
                  TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
   def UDIVREM_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = MathFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
+  }
 }
 
 foreach IntTy = [Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64] in {
@@ -281,8 +293,9 @@ class DivRemPairImpl<RuntimeLibcall P, string Name = NAME>
   defvar IntTy = P.ReturnType;
   let ReturnType = !cast<FuncArgType>(!cast<string>(IntTy) # "Pair");
   let ArgumentTypes = [IntTy, IntTy];
-  let FnAttrs = MathFnAttrs;
   let Memory = NoMemory;
+  let ParamAttrs = [];
+  let ParamPointeeTypes = [];
 }
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
@@ -301,8 +314,6 @@ def F64 : TypeSuffix<"F64", Dbl>;
 def F80 : TypeSuffix<"F80", X86FP80>;
 def F128 : TypeSuffix<"F128", FP128>;
 def PPCF128 : TypeSuffix<"PPCF128", PPCFP128>;
-
-defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
 
 foreach FPTy = [F32, F64] in {
   def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]> {
