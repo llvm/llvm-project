@@ -672,7 +672,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
   // MRI tracks physical operands and reg masks, not assigned virtual
   // intervals. Reserved low AGPRs can leave AGPR0 unassigned.
-  if (llvm::none_of(AMDGPU::AGPR_32RegClass.getRegisters(),
+  if (llvm::none_of(RegClassInfo.getOrder(&AMDGPU::AGPR_32RegClass),
                     [&](MCPhysReg Reg) { return LRM.isPhysRegUsed(Reg); })) {
     LLVM_DEBUG(dbgs() << "skipping function that did not allocate AGPRs\n");
     return false;
