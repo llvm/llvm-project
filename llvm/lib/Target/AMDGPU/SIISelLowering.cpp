@@ -20725,13 +20725,9 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
 
       KnownBits RHSKnown;
       VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
-      if (RHSKnown.isUnknown())
-        break;
 
       KnownBits LHSKnown;
       VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
-      if (LHSKnown.isUnknown())
-        break;
 
       bool SelfMultiply =
           LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
