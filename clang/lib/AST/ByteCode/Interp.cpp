@@ -3310,11 +3310,9 @@ bool FinishInitGlobal(InterpState &S) {
 }
 
 bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-
   switch (Kind) {
   case CastKind::Reinterpret:
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Reinterpret
         << S.Current->getRange(OpPC);
     return !Fatal;
@@ -3324,7 +3322,7 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     assert(!Fatal);
     return true;
   case CastKind::ReinterpretLike:
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
     return !Fatal;
@@ -3342,7 +3340,7 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     return false;
   case CastKind::Dynamic:
     assert(!S.getLangOpts().CPlusPlus20);
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
     return true;
   }
