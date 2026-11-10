@@ -151,6 +151,33 @@ static mlir::Value makeScopedAtomicXchg(CIRGenFunction &cgf,
 std::optional<mlir::Value>
 CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   switch (builtinId) {
+  case NVPTX::BI__mma_bf16_m16n16k16_ld_b: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address dst = emitPointerWithAlignment(expr->getArg(0));
+    mlir::Value src = emitScalarExpr(expr->getArg(1));
+    mlir::Value ldm = emitScalarExpr(expr->getArg(2));
+    auto layout = expr->getArg(3)->getIntegerConstantExpr(getContext());
+    if (!layout)
+      return std::nullopt;
+    std::string intrinsic = "nvvm.wmma.m16n16k16.load.b.";
+    intrinsic += layout->getSExtValue() ? "col" : "row";
+    intrinsic += ".stride.bf16";
+    mlir::Type elementTy = builder.getSInt32Ty();
+    llvm::SmallVector<mlir::Type, 4> members(4, elementTy);
+    auto resultTy = cir::StructType::get(
+        builder.getContext(), members, /*packed=*/false, /*is_class=*/false,
+        cir::RecordType::getAllDataKinds(members));
+    mlir::Value result = builder.emitIntrinsicCallOp(
+        loc, intrinsic, resultTy, mlir::ValueRange{src, ldm});
+    for (unsigned i = 0; i < 4; ++i) {
+      mlir::Value value = cir::ExtractMemberOp::create(builder, loc, result, i);
+      value = builder.createBitcast(value, dst.getElementType());
+      mlir::Value ptr = builder.createPtrStride(loc, dst.emitRawPointer(),
+                                                builder.getSInt32(i, loc));
+      builder.createStore(loc, value, Address{ptr, CharUnits::fromQuantity(4)});
+    }
+    return result;
+  }
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
@@ -486,7 +513,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   case NVPTX::BI__mma_bf16_m16n16k16_ld_a:
-  case NVPTX::BI__mma_bf16_m16n16k16_ld_b:
   case NVPTX::BI__mma_bf16_m8n32k16_ld_a:
   case NVPTX::BI__mma_bf16_m8n32k16_ld_b:
   case NVPTX::BI__mma_bf16_m32n8k16_ld_a:
