@@ -29,7 +29,7 @@ $ for V in 4 5; do
   done
 
 Every level is linked with the same DWARF linker. dsymutil is expected to be
-silent.
+silent: it warns when the relocations of an object file were all lost.
 
 DEFINE: %{version} =
 DEFINE: %{linker} =
