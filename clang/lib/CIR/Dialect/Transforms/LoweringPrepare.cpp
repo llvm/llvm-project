@@ -668,9 +668,19 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
-    if (!hasDefaultFuncAttrs)
+    if (!hasDefaultFuncAttrs) {
       f->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
                  builder.getUnitAttr());
+    } else {
+      // Give the function the TU-wide target-cpu/target-features that CIRGen
+      // recorded on the module, as classic codegen does for every function.
+      for (llvm::StringRef name :
+           {cir::CIRDialect::getTargetCPUAttrName(),
+            cir::CIRDialect::getTuneCPUAttrName(),
+            cir::CIRDialect::getTargetFeaturesAttrName()})
+        if (mlir::Attribute attr = mlirModule->getAttr(name))
+          f->setAttr(name, attr);
+    }
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
   }

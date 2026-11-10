@@ -4354,6 +4354,38 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::vector_shuffle: {
+    // Canonicalize a shuffle with a constant mask to shufflevector. Mask
+    // elements that are poison or out of range select poison.
+    Value *Vec = II->getArgOperand(0);
+    auto *Mask = dyn_cast<Constant>(II->getArgOperand(1));
+    if (!Mask)
+      break;
+
+    auto *VecTy = cast<VectorType>(Vec->getType());
+    unsigned NumElts = VecTy->getElementCount().getKnownMinValue();
+
+    // shufflevector can only splat lane 0 of a scalable vector.
+    if (VecTy->isScalableTy() && !Mask->isNullValue())
+      break;
+
+    // Only fold masks whose elements are all ConstantInt or poison.
+    SmallVector<int, 16> ShuffleMask;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      Constant *Elt = Mask->getAggregateElement(I);
+      if (!isa_and_nonnull<ConstantInt, PoisonValue>(Elt))
+        break;
+      auto *Idx = dyn_cast<ConstantInt>(Elt);
+      ShuffleMask.push_back(Idx && Idx->getValue().ult(NumElts)
+                                ? static_cast<int>(Idx->getZExtValue())
+                                : PoisonMaskElem);
+    }
+    if (ShuffleMask.size() != NumElts)
+      break;
+
+    return replaceInstUsesWith(CI,
+                               Builder.CreateShuffleVector(Vec, ShuffleMask));
+  }
   case Intrinsic::experimental_vp_reverse: {
     Value *X;
     Value *Vec = II->getArgOperand(0);

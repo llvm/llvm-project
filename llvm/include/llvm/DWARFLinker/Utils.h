@@ -21,6 +21,7 @@
 
 namespace llvm {
 class DWARFDie;
+class DWARFFormValue;
 
 namespace dwarf_linker {
 
@@ -41,6 +42,15 @@ LLVM_ABI bool isIdentifiedByChildren(dwarf::Tag Tag);
 
 /// Test if \p Die is a child that identifies its unnamed parent type.
 LLVM_ABI bool isIdentifyingChild(const DWARFDie &Die);
+
+/// Hash the fully qualified name of type \p Die for the Apple accelerator
+/// tables. \p ResolveRef returns the DIE that a DW_AT_specification or
+/// DW_AT_abstract_origin of its first argument refers to, or an invalid DIE.
+/// If \p SkipModules, a DW_TAG_module scope ends the name like the unit does.
+LLVM_ABI uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)> ResolveRef,
+    bool SkipModules);
 
 /// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
 /// the first-row index (in \p LT.Rows) of the corresponding line-table
