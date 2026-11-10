@@ -201,10 +201,6 @@ struct coro_nt_t {
 // LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} sret(%struct.NT) {{.*}} %[[TMP:[0-9]+]], ptr
 // LLVM-NEXT: br label %[[BB1:[0-9]+]]
 // LLVM: [[BB1]]:
-// LLVM-NEXT: br label %[[BB2:[0-9]+]]
-// LLVM: [[BB2]]:
-// LLVM-NEXT: br label %[[BB3:[0-9]+]]
-// LLVM: [[BB3]]:
 // LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[TMP]])
 // LLVM: [[CORO_CLEANUP]]:
 // LLVM-NEXT: call ptr @llvm.coro.free(
@@ -236,11 +232,9 @@ coro_t discard_nontrivial() { co_await AwaitNT{}; }
 // LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[TMP:[0-9]+]], ptr
 // LLVM-NEXT: br label %[[BB1:[0-9]+]]
 // LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_Z3usei(i32 noundef 1)
 // LLVM-NEXT: br label %[[BB2:[0-9]+]]
 // LLVM: [[BB2]]:
-// LLVM-NEXT: call void @_Z3usei(i32 noundef 1)
-// LLVM-NEXT: br label %[[BB3:[0-9]+]]
-// LLVM: [[BB3]]:
 // LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[TMP]])
 
 // OGCG-LABEL: define dso_local void @_Z16comma_nontrivialv
@@ -266,11 +260,9 @@ coro_t comma_nontrivial() { (co_await AwaitNT{}, use(1)); }
 // LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[ARG:[0-9]+]], ptr
 // LLVM-NEXT: br label %[[BB1:[0-9]+]]
 // LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_Z7consume2NT(ptr {{.*}} %[[ARG]])
 // LLVM-NEXT: br label %[[BB2:[0-9]+]]
 // LLVM: [[BB2]]:
-// LLVM-NEXT: call void @_Z7consume2NT(ptr {{.*}} %[[ARG]])
-// LLVM-NEXT: br label %[[BB3:[0-9]+]]
-// LLVM: [[BB3]]:
 // LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[ARG]])
 
 // OGCG-LABEL: define dso_local void @_Z16byval_nontrivialv
@@ -342,16 +334,12 @@ coro_t byval_nontrivial() { consume(co_await AwaitNT{}); }
 // LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[A1:[0-9]+]], ptr
 // LLVM-NEXT: br label %[[BB1:[0-9]+]]
 // LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_Z8consume22NTS_(ptr {{.*}} %[[A0]], ptr {{.*}} %[[A1]])
 // LLVM-NEXT: br label %[[BB2:[0-9]+]]
 // LLVM: [[BB2]]:
-// LLVM-NEXT: call void @_Z8consume22NTS_(ptr {{.*}} %[[A0]], ptr {{.*}} %[[A1]])
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[A1]])
 // LLVM-NEXT: br label %[[BB3:[0-9]+]]
 // LLVM: [[BB3]]:
-// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[A1]])
-// LLVM-NEXT: br label %[[BB4:[0-9]+]]
-// LLVM: [[BB4]]:
-// LLVM-NEXT: br label %[[BB5:[0-9]+]]
-// LLVM: [[BB5]]:
 // LLVM-NEXT: store i32 0, ptr %[[SLOT]], align 4
 // LLVM-NEXT: br label %[[A0_DTOR]]
 // LLVM: [[A0_DTOR]]:
@@ -397,18 +385,12 @@ coro_t two_args_nontrivial() { consume2(co_await AwaitNT{}, co_await AwaitNT{});
 // LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[ARG:[0-9]+]], ptr
 // LLVM-NEXT: br label %[[BB1:[0-9]+]]
 // LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_ZN9coro_nt_t12promise_type12return_valueE2NT(ptr {{.*}}, ptr {{.*}} %[[ARG]])
 // LLVM-NEXT: br label %[[BB2:[0-9]+]]
 // LLVM: [[BB2]]:
-// LLVM-NEXT: call void @_ZN9coro_nt_t12promise_type12return_valueE2NT(ptr {{.*}}, ptr {{.*}} %[[ARG]])
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[ARG]])
 // LLVM-NEXT: br label %[[BB3:[0-9]+]]
 // LLVM: [[BB3]]:
-// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[ARG]])
-// LLVM-NEXT: br label %[[BB4:[0-9]+]]
-// LLVM: [[BB4]]:
-// LLVM-NEXT: br label %[[BB5:[0-9]+]]
-// LLVM: [[BB5]]:
-// LLVM-NEXT: br label %[[BB6:[0-9]+]]
-// LLVM: [[BB6]]:
 // LLVM-NEXT: call void @_ZN9coro_nt_t12promise_type13final_suspendEv(
 
 // OGCG-LABEL: define dso_local void @_Z27coreturn_coyield_nontrivialv
@@ -492,21 +474,17 @@ coro_t cond_discard_nontrivial(bool c) { c ? (void)co_await AwaitNT{} : (void)0;
 // LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[V:[0-9]+]], ptr
 // LLVM-NEXT: br label %[[BB1:[0-9]+]]
 // LLVM: [[BB1]]:
-// LLVM-NEXT: br label %[[BB2:[0-9]+]]
-// LLVM: [[BB2]]:
 // LLVM-NEXT: %[[X_ADDR:.*]] = getelementptr inbounds nuw %struct.NT, ptr %[[V]], i32 0, i32 0
 // LLVM-NEXT: %[[X:.*]] = load i32, ptr %[[X_ADDR]], align 4
 // LLVM-NEXT: call void @_Z3usei(i32 noundef %[[X]])
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[V]])
 // LLVM-NEXT: br label %[[BB3:[0-9]+]]
 // LLVM: [[BB3]]:
-// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[V]])
+// LLVM-NEXT: call void @_ZN6coro_t12promise_type11return_voidEv(
 // LLVM-NEXT: br label %[[BB4:[0-9]+]]
 // LLVM: [[BB4]]:
-// LLVM-NEXT: br label %[[BB5:[0-9]+]]
-// LLVM: [[BB5]]:
-// LLVM-NEXT: call void @_ZN6coro_t12promise_type11return_voidEv(
-// LLVM-NEXT: br label %[[BB6:[0-9]+]]
-// LLVM: [[BB6]]:
 // LLVM-NEXT: call void @_ZN6coro_t12promise_type13final_suspendEv(
 
 // OGCG-LABEL: define dso_local void @_Z19var_init_nontrivialv
@@ -546,18 +524,14 @@ bool check(NT);
 // LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[ARG:[0-9]+]], ptr
 // LLVM-NEXT: br label %[[BB1:[0-9]+]]
 // LLVM: [[BB1]]:
-// LLVM-NEXT: br label %[[BB2:[0-9]+]]
-// LLVM: [[BB2]]:
 // LLVM-NEXT: %[[CHECK:.*]] = call {{.*}} i1 @_Z5check2NT(ptr {{.*}} %[[ARG]])
 // LLVM-NEXT: %[[EXT:.*]] = zext i1 %[[CHECK]] to i8
 // LLVM-NEXT: store i8 %[[EXT]], ptr %[[SPILL:[0-9]+]], align 1
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[ARG]])
 // LLVM-NEXT: br label %[[BB3:[0-9]+]]
 // LLVM: [[BB3]]:
-// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[ARG]])
-// LLVM-NEXT: br label %[[BB4:[0-9]+]]
-// LLVM: [[BB4]]:
-// LLVM-NEXT: br label %[[BB5:[0-9]+]]
-// LLVM: [[BB5]]:
 // LLVM-NEXT: load i8, ptr %[[SPILL]], align 1
 
 // OGCG-LABEL: define dso_local void @_Z20loop_cond_nontrivialv
@@ -652,18 +626,10 @@ struct coro_init_final_nt_t {
 // LLVM: call void @_ZN11InitAwaitNT12await_resumeEv(ptr {{.*}} %[[INIT:[0-9]+]], ptr
 // LLVM-NEXT: br label %[[BB1:[0-9]+]]
 // LLVM: [[BB1]]:
-// LLVM-NEXT: br label %[[BB2:[0-9]+]]
-// LLVM: [[BB2]]:
-// LLVM-NEXT: br label %[[BB3:[0-9]+]]
-// LLVM: [[BB3]]:
 // LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[INIT]])
 // LLVM: call void @_ZN12FinalAwaitNT12await_resumeEv(ptr {{.*}} %[[FINAL:[0-9]+]], ptr
-// LLVM-NEXT: br label %[[BB4:[0-9]+]]
-// LLVM: [[BB4]]:
-// LLVM-NEXT: br label %[[BB5:[0-9]+]]
-// LLVM: [[BB5]]:
-// LLVM-NEXT: br label %[[BB6:[0-9]+]]
-// LLVM: [[BB6]]:
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
 // LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[FINAL]])
 
 // OGCG-LABEL: define dso_local void @_Z21init_final_nontrivialv

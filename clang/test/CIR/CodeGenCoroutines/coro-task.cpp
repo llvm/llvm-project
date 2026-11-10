@@ -1664,13 +1664,11 @@ VoidTask silly_task_with_dtor() {
 // LLVM-NEXT:     i32 0, label %[[NORMAL:[0-9]+]]
 // LLVM-NEXT:     i32 1, label %[[DESTROY:[0-9]+]]
 // LLVM-NEXT:   ]
-// LLVM: [[NORMAL]]:
-// LLVM-NEXT:   br label %[[DTOR_CONT:[0-9]+]]
 // LLVM: [[DESTROY]]:
 // LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
 
 // Normal: return_void + final suspend. Destroy: coro.free.
-// LLVM: [[DTOR_CONT]]:
+// LLVM: [[NORMAL]]:
 // LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
 // LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
 // LLVM: [[FINAL]]:
@@ -1894,8 +1892,6 @@ VoidTask await_in_if(bool b) {
 // LLVM: [[AWAIT_CLEANUP]]:
 // LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
 // LLVM: [[IF_END]]:
-// LLVM-NEXT:   br label %[[AFTER_IF:[0-9]+]]
-// LLVM: [[AFTER_IF]]:
 // LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
 // LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
 // LLVM: [[FINAL]]:
