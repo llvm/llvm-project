@@ -866,16 +866,12 @@ static void eraseTerminatorAndDCECond(Instruction *TI,
     RecursivelyDeleteTriviallyDeadInstructions(Cond, nullptr, MSSAU);
 }
 
-/// Return true if the specified terminator checks
-/// to see if a value is equal to constant integer value.
+/// If the terminator is an integer value check, return the value being checked.
 Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
   Value *CV = nullptr;
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-    // Do not permit merging of large switch instructions into their
-    // predecessors unless there is only one predecessor.
-    if (!SI->getParent()->hasNPredecessorsOrMore(128 / SI->getNumSuccessors()))
-      CV = SI->getCondition();
-  } else if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
+    CV = SI->getCondition();
+  else if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
     if (BI->getCondition()->hasOneUse()) {
       if (ICmpInst *ICI = dyn_cast<ICmpInst>(BI->getCondition())) {
         if (ICI->isEquality() && getConstantInt(ICI->getOperand(1), DL))
@@ -1488,6 +1484,12 @@ bool SimplifyCFGOpt::foldValueComparisonIntoPredecessors(Instruction *TI,
   BasicBlock *BB = TI->getParent();
   Value *CV = isValueEqualityComparison(TI); // CondVal
   assert(CV && "Not a comparison?");
+
+  // Limit `incoming_edges * outgoing_edges < 128` to avoid code size explosion
+  // when we duplicate branches in multiple predecessors.
+  if (!BB->getSinglePredecessor() &&
+      BB->hasNPredecessorsOrMore(128 / TI->getNumSuccessors()))
+    return false;
 
   bool Changed = false;
 
