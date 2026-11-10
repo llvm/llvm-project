@@ -52,7 +52,7 @@ LLVMInitializeSystemZTarget() {
   initializeSystemZElimComparePass(PR);
   initializeSystemZShortenInstPass(PR);
   initializeSystemZLongBranchPass(PR);
-  initializeSystemZLDCleanupPass(PR);
+  initializeSystemZLDCleanupLegacyPass(PR);
   initializeSystemZShortenInstPass(PR);
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCLegacyPass(PR);
@@ -242,7 +242,7 @@ bool SystemZPassConfig::addInstSelector() {
       createSystemZISelDagLegacyPass(getSystemZTargetMachine(), getOptLevel()));
 
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createSystemZLDCleanupPass(getSystemZTargetMachine()));
+    addPass(createSystemZLDCleanupLegacyPass(getSystemZTargetMachine()));
 
   return false;
 }

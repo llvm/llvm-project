@@ -88,6 +88,7 @@
 ; O3-NEXT: function
 ; O3-NEXT:   machine-function
 ; O3-NEXT:     systemz-isel
+; O3-NEXT:     systemz-ld-cleanup
 ; O3-NEXT:     finalize-isel
 ; O3-NEXT:     early-tailduplication
 ; O3-NEXT:     opt-phis

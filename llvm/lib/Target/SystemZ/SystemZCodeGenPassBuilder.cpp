@@ -67,9 +67,8 @@ void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 Error SystemZCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   addMachineFunctionPass(SystemZISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
 
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZLDCleanupPass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZLDCleanupPass(), PMW);
 
   return Error::success();
 }
