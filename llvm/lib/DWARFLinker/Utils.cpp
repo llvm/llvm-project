@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/DJB.h"
 #include <limits>
 #include <map>
 
@@ -77,6 +78,54 @@ bool isIdentifyingChild(const DWARFDie &Die) {
   default:
     return false;
   }
+}
+
+static uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)> ResolveRef,
+    bool SkipModules, bool IsScope) {
+  const char *Name = nullptr;
+  if (Error Err = finiteLoop([&]() -> Expected<bool> {
+        if (const char *CurrentName = Die.getName(DINameKind::ShortName))
+          Name = CurrentName;
+
+        std::optional<DWARFFormValue> Ref;
+        if (!(Ref = Die.find(dwarf::DW_AT_specification)) &&
+            !(Ref = Die.find(dwarf::DW_AT_abstract_origin)))
+          return false;
+
+        if (!Ref->isFormClass(DWARFFormValue::FC_Reference))
+          return false;
+
+        DWARFDie RefDie = ResolveRef(Die, *Ref);
+        if (!RefDie)
+          return false;
+
+        Die = RefDie;
+        return true;
+      }))
+    consumeError(std::move(Err));
+
+  if (!Name && Die.getTag() == dwarf::DW_TAG_namespace)
+    Name = "(anonymous namespace)";
+
+  DWARFDie Parent = Die.getParent();
+  if (!Parent || dwarf::isUnitType(Parent.getTag()) ||
+      (SkipModules && Parent.getTag() == dwarf::DW_TAG_module))
+    return djbHash(Name ? Name : "", djbHash(IsScope ? "" : "::"));
+
+  return djbHash(Name ? Name : "",
+                 djbHash(Name ? "::" : "",
+                         hashFullyQualifiedName(Parent, ResolveRef, SkipModules,
+                                                /*IsScope=*/true)));
+}
+
+uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)> ResolveRef,
+    bool SkipModules) {
+  return hashFullyQualifiedName(Die, ResolveRef, SkipModules,
+                                /*IsScope=*/false);
 }
 
 void buildStmtSeqOffsetToFirstRowIndex(
