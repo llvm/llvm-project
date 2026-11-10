@@ -1586,6 +1586,32 @@ let isCommutable = 1, isReMaterializable = 1 in {
   } // End SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble]
 } // End isCommutable = 1, isReMaterializable = 1
 
+// GFX950 v_pk_{add,mul}_f32: opsel[1:0] == 2'b10 is invalid. These patterns
+// reject a src1 that needs OP_SEL_0, so the commuted form puts that operand in
+// src0. Otherwise, the default pattern gives the valid opsel[1:0] == 2'b11.
+let SubtargetPredicate = HasGFX950Insts, AddedComplexity = 1 in {
+def : GCNPat<
+  (v2f32 (any_fadd (VOP3PMods v2f32:$src0, i32:$src0_mods),
+                   (VOP3PModsPkAddMulOpSel0 v2f32:$src1, i32:$src1_mods))),
+  (V_PK_ADD_F32 $src0_mods, $src0, $src1_mods, $src1)
+>;
+
+def : GCNPat<
+  (v2f32 (any_fmul (VOP3PMods v2f32:$src0, i32:$src0_mods),
+                   (VOP3PModsPkAddMulOpSel0 v2f32:$src1, i32:$src1_mods))),
+  (V_PK_MUL_F32 $src0_mods, $src0, $src1_mods, $src1)
+>;
+
+// v_pk_fma_f32: Don't fold a swizzle that needs OP_SEL_0 into src1 or src2; it
+// is materialized separately instead.
+def : GCNPat<
+  (v2f32 (any_fma (VOP3PMods v2f32:$src0, i32:$src0_mods),
+                  (VOP3PModsPkFmaOpSel0 v2f32:$src1, i32:$src1_mods),
+                  (VOP3PModsPkFmaOpSel0 v2f32:$src2, i32:$src2_mods))),
+  (V_PK_FMA_F32 $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2)
+>;
+} // End SubtargetPredicate = HasGFX950Insts, AddedComplexity = 1
+
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
 def : AMDGPUMnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 
@@ -3002,7 +3028,10 @@ defm V_WMMA_I32_16X16X16_IU4   : VOP3P_Real_WMMA <0x045>;
 multiclass VOP3P_Real_vi<bits<7> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
             VOP3Pe_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
-    let AssemblerPredicate = HasVOP3PInsts;
+    // VOP3P instructions use the VI encoding, which is GFX9-only; GFX8 does
+    // not support VOP3P. Use isGFX9Only so the assembler predicate also
+    // distinguishes this variant from the GFX10+ real instructions.
+    let AssemblerPredicate = isGFX9Only;
     let DecoderNamespace = "GFX8";
     let VOP3P = 1;
   }
@@ -3415,11 +3444,11 @@ multiclass FPToIntSatI16Pat<dag lhs, dag rhs> {
 // Packed f32 -> i16 saturated conversion.
 multiclass CvtPkF32ToI16Pat<SDPatternOperator dagOp, Instruction inst> {
   def : GCNPat<(v2i16 (dagOp (v2f32 VReg_64:$src), i16)),
-               (inst 0, (EXTRACT_SUBREG VReg_64:$src, sub0),
-                     0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+               (inst 0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub0)),
+                     0, (f32 (EXTRACT_SUBREG VReg_64:$src, sub1)))>;
   def : GCNPat<(v2i16 (dagOp (v2f32 SReg_64:$src), i16)),
-               (inst 0, (EXTRACT_SUBREG SReg_64:$src, sub0),
-                     0, (EXTRACT_SUBREG SReg_64:$src, sub1))>;
+               (inst 0, (f32 (EXTRACT_SUBREG SReg_64:$src, sub0)),
+                     0, (f32 (EXTRACT_SUBREG SReg_64:$src, sub1)))>;
   // Single value conversion: use a packed instruction with a dummy second input.
   defm : FPToIntSatI16Pat<(i16 (dagOp (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)),
                           (inst $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;

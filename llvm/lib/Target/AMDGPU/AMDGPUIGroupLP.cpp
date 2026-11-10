@@ -28,36 +28,6 @@ using namespace llvm::AMDGPU;
 
 namespace {
 
-static cl::opt<bool> EnableExactSolver(
-    "amdgpu-igrouplp-exact-solver", cl::Hidden,
-    cl::desc("Whether to use the exponential time solver to fit "
-             "the instructions to the pipeline as closely as "
-             "possible."),
-    cl::init(false));
-
-static cl::opt<unsigned> CutoffForExact(
-    "amdgpu-igrouplp-exact-solver-cutoff", cl::init(0), cl::Hidden,
-    cl::desc("The maximum number of scheduling group conflicts "
-             "which we attempt to solve with the exponential time "
-             "exact solver. Problem sizes greater than this will"
-             "be solved by the less accurate greedy algorithm. Selecting "
-             "solver by size is superseded by manually selecting "
-             "the solver (e.g. by amdgpu-igrouplp-exact-solver"));
-
-static cl::opt<uint64_t> MaxBranchesExplored(
-    "amdgpu-igrouplp-exact-solver-max-branches", cl::init(0), cl::Hidden,
-    cl::desc("The amount of branches that we are willing to explore with"
-             "the exact algorithm before giving up."));
-
-static cl::opt<bool> UseCostHeur(
-    "amdgpu-igrouplp-exact-solver-cost-heur", cl::init(true), cl::Hidden,
-    cl::desc("Whether to use the cost heuristic to make choices as we "
-             "traverse the search space using the exact solver. Defaulted "
-             "to on, and if turned off, we will use the node order -- "
-             "attempting to put the later nodes in the later sched groups. "
-             "Experimentally, results are mixed, so this should be set on a "
-             "case-by-case basis."));
-
 class SchedGroup;
 
 // InstructionRule class is used to enact a filter which determines whether or
@@ -226,6 +196,7 @@ using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 // only be used for small sized problems or medium sized problems where an exact
 // solution is highly desired.
 class PipelineSolver {
+  const AMDGPUOptions &CLOpts;
   [[maybe_unused]] ScheduleDAGMI *DAG;
 
   // Instructions that can be assigned to multiple SchedGroups
@@ -360,8 +331,9 @@ public:
   PipelineSolver(DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
                  DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
                  ScheduleDAGMI *DAG, bool IsBottomUp = true)
-      : DAG(DAG), SyncedInstrs(SyncedInstrs),
-        SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
+      : CLOpts(DAG->MF.getSubtarget<GCNSubtarget>().getCLOpts()), DAG(DAG),
+        SyncedInstrs(SyncedInstrs), SyncedSchedGroups(SyncedSchedGroups),
+        IsBottomUp(IsBottomUp) {
 
     for (auto &PipelineInstrs : SyncedInstrs) {
       if (!PipelineInstrs.second.empty()) {
@@ -655,7 +627,8 @@ void PipelineSolver::retreatPosition() {
     while (PipelineInstrs[CurrSyncGroupIdx].empty())
       --CurrSyncGroupIdx;
 
-    CurrConflInstNo = PipelineInstrs[CurrSyncGroupIdx].size() - 1;
+    CurrConflInstNo =
+        static_cast<int>(PipelineInstrs[CurrSyncGroupIdx].size() - 1);
   }
 }
 
@@ -670,7 +643,8 @@ bool PipelineSolver::checkOptimal() {
   }
 
   bool DoneExploring = false;
-  if (MaxBranchesExplored > 0 && BranchesExplored >= MaxBranchesExplored)
+  if (CLOpts.igrouplp_exact_solver_max_branches > 0 &&
+      BranchesExplored >= CLOpts.igrouplp_exact_solver_max_branches)
     DoneExploring = true;
 
   return (DoneExploring || BestCost == 0);
@@ -691,7 +665,7 @@ void PipelineSolver::populateReadyList(
     });
     assert(Match);
 
-    if (UseCostHeur) {
+    if (CLOpts.igrouplp_exact_solver_cost_heur) {
       if (Match->isFull()) {
         ReadyList.push_back(std::pair(*I, MissPenalty));
         continue;
@@ -704,7 +678,7 @@ void PipelineSolver::populateReadyList(
       ReadyList.push_back(std::pair(*I, -1));
   }
 
-  if (UseCostHeur)
+  if (CLOpts.igrouplp_exact_solver_cost_heur)
     std::sort(ReadyList.begin(), ReadyList.end(), llvm::less_second());
 
   assert(ReadyList.size() == CurrSU.second.size());
@@ -900,7 +874,7 @@ bool PipelineSolver::solveGreedy() {
 unsigned PipelineSolver::computeProblemSize() {
   unsigned ProblemSize = 0;
   for (auto &PipeConflicts : PipelineInstrs) {
-    ProblemSize += PipeConflicts.size();
+    ProblemSize += static_cast<unsigned>(PipeConflicts.size());
   }
 
   return ProblemSize;
@@ -913,11 +887,12 @@ void PipelineSolver::solve() {
   unsigned ProblemSize = computeProblemSize();
   assert(ProblemSize > 0);
 
-  bool BelowCutoff = (CutoffForExact > 0) && ProblemSize <= CutoffForExact;
+  bool BelowCutoff = (CLOpts.igrouplp_exact_solver_cutoff > 0) &&
+                     ProblemSize <= CLOpts.igrouplp_exact_solver_cutoff;
   MissPenalty = (ProblemSize / 2) + 1;
 
   LLVM_DEBUG(DAG->dump());
-  if (EnableExactSolver || BelowCutoff) {
+  if (CLOpts.igrouplp_exact_solver || BelowCutoff) {
     LLVM_DEBUG(dbgs() << "Starting Greedy pipeline solver\n");
     solveGreedy();
     reset();
@@ -1166,7 +1141,7 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+      size_t SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
       if (SuccSize >= Size)
@@ -1174,7 +1149,7 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          unsigned SuccSize =
+          size_t SuccSize =
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
@@ -1206,7 +1181,7 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      unsigned SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+      size_t SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
         return Succ.getKind() == SDep::Data;
       });
       if (SuccSize >= Size)
@@ -1214,7 +1189,7 @@ private:
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          unsigned SuccSize =
+          size_t SuccSize =
               llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
               });
@@ -1404,7 +1379,7 @@ private:
 
   // Whether the instruction occurs after the first TRANS instruction. This
   // implies the instruction can not be a predecessor of the first TRANS
-  // insruction
+  // instruction.
   class OccursAfterExp final : public InstructionRule {
   public:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
@@ -1543,7 +1518,7 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
     }
   }
 
-  MFMAPipeCount = MFMAPipeSUs.size();
+  MFMAPipeCount = static_cast<unsigned>(MFMAPipeSUs.size());
 
   assert(TempExp && TempMFMA);
   assert(MFMAPipeCount > 0);
@@ -1588,17 +1563,17 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   }
 
   // The number of bit pack operations that depend on a single V_EXP
-  unsigned PackSuccCount =
+  unsigned PackSuccCount = static_cast<unsigned>(
       llvm::count_if(PackSUs, [this, &TempExp](SUnit *VPack) {
         return DAG->IsReachable(VPack, *TempExp);
-      });
+      }));
 
   // The number of bit pack operations an MFMA depends on
-  unsigned PackPredCount =
+  unsigned PackPredCount = static_cast<unsigned>(
       llvm::count_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
         auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
         return isBitPack(Opc);
-      });
+      }));
 
   auto *PackPred = llvm::find_if((*TempMFMA)->Preds, [&isBitPack](SDep &Pred) {
     auto Opc = Pred.getSUnit()->getInstr()->getOpcode();
@@ -1611,19 +1586,19 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   MFMAEnablement = 0;
   ExpRequirement = 0;
   // How many MFMAs depend on a single bit pack operation
-  MFMAEnablement =
+  MFMAEnablement = static_cast<unsigned>(
       llvm::count_if(PackPred->getSUnit()->Succs, [&TII](SDep &Succ) {
         return TII->isMFMAorWMMA(*Succ.getSUnit()->getInstr());
-      });
+      }));
 
   // The number of MFMAs that depend on a single V_EXP
   MFMAEnablement *= PackSuccCount;
 
   // The number of V_EXPs required to resolve all dependencies for an MFMA
-  ExpRequirement =
+  ExpRequirement = static_cast<unsigned>(
       llvm::count_if(ExpPipeCands, [this, &PackPred](SUnit *ExpBase) {
         return DAG->IsReachable(PackPred->getSUnit(), ExpBase);
-      });
+      }));
 
   ExpRequirement *= PackPredCount;
   return true;
@@ -2084,7 +2059,7 @@ private:
       if (!Collection.size())
         return true;
 
-      int NumBits = 0;
+      uint64_t NumBits = 0;
 
       auto TRI = TII->getRegisterInfo();
       auto &MRI = MI->getMF()->getRegInfo();
@@ -2216,7 +2191,7 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   }
 
   if (IsInitial) {
-    DSWWithPermCount = DSWithPerms.size();
+    DSWWithPermCount = static_cast<unsigned>(DSWithPerms.size());
     auto *I = DSWithPerms.begin();
     auto *E = DSWithPerms.end();
 
@@ -2798,9 +2773,9 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
   MachineInstr &SGB = *RIter->getInstr();
   assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
-  int32_t SGMask = SGB.getOperand(0).getImm();
-  int32_t Size = SGB.getOperand(1).getImm();
-  int32_t SyncID = SGB.getOperand(2).getImm();
+  int64_t SGMask = SGB.getOperand(0).getImm();
+  int32_t Size = static_cast<int32_t>(SGB.getOperand(1).getImm());
+  int32_t SyncID = static_cast<int32_t>(SGB.getOperand(2).getImm());
 
   Size++; // Make room for the SCHED_GROUP_BARRIER instruction
   auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,

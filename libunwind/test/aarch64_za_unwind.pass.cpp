@@ -13,7 +13,9 @@
 // to disable ZA before resuming from unwinding.
 // UNSUPPORTED: stdlib=system && target={{.+}}-apple-{{.*}}{{(11|12|13|14|15|26)(\.\d+)*}}
 
+#if !defined(__FreeBSD__)
 #include <alloca.h>
+#endif
 #include <libunwind.h>
 #include <stdint.h>
 #include <stdio.h>

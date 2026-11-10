@@ -46,13 +46,12 @@ private:
   unordered_map<_Key, _Value, _Hash, _BinaryPredicate> __table_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit _BMSkipTable(
-      size_t __sz, value_type __default_value, _Hash __hash, _BinaryPredicate __pred)
+  explicit _BMSkipTable(size_t __sz, value_type __default_value, _Hash __hash, _BinaryPredicate __pred)
       : __default_value_(__default_value), __table_(__sz, __hash, __pred) {}
 
-  _LIBCPP_HIDE_FROM_ABI void insert(const key_type& __key, value_type __val) { __table_[__key] = __val; }
+  void insert(const key_type& __key, value_type __val) { __table_[__key] = __val; }
 
-  _LIBCPP_HIDE_FROM_ABI value_type operator[](const key_type& __key) const {
+  value_type operator[](const key_type& __key) const {
     auto __it = __table_.find(__key);
     return __it == __table_.end() ? __default_value_ : __it->second;
   }
@@ -70,20 +69,16 @@ private:
   static_assert(numeric_limits<unsigned_key_type>::max() < 256);
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit _BMSkipTable(size_t, value_type __default_value, _Hash, _BinaryPredicate) {
+  explicit _BMSkipTable(size_t, value_type __default_value, _Hash, _BinaryPredicate) {
     _LIBCPP_DIAGNOSTIC_PUSH
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wmaybe-uninitialized")
     std::fill_n(__table_.data(), __table_.size(), __default_value);
     _LIBCPP_DIAGNOSTIC_POP
   }
 
-  _LIBCPP_HIDE_FROM_ABI void insert(key_type __key, value_type __val) {
-    __table_[static_cast<unsigned_key_type>(__key)] = __val;
-  }
+  void insert(key_type __key, value_type __val) { __table_[static_cast<unsigned_key_type>(__key)] = __val; }
 
-  _LIBCPP_HIDE_FROM_ABI value_type operator[](key_type __key) const {
-    return __table_[static_cast<unsigned_key_type>(__key)];
-  }
+  value_type operator[](key_type __key) const { return __table_[static_cast<unsigned_key_type>(__key)]; }
 };
 
 template <class _RandomAccessIterator1,
@@ -102,11 +97,10 @@ private:
                        is_same_v<_BinaryPredicate, equal_to<>>>;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI boyer_moore_searcher(
-      _RandomAccessIterator1 __first,
-      _RandomAccessIterator1 __last,
-      _Hash __hash            = _Hash(),
-      _BinaryPredicate __pred = _BinaryPredicate())
+  boyer_moore_searcher(_RandomAccessIterator1 __first,
+                       _RandomAccessIterator1 __last,
+                       _Hash __hash            = _Hash(),
+                       _BinaryPredicate __pred = _BinaryPredicate())
       : __first_(__first),
         __last_(__last),
         __pred_(__pred),
@@ -124,7 +118,7 @@ public:
   }
 
   template <class _RandomAccessIterator2>
-  _LIBCPP_HIDE_FROM_ABI pair<_RandomAccessIterator2, _RandomAccessIterator2>
+  pair<_RandomAccessIterator2, _RandomAccessIterator2>
   operator()(_RandomAccessIterator2 __first, _RandomAccessIterator2 __last) const {
     static_assert(is_same_v<__remove_cvref_t<typename iterator_traits<_RandomAccessIterator1>::value_type>,
                             __remove_cvref_t<typename iterator_traits<_RandomAccessIterator2>::value_type>>,
@@ -148,7 +142,7 @@ private:
   shared_ptr<difference_type[]> __suffix_;
 
   template <class _RandomAccessIterator2>
-  _LIBCPP_HIDE_FROM_ABI pair<_RandomAccessIterator2, _RandomAccessIterator2>
+  pair<_RandomAccessIterator2, _RandomAccessIterator2>
   __search(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const {
     _RandomAccessIterator2 __current      = __f;
     const _RandomAccessIterator2 __last   = __l - __pattern_length_;
@@ -173,8 +167,7 @@ private:
   }
 
   template <class _Iterator, class _Container>
-  _LIBCPP_HIDE_FROM_ABI void
-  __compute_bm_prefix(_Iterator __first, _Iterator __last, _BinaryPredicate __pred, _Container& __prefix) {
+  void __compute_bm_prefix(_Iterator __first, _Iterator __last, _BinaryPredicate __pred, _Container& __prefix) {
     const size_t __count = __last - __first;
 
     __prefix[0] = 0;
@@ -190,8 +183,7 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI void
-  __build_suffix_table(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _BinaryPredicate __pred) {
+  void __build_suffix_table(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _BinaryPredicate __pred) {
     const size_t __count = __last - __first;
 
     if (__count == 0)
@@ -233,11 +225,10 @@ private:
                        is_same_v<_BinaryPredicate, equal_to<>>>;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI boyer_moore_horspool_searcher(
-      _RandomAccessIterator1 __first,
-      _RandomAccessIterator1 __last,
-      _Hash __hash            = _Hash(),
-      _BinaryPredicate __pred = _BinaryPredicate())
+  boyer_moore_horspool_searcher(_RandomAccessIterator1 __first,
+                                _RandomAccessIterator1 __last,
+                                _Hash __hash            = _Hash(),
+                                _BinaryPredicate __pred = _BinaryPredicate())
       : __first_(__first),
         __last_(__last),
         __pred_(__pred),
@@ -255,7 +246,7 @@ public:
   }
 
   template <class _RandomAccessIterator2>
-  _LIBCPP_HIDE_FROM_ABI pair<_RandomAccessIterator2, _RandomAccessIterator2>
+  pair<_RandomAccessIterator2, _RandomAccessIterator2>
   operator()(_RandomAccessIterator2 __first, _RandomAccessIterator2 __last) const {
     static_assert(is_same_v<__remove_cvref_t<typename std::iterator_traits<_RandomAccessIterator1>::value_type>,
                             __remove_cvref_t<typename std::iterator_traits<_RandomAccessIterator2>::value_type>>,
@@ -279,7 +270,7 @@ private:
   shared_ptr<__skip_table_type> __skip_table_;
 
   template <class _RandomAccessIterator2>
-  _LIBCPP_HIDE_FROM_ABI pair<_RandomAccessIterator2, _RandomAccessIterator2>
+  pair<_RandomAccessIterator2, _RandomAccessIterator2>
   __search(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const {
     _RandomAccessIterator2 __current      = __f;
     const _RandomAccessIterator2 __last   = __l - __pattern_length_;

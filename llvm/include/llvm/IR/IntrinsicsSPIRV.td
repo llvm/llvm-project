@@ -383,10 +383,49 @@ let TargetPrefix = "spv" in {
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
 
+  def int_spv_subgroup_multi_prefix_bit_and
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_spv_subgroup_multi_prefix_bit_or
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_spv_subgroup_multi_prefix_bit_xor
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_spv_subgroup_multi_prefix_product
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
+  def int_spv_subgroup_multi_prefix_sum
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty],
+                              [IntrConvergent, IntrNoMem,
+                               IntrTriviallyScalarizable]>;
+
   def int_spv_wave_prefix_product
       : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                               [IntrConvergent, IntrNoMem,
                                IntrTriviallyScalarizable]>;
+
+  def int_spv_quad_all
+      : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i1_ty],
+                              [IntrConvergent, IntrNoMem]>;
 
   def int_spv_quad_read_across_x
       : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],
@@ -527,8 +566,10 @@ let TargetPrefix = "spv" in {
                               [IntrNoMem, IntrTriviallyScalarizable]>;
 
   def int_spv_resource_updatecounter
-      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
-                              [IntrInaccessibleMemOrArgMemOnly]>;
+      : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                              [llvm_any_ty, llvm_i8_ty /*Increment*/],
+                              [IntrInaccessibleMemOrArgMemOnly,
+                               ImmArg<ArgIndex<1>>]>;
 
   def int_spv_resource_getdimensions_x
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty], [IntrReadMem]>;

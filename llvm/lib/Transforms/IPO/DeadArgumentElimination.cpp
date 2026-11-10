@@ -637,14 +637,14 @@ void DeadArgumentEliminationPass::markValue(const RetOrArg &RA, Liveness L,
 /// only needs to guarantee they have the same return type.
 bool DeadArgumentEliminationPass::markFnOrRetTyFrozenOnMusttail(
     const Function &F) {
-  if (F.getCallingConv() != CallingConv::SwiftTail ||
+  if (F.getCallingConv() != CallingConv::SwiftTail &&
       F.getCallingConv() != CallingConv::Tail) {
     markFrozen(F);
     return true;
-  } else {
-    markRetTyFrozen(F);
-    return false;
   }
+
+  markRetTyFrozen(F);
+  return false;
 }
 
 /// Mark the given Function as alive, meaning that it cannot be changed in any

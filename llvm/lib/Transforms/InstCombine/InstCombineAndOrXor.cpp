@@ -347,14 +347,30 @@ getMaskedTypeForICmpPair(Value *&A, Value *&B, Value *&C, Value *&D, Value *&E,
       std::make_pair(LeftType, RightType));
 }
 
+/// When foldLogOpOfMaskedICmps returns RHS for a logical and/or, we need to
+/// make sure that RHS is not more poisonous, e.g. as a result of poison flags
+/// on icmp or trunc, or via poison elements in vector constants. Using freeze
+/// is insufficient here, because we need the constants to match those the
+/// analysis was performed on.
+/// D and E are expected to be poison-free constants here.
+static Value *getReconstructedMaskedICmp(IRBuilderBase &Builder, bool IsLogical,
+                                         Value *RHS, Value *A, Value *D,
+                                         Value *E, ICmpInst::Predicate PredR) {
+  if (!IsLogical)
+    return RHS;
+
+  Value *And = Builder.CreateAnd(A, D);
+  return Builder.CreateICmp(PredR, And, E);
+}
+
 /// Try to fold (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E) into a single
 /// (icmp(A & X) ==/!= Y), where the left-hand side is of type Mask_NotAllZeros
 /// and the right hand side is of type BMask_Mixed. For example,
 /// (icmp (A & 12) != 0) & (icmp (A & 15) == 8) -> (icmp (A & 15) == 8).
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-    Value *LHS, Value *RHS, bool IsAnd, Value *A, Value *B, Value *D, Value *E,
-    ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
+    Value *LHS, Value *RHS, bool IsAnd, bool IsLogical, Value *A, Value *B,
+    Value *D, Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
     InstCombiner::BuilderTy &Builder) {
   // We are given the canonical form:
   //   (icmp ne (A & B), 0) & (icmp eq (A & D), E).
@@ -475,22 +491,16 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   // RHS. For example,
   // (icmp ne (A & 255), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   // (icmp ne (A & 15), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
-  if (IsSuperSetOrEqual(BCst, DCst)) {
-    // We can't guarantee that samesign hold after this fold.
-    if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
-      ICmp->setSameSign(false);
-    return RHS;
-  }
+  if (IsSuperSetOrEqual(BCst, DCst))
+    return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E, PredR);
+
   // Otherwise, B is a subset of D. If B and E have a common bit set,
   // ie. (B & E) != 0, then LHS is subsumed by RHS. For example.
   // (icmp ne (A & 12), 0) & (icmp eq (A & 15), 8) -> (icmp eq (A & 15), 8).
   assert(IsSubSetOrEqual(BCst, DCst) && "Precondition due to above code");
-  if ((*BCst & ECst) != 0) {
-    // We can't guarantee that samesign hold after this fold.
-    if (auto *ICmp = dyn_cast<ICmpInst>(RHS))
-      ICmp->setSameSign(false);
-    return RHS;
-  }
+  if ((*BCst & ECst) != 0)
+    return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E, PredR);
+
   // Otherwise, LHS and RHS contradict and the whole expression becomes false
   // (or true if negated.) For example,
   // (icmp ne (A & 7), 0) & (icmp eq (A & 15), 8) -> false.
@@ -503,9 +513,10 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
 /// aren't of the common mask pattern type.
 /// Also used for logical and/or, must be poison safe.
 static Value *foldLogOpOfMaskedICmpsAsymmetric(
-    Value *LHS, Value *RHS, bool IsAnd, Value *A, Value *B, Value *C, Value *D,
-    Value *E, ICmpInst::Predicate PredL, ICmpInst::Predicate PredR,
-    unsigned LHSMask, unsigned RHSMask, InstCombiner::BuilderTy &Builder) {
+    Value *LHS, Value *RHS, bool IsAnd, bool IsLogical, Value *A, Value *B,
+    Value *C, Value *D, Value *E, ICmpInst::Predicate PredL,
+    ICmpInst::Predicate PredR, unsigned LHSMask, unsigned RHSMask,
+    InstCombiner::BuilderTy &Builder) {
   assert(ICmpInst::isEquality(PredL) && ICmpInst::isEquality(PredR) &&
          "Expected equality predicates for masked type of icmps.");
   // Handle Mask_NotAllZeros-BMask_Mixed cases.
@@ -519,12 +530,13 @@ static Value *foldLogOpOfMaskedICmpsAsymmetric(
   }
   if ((LHSMask & Mask_NotAllZeros) && (RHSMask & BMask_Mixed)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            LHS, RHS, IsAnd, A, B, D, E, PredL, PredR, Builder)) {
+            LHS, RHS, IsAnd, IsLogical, A, B, D, E, PredL, PredR, Builder)) {
       return V;
     }
   } else if ((LHSMask & BMask_Mixed) && (RHSMask & Mask_NotAllZeros)) {
     if (Value *V = foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
-            RHS, LHS, IsAnd, A, D, B, C, PredR, PredL, Builder)) {
+            RHS, LHS, IsAnd, /*IsLogical=*/false, A, D, B, C, PredR, PredL,
+            Builder)) {
       return V;
     }
   }
@@ -551,9 +563,9 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
   if (Mask == 0) {
     // Even if the two sides don't share a common pattern, check if folding can
     // still happen.
-    if (Value *V = foldLogOpOfMaskedICmpsAsymmetric(
-            LHS, RHS, IsAnd, A, B, C, D, E, PredL, PredR, LHSMask, RHSMask,
-            Builder))
+    if (Value *V = foldLogOpOfMaskedICmpsAsymmetric(LHS, RHS, IsAnd, IsLogical,
+                                                    A, B, C, D, E, PredL, PredR,
+                                                    LHSMask, RHSMask, Builder))
       return V;
     return nullptr;
   }
@@ -620,13 +632,9 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
       APInt NewMask = *ConstB & *ConstD;
       if (NewMask == *ConstB)
         return LHS;
-      if (NewMask == *ConstD) {
-        if (IsLogical) {
-          if (auto *RHSI = dyn_cast<Instruction>(RHS))
-            RHSI->dropPoisonGeneratingFlags();
-        }
-        return RHS;
-      }
+      if (NewMask == *ConstD)
+        return getReconstructedMaskedICmp(Builder, IsLogical, RHS, A, D, E,
+                                          PredR);
     }
 
     if (Mask & AMask_NotAllOnes) {
@@ -3594,42 +3602,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   if (!LHSC || !RHSC)
     return nullptr;
 
-  // (trunc x) == C1 & (and x, CA) == C2 -> (and x, CA|CMAX) == C1|C2
-  // (trunc x) != C1 | (and x, CA) != C2 -> (and x, CA|CMAX) != C1|C2
-  // where CMAX is the all ones value for the truncated type,
-  // iff the lower bits of C2 and CA are zero.
-  if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
-      PredL.dropSameSign() == PredR.dropSameSign() && LHSOneUse && RHSOneUse) {
-    Value *V;
-    const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
-
-    // (trunc x) == C1 & (and x, CA) == C2
-    // (and x, CA) == C2 & (trunc x) == C1
-    if (match(RHS0, m_Trunc(m_Value(V))) &&
-        match(LHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
-      SmallC = RHSC;
-      BigC = LHSC;
-    } else if (match(LHS0, m_Trunc(m_Value(V))) &&
-               match(RHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
-      SmallC = LHSC;
-      BigC = RHSC;
-    }
-
-    if (SmallC && BigC) {
-      unsigned BigBitSize = BigC->getBitWidth();
-      unsigned SmallBitSize = SmallC->getBitWidth();
-
-      // Check that the low bits are zero.
-      APInt Low = APInt::getLowBitsSet(BigBitSize, SmallBitSize);
-      if ((Low & *AndC).isZero() && (Low & *BigC).isZero()) {
-        Value *NewAnd = Builder.CreateAnd(V, Low | *AndC);
-        APInt N = SmallC->zext(BigBitSize) | *BigC;
-        Value *NewVal = ConstantInt::get(NewAnd->getType(), N);
-        return Builder.CreateICmp(PredL, NewAnd, NewVal);
-      }
-    }
-  }
-
   // Match naive pattern (and its inverted form) for checking if two values
   // share same sign. An example of the pattern:
   // (icmp slt (X & Y), 0) | (icmp sgt (X | Y), -1) -> (icmp sgt (X ^ Y), -1)
@@ -5596,8 +5568,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       // When X is a power-of-two or zero and zero input is poison:
       // ctlz(i32 X) ^ 31 --> cttz(X)
       // cttz(i32 X) ^ 31 --> ctlz(X)
+      // The bit width must be a power of two so BW - 1 is an all-ones mask.
       auto *II = dyn_cast<IntrinsicInst>(Op0);
-      if (II && II->hasOneUse() && *RHSC == Ty->getScalarSizeInBits() - 1) {
+      if (II && II->hasOneUse() && isPowerOf2_32(Ty->getScalarSizeInBits()) &&
+          *RHSC == Ty->getScalarSizeInBits() - 1) {
         Intrinsic::ID IID = II->getIntrinsicID();
         if ((IID == Intrinsic::ctlz || IID == Intrinsic::cttz) &&
             match(II->getArgOperand(1), m_One()) &&

@@ -772,12 +772,15 @@ func.func @brgemm_bf16_loop(%arg0: memref<16x64x64x2xbf16>, %arg1: memref<16x64x
 }
 
 // CHECK-LABEL: @brgemm_bf16_loop
-// CHECK-2: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) { 
-// CHECK-4: x86.amx.tile_zero : !x86.amx.tile<16x16xf32>
-// CHECK-4: x86.amx.tile_load
-// CHECK-4: x86.amx.tile_mulf
+// CHECK-COUNT-2: scf.for
+// CHECK-COUNT-4: x86.amx.tile_load {{.*}} : memref<32x32xf32, strided<[128, 1], offset: ?>> into !x86.amx.tile<16x16xf32>
+// CHECK-COUNT-2: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) {
+// CHECK-DAG: x86.amx.tile_load
+// CHECK-DAG: x86.amx.tile_mulf
 // CHECK: scf.yield {{.*}} : !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>
-// CHECK-NOT: scf.for {{.*}} vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>, vector<16x16xf32>
+// CHECK-NOT: x86.amx.tile_zero
+// CHECK-COUNT-4: x86.amx.tile_store {{.*}} : memref<32x32xf32, strided<[128, 1], offset: ?>>, !x86.amx.tile<16x16xf32>
+// CHECK-NOT: vector.transfer_write
 // CHECK-NOT: vector.contract
 
 module attributes {transform.with_named_sequence} {
@@ -1268,6 +1271,92 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Zero-initialized VNNI contractions store a 1x3 tile grid directly to the
+// output, preserving the destination of each contraction rather than using
+// contraction order as the tile order in memory.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x16x4xi8, strided<[256, 4, 1], offset: ?>>
+!memrefB = memref<16x48x4xi8, strided<[192, 4, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @matmul_int8_loop_zero_init_direct_store(%lhs: memref<16x64x4xi8>, %rhs: memref<64x48x4xi8>, %out: memref<16x48xi32>) {
+  %zero = arith.constant dense<0> : !vecC
+  %padding = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %c64 = arith.constant 64 : index
+  %tiles:3 = scf.for %k = %c0 to %c64 step %c16 iter_args(%acc0 = %zero, %acc1 = %zero, %acc2 = %zero) -> (!vecC, !vecC, !vecC) {
+    %lhs_tile = memref.subview %lhs[0, %k, 0] [16, 16, 4] [1, 1, 1] :
+            memref<16x64x4xi8> to !memrefA
+    %rhs_tiles = memref.subview %rhs[%k, 0, 0] [16, 48, 4] [1, 1, 1] :
+            memref<64x48x4xi8> to !memrefB
+    %a = vector.transfer_read %lhs_tile[%c0, %c0, %c0], %padding {in_bounds = [true, true, true]} :
+            !memrefA, !vecAB
+    %b0 = vector.transfer_read %rhs_tiles[%c0, %c16, %c0], %padding {in_bounds = [true, true, true]} :
+            !memrefB, !vecAB
+    %b1 = vector.transfer_read %rhs_tiles[%c0, %c32, %c0], %padding {in_bounds = [true, true, true]} :
+            !memrefB, !vecAB
+    %b2 = vector.transfer_read %rhs_tiles[%c0, %c0, %c0], %padding {in_bounds = [true, true, true]} :
+            !memrefB, !vecAB
+
+    %res0 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+            ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+            %a, %b0, %acc0 : !vecAB, !vecAB into !vecC
+    %res1 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+            ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+            %a, %b1, %acc1 : !vecAB, !vecAB into !vecC
+    %res2 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+            ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+            %a, %b2, %acc2 : !vecAB, !vecAB into !vecC
+
+    scf.yield %res0, %res1, %res2 : !vecC, !vecC, !vecC
+  }
+
+  vector.transfer_write %tiles#0, %out[%c0, %c16] {in_bounds = [true, true]} :
+          !vecC, memref<16x48xi32>
+  vector.transfer_write %tiles#1, %out[%c0, %c32] {in_bounds = [true, true]} :
+          !vecC, memref<16x48xi32>
+  vector.transfer_write %tiles#2, %out[%c0, %c0] {in_bounds = [true, true]} :
+          !vecC, memref<16x48xi32>
+
+  return
+}
+
+// CHECK-LABEL: @matmul_int8_loop_zero_init_direct_store(
+// CHECK-SAME: %[[LHS:[^:]+]]: memref<16x64x4xi8>, %[[RHS:[^:]+]]: memref<64x48x4xi8>, %[[OUT:[^:]+]]: memref<16x48xi32>
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG: %[[C16:.+]] = arith.constant 16 : index
+// CHECK-DAG: %[[C32:.+]] = arith.constant 32 : index
+// CHECK-NOT: memref.alloca
+// CHECK-COUNT-3: x86.amx.tile_zero : !x86.amx.tile<16x16xi32>
+// CHECK: %[[TILES:.+]]:3 = scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>) {
+// CHECK-COUNT-3: x86.amx.tile_muli
+// CHECK: scf.yield {{.*}} : !x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>
+// CHECK-NEXT: }
+// CHECK-NEXT: x86.amx.tile_store %[[OUT]][%[[C0]], %[[C16]]], %[[TILES]]#0
+// CHECK-NEXT: x86.amx.tile_store %[[OUT]][%[[C0]], %[[C32]]], %[[TILES]]#1
+// CHECK-NEXT: x86.amx.tile_store %[[OUT]][%[[C0]], %[[C0]]], %[[TILES]]#2
+// CHECK-NEXT: return
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // The contraction results are carried through another loop before being
 // written.
 
@@ -1440,7 +1529,7 @@ func.func @matmul_int8_loop_result_through_loop_extra_args(
 
 // CHECK-LABEL: @matmul_int8_loop_result_through_loop_extra_args
 // CHECK: %[[TILES:.+]]:2 = scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>) {
-// CHECK: %[[BUF:.+]] = memref.alloca() : memref<16x32xi32>
+// CHECK: %[[BUF:.+]] = memref.alloca() : memref<32x16xi32>
 // CHECK: x86.amx.tile_store %[[BUF]][%{{.+}}, %{{.+}}], %[[TILES]]#0
 // CHECK: x86.amx.tile_store %[[BUF]][%{{.+}}, %{{.+}}], %[[TILES]]#1
 // CHECK: %[[RES0:.+]] = vector.transfer_read %[[BUF]]
@@ -4046,8 +4135,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// The zero initialized accumulation results are not written to memory: not
-// supported.
+// The zero initialized accumulation results are not written to memory.
 
 !vecAB = vector<16x16x4xi8>
 !vecC = vector<16x16xi32>
@@ -4058,7 +4146,7 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
 
-func.func @negative_matmul_int8_loop_result_not_written(
+func.func @matmul_int8_loop_result_not_written(
     %arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8>) -> (!vecC, !vecC) {
   %cst = arith.constant dense<0> : !vecC
   %1 = ub.poison : i8
@@ -4092,10 +4180,20 @@ func.func @negative_matmul_int8_loop_result_not_written(
   return %4#0, %4#1 : !vecC, !vecC
 }
 
-// CHECK-LABEL: @negative_matmul_int8_loop_result_not_written
-// CHECK-NOT: x86.amx
-// CHECK-COUNT-2: vector.contract
-// CHECK-NOT: x86.amx
+// CHECK-LABEL: @matmul_int8_loop_result_not_written
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG: %[[C16:.+]] = arith.constant 16 : index
+// CHECK-COUNT-2: x86.amx.tile_zero : !x86.amx.tile<16x16xi32>
+// CHECK: %[[TILES:.+]]:2 = scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>) {
+// CHECK-COUNT-2: x86.amx.tile_muli
+// CHECK: scf.yield {{.*}} : !x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>
+// CHECK: %[[BUF:.+]] = memref.alloca() : memref<32x16xi32>
+// CHECK-NEXT: x86.amx.tile_store %[[BUF]][%[[C0]], %[[C0]]], %[[TILES]]#0
+// CHECK-NEXT: x86.amx.tile_store %[[BUF]][%[[C16]], %[[C0]]], %[[TILES]]#1
+// CHECK-NEXT: %[[RES0:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C0]]]
+// CHECK-NEXT: %[[RES1:.+]] = vector.transfer_read %[[BUF]][%[[C16]], %[[C0]]]
+// CHECK-NEXT: return %[[RES0]], %[[RES1]] : vector<16x16xi32>, vector<16x16xi32>
+// CHECK-NOT: vector.contract
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

@@ -143,7 +143,7 @@ struct TransferReadOpMemOpModel
       result = arith::SelectOp::create(builder, loc, mask, reachingDefinition,
                                        padSplat);
     }
-    readOp.getVector().replaceAllUsesWith(result);
+    readOp.getResult().replaceAllUsesWith(result);
     return DeletionKind::Delete;
   }
 };
@@ -269,7 +269,8 @@ struct MaskOpMemOpModel
 //  Register external models
 //===----------------------------------------------------------------------===//
 
-void mlir::vector::registerMemorySlotExternalModels(DialectRegistry &registry) {
+void mlir::vector::registerMemorySlotInterfacesExternalModels(
+    DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
     TransferReadOp::attachInterface<TransferReadOpMemOpModel>(*ctx);
     TransferWriteOp::attachInterface<TransferWriteOpMemOpModel>(*ctx);

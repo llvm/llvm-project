@@ -39,6 +39,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -680,15 +681,16 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
 // Compile the module to an object file using the appropriate target machine for
 // the host triple.
-Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
+Expected<StringRef>
+compileModule(const cl::LibraryOptionsContext &LibraryOptions, Module &M,
+              OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Compile module");
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
   if (!T)
     return createStringError(Msg);
 
-  auto Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(M.getTargetTriple());
+  auto Options = codegen::getTargetOptions(LibraryOptions, M.getTargetTriple());
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
@@ -780,7 +782,8 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 /// Creates the object file containing the device image and runtime
 /// registration code from the device images stored in \p Images.
 Expected<StringRef>
-wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
+wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
+                 ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
                  const ArgList &Args, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Wrap bundled images");
 
@@ -846,7 +849,7 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
     WriteBitcodeToFile(M, OS);
   }
 
-  auto FileOrErr = compileModule(M, Kind);
+  auto FileOrErr = compileModule(LibraryOptions, M, Kind);
   if (!FileOrErr)
     return FileOrErr.takeError();
   return *FileOrErr;
@@ -979,9 +982,6 @@ Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
                    OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Bundle linked output");
-  if (usesLLVMOffloadWrapper(Images))
-    return bundleOpenMP(Images);
-
   switch (Kind) {
   case OFK_OpenMP:
     return (Verbose && SaveTemps) ? bundleOpenMPVerbose(Images)
@@ -1096,7 +1096,8 @@ Error handleOverrideImages(
 /// be registered by the runtime. If NeedsWrapping is false, writes bundled
 /// output directly without wrapping or host linking.
 Expected<SmallVector<StringRef>>
-linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
+linkAndWrapDeviceFiles(const cl::LibraryOptionsContext &LibraryOptions,
+                       ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
                        const InputArgList &Args, char **Argv, int Argc,
                        bool NeedsWrapping) {
   llvm::TimeTraceScope TimeScope("Handle all device input");
@@ -1191,6 +1192,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
   // fat binary directly (e.g. .hipfb / .fatbin).
   SmallVector<StringRef> WrappedOutput;
   for (auto &[Kind, Input] : Images) {
+    OffloadKind WrapperKind = usesLLVMOffloadWrapper(Input) ? OFK_OpenMP : Kind;
     // We sort the entries before bundling so they appear in a deterministic
     // order in the final binary.
     llvm::sort(Input, [](OffloadingImage &A, OffloadingImage &B) {
@@ -1204,7 +1206,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
         return ArchA > ArchB;
       return A.TheOffloadKind < B.TheOffloadKind;
     });
-    auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
+    auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, WrapperKind);
     if (!BundledImagesOrErr)
       return BundledImagesOrErr.takeError();
 
@@ -1227,8 +1229,8 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
       continue;
     }
 
-    OffloadKind WrapperKind = usesLLVMOffloadWrapper(Input) ? OFK_OpenMP : Kind;
-    auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, WrapperKind);
+    auto OutputOrErr = wrapDeviceImages(LibraryOptions, *BundledImagesOrErr,
+                                        Args, WrapperKind);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
     WrappedOutput.push_back(*OutputOrErr);
@@ -1555,7 +1557,8 @@ int main(int Argc, char **Argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
     NewArgv.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
@@ -1611,8 +1614,8 @@ int main(int Argc, char **Argv) {
 
     // Link and process the device images. The function may emit a direct fat
     // binary if --emit-fatbin-only is specified.
-    auto FilesOrErr = linkAndWrapDeviceFiles(*DeviceInputFiles, Args, Argv,
-                                             Argc, !EmitFatbinOnly);
+    auto FilesOrErr = linkAndWrapDeviceFiles(LibraryOptions, *DeviceInputFiles,
+                                             Args, Argv, Argc, !EmitFatbinOnly);
     if (!FilesOrErr)
       reportError(FilesOrErr.takeError());
 
