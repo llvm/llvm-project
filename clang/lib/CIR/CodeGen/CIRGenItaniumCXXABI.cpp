@@ -268,10 +268,9 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
   /// 1) getThisValue is currently protected
   /// 2) in theory, an ABI could implement 'this' returns some other way;
   ///    HasThisReturn only specifies a contract, not the implementation
-  if (hasThisReturn(cgf.curGD)) {
-    cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                     "emitInstanceFunctionProlog: hasThisReturn");
-  }
+  if (hasThisReturn(cgf.curGD))
+    cgf.getBuilder().createStore(cgf.getLoc(loc), cgf.cxxabiThisValue,
+                                 cgf.returnValue);
 }
 
 CIRGenCXXABI::AddedStructorArgCounts
