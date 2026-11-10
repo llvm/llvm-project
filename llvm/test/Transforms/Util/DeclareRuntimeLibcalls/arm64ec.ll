@@ -7,106 +7,106 @@
 ; CHECK: @__security_cookie = external global ptr
 ; CHECK-NEXT: declare i32 @"#_Unwind_RaiseException"(ptr)
 ; CHECK-NEXT: declare void @"#_Unwind_Resume"(ptr)
-; CHECK-NEXT: declare i128 @"#__aarch64_cas16_acq"(i128, i128, ptr)
-; CHECK-NEXT: declare i128 @"#__aarch64_cas16_acq_rel"(i128, i128, ptr)
-; CHECK-NEXT: declare i128 @"#__aarch64_cas16_rel"(i128, i128, ptr)
-; CHECK-NEXT: declare i128 @"#__aarch64_cas16_relax"(i128, i128, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_cas1_acq"(i8 zeroext, i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_cas1_acq_rel"(i8 zeroext, i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_cas1_rel"(i8 zeroext, i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_cas1_relax"(i8 zeroext, i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_cas2_acq"(i16 zeroext, i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_cas2_acq_rel"(i16 zeroext, i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_cas2_rel"(i16 zeroext, i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_cas2_relax"(i16 zeroext, i16 zeroext, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_cas4_acq"(i32, i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_cas4_acq_rel"(i32, i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_cas4_rel"(i32, i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_cas4_relax"(i32, i32, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_cas8_acq"(i64, i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_cas8_acq_rel"(i64, i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_cas8_rel"(i64, i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_cas8_relax"(i64, i64, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldadd1_acq"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldadd1_acq_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldadd1_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldadd1_relax"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldadd2_acq"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldadd2_acq_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldadd2_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldadd2_relax"(i16 zeroext, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldadd4_acq"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldadd4_acq_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldadd4_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldadd4_relax"(i32, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldadd8_acq"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldadd8_acq_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldadd8_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldadd8_relax"(i64, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldclr1_acq"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldclr1_acq_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldclr1_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldclr1_relax"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldclr2_acq"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldclr2_acq_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldclr2_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldclr2_relax"(i16 zeroext, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldclr4_acq"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldclr4_acq_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldclr4_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldclr4_relax"(i32, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldclr8_acq"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldclr8_acq_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldclr8_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldclr8_relax"(i64, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldeor1_acq"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldeor1_acq_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldeor1_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldeor1_relax"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldeor2_acq"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldeor2_acq_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldeor2_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldeor2_relax"(i16 zeroext, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldeor4_acq"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldeor4_acq_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldeor4_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldeor4_relax"(i32, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldeor8_acq"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldeor8_acq_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldeor8_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldeor8_relax"(i64, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldset1_acq"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldset1_acq_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldset1_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldset1_relax"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldset2_acq"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldset2_acq_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldset2_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldset2_relax"(i16 zeroext, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldset4_acq"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldset4_acq_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldset4_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_ldset4_relax"(i32, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldset8_acq"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldset8_acq_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldset8_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_ldset8_relax"(i64, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_swp1_acq"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_swp1_acq_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_swp1_rel"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i8 @"#__aarch64_swp1_relax"(i8 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_swp2_acq"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_swp2_acq_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_swp2_rel"(i16 zeroext, ptr)
-; CHECK-NEXT: declare zeroext i16 @"#__aarch64_swp2_relax"(i16 zeroext, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_swp4_acq"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_swp4_acq_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_swp4_rel"(i32, ptr)
-; CHECK-NEXT: declare i32 @"#__aarch64_swp4_relax"(i32, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_swp8_acq"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_swp8_acq_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_swp8_rel"(i64, ptr)
-; CHECK-NEXT: declare i64 @"#__aarch64_swp8_relax"(i64, ptr)
+; CHECK-NEXT: declare i128 @"#__aarch64_cas16_acq"(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare i128 @"#__aarch64_cas16_acq_rel"(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__aarch64_cas16_rel"(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__aarch64_cas16_relax"(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_cas1_acq"(i8 zeroext, i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_cas1_acq_rel"(i8 zeroext, i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_cas1_rel"(i8 zeroext, i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_cas1_relax"(i8 zeroext, i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_cas2_acq"(i16 zeroext, i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_cas2_acq_rel"(i16 zeroext, i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_cas2_rel"(i16 zeroext, i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_cas2_relax"(i16 zeroext, i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_cas4_acq"(i32, i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_cas4_acq_rel"(i32, i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_cas4_rel"(i32, i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_cas4_relax"(i32, i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_cas8_acq"(i64, i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_cas8_acq_rel"(i64, i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_cas8_rel"(i64, i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_cas8_relax"(i64, i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldadd1_acq"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldadd1_acq_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldadd1_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldadd1_relax"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldadd2_acq"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldadd2_acq_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldadd2_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldadd2_relax"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldadd4_acq"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldadd4_acq_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldadd4_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldadd4_relax"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldadd8_acq"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldadd8_acq_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldadd8_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldadd8_relax"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldclr1_acq"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldclr1_acq_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldclr1_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldclr1_relax"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldclr2_acq"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldclr2_acq_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldclr2_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldclr2_relax"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldclr4_acq"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldclr4_acq_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldclr4_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldclr4_relax"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldclr8_acq"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldclr8_acq_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldclr8_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldclr8_relax"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldeor1_acq"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldeor1_acq_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldeor1_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldeor1_relax"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldeor2_acq"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldeor2_acq_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldeor2_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldeor2_relax"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldeor4_acq"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldeor4_acq_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldeor4_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldeor4_relax"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldeor8_acq"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldeor8_acq_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldeor8_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldeor8_relax"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldset1_acq"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldset1_acq_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldset1_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_ldset1_relax"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldset2_acq"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldset2_acq_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldset2_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_ldset2_relax"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldset4_acq"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldset4_acq_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldset4_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_ldset4_relax"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldset8_acq"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldset8_acq_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldset8_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_ldset8_relax"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_swp1_acq"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_swp1_acq_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_swp1_rel"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__aarch64_swp1_relax"(i8 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_swp2_acq"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_swp2_acq_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_swp2_rel"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__aarch64_swp2_relax"(i16 zeroext, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_swp4_acq"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_swp4_acq_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_swp4_rel"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__aarch64_swp4_relax"(i32, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_swp8_acq"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_swp8_acq_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_swp8_rel"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__aarch64_swp8_relax"(i64, ptr captures(none)) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare double @"#__adddf3"(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare float @"#__addsf3"(float, float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare fp128 @"#__addtf3"(fp128, fp128) [[NOMEM_ATTRS]]
@@ -120,60 +120,60 @@
 ; CHECK-NEXT: declare i64 @"#__ashrdi3"(i64, i32) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare signext i16 @"#__ashrhi3"(i16 signext, i32) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i32 @"#__ashrsi3"(i32, i32) [[NOMEM_ATTRS]]
-; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange"(i64, ptr, ptr, ptr, i32, i32)
-; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_1"(ptr, ptr, i8 zeroext, i32, i32)
-; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_16"(ptr, ptr, i128, i32, i32)
-; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_2"(ptr, ptr, i16 zeroext, i32, i32)
-; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_4"(ptr, ptr, i32, i32, i32)
-; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_8"(ptr, ptr, i64, i32, i32)
-; CHECK-NEXT: declare void @"#__atomic_exchange"(i64, ptr, ptr, ptr, i32)
-; CHECK-NEXT: declare zeroext i8 @"#__atomic_exchange_1"(ptr, i8 zeroext, i32)
-; CHECK-NEXT: declare i128 @"#__atomic_exchange_16"(ptr, i128, i32)
-; CHECK-NEXT: declare zeroext i16 @"#__atomic_exchange_2"(ptr, i16 zeroext, i32)
-; CHECK-NEXT: declare i32 @"#__atomic_exchange_4"(ptr, i32, i32)
-; CHECK-NEXT: declare i64 @"#__atomic_exchange_8"(ptr, i64, i32)
-; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_add_1"(ptr, i8 zeroext, i32)
-; CHECK-NEXT: declare i128 @"#__atomic_fetch_add_16"(ptr, i128, i32)
-; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_add_2"(ptr, i16 zeroext, i32)
-; CHECK-NEXT: declare i32 @"#__atomic_fetch_add_4"(ptr, i32, i32)
-; CHECK-NEXT: declare i64 @"#__atomic_fetch_add_8"(ptr, i64, i32)
-; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_and_1"(ptr, i8 zeroext, i32)
-; CHECK-NEXT: declare i128 @"#__atomic_fetch_and_16"(ptr, i128, i32)
-; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_and_2"(ptr, i16 zeroext, i32)
-; CHECK-NEXT: declare i32 @"#__atomic_fetch_and_4"(ptr, i32, i32)
-; CHECK-NEXT: declare i64 @"#__atomic_fetch_and_8"(ptr, i64, i32)
-; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_nand_1"(ptr, i8 zeroext, i32)
-; CHECK-NEXT: declare i128 @"#__atomic_fetch_nand_16"(ptr, i128, i32)
-; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_nand_2"(ptr, i16 zeroext, i32)
-; CHECK-NEXT: declare i32 @"#__atomic_fetch_nand_4"(ptr, i32, i32)
-; CHECK-NEXT: declare i64 @"#__atomic_fetch_nand_8"(ptr, i64, i32)
-; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_or_1"(ptr, i8 zeroext, i32)
-; CHECK-NEXT: declare i128 @"#__atomic_fetch_or_16"(ptr, i128, i32)
-; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_or_2"(ptr, i16 zeroext, i32)
-; CHECK-NEXT: declare i32 @"#__atomic_fetch_or_4"(ptr, i32, i32)
-; CHECK-NEXT: declare i64 @"#__atomic_fetch_or_8"(ptr, i64, i32)
-; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_sub_1"(ptr, i8 zeroext, i32)
-; CHECK-NEXT: declare i128 @"#__atomic_fetch_sub_16"(ptr, i128, i32)
-; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_sub_2"(ptr, i16 zeroext, i32)
-; CHECK-NEXT: declare i32 @"#__atomic_fetch_sub_4"(ptr, i32, i32)
-; CHECK-NEXT: declare i64 @"#__atomic_fetch_sub_8"(ptr, i64, i32)
-; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_xor_1"(ptr, i8 zeroext, i32)
-; CHECK-NEXT: declare i128 @"#__atomic_fetch_xor_16"(ptr, i128, i32)
-; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_xor_2"(ptr, i16 zeroext, i32)
-; CHECK-NEXT: declare i32 @"#__atomic_fetch_xor_4"(ptr, i32, i32)
-; CHECK-NEXT: declare i64 @"#__atomic_fetch_xor_8"(ptr, i64, i32)
-; CHECK-NEXT: declare void @"#__atomic_load"(i64, ptr, ptr, i32)
-; CHECK-NEXT: declare zeroext i8 @"#__atomic_load_1"(ptr, i32)
-; CHECK-NEXT: declare i128 @"#__atomic_load_16"(ptr, i32)
-; CHECK-NEXT: declare zeroext i16 @"#__atomic_load_2"(ptr, i32)
-; CHECK-NEXT: declare i32 @"#__atomic_load_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__atomic_load_8"(ptr, i32)
-; CHECK-NEXT: declare void @"#__atomic_store"(i64, ptr, ptr, i32)
-; CHECK-NEXT: declare void @"#__atomic_store_1"(ptr, i8 zeroext, i32)
-; CHECK-NEXT: declare void @"#__atomic_store_16"(ptr, i128, i32)
-; CHECK-NEXT: declare void @"#__atomic_store_2"(ptr, i16 zeroext, i32)
-; CHECK-NEXT: declare void @"#__atomic_store_4"(ptr, i32, i32)
-; CHECK-NEXT: declare void @"#__atomic_store_8"(ptr, i64, i32)
+; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange"(i64, ptr captures(none), ptr captures(none), ptr readonly captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_1"(ptr captures(none), ptr captures(none), i8 zeroext, i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_16"(ptr captures(none), ptr captures(none), i128, i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_2"(ptr captures(none), ptr captures(none), i16 zeroext, i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_4"(ptr captures(none), ptr captures(none), i32, i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i1 @"#__atomic_compare_exchange_8"(ptr captures(none), ptr captures(none), i64, i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @"#__atomic_exchange"(i64, ptr captures(none), ptr readonly captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__atomic_exchange_1"(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__atomic_exchange_16"(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__atomic_exchange_2"(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__atomic_exchange_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__atomic_exchange_8"(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_add_1"(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__atomic_fetch_add_16"(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_add_2"(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__atomic_fetch_add_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__atomic_fetch_add_8"(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_and_1"(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__atomic_fetch_and_16"(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_and_2"(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__atomic_fetch_and_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__atomic_fetch_and_8"(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_nand_1"(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__atomic_fetch_nand_16"(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_nand_2"(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__atomic_fetch_nand_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__atomic_fetch_nand_8"(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_or_1"(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__atomic_fetch_or_16"(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_or_2"(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__atomic_fetch_or_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__atomic_fetch_or_8"(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_sub_1"(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__atomic_fetch_sub_16"(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_sub_2"(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__atomic_fetch_sub_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__atomic_fetch_sub_8"(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__atomic_fetch_xor_1"(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__atomic_fetch_xor_16"(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__atomic_fetch_xor_2"(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__atomic_fetch_xor_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__atomic_fetch_xor_8"(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @"#__atomic_load"(i64, ptr captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__atomic_load_1"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__atomic_load_16"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__atomic_load_2"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__atomic_load_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__atomic_load_8"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @"#__atomic_store"(i64, ptr captures(none), ptr readonly captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @"#__atomic_store_1"(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @"#__atomic_store_16"(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @"#__atomic_store_2"(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @"#__atomic_store_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @"#__atomic_store_8"(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare void @"#__chkstk_arm64ec"()
 ; CHECK-NEXT: declare void @"#__clear_cache"(ptr, ptr)
 ; CHECK-NEXT: declare i32 @"#__clzdi2"(i64) [[NOMEM_ATTRS]]
@@ -265,21 +265,21 @@
 ; CHECK-NEXT: declare i32 @"#__lesf2"(float, float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i32 @"#__letf2"(fp128, fp128) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare void @"#__llvm_deoptimize"(...)
-; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_1"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_16"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_2"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_4"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_8"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_1"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_16"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_2"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_4"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_8"(ptr, ptr, i64)
-; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_1"(ptr, i32, i64)
-; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_16"(ptr, i32, i64)
-; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_2"(ptr, i32, i64)
-; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_4"(ptr, i32, i64)
-; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_8"(ptr, i32, i64)
+; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_1"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_16"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_2"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_4"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memcpy_element_unordered_atomic_8"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_1"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_16"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_2"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_4"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memmove_element_unordered_atomic_8"(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_1"(ptr writeonly captures(none), i32, i64) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_16"(ptr writeonly captures(none), i32, i64) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_2"(ptr writeonly captures(none), i32, i64) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_4"(ptr writeonly captures(none), i32, i64) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_8"(ptr writeonly captures(none), i32, i64) [[ARGMEM_WRITE_ATTRS]]
 ; CHECK-NEXT: declare double @"#__log10_finite"(double) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare float @"#__log10f_finite"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @"#__log2_finite"(double) [[SQRT_ATTRS]]
@@ -323,66 +323,66 @@
 ; CHECK-NEXT: declare double @"#__subdf3"(double, double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @"#__subsf3"(float, float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare fp128 @"#__subtf3"(fp128, fp128) [[NOMEM_ATTRS]]
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_add_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_add_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_add_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_add_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_add_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_and_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_and_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_and_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_and_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_and_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_max_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_max_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_max_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_max_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_max_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_min_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_min_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_min_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_min_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_min_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_nand_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_nand_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_nand_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_nand_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_nand_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_or_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_or_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_or_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_or_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_or_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_sub_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_sub_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_sub_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_sub_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_sub_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_umax_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_umax_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_umax_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_umax_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_umax_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_umin_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_umin_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_umin_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_umin_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_umin_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_xor_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_fetch_and_xor_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_xor_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_fetch_and_xor_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_fetch_and_xor_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_lock_test_and_set_1"(ptr, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_lock_test_and_set_16"(ptr, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_lock_test_and_set_2"(ptr, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_lock_test_and_set_4"(ptr, i32)
-; CHECK-NEXT: declare i64 @"#__sync_lock_test_and_set_8"(ptr, i64)
-; CHECK-NEXT: declare zeroext i8 @"#__sync_val_compare_and_swap_1"(ptr, i8 zeroext, i8 zeroext)
-; CHECK-NEXT: declare i128 @"#__sync_val_compare_and_swap_16"(ptr, i128, i128)
-; CHECK-NEXT: declare zeroext i16 @"#__sync_val_compare_and_swap_2"(ptr, i16 zeroext, i16 zeroext)
-; CHECK-NEXT: declare i32 @"#__sync_val_compare_and_swap_4"(ptr, i32, i32)
-; CHECK-NEXT: declare i64 @"#__sync_val_compare_and_swap_8"(ptr, i64, i64)
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_add_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_add_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_add_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_add_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_add_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_and_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_and_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_and_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_and_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_and_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_max_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_max_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_max_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_max_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_max_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_min_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_min_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_min_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_min_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_min_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_nand_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_nand_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_nand_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_nand_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_nand_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_or_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_or_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_or_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_or_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_or_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_sub_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_sub_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_sub_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_sub_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_sub_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_umax_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_umax_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_umax_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_umax_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_umax_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_umin_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_umin_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_umin_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_umin_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_umin_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_fetch_and_xor_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_fetch_and_xor_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_fetch_and_xor_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_fetch_and_xor_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_fetch_and_xor_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_lock_test_and_set_1"(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_lock_test_and_set_16"(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_lock_test_and_set_2"(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_lock_test_and_set_4"(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_lock_test_and_set_8"(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i8 @"#__sync_val_compare_and_swap_1"(ptr captures(none), i8 zeroext, i8 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i128 @"#__sync_val_compare_and_swap_16"(ptr captures(none), i128, i128) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare zeroext i16 @"#__sync_val_compare_and_swap_2"(ptr captures(none), i16 zeroext, i16 zeroext) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i32 @"#__sync_val_compare_and_swap_4"(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare i64 @"#__sync_val_compare_and_swap_8"(ptr captures(none), i64, i64) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare bfloat @"#__truncdfbf2"(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare half @"#__truncdfhf2"(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @"#__truncdfsf2"(double) [[NOMEM_ATTRS]]
@@ -515,8 +515,10 @@
 ; CHECK-NEXT: declare float @"#tgammaf"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @"#trunc"(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @"#truncf"(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; CHECK-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; CHECK-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
