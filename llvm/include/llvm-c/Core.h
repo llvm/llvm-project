@@ -747,6 +747,54 @@ LLVM_C_ABI LLVMAttributeRef LLVMCreateConstantRangeAttribute(
     const uint64_t LowerWords[], const uint64_t UpperWords[]);
 
 /**
+ * Get the constant range attribute's lower and upper values.
+ *
+ * LowerWords and UpperWords are managed by LLVM and should not be freed.
+ *
+ * @param A The constant range attribute
+ * @param LowerWords Out parameter which holds the words of the lower value
+ * @param UpperWords Out parameter which holds the words of the upper value
+ * @return The number of bits of precision in LowerWords and UpperWords
+ */
+LLVM_C_ABI unsigned
+LLVMGetConstantRangeAttributeValue(LLVMAttributeRef A,
+                                   const uint64_t **LowerWords,
+                                   const uint64_t **UpperWords);
+
+/**
+ * Create a ConstantRangeList attribute.
+ *
+ * LowerWords and UpperWords need to be NumRanges elements long, be correctly
+ * sorted, and each individual word needs to be NumBits divided by 64 rounded up
+ * elements long.
+ */
+LLVM_C_ABI LLVMAttributeRef LLVMCreateConstantRangeListAttribute(
+    LLVMContextRef C, unsigned KindID, size_t NumRanges, unsigned NumBits,
+    const uint64_t *LowerWords[], const uint64_t *UpperWords[]);
+
+/**
+ * Get the constant range list attribute's number of constant ranges.
+ */
+LLVM_C_ABI size_t LLVMGetConstantRangeListAttributeCount(LLVMAttributeRef A);
+
+/**
+ * Get the constant range list attribute's lower and upper values at a given
+ * index.
+ *
+ * LowerWords and UpperWords are managed by LLVM and should not be freed.
+ *
+ * @param A The constant range list attribute
+ * @param Index A constant range index, must be less than
+ * LLVMGetConstantRangeListAttributeCount().
+ * @param LowerWords Out parameter which holds the words of the lower value
+ * @param UpperWords Out parameter which holds the words of the upper value
+ * @return The number of bits of precision in LowerWords and UpperWords
+ */
+LLVM_C_ABI unsigned LLVMGetConstantRangeListAttributeValueAtIndex(
+    LLVMAttributeRef A, unsigned Index, const uint64_t **LowerWords,
+    const uint64_t **UpperWords);
+
+/**
  * Represent different denormal handling kinds for use with
  * LLVMCreateDenormalFPEnvAttribute.
  */
@@ -807,6 +855,8 @@ LLVM_C_ABI const char *LLVMGetStringAttributeValue(LLVMAttributeRef A,
 LLVM_C_ABI LLVMBool LLVMIsEnumAttribute(LLVMAttributeRef A);
 LLVM_C_ABI LLVMBool LLVMIsStringAttribute(LLVMAttributeRef A);
 LLVM_C_ABI LLVMBool LLVMIsTypeAttribute(LLVMAttributeRef A);
+LLVM_C_ABI LLVMBool LLVMIsConstantRangeAttribute(LLVMAttributeRef A);
+LLVM_C_ABI LLVMBool LLVMIsConstantRangeListAttribute(LLVMAttributeRef A);
 
 /**
  * Obtain a Type from a context by its registered name.

@@ -457,6 +457,55 @@ static LLVMValueRef clone_inline_asm(LLVMValueRef Asm, LLVMModuleRef M) {
                           CanUnwind);
 }
 
+static LLVMAttributeRef clone_attribute(LLVMAttributeRef A, LLVMModuleRef M) {
+  auto Ctx = LLVMGetModuleContext(M);
+
+  if (LLVMIsEnumAttribute(A)) {
+    unsigned KindID = LLVMGetEnumAttributeKind(A);
+    auto Val = LLVMGetEnumAttributeValue(A);
+
+    return LLVMCreateEnumAttribute(Ctx, KindID, Val);
+  } else if (LLVMIsStringAttribute(A)) {
+    unsigned KLen;
+    const char *K = LLVMGetStringAttributeKind(A, &KLen);
+    unsigned VLen;
+    const char *V = LLVMGetStringAttributeValue(A, &VLen);
+
+    return LLVMCreateStringAttribute(Ctx, K, KLen, V, VLen);
+  } else if (LLVMIsTypeAttribute(A)) {
+    unsigned KindID = LLVMGetEnumAttributeKind(A);
+    LLVMTypeRef Ty = LLVMGetTypeAttributeValue(A);
+
+    return LLVMCreateTypeAttribute(Ctx, KindID, TypeCloner(M).Clone(Ty));
+  } else if (LLVMIsConstantRangeAttribute(A)) {
+    unsigned KindID = LLVMGetEnumAttributeKind(A);
+    const uint64_t *LowerWords, *UpperWords;
+    unsigned NumBits =
+        LLVMGetConstantRangeAttributeValue(A, &LowerWords, &UpperWords);
+
+    return LLVMCreateConstantRangeAttribute(Ctx, KindID, NumBits, LowerWords,
+                                            UpperWords);
+  } else if (LLVMIsConstantRangeListAttribute(A)) {
+    unsigned KindID = LLVMGetEnumAttributeKind(A);
+    size_t NumRanges = LLVMGetConstantRangeListAttributeCount(A);
+    if (NumRanges == 0)
+      return LLVMCreateConstantRangeListAttribute(Ctx, KindID, 0, 0, nullptr,
+                                                  nullptr);
+
+    unsigned NumBits;
+    SmallVector<const uint64_t *, 2> LowerWords(NumRanges);
+    SmallVector<const uint64_t *, 2> UpperWords(NumRanges);
+    for (unsigned I = 0; I < NumRanges; ++I)
+      NumBits = LLVMGetConstantRangeListAttributeValueAtIndex(
+          A, I, &LowerWords[I], &UpperWords[I]);
+
+    return LLVMCreateConstantRangeListAttribute(
+        Ctx, KindID, NumRanges, NumBits, LowerWords.data(), UpperWords.data());
+  } else {
+    report_fatal_error("Unknown attribute kind");
+  }
+}
+
 struct FunCloner {
   LLVMValueRef Fun;
   LLVMModuleRef M;
@@ -502,15 +551,13 @@ struct FunCloner {
   }
 
   void CloneAttrs(LLVMValueRef Src, LLVMValueRef Dst) {
-    auto Ctx = LLVMGetModuleContext(M);
     int ArgCount = LLVMGetNumArgOperands(Src);
     for (int i = LLVMAttributeReturnIndex; i <= ArgCount; i++) {
-      for (unsigned k = 0, e = LLVMGetLastEnumAttributeKind(); k < e; ++k) {
-        if (auto SrcA = LLVMGetCallSiteEnumAttribute(Src, i, k)) {
-          auto Val = LLVMGetEnumAttributeValue(SrcA);
-          auto A = LLVMCreateEnumAttribute(Ctx, k, Val);
-          LLVMAddCallSiteAttribute(Dst, i, A);
-        }
+      auto AttrCount = LLVMGetCallSiteAttributeCount(Src, i);
+      SmallVector<LLVMAttributeRef, 4> Attrs(AttrCount);
+      LLVMGetCallSiteAttributes(Src, i, Attrs.data());
+      for (auto A : Attrs) {
+        LLVMAddCallSiteAttribute(Dst, i, clone_attribute(A, M));
       }
     }
   }
@@ -1206,8 +1253,6 @@ struct FunCloner {
 };
 
 static void declare_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
-  auto Ctx = LLVMGetModuleContext(M);
-
   LLVMValueRef Begin = LLVMGetFirstGlobal(Src);
   LLVMValueRef End = LLVMGetLastGlobal(Src);
 
@@ -1264,12 +1309,11 @@ FunDecl:
     // Copy attributes
     for (int i = LLVMAttributeFunctionIndex, c = LLVMCountParams(F);
          i <= c; ++i) {
-      for (unsigned k = 0, e = LLVMGetLastEnumAttributeKind(); k < e; ++k) {
-        if (auto SrcA = LLVMGetEnumAttributeAtIndex(Cur, i, k)) {
-          auto Val = LLVMGetEnumAttributeValue(SrcA);
-          auto DstA = LLVMCreateEnumAttribute(Ctx, k, Val);
-          LLVMAddAttributeAtIndex(F, i, DstA);
-        }
+      auto AttrCount = LLVMGetAttributeCountAtIndex(Cur, i);
+      SmallVector<LLVMAttributeRef, 4> Attrs(AttrCount);
+      LLVMGetAttributesAtIndex(Cur, i, Attrs.data());
+      for (auto A : Attrs) {
+        LLVMAddAttributeAtIndex(F, i, clone_attribute(A, M));
       }
     }
 

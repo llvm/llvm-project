@@ -217,6 +217,53 @@ LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
                     APInt(NumBits, ArrayRef(UpperWords, NumWords)))));
 }
 
+unsigned LLVMGetConstantRangeAttributeValue(LLVMAttributeRef A,
+                                            const uint64_t **LowerWords,
+                                            const uint64_t **UpperWords) {
+
+  auto Attr = unwrap(A);
+  const auto &CR = Attr.getRange();
+  if (LowerWords)
+    *LowerWords = CR.getLower().getRawData();
+  if (UpperWords)
+    *UpperWords = CR.getUpper().getRawData();
+  return CR.getBitWidth();
+}
+
+LLVMAttributeRef LLVMCreateConstantRangeListAttribute(
+    LLVMContextRef C, unsigned KindID, size_t NumRanges, unsigned NumBits,
+    const uint64_t *LowerWords[], const uint64_t *UpperWords[]) {
+  auto &Ctx = *unwrap(C);
+  auto AttrKind = (Attribute::AttrKind)KindID;
+  unsigned NumWords = divideCeil(NumBits, 64);
+
+  SmallVector<ConstantRange, 2> CRs;
+  for (size_t I = 0; I < NumRanges; ++I) {
+    CRs.push_back(
+        ConstantRange(APInt(NumBits, ArrayRef(LowerWords[I], NumWords)),
+                      APInt(NumBits, ArrayRef(UpperWords[I], NumWords))));
+  }
+
+  return wrap(Attribute::get(Ctx, AttrKind, ArrayRef(CRs)));
+}
+
+size_t LLVMGetConstantRangeListAttributeCount(LLVMAttributeRef A) {
+  auto Attr = unwrap(A);
+  return Attr.getValueAsConstantRangeList().size();
+}
+
+unsigned LLVMGetConstantRangeListAttributeValueAtIndex(
+    LLVMAttributeRef A, unsigned Index, const uint64_t **LowerWords,
+    const uint64_t **UpperWords) {
+  auto Attr = unwrap(A);
+  const auto &CR = Attr.getValueAsConstantRangeList()[Index];
+  if (LowerWords)
+    *LowerWords = CR.getLower().getRawData();
+  if (UpperWords)
+    *UpperWords = CR.getUpper().getRawData();
+  return CR.getBitWidth();
+}
+
 LLVMAttributeRef LLVMCreateDenormalFPEnvAttribute(
     LLVMContextRef C, LLVMDenormalModeKind DefaultModeOutput,
     LLVMDenormalModeKind DefaultModeInput, LLVMDenormalModeKind FloatModeOutput,
@@ -265,6 +312,14 @@ LLVMBool LLVMIsStringAttribute(LLVMAttributeRef A) {
 
 LLVMBool LLVMIsTypeAttribute(LLVMAttributeRef A) {
   return unwrap(A).isTypeAttribute();
+}
+
+LLVMBool LLVMIsConstantRangeAttribute(LLVMAttributeRef A) {
+  return unwrap(A).isConstantRangeAttribute();
+}
+
+LLVMBool LLVMIsConstantRangeListAttribute(LLVMAttributeRef A) {
+  return unwrap(A).isConstantRangeListAttribute();
 }
 
 char *LLVMGetDiagInfoDescription(LLVMDiagnosticInfoRef DI) {
