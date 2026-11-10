@@ -13,7 +13,7 @@ target triple = "sparc-unknown-unknown"
 ;; straightforward.
 
 ; CHECK-LABEL: @test_load_i16(
-; CHECK:  %1 = call zeroext i16 @__atomic_load_2(ptr %arg, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_load_2(ptr captures(none) %arg, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_load_i16(ptr %arg) {
   %ret = load atomic i16, ptr %arg seq_cst, align 4
@@ -21,7 +21,7 @@ define i16 @test_load_i16(ptr %arg) {
 }
 
 ; CHECK-LABEL: @test_store_i16(
-; CHECK:  call void @__atomic_store_2(ptr %arg, i16 zeroext %val, i32 5)
+; CHECK:  call void @__atomic_store_2(ptr captures(none) %arg, i16 zeroext %val, i32 5)
 ; CHECK:  ret void
 define void @test_store_i16(ptr %arg, i16 %val) {
   store atomic i16 %val, ptr %arg seq_cst, align 4
@@ -29,7 +29,7 @@ define void @test_store_i16(ptr %arg, i16 %val) {
 }
 
 ; CHECK-LABEL: @test_exchange_i16(
-; CHECK:  %1 = call zeroext i16 @__atomic_exchange_2(ptr %arg, i16 zeroext %val, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_exchange_2(ptr captures(none) %arg, i16 zeroext %val, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_exchange_i16(ptr %arg, i16 %val) {
   %ret = atomicrmw xchg ptr %arg, i16 %val seq_cst
@@ -40,7 +40,7 @@ define i16 @test_exchange_i16(ptr %arg, i16 %val) {
 ; CHECK:  %1 = alloca i16, align 2
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
 ; CHECK:  store i16 %old, ptr %1, align 2
-; CHECK:  %2 = call zeroext i1 @__atomic_compare_exchange_2(ptr %arg, ptr %1, i16 zeroext %new, i32 5, i32 0)
+; CHECK:  %2 = call zeroext i1 @__atomic_compare_exchange_2(ptr captures(none) %arg, ptr captures(none) %1, i16 zeroext %new, i32 5, i32 0)
 ; CHECK:  %3 = load i16, ptr %1, align 2
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  %4 = insertvalue { i16, i1 } poison, i16 %3, 0
@@ -54,7 +54,7 @@ define i16 @test_cmpxchg_i16(ptr %arg, i16 %old, i16 %new) {
 }
 
 ; CHECK-LABEL: @test_add_i16(
-; CHECK:  %1 = call zeroext i16 @__atomic_fetch_add_2(ptr %arg, i16 zeroext %val, i32 5)
+; CHECK:  %1 = call zeroext i16 @__atomic_fetch_add_2(ptr captures(none) %arg, i16 zeroext %val, i32 5)
 ; CHECK:  ret i16 %1
 define i16 @test_add_i16(ptr %arg, i16 %val) {
   %ret = atomicrmw add ptr %arg, i16 %val seq_cst
@@ -69,7 +69,7 @@ define i16 @test_add_i16(ptr %arg, i16 %val) {
 ; CHECK-LABEL: @test_load_i128(
 ; CHECK:  %1 = alloca i128, align 8
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
-; CHECK:  call void @__atomic_load(i32 16, ptr %arg, ptr %1, i32 5)
+; CHECK:  call void @__atomic_load(i32 16, ptr captures(none) %arg, ptr writeonly captures(none) %1, i32 5)
 ; CHECK:  %2 = load i128, ptr %1, align 8
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  ret i128 %2
@@ -82,7 +82,7 @@ define i128 @test_load_i128(ptr %arg) {
 ; CHECK:  %1 = alloca i128, align 8
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
 ; CHECK:  store i128 %val, ptr %1, align 8
-; CHECK:  call void @__atomic_store(i32 16, ptr %arg, ptr %1, i32 5)
+; CHECK:  call void @__atomic_store(i32 16, ptr captures(none) %arg, ptr readonly captures(none) %1, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  ret void
 define void @test_store_i128(ptr %arg, i128 %val) {
@@ -96,7 +96,7 @@ define void @test_store_i128(ptr %arg, i128 %val) {
 ; CHECK:  store i128 %val, ptr %1, align 8
 ; CHECK:  %2 = alloca i128, align 8
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %2)
-; CHECK:  call void @__atomic_exchange(i32 16, ptr %arg, ptr %1, ptr %2, i32 5)
+; CHECK:  call void @__atomic_exchange(i32 16, ptr captures(none) %arg, ptr readonly captures(none) %1, ptr writeonly captures(none) %2, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  %3 = load i128, ptr %2, align 8
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %2)
@@ -113,7 +113,7 @@ define i128 @test_exchange_i128(ptr %arg, i128 %val) {
 ; CHECK:  %2 = alloca i128, align 8
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %2)
 ; CHECK:  store i128 %new, ptr %2, align 8
-; CHECK:  %3 = call zeroext i1 @__atomic_compare_exchange(i32 16, ptr %arg, ptr %1, ptr %2, i32 5, i32 0)
+; CHECK:  %3 = call zeroext i1 @__atomic_compare_exchange(i32 16, ptr captures(none) %arg, ptr captures(none) %1, ptr readonly captures(none) %2, i32 5, i32 0)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %2)
 ; CHECK:  %4 = load i128, ptr %1, align 8
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
@@ -136,7 +136,7 @@ define i128 @test_cmpxchg_i128(ptr %arg, i128 %old, i128 %new) {
 ; CHECK:  %2 = alloca i128, align 8
 ; CHECK:  %3 = alloca i128, align 8
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %3)
-; CHECK:  call void @__atomic_load(i32 16, ptr %arg, ptr %3, i32 0)
+; CHECK:  call void @__atomic_load(i32 16, ptr captures(none) %arg, ptr writeonly captures(none) %3, i32 0)
 ; CHECK:  %4 = load i128, ptr %3, align 8
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %3)
 ; CHECK:  br label %atomicrmw.start
@@ -147,7 +147,7 @@ define i128 @test_cmpxchg_i128(ptr %arg, i128 %old, i128 %new) {
 ; CHECK:  store i128 %loaded, ptr %1, align 8
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %2)
 ; CHECK:  store i128 %new, ptr %2, align 8
-; CHECK:  %5 = call zeroext i1 @__atomic_compare_exchange(i32 16, ptr %arg, ptr %1, ptr %2, i32 5, i32 5)
+; CHECK:  %5 = call zeroext i1 @__atomic_compare_exchange(i32 16, ptr captures(none) %arg, ptr captures(none) %1, ptr readonly captures(none) %2, i32 5, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %2)
 ; CHECK:  %6 = load i128, ptr %1, align 8
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
@@ -166,7 +166,7 @@ define i128 @test_add_i128(ptr %arg, i128 %val) {
 ;; Ensure that non-integer types get bitcast correctly on the way in and out of a libcall:
 
 ; CHECK-LABEL: @test_load_double(
-; CHECK:  %1 = call i64 @__atomic_load_8(ptr %arg, i32 5)
+; CHECK:  %1 = call i64 @__atomic_load_8(ptr captures(none) %arg, i32 5)
 ; CHECK:  %2 = bitcast i64 %1 to double
 ; CHECK:  ret double %2
 define double @test_load_double(ptr %arg, double %val) {
@@ -176,7 +176,7 @@ define double @test_load_double(ptr %arg, double %val) {
 
 ; CHECK-LABEL: @test_store_double(
 ; CHECK:  %1 = bitcast double %val to i64
-; CHECK:  call void @__atomic_store_8(ptr %arg, i64 %1, i32 5)
+; CHECK:  call void @__atomic_store_8(ptr captures(none) %arg, i64 %1, i32 5)
 ; CHECK:  ret void
 define void @test_store_double(ptr %arg, double %val) {
   store atomic double %val, ptr %arg seq_cst, align 16
@@ -188,7 +188,7 @@ define void @test_store_double(ptr %arg, double %val) {
 ; CHECK:   call void @llvm.lifetime.start.p0(ptr %1)
 ; CHECK:   store ptr %old, ptr %1, align 4
 ; CHECK:   %2 = ptrtoint ptr %new to i32
-; CHECK:   %3 = call zeroext i1 @__atomic_compare_exchange_4(ptr %arg, ptr %1, i32 %2, i32 5, i32 2)
+; CHECK:   %3 = call zeroext i1 @__atomic_compare_exchange_4(ptr captures(none) %arg, ptr captures(none) %1, i32 %2, i32 5, i32 2)
 ; CHECK:   %4 = load ptr, ptr %1, align 4
 ; CHECK:   call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:   %5 = insertvalue { ptr, i1 } poison, ptr %4, 0
@@ -208,7 +208,7 @@ define ptr @test_cmpxchg_ptr(ptr %arg, ptr %old, ptr %new) {
 ; CHECK:  %1 = alloca fp128, align 8
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
 ; CHECK:  store fp128 %val, ptr %1, align 8
-; CHECK:  call void @__atomic_store(i32 16, ptr %arg, ptr %1, i32 5)
+; CHECK:  call void @__atomic_store(i32 16, ptr captures(none) %arg, ptr readonly captures(none) %1, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  ret void
 define void @test_store_fp128(ptr %arg, fp128 %val) {

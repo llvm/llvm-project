@@ -13,6 +13,11 @@ define float @sinf(float %x) {
 
 ; CHECK: declare void @_Unwind_Resume(ptr)
 
+; CHECK: declare void @__atomic_load(i64, ptr captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS:#[0-9]+]]
+; CHECK: declare i32 @__atomic_load_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+
+; CHECK: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS:#[0-9]+]]
+
 ; CHECK: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; CHECK: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; CHECK: declare ptr @__memset_chk(ptr, i32, i64, i64)
@@ -69,7 +74,9 @@ define float @sinf(float %x) {
 ; CHECK: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
 
 ; CHECK: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; CHECK: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; CHECK: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; CHECK: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }

@@ -73,60 +73,60 @@
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__ashrdi3(i64, i32) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc signext i16 @__ashrhi3(i16 signext, i32) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__ashrsi3(i32, i32) [[DIVMOD_ATTRS]]
-; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32, ptr, ptr, ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_2(ptr, ptr, i16 zeroext, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_4(ptr, ptr, i32, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_8(ptr, ptr, i64, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__atomic_exchange(i32, ptr, ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_exchange_1(ptr, i8 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_exchange_16(ptr, i128, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_exchange_2(ptr, i16 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_exchange_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_exchange_8(ptr, i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_add_1(ptr, i8 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_add_16(ptr, i128, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_add_2(ptr, i16 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_add_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_add_8(ptr, i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_and_1(ptr, i8 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_and_16(ptr, i128, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_and_2(ptr, i16 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_and_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_and_8(ptr, i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_nand_1(ptr, i8 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_nand_16(ptr, i128, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_nand_2(ptr, i16 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_nand_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_nand_8(ptr, i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_or_1(ptr, i8 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_or_16(ptr, i128, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_or_2(ptr, i16 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_or_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_or_8(ptr, i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_sub_1(ptr, i8 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_sub_16(ptr, i128, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_sub_2(ptr, i16 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_sub_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_sub_8(ptr, i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_xor_1(ptr, i8 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_xor_16(ptr, i128, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_xor_2(ptr, i16 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_xor_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_xor_8(ptr, i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__atomic_load(i32, ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_load_1(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_load_16(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_load_2(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_load_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_load_8(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store(i32, ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_1(ptr, i8 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_16(ptr, i128, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_2(ptr, i16 zeroext, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_8(ptr, i64, i32)
+; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32, ptr captures(none), ptr captures(none), ptr readonly captures(none), i32, i32) [[ATOMIC_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_1(ptr captures(none), ptr captures(none), i8 zeroext, i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_16(ptr captures(none), ptr captures(none), i128, i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_2(ptr captures(none), ptr captures(none), i16 zeroext, i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_4(ptr captures(none), ptr captures(none), i32, i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_8(ptr captures(none), ptr captures(none), i64, i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__atomic_exchange(i32, ptr captures(none), ptr readonly captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_exchange_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_exchange_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_exchange_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_exchange_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_exchange_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_add_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_add_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_add_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_add_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_add_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_and_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_and_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_and_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_and_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_and_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_nand_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_nand_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_nand_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_nand_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_nand_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_or_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_or_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_or_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_or_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_or_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_sub_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_sub_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_sub_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_sub_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_sub_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_xor_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_fetch_xor_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_xor_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_fetch_xor_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_fetch_xor_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__atomic_load(i32, ptr captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__atomic_load_1(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__atomic_load_16(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__atomic_load_2(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__atomic_load_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__atomic_load_8(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store(i32, ptr captures(none), ptr readonly captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @__clear_cache(ptr, ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzdi2(i64) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzsi2(i32) [[DIVMOD_ATTRS]]
@@ -218,21 +218,21 @@
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__lesf2(float, float) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__letf2(fp128, fp128) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_deoptimize(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_2(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_4(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_8(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_1(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_16(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_2(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_4(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_8(ptr, ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_1(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_16(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_16(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_2(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_4(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_8(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_16(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_2(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_4(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_8(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_1(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_16(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_2(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_4(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_8(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__log10_finite(double) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @__log10f_finite(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__log2_finite(double) [[SQRT_ATTRS]]
@@ -278,66 +278,66 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @__subdf3(double, double) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @__subsf3(float, float) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128) [[DIVMOD_ATTRS]]
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_add_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_add_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_add_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_and_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_and_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_and_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_and_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_and_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_max_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_max_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_max_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_max_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_max_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_min_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_min_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_min_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_min_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_min_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_nand_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_nand_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_nand_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_nand_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_nand_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_or_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_or_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_or_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_or_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_or_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_sub_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_sub_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_sub_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_sub_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_sub_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_umax_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_umax_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_umax_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_umax_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_umax_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_umin_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_umin_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_umin_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_umin_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_umin_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_xor_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_xor_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_xor_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_xor_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_xor_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_lock_test_and_set_1(ptr, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_lock_test_and_set_16(ptr, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_lock_test_and_set_2(ptr, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_lock_test_and_set_4(ptr, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_lock_test_and_set_8(ptr, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_val_compare_and_swap_1(ptr, i8 zeroext, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_val_compare_and_swap_16(ptr, i128, i128)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_add_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_add_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_add_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_add_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_add_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_and_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_and_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_and_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_and_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_and_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_max_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_max_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_max_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_max_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_max_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_min_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_min_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_min_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_min_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_min_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_nand_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_nand_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_nand_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_nand_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_nand_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_or_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_or_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_or_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_or_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_or_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_sub_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_sub_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_sub_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_sub_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_sub_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_umax_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_umax_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_umax_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_umax_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_umax_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_umin_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_umin_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_umin_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_umin_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_umin_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_xor_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_xor_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_xor_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_xor_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_xor_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_lock_test_and_set_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_lock_test_and_set_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_lock_test_and_set_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_lock_test_and_set_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_lock_test_and_set_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_val_compare_and_swap_1(ptr captures(none), i8 zeroext, i8 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_val_compare_and_swap_16(ptr captures(none), i128, i128) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_val_compare_and_swap_2(ptr captures(none), i16 zeroext, i16 zeroext) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_val_compare_and_swap_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_val_compare_and_swap_8(ptr captures(none), i64, i64) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc bfloat @__truncdfbf2(double) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc half @__truncdfhf2(double) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @__truncdfsf2(double) [[DIVMOD_ATTRS]]
@@ -474,7 +474,9 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; SJLJ-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; SJLJ-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; SJLJ-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; SJLJ-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
@@ -549,60 +551,60 @@
 ; DWARF-NEXT: declare arm_aapcscc i64 @__ashrdi3(i64, i32) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc signext i16 @__ashrhi3(i16 signext, i32) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__ashrsi3(i32, i32) [[DIVMOD_ATTRS]]
-; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32, ptr, ptr, ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_2(ptr, ptr, i16 zeroext, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_4(ptr, ptr, i32, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_8(ptr, ptr, i64, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__atomic_exchange(i32, ptr, ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_exchange_1(ptr, i8 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_exchange_16(ptr, i128, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_exchange_2(ptr, i16 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_exchange_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_exchange_8(ptr, i64, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_add_1(ptr, i8 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_add_16(ptr, i128, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_add_2(ptr, i16 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_add_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_add_8(ptr, i64, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_and_1(ptr, i8 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_and_16(ptr, i128, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_and_2(ptr, i16 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_and_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_and_8(ptr, i64, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_nand_1(ptr, i8 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_nand_16(ptr, i128, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_nand_2(ptr, i16 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_nand_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_nand_8(ptr, i64, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_or_1(ptr, i8 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_or_16(ptr, i128, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_or_2(ptr, i16 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_or_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_or_8(ptr, i64, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_sub_1(ptr, i8 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_sub_16(ptr, i128, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_sub_2(ptr, i16 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_sub_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_sub_8(ptr, i64, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_xor_1(ptr, i8 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_xor_16(ptr, i128, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_xor_2(ptr, i16 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_xor_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_xor_8(ptr, i64, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__atomic_load(i32, ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_load_1(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_load_16(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_load_2(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_load_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_load_8(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__atomic_store(i32, ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_1(ptr, i8 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_16(ptr, i128, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_2(ptr, i16 zeroext, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_8(ptr, i64, i32)
+; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32, ptr captures(none), ptr captures(none), ptr readonly captures(none), i32, i32) [[ATOMIC_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_1(ptr captures(none), ptr captures(none), i8 zeroext, i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_16(ptr captures(none), ptr captures(none), i128, i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_2(ptr captures(none), ptr captures(none), i16 zeroext, i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_4(ptr captures(none), ptr captures(none), i32, i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_8(ptr captures(none), ptr captures(none), i64, i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__atomic_exchange(i32, ptr captures(none), ptr readonly captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_exchange_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_exchange_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_exchange_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_exchange_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_exchange_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_add_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_add_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_add_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_add_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_add_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_and_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_and_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_and_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_and_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_and_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_nand_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_nand_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_nand_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_nand_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_nand_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_or_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_or_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_or_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_or_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_or_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_sub_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_sub_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_sub_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_sub_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_sub_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_fetch_xor_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_fetch_xor_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_fetch_xor_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_fetch_xor_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_fetch_xor_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__atomic_load(i32, ptr captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__atomic_load_1(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__atomic_load_16(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__atomic_load_2(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__atomic_load_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__atomic_load_8(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__atomic_store(i32, ptr captures(none), ptr readonly captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_1(ptr captures(none), i8 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_16(ptr captures(none), i128, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @__clear_cache(ptr, ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzdi2(i64) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzsi2(i32) [[DIVMOD_ATTRS]]
@@ -694,21 +696,21 @@
 ; DWARF-NEXT: declare arm_aapcscc i32 @__lesf2(float, float) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__letf2(fp128, fp128) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_deoptimize(...)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_2(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_4(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_8(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_1(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_16(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_2(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_4(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_8(ptr, ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_1(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_16(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_16(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_2(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_4(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_8(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_16(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_2(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_4(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memmove_element_unordered_atomic_8(ptr writeonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_1(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_16(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_2(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_4(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_8(ptr writeonly captures(none), i32, i32) [[ARGMEM_WRITE_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @__log10_finite(double) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @__log10f_finite(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @__log2_finite(double) [[SQRT_ATTRS]]
@@ -754,66 +756,66 @@
 ; DWARF-NEXT: declare arm_aapcscc double @__subdf3(double, double) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @__subsf3(float, float) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128) [[DIVMOD_ATTRS]]
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_add_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_add_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_add_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_and_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_and_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_and_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_and_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_and_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_max_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_max_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_max_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_max_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_max_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_min_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_min_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_min_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_min_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_min_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_nand_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_nand_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_nand_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_nand_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_nand_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_or_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_or_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_or_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_or_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_or_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_sub_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_sub_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_sub_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_sub_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_sub_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_umax_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_umax_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_umax_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_umax_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_umax_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_umin_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_umin_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_umin_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_umin_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_umin_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_xor_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_xor_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_xor_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_xor_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_xor_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_lock_test_and_set_1(ptr, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_lock_test_and_set_16(ptr, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_lock_test_and_set_2(ptr, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_lock_test_and_set_4(ptr, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_lock_test_and_set_8(ptr, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_val_compare_and_swap_1(ptr, i8 zeroext, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i128 @__sync_val_compare_and_swap_16(ptr, i128, i128)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_add_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_add_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_add_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_add_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_add_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_and_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_and_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_and_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_and_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_and_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_max_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_max_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_max_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_max_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_max_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_min_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_min_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_min_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_min_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_min_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_nand_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_nand_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_nand_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_nand_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_nand_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_or_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_or_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_or_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_or_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_or_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_sub_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_sub_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_sub_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_sub_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_sub_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_umax_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_umax_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_umax_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_umax_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_umax_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_umin_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_umin_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_umin_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_umin_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_umin_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_xor_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_xor_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_xor_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_fetch_and_xor_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_fetch_and_xor_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_lock_test_and_set_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_lock_test_and_set_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_lock_test_and_set_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_lock_test_and_set_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_lock_test_and_set_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_val_compare_and_swap_1(ptr captures(none), i8 zeroext, i8 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__sync_val_compare_and_swap_16(ptr captures(none), i128, i128) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_val_compare_and_swap_2(ptr captures(none), i16 zeroext, i16 zeroext) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__sync_val_compare_and_swap_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__sync_val_compare_and_swap_8(ptr captures(none), i64, i64) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc bfloat @__truncdfbf2(double) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc half @__truncdfhf2(double) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @__truncdfsf2(double) [[DIVMOD_ATTRS]]
@@ -950,7 +952,9 @@
 ; DWARF-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; DWARF-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; DWARF-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; DWARF-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; DWARF-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; DWARF-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }

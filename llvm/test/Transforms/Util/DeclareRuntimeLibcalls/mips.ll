@@ -18,60 +18,60 @@
 ; MIPS32-NEXT: declare i64 @__ashrdi3(i64, i32 signext) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32 signext) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare i32 @__ashrsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
-; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange(i32 signext, ptr, ptr, ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32 signext, i32 signext)
-; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32 signext, i32 signext)
-; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_2(ptr, ptr, i16 zeroext, i32 signext, i32 signext)
-; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_4(ptr, ptr, i32 signext, i32 signext, i32 signext)
-; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_8(ptr, ptr, i64, i32 signext, i32 signext)
-; MIPS32-NEXT: declare void @__atomic_exchange(i32 signext, ptr, ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare zeroext i8 @__atomic_exchange_1(ptr, i8 zeroext, i32 signext)
-; MIPS32-NEXT: declare i128 @__atomic_exchange_16(ptr, i128, i32 signext)
-; MIPS32-NEXT: declare zeroext i16 @__atomic_exchange_2(ptr, i16 zeroext, i32 signext)
-; MIPS32-NEXT: declare i32 @__atomic_exchange_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare i64 @__atomic_exchange_8(ptr, i64, i32 signext)
-; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_add_1(ptr, i8 zeroext, i32 signext)
-; MIPS32-NEXT: declare i128 @__atomic_fetch_add_16(ptr, i128, i32 signext)
-; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_add_2(ptr, i16 zeroext, i32 signext)
-; MIPS32-NEXT: declare i32 @__atomic_fetch_add_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare i64 @__atomic_fetch_add_8(ptr, i64, i32 signext)
-; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_and_1(ptr, i8 zeroext, i32 signext)
-; MIPS32-NEXT: declare i128 @__atomic_fetch_and_16(ptr, i128, i32 signext)
-; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_and_2(ptr, i16 zeroext, i32 signext)
-; MIPS32-NEXT: declare i32 @__atomic_fetch_and_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare i64 @__atomic_fetch_and_8(ptr, i64, i32 signext)
-; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_nand_1(ptr, i8 zeroext, i32 signext)
-; MIPS32-NEXT: declare i128 @__atomic_fetch_nand_16(ptr, i128, i32 signext)
-; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_nand_2(ptr, i16 zeroext, i32 signext)
-; MIPS32-NEXT: declare i32 @__atomic_fetch_nand_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare i64 @__atomic_fetch_nand_8(ptr, i64, i32 signext)
-; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_or_1(ptr, i8 zeroext, i32 signext)
-; MIPS32-NEXT: declare i128 @__atomic_fetch_or_16(ptr, i128, i32 signext)
-; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_or_2(ptr, i16 zeroext, i32 signext)
-; MIPS32-NEXT: declare i32 @__atomic_fetch_or_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare i64 @__atomic_fetch_or_8(ptr, i64, i32 signext)
-; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_sub_1(ptr, i8 zeroext, i32 signext)
-; MIPS32-NEXT: declare i128 @__atomic_fetch_sub_16(ptr, i128, i32 signext)
-; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_sub_2(ptr, i16 zeroext, i32 signext)
-; MIPS32-NEXT: declare i32 @__atomic_fetch_sub_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare i64 @__atomic_fetch_sub_8(ptr, i64, i32 signext)
-; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_xor_1(ptr, i8 zeroext, i32 signext)
-; MIPS32-NEXT: declare i128 @__atomic_fetch_xor_16(ptr, i128, i32 signext)
-; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_xor_2(ptr, i16 zeroext, i32 signext)
-; MIPS32-NEXT: declare i32 @__atomic_fetch_xor_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare i64 @__atomic_fetch_xor_8(ptr, i64, i32 signext)
-; MIPS32-NEXT: declare void @__atomic_load(i32 signext, ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare zeroext i8 @__atomic_load_1(ptr, i32 signext)
-; MIPS32-NEXT: declare i128 @__atomic_load_16(ptr, i32 signext)
-; MIPS32-NEXT: declare zeroext i16 @__atomic_load_2(ptr, i32 signext)
-; MIPS32-NEXT: declare i32 @__atomic_load_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__atomic_load_8(ptr, i32 signext)
-; MIPS32-NEXT: declare void @__atomic_store(i32 signext, ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__atomic_store_1(ptr, i8 zeroext, i32 signext)
-; MIPS32-NEXT: declare void @__atomic_store_16(ptr, i128, i32 signext)
-; MIPS32-NEXT: declare void @__atomic_store_2(ptr, i16 zeroext, i32 signext)
-; MIPS32-NEXT: declare void @__atomic_store_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare void @__atomic_store_8(ptr, i64, i32 signext)
+; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange(i32 signext, ptr captures(none), ptr captures(none), ptr readonly captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS:#[0-9]+]]
+; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr captures(none), ptr captures(none), i8 zeroext, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr captures(none), ptr captures(none), i128, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_2(ptr captures(none), ptr captures(none), i16 zeroext, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_4(ptr captures(none), ptr captures(none), i32 signext, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i1 @__atomic_compare_exchange_8(ptr captures(none), ptr captures(none), i64, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare void @__atomic_exchange(i32 signext, ptr captures(none), ptr readonly captures(none), ptr writeonly captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__atomic_exchange_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__atomic_exchange_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__atomic_exchange_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__atomic_exchange_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__atomic_exchange_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_add_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__atomic_fetch_add_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_add_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__atomic_fetch_add_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__atomic_fetch_add_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_and_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__atomic_fetch_and_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_and_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__atomic_fetch_and_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__atomic_fetch_and_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_nand_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__atomic_fetch_nand_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_nand_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__atomic_fetch_nand_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__atomic_fetch_nand_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_or_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__atomic_fetch_or_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_or_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__atomic_fetch_or_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__atomic_fetch_or_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_sub_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__atomic_fetch_sub_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_sub_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__atomic_fetch_sub_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__atomic_fetch_sub_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__atomic_fetch_xor_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__atomic_fetch_xor_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__atomic_fetch_xor_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__atomic_fetch_xor_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__atomic_fetch_xor_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare void @__atomic_load(i32 signext, ptr captures(none), ptr writeonly captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__atomic_load_1(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__atomic_load_16(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__atomic_load_2(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__atomic_load_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__atomic_load_8(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare void @__atomic_store(i32 signext, ptr captures(none), ptr readonly captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare void @__atomic_store_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare void @__atomic_store_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare void @__atomic_store_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
 ; MIPS32-NEXT: declare void @__clear_cache(ptr, ptr)
 ; MIPS32-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare i32 @__clzsi2(i32 signext) [[NOMEM_ATTRS]]
@@ -162,21 +162,21 @@
 ; MIPS32-NEXT: declare i32 @__lesf2(float, float) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare i32 @__letf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare void @__llvm_deoptimize(...)
-; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_2(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_4(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_8(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_1(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_16(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_2(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_4(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_8(ptr, ptr, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_1(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_16(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i32 signext, i32 signext)
+; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS:#[0-9]+]]
+; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_2(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_4(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_8(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_16(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_2(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_4(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memmove_element_unordered_atomic_8(ptr writeonly captures(none), ptr readonly captures(none), i32 signext) [[ARGMEM_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_1(ptr writeonly captures(none), i32 signext, i32 signext) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_16(ptr writeonly captures(none), i32 signext, i32 signext) [[ARGMEM_WRITE_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr writeonly captures(none), i32 signext, i32 signext) [[ARGMEM_WRITE_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr writeonly captures(none), i32 signext, i32 signext) [[ARGMEM_WRITE_ATTRS]]
+; MIPS32-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr writeonly captures(none), i32 signext, i32 signext) [[ARGMEM_WRITE_ATTRS]]
 ; MIPS32-NEXT: declare double @__log10_finite(double) [[SQRT_ATTRS]]
 ; MIPS32-NEXT: declare float @__log10f_finite(float) [[SQRT_ATTRS]]
 ; MIPS32-NEXT: declare double @__log2_finite(double) [[SQRT_ATTRS]]
@@ -256,66 +256,66 @@
 ; MIPS32-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare fp128 @__subtf3(fp128, fp128) [[NOMEM_ATTRS]]
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_add_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_add_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_add_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_and_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_and_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_and_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_and_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_and_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_max_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_max_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_max_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_max_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_max_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_min_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_min_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_min_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_min_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_min_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_nand_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_nand_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_nand_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_nand_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_nand_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_or_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_or_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_or_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_or_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_or_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_sub_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_sub_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_sub_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_sub_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_sub_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_umax_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_umax_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_umax_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_umax_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_umax_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_umin_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_umin_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_umin_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_umin_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_umin_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_xor_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_fetch_and_xor_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_xor_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_fetch_and_xor_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_fetch_and_xor_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_lock_test_and_set_1(ptr, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_lock_test_and_set_16(ptr, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_lock_test_and_set_2(ptr, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_lock_test_and_set_4(ptr, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_lock_test_and_set_8(ptr, i64)
-; MIPS32-NEXT: declare zeroext i8 @__sync_val_compare_and_swap_1(ptr, i8 zeroext, i8 zeroext)
-; MIPS32-NEXT: declare i128 @__sync_val_compare_and_swap_16(ptr, i128, i128)
-; MIPS32-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
-; MIPS32-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_add_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_add_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_add_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_and_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_and_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_and_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_and_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_and_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_max_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_max_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_max_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_max_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_max_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_min_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_min_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_min_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_min_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_min_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_nand_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_nand_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_nand_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_nand_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_nand_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_or_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_or_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_or_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_or_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_or_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_sub_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_sub_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_sub_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_sub_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_sub_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_umax_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_umax_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_umax_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_umax_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_umax_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_umin_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_umin_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_umin_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_umin_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_umin_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_fetch_and_xor_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_fetch_and_xor_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_fetch_and_xor_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_fetch_and_xor_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_fetch_and_xor_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_lock_test_and_set_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_lock_test_and_set_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_lock_test_and_set_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_lock_test_and_set_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_lock_test_and_set_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i8 @__sync_val_compare_and_swap_1(ptr captures(none), i8 zeroext, i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i128 @__sync_val_compare_and_swap_16(ptr captures(none), i128, i128) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr captures(none), i16 zeroext, i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS32-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr captures(none), i64, i64) [[ATOMIC_ATTRS]]
 ; MIPS32-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
@@ -453,7 +453,9 @@
 ; MIPS32-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; MIPS32-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; MIPS32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; MIPS32-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; MIPS32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; MIPS32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MIPS32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
@@ -477,60 +479,60 @@
 ; MIPS64-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32 signext) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare i32 @__ashrsi3(i32 signext, i32 signext) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare i128 @__ashrti3(i128, i32 signext) [[NOMEM_ATTRS]]
-; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32 signext, i32 signext)
-; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32 signext, i32 signext)
-; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_2(ptr, ptr, i16 zeroext, i32 signext, i32 signext)
-; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_4(ptr, ptr, i32 signext, i32 signext, i32 signext)
-; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_8(ptr, ptr, i64, i32 signext, i32 signext)
-; MIPS64-NEXT: declare void @__atomic_exchange(i64, ptr, ptr, ptr, i32 signext)
-; MIPS64-NEXT: declare zeroext i8 @__atomic_exchange_1(ptr, i8 zeroext, i32 signext)
-; MIPS64-NEXT: declare i128 @__atomic_exchange_16(ptr, i128, i32 signext)
-; MIPS64-NEXT: declare zeroext i16 @__atomic_exchange_2(ptr, i16 zeroext, i32 signext)
-; MIPS64-NEXT: declare i32 @__atomic_exchange_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare i64 @__atomic_exchange_8(ptr, i64, i32 signext)
-; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_add_1(ptr, i8 zeroext, i32 signext)
-; MIPS64-NEXT: declare i128 @__atomic_fetch_add_16(ptr, i128, i32 signext)
-; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_add_2(ptr, i16 zeroext, i32 signext)
-; MIPS64-NEXT: declare i32 @__atomic_fetch_add_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare i64 @__atomic_fetch_add_8(ptr, i64, i32 signext)
-; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_and_1(ptr, i8 zeroext, i32 signext)
-; MIPS64-NEXT: declare i128 @__atomic_fetch_and_16(ptr, i128, i32 signext)
-; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_and_2(ptr, i16 zeroext, i32 signext)
-; MIPS64-NEXT: declare i32 @__atomic_fetch_and_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare i64 @__atomic_fetch_and_8(ptr, i64, i32 signext)
-; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_nand_1(ptr, i8 zeroext, i32 signext)
-; MIPS64-NEXT: declare i128 @__atomic_fetch_nand_16(ptr, i128, i32 signext)
-; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_nand_2(ptr, i16 zeroext, i32 signext)
-; MIPS64-NEXT: declare i32 @__atomic_fetch_nand_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare i64 @__atomic_fetch_nand_8(ptr, i64, i32 signext)
-; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_or_1(ptr, i8 zeroext, i32 signext)
-; MIPS64-NEXT: declare i128 @__atomic_fetch_or_16(ptr, i128, i32 signext)
-; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_or_2(ptr, i16 zeroext, i32 signext)
-; MIPS64-NEXT: declare i32 @__atomic_fetch_or_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare i64 @__atomic_fetch_or_8(ptr, i64, i32 signext)
-; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_sub_1(ptr, i8 zeroext, i32 signext)
-; MIPS64-NEXT: declare i128 @__atomic_fetch_sub_16(ptr, i128, i32 signext)
-; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_sub_2(ptr, i16 zeroext, i32 signext)
-; MIPS64-NEXT: declare i32 @__atomic_fetch_sub_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare i64 @__atomic_fetch_sub_8(ptr, i64, i32 signext)
-; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_xor_1(ptr, i8 zeroext, i32 signext)
-; MIPS64-NEXT: declare i128 @__atomic_fetch_xor_16(ptr, i128, i32 signext)
-; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_xor_2(ptr, i16 zeroext, i32 signext)
-; MIPS64-NEXT: declare i32 @__atomic_fetch_xor_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare i64 @__atomic_fetch_xor_8(ptr, i64, i32 signext)
-; MIPS64-NEXT: declare void @__atomic_load(i64, ptr, ptr, i32 signext)
-; MIPS64-NEXT: declare zeroext i8 @__atomic_load_1(ptr, i32 signext)
-; MIPS64-NEXT: declare i128 @__atomic_load_16(ptr, i32 signext)
-; MIPS64-NEXT: declare zeroext i16 @__atomic_load_2(ptr, i32 signext)
-; MIPS64-NEXT: declare i32 @__atomic_load_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__atomic_load_8(ptr, i32 signext)
-; MIPS64-NEXT: declare void @__atomic_store(i64, ptr, ptr, i32 signext)
-; MIPS64-NEXT: declare void @__atomic_store_1(ptr, i8 zeroext, i32 signext)
-; MIPS64-NEXT: declare void @__atomic_store_16(ptr, i128, i32 signext)
-; MIPS64-NEXT: declare void @__atomic_store_2(ptr, i16 zeroext, i32 signext)
-; MIPS64-NEXT: declare void @__atomic_store_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare void @__atomic_store_8(ptr, i64, i32 signext)
+; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange(i64, ptr captures(none), ptr captures(none), ptr readonly captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS:#[0-9]+]]
+; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr captures(none), ptr captures(none), i8 zeroext, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr captures(none), ptr captures(none), i128, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_2(ptr captures(none), ptr captures(none), i16 zeroext, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_4(ptr captures(none), ptr captures(none), i32 signext, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i1 @__atomic_compare_exchange_8(ptr captures(none), ptr captures(none), i64, i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare void @__atomic_exchange(i64, ptr captures(none), ptr readonly captures(none), ptr writeonly captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__atomic_exchange_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__atomic_exchange_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__atomic_exchange_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__atomic_exchange_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__atomic_exchange_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_add_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__atomic_fetch_add_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_add_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__atomic_fetch_add_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__atomic_fetch_add_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_and_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__atomic_fetch_and_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_and_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__atomic_fetch_and_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__atomic_fetch_and_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_nand_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__atomic_fetch_nand_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_nand_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__atomic_fetch_nand_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__atomic_fetch_nand_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_or_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__atomic_fetch_or_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_or_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__atomic_fetch_or_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__atomic_fetch_or_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_sub_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__atomic_fetch_sub_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_sub_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__atomic_fetch_sub_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__atomic_fetch_sub_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__atomic_fetch_xor_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__atomic_fetch_xor_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__atomic_fetch_xor_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__atomic_fetch_xor_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__atomic_fetch_xor_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare void @__atomic_load(i64, ptr captures(none), ptr writeonly captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__atomic_load_1(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__atomic_load_16(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__atomic_load_2(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__atomic_load_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__atomic_load_8(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare void @__atomic_store(i64, ptr captures(none), ptr readonly captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare void @__atomic_store_1(ptr captures(none), i8 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare void @__atomic_store_16(ptr captures(none), i128, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare void @__atomic_store_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
 ; MIPS64-NEXT: declare void @__clear_cache(ptr, ptr)
 ; MIPS64-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare i32 @__clzsi2(i32 signext) [[NOMEM_ATTRS]]
@@ -623,21 +625,21 @@
 ; MIPS64-NEXT: declare i64 @__lesf2(float, float) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare i64 @__letf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare void @__llvm_deoptimize(...)
-; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_2(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_4(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_8(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_1(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_16(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_2(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_4(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_8(ptr, ptr, i64)
-; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_1(ptr, i32 signext, i64)
-; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_16(ptr, i32 signext, i64)
-; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i32 signext, i64)
-; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i32 signext, i64)
-; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i32 signext, i64)
+; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS:#[0-9]+]]
+; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_2(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_4(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_8(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_1(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_16(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_2(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_4(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memmove_element_unordered_atomic_8(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_1(ptr writeonly captures(none), i32 signext, i64) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_16(ptr writeonly captures(none), i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr writeonly captures(none), i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr writeonly captures(none), i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
+; MIPS64-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr writeonly captures(none), i32 signext, i64) [[ARGMEM_WRITE_ATTRS]]
 ; MIPS64-NEXT: declare double @__log10_finite(double) [[SQRT_ATTRS]]
 ; MIPS64-NEXT: declare float @__log10f_finite(float) [[SQRT_ATTRS]]
 ; MIPS64-NEXT: declare fp128 @__log10l_finite(fp128) [[SQRT_ATTRS]]
@@ -689,66 +691,66 @@
 ; MIPS64-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare fp128 @__subtf3(fp128, fp128) [[NOMEM_ATTRS]]
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_add_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_add_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_add_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_and_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_and_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_and_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_and_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_and_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_max_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_max_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_max_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_max_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_max_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_min_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_min_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_min_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_min_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_min_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_nand_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_nand_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_nand_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_nand_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_nand_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_or_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_or_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_or_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_or_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_or_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_sub_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_sub_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_sub_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_sub_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_sub_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_umax_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_umax_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_umax_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_umax_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_umax_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_umin_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_umin_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_umin_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_umin_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_umin_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_xor_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_fetch_and_xor_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_xor_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_fetch_and_xor_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_fetch_and_xor_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_lock_test_and_set_1(ptr, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_lock_test_and_set_16(ptr, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_lock_test_and_set_2(ptr, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_lock_test_and_set_4(ptr, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_lock_test_and_set_8(ptr, i64)
-; MIPS64-NEXT: declare zeroext i8 @__sync_val_compare_and_swap_1(ptr, i8 zeroext, i8 zeroext)
-; MIPS64-NEXT: declare i128 @__sync_val_compare_and_swap_16(ptr, i128, i128)
-; MIPS64-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
-; MIPS64-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr, i32 signext, i32 signext)
-; MIPS64-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_add_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_add_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_add_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_and_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_and_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_and_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_and_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_and_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_max_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_max_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_max_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_max_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_max_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_min_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_min_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_min_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_min_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_min_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_nand_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_nand_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_nand_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_nand_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_nand_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_or_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_or_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_or_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_or_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_or_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_sub_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_sub_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_sub_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_sub_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_sub_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_umax_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_umax_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_umax_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_umax_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_umax_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_umin_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_umin_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_umin_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_umin_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_umin_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_fetch_and_xor_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_fetch_and_xor_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_fetch_and_xor_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_fetch_and_xor_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_fetch_and_xor_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_lock_test_and_set_1(ptr captures(none), i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_lock_test_and_set_16(ptr captures(none), i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_lock_test_and_set_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_lock_test_and_set_4(ptr captures(none), i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_lock_test_and_set_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i8 @__sync_val_compare_and_swap_1(ptr captures(none), i8 zeroext, i8 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i128 @__sync_val_compare_and_swap_16(ptr captures(none), i128, i128) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr captures(none), i16 zeroext, i16 zeroext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
+; MIPS64-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr captures(none), i64, i64) [[ATOMIC_ATTRS]]
 ; MIPS64-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
@@ -938,7 +940,9 @@
 ; MIPS64-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; MIPS64-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; MIPS64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; MIPS64-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; MIPS64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; MIPS64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MIPS64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
