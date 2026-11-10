@@ -19,7 +19,6 @@
 
 ---
 name: one_block
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
@@ -85,7 +84,6 @@ body: |
 
 ---
 name: one_block_csr_only
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
@@ -155,7 +153,6 @@ body: |
 # v41, will be 8 bytes long.
 ---
 name: multiple_blocks
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
@@ -303,7 +300,6 @@ body: |
 
 ---
 name: reg_tuples
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
@@ -408,7 +404,6 @@ body: |
 
 ---
 name: locals
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 stack:
@@ -492,7 +487,6 @@ body: |
 
 ---
 name: other_regs
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
   wwmReservedRegs:
@@ -590,7 +584,6 @@ body: |
 
 ---
 name: entry_func
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
@@ -607,7 +600,6 @@ body: |
 
 ---
 name: multiple_basic_blocks
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |

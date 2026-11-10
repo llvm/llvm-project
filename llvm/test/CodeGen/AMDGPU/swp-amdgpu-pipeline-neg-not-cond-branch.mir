@@ -5,7 +5,6 @@
 
 ---
 name:            swp_amdgpu_pipeline_neg_not_cond_branch
-tracksRegLiveness: true
 isSSA:           true
 liveins:
   - { reg: '$sgpr8' }

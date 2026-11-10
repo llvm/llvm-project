@@ -3,7 +3,6 @@
 
 ---
 name:            test1
-tracksRegLiveness: true
 body:             |
   bb.1:
     %2:_(s32) = IMPLICIT_DEF
@@ -24,7 +23,6 @@ body:             |
 
 ---
 name:            test_atomics
-tracksRegLiveness: true
 body:             |
   bb.1:
 
@@ -95,7 +93,6 @@ body:             |
 
 ---
 name: test_buffer_atomics_always_divergent
-tracksRegLiveness: true
 body: |
   bb.1:
     liveins: $sgpr0, $sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7

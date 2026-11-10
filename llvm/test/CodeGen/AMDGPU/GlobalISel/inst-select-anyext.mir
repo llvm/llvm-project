@@ -29,7 +29,6 @@ body: |
 name: anyext_sgpr_s32_to_sgpr_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -51,7 +50,6 @@ body:             |
 name: anyext_sgpr_s16_to_sgpr_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -74,7 +72,6 @@ body:             |
 name: anyext_vgpr_s32_to_vgpr_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -96,7 +93,6 @@ body:             |
 name: anyext_vgpr_s16_to_vgpr_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

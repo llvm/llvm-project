@@ -4,7 +4,6 @@
 ---
 name:            _amdgpu_ps_main
 alignment:       1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_128 }
   - { id: 1, class: sreg_32_xm0, preferred-register: '%2' }

@@ -9,7 +9,6 @@
 # CHECK-NEXT: s_set_gpr_idx_off
 
 name: indirect_reg_read_imm_idx
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     %0:vreg_512_align2 = IMPLICIT_DEF

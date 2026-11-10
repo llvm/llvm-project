@@ -10,7 +10,6 @@
 name: shl_i32_masked_amount_through_copy
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -34,7 +33,6 @@ body: |
 name: lshr_i32_masked_amount_through_copy
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -58,7 +56,6 @@ body: |
 name: ashr_i32_masked_amount_through_copy
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -83,7 +80,6 @@ body: |
 name: shl_i32_superset_mask_through_copy
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -107,7 +103,6 @@ body: |
 name: shl_i16_masked_amount_through_copy
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -134,7 +129,6 @@ body: |
 name: shl_i64_masked_amount_through_copy
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -160,7 +154,6 @@ body: |
 name: shl_i32_sgpr_and_vgpr_shift
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $sgpr0
@@ -185,7 +178,6 @@ body: |
 name: shl_i32_sgpr_and_vgpr_shift_misses_low_bit
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $sgpr0
@@ -214,7 +206,6 @@ body: |
 name: shl_i32_masked_amount_uniform
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -238,7 +229,6 @@ body: |
 name: shl_i32_mask_misses_low_bit
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -266,7 +256,6 @@ body: |
 name: shl_i64_mask_too_narrow
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -294,7 +283,6 @@ body: |
 name: shl_i32_variable_mask
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2

@@ -4,7 +4,6 @@
 
 ---
 name: test_rsq_clamp_flags_ieee_on_f32
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -36,7 +35,6 @@ body: |
 
 ---
 name: test_rsq_clamp_flags_ieee_off_f32
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false

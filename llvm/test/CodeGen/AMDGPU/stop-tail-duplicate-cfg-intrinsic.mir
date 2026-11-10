@@ -4,7 +4,6 @@
 
 ---
 name:            stop_duplicate_cfg_intrinsic
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: stop_duplicate_cfg_intrinsic
   ; CHECK: bb.0:

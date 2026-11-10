@@ -4,7 +4,6 @@
 # Post-legalizer should not generate illegal extending loads
 ---
 name: zextload_from_inreg
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -27,7 +26,6 @@ body: |
 # Legal to fold into zextload
 ---
 name: zext_inreg_8_zextload_s32
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -47,7 +45,6 @@ body: |
 
 ---
 name: zext_inreg_7_zextload_s32
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -69,7 +66,6 @@ body: |
 
 ---
 name: zext_inreg_9_zextload_s32
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -92,7 +88,6 @@ body: |
 # Legal to fold into zextload
 ---
 name: zext_inreg_16_zextload_s32
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -112,7 +107,6 @@ body: |
 
 ---
 name: zext_inreg_8_zextload_s8
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -132,7 +126,6 @@ body: |
 
 ---
 name: zext_inreg_8_zextload_s8_volatile
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -152,7 +145,6 @@ body: |
 
 ---
 name: zext_inreg_16_zextload_s16
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -172,7 +164,6 @@ body: |
 
 ---
 name: zext_inreg_16_zextload_s16_volatile
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:

@@ -5,7 +5,6 @@
 
 ---
 name:            s_or_i32_disjoint
-tracksRegLiveness: true
 regBankSelected: true
 legalized: true
 body:             |

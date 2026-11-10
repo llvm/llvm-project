@@ -4,7 +4,6 @@
 # GCN:      bb.0:
 # GCN-NEXT: S_ENDPGM 0
 name: kill_all
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }
@@ -28,7 +27,6 @@ body:             |
 # GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr
 # GCN-NEXT: S_ENDPGM 0
 name: load_without_memoperand
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }
@@ -52,7 +50,6 @@ body:             |
 # GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load (s32))
 # GCN-NEXT: S_ENDPGM 0
 name: load_volatile
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }
@@ -76,7 +73,6 @@ body:             |
 # GCN-NEXT: FLAT_STORE_DWORD %0, %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
 # GCN-NEXT: S_ENDPGM 0
 name: store
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }
@@ -95,7 +91,6 @@ body:             |
 # GCN-NEXT: S_BARRIER
 # GCN-NEXT: S_ENDPGM 0
 name: barrier
-tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
@@ -109,7 +104,6 @@ body:             |
 # GCN-NEXT: $sgpr4_sgpr5 = S_SWAPPC_B64 $sgpr2_sgpr3
 # GCN-NEXT: S_ENDPGM 0
 name: call
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr2_sgpr3
@@ -124,7 +118,6 @@ body:             |
 # GCN-NEXT: EXP 32, undef %0:vgpr_32, undef %1:vgpr_32, %2, undef %3:vgpr_32, 0, 0, 15, implicit $exec
 # GCN-NEXT: S_ENDPGM 0
 name: exp
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -143,7 +136,6 @@ body:             |
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
 # GCN-NEXT: SI_RETURN_TO_EPILOG killed $vgpr0
 name: return_to_epilog
-tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
@@ -159,7 +151,6 @@ body:             |
 # GCN:      bb.1:
 # GCN-NEXT:   S_ENDPGM 0
 name: split_block
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -186,7 +177,6 @@ body:             |
 # GCN:      bb.2:
 # GCN-NEXT:   S_ENDPGM 0
 name: split_block_empty_block
-tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
@@ -206,7 +196,6 @@ body:             |
 # GCN:      bb.1:
 # GCN-NEXT:   S_ENDPGM 0
 name: split_block_uncond_branch
-tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
@@ -226,7 +215,6 @@ body:             |
 # GCN:      bb.2:
 # GCN-NEXT:   S_ENDPGM 0
 name: split_block_cond_branch
-tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
@@ -251,7 +239,6 @@ body:             |
 # GCN:      bb.2:
 # GCN-NEXT:   S_ENDPGM 0
 name: two_preds_both_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
@@ -280,7 +267,6 @@ body:             |
 # GCN:      bb.2:
 # GCN-NEXT:   S_ENDPGM 0
 name: two_preds_one_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     $vcc = IMPLICIT_DEF
@@ -303,7 +289,6 @@ body:             |
 # GCN: V_ADDC_U32
 # GCN: S_ENDPGM 0, implicit %3
 name: implicit_use_on_S_ENDPGM 0
-tracksRegLiveness: true
 
 body:             |
   bb.0:
@@ -320,7 +305,6 @@ body:             |
 # GCN-NOT: INLINEASM
 # GCN: S_ENDPGM 0
 name: inlineasm_nosideeffect
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }
@@ -342,7 +326,6 @@ body:             |
 # GCN-NEXT: INLINEASM
 # GCN-NEXT: S_ENDPGM 0
 name: inlineasm_sideeffect
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }

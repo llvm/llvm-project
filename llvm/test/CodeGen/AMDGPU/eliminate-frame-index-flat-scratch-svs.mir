@@ -30,7 +30,6 @@
 ...
 ---
 name: scratch_store_ss_fallback
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:
@@ -62,7 +61,6 @@ body:             |
 ...
 ---
 name: scratch_load_ss_fallback
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:
@@ -94,7 +92,6 @@ body:             |
 ...
 ---
 name: scratch_store_ss_vgpr_spill
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:
@@ -130,7 +127,6 @@ body:             |
 ...
 ---
 name: scratch_load_ss_vgpr_spill
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:
@@ -166,7 +162,6 @@ body:             |
 ...
 ---
 name: scratch_store_svs_fallback
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:
@@ -198,7 +193,6 @@ body:             |
 ...
 ---
 name: scratch_store_same_vdata_vaddr_svs_fallback
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:
@@ -230,7 +224,6 @@ body:             |
 ...
 ---
 name: scratch_load_svs_fallback
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:
@@ -262,7 +255,6 @@ body:             |
 ...
 ---
 name: scratch_store_svs_vgpr_spill
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:
@@ -298,7 +290,6 @@ body:             |
 ...
 ---
 name: scratch_load_svs_vgpr_spill
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
 stack:

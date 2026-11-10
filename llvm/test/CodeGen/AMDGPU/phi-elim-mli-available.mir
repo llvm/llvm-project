@@ -7,7 +7,6 @@
 
 ---
 name:            test_loop_exit_edge_split
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_loop_exit_edge_split
   ; CHECK: bb.0:

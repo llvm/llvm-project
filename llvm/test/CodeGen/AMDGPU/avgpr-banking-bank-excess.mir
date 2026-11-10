@@ -21,7 +21,6 @@
 ...
 ---
 name:            bank_excess
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'

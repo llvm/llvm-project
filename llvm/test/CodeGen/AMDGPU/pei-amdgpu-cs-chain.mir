@@ -23,7 +23,6 @@
 
 ---
 name:            preserve_inactive_wwm
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:
@@ -60,7 +59,6 @@ body:             |
 
 ---
 name:            dont_preserve_wwm_if_no_chain_calls
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     false
 machineFunctionInfo:
@@ -91,7 +89,6 @@ body:             |
 
 ---
 name:            dont_preserve_wwm_if_init_whole_wave
-tracksRegLiveness: true
 frameInfo:
   hasTailCall: true
 machineFunctionInfo:
@@ -119,7 +116,6 @@ body:             |
 
 ---
 name:            dont_preserve_non_wwm
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:
@@ -148,7 +144,6 @@ body:             |
 
 ---
 name:            dont_preserve_v0_v7
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:
@@ -189,7 +184,6 @@ body:             |
 
 ---
 name:            dont_preserve_sgpr
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:

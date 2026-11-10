@@ -6,7 +6,6 @@
 
 ---
 name: invalid_end_cf_fold_0
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }

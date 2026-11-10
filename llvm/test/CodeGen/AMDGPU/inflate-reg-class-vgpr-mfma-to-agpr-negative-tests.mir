@@ -43,7 +43,6 @@
 # Inflate pattern, except the defining instruction isn't an MFMA.
 ---
 name:            inflate_result_to_agpr__not_mfma
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -126,7 +125,6 @@ body:             |
 
 ---
 name:            av_split_is_phi_def_crash
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   waveLimiter:     true
@@ -314,7 +312,6 @@ body:             |
 
 ---
 name:            copy_physreg_to_av_crash
-tracksRegLiveness: true
 registers:
   - { id: 0, class: av_32, preferred-register: '$agpr0' }
 machineFunctionInfo:
@@ -336,7 +333,6 @@ body:             |
 # Non-mac variant, src2 is a physical register
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_physreg_src2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -419,7 +415,6 @@ body:             |
 # There isn't an assignable AGPR around the first MFMA.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_no_agprs_first
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -510,7 +505,6 @@ body:             |
 # There isn't an assignable AGPR around the second MFMA.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_no_agprs_second
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -601,7 +595,6 @@ body:             |
 # There isn't an assignable AGPR around the first MFMA, with physreg interference
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_no_agprs_first_physreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -720,7 +713,6 @@ body:             |
 # There isn't an assignable AGPR around the second MFMA, physreg interference
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_no_agprs_second_physreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'

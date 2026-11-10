@@ -5,7 +5,6 @@
 name: return_address_already_live_in_copy
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr30_sgpr31', virtual-reg: '%0' }
 
@@ -26,7 +25,6 @@ body: |
 name: return_address_already_block_live_in_copy_not_mf_life_in
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -46,7 +44,6 @@ body: |
 name: return_address_no_live_in
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -64,7 +61,6 @@ body: |
 name: return_address_no_live_in_non_entry_block
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: return_address_no_live_in_non_entry_block
@@ -89,7 +85,6 @@ body: |
 name: return_address_multi_use
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: return_address_multi_use
@@ -115,7 +110,6 @@ body: |
 name: return_address_kernel_is_null
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 

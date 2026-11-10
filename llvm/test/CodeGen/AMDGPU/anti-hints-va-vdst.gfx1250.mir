@@ -49,7 +49,6 @@
 # Without anti-hints: %0 gets vgpr0, DS_READ result gets vgpr0-3 (overlaps!,
 # va_vdst wait before the DS_READ)
 name:            test_valu_dsread_anti_hints
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_valu_dsread_anti_hints
@@ -92,7 +91,6 @@ body:             |
 # stays live to the end, so vgpr0 is never free for the load.
 # Both runs: %0 gets vgpr0, BUFFER_LOAD result gets vgpr2 (no overlap, no wait)
 name:            test_valu_buffer_load_anti_hints
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr10, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
@@ -136,7 +134,6 @@ body:             |
 # Without anti-hints: V_PK_ADD sources get vgpr0-3, DS_READ result gets
 # vgpr0-3 (overlaps!, va_vdst wait before the DS_READ)
 name:            test_pk_add_dsread_anti_hints
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr10

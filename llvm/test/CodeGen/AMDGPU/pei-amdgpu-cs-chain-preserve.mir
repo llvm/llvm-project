@@ -24,7 +24,6 @@
 
 ---
 name:            preserve_active_lanes_above_args
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:
@@ -56,7 +55,6 @@ body:             |
 
 ---
 name:            preserve_all_lanes_wwm_above_args
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:
@@ -101,7 +99,6 @@ body:             |
 
 ---
 name:            dont_preserve_args
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:
@@ -130,7 +127,6 @@ body:             |
 
 ---
 name:            preserve_inactive_lanes_wwm_args
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:
@@ -173,7 +169,6 @@ body:             |
 
 ---
 name:            dont_preserve_if_no_chain_calls
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     false
 machineFunctionInfo:
@@ -209,7 +204,6 @@ body:             |
 
 ---
 name:            dont_preserve_v0_v7
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:
@@ -249,7 +243,6 @@ body:             |
 
 ---
 name:            dont_preserve_sgpr
-tracksRegLiveness: true
 frameInfo:
   hasTailCall:     true
 machineFunctionInfo:

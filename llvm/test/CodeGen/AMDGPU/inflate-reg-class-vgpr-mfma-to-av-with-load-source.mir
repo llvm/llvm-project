@@ -7,7 +7,6 @@
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -93,7 +92,6 @@ body:             |
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_multi_load
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -186,7 +184,6 @@ body:             |
 # unless we also try to reassign src2 to an AGPR.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -272,7 +269,6 @@ body:             |
 # transform.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_two_chained_uses
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -359,7 +355,6 @@ body:             |
 # %0 in src0/src1, not just src2.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_two_chained_uses_repeated_operand
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -445,7 +440,6 @@ body:             |
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_two_chained_uses_cannot_rewrite_final_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -525,7 +519,6 @@ body:             |
 # does not have a tied result.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_2nd_use_not_tied
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -611,7 +604,6 @@ body:             |
 # Chain of 2 untied cases
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -696,7 +688,6 @@ body:             |
 # Chain of 2 untied cases, but the use isn't in src2.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_non_src2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -783,7 +774,6 @@ body:             |
 # uses a subregister.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -862,7 +852,6 @@ body:             |
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_local_split
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -925,7 +914,6 @@ body:             |
 # Performs a split and inflate around the single instruction
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_instruction_split
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1006,7 +994,6 @@ body:             |
 # Performs a split and inflate around the single instruction, non-tied case
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_instruction_split
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1090,7 +1077,6 @@ body:             |
 # of a simple copy.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_instruction_split_partial_uses_only
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1172,7 +1158,6 @@ body:             |
 # of used lanes instead of a simple copy,
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_instruction_split_partial_uses_only
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1252,7 +1237,6 @@ body:             |
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_same_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1342,7 +1326,6 @@ body:             |
 
 ---
 name:            chained_mfma_dst_user_is_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1434,7 +1417,6 @@ body:             |
 # the tuple copy.
 ---
 name:            chained_mfma_dst_user_is_vgpr_small_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1525,7 +1507,6 @@ body:             |
 # Transitive user of the register is an MFMA with non-register src2
 ---
 name:            chained_mfma_dst_user_has_imm_src2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1615,7 +1596,6 @@ body:             |
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_has_untied_user
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1700,7 +1680,6 @@ body:             |
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_has_untied_user_with_vgpr_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1788,7 +1767,6 @@ body:             |
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_has_tied_user
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1874,7 +1852,6 @@ body:             |
 # Non-mac variant, src2 is an immediate.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_imm_src2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -1956,7 +1933,6 @@ body:             |
 # Non-mac variant, src2 is the same VGPR, but a different subregister.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_src2_different_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'

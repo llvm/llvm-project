@@ -4,7 +4,6 @@
 # in GCNDownwardRPTracker::advanceBeforeNext().
 ---
 name:            test_revert_slot_monotonicity
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

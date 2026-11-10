@@ -7,7 +7,6 @@
 # (creating flush points) but others remain unflushed at backedge (prefetches).
 # Expected: s_wait_dscnt 0 in preheader, non-zero waits in loop.
 name: ds_prefetch_flushed
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

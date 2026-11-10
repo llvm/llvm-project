@@ -18,7 +18,6 @@
 
 ---
 name:            test_same_num_instrs
-tracksRegLiveness: true
 frameInfo:
   hasCalls:        true
 body:             |
@@ -162,7 +161,6 @@ body:             |
 
 ---
 name:            test_debug_value_same_position
-tracksRegLiveness: true
 frameInfo:
   hasCalls:        true
 body:             |

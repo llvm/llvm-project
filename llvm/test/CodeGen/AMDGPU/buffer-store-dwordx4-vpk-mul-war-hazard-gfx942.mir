@@ -22,7 +22,6 @@
 
 ---
 name: buffer_store_dwordx4_sgpr_soffset_then_vpk_mul
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $vgpr8_vgpr9, $sgpr0_sgpr1, $sgpr1, $sgpr8_sgpr9_sgpr10_sgpr11
@@ -55,7 +54,6 @@ body: |
 
 ---
 name: buffer_store_dwordx4_literal_soffset_then_vpk_mul
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $vgpr8_vgpr9, $sgpr0_sgpr1, $sgpr8_sgpr9_sgpr10_sgpr11
@@ -89,7 +87,6 @@ body: |
 
 ---
 name: buffer_store_dwordx2_sgpr_soffset_then_vpk_mul_no_hazard
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr4, $vgpr8_vgpr9, $sgpr0_sgpr1, $sgpr1, $sgpr8_sgpr9_sgpr10_sgpr11
@@ -106,7 +103,6 @@ body: |
 
 ---
 name: buffer_store_dwordx4_sgpr_soffset_then_unrelated_write
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $vgpr8_vgpr9, $sgpr0_sgpr1, $sgpr1, $sgpr8_sgpr9_sgpr10_sgpr11
@@ -136,7 +132,6 @@ body: |
 
 ---
 name: buffer_store_dwordx4_literal_soffset_then_vpk_mul_across_branch
-tracksRegLiveness: true
 body: |
   ; GFX950-LABEL: name: buffer_store_dwordx4_literal_soffset_then_vpk_mul_across_branch
   ; GFX950: bb.0:

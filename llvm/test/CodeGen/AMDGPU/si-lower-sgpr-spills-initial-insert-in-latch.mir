@@ -3,7 +3,6 @@
 
 ---
 name:            sgpr_spill_initial_insert_in_latch_moves_to_preheader
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:

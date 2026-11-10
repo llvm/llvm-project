@@ -5,7 +5,6 @@
 
 ---
 name: index_vgpr_waterfall_loop
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }

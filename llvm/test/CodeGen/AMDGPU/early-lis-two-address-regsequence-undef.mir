@@ -10,7 +10,6 @@
 
 ---
 name:            all_undef_reg_sequence
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX90A-LABEL: name: all_undef_reg_sequence
@@ -25,7 +24,6 @@ body:             |
 
 ---
 name:            tied_read_of_undef_lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GFX90A-LABEL: name: tied_read_of_undef_lane
@@ -47,7 +45,6 @@ body:             |
 
 ---
 name:            read_of_defined_and_undef_lanes
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2_vgpr3

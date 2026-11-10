@@ -4,7 +4,6 @@
 
 ---
 name:  fold_frame_index__v_add_u32_e32__const_v_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -24,7 +23,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_co_u32_e64__v_fi_const
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -46,7 +44,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_u32_e64__const_v_fi
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -66,7 +63,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_u32_e64___v_fi_const
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -86,7 +82,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_co_u32_e64___fi_const_v
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -106,7 +101,6 @@ body:             |
 
 ---
 name:  fold_frame_index__v_add_co_u32_e64__v_fi_imm
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384

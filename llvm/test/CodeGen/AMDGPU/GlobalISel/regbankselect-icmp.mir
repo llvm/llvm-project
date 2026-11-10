@@ -436,7 +436,6 @@ body: |
 ---
 name:            map_icmp_already_vcc_bank_sgpr_inputs
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -471,7 +470,6 @@ body:             |
 ---
 name:            map_icmp_already_vcc_regclass_sgpr_inputs
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1

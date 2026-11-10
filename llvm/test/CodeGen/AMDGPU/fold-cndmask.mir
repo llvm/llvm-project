@@ -8,7 +8,6 @@
 
 ---
 name:            fold_cndmask
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: vgpr_32 }

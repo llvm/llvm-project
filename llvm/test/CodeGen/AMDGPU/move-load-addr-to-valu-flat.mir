@@ -3,7 +3,6 @@
 
 ---
 name:            flat_load_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: flat_load_saddr_to_valu
   ; GCN: bb.0:
@@ -47,7 +46,6 @@ body:             |
 
 ---
 name:            flat_load_saddr_to_valu_non_zero_vaddr
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: flat_load_saddr_to_valu_non_zero_vaddr
   ; GCN: bb.0:
@@ -96,7 +94,6 @@ body:             |
 
 ---
 name:            flat_load_saddr_to_valu_undef_vaddr
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: flat_load_saddr_to_valu_undef_vaddr
   ; GCN: bb.0:
@@ -142,7 +139,6 @@ body:             |
 
 ---
 name:            flat_store_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: flat_store_saddr_to_valu
   ; GCN: bb.0:
@@ -188,7 +184,6 @@ body:             |
 
 ---
 name:            flat_atomic_noret_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: flat_atomic_noret_saddr_to_valu
   ; GCN: bb.0:
@@ -233,7 +228,6 @@ body:             |
 
 ---
 name:            flat_atomic_rtn_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: flat_atomic_rtn_saddr_to_valu
   ; GCN: bb.0:
@@ -278,7 +272,6 @@ body:             |
 
 ---
 name:            scratch_load_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: scratch_load_saddr_to_valu
   ; GCN: bb.0:
@@ -317,7 +310,6 @@ body:             |
 
 ---
 name:            scratch_store_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: scratch_store_saddr_to_valu
   ; GCN: bb.0:

@@ -73,7 +73,6 @@
 
 ---
 name: early_term_scc0_end_block
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0' }
   - { reg: '$sgpr1' }
@@ -111,7 +110,6 @@ body: |
 
 ---
 name: early_term_scc0_trailing_debug
-tracksRegLiveness: true
 body: |
   ; GCN-LABEL: name: early_term_scc0_trailing_debug
   ; GCN: bb.0:
@@ -149,7 +147,6 @@ body: |
 
 ---
 name: early_term_scc0_debug_before_instruction
-tracksRegLiveness: true
 body: |
   ; GCN-LABEL: name: early_term_scc0_debug_before_instruction
   ; GCN: bb.0:
@@ -181,7 +178,6 @@ body: |
 
 ---
 name: early_term_scc0_debug_before_terminator
-tracksRegLiveness: true
 body: |
   ; GCN-LABEL: name: early_term_scc0_debug_before_terminator
   ; GCN: bb.0:
@@ -228,7 +224,6 @@ body: |
 
 ---
 name: early_term_scc0_next_terminator
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0' }
   - { reg: '$sgpr1' }
@@ -276,7 +271,6 @@ body: |
 
 ---
 name: early_term_scc0_in_block
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0' }
   - { reg: '$sgpr1' }
@@ -321,7 +315,6 @@ body: |
 
 ---
 name: early_term_scc0_gs
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0' }
   - { reg: '$sgpr1' }
@@ -353,7 +346,6 @@ body: |
 
 ---
 name: early_term_scc0_cs
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0' }
   - { reg: '$sgpr1' }
@@ -386,7 +378,6 @@ body: |
 
 ---
 name: early_term_no_export
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0' }
   - { reg: '$sgpr1' }
@@ -424,7 +415,6 @@ body: |
 
 ---
 name: early_term_depth_only
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0' }
   - { reg: '$sgpr1' }

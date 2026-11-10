@@ -13,7 +13,6 @@
 
 ---
 name:            stack-slot-share-equal-sized-spills
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
   hasCalls:        true
@@ -79,7 +78,6 @@ body:             |
 
 ---
 name:            stack-slot-share-unequal-sized-spills-with-large-spill-first
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
   hasCalls:        true
@@ -143,7 +141,6 @@ body:             |
 
 ---
 name:            stack-slot-share-unequal-sized-spills-with-small-spill-first
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
   hasCalls:        true

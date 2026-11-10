@@ -3,7 +3,6 @@
 
 ---
 name:            global_load_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu
   ; GCN: bb.0:
@@ -47,7 +46,6 @@ body:             |
 
 ---
 name:            global_load_saddr_to_valu_non_zero_vaddr
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu_non_zero_vaddr
   ; GCN: bb.0:
@@ -96,7 +94,6 @@ body:             |
 
 ---
 name:            global_load_saddr_to_valu_undef_vaddr
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu_undef_vaddr
   ; GCN: bb.0:
@@ -142,7 +139,6 @@ body:             |
 
 ---
 name:            global_store_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_store_saddr_to_valu
   ; GCN: bb.0:
@@ -188,7 +184,6 @@ body:             |
 
 ---
 name:            global_addtid_load_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_addtid_load_saddr_to_valu
   ; GCN: bb.0:
@@ -234,7 +229,6 @@ body:             |
 
 ---
 name:            global_store_addtid_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_store_addtid_saddr_to_valu
   ; GCN: bb.0:
@@ -282,7 +276,6 @@ body:             |
 
 ---
 name:            global_atomic_noret_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_atomic_noret_saddr_to_valu
   ; GCN: bb.0:
@@ -327,7 +320,6 @@ body:             |
 
 ---
 name:            global_atomic_rtn_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: global_atomic_rtn_saddr_to_valu
   ; GCN: bb.0:
@@ -372,7 +364,6 @@ body:             |
 
 ---
 name:            scratch_load_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: scratch_load_saddr_to_valu
   ; GCN: bb.0:
@@ -411,7 +402,6 @@ body:             |
 
 ---
 name:            scratch_store_saddr_to_valu
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: scratch_store_saddr_to_valu
   ; GCN: bb.0:

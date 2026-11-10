@@ -12,7 +12,6 @@
 
 ---
 name:            no_live_subrange_at_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -53,7 +52,6 @@ body:             |
 # Different operand order
 ---
 name:            no_live_subrange_at_use_swap
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

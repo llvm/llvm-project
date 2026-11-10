@@ -27,7 +27,6 @@
 
 ---
 name:            dbg_instr_use
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: dbg_instr_use
   ; GCN: bb.0:

@@ -3,7 +3,6 @@
 
 ---
 name: urem_s32_var_const0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -21,7 +20,6 @@ body:             |
 
 ---
 name: urem_s32_var_const1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -39,7 +37,6 @@ body:             |
 
 ---
 name: urem_s32_var_const2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -59,7 +56,6 @@ body:             |
 
 ---
 name: urem_s32_var_shl1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -85,7 +81,6 @@ body:             |
 
 ---
 name: urem_s32_var_shl4096
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -111,7 +106,6 @@ body:             |
 
 ---
 name: urem_s32_var_trunc_shl4096
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -139,7 +133,6 @@ body:             |
 
 ---
 name: urem_s32_var_lshr4096
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -165,7 +158,6 @@ body:             |
 
 ---
 name: urem_s32_var_shl3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -189,7 +181,6 @@ body:             |
 
 ---
 name: urem_s32_var_shl_nonconst
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -213,7 +204,6 @@ body:             |
 
 ---
 name: urem_s64_var_shl1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -239,7 +229,6 @@ body:             |
 
 ---
 name: urem_s64_var_shl4096
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2
@@ -265,7 +254,6 @@ body:             |
 
 ---
 name: urem_v2s32_var_shl1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -294,7 +282,6 @@ body:             |
 
 ---
 name: urem_v2s32_var_shl4096
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -323,7 +310,6 @@ body:             |
 
 ---
 name: urem_v2s16_var_const4_build_vector_trunc
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -351,7 +337,6 @@ body:             |
 # value is a power of 2 due to the truncation.
 ---
 name: urem_v2s16_var_nonconst_build_vector_trunc
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -379,7 +364,6 @@ body:             |
 
 ---
 name: v_urem_v2i32_pow2k_denom
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -401,7 +385,6 @@ body:             |
 
 ---
 name: v_urem_v2i32_pow2k_not_splat_denom
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -425,7 +408,6 @@ body:             |
 
 ---
 name: v_urem_v2i64_pow2k_denom
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3

@@ -3,7 +3,6 @@
 
 ---
 name:            ushlsat_and_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -32,7 +31,6 @@ body:             |
 ...
 ---
 name:            ushlsat_and_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -62,7 +60,6 @@ body:             |
 ...
 ---
 name:            ushlsat_and_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -92,7 +89,6 @@ body:             |
 ...
 ---
 name:            ushlsat_or_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -121,7 +117,6 @@ body:             |
 ...
 ---
 name:            ushlsat_or_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -151,7 +146,6 @@ body:             |
 ...
 ---
 name:            ushlsat_or_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -181,7 +175,6 @@ body:             |
 ...
 ---
 name:            ushlsat_xor
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -211,7 +204,6 @@ body:             |
 ...
 ---
 name:            sshlsat_and_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -240,7 +232,6 @@ body:             |
 ...
 ---
 name:            sshlsat_and_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -270,7 +261,6 @@ body:             |
 ...
 ---
 name:            sshlsat_and_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -300,7 +290,6 @@ body:             |
 ...
 ---
 name:            sshlsat_or_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -329,7 +318,6 @@ body:             |
 ...
 ---
 name:            sshlsat_or_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -359,7 +347,6 @@ body:             |
 ...
 ---
 name:            sshlsat_or_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -389,7 +376,6 @@ body:             |
 ...
 ---
 name:            sshlsat_xor
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0

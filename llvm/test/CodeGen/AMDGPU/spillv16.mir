@@ -5,7 +5,6 @@
 
 ---
 name: spill_restore_vgpr16
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32

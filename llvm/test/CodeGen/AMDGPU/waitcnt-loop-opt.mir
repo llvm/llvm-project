@@ -6,7 +6,6 @@
 # The optimization flushes DSCNT in the preheader so that
 # subsequent loop iterations don't need to wait inside the loop.
 name: ds_preheader_flush_simple
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -76,7 +75,6 @@ body: |
 # The cascading wait pattern shows decreasing dscnt values (12, 8, 4, 0)
 # as each group of registers becomes ready.
 name: ds_loop_prefetch_pattern
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

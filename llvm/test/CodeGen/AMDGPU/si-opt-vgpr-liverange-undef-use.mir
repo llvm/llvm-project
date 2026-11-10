@@ -3,7 +3,6 @@
 
 ---
 name:            phi_src_undef_use_in_then
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_src_undef_use_in_then
   ; CHECK: bb.0:

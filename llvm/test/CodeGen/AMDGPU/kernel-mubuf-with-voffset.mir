@@ -13,7 +13,6 @@
 ...
 ---
 name: kernel_vgpr32_spill
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 4, alignment: 4 }

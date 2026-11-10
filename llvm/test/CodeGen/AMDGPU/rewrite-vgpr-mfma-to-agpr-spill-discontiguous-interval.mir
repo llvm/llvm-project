@@ -19,7 +19,6 @@
 ...
 ---
 name:            spill_slot_discontiguous_interval
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 machineFunctionInfo:

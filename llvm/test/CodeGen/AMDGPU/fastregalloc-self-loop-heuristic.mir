@@ -4,7 +4,6 @@
 
 ---
 name: self_loop_single_def_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -43,7 +42,6 @@ body:             |
 
 ---
 name: self_loop_multi_def
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -89,7 +87,6 @@ body:             |
 
 ---
 name: self_loop_def_use_same_inst
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -129,7 +126,6 @@ body:             |
 
 ---
 name: self_loop_def_after_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -169,7 +165,6 @@ body:             |
 
 ---
 name: self_loop_single_subreg_def_use
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'

@@ -103,7 +103,6 @@ body: |
 # CHECK: bb.4:
 # CHECK: S_NOP 0, implicit %1.sub0_sub1_sub2
 name: test3
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_128 }
 body: |

@@ -5,7 +5,6 @@
 ---
 name: phi_s32_ss_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_ss_sbranch
@@ -87,7 +86,6 @@ body: |
 ---
 name: phi_s32_sv_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_sv_sbranch
@@ -169,7 +167,6 @@ body: |
 ---
 name: phi_s32_vs_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_vs_sbranch
@@ -251,7 +248,6 @@ body: |
 ---
 name: phi_s32_vv_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_vv_sbranch
@@ -332,7 +328,6 @@ body: |
 ---
 name: phi_s32_ss_vcc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_ss_vcc_sbranch
@@ -412,7 +407,6 @@ body: |
 ---
 name: phi_s32_sv_vcc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_sv_vcc_sbranch
@@ -492,7 +486,6 @@ body: |
 ---
 name: phi_s32_vs_vcc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_vs_vcc_sbranch
@@ -572,7 +565,6 @@ body: |
 ---
 name: phi_s32_vv_vcc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_vv_vcc_sbranch
@@ -652,7 +644,6 @@ body: |
 ---
 name: phi_s1_scc_scc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_scc_scc_sbranch
@@ -749,7 +740,6 @@ body: |
 ---
 name: phi_s1_scc_scc_scc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_scc_scc_scc_sbranch
@@ -890,7 +880,6 @@ body: |
 ---
 name: phi_s1_scc_vcc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_scc_vcc_sbranch
@@ -985,7 +974,6 @@ body: |
 ---
 name: phi_s1_vcc_scc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_vcc_scc_sbranch
@@ -1080,7 +1068,6 @@ body: |
 ---
 name: phi_s1_vcc_vcc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_vcc_vcc_sbranch
@@ -1171,7 +1158,6 @@ body: |
 ---
 name: phi_s1_s_scc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_s_scc_sbranch
@@ -1266,7 +1252,6 @@ body: |
 ---
 name: phi_s1_scc_s_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_scc_s_sbranch
@@ -1361,7 +1346,6 @@ body: |
 ---
 name: phi_s1_scc_v_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_scc_v_sbranch
@@ -1460,7 +1444,6 @@ body: |
 ---
 name: phi_s1_v_scc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_v_scc_sbranch
@@ -1557,7 +1540,6 @@ body: |
 ---
 name: phi_s1_vcc_s_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_vcc_s_sbranch
@@ -1648,7 +1630,6 @@ body: |
 ---
 name: phi_s1_s_vcc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_s_vcc_sbranch
@@ -1741,7 +1722,6 @@ body: |
 ---
 name: phi_s1_vcc_v_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_vcc_v_sbranch
@@ -1842,7 +1822,6 @@ body: |
 ---
 name: phi_s1_v_vcc_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_v_vcc_sbranch
@@ -1943,7 +1922,6 @@ body: |
 ---
 name: phi_s1_v_s_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_v_s_sbranch
@@ -2038,7 +2016,6 @@ body: |
 ---
 name: phi_s1_s_v_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_s_v_sbranch
@@ -2135,7 +2112,6 @@ body: |
 ---
 name: phi_s1_v_v_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_v_v_sbranch
@@ -2230,7 +2206,6 @@ body: |
 ---
 name: phi_s1_s_s_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s1_s_s_sbranch
@@ -2324,7 +2299,6 @@ body: |
 ---
 name: phi_s32_s_loop_v_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_s_loop_v_sbranch
@@ -2404,7 +2378,6 @@ body: |
 ---
 name: phi_s32_s_loop_s_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_s_loop_s_sbranch
@@ -2483,7 +2456,6 @@ body: |
 ---
 name: phi_s32_ss_sbranch_cycle
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_ss_sbranch_cycle
@@ -2565,7 +2537,6 @@ body: |
 ---
 name: phi_s32_vs_sbranch_cycle
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_vs_sbranch_cycle
@@ -2647,7 +2618,6 @@ body: |
 ---
 name: phi_s32_aa_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_aa_sbranch
@@ -2729,7 +2699,6 @@ body: |
 ---
 name: phi_s32_av_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_av_sbranch
@@ -2810,7 +2779,6 @@ body: |
 ---
 name: phi_s32_va_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_va_sbranch
@@ -2892,7 +2860,6 @@ body: |
 ---
 name: phi_s32_as_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_as_sbranch
@@ -2974,7 +2941,6 @@ body: |
 ---
 name: phi_s32_sa_sbranch
 legalized: true
-tracksRegLiveness: true
 
 body: |
   ; FAST-LABEL: name: phi_s32_sa_sbranch

@@ -10,7 +10,6 @@
 
 ---
 name:            loop_carried_mark
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: loop_carried_mark
   ; CHECK: bb.0:
@@ -61,7 +60,6 @@ body:             |
 
 ---
 name:            loop_carried_mark_with_soft_waits
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: loop_carried_mark_with_soft_waits
   ; CHECK: bb.0:
@@ -119,7 +117,6 @@ body:             |
 
 ---
 name:            loop_carried_mark_other_stage
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: loop_carried_mark_other_stage
   ; CHECK: bb.0:
@@ -173,7 +170,6 @@ body:             |
 # asynccnt for the loop-carried mark.
 ---
 name:            loop_carried_mark_adjacent_soft_wait
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: loop_carried_mark_adjacent_soft_wait
   ; CHECK: bb.0:

@@ -12,7 +12,6 @@
 name: load_flat_s32_from_4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -70,7 +69,6 @@ body: |
 name: load_flat_s32_from_2
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -128,7 +126,6 @@ body: |
 name: load_flat_s32_from_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -244,7 +241,6 @@ body: |
 name: load_flat_v3s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -302,7 +298,6 @@ body: |
 name: load_flat_v4s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -360,7 +355,6 @@ body: |
 name: load_flat_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -418,7 +412,6 @@ body: |
 name: load_flat_v2s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -476,7 +469,6 @@ body: |
 name: load_flat_v2p1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -534,7 +526,6 @@ body: |
 name: load_flat_s96
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -592,7 +583,6 @@ body: |
 name: load_flat_s128
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -650,7 +640,6 @@ body: |
 name: load_flat_p3_from_4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -708,7 +697,6 @@ body: |
 name: load_flat_p1_from_8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -766,7 +754,6 @@ body: |
 name: load_flat_p999_from_8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -882,7 +869,6 @@ body: |
 name: load_flat_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -940,7 +926,6 @@ body: |
 name: load_flat_v4s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -998,7 +983,6 @@ body: |
 name: load_flat_v6s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1056,7 +1040,6 @@ body: |
 name: load_flat_v8s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1118,7 +1101,6 @@ body: |
 name: load_flat_s32_from_1_gep_2047
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1202,7 +1184,6 @@ body: |
 name: load_flat_s32_from_1_gep_2048
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1286,7 +1267,6 @@ body: |
 name: load_flat_s32_from_1_gep_m2047
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1386,7 +1366,6 @@ body: |
 name: load_flat_s32_from_1_gep_m2048
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1486,7 +1465,6 @@ body: |
 name: load_flat_s32_from_1_gep_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1570,7 +1548,6 @@ body: |
 name: load_flat_s32_from_1_gep_4096
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1670,7 +1647,6 @@ body: |
 name: load_flat_s32_from_1_gep_m4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1770,7 +1746,6 @@ body: |
 name: load_flat_s32_from_1_gep_m4096
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1870,7 +1845,6 @@ body: |
 name: load_flat_s32_from_1_gep_8191
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1970,7 +1944,6 @@ body: |
 name: load_flat_s32_from_1_gep_8192
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -2070,7 +2043,6 @@ body: |
 name: load_flat_s32_from_1_gep_m8191
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -2170,7 +2142,6 @@ body: |
 name: load_flat_s32_from_1_gep_m8192
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -2270,7 +2241,6 @@ body: |
 name: load_flat_s32_from_1_gep_24bit_max
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -2370,7 +2340,6 @@ body: |
 name: load_flat_s32_from_1_gep_2x_24bit_max
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -2478,7 +2447,6 @@ body: |
 name: load_flat_s32_from_1_gep_24bit_min
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -2578,7 +2546,6 @@ body: |
 name: load_flat_s32_from_1_gep_2x_24bit_min
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

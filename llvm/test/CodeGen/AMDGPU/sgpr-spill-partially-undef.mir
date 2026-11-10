@@ -5,7 +5,6 @@
 
 ---
 name:  sgpr_spill_s64_undef_high32
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs:     true
@@ -31,7 +30,6 @@ body:             |
 
 ---
 name:  sgpr_spill_s64_undef_low32
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs:     true
@@ -57,7 +55,6 @@ body:             |
 
 ---
 name:  sgpr_spill_s32_undef
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs:     true
@@ -78,7 +75,6 @@ body:             |
 
 ---
 name:  sgpr_spill_s64_undef
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs:     true

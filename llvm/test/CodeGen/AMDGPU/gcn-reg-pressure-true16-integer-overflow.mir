@@ -3,7 +3,6 @@
 
 ---
 name:            foo
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '%0' }
 body:             |

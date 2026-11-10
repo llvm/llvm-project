@@ -6,7 +6,6 @@
 
 ---
 name:  agpr-spill-to-vgpr-machine-cp
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 128, alignment: 4 }
 machineFunctionInfo:
@@ -52,7 +51,6 @@ body: |
 
 ---
 name:  agpr-spill-to-vgpr-to-stack-machine-cp
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 128, alignment: 4 }
 machineFunctionInfo:

@@ -3,7 +3,6 @@
 
 ---
 name: cndmask_b32 # can be directly converted to SDWA without a copy to VCC
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vcc
@@ -35,7 +34,6 @@ body: |
 
 ---
 name: carry-compare
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -63,7 +61,6 @@ body:             |
 
 ---
 name: carry-compare-class
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -92,7 +89,6 @@ body:             |
 ...
 ---
 name: carry-non-compare
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -121,7 +117,6 @@ body:             |
 ...
 ---
 name: carry-multiuse
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -152,7 +147,6 @@ body:             |
 ...
 ---
 name: live-vcc # cannot convert because of live VCC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -183,7 +177,6 @@ body:             |
 ...
 ---
 name: cannot-shrink-with-source-mods
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -210,7 +203,6 @@ body:             |
 ...
 ---
 name: missing-carry-def
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_64_xexec }
 body:             |
@@ -239,7 +231,6 @@ body:             |
 ...
 ---
 name: issue138766_cndmask_with_sext
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2

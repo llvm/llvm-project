@@ -31,7 +31,6 @@
 
 ---
 name:            pk_mul_virtual_32_lo_lo_32_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -58,7 +57,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_32_lo_lo_32_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -87,7 +85,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_16_lo_lo_16_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -114,7 +111,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_16_lo_lo_16_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -143,7 +139,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_32_lo_lo_32_lo_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -171,7 +166,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_32_lo_lo_32_hi_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -201,7 +195,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_16_lo_lo_16_lo_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -229,7 +222,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_16_lo_lo_16_hi_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -259,7 +251,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_32_hi_lo_32_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -287,7 +278,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_32_lo_hi_32_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -317,7 +307,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_16_hi_lo_16_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -345,7 +334,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_16_hi_lo_16_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -375,7 +363,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_32_hi_hi_32_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -404,7 +391,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_32_hi_hi_32_lo_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -435,7 +421,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_16_hi_hi_16_hi_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -462,7 +447,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_16_hi_hi_16_hi_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -491,7 +475,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_32_hi_hi_32_hi_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -518,7 +501,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_32_hi_hi_32_hi_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -547,7 +529,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_16_lo_lo_16_lo_lo_superreg_definition
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -574,7 +555,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_16_lo_lo_16_lo_lo_superreg_definition
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -604,7 +584,6 @@ body:             |
 
 ---
 name:            pk_mul_virtual_16_hi_hi_16_hi_hi_superreg_definition
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -631,7 +610,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_16_hi_hi_16_hi_hi_superreg_definition
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -661,7 +639,6 @@ body:             |
 
 ---
 name:            pk_mul_physical_16_hi_hi_16_hi_hi_superreg_definition1
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -690,7 +667,6 @@ body:             |
 
 ---
 name:            mad_mix_virtual_16_lo_16_lo_16_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -717,7 +693,6 @@ body:             |
 
 ---
 name:            mad_mix_physical_16_lo_16_lo_16_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -746,7 +721,6 @@ body:             |
 
 ---
 name:            mad_mix_virtual_16_hi_16_hi_16_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -773,7 +747,6 @@ body:             |
 
 ---
 name:            mad_mix_physical_16_hi_16_hi_16_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -802,7 +775,6 @@ body:             |
 
 ---
 name:            mad_mix_virtual_16_hi_16_lo_16_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -831,7 +803,6 @@ body:             |
 
 ---
 name:            mad_mix_physical_16_hi_16_lo_16_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -862,7 +833,6 @@ body:             |
 
 ---
 name:            mad_mix_virtual_32_hi_32_hi_32_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -889,7 +859,6 @@ body:             |
 
 ---
 name:            mad_mix_physical_32_lo_32_lo_32_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -918,7 +887,6 @@ body:             |
 
 ---
 name:            mad_mix_virtual_32_hi_32_hi_32_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -947,7 +915,6 @@ body:             |
 
 ---
 name:            mad_mix_physical_32_lo_32_hi_32_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |

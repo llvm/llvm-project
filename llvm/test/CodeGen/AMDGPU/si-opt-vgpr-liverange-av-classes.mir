@@ -8,7 +8,6 @@
 
 ---
 name:            else_av_32
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: else_av_32
   ; CHECK: bb.0:
@@ -94,7 +93,6 @@ body:             |
 
 ---
 name:            else_av_64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: else_av_64
   ; CHECK: bb.0:
@@ -183,7 +181,6 @@ body:             |
 # Flow block.
 ---
 name:            endif_phi_av_32
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: endif_phi_av_32
   ; CHECK: bb.0:
@@ -263,7 +260,6 @@ body:             |
 # PHI in the loop header with an undef input from the loop latch.
 ---
 name:            waterfall_av_32
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: waterfall_av_32
   ; CHECK: bb.0:

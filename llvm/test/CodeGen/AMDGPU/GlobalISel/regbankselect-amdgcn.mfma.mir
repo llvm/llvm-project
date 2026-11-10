@@ -4,7 +4,6 @@
 ---
 name: mfma_f32_32x32x1f32_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
@@ -29,7 +28,6 @@ body: |
 ---
 name: mfma_f32_32x32x1f32_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
@@ -56,7 +54,6 @@ body: |
 ---
 name: mfma_f32_16x16x1f32_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -81,7 +78,6 @@ body: |
 ---
 name: mfma_f32_16x16x1f32_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -108,7 +104,6 @@ body: |
 ---
 name: mfma_f32_4x4x1f32_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3
@@ -133,7 +128,6 @@ body: |
 ---
 name: mfma_f32_4x4x1f32_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3
@@ -160,7 +154,6 @@ body: |
 ---
 name: mfma_f32_32x32x2f32_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -185,7 +178,6 @@ body: |
 ---
 name: mfma_f32_32x32x2f32_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -212,7 +204,6 @@ body: |
 ---
 name: mfma_f32_16x16x4f32_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3
@@ -237,7 +228,6 @@ body: |
 ---
 name: mfma_f32_16x16x4f32_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3
@@ -264,7 +254,6 @@ body: |
 ---
 name: mfma_f32_32x32x4f16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
@@ -289,7 +278,6 @@ body: |
 ---
 name: mfma_f32_32x32x4f16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32_sgpr33, $sgpr34_sgpr35, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
@@ -316,7 +304,6 @@ body: |
 ---
 name: mfma_f32_16x16x4f16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -341,7 +328,6 @@ body: |
 ---
 name: mfma_f32_16x16x4f16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32_sgpr33, $sgpr34_sgpr35, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -368,7 +354,6 @@ body: |
 ---
 name: mfma_f32_4x4x4f16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3
@@ -393,7 +378,6 @@ body: |
 ---
 name: mfma_f32_4x4x4f16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32_sgpr33, $sgpr34_sgpr35, $sgpr0_sgpr1_sgpr2_sgpr3
@@ -420,7 +404,6 @@ body: |
 ---
 name: mfma_f32_32x32x8f16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -445,7 +428,6 @@ body: |
 ---
 name: mfma_f32_32x32x8f16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32_sgpr33, $sgpr34_sgpr35, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -472,7 +454,6 @@ body: |
 ---
 name: mfma_f32_16x16x16f16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3
@@ -497,7 +478,6 @@ body: |
 ---
 name: mfma_f32_16x16x16f16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32_sgpr33, $sgpr34_sgpr35, $sgpr0_sgpr1_sgpr2_sgpr3
@@ -524,7 +504,6 @@ body: |
 ---
 name: mfma_i32_32x32x4i8_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
@@ -549,7 +528,6 @@ body: |
 ---
 name: mfma_i32_32x32x4i8_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
@@ -576,7 +554,6 @@ body: |
 ---
 name: mfma_i32_16x16x4i8_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -601,7 +578,6 @@ body: |
 ---
 name: mfma_i32_16x16x4i8_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -628,7 +604,6 @@ body: |
 ---
 name: mfma_i32_4x4x4i8_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3
@@ -653,7 +628,6 @@ body: |
 ---
 name: mfma_i32_4x4x4i8_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3
@@ -680,7 +654,6 @@ body: |
 ---
 name: mfma_i32_32x32x8i8_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -705,7 +678,6 @@ body: |
 ---
 name: mfma_i32_32x32x8i8_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -732,7 +704,6 @@ body: |
 ---
 name: mfma_i32_16x16x16i8_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3
@@ -757,7 +728,6 @@ body: |
 ---
 name: mfma_i32_16x16x16i8_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3
@@ -784,7 +754,6 @@ body: |
 ---
 name: mfma_f32_32x32x2bf16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
@@ -809,7 +778,6 @@ body: |
 ---
 name: mfma_f32_32x32x2bf16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
@@ -836,7 +804,6 @@ body: |
 ---
 name: mfma_f32_16x16x2bf16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -861,7 +828,6 @@ body: |
 ---
 name: mfma_f32_16x16x2bf16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -888,7 +854,6 @@ body: |
 ---
 name: mfma_f32_4x4x2bf16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3
@@ -913,7 +878,6 @@ body: |
 ---
 name: mfma_f32_4x4x2bf16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3
@@ -940,7 +904,6 @@ body: |
 ---
 name: mfma_f32_32x32x4bf16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
@@ -965,7 +928,6 @@ body: |
 ---
 name: mfma_f32_32x32x4bf16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
@@ -992,7 +954,6 @@ body: |
 ---
 name: mfma_f32_16x16x8bf16_vva
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr2, $agpr0_agpr1_agpr2_agpr3
@@ -1017,7 +978,6 @@ body: |
 ---
 name: mfma_f32_16x16x8bf16_sss
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr32, $sgpr33, $sgpr0_sgpr1_sgpr2_sgpr3

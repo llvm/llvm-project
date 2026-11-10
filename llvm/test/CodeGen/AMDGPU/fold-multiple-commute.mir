@@ -5,7 +5,6 @@
 # 0 into multiple uses as an inline operand.
 ---
 name: test_commute
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vcc

@@ -13,7 +13,6 @@
 
 ---
 name:            single-wave-phase-2b
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       1
 body:             |

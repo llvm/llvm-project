@@ -6,7 +6,6 @@
 name:            fract_f64_neg
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.1:
@@ -74,7 +73,6 @@ body: |
 name:            fract_f64_neg_abs
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.1:

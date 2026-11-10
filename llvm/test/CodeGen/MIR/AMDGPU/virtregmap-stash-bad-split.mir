@@ -6,7 +6,6 @@
 # CHECK: expected a virtual register
 ---
 name: bad_split
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, split-from: '$vgpr5' }
 body: |

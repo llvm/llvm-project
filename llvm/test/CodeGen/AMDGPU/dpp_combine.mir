@@ -17,7 +17,6 @@
 # GCN: %16:vgpr_32 = V_NOT_B32_e32 %15, implicit $exec
 # GCN: %18:vgpr_32 = V_NOT_B32_e32 %17, implicit $exec
 name: old_is_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -101,7 +100,6 @@ body: |
 # GCN: %18:vgpr_32 = V_NOT_B32_e32 %17, implicit $exec
 
 name: old_is_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -151,7 +149,6 @@ body: |
 # GCN: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
 
 name: nonzero_old_is_identity_masks_enabled_bctl_off
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -189,7 +186,6 @@ body: |
 # GCN: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
 
 name: nonzero_old_is_identity_masks_partially_disabled_bctl_off
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -227,7 +223,6 @@ body: |
 # GCN: %13:vgpr_32 = V_MIN_I32_e32 %12, %1, implicit $exec
 
 name: nonzero_old_is_identity_masks_partially_disabled_bctl0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -261,7 +256,6 @@ body: |
 # GCN-NEXT: %16:vgpr_32 = V_SUB_CO_U32_e32 %1, %15, implicit-def $vcc, implicit $exec
 # GCN: %19:vgpr_32 = V_ADD_CO_U32_e32 5, %18, implicit-def $vcc, implicit $exec
 name: dpp_commute
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -306,7 +300,6 @@ body:             |
 # GCN: %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $mode, implicit $exec
 
 name: add_f32_e64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -338,7 +331,6 @@ body:             |
 # GCN: %6:vgpr_32 = V_ADD_U32_e64 %5, %1, 1, implicit $exec
 
 name: add_u32_e64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -360,7 +352,6 @@ body:             |
 # GCN: %4:vgpr_32, %5:sreg_64_xexec = V_ADD_CO_U32_e64 %3, %1, 0, implicit $exec
 
 name: add_co_u32_e64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -386,7 +377,6 @@ body:             |
 # GCN: %7:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 14, 15, 0, implicit $exec
 
 name: dpp_seq
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -413,7 +403,6 @@ body: |
 # GCN-NEXT: %6:vgpr_32 = V_OR_B32_e32 %3, %1, implicit $exec
 
 name: dpp_seq_cf
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1, %bb.2
@@ -442,7 +431,6 @@ body: |
 # GCN: %4:vgpr_32 = V_ADD_U32_dpp %0, %1, %0, 1, 1, 1, 0, implicit $exec
 
 name: old_in_diff_bb
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -463,7 +451,6 @@ body: |
 # GCN: %4:vgpr_32 = V_ADD_U32_dpp {{%[0-9]}}, %0, %1, 1, 15, 15, 1, implicit $exec
 
 name: old_in_diff_bb_bctrl_zero
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -484,7 +471,6 @@ body: |
 # GCN: %3:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
 
 name: exec_changed
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -504,7 +490,6 @@ body: |
 # GCN: %7:vgpr_32 = V_MUL_I32_I24_dpp %0.sub1, %1, %0.sub1, 1, 1, 1, 0, implicit $exec
 
 name:            mul_old_subreg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -523,7 +508,6 @@ body: |
 # GCN: %5:vgpr_32 = V_ADD_U32_dpp %0.sub1, %1, %0.sub1, 1, 1, 1, 0, implicit $exec
 
 name:            add_old_subreg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -540,7 +524,6 @@ body: |
 # GCN: %5:vgpr_32 = V_ADD_U32_dpp undef %3.sub1, %1, %0.sub1, 1, 15, 15, 1, implicit $exec
 
 name:            add_old_subreg_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -557,7 +540,6 @@ body: |
 # GCN-LABEL: name: dpp_vop1
 # GCN: %3:vgpr_32 = V_CEIL_F32_dpp %0, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: dpp_vop1
-tracksRegLiveness: true
 body: |
   bb.0:
     %1:vgpr_32 = IMPLICIT_DEF
@@ -569,7 +551,6 @@ body: |
 # GCN-LABEL: name: dpp_min
 # GCN: %3:vgpr_32 = V_MIN_F32_dpp %0, 0, undef %2:vgpr_32, 0, undef %4:vgpr_32, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: dpp_min
-tracksRegLiveness: true
 body: |
   bb.0:
     %1:vgpr_32 = IMPLICIT_DEF
@@ -581,7 +562,6 @@ body: |
 # GCN-LABEL: name: dpp_undef_old
 # GCN: %3:vgpr_32 = V_CEIL_F32_dpp undef %1:vgpr_32, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: dpp_undef_old
-tracksRegLiveness: true
 body: |
   bb.0:
     %2:vgpr_32 = V_MOV_B32_dpp undef %1:vgpr_32, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
@@ -593,7 +573,6 @@ body: |
 # GCN: $vgpr0 = V_MOV_B32_dpp undef %0:vgpr_32, undef %1:vgpr_32, 1, 15, 15, 1, implicit $exec
 # GCN: %2:vgpr_32 = V_CEIL_F32_e32 $vgpr0, implicit $mode, implicit $exec
 name: phys_dpp_mov_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     $vgpr0 = V_MOV_B32_dpp undef %1:vgpr_32, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
@@ -605,7 +584,6 @@ body: |
 # GCN: %0:vgpr_32 = V_MOV_B32_dpp undef $vgpr0, undef %1:vgpr_32, 1, 15, 15, 1, implicit $exec
 # GCN: %2:vgpr_32 = V_CEIL_F32_e32 %0, implicit $mode, implicit $exec
 name: phys_dpp_mov_old_src
-tracksRegLiveness: true
 body: |
   bb.0:
     %1:vgpr_32 = V_MOV_B32_dpp undef $vgpr0, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
@@ -617,7 +595,6 @@ body: |
 # GCN: %0:vgpr_32 = V_MOV_B32_dpp undef %1:vgpr_32, undef $vgpr0, 1, 15, 15, 1, implicit $exec
 # GCN: %2:vgpr_32 = V_CEIL_F32_e32 %0, implicit $mode, implicit $exec
 name: phys_dpp_mov_src
-tracksRegLiveness: true
 body: |
   bb.0:
     %1:vgpr_32 = V_MOV_B32_dpp undef %0:vgpr_32, undef $vgpr0, 1, 15, 15, 1, implicit $exec
@@ -633,7 +610,6 @@ body: |
 # GCN: %6:vgpr_32 = V_ADD_CO_U32_dpp %9, %1.sub0, %2, 1, 15, 15, 1, implicit-def $vcc, implicit $exec
 # GCN: %7:vgpr_32 = V_ADDC_U32_dpp %8, %1.sub1, %2, 1, 15, 15, 1, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dpp_reg_sequence_both_combined
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -658,7 +634,6 @@ body: |
 # GCN: %6:vgpr_32 = V_ADD_CO_U32_dpp %8, %1.sub0, %2, 1, 15, 15, 1, implicit-def $vcc, implicit $exec
 # GCN: %7:vgpr_32 = V_ADDC_U32_e32 %5.sub1, %2, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dpp_reg_sequence_first_combined
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -683,7 +658,6 @@ body: |
 # GCN: %6:vgpr_32 = V_ADD_CO_U32_e32 %5.sub0, %2, implicit-def $vcc, implicit $exec
 # GCN: %7:vgpr_32 = V_ADDC_U32_dpp %8, %1.sub1, %2, 1, 15, 15, 1, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dpp_reg_sequence_second_combined
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -708,7 +682,6 @@ body: |
 # GCN: %6:vgpr_32 = V_ADD_CO_U32_e32 %5.sub0, %2, implicit-def $vcc, implicit $exec
 # GCN: %7:vgpr_32 = V_ADDC_U32_e32 %5.sub1, %2, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dpp_reg_sequence_none_combined
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -735,7 +708,6 @@ body: |
 # GCN:   %6:vgpr_32 = V_ADD_CO_U32_e32 %5.sub0, %2, implicit-def $vcc, implicit $exec
 # GCN:   %7:vgpr_32 = V_ADDC_U32_e32 %5.sub1, %2, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dpp_reg_sequence_exec_changed
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -764,7 +736,6 @@ body: |
 # GCN: %7:vgpr_32 = V_ADD_CO_U32_e32 %6.sub0, %2, implicit-def $vcc, implicit $exec
 # GCN: %8:vgpr_32 = V_ADDC_U32_e32 %6.sub1, %2, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dpp_reg_sequence_subreg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -784,7 +755,6 @@ body: |
 # GCN: %3:vgpr_32 = V_ADD_CO_U32_dpp %1.sub0, %0.sub0, undef %4:vgpr_32, 1, 15, 15, 1, implicit-def $vcc, implicit $exec
 # GCN: %5:vgpr_32 = V_ADDC_U32_dpp %1.sub1, %0.sub1, undef %4:vgpr_32, 1, 15, 15, 1, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dpp64_add64_impdef
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vreg_64 = IMPLICIT_DEF
@@ -798,7 +768,6 @@ body: |
 # GCN: %3:vgpr_32 = V_ADD_CO_U32_dpp undef %1.sub0:vreg_64, undef %2.sub0:vreg_64, undef %4:vgpr_32, 1, 15, 15, 1, implicit-def $vcc, implicit $exec
 # GCN: %5:vgpr_32 = V_ADDC_U32_dpp undef %1.sub1:vreg_64, undef %2.sub1:vreg_64, undef %4:vgpr_32, 1, 15, 15, 1, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dpp64_add64_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     %2:vreg_64 = V_MOV_B64_DPP_PSEUDO undef %1:vreg_64, undef %0:vreg_64, 1, 15, 15, 1, implicit $exec
@@ -812,7 +781,6 @@ body: |
 # GCN: %3:vgpr_32 = V_ADD_CO_U32_dpp undef %1.sub0:vreg_64, undef %2.sub0:vreg_64, undef %4:vgpr_32, 1, 15, 15, 1, implicit-def $vcc, implicit $exec
 # GCN: %5:vgpr_32, dead %6:sreg_64_xexec = V_ADDC_U32_e64 1, %0.sub1, undef $vcc, 0, implicit $exec
 name: dpp64_add64_first_combined
-tracksRegLiveness: true
 body: |
   bb.0:
     %2:vreg_64 = V_MOV_B64_DPP_PSEUDO undef %1:vreg_64, undef %0:vreg_64, 1, 15, 15, 1, implicit $exec
@@ -823,7 +791,6 @@ body: |
 # GCN-LABEL: name: dont_combine_cndmask_with_src2
 # GCN: %5:vgpr_32 = V_CNDMASK_B32_e64 0, %3, 0, %1, %4, implicit $exec
 name: dont_combine_cndmask_with_src2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -842,7 +809,6 @@ body: |
 # GCN-LABEL: name: flags_add_f32_e64
 # GCN: %4:vgpr_32 = nnan nofpexcept V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
 name: flags_add_f32_e64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -860,7 +826,6 @@ body:             |
 # GCN-LABEL: name: dont_combine_more_than_one_operand
 # GCN: %3:vgpr_32 = V_MAX_F32_e64 0, %2, 0, %2, 0, 0, implicit $mode, implicit $exec
 name: dont_combine_more_than_one_operand
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -874,7 +839,6 @@ body: |
 # GCN: %5:vgpr_32 = V_ADD_CO_U32_e32 %4.sub0, %4.sub0, implicit-def $vcc, implicit $exec
 # GCN: %6:vgpr_32 = V_ADDC_U32_e32 %4.sub1, %4.sub1, implicit-def $vcc, implicit $vcc, implicit $exec
 name: dont_combine_more_than_one_operand_dpp_reg_sequence
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -891,7 +855,6 @@ body: |
 # V_MOV_B32_dpp was the last instruction in the block.
 ---
 name:            mov_dpp_last_block_inst
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: mov_dpp_last_block_inst
   ; GCN: bb.0:

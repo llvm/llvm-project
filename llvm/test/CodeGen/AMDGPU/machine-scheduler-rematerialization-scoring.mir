@@ -31,7 +31,6 @@
 # %32's defining and using region frequencies are identical therefore it is the
 # best register to rematerialize.
 name:            favor_same_frequency
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -196,7 +195,6 @@ body:             |
 # bb.2's frequency is lesser than bb.4's therefore it is preferable to
 # rematerialize registers in bb.2 instead of bb.4.
 name:            favor_lower_frequency
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -360,7 +358,6 @@ body:             |
 ---
 # Rematerializing registers used in bb.4 is the only option.
 name:            remat_in_only_possible_region
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

@@ -29,7 +29,6 @@
 # the scheduler's rematerialization stage. Register usage above that number
 # is considered like spill.
 name:            small_num_sgprs_as_spill
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -352,7 +351,6 @@ body:             |
 # is necessary.
 ---
 name:            small_num_vgprs_as_spill
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -443,7 +441,6 @@ body:             |
 # stage should not try to rematerialize instructions.
 ---
 name:            dont_remat_waves_per_eu
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -607,7 +604,6 @@ body:             |
 # try to rematerialize instructions.
 ---
 name:            dont_remat_at_max_occ
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -758,7 +754,6 @@ body:             |
 # more ArchVGPRs to eliminate spilling.
 ---
 name:            reduce_arch_and_acc_vgpr_spill
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -1032,7 +1027,6 @@ body:             |
 # AGPR for one of the ArchVGPRs.
 ---
 name:            reduce_spill_archvgpr_above_addressable_limit
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -1918,7 +1912,6 @@ body:             |
 # ArchVGPR for one of the AGPRs.
 ---
 name:            reduce_spill_agpr_above_addressable_limit
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

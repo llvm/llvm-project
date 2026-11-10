@@ -7,7 +7,6 @@
   attributes #0 = { "amdgpu-waves-per-eu"="8,8" nounwind }
 ---
 name: agpr_spill_copy
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 4 }
 machineFunctionInfo:

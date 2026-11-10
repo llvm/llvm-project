@@ -10,7 +10,6 @@
 
 ---
 name:            indirect_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr1, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -25,7 +24,6 @@ body:             |
 # CHECK: ; codeLenInByte = 4
 ---
 name:            meta
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -40,7 +38,6 @@ body:             |
 # CHECK: ; codeLenInByte = 4
 ---
 name:            wait_asyncmark_meta
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -57,7 +54,6 @@ body:             |
 
 ---
 name:            align4
-tracksRegLiveness: true
 body:             |
   bb.0:
     $scc = IMPLICIT_DEF
@@ -79,7 +75,6 @@ body:             |
 # CHECK: ; codeLenInByte = 20
 ---
 name:            align8
-tracksRegLiveness: true
 body:             |
   bb.0:
     $scc = IMPLICIT_DEF
@@ -101,7 +96,6 @@ body:             |
 # CHECK: ; codeLenInByte = 20
 ---
 name:            align16
-tracksRegLiveness: true
 body:             |
   bb.0:
     $scc = IMPLICIT_DEF
@@ -123,7 +117,6 @@ body:             |
 # CHECK: ; codeLenInByte = 36
 ---
 name:            align32
-tracksRegLiveness: true
 body:             |
   bb.0:
     $scc = IMPLICIT_DEF

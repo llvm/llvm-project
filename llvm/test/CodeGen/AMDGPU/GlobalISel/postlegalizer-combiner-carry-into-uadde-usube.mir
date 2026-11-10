@@ -3,7 +3,6 @@
 
 ---
 name: add_zext_uaddo_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -27,7 +26,6 @@ body: |
 
 ---
 name: add_zext_uaddo_carry_commuted
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -51,7 +49,6 @@ body: |
 
 ---
 name: sub_zext_usubo_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -75,7 +72,6 @@ body: |
 
 ---
 name: sub_zext_usubo_carry_lhs_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -99,7 +95,6 @@ body: |
 
 ---
 name: add_zext_uadde_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -127,7 +122,6 @@ body: |
 
 ---
 name: sub_zext_usube_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -155,7 +149,6 @@ body: |
 
 ---
 name: add_zext_usubo_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -181,7 +174,6 @@ body: |
 
 ---
 name: sub_zext_uaddo_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -207,7 +199,6 @@ body: |
 
 ---
 name: add_zext_carry_s64_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -233,7 +224,6 @@ body: |
 
 ---
 name: add_zext_multi_use_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:

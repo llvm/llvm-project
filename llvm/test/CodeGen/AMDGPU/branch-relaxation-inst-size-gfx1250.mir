@@ -23,7 +23,6 @@
 
 ---
 name: s_mov_b64_64bit_literal_size
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
   stackPtrOffsetReg: '$sgpr32'

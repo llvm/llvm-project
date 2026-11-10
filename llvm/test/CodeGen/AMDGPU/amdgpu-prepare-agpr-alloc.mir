@@ -24,7 +24,6 @@
 ...
 ---
 name: func
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4 }
 body:             |
@@ -76,7 +75,6 @@ body:             |
 
 ---
 name: no_agprs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -104,7 +102,6 @@ body:             |
 
 ---
 name: func64
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4 }
 body:             |
@@ -177,7 +174,6 @@ body:             |
 
 ---
 name: func64_no_agprs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

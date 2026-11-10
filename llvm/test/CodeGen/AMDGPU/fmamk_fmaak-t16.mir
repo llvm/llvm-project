@@ -3,7 +3,6 @@
 
 ---
 name:            v_fmamk_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -20,7 +19,6 @@ body:             |
 
 ---
 name:            v_fmaak_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

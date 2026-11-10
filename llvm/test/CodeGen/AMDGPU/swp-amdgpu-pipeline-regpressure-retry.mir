@@ -19,7 +19,6 @@
 
 ---
 name:            swp_amdgpu_pipeline_regpressure_retry
-tracksRegLiveness: true
 isSSA:           true
 machineFunctionInfo:
   isEntryFunction: true

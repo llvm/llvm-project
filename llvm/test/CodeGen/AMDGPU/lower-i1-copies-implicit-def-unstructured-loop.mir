@@ -10,7 +10,6 @@
 
 ---
 name:            recursive_vreg_1_phi
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

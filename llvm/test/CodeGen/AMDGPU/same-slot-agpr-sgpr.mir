@@ -3,7 +3,6 @@
 
 ---
 name: same_slot_agpr_sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -41,7 +40,6 @@ body: |
 ...
 ---
 name: diff_slot_agpr_sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
   - { id: 1, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4 }
@@ -80,7 +78,6 @@ body: |
 ...
 ---
 name: dead_vgpr_slot
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
 machineFunctionInfo:

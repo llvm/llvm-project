@@ -11,7 +11,6 @@
 
 ---
 name:            live_variable_update
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: live_variable_update
   ; CHECK: bb.0:

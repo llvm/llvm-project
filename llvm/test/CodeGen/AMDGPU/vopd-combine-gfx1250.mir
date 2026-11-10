@@ -5,7 +5,6 @@
 
 ---
 name:            vopd_combine_low_vgprs
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -36,7 +35,6 @@ body:             |
 
 ---
 name:            vopd_combine_hi_vgprs
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -70,7 +68,6 @@ body:             |
 
 ---
 name:            vopd_combine_hi_vgprs_above_512
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -104,7 +101,6 @@ body:             |
 
 ---
 name:            mixed_vgprs_low_and_hi_dst
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -139,7 +135,6 @@ body:             |
 
 ---
 name:            mixed_vgprs_low_and_hi_scr0
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -178,7 +173,6 @@ body:             |
 
 ---
 name:            mixed_vgprs_low_and_hi_scr1
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -219,7 +213,6 @@ body:             |
 
 ---
 name:            mixed_vgprs_hi_and_hi_dst_different_msb
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -251,7 +244,6 @@ body:             |
 
 ---
 name:            mixed_vgprs_low_and_hi_scr0_different_msb
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -291,7 +283,6 @@ body:             |
 
 ---
 name:            vopd_combine_sgpr_src0
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -332,7 +323,6 @@ body:             |
 
 ---
 name:            vopd_combine_imm_src0
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -369,7 +359,6 @@ body:             |
 
 ---
 name:            vopd_mov_max_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -400,7 +389,6 @@ body:             |
 
 ---
 name:            vopd_mov_min_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -431,7 +419,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_max_i32_max_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -460,7 +447,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_min_i32_min_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -489,7 +475,6 @@ body:             |
 
 ---
 name:            vopd_mov_sub_nc_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -520,7 +505,6 @@ body:             |
 
 ---
 name:            vopd_mov_lshrrev_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -551,7 +535,6 @@ body:             |
 
 ---
 name:            vopd_mov_ashrrev_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -582,7 +565,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_same_vgprs_banks
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -619,7 +601,6 @@ body:             |
 
 ---
 name:            vopd_combine_same_vgprs
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -650,7 +631,6 @@ body:             |
 
 ---
 name:            vopd_combine_same_dst_parity
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -681,7 +661,6 @@ body:             |
 
 ---
 name:            vopd_combine_x_fmaak
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -712,7 +691,6 @@ body:             |
 
 ---
 name:            vopd_combine_y_fmaak
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -743,7 +721,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_x_fmaak_same_dst_parity
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -776,7 +753,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_y_fmaak_same_dst_parity
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -809,7 +785,6 @@ body:             |
 
 ---
 name:            vopd_combine_literal_x
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -840,7 +815,6 @@ body:             |
 
 ---
 name:            vopd_combine_literal_y
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -873,7 +847,6 @@ body:             |
 # encode the literal, so the literal is moved into a scalar register first.
 ---
 name:            vopd_combine_moved_literal_x
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -906,7 +879,6 @@ body:             |
 
 ---
 name:            vopd_combine_moved_literal_y
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -939,7 +911,6 @@ body:             |
 
 ---
 name:            vopd_combine_add_u32_add_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -978,7 +949,6 @@ body:             |
 
 ---
 name:            vopd_combine_add_f32_add_u32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1017,7 +987,6 @@ body:             |
 
 ---
 name:            vopd_combine_add_u32_add_f32_same_dst_parity
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1052,7 +1021,6 @@ body:             |
 
 ---
 name:            vopd_combine_add_f32_add_u32_same_dst_parity
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1087,7 +1055,6 @@ body:             |
 
 ---
 name:            vopd_combine_lshl_lshl
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1122,7 +1089,6 @@ body:             |
 
 ---
 name:            vopd_combine_ashr_ashr
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1157,7 +1123,6 @@ body:             |
 
 ---
 name:            vopd_combine_lshr_lshr
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1194,7 +1159,6 @@ body:             |
 
 ---
 name:            vopd_combine_sub_u32_sub_u32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1229,7 +1193,6 @@ body:             |
 
 ---
 name:            vopd_combine_sub_u32_sub_u32_moved_lit
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1264,7 +1227,6 @@ body:             |
 # two scalar registers, which the encoding allows.
 ---
 name:            vopd_combine_null_with_two_sgprs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1291,7 +1253,6 @@ body:             |
 # two instructions are left alone.
 ---
 name:            vopd_no_combine_lit_without_free_sgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr16_sgpr17_sgpr18_sgpr19, $sgpr20_sgpr21_sgpr22_sgpr23, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr32_sgpr33_sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39, $sgpr40_sgpr41_sgpr42_sgpr43, $sgpr44_sgpr45_sgpr46_sgpr47, $sgpr48_sgpr49_sgpr50_sgpr51, $sgpr52_sgpr53_sgpr54_sgpr55, $sgpr56_sgpr57_sgpr58_sgpr59, $sgpr60_sgpr61_sgpr62_sgpr63, $sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75, $sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83, $sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91, $sgpr92_sgpr93_sgpr94_sgpr95, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr104, $sgpr105
@@ -1336,7 +1297,6 @@ body:             |
 
 ---
 name:            vopd_combine_fmac_fmac
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1371,7 +1331,6 @@ body:             |
 
 ---
 name:            vopd_combine_fmac_fmac_same_dst_parity
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1406,7 +1365,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fmac_fmac_same_dst
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1439,7 +1397,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_add_f32_fadd_f32_same_dst
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1468,7 +1425,6 @@ body:             |
 
 ---
 name:            vopd_combine_add_f64_add_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1511,7 +1467,6 @@ body:             |
 
 ---
 name:            vopd_combine_add_f32_add_f64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1554,7 +1509,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_add_f64_add_f64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1603,7 +1557,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_add_f64_add_f32_overlapping_dst
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1648,7 +1601,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_add_f64_add_f32_overlapping_src_sub1
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1685,7 +1637,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_add_f64_add_f32_overlapping_src_sub0
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1722,7 +1673,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_fma
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1769,7 +1719,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fma_fma_bank_conflict_src2
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1818,7 +1767,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_add_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1861,7 +1809,6 @@ body:             |
 
 ---
 name:            vopd_combine_add_f32_fma
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1904,7 +1851,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_add_f64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1947,7 +1893,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fma_src0_mod_fma
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -1996,7 +1941,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fma_fma_src1_mod
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2045,7 +1989,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fma_fma_src2_mod
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2094,7 +2037,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fma_clamp_fma
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2143,7 +2085,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fma_fma_omod
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2192,7 +2133,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_fma_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2239,7 +2179,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_fma_src0_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2286,7 +2225,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_fma_src1_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2333,7 +2271,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_fma_src2_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2380,7 +2317,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_f64_fma_f32_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2427,7 +2363,6 @@ body:             |
 
 ---
 name:            vopd_combine_lshl_add_u64_fma
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2476,7 +2411,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_lshl_add_u64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2525,7 +2459,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_lshl_add_u64_fma_overlapping_src2
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2570,7 +2503,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_lshl_add_u64_fma_src0_conflict
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2619,7 +2551,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_lshl_add_u64_fma_src1_conflict
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2668,7 +2599,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_f64_fma_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2715,7 +2645,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fma_f64_fma_f32_overlapping_src1
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2760,7 +2689,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_f32_add_f64_e32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2803,7 +2731,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_f32_add_f64_e64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2846,7 +2773,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_f32_add_f64_e64_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2889,7 +2815,6 @@ body:             |
 
 ---
 name:            vopd_combine_fma_bitop
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2933,7 +2858,6 @@ body:             |
 # Make sure bitop3 modifier does not count against constant bus limit.
 ---
 name:            vopd_combine_fma_bitop_2_scalar_src
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -2976,7 +2900,6 @@ body:             |
 
 ---
 name:            vopd_combine_bitop_mov_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3011,7 +2934,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_mov_b32_bitop_non_imm_src2
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3048,7 +2970,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_mov_b32_bitop_non_zero_src2
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3085,7 +3006,6 @@ body:             |
 
 ---
 name: vopd_no_combine_bitop3_mov_dpp_vgpr_src2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SCHED-LABEL: name: vopd_no_combine_bitop3_mov_dpp_vgpr_src2
@@ -3122,7 +3042,6 @@ body:             |
 
 ---
 name:            vopd_combine_mov_or
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3157,7 +3076,6 @@ body:             |
 
 ---
 name:            vopd_combine_mov_and
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3192,7 +3110,6 @@ body:             |
 
 ---
 name:            vopd_combine_mov_xor
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3227,7 +3144,6 @@ body:             |
 
 ---
 name:            vopd_combine_mov_xnor
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3265,7 +3181,6 @@ body:             |
 # This is not trivial at the very least.
 ---
 name:            vopd_combine_mov_not
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3298,7 +3213,6 @@ body:             |
 
 ---
 name:            vopd_combine_fadd_not
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3335,7 +3249,6 @@ body:             |
 
 ---
 name:            vopd_combine_fadd_f64_not
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3372,7 +3285,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_src1_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3421,7 +3333,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_src2_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3470,7 +3381,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_src1_sgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3523,7 +3433,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_src2_sgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3576,7 +3485,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_fadd
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vcc_lo
@@ -3622,7 +3530,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_fma
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vcc_lo
@@ -3672,7 +3579,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_e64_vcc_fadd
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3715,7 +3621,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_e64_sgpr_fadd
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3758,7 +3663,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_e64_neg_vcc_fadd
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3801,7 +3705,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_cndmask_e64_vcc_fadd_constant_bus_limit
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3850,7 +3753,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_cndmask_e64_vcc_fadd_sgpr_src1
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -3899,7 +3801,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_e64_cndmask_e32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vcc_lo
@@ -3949,7 +3850,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_e32_cndmask_e64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vcc_lo
@@ -3999,7 +3899,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_e32_cndmask_e32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vcc_lo
@@ -4049,7 +3948,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_e64_cndmask_e64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4096,7 +3994,6 @@ body:             |
 
 ---
 name:            vopd_combine_fadd_e64_fadd_e64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4135,7 +4032,6 @@ body:             |
 
 ---
 name:            vopd_combine_fadd_e64_neg_fadd_e32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4174,7 +4070,6 @@ body:             |
 
 ---
 name:            vopd_no_combine_fadd_e64_abs_neg_fadd_e32
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4215,7 +4110,6 @@ body:             |
 
 ---
 name:            vopd_combine_mul_f64_e64_sub_f32_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4254,7 +4148,6 @@ body:             |
 
 ---
 name:            vopd_combine_mul_f64_e32_subrev_f32_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4293,7 +4186,6 @@ body:             |
 
 ---
 name:            vopd_combine_min_num_f64_e64_mul_f32_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4332,7 +4224,6 @@ body:             |
 
 ---
 name:            vopd_combine_min_num_f64_e32_mul_legacy_f32_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4371,7 +4262,6 @@ body:             |
 
 ---
 name:            vopd_combine_max_num_f64_e64_min_f32_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4410,7 +4300,6 @@ body:             |
 
 ---
 name:            vopd_combine_max_num_f64_e32_max_f32_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4449,7 +4338,6 @@ body:             |
 
 ---
 name:            vopd_combine_add_f64_fmac_f32_e64_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4492,7 +4380,6 @@ body:             |
 
 ---
 name:            vopd_combine_cndmask_e64_neg_cndmask_e64_neg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4531,7 +4418,6 @@ body:             |
 
 ---
 name: vopd_no_combine_dpp
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -4558,7 +4444,6 @@ body: |
 
 ---
 name: vopd_no_combine_fmamk_src1
-tracksRegLiveness: true
 body: |
   bb.0:
     ; SCHED-LABEL: name: vopd_no_combine_fmamk_src1
@@ -4578,7 +4463,6 @@ body: |
 
 ---
 name:            no_combine_opx_writes_opy_src
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4611,7 +4495,6 @@ body:             |
 
 ---
 name:            combine_opx_writes_opy_src_reorder_antidep
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4642,7 +4525,6 @@ body:             |
 
 ---
 name:            no_combine_add_f64_fmac_f32_e64_neg_overlap_dst
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -4685,7 +4567,6 @@ body:             |
 # the second value makes the pair need two moves, so it must not be clustered.
 ---
 name:            vopd_cluster_one_materialized_value
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -4716,7 +4597,6 @@ body:             |
 
 ---
 name:            vopd_no_cluster_two_materialized_values
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

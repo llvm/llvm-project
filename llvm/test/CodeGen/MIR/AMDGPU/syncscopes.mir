@@ -49,7 +49,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr4_sgpr5' }
 frameInfo:

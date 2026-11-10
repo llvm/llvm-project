@@ -6,7 +6,6 @@
 
 ---
 name:            test_spill_v6_offset_overflow
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: spill-slot, offset: 4084, size: 24, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

@@ -4,7 +4,6 @@
 # Two buffer loads with overlapping outputs. No waitcnt required.
 ---
 name: buffer_buffer
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
@@ -21,7 +20,6 @@ body: |
 # Two tbuffer loads with overlapping outputs. No waitcnt required.
 ---
 name: tbuffer_tbuffer
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
@@ -39,7 +37,6 @@ body: |
 # dmask means something different.) No waitcnt required.
 ---
 name: gather_gather
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
@@ -58,7 +55,6 @@ body: |
 # counter.
 ---
 name: nosampler_sampler
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0_vgpr1_vgpr2_vgpr3
@@ -75,7 +71,6 @@ body: |
 # (global_load + scratch_load + buffer_load)
 ---
 name: global_scratch_buffer
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0_vgpr1
@@ -94,7 +89,6 @@ body: |
 # (flat + buffer)
 ---
 name: flat_buffer
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0_vgpr1
@@ -111,7 +105,6 @@ body: |
 # buffer + flat
 ---
 name: buffer_flat
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0_vgpr1
