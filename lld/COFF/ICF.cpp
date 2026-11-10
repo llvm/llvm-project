@@ -35,8 +35,7 @@ namespace lld::coff {
 // Propagation mixes a self-referencing section's hash with itself, so mix(h, h)
 // must not be a constant.
 static uint64_t mix(uint64_t h, uint64_t v) {
-  h = (h + v) * 0x9e3779b97f4a7c15;
-  return h ^ (h >> 32);
+  return (h + v) * 0x9e3779b97f4a7c15;
 }
 
 // Ignore associated metadata sections that don't participate in ICF, such as
@@ -59,6 +58,9 @@ private:
 
   template <bool constant>
   bool sectionsEqual(const SectionChunk *a, const SectionChunk *b);
+
+  void hashRelocs(const SectionChunk &sc, uint64_t &h,
+                  SmallVectorImpl<uint32_t> &edges);
 
   bool isEligible(SectionChunk *c);
 
@@ -194,6 +196,43 @@ bool ICF::sectionsEqual(const SectionChunk *a, const SectionChunk *b) {
   }
 }
 
+// Hash what sectionsEqual<true> compares, plus the class of a non-candidate
+// target, which never changes. Candidate targets are recorded as edges instead.
+void ICF::hashRelocs(const SectionChunk &sc, uint64_t &h,
+                     SmallVectorImpl<uint32_t> &edges) {
+  h = mix(h, sc.getOutputCharacteristics());
+  h = mix(h, xxh3_64bits(sc.getSectionName()));
+  h = mix(h, sc.header->SizeOfRawData);
+  h = mix(h, sc.checksum);
+  h = mix(h, sc.getMachine());
+  auto hashChunk = [&](const SectionChunk *target) {
+    if (target->eqClass[0] & (1U << 31))
+      edges.push_back(target->eqClass[0] & ~(1U << 31));
+    else
+      h = mix(h, target->eqClass[0]);
+  };
+  for (const coff_relocation &r : sc.getRelocs()) {
+    h = mix(h, r.Type);
+    h = mix(h, r.VirtualAddress);
+    Symbol *sym = sc.file->getSymbol(r.SymbolTableIndex);
+    if (auto *d = dyn_cast_or_null<DefinedRegular>(sym)) {
+      h = mix(h, d->getValue());
+      hashChunk(d->getChunk());
+    } else {
+      h = mix(h, sym ? xxh3_64bits(sym->getName()) : 0);
+    }
+  }
+  if (Defined *e = sc.getEntryThunk()) {
+    if (auto *d = dyn_cast<DefinedRegular>(e))
+      hashChunk(d->getChunk());
+    else
+      h = mix(h, xxh3_64bits(e->getName()));
+  }
+  for (const SectionChunk &c : sc.children())
+    if (considerForICF(c))
+      hashChunk(&c);
+}
+
 // Find the first Chunk after Begin that has a different class from Begin.
 size_t ICF::findBoundary(size_t begin, size_t end) {
   for (size_t i = begin + 1; i < end; ++i)
@@ -273,8 +312,8 @@ void ICF::run() {
   assert(chunks.size() <= (1U << 31) && nextId < (1U << 31) &&
          "the MSB marks a candidate and the low bits index chunks");
 
-  // Hash sections in chunks. An edge is a relocation or associated section
-  // referencing a candidate, recorded as the target's index. Each chunk
+  // Hash sections in blocks. An edge is a relocation or associated section
+  // referencing a candidate, recorded as the target's index. Each block
   // appends its sections' edges to its own buffer; edgeEnd[i] is where
   // section i's edges end within that buffer.
   constexpr size_t blockSize = 1024;
@@ -285,49 +324,14 @@ void ICF::run() {
   nextHashes.resize_for_overwrite(numChunks);
   SmallVector<uint32_t, 0> edgeEnd;
   edgeEnd.resize_for_overwrite(numChunks);
-  SmallVector<SmallVector<uint32_t, 0>, 0> chunkEdges(numBlocks);
+  SmallVector<SmallVector<uint32_t, 0>, 0> blockEdges(numBlocks);
   parallelFor(0, numBlocks, [&](size_t b) {
-    SmallVectorImpl<uint32_t> &edges = chunkEdges[b];
+    SmallVectorImpl<uint32_t> &edges = blockEdges[b];
     size_t begin = b * blockSize, end = std::min(begin + blockSize, numChunks);
     for (size_t i = begin; i != end; ++i) {
       SectionChunk *sc = chunks[i];
       uint64_t h = xxh3_64bits(sc->getContents());
-      h = mix(h, sc->getOutputCharacteristics());
-      h = mix(h, xxh3_64bits(sc->getSectionName()));
-      h = mix(h, sc->header->SizeOfRawData);
-      h = mix(h, sc->checksum);
-      h = mix(h, sc->getMachine());
-      auto hashChunk = [&](SectionChunk *target) {
-        if (target->eqClass[0] & (1U << 31))
-          edges.push_back(target->eqClass[0] & ~(1U << 31));
-        else
-          h = mix(h, target->eqClass[0]);
-      };
-      for (const coff_relocation &r : sc->getRelocs()) {
-        h = mix(h, r.Type);
-        h = mix(h, r.VirtualAddress);
-        Symbol *sym = sc->file->getSymbol(r.SymbolTableIndex);
-        if (auto *d = dyn_cast_or_null<DefinedRegular>(sym)) {
-          h = mix(h, d->getValue());
-          hashChunk(d->getChunk());
-        } else {
-          h = mix(h, sym ? xxh3_64bits(sym->getName()) : 0);
-        }
-      }
-      if (Defined *e = sc->getEntryThunk()) {
-        if (auto *d = dyn_cast<DefinedRegular>(e))
-          hashChunk(d->getChunk());
-        else
-          h = mix(h, xxh3_64bits(e->getName()));
-      }
-      size_t numAssoc = 0;
-      for (const SectionChunk &c : sc->children()) {
-        if (!considerForICF(c))
-          continue;
-        ++numAssoc;
-        hashChunk(const_cast<SectionChunk *>(&c));
-      }
-      h = mix(h, numAssoc);
+      hashRelocs(*sc, h, edges);
       hashes[i] = h;
       edgeEnd[i] = edges.size();
     }
@@ -337,7 +341,7 @@ void ICF::run() {
   // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
   for (int round = 7; round--;) {
     parallelFor(0, numBlocks, [&](size_t b) {
-      ArrayRef<uint32_t> edges = chunkEdges[b];
+      ArrayRef<uint32_t> edges = blockEdges[b];
       size_t begin = b * blockSize,
              end = std::min(begin + blockSize, numChunks), j = 0;
       for (size_t i = begin; i != end; ++i) {
@@ -355,8 +359,9 @@ void ICF::run() {
   SmallVector<uint64_t, 0> keys;
   keys.resize_for_overwrite(numChunks);
   parallelFor(0, numChunks, [&](size_t i) {
-    // Set MSB to 1 to avoid collisions with non-hash classes.
-    uint32_t h = hashes[i] | (1U << 31);
+    // mix()'s low bits depend only on the inputs' low bits. Fold the high half,
+    // and set MSB to 1 to avoid collisions with non-hash classes.
+    uint32_t h = (hashes[i] ^ hashes[i] >> 32) | (1U << 31);
     chunks[i]->eqClass[0] = h;
     keys[i] = uint64_t(h) << 32 | i;
   });
