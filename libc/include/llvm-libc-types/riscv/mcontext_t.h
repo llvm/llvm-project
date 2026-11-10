@@ -1,12 +1,16 @@
-//===-- Definition of type mcontext_t -------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-// Note: Definitions in this file are based on the Linux kernel ABI.
+///
+/// \file
+/// Definition of type mcontext_t for RISC-V. The definitions in this file are
+/// based on the Linux kernel ABI.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TYPES_RISCV_MCONTEXT_T_H
 #define LLVM_LIBC_TYPES_RISCV_MCONTEXT_T_H
