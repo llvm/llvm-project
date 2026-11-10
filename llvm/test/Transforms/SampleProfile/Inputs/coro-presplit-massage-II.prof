@@ -1,0 +1,10 @@
+_Z16coro_ramp_resumev:2000:200
+ 3: 200
+ 3: _Z16coro_ramp_resumev.__await_suspend_wrapper__async:2000
+  1: 200
+_Z16coro_ramp_resumev.resume:8000:800
+ 1.3: 0
+ 3: 800
+ 3.3: 1000
+ 3: _Z16coro_ramp_resumev.__await_suspend_wrapper__async:8000
+  1: 800

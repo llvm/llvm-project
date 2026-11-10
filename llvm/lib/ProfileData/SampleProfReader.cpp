@@ -37,6 +37,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -1125,8 +1126,28 @@ bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
   if (!M)
     return false;
   FuncsToUse.clear();
-  for (auto &F : *M)
-    FuncsToUse.insert(FunctionSamples::getCanonicalFnName(F));
+  StringSaver Saver(Allocator);
+  for (auto &F : *M) {
+    StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+    FuncsToUse.insert(CanonName);
+    if (!ReadCoroutineProfiles)
+      continue;
+    // The samples of a pre-split coroutine also come from its post-split
+    // .resume function so add .resume to FuncsToUse.
+    if (F.isPresplitCoroutine())
+      FuncsToUse.insert(Saver.save(CanonName + ".resume"));
+    // Await-suspend wrappers have ".__uniq.<hash_id>" in the middle of their
+    // name but this unique hash id is not used in the sample PGO profile.
+    static constexpr StringLiteral WrapperMarker(".__await_suspend_wrapper");
+    size_t MarkerPos = F.getName().find(WrapperMarker);
+    if (MarkerPos != StringRef::npos) {
+      StringRef Prefix = F.getName().substr(0, MarkerPos);
+      StringRef CanonPrefix = FunctionSamples::getCanonicalFnName(Prefix);
+      if (CanonPrefix != Prefix)
+        FuncsToUse.insert(
+            Saver.save(CanonPrefix + F.getName().substr(MarkerPos)));
+    }
+  }
   return true;
 }
 
