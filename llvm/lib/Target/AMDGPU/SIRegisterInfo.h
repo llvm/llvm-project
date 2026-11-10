@@ -447,6 +447,9 @@ public:
   // \returns NoRegister otherwise.
   MCRegister get32BitRegister(MCRegister Reg) const;
 
+  // Register clobber handling of returning vgpr16 registers
+  void addT16ReturnRegClobbers(MachineInstr &MI) const;
+
   // Returns true if a given register class is properly aligned for
   // the subtarget.
   bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;

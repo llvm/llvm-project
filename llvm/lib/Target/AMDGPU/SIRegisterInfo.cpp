@@ -4598,6 +4598,40 @@ MCRegister SIRegisterInfo::get32BitRegister(MCRegister Reg) const {
   return AMDGPU::NoRegister;
 }
 
+
+// With true16, a 16-bit return value comes back in the lo16 subregister of a
+// VGPR_32 that the calling convention otherwise treats as callee saved.
+// To prevent the hi16 being used by the caller, Mark the enclosing 32-bit
+// register of every 16-bit physical def as clobbered explicitly.
+void SIRegisterInfo::addT16ReturnRegClobbers(MachineInstr &MI) const {
+  const uint32_t *RegMask = nullptr;
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isRegMask()) {
+      RegMask = MO.getRegMask();
+      break;
+    }
+  }
+  if (!RegMask)
+    return;
+
+  // Collect first, since adding operands below invalidates the iteration.
+  SmallVector<MCRegister, 4> Supers;
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.isDef() || !MO.getReg().isPhysical())
+      continue;
+    MCRegister Reg = MO.getReg().asMCReg();
+    if (!AMDGPU::VGPR_16RegClass.contains(Reg))
+      continue;
+    MCRegister Super = get32BitRegister(Reg);
+    if (Super && !MachineOperand::clobbersPhysReg(RegMask, Super))
+      Supers.push_back(Super);
+  }
+
+  MachineInstrBuilder MIB(*MI.getMF(), &MI);
+  for (MCRegister Super : Supers)
+    MIB.addReg(Super, RegState::ImplicitDefine);
+}
+
 bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
   if (!ST.needsAlignedVGPRs())
     return true;

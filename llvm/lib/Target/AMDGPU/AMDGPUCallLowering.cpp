@@ -1770,6 +1770,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!determineAndHandleAssignments(Handler, Assigner, InArgs, MIRBuilder,
                                        Info.CallConv, Info.IsVarArg))
       return false;
+
+    TRI->addT16ReturnRegClobbers(*MIB);
   }
 
   uint64_t CalleePopBytes = NumBytes;
