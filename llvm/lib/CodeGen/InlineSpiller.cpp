@@ -643,6 +643,13 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
                            .addReg(StoreReg)
                            .getInstr();
   Store.clearRegisterKills(StoreReg, &TRI);
+  // The copy doesn't read the other physical registers of the restore.
+  // Drop their outdated cached ranges to be recomputed on demand.
+  for (const MachineOperand &MO : Restore.all_uses())
+    if (MO.getReg().isPhysical())
+      for (MCRegUnit Unit : TRI.regunits(MO.getReg().asMCReg()))
+        if (!MRI.isReservedRegUnit(Unit))
+          LIS.removeRegUnit(Unit);
   LIS.ReplaceMachineInstrInMaps(Restore, *Copy);
   MF.substituteDebugValuesForInst(Restore, *Copy, /*MaxOperand=*/1);
   Restore.eraseFromParent();
