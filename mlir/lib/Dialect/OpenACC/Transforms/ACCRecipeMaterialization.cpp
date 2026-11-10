@@ -98,12 +98,11 @@ static bool typeContainsComplex(Type type) {
   if (isa<ComplexType>(type))
     return true;
   bool found = false;
-  type.walkImmediateSubElements(
-      [](Attribute) {},
-      [&](Type nested) {
-        if (!found)
-          found = typeContainsComplex(nested);
-      });
+  type.walkImmediateSubElements([](Attribute) {},
+                                [&](Type nested) {
+                                  if (!found)
+                                    found = typeContainsComplex(nested);
+                                });
   return found;
 }
 
