@@ -1740,15 +1740,14 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("x86_64-pc-windows-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
             Triple("x86_64-pc-cygwin").getDefaultLongDoubleFormat());
-  // Windows-MSVC and x86-64 UEFI use IEEE double.
+  // Windows-MSVC and UEFI use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("x86_64-pc-windows-msvc").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("i686-pc-windows-msvc").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("x86_64-unknown-uefi").getDefaultLongDoubleFormat());
-  // 32-bit UEFI keeps x87.
-  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("i686-unknown-uefi").getDefaultLongDoubleFormat());
   // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
@@ -1773,10 +1772,10 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
       Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
-  // ... except on Windows, UEFI and Darwin, which use IEEE double.
+  // ... except on Windows and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
-  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("aarch64-unknown-uefi").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
