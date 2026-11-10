@@ -60,7 +60,7 @@ Each toolchain provides a good reference for what it accepts:
 
 * Clang: https://clang.llvm.org/cxx_status.html
 
-  * libc++: [C++17 status](inv:libcxx:std:doc#Status/Cxx17)
+  * libc++: https://libcxx.llvm.org/Status/Cxx17.html
 
 * GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx17
 

@@ -16,7 +16,7 @@ component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
 Other components include:
-the [libc++ C++ standard library](inv:libcxx:std:doc#index),
+the [libc++ C++ standard library](https://libcxx.llvm.org),
 the [LLD linker](inv:lld:std:doc#index), and more.
 
 (sources)=

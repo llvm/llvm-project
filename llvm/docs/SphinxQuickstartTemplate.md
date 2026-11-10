@@ -139,9 +139,11 @@ warns if the target does not exist:
 
 The link target has the form `inv:<project>:<domain>:<type>#<target>`:
 
-* `<project>` is the key in the project's `intersphinx_mapping`, such as `llvm`,
-  `clang`, `lld`, or `libcxx`. Projects take these from
-  `LLVM_INTERSPHINX_MAPPING` in `utils/docs/llvm_sphinx/__init__.py`.
+* `<project>` is the key in the project's `intersphinx_mapping`: `llvm`,
+  `clang`, `clang-tools-extra`, `lld`, `lldb`, `flang`, or `polly`. Projects take
+  these from `LLVM_INTERSPHINX_MAPPING` in `utils/docs/llvm_sphinx/__init__.py`.
+  The runtimes (libc++, libc, OpenMP, ...) are configured separately from these
+  projects, so link to them with an ordinary URL.
 * `<domain>` is the Sphinx domain. Documents, labels, and command-line options
   all live in the standard domain, `std`.
 * `<type>` is the kind of object. Use `doc` for a whole document, `label` for an
@@ -167,6 +169,32 @@ as a top-level `Maintainers.md`, because `inv:` links only resolve in the Sphinx
 build. A project must set `intersphinx_mapping` in its `conf.py`, for example
 `intersphinx_mapping = LLVM_INTERSPHINX_MAPPING.copy()`, before it can use these
 links.
+
+### How the inventories are built
+
+A documentation build does not download the other projects' inventories. When
+the docs are built with CMake, each project above also gets a
+`docs-<project>-inventory` target that reads the project's sources and writes
+only its `objects.inv` (using the `inventory` builder from
+`llvm_sphinx.ext.inventory`). The `llvm` and `clang` docs targets depend on all
+of them and resolve `inv:` links against those local files. So the build needs
+no network, and a change can add a label to the Clang docs and link to it from
+the LLVM docs at the same time.
+
+The cost is that building the docs requires all of these projects to be enabled
+in the same configuration. CMake stops with an error naming any that are
+missing:
+
+```sh
+cmake -G Ninja -S llvm -B build -DLLVM_ENABLE_SPHINX=ON \
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;polly"
+ninja -C build docs-llvm-html docs-clang-html
+```
+
+Pass `-DLLVM_SPHINX_FETCH_INVENTORIES=ON` to skip this and fetch the published
+inventories instead. That needs network access, and links to labels that are not
+yet published do not resolve. Running `sphinx-build` directly, without CMake,
+also fetches the published inventories.
 
 ## Lists
 

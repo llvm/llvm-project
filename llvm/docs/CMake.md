@@ -686,7 +686,7 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     toolchain. It will build the builtins separately from the other runtimes to
     preserve correct dependency ordering. If you want to build the runtimes
     using a system compiler, see the [libc++
-    documentation](inv:libcxx:std:doc#VendorDocumentation).
+    documentation](https://libcxx.llvm.org/VendorDocumentation.html).
 
     :::{note}
     The list should not have duplicates with `LLVM_ENABLE_PROJECTS`.

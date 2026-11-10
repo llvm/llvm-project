@@ -791,7 +791,7 @@ items that need to be implemented.
   you have to handle `EH_RETURN` in `TargetLowering`.
 
 If you don't leverage the existing runtime (`libstdc++` and `libgcc`),
-you have to take a look at [libc++](inv:libcxx:std:doc#index) and
+you have to take a look at [libc++](https://libcxx.llvm.org/) and
 [libunwind]
 to see what has to be done there. For `libunwind`, you have to do the following:
 

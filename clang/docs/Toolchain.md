@@ -295,7 +295,7 @@ of the [C++ standard library](https://en.cppreference.com/w/cpp).
 
 #### libc++ (LLVM)
 
-[libc++](inv:libcxx:std:doc#index) is LLVM's implementation of the C++
+[libc++](https://libcxx.llvm.org/) is LLVM's implementation of the C++
 standard library, aimed at being a complete implementation of the C++
 standards from C++11 onwards.
 

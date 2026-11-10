@@ -32,7 +32,7 @@ describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see
 [the LLVM documentation](inv:llvm:std:doc#ReleaseNotes). For the libc++ release notes,
-see [this page](inv:libcxx:std:doc#ReleaseNotes). All LLVM releases
+see [this page](https://libcxx.llvm.org/ReleaseNotes.html). All LLVM releases
 may be downloaded from the [LLVM releases web site](https://llvm.org/releases/).
 
 For more information about Clang or LLVM, including information about the

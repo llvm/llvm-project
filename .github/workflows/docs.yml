@@ -30,9 +30,10 @@ on:
       - 'flang/docs/**'
       - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
       - '.github/workflows/docs.yml'
+      - 'llvm/cmake/modules/AddSphinxTarget.cmake'
   pull_request:
     paths:
-      - 'bolts/docs/**'
+      - 'bolt/docs/**'
       - 'llvm/docs/**'
       - 'clang/docs/**'
       - 'clang/include/clang/Basic/AttrDocs.td'
@@ -49,6 +50,7 @@ on:
       - 'flang/docs/**'
       - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
       - '.github/workflows/docs.yml'
+      - 'llvm/cmake/modules/AddSphinxTarget.cmake'
       - 'utils/docs/**'
 
 jobs:
@@ -100,6 +102,7 @@ jobs:
               - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
             common:
               - '.github/workflows/docs.yml'
+              - 'llvm/cmake/modules/AddSphinxTarget.cmake'
               - 'utils/docs/**'
       - name: Setup Python env
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -116,51 +119,87 @@ jobs:
           sudo apt-get install -y cmake ninja-build swig graphviz
       - name: Setup output folder
         run: mkdir built-docs
+      # The projects below link to each other's docs, so their docs are built
+      # from a single configuration that has all of them enabled (CMake checks
+      # this). The runtimes are configured separately and are not linked this
+      # way.
+      - name: Configure project docs
+        if: |
+          steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.bolt_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.clang_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.clang-tools-extra_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.lldb_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.lld_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.polly_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.flang_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
+        run: |
+          cmake -B projects-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="bolt;clang;clang-tools-extra;lld;lldb;polly;mlir;flang" -DLLVM_ENABLE_SPHINX=ON ./llvm
       - name: Build LLVM docs
         if: |
           steps.docs-changed-subprojects.outputs.llvm_any_changed == 'true' ||
           steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
-          cmake -B llvm-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C llvm-build docs-llvm-html docs-llvm-man
+          TZ=UTC ninja -C projects-build docs-llvm-html docs-llvm-man
           mkdir built-docs/llvm
-          cp -r llvm-build/docs/* built-docs/llvm/
+          cp -r projects-build/docs/* built-docs/llvm/
       - name: Build BOLT docs
         if: |
           steps.docs-changed-subprojects.outputs.bolt_any_changed == 'true' ||
           steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
-          cmake -B bolt-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="bolt" -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C bolt-build docs-bolt-html
+          TZ=UTC ninja -C projects-build docs-bolt-html
           mkdir built-docs/bolt
-          cp -r bolt-build/docs/* built-docs/bolt/
+          cp -r projects-build/tools/bolt/docs/* built-docs/bolt/
       - name: Build Clang docs
         if: |
           steps.docs-changed-subprojects.outputs.clang_any_changed == 'true' ||
           steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
-          cmake -B clang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C clang-build docs-clang-html docs-clang-man
+          TZ=UTC ninja -C projects-build docs-clang-html docs-clang-man
           mkdir built-docs/clang
-          cp -r clang-build/docs/* built-docs/clang/
+          cp -r projects-build/tools/clang/docs/* built-docs/clang/
       - name: Build clang-tools-extra docs
         if: |
           steps.docs-changed-subprojects.outputs.clang-tools-extra_any_changed == 'true' ||
           steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
-          cmake -B clang-tools-extra-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C clang-tools-extra-build docs-clang-tools-html docs-clang-tools-man
+          TZ=UTC ninja -C projects-build docs-clang-tools-html docs-clang-tools-man
           mkdir built-docs/clang-tools-extra
-          cp -r clang-tools-extra-build/docs/* built-docs/clang-tools-extra/
+          cp -r projects-build/tools/clang/tools/extra/docs/* built-docs/clang-tools-extra/
       - name: Build LLDB docs
         if: |
           steps.docs-changed-subprojects.outputs.lldb_any_changed == 'true' ||
           steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
         run: |
-          cmake -B lldb-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;lldb" -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C lldb-build docs-lldb-html docs-lldb-man
+          TZ=UTC ninja -C projects-build docs-lldb-html docs-lldb-man
           mkdir built-docs/lldb
-          cp -r lldb-build/docs/* built-docs/lldb/
+          cp -r projects-build/tools/lldb/docs/* built-docs/lldb/
+      - name: Build LLD docs
+        if: |
+          steps.docs-changed-subprojects.outputs.lld_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
+        run: |
+          TZ=UTC ninja -C projects-build docs-lld-html
+          mkdir built-docs/lld
+          cp -r projects-build/tools/lld/docs/* built-docs/lld/
+      - name: Build Polly docs
+        if: |
+          steps.docs-changed-subprojects.outputs.polly_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
+        run: |
+          TZ=UTC ninja -C projects-build docs-polly-html docs-polly-man
+          mkdir built-docs/polly
+          cp -r projects-build/tools/polly/docs/* built-docs/polly/
+      - name: Build Flang docs
+        if: |
+          steps.docs-changed-subprojects.outputs.flang_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
+        run: |
+          TZ=UTC ninja -C projects-build docs-flang-html docs-flang-man
+          mkdir built-docs/flang
+          cp -r projects-build/tools/flang/docs/* built-docs/flang/
       - name: Build libunwind docs
         if: |
           steps.docs-changed-subprojects.outputs.libunwind_any_changed == 'true' ||
@@ -188,15 +227,6 @@ jobs:
           TZ=UTC ninja -C libc-build docs-libc-html
           mkdir built-docs/libc
           cp -r libc-build/libc/docs/* built-docs/libc/
-      - name: Build LLD docs
-        if: |
-          steps.docs-changed-subprojects.outputs.lld_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
-        run: |
-          cmake -B lld-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld" -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C lld-build docs-lld-html
-          mkdir built-docs/lld
-          cp -r lld-build/docs/* built-docs/lld/
       - name: Build OpenMP docs
         if: |
           steps.docs-changed-subprojects.outputs.openmp_any_changed == 'true' ||
@@ -206,24 +236,6 @@ jobs:
           TZ=UTC ninja -C openmp-build docs-openmp-html
           mkdir built-docs/openmp
           cp -r openmp-build/openmp/docs/* built-docs/openmp/
-      - name: Build Polly docs
-        if: |
-          steps.docs-changed-subprojects.outputs.polly_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
-        run: |
-          cmake -B polly-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="polly" -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C polly-build docs-polly-html docs-polly-man
-          mkdir built-docs/polly
-          cp -r polly-build/docs/* built-docs/polly/
-      - name: Build Flang docs
-        if: |
-          steps.docs-changed-subprojects.outputs.flang_any_changed == 'true' ||
-          steps.docs-changed-subprojects.outputs.common_any_changed == 'true'
-        run: |
-          cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON ./llvm
-          TZ=UTC ninja -C flang-build docs-flang-html docs-flang-man
-          mkdir built-docs/flang
-          cp -r flang-build/docs/* built-docs/flang/
       - name: Upload docs
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

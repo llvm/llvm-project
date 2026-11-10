@@ -12,11 +12,11 @@
 # Required Packages:
 # * Fedora:
 #   * dnf install doxygen texlive-epstopdf ghostscript \
-#                 ninja-build gcc-c++
+#                 ninja-build gcc-c++ swig
 #   * pip install --user -r ./llvm/docs/requirements.txt
 # * Ubuntu:
 #   * apt-get install doxygen \
-#             ninja-build graphviz texlive-font-utils
+#             ninja-build graphviz swig texlive-font-utils
 #   * pip install --user -r ./llvm/docs/requirements.txt
 #===------------------------------------------------------------------------===#
 
@@ -127,7 +127,7 @@ if [ "${no_man_pages}" != "yes" ]; then
   man_page_targets="install-docs-clang-man install-docs-clang-tools-man install-docs-dsymutil-man install-docs-flang-man install-docs-lldb-man install-docs-llvm-dwarfdump-man install-docs-llvm-man install-docs-polly-man"
   install_prefix=${builddir}/install
   man_page_flag=" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF -DSPHINX_OUTPUT_MAN:BOOL=ON -DCMAKE_INSTALL_PREFIX=${install_prefix}"
-  extra_man_page_projects=";lldb;mlir;bolt"
+  extra_man_page_projects=";mlir;bolt"
   extra_man_page_runtimes=";compiler-rt;openmp;"
 else
   echo "Man pages: disabled"
@@ -142,7 +142,7 @@ else
 fi
 
 cmake -G Ninja $srcdir -B $builddir \
-               -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang${extra_man_page_projects}" \
+               -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;polly;flang${extra_man_page_projects}" \
                -DCMAKE_BUILD_TYPE=Release \
                -DLLVM_BUILD_DOCS=ON \
                $sphinx_flag \

@@ -183,7 +183,7 @@ what to add to your calendar invite.
      -
      -
    * - OpenMP
-     - Multiple meeting series, [documented here](inv:openmp:std:doc#SupportAndFAQ)
+     - Multiple meeting series, [documented here](https://openmp.llvm.org/docs/SupportAndFAQ.html)
      -
      -
    * - LLVM Alias Analysis

@@ -198,7 +198,7 @@ with ThinLTO, follow these steps:
 1. The host [compiler](#compiler) must be a version of clang that supports ThinLTO.
 2. The host [linker](#linker) must support ThinLTO (and in the case of gold, must be
    [configured with plugins enabled](inv:llvm:std:doc#GoldPlugin)).
-3. Use the following additional [CMake variables](inv:llvm:std:label#options and variables)
+3. Use the following additional [CMake variables](<inv:llvm:std:label#options and variables>)
    when configuring the bootstrap compiler build:
 
 > - `-DLLVM_ENABLE_LTO=Thin`

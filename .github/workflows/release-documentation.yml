@@ -98,6 +98,7 @@ jobs:
               graphviz \
               python3-github \
               ninja-build \
+              swig \
               texlive-font-utils
           pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 

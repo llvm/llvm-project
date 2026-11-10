@@ -17,6 +17,7 @@ call to `common_conf`, they should be modified/appended to, as in:
 
 """
 
+import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
@@ -24,19 +25,43 @@ from sphinx.util.tags import Tags
 
 _SHARED_STATIC_DIR = Path(__file__).parent / "_static"
 
-# LLVM project documentation sites that publish Sphinx inventories.
-LLVM_INTERSPHINX_MAPPING = {
-    "llvm": ("https://llvm.org/docs/", None),
-    "clang": ("https://clang.llvm.org/docs/", None),
-    "clang-tools-extra": ("https://clang.llvm.org/extra/", None),
-    "libc": ("https://libc.llvm.org/", None),
-    "libcxx": ("https://libcxx.llvm.org/", None),
-    "lld": ("https://lld.llvm.org/", None),
-    "lldb": ("https://lldb.llvm.org/", None),
-    "openmp": ("https://openmp.llvm.org/", None),
-    "flang": ("https://flang.llvm.org/docs/", None),
-    "polly": ("https://polly.llvm.org/docs/", None),
+# Documentation sites of the LLVM projects that are built together by one
+# `LLVM_ENABLE_PROJECTS` configure, so that their inventories can be produced
+# locally (see ext/inventory.py). The runtimes (libc, libcxx, openmp, ...) are
+# configured separately, so their docs cannot be resolved this way; link to them
+# with an ordinary URL.
+_LLVM_DOC_SITES = {
+    "llvm": "https://llvm.org/docs/",
+    "clang": "https://clang.llvm.org/docs/",
+    "clang-tools-extra": "https://clang.llvm.org/extra/",
+    "lld": "https://lld.llvm.org/",
+    "lldb": "https://lldb.llvm.org/",
+    "flang": "https://flang.llvm.org/docs/",
+    "polly": "https://polly.llvm.org/docs/",
 }
+
+
+def _intersphinx_mapping():
+    """Map each project to its site, and to a local inventory if configured.
+
+    With LLVM_SPHINX_INVENTORY_DIR set, inventories come from
+    <dir>/<project>/objects.inv (see ext/inventory.py) instead of the network.
+    Generated links still point at the site.
+    """
+    inventory_dir = os.environ.get("LLVM_SPHINX_INVENTORY_DIR")
+    if not inventory_dir:
+        return {name: (url, None) for name, url in _LLVM_DOC_SITES.items()}
+    mapping = {}
+    for name, url in _LLVM_DOC_SITES.items():
+        inventory = os.path.join(inventory_dir, name, "objects.inv")
+        # A project without a local inventory is left unmapped: its `inv:`
+        # links then fail to resolve instead of silently using the network.
+        if os.path.exists(inventory):
+            mapping[name] = (url, inventory)
+    return mapping
+
+
+LLVM_INTERSPHINX_MAPPING = _intersphinx_mapping()
 
 
 def common_conf(tags: Tags) -> Dict[str, Any]:
@@ -44,7 +69,11 @@ def common_conf(tags: Tags) -> Dict[str, Any]:
     # needs_sphinx = '1.0'
     # The encoding of source files.
     # source_encoding = 'utf-8-sig'
-    extensions = ["llvm_sphinx.ext.mlir_pygments", "myst_parser"]
+    extensions = [
+        "llvm_sphinx.ext.inventory",
+        "llvm_sphinx.ext.mlir_pygments",
+        "myst_parser",
+    ]
     source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
     myst_enable_extensions = ["substitution", "colon_fence"]
     myst_heading_anchors = 6
