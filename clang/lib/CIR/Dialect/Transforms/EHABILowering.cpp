@@ -74,6 +74,8 @@ static cir::FuncOp getOrCreateRuntimeFuncDecl(mlir::ModuleOp mod,
   auto funcOp = cir::FuncOp::create(builder, loc, name, funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
   funcOp.setPrivate();
+  funcOp->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
+                  builder.getUnitAttr());
   // This pass runs after CallConvLowering and builds the declaration in its
   // target ABI form already.
   funcOp.setRequiresCallConvLowering(false);

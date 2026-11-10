@@ -24,9 +24,7 @@
 #include "ExclusiveAccess.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
-#include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
 #include "GenericProfiler.h"
@@ -37,11 +35,7 @@
 #include "RPC.h"
 #include "omptarget.h"
 
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StableHashing.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/Allocator.h"
@@ -137,14 +131,6 @@ struct AsyncInfoWrapperTy {
     return static_cast<Ty>(AsyncInfoPtr->Queue);
   }
 
-  /// Set the queue.
-  template <typename Ty> void setQueueAs(Ty Queue) {
-    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
-                  "Queue is not of the same size as target type");
-    assert(!AsyncInfoPtr->Queue && "Overwriting queue");
-    AsyncInfoPtr->Queue = Queue;
-  }
-
   /// Get the queue, using the provided resource manager to initialise it if it
   /// doesn't exist.
   template <typename Ty, typename RMTy>
@@ -166,13 +152,6 @@ struct AsyncInfoWrapperTy {
   /// actually executed. This function must be called before destroying the
   /// object and only once.
   void finalize(Error &Err);
-
-  /// Register \p Ptr as an associated allocation that is freed after
-  /// finalization.
-  void freeAllocationAfterSynchronization(void *Ptr, TargetAllocTy Kind) {
-    std::lock_guard<std::mutex> AllocationGuard(AsyncInfoPtr->Mutex);
-    AsyncInfoPtr->AssociatedAllocations.push_back({Ptr, Kind});
-  }
 
 private:
   GenericDeviceTy &Device;
@@ -414,19 +393,6 @@ struct GenericKernelTy {
   /// underlying device function may run, as reported by the driver/backend.
   virtual uint32_t getMaxThreads() const {
     return std::numeric_limits<uint32_t>::max();
-  }
-
-  /// Indicate whether an execution mode is valid.
-  static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
-    switch (ExecutionMode) {
-    case OMP_TGT_EXEC_MODE_BARE:
-    case OMP_TGT_EXEC_MODE_SPMD:
-    case OMP_TGT_EXEC_MODE_GENERIC:
-    case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
-    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
-      return true;
-    }
-    return false;
   }
 
 protected:
@@ -689,14 +655,6 @@ public:
     return utils::advancePtr(Entry->DevAccessiblePtr,
                              utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
-
-  /// Check whether a buffer belongs to a registered host pinned allocation.
-  bool isHostPinnedBuffer(const void *HstPtr) const {
-    std::shared_lock<std::shared_mutex> Lock(Mutex);
-
-    // Return whether there is an intersecting allocation.
-    return (findIntersecting(const_cast<void *>(HstPtr)) != nullptr);
-  }
 };
 
 /// Description of an allocation: owning device, kind, base address and size.
@@ -937,20 +895,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                bool *IsQueueWorkCompleted) = 0;
 
-  /// Check whether the architecture supports VA management
-  virtual bool supportVAManagement() const { return false; }
-
   /// Get the total device memory size
   virtual Error getDeviceMemorySize(uint64_t &DSize);
-
-  /// Allocates \p RSize bytes (rounded up to page size) and hints the driver to
-  /// map it to \p VAddr. The obtained address is stored in \p Addr. At return
-  /// \p RSize contains the actual size which can be equal or larger than the
-  /// requested size.
-  virtual Error memoryVAMap(void **Addr, void *VAddr, size_t *RSize);
-
-  /// De-allocates device memory and unmaps the virtual address \p VAddr
-  virtual Error memoryVAUnMap(void *VAddr, size_t Size);
 
   /// Allocate data on the device or involving the device.
   Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind,
@@ -1446,7 +1392,7 @@ struct GenericPluginTy {
 
   /// Indicate whether data can be exchanged directly between two devices under
   /// this same plugin. If this function returns true, it's safe to call the
-  /// GenericDeviceTy::exchangeData() function on the source device.
+  /// GenericDeviceTy::dataExchange() function on the source device.
   virtual bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) {
     return isValidDeviceId(SrcDeviceId) && isValidDeviceId(DstDeviceId);
   }

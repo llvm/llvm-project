@@ -20,7 +20,10 @@ tablegen("ARMGenFastISel") {
 
 tablegen("ARMGenGlobalISel") {
   visibility = [ ":LLVMARMCodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "ARM.td"
 }
 

@@ -715,7 +715,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
     // Since the workload def uses names, we need a quick lookup
     // name->ValueInfo.
     StringMap<ValueInfo> NameToValueInfo;
-    StringSet<> AmbiguousNames;
+    [[maybe_unused]] StringSet<> AmbiguousNames;
     for (auto &I : Index) {
       ValueInfo VI = Index.getValueInfo(I);
       if (!NameToValueInfo.insert(std::make_pair(VI.name(), VI)).second)

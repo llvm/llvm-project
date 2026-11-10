@@ -49,7 +49,7 @@
 
 using namespace llvm;
 
-static mc::RegisterMCTargetOptionsFlags MOF;
+static mc::RegisterMCToolOptions MOF;
 
 static cl::OptionCategory MCCategory("MC Options");
 

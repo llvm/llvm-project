@@ -30,6 +30,12 @@ tablegen("AMDGPUGenSubtargetInfo") {
   td_file = "../AMDGPU.td"
 }
 
+tablegen("AMDGPUOptions") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "../AMDGPUOptions.td"
+}
+
 tablegen("R600GenAsmWriter") {
   visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-asm-writer" ]
@@ -72,6 +78,7 @@ group("tablegen") {
     ":AMDGPUGenInstrInfo",
     ":AMDGPUGenRegisterInfo",
     ":AMDGPUGenSubtargetInfo",
+    ":AMDGPUOptions",
     ":R600GenInstrInfo",
     ":R600GenRegisterInfo",
     ":R600GenSubtargetInfo",

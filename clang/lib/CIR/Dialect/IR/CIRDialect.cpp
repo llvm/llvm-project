@@ -2953,6 +2953,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       getPreferredAlignmentAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+  mlir::StringAttr unnamedAddrNameAttr = getUnnamedAddrAttrName(state.name);
   mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
@@ -3036,6 +3037,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (parser.parseOptionalKeyword(dsoLocalNameAttr).succeeded())
     state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalKeyword(unnamedAddrNameAttr).succeeded())
+    state.addAttribute(unnamedAddrNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
   if (parser.parseSymbolName(nameAttr, getSymNameAttrName(state.name),
@@ -3351,6 +3355,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getDsoLocal())
     p << " dso_local";
 
+  if (getUnnamedAddr())
+    p << " unnamed_addr";
+
   p << ' ';
   p.printSymbolName(getSymName());
   cir::FuncType fnType = getFunctionType();
@@ -3477,28 +3484,6 @@ mlir::LogicalResult cir::FuncOp::verify() {
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// AddOp / SubOp
-//===----------------------------------------------------------------------===//
-
-// The integer-only type constraint on these ops makes the nsw/nuw/sat flag
-// type checks unnecessary. Only the mutual-exclusivity between nsw/nuw and
-// sat needs to be verified.
-
-LogicalResult cir::AddOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
-}
-
-LogicalResult cir::SubOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -4138,6 +4123,9 @@ LogicalResult cir::GetRuntimeMemberOp::verify() {
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
+  if (getType().getAddrSpace() != getAddr().getType().getAddrSpace())
+    return emitError()
+           << "result address space does not match the object address space";
   return mlir::success();
 }
 
