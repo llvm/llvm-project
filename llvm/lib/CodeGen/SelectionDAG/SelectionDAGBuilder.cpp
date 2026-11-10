@@ -10720,10 +10720,21 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
           auto *R = cast<RegisterSDNode>(Info.AsmNodeOperands[CurOp + 1]);
           Register TiedReg = R->getReg();
           MVT RegVT = R->getSimpleValueType(0);
-          const TargetRegisterClass *RC =
-              TiedReg.isVirtual()     ? MRI.getRegClass(TiedReg)
-              : RegVT != MVT::Untyped ? TLI.getRegClassFor(RegVT)
-                                      : TRI.getMinimalPhysRegClass(TiedReg);
+          const TargetRegisterClass *RC;
+          if (TiedReg.isVirtual()) {
+            RC = MRI.getRegClass(TiedReg);
+          } else if (RegVT == MVT::Untyped) {
+            RC = TRI.getMinimalPhysRegClass(TiedReg);
+          } else {
+            RC = TLI.getRegClassFor(RegVT);
+            if (!RC->contains(TiedReg)) {
+              const TargetRegisterClass *PhysRC =
+                  TRI.getMinimalPhysRegClass(TiedReg);
+              if (PhysRC->isAllocatable())
+                RC = PhysRC;
+            }
+          }
+
           for (unsigned I = 0, E = Flag.getNumOperandRegisters(); I != E; ++I)
             Regs.push_back(MRI.createVirtualRegister(RC));
 

@@ -9,10 +9,7 @@ define void @tied_agpr_imm() {
 ; GFX908-LABEL: tied_agpr_imm:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    s_mov_b32 s4, 7
-; GFX908-NEXT:    v_mov_b32_e32 v1, s4
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, v1
+; GFX908-NEXT:    v_accvgpr_write_b32 a1, 7
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def a1
 ; GFX908-NEXT:    ;;#ASMEND
@@ -24,8 +21,7 @@ define void @tied_agpr_imm() {
 ; GFX90A-LABEL: tied_agpr_imm:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    s_mov_b32 s4, 7
-; GFX90A-NEXT:    v_accvgpr_write_b32 a1, s4
+; GFX90A-NEXT:    v_accvgpr_write_b32 a1, 7
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a1
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -102,8 +98,8 @@ define void @tied_agpr64(i64 %x) {
 ; GFX908-LABEL: tied_agpr64:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v1
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, v0
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, v1
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def a[2:3]
 ; GFX908-NEXT:    ;;#ASMEND
@@ -115,8 +111,8 @@ define void @tied_agpr64(i64 %x) {
 ; GFX90A-LABEL: tied_agpr64:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_accvgpr_write_b32 a3, v1
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a2, v0
+; GFX90A-NEXT:    v_accvgpr_write_b32 a3, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -133,11 +129,11 @@ define void @tied_agpr64_sgpr(i64 inreg %x) {
 ; GFX908-LABEL: tied_agpr64_sgpr:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_mov_b32_e32 v2, s16
-; GFX908-NEXT:    v_mov_b32_e32 v0, s17
+; GFX908-NEXT:    v_mov_b32_e32 v0, s16
+; GFX908-NEXT:    v_mov_b32_e32 v1, s17
 ; GFX908-NEXT:    s_nop 0
-; GFX908-NEXT:    v_accvgpr_write_b32 a2, v2
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v0
+; GFX908-NEXT:    v_accvgpr_write_b32 a2, v0
+; GFX908-NEXT:    v_accvgpr_write_b32 a3, v1
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; def a[2:3]
 ; GFX908-NEXT:    ;;#ASMEND

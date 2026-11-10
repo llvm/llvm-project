@@ -1333,11 +1333,10 @@ public:
                                           StringRef Attr = "selected") {
     // A local coroutine function from another CU can be promoted to a global
     // function during ThinLTO import. This will create a linkage name like
-    // "_Zfoo.llvm.xxxx.cleanup". Under CFI, LowerTypeTests may also append
-    // ".cfi" either before or after CoroSplit appends the coroutine suffix.
-    // Remove these suffixes to avoid pseudo probe mismatch.
-    const SmallVector<StringRef, 6> CoroSuffixes{
-        CfiSuffix, ".cleanup", ".destroy", ".resume", CfiSuffix, LLVMSuffix};
+    // "_Zfoo.llvm.xxxx.cleanup". Remove the ".llvm." suffix after stripping all
+    // the coroutine suffixes to avoid pseudo probe mismatch.
+    const SmallVector<StringRef, 4> CoroSuffixes{".cleanup", ".destroy",
+                                                 ".resume", LLVMSuffix};
     return getCanonicalFnName(FnName, CoroSuffixes, Attr);
   }
 

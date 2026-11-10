@@ -1331,18 +1331,7 @@ TEST(SampleProfCanonicalNameTest, CoroFnName) {
             FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.destroy"));
   EXPECT_EQ("_Zfoo",
             FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.resume"));
-  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.cfi"));
-  EXPECT_EQ("_Zfoo", FunctionSamples::getCanonicalCoroFnName(
-                         "_Zfoo.llvm.1234.resume.cfi"));
-  EXPECT_EQ("_Zfoo", FunctionSamples::getCanonicalCoroFnName(
-                         "_Zfoo.llvm.1234.cfi.resume"));
-  EXPECT_EQ("_Zfoo", FunctionSamples::getCanonicalCoroFnName(
-                         "_Zfoo.llvm.1234.cleanup.cfi"));
-  EXPECT_EQ("_Zfoo", FunctionSamples::getCanonicalCoroFnName(
-                         "_Zfoo.llvm.1234.cfi.destroy"));
   // Suffixes without trailing dot require an exact match.
-  EXPECT_EQ("foo.cfi_jt",
-            FunctionSamples::getCanonicalCoroFnName("foo.cfi_jt"));
   EXPECT_EQ("foo.cleanupper",
             FunctionSamples::getCanonicalCoroFnName("foo.cleanupper"));
   EXPECT_EQ("foo.destroyer",

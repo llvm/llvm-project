@@ -483,33 +483,21 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
 
 Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical,
                               bool KeyImportedAliasesByAliasGUID) {
-  auto IsPreferredDef = [](const Function &F) {
-    return !F.isDeclaration() && !F.hasFnAttribute(Attribute::Naked);
-  };
-  // Process non-naked definitions before declarations and naked jump-table
-  // stubs so that when both share a canonical name or GUID (for example, a CFI
-  // function definition @foo.cfi and its jump-table declaration or stub @foo),
-  // finalizeSymtab()'s stable_sort keeps the real definition first.
-  for (bool VisitPreferred : {true, false}) {
-    for (Function &F : M) {
-      if (IsPreferredDef(F) != VisitPreferred)
-        continue;
-      // Function may not have a name: like using asm("") to overwrite the name.
-      // Ignore in this case.
-      if (!F.hasName())
-        continue;
-      auto IRPGOFuncName = getIRPGOObjectName(F, InLTO);
-      if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical,
+  for (Function &F : M) {
+    // Function may not have a name: like using asm("") to overwrite the name.
+    // Ignore in this case.
+    if (!F.hasName())
+      continue;
+    auto IRPGOFuncName = getIRPGOObjectName(F, InLTO);
+    if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical,
+                                  KeyImportedAliasesByAliasGUID))
+      return E;
+    // Also use getPGOFuncName() so that we can find records from older profiles
+    auto PGOFuncName = getPGOFuncName(F, InLTO);
+    if (PGOFuncName != IRPGOFuncName)
+      if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical,
                                     KeyImportedAliasesByAliasGUID))
         return E;
-      // Also use getPGOFuncName() so that we can find records from older
-      // profiles
-      auto PGOFuncName = getPGOFuncName(F, InLTO);
-      if (PGOFuncName != IRPGOFuncName)
-        if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical,
-                                      KeyImportedAliasesByAliasGUID))
-          return E;
-    }
   }
 
   for (GlobalVariable &G : M.globals()) {
@@ -518,6 +506,13 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical,
     if (Error E = addVTableWithName(G, getIRPGOObjectName(G, InLTO)))
       return E;
   }
+
+  // Place definitions before declarations so finalizeSymtab()'s stable_sort
+  // keeps definitions (e.g. @foo.cfi) ahead of jump-table declarations (@foo)
+  // when they share a canonical name or GUID.
+  std::stable_partition(
+      MD5FuncMap.begin(), MD5FuncMap.end(),
+      [](const auto &Entry) { return !Entry.second->isDeclaration(); });
 
   Sorted = false;
   finalizeSymtab();
