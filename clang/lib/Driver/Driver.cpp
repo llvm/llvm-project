@@ -1138,14 +1138,17 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     if (!IsSYCL)
       Diag(clang::diag::err_drv_argument_only_allowed_with)
           << A->getSpelling() << "-fsycl";
-    else if (const Arg *OnlyArg = C.getInputArgs().getLastArgNoClaim(
+    else if (const Arg *ModeArg = C.getInputArgs().getLastArgNoClaim(
                  options::OPT_offload_device_only,
-                 options::OPT_offload_host_only)) {
+                 options::OPT_offload_host_only,
+                 options::OPT_offload_host_device);
+             ModeArg &&
+             !ModeArg->getOption().matches(options::OPT_offload_host_device)) {
       // Report the spelling that was used, e.g. -fsycl-device-only.
-      if (OnlyArg->getAlias())
-        OnlyArg = OnlyArg->getAlias();
+      if (ModeArg->getAlias())
+        ModeArg = ModeArg->getAlias();
       Diag(clang::diag::err_drv_argument_not_allowed_with)
-          << A->getSpelling() << OnlyArg->getSpelling();
+          << A->getSpelling() << ModeArg->getSpelling();
     }
   }
 

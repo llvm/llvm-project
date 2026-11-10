@@ -3,12 +3,16 @@
 
 // RUN: touch %t.a.o %t.b.o
 
-/// clang-linker-wrapper is the only link job, and it gets --sycl-device-link.
+/// clang-linker-wrapper is the only link job, and it gets --sycl-device-link
+/// with the link inputs instead of the host link command.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-link \
-// RUN:   %t.a.o %t.b.o -o dev.o 2>&1 | FileCheck %s --check-prefix=LINK
+// RUN:   %t.a.o -L/foo -Wl,--whole-archive -lbar -Wl,--no-whole-archive \
+// RUN:   %t.b.o -o dev.o 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=LINK --implicit-check-not=crt1.o \
+// RUN:     --implicit-check-not='"-lc"'
 // LINK: clang-linker-wrapper"
-// LINK-SAME: "--sycl-device-link"
-// LINK-SAME: "-o" "dev.o"
+// LINK-SAME: "--sycl-device-link" "-o" "dev.o" "-L/foo"
+// LINK-SAME: "{{.*}}a.o" "--whole-archive" "-lbar" "--no-whole-archive" "{{.*}}b.o"{{$}}
 
 // RUN: %clang -ccc-print-bindings --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   -fsycl-link %t.a.o %t.b.o -o dev.o 2>&1 \
@@ -30,7 +34,7 @@
 
 // RUN: %clang -### --target=x86_64-pc-windows-msvc -fsycl -fsycl-link \
 // RUN:   %t.a.o -o dev.obj 2>&1 | FileCheck %s --check-prefix=WINDOWS
-// WINDOWS: clang-linker-wrapper"{{.*}} "--sycl-device-link"{{.*}} "-out:dev.obj"
+// WINDOWS: clang-linker-wrapper"{{.*}} "--sycl-device-link" "-o" "dev.obj" "{{.*}}a.o"{{$}}
 // RUN: %clang -ccc-print-bindings --target=x86_64-pc-windows-msvc -fsycl \
 // RUN:   -fsycl-link %t.a.o -o dev.obj 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=WINDOWS-BINDINGS
@@ -62,6 +66,13 @@
 // RUN:   -fsycl-host-only %t.a.o 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ONLY -DOPT=-fsycl-host-only
 // ONLY: error: invalid argument '-fsycl-link' not allowed with '[[OPT]]'
+
+/// The last of the mode options selects the mode.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-link \
+// RUN:   --offload-device-only --offload-host-device %t.a.o 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=HOST-DEVICE
+// HOST-DEVICE-NOT: error:
+// HOST-DEVICE: clang-linker-wrapper"{{.*}} "--sycl-device-link"
 
 /// -fsycl-link is unused when there is no link step.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-link -c %s \

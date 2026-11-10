@@ -10139,12 +10139,18 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.append({"-o", Output.getFilename()});
     for (auto Input : Inputs)
       CmdArgs.push_back(Input.getFilename());
-  } else {
+  } else if (C.isOffloadingHostKind(Action::OFK_SYCL) &&
+             Args.hasArg(options::OPT_fsycl_link)) {
     // With -fsycl-link, the wrapper writes the wrapped SYCL device object to
-    // the output and does not run the host link command.
-    if (C.isOffloadingHostKind(Action::OFK_SYCL) &&
-        Args.hasArg(options::OPT_fsycl_link))
-      CmdArgs.push_back("--sycl-device-link");
+    // the output and no host link runs. Pass only the link inputs and library
+    // paths, not the host link command with its startup files and default
+    // libraries.
+    CmdArgs.push_back("--sycl-device-link");
+    CmdArgs.append({"-o", Output.getFilename()});
+    Args.AddAllArgs(CmdArgs, options::OPT_L);
+    getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+    AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+  } else {
     for (const char *LinkArg : LinkCommand->getArguments())
       CmdArgs.push_back(LinkArg);
   }
