@@ -5,7 +5,7 @@
 
 ; CHECK: Running analysis: DominatorTreeAnalysis on f
 ; CHECK: Running pass: AttributorLightPass on [module]
-; CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::DominatorTreeAnalysis, llvm::Function, llvm::AnalysisManager<Function>> on f
+; CHECK-NEXT: Running pass: RequireAnalysisPass<{{.*}}DominatorTreeAnalysis{{.*}}> on f
 ; CHECK-NEXT: Running pass: NoOpFunctionPass on f
 
 define void @f() {
