@@ -481,7 +481,9 @@ register allocation, a `FREEZE` of a defined value becomes a `COPY`, and a
 `FREEZE` of an undefined value stays until code emission, where it emits no
 code.
 
-Selectors still lower `freeze` to a `COPY`. If the copied value is undefined,
+SelectionDAG selects `freeze` to `FREEZE`, except on targets that don't use
+physical registers for values, such as WebAssembly. FastISel and the GlobalISel
+selectors still lower it to a `COPY`. If the copied value is undefined,
 different uses can observe different values, which violates the IR semantics of
 `freeze`.
 

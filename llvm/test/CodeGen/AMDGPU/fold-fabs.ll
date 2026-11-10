@@ -70,6 +70,7 @@ exit:
 define float @fold_abs_in_branch_undef(float %arg1, float %arg2) {
 ; GFX10-LABEL: fold_abs_in_branch_undef:
 ; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    ; freeze: $sgpr4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_add_f32_e64 v0, |s4|, |s4|
 ; GFX10-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 1.0, v0

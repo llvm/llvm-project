@@ -109,20 +109,21 @@ define amdgpu_kernel void @s_set_midbit(ptr addrspace(1) %out, i32 %in) {
 define void @bitset_verifier_error_freeze_poison() local_unnamed_addr #0 {
 ; SI-LABEL: bitset_verifier_error_freeze_poison:
 ; SI:       ; %bb.0: ; %bb
+; SI-NEXT:    ; freeze: $sgpr8
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_getpc_b64 s[4:5]
 ; SI-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; SI-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; SI-NEXT:    s_and_b32 s9, s8, 0x7fffffff
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    v_mov_b32_e32 v0, s9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_and_b32 s8, s4, 0x7fffffff
-; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x3f7fbe77
-; SI-NEXT:    v_cmp_ge_f32_e64 vcc, |s4|, v0
+; SI-NEXT:    v_cmp_ge_f32_e64 vcc, |s8|, v0
 ; SI-NEXT:    s_cbranch_vccnz .LBB6_2
 ; SI-NEXT:  ; %bb.1: ; %bb5
 ; SI-NEXT:  .LBB6_2: ; %bb6
