@@ -93,11 +93,11 @@ struct ShadowAddressDescription {
   ShadowKind kind;
   u8 shadow_byte;
 
-  void Print(ScopedSanitizerReport *srep) const;
+  void Print(ScopedSanitizerReport* srep) const;
 };
 
 bool GetShadowAddressInformation(uptr addr, ShadowAddressDescription *descr);
-bool DescribeAddressIfShadow(ScopedSanitizerReport *srep, uptr addr);
+bool DescribeAddressIfShadow(ScopedSanitizerReport* srep, uptr addr);
 
 enum AccessType {
   kAccessTypeLeft,
@@ -125,12 +125,12 @@ struct HeapAddressDescription {
   u32 free_stack_id;
   ChunkAccess chunk_access;
 
-  void Print(ScopedSanitizerReport *srep) const;
+  void Print(ScopedSanitizerReport* srep) const;
 };
 
 bool GetHeapAddressInformation(uptr addr, uptr access_size,
                                HeapAddressDescription *descr);
-bool DescribeAddressIfHeap(ScopedSanitizerReport *srep, uptr addr,
+bool DescribeAddressIfHeap(ScopedSanitizerReport* srep, uptr addr,
                            uptr access_size = 1);
 
 struct StackAddressDescription {
@@ -141,7 +141,7 @@ struct StackAddressDescription {
   uptr access_size;
   const char *frame_descr;
 
-  void Print(ScopedSanitizerReport *srep) const;
+  void Print(ScopedSanitizerReport* srep) const;
 };
 
 bool GetStackAddressInformation(uptr addr, uptr access_size,
@@ -151,7 +151,7 @@ struct WildAddressDescription {
   uptr addr;
   uptr access_size;
 
-  void Print(ScopedSanitizerReport *srep) const;
+  void Print(ScopedSanitizerReport* srep) const;
 };
 
 struct GlobalAddressDescription {
@@ -163,7 +163,7 @@ struct GlobalAddressDescription {
   uptr access_size;
   u8 size;
 
-  void Print(ScopedSanitizerReport *srep, const char *bug_type = "") const;
+  void Print(ScopedSanitizerReport* srep, const char* bug_type = "") const;
 
   // Returns true when this descriptions points inside the same global variable
   // as other. Descriptions can have different address within the variable
@@ -172,8 +172,8 @@ struct GlobalAddressDescription {
 
 bool GetGlobalAddressInformation(uptr addr, uptr access_size,
                                  GlobalAddressDescription *descr);
-bool DescribeAddressIfGlobal(ScopedSanitizerReport *srep, uptr addr,
-                             uptr access_size, const char *bug_type);
+bool DescribeAddressIfGlobal(ScopedSanitizerReport* srep, uptr addr,
+                             uptr access_size, const char* bug_type);
 
 // General function to describe an address. Will try to describe the address as
 // a shadow, global (variable), stack, or heap address.
@@ -183,9 +183,8 @@ bool DescribeAddressIfGlobal(ScopedSanitizerReport *srep, uptr addr,
 // addresses. Defaults to 1.
 // Each of the *AddressDescription functions has its own Print() member, which
 // may take access_size and bug_type parameters if needed.
-void PrintAddressDescription(ScopedSanitizerReport *srep, uptr addr,
-                             uptr access_size = 1,
-                             const char *bug_type = "");
+void PrintAddressDescription(ScopedSanitizerReport* srep, uptr addr,
+                             uptr access_size = 1, const char* bug_type = "");
 
 enum AddressKind {
   kAddressKindWild,
@@ -233,8 +232,8 @@ class AddressDescription {
     }
     UNREACHABLE("AddressInformation kind is invalid");
   }
-  void Print(ScopedSanitizerReport &srep,
-             const char *bug_descr = nullptr) const {
+  void Print(ScopedSanitizerReport& srep,
+             const char* bug_descr = nullptr) const {
     switch (data.kind) {
       case kAddressKindWild:
         data.wild.Print(&srep);

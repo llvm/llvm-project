@@ -23,8 +23,8 @@
 
 namespace __asan {
 
-void ErrorBase::PrintFaultStack(ScopedSanitizerReport &srep,
-                                const StackTrace &stack) const {
+void ErrorBase::PrintFaultStack(ScopedSanitizerReport& srep,
+                                const StackTrace& stack) const {
   stack.Print();
   srep.NotifyStack(stack.trace, stack.size, kReportStackOther, "fault", tid);
 }
@@ -48,15 +48,15 @@ static void OnStackUnwind(const SignalContext &sig,
                 fast);
 }
 
-void ErrorDeadlySignal::Print(ScopedSanitizerReport &srep) {
+void ErrorDeadlySignal::Print(ScopedSanitizerReport& srep) {
   ReportDeadlySignal(srep, signal, tid, &OnStackUnwind, &scariness);
 }
 
-void ErrorDoubleFree::Print(ScopedSanitizerReport &srep) {
+void ErrorDoubleFree::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(),
                    "ERROR: AddressSanitizer: attempting %s on %p in thread %s:",
-                   scariness.GetDescription(), (void *)addr_description.addr,
+                   scariness.GetDescription(), (void*)addr_description.addr,
                    AsanThreadIdAndName(tid).c_str());
   scariness.Print();
   GET_STACK_TRACE_FATAL(second_free_stack->trace[0],
@@ -66,10 +66,10 @@ void ErrorDoubleFree::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), &stack);
 }
 
-void ErrorNewDeleteTypeMismatch::Print(ScopedSanitizerReport &srep) {
+void ErrorNewDeleteTypeMismatch::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(), "ERROR: AddressSanitizer: %s on %p in thread %s:",
-                   scariness.GetDescription(), (void *)addr_description.addr,
+                   scariness.GetDescription(), (void*)addr_description.addr,
                    AsanThreadIdAndName(tid).c_str());
   Printf("%s  object passed to delete has wrong type:\n", d.Default());
   if (delete_size != 0) {
@@ -105,10 +105,10 @@ void ErrorNewDeleteTypeMismatch::Print(ScopedSanitizerReport &srep) {
       "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
 }
 
-void ErrorFreeSizeMismatch::Print(ScopedSanitizerReport &srep) {
+void ErrorFreeSizeMismatch::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(), "ERROR: AddressSanitizer: %s on %p in thread %s:",
-                   scariness.GetDescription(), (void *)addr_description.addr,
+                   scariness.GetDescription(), (void*)addr_description.addr,
                    AsanThreadIdAndName(tid).c_str());
   Printf("%s  object passed to %s has wrong size or alignment:\n", d.Default(),
          (isFreeAlignedSized() ? "free_aligned_sized" : "free_sized"));
@@ -145,12 +145,12 @@ void ErrorFreeSizeMismatch::Print(ScopedSanitizerReport &srep) {
       "ASAN_OPTIONS=free_size_mismatch=0\n");
 }
 
-void ErrorFreeNotMalloced::Print(ScopedSanitizerReport &srep) {
+void ErrorFreeNotMalloced::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(),
                    "ERROR: AddressSanitizer: attempting free on address "
                    "which was not malloc()-ed: %p in thread %s",
-                   (void *)addr_description.Address(),
+                   (void*)addr_description.Address(),
                    AsanThreadIdAndName(tid).c_str());
   CHECK_GT(free_stack->size, 0);
   scariness.Print();
@@ -160,7 +160,7 @@ void ErrorFreeNotMalloced::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), &stack);
 }
 
-void ErrorAllocTypeMismatch::Print(ScopedSanitizerReport &srep) {
+void ErrorAllocTypeMismatch::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   static const char *alloc_names[] = {"INVALID", "malloc", "operator new",
                                       "operator new []"};
@@ -170,7 +170,7 @@ void ErrorAllocTypeMismatch::Print(ScopedSanitizerReport &srep) {
   srep.PrintTitleF(d.Error(), "ERROR: AddressSanitizer: %s (%s vs %s) on %p",
                    scariness.GetDescription(), alloc_names[alloc_type],
                    dealloc_names[dealloc_type],
-                   (void *)addr_description.Address());
+                   (void*)addr_description.Address());
   CHECK_GT(dealloc_stack->size, 0);
   scariness.Print();
   GET_STACK_TRACE_FATAL(dealloc_stack->trace[0], dealloc_stack->top_frame_bp);
@@ -182,32 +182,32 @@ void ErrorAllocTypeMismatch::Print(ScopedSanitizerReport &srep) {
       "ASAN_OPTIONS=alloc_dealloc_mismatch=0\n");
 }
 
-void ErrorMallocUsableSizeNotOwned::Print(ScopedSanitizerReport &srep) {
+void ErrorMallocUsableSizeNotOwned::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
       "ERROR: AddressSanitizer: attempting to call malloc_usable_size() for "
       "pointer which is not owned: %p",
-      (void *)addr_description.Address());
+      (void*)addr_description.Address());
   PrintFaultStack(srep, *stack);
   addr_description.Print(srep);
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
 void ErrorSanitizerGetAllocatedSizeNotOwned::Print(
-    ScopedSanitizerReport &srep) {
+    ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
       "ERROR: AddressSanitizer: attempting to call "
       "__sanitizer_get_allocated_size() for pointer which is not owned: %p",
-      (void *)addr_description.Address());
+      (void*)addr_description.Address());
   PrintFaultStack(srep, *stack);
   addr_description.Print(srep);
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorCallocOverflow::Print(ScopedSanitizerReport &srep) {
+void ErrorCallocOverflow::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
@@ -219,7 +219,7 @@ void ErrorCallocOverflow::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorReallocArrayOverflow::Print(ScopedSanitizerReport &srep) {
+void ErrorReallocArrayOverflow::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
@@ -231,7 +231,7 @@ void ErrorReallocArrayOverflow::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorPvallocOverflow::Print(ScopedSanitizerReport &srep) {
+void ErrorPvallocOverflow::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
@@ -244,7 +244,7 @@ void ErrorPvallocOverflow::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorInvalidAllocationAlignment::Print(ScopedSanitizerReport &srep) {
+void ErrorInvalidAllocationAlignment::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
@@ -256,7 +256,7 @@ void ErrorInvalidAllocationAlignment::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorInvalidAlignedAllocAlignment::Print(ScopedSanitizerReport &srep) {
+void ErrorInvalidAlignedAllocAlignment::Print(ScopedSanitizerReport& srep) {
   Decorator d;
 #if SANITIZER_POSIX
   srep.PrintTitleF(d.Error(),
@@ -277,20 +277,20 @@ void ErrorInvalidAlignedAllocAlignment::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorInvalidPosixMemalignAlignment::Print(ScopedSanitizerReport &srep) {
+void ErrorInvalidPosixMemalignAlignment::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
       "ERROR: AddressSanitizer: invalid alignment requested in posix_memalign: "
       "%zd, alignment must be a power of two and a multiple of sizeof(void*) "
       "== %zd (thread %s)",
-      alignment, sizeof(void *), AsanThreadIdAndName(tid).c_str());
+      alignment, sizeof(void*), AsanThreadIdAndName(tid).c_str());
   PrintFaultStack(srep, *stack);
   PrintHintAllocatorCannotReturnNull();
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorAllocationSizeTooBig::Print(ScopedSanitizerReport &srep) {
+void ErrorAllocationSizeTooBig::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
@@ -303,7 +303,7 @@ void ErrorAllocationSizeTooBig::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorRssLimitExceeded::Print(ScopedSanitizerReport &srep) {
+void ErrorRssLimitExceeded::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
@@ -315,7 +315,7 @@ void ErrorRssLimitExceeded::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorOutOfMemory::Print(ScopedSanitizerReport &srep) {
+void ErrorOutOfMemory::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(
       d.Error(),
@@ -327,7 +327,7 @@ void ErrorOutOfMemory::Print(ScopedSanitizerReport &srep) {
 }
 
 void ErrorStringFunctionMemoryRangesOverlap::Print(
-    ScopedSanitizerReport &srep) {
+    ScopedSanitizerReport& srep) {
   Decorator d;
   char bug_type[100];
   internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
@@ -335,10 +335,10 @@ void ErrorStringFunctionMemoryRangesOverlap::Print(
       d.Error(),
       "ERROR: AddressSanitizer: %s: memory ranges [%p,%p) and [%p, %p) "
       "overlap",
-      bug_type, (void *)addr1_description.Address(),
-      (void *)(addr1_description.Address() + length1),
-      (void *)addr2_description.Address(),
-      (void *)(addr2_description.Address() + length2));
+      bug_type, (void*)addr1_description.Address(),
+      (void*)(addr1_description.Address() + length1),
+      (void*)addr2_description.Address(),
+      (void*)(addr2_description.Address() + length2));
   scariness.Print();
   PrintFaultStack(srep, *stack);
   addr1_description.Print(srep);
@@ -346,7 +346,7 @@ void ErrorStringFunctionMemoryRangesOverlap::Print(
   ReportErrorSummary(bug_type, stack);
 }
 
-void ErrorStringFunctionSizeOverflow::Print(ScopedSanitizerReport &srep) {
+void ErrorStringFunctionSizeOverflow::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(), "ERROR: AddressSanitizer: %s: (size=%zd)",
                    scariness.GetDescription(), size);
@@ -357,7 +357,7 @@ void ErrorStringFunctionSizeOverflow::Print(ScopedSanitizerReport &srep) {
 }
 
 void ErrorBadParamsToAnnotateContiguousContainer::Print(
-    ScopedSanitizerReport &srep) {
+    ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(),
                    "ERROR: AddressSanitizer: bad parameters to "
@@ -367,13 +367,13 @@ void ErrorBadParamsToAnnotateContiguousContainer::Print(
       "      end     : %p\n"
       "      old_mid : %p\n"
       "      new_mid : %p\n",
-      (void *)beg, (void *)end, (void *)old_mid, (void *)new_mid);
+      (void*)beg, (void*)end, (void*)old_mid, (void*)new_mid);
   PrintFaultStack(srep, *stack);
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
 void ErrorBadParamsToAnnotateDoubleEndedContiguousContainer::Print(
-    ScopedSanitizerReport &srep) {
+    ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(),
                    "ERROR: AddressSanitizer: bad parameters to "
@@ -385,17 +385,17 @@ void ErrorBadParamsToAnnotateDoubleEndedContiguousContainer::Print(
       "      old_container_end  : %p\n"
       "      new_container_beg  : %p\n"
       "      new_container_end  : %p\n",
-      (void *)storage_beg, (void *)storage_end, (void *)old_container_beg,
-      (void *)old_container_end, (void *)new_container_beg,
-      (void *)new_container_end);
+      (void*)storage_beg, (void*)storage_end, (void*)old_container_beg,
+      (void*)old_container_end, (void*)new_container_beg,
+      (void*)new_container_end);
   PrintFaultStack(srep, *stack);
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
-void ErrorODRViolation::Print(ScopedSanitizerReport &srep) {
+void ErrorODRViolation::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(), "ERROR: AddressSanitizer: %s (%p):",
-                   scariness.GetDescription(), (void *)global1.beg);
+                   scariness.GetDescription(), (void*)global1.beg);
   srep.NotifyAddress(global1.beg, global1.size, kReportAddressFault, "fault");
   InternalScopedString g1_loc;
   InternalScopedString g2_loc;
@@ -427,12 +427,12 @@ void ErrorODRViolation::Print(ScopedSanitizerReport &srep) {
   ReportErrorSummary(error_msg.data());
 }
 
-void ErrorInvalidPointerPair::Print(ScopedSanitizerReport &srep) {
+void ErrorInvalidPointerPair::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   srep.PrintTitleF(d.Error(), "ERROR: AddressSanitizer: %s: %p %p",
                    scariness.GetDescription(),
-                   (void *)addr1_description.Address(),
-                   (void *)addr2_description.Address());
+                   (void*)addr1_description.Address(),
+                   (void*)addr2_description.Address());
   GET_STACK_TRACE_FATAL(pc, bp);
   PrintFaultStack(srep, stack);
   addr1_description.Print(srep);
@@ -676,13 +676,13 @@ static void CheckPoisonRecords(uptr addr) {
   }
 }
 
-void ErrorGeneric::Print(ScopedSanitizerReport &srep) {
+void ErrorGeneric::Print(ScopedSanitizerReport& srep) {
   Decorator d;
   uptr addr = addr_description.Address();
   srep.PrintTitleF(
       d.Error(),
       "ERROR: AddressSanitizer: %s on address %p at pc %p bp %p sp %p",
-      bug_descr, (void *)addr, (void *)pc, (void *)bp, (void *)sp);
+      bug_descr, (void*)addr, (void*)pc, (void*)bp, (void*)sp);
 
   const char* access_type = "ACCESS";
   if (access_size) {

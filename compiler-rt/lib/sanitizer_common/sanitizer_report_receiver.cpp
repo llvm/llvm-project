@@ -8,28 +8,27 @@
 
 #include "sanitizer_report_receiver.h"
 
+#include <stdarg.h>
+
 #include "sanitizer_common.h"
 #include "sanitizer_report_decorator.h"
-
-#include <stdarg.h>
 
 namespace __sanitizer {
 
 // Single receiver for now; registration happens once at init.
-static ReportReceiver *g_receiver = nullptr;
+static ReportReceiver* g_receiver = nullptr;
 
-void RegisterReportReceiver(ReportReceiver *r) {
+void RegisterReportReceiver(ReportReceiver* r) {
   if (!r)
     return;
   CHECK(!g_receiver && "only one ReportReceiver is supported");
   g_receiver = r;
 }
 
-ScopedSanitizerReport::ScopedSanitizerReport(const char *sanitizer,
-                                             const char *type,
+ScopedSanitizerReport::ScopedSanitizerReport(const char* sanitizer,
+                                             const char* type,
                                              bool title_with_pid)
-    : sanitizer_(sanitizer ? sanitizer : ""),
-      title_with_pid_(title_with_pid) {
+    : sanitizer_(sanitizer ? sanitizer : ""), title_with_pid_(title_with_pid) {
   if (g_receiver)
     g_receiver->OnStart(sanitizer, type);
 }
@@ -39,7 +38,7 @@ ScopedSanitizerReport::~ScopedSanitizerReport() {
     g_receiver->OnFinish();
 }
 
-static void NotifyTitle(const char *title) {
+static void NotifyTitle(const char* title) {
   if (g_receiver)
     g_receiver->OnTitle(title);
 }
@@ -47,7 +46,7 @@ static void NotifyTitle(const char *title) {
 // Stack buffer, like Report(): this can run when the allocator has failed.
 static const uptr kTitleBufSize = 320;
 
-void ScopedSanitizerReport::PrintTitleF(const char *color, const char *fmt,
+void ScopedSanitizerReport::PrintTitleF(const char* color, const char* fmt,
                                         ...) {
   char buf[kTitleBufSize];
   va_list ap;
@@ -71,15 +70,15 @@ void ScopedSanitizerReport::PrintTitleF(const char *color, const char *fmt,
 
 void ScopedSanitizerReport::NotifyAddress(uptr addr, uptr size,
                                           ReportAddressKind kind,
-                                          const char *desc) {
+                                          const char* desc) {
   if (!addr)
     return;
   if (g_receiver)
     g_receiver->OnAddress(addr, size, kind, desc);
 }
 
-void ScopedSanitizerReport::NotifyStack(const uptr *frames, uptr num_frames,
-                                        ReportStackKind kind, const char *desc,
+void ScopedSanitizerReport::NotifyStack(const uptr* frames, uptr num_frames,
+                                        ReportStackKind kind, const char* desc,
                                         u64 tid) {
   if (!frames || !num_frames)
     return;

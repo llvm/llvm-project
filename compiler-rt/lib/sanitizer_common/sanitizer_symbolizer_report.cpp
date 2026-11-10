@@ -218,16 +218,16 @@ static void MaybeDumpRegisters(void *context) {
   SignalContext::DumpAllRegisters(context);
 }
 
-static void ReportStackOverflowImpl(ScopedSanitizerReport &srep,
-                                    const SignalContext &sig, u32 tid,
+static void ReportStackOverflowImpl(ScopedSanitizerReport& srep,
+                                    const SignalContext& sig, u32 tid,
                                     UnwindSignalStackCallbackType unwind,
-                                    const void *unwind_context) {
+                                    const void* unwind_context) {
   static const char kDescription[] = "stack-overflow";
   SanitizerCommonDecorator d;
   srep.PrintTitleF(d.Warning(),
                    "ERROR: %s: %s on address %p (pc %p bp %p sp %p T%d)",
-                   SanitizerToolName, kDescription, (void *)sig.addr,
-                   (void *)sig.pc, (void *)sig.bp, (void *)sig.sp, tid);
+                   SanitizerToolName, kDescription, (void*)sig.addr,
+                   (void*)sig.pc, (void*)sig.bp, (void*)sig.sp, tid);
   if (sig.is_true_faulting_addr)
     srep.NotifyAddress(sig.addr, 0, kReportAddressFault, "fault");
   // Avoid SEGVs in the unwinder when bp couldn't be determined.
@@ -243,23 +243,23 @@ static void ReportStackOverflowImpl(ScopedSanitizerReport &srep,
   }
 }
 
-static void ReportDeadlySignalImpl(ScopedSanitizerReport &srep,
-                                   const SignalContext &sig, u32 tid,
+static void ReportDeadlySignalImpl(ScopedSanitizerReport& srep,
+                                   const SignalContext& sig, u32 tid,
                                    UnwindSignalStackCallbackType unwind,
-                                   const void *unwind_context) {
+                                   const void* unwind_context) {
   SanitizerCommonDecorator d;
   const char *description = sig.Describe();
   if (sig.is_memory_access && !sig.is_true_faulting_addr)
     srep.PrintTitleF(d.Warning(),
                      "ERROR: %s: %s on unknown address (pc %p bp %p sp %p T%d)",
-                     SanitizerToolName, description, (void *)sig.pc,
-                     (void *)sig.bp, (void *)sig.sp, tid);
+                     SanitizerToolName, description, (void*)sig.pc,
+                     (void*)sig.bp, (void*)sig.sp, tid);
   else
     srep.PrintTitleF(
         d.Warning(),
         "ERROR: %s: %s on unknown address %p (pc %p bp %p sp %p T%d)",
-        SanitizerToolName, description, (void *)sig.addr, (void *)sig.pc,
-        (void *)sig.bp, (void *)sig.sp, tid);
+        SanitizerToolName, description, (void*)sig.addr, (void*)sig.pc,
+        (void*)sig.bp, (void*)sig.sp, tid);
   if (sig.is_true_faulting_addr)
     srep.NotifyAddress(sig.addr, 0, kReportAddressFault, "fault");
   if (sig.pc < GetPageSizeCached())
@@ -291,9 +291,9 @@ static void ReportDeadlySignalImpl(ScopedSanitizerReport &srep,
   ReportErrorSummary(description, stack);
 }
 
-void ReportDeadlySignal(ScopedSanitizerReport &srep, const SignalContext &sig,
+void ReportDeadlySignal(ScopedSanitizerReport& srep, const SignalContext& sig,
                         u32 tid, UnwindSignalStackCallbackType unwind,
-                        const void *unwind_context) {
+                        const void* unwind_context) {
   if (sig.IsStackOverflow())
     ReportStackOverflowImpl(srep, sig, tid, unwind, unwind_context);
   else

@@ -130,7 +130,7 @@ static const char *ExternalMopDesc(bool first, bool write) {
                : (write ? "Previous modifying" : "Previous read-only");
 }
 
-static void PrintMop(ScopedSanitizerReport &srep, const ReportMop *mop,
+static void PrintMop(ScopedSanitizerReport& srep, const ReportMop* mop,
                      bool first) {
   Decorator d;
   char thrbuf[kThreadBufSize];
@@ -139,14 +139,13 @@ static void PrintMop(ScopedSanitizerReport &srep, const ReportMop *mop,
   if (mop->external_tag == kExternalTagNone) {
     s.AppendF("%s of size %d at %p by %s",
               MopDesc(first, mop->write, mop->atomic), mop->size,
-              (void *)mop->addr, thread_name(thrbuf, mop->tid));
+              (void*)mop->addr, thread_name(thrbuf, mop->tid));
   } else {
     const char *object_type = GetObjectTypeFromTag(mop->external_tag);
     if (object_type == nullptr)
       object_type = "external object";
-    s.AppendF("%s access of %s at %p by %s",
-              ExternalMopDesc(first, mop->write), object_type,
-              (void *)mop->addr, thread_name(thrbuf, mop->tid));
+    s.AppendF("%s access of %s at %p by %s", ExternalMopDesc(first, mop->write),
+              object_type, (void*)mop->addr, thread_name(thrbuf, mop->tid));
   }
   Printf("  %s", s.data());
   PrintMutexSet(mop->mset);
@@ -160,8 +159,8 @@ static void PrintMop(ScopedSanitizerReport &srep, const ReportMop *mop,
                    kReportStackOther, s.data(), mop->tid);
 }
 
-static void PrintLocation(ScopedSanitizerReport &srep,
-                          const ReportLocation *loc) {
+static void PrintLocation(ScopedSanitizerReport& srep,
+                          const ReportLocation* loc) {
   Decorator d;
   char thrbuf[kThreadBufSize];
   bool print_stack = false;
@@ -171,25 +170,24 @@ static void PrintLocation(ScopedSanitizerReport &srep,
     const DataInfo &global = loc->global;
     if (global.size != 0)
       s.AppendF("Location is global '%s' of size %zu at %p (%s+0x%zx)",
-                global.name, global.size,
-                reinterpret_cast<void *>(global.start),
+                global.name, global.size, reinterpret_cast<void*>(global.start),
                 StripModuleName(global.module), global.module_offset);
     else
       s.AppendF("Location is global '%s' at %p (%s+0x%zx)", global.name,
-                reinterpret_cast<void *>(global.start),
+                reinterpret_cast<void*>(global.start),
                 StripModuleName(global.module), global.module_offset);
   } else if (loc->type == ReportLocationHeap) {
     const char *object_type = GetObjectTypeFromTag(loc->external_tag);
     if (!object_type)
       s.AppendF("Location is heap block of size %zu at %p allocated by %s:",
                 loc->heap_chunk_size,
-                reinterpret_cast<void *>(loc->heap_chunk_start),
+                reinterpret_cast<void*>(loc->heap_chunk_start),
                 thread_name(thrbuf, loc->tid));
     else
-      s.AppendF("Location is %s of size %zu at %p allocated by %s:",
-                object_type, loc->heap_chunk_size,
-                reinterpret_cast<void *>(loc->heap_chunk_start),
-                thread_name(thrbuf, loc->tid));
+      s.AppendF(
+          "Location is %s of size %zu at %p allocated by %s:", object_type,
+          loc->heap_chunk_size, reinterpret_cast<void*>(loc->heap_chunk_start),
+          thread_name(thrbuf, loc->tid));
     print_stack = true;
     stack_kind = kReportStackAllocation;
     srep.NotifyAddress((uptr)loc->heap_chunk_start, loc->heap_chunk_size,
@@ -227,12 +225,12 @@ static void PrintMutexShortWithAddress(const ReportMutex *rm,
          reinterpret_cast<void *>(rm->addr), d.Default(), after);
 }
 
-static void PrintMutex(ScopedSanitizerReport &srep, const ReportMutex *rm) {
+static void PrintMutex(ScopedSanitizerReport& srep, const ReportMutex* rm) {
   Decorator d;
   Printf("%s", d.Mutex());
   InternalScopedString s;
   s.AppendF("Mutex M%u (%p) created at:", rm->id,
-            reinterpret_cast<void *>(rm->addr));
+            reinterpret_cast<void*>(rm->addr));
   Printf("  %s\n", s.data());
   Printf("%s", d.Default());
   PrintStack(rm->stack);
@@ -241,7 +239,7 @@ static void PrintMutex(ScopedSanitizerReport &srep, const ReportMutex *rm) {
                    kReportUnknownThread);
 }
 
-static void PrintThread(ScopedSanitizerReport &srep, const ReportThread *rt) {
+static void PrintThread(ScopedSanitizerReport& srep, const ReportThread* rt) {
   Decorator d;
   if (rt->id == kMainTid)  // Little sense in describing the main thread.
     return;
@@ -373,8 +371,7 @@ void PrintReport(const ReportDesc *rep) {
   if (rep->sleep)
     PrintSleep(rep->sleep);
 
-  for (uptr i = 0; i < rep->locs.Size(); i++)
-    PrintLocation(srep, rep->locs[i]);
+  for (uptr i = 0; i < rep->locs.Size(); i++) PrintLocation(srep, rep->locs[i]);
 
   if (rep->typ != ReportTypeDeadlock) {
     for (uptr i = 0; i < rep->mutexes.Size(); i++)

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_descriptions.h"
+
 #include "asan_mapping.h"
 #include "asan_report.h"
 #include "asan_stack.h"
@@ -91,7 +92,7 @@ static bool GetShadowKind(uptr addr, ShadowKind *shadow_kind) {
   return true;
 }
 
-bool DescribeAddressIfShadow(ScopedSanitizerReport *srep, uptr addr) {
+bool DescribeAddressIfShadow(ScopedSanitizerReport* srep, uptr addr) {
   ShadowAddressDescription descr;
   if (!GetShadowAddressInformation(addr, &descr)) return false;
   descr.Print(srep);
@@ -187,7 +188,7 @@ static StackTrace GetStackTraceFromId(u32 id) {
   return res;
 }
 
-bool DescribeAddressIfHeap(ScopedSanitizerReport *srep, uptr addr,
+bool DescribeAddressIfHeap(ScopedSanitizerReport* srep, uptr addr,
                            uptr access_size) {
   HeapAddressDescription descr;
   if (!GetHeapAddressInformation(addr, access_size, &descr)) {
@@ -276,7 +277,7 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
   Printf("%s", str.data());
 }
 
-bool DescribeAddressIfStack(ScopedSanitizerReport *srep, uptr addr,
+bool DescribeAddressIfStack(ScopedSanitizerReport* srep, uptr addr,
                             uptr access_size) {
   StackAddressDescription descr;
   if (!GetStackAddressInformation(addr, access_size, &descr)) return false;
@@ -320,8 +321,8 @@ bool GetGlobalAddressInformation(uptr addr, uptr access_size,
   return globals_num != 0;
 }
 
-bool DescribeAddressIfGlobal(ScopedSanitizerReport *srep, uptr addr,
-                             uptr access_size, const char *bug_type) {
+bool DescribeAddressIfGlobal(ScopedSanitizerReport* srep, uptr addr,
+                             uptr access_size, const char* bug_type) {
   GlobalAddressDescription descr;
   if (!GetGlobalAddressInformation(addr, access_size, &descr)) return false;
 
@@ -329,7 +330,7 @@ bool DescribeAddressIfGlobal(ScopedSanitizerReport *srep, uptr addr,
   return true;
 }
 
-void ShadowAddressDescription::Print(ScopedSanitizerReport *srep) const {
+void ShadowAddressDescription::Print(ScopedSanitizerReport* srep) const {
   // Shadow addresses have no meaningful access size.
   if (srep)
     srep->NotifyAddress(addr, 0, kReportAddressFault, "fault");
@@ -337,8 +338,8 @@ void ShadowAddressDescription::Print(ScopedSanitizerReport *srep) const {
          ShadowNames[kind]);
 }
 
-void GlobalAddressDescription::Print(ScopedSanitizerReport *srep,
-                                     const char *bug_type) const {
+void GlobalAddressDescription::Print(ScopedSanitizerReport* srep,
+                                     const char* bug_type) const {
   if (srep)
     srep->NotifyAddress(addr, access_size, kReportAddressFault, "fault");
   for (int i = 0; i < size; i++) {
@@ -372,7 +373,7 @@ bool GlobalAddressDescription::PointsInsideTheSameVariable(
   return false;
 }
 
-void StackAddressDescription::Print(ScopedSanitizerReport *srep) const {
+void StackAddressDescription::Print(ScopedSanitizerReport* srep) const {
   if (srep)
     srep->NotifyAddress(addr, access_size, kReportAddressFault, "fault");
   Decorator d;
@@ -429,7 +430,7 @@ void StackAddressDescription::Print(ScopedSanitizerReport *srep) const {
   DescribeThread(GetThreadContextByTidLocked(tid));
 }
 
-void HeapAddressDescription::Print(ScopedSanitizerReport *srep) const {
+void HeapAddressDescription::Print(ScopedSanitizerReport* srep) const {
   if (srep)
     srep->NotifyAddress(addr, access_size, kReportAddressFault, "fault");
   PrintHeapChunkAccess(addr, chunk_access);
@@ -516,16 +517,15 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
   data.wild.access_size = access_size;
 }
 
-void WildAddressDescription::Print(ScopedSanitizerReport *srep) const {
+void WildAddressDescription::Print(ScopedSanitizerReport* srep) const {
   if (srep)
     srep->NotifyAddress(addr, access_size, kReportAddressFault, "fault");
   Printf("Address %p is a wild pointer inside of access range of size %p.\n",
          (void *)addr, (void *)access_size);
 }
 
-void PrintAddressDescription(ScopedSanitizerReport *srep, uptr addr,
-                             uptr access_size,
-                             const char *bug_type) {
+void PrintAddressDescription(ScopedSanitizerReport* srep, uptr addr,
+                             uptr access_size, const char* bug_type) {
   ShadowAddressDescription shadow_descr;
   if (GetShadowAddressInformation(addr, &shadow_descr)) {
     shadow_descr.Print(srep);

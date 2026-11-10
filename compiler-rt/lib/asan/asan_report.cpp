@@ -173,7 +173,7 @@ class ScopedInErrorReport {
     if (current_error_.IsValid()) {
       // Passed by reference (or pointer) through the Error*::Print /
       // *AddressDescription::Print methods so they can push receiver events.
-      const char *type_str =
+      const char* type_str =
           current_error_.kind == kErrorKindGeneric
               ? current_error_.Generic.bug_descr
               : current_error_.Base.scariness.GetDescription();
