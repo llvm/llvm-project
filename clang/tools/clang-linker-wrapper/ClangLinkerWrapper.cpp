@@ -1488,7 +1488,8 @@ getDeviceInput(const ArgList &Args) {
       UnknownOptionIndices.insert(Arg->getIndex());
   // COFF linker options such as '/nologo' or '/LIBPATH:C:\dir' are parsed as
   // inputs. Unlike a path, the option name before any ':' has no further path
-  // separator.
+  // separator. A missing root-level path such as '/a.obj' looks the same, so it
+  // is not reported.
   auto IsCOFFLinkerOption = [&](StringRef Input) {
     if (!HostTriple.isOSWindows() || !Input.consume_front("/"))
       return false;
