@@ -4,7 +4,8 @@
 ; can sneak in between two checked declarations.
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=avr-none < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CHECK %s
 
-; CHECK: declare double @__adddf3(double, double) addrspace(1)
+; CHECK: @__stack_chk_guard = external global ptr
+; CHECK-NEXT: declare double @__adddf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__addsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__addtf3(fp128, fp128) addrspace(1)
 ; CHECK-NEXT: declare i64 @__ashldi3(i64, i16) addrspace(1)
@@ -71,6 +72,9 @@
 ; CHECK-NEXT: declare i16 @__clzdi2(i64) addrspace(1)
 ; CHECK-NEXT: declare i16 @__clzsi2(i32) addrspace(1)
 ; CHECK-NEXT: declare i16 @__clzti2(i128) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzdi2(i64) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzsi2(i32) addrspace(1)
+; CHECK-NEXT: declare i16 @__ctzti2(i128) addrspace(1)
 ; CHECK-NEXT: declare double @__divdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare i64 @__divdi3(i64, i64) addrspace(1)
 ; CHECK-NEXT: declare cc86 inreg { i16, i16 } @__divmodhi4(i16, i16) addrspace(1) [[DIVMOD_ATTRS:#[0-9]+]]
@@ -206,8 +210,7 @@
 ; CHECK-NEXT: declare double @__powidf2(double, i16) addrspace(1)
 ; CHECK-NEXT: declare float @__powisf2(float, i16) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16) addrspace(1)
-; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1)
-; CHECK-NEXT: declare void @__stack_chk_guard(...) addrspace(1)
+; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1) [[NORETURN_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__subdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__subsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128) addrspace(1)
@@ -401,6 +404,7 @@
 ; CHECK-NEXT: declare double @trunc(double) addrspace(1)
 ; CHECK-NEXT: declare float @truncf(float) addrspace(1)
 ; CHECK-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

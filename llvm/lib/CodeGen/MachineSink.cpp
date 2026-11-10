@@ -153,7 +153,6 @@ class MachineSinking {
   // will be split.
   SetVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> ToSplit;
 
-  DenseSet<Register> RegsToClearKillFlags;
 
   using AllSuccsCache =
       SmallDenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
@@ -392,10 +391,6 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
   MRI->replaceRegWith(DstReg, SrcReg);
   MI.eraseFromParent();
 
-  // Conservatively, clear any kill flags, since it's possible that they are no
-  // longer correct.
-  MRI->clearKillFlags(SrcReg);
-
   ++NumCoalesces;
   return true;
 }
@@ -579,25 +574,9 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       New = &*std::prev(InsertPt);
       if (!New->getDebugLoc())
         New->setDebugLoc(SinkDst->getDebugLoc());
-
-      // The operand registers of the "sunk" instruction have their live range
-      // extended and their kill flags may no longer be correct. Conservatively
-      // clear the kill flags.
-      if (UsedRegA)
-        MRI->clearKillFlags(UsedRegA);
-      if (UsedRegB)
-        MRI->clearKillFlags(UsedRegB);
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
-
-      // The registers of the addressing mode may have their live range extended
-      // and their kill flags may no longer be correct. Conservatively clear the
-      // kill flags.
-      if (Register R = MaybeAM.BaseReg; R.isValid() && R.isVirtual())
-        MRI->clearKillFlags(R);
-      if (Register R = MaybeAM.ScaledReg; R.isValid() && R.isVirtual())
-        MRI->clearKillFlags(R);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
     // Clear the StoreInstrCache, since we may invalidate it by erasing.
@@ -936,11 +915,6 @@ bool MachineSinking::run(MachineFunction &MF) {
 
   HasStoreCache.clear();
   StoreInstrCache.clear();
-
-  // Now clear any kill flags for recorded registers.
-  for (auto I : RegsToClearKillFlags)
-    MRI->clearKillFlags(I);
-  RegsToClearKillFlags.clear();
 
   releaseMemory();
   return EverMadeChange;
@@ -1509,8 +1483,7 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
 /// check optimization is legal over MI, and this returning false does not
 /// guarantee MI cannot possibly be used to do a null check.
 static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
-                                             const TargetInstrInfo *TII,
-                                             const TargetRegisterInfo *TRI) {
+                                             const TargetInstrInfo *TII) {
   using MachineBranchPredicate = TargetInstrInfo::MachineBranchPredicate;
 
   auto *MBB = MI.getParent();
@@ -1808,12 +1781,6 @@ bool MachineSinking::aggressivelySinkIntoCycle(
       SunkInstrs.insert({MapEntry, NewMI});
     }
 
-    // Conservatively clear any kill flags on uses of sunk instruction
-    for (MachineOperand &MO : NewMI->all_uses()) {
-      assert(MO.isReg() && MO.isUse());
-      RegsToClearKillFlags.insert(MO.getReg());
-    }
-
     // The instruction is moved from its basic block, so do not retain the
     // debug information.
     assert(!NewMI->isDebugInstr() && "Should not sink debug inst");
@@ -1849,7 +1816,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
 
   // Don't break implicit null checks.  This is a performance heuristic, and not
   // required for correctness.
-  if (SinkingPreventsImplicitNullCheck(MI, TII, TRI))
+  if (SinkingPreventsImplicitNullCheck(MI, TII))
     return false;
 
   // FIXME: This should include support for sinking instructions within the
@@ -1980,14 +1947,6 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     SalvageUnsunkDebugUsersOfCopy(MI, SuccToSinkTo);
 
   performSink(MI, *SuccToSinkTo, InsertPos, DbgUsersToSink);
-
-  // Conservatively, clear any kill flags, since it's possible that they are no
-  // longer correct.
-  // Note that we have to clear the kill flags for any register this instruction
-  // uses as we may sink over another instruction which currently kills the
-  // used registers.
-  for (MachineOperand &MO : MI.all_uses())
-    RegsToClearKillFlags.insert(MO.getReg()); // Remember to clear kill flags.
 
   return true;
 }

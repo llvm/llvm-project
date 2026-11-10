@@ -22,7 +22,7 @@
 
 ; Tests for selecting interleave counts for loops with loads and stores.
 
-define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 %b) {
+define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 %b) vscale_range(1,16) {
 ; INTERLEAVE-2-LABEL: @interleave_single_load_store(
 ; INTERLEAVE-2-NEXT:  iter.check:
 ; INTERLEAVE-2-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64

@@ -63,13 +63,6 @@ today_fmt = "%Y-%m-%d"
 # directories to ignore when looking for source files.
 exclude_patterns = ["_build"]
 
-rst_prolog = """
-.. role::  raw-html(raw)
-    :format: html
-
-.. |check| replace:: :raw-html:`&#x2705`
-"""
-
 myst_substitutions = {
     "check": "\N{WHITE HEAVY CHECK MARK}",
 }
@@ -102,6 +95,7 @@ configure_furo(
     source_directory="libc/docs/",
     html_title="The LLVM C Library",
     local_static_path=["_static"],
+    extra_css_files=["status.css"],
 )
 
 # Add any paths that contain custom themes here, relative to this directory.

@@ -18,7 +18,9 @@ include "mlir/Dialect/OpenACC/OpenACCAttributes.td"
 include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/IR/EnumAttr.td"
 
-class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
+class fir_Attr<string name> : AttrDef<FIROpsDialect, name> {
+  let cppIncludes = ["flang/Optimizer/Dialect/FIRAttr.h"];
+}
 
 //===----------------------------------------------------------------------===//
 // Linkage

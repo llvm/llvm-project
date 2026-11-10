@@ -1223,13 +1223,15 @@ llvm::json::Value toJSON(const StackFrame &SF) {
   }
   if (SF.canRestart)
     result.insert({"canRestart", SF.canRestart});
+  if (SF.isOptimized)
+    result.insert({"$__lldb_isOptimized", SF.isOptimized});
   if (SF.instructionPointerReference != LLDB_INVALID_ADDRESS)
     result.insert({"instructionPointerReference",
                    EncodeMemoryReference(SF.instructionPointerReference)});
   if (SF.moduleId)
     result.insert({"moduleId", *SF.moduleId});
   if (SF.compileUnitId)
-    result.insert({"compileUnitId", *SF.compileUnitId});
+    result.insert({"$__lldb_compileUnitId", *SF.compileUnitId});
   if (SF.languageSpecificData)
     result.insert({"$__lldb_languageSpecificData", *SF.languageSpecificData});
   if (SF.presentationHint != StackFrame::ePresentationHintNone)

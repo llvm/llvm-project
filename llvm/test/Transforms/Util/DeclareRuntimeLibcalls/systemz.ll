@@ -4,7 +4,10 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=s390x-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=LINUX %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=s390x-ibm-zos < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=ZOS %s
 
-; LINUX: declare void @_Unwind_Resume(ptr)
+; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; LINUX-NEXT: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare float @__addsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -74,6 +77,9 @@
 ; LINUX-NEXT: declare signext i32 @__clzdi2(i64)
 ; LINUX-NEXT: declare signext i32 @__clzsi2(i32 zeroext)
 ; LINUX-NEXT: declare signext i32 @__clzti2(i128)
+; LINUX-NEXT: declare signext i32 @__ctzdi2(i64)
+; LINUX-NEXT: declare signext i32 @__ctzsi2(i32 zeroext)
+; LINUX-NEXT: declare signext i32 @__ctzti2(i128)
 ; LINUX-NEXT: declare void @__cxa_end_cleanup()
 ; LINUX-NEXT: declare double @__divdf3(double, double)
 ; LINUX-NEXT: declare i64 @__divdi3(i64, i64)
@@ -221,9 +227,7 @@
 ; LINUX-NEXT: declare float @__powisf2(float, i32 signext)
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; LINUX-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; LINUX-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
-; LINUX-NEXT: declare void @__stack_chk_fail()
-; LINUX-NEXT: declare void @__stack_chk_guard(...)
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -475,12 +479,14 @@
 ; LINUX-NEXT: declare double @trunc(double)
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncl(fp128)
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; ZOS: declare double @"@@DCPY@B"(double, double)
+; ZOS: @__stack_chk_guard = external global ptr
+; ZOS-NEXT: declare double @"@@DCPY@B"(double, double)
 ; ZOS-NEXT: declare double @"@@EXP2@B"(double)
 ; ZOS-NEXT: declare float @"@@FACS@B"(float)
 ; ZOS-NEXT: declare float @"@@FASN@B"(float)
@@ -585,6 +591,7 @@
 ; ZOS-NEXT: declare double @"@@WPOW@B"(double, double)
 ; ZOS-NEXT: declare double @"@@WSNH@B"(double)
 ; ZOS-NEXT: declare double @"@@WSQT@B"(double)
+; ZOS-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; ZOS-NEXT: declare void @_Unwind_Resume(ptr)
 ; ZOS-NEXT: declare double @__adddf3(double, double)
 ; ZOS-NEXT: declare float @__addsf3(float, float)
@@ -655,6 +662,9 @@
 ; ZOS-NEXT: declare signext i32 @__clzdi2(i64)
 ; ZOS-NEXT: declare signext i32 @__clzsi2(i32 zeroext)
 ; ZOS-NEXT: declare signext i32 @__clzti2(i128)
+; ZOS-NEXT: declare signext i32 @__ctzdi2(i64)
+; ZOS-NEXT: declare signext i32 @__ctzsi2(i32 zeroext)
+; ZOS-NEXT: declare signext i32 @__ctzti2(i128)
 ; ZOS-NEXT: declare void @__cxa_end_cleanup()
 ; ZOS-NEXT: declare double @__divdf3(double, double)
 ; ZOS-NEXT: declare i64 @__divdi3(i64, i64)
@@ -802,8 +812,7 @@
 ; ZOS-NEXT: declare float @__powisf2(float, i32 signext)
 ; ZOS-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; ZOS-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; ZOS-NEXT: declare void @__stack_chk_fail()
-; ZOS-NEXT: declare void @__stack_chk_guard(...)
+; ZOS-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; ZOS-NEXT: declare double @__subdf3(double, double)
 ; ZOS-NEXT: declare float @__subsf3(float, float)
 ; ZOS-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1052,6 +1061,7 @@
 ; ZOS-NEXT: declare double @trunc(double)
 ; ZOS-NEXT: declare float @truncf(float)
 ; ZOS-NEXT: declare fp128 @truncl(fp128)
+; ZOS-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; ZOS-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; ZOS-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; ZOS-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

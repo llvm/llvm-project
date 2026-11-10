@@ -667,9 +667,8 @@ public:
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
-    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             getTriple().isNVPTX());
+    return (forEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Emit type info if type of an expression is a variably modified
@@ -685,9 +684,12 @@ public:
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
 
-  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
-                          GlobalDecl aliasGD, cir::FuncOp aliasee,
-                          cir::GlobalLinkageKind linkage);
+  /// Emit `aliasGD` as an alias of `aliasee`, replacing any existing
+  /// declaration `op`, and return the alias.
+  cir::FuncOp emitAliasForGlobal(llvm::StringRef mangledName,
+                                 mlir::Operation *op, GlobalDecl aliasGD,
+                                 cir::FuncOp aliasee,
+                                 cir::GlobalLinkageKind linkage);
 
   /// Emit a definition for an `__attribute__((alias))` declaration.
   void emitAliasDefinition(GlobalDecl gd);

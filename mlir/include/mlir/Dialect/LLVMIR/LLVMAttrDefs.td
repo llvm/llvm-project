@@ -21,6 +21,7 @@ class LLVM_Attr<string name, string attrMnemonic,
                 list<Trait> traits = [],
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/LLVMAttrs.h"];
   let mnemonic = attrMnemonic;
 }
 

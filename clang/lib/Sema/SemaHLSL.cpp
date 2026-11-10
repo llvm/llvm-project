@@ -4968,14 +4968,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
-  case Builtin::BI__builtin_hlsl_all:
-  case Builtin::BI__builtin_hlsl_any: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
-      return true;
-    break;
-  }
   case Builtin::BI__builtin_hlsl_asdouble: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
@@ -6402,9 +6394,8 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     }
 
     // Process resources in user-defined structs, or arrays of such structs.
-    const Type *VDTy = VD->getType().getTypePtr();
-    if (VD->getStorageClass() != SC_Static && VDTy->isHLSLIntangibleType() &&
-        !isResourceRecordTypeOrArrayOf(VD))
+    if (VD->getStorageClass() != SC_Static &&
+        isStructOrArrayOfWithResources(VD->getType()))
       handleGlobalStructOrArrayOfWithResources(VD);
 
     // Mark groupshared variables as extern so they will have
