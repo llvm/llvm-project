@@ -1,0 +1,20 @@
+# REQUIRES: cir-enabled, aarch64-registered-target
+## LLVM IR and CIR RUN lines of an SVE test share one set of checks, focused on
+## the intrinsic call. The test uses the real AArch64 lit.local.cfg, so this
+## also fails when its substitutions change.
+
+# RUN: rm -rf %t && mkdir %t
+# RUN: cp %S/../../CodeGen/AArch64/lit.local.cfg %t/lit.local.cfg
+# RUN: cp %S/Inputs/cir-sve-recpe.c %t/test.c
+# RUN: %update_cc_test_checks --version 6 --lit-features cir-enabled --body-prefixes LLVM,CIR --normalize-local-names --filter-out "cir\.(alloca|store|load|return)" %t/test.c
+# RUN: diff -u %S/Inputs/cir-sve-recpe.c.expected %t/test.c
+
+## The generated checks must hold against the real output of every pipeline.
+# RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +sve -fclangir -emit-cir -disable-O0-optnone -o - %t/test.c | FileCheck %t/test.c --check-prefixes=C,CIR
+# RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +sve -fclangir -emit-llvm -disable-O0-optnone -o - %t/test.c | opt -passes=mem2reg -S | FileCheck %t/test.c --check-prefixes=C,LLVM
+# RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +sve -emit-llvm -disable-O0-optnone -o - %t/test.c | opt -passes=mem2reg -S | FileCheck %t/test.c --check-prefixes=C,LLVM
+# RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +sve -DSVE_OVERLOADED_FORMS -emit-llvm -disable-O0-optnone -o - -x c++ %t/test.c | opt -passes=mem2reg -S | FileCheck %t/test.c --check-prefixes=CPP,LLVM
+
+## Check that re-running update_cc_test_checks doesn't change the output
+# RUN: %update_cc_test_checks %t/test.c
+# RUN: diff -u %S/Inputs/cir-sve-recpe.c.expected %t/test.c
