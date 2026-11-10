@@ -498,10 +498,10 @@ define void @reverse_deref_size_lower_guard(ptr %A, ptr %B, i64 %d) {
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: null High: (32 + %B))
+; CHECK-NEXT:          (Low: %B High: (32 + %B))
 ; CHECK-NEXT:            Member: {(28 + %B),+,-4}<nw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: null High: (32 + %A))
+; CHECK-NEXT:          (Low: %A High: (32 + %A))
 ; CHECK-NEXT:            Member: {(28 + %A),+,-4}<nw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
