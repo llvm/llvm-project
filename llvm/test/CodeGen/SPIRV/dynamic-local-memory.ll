@@ -84,10 +84,10 @@ define spir_kernel void @nouse() addrspace(9) {
 
 ; SPV-DAG: OpEntryPoint Kernel %[[#KERNEL:]] "kernel"
 ; SPV-DAG: OpEntryPoint Kernel %[[#NOUSE:]] "nouse"
-; SPV-DAG: %[[#I8:]] = OpTypeInt 8 0
-; SPV-DAG: %[[#LOCALPTR:]] = OpTypePointer Workgroup %[[#I8]]
 ; SPV-NOT: LinkageAttributes "buf"
 ; SPV-NOT: LinkageAttributes "other"
+; SPV-DAG: %[[#I8:]] = OpTypeInt 8 0
+; SPV-DAG: %[[#LOCALPTR:]] = OpTypePointer Workgroup %[[#I8]]
 ; SPV: %[[#KERNEL]] = OpFunction
 ; SPV-NEXT: OpFunctionParameter
 ; SPV-NEXT: OpFunctionParameter %[[#LOCALPTR]]
