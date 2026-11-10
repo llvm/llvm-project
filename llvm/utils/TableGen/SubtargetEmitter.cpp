@@ -983,11 +983,6 @@ SubtargetEmitter::findWriteResources(const CodeGenSchedRW &SchedWrite,
 
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindWriteResources recursively with that model here.
-  if (!ResDef) {
-    PrintFatalError(ProcModel.ModelDef->getLoc(),
-                    Twine("Processor does not define resources for ") +
-                        SchedWrite.TheDef->getName());
-  }
   return ResDef;
 }
 
@@ -1043,11 +1038,6 @@ SubtargetEmitter::findReadAdvance(const CodeGenSchedRW &SchedRead,
 
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindReadAdvance recursively with that model here.
-  if (!ResDef && SchedRead.TheDef->getName() != "ReadDefault") {
-    PrintFatalError(ProcModel.ModelDef->getLoc(),
-                    Twine("Processor does not define resources for ") +
-                        SchedRead.TheDef->getName());
-  }
   return ResDef;
 }
 
@@ -1201,6 +1191,10 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       for (unsigned WS : WriteSeq) {
         const Record *WriteRes =
             findWriteResources(SchedModels.getSchedWrite(WS), ProcModel);
+        if (!WriteRes)
+          PrintFatalError(ProcModel.ModelDef->getLoc(),
+                          Twine("Processor does not define resources for ") +
+                              SchedModels.getSchedWrite(WS).TheDef->getName());
 
         // Mark the parent class as invalid for unsupported write types.
         if (WriteRes->getValueAsBit("Unsupported")) {
@@ -1315,10 +1309,15 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
     // Entries must be sorted first by UseIdx then by WriteResourceID.
     for (unsigned UseIdx = 0, EndIdx = Reads.size(); UseIdx != EndIdx;
          ++UseIdx) {
-      const Record *ReadAdvance =
-          findReadAdvance(SchedModels.getSchedRead(Reads[UseIdx]), ProcModel);
-      if (!ReadAdvance)
+      const CodeGenSchedRW &SchedRead = SchedModels.getSchedRead(Reads[UseIdx]);
+      const Record *ReadAdvance = findReadAdvance(SchedRead, ProcModel);
+      if (!ReadAdvance) {
+        if (SchedRead.TheDef->getName() != "ReadDefault")
+          PrintFatalError(ProcModel.ModelDef->getLoc(),
+                          Twine("Processor does not define resources for ") +
+                              SchedRead.TheDef->getName());
         continue;
+      }
 
       // Mark the parent class as invalid for unsupported write types.
       if (ReadAdvance->getValueAsBit("Unsupported")) {
