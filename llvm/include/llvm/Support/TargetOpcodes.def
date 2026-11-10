@@ -63,6 +63,10 @@ HANDLE_TARGET_OPCODE(IMPLICIT_DEF)
 /// early-clobber result operand.
 HANDLE_TARGET_OPCODE(INIT_UNDEF)
 
+/// FREEZE - Returns an arbitrary, but fixed value of the same type when the
+/// input is undefined/poison. Otherwise, copies the input.
+HANDLE_TARGET_OPCODE(FREEZE)
+
 /// SUBREG_TO_REG - Expose the value of bits in a super register.
 /// This is typically used after an instruction which writes its result to a
 /// subregister but also, as a side effect, writes some value (often zero) into

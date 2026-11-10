@@ -1254,6 +1254,16 @@ void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
   OutStreamer->addBlankLine();
 }
 
+static void emitFreeze(const MachineInstr *MI, AsmPrinter &AP) {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << "freeze: "
+     << printReg(MI->getOperand(0).getReg(),
+                 AP.MF->getSubtarget().getRegisterInfo());
+  AP.OutStreamer->AddComment(Str);
+  AP.OutStreamer->addBlankLine();
+}
+
 static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   std::string Str;
   raw_string_ostream OS(Str);
@@ -2266,6 +2276,12 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::INIT_UNDEF:
         // This is only used to influence register allocation behavior, no
         // actual initialization is needed.
+        break;
+      case TargetOpcode::FREEZE:
+        // Only a FREEZE of an undefined value is left. Whatever the register
+        // holds is a valid frozen value.
+        if (isVerbose())
+          emitFreeze(&MI, *this);
         break;
       case TargetOpcode::RELOC_NONE: {
         // Generate a temporary label for the current PC.
