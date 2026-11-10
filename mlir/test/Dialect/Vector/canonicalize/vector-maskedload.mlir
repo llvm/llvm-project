@@ -109,3 +109,40 @@ func.func @no_fold_select_load_on_false_arm(%base: memref<?xf32>, %idx: index,
   %result = arith.select %mask, %other, %load : vector<4xi1>, vector<4xf32>
   return %result : vector<4xf32>
 }
+
+// -----
+
+// Fold before the select's broadcast condition is canonicalized to a scalar.
+// CHECK-LABEL: func.func @fold_select_broadcast_mask(
+// CHECK-SAME: %[[COND:[^:]+]]: i1, %{{[^:]+}}: vector<4xf32>, %[[NEW:[^:]+]]: vector<4xf32>
+// CHECK: %[[MASK:.*]] = vector.broadcast %[[COND]]
+// CHECK: %[[LOAD:.*]] = vector.maskedload {{.*}}, %[[MASK]], %[[NEW]]
+// CHECK-NEXT: return %[[LOAD]]
+func.func @fold_select_broadcast_mask(%base: memref<?xf32>, %idx: index,
+    %cond: i1, %old: vector<4xf32>, %new: vector<4xf32>) -> vector<4xf32> {
+  %mask = vector.broadcast %cond : i1 to vector<4xi1>
+  %load = vector.maskedload %base[%idx], %mask, %old
+      : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  %result = arith.select %mask, %load, %new : vector<4xi1>, vector<4xf32>
+  return %result : vector<4xf32>
+}
+
+// -----
+
+// A rewrite scoped to the if region cannot update the enclosing load.
+// CHECK-LABEL: func.func @no_fold_select_in_nested_region(
+// CHECK-SAME: %[[MASK:[^:]+]]: vector<4xi1>, %[[OLD:[^:]+]]: vector<4xf32>, %[[NEW:[^:]+]]: vector<4xf32>
+// CHECK: %[[LOAD:.*]] = vector.maskedload {{.*}}, %[[MASK]], %[[OLD]]
+// CHECK: scf.if
+// CHECK: %[[SELECT:.*]] = arith.select %[[MASK]], %[[LOAD]], %[[NEW]]
+// CHECK: vector.store %[[SELECT]],
+func.func @no_fold_select_in_nested_region(%base: memref<?xf32>, %idx: index,
+    %cond: i1, %mask: vector<4xi1>, %old: vector<4xf32>, %new: vector<4xf32>) {
+  %load = vector.maskedload %base[%idx], %mask, %old
+      : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  scf.if %cond {
+    %result = arith.select %mask, %load, %new : vector<4xi1>, vector<4xf32>
+    vector.store %result, %base[%idx] : memref<?xf32>, vector<4xf32>
+  }
+  return
+}

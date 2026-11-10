@@ -6450,44 +6450,11 @@ public:
     llvm_unreachable("Unexpected 1DMaskFormat on MaskedLoad");
   }
 };
-
-/// Fold select(mask, maskedload(base, mask, old), new) by using the select's
-/// false value as the load's passthrough.
-struct FoldSelectIntoMaskedLoad final : OpRewritePattern<MaskedLoadOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(MaskedLoadOp load,
-                                PatternRewriter &rewriter) const override {
-    if (!load.getResult().hasOneUse())
-      return failure();
-
-    auto select = dyn_cast<arith::SelectOp>(*load->user_begin());
-    if (!select || select.getTrueValue() != load.getResult() ||
-        select.getCondition() != load.getMask())
-      return failure();
-
-    // Keep the load in place so it cannot cross a write to the same memory.
-    // Check availability within the load's block to avoid building a dominator
-    // tree during canonicalization.
-    Value passthru = select.getFalseValue();
-    if (passthru.getParentBlock() != load->getBlock() ||
-        mayBeGraphRegion(*load->getParentRegion()))
-      return failure();
-    if (Operation *def = passthru.getDefiningOp();
-        def && !def->isBeforeInBlock(load))
-      return failure();
-
-    rewriter.modifyOpInPlace(
-        load, [&] { load.getPassThruMutable().assign(passthru); });
-    rewriter.replaceOp(select, load.getResult());
-    return success();
-  }
-};
 } // namespace
 
 void MaskedLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<MaskedLoadFolder, FoldSelectIntoMaskedLoad>(context);
+  results.add<MaskedLoadFolder>(context);
 }
 
 OpFoldResult MaskedLoadOp::fold(FoldAdaptor) {
@@ -8775,11 +8742,46 @@ struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
     return success();
   }
 };
+
+/// Fold select(mask, maskedload(base, mask, old), new) by using the select's
+/// false value as the load's passthrough.
+struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto load = select.getTrueValue().getDefiningOp<MaskedLoadOp>();
+    if (!load || !load.getResult().hasOneUse() ||
+        select.getCondition() != load.getMask())
+      return failure();
+
+    // A rewrite scoped to the select's region cannot update an enclosing load.
+    if (load->getParentRegion() != select->getParentRegion())
+      return failure();
+
+    // Keep the load in place so it cannot cross a write to the same memory.
+    // Check availability within the load's block to avoid building a dominator
+    // tree during canonicalization.
+    Value passthru = select.getFalseValue();
+    if (passthru.getParentBlock() != load->getBlock() ||
+        mayBeGraphRegion(*load->getParentRegion()))
+      return failure();
+    if (Operation *def = passthru.getDefiningOp();
+        def && !def->isBeforeInBlock(load))
+      return failure();
+
+    rewriter.modifyOpInPlace(
+        load, [&] { load.getPassThruMutable().assign(passthru); });
+    rewriter.replaceOp(select, load.getResult());
+    return success();
+  }
+};
 } // namespace
 
 void VectorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<SelectBroadcastCondition>(getContext());
+  // Fold a shared vector mask before scalarizing the select's condition.
+  results.add<FoldSelectIntoMaskedLoad, SelectBroadcastCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//
