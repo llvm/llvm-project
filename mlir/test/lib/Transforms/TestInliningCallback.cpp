@@ -20,6 +20,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Inliner.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace mlir;
@@ -145,6 +146,18 @@ struct InlinerCallback
 
 namespace mlir {
 namespace test {
-void registerInlinerCallback() { PassRegistration<InlinerCallback>(); }
+void registerInlinerCallback() {
+  PassRegistration<InlinerCallback>();
+  PassPipelineRegistration<>(
+      "test-inline-profitability-callback",
+      "Test the inliner pass with a profitability callback",
+      [](OpPassManager &pm) {
+        pm.addPass(createInlinerPass(
+            {}, nullptr, [](const Inliner::ResolvedCall &call) {
+              // Don't inline calls that are marked `unprofitable`.
+              return !call.call->hasDiscardableAttr("unprofitable");
+            }));
+      });
+}
 } // namespace test
 } // namespace mlir

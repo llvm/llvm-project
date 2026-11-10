@@ -120,12 +120,6 @@ bool InlinerInterface::isLegalToInline(Operation *op, Region *dest,
   return false;
 }
 
-bool InlinerInterface::isProfitableToInline(Operation *call,
-                                            Operation *callable) const {
-  auto *handler = getInterfaceFor(call);
-  return handler ? handler->isProfitableToInline(call, callable) : true;
-}
-
 bool InlinerInterface::shouldAnalyzeRecursively(Operation *op) const {
   auto *handler = getInterfaceFor(op);
   return handler ? handler->shouldAnalyzeRecursively(op) : true;

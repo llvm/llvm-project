@@ -18,6 +18,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/CompositePass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/Inliner.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/ViewOpGraph.h"
 #include "llvm/Support/Debug.h"
@@ -80,6 +81,12 @@ createInlinerPass(llvm::StringMap<OpPassManager> opPipelines);
 std::unique_ptr<Pass>
 createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
                   std::function<void(OpPassManager &)> defaultPipelineBuilder);
+/// Same as above, but a call is inlined only if `profitabilityCb` also returns
+/// true for it.
+std::unique_ptr<Pass>
+createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
+                  std::function<void(OpPassManager &)> defaultPipelineBuilder,
+                  Inliner::ProfitabilityCallbackTy profitabilityCb);
 
 /// Creates a pass which prints the list of ops and the number of occurrences in
 /// the module.

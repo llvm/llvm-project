@@ -380,10 +380,6 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
-  bool isProfitableToInline(Operation *call, Operation *) const final {
-    // Don't inline calls that are marked `unprofitable`.
-    return !call->hasDiscardableAttr("unprofitable");
-  }
 
   bool shouldAnalyzeRecursively(Operation *op) const final {
     // Analyze recursively if this is not a functional region operation, it

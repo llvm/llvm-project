@@ -46,7 +46,8 @@ public:
   InlinerPass(const InlinerPass &) = default;
   InlinerPass(std::function<void(OpPassManager &)> defaultPipeline);
   InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
-              llvm::StringMap<OpPassManager> opPipelines);
+              llvm::StringMap<OpPassManager> opPipelines,
+              Inliner::ProfitabilityCallbackTy profitabilityCb = nullptr);
   void runOnOperation() override;
 
   /// A callback provided to the inliner driver to execute
@@ -72,6 +73,9 @@ private:
 
   /// Inliner configuration parameters created from the pass options.
   InlinerConfig config;
+
+  /// Optional caller-provided profitability policy.
+  Inliner::ProfitabilityCallbackTy customProfitabilityCb;
 };
 } // namespace
 
@@ -83,8 +87,10 @@ InlinerPass::InlinerPass(
                   llvm::StringMap<OpPassManager>{}) {}
 
 InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
-                         llvm::StringMap<OpPassManager> opPipelines)
-    : config(std::move(defaultPipeline), maxInliningIterations) {
+                         llvm::StringMap<OpPassManager> opPipelines,
+                         Inliner::ProfitabilityCallbackTy profitabilityCb)
+    : config(std::move(defaultPipeline), maxInliningIterations),
+      customProfitabilityCb(std::move(profitabilityCb)) {
   if (opPipelines.empty())
     return;
 
@@ -140,12 +146,10 @@ void InlinerPass::runOnOperation() {
   }
 
   // By default, assume that any inlining is profitable.
-  InlinerInterface inlinerIface(op->getContext());
-  auto profitabilityCb = [this,
-                          &inlinerIface](const Inliner::ResolvedCall &call) {
-    Operation *callable = call.targetNode->getCallableRegion()->getParentOp();
-    return inlinerIface.isProfitableToInline(call.call, callable) &&
-           isProfitableToInline(call, inliningThreshold);
+  auto profitabilityCb = [this](const Inliner::ResolvedCall &call) {
+    if (customProfitabilityCb && !customProfitabilityCb(call))
+      return false;
+    return isProfitableToInline(call, inliningThreshold);
   };
 
   // Get an instance of the inliner.
@@ -198,4 +202,12 @@ std::unique_ptr<Pass> mlir::createInlinerPass(
     std::function<void(OpPassManager &)> defaultPipelineBuilder) {
   return std::make_unique<InlinerPass>(std::move(defaultPipelineBuilder),
                                        std::move(opPipelines));
+}
+std::unique_ptr<Pass> mlir::createInlinerPass(
+    llvm::StringMap<OpPassManager> opPipelines,
+    std::function<void(OpPassManager &)> defaultPipelineBuilder,
+    Inliner::ProfitabilityCallbackTy profitabilityCb) {
+  return std::make_unique<InlinerPass>(std::move(defaultPipelineBuilder),
+                                       std::move(opPipelines),
+                                       std::move(profitabilityCb));
 }
