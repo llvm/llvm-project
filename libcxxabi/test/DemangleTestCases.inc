@@ -29944,6 +29944,10 @@
 {"_Z1fIR1SEiOT_", "int f<S&>(S&)"},
 {"_Z1fIJR1SS0_EEiDpOT_", "int f<S&, S>(S&, S&&)"},
 
+// cv-qualifier collapsing.
+{"_Z1fIKiEvPKT_", "void f<int const>(int const*)"},
+{"_Z1fIKiEvPVKT_", "void f<int const>(int const volatile*)"},
+
 {"___Z3foo_block_invoke.25", "invocation function for block in foo"},
 
 // Darwin adds leading underscores to symbols, just demangle them anyways.
