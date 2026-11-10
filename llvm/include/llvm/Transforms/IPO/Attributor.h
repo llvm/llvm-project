@@ -1381,13 +1381,17 @@ private:
 /// declared here are tested with a bit mask, others with a list of IDs.
 class AAKindSet {
 public:
-  template <size_t N> constexpr AAKindSet(const char *const (&IDs)[N]);
+  /// Return the set of the kinds with the IDs \p KindIDs.
+  template <const char *...KindIDs> static constexpr AAKindSet get();
 
   /// Return true if abstract attributes of type \p AAType are in the set.
   template <typename AAType> bool contains() const;
 
 private:
-  uint64_t Mask = 0;
+  constexpr AAKindSet(uint64_t Mask, ArrayRef<const char *> IDs)
+      : Mask(Mask), IDs(IDs) {}
+
+  uint64_t Mask;
   ArrayRef<const char *> IDs;
 };
 
@@ -6399,76 +6403,67 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
 } // namespace AA
 
 namespace detail {
+template <const char *...IDs> struct AAKindIDList {};
+
 /// The IDs of the abstract attributes declared here, by their bit in
 /// AAKindSet.
-constexpr const char *AAKindIDs[] = {
-    &AANoUnwind::ID,
-    &AANoSync::ID,
-    &AAMustProgress::ID,
-    &AANonNull::ID,
-    &AANoRecurse::ID,
-    &AAWillReturn::ID,
-    &AAUndefinedBehavior::ID,
-    &AAIntraFnReachability::ID,
-    &AANoAlias::ID,
-    &AANoFree::ID,
-    &AANoReturn::ID,
-    &AAIsDead::ID,
-    &AADereferenceable::ID,
-    &AAAlign::ID,
-    &AAInstanceInfo::ID,
-    &AANoCapture::ID,
-    &AAValueSimplify::ID,
-    &AAHeapToStack::ID,
-    &AAPrivatizablePtr::ID,
-    &AAMemoryBehavior::ID,
-    &AAMemoryLocation::ID,
-    &AAValueConstantRange::ID,
-    &AAPotentialConstantValues::ID,
-    &AAPotentialValues::ID,
-    &AANoUndef::ID,
-    &AANoFPClass::ID,
-    &AACallEdges::ID,
-    &AAExecutionDomain::ID,
-    &AAInterFnReachability::ID,
-    &AANonConvergent::ID,
-    &AAPointerInfo::ID,
-    &AAAssumptionInfo::ID,
-    &AAUnderlyingObjects::ID,
-    &AAInvariantLoadPointer::ID,
-    &AAAddressSpace::ID,
-    &AANoAliasAddrSpace::ID,
-    &AAAllocationInfo::ID,
-    &AAGlobalValueInfo::ID,
-    &AAIndirectCallInfo::ID,
-    &AADenormalFPMath::ID,
-};
-static_assert(std::size(AAKindIDs) <= 64, "Too many kinds for the mask");
+using AAKindIDs = AAKindIDList<
+    &AANoUnwind::ID, &AANoSync::ID, &AAMustProgress::ID, &AANonNull::ID,
+    &AANoRecurse::ID, &AAWillReturn::ID, &AAUndefinedBehavior::ID,
+    &AAIntraFnReachability::ID, &AANoAlias::ID, &AANoFree::ID, &AANoReturn::ID,
+    &AAIsDead::ID, &AADereferenceable::ID, &AAAlign::ID, &AAInstanceInfo::ID,
+    &AANoCapture::ID, &AAValueSimplify::ID, &AAHeapToStack::ID,
+    &AAPrivatizablePtr::ID, &AAMemoryBehavior::ID, &AAMemoryLocation::ID,
+    &AAValueConstantRange::ID, &AAPotentialConstantValues::ID,
+    &AAPotentialValues::ID, &AANoUndef::ID, &AANoFPClass::ID, &AACallEdges::ID,
+    &AAExecutionDomain::ID, &AAInterFnReachability::ID, &AANonConvergent::ID,
+    &AAPointerInfo::ID, &AAAssumptionInfo::ID, &AAUnderlyingObjects::ID,
+    &AAInvariantLoadPointer::ID, &AAAddressSpace::ID, &AANoAliasAddrSpace::ID,
+    &AAAllocationInfo::ID, &AAGlobalValueInfo::ID, &AAIndirectCallInfo::ID,
+    &AADenormalFPMath::ID>;
+
+template <const char *...IDs>
+constexpr size_t getNumAAKinds(AAKindIDList<IDs...>) {
+  return sizeof...(IDs);
+}
+
+constexpr size_t NumAAKinds = getNumAAKinds(AAKindIDs());
+static_assert(NumAAKinds <= 64, "Too many kinds for the mask");
 
 /// Return the bit of \p ID in AAKindSet, or the number of kinds if it has
-/// none.
-constexpr size_t getAAKindBit(const char *ID) {
-  for (size_t I = 0; I != std::size(AAKindIDs); ++I) {
-    if (AAKindIDs[I] == ID)
+/// none. The IDs are compared as template arguments since older compilers
+/// cannot compare their addresses in constant expressions.
+template <const char *ID, const char *...IDs>
+constexpr size_t getAAKindBit(AAKindIDList<IDs...>) {
+  constexpr bool Matches[] = {
+      std::is_same_v<AAKindIDList<ID>, AAKindIDList<IDs>>...};
+  for (size_t I = 0; I != sizeof...(IDs); ++I) {
+    if (Matches[I])
       return I;
   }
-  return std::size(AAKindIDs);
+  return sizeof...(IDs);
 }
+
+/// Return the bit of \p ID in the mask of AAKindSet, or 0 if it has none.
+template <const char *ID> constexpr uint64_t getAAKindMask() {
+  constexpr size_t Bit = getAAKindBit<ID>(AAKindIDs());
+  return Bit < NumAAKinds ? uint64_t(1) << Bit : 0;
+}
+
+/// The storage of the IDs of an AAKindSet.
+template <const char *...IDs>
+inline constexpr const char *AAKindSetIDs[] = {IDs...};
 } // namespace detail
 
-template <size_t N>
-constexpr AAKindSet::AAKindSet(const char *const (&IDs)[N]) : IDs(IDs) {
-  for (const char *ID : IDs) {
-    if (size_t Bit = detail::getAAKindBit(ID);
-        Bit < std::size(detail::AAKindIDs))
-      Mask |= uint64_t(1) << Bit;
-  }
+template <const char *...KindIDs> constexpr AAKindSet AAKindSet::get() {
+  return AAKindSet((detail::getAAKindMask<KindIDs>() | ...),
+                   detail::AAKindSetIDs<KindIDs...>);
 }
 
 template <typename AAType> bool AAKindSet::contains() const {
-  constexpr size_t Bit = detail::getAAKindBit(&AAType::ID);
-  if constexpr (Bit < std::size(detail::AAKindIDs))
-    return Mask & (uint64_t(1) << Bit);
+  constexpr uint64_t KindMask = detail::getAAKindMask<&AAType::ID>();
+  if constexpr (KindMask != 0)
+    return Mask & KindMask;
   else
     return is_contained(IDs, &AAType::ID);
 }

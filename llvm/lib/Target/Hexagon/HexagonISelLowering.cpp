@@ -1916,6 +1916,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   if (Subtarget.useHVXOps())
     initializeHVXLowering();
 
+  if (Subtarget.useHLXOps())
+    initializeHLXLowering();
+
   computeRegisterProperties(&HRI);
 }
 
@@ -3357,7 +3360,11 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   if (Opc == ISD::INLINEASM || Opc == ISD::INLINEASM_BR)
     return LowerINLINEASM(Op, DAG);
 
-  if (isHvxOperation(Op.getNode(), DAG)) {
+  if (isHlxOperation(Op.getNode(), DAG)) {
+    // If HLX lowering returns nothing, try the default lowering.
+    if (SDValue V = LowerHlxOperation(Op, DAG))
+      return V;
+  } else if (isHvxOperation(Op.getNode(), DAG)) {
     // If HVX lowering returns nothing, try the default lowering.
     if (SDValue V = LowerHvxOperation(Op, DAG))
       return V;
@@ -3924,6 +3931,8 @@ bool HexagonTargetLowering::allowsMemoryAccess(
   if (!VT.isSimple())
     return false;
   MVT SVT = VT.getSimpleVT();
+  if (Subtarget.isHLXVectorType(SVT))
+    return allowsHlxMemoryAccess(SVT, Flags, Fast);
   if (Subtarget.isHVXVectorType(SVT, true))
     return allowsHvxMemoryAccess(SVT, Flags, Fast);
   return TargetLoweringBase::allowsMemoryAccess(

@@ -1562,24 +1562,25 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
-// Lower one DO control (lower, upper, or step). Integer controls, of any
-// kind, are already legal acc.loop operands and are left unchanged. A
-// non-integer control is a Fortran extension used by an implicit acc.loop;
-// convert it to the induction variable's integer type. An explicit !$acc loop
-// with a non-integer bound is rejected in semantics and must not reach here.
+// Lower one DO control (lower, upper, or step). The loop parameters have the
+// induction variable's kind (F2023 11.1.7.4.1), so convert a control whose
+// type differs. A non-integer control is a Fortran extension used by an
+// implicit acc.loop. An explicit !$acc loop with a non-integer bound is
+// rejected in semantics and must not reach here.
 static mlir::Value genACCLoopControlValue(
     Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
     mlir::Location loc, Fortran::lower::StatementContext &stmtCtx,
     const Fortran::lower::SomeExpr &expr,
     const Fortran::semantics::Symbol &ivSym, bool hasDirective) {
+  mlir::Type ivTy = getTypeFromIvTypeSize(builder, ivSym);
   mlir::Value value = fir::getBase(converter.genExprValue(expr, stmtCtx));
-  if (mlir::isa<mlir::IntegerType>(value.getType()) ||
-      value.getType().isIndex())
+  if (value.getType() == ivTy)
     return value;
-  assert(!hasDirective &&
-         "non-integer OpenACC loop bound should have been rejected");
-  return builder.createConvert(loc, getTypeFromIvTypeSize(builder, ivSym),
-                               value);
+  if (!mlir::isa<mlir::IntegerType>(value.getType()) &&
+      !value.getType().isIndex())
+    assert(!hasDirective &&
+           "non-integer OpenACC loop bound should have been rejected");
+  return builder.createConvert(loc, ivTy, value);
 }
 
 static void privatizeIv(
@@ -2039,9 +2040,9 @@ static void processDoLoopBounds(
         steps.push_back(genACCLoopControlValue(
             converter, builder, currentLocation, stmtCtx,
             *Fortran::semantics::GetExpr(*expr), ivSym, hasDirective));
-      else // If `step` is not present, assume it is `1`.
+      else // Absent step is 1 of the induction variable's kind.
         steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds.back().getType(), 1));
+            currentLocation, getTypeFromIvTypeSize(builder, ivSym), 1));
 
       privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                   privateOperands, ivPrivate, isDoConcurrent);
@@ -2087,9 +2088,9 @@ static void processDoLoopBounds(
             steps.push_back(genACCLoopControlValue(
                 converter, builder, loc, stmtCtx,
                 *Fortran::semantics::GetExpr(step), ivSym, hasDirective));
-          else // If `step` is not present, assume it is `1`.
+          else // Absent step is 1 of the induction variable's kind.
             steps.push_back(builder.createIntegerConstant(
-                currentLocation, upperbounds.back().getType(), 1));
+                currentLocation, getTypeFromIvTypeSize(builder, ivSym), 1));
           privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                       privateOperands, ivPrivate);
 
