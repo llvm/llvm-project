@@ -11,7 +11,6 @@
 
 struct hsearch_data {
   void *__opaque;
-  unsigned int __unused[2];
 };
 
 #endif // LLVM_LIBC_TYPES_STRUCT_HSEARCH_DATA_H
