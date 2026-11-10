@@ -6268,9 +6268,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // declaration was instantiated, so transfer the unqualified lookups
     // performed at its definition now. They were performed from namespace
     // scope, so they don't need to be instantiated.
-    if (!Function->getDefaultedOrDeletedInfo())
-      Function->setDefaultedOrDeletedInfo(
-          PatternDecl->getDefaultedOrDeletedInfo());
+    if (auto *Info = PatternDecl->getDefaultedOrDeletedInfo();
+        Info && !Function->getDefaultedOrDeletedInfo())
+      Function->setDefaultedOrDeletedInfo(Info);
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
     DeclContext *DC = Function->getLexicalDeclContext();
