@@ -95,8 +95,9 @@ static bool isExecInvariantBackEdge(const MachineBasicBlock &Latch,
                                     const MachineDominatorTree &DT,
                                     const MachinePostDominatorTree &PDT,
                                     const SIInstrInfo &TII) {
-  if (!Latch.isSuccessor(&Header) || !DT.dominates(&Header, &Latch) ||
-      !PDT.dominates(&Latch, &Header) || TII.hasDivergentBranch(&Latch))
+  assert(Latch.isSuccessor(&Header) && "expected a CFG edge");
+  if (TII.hasDivergentBranch(&Latch) || !DT.dominates(&Header, &Latch) ||
+      !PDT.dominates(&Latch, &Header))
     return false;
 
   return none_of(Header.predecessors(), [&](const MachineBasicBlock *Pred) {
