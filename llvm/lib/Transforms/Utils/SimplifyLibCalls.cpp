@@ -334,7 +334,8 @@ static void annotateDereferenceableBytes(CallInst *CI,
 }
 
 static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
-                                         ArrayRef<unsigned> ArgNos) {
+                                                ArrayRef<unsigned> ArgNos,
+                                                uint64_t CharSize = 1) {
   Function *F = CI->getCaller();
   if (!F)
     return;
@@ -351,7 +352,7 @@ static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
       CI->addParamAttr(ArgNo, Attribute::NonNull);
     }
 
-    annotateDereferenceableBytes(CI, ArgNo, 1);
+    annotateDereferenceableBytes(CI, ArgNo, CharSize);
   }
 }
 
@@ -1109,12 +1110,16 @@ Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
   Module &M = *CI->getModule();
-  unsigned WCharSize = TLI->getWCharSize(M) * 8;
+  unsigned WCharSize = TLI->getWCharSize(M);
   // We cannot perform this optimization without wchar_size metadata.
   if (WCharSize == 0)
     return nullptr;
 
-  return optimizeStringLength(CI, B, WCharSize);
+  if (Value *V = optimizeStringLength(CI, B, WCharSize * 8))
+    return V;
+  // At least the terminating wide character is read.
+  annotateNonNullNoUndefBasedOnAccess(CI, 0, WCharSize);
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilderBase &B) {
@@ -1995,25 +2000,25 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   case LibFunc_size_returning_new:
     NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
                                           LibFunc_size_returning_new_hot_cold,
-                                          HotColdVal);
+                                          HotColdVal, CI->getType());
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (ShouldOptimizeExistingHotColdNew)
-      NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
-                                            LibFunc_size_returning_new_hot_cold,
-                                            getHotColdHintForExisting(HotCold));
+      NewCall = emitHotColdSizeReturningNew(
+          CI->getArgOperand(0), B, TLI, LibFunc_size_returning_new_hot_cold,
+          getHotColdHintForExisting(HotCold), CI->getType());
     break;
   case LibFunc_size_returning_new_aligned:
     NewCall = emitHotColdSizeReturningNewAligned(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal);
+        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal, CI->getType());
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdSizeReturningNewAligned(
           CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold,
-          getHotColdHintForExisting(HotCold));
+          getHotColdHintForExisting(HotCold), CI->getType());
     break;
   default:
     return nullptr;
@@ -3155,7 +3160,8 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *X;
   Value *Src = CI->getArgOperand(0);
 
-  if (match(Src, m_OneUse(m_FNeg(m_Value(X)))) &&
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Src, m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
       (IsEven || !mayFlushDenormalsToPositiveZero(CI))) {
     auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     auto *CallInst = copyFlags(*CI, Call);
@@ -4395,6 +4401,15 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   Module *M = CI->getModule();
   assert(!CI->isMustTailCall() && "These transforms aren't musttail safe.");
 
+  Function *Callee = CI->getCalledFunction();
+  LibFunc Func = TLI->getLibFunc(*Callee);
+
+  // Most calls are neither intrinsics nor known library functions. Bail out
+  // before doing the (comparatively expensive) set-up below. This also covers
+  // nobuiltin calls, since operator new calls are always library functions.
+  if (Func == NotLibFunc && !isa<IntrinsicInst>(CI))
+    return nullptr;
+
   // TODO: Split out the code below that operates on FP calls so that
   //       we can all non-FP calls with the StrictFP attribute to be
   //       optimized.
@@ -4403,8 +4418,6 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     return maybeOptimizeNoBuiltinOperatorNew(CI, Builder);
   }
 
-  Function *Callee = CI->getCalledFunction();
-  LibFunc Func = TLI->getLibFunc(*Callee);
   bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;

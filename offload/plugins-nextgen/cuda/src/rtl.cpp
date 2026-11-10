@@ -16,7 +16,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 
@@ -139,7 +138,8 @@ struct CUDAKernelTy : public GenericKernelTy {
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
                    KernelLaunchArgsTy &LaunchArgs,
-                   AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
+                   AsyncInfoWrapperTy &AsyncInfoWrapper,
+                   GenericProfilerTy *ProfilerPtr) const override;
 
   /// Return maximum block size for maximum occupancy
   Expected<uint64_t> maxGroupSize(GenericDeviceTy &,
@@ -567,6 +567,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
   CUcontext getCUDAContext() const { return Context; }
   CUdevice getCUDADevice() const { return Device; }
 
+  Expected<void *> getNativeHandle() override {
+    return reinterpret_cast<void *>(Device);
+  }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override {
+    if (!AsyncInfo || !AsyncInfo->Queue)
+      return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
+                           "no queue associated with the async info");
+    return AsyncInfo->Queue;
+  }
+
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
@@ -823,7 +834,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       GenericProfilerTy *ProfilerPtr) override {
     if (auto Err = setContext())
       return Err;
 
@@ -837,7 +849,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override {
     if (auto Err = setContext())
       return Err;
 
@@ -867,7 +880,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// the CUDA devices and driver allow them.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override;
 
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
@@ -971,57 +985,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
       if (auto Err = Plugin::check(Res, "error in cuMemPrefetchAsync: %s"))
         return Err;
     }
-    return Plugin::success();
-  }
-
-  /// Insert a data fence between previous data operations and the following
-  /// operations. This is a no-op for CUDA devices as operations inserted into
-  /// a queue are in-order.
-  Error dataFence(__tgt_async_info *Async) override {
-    return Plugin::success();
-  }
-
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override {
-    return interop_spec_t{tgt_fr_cuda, {true, 0}, 0};
-  }
-
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override {
-    auto *Ret = new omp_interop_val_t(
-        DeviceId, static_cast<kmp_interop_type_t>(InteropType));
-    Ret->fr_id = tgt_fr_cuda;
-    Ret->vendor_id = omp_vendor_nvidia;
-
-    if (InteropType == kmp_interop_type_target ||
-        InteropType == kmp_interop_type_targetsync) {
-      Ret->device_info.Platform = nullptr;
-      Ret->device_info.Device = reinterpret_cast<void *>(Device);
-      Ret->device_info.Context = Context;
-    }
-
-    if (InteropType == kmp_interop_type_targetsync) {
-      Ret->async_info = new __tgt_async_info();
-      if (auto Err = setContext())
-        return Err;
-      CUstream Stream;
-      if (auto Err = CUDAStreamManager.getResource(Stream))
-        return Err;
-
-      Ret->async_info->Queue = Stream;
-    }
-    return Ret;
-  }
-
-  Error releaseInterop(omp_interop_val_t *Interop) override {
-    if (!Interop)
-      return Plugin::success();
-
-    if (Interop->async_info)
-      delete Interop->async_info;
-
-    delete Interop;
     return Plugin::success();
   }
 
@@ -1401,6 +1364,9 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Returns the clock frequency for the given NVPTX device.
   uint64_t getClockFrequency() const override { return 1000000000; }
 
+  /// Device timestamp stub for CUDA - full profiling is a future extension.
+  uint64_t getDeviceTimeStamp() override { return 0; }
+
 private:
   using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
   using CUDAEventManagerTy = GenericDeviceResourceManagerTy<CUDAEventRef>;
@@ -1495,7 +1461,8 @@ private:
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
     auto Err =
         CUDAKernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads,
-                              0, LaunchArgs, AsyncInfoWrapper);
+                              0, LaunchArgs, AsyncInfoWrapper,
+                              /*ProfilerPtr=*/nullptr);
 
     AsyncInfoWrapper.finalize(Err);
     if (Err)
@@ -1541,7 +1508,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                uint32_t NumThreads[3], uint32_t NumBlocks[3],
                                uint32_t DynBlockMemSize,
                                KernelLaunchArgsTy &LaunchArgs,
-                               AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+                               AsyncInfoWrapperTy &AsyncInfoWrapper,
+                               GenericProfilerTy *ProfilerPtr) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
   CUstream Stream;
@@ -1681,6 +1649,16 @@ struct CUDAPluginContextTy final : public PluginContextTy {
 
     CUstream Stream;
     return CUDADevice.getStream(AsyncInfoWrapper, Stream);
+  }
+
+  Expected<void *> getNativeHandle() override {
+    // Each CUDA device carries its own CUcontext, so a single native handle
+    // only exists for a single-device context.
+    if (Devices.size() != 1)
+      return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                           "CUDA context handle is only defined for a "
+                           "single-device context");
+    return static_cast<CUDADeviceTy &>(*Devices.front()).getCUDAContext();
   }
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
@@ -1869,7 +1847,8 @@ struct CUDAPluginTy final : public GenericPluginTy {
 Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
                                      GenericDeviceTy &DstGenericDevice,
                                      void *DstPtr, int64_t Size,
-                                     AsyncInfoWrapperTy &AsyncInfoWrapper) {
+                                     AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                     GenericProfilerTy *ProfilerPtr) {
   if (auto Err = setContext())
     return Err;
 

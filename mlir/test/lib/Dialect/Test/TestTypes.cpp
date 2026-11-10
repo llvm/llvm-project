@@ -14,14 +14,13 @@
 #include "TestTypes.h"
 #include "TestDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/TypeSize.h"
 #include <cstring>
 #include <optional>
@@ -569,13 +568,24 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
     return mlir::success(valid);
   }
 
+  // A builtin memref may leave an extent of the tensor dynamic.
   if (auto builtinMemref = dyn_cast<MemRefType>(bufferType)) {
-    const bool valid = getShape() == builtinMemref.getShape() &&
+    const bool valid = succeeded(verifyCompatibleShape(
+                           getShape(), builtinMemref.getShape())) &&
                        getElementType() == builtinMemref.getElementType();
     return mlir::success(valid);
   }
 
   return emitError() << "expected MemRefType or TestMemrefType";
+}
+
+::mlir::LogicalResult TestUnshapedType::verifyCompatibleBufferType(
+    ::mlir::bufferization::BufferLikeType bufferType,
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
+  auto memref = dyn_cast<MemRefType>(bufferType);
+  if (!memref)
+    return emitError() << "expected MemRefType";
+  return mlir::success(getElementType() == memref.getElementType());
 }
 
 //===----------------------------------------------------------------------===//

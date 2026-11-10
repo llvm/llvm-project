@@ -379,15 +379,9 @@ int test_temp_in_condition(G &obj) {
 // LLVM:   br label %[[CLEAN_SCOPE_TWO_CLEANUP:.*]]
 // LLVM: [[CLEAN_SCOPE_TWO_CLEANUP]]:
 // LLVM:   call void @_ZN1GD1Ev(ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   br label %[[EXIT_CLEAN_SCOPE_TWO:.*]]
-// LLVM: [[EXIT_CLEAN_SCOPE_TWO]]:
-// LLVM:   br label %[[CLEAN_SCOPE_ONE_CONTINUE:.*]]
-// LLVM: [[CLEAN_SCOPE_ONE_CONTINUE]]:
 // LLVM:   br label %[[CLEAN_SCOPE_ONE_CLEANUP:.*]]
 // LLVM: [[CLEAN_SCOPE_ONE_CLEANUP]]:
 // LLVM:   call void @_ZN1GD1Ev(ptr {{.*}} %[[REF_TMP0]])
-// LLVM:   br label %[[EXIT_CLEAN_SCOPE_ONE:.*]]
-// LLVM: [[EXIT_CLEAN_SCOPE_ONE]]:
 // LLVM:   br label %[[SCOPE_CONTINUE:.*]]
 // LLVM: [[SCOPE_CONTINUE]]:
 // LLVM:   %[[LOAD_RESULT:.*]] = load i8, ptr %[[TMP_RESULT]]
@@ -398,8 +392,6 @@ int test_temp_in_condition(G &obj) {
 // LLVM:   %[[RETVAL:.*]] = load i32, ptr %[[RET_ADDR]]
 // LLVM:   ret i32 %[[RETVAL]]
 // LLVM: [[FALSE_BLOCK]]:
-// LLVM:   br label %[[EXIT_SCOPE:.*]]
-// LLVM: [[EXIT_SCOPE]]:
 // LLVM:   store i32 0, ptr %[[RET_ADDR]]
 // LLVM:   %[[RETVAL:.*]] = load i32, ptr %[[RET_ADDR]]
 // LLVM:   ret i32 %[[RETVAL]]

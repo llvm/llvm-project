@@ -38,7 +38,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Plugins/PassPlugin.h"
@@ -46,9 +45,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/PGOOptions.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -386,14 +383,9 @@ extern "C" int llcMain(int argc, char **argv) {
   PassRegistry *Registry = PassRegistry::getPassRegistry();
   initializeCore(*Registry);
   initializeCodeGen(*Registry);
-  initializeLoopStrengthReducePass(*Registry);
-  initializePostInlineEntryExitInstrumenterPass(*Registry);
-  initializeUnreachableBlockElimLegacyPassPass(*Registry);
-  initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
   initializeIPO(*Registry);
   initializeVectorization(*Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
   initializeTransformUtils(*Registry);
 
   // Initialize debugging passes.
@@ -542,7 +534,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   }
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
-    Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+    Options = codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
     Options.MCOptions.LibraryOptions = &Context.getLibraryOptions();
 
     if (Options.XCOFFReadOnlyPointers) {
@@ -733,7 +725,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     }
   }
 
-  if (mc::getExplicitRelaxAll() &&
+  if (Options.MCOptions.MCRelaxAll &&
       codegen::getFileType() != CodeGenFileType::ObjectFile)
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";

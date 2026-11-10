@@ -52,6 +52,7 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
@@ -119,7 +120,6 @@ cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
 
-extern cl::opt<std::string> SampleProfileFile;
 } // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -563,8 +563,7 @@ bool LTOCodeGenerator::optimize() {
   Config.StatsFile = LTOStatsFile;
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
-  Config.SampleProfile = SampleProfileFile;
-  Config.PTO = PipelineTuningOptions(Config.LibraryOptions);
+  Config.SampleProfile = SampleProfileLoaderPass::getSampleProfileFile(Context);
   Config.PTO.LoopVectorization = Config.OptLevel > 1;
   Config.PTO.SLPVectorization = Config.OptLevel > 1;
 

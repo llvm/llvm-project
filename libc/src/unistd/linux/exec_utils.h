@@ -25,8 +25,43 @@
 #include "src/stdlib/environ_internal.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
+#include <stdarg.h>
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
+
+// Extracts argv from a variable argument list and calls exec(argv).
+//
+// The varargs list in `*args` is consumed up to and including the terminating
+// null pointer. If additional arguments follow (such as envp in execle),
+// they can be read from `*args` by the `exec` callback.
+template <typename ExecFn>
+LIBC_INLINE ErrorOr<int> exec_with_arg_list(const char *arg0, va_list *args,
+                                            ExecFn exec) {
+  va_list args_count;
+  va_copy(args_count, *args);
+  size_t argc = 1;
+  while (va_arg(args_count, const char *) != nullptr)
+    ++argc;
+  va_end(args_count);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvla"
+#if __has_warning("-Wvla-cxx-extension")
+#pragma GCC diagnostic ignored "-Wvla-cxx-extension"
+#endif
+  char *argv[argc + 1];
+#pragma GCC diagnostic pop
+  argv[0] = const_cast<char *>(arg0);
+
+  for (size_t i = 1; i < argc; ++i)
+    argv[i] = va_arg(*args, char *);
+  // Consume the terminating nullptr from *args.
+  va_arg(*args, char *);
+  argv[argc] = nullptr;
+
+  return exec(argv);
+}
 
 // TODO: POSIX requires that if execve fails with ENOEXEC, the file is executed
 // using the system shell (as if by `sh -- file args...`). The kernel only
