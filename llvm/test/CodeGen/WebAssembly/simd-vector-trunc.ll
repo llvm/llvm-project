@@ -189,13 +189,32 @@ entry:
   ret <4 x i16> %0
 }
 
+define <4 x i8> @trunc4i16_4i8(<4 x i16> %a) {
+; CHECK-LABEL: trunc4i16_4i8:
+; CHECK:         .functype trunc4i16_4i8 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 255, 255, 255, 255, 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %0 = trunc <4 x i16> %a to <4 x i8>
+  ret <4 x i8> %0
+}
+
 define <4 x i8> @trunc4i32_4i8(<4 x i32> %a) {
 ; CHECK-LABEL: trunc4i32_4i8:
 ; CHECK:         .functype trunc4i32_4i8 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %0 = trunc <4 x i32> %a to <4 x i8>

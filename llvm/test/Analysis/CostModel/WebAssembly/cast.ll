@@ -14,3 +14,31 @@ define <8 x float> @uitofp_v8i16(<8 x i16> %x) {
   %result = uitofp <8 x i16> %x to <8 x float>
   ret <8 x float> %result
 }
+
+define <4 x i8> @trunc_v4i32_to_v4i8(<4 x i32> %x) {
+; CHECK-LABEL: function 'trunc_v4i32_to_v4i8'
+; CHECK: estimated cost of 3 for instruction:
+  %result = trunc <4 x i32> %x to <4 x i8>
+  ret <4 x i8> %result
+}
+
+define <4 x i8> @trunc_v4i16_to_v4i8(<4 x i16> %x) {
+; CHECK-LABEL: function 'trunc_v4i16_to_v4i8'
+; CHECK: estimated cost of 2 for instruction:
+  %result = trunc <4 x i16> %x to <4 x i8>
+  ret <4 x i8> %result
+}
+
+define <4 x i8> @fptosi_v4f32_to_v4i8(<4 x float> %x) {
+; CHECK-LABEL: function 'fptosi_v4f32_to_v4i8'
+; CHECK: estimated cost of 5 for instruction:
+  %result = fptosi <4 x float> %x to <4 x i8>
+  ret <4 x i8> %result
+}
+
+define <4 x i8> @fptoui_v4f32_to_v4i8(<4 x float> %x) {
+; CHECK-LABEL: function 'fptoui_v4f32_to_v4i8'
+; CHECK: estimated cost of 5 for instruction:
+  %result = fptoui <4 x float> %x to <4 x i8>
+  ret <4 x i8> %result
+}

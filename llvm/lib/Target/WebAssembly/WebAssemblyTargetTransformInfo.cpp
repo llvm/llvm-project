@@ -174,8 +174,10 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},
       {ISD::TRUNCATE, MVT::v4i16, MVT::v4i32, 2},
-      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i32, 4},
+      // 2x narrow, and
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i32, 3},
       // narrow, and
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i16, 2},
       {ISD::TRUNCATE, MVT::v8i16, MVT::v8i32, 2},
       {ISD::TRUNCATE, MVT::v8i8, MVT::v8i16, 2},
       // narrow, 2x and
@@ -207,12 +209,13 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
-      /// trunc_sat, const, and, 3x narrow
+      // trunc_sat, const, and, 3x narrow
       {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 6},
       {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 6},
-      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f32, 6},
-      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 6},
-      /// trunc_sat, const, and, narrow
+      // trunc_sat, const, and, 2x narrow
+      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f32, 5},
+      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 5},
+      // trunc_sat, const, and, narrow
       {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f32, 4},
       {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f32, 4},
       {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f32, 4},

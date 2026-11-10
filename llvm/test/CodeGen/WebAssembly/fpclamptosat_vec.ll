@@ -3097,6 +3097,30 @@ define <8 x i8> @v8f32_almost_clamped_s8(<8 x float> %in) {
   ret <8 x i8> %res
 }
 
+define <4 x i8> @v4f32_almost_clamped_s8(<4 x float> %in) {
+; CHECK-LABEL: v4f32_almost_clamped_s8:
+; CHECK:         .functype v4f32_almost_clamped_s8 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const -127, -127, -127, -127
+; CHECK-NEXT:    i32x4.max_s
+; CHECK-NEXT:    v128.const 127, 127, 127, 127
+; CHECK-NEXT:    i32x4.min_s
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <4 x float> %in to <4 x i32>
+  %max = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %conv, <4 x i32> splat (i32 -127))
+  %min = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %max, <4 x i32> splat (i32 127))
+  %res = trunc nsw <4 x i32> %min to <4 x i8>
+  ret <4 x i8> %res
+}
+
 declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i32> @llvm.smax.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i32> @llvm.umin.v2i32(<2 x i32>, <2 x i32>)

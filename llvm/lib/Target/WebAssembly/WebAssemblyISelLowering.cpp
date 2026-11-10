@@ -3351,12 +3351,25 @@ static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
     // Use a narrow to avoid a shuffle, which can also prevent other shuffles
     // degrading to extract/replace_lane.
     SDValue Poison = DAG.getPOISON(SrcVT);
-    EVT NarrowVT =
-        SrcVT.getDoubleNumVectorElementsVT(Ctx).changeVectorElementType(
-            Ctx, MVT::i8);
     SDValue Res =
-        DAG.getNode(WebAssemblyISD::NARROW_U, DL, NarrowVT, In, Poison);
+        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v16i8, In, Poison);
     return extractSubVector(Res, 0, DAG, DL, 64);
+  }
+
+  if (SrcVT == MVT::v4i32 && DstVT == MVT::v4i8) {
+    SDValue Poison = DAG.getPOISON(SrcVT);
+    SDValue Narrow =
+        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v8i16, In, Poison);
+    SDValue Extract = extractSubVector(Narrow, 0, DAG, DL, 64);
+    return truncateVectorWithNARROW(DstVT, Extract, DL, DAG);
+  }
+
+  if (SrcVT == MVT::v4i16 && DstVT == MVT::v4i8) {
+    In = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16,
+                     {In, DAG.getPOISON(SrcVT)});
+    SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v16i8, In,
+                              DAG.getPOISON(MVT::v8i16));
+    return extractSubVector(Res, 0, DAG, DL, 32);
   }
 
   unsigned SubSizeInBits = SrcSizeInBits / 2;
@@ -3408,7 +3421,8 @@ static SDValue performTruncateCombine(SDNode *N,
   if (!OutVT.isVector())
     return SDValue();
 
-  if (OutVT != MVT::v16i8 && OutVT != MVT::v8i16 && OutVT != MVT::v8i8)
+  if (OutVT != MVT::v16i8 && OutVT != MVT::v8i16 && OutVT != MVT::v8i8 &&
+      OutVT != MVT::v4i8)
     return SDValue();
 
   SDLoc DL(N);
