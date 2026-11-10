@@ -50,7 +50,8 @@ void addSafe(float *X) {
 
 int main() {
   float NoHint = 0.0f, Fast = 0.0f, Safe = 0.0f;
-#pragma omp target teams distribute parallel for map(tofrom : NoHint, Fast, Safe)
+#pragma omp target teams distribute parallel for map(tofrom : NoHint, Fast,    \
+                                                         Safe)
   for (int I = 0; I < N; ++I) {
     addNoHint(&NoHint);
     addFast(&Fast);
