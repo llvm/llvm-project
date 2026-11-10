@@ -11,7 +11,7 @@
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
 ; LINUX-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
 ; LINUX-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
@@ -196,7 +196,7 @@
 ; LINUX-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; LINUX-NEXT: declare void @__cxa_end_cleanup()
+; LINUX-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; LINUX-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -595,6 +595,7 @@
 ; LINUX-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; LINUX-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; LINUX-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -612,7 +613,7 @@
 ; DARWIN: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; DARWIN-NEXT: @__stack_chk_guard = external global ptr
 ; DARWIN-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; DARWIN-NEXT: declare void @_Unwind_Resume(ptr)
+; DARWIN-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; DARWIN-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS:#[0-9]+]]
 ; DARWIN-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
 ; DARWIN-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
@@ -797,7 +798,7 @@
 ; DARWIN-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; DARWIN-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; DARWIN-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; DARWIN-NEXT: declare void @__cxa_end_cleanup()
+; DARWIN-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; DARWIN-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; DARWIN-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; DARWIN-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -1139,6 +1140,7 @@
 ; DARWIN-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; DARWIN-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; DARWIN-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; DARWIN-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; DARWIN-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; DARWIN-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; DARWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -1157,7 +1159,7 @@
 ; WINMSVC: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; WINMSVC-NEXT: @__security_cookie = external global ptr
 ; WINMSVC-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; WINMSVC-NEXT: declare void @_Unwind_Resume(ptr)
+; WINMSVC-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; WINMSVC-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS:#[0-9]+]]
 ; WINMSVC-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
 ; WINMSVC-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
@@ -1343,7 +1345,7 @@
 ; WINMSVC-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; WINMSVC-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; WINMSVC-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; WINMSVC-NEXT: declare void @__cxa_end_cleanup()
+; WINMSVC-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; WINMSVC-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; WINMSVC-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; WINMSVC-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -1678,6 +1680,7 @@
 ; WINMSVC-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; WINMSVC-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; WINMSVC-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; WINMSVC-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; WINMSVC-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; WINMSVC-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; WINMSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -1694,7 +1697,7 @@
 ; MINGW: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; MINGW-NEXT: @__stack_chk_guard = external global ptr
 ; MINGW-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; MINGW-NEXT: declare void @_Unwind_Resume(ptr)
+; MINGW-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
 ; MINGW-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
@@ -1880,7 +1883,7 @@
 ; MINGW-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; MINGW-NEXT: declare void @__cxa_end_cleanup()
+; MINGW-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; MINGW-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -2219,6 +2222,7 @@
 ; MINGW-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; MINGW-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; MINGW-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -2236,7 +2240,7 @@
 ; ANDROID: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; ANDROID-NEXT: @__stack_chk_guard = external global ptr
 ; ANDROID-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; ANDROID-NEXT: declare void @_Unwind_Resume(ptr)
+; ANDROID-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; ANDROID-NEXT: declare i128 @__aarch64_cas16_acq(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS:#[0-9]+]]
 ; ANDROID-NEXT: declare i128 @__aarch64_cas16_acq_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
 ; ANDROID-NEXT: declare i128 @__aarch64_cas16_rel(i128, i128, ptr captures(none)) [[ATOMIC_ATTRS]]
@@ -2421,7 +2425,7 @@
 ; ANDROID-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; ANDROID-NEXT: declare void @__cxa_end_cleanup()
+; ANDROID-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; ANDROID-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -2821,6 +2825,7 @@
 ; ANDROID-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; ANDROID-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; ANDROID-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; ANDROID-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; ANDROID-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

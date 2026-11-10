@@ -9,7 +9,7 @@
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
 ; LINUX-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -83,7 +83,7 @@
 ; LINUX-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; LINUX-NEXT: declare void @__cxa_end_cleanup()
+; LINUX-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; LINUX-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
@@ -550,6 +550,7 @@
 ; LINUX-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; LINUX-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; LINUX-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; LINUX-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -567,7 +568,7 @@
 ; FREEBSD: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; FREEBSD-NEXT: @__stack_chk_guard = external global ptr
 ; FREEBSD-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; FREEBSD-NEXT: declare void @_Unwind_Resume(ptr)
+; FREEBSD-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; FREEBSD-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; FREEBSD-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -641,7 +642,7 @@
 ; FREEBSD-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; FREEBSD-NEXT: declare void @__cxa_end_cleanup()
+; FREEBSD-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; FREEBSD-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
@@ -1055,6 +1056,7 @@
 ; FREEBSD-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; FREEBSD-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; FREEBSD-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; FREEBSD-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; FREEBSD-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; FREEBSD-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -1072,7 +1074,7 @@
 ; OPENBSD: @__guard_local = external global ptr
 ; OPENBSD-NEXT: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; OPENBSD-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; OPENBSD-NEXT: declare void @_Unwind_Resume(ptr)
+; OPENBSD-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; OPENBSD-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; OPENBSD-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -1146,7 +1148,7 @@
 ; OPENBSD-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; OPENBSD-NEXT: declare void @__cxa_end_cleanup()
+; OPENBSD-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; OPENBSD-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
@@ -1560,6 +1562,7 @@
 ; OPENBSD-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; OPENBSD-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; OPENBSD-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; OPENBSD-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; OPENBSD-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; OPENBSD-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

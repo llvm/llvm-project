@@ -5,7 +5,7 @@
 ; CHECK-NEXT: @__stack_chk_guard = external global ptr
 ; CHECK-NEXT: declare signext i32 @_Unwind_SjLj_RaiseException(ptr)
 ; CHECK-NEXT: declare void @_Unwind_SjLj_Register(ptr)
-; CHECK-NEXT: declare void @_Unwind_SjLj_Resume(ptr)
+; CHECK-NEXT: declare void @_Unwind_SjLj_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare void @_Unwind_SjLj_Unregister(ptr)
 ; CHECK-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
@@ -79,7 +79,7 @@
 ; CHECK-NEXT: declare signext i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare signext i32 @__ctzsi2(i32 zeroext) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare signext i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; CHECK-NEXT: declare void @__cxa_end_cleanup()
+; CHECK-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; CHECK-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -475,6 +475,7 @@
 ; CHECK-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; CHECK-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; CHECK-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

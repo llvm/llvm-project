@@ -837,14 +837,19 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 }
 
 // Exception handling
-def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoReturn];
+}
+
 def UNWIND_RAISE_EXCEPTION : RuntimeLibcall<Int, [Ptr]>;
 def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []> {
   let FnAttrs = [NoUnwind];
 }
-def CXA_END_CLEANUP : RuntimeLibcall<Void, []>;
+def CXA_END_CLEANUP : RuntimeLibcall<Void, []> {
+  let FnAttrs = [NoReturn];
+}
 
 // Note: there are two sets of atomics libcalls; see
 // <https://llvm.org/docs/Atomics.html> for more info on the
@@ -1104,8 +1109,11 @@ def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
 def OBJC_SYNC_ENTER : RuntimeLibcall<Int, [Ptr]>;
 def OBJC_SYNC_EXIT : RuntimeLibcall<Int, [Ptr]>;
 
-def ABORT : RuntimeLibcall<Void, []>;
-def ABS : RuntimeLibcall<Int, [Int]>;
+def ABORT : RuntimeLibcall<Void, []> {
+  let FnAttrs = [Cold, NoFree, NoReturn, NoUnwind];
+}
+
+def ABS : PureLibcall<Int, [Int]>;
 def ACCESS : RuntimeLibcall<Int, [Ptr, Int]>;
 def ALIGNED_ALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
 def ATEXIT : RuntimeLibcall<Int, [Ptr]>;
@@ -1129,7 +1137,10 @@ def CXA_ATEXIT : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def CXA_GUARD_ABORT : RuntimeLibcall<Void, [Ptr]>;
 def CXA_GUARD_ACQUIRE : RuntimeLibcall<Int, [Ptr]>;
 def CXA_GUARD_RELEASE : RuntimeLibcall<Void, [Ptr]>;
-def CXA_THROW : RuntimeLibcall<Void, [Ptr, Ptr, Ptr]>;
+def CXA_THROW : RuntimeLibcall<Void, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [Cold, NoReturn];
+}
+
 def DUNDER_ISOC99_SCANF : RuntimeLibcall<Int, [Ptr, Ellip]>;
 def DUNDER_ISOC99_SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def DUNDER_STRDUP : RuntimeLibcall<Ptr, [Ptr]>;
@@ -1143,15 +1154,18 @@ def EXECVE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def EXECVP : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def EXECV_P : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def EXECVPE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def EXIT : RuntimeLibcall<Void, [Int]>;
+def EXIT : RuntimeLibcall<Void, [Int]> {
+  let FnAttrs = [NoReturn];
+}
+
 def FCLOSE : RuntimeLibcall<Int, [Ptr]>;
 def FDOPEN : RuntimeLibcall<Ptr, [Int, Ptr]>;
 def FEOF : RuntimeLibcall<Int, [Ptr]>;
 def FERROR : RuntimeLibcall<Int, [Ptr]>;
 def FFLUSH : RuntimeLibcall<Int, [Ptr]>;
-def FFS : RuntimeLibcall<Int, [Int]>;
-def FFSL : RuntimeLibcall<Int, [Long]>;
-def FFSLL : RuntimeLibcall<Int, [LLong]>;
+def FFS : PureLibcall<Int, [Int]>;
+def FFSL : PureLibcall<Int, [Long]>;
+def FFSLL : PureLibcall<Int, [LLong]>;
 def FGETC : RuntimeLibcall<Int, [Ptr]>;
 def FGETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]>;
 def FGETPOS : RuntimeLibcall<Int, [Ptr, Ptr]>;
@@ -1160,9 +1174,9 @@ def FGETS_UNLOCKED : RuntimeLibcall<Ptr, [Ptr, Int, Ptr]>;
 def FILENO : RuntimeLibcall<Int, [Ptr]>;
 def FIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def FLOCKFILE : RuntimeLibcall<Void, [Ptr]>;
-def FLS : RuntimeLibcall<Int, [Int]>;
-def FLSL : RuntimeLibcall<Int, [Long]>;
-def FLSLL : RuntimeLibcall<Int, [LLong]>;
+def FLS : PureLibcall<Int, [Int]>;
+def FLSL : PureLibcall<Int, [Long]>;
+def FLSLL : PureLibcall<Int, [LLong]>;
 def FOPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
 def FOPEN64 : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
 def FORK : RuntimeLibcall<Int, []>;
@@ -1208,14 +1222,20 @@ def GETLOGIN_R : RuntimeLibcall<Int, [Ptr, SizeT]>;
 def GETPWNAM : RuntimeLibcall<Ptr, [Ptr]>;
 def GETS : RuntimeLibcall<Ptr, [Ptr]>;
 def GETTIMEOFDAY : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def HTONL : RuntimeLibcall<UInt32, [UInt32]>;
-def HTONS : RuntimeLibcall<UInt16, [UInt16]>;
+def HTONL : PureLibcall<UInt32, [UInt32]>;
+def HTONS : PureLibcall<UInt16, [UInt16]>;
 def IPRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
-def ISASCII : RuntimeLibcall<Int, [Int]>;
-def ISDIGIT : RuntimeLibcall<Int, [Int]>;
-def LABS : RuntimeLibcall<Long, [Same]>;
+def ISASCII : RuntimeLibcall<Int, [Int]> {
+  let FnAttrs = CommonFnAttrs;
+}
+
+def ISDIGIT : RuntimeLibcall<Int, [Int]> {
+  let FnAttrs = CommonFnAttrs;
+}
+
+def LABS : PureLibcall<Long, [Same]>;
 def LCHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]>;
-def LLABS : RuntimeLibcall<LLong, [LLong]>;
+def LLABS : PureLibcall<LLong, [LLong]>;
 def LSTAT : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def LSTAT64 : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def MEMALIGN : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
@@ -1254,8 +1274,8 @@ def MSVC_NEW_INT : RuntimeLibcall<Ptr, [UInt]>;
 def MSVC_NEW_INT_NOTHROW : RuntimeLibcall<Ptr, [UInt, Ptr]>;
 def MSVC_NEW_LONGLONG : RuntimeLibcall<Ptr, [ULLong]>;
 def MSVC_NEW_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [ULLong, Ptr]>;
-def NTOHL : RuntimeLibcall<UInt32, [UInt32]>;
-def NTOHS : RuntimeLibcall<UInt16, [UInt16]>;
+def NTOHL : PureLibcall<UInt32, [UInt32]>;
+def NTOHS : PureLibcall<UInt16, [UInt16]>;
 def OPEN : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
 def OPEN64 : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
 def OPENDIR : RuntimeLibcall<Ptr, [Ptr]>;
@@ -1359,11 +1379,14 @@ def STRTOUL : RuntimeLibcall<ULong, [Ptr, Ptr, Int]>;
 def STRTOULL : RuntimeLibcall<ULLong, [Ptr, Ptr, Int]>;
 def STRXFRM : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
 def SYSTEM : RuntimeLibcall<Int, [Ptr]>;
-def TERMINATE : RuntimeLibcall<Void, []>;
+def TERMINATE : RuntimeLibcall<Void, []> {
+  let FnAttrs = [Cold, NoFree, NoReturn];
+}
+
 def TIMES : RuntimeLibcall<IntPlus, [Ptr]>;
 def TMPFILE : RuntimeLibcall<Ptr, []>;
 def TMPFILE64 : RuntimeLibcall<Ptr, []>;
-def TOASCII : RuntimeLibcall<Int, [Int]>;
+def TOASCII : PureLibcall<Int, [Int]>;
 def UNAME : RuntimeLibcall<Int, [Ptr]>;
 def UNDER_IO_GETC : RuntimeLibcall<Int, [Ptr]>;
 def UNDER_IO_PUTC : RuntimeLibcall<Int, [Int, Ptr]>;

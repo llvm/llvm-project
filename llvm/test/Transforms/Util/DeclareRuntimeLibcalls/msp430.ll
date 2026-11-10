@@ -6,7 +6,7 @@
 
 ; CHECK: @__stack_chk_guard = external global ptr
 ; CHECK-NEXT: declare i16 @_Unwind_RaiseException(ptr)
-; CHECK-NEXT: declare void @_Unwind_Resume(ptr)
+; CHECK-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -77,7 +77,7 @@
 ; CHECK-NEXT: declare i16 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i16 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i16 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; CHECK-NEXT: declare void @__cxa_end_cleanup()
+; CHECK-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; CHECK-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare i16 @__divhi3(i16, i16) [[NOMEM_ATTRS]]
@@ -457,6 +457,7 @@
 ; CHECK-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; CHECK-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

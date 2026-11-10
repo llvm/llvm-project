@@ -8,7 +8,7 @@
 
 ; AIX32: @__ssp_canary_word = external global ptr
 ; AIX32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; AIX32-NEXT: declare void @_Unwind_Resume(ptr)
+; AIX32-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare void @___bzero(ptr writeonly captures(none), i32) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memccpy(ptr, ptr, i32, i32)
 ; AIX32-NEXT: declare i32 @___memcmp(ptr readonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_READ_ATTRS:#[0-9]+]]
@@ -88,7 +88,7 @@
 ; AIX32-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; AIX32-NEXT: declare void @__cxa_end_cleanup()
+; AIX32-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; AIX32-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; AIX32-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -557,6 +557,7 @@
 ; AIX32-NEXT: declare void @vec_free(ptr allocptr noundef captures(none)) [[VEC_FREE_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare noalias noundef ptr @vec_malloc(i32 noundef) [[VEC_MALLOC_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare noalias noundef ptr @vec_realloc(ptr allocptr captures(none), i32 noundef) [[VEC_REALLOC_ATTRS:#[0-9]+]]
+; AIX32-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; AIX32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; AIX32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; AIX32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
@@ -577,7 +578,7 @@
 
 ; AIX64: @__ssp_canary_word = external global ptr
 ; AIX64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
-; AIX64-NEXT: declare void @_Unwind_Resume(ptr)
+; AIX64-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare void @___bzero64(ptr writeonly captures(none), i64) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memccpy64(ptr, ptr, i32 signext, i64)
 ; AIX64-NEXT: declare signext i32 @___memcmp64(ptr readonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_READ_ATTRS:#[0-9]+]]
@@ -659,7 +660,7 @@
 ; AIX64-NEXT: declare signext i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare signext i32 @__ctzsi2(i32 zeroext) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare signext i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; AIX64-NEXT: declare void @__cxa_end_cleanup()
+; AIX64-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; AIX64-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; AIX64-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -1130,6 +1131,7 @@
 ; AIX64-NEXT: declare void @vec_free(ptr allocptr noundef captures(none)) [[VEC_FREE_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare noalias noundef ptr @vec_malloc(i64 noundef) [[VEC_MALLOC_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare noalias noundef ptr @vec_realloc(ptr allocptr captures(none), i64 noundef) [[VEC_REALLOC_ATTRS:#[0-9]+]]
+; AIX64-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; AIX64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; AIX64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; AIX64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
@@ -1150,7 +1152,7 @@
 
 ; LINUX: @__stack_chk_guard = external global ptr
 ; LINUX-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
-; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare fp128 @__addkf3(fp128, fp128) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
@@ -1223,7 +1225,7 @@
 ; LINUX-NEXT: declare signext i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i32 @__ctzsi2(i32 zeroext) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; LINUX-NEXT: declare void @__cxa_end_cleanup()
+; LINUX-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; LINUX-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -1694,6 +1696,7 @@
 ; LINUX-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare ppc_fp128 @truncl(ppc_fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; LINUX-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; LINUX-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

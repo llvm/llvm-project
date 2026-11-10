@@ -9,7 +9,7 @@
 ; SJLJ-NEXT: @__stack_chk_guard = external global ptr
 ; SJLJ-NEXT: declare arm_aapcscc i32 @_Unwind_SjLj_RaiseException(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
-; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Resume(ptr)
+; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Unregister(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc double @__adddf3(double, double) [[DIVMOD_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc float @__addsf3(float, float) [[DIVMOD_ATTRS]]
@@ -134,7 +134,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzdi2(i64) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzsi2(i32) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzti2(i128) [[DIVMOD_ATTRS]]
-; SJLJ-NEXT: declare arm_aapcscc void @__cxa_end_cleanup()
+; SJLJ-NEXT: declare arm_aapcscc void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__divdf3(double, double) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc signext i16 @__divhi3(i16 signext, i16 signext) [[DIVMOD_ATTRS]]
@@ -473,6 +473,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc float @tgammaf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; SJLJ-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; SJLJ-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -490,7 +491,7 @@
 ; DWARF: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; DWARF-NEXT: @__stack_chk_guard = external global ptr
 ; DWARF-NEXT: declare arm_aapcscc i32 @_Unwind_RaiseException(ptr)
-; DWARF-NEXT: declare arm_aapcscc void @_Unwind_Resume(ptr)
+; DWARF-NEXT: declare arm_aapcscc void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc double @__adddf3(double, double) [[DIVMOD_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc float @__addsf3(float, float) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128) [[DIVMOD_ATTRS]]
@@ -614,7 +615,7 @@
 ; DWARF-NEXT: declare arm_aapcscc i32 @__ctzdi2(i64) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__ctzsi2(i32) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__ctzti2(i128) [[DIVMOD_ATTRS]]
-; DWARF-NEXT: declare arm_aapcscc void @__cxa_end_cleanup()
+; DWARF-NEXT: declare arm_aapcscc void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @__divdf3(double, double) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc signext i16 @__divhi3(i16 signext, i16 signext) [[DIVMOD_ATTRS]]
@@ -953,6 +954,7 @@
 ; DWARF-NEXT: declare arm_aapcscc float @tgammaf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; DWARF-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; DWARF-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; DWARF-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

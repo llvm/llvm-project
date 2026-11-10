@@ -7,7 +7,7 @@
 ; M68K: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; M68K-NEXT: @__stack_chk_guard = external global ptr
 ; M68K-NEXT: declare i32 @_Unwind_RaiseException(ptr)
-; M68K-NEXT: declare void @_Unwind_Resume(ptr)
+; M68K-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; M68K-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; M68K-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -78,7 +78,7 @@
 ; M68K-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; M68K-NEXT: declare void @__cxa_end_cleanup()
+; M68K-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; M68K-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -415,6 +415,7 @@
 ; M68K-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; M68K-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; M68K-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; M68K-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

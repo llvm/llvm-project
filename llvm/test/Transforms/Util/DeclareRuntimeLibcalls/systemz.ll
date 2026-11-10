@@ -7,7 +7,7 @@
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
 ; LINUX-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
-; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -80,7 +80,7 @@
 ; LINUX-NEXT: declare signext i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i32 @__ctzsi2(i32 zeroext) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; LINUX-NEXT: declare void @__cxa_end_cleanup()
+; LINUX-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; LINUX-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -479,6 +479,7 @@
 ; LINUX-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; LINUX-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; LINUX-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
@@ -600,7 +601,7 @@
 ; ZOS-NEXT: declare double @"@@WSNH@B"(double) [[SQRT_ATTRS]]
 ; ZOS-NEXT: declare nofpclass(ninf nsub nnorm) double @"@@WSQT@B"(double) [[SQRT_ATTRS]]
 ; ZOS-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
-; ZOS-NEXT: declare void @_Unwind_Resume(ptr)
+; ZOS-NEXT: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 ; ZOS-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS]]
 ; ZOS-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; ZOS-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -673,7 +674,7 @@
 ; ZOS-NEXT: declare signext i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
 ; ZOS-NEXT: declare signext i32 @__ctzsi2(i32 zeroext) [[NOMEM_ATTRS]]
 ; ZOS-NEXT: declare signext i32 @__ctzti2(i128) [[NOMEM_ATTRS]]
-; ZOS-NEXT: declare void @__cxa_end_cleanup()
+; ZOS-NEXT: declare void @__cxa_end_cleanup() [[NORETURN_ONLY_ATTRS]]
 ; ZOS-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
 ; ZOS-NEXT: declare i64 @__divdi3(i64, i64) [[NOMEM_ATTRS]]
 ; ZOS-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
@@ -1072,6 +1073,7 @@
 ; ZOS-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; ZOS-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; ZOS-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; ZOS-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; ZOS-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; ZOS-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; ZOS-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
