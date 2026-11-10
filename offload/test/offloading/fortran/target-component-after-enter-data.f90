@@ -1,4 +1,4 @@
-! REQUIRES: flang
+! REQUIRES: flang, amdgpu, flang-rt
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 
 ! Enter data maps only the component. Subsequent structured regions must

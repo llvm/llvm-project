@@ -1,4 +1,4 @@
-! REQUIRES: flang
+! REQUIRES: flang, amdgpu, flang-rt
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 
 ! A scalar dummy and an array element designate the same component storage.
