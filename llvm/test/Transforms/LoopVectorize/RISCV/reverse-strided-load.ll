@@ -15,18 +15,13 @@ define void @reverse_add_i64(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = sub nuw nsw i64 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP2]], i64 [[TMP5]]
-; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP6]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP2]], i64 -8, <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[C]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP7]], i64 [[TMP5]]
-; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP7]], i64 -8, <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <vscale x 2 x i64> [[VP_OP_LOAD]], [[VP_OP_LOAD1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> [[TMP9]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP10]], ptr align 8 [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP9]], ptr align 8 [[TMP11]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
@@ -73,16 +68,12 @@ define void @reverse_fneg_fadd_splat_f64(ptr noalias %a, ptr noalias %b, double 
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = sub nuw nsw i64 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP2]], i64 [[TMP5]]
-; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x double> @llvm.vp.load.nxv2f64.p0(ptr align 8 [[TMP6]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP2]], i64 -8, <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = fneg <vscale x 2 x double> [[VP_OP_LOAD]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[TMP7]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2f64.p0(<vscale x 2 x double> [[TMP9]], ptr align 8 [[TMP10]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2f64.p0(<vscale x 2 x double> [[TMP8]], ptr align 8 [[TMP10]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
@@ -129,15 +120,10 @@ define void @reverse_masked_i64(ptr noalias %a, ptr noalias %b, ptr noalias %con
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 2 x i8> [[VP_OP_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> [[TMP2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 0, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP4]], i64 [[TMP8]]
-; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP9]], <vscale x 2 x i1> [[TMP5]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD1]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP4]], i64 -8, <vscale x 2 x i1> [[TMP2]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP10]], ptr align 8 [[TMP11]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP6]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0

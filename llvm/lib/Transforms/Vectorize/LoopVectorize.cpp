@@ -6309,6 +6309,19 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
                    Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
+    // This runs after optimize since it relies on simplifyReverses to pull
+    // reverses out of elementwise recipes. If it clamps the range, drop the
+    // VFs past the new end so the next iteration builds a plan for them.
+    if (!Plan->hasScalarVFOnly()) {
+      VPCostContext CostCtx(*TLI, *Plan, PlanCM, Config);
+      RUN_VPLAN_PASS(VPlanTransforms::convertToReverseStridedAccess, *Plan,
+                     CostCtx, SubRange);
+      for (ElementCount RemovedVF = SubRange.End;
+           ElementCount::isKnownLT(RemovedVF, VF); RemovedVF *= 2)
+        Plan->removeVF(RemovedVF);
+      VF = SubRange.End;
+    }
+
     // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
     if (PlanCM.foldTailWithEVL()) {
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,

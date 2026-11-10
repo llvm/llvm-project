@@ -1811,6 +1811,127 @@ void VPlanTransforms::simplifyReverses(VPlan &Plan) {
         R.getVPSingleValue()->replaceAllUsesWith(X);
 }
 
+/// If \p R is a reverse of a tree of single-use elementwise recipes whose
+/// leaves are single scalars or consecutive loads, replace each load with a
+/// vp.strided.load with a negative stride that starts at the highest address,
+/// and drop the reverse:
+///
+///   reverse(op(load(endptr(p)), reverse(m)), ...))
+///   -> op(vp.strided.load(p, -sizeof(elt), m, VF), ...)
+static bool convertToReverseStridedLoads(VPRecipeBase *R, VPCostContext &Ctx,
+                                         VFRange &Range) {
+  VPValue *X;
+  if (!match(R, m_Reverse(m_VPValue(X))))
+    return false;
+
+  SmallSetVector<VPWidenLoadRecipe *, 4> Loads;
+  SmallVector<VPValue *> Worklist = {X};
+  while (!Worklist.empty()) {
+    VPValue *X = Worklist.pop_back_val();
+    if (vputils::isSingleScalar(X))
+      continue;
+    auto *Def = dyn_cast_if_present<VPSingleDefRecipe>(X->getDefiningRecipe());
+    if (!Def || Def->getNumUsers() != 1)
+      return false;
+    if (auto *Load = dyn_cast<VPWidenLoadRecipe>(Def);
+        Load && Load->isConsecutive() &&
+        (!Load->getMask() || match(Load->getMask(), m_Reverse(m_VPValue())))) {
+      Loads.insert(Load);
+    } else if (vputils::isElementwise(Def)) {
+      append_range(Worklist, Def->operands());
+    } else {
+      return false;
+    }
+  }
+
+  if (Loads.empty())
+    return false;
+
+  Type *LoadTy = Loads[0]->getScalarType();
+  Align Alignment = Loads[0]->getAlign();
+  auto IsProfitable = [&](ElementCount VF) {
+    Type *DataTy = toVectorTy(LoadTy, VF);
+    if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
+      return false;
+
+    InstructionCost CurrentCost = cast<VPInstruction>(R)->computeCost(VF, Ctx);
+    for (auto *Load : Loads)
+      CurrentCost += Load->computeCost(VF, Ctx);
+
+    InstructionCost NewCost = 0;
+    for (auto *Load : Loads)
+      NewCost += VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
+          Intrinsic::experimental_vp_strided_load, DataTy, Load->isMasked(),
+          Alignment, Ctx);
+    return NewCost < CurrentCost;
+  };
+
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable, Range))
+    return false;
+
+  VPlan *Plan = R->getParent()->getPlan();
+
+  // Get VF as i32 for the vector length operand.
+  VPValue *I32VF = VPBuilder(Plan->getVectorPreheader())
+                       .createScalarZExtOrTrunc(
+                           &Plan->getVF(), Type::getInt32Ty(Plan->getContext()),
+                           DebugLoc::getUnknown());
+
+  Type *VFTy = Plan->getVF().getScalarType();
+  uint64_t EltSize = Plan->getDataLayout().getTypeStoreSize(LoadTy);
+  for (VPWidenLoadRecipe *Load : Loads) {
+    Type *IndexTy =
+        Plan->getDataLayout().getIndexType(Load->getAddr()->getScalarType());
+    VPBuilder Builder(Load);
+    // The strided load starts at the highest address of each part. For a
+    // reverse load that is the end pointer's base stepped back by VF per part.
+    // Otherwise rebase the lowest address: addr + (VF-1) * size.
+    VPValue *NewPtr;
+    if (auto *EndPtr = dyn_cast<VPVectorEndPointerRecipe>(Load->getAddr())) {
+      NewPtr = Builder.createVectorPointer(
+          EndPtr->getPointer(), EndPtr->getSourceElementType(),
+          Plan->getConstantInt(IndexTy, EndPtr->getStride(), /*IsSigned=*/true),
+          EndPtr->getGEPNoWrapFlags(), EndPtr->getDebugLoc());
+    } else {
+      VPValue *VFMinusOne =
+          Builder.createSub(&Plan->getVF(), Plan->getConstantInt(VFTy, 1));
+      VPValue *Offset = Builder.createOverflowingOp(
+          Instruction::Mul, {Plan->getConstantInt(VFTy, EltSize), VFMinusOne});
+      NewPtr = Builder.createPtrAdd(Load->getAddr(), Offset);
+    }
+    VPValue *StrideInBytes =
+        Plan->getConstantInt(IndexTy, -EltSize, /*IsSigned=*/true);
+    // The strided load produces lanes in reverse order, so it takes the
+    // unreversed mask.
+    VPValue *Mask = Plan->getTrue();
+    if (Load->getMask())
+      match(Load->getMask(), m_Reverse(m_VPValue(Mask)));
+    auto *StridedLoad = Builder.createWidenMemIntrinsic(
+        Intrinsic::experimental_vp_strided_load,
+        {NewPtr, StrideInBytes, Mask, I32VF}, LoadTy, Alignment, *Load,
+        Load->getDebugLoc());
+    Load->replaceAllUsesWith(StridedLoad);
+  }
+
+  R->getVPSingleValue()->replaceAllUsesWith(R->getOperand(0));
+  R->eraseFromParent();
+  return true;
+}
+
+void VPlanTransforms::convertToReverseStridedAccess(VPlan &Plan,
+                                                    VPCostContext &Ctx,
+                                                    VFRange &Range) {
+  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
+  bool Changed = false;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(VectorLoop->getEntry())))
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      Changed |= convertToReverseStridedLoads(&R, Ctx, Range);
+  // Clean up the replaced loads and their reversed masks.
+  if (Changed)
+    removeDeadRecipes(Plan);
+}
+
 /// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
 /// header mask to be simplified further when tail folding, e.g. in
 /// optimizeEVLMasks.

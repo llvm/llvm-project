@@ -450,6 +450,12 @@ struct VPlanTransforms {
   /// Cancel out redundant reverses in \p Plan, e.g. reverse(reverse(x)) -> x.
   static void simplifyReverses(VPlan &Plan);
 
+  /// Replace reverse(elementwise tree of reverse consecutive loads) with the
+  /// same tree of negative-stride vp.strided.loads when legal and profitable.
+  /// \p Range is clamped to the VFs where the decision holds.
+  static void convertToReverseStridedAccess(VPlan &Plan, VPCostContext &Ctx,
+                                            VFRange &Range);
+
   /// Remove BranchOnCond recipes with true or false conditions together with
   /// removing dead edges to their successors. If \p OnlyLatches is true, only
   /// process loop latches. Returns true if incoming values from any phi-like
