@@ -39,7 +39,7 @@ defm : EnumListField<"spirv-avoid-capabilities", "SPIRV::Capability::Capability"
 defm : BoolField<"spirv-debug-lexical-block-discriminator-scope", "false",
   "Use a DebugLexicalBlockDiscriminator as a DebugScope">;
 defm : BoolField<"spirv-debug-scope-forward-refs", "true",
-  "Forward-reference debug scopes when SPV_KHR_relaxed_extended_instruction is enabled">;
+  "Forward-reference debug scopes when SPV_KHR_relaxed_extended_instruction is enabled. May produce invalid SPIR-V if part of a cycle is unsupported; disable to drop the cycle instead">;
 
 // SPIRVRemoveUnusedResources.cpp
 defm : BoolField<"spirv-enable-remove-unused-resources", "true",
