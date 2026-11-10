@@ -3185,14 +3185,6 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
   }
 }
 
-static bool WithMultipleAppearancesOmpException(
-    const Symbol &symbol, Symbol::Flag flag) {
-  return (flag == Symbol::Flag::OmpFirstPrivate &&
-             symbol.test(Symbol::Flag::OmpLastPrivate)) ||
-      (flag == Symbol::Flag::OmpLastPrivate &&
-          symbol.test(Symbol::Flag::OmpFirstPrivate));
-}
-
 void OmpAttributeVisitor::ResolveOmpCommonBlock(
     const parser::Name &name, Symbol::Flag ompFlag) {
   bool cbResolved{false};
@@ -3236,20 +3228,13 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     bool cbCloned{cbResolved && name.symbol != originalCB};
     bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag) && !cbCloned};
     CommonBlockDetails cloneDetails{symbol->name()};
-    bool memberConflict{false};
     for (auto [index, object] : llvm::enumerate(details.objects())) {
       if (auto *resolvedObject{ResolveOmp(*object, ompFlag, currScope())}) {
         if (dataCopyingAttributeFlags.test(ompFlag)) {
           CheckDataCopyingClause(name, *resolvedObject, ompFlag);
         } else {
-          if (!memberConflict && !allowRepeatedAppearance &&
-              dataSharingAttributeFlags.test(ompFlag)) {
-            const Symbol &member{object->GetUltimate()};
-            if (HasDataSharingAttributeObject(member) &&
-                !WithMultipleAppearancesOmpException(
-                    *resolvedObject, ompFlag)) {
-              memberConflict = true;
-            }
+          if (!allowRepeatedAppearance) {
+            CheckMultipleAppearances(name, *resolvedObject, ompFlag);
           }
           AddToContextObjectWithExplicitDSA(*resolvedObject, ompFlag);
         }
@@ -3262,22 +3247,6 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
         // Propagate the flag to symbols in the equivalence set
         if (ompFlag == Symbol::Flag::OmpThreadprivate) {
           PropagateOmpFlagToEquivalenceSet(*resolvedObject, ompFlag);
-        }
-      }
-    }
-    if (!dataCopyingAttributeFlags.test(ompFlag) && !allowRepeatedAppearance) {
-      const Symbol &blockUltimate{symbol->GetUltimate()};
-      bool conflicts{
-          memberConflict || HasDataSharingAttributeObject(blockUltimate)};
-      if (conflicts && !WithMultipleAppearancesOmpException(*symbol, ompFlag)) {
-        context_.Say(name.source,
-            "'%s' appears in more than one data-sharing clause "
-            "on the same OpenMP directive"_err_en_US,
-            name.ToString());
-      } else {
-        AddDataSharingAttributeObject(blockUltimate);
-        for (const auto &object : details.objects()) {
-          AddDataSharingAttributeObject(*object);
         }
       }
     }
@@ -3354,16 +3323,19 @@ Symbol *OmpAttributeVisitor::DeclareOrMarkOtherAccessEntity(
   return &object;
 }
 
+static bool WithMultipleAppearancesOmpException(
+    const Symbol &symbol, Symbol::Flag flag) {
+  return (flag == Symbol::Flag::OmpFirstPrivate &&
+             symbol.test(Symbol::Flag::OmpLastPrivate)) ||
+      (flag == Symbol::Flag::OmpLastPrivate &&
+          symbol.test(Symbol::Flag::OmpFirstPrivate));
+}
+
 void OmpAttributeVisitor::CheckMultipleAppearances(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
   const Symbol &ultimate{symbol.GetUltimate()};
-  bool conflicts{HasDataSharingAttributeObject(ultimate)};
-  if (!conflicts) {
-    if (const Symbol *commonBlock{FindCommonBlockContaining(ultimate)}) {
-      conflicts = HasDataSharingAttributeObject(*commonBlock);
-    }
-  }
-  if (conflicts && !WithMultipleAppearancesOmpException(symbol, ompFlag)) {
+  if (HasDataSharingAttributeObject(ultimate) &&
+      !WithMultipleAppearancesOmpException(symbol, ompFlag)) {
     context_.Say(name.source,
         "'%s' appears in more than one data-sharing clause "
         "on the same OpenMP directive"_err_en_US,
