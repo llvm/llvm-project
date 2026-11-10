@@ -522,7 +522,9 @@ protected:
 
   bool MissingDebugInfo();
 
-  /// This may return nullptr if there is no standalone line-table information.
+  /// Return standalone line-table information when there is a .debug_line
+  /// section without a .debug_info section. Returns nullptr when .debug_info
+  /// is present.
   StandaloneDWARFLineTableInfo *GetStandaloneLineTableInfo();
 
   void FindDwpSymbolFile();

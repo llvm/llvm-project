@@ -993,8 +993,8 @@ StandaloneDWARFLineTableInfo *SymbolFileDWARF::GetStandaloneLineTableInfo() {
     if (info->HasLineTables())
       m_standalone_line_table_info = std::move(info);
   });
-  // Returning nullptr is valid when no standalone line-table information is
-  // available.
+  // This returns a valid pointer only if there is .debug_line with no
+  // .debug_info.
   return m_standalone_line_table_info.get();
 }
 
