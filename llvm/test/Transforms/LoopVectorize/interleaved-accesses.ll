@@ -1721,3 +1721,70 @@ latch:
 exit:
   ret void
 }
+
+; The loads are 2^32 + 1 elements apart. Their member index does not fit into
+; 32 bits, so they must not form an interleave group.
+define void @member_index_does_not_fit(ptr noalias %dst, ptr noalias %src, i64 %n) {
+; CHECK-LABEL: @member_index_does_not_fit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STRIDED_VEC]], [[STRIDED_VEC1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = shl i64 [[IV]], 1
+; CHECK-NEXT:    [[NEAR_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[OFF]]
+; CHECK-NEXT:    [[NEAR:%.*]] = load i8, ptr [[NEAR_GEP]], align 1
+; CHECK-NEXT:    [[FAR_GEP:%.*]] = getelementptr i8, ptr [[NEAR_GEP]], i64 4294967297
+; CHECK-NEXT:    [[FAR:%.*]] = load i8, ptr [[FAR_GEP]], align 1
+; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[NEAR]], [[FAR]]
+; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i8 [[SUM]], ptr [[DST_GEP]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP39:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %off = shl i64 %iv, 1
+  %near.gep = getelementptr i8, ptr %src, i64 %off
+  %near = load i8, ptr %near.gep, align 1
+  %far.gep = getelementptr i8, ptr %near.gep, i64 4294967297
+  %far = load i8, ptr %far.gep, align 1
+  %sum = add i8 %near, %far
+  %dst.gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 %sum, ptr %dst.gep, align 1
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
