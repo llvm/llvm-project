@@ -515,8 +515,7 @@ public:
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeARM, sizeof(tailMergeARM));
     applyMOV32T(buf + 14, desc->getRVA() + ctx.config.imageBase);
-    // Call the helper through an absolute address: with LTO it can be more
-    // than 16 MiB away, out of reach of a bl.
+    // The helper can be more than 16 MiB away, out of reach of a bl.
     applyMOV32T(buf + 22, (helper->getRVA() + ctx.config.imageBase) | 1);
   }
 
