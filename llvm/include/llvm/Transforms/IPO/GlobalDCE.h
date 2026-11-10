@@ -18,6 +18,7 @@
 #define LLVM_TRANSFORMS_IPO_GLOBALDCE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
