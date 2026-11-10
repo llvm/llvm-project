@@ -792,6 +792,7 @@ TEST(DataLayout, CacheInvalidation) {
 
   // Normal query is fine.
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 6u);
+  EXPECT_TRUE(layout.hasTypeEntry(IntegerType::get(&ctx, 42)));
 
   // Replace the data layout spec with a new, empty spec.
   op->setDiscardableAttr(kAttrName, CustomDataLayoutSpec::get(&ctx, {}));
@@ -799,6 +800,8 @@ TEST(DataLayout, CacheInvalidation) {
   // Data layout is no longer valid and should trigger assertion when queried.
 #ifndef NDEBUG
   ASSERT_DEATH(layout.getTypeSize(Float16Type::get(&ctx)), "no longer valid");
+  ASSERT_DEATH(layout.hasTypeEntry(IntegerType::get(&ctx, 42)),
+               "no longer valid");
 #endif
 }
 

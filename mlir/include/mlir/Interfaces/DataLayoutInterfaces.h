@@ -263,6 +263,7 @@ private:
   Operation *scope;
 
   /// Caches for individual requests.
+  mutable DenseMap<Type, bool> typeEntries;
   mutable DenseMap<Type, llvm::TypeSize> sizes;
   mutable DenseMap<Type, llvm::TypeSize> bitsizes;
   mutable DenseMap<Type, uint64_t> abiAlignments;
