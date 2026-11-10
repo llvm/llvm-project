@@ -78,9 +78,11 @@ STATISTIC(NumTailCalls,  "Number of tail calls optimized");
 static cl::opt<cl::boolOrDefault>
     FlagEnableTailMerge("enable-tail-merge",
                         cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
-static cl::opt<bool>
-    FlagFallthroughFolding("enable-fallthrough-folding",
-                           cl::init(false), cl::Hidden);
+
+static cl::opt<bool> FlagFallthroughFolding(
+    "enable-fallthrough-folding", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Fold fallthrough blocks into conditional tailcalls when profitable"));
 
 // Override the common-code hoisting sub-phase of BranchFolding. Unset by
 // default, in which case the value configured by the caller is used.
