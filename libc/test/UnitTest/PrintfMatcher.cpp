@@ -30,19 +30,20 @@ namespace {
 #define IF_FLAG_SHOW_FLAG(flag_name)                                           \
   do {                                                                         \
     if ((form.flags & FormatFlags::flag_name) == FormatFlags::flag_name)       \
-      tlog << "\n\t\t" << #flag_name;                                          \
+      listener << "\n\t\t" << #flag_name;                                      \
   } while (false)
 #define CASE_LM(lm)                                                            \
   case (LengthModifier::lm):                                                   \
-    tlog << #lm;                                                               \
+    listener << #lm;                                                           \
     break
 #define CASE_LM_BIT_WIDTH(lm, bw)                                              \
   case (LengthModifier::lm):                                                   \
-    tlog << #lm << "\n\tbit width: :" << bw;                                   \
+    listener << #lm << "\n\tbit width: :" << bw;                               \
     break
 
-template <typename CharT> void display_impl(FormatSection<CharT> form) {
-  tlog << "Raw String (len " << form.raw_string.size() << "): \"";
+template <typename CharT>
+void display_impl(MatchResultListener &listener, FormatSection<CharT> form) {
+  listener << "Raw String (len " << form.raw_string.size() << "): \"";
   cpp::string raw_string_utf8;
   if constexpr (cpp::is_same_v<CharT, char>) {
     raw_string_utf8 = form.raw_string;
@@ -50,20 +51,20 @@ template <typename CharT> void display_impl(FormatSection<CharT> form) {
     raw_string_utf8 = try_convert_to_utf8(form.raw_string);
   }
   for (size_t i = 0; i < raw_string_utf8.size(); ++i) {
-    tlog << raw_string_utf8[i];
+    listener << raw_string_utf8[i];
   }
-  tlog << "\"";
+  listener << "\"";
   if (form.has_conv) {
-    tlog << "\n\tHas Conv\n\tFlags:";
+    listener << "\n\tHas Conv\n\tFlags:";
     IF_FLAG_SHOW_FLAG(LEFT_JUSTIFIED);
     IF_FLAG_SHOW_FLAG(FORCE_SIGN);
     IF_FLAG_SHOW_FLAG(SPACE_PREFIX);
     IF_FLAG_SHOW_FLAG(ALTERNATE_FORM);
     IF_FLAG_SHOW_FLAG(LEADING_ZEROES);
-    tlog << "\n";
-    tlog << "\tmin width: " << form.min_width << "\n";
-    tlog << "\tprecision: " << form.precision << "\n";
-    tlog << "\tlength modifier: ";
+    listener << "\n";
+    listener << "\tmin width: " << form.min_width << "\n";
+    listener << "\tprecision: " << form.precision << "\n";
+    listener << "\tlength modifier: ";
     switch (form.length_modifier) {
       CASE_LM(none);
       CASE_LM(l);
@@ -90,26 +91,28 @@ template <typename CharT> void display_impl(FormatSection<CharT> form) {
       conv_name_utf8 =
           try_convert_to_utf8(cpp::wstring_view(&form.conv_name, 1));
     }
-    tlog << "\n";
-    tlog << "\tconversion name: " << conv_name_utf8 << "\n";
+    listener << "\n";
+    listener << "\tconversion name: " << conv_name_utf8 << "\n";
     if (conv_name_utf8 == "p" || conv_name_utf8 == "n" || conv_name_utf8 == "s")
-      tlog << "\tpointer value: "
-           << int_to_hex<uintptr_t>(
-                  reinterpret_cast<uintptr_t>(form.conv_val_ptr))
-           << "\n";
+      listener << "\tpointer value: "
+               << int_to_hex<uintptr_t>(
+                      reinterpret_cast<uintptr_t>(form.conv_val_ptr))
+               << "\n";
     else if (conv_name_utf8 != "%")
-      tlog << "\tvalue: " << int_to_hex(form.conv_val_raw) << "\n";
+      listener << "\tvalue: " << int_to_hex(form.conv_val_raw) << "\n";
   }
 }
 
 } // anonymous namespace
 
-void display(const FormatSection<char> &format_section) {
-  display_impl(format_section);
+void display(MatchResultListener &listener,
+             const FormatSection<char> &format_section) {
+  display_impl(listener, format_section);
 }
 
-void display(const FormatSection<wchar_t> &format_section) {
-  display_impl(format_section);
+void display(MatchResultListener &listener,
+             const FormatSection<wchar_t> &format_section) {
+  display_impl(listener, format_section);
 }
 
 } // namespace testing

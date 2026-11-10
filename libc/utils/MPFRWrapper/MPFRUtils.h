@@ -205,31 +205,31 @@ template <typename InputType, typename OutputType>
 void explain_unary_operation_single_output_error(Operation op, InputType input,
                                                  OutputType match_value,
                                                  double ulp_tolerance,
-                                                 RoundingMode rounding);
+                                                 RoundingMode rounding,
+                                                 MatchResultListener *listener);
 template <typename T>
 void explain_unary_operation_two_outputs_error(
     Operation op, T input, const BinaryOutput<T> &match_value,
-    double ulp_tolerance, RoundingMode rounding);
+    double ulp_tolerance, RoundingMode rounding, MatchResultListener *listener);
 template <typename T>
 void explain_binary_operation_two_outputs_error(
     Operation op, const BinaryInput<T> &input,
     const BinaryOutput<T> &match_value, double ulp_tolerance,
-    RoundingMode rounding);
+    RoundingMode rounding, MatchResultListener *listener);
 
 template <typename InputType, typename OutputType>
 void explain_binary_operation_one_output_error(
     Operation op, const BinaryInput<InputType> &input, OutputType match_value,
-    double ulp_tolerance, RoundingMode rounding);
+    double ulp_tolerance, RoundingMode rounding, MatchResultListener *listener);
 
 template <typename InputType, typename OutputType>
 void explain_ternary_operation_one_output_error(
     Operation op, const TernaryInput<InputType> &input, OutputType match_value,
-    double ulp_tolerance, RoundingMode rounding);
+    double ulp_tolerance, RoundingMode rounding, MatchResultListener *listener);
 
 template <Operation op, bool silent, typename InputType, typename OutputType>
 class MPFRMatcher : public testing::Matcher<OutputType> {
   InputType input;
-  OutputType match_value;
   double ulp_tolerance;
   RoundingMode rounding;
 
@@ -237,77 +237,82 @@ public:
   MPFRMatcher(InputType testInput, double ulp_tolerance, RoundingMode rounding)
       : input(testInput), ulp_tolerance(ulp_tolerance), rounding(rounding) {}
 
-  bool match(OutputType libcResult) {
-    match_value = libcResult;
-    return match(input, match_value);
-  }
+  bool match(OutputType libcResult) const { return match(input, libcResult); }
 
-  // This method is marked with NOLINT because the name `explainError` does not
-  // conform to the coding style.
-  void explainError() override { // NOLINT
-    explain_error(input, match_value);
+  bool MatchAndExplain(OutputType libcResult,
+                       MatchResultListener *listener) const {
+    if (match(libcResult))
+      return true;
+    if constexpr (!silent) {
+      if (listener->IsInterested())
+        explain_error(input, libcResult, listener);
+    }
+    return false;
   }
-
-  // Whether the `explainError` step is skipped or not.
-  bool is_silent() const override { return silent; }
 
 private:
   template <typename InType, typename OutType>
-  bool match(InType in, OutType out) {
+  bool match(InType in, OutType out) const {
     return compare_unary_operation_single_output(op, in, out, ulp_tolerance,
                                                  rounding);
   }
 
-  template <typename T> bool match(T in, const BinaryOutput<T> &out) {
+  template <typename T> bool match(T in, const BinaryOutput<T> &out) const {
     return compare_unary_operation_two_outputs(op, in, out, ulp_tolerance,
                                                rounding);
   }
 
   template <typename T, typename U>
-  bool match(const BinaryInput<T> &in, U out) {
+  bool match(const BinaryInput<T> &in, U out) const {
     return compare_binary_operation_one_output(op, in, out, ulp_tolerance,
                                                rounding);
   }
 
   template <typename T>
-  bool match(BinaryInput<T> in, const BinaryOutput<T> &out) {
+  bool match(BinaryInput<T> in, const BinaryOutput<T> &out) const {
     return compare_binary_operation_two_outputs(op, in, out, ulp_tolerance,
                                                 rounding);
   }
 
   template <typename InType, typename OutType>
-  bool match(const TernaryInput<InType> &in, OutType out) {
+  bool match(const TernaryInput<InType> &in, OutType out) const {
     return compare_ternary_operation_one_output(op, in, out, ulp_tolerance,
                                                 rounding);
   }
 
   template <typename InType, typename OutType>
-  void explain_error(InType in, OutType out) {
+  void explain_error(InType in, OutType out,
+                     MatchResultListener *listener) const {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
-                                                rounding);
-  }
-
-  template <typename T> void explain_error(T in, const BinaryOutput<T> &out) {
-    explain_unary_operation_two_outputs_error(op, in, out, ulp_tolerance,
-                                              rounding);
+                                                rounding, listener);
   }
 
   template <typename T>
-  void explain_error(const BinaryInput<T> &in, const BinaryOutput<T> &out) {
+  void explain_error(T in, const BinaryOutput<T> &out,
+                     MatchResultListener *listener) const {
+    explain_unary_operation_two_outputs_error(op, in, out, ulp_tolerance,
+                                              rounding, listener);
+  }
+
+  template <typename T>
+  void explain_error(const BinaryInput<T> &in, const BinaryOutput<T> &out,
+                     MatchResultListener *listener) const {
     explain_binary_operation_two_outputs_error(op, in, out, ulp_tolerance,
-                                               rounding);
+                                               rounding, listener);
   }
 
   template <typename T, typename U>
-  void explain_error(const BinaryInput<T> &in, U out) {
+  void explain_error(const BinaryInput<T> &in, U out,
+                     MatchResultListener *listener) const {
     explain_binary_operation_one_output_error(op, in, out, ulp_tolerance,
-                                              rounding);
+                                              rounding, listener);
   }
 
   template <typename InType, typename OutType>
-  void explain_error(const TernaryInput<InType> &in, OutType out) {
+  void explain_error(const TernaryInput<InType> &in, OutType out,
+                     MatchResultListener *listener) const {
     explain_ternary_operation_one_output_error(op, in, out, ulp_tolerance,
-                                               rounding);
+                                               rounding, listener);
   }
 };
 
