@@ -621,6 +621,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
       setOperationAction({ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT},
                          {MVT::v4i16, MVT::v8i8}, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i32, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
                          Legal);
@@ -11691,6 +11692,11 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     unsigned IdxVal = IdxC->getZExtValue();
     unsigned NumElts = VecVT.getVectorNumElements();
     MVT EltVT = VecVT.getVectorElementType();
+
+    // v2i32 on RV32 lives in a GPR pair; constant index inserts are selected
+    // with INSERT_SUBREG.
+    if (!Subtarget.is64Bit() && VecVT == MVT::v2i32)
+      return Op;
 
     if (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8)) {
       unsigned HalfNumElts = NumElts / 2;
