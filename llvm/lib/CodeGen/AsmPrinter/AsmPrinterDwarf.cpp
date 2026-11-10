@@ -308,6 +308,8 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
 }
 
 void AsmPrinter::emitDwarfDIE(const DIE &Die) const {
+  assert(!Die.isPlaceholder() && "Cannot emit a placeholder DIE");
+
   // Emit the code (index) for the abbreviation.
   if (isVerbose())
     OutStreamer->AddComment("Abbrev [" + Twine(Die.getAbbrevNumber()) + "] 0x" +

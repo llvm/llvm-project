@@ -1324,7 +1324,6 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
         cpu_type != 0 && cpu_type != static_cast<cpu_type_t>(UINT32_MAX) &&
         cpu_type != static_cast<cpu_type_t>(LLDB_INVALID_CPUTYPE);
     const bool set_cpu_subtype =
-        cpu_subtype != 0 &&
         cpu_subtype != static_cast<cpu_subtype_t>(UINT32_MAX) &&
         cpu_subtype != CPU_SUBTYPE_X86_64_H;
     if (set_cpu_type) {
@@ -1335,16 +1334,21 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
           (posix_spawnattr_setarchpref_np_t)dlsym(
               RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
       if (set_cpu_subtype && posix_spawnattr_setarchpref_np_fn) {
+        // The kernel matches subtypes exactly. Fall back to any subtype for
+        // binaries without the requested slice.
+        cpu_type_t cpu_types[] = {cpu_type, cpu_type};
+        cpu_subtype_t cpu_subtypes[] = {cpu_subtype, CPU_SUBTYPE_ANY};
+        const size_t count = std::size(cpu_types);
         error = Status((*posix_spawnattr_setarchpref_np_fn)(
-                           &attr, 1, &cpu_type, &cpu_subtype, &ocount),
+                           &attr, count, cpu_types, cpu_subtypes, &ocount),
                        eErrorTypePOSIX);
         if (error.Fail())
           LLDB_LOG(log,
-                   "error: {}, ::posix_spawnattr_setarchpref_np ( &attr, 1, "
+                   "error: {}, ::posix_spawnattr_setarchpref_np ( &attr, {}, "
                    "cpu_type = {:x}, cpu_subtype = {:x}, count => {} )",
-                   error, cpu_type, cpu_subtype, ocount);
+                   error, count, cpu_type, cpu_subtype, ocount);
 
-        if (error.Fail() || ocount != 1)
+        if (error.Fail() || ocount != count)
           return error;
       } else {
         error = Status(
@@ -1538,7 +1542,8 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec;
@@ -1594,9 +1599,8 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     bool run_in_shell = true;
     std::string error_output; // Pass stderr string arg so it is not mixed with
                               // stdout.
-    Status e =
-        RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                        &error_output, std::chrono::seconds(10), run_in_shell);
+    Status e = RunShellCommand(expand_command, cwd, &status, nullptr, &output,
+                               &error_output, timeout, run_in_shell);
 
     if (e.Fail())
       return e;

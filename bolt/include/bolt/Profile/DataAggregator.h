@@ -100,6 +100,7 @@ private:
   friend struct PerfSpeEventsTestHelper;
   friend struct PreAggregatedTestHelper;
   friend struct PerfScriptTestHelper;
+  friend struct MMapEventsTestHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
@@ -393,8 +394,9 @@ private:
   /// Parse a single line of a PERF_RECORD_MMAP2 event looking for a mapping
   /// between the binary name and its memory layout in a process with a given
   /// PID.
-  /// On success return a <FileName, MMapInfo> pair.
-  ErrorOr<std::pair<StringRef, MMapInfo>> parseMMapEvent();
+  /// On success return a <FileName, BuildId, MMapInfo> pair. BuildId may be
+  /// empty.
+  ErrorOr<std::tuple<StringRef, StringRef, MMapInfo>> parseMMapEvent();
 
   /// Parse PERF_RECORD_FORK event.
   std::optional<ForkInfo> parseForkEvent();

@@ -30,6 +30,7 @@ public:
     eRegisterTypeKindEnum,
     eRegisterTypeKindBuiltin,
     eRegisterTypeKindVector,
+    eRegisterTypeKindUnion,
   };
 
   RegisterTypeKind getKind() const { return m_kind; }
@@ -80,6 +81,18 @@ private:
   std::vector<const RegisterType *> m_dependencies;
 };
 
+/// A register type whose value is interpreted as a structured layout.
+class RegisterTypeComposite : public RegisterType {
+public:
+  static bool classof(const RegisterType *type) {
+    return type->getKind() == eRegisterTypeKindVector ||
+           type->getKind() == eRegisterTypeKindUnion;
+  }
+
+protected:
+  RegisterTypeComposite(RegisterTypeKind kind, std::string id);
+};
+
 /// A predefined GDB target-description type. Builtin types are referenced by
 /// name and are not emitted as XML definitions.
 class RegisterTypeBuiltin : public RegisterType {
@@ -108,7 +121,7 @@ private:
 };
 
 /// A GDB target-description vector type. The element type must outlive it.
-class RegisterTypeVector : public RegisterType {
+class RegisterTypeVector : public RegisterTypeComposite {
 public:
   RegisterTypeVector(std::string id, const RegisterType *element_type,
                      uint32_t count);
@@ -130,6 +143,41 @@ public:
 private:
   const RegisterType *m_element_type;
   const uint32_t m_count;
+};
+
+/// A GDB target-description union type. Each field is an alternative view of
+/// the same register data. Referenced field types must outlive the union.
+class RegisterTypeUnion : public RegisterTypeComposite {
+public:
+  class Field {
+  public:
+    Field(std::string name, const RegisterType *type);
+
+    const std::string &GetName() const { return m_name; }
+    const RegisterType *GetType() const { return m_type; }
+
+  private:
+    const std::string m_name;
+    const RegisterType *m_type;
+  };
+
+  RegisterTypeUnion(std::string id, std::vector<Field> fields);
+
+  const std::vector<Field> &GetFields() const { return m_fields; }
+  std::optional<uint64_t> GetByteSize() const override;
+  bool IsByteSizeCompatible(uint64_t byte_size) const;
+
+  void DumpToLog(Log *log) const;
+
+  void ToXMLElement(Stream &strm,
+                    const RegisterType *user = nullptr) const override;
+
+  static bool classof(const RegisterType *type) {
+    return type->getKind() == eRegisterTypeKindUnion;
+  }
+
+private:
+  const std::vector<Field> m_fields;
 };
 
 } // namespace lldb_private

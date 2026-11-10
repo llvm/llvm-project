@@ -178,6 +178,7 @@ public:
       return clang::CreateASTDeclNodeLister();
     if (ASTDump)
       return clang::CreateASTDumper(nullptr /*Dump to stdout.*/, ASTDumpFilter,
+                                    /*FilterPath=*/"",
                                     /*DumpDecls=*/true,
                                     /*Deserialize=*/false,
                                     /*DumpLookups=*/false,

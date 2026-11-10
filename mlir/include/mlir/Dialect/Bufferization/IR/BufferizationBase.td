@@ -31,7 +31,6 @@ def Bufferization_Dialect : Dialect {
     "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect",
     "arith::ArithDialect"
   ];
-  let useStrictPropertiesInAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     /// Verify an attribute from this dialect on the argument at 'argIndex' for

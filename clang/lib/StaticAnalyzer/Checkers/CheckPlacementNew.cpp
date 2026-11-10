@@ -112,7 +112,7 @@ bool PlacementNewChecker::checkPlaceCapacityIsSufficient(
     return true;
 
   if ((SizeOfPlaceCI->getValue() < SizeOfTargetCI->getValue())) {
-    if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
+    if (ExplodedNode *N = C.addSink(C.getState())) {
       std::string Msg =
           llvm::formatv("Storage provided to placement new is only {0} bytes, "
                         "whereas the allocated type requires {1} bytes",
@@ -133,7 +133,7 @@ void PlacementNewChecker::emitBadAlignReport(const Expr *P, CheckerContext &C,
                                              unsigned AllocatedTAlign,
                                              unsigned StorageTAlign) const {
   ProgramStateRef State = C.getState();
-  if (ExplodedNode *N = C.generateErrorNode(State)) {
+  if (ExplodedNode *N = C.addSink(State)) {
     std::string Msg(llvm::formatv("Storage type is aligned to {0} bytes but "
                                   "allocated type is aligned to {1} bytes",
                                   StorageTAlign, AllocatedTAlign));

@@ -30,7 +30,9 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
   set_target_properties(${LIB_TARGET_NAME}
       PROPERTIES
         LINKER_LANGUAGE CXX
-        POSITION_INDEPENDENT_CODE TRUE)
+        POSITION_INDEPENDENT_CODE TRUE
+        BUILD_RPATH "$ORIGIN"
+        INSTALL_RPATH "$ORIGIN")
 
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     # Install stripped PDB
@@ -98,6 +100,7 @@ set(LIBSYCL_SOURCES
     "detail/event_impl.cpp"
     "detail/device_image_wrapper.cpp"
     "detail/device_impl.cpp"
+    "detail/device_kernel_info.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
     "detail/program_manager.cpp"

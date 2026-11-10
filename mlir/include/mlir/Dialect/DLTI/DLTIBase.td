@@ -76,7 +76,6 @@ def DLTI_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 def HasDefaultDLTIDataLayout : NativeOpTrait<"HasDefaultDLTIDataLayout"> {

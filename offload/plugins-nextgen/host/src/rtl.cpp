@@ -12,6 +12,8 @@
 
 #include <cassert>
 #include <cstddef>
+#include <map>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -21,7 +23,6 @@
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
-#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "omptarget.h"
 
@@ -76,12 +77,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
     // Save the function pointer.
     Func = reinterpret_cast<KernelTy *>(Global.getPtr());
 
-    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
-
-    // Set the maximum number of threads to a single.
-    MaxNumThreads = 1;
     return Plugin::success();
   }
 
@@ -89,10 +84,8 @@ struct GenELF64KernelTy : public GenericKernelTy {
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
                    KernelLaunchArgsTy &LaunchArgs,
-                   AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
-      return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "Incompatible kernel argument version for plugin");
+                   AsyncInfoWrapperTy &AsyncInfoWrapper,
+                   GenericProfilerTy *ProfilerPtr) const override {
     // Cooperative kernel launch is not supported for host
     if (LaunchArgs.Flags.Cooperative)
       return Plugin::error(ErrorCode::UNSUPPORTED,
@@ -145,7 +138,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   ~GenELF64DeviceTy() {}
 
   /// Initialize the device, which is a no-op
-  Error initImpl(GenericPluginTy &Plugin) override { return Plugin::success(); }
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
+    return Plugin::success();
+  }
 
   /// Unload the binary image
   ///
@@ -266,14 +262,16 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       GenericProfilerTy *ProfilerPtr) override {
     std::memcpy(TgtPtr, HstPtr, Size);
     return Plugin::success();
   }
 
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override {
     std::memcpy(HstPtr, TgtPtr, Size);
     return Plugin::success();
   }
@@ -288,15 +286,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// supported in this plugin.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override {
     std::memcpy(DstPtr, SrcPtr, Size);
-    return Plugin::success();
-  }
-
-  /// Insert a data fence between previous data operations and the following
-  /// operations. This is a no-op for Host devices as operations inserted into
-  /// a queue are in-order.
-  Error dataFence(__tgt_async_info *Async) override {
     return Plugin::success();
   }
 
@@ -385,7 +377,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
              DeviceInfo::MAX_CLOCK_FREQUENCY);
     Info.add("Memory Address Size", std::numeric_limits<uintptr_t>::digits,
              "bits", DeviceInfo::ADDRESS_BITS);
-    Info.add("Local memory size (bytes)", 1, "",
+    // The host has no work group shared memory.
+    Info.add("Local memory size (bytes)", 0, "",
              DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
     Info.add("Global memory size (bytes)", 1, "", DeviceInfo::GLOBAL_MEM_SIZE);
     Info.add("Max Memory Allocation Size (bytes)", 1, "",
@@ -488,6 +481,42 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
   Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
     return Plugin::success();
   }
+
+  void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
+                       TargetAllocTy Kind) override {
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    Allocs[Ptr] = Entry{&Device, Kind, static_cast<size_t>(Size)};
+  }
+
+  void untrackAllocation(void *Ptr) override {
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    Allocs.erase(Ptr);
+  }
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    auto It = Allocs.upper_bound(const_cast<void *>(Ptr));
+    if (It == Allocs.begin())
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    --It;
+    void *Base = It->first;
+    const Entry &E = It->second;
+    if (reinterpret_cast<const char *>(Ptr) >=
+        reinterpret_cast<char *>(Base) + E.Size)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    return PluginAllocInfoTy{E.Device, E.Kind, Base, E.Size};
+  }
+
+private:
+  struct Entry {
+    GenericDeviceTy *Device;
+    TargetAllocTy Kind;
+    size_t Size;
+  };
+  std::map<void *, Entry> Allocs;
+  std::mutex AllocsMutex;
 };
 
 /// Class implementing the plugin functionalities for GenELF64.

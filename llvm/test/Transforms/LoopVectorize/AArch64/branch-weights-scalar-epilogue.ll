@@ -6,7 +6,7 @@
 ; remainder of exactly the epilogue's step of 4. Check the branch weights of
 ; that check for an estimated remainder of exactly 4 iterations, that is, for the
 ; boundary at which the epilogue vector loop is estimated to be skipped.
-define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) !prof !0 {
+define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) vscale_range(1,16) !prof !0 {
 ; CHECK-LABEL: define i32 @load_factor_4_with_tail_gap(
 ; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF0:![0-9]+]] {
 ; CHECK:  [[ITER_CHECK:.*:]]

@@ -15,7 +15,6 @@
 #define MLIR_IR_BUILTINDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeImplementation.h"
-#include "mlir/IR/Dialect.h"
 
 //===----------------------------------------------------------------------===//
 // BuiltinDialectVersion
@@ -26,7 +25,7 @@ struct BuiltinDialectVersion : public mlir::DialectVersion {
 
   int64_t getVersion() const { return version; }
 
-  static BuiltinDialectVersion getCurrentVersion() { return {0}; }
+  static BuiltinDialectVersion getCurrentVersion() { return {1}; }
 
   bool operator<(const BuiltinDialectVersion &other) const {
     return version < other.version;

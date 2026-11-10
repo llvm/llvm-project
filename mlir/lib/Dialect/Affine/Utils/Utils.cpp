@@ -580,22 +580,11 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
 
   // Construct the new upper bound value map.
   AffineMap oldLbMap = op.getLowerBoundMap();
-  // The upper bound can have multiple results. To use
-  // AffineValueMap::difference, we need to have the same number of results in
-  // both lower and upper bound maps. So, we just create a value map for the
-  // lower bound with the only available lower bound result repeated to pad up
-  // to the number of upper bound results.
-  SmallVector<AffineExpr> lbExprs(op.getUpperBoundMap().getNumResults(),
-                                  op.getLowerBoundMap().getResult(0));
   AffineValueMap lbMap(oldLbMap, op.getLowerBoundOperands());
-  AffineMap paddedLbMap =
-      AffineMap::get(oldLbMap.getNumDims(), oldLbMap.getNumSymbols(), lbExprs,
-                     op.getContext());
-  AffineValueMap paddedLbValueMap(paddedLbMap, op.getLowerBoundOperands());
   AffineValueMap ubValueMap(op.getUpperBoundMap(), op.getUpperBoundOperands());
   AffineValueMap newUbValueMap;
-  // Compute the `upper bound - lower bound`.
-  AffineValueMap::difference(ubValueMap, paddedLbValueMap, &newUbValueMap);
+  // Subtract the single lower bound from each upper bound.
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbMap, &newUbValueMap);
   (void)newUbValueMap.canonicalize();
 
   // Scale down the upper bound value map by the loop step.
@@ -842,10 +831,8 @@ static void forwardStoreToLoad(
   // to replace the load, if any.
   Operation *lastWriteStoreOp = nullptr;
 
-  for (auto *user : loadOp.getMemRef().getUsers()) {
-    auto storeOp = dyn_cast<AffineWriteOpInterface>(user);
-    if (!storeOp)
-      continue;
+  for (auto storeOp : llvm::make_isa_range<AffineWriteOpInterface>(
+           loadOp.getMemRef().getUsers())) {
     MemRefAccess srcAccess(storeOp);
     MemRefAccess destAccess(loadOp);
 
@@ -916,12 +903,9 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
                             PostDominanceInfo &postDominanceInfo,
                             llvm::function_ref<bool(Value, Value)> mayAlias) {
 
-  for (Operation *user : writeA.getMemRef().getUsers()) {
-    // Only consider writing operations.
-    auto writeB = dyn_cast<AffineWriteOpInterface>(user);
-    if (!writeB)
-      continue;
-
+  // Only consider writing operations.
+  for (auto writeB : llvm::make_isa_range<AffineWriteOpInterface>(
+           writeA.getMemRef().getUsers())) {
     // The operations must be distinct.
     if (writeB == writeA)
       continue;

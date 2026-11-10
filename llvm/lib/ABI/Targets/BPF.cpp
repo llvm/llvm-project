@@ -16,7 +16,7 @@ namespace llvm::abi {
 
 class BPFTargetInfo : public TargetInfo {
 private:
-  TypeBuilder &TB;
+  ABICompatInfo CompatInfo;
 
   ArgInfo classifyReturnType(const Type *RetTy) const {
     if (RetTy->isVoid())
@@ -25,12 +25,14 @@ private:
     if (isAggregateTypeForABI(RetTy)) {
       if (RetTy->isZeroSize())
         return ArgInfo::getIgnore();
-      return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+      return getNaturalAlignIndirect(RetTy, getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
     }
 
     if (const auto *IntTy = dyn_cast<IntegerType>(RetTy)) {
       if (IntTy->isBitInt() && IntTy->getSizeInBits().getFixedValue() > 128)
-        return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+        return getNaturalAlignIndirect(RetTy, getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
     }
 
     return ArgInfo::getDirect();
@@ -57,12 +59,12 @@ private:
         return ArgInfo::getDirect(CoerceTy);
       }
 
-      return getNaturalAlignIndirect(ArgTy, /*ByVal=*/true);
+      return getNaturalAlignIndirect(ArgTy, getAllocaAddrSpace());
     }
 
     if (const auto *IntTy = dyn_cast<IntegerType>(ArgTy)) {
       if (IntTy->isBitInt() && IntTy->getSizeInBits().getFixedValue() > 128)
-        return getNaturalAlignIndirect(ArgTy, /*ByVal=*/true);
+        return getNaturalAlignIndirect(ArgTy, getAllocaAddrSpace());
 
       if (isPromotableInteger(IntTy))
         return ArgInfo::getExtend(ArgTy);
@@ -72,7 +74,9 @@ private:
   }
 
 public:
-  BPFTargetInfo(TypeBuilder &TB) : TB(TB) {}
+  BPFTargetInfo(TypeBuilder &Builder) : TargetInfo(Builder) {}
+
+  const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
 
   void computeInfo(FunctionInfo &FI) const override {
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());

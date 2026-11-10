@@ -1,5 +1,6 @@
 // Test memory allocation pass for fir.alloca outside of function entry block
 // RUN: fir-opt --memory-allocation-opt="dynamic-array-on-heap=true" %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="legacy=true dynamic-array-on-heap=true" %s | FileCheck %s
 
 func.func @test_loop() {
   %c1 = arith.constant 1 : index
@@ -15,7 +16,7 @@ func.func @test_loop() {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 100 : index
 // CHECK:           fir.do_loop %[[VAL_2:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_0]] {
-// CHECK:             %[[VAL_3:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_2]] {bindc_name = "", uniq_name = ""}
+// CHECK:             %[[VAL_3:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_2]] <{bindc_name = "", uniq_name = ""}>
 // CHECK:             %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 // CHECK:             fir.call @bar(%[[VAL_4]]) : (!fir.ref<!fir.array<?xf32>>) -> ()
 // CHECK:             fir.freemem %[[VAL_3]] : !fir.heap<!fir.array<?xf32>>
@@ -72,7 +73,7 @@ func.func @test_unstructured(%n : index) {
 // CHECK:           fir.if %[[VAL_12]] {
 // CHECK:             fir.freemem %[[VAL_10]] : !fir.heap<!fir.array<?xf32>>
 // CHECK:           }
-// CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_8]] {bindc_name = "", uniq_name = ""}
+// CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_8]] <{bindc_name = "", uniq_name = ""}>
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 // CHECK:           fir.store %[[VAL_13]] to %[[VAL_1]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 // CHECK:           fir.call @bar(%[[VAL_14]]) : (!fir.ref<!fir.array<?xf32>>) -> ()
@@ -137,7 +138,7 @@ func.func @alloca_dominate_return_in_cycle(%arg0: index) {
 // CHECK:           fir.if %[[VAL_9]] {
 // CHECK:             fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
 // CHECK:           }
-// CHECK:           %[[VAL_10:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_6]] {bindc_name = "", uniq_name = ""}
+// CHECK:           %[[VAL_10:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_6]] <{bindc_name = "", uniq_name = ""}>
 // CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 // CHECK:           fir.store %[[VAL_10]] to %[[VAL_1]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 // CHECK:           fir.call @bar(%[[VAL_11]]) : (!fir.ref<!fir.array<?xf32>>) -> ()

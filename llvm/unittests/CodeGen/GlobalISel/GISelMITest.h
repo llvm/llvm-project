@@ -66,7 +66,7 @@ parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
   if (!M)
     return nullptr;
 
-  M->setDataLayout(TM.createDataLayout());
+  M->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
   if (MIR->parseMachineFunctions(*M, MMI))
     return nullptr;

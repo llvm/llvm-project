@@ -746,7 +746,7 @@ define void @f3() #0 {
 ; X86-O0-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-O0-NEXT:    pushl %esi
 ; X86-O0-NEXT:    andl $-8, %esp
-; X86-O0-NEXT:    subl $16, %esp
+; X86-O0-NEXT:    subl $8, %esp
 ; X86-O0-NEXT:    .cfi_offset %esi, -12
 ; X86-O0-NEXT:    movl var_13, %ecx
 ; X86-O0-NEXT:    movl %ecx, %eax

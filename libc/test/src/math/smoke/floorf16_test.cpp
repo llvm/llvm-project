@@ -10,4 +10,4 @@
 
 #include "src/math/floorf16.h"
 
-LIST_FLOOR_TESTS(float16, LIBC_NAMESPACE::floorf16)
+LIST_FLOOR_TESTS(Floorf16, float16, LIBC_NAMESPACE::floorf16)

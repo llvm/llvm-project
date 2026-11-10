@@ -104,3 +104,183 @@ cir.func @f17() {
   cir.call @f16() { inline_kind = #cir.inline<nonsense> } : () -> () 
   cir.return
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @f18(%arg0: !s32i) {
+  // expected-error @below {{indirect callee must be a pointer to a function, but has type '!cir.int<s, 32>'}}
+  cir.call %arg0() : (!s32i) -> ()
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @f19(%arg0: !cir.ptr<!s32i>) {
+  // expected-error @below {{indirect callee must be a pointer to a function, but has type '!cir.ptr<!cir.int<s, 32>>'}}
+  cir.call %arg0() : (!cir.ptr<!s32i>) -> ()
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @f20(%arg0: !cir.ptr<!cir.func<(!s32i)>>, %arg1: !s32i) {
+  // expected-error @below {{incorrect number of operands for callee}}
+  cir.call %arg0(%arg1, %arg1) : (!cir.ptr<!cir.func<(!s32i)>>, !s32i, !s32i) -> ()
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @f21(%arg0: !cir.ptr<!cir.func<(!s32i, !s32i, ...)>>, %arg1: !s32i) {
+  // expected-error @below {{too few operands for callee}}
+  cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<(!s32i, !s32i, ...)>>, !s32i) -> ()
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+cir.func @f22(%arg0: !cir.ptr<!cir.func<(!s32i, !s32i)>>, %arg1: !s32i, %arg2: !u32i) {
+  // expected-error @below {{operand type mismatch: expected operand type '!cir.int<s, 32>', but provided '!cir.int<u, 32>' for operand number 1}}
+  cir.call %arg0(%arg1, %arg2) : (!cir.ptr<!cir.func<(!s32i, !s32i)>>, !s32i, !u32i) -> ()
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+
+cir.func @f23(%arg0: !cir.ptr<!cir.func<()>>) {
+  // expected-error @below {{callee returns void but call has results}}
+  %0 = cir.call %arg0() : (!cir.ptr<!cir.func<()>>) -> !u32i
+  cir.return
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+
+cir.func @f24(%arg0: !cir.ptr<!cir.func<() -> !u32i>>) {
+  // expected-error @below {{incorrect number of results for callee}}
+  cir.call %arg0() : (!cir.ptr<!cir.func<() -> !u32i>>) -> ()
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+cir.func @f25(%arg0: !cir.ptr<!cir.func<() -> !u32i>>) {
+  // expected-error @below {{result type mismatch}}
+  %0 = cir.call %arg0() : (!cir.ptr<!cir.func<() -> !u32i>>) -> !s32i
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+cir.func @f26(%arg0: !cir.ptr<!cir.func<(!s32i)>>, %arg1: !s32i) {
+  // expected-error @below {{incorrect number of operands for callee}}
+  cir.try_call %arg0(%arg1, %arg1) ^bb1, ^bb2
+      : (!cir.ptr<!cir.func<(!s32i)>>, !s32i, !s32i) -> ()
+^bb1:
+  cir.br ^bb4
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.eh.dispatch %0 : !cir.eh_token [
+    catch_all : ^bb3
+  ]
+^bb3(%tok : !cir.eh_token):
+  %ct, %exn = cir.begin_catch %tok : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb4
+^bb4:
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!void = !cir.void
+
+cir.func @f27(%arg0: !cir.ptr<!cir.func<(!s32i, !s32i)>>, %arg1: !s32i, %arg2: !u32i) {
+  // expected-error @below {{operand type mismatch: expected operand type '!cir.int<s, 32>', but provided '!cir.int<u, 32>' for operand number 1}}
+  cir.try_call %arg0(%arg1, %arg2) ^bb1, ^bb2
+      : (!cir.ptr<!cir.func<(!s32i, !s32i)>>, !s32i, !u32i) -> ()
+^bb1:
+  cir.br ^bb4
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.eh.dispatch %0 : !cir.eh_token [
+    catch_all : ^bb3
+  ]
+^bb3(%tok : !cir.eh_token):
+  %ct, %exn = cir.begin_catch %tok : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb4
+^bb4:
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @f28(%arg0: !cir.ptr<!cir.func<(!s32i, ...)>>, %arg1: !cir.ptr<!s32i>) {
+  // expected-error @below {{operand type mismatch: expected operand type '!cir.int<s, 32>', but provided '!cir.ptr<!cir.int<s, 32>>' for operand number 0}}
+  cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<(!s32i, ...)>>, !cir.ptr<!s32i>) -> ()
+  cir.return
+}
+
+// -----
+
+cir.func @f29() {
+  // expected-error @below {{'cir.call' op indirect call requires a callee operand}}
+  "cir.call"() : () -> ()
+  cir.return
+}
+
+// -----
+
+cir.func @f30() {
+  // expected-error @below {{'cir.try_call' op indirect call requires a callee operand}}
+  "cir.try_call"()[^bb1, ^bb1] : () -> ()
+^bb1:
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+// The verifier accepts these: operands past a variadic function type's
+// declared parameters, a function type with no declared parameters, and a
+// direct call to a no_proto function, which is not checked against its
+// declaration.
+cir.func no_proto private @f31(!s32i, !s32i) -> !s32i
+cir.func @f32(%arg0: !cir.ptr<!cir.func<(!s32i, ...)>>,
+              %arg1: !cir.ptr<!cir.func<(...) -> !s32i>>, %arg2: !s32i,
+              %arg3: !u32i) {
+  cir.call %arg0(%arg2, %arg3, %arg2) : (!cir.ptr<!cir.func<(!s32i, ...)>>, !s32i, !u32i, !s32i) -> ()
+  cir.call %arg0(%arg2) : (!cir.ptr<!cir.func<(!s32i, ...)>>, !s32i) -> ()
+  %0 = cir.call %arg1(%arg3) : (!cir.ptr<!cir.func<(...) -> !s32i>>, !u32i) -> !s32i
+  %1 = cir.call @f31(%arg2) : (!s32i) -> !s32i
+  %2 = cir.call @f31(%arg2, %arg2, %arg3) : (!s32i, !s32i, !u32i) -> !s32i
+  %3 = cir.call @f31(%arg3, %arg3) : (!u32i, !u32i) -> !s32i
+  cir.return
+}

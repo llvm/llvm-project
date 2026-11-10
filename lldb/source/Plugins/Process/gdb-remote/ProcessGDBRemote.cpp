@@ -68,6 +68,8 @@
 #include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/TargetGroup.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
@@ -105,6 +107,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -945,7 +948,11 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
 
       if (!disable_stdio) {
         if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
+#ifdef _WIN32
           SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+#else
+          SetSTDIOPseudoTerminal(pty);
+#endif
         }
 #ifdef _WIN32
         else if (m_stdin_forward) {
@@ -1179,6 +1186,7 @@ void ProcessGDBRemote::LoadStubBinaries() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (!module)
@@ -1811,6 +1819,26 @@ void ProcessGDBRemote::SetThreadPc(const ThreadSP &thread_sp, uint64_t index) {
   }
 }
 
+std::optional<size_t> ProcessGDBRemote::FindThreadIDIndex(lldb::tid_t tid) {
+  // This runs for every thread at a stop, so searching m_thread_ids would make
+  // the stop quadratic in the number of threads. m_thread_ids is rewritten in
+  // several places that leave m_thread_id_positions alone, so trust a cached
+  // position only if m_thread_ids still has tid there, and rebuild otherwise.
+  std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
+  auto it = m_thread_id_positions.find(tid);
+  if (it != m_thread_id_positions.end() && it->second < m_thread_ids.size() &&
+      m_thread_ids[it->second] == tid)
+    return it->second;
+
+  m_thread_id_positions.clear();
+  for (auto [i, id] : llvm::enumerate(m_thread_ids))
+    m_thread_id_positions.try_emplace(id, i);
+  it = m_thread_id_positions.find(tid);
+  if (it == m_thread_id_positions.end())
+    return std::nullopt;
+  return it->second;
+}
+
 bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
     ThreadGDBRemote *thread, const StructuredData::ObjectSP &thread_infos_sp) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
@@ -1827,7 +1855,8 @@ bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
           if (thread_dict->GetValueForKeyAsInteger<lldb::tid_t>(
                   "tid", tid, LLDB_INVALID_THREAD_ID)) {
             if (tid == thread->GetID())
-              return (bool)SetThreadStopInfo(thread_dict);
+              return (bool)SetThreadStopInfo(thread_dict,
+                                             thread->shared_from_this());
           }
         }
       }
@@ -1901,14 +1930,14 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     LazyBool associated_with_dispatch_queue, addr_t dispatch_queue_t,
     std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial,
     std::vector<lldb::addr_t> &added_binaries,
-    StructuredData::ObjectSP &detailed_binaries_info) {
+    StructuredData::ObjectSP &detailed_binaries_info, ThreadSP thread_sp) {
 
   if (tid == LLDB_INVALID_THREAD_ID)
     return nullptr;
 
-  ThreadSP thread_sp;
-  // Scope for "locker" below
-  {
+  // Stop info is set for every thread at a stop, so a search of the thread
+  // list for each would take time quadratic in the number of threads.
+  if (!thread_sp || thread_sp->GetProtocolID() != tid) {
     // m_thread_list_real does have its own mutex, but we need to hold onto the
     // mutex between the call to m_thread_list_real.FindThreadByID(...) and the
     // m_thread_list_real.AddThread(...) so it doesn't change on us
@@ -1927,9 +1956,8 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 
-  auto iter = llvm::find(m_thread_ids, tid);
-  if (iter != m_thread_ids.end())
-    SetThreadPc(thread_sp, iter - m_thread_ids.begin());
+  if (std::optional<size_t> index = FindThreadIDIndex(tid))
+    SetThreadPc(thread_sp, *index);
 
   ParseExpeditedRegisters(expedited_register_map, thread_sp);
 
@@ -2128,6 +2156,15 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
+        } else if (reason == "dyld") {
+          if (llvm::Error error = LoadModules()) {
+            Log *log = GetLog(GDBRLog::Process);
+            LLDB_LOG_ERROR(log, std::move(error),
+                           "failed to load modules: {0}");
+          }
+          thread_sp->SetStopInfo(
+              StopInfo::CreateStopReasonDyld(*thread_sp, description.c_str()));
+          handled = true;
         }
       }
 
@@ -2236,7 +2273,8 @@ ProcessGDBRemote::HandleThreadAsyncInterrupt(uint8_t signo,
 }
 
 lldb::ThreadSP
-ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
+ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict,
+                                    lldb::ThreadSP thread_sp) {
   static constexpr llvm::StringLiteral g_key_tid("tid");
   static constexpr llvm::StringLiteral g_key_name("name");
   static constexpr llvm::StringLiteral g_key_reason("reason");
@@ -2375,7 +2413,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                   const size_t bytes_copied =
                       bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
                   if (bytes_copied == byte_size)
-                    m_memory_cache.AddCacheData(mem_cache_addr, data_buffer_sp);
+                    AddCacheData(mem_cache_addr, data_buffer_sp);
                 }
               }
             }
@@ -2419,7 +2457,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
       tid, expedited_register_map, signo, thread_name, reason, description,
       exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
       associated_with_dispatch_queue, dispatch_queue_t, queue_name, queue_kind,
-      queue_serial_number, added_binaries, detailed_binaries_info);
+      queue_serial_number, added_binaries, detailed_binaries_info,
+      std::move(thread_sp));
 }
 
 StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
@@ -2565,7 +2604,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
             const size_t bytes_copied =
                 bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
             if (bytes_copied == byte_size)
-              m_memory_cache.AddCacheData(mem_cache_addr, data_buffer_sp);
+              AddCacheData(mem_cache_addr, data_buffer_sp);
           }
         }
       } else if (key.compare("watch") == 0 || key.compare("rwatch") == 0 ||
@@ -2907,12 +2946,20 @@ void ProcessGDBRemote::WillPublicStop() {
     // and memory that was in the jThreadsInfo response.
     StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
     if (thread_infos) {
+      std::unordered_map<lldb::tid_t, ThreadSP> threads;
+      for (const ThreadSP &thread_sp : m_thread_list_real.Threads())
+        threads.try_emplace(thread_sp->GetProtocolID(), thread_sp);
       const size_t n = thread_infos->GetSize();
       for (size_t i = 0; i < n; ++i) {
         StructuredData::Dictionary *thread_dict =
             thread_infos->GetItemAtIndex(i)->GetAsDictionary();
-        if (thread_dict)
-          SetThreadStopInfo(thread_dict);
+        if (!thread_dict)
+          continue;
+        lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+        thread_dict->GetValueForKeyAsInteger("tid", tid);
+        auto thread = threads.find(tid);
+        SetThreadStopInfo(thread_dict,
+                          thread == threads.end() ? nullptr : thread->second);
       }
     }
   }
@@ -3129,6 +3176,7 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
         response_str);
 
   // Sizes are separated by a `,`.
+  unsigned num_sizes = 0;
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
     uint64_t read_size;
     if (size_str.getAsInteger(BASE_16, read_size))
@@ -3140,17 +3188,27 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
                                       "enough data, requested sizes: {0}",
                                       sizes_str);
 
+    if (read_size > buffer.size())
+      return llvm::createStringErrorV(
+          "MultiMemRead response size {0} exceeds remaining buffer {1}",
+          read_size, buffer.size());
+
     llvm::StringRef region_to_read = memory_data.take_front(read_size);
     memory_data = memory_data.drop_front(read_size);
 
-    assert(buffer.size() >= read_size);
     llvm::MutableArrayRef<uint8_t> region_to_write =
         buffer.take_front(read_size);
     buffer = buffer.drop_front(read_size);
 
     memcpy(region_to_write.data(), region_to_read.data(), read_size);
     memory_regions.push_back(region_to_write);
+    ++num_sizes;
   }
+
+  if (num_sizes != expected_num_ranges)
+    return llvm::createStringErrorV(
+        "MultiMemRead response had {0} sizes, expected {1}", num_sizes,
+        expected_num_ranges);
 
   return llvm::Error::success();
 }
@@ -3390,6 +3448,27 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
                                               packet.GetData());
   }
   return 0;
+}
+
+bool ProcessGDBRemote::DoCanAllocateMemory() {
+  // Probe the _M packet. Falling back to mmap() only needs its symbol.
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolCalculate) {
+    addr_t addr = m_gdb_comm.AllocateMemory(8, ePermissionsReadable |
+                                                   ePermissionsWritable |
+                                                   ePermissionsExecutable);
+    if (addr != LLDB_INVALID_ADDRESS)
+      m_gdb_comm.DeallocateMemory(addr);
+  }
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+    return true;
+
+  ModuleFunctionSearchOptions options;
+  options.include_symbols = true;
+  options.include_inlines = false;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindFunctions(
+      ConstString("mmap"), eFunctionNameTypeFull, options, sc_list);
+  return !sc_list.IsEmpty();
 }
 
 lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
@@ -4346,12 +4425,45 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!accelerator_target_sp)
     return llvm::createStringError("failed to create accelerator target");
 
+  llvm::scope_exit delete_accelerator_target([&] {
+    debugger.GetTargetList().DeleteTarget(accelerator_target_sp);
+    accelerator_target_sp->Destroy();
+  });
+
   PlatformSP platform_sp = accelerator_target_sp->GetPlatform();
   if (!platform_sp)
     return llvm::createStringErrorV(
         "no platform '{0}' compatible with triple '{1}' for the accelerator "
         "target",
         connect_info.platform_name, connect_info.triple);
+
+  TargetSP native_target_sp = GetTarget().shared_from_this();
+  std::shared_ptr<TargetGroupCPUAndAccelerators> group_sp =
+      native_target_sp
+          ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>();
+
+  bool created_group = !group_sp;
+  if (created_group) {
+    group_sp = debugger.GetTargetGroupList()
+                   .CreateTargetGroup<TargetGroupCPUAndAccelerators>(
+                       "CPU and accelerator targets");
+  }
+
+  llvm::scope_exit restore_target_group([&] {
+    group_sp->RemoveTarget(accelerator_target_sp);
+    if (created_group) {
+      group_sp->RemoveTarget(native_target_sp);
+      debugger.GetTargetGroupList().DeleteTargetGroup(group_sp);
+    }
+  });
+
+  if (llvm::Error membership_error =
+          group_sp->AddTarget(native_target_sp, TargetGroup::Role::CPU))
+    return membership_error;
+  if (llvm::Error membership_error = group_sp->AddTarget(
+          accelerator_target_sp, TargetGroup::Role::Accelerator))
+    return membership_error;
+
   ProcessSP process_sp =
       connect_info.synchronous
           ? platform_sp->ConnectProcessSynchronous(
@@ -4366,6 +4478,8 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!process_sp)
     return llvm::createStringError("failed to connect to the accelerator");
 
+  restore_target_group.release();
+  delete_accelerator_target.release();
   accelerator_target_sp->SetTargetSessionName(actions.session_name);
 
   // Broadcast the new-target event so API clients can detect it.
@@ -4595,8 +4709,12 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+  if (m_dyld_up.get() == nullptr) {
+    std::string plugin_name;
+    if (std::optional<LLDBSettings> settings = m_gdb_comm.GetLLDBSettings())
+      plugin_name = settings->dyld_plugin_name;
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, plugin_name));
+  }
   return m_dyld_up.get();
 }
 
@@ -5491,10 +5609,12 @@ ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
     return;
   }
 
-  if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector>(element_type)) {
+  if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector, RegisterTypeUnion>(
+          element_type)) {
     LLDB_LOG(log,
              "ProcessGDBRemote::ParseVector Found element type \"{0}\" for "
-             "vector \"{1}\", but it is not a builtin or vector type",
+             "vector \"{1}\", but it is not a builtin, vector, or union "
+             "type",
              *element_type_name, *id);
     return;
   }
@@ -5515,13 +5635,137 @@ ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
   owned_register_types.push_back(std::move(vector_type));
 }
 
+static std::vector<RegisterTypeUnion::Field>
+ParseUnionFields(const XMLNode &union_node, llvm::StringRef union_id,
+                 const RegisterTypeMap &feature_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::vector<RegisterTypeUnion::Field> fields;
+  bool invalid_field = false;
+
+  union_node.ForEachChildElementWithName(
+      "field", [&fields, &invalid_field, log, &feature_register_types,
+                union_id](const XMLNode &field_node) {
+        std::optional<llvm::StringRef> name;
+        std::optional<llvm::StringRef> type_name;
+
+        field_node.ForEachAttribute(
+            [&name, &type_name, log, union_id](llvm::StringRef attribute,
+                                               llvm::StringRef value) {
+              if (attribute == "name")
+                name = value;
+              else if (attribute == "type")
+                type_name = value;
+              else
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseUnionFields Ignoring unknown "
+                         "attribute \"{0}\" in a field of union \"{1}\"",
+                         attribute, union_id);
+              return true;
+            });
+
+        if (!name || name->empty() || !type_name || type_name->empty()) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Union \"{0}\" has a "
+                   "field missing a non-empty name or type",
+                   union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        const RegisterType *field_type =
+            ResolveGDBType(*type_name, feature_register_types);
+        if (!field_type) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Could not resolve type "
+                   "\"{0}\" for field \"{1}\" of union \"{2}\"",
+                   *type_name, *name, union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector,
+                       RegisterTypeUnion>(field_type)) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Found type \"{0}\" "
+                   "for field \"{1}\", but it is not a builtin, vector, or "
+                   "union type. Union \"{2}\" will be ignored.",
+                   *type_name, *name, union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        fields.emplace_back(name->str(), field_type);
+        return true;
+      });
+
+  // Reject the whole union if any field is invalid. Retaining only valid fields
+  // would misrepresent the target's type definition.
+  if (invalid_field) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnionFields Ignoring union \"{0}\" "
+             "because it contains an invalid field",
+             union_id);
+    fields.clear();
+  } else if (fields.empty()) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnionFields Ignoring union \"{0}\" "
+             "because it has no fields",
+             union_id);
+  }
+  return fields;
+}
+
 static void
-ParseVectors(XMLNode feature_node, RegisterTypeMap &feature_register_types,
-             std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
-  feature_node.ForEachChildElementWithName(
-      "vector", [&feature_register_types,
-                 &owned_register_types](const XMLNode &vector_node) {
-        ParseVector(vector_node, feature_register_types, owned_register_types);
+ParseUnion(const XMLNode &union_node, RegisterTypeMap &feature_register_types,
+           std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::optional<llvm::StringRef> id;
+
+  union_node.ForEachAttribute(
+      [&id, log](llvm::StringRef name, llvm::StringRef value) {
+        if (name == "id")
+          id = value;
+        else
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnion Ignoring unknown attribute "
+                   "\"{0}\"",
+                   name);
+        return true;
+      });
+
+  if (!id || id->empty()) {
+    LLDB_LOG(log, "ProcessGDBRemote::ParseUnion Ignoring union without an id");
+    return;
+  }
+
+  if (feature_register_types.contains(*id)) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnion Ignoring duplicate type \"{0}\"",
+             *id);
+    return;
+  }
+
+  std::vector<RegisterTypeUnion::Field> fields =
+      ParseUnionFields(union_node, *id, feature_register_types);
+  if (fields.empty())
+    return;
+
+  auto union_type =
+      std::make_unique<RegisterTypeUnion>(id->str(), std::move(fields));
+  feature_register_types.try_emplace(*id, union_type.get());
+  owned_register_types.push_back(std::move(union_type));
+}
+
+static void ParseCompositeTypes(
+    XMLNode feature_node, RegisterTypeMap &feature_register_types,
+    std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  feature_node.ForEachChildElement(
+      [&feature_register_types,
+       &owned_register_types](const XMLNode &type_node) {
+        if (type_node.NameIs("vector"))
+          ParseVector(type_node, feature_register_types, owned_register_types);
+        else if (type_node.NameIs("union"))
+          ParseUnion(type_node, feature_register_types, owned_register_types);
         return true;
       });
 }
@@ -5549,11 +5793,19 @@ bool ParseRegisters(
             llvm::dyn_cast<RegisterTypeFlags>(register_type.second))
       flags_type->DumpToLog(log);
 
-  ParseVectors(feature_node, feature_register_types, owned_register_types);
+  // Enums and flags retain their dedicated passes above. Vectors and unions
+  // can reference one another, so parse them together in document order. A
+  // referenced composite type must precede its user.
+  ParseCompositeTypes(feature_node, feature_register_types,
+                      owned_register_types);
   for (const auto &register_type : feature_register_types)
     if (const auto *vector_type =
             llvm::dyn_cast<RegisterTypeVector>(register_type.second))
       vector_type->DumpToLog(log);
+  for (const auto &register_type : feature_register_types)
+    if (const auto *union_type =
+            llvm::dyn_cast<RegisterTypeUnion>(register_type.second))
+      union_type->DumpToLog(log);
 
   feature_node.ForEachChildElementWithName(
       "reg",
@@ -5670,6 +5922,30 @@ bool ParseRegisters(
                 }
                 if (!format_set) {
                   reg_info.format = eFormatVectorOfUInt8;
+                  format_set = true;
+                }
+              }
+            } else if (const auto *union_type =
+                           llvm::dyn_cast<RegisterTypeUnion>(it->second)) {
+              if (reg_info.byte_size > RegisterValue::kMaxRegisterByteSize) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Register {0} is "
+                         "too large for union type {1}",
+                         reg_info.name, union_type->GetID());
+              } else if (!union_type->IsByteSizeCompatible(
+                             reg_info.byte_size)) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Size of register "
+                         "{0} is incompatible with union type {1}",
+                         reg_info.name, union_type->GetID());
+              } else {
+                reg_info.register_type = union_type;
+                if (!encoding_set) {
+                  reg_info.encoding = eEncodingUint;
+                  encoding_set = true;
+                }
+                if (!format_set) {
+                  reg_info.format = eFormatHex;
                   format_set = true;
                 }
               }
@@ -6116,6 +6392,9 @@ lldb::ModuleSP ProcessGDBRemote::LoadModuleAtAddress(const FileSpec &file,
 llvm::Error ProcessGDBRemote::LoadModules() {
   using lldb_private::process_gdb_remote::ProcessGDBRemote;
 
+  if (m_dyld_up && m_dyld_up->HandleStopReasonDynamicLoader())
+    return llvm::ErrorSuccess();
+
   // request a list of loaded libraries from GDBServer
   llvm::Expected<LoadedModuleInfoList> module_list = GetLoadedModuleList();
   if (!module_list)
@@ -6186,7 +6465,7 @@ llvm::Error ProcessGDBRemote::LoadModules() {
         return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
-      target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
+      target.RebuildModuleListWithExecutable(module_copy_sp, eLoadDependentsNo);
       return IterationAction::Stop;
     });
 
