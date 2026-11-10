@@ -253,7 +253,7 @@ define ptr @ptr_iv_used_in_inner_and_live_out(ptr noalias %dst, ptr noalias %src
 ; CHECK:       [[INNER1]]:
 ; CHECK-NEXT:    [[INNER_IV2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER1]] ]
 ; CHECK-NEXT:    [[SUM3:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER1]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i64, <4 x ptr> [[VECTOR_GEP]], <4 x i64> [[INNER_IV2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [8 x i8], <4 x ptr> [[VECTOR_GEP]], <4 x i64> [[INNER_IV2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i64> poison)
 ; CHECK-NEXT:    [[TMP3]] = add <4 x i64> [[SUM3]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[INNER_IV2]], splat (i64 1)

@@ -29,6 +29,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Error.h"
 
 namespace mlir {
@@ -96,11 +97,10 @@ FunctionClassification classify(TypeRange argTypes, Type returnType,
 ///
 /// \param attr   The dictionary attribute to parse.
 /// \param emitError  Diagnostic sink for parse errors.
-/// \returns The parsed classification, or std::nullopt on error.
-std::optional<FunctionClassification>
+/// \returns The parsed classification, or failure on error.
+FailureOr<FunctionClassification>
 parseClassificationAttr(DictionaryAttr attr,
                         function_ref<InFlightDiagnostic()> emitError);
-
 } // namespace test
 } // namespace abi
 } // namespace mlir

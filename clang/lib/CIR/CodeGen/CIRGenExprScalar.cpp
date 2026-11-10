@@ -1430,11 +1430,18 @@ public:
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
 
-      auto cmpOpKind = cir::CmpOpKind::ne;
       auto resultTy =
           mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
-      rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+        CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+        auto cmpOpKind = cir::FCmpOpKind::une;
+        lhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      } else {
+        auto cmpOpKind = cir::CmpOpKind::ne;
+        lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      }
       return builder.createAnd(loc, lhs, rhs);
     }
 
@@ -1478,11 +1485,18 @@ public:
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
 
-      auto cmpOpKind = cir::CmpOpKind::ne;
       auto resultTy =
           mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
-      rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+        CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+        auto cmpOpKind = cir::FCmpOpKind::une;
+        lhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      } else {
+        auto cmpOpKind = cir::CmpOpKind::ne;
+        lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      }
       return builder.createOr(loc, lhs, rhs);
     }
 
@@ -2067,12 +2081,10 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    cir::OverflowBehavior overflowBehavior =
-        cgf.getLangOpts().PointerOverflowDefined
-            ? cir::OverflowBehavior::None
-            : cir::OverflowBehavior::NoSignedWrap;
-    index =
-        cgf.getBuilder().createMul(loc, index, numElements, overflowBehavior);
+    cir::OverflowFlags overflowFlags = cgf.getLangOpts().PointerOverflowDefined
+                                           ? cir::OverflowFlags::None
+                                           : cir::OverflowFlags::NoSignedWrap;
+    index = cgf.getBuilder().createMul(loc, index, numElements, overflowFlags);
     assert(!cir::MissingFeatures::sanitizers());
     return cir::PtrStrideOp::create(cgf.getBuilder(), loc, pointer.getType(),
                                     pointer, index);
@@ -3133,6 +3145,12 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
     auto operVecTy = mlir::cast<cir::VectorType>(oper.getType());
     mlir::Value zeroVec = builder.getNullValue(operVecTy, loc);
     auto resultTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+    if (cir::isFPOrVectorOfFPType(operVecTy.getElementType())) {
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+      return builder.createVecFCompare(loc, resultTy, cir::FCmpOpKind::oeq,
+                                       oper, zeroVec);
+    }
+
     return builder.createVecCompare(loc, resultTy, cir::CmpOpKind::eq, oper,
                                     zeroVec);
   }
@@ -3270,7 +3288,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
               builder.getConstAPInt(numElts.getLoc(), numElts.getType(),
                                     cgf.cgm.getSize(eltSize).getValue());
           return builder.createMul(loc, eltSizeValue, numElts,
-                                   cir::OverflowBehavior::NoUnsignedWrap);
+                                   cir::OverflowFlags::NoUnsignedWrap);
         }
 
         return numElts;

@@ -200,23 +200,23 @@ jobs:
           -DLIBC_COMPILE_OPTIONS_NATIVE=''
         "
 
-        if [[ "${{ matrix.assertions }}" == "ON" ]]; then
+        if [ "${{ matrix.assertions }}" = "ON" ]; then
           export CMAKE_FLAGS="$CMAKE_FLAGS -DLLVM_ENABLE_ASSERTIONS=ON"
         fi
 
-        if [[ "${{ matrix.testing }}" != "SKIP" ]]; then
+        if [ "${{ matrix.testing }}" != "SKIP" ]; then
           export CMAKE_FLAGS="$CMAKE_FLAGS
             -DLIBC_TEST_SKIP_DEATH_TESTS=ON
             -DLIBC_TEST_SKIP_SHARED_TESTS=ON
           "
         fi
 
-        if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" || "${{ matrix.build_builtins }}" == "ON" ]]; then
+        if [ "${{ matrix.include_scudo }}" = "ON" ] || [ "${{ matrix.build_fuzzing_tests }}" = "ON" ] || [ "${{ matrix.build_builtins }}" = "ON" ]; then
           export RUNTIMES="$RUNTIMES;compiler-rt"
           export CMAKE_FLAGS="$CMAKE_FLAGS -DRUNTIMES_USE_LIBC=llvm-libc"
         fi
 
-        if [[ "${{ matrix.include_scudo }}" == "ON" ]]; then
+        if [ "${{ matrix.include_scudo }}" = "ON" ]; then
           export CMAKE_FLAGS="$CMAKE_FLAGS
             -DLLVM_LIBC_INCLUDE_SCUDO=ON
             -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
@@ -226,10 +226,10 @@ jobs:
 
         case "${{ matrix.name }}" in
           baremetal-* )
-            if [[ "${{ matrix.build_builtins }}" == "ON" ]]; then
+            if [ "${{ matrix.build_builtins }}" = "ON" ]; then
               export CMAKE_FLAGS="$CMAKE_FLAGS -DLLVM_ENABLE_RUNTIMES=$RUNTIMES"
             fi
-            if [[ "${{ matrix.name }}" == "baremetal-hexagon" ]]; then
+            if [ "${{ matrix.name }}" = "baremetal-hexagon" ]; then
               # Clang's Hexagon driver fails to identify LLD when binary is named ld.lld-23
               # TODO : remove this workaround when the below issue is fixed and we move
               # to new toolchain version which has the fix
@@ -256,10 +256,9 @@ jobs:
         esac
 
     - name: Build
-      shell: bash
       run: |
         TARGETS="install"
-        if [[ "${{ matrix.build_fuzzing_tests }}" == "ON" ]]; then
+        if [ "${{ matrix.build_fuzzing_tests }}" = "ON" ]; then
           TARGETS="$TARGETS libc-fuzzer"
         fi
 

@@ -36,7 +36,7 @@ define void @wide_gep_all_lanes_live_only_scalar_users(ptr noalias %dst, ptr noa
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = fcmp ogt <2 x float> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [16 x i8], ptr [[DST]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = sitofp <2 x i64> [[VEC_IND]] to <2 x float>
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP14]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]

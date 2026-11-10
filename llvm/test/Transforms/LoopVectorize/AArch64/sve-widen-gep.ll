@@ -14,7 +14,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ;  1. As a uniform address for the load, and
 ;  2. Non-uniform use by the getelementptr which is stored. This requires the
 ;     vector value.
-define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias %start.2, i64 %N) {
+define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias %start.2, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @pointer_induction_used_as_vector(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -93,7 +93,7 @@ exit:
   ret void
 }
 
-define void @pointer_induction(ptr noalias %start, i64 %N) {
+define void @pointer_induction(ptr noalias %start, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @pointer_induction(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
@@ -155,7 +155,7 @@ end:
   ret void
 }
 
-attributes #0 = {"target-features"="+sve"}
+attributes #0 = {"target-features"="+sve" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.interleave.count", i32 1}

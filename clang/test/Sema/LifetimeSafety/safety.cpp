@@ -106,6 +106,16 @@ void propagation_gsl() {
   v2.use();     // expected-note {{later used here}}
 }
 
+void assign_to_temporary_copy_of_dangling_view() {
+  View v;
+  {
+    MyObj s;
+    v = s;
+  }
+  // Writes to the temporary's storage, not to 's'.
+  View{v} = View();
+}
+
 void multiple_uses_one_warning() {
   MyObj* p;
   {
@@ -1453,14 +1463,12 @@ int **return_multilevel() {
 }
 } // namespace unary_plus
 
-// FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
-// information to be missed (local variable 'p' aliases the storage of local variable 'b').
 void simpleparen() {
   MyObj* p;
   {
     MyObj a;
     MyObj* b = &a;  // expected-warning {{local variable 'a' does not live long enough}}
-    p = (((b)));
+    p = (((b)));    // expected-note {{local variable 'b' aliases the storage of local variable 'a'}}
   }                 // expected-note {{local variable 'a' is destroyed here}}
   use(*p);          // expected-note {{later used here}}
 }
@@ -2955,6 +2963,26 @@ void indexing_with_static_operator() {
   use(x);  // expected-note 2 {{later used here}}
 
 }
+
+struct Table {
+  static const int &operator[](const int &key [[clang::lifetimebound]]);
+};
+
+const int &returned_from_static_subscript(const Table &table) {
+  int key = 1;
+  return table[key]; // expected-warning {{stack memory associated with local variable 'key' is returned}} \
+                     // expected-note {{returned here}}
+}
+
+void dangling_from_static_subscript(const Table &table) {
+  const int *p;
+  {
+    int key = 1;
+    p = &table[key]; // expected-warning {{local variable 'key' does not live long enough}} \
+                     // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'key' because parameter 'key' is marked as lifetimebound}}
+  }                  // expected-note {{local variable 'key' is destroyed here}}
+  use(*p);           // expected-note {{later used here}}
+}
 } // namespace static_call_operator
 
 namespace track_origins_for_lifetimebound_record_type {
@@ -4140,6 +4168,45 @@ struct S {
     }
     this->p_ = &GLOBAL_INT;
     bar();
+  }
+  void parenthesized_this_call() {
+    {
+      int num;
+      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}}
+    }                  // expected-note {{local variable 'num' is destroyed here}}
+    (this)->bar();     // expected-note {{later used here}}
+    this->p_ = &GLOBAL_INT;
+  }
+  void alias_note_for_field_use() {
+    {
+      int num;
+      int *p = &num; // expected-warning {{local variable 'num' does not live long enough}}
+      this->p_ = p;  // expected-note {{local variable 'p' aliases the storage of local variable 'num'}}
+    }                // expected-note {{local variable 'num' is destroyed here}}
+    bar();           // expected-note {{later used here}}
+  }
+  void alias_note_ignores_later_flow() {
+    int *q;
+    {
+      int num;
+      int *p = &num; // expected-warning {{local variable 'num' does not live long enough}}
+      this->p_ = p;  // expected-note {{local variable 'p' aliases the storage of local variable 'num'}}
+      q = p;
+    }                // expected-note {{local variable 'num' is destroyed here}}
+    bar();           // expected-note {{later used here}}
+    this->p_ = q;
+  }
+  void alias_note_from_previous_iteration(int n) {
+    int *q;
+    {
+      int num;
+      q = &num;      // expected-warning {{local variable 'num' does not live long enough}}
+    }                // expected-note {{local variable 'num' is destroyed here}}
+    for (int i = 0; i < n; ++i) {
+      bar();         // expected-note {{later used here}}
+      this->p_ = q;  // expected-note {{local variable 'q' aliases the storage of local variable 'num'}}
+    }
+    this->p_ = nullptr;
   }
 };
 
@@ -5426,7 +5493,7 @@ void closure_dtor_reads_captured_borrow() {
   std::string backing;
   Ref r;
   r = backing; // expected-warning {{local variable 'backing' does not live long enough}}
-  fn = [r] {};
+  fn = [r] {}; // expected-note {{local variable 'r' aliases the storage of local variable 'backing'}}
 } // expected-note {{local variable 'backing' is destroyed here}} expected-note {{later used by the destructor of 'fn' at scope exit}}
 
 // The explicit use and the destructor use of `r` meet after the if.
