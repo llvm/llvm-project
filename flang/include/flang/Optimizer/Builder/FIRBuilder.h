@@ -248,14 +248,6 @@ public:
                             llvm::ArrayRef<mlir::Value> lenParams,
                             bool asTarget = false);
 
-  /// Create a slot for a local on the stack with a requested minimum byte
-  /// alignment \p align. Zero requests no particular alignment.
-  mlir::Value allocateLocal(mlir::Location loc, mlir::Type ty,
-                            llvm::StringRef uniqName, llvm::StringRef name,
-                            llvm::ArrayRef<mlir::Value> shape,
-                            llvm::ArrayRef<mlir::Value> lenParams,
-                            bool asTarget, std::size_t align);
-
   /// Create a two dimensional ArrayAttr containing integer data as
   /// IntegerAttrs, effectively: ArrayAttr<ArrayAttr<IntegerAttr>>>.
   mlir::ArrayAttr create2DI64ArrayAttr(

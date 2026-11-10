@@ -2080,13 +2080,14 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
     return;
   }
   // This is a local aggregate, allocate an anonymous block of memory.
-  // Request the alignment, which the storage type does not imply.
   auto size = std::get<1>(var.getInterval());
   fir::SequenceType::Shape shape(1, size);
   auto seqTy = fir::SequenceType::get(shape, i8Ty);
   mlir::Value local =
-      builder.allocateLocal(loc, seqTy, aggName, "", {}, {}, /*target=*/false,
-                            var.getAggregateStore().getAlignment());
+      builder.allocateLocal(loc, seqTy, aggName, "", {}, {}, /*target=*/false);
+  // Request the alignment, which the storage type does not imply.
+  if (std::size_t alignment = var.getAggregateStore().getAlignment())
+    local.getDefiningOp<fir::AllocaOp>().setAlignment(alignment);
   insertAggregateStore(storeMap, var, local);
 }
 

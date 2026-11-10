@@ -297,17 +297,6 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
                        lenParams, asTarget);
 }
 
-mlir::Value fir::FirOpBuilder::allocateLocal(
-    mlir::Location loc, mlir::Type ty, llvm::StringRef uniqName,
-    llvm::StringRef name, llvm::ArrayRef<mlir::Value> shape,
-    llvm::ArrayRef<mlir::Value> lenParams, bool asTarget, std::size_t align) {
-  mlir::Value local = allocateLocal(loc, ty, uniqName, name, /*pinned=*/false,
-                                    shape, lenParams, asTarget);
-  if (align > 0)
-    mlir::cast<fir::AllocaOp>(local.getDefiningOp()).setAlignment(align);
-  return local;
-}
-
 /// Get the block for adding Allocas.
 mlir::Block *fir::getAllocaBlock(mlir::Region &region) {
   // Find the closest parent operation that knows where its allocas belong.

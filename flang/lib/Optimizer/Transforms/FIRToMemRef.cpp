@@ -508,9 +508,7 @@ void FIRToMemRef::rewriteAlloca(fir::AllocaOp firAlloca,
 
   auto alloca = memref::AllocaOp::create(rewriter, loc, memrefTy, sizes);
   // The alignment is not part of the memref type, so carry it over.
-  if (std::optional<std::int64_t> alignment = firAlloca.getAlignment()) {
-    alloca.setAlignment(*alignment);
-  }
+  copyAttribute(firAlloca, alloca, firAlloca.getAlignmentAttrName());
   copyAttribute(firAlloca, alloca, firAlloca.getBindcNameAttrName());
   copyAttribute(firAlloca, alloca, firAlloca.getUniqNameAttrName());
   copyAttribute(firAlloca, alloca, cuf::getDataAttrName());

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
-#include "flang/Evaluate/characteristics.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
@@ -1786,10 +1785,9 @@ bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
 namespace {
 /// Byte alignment required by \p sym, or zero if it cannot be determined.
 static std::size_t getSymbolAlignment(const semantics::Symbol &sym) {
-  semantics::SemanticsContext &context = sym.owner().context();
-  if (auto chars = evaluate::characteristics::TypeAndShape::Characterize(
-          sym, context.foldingContext()))
-    return chars->type().GetAlignment(context.targetCharacteristics());
+  if (auto dynamicType = evaluate::DynamicType::From(sym))
+    return dynamicType->GetAlignment(
+        sym.owner().context().targetCharacteristics());
   return 0;
 }
 
