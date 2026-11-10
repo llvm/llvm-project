@@ -25,8 +25,7 @@ class Module;
 class raw_ostream;
 
 /// Create and return a pass that writes the module to the specified
-/// ostream. Note that this pass is designed for use with the legacy pass
-/// manager.
+/// ostream.
 class DXILWriterPass : public RequiredPassInfoMixin<DXILWriterPass> {
   raw_ostream &OS;
 
@@ -39,7 +38,12 @@ ModulePass *createDXILWriterLegacyPass(raw_ostream &Str);
 
 /// Create and return a pass that writes the module to a global variable in the
 /// module for later emission in the MCStreamer.
-ModulePass *createDXILEmbedderPass();
+class DXILEmbedderPass : public RequiredPassInfoMixin<DXILEmbedderPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createDXILEmbedderLegacyPass();
 
 namespace dxil {
 extern cl::opt<bool> SourceInDebugModule;

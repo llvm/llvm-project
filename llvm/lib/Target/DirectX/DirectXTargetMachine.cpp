@@ -56,7 +56,7 @@ LLVMInitializeDirectXTarget() {
   initializeScalarizerLegacyPassPass(*PR);
   initializeDXILLegalizeLegacyPass(*PR);
   initializeDXILPrepareModuleLegacyPass(*PR);
-  initializeEmbedDXILPassPass(*PR);
+  initializeDXILEmbedderLegacyPass(*PR);
   initializeDXILWriterLegacyPass(*PR);
   initializeDXILContainerGlobalsLegacyPass(*PR);
   initializeDXILContainerPDBLegacyPass(*PR);
@@ -179,7 +179,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     break;
   case CodeGenFileType::ObjectFile:
     if (PassConfig->willCompleteCodeGenPipeline()) {
-      PM.add(createDXILEmbedderPass());
+      PM.add(createDXILEmbedderLegacyPass());
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.
       PM.add(createDXILContainerGlobalsLegacyPass());
