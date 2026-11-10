@@ -1,5 +1,5 @@
 ; RUN: opt -passes=correlated-propagation -pass-remarks-output=%t.opt.yaml -disable-output %s
-; RUN: cat %t.opt.yaml | FileCheck %s
+; RUN: FileCheck %s --input-file=%t.opt.yaml --implicit-check-not="--- !"
 
 ; LVI only looks at a limited number of uses for conditions that constrain a value at a use. Reaching that limit emits a missed remark.
 
