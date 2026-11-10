@@ -35,9 +35,9 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i64> [[TMP5]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc <8 x i64> [[TMP6]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc <8 x i64> [[TMP7]] to <8 x i32>
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP8]], i64 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP8]], i64 16
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP8]], i64 24
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP8]], i64 32
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP8]], i64 96
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP9]], ptr align 4 [[TMP8]], <8 x i1> [[TMP0]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP10]], ptr align 4 [[TMP13]], <8 x i1> [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> [[TMP11]], ptr align 4 [[TMP14]], <8 x i1> [[TMP2]])
@@ -198,7 +198,7 @@ define void @test_scalar_cost_single_store_loop_varying_cond(ptr %dst, ptr noali
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i32> [[WIDE_VEC1]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[STRIDED_VEC]], splat (i32 123)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[STRIDED_VEC2]], splat (i32 123)
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i64 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr align 4 [[NEXT_GEP]], <4 x i1> [[TMP5]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr align 4 [[TMP7]], <4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

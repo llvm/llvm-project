@@ -227,7 +227,7 @@
 ; LINUX-NEXT: declare float @__powisf2(float, i32 signext)
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; LINUX-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; LINUX-NEXT: declare void @__stack_chk_fail()
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -479,6 +479,7 @@
 ; LINUX-NEXT: declare double @trunc(double)
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncl(fp128)
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -811,7 +812,7 @@
 ; ZOS-NEXT: declare float @__powisf2(float, i32 signext)
 ; ZOS-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; ZOS-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; ZOS-NEXT: declare void @__stack_chk_fail()
+; ZOS-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; ZOS-NEXT: declare double @__subdf3(double, double)
 ; ZOS-NEXT: declare float @__subsf3(float, float)
 ; ZOS-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1060,6 +1061,7 @@
 ; ZOS-NEXT: declare double @trunc(double)
 ; ZOS-NEXT: declare float @truncf(float)
 ; ZOS-NEXT: declare fp128 @truncl(fp128)
+; ZOS-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; ZOS-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; ZOS-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; ZOS-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
