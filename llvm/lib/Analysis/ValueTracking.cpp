@@ -5291,6 +5291,68 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
+static void computeKnownFPClassForFRem(const Operator *Op,
+                                       const APInt &DemandedElts,
+                                       FPClassTest InterestedClasses,
+                                       KnownFPClass &Known,
+                                       const SimplifyQuery &Q, unsigned Depth) {
+  const Value *LHS = Op->getOperand(0);
+  const Value *RHS = Op->getOperand(1);
+
+  FPClassTest InterestedLHS = fcNone;
+  FPClassTest InterestedRHS = fcNone;
+
+  // NaN is also generated for frem(Inf, x) and frem(x, 0.0).
+  if (InterestedClasses & fcNan) {
+    InterestedLHS |= fcNan | fcInf;
+    InterestedRHS |= fcNan | fcZero | fcSubnormal;
+  }
+
+  // The sign for frem is the same as the first operand.
+  if (InterestedClasses & (fcPosNormal | fcPosSubnormal))
+    InterestedLHS |= fcPosNormal | fcPosSubnormal;
+  if (InterestedClasses & (fcNegNormal | fcNegSubnormal))
+    InterestedLHS |= fcNegNormal | fcNegSubnormal;
+
+  // A negative zero result requires a negative finite first operand.
+  if (InterestedClasses & fcNegZero)
+    InterestedLHS |= fcNegFinite;
+
+  // A positive zero result can additionally come from a negative finite
+  // result being flushed to positive zero.
+  if (InterestedClasses & fcPosZero)
+    InterestedLHS |= fcPosFinite | fcNegNormal | fcNegSubnormal;
+
+  const Function *F = cast<Instruction>(Op)->getFunction();
+  DenormalMode Mode =
+      F ? F->getDenormalMode(Op->getType()->getScalarType()->getFltSemantics())
+        : DenormalMode::getDynamic();
+
+  if (LHS == RHS && isGuaranteedNotToBeUndef(LHS, Q.AC, Q.CtxI, Q.DT)) {
+    // X % X is always exactly [+-]0.0 or a NaN.
+    FPClassTest InterestedSrcs = InterestedLHS | InterestedRHS;
+    KnownFPClass KnownSrc;
+    if (InterestedSrcs != fcNone)
+      computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownSrc, Q,
+                          Depth + 1);
+    Known = KnownFPClass::frem_self(KnownSrc, Mode);
+    return;
+  }
+
+  KnownFPClass KnownLHS;
+  if (InterestedLHS != fcNone)
+    computeKnownFPClass(LHS, DemandedElts, InterestedLHS, KnownLHS, Q,
+                        Depth + 1);
+
+  KnownFPClass KnownRHS;
+  // RHS is only useful for refining NaN classes.
+  if (InterestedRHS != fcNone && KnownLHS.isKnownNever(fcSNan))
+    computeKnownFPClass(RHS, DemandedElts, InterestedRHS, KnownRHS, Q,
+                        Depth + 1);
+
+  Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
+}
+
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
   switch (IID) {
   case Intrinsic::minimum:
@@ -5573,6 +5635,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
                 : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
                                         Mode);
+      break;
+    }
+    case Intrinsic::experimental_constrained_frem: {
+      computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
+                                 Depth);
       break;
     }
     case Intrinsic::sqrt:
@@ -6262,61 +6329,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FRem: {
-    FPClassTest InterestedLHS = fcNone;
-    FPClassTest InterestedRHS = fcNone;
-
-    // NaN is also generated for frem(Inf, x) and frem(x, 0.0).
-    if (InterestedClasses & fcNan) {
-      InterestedLHS |= fcNan | fcInf;
-      InterestedRHS |= fcNan | fcZero | fcSubnormal;
-    }
-
-    // The sign for frem is the same as the first operand.
-    if (InterestedClasses & (fcPosNormal | fcPosSubnormal))
-      InterestedLHS |= fcPosNormal | fcPosSubnormal;
-    if (InterestedClasses & (fcNegNormal | fcNegSubnormal))
-      InterestedLHS |= fcNegNormal | fcNegSubnormal;
-
-    // A negative zero result requires a negative finite first operand.
-    if (InterestedClasses & fcNegZero)
-      InterestedLHS |= fcNegFinite;
-
-    // A positive zero result can additionally come from a negative finite
-    // result being flushed to positive zero.
-    if (InterestedClasses & fcPosZero)
-      InterestedLHS |= fcPosFinite | fcNegNormal | fcNegSubnormal;
-
-    const Function *F = cast<Instruction>(Op)->getFunction();
-    DenormalMode Mode =
-        F ? F->getDenormalMode(
-                Op->getType()->getScalarType()->getFltSemantics())
-          : DenormalMode::getDynamic();
-
-    if (Op->getOperand(0) == Op->getOperand(1) &&
-        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CtxI, Q.DT)) {
-      // X % X is always exactly [+-]0.0 or a NaN.
-      FPClassTest InterestedSrcs = InterestedLHS | InterestedRHS;
-      KnownFPClass KnownSrc;
-      if (InterestedSrcs != fcNone)
-        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                            KnownSrc, Q, Depth + 1);
-      Known = KnownFPClass::frem_self(KnownSrc, Mode);
-      break;
-    }
-
-    KnownFPClass KnownLHS;
-    if (InterestedLHS != fcNone)
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedLHS,
-                          KnownLHS, Q, Depth + 1);
-
-    KnownFPClass KnownRHS;
-    // RHS is only useful for refining NaN classes.
-    if (InterestedRHS != fcNone && KnownLHS.isKnownNever(fcSNan))
-      computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedRHS,
-                          KnownRHS, Q, Depth + 1);
-
-    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
-
+    computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
+                               Depth);
     break;
   }
   case Instruction::FPExt: {

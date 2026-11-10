@@ -57,6 +57,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueStores = false;
   bool UseSmallData = false;
   bool UseZRegOps = false;
+  bool UseHLXOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
   bool UseHVXFloatingPoint = false;
@@ -98,7 +99,7 @@ public:
   };
 
 private:
-  enum HexagonProcFamilyEnum { Others, TinyCore };
+  enum HexagonProcFamilyEnum { Others, TinyCore, HLX2048B };
 
   std::string CPUString;
   HexagonProcFamilyEnum HexagonProcFamily = Others;
@@ -272,6 +273,10 @@ public:
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
   bool useZRegOps() const { return UseZRegOps; }
+  bool useHLXOps() const { return UseHLXOps; }
+  bool useHLX2048BOps() const {
+    return UseHLXOps && HexagonProcFamily == HLX2048B;
+  }
   bool useCabac() const { return UseCabac; }
 
   bool isTinyCore() const { return HexagonProcFamily == TinyCore; }

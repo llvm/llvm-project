@@ -7,7 +7,6 @@
 
 ---
 name: cmp_rr
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: cmp_rr
@@ -23,7 +22,6 @@ body: |
 
 ---
 name: cmp_rp
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: cmp_rp
@@ -39,7 +37,6 @@ body: |
 
 ---
 name: logical_and
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: logical_and
@@ -53,7 +50,6 @@ body: |
 
 ---
 name: logical_andir
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: logical_andir
@@ -67,7 +63,6 @@ body: |
 
 ---
 name: logical_or
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: logical_or
@@ -81,7 +76,6 @@ body: |
 
 ---
 name: logical_xor
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: logical_xor
@@ -95,7 +89,6 @@ body: |
 
 ---
 name: condmove_mux
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: condmove_mux
@@ -109,7 +102,6 @@ body: |
 
 ---
 name: condmove_muxir
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: condmove_muxir
@@ -123,7 +115,6 @@ body: |
 
 ---
 name: ext_sxtb
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: ext_sxtb
@@ -137,7 +128,6 @@ body: |
 
 ---
 name: ext_zxth
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: ext_zxth
@@ -151,7 +141,6 @@ body: |
 
 ---
 name: ext_sxtw
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: ext_sxtw
@@ -165,7 +154,6 @@ body: |
 
 ---
 name: rseq_combinew
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: rseq_combinew
@@ -179,7 +167,6 @@ body: |
 
 ---
 name: vec1_clb
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: vec1_clb
@@ -193,7 +180,6 @@ body: |
 
 ---
 name: vec1_ct0
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: vec1_ct0
@@ -207,7 +193,6 @@ body: |
 
 ---
 name: vec1_extractu
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: vec1_extractu
@@ -221,7 +206,6 @@ body: |
 
 ---
 name: vec1_extract
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: vec1_extract
@@ -235,7 +219,6 @@ body: |
 
 ---
 name: vec1_vsplatrb
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: vec1_vsplatrb
@@ -249,7 +232,6 @@ body: |
 
 ---
 name: setbit
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: setbit
@@ -263,7 +245,6 @@ body: |
 
 ---
 name: branch_jumpt
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: branch_jumpt
   ; CHECK: bb.0:
@@ -289,7 +270,6 @@ body: |
 
 ---
 name: branch_jumpf
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: branch_jumpf
   ; CHECK: bb.0:

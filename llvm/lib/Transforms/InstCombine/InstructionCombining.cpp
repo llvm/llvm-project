@@ -3444,27 +3444,17 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return replaceInstUsesWith(GEP, NewGEP);
   }
 
-  // Strip trailing zero indices.
-  auto *LastIdx = dyn_cast<Constant>(Indices.back());
-  if (LastIdx && LastIdx->isNullValue() && !LastIdx->getType()->isVectorTy()) {
-    return replaceInstUsesWith(
-        GEP, Builder.CreateGEP(GEP.getSourceElementType(), PtrOp,
-                               drop_end(Indices), "", GEP.getNoWrapFlags()));
-  }
-
-  // Strip leading zero indices.
-  auto *FirstIdx = dyn_cast<Constant>(Indices.front());
-  if (FirstIdx && FirstIdx->isNullValue() &&
-      !FirstIdx->getType()->isVectorTy()) {
-    gep_type_iterator GTI = gep_type_begin(GEP);
-    ++GTI;
-    if (!GTI.isStruct() && GTI.getSequentialElementStride(DL) ==
-                               DL.getTypeAllocSize(GTI.getIndexedType()))
-      return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
-                                                        GEP.getPointerOperand(),
-                                                        drop_begin(Indices), "",
-                                                        GEP.getNoWrapFlags()));
-  }
+  // Canonicalize to getelementptr i8 or getelementptr [Stride x i8]
+  // via IRBuilder.
+  auto IsCanonicalType = [](Type *Ty) {
+    if (auto *AT = dyn_cast<ArrayType>(Ty))
+      Ty = AT->getElementType();
+    return Ty->isIntegerTy(8);
+  };
+  if (!IsCanonicalType(GEPEltType) || Indices.size() != 1)
+    return replaceInstUsesWith(GEP,
+                               Builder.CreateGEP(GEPEltType, PtrOp, Indices, "",
+                                                 GEP.getNoWrapFlags()));
 
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.
   // Note that this looses information about undef lanes; we run it after
@@ -3490,50 +3480,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       Res = Builder.CreateVectorSplat(EC, Res);
     }
     return replaceInstUsesWith(GEP, Res);
-  }
-
-  bool SeenNonZeroIndex = false;
-  for (auto [IdxNum, Idx] : enumerate(Indices)) {
-    // Ignore one leading zero index.
-    auto *C = dyn_cast<Constant>(Idx);
-    if (C && C->isNullValue() && IdxNum == 0)
-      continue;
-
-    if (!SeenNonZeroIndex) {
-      SeenNonZeroIndex = true;
-      continue;
-    }
-
-    // GEP has multiple non-zero indices: Split it.
-    ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
-    Value *FrontGEP =
-        Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,
-                          GEP.getName() + ".split", GEP.getNoWrapFlags());
-
-    SmallVector<Value *> BackIndices;
-    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
-    append_range(BackIndices, drop_begin(Indices, IdxNum));
-    return GetElementPtrInst::Create(
-        GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
-        BackIndices, GEP.getNoWrapFlags());
-  }
-
-  // Canonicalize gep %T to gep [sizeof(%T) x i8]:
-  auto IsCanonicalType = [](Type *Ty) {
-    if (auto *AT = dyn_cast<ArrayType>(Ty))
-      Ty = AT->getElementType();
-    return Ty->isIntegerTy(8);
-  };
-  if (Indices.size() == 1 && !IsCanonicalType(GEPEltType)) {
-    TypeSize Scale = DL.getTypeAllocSize(GEPEltType);
-    assert(!Scale.isScalable() && "Should have been handled earlier");
-    Type *NewElemTy = Builder.getInt8Ty();
-    if (Scale.getFixedValue() != 1)
-      NewElemTy = ArrayType::get(NewElemTy, Scale.getFixedValue());
-    GEP.setSourceElementType(NewElemTy);
-    GEP.setResultElementType(NewElemTy);
-    // Don't bother revisiting the GEP after this change.
-    MadeIRChange = true;
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.

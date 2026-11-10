@@ -261,7 +261,7 @@
 ; AIX32-NEXT: declare float @__powisf2(float, i32)
 ; AIX32-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32)
 ; AIX32-NEXT: declare double @__powl_finite(double, double)
-; AIX32-NEXT: declare void @__stack_chk_fail()
+; AIX32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare double @__subdf3(double, double)
 ; AIX32-NEXT: declare fp128 @__subkf3(fp128, fp128)
 ; AIX32-NEXT: declare float @__subsf3(float, float)
@@ -557,6 +557,7 @@
 ; AIX32-NEXT: declare void @vec_free(ptr)
 ; AIX32-NEXT: declare ptr @vec_malloc(i32)
 ; AIX32-NEXT: declare ptr @vec_realloc(ptr, i32)
+; AIX32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; AIX32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; AIX32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; AIX32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -821,7 +822,7 @@
 ; AIX64-NEXT: declare float @__powisf2(float, i32 signext)
 ; AIX64-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext)
 ; AIX64-NEXT: declare double @__powl_finite(double, double)
-; AIX64-NEXT: declare void @__stack_chk_fail()
+; AIX64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare double @__subdf3(double, double)
 ; AIX64-NEXT: declare fp128 @__subkf3(fp128, fp128)
 ; AIX64-NEXT: declare float @__subsf3(float, float)
@@ -1117,6 +1118,7 @@
 ; AIX64-NEXT: declare void @vec_free(ptr)
 ; AIX64-NEXT: declare ptr @vec_malloc(i64)
 ; AIX64-NEXT: declare ptr @vec_realloc(ptr, i64)
+; AIX64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; AIX64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; AIX64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; AIX64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -1372,7 +1374,7 @@
 ; LINUX-NEXT: declare float @__powisf2(float, i32 signext)
 ; LINUX-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext)
 ; LINUX-NEXT: declare ppc_fp128 @__powl_finite(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare void @__stack_chk_fail()
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare fp128 @__subkf3(fp128, fp128)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
@@ -1668,6 +1670,7 @@
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncf128(fp128)
 ; LINUX-NEXT: declare ppc_fp128 @truncl(ppc_fp128)
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

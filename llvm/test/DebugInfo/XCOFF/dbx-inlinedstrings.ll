@@ -1,9 +1,9 @@
-; The original purpose of this test case was to verify DBX under AIX, 
-; but XCOFF does not support object mode for now. Since the option
-; `-debugger-tune=dbx` is target-independent, set `-mtriple` to 
+; The original purpose of this test case was to verify DBX under AIX,
+; but XCOFF does not support object mode for now. Since the
+; `"debugger-tuning"` module flag is target-independent, set `-mtriple` to
 ; `powerpc-unknown-linux` for now.
 
-; RUN: llc -mtriple powerpc-unknown-linux -debugger-tune=dbx -filetype=obj < %s \
+; RUN: llc -mtriple powerpc-unknown-linux -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -v - | FileCheck %s -implicit-check-not DW_FORM_strp
 
 ; CHECK:  DW_AT_producer [DW_FORM_string]	("clang version 12.0.0")
@@ -20,7 +20,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5, !6, !13}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
@@ -35,4 +35,5 @@ entry:
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11}
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!13 = !{i32 2, !"debugger-tuning", !"dbx"}
 !12 = !DILocation(line: 3, column: 3, scope: !8)

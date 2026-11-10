@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true -mtriple=i386-unknown-linux-gnu -dwarf-version=4 | llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefix=I386
-; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true -mtriple=i386-unknown-linux-gnu -dwarf-version=2 -debugger-tune=sce | llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefix=I386-COMPAT
+; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true -mtriple=i386-unknown-linux-gnu -dwarf-version=2 | llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefix=I386-COMPAT
 
 ; A hand-written testcase to check 64-bit constant handling in location lists.
 
