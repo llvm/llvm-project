@@ -3,7 +3,6 @@
 ; Functions without an exact definition (here: weak or noipa) may be replaced
 ; at link time, so their bodies can't be used. Their attributes still describe
 ; any replacement, though, so they can be used like those of a declaration.
-; FIXME: GlobalsAA currently gives up on non-exact functions entirely.
 
 @g = internal global i32 0
 
@@ -48,7 +47,7 @@ define weak void @scc_weak_none() memory(none) {
 }
 
 ; CHECK-LABEL: Function: test_weak_none
-; CHECK: Both ModRef:  Ptr: i32* @g	<->  call void @caller_weak_none()
+; CHECK: NoModRef:  Ptr: i32* @g	<->  call void @caller_weak_none()
 define i32 @test_weak_none() {
   store i32 1, ptr @g
   call void @caller_weak_none()
@@ -57,7 +56,7 @@ define i32 @test_weak_none() {
 }
 
 ; CHECK-LABEL: Function: test_weak_read
-; CHECK: Both ModRef:  Ptr: i32* @g	<->  call void @caller_weak_read()
+; CHECK: Just Ref:  Ptr: i32* @g	<->  call void @caller_weak_read()
 define i32 @test_weak_read() {
   store i32 1, ptr @g
   call void @caller_weak_read()
@@ -66,7 +65,7 @@ define i32 @test_weak_read() {
 }
 
 ; CHECK-LABEL: Function: test_noipa_none
-; CHECK: Both ModRef:  Ptr: i32* @g	<->  call void @caller_noipa_none()
+; CHECK: NoModRef:  Ptr: i32* @g	<->  call void @caller_noipa_none()
 define i32 @test_noipa_none() {
   store i32 1, ptr @g
   call void @caller_noipa_none()
@@ -75,7 +74,7 @@ define i32 @test_noipa_none() {
 }
 
 ; CHECK-LABEL: Function: test_scc
-; CHECK: Both ModRef:  Ptr: i32* @g	<->  call void @scc_exact()
+; CHECK: NoModRef:  Ptr: i32* @g	<->  call void @scc_exact()
 define i32 @test_scc() {
   store i32 1, ptr @g
   call void @scc_exact()
