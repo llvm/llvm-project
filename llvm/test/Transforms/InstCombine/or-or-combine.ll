@@ -51,8 +51,8 @@ define i32 @test4(i32 %x, i32 %y) {
 
 define i32 @test4_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test4_commuted(
-; CHECK-NEXT:    [[INNER:%.*]] = or i32 [[X:%.*]], 5
-; CHECK-NEXT:    [[OUTER:%.*]] = or i32 [[Y:%.*]], [[INNER]]
+; CHECK-NEXT:    [[INNER:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OUTER:%.*]] = or i32 [[INNER]], 5
 ; CHECK-NEXT:    ret i32 [[OUTER]]
 ;
   %inner = or i32 %x, 5
