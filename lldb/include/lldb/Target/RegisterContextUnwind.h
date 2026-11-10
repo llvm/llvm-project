@@ -137,8 +137,11 @@ private:
   // user somehow.
   bool IsSkipFrame() const;
 
-  /// Identify a trap handler from its symbol name or signal-frame CFI at
-  /// m_current_pc, before selecting an unwind plan.
+  /// Identify a trap handler from signal-frame CFI at m_current_pc or its
+  /// symbol name provided by platform or user, in order.
+  ///
+  /// \return
+  ///     Returns true if the SymbolContext is a trap handler.
   bool IsTrapHandler(lldb_private::Process *process) const;
 
   /// Check if the given unwind plan indicates a signal trap handler, and

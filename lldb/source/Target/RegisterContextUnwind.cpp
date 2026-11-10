@@ -1313,6 +1313,20 @@ bool RegisterContextUnwind::IsSkipFrame() const {
 }
 
 bool RegisterContextUnwind::IsTrapHandler(Process *process) const {
+  // See if signal-frame CFI exists at m_current_pc.
+  ModuleSP module_sp = m_current_pc.GetModule();
+  if (!m_current_pc.IsValid() || !module_sp || !module_sp->GetObjectFile())
+    return false;
+
+  DWARFCallFrameInfo *eh_frame = module_sp->GetUnwindTable().GetEHFrameInfo();
+  if (!eh_frame)
+    return false;
+
+  std::unique_ptr<UnwindPlan> plan_up = eh_frame->GetUnwindPlan(m_current_pc);
+  return plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
+         plan_up->PlanValidAtAddress(m_current_pc);
+
+  // Check trap handler names provided by platform.
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
   if (platform_sp) {
     const std::vector<std::string> &trap_handler_names(
@@ -1326,6 +1340,8 @@ bool RegisterContextUnwind::IsTrapHandler(Process *process) const {
       }
     }
   }
+
+  // Check trap handler names provided by user.
   const std::vector<std::string> &user_specified_trap_handler_names =
       m_parent_unwind.GetUserSpecifiedTrapHandlerFunctionNames();
   for (const std::string &name : user_specified_trap_handler_names) {
@@ -1337,23 +1353,8 @@ bool RegisterContextUnwind::IsTrapHandler(Process *process) const {
     }
   }
 
-  // Recognize signal trampolines before choosing a fast unwind plan, which
-  // could otherwise hide their signal-frame CFI. At trampoline entry this also
-  // lets us recognize a synthetic return address before backing up into the
-  // preceding function, just as the name-based checks above do.
-  // The signal-frame flag describes the caller's saved context; it does not
-  // imply that this frame's own PC is an interrupted PC.
-  ModuleSP module_sp = m_current_pc.GetModule();
-  if (!m_current_pc.IsValid() || !module_sp || !module_sp->GetObjectFile())
-    return false;
-
-  DWARFCallFrameInfo *eh_frame = module_sp->GetUnwindTable().GetEHFrameInfo();
-  if (!eh_frame)
-    return false;
-
-  std::unique_ptr<UnwindPlan> plan_up = eh_frame->GetUnwindPlan(m_current_pc);
-  return plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
-         plan_up->PlanValidAtAddress(m_current_pc);
+  // This is not a trap handler.
+  return false;
 }
 
 // Search this stack frame's UnwindPlans for the AbstractRegisterLocation
