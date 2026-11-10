@@ -1,0 +1,337 @@
+## Check how obj2yaml produces YAML .llvm_bb_addr_map descriptions.
+
+## Check that obj2yaml uses the "Entries" tag to describe an .llvm_bb_addr_map
+## section, omits SectionData and SizeOfRawData and preserves relocations.
+## Addresses are 8 bytes on 64-bit machines and 4 bytes on 32-bit machines.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefixes=VALID,VALID64
+# RUN: yaml2obj --docnum=1 -DMACHINE=IMAGE_FILE_MACHINE_I386 \
+# RUN:   -DRELTYPE=IMAGE_REL_I386_DIR32 %s -o %t1.32
+# RUN: obj2yaml %t1.32 | FileCheck %s --check-prefixes=VALID,VALID32
+
+# VALID:        - Name:            .llvm_bb_addr_map
+# VALID-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# VALID-NEXT:     Entries:
+# VALID-NEXT:       - Version:         3
+## The 'Feature' and 'BaseAddress' fields are omitted when they are zero.
+# VALID-NEXT:         BBRanges:
+# VALID-NEXT:           - BBEntries:
+# VALID-NEXT:               - ID:              0
+# VALID-NEXT:                 AddressOffset:   0x1
+# VALID-NEXT:                 Size:            0x2
+# VALID-NEXT:                 Metadata:        0x3
+# VALID-NEXT:               - ID:              2
+# VALID-NEXT:                 AddressOffset:   0x4
+# VALID-NEXT:                 Size:            0x5
+# VALID-NEXT:                 Metadata:        0x6
+# VALID-NEXT:               - ID:              4
+# VALID-NEXT:                 AddressOffset:   0xFFFFFFFFFFFFFFF7
+# VALID-NEXT:                 Size:            0xFFFFFFFFFFFFFFF8
+# VALID-NEXT:                 Metadata:        0xFFFFFFFFFFFFFFF9
+# VALID-NEXT:       - Version:         3
+# VALID-NEXT:         Feature:         0x28
+# VALID-NEXT:         BBRanges:
+# VALID64-NEXT:         - BaseAddress:     0xFFFFFFFFFFFFFF20
+# VALID32-NEXT:         - BaseAddress:     0xFFFFFF20
+# VALID-NEXT:             BBEntries:
+# VALID-NEXT:               - ID:              6
+# VALID-NEXT:                 AddressOffset:   0xA
+# VALID-NEXT:                 Size:            0xB
+# VALID-NEXT:                 Metadata:        0xC
+# VALID-NEXT:                 CallsiteEndOffsets: [ 0x1, 0x2 ]
+# VALID-NEXT:     Relocations:
+# VALID-NEXT:       - VirtualAddress:  2
+# VALID-NEXT:         SymbolName:      .text
+# VALID64-NEXT:       Type:            IMAGE_REL_AMD64_ADDR64
+# VALID32-NEXT:       Type:            IMAGE_REL_I386_DIR32
+# VALID-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine: [[MACHINE=IMAGE_FILE_MACHINE_AMD64]]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    SectionData:     C3
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 3
+        Feature: 0x0
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+              - ID:            2
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6
+              - ID:            4
+                AddressOffset: 0xFFFFFFFFFFFFFFF7
+                Size:          0xFFFFFFFFFFFFFFF8
+                Metadata:      0xFFFFFFFFFFFFFFF9
+      - Version:     3
+        Feature:     0x28
+        NumBBRanges: [[NUMBBRANGES=<none>]]
+        BBRanges:
+          - BaseAddress: 0xFFFFFFFFFFFFFF20
+            NumBlocks:   [[NUMBLOCKS=<none>]]
+            BBEntries:
+              - ID:                 6
+                AddressOffset:      0xA
+                Size:               0xB
+                Metadata:           0xC
+                CallsiteEndOffsets: [ 0x1, 0x2 ]
+    Relocations:
+      - VirtualAddress: 2
+        SymbolName:     .text
+        Type:           [[RELTYPE=IMAGE_REL_AMD64_ADDR64]]
+symbols:
+  - Name:          .text
+    Value:         0
+    SectionNumber: 1
+    SimpleType:    IMAGE_SYM_TYPE_NULL
+    ComplexType:   IMAGE_SYM_DTYPE_NULL
+    StorageClass:  IMAGE_SYM_CLASS_STATIC
+
+## Check obj2yaml can dump empty .llvm_bb_addr_map sections.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=EMPTY
+
+# EMPTY:      sections:
+# EMPTY-NEXT:   - Name:            .llvm_bb_addr_map
+# EMPTY-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# EMPTY-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    SectionData:     ""
+symbols: []
+
+## Check obj2yaml can dump multiple .llvm_bb_addr_map sections.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=MULTI
+
+# MULTI:      sections:
+# MULTI-NEXT:   - Name:            .llvm_bb_addr_map
+# MULTI-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# MULTI-NEXT:     Entries:
+## Fields 'BaseAddress' and 'Feature' are omitted when they are zero.
+# MULTI-NEXT:       - Version:         0
+# MULTI-NEXT:         BBRanges:
+# MULTI-NEXT:           - BBEntries:
+# MULTI-NEXT:               - ID:              0
+# MULTI-NEXT:                 AddressOffset:   0x1
+# MULTI-NEXT:                 Size:            0x2
+# MULTI-NEXT:                 Metadata:        0x3
+# MULTI-NEXT:   - Name:            .llvm_bb_addr_map
+# MULTI-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# MULTI-NEXT:     Entries:
+# MULTI-NEXT:       - Version:         0
+# MULTI-NEXT:         BBRanges:
+# MULTI-NEXT:           - BaseAddress:     0x20
+# MULTI-NEXT:             BBEntries:       []
+# MULTI-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 0
+        Feature: 0x0
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 0
+        BBRanges:
+          - BaseAddress: 0x20
+symbols: []
+
+## Check that obj2yaml can dump basic block hash in the .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=BBHASH
+
+# BBHASH:      Entries:
+# BBHASH-NEXT:   - Version:         4
+# BBHASH-NEXT:     Feature:         0x40
+# BBHASH-NEXT:     BBRanges:
+# BBHASH-NEXT:       - BBEntries:
+# BBHASH-NEXT:           - ID:              0
+# BBHASH-NEXT:             AddressOffset:   0x1
+# BBHASH-NEXT:             Size:            0x2
+# BBHASH-NEXT:             Metadata:        0x3
+# BBHASH-NEXT:             Hash:            0x1
+# BBHASH-NEXT:           - ID:              2
+# BBHASH-NEXT:             AddressOffset:   0x4
+# BBHASH-NEXT:             Size:            0x5
+# BBHASH-NEXT:             Metadata:        0x6
+# BBHASH-NEXT:             Hash:            0x2
+# BBHASH-NEXT:           - ID:              4
+# BBHASH-NEXT:             AddressOffset:   0xFFFFFFFFFFFFFFF7
+# BBHASH-NEXT:             Size:            0xFFFFFFFFFFFFFFF8
+# BBHASH-NEXT:             Metadata:        0xFFFFFFFFFFFFFFF9
+# BBHASH-NEXT:             Hash:            0x3
+# BBHASH-NEXT:   - Version:         4
+# BBHASH-NEXT:     Feature:         0x68
+# BBHASH-NEXT:     BBRanges:
+# BBHASH-NEXT:       - BaseAddress:     0xFFFFFFFFFFFFFF20
+# BBHASH-NEXT:         BBEntries:
+# BBHASH-NEXT:           - ID:              6
+# BBHASH-NEXT:             AddressOffset:   0xA
+# BBHASH-NEXT:             Size:            0xB
+# BBHASH-NEXT:             Metadata:        0xC
+# BBHASH-NEXT:             CallsiteEndOffsets: [ 0x1, 0x2 ]
+# BBHASH-NEXT:             Hash:            0x123
+# BBHASH-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 4
+        Feature: 0x40
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+                Hash:          0x1
+              - ID:            2
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6
+                Hash:          0x2
+              - ID:            4
+                AddressOffset: 0xFFFFFFFFFFFFFFF7
+                Size:          0xFFFFFFFFFFFFFFF8
+                Metadata:      0xFFFFFFFFFFFFFFF9
+                Hash:          0x3
+      - Version: 4
+        Feature: 0x68
+        BBRanges:
+          - BaseAddress: 0xFFFFFFFFFFFFFF20
+            BBEntries:
+              - ID:                 6
+                AddressOffset:      0xA
+                Size:               0xB
+                Metadata:           0xC
+                CallsiteEndOffsets: [ 0x1, 0x2 ]
+                Hash:               0x123
+symbols: []
+
+## Check that obj2yaml uses the "SectionData" tag when the section is truncated
+## or 'NumBlocks' or 'NumBBRanges' is invalid.
+## The truncated section contains the first 8 bytes of document 1's section.
+
+# RUN: yaml2obj --docnum=5 -DDATA=0300000000000000 %s -o %t5
+# RUN: obj2yaml %t5 | FileCheck %s --check-prefixes=TRUNCATED,INVALID
+
+# RUN: yaml2obj --docnum=1 -DNUMBLOCKS=2 %s -o %t6
+# RUN: obj2yaml %t6 | FileCheck %s --check-prefixes=BADNUM,INVALID
+
+# RUN: yaml2obj --docnum=1 -DNUMBBRANGES=2 %s -o %t7
+# RUN: obj2yaml %t7 | FileCheck %s --check-prefixes=BADNUM,INVALID
+
+# INVALID:        - Name:            .llvm_bb_addr_map
+# INVALID-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+# BADNUM-NEXT:      SectionData:     {{([[:xdigit:]]+)}}{{$}}
+# TRUNCATED-NEXT:   SectionData:     '0300000000000000'{{$}}
+# INVALID-NEXT:     SizeOfRawData:   {{[0-9]+}}{{$}}
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    SectionData:     "[[DATA]]"
+symbols: []
+
+## Check that obj2yaml can dump the function GUID in the .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=6 %s -o %t8
+# RUN: obj2yaml %t8 | FileCheck %s --check-prefix=GUID
+
+# GUID:      Entries:
+# GUID-NEXT:   - Version:         6
+# GUID-NEXT:     Feature:         0x100
+# GUID-NEXT:     FuncGUID:        0x1122334455667788
+# GUID-NEXT:     BBRanges:
+# GUID-NEXT:       - BaseAddress:     0x20
+# GUID-NEXT:         BBEntries:
+# GUID-NEXT:           - ID:              0
+# GUID-NEXT:             AddressOffset:   0x1
+# GUID-NEXT:             Size:            0x2
+# GUID-NEXT:             Metadata:        0x3
+## The 'FuncGUID' field is omitted when the feature is disabled.
+# GUID-NEXT:   - Version:         6
+# GUID-NEXT:     BBRanges:
+# GUID-NEXT:       - BaseAddress:     0x30
+# GUID-NEXT:         BBEntries:
+# GUID-NEXT:           - ID:              1
+# GUID-NEXT:             AddressOffset:   0x4
+# GUID-NEXT:             Size:            0x5
+# GUID-NEXT:             Metadata:        0x6
+# GUID-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version:  6
+        Feature:  0x100
+        FuncGUID: 0x1122334455667788
+        BBRanges:
+          - BaseAddress: 0x20
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+      - Version:  6
+        BBRanges:
+          - BaseAddress: 0x30
+            BBEntries:
+              - ID:            1
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6
+symbols: []
+
+## Check that obj2yaml reports an error for an unsupported version or feature.
+
+# RUN: yaml2obj --docnum=5 -DDATA=07 %s -o %t9
+# RUN: not obj2yaml %t9 2>&1 | FileCheck %s --check-prefix=BAD-VERSION
+# RUN: yaml2obj --docnum=5 -DDATA=050002 %s -o %t10
+# RUN: not obj2yaml %t10 2>&1 | FileCheck %s --check-prefix=BAD-FEATURE
+
+# BAD-VERSION: invalid .llvm_bb_addr_map section: invalid SHT_LLVM_BB_ADDR_MAP section version: 7
+# BAD-FEATURE: invalid .llvm_bb_addr_map section: invalid encoding for BBAddrMap::Features: 0x200

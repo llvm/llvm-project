@@ -310,20 +310,14 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
   setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i128, Custom);
 
-  // Type legalization will convert 8- and 16-bit atomic operations into
-  // forms that operate on i32s (but still keeping the original memory VT).
-  // Lower them into full i32 operations.
-  setOperationAction(ISD::ATOMIC_SWAP,      MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_ADD,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_SUB,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_AND,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_OR,   MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_XOR,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_MIN,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_MAX,  MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, Custom);
+  // Lower 8- and 16-bit atomic operations into full i32 operations during
+  // type legalization.
+  setOperationAction(
+      {ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD_ADD, ISD::ATOMIC_LOAD_SUB,
+       ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR, ISD::ATOMIC_LOAD_XOR,
+       ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN, ISD::ATOMIC_LOAD_MAX,
+       ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
+      {MVT::i8, MVT::i16}, Custom);
 
   // Whether or not i128 is not a legal type, we need to custom lower
   // the atomic operations in order to exploit SystemZ instructions.
@@ -1583,6 +1577,14 @@ bool SystemZTargetLowering::isTruncateFree(EVT FromVT, EVT ToVT) const {
   unsigned FromBits = FromVT.getFixedSizeInBits();
   unsigned ToBits = ToVT.getFixedSizeInBits();
   return FromBits > ToBits;
+}
+
+bool SystemZTargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
+  unsigned Opc = N->getOpcode();
+  if ((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) && VT.isVector() &&
+      VT.getScalarSizeInBits() < N->getValueType(0).getScalarSizeInBits())
+    return false;
+  return TargetLowering::isTypeDesirableForOp(N, VT);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5295,19 +5297,15 @@ static void getCSAddressAndShifts(SDValue Addr, SelectionDAG &DAG, SDLoc DL,
 
 }
 
-// Op is an 8-, 16-bit or 32-bit ATOMIC_LOAD_* operation.  Lower the first
-// two into the fullword ATOMIC_LOADW_* operation given by Opcode.
-SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
-                                                   SelectionDAG &DAG,
-                                                   unsigned Opcode) const {
-  auto *Node = cast<AtomicSDNode>(Op.getNode());
+// N is an 8- or 16-bit ATOMIC_LOAD_* operation.  Lower it into the fullword
+// ATOMIC_LOADW_* operation.
+void SystemZTargetLowering::lowerATOMIC_LOAD_OP(
+    SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG,
+    unsigned Opcode) const {
+  auto *Node = cast<AtomicSDNode>(N);
 
-  // 32-bit operations need no special handling.
   EVT NarrowVT = Node->getMemoryVT();
   EVT WideVT = MVT::i32;
-  if (NarrowVT == WideVT)
-    return Op;
-
   int64_t BitSize = NarrowVT.getSizeInBits();
   SDValue ChainIn = Node->getChain();
   SDValue Addr = Node->getBasePtr();
@@ -5319,8 +5317,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
   if (Opcode == SystemZISD::ATOMIC_LOADW_SUB)
     if (auto *Const = dyn_cast<ConstantSDNode>(Src2)) {
       Opcode = SystemZISD::ATOMIC_LOADW_ADD;
-      Src2 = DAG.getSignedConstant(-Const->getSExtValue(), DL,
-                                   Src2.getValueType());
+      Src2 = DAG.getConstant(-Const->getAPIntValue(), DL, Src2.getValueType());
     }
 
   SDValue AlignedAddr, BitShift, NegBitShift;
@@ -5331,6 +5328,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
   // operations require the source to be shifted in advance.  (This shift
   // can be folded if the source is constant.)  For AND and NAND, the lower
   // bits must be set, while for other opcodes they should be left clear.
+  Src2 = DAG.getNode(ISD::ANY_EXTEND, DL, WideVT, Src2);
   if (Opcode != SystemZISD::ATOMIC_SWAPW)
     Src2 = DAG.getNode(ISD::SHL, DL, WideVT, Src2,
                        DAG.getConstant(32 - BitSize, DL, WideVT));
@@ -5351,32 +5349,25 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
   SDValue ResultShift = DAG.getNode(ISD::ADD, DL, WideVT, BitShift,
                                     DAG.getConstant(BitSize, DL, WideVT));
   SDValue Result = DAG.getNode(ISD::ROTL, DL, WideVT, AtomicOp, ResultShift);
-
-  SDValue RetOps[2] = { Result, AtomicOp.getValue(1) };
-  return DAG.getMergeValues(RetOps, DL);
+  Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, Result));
+  Results.push_back(AtomicOp.getValue(1));
 }
 
-// Op is an ATOMIC_LOAD_SUB operation.  Lower 8- and 16-bit operations into
-// ATOMIC_LOADW_SUBs and convert 32- and 64-bit operations into additions.
+// Op is a 32- or 64-bit ATOMIC_LOAD_SUB operation.  Convert it into an
+// addition.
 SDValue SystemZTargetLowering::lowerATOMIC_LOAD_SUB(SDValue Op,
                                                     SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
   EVT MemVT = Node->getMemoryVT();
-  if (MemVT == MVT::i32 || MemVT == MVT::i64) {
-    // A full-width operation: negate and use LAA(G).
-    assert(Op.getValueType() == MemVT && "Mismatched VTs");
-    assert(Subtarget.hasInterlockedAccess1() &&
-           "Should have been expanded by AtomicExpand pass.");
-    SDValue Src2 = Node->getVal();
-    SDLoc DL(Src2);
-    SDValue NegSrc2 =
+  assert(Op.getValueType() == MemVT && "Mismatched VTs");
+  assert(Subtarget.hasInterlockedAccess1() &&
+         "Should have been expanded by AtomicExpand pass.");
+  SDValue Src2 = Node->getVal();
+  SDLoc DL(Src2);
+  SDValue NegSrc2 =
       DAG.getNode(ISD::SUB, DL, MemVT, DAG.getConstant(0, DL, MemVT), Src2);
-    return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, MemVT,
-                         Node->getChain(), Node->getBasePtr(), NegSrc2,
-                         Node->getMemOperand());
-  }
-
-  return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_SUB);
+  return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, MemVT, Node->getChain(),
+                       Node->getBasePtr(), NegSrc2, Node->getMemOperand());
 }
 
 // Lower 8/16/32/64-bit ATOMIC_CMP_SWAP_WITH_SUCCESS node.
@@ -7345,32 +7336,12 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE_ADD(Op, DAG);
   case ISD::ATOMIC_FENCE:
     return lowerATOMIC_FENCE(Op, DAG);
-  case ISD::ATOMIC_SWAP:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_SWAPW);
   case ISD::ATOMIC_STORE:
     return lowerATOMIC_STORE(Op, DAG);
   case ISD::ATOMIC_LOAD:
     return lowerATOMIC_LOAD(Op, DAG);
-  case ISD::ATOMIC_LOAD_ADD:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_ADD);
   case ISD::ATOMIC_LOAD_SUB:
     return lowerATOMIC_LOAD_SUB(Op, DAG);
-  case ISD::ATOMIC_LOAD_AND:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_AND);
-  case ISD::ATOMIC_LOAD_OR:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_OR);
-  case ISD::ATOMIC_LOAD_XOR:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_XOR);
-  case ISD::ATOMIC_LOAD_NAND:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_NAND);
-  case ISD::ATOMIC_LOAD_MIN:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_MIN);
-  case ISD::ATOMIC_LOAD_MAX:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_MAX);
-  case ISD::ATOMIC_LOAD_UMIN:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_UMIN);
-  case ISD::ATOMIC_LOAD_UMAX:
-    return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_UMAX);
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     return lowerATOMIC_CMP_SWAP(Op, DAG);
   case ISD::STACKSAVE:
@@ -7635,6 +7606,39 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
     }
     break;
   }
+  case ISD::ATOMIC_SWAP:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_SWAPW);
+    break;
+  case ISD::ATOMIC_LOAD_ADD:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_ADD);
+    break;
+  case ISD::ATOMIC_LOAD_SUB:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_SUB);
+    break;
+  case ISD::ATOMIC_LOAD_AND:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_AND);
+    break;
+  case ISD::ATOMIC_LOAD_OR:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_OR);
+    break;
+  case ISD::ATOMIC_LOAD_XOR:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_XOR);
+    break;
+  case ISD::ATOMIC_LOAD_NAND:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_NAND);
+    break;
+  case ISD::ATOMIC_LOAD_MIN:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_MIN);
+    break;
+  case ISD::ATOMIC_LOAD_MAX:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_MAX);
+    break;
+  case ISD::ATOMIC_LOAD_UMIN:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_UMIN);
+    break;
+  case ISD::ATOMIC_LOAD_UMAX:
+    lowerATOMIC_LOAD_OP(N, Results, DAG, SystemZISD::ATOMIC_LOADW_UMAX);
+    break;
   default:
     llvm_unreachable("Unexpected node to lower");
   }
