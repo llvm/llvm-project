@@ -1315,17 +1315,23 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::loadPassPlugins() {
+  // Filenames are cleared on success, so repeated calls are no-ops.
   if (Conf.PassPluginFilenames.empty())
     return Error::success();
-  assert(PassPlugins.empty() && "Pass-plugins must be loaded only once");
 
-  // Load plugins from file and append them to the list of client loaded ones.
+  // Load plugins from file. Failures leave them all unregistered.
+  SmallVector<std::unique_ptr<PassPlugin>, 0> Loaded;
   for (const std::string &PluginFN : Conf.PassPluginFilenames) {
     Expected<PassPlugin> Plugin = PassPlugin::load(PluginFN);
     if (!Plugin)
       return Plugin.takeError();
-    PassPlugins.push_back(std::make_unique<PassPlugin>(std::move(*Plugin)));
-    Conf.LoadedPassPlugins.push_back(PassPlugins.back().get());
+    Loaded.push_back(std::make_unique<PassPlugin>(std::move(*Plugin)));
+  }
+
+  // Append them to the list of client loaded ones.
+  for (std::unique_ptr<PassPlugin> &Plugin : Loaded) {
+    Conf.LoadedPassPlugins.push_back(Plugin.get());
+    PassPlugins.push_back(std::move(Plugin));
   }
 
   Conf.PassPluginFilenames.clear();

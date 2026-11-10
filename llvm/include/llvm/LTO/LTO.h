@@ -673,7 +673,7 @@ private:
   // Pass-plugins that we load from Conf.PassPluginFilenames.
   SmallVector<std::unique_ptr<PassPlugin>, 0> PassPlugins;
 
-  // Load pass-plugins from file once.
+  // Load pass-plugins from Conf.PassPluginFilenames.
   Error loadPassPlugins();
 
   // LibFuncs that were implemented in bitcode but were not extracted
