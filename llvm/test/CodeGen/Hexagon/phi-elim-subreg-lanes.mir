@@ -6,7 +6,6 @@
 # block, so each lane dies at its own last read.
 ---
 name:            two_phis_read_different_subregs
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: two_phis_read_different_subregs
   ; CHECK: bb.0:
@@ -61,7 +60,6 @@ body:             |
 # there and must not be trimmed again.
 ---
 name:            terminator_reads_lane_no_phi_reads
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: terminator_reads_lane_no_phi_reads
   ; CHECK: bb.0:
@@ -108,7 +106,6 @@ body:             |
 # terminator and the other at its copy.
 ---
 name:            terminator_reads_phi_read_lane
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: terminator_reads_phi_read_lane
   ; CHECK: bb.0:
@@ -161,7 +158,6 @@ body:             |
 # the lane not read by the last copy dies at the whole register copy.
 ---
 name:            whole_reg_phi_lowered_before_subreg_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: whole_reg_phi_lowered_before_subreg_phi
   ; CHECK: bb.0:
@@ -213,7 +209,6 @@ body:             |
 # Two PHIs read the same lane, which dies at the later of the two copies.
 ---
 name:            two_phis_read_same_subreg
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: two_phis_read_same_subreg
   ; CHECK: bb.0:
@@ -272,7 +267,6 @@ body:             |
 # add a later read of the lane.
 ---
 name:            identical_phis_reuse_one_copy
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: identical_phis_reuse_one_copy
   ; CHECK: bb.0:
@@ -346,7 +340,6 @@ body:             |
 # so shrinking must preserve the later low-lane terminator use.
 ---
 name:            two_terminators
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: two_terminators
   ; CHECK: bb.0:

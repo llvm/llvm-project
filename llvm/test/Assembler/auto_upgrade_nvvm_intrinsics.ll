@@ -904,3 +904,39 @@ define void @nvvm_mbarrier_init_default_layout(ptr %gen, ptr addrspace(3) %share
   call void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %shared, i32 %count)
   ret void
 }
+
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7), i32)
+
+; CHECK-LABEL: @nvvm_mbarrier_multicast
+define void @nvvm_mbarrier_multicast(ptr addrspace(7) %mbar, i32 %tx) {
+; CHECK: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx, i32 0, i1 false)
+  call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  call void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
+  ret void
+}

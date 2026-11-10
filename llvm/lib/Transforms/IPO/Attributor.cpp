@@ -3426,7 +3426,7 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
                                      bool SkipHasAttrCheck) {
   bool IsKnown;
   if (SkipHasAttrCheck || !Attrs.hasAttribute(AK))
-    if (!Configuration.Allowed || Configuration.Allowed->count(&AAType::ID))
+    if (!Configuration.Allowed || Configuration.Allowed->contains<AAType>())
       if (!AA::hasAssumedIRAttr<AK>(*this, nullptr, IRP, DepClassTy::NONE,
                                     IsKnown))
         getOrCreateAAFor<AAType>(IRP);
@@ -4026,14 +4026,27 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
   AttributorConfig AC(CGUpdater);
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = false;
-  DenseSet<const char *> Allowed(
-      {&AAWillReturn::ID, &AANoUnwind::ID, &AANoRecurse::ID, &AANoSync::ID,
-       &AANoFree::ID, &AANoReturn::ID, &AAMemoryLocation::ID,
-       &AAMemoryBehavior::ID, &AAUnderlyingObjects::ID, &AANoCapture::ID,
-       &AAInterFnReachability::ID, &AAIntraFnReachability::ID, &AACallEdges::ID,
-       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID,
-       &AADenormalFPMath::ID});
-  AC.Allowed = &Allowed;
+  static constexpr const char *AllowedIDs[] = {
+      &AAWillReturn::ID,
+      &AANoUnwind::ID,
+      &AANoRecurse::ID,
+      &AANoSync::ID,
+      &AANoFree::ID,
+      &AANoReturn::ID,
+      &AAMemoryLocation::ID,
+      &AAMemoryBehavior::ID,
+      &AAUnderlyingObjects::ID,
+      &AANoCapture::ID,
+      &AAInterFnReachability::ID,
+      &AAIntraFnReachability::ID,
+      &AACallEdges::ID,
+      &AANoFPClass::ID,
+      &AAMustProgress::ID,
+      &AANonNull::ID,
+      &AADenormalFPMath::ID,
+  };
+  static constexpr AAKindSet Allowed(AllowedIDs);
+  AC.Allowed = Allowed;
   AC.UseLiveness = false;
 
   Attributor A(Functions, InfoCache, AC);

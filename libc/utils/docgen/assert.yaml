@@ -1,3 +1,4 @@
+c-reference-root: error/assert
 macros:
   __STDC_VERSION_ASSERT_H__:
     c-definition: 7.2.1
