@@ -163,7 +163,7 @@ unsigned RegEncoder::encodeVirtualRegisterIndex(unsigned Idx, RegBank Bank,
 
 std::pair<const char *, unsigned>
 RegEncoder::decodeVirtualRegister(MCRegister Reg) {
-  unsigned BankBits = (Reg >> NumRegBits) & ((1U << NumBankBits) - 1);
+  unsigned BankBits = Reg >> NumRegBits;
   const char *Prefix = getPrefixFromBank(getRegBank(BankBits));
   unsigned Num = Reg & ((1U << NumRegBits) - 1);
   return std::make_pair(Prefix, Num);
