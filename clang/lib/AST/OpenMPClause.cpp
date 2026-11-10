@@ -1197,9 +1197,9 @@ OMPClauseMappableExprCommon::findAttachPtrExpr(
     if (!CurExpr)
       break;
 
-    // If CurExpr is something like `p + 10`, we need to ignore it, since
-    // we are looking for `p`.
-    if (isa<BinaryOperator>(CurExpr))
+    // If CurExpr is something like `p + 10` or `([n])p`, we need to ignore it,
+    // since we are looking for `p`.
+    if (isa<BinaryOperator, OMPArrayShapingExpr>(CurExpr))
       continue;
 
     // Keep going until we reach an Expr of pointer type.

@@ -983,6 +983,7 @@ void ASTStmtWriter::VisitOMPArrayShapingExpr(OMPArrayShapingExpr *E) {
     Record.AddSourceRange(SR);
   Record.AddSourceLocation(E->getLParenLoc());
   Record.AddSourceLocation(E->getRParenLoc());
+  Record.AddTypeRef(E->getShapedType());
   Code = serialization::EXPR_OMP_ARRAY_SHAPING;
 }
 
