@@ -63,6 +63,13 @@ public:
     EXPECT_FP_EQ(one,
                  LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0xbdb4)).get_val()));
 
+    // cosh(x) > 1 for x != 0, so only round-up moves the result above 1.
+    bfloat16 small = FPBits(uint16_t(0x0001)).get_val();
+    EXPECT_FP_EQ_ROUNDING_NEAREST(one, LIBC_NAMESPACE::coshbf16(small));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(one_plus_ulp, LIBC_NAMESPACE::coshbf16(small));
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(one, LIBC_NAMESPACE::coshbf16(small));
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(one, LIBC_NAMESPACE::coshbf16(small));
+
     // First input whose result no longer rounds to 1 in round-to-nearest.
     EXPECT_FP_EQ(one_plus_ulp,
                  LIBC_NAMESPACE::coshbf16(FPBits(uint16_t(0x3db5)).get_val()));
