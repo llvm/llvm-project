@@ -222,7 +222,15 @@ public:
 };
 
 FunctionPass *createSystemZCopyPhysRegsLegacyPass(SystemZTargetMachine &TM);
-FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
+
+class SystemZPostRewritePass
+    : public RequiredPassInfoMixin<SystemZPostRewritePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createSystemZPostRewriteLegacyPass(SystemZTargetMachine &TM);
 
 class SystemZTDCPass : public RequiredPassInfoMixin<SystemZTDCPass> {
   SystemZTargetMachine &TM;
@@ -249,7 +257,7 @@ void initializeSystemZDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeSystemZElimComparePass(PassRegistry &);
 void initializeSystemZLDCleanupLegacyPass(PassRegistry &);
 void initializeSystemZLongBranchPass(PassRegistry &);
-void initializeSystemZPostRewritePass(PassRegistry &);
+void initializeSystemZPostRewriteLegacyPass(PassRegistry &);
 void initializeSystemZShortenInstPass(PassRegistry &);
 void initializeSystemZTDCLegacyPass(PassRegistry &);
 void initializeSystemZAlignGlobalsLegacyPass(PassRegistry &);

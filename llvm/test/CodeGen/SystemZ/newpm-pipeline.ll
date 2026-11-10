@@ -34,6 +34,7 @@
 ; O0-NEXT:     systemz-copy-physregs
 ; O0-NEXT:     phi-node-elimination
 ; O0-NEXT:     regallocfast
+; O0-NEXT:     systemz-post-rewrite
 ; O0-NEXT:     remove-redundant-debug-values
 ; O0-NEXT:     fixup-statepoint-caller-saved
 ; O0-NEXT:     prolog-epilog
@@ -118,6 +119,7 @@
 ; O3-NEXT:     greedy<all>
 ; O3-NEXT:     virt-reg-rewriter
 ; O3-NEXT:     stack-slot-coloring
+; O3-NEXT:     systemz-post-rewrite
 ; O3-NEXT:     machine-cp
 ; O3-NEXT:     machinelicm
 ; O3-NEXT:     remove-redundant-debug-values

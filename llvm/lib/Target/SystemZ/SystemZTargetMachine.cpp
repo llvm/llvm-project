@@ -54,7 +54,7 @@ LLVMInitializeSystemZTarget() {
   initializeSystemZLongBranchPass(PR);
   initializeSystemZLDCleanupLegacyPass(PR);
   initializeSystemZShortenInstPass(PR);
-  initializeSystemZPostRewritePass(PR);
+  initializeSystemZPostRewriteLegacyPass(PR);
   initializeSystemZTDCLegacyPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
   initializeSystemZCopyPhysRegsLegacyPass(PR);
@@ -261,14 +261,14 @@ void SystemZPassConfig::addPreRegAlloc() {
 }
 
 void SystemZPassConfig::addPostRewrite() {
-  addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+  addPass(createSystemZPostRewriteLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRegAlloc() {
   // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
   // is not called).
   if (getOptLevel() == CodeGenOptLevel::None)
-    addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
+    addPass(createSystemZPostRewriteLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPreSched2() {

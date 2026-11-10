@@ -85,15 +85,14 @@ void SystemZCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void SystemZCodeGenPassBuilder::addPostRewrite(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZPostRewritePass
+  addMachineFunctionPass(SystemZPostRewritePass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
   // is not called).
-  if (getOptLevel() == CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add SystemZPostRewritePass
-  }
+  if (getOptLevel() == CodeGenOptLevel::None)
+    addMachineFunctionPass(SystemZPostRewritePass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {

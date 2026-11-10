@@ -31,4 +31,5 @@ FUNCTION_PASS("systemz-tdc", SystemZTDCPass(*this))
 MACHINE_FUNCTION_PASS("systemz-copy-physregs", SystemZCopyPhysRegsPass())
 MACHINE_FUNCTION_PASS("systemz-isel", SystemZISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("systemz-ld-cleanup", SystemZLDCleanupPass())
+MACHINE_FUNCTION_PASS("systemz-post-rewrite", SystemZPostRewritePass())
 #undef MACHINE_FUNCTION_PASS
