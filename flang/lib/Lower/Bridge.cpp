@@ -4037,8 +4037,16 @@ private:
         }
       // The descent lands on the loop the directive takes over, and every
       // level it steps through is one. A construct whose first evaluation is
-      // not a loop takes over none.
-      if (outerDo)
+      // not a loop takes over none. Neither does a DO WHILE lowered
+      // structurally: it has no bounds, so its acc.loop does not iterate, and
+      // the whole loop, condition included, is lowered inside it. The code
+      // below lowers the evaluations nested in curEval; for a loop the
+      // directive takes over, curEval is that loop, so only its body is
+      // lowered. Resetting curEval to the construct's own evaluation lowers
+      // the DO WHILE evaluation itself instead, through genFIR(DoConstruct).
+      if (outerDo && outerDo->IsDoWhile())
+        curEval = &getEval();
+      else if (outerDo)
         absorbedLoop = curEval;
     }
 
