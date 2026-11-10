@@ -1718,6 +1718,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.localtime
     libc.src.time.localtime_r
     libc.src.time.mktime
+    libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.strftime
     libc.src.time.strftime_l
