@@ -776,6 +776,32 @@ bool fir::isa_volatile_type(mlir::Type t) {
       .Default([](mlir::Type) { return false; });
 }
 
+/// Parse the optional trailing attributes shared by !fir.box and !fir.class:
+///   (`,` (`volatile` | `corank` `:` integer))*
+/// Each attribute may appear at most once, in any order.
+static mlir::ParseResult parseBoxLikeAttrs(mlir::AsmParser &parser,
+                                           bool &isVolatile, int64_t &corank) {
+  bool hasCorank = false;
+  auto location = parser.getCurrentLocation();
+  while (mlir::succeeded(parser.parseOptionalComma())) {
+    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword()))) {
+      if (isVolatile)
+        return parser.emitError(location, "duplicate 'volatile' keyword");
+      isVolatile = true;
+    } else if (mlir::succeeded(
+                   parser.parseOptionalKeyword(getCorankKeyword()))) {
+      if (hasCorank)
+        return parser.emitError(location, "duplicate 'corank' keyword");
+      if (parser.parseColon() || parser.parseInteger(corank))
+        return mlir::failure();
+      hasCorank = true;
+    } else {
+      return parser.emitError(location, "expected 'volatile' or 'corank'");
+    }
+  }
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // BoxProcType
 //===----------------------------------------------------------------------===//
@@ -813,37 +839,17 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
-// `box` `<` type (`, volatile` $volatile^)? (`, corank: corank` $corank^)? `>`
+// `box` `<` type (`,` (`volatile` | `corank` `:` integer))* `>`
 mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
   mlir::Type eleTy;
   auto location = parser.getCurrentLocation();
   auto *context = parser.getContext();
   bool isVolatile = false;
-  bool hasCorank = false;
   int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  while (mlir::succeeded(parser.parseOptionalComma())) {
-    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword()))) {
-      if (isVolatile) {
-        parser.emitError(location, "duplicate 'volatile' keyword");
-        return {};
-      }
-      isVolatile = true;
-    } else if (mlir::succeeded(
-                   parser.parseOptionalKeyword(getCorankKeyword()))) {
-      if (hasCorank) {
-        parser.emitError(location, "duplicate 'corank' keyword");
-        return {};
-      }
-      hasCorank = true;
-      if (parser.parseColon() || parser.parseInteger(corank))
-        return {};
-    } else {
-      parser.emitError(location, "expected 'volatile' or 'corank'");
-      return {};
-    }
-  }
+  if (parseBoxLikeAttrs(parser, isVolatile, corank))
+    return {};
   if (parser.parseGreater())
     return {};
   return parser.getChecked<fir::BoxType>(location, context, eleTy, isVolatile,
@@ -927,38 +933,17 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 // ClassType
 //===----------------------------------------------------------------------===//
-
-// `class` `<` type (`, volatile` $volatile^)? (`, corank: corank` $corank^)?`>`
+// `class` `<` type (`,` (`volatile` | `corank` `:` integer))*`>`
 mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
   mlir::Type eleTy;
   auto location = parser.getCurrentLocation();
   auto *context = parser.getContext();
   bool isVolatile = false;
-  bool hasCorank = false;
   int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  while (mlir::succeeded(parser.parseOptionalComma())) {
-    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword()))) {
-      if (isVolatile) {
-        parser.emitError(location, "duplicate 'volatile' keyword");
-        return {};
-      }
-      isVolatile = true;
-    } else if (mlir::succeeded(
-                   parser.parseOptionalKeyword(getCorankKeyword()))) {
-      if (hasCorank) {
-        parser.emitError(location, "duplicate 'corank' keyword");
-        return {};
-      }
-      hasCorank = true;
-      if (parser.parseColon() || parser.parseInteger(corank))
-        return {};
-    } else {
-      parser.emitError(location, "expected 'volatile' or 'corank'");
-      return {};
-    }
-  }
+  if (parseBoxLikeAttrs(parser, isVolatile, corank))
+    return {};
   if (parser.parseGreater())
     return {};
   return parser.getChecked<fir::ClassType>(location, context, eleTy, isVolatile,
