@@ -17,8 +17,8 @@
 // RUN:   | FileCheck %s --check-prefix=LINK --implicit-check-not=/usr/bin/ld
 // LINK: "{{.*}}clang{{(.exe)?}}" {{.*}}--target=spirv64-unknown-unknown {{.*}}sycl-spirv64-unknown-unknown-generic{{.*}}.o --sycl-link{{$}}
 
-// Archive members are only extracted for the host link, so use
-// --whole-archive to device link a static library.
+// Archive device code is only extracted for device targets that other inputs
+// have. Here no other input has device code, so --whole-archive is needed.
 // RUN: rm -f %t.sycl.a && llvm-ar rcs %t.sycl.a %t.sycl.o
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld --whole-archive %t.sycl.a \
