@@ -1196,22 +1196,11 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     // Cases where the RHS of the alias is dependent. e.g.
     //   template<typename T>
     //   using AliasFoo1 = Foo<T>; // a class/type alias template specialization
-
+    Template = TST->getTemplateName().getAsTemplateDecl();
     // Look through RHS until we find a non-alias template.
-    // This is basically Type::getAsNonAliasTemplateSpecializationType, but we
-    // don't assume RHS is always TemplateSpecializationType.
-    while (TST && TST->isTypeAlias()) {
-      RhsType = TST->desugar();
-      TST = RhsType->getAs<TemplateSpecializationType>();
-    }
-    if (TST) {
-      Template = TST->getTemplateName().getAsTemplateDecl();
-      AliasRhsTemplateArgs = TST->template_arguments();
-      return {Template, AliasRhsTemplateArgs};
-    }
-    // We continue here in case RHS is non-dependent now.
-  }
-  if (const auto *RT = RhsType->getAs<RecordType>()) {
+    if (auto *NonAlias = TST->getAsNonAliasTemplateSpecializationType())
+      AliasRhsTemplateArgs = NonAlias->template_arguments();
+  } else if (const auto *RT = RhsType->getAs<RecordType>()) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
     //   using AliasFoo = Foo<bool>;

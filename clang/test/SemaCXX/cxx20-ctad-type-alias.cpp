@@ -636,13 +636,30 @@ template<class T> struct Foo { using self = Foo; Foo(T); };
 
 template<class> using Int = typename Foo<int>::self;
 
+template<class T> using Int2 = Foo<T>;
+
+template<class T> using Int3 = Foo<int>;
+
 template<class T> using A = Int<T>; // #post_GH147675_A
 
-A a = 1;
+template<class T> using B = Int2<T>; // #post_GH147675_B
 
-A b = nullptr;
+template<class T> using C = Int3<T>; // #post_GH147675_C
+
+A a = 1;
 // expected-error@-1 {{no viable constructor or deduction guide}}
 // expected-note@#post_GH147675_A 2{{candidate function}}
+// expected-note@#post_GH147675_A 2{{cannot deduce template arguments}}
 // expected-note@#post_GH147675_A 2{{implicit deduction guide}}
+
+B b = 1;
+static_assert(__is_same(decltype(b), Foo<int>));
+
+C c = 1;
+// expected-error@-1 {{no viable constructor or deduction guide}}
+// expected-note@#post_GH147675_C 2{{candidate function}}
+// expected-note@#post_GH147675_C 2{{cannot deduce template arguments}}
+// expected-note@#post_GH147675_C 2{{implicit deduction guide}}
+
 
 }
