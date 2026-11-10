@@ -166,6 +166,11 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         "only supported to improve calls to SME ACLE __arm_sme_state "
         "and is not intended to be used beyond that scope.");
 
+  case CallingConv::AArch64_Outline_Atomics_PreserveMost:
+    report_fatal_error(
+        "Calling convention AArch64_Outline_Atomics_PreserveMost is only "
+        "supported for calls to out-of-line atomic helper routines.");
+
   case CallingConv::Win64:
     if (Darwin)
       return CSR_Darwin_AArch64_AAPCS_Win64_SaveList;
@@ -250,6 +255,8 @@ AArch64RegisterInfo::getDarwinCallPreservedMask(const MachineFunction &MF,
     return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1_RegMask;
   if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
     return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2_RegMask;
+  if (CC == CallingConv::AArch64_Outline_Atomics_PreserveMost)
+    return CSR_AArch64_Outline_Atomics_PreserveMost_RegMask;
   if (CC == CallingConv::CFGuard_Check)
     report_fatal_error(
         "Calling convention CFGuard_Check is unsupported on Darwin.");
@@ -298,6 +305,8 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1_RegMask;
   if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
     return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2_RegMask;
+  if (CC == CallingConv::AArch64_Outline_Atomics_PreserveMost)
+    return CSR_AArch64_Outline_Atomics_PreserveMost_RegMask;
   if (CC == CallingConv::CFGuard_Check)
     return CSR_Win_AArch64_CFGuard_Check_RegMask;
   if (MF.getSubtarget<AArch64Subtarget>().getTargetLowering()
@@ -738,6 +747,7 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
+  case CallingConv::AArch64_Outline_Atomics_PreserveMost:
     if (STI.isTargetWindowsOrUEFI())
       return HasReg(CC_AArch64_Win64PCS_ArgRegs, Reg);
     return HasReg(CC_AArch64_AAPCS_ArgRegs, Reg);

@@ -1347,6 +1347,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
   Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
 
+- Added `-moutline-atomics-preserve-most` and `-mno-outline-atomics-preserve-most` for AArch64 targets to control whether out-of-line atomic helper calls preserve all registers except argument/return registers (`x0`-`x4`), scratch registers (`x15`-`x17`), and `NZCV`.
+
 #### Android Support
 
 - Enabled PAC and BTI by default for AArch64 Android targets.

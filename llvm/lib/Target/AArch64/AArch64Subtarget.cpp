@@ -20,6 +20,7 @@
 #include "GISel/AArch64LegalizerInfo.h"
 #include "GISel/AArch64RegisterBankInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/Analysis/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -543,6 +544,39 @@ bool AArch64Subtarget::useScalarIncVL() const {
   // If SVE2 or SME is present (we are not SVE-1 only) and
   // -sve-use-scalar-inc-vl is not otherwise set, enable it by default.
   return valueOr(CLOpts.sve_use_scalar_inc_vl, hasSVE2() || hasSME());
+}
+
+bool AArch64Subtarget::useOutlineAtomicsPreserveMost() const {
+  if (isWindowsArm64EC())
+    return false;
+  return valueOr(CLOpts.outline_atomics_preserve_most,
+                 OutlineAtomicsPreserveMost);
+}
+
+void AArch64Subtarget::initLibcallLoweringInfo(
+    LibcallLoweringInfo &Info) const {
+  if (!useOutlineAtomicsPreserveMost())
+    return;
+
+#define LCALLS(A, B)                                                           \
+  RTLIB::A##B##_RELAX, RTLIB::A##B##_ACQ, RTLIB::A##B##_REL,                   \
+      RTLIB::A##B##_ACQ_REL
+#define LCALL4(A) LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8)
+  static constexpr RTLIB::Libcall OutlineAtomicCalls[] = {
+      LCALL4(OUTLINE_ATOMIC_CAS),   LCALLS(OUTLINE_ATOMIC_CAS, 16),
+      LCALL4(OUTLINE_ATOMIC_SWP),   LCALL4(OUTLINE_ATOMIC_LDADD),
+      LCALL4(OUTLINE_ATOMIC_LDSET), LCALL4(OUTLINE_ATOMIC_LDCLR),
+      LCALL4(OUTLINE_ATOMIC_LDEOR),
+  };
+#undef LCALL4
+#undef LCALLS
+
+  for (RTLIB::Libcall LC : OutlineAtomicCalls) {
+    RTLIB::LibcallImpl Impl = Info.getLibcallImpl(LC);
+    if (Impl != RTLIB::Unsupported)
+      Info.setLibcallImplCallingConv(
+          Impl, CallingConv::AArch64_Outline_Atomics_PreserveMost);
+  }
 }
 
 // If return address signing is enabled, tail calls are emitted as follows:

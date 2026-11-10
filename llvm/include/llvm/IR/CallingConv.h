@@ -297,6 +297,10 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// Callee preserves all registers except X0-X4, X15-X17, and NZCV (used by
+    /// AArch64 out-of-line atomic helper calls).
+    AArch64_Outline_Atomics_PreserveMost = 128,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

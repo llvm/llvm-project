@@ -13,3 +13,11 @@
 // RUN: %clang -target riscv64 -mno-outline-atomics -S %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-NO-OUTLINE-ATOMICS-RISCV
 // CHECK-NO-OUTLINE-ATOMICS-RISCV: warning: 'riscv64' does not support '-mno-outline-atomics'; flag ignored [-Woption-ignored]
 // CHECK-NO-OUTLINE-ATOMICS-RISCV-NOT: "-target-feature" "-outline-atomics"
+
+// RUN: %clang -target x86_64 -moutline-atomics-preserve-most -S %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-PRESERVE-MOST-X86
+// CHECK-PRESERVE-MOST-X86: warning: 'x86_64' does not support '-moutline-atomics-preserve-most'; flag ignored [-Woption-ignored]
+// CHECK-PRESERVE-MOST-X86-NOT: "-target-feature" "+outline-atomics-preserve-most"
+
+// RUN: %clang -target x86_64 -mno-outline-atomics-preserve-most -S %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-NO-PRESERVE-MOST-X86
+// CHECK-NO-PRESERVE-MOST-X86: warning: 'x86_64' does not support '-mno-outline-atomics-preserve-most'; flag ignored [-Woption-ignored]
+// CHECK-NO-PRESERVE-MOST-X86-NOT: "-target-feature" "-outline-atomics-preserve-most"
