@@ -584,8 +584,7 @@ define i8 @test_extract_vector_8_elem1(<4 x i8> %a) {
 define <2 x i16> @test_insert_vector_16(<2 x i16> %a, i16 %val) {
 ; RV32-LABEL: test_insert_vector_16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    pack a0, a1, a0
+; RV32-NEXT:    ppaireo.h a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_insert_vector_16:

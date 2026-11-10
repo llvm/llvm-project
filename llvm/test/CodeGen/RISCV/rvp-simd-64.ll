@@ -1195,8 +1195,7 @@ define i32 @test_extract_vector_32_elem1(<2 x i32> %a) {
 define <4 x i16> @test_insert_vector_16(<4 x i16> %a, i16 %val) {
 ; RV32-LABEL: test_insert_vector_16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    ppaireo.h a0, a2, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_insert_vector_16:
@@ -1212,8 +1211,7 @@ define <4 x i16> @test_insert_vector_16(<4 x i16> %a, i16 %val) {
 define <4 x i16> @test_insert_vector_16_elem2(<4 x i16> %a, i16 %val) {
 ; RV32-LABEL: test_insert_vector_16_elem2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    pack a1, a2, a1
+; RV32-NEXT:    ppaireo.h a1, a2, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_insert_vector_16_elem2:

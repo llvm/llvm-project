@@ -11707,23 +11707,17 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Lo, NewHi);
     }
 
-    Vec = DAG.getBitcast(XLenVT, Vec);
     SDValue ExtVal = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Val);
 
-    // For 2-element vectors, BUILD_VECTOR is more efficient since it only needs
-    // at most 2 instructions.
+    // A 2-element vector is a single PPAIR of the old vector and the new
+    // element.
     if (NumElts == 2) {
-      unsigned EltBits = EltVT.getSizeInBits();
-      SDValue Elt0, Elt1;
-      if (IdxVal == 0) {
-        Elt0 = ExtVal;
-        Elt1 = DAG.getNode(ISD::SRL, DL, XLenVT, Vec,
-                           DAG.getConstant(EltBits, DL, XLenVT));
-      } else {
-        Elt0 = Vec;
-        Elt1 = ExtVal;
-      }
-      return DAG.getNode(ISD::BUILD_VECTOR, DL, VecVT, Elt0, Elt1);
+      SDValue NewElt = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, ExtVal);
+      // Index 0: take element 0 from NewElt and element 1 from Vec.
+      if (IdxVal == 0)
+        return DAG.getNode(RISCVISD::PPAIREO, DL, VecVT, NewElt, Vec);
+      // Index 1: take element 0 from Vec and element 0 of NewElt.
+      return DAG.getNode(RISCVISD::PPAIRE, DL, VecVT, Vec, NewElt);
     }
 
     // For 4/8-element vectors, use MVM(or MERGE) instruction which does bitwise
@@ -11737,6 +11731,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, XLenVT, ExtVal,
                                        DAG.getConstant(ShiftAmt, DL, XLenVT));
       SDValue Mask = DAG.getConstant(PosMask, DL, XLenVT);
+      Vec = DAG.getBitcast(XLenVT, Vec);
       SDValue Result =
           DAG.getNode(RISCVISD::MERGE, DL, XLenVT, Mask, Vec, ShiftedVal);
       return DAG.getBitcast(VecVT, Result);
