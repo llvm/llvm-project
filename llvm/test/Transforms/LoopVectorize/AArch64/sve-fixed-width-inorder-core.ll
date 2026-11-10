@@ -3,7 +3,7 @@
 ; RUN: opt < %s -mtriple=aarch64-none-elf -mcpu=cortex-a520 -mattr=+sve -passes=loop-vectorize -S | FileCheck %s --check-prefix=CHECK-CA520
 ; RUN: opt < %s -mtriple=aarch64-none-elf -mcpu=cortex-a320 -mattr=+sve -passes=loop-vectorize -S | FileCheck %s --check-prefix=CHECK-CA320
 
-define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
+define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) vscale_range(1,16) {
 ; CHECK-CA510-LABEL: define void @sve_add(
 ; CHECK-CA510-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA510-NEXT:  [[ENTRY:.*:]]
