@@ -61,6 +61,7 @@ template <class IRBuilderTy> class FixedPointBuilder {
       }
 
       unsigned Shift = SrcScale - DstScale;
+      assert(Shift <= ResultWidth && "Shift cannot exceed result width");
       if (Shift < ResultWidth) {
         Result = SrcIsSigned ? B.CreateAShr(Result, Shift, "downscale")
                              : B.CreateLShr(Result, Shift, "downscale");
