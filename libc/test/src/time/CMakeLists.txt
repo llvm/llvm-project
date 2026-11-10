@@ -1,5 +1,10 @@
 add_libc_testsuite(libc-time-tests)
 
+# Allow designated and aggregate initialisers of struct tm to omit fields
+# (such as platform extension fields tm_gmtoff and tm_zone) and rely on
+# standard zero-initialisation without compiler warnings.
+set(time_test_copts "-Wno-missing-field-initializers")
+
 add_header_library(
   time_test_utils
   HDRS
@@ -20,6 +25,8 @@ add_libc_test(
     asctime_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.hdr.errno_macros
@@ -37,6 +44,8 @@ add_libc_test(
     asctime_r_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.hdr.errno_macros
@@ -54,6 +63,8 @@ add_libc_test(
     ctime_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.include.time
@@ -72,6 +83,8 @@ add_libc_test(
     ctime_r_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.include.time
@@ -205,6 +218,8 @@ add_libc_test(
     libc-time-tests
   SRCS
     gmtime_test.cpp
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.hdr.errno_macros
@@ -222,6 +237,8 @@ add_libc_test(
     libc-time-tests
   SRCS
     gmtime_r_test.cpp
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.src.time.gmtime_r
@@ -238,12 +255,30 @@ add_libc_test(
     mktime_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
     .time_test_utils
     libc.src.time.mktime
     libc.src.__support.CPP.limits
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
+)
+
+add_libc_test(
+  clock_nanosleep_test
+  SUITE
+    libc-time-tests
+  SRCS
+    clock_nanosleep_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.time.clock_nanosleep
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.Test
 )
 
 add_libc_test(

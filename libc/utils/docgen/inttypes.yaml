@@ -1,20 +1,27 @@
+c-reference-root: types/integer
 functions:
   imaxabs:
     c-definition: 7.8.2.1
+    c-reference: numeric/math/abs
     in-latest-posix: ''
   imaxdiv:
     c-definition: 7.8.2.2
+    c-reference: numeric/math/div
     in-latest-posix: ''
   strtoimax:
     c-definition: 7.8.2.3
+    c-reference: string/byte/strtoimax
     in-latest-posix: ''
   strtoumax:
     c-definition: 7.8.2.3
+    c-reference: string/byte/strtoimax
     in-latest-posix: ''
   wcstoimax:
     c-definition: 7.8.2.4
+    c-reference: string/wide/wcstoimax
     in-latest-posix: ''
   wcstoumax:
     c-definition: 7.8.2.4
+    c-reference: string/wide/wcstoimax
     in-latest-posix: ''
 

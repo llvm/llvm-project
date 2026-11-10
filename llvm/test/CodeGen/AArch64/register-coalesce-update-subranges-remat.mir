@@ -27,11 +27,11 @@ body:             |
     ; CHECK-NEXT: dead [[ADDXri1]]:gpr64common, dead early-clobber [[MOVi32imm1]]:gpr64 = MOPSMemorySetPseudo [[ADDXri1]], [[MOVi32imm1]], [[MOVi32imm]], implicit-def dead $nzcv
     ; CHECK-NEXT: RET_ReallyLR
     %1:gpr64sp = ADDXri %stack.0, 0, 0
-    %2:gpr64common = nuw ADDXri killed %1, 64, 0
+    %2:gpr64common = nuw ADDXri %1, 64, 0
     %3:gpr32 = MOVi32imm 64
-    %4:gpr64 = SUBREG_TO_REG killed %3, %subreg.sub_32
+    %4:gpr64 = SUBREG_TO_REG %3, %subreg.sub_32
     %6:gpr64 = COPY %4
-    %5:gpr64common = COPY killed %2
+    %5:gpr64common = COPY %2
     dead %5:gpr64common, dead early-clobber %6:gpr64 = MOPSMemorySetPseudo %5, %6, %4, implicit-def dead $nzcv
     RET_ReallyLR
 
@@ -61,7 +61,7 @@ body:             |
 
   bb.3:
     $nzcv = IMPLICIT_DEF
-    %4:gpr64 = COPY killed %3
+    %4:gpr64 = COPY %3
     Bcc 1, %bb.7, implicit killed $nzcv
 
   bb.4:
@@ -70,15 +70,15 @@ body:             |
 
   bb.5:
     %5:gpr64all = SUBREG_TO_REG %0, %subreg.sub_32
-    %4:gpr64 = COPY killed %5
+    %4:gpr64 = COPY %5
     B %bb.7
 
   bb.6:
     %4:gpr64 = COPY $xzr
 
   bb.7:
-    %7:gpr64 = ADDXrs killed %1, killed %4, 1
-    %1:gpr64 = COPY killed %7
+    %7:gpr64 = ADDXrs %1, %4, 1
+    %1:gpr64 = COPY %7
     B %bb.1
 
 ...
@@ -107,7 +107,7 @@ body:             |
 
   bb.3:
     $nzcv = IMPLICIT_DEF
-    %4:gpr64 = COPY killed %3
+    %4:gpr64 = COPY %3
     Bcc 1, %bb.7, implicit killed $nzcv
 
   bb.4:
@@ -122,8 +122,8 @@ body:             |
     %4:gpr64 = COPY $xzr
 
   bb.7:
-    %5:gpr64 = ADDXrs killed %1, killed %4, 1
-    %1:gpr64 = COPY killed %5
+    %5:gpr64 = ADDXrs %1, %4, 1
+    %1:gpr64 = COPY %5
     B %bb.1
 
 ...

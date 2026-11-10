@@ -473,6 +473,7 @@ cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *rd) {
   cir::GlobalOp vtt = cgm.createOrReplaceCXXRuntimeVariable(
       cgm.getLoc(rd->getSourceRange()), name, arrayType,
       cir::GlobalLinkageKind::ExternalLinkage, CharUnits::fromQuantity(align));
+  vtt.setUnnamedAddr(true);
   cgm.setGVProperties(vtt, rd);
   return vtt;
 }

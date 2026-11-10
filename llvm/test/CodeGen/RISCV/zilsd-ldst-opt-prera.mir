@@ -269,7 +269,6 @@
 # Basic case: two consecutive 32-bit loads that can be combined into LD
 name: basic_load_combine
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -303,7 +302,6 @@ body: |
 # Basic case: two consecutive 32-bit stores that can be combined into SD
 name: basic_store_combine
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -342,7 +340,6 @@ body: |
 # Basic case: two consecutive 32-bit store 0 that can be combined into SD
 name: basic_store_zero_combine
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -377,7 +374,6 @@ body: |
 # Basic case: two consecutive 32-bit store 0 that cannot be combined into SD
 name: basic_store_zero_no_combine
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -411,7 +407,6 @@ body: |
 ---
 name: basic_load_combine_8_byte_aligned
 alignment: 8
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -444,7 +439,6 @@ body: |
 # Basic case: two consecutive 32-bit stores that can be combined into SD
 name: basic_store_combine_8_byte_aligned
 alignment: 8
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -482,7 +476,6 @@ body: |
 # Non-consecutive offsets - should not combine
 name: non_consecutive_offsets
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -518,7 +511,6 @@ body: |
 # Different base registers - should not combine
 name: different_base_regs
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -558,7 +550,6 @@ body: |
 # Call instruction blocks optimization
 name: call_blocks_optimization
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -597,7 +588,6 @@ body: |
 # Terminator instruction blocks optimization
 name: terminator_blocks_optimization
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -650,7 +640,6 @@ body: |
 # Memory aliasing - store between loads with unknown base should prevent combining
 name: memory_aliasing
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -696,7 +685,6 @@ body: |
 # Multiple pairs in same function
 name: multiple_pairs
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -748,7 +736,6 @@ body: |
 # Many loads test
 name: many_loads
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -854,7 +841,6 @@ body: |
 # Test reverse order - second load has lower offset than first
 name: reverse_order_loads
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -890,7 +876,6 @@ body: |
 # Test with immediate offset calculation
 name: offset_calculation
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -925,7 +910,6 @@ body: |
 # Test large offset values
 name: large_offsets
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -960,7 +944,6 @@ body: |
 # Test with negative offsets
 name: negative_offsets
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -995,7 +978,6 @@ body: |
 # Test with volatile loads - should not combine
 name: volatile_loads
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -1031,7 +1013,6 @@ body: |
 # Test store dependency - store modifies same location as load
 name: store_dependency
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -1076,7 +1057,6 @@ body: |
 # align 4: first two should combine
 name: three_loads
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -1116,7 +1096,6 @@ body: |
 # Test where distance between loads exceeds MaxRescheduleDistance
 name: distance_exceeds_max
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -1184,7 +1163,6 @@ body: |
 # Test combining loads with symbolic operands (global address)
 name: symbolic_operands_global
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 body: |
@@ -1219,7 +1197,6 @@ body: |
 # Test that loads with different global symbols are not combined
 name: symbolic_operands_different_globals
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 stack:
@@ -1257,7 +1234,6 @@ body: |
 # Test combining loads with constant pool operands
 name: symbolic_operands_constantpool
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
 constants:
@@ -1295,7 +1271,6 @@ body: |
 ---
 name: symbolic_operands_interleave
 alignment: 4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -1340,7 +1315,6 @@ body: |
 ---
 name: frame_index
 alignment: 4
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: 0, size: 8, alignment: 4 }
 liveins:
@@ -1375,7 +1349,6 @@ body: |
 ---
 name: frame_index_operands_interleave
 alignment: 4
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: 0, size: 8, alignment: 4 }
 liveins:

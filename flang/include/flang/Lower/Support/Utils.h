@@ -62,10 +62,11 @@ static Fortran::lower::SomeExpr toEvExpr(const A &x) {
 }
 
 template <Fortran::common::TypeCategory FROM>
-static Fortran::lower::SomeExpr ignoreEvConvert(
-    const Fortran::evaluate::Convert<
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>,
-        FROM> &x) {
+static Fortran::lower::SomeExpr
+ignoreEvConvert(const Fortran::evaluate::Convert<
+                Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>,
+                FROM> &x) {
+  CHECK(x.kind() == 8);
   return toEvExpr(x.left());
 }
 template <typename A>
@@ -76,9 +77,10 @@ static Fortran::lower::SomeExpr ignoreEvConvert(const A &x) {
 /// A vector subscript expression may be wrapped with a cast to INTEGER*8.
 /// Get rid of it here so the vector can be loaded. Add it back when
 /// generating the elemental evaluation (inside the loop nest).
-inline Fortran::lower::SomeExpr
-ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
-                    Fortran::common::TypeCategory::Integer, 8>> &x) {
+inline Fortran::lower::SomeExpr ignoreEvConvert(
+    const Fortran::evaluate::Expr<
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>> &x) {
+  CHECK(x.kind() == 8);
   return Fortran::common::visit(
       [](const auto &v) { return ignoreEvConvert(v); }, x.u);
 }

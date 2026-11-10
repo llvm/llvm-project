@@ -106,6 +106,18 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   )
 endforeach()
 
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_entrypoint_object(
+    muli${suffix}
+    HDRS
+      muli${suffix}.h
+    SRCS
+      muli${suffix}.cpp
+    DEPENDS
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
 add_entrypoint_object(
   uhksqrtus
   HDRS

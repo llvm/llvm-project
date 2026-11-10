@@ -1146,6 +1146,7 @@ def bundle__loader : Separate<["-"], "bundle_loader">;
 def bundle : Flag<["-"], "bundle">;
 def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   HelpText<"Pass -b <arg> to the linker on AIX">, MetaVarName<"<arg>">,
+  Visibility<[ClangOption, FlangOption]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
@@ -3786,6 +3787,13 @@ def fexperimental_abi_lowering : Flag<["-"], "fexperimental-abi-lowering">,
   Group<f_Group>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"ExperimentalABILowering">>;
 
+defm module_local_hints : BoolFOption<"module-local-hints",
+  CodeGenOpts<"ModuleLocalHints">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Mark inline functions and template instantiations defined in the "
+          "main source file as likely_module_local">,
+  NegFlag<SetFalse>>;
+
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Embed the contents of all files read by this compilation into "
@@ -4516,9 +4524,9 @@ def fno_direct_access_external_data : Flag<["-"], "fno-direct-access-external-da
   HelpText<"Use GOT indirection to reference external data symbols">;
 defm plt : BoolFOption<"plt",
   CodeGenOpts<"NoPLT">, DefaultFalse,
-  NegFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Use GOT indirection instead of PLT to make external function calls (x86 only)">,
-  PosFlag<SetFalse>>;
+  NegFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
+          "Use GOT indirection instead of PLT to make external function calls (x86 and AArch64 only)">,
+  PosFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm ropi : BoolFOption<"ropi",
   LangOpts<"ROPI">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, FlangOption, CC1Option],
@@ -5345,6 +5353,12 @@ defm codeview_command_line : BoolOption<"g", "codeview-command-line",
   NegFlag<SetFalse, [], [ClangOption], "Don't emit compiler path and command line into CodeView debug information">,
   BothFlags<[], [ClangOption, CLOption, DXCOption, CC1Option]>>,
   Group<g_flags_Group>;
+defm codeview_cwd : BoolOption<"g", "codeview-cwd",
+  CodeGenOpts<"CodeViewEmitCurrentWorkdir">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Emit current working directory into CodeView debug information">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't emit current working directory into CodeView debug information">,
+  BothFlags<[], [ClangOption, CLOption, DXCOption, CC1Option]>>,
+  Group<g_flags_Group>;
 defm inline_line_tables : BoolGOption<"inline-line-tables",
   CodeGenOpts<"NoInlineLineTables">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5417,11 +5431,13 @@ def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
                                 Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CC1Option]>;
-def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def gno_gnu_pubnames : Flag<["-"], "gno-gnu-pubnames">, Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def gpubnames : Flag<["-"], "gpubnames">, Group<g_flags_Group>,
-  Visibility<[ClangOption, CC1Option]>;
-def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def gno_pubnames : Flag<["-"], "gno-pubnames">, Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
 def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"
@@ -6056,6 +6072,8 @@ def mharden_sls_EQ : Joined<["-"], "mharden-sls=">, Group<m_Group>,
            " blr(ARM/AArch64), comdat(ARM/AArch64), nocomdat(ARM/AArch64),"
            " return(X86), indirect-jmp(X86)">;
 
+def macquire_release_atomics : Flag<["-"], "macquire-release-atomics">, Group<m_wasm_Features_Group>;
+def mno_acquire_release_atomics : Flag<["-"], "mno-acquire-release-atomics">, Group<m_wasm_Features_Group>;
 def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
 def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
@@ -6084,8 +6102,6 @@ def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Fea
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
 def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
-def mrelaxed_atomics : Flag<["-"], "mrelaxed-atomics">, Group<m_wasm_Features_Group>;
-def mno_relaxed_atomics : Flag<["-"], "mno-relaxed-atomics">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
@@ -7287,6 +7303,10 @@ def mv79 : Flag<["-"], "mv79">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv79"]>;
 def mv81 : Flag<["-"], "mv81">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv81"]>;
+def mv83 : Flag<["-"], "mv83">, Group<m_hexagon_Features_Group>,
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv83"]>;
+def mv85 : Flag<["-"], "mv85">, Group<m_hexagon_Features_Group>,
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv85"]>;
 def mhexagon_hvx : Flag<["-"], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon Vector eXtensions">;
 def mhexagon_hvx_EQ : Joined<["-"], "mhvx=">,
@@ -7353,6 +7373,12 @@ def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   HelpText<"Disable generation of new-value stores">;
 def mcabac: Flag<["-"], "mcabac">, Group<m_hexagon_Features_Group>,
   HelpText<"Enable CABAC instructions">;
+def mhexagon_hlx : Flag<["-"], "mhlx">, Group<m_hexagon_Features_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable Hexagon eLementwise eXtensions">;
+def mno_hexagon_hlx : Flag<["-"], "mno-hlx">, Group<m_hexagon_Features_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable Hexagon eLementwise eXtensions">;
 
 // SPARC feature flags
 let Flags = [TargetSpecific] in {
@@ -8132,6 +8158,16 @@ let Visibility = [CC1Option, CC1AsOption] in {
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
+def debug_info_macro_expansion_loc
+    : Flag<["-"], "debug-info-macro-expansion-loc">,
+      HelpText<"Use expansion location for debug info for multi line macros">,
+      MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
+def debug_info_macro_max_depth_EQ
+    : Joined<["-"], "debug-info-macro-max-depth=">,
+      MetaVarName<"<N>">,
+      HelpText<"Use expansion location for debug info for macro arguments "
+               "nested deeper than <N> macro expansions (default 64)">,
+      MarshallingInfoInt<CodeGenOpts<"DebugInfoMacroMaxDepth">, "64">;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;

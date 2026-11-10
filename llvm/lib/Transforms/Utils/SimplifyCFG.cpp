@@ -255,7 +255,7 @@ using SwitchCaseResultVectorTy =
 // switch for that PHI.
 using SwitchCaseResultsTy = SmallVector<std::pair<PHINode *, Constant *>, 4>;
 
-/// ValueEqualityComparisonCase - Represents a case of a switch.
+/// Represents a case of a switch.
 struct ValueEqualityComparisonCase {
   ConstantInt *Value;
   BasicBlock *Dest;
@@ -866,16 +866,12 @@ static void eraseTerminatorAndDCECond(Instruction *TI,
     RecursivelyDeleteTriviallyDeadInstructions(Cond, nullptr, MSSAU);
 }
 
-/// Return true if the specified terminator checks
-/// to see if a value is equal to constant integer value.
+/// If the terminator is an integer value check, return the value being checked.
 Value *SimplifyCFGOpt::isValueEqualityComparison(Instruction *TI) {
   Value *CV = nullptr;
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-    // Do not permit merging of large switch instructions into their
-    // predecessors unless there is only one predecessor.
-    if (!SI->getParent()->hasNPredecessorsOrMore(128 / SI->getNumSuccessors()))
-      CV = SI->getCondition();
-  } else if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
+    CV = SI->getCondition();
+  else if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
     if (BI->getCondition()->hasOneUse()) {
       if (ICmpInst *ICI = dyn_cast<ICmpInst>(BI->getCondition())) {
         if (ICI->isEquality() && getConstantInt(ICI->getOperand(1), DL))
@@ -970,11 +966,13 @@ static bool valuesOverlap(std::vector<ValueEqualityComparisonCase> &C1,
   return false;
 }
 
-/// If TI is known to be a terminator instruction and its block is known to
-/// only have a single predecessor block, check to see if that predecessor is
-/// also a value comparison with the same value, and if that comparison
-/// determines the outcome of this comparison. If so, simplify TI. This does a
-/// very limited form of jump threading.
+/// If TI is a terminator instruction and its block has a single predecessor,
+/// and that predecessor also compares the same value as TI, simplify the TI or
+/// its block based on the conditions that jump to TI's block:
+/// - Prune branches of TI based on the values handled in the predecessor.
+/// - If the predecessor jumps to TI's block on one value, or if TI is a
+///   conditional branch whose only case is ruled out by the predecessor,
+///   replace it with a jump to its only possible destination.
 bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
     Instruction *TI, BasicBlock *Pred, IRBuilder<> &Builder) {
   Value *PredVal = isValueEqualityComparison(Pred->getTerminator());
@@ -993,16 +991,20 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
   std::vector<ValueEqualityComparisonCase> PredCases;
   BasicBlock *PredDef =
       getValueEqualityComparisonCases(Pred->getTerminator(), PredCases);
-  eliminateBlockCases(PredDef, PredCases); // Remove default from cases.
+  // Remove cases that branch to the default target.
+  eliminateBlockCases(PredDef, PredCases);
 
   // Find information about how control leaves this block.
   std::vector<ValueEqualityComparisonCase> ThisCases;
   BasicBlock *ThisDef = getValueEqualityComparisonCases(TI, ThisCases);
-  eliminateBlockCases(ThisDef, ThisCases); // Remove default from cases.
+  // Remove cases that branch to the default target.
+  eliminateBlockCases(ThisDef, ThisCases);
 
-  // If TI's block is the default block from Pred's comparison, potentially
-  // simplify TI based on this knowledge.
-  if (PredDef == TI->getParent()) {
+  BasicBlock *TIBB = TI->getParent();
+
+  // If TI's block is the default block from Pred's comparison, prune branches
+  // of TI based on the values handled in the Pred's comparison.
+  if (PredDef == TIBB) {
     // If we are here, we know that the value is none of those cases listed in
     // PredCases.  If there are any cases in ThisCases that are in PredCases, we
     // can simplify TI.
@@ -1010,15 +1012,16 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
       return false;
 
     if (isa<CondBrInst>(TI)) {
-      // Okay, one of the successors of this condbr is dead.  Convert it to a
-      // uncond br.
+      // TI checks for one value, which is already checked in the predecessor.
+      // So we know which branch will be taken, convert it to an unconditional
+      // br.
       assert(ThisCases.size() == 1 && "Branch can only have one case!");
       // Insert the new branch.
       Instruction *NI = Builder.CreateBr(ThisDef);
       (void)NI;
 
       // Remove PHI node entries for the dead edge.
-      ThisCases[0].Dest->removePredecessor(PredDef);
+      ThisCases[0].Dest->removePredecessor(TIBB);
 
       LLVM_DEBUG(dbgs() << "Threading pred instr: " << *Pred->getTerminator()
                         << "Through successor TI: " << *TI << "Leaving: " << *NI
@@ -1027,8 +1030,7 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
       eraseTerminatorAndDCECond(TI);
 
       if (DTU)
-        DTU->applyUpdates(
-            {{DominatorTree::Delete, PredDef, ThisCases[0].Dest}});
+        DTU->applyUpdates({{DominatorTree::Delete, TIBB, ThisCases[0].Dest}});
 
       return true;
     }
@@ -1071,7 +1073,6 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
   // Otherwise, TI's block must correspond to some matched value.  Find out
   // which value (or set of values) this is.
   ConstantInt *TIV = nullptr;
-  BasicBlock *TIBB = TI->getParent();
   for (const auto &[Value, Dest] : PredCases)
     if (Dest == TIBB) {
       if (TIV)
@@ -1080,8 +1081,7 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
     }
   assert(TIV && "No edge from pred to succ?");
 
-  // Okay, we found the one constant that our value can be if we get into TI's
-  // BB.  Find out which successor will unconditionally be branched to.
+  // Find out which successor will unconditionally be branched to.
   BasicBlock *TheRealDest = nullptr;
   for (const auto &[Value, Dest] : ThisCases)
     if (Value == TIV) {
@@ -1484,6 +1484,12 @@ bool SimplifyCFGOpt::foldValueComparisonIntoPredecessors(Instruction *TI,
   BasicBlock *BB = TI->getParent();
   Value *CV = isValueEqualityComparison(TI); // CondVal
   assert(CV && "Not a comparison?");
+
+  // Limit `incoming_edges * outgoing_edges < 128` to avoid code size explosion
+  // when we duplicate branches in multiple predecessors.
+  if (!BB->getSinglePredecessor() &&
+      BB->hasNPredecessorsOrMore(128 / TI->getNumSuccessors()))
+    return false;
 
   bool Changed = false;
 
@@ -8673,8 +8679,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   BasicBlock *BB = SI->getParent();
 
   if (isValueEqualityComparison(SI)) {
-    // If we only have one predecessor, and if it is a branch on this value,
-    // see if that predecessor totally determines the outcome of this switch.
+    // If we only have one predecessor, and the predecessor branches on the
+    // same value as this switch, try to simplify the switch based on the
+    // conditions under which the predecessor jumps to this block.
     if (BasicBlock *OnlyPred = BB->getSinglePredecessor())
       if (simplifyEqualityComparisonWithOnlyPredecessor(SI, OnlyPred, Builder))
         return requestResimplify();
@@ -9055,9 +9062,9 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
 
   // Conditional branch
   if (isValueEqualityComparison(BI)) {
-    // If we only have one predecessor, and if it is a branch on this value,
-    // see if that predecessor totally determines the outcome of this
-    // switch.
+    // If we only have one predecessor, and the predecessor branches on the
+    // same value as this branch, try to simplify the branch based on the
+    // conditions under which the predecessor jumps to this block.
     if (BasicBlock *OnlyPred = BB->getSinglePredecessor())
       if (simplifyEqualityComparisonWithOnlyPredecessor(BI, OnlyPred, Builder))
         return requestResimplify();

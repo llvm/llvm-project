@@ -14,18 +14,9 @@
 namespace llvm {
 
 class LiveDebugValuesPass : public RequiredPassInfoMixin<LiveDebugValuesPass> {
-  const bool ShouldEmitDebugEntryValues;
-
 public:
-  LiveDebugValuesPass(bool ShouldEmitDebugEntryValues)
-      : ShouldEmitDebugEntryValues(ShouldEmitDebugEntryValues) {}
-
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-
-  LLVM_ABI void
-  printPipeline(raw_ostream &OS,
-                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // namespace llvm

@@ -29,7 +29,7 @@ body:             |
     %6:gr64bit = INSERT_SUBREG %7, %5, %subreg.subreg_l32
     ADJCALLSTACKDOWN 0, 0
     %16:gr64bit = LLILL 0
-    %8:gr128bit = REG_SEQUENCE %16, %subreg.subreg_h64, killed %6, %subreg.subreg_l64
+    %8:gr128bit = REG_SEQUENCE %16, %subreg.subreg_h64, %6, %subreg.subreg_l64
     %10:addr64bit = IMPLICIT_DEF
     %9:gr128bit = DL %8, %10, 0, $noreg :: (load (s32) from `ptr undef` + 4)
     %11:gr32bit = COPY %9.subreg_l32

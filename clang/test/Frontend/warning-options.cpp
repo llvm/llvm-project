@@ -13,3 +13,12 @@
 // diagnostics in this limited mode without SourceManager, etc.
 // At the moment all we can do is to ensure we don't crash with and without
 // assertions.
+
+// RUN: %clang_cc1 -Werror=monkey -Wno-error=monkey -Wfatal-errors=monkey \
+// RUN:        -Wno-fatal-errors=monkey -Wno-error=unused-command-line-arguments \
+// RUN:        %s 2>&1 | FileCheck --check-prefix=SPECIFIER %s
+// SPECIFIER: unknown warning option '-Werror=monkey'
+// SPECIFIER-NEXT: unknown warning option '-Wno-error=monkey'
+// SPECIFIER-NEXT: unknown warning option '-Wfatal-errors=monkey'
+// SPECIFIER-NEXT: unknown warning option '-Wno-fatal-errors=monkey'
+// SPECIFIER-NEXT: unknown warning option '-Wno-error=unused-command-line-arguments'; did you mean '-Wno-error=unused-command-line-argument'?

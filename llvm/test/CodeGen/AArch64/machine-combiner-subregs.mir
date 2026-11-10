@@ -27,8 +27,8 @@ body:             |
     %2:fpr128 = COPY $q2
     %3:fpr128 = COPY $q3
     %4:fpr32 = nsz reassoc nofpexcept FADDSrr %0.ssub, %1.ssub, implicit $fpcr
-    %5:fpr32 = nsz reassoc nofpexcept FADDSrr %2.ssub, killed %4, implicit $fpcr
-    %6:fpr32 = nsz reassoc nofpexcept FADDSrr killed %5, %3.ssub, implicit $fpcr
+    %5:fpr32 = nsz reassoc nofpexcept FADDSrr %2.ssub, %4, implicit $fpcr
+    %6:fpr32 = nsz reassoc nofpexcept FADDSrr %5, %3.ssub, implicit $fpcr
     $s0 = COPY %6
     RET_ReallyLR implicit $s0
 

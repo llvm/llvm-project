@@ -627,6 +627,15 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
 
+  int64_t AbsValue;
+  const auto *Sec = static_cast<const MCSectionGOFF *>(getCurrentSectionOnly());
+  if (!Value->evaluateAsAbsolute(AbsValue, getAssemblerPtr()) && Size != 8 &&
+      Sec->getParent() && Sec->getParent()->getName() == GOFF::CLASS_WSA) {
+    getContext().reportError(Loc, "address constant in C_WSA64 must be 8 bytes "
+                                  "(z/OS binder restriction IEW2572E)");
+    return;
+  }
+
   MCStreamer::emitValueImpl(Value, Size, Loc);
   OS << " DC ";
   emitHLASMValueImpl(Value, Size, true);

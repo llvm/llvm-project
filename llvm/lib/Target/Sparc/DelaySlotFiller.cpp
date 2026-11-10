@@ -477,7 +477,8 @@ static bool runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     // to cover all floating point operations.
     if (!Subtarget->isV9() &&
         (MI->getOpcode() == SP::FCMPS || MI->getOpcode() == SP::FCMPD ||
-         MI->getOpcode() == SP::FCMPQ)) {
+         MI->getOpcode() == SP::FCMPQ || MI->getOpcode() == SP::FCMPES ||
+         MI->getOpcode() == SP::FCMPED || MI->getOpcode() == SP::FCMPEQ)) {
       BuildMI(MBB, I, MI->getDebugLoc(), TII->get(SP::NOP));
       Changed = true;
       continue;

@@ -84,38 +84,38 @@ body:             |
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[UADDLVv4i32v:%[0-9]+]]:fpr64 = UADDLVv4i32v [[MOVIv2d_ns]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[UADDLVv4i32v]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[UADDLVv4i32v]], %subreg.dsub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY [[INSERT_SUBREG]].dsub
     ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[MOVIv2d_ns]], 0, [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[MOVID]], %subreg.dsub
-    ; CHECK-NEXT: [[UCVTFv2f64_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv2f64 killed [[INSvi64lane]], implicit $fpcr
-    ; CHECK-NEXT: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv2i32 killed [[UCVTFv2f64_]], implicit $fpcr
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVID]], %subreg.dsub
+    ; CHECK-NEXT: [[UCVTFv2f64_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv2f64 [[INSvi64lane]], implicit $fpcr
+    ; CHECK-NEXT: [[FCVTNv2i32_:%[0-9]+]]:fpr64 = nofpexcept FCVTNv2i32 [[UCVTFv2f64_]], implicit $fpcr
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], killed [[FCVTNv2i32_]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[FCVTNv2i32_]], %subreg.dsub
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
-    ; CHECK-NEXT: STRDui killed [[COPY2]], [[COPY]], 2 :: (store (s64) into %ir.0 + 16)
+    ; CHECK-NEXT: STRDui [[COPY2]], [[COPY]], 2 :: (store (s64) into %ir.0 + 16)
     ; CHECK-NEXT: STRQui [[INSERT_SUBREG2]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:fpr128 = MOVIv2d_ns 0
     %2:fpr64 = UADDLVv4i32v %1
     %4:fpr128 = IMPLICIT_DEF
-    %3:fpr128 = INSERT_SUBREG %4, killed %2, %subreg.dsub
+    %3:fpr128 = INSERT_SUBREG %4, %2, %subreg.dsub
     %5:gpr64 = COPY %3.dsub
-    %7:fpr128 = INSvi64gpr %1, 0, killed %5
+    %7:fpr128 = INSvi64gpr %1, 0, %5
     %8:fpr64 = MOVID 0
     %10:fpr128 = IMPLICIT_DEF
-    %9:fpr128 = INSERT_SUBREG %10, killed %8, %subreg.dsub
-    %11:fpr128 = nofpexcept UCVTFv2f64 killed %7, implicit $fpcr
-    %12:fpr64 = nofpexcept FCVTNv2i32 killed %11, implicit $fpcr
+    %9:fpr128 = INSERT_SUBREG %10, %8, %subreg.dsub
+    %11:fpr128 = nofpexcept UCVTFv2f64 %7, implicit $fpcr
+    %12:fpr64 = nofpexcept FCVTNv2i32 %11, implicit $fpcr
     %14:fpr128 = IMPLICIT_DEF
-    %13:fpr128 = INSERT_SUBREG %14, killed %12, %subreg.dsub
-    %15:fpr128 = INSvi64lane %13, 1, killed %9, 0
+    %13:fpr128 = INSERT_SUBREG %14, %12, %subreg.dsub
+    %15:fpr128 = INSvi64lane %13, 1, %9, 0
     %17:fpr64 = COPY %1.dsub
-    STRDui killed %17, %0, 2 :: (store (s64) into %ir.0 + 16)
-    STRQui killed %15, %0, 0 :: (store (s128) into %ir.0, align 8)
+    STRDui %17, %0, 2 :: (store (s64) into %ir.0 + 16)
+    STRQui %15, %0, 0 :: (store (s128) into %ir.0, align 8)
     RET_ReallyLR
 
 ...
@@ -145,31 +145,31 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-    ; CHECK-NEXT: [[UADDLVv8i16v:%[0-9]+]]:fpr32 = UADDLVv8i16v killed [[MOVIv2d_ns]]
+    ; CHECK-NEXT: [[UADDLVv8i16v:%[0-9]+]]:fpr32 = UADDLVv8i16v [[MOVIv2d_ns]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[UADDLVv8i16v]], %subreg.ssub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[UADDLVv8i16v]], %subreg.ssub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].ssub
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[MOVID]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVID]], %subreg.dsub
     ; CHECK-NEXT: [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[INSERT_SUBREG1]], 0, [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi32lane]].dsub
-    ; CHECK-NEXT: [[UCVTFv2f32_:%[0-9]+]]:fpr64 = nofpexcept UCVTFv2f32 killed [[COPY2]], implicit $fpcr
-    ; CHECK-NEXT: STRDui killed [[UCVTFv2f32_]], [[COPY]], 0 :: (store (s64) into %ir.0)
+    ; CHECK-NEXT: [[UCVTFv2f32_:%[0-9]+]]:fpr64 = nofpexcept UCVTFv2f32 [[COPY2]], implicit $fpcr
+    ; CHECK-NEXT: STRDui [[UCVTFv2f32_]], [[COPY]], 0 :: (store (s64) into %ir.0)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:fpr128 = MOVIv2d_ns 0
-    %2:fpr32 = UADDLVv8i16v killed %1
+    %2:fpr32 = UADDLVv8i16v %1
     %4:fpr128 = IMPLICIT_DEF
-    %3:fpr128 = INSERT_SUBREG %4, killed %2, %subreg.ssub
+    %3:fpr128 = INSERT_SUBREG %4, %2, %subreg.ssub
     %5:gpr32 = COPY %3.ssub
     %6:fpr64 = MOVID 0
     %8:fpr128 = IMPLICIT_DEF
-    %7:fpr128 = INSERT_SUBREG %8, killed %6, %subreg.dsub
-    %9:fpr128 = INSvi32gpr %7, 0, killed %5
+    %7:fpr128 = INSERT_SUBREG %8, %6, %subreg.dsub
+    %9:fpr128 = INSvi32gpr %7, 0, %5
     %10:fpr64 = COPY %9.dsub
-    %11:fpr64 = nofpexcept UCVTFv2f32 killed %10, implicit $fpcr
-    STRDui killed %11, %0, 0 :: (store (s64) into %ir.0)
+    %11:fpr64 = nofpexcept UCVTFv2f32 %10, implicit $fpcr
+    STRDui %11, %0, 0 :: (store (s64) into %ir.0)
     RET_ReallyLR
 
 ...
@@ -201,43 +201,43 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-    ; CHECK-NEXT: [[UADDLVv8i16v:%[0-9]+]]:fpr32 = UADDLVv8i16v killed [[MOVIv2d_ns]]
+    ; CHECK-NEXT: [[UADDLVv8i16v:%[0-9]+]]:fpr32 = UADDLVv8i16v [[MOVIv2d_ns]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[UADDLVv8i16v]], %subreg.ssub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[UADDLVv8i16v]], %subreg.ssub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].ssub
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[MOVID]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVID]], %subreg.dsub
     ; CHECK-NEXT: [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[INSERT_SUBREG1]], 0, [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi16lane]].dsub
-    ; CHECK-NEXT: [[USHLLv4i16_shift:%[0-9]+]]:fpr128 = USHLLv4i16_shift killed [[COPY2]], 0
-    ; CHECK-NEXT: [[UCVTFv4f32_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv4f32 killed [[USHLLv4i16_shift]], implicit $fpcr
+    ; CHECK-NEXT: [[USHLLv4i16_shift:%[0-9]+]]:fpr128 = USHLLv4i16_shift [[COPY2]], 0
+    ; CHECK-NEXT: [[UCVTFv4f32_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv4f32 [[USHLLv4i16_shift]], implicit $fpcr
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: STRWui [[COPY3]], [[COPY]], 7 :: (store (s32) into %ir.0 + 28)
     ; CHECK-NEXT: STRWui [[COPY3]], [[COPY]], 6 :: (store (s32) into %ir.0 + 24, align 8)
     ; CHECK-NEXT: STRWui [[COPY3]], [[COPY]], 5 :: (store (s32) into %ir.0 + 20)
     ; CHECK-NEXT: STRWui [[COPY3]], [[COPY]], 4 :: (store (s32) into %ir.0 + 16, align 8)
-    ; CHECK-NEXT: STRQui killed [[UCVTFv4f32_]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
+    ; CHECK-NEXT: STRQui [[UCVTFv4f32_]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:fpr128 = MOVIv2d_ns 0
-    %2:fpr32 = UADDLVv8i16v killed %1
+    %2:fpr32 = UADDLVv8i16v %1
     %4:fpr128 = IMPLICIT_DEF
-    %3:fpr128 = INSERT_SUBREG %4, killed %2, %subreg.ssub
+    %3:fpr128 = INSERT_SUBREG %4, %2, %subreg.ssub
     %5:gpr32 = COPY %3.ssub
     %6:fpr64 = MOVID 0
     %8:fpr128 = IMPLICIT_DEF
-    %7:fpr128 = INSERT_SUBREG %8, killed %6, %subreg.dsub
-    %9:fpr128 = INSvi16gpr %7, 0, killed %5
+    %7:fpr128 = INSERT_SUBREG %8, %6, %subreg.dsub
+    %9:fpr128 = INSvi16gpr %7, 0, %5
     %10:fpr64 = COPY %9.dsub
-    %11:fpr128 = USHLLv4i16_shift killed %10, 0
-    %12:fpr128 = nofpexcept UCVTFv4f32 killed %11, implicit $fpcr
+    %11:fpr128 = USHLLv4i16_shift %10, 0
+    %12:fpr128 = nofpexcept UCVTFv4f32 %11, implicit $fpcr
     %13:gpr32 = COPY $wzr
     STRWui %13, %0, 7 :: (store (s32) into %ir.0 + 28)
     STRWui %13, %0, 6 :: (store (s32) into %ir.0 + 24, align 8)
     STRWui %13, %0, 5 :: (store (s32) into %ir.0 + 20)
     STRWui %13, %0, 4 :: (store (s32) into %ir.0 + 16, align 8)
-    STRQui killed %12, %0, 0 :: (store (s128) into %ir.0, align 8)
+    STRQui %12, %0, 0 :: (store (s128) into %ir.0, align 8)
     RET_ReallyLR
 
 ...
@@ -275,45 +275,45 @@ body:             |
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[UADDLVv4i32v:%[0-9]+]]:fpr64 = UADDLVv4i32v [[MOVIv2d_ns]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[UADDLVv4i32v]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[UADDLVv4i32v]], %subreg.dsub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64all = COPY [[INSERT_SUBREG]].dsub
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]].sub_32
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[MOVID]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVID]], %subreg.dsub
     ; CHECK-NEXT: [[INSvi8lane:%[0-9]+]]:fpr128 = INSvi8lane [[INSERT_SUBREG1]], 0, [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr64 = COPY [[INSvi8lane]].dsub
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[ZIP1v8i8_:%[0-9]+]]:fpr64 = ZIP1v8i8 killed [[COPY3]], killed [[DEF2]]
+    ; CHECK-NEXT: [[ZIP1v8i8_:%[0-9]+]]:fpr64 = ZIP1v8i8 [[COPY3]], [[DEF2]]
     ; CHECK-NEXT: [[BICv4i16_:%[0-9]+]]:fpr64 = BICv4i16 [[ZIP1v8i8_]], 255, 8
-    ; CHECK-NEXT: [[USHLLv4i16_shift:%[0-9]+]]:fpr128 = USHLLv4i16_shift killed [[BICv4i16_]], 0
-    ; CHECK-NEXT: [[UCVTFv4f32_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv4f32 killed [[USHLLv4i16_shift]], implicit $fpcr
+    ; CHECK-NEXT: [[USHLLv4i16_shift:%[0-9]+]]:fpr128 = USHLLv4i16_shift [[BICv4i16_]], 0
+    ; CHECK-NEXT: [[UCVTFv4f32_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv4f32 [[USHLLv4i16_shift]], implicit $fpcr
     ; CHECK-NEXT: STRQui [[MOVIv2d_ns]], [[COPY]], 3 :: (store (s128) into %ir.0 + 48, align 8)
     ; CHECK-NEXT: STRQui [[MOVIv2d_ns]], [[COPY]], 2 :: (store (s128) into %ir.0 + 32, align 8)
     ; CHECK-NEXT: STRQui [[MOVIv2d_ns]], [[COPY]], 1 :: (store (s128) into %ir.0 + 16, align 8)
-    ; CHECK-NEXT: STRQui killed [[UCVTFv4f32_]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
+    ; CHECK-NEXT: STRQui [[UCVTFv4f32_]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:fpr128 = MOVIv2d_ns 0
     %2:fpr64 = UADDLVv4i32v %1
     %4:fpr128 = IMPLICIT_DEF
-    %3:fpr128 = INSERT_SUBREG %4, killed %2, %subreg.dsub
+    %3:fpr128 = INSERT_SUBREG %4, %2, %subreg.dsub
     %5:gpr64all = COPY %3.dsub
     %6:gpr32 = COPY %5.sub_32
     %7:fpr64 = MOVID 0
     %9:fpr128 = IMPLICIT_DEF
-    %8:fpr128 = INSERT_SUBREG %9, killed %7, %subreg.dsub
-    %10:fpr128 = INSvi8gpr %8, 0, killed %6
+    %8:fpr128 = INSERT_SUBREG %9, %7, %subreg.dsub
+    %10:fpr128 = INSvi8gpr %8, 0, %6
     %11:fpr64 = COPY %10.dsub
     %13:fpr64 = IMPLICIT_DEF
-    %12:fpr64 = ZIP1v8i8 killed %11, killed %13
+    %12:fpr64 = ZIP1v8i8 %11, %13
     %14:fpr64 = BICv4i16 %12, 255, 8
-    %15:fpr128 = USHLLv4i16_shift killed %14, 0
-    %16:fpr128 = nofpexcept UCVTFv4f32 killed %15, implicit $fpcr
+    %15:fpr128 = USHLLv4i16_shift %14, 0
+    %16:fpr128 = nofpexcept UCVTFv4f32 %15, implicit $fpcr
     STRQui %1, %0, 3 :: (store (s128) into %ir.0 + 48, align 8)
     STRQui %1, %0, 2 :: (store (s128) into %ir.0 + 32, align 8)
     STRQui %1, %0, 1 :: (store (s128) into %ir.0 + 16, align 8)
-    STRQui killed %16, %0, 0 :: (store (s128) into %ir.0, align 8)
+    STRQui %16, %0, 0 :: (store (s128) into %ir.0, align 8)
     RET_ReallyLR
 
 ...
@@ -342,21 +342,21 @@ body:             |
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[UADDLVv8i16v:%[0-9]+]]:fpr32 = UADDLVv8i16v [[MOVIv2d_ns]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[UADDLVv8i16v]], %subreg.ssub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[UADDLVv8i16v]], %subreg.ssub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].ssub
     ; CHECK-NEXT: [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[MOVIv2d_ns]], 2, [[INSERT_SUBREG]], 0
-    ; CHECK-NEXT: [[UCVTFv4f32_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv4f32 killed [[INSvi32lane]], implicit $fpcr
-    ; CHECK-NEXT: STRQui killed [[UCVTFv4f32_]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
+    ; CHECK-NEXT: [[UCVTFv4f32_:%[0-9]+]]:fpr128 = nofpexcept UCVTFv4f32 [[INSvi32lane]], implicit $fpcr
+    ; CHECK-NEXT: STRQui [[UCVTFv4f32_]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:fpr128 = MOVIv2d_ns 0
     %2:fpr32 = UADDLVv8i16v %1
     %4:fpr128 = IMPLICIT_DEF
-    %3:fpr128 = INSERT_SUBREG %4, killed %2, %subreg.ssub
+    %3:fpr128 = INSERT_SUBREG %4, %2, %subreg.ssub
     %5:gpr32 = COPY %3.ssub
-    %7:fpr128 = INSvi32gpr %1, 2, killed %5
-    %8:fpr128 = nofpexcept UCVTFv4f32 killed %7, implicit $fpcr
-    STRQui killed %8, %0, 0 :: (store (s128) into %ir.0, align 8)
+    %7:fpr128 = INSvi32gpr %1, 2, %5
+    %8:fpr128 = nofpexcept UCVTFv4f32 %7, implicit $fpcr
+    STRQui %8, %0, 0 :: (store (s128) into %ir.0, align 8)
     RET_ReallyLR
 
 ...
@@ -391,22 +391,22 @@ body:             |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_32
     ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri %stack.0, 0, 0
-    ; CHECK-NEXT: [[BFMXri:%[0-9]+]]:gpr64common = BFMXri [[ADDXri]], killed [[INSERT_SUBREG]], 62, 1
-    ; CHECK-NEXT: STRWui [[COPY1]], killed [[BFMXri]], 0 :: (store (s32))
+    ; CHECK-NEXT: [[BFMXri:%[0-9]+]]:gpr64common = BFMXri [[ADDXri]], [[INSERT_SUBREG]], 62, 1
+    ; CHECK-NEXT: STRWui [[COPY1]], [[BFMXri]], 0 :: (store (s32))
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
     ; CHECK-NEXT: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[LDRQui]], 1, [[COPY1]]
-    ; CHECK-NEXT: STRQui killed [[INSvi32gpr]], [[COPY]], 0 :: (store (s128) into %ir.p, align 4)
+    ; CHECK-NEXT: STRQui [[INSvi32gpr]], [[COPY]], 0 :: (store (s128) into %ir.p, align 4)
     ; CHECK-NEXT: RET_ReallyLR
     %1:gpr64common = COPY $x1
     %0:gpr32 = COPY $w0
     %3:gpr64all = IMPLICIT_DEF
     %2:gpr64 = INSERT_SUBREG %3, %0, %subreg.sub_32
     %4:gpr64common = ADDXri %stack.0, 0, 0
-    %5:gpr64common = BFMXri %4, killed %2, 62, 1
-    STRWui %0, killed %5, 0 :: (store (s32))
+    %5:gpr64common = BFMXri %4, %2, 62, 1
+    STRWui %0, %5, 0 :: (store (s32))
     %6:fpr128 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
     %7:fpr128 = INSvi32gpr %6, 1, %0
-    STRQui killed %7, %1, 0 :: (store (s128) into %ir.p, align 4)
+    STRQui %7, %1, 0 :: (store (s128) into %ir.p, align 4)
     RET_ReallyLR
 
 ...
@@ -441,9 +441,9 @@ body:             |
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[COPY2]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY2]], %subreg.dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[FADDDrr]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[FADDDrr]], %subreg.dsub
     ; CHECK-NEXT: $q0 = COPY [[INSERT_SUBREG1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %1:fpr64 = COPY $d1
@@ -452,10 +452,10 @@ body:             |
     %3:fpr128 = MOVIv2d_ns 0
     %4:fpr64 = COPY %3.dsub
     %6:fpr128 = IMPLICIT_DEF
-    %5:fpr128 = INSERT_SUBREG %6, killed %4, %subreg.dsub
+    %5:fpr128 = INSERT_SUBREG %6, %4, %subreg.dsub
     %8:fpr128 = IMPLICIT_DEF
-    %7:fpr128 = INSERT_SUBREG %8, killed %2, %subreg.dsub
-    %9:fpr128 = INSvi64lane %7, 1, killed %5, 0
+    %7:fpr128 = INSERT_SUBREG %8, %2, %subreg.dsub
+    %9:fpr128 = INSvi64lane %7, 1, %5, 0
     $q0 = COPY %9
     RET_ReallyLR implicit $q0
 
@@ -493,38 +493,38 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[DEF]]
-    ; CHECK-NEXT: INLINEASM &"ldr ${0:s}, $1", mayload attdialect, regdef:FPR64, def %1, mem:m, killed [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"ldr ${0:s}, $1", mayload attdialect, regdef:FPR64, def %1, mem:m, [[COPY1]]
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[COPY2]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY2]], %subreg.dsub
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], %1, %subreg.dsub
-    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, killed [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[TBLv8i8One:%[0-9]+]]:fpr64 = TBLv8i8One killed [[INSvi64lane]], killed [[DEF3]]
+    ; CHECK-NEXT: [[TBLv8i8One:%[0-9]+]]:fpr64 = TBLv8i8One [[INSvi64lane]], [[DEF3]]
     ; CHECK-NEXT: [[DEF4:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], killed [[TBLv8i8One]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], [[TBLv8i8One]], %subreg.dsub
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr32 = COPY [[INSERT_SUBREG2]].ssub
-    ; CHECK-NEXT: STRSui killed [[COPY3]], [[COPY]], 0 :: (store (s32) into %ir.hist)
+    ; CHECK-NEXT: STRSui [[COPY3]], [[COPY]], 0 :: (store (s32) into %ir.hist)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %2:gpr64all = IMPLICIT_DEF
     %3:gpr64sp = COPY %2
-    INLINEASM &"ldr ${0:s}, $1", mayload attdialect, regdef:FPR64, def %1, mem:m, killed %3
+    INLINEASM &"ldr ${0:s}, $1", mayload attdialect, regdef:FPR64, def %1, mem:m, %3
     %4:fpr128 = MOVIv2d_ns 0
     %5:fpr64 = COPY %4.dsub
     %7:fpr128 = IMPLICIT_DEF
-    %6:fpr128 = INSERT_SUBREG %7, killed %5, %subreg.dsub
+    %6:fpr128 = INSERT_SUBREG %7, %5, %subreg.dsub
     %9:fpr128 = IMPLICIT_DEF
     %8:fpr128 = INSERT_SUBREG %9, %1, %subreg.dsub
-    %10:fpr128 = INSvi64lane %8, 1, killed %6, 0
+    %10:fpr128 = INSvi64lane %8, 1, %6, 0
     %12:fpr64 = IMPLICIT_DEF
-    %11:fpr64 = TBLv8i8One killed %10, killed %12
+    %11:fpr64 = TBLv8i8One %10, %12
     %14:fpr128 = IMPLICIT_DEF
-    %13:fpr128 = INSERT_SUBREG %14, killed %11, %subreg.dsub
+    %13:fpr128 = INSERT_SUBREG %14, %11, %subreg.dsub
     %16:fpr32 = COPY %13.ssub
-    STRSui killed %16, %0, 0 :: (store (s32) into %ir.hist)
+    STRSui %16, %0, 0 :: (store (s32) into %ir.hist)
     RET_ReallyLR
 
 ---
@@ -558,7 +558,7 @@ body:             |
     ; CHECK-NEXT: [[INSERT_LOW:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[FMOV]], %subreg.dsub
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_ZERO:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[MOVID]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_ZERO:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVID]], %subreg.dsub
     ; CHECK-NEXT: STRQui [[INSERT_LOW]], [[PTR]], 0 :: (store (s128) into %ir.dst, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
@@ -568,9 +568,9 @@ body:             |
     %3:fpr128 = INSERT_SUBREG %4, %2, %subreg.dsub
     %5:fpr64 = MOVID 0
     %7:fpr128 = IMPLICIT_DEF
-    %6:fpr128 = INSERT_SUBREG %7, killed %5, %subreg.dsub
-    %8:fpr128 = INSvi64lane %3, 1, killed %6, 0
-    STRQui killed %8, %0, 0 :: (store (s128) into %ir.dst, align 8)
+    %6:fpr128 = INSERT_SUBREG %7, %5, %subreg.dsub
+    %8:fpr128 = INSvi64lane %3, 1, %6, 0
+    STRQui %8, %0, 0 :: (store (s128) into %ir.dst, align 8)
     RET_ReallyLR
 
 ...

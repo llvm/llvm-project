@@ -363,6 +363,14 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value exti = arith::ExtUIOp::create(b, i32Ty, bitcast);
     Value f32Bits = arith::ShLIOp::create(b, exti, cF32MantissaWidth);
 
+    // F8E8M0 has no zero representation.
+    // All zeros encoding represents 2^-127 which is an f32 subnormal.
+    Value cF8Min = createConst(op.getLoc(), i8Ty, 0, rewriter);
+    Value cF32Min = createConst(op.getLoc(), i32Ty, 0x00400000, rewriter);
+    Value isMin =
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8Min);
+    f32Bits = arith::SelectOp::create(b, isMin, cF32Min, f32Bits);
+
     // If FastMathFlag allows no NaN checks, skip it
     auto fastMath = op.getFastmathAttr();
     bool NoNaN = fastMath

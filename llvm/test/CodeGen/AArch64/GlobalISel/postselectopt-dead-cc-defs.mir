@@ -177,13 +177,13 @@ body:             |
     ; CHECK-LABEL: name: test_impdef_subsw
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $x1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[SUBWrr:%[0-9]+]]:gpr32 = SUBWrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[SUBWrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %1:gpr32 = COPY $x0
-    %2:gpr32 = COPY $x1
+    %1:gpr32 = COPY $w0
+    %2:gpr32 = COPY $w1
     %4:gpr32 = SUBSWrr %1, %2, implicit-def $nzcv
     $w0 = COPY %4
     RET_ReallyLR implicit $w0
@@ -225,13 +225,13 @@ body:             |
     ; CHECK-LABEL: name: test_impdef_addsw
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $x1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %1:gpr32 = COPY $x0
-    %2:gpr32 = COPY $x1
+    %1:gpr32 = COPY $w0
+    %2:gpr32 = COPY $w1
     %4:gpr32 = ADDSWrr %1, %2, implicit-def $nzcv
     $w0 = COPY %4
     RET_ReallyLR implicit $w0

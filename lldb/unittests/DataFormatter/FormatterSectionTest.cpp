@@ -132,8 +132,7 @@ public:
     // each test from a clean slate regardless of what earlier tests in this
     // binary registered.
     TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(ConstString("default"),
-                                               category);
+    DataVisualization::Categories::GetCategory("default", category);
     if (category)
       category->Clear();
 
@@ -198,7 +197,7 @@ Sections:
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
 
   ASSERT_EQ(category->GetCount(), 2u);
@@ -239,7 +238,7 @@ TEST_F(FormatterSectionTest, MalformedULEBAtStart) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetCount(), 0u);
 }
@@ -264,7 +263,7 @@ TEST_F(FormatterSectionTest, SkipsRecordWithUnsupportedVersion) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetSummaryForType(std::make_shared<TypeNameSpecifierImpl>(
                 "Bogus", lldb::eFormatterMatchExact)),
@@ -302,7 +301,7 @@ TEST_F(FormatterSectionTest, Version2SelectorsReturnInteger) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
 
   Scalar val;
@@ -392,7 +391,7 @@ TEST_F(FormatterSectionTest, LoadsVersion2SyntheticChildren) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
 
   Scalar val;
@@ -476,7 +475,7 @@ TEST_F(FormatterSectionTest, TypeNameSizeExceedsLengthOfTypeName) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetCount(), 1u);
   EXPECT_NE(category->GetSummaryForType(std::make_shared<TypeNameSpecifierImpl>(
@@ -505,7 +504,7 @@ TEST_F(FormatterSectionTest, RecordSizeExceedsRemainingSectionIsRejected) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetCount(), 1u);
   EXPECT_NE(category->GetSummaryForType(std::make_shared<TypeNameSpecifierImpl>(
@@ -539,7 +538,7 @@ TEST_F(FormatterSectionTest, UnsupportedSignatureSkipsEntry) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_NE(category->GetSummaryForType(std::make_shared<TypeNameSpecifierImpl>(
                 "Widget", lldb::eFormatterMatchExact)),
@@ -565,7 +564,7 @@ TEST_F(FormatterSectionTest, TruncatedBytecodeSizeAbortsEntryParsing) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetCount(), 0u);
   EXPECT_EQ(
@@ -591,7 +590,7 @@ TEST_F(FormatterSectionTest, EmptyEntryRegistersNothing) {
   LoadFormattersForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetCount(), 0u);
 }
@@ -613,7 +612,7 @@ TEST_F(FormatterSectionTest, EmptySummaryStringIsNotRegistered) {
   LoadTypeSummariesForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetCount(), 0u);
 }
@@ -637,7 +636,7 @@ TEST_F(FormatterSectionTest, SummarySizeExceedsAvailableBytes) {
   LoadTypeSummariesForModule(module_sp);
 
   TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  DataVisualization::Categories::GetCategory("default", category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetCount(), 0u);
 }

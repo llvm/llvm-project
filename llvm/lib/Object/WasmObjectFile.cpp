@@ -884,6 +884,13 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
             "section symbols must have local binding",
             object_error::parse_failed);
       Info.ElementIndex = readVaruint32(Ctx);
+      if (Info.ElementIndex >= Sections.size())
+        return make_error<GenericBinaryError>("invalid section symbol index",
+                                              object_error::parse_failed);
+      if (Sections[Info.ElementIndex].Type != wasm::WASM_SEC_CUSTOM)
+        return make_error<GenericBinaryError>(
+            "section symbols must reference custom sections",
+            object_error::parse_failed);
       // Use somewhat unique section name as symbol name.
       StringRef SectionName = Sections[Info.ElementIndex].Name;
       Info.Name = SectionName;

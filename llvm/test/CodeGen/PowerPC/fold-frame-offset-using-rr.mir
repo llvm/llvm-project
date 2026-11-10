@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=powerpc64le--linux-gnu -stop-after ppc-pre-emit-peephole %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=powerpc64le--linux-gnu -stop-after ppc-pre-emit-peephole %s -o - | FileCheck %s
 
 # ADDI instr: ToBeChangedReg = ADDI FrameBaseReg, OffsetAddi
 # ADD instr:  ToBeDeletedReg = ADD ToBeChangedReg(killed), ScaleReg
