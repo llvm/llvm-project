@@ -216,6 +216,13 @@ inline bool isSpecializedAccRoutine(mlir::Operation *op) {
          op->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName());
 }
 
+/// Attribute on global symbols that are associated with device-side symbols of
+/// the same name. The LLVM IR translation emits entries to be registered with
+/// the runtime.
+static constexpr StringLiteral getOffloadEntryAttrName() {
+  return StringLiteral("acc.offload_entry");
+}
+
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
   return StringLiteral("acc.from_default");
 }

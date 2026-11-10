@@ -4,6 +4,7 @@ add_mlir_translation_library(MLIROpenACCToLLVMIRTranslation
   LINK_COMPONENTS
   BinaryFormat
   Core
+  FrontendOffloading
   Object
   TransformUtils
 
