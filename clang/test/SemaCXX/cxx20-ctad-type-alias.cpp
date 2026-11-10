@@ -629,3 +629,20 @@ template <typename T> using S3 = S2<T>; // expected-note {{candidate function no
                                         // expected-note {{cannot deduce template arguments for 'GH190517::S3' from 'GH190517::S1<char>'}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }
+
+namespace post_GH147675 {
+
+template<class T> struct Foo { using self = Foo; Foo(T); };
+
+template<class> using Int = typename Foo<int>::self;
+
+template<class T> using A = Int<T>; // #post_GH147675_A
+
+A a = 1;
+
+A b = nullptr;
+// expected-error@-1 {{no viable constructor or deduction guide}}
+// expected-note@#post_GH147675_A 2{{candidate function}}
+// expected-note@#post_GH147675_A 2{{implicit deduction guide}}
+
+}
