@@ -8,6 +8,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -426,14 +427,12 @@ unsigned DWARFVerifier::verifyDebugInfoSubprogram(const DWARFDie &Die) {
   return 0;
 }
 
-/// Collects the shared local entities declared in \p Scope or in any lexical
-/// block nested in it.
-static void collectSharedLocalEntities(const DWARFDie &Scope,
-                                       SmallVectorImpl<DWARFDie> &Entities) {
+static void verifySharedLocalEntities(const DWARFDie &Scope,
+                                      function_ref<void(DWARFDie)> VerifyF) {
   for (DWARFDie Child : Scope.children()) {
     switch (Child.getTag()) {
     case DW_TAG_lexical_block:
-      collectSharedLocalEntities(Child, Entities);
+      verifySharedLocalEntities(Child, VerifyF);
       break;
     case DW_TAG_class_type:
     case DW_TAG_structure_type:
@@ -442,11 +441,11 @@ static void collectSharedLocalEntities(const DWARFDie &Scope,
     case DW_TAG_typedef:
     case DW_TAG_imported_module:
     case DW_TAG_imported_declaration:
-      Entities.push_back(Child);
+      VerifyF(Child);
       break;
-    // TODO: Static local variables are shared by all instances of a subprogram
-    // too, but they aren't checked here. A DW_TAG_variable doesn't say whether
-    // it is static, so it'd have to be inferred from DW_AT_location.
+    // TODO: Static local variables are shared by instances too, but they aren't
+    // checked here. A DW_TAG_variable doesn't say whether it is static, so it'd
+    // have to be inferred from DW_AT_location.
     default:
       break;
     }
@@ -459,22 +458,21 @@ void DWARFVerifier::verifyDebugInfoLocalEntities(const DWARFDie &Die) {
     return;
 
   DWARFDie Origin = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
-  if (!Origin || Origin.getTag() != DW_TAG_subprogram)
+  if (!Origin)
     return;
 
-  SmallVector<DWARFDie, 4> Entities;
-  collectSharedLocalEntities(Die, Entities);
-  for (const DWARFDie &Entity : Entities) {
-    // A concrete instance may refer to the entity in the abstract origin, but
-    // it shouldn't describe the entity on its own.
+  // Verify that a concrete subprogram instance does not define its own local
+  // types or imported entities.
+  verifySharedLocalEntities(Die, [&](DWARFDie Entity) {
+    // It may refer to the entity in the abstract origin.
     if (Entity.find(DW_AT_abstract_origin))
-      continue;
+      return;
     warn() << formatv("{0} in concrete instance {1:x+8} of a subprogram should "
                       "only be in its abstract origin {2:x+8}:\n",
                       TagString(Entity.getTag()), Die.getOffset(),
                       Origin.getOffset());
     dump(Entity) << '\n';
-  }
+  });
 }
 
 unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
