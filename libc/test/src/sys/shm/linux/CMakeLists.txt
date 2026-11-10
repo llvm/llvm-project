@@ -1,6 +1,65 @@
 add_libc_testsuite(libc-sys-shm-tests)
 
 add_libc_test(
+  shmat_test
+  SUITE
+    libc-sys-shm-tests
+  SRCS
+    shmat_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_ipc_macros
+    libc.hdr.sys_shm_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmctl
+    libc.src.sys.shm.shmdt
+    libc.src.sys.shm.shmget
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  shmctl_test
+  SUITE
+    libc-sys-shm-tests
+  SRCS
+    shmctl_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_ipc_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_shmid_ds
+    libc.src.__support.CPP.scope
+    libc.src.sys.shm.shmctl
+    libc.src.sys.shm.shmget
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  shmdt_test
+  SUITE
+    libc-sys-shm-tests
+  SRCS
+    shmdt_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_ipc_macros
+    libc.hdr.sys_shm_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.sys.shm.shmat
+    libc.src.sys.shm.shmctl
+    libc.src.sys.shm.shmdt
+    libc.src.sys.shm.shmget
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   shmget_test
   SUITE
     libc-sys-shm-tests
@@ -10,6 +69,8 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.sys_ipc_macros
     libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.scope
+    libc.src.sys.shm.shmctl
     libc.src.sys.shm.shmget
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher

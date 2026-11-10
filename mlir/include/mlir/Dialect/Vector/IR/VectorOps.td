@@ -268,8 +268,8 @@ def Vector_ReductionOp :
   Vector_Op<"reduction", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     OptionalTypesMatchWith<"dest and acc have the same type",
-                            "dest", "acc", "::llvm::cast<Type>($_self)">,
+     OptionalTypesMatchWith<"result and acc have the same type",
+                            "result", "acc", "::llvm::cast<Type>($_self)">,
      DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
@@ -280,7 +280,7 @@ def Vector_ReductionOp :
                DefaultValuedAttr<
                  Arith_FastMathAttr,
                  "::mlir::arith::FastMathFlags::none">:$fastmath)>,
-    Results<(outs AnyType:$dest)> {
+    Results<(outs AnyType:$result)> {
   let summary = "reduction operation";
   let description = [{
     Reduces an 1-D vector "horizontally" into a scalar using the given
@@ -309,25 +309,25 @@ def Vector_ReductionOp :
     }
   }];
   let builders = [
-    // Builder that infers the type of `dest`.
+    // Builder that infers the type of `result`.
     OpBuilder<(ins "CombiningKind":$kind, "Value":$vector, "Value":$acc,
                     CArg<"::mlir::arith::FastMathFlags",
                          "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>,
-    // Builder that infers the type of `dest` and has no accumulator.
+    // Builder that infers the type of `result` and has no accumulator.
     OpBuilder<(ins "CombiningKind":$kind, "Value":$vector,
                     CArg<"::mlir::arith::FastMathFlags",
                          "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
 
   let assemblyFormat = "$kind `,` $vector (`,` $acc^)? (`fastmath` `` $fastmath^)?"
-                       " attr-dict `:` type($vector) `into` type($dest)";
+                       " attr-dict `:` type($vector) `into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
 def Vector_MultiDimReductionOp :
   Vector_Op<"multi_reduction", [Pure,
-     AllTypesMatch<["dest", "acc"]>,
+     AllTypesMatch<["result", "acc"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      DeclareOpInterfaceMethods<ArithFastMathInterface>,
@@ -342,7 +342,7 @@ def Vector_MultiDimReductionOp :
                    DefaultValuedAttr<
                      Arith_FastMathAttr,
                      "::mlir::arith::FastMathFlags::none">:$fastmath)>,
-    Results<(outs AnyType:$dest)> {
+    Results<(outs AnyType:$result)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
     Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
@@ -381,7 +381,7 @@ def Vector_MultiDimReductionOp :
       return ::llvm::cast<VectorType>(getSource().getType());
     }
     Type getDestType() {
-      return getDest().getType();
+      return getResult().getType();
     }
 
     bool isReducedDim(int64_t d) {
@@ -406,7 +406,7 @@ def Vector_MultiDimReductionOp :
   }];
   let assemblyFormat =
     "$kind `,` $source `,` $acc (`fastmath` `` $fastmath^)? attr-dict "
-    "$reduction_dims `:` type($source) `to` type($dest)";
+    "$reduction_dims `:` type($source) `to` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -419,11 +419,11 @@ def Vector_BroadcastOp :
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyType:$source)>,
-    Results<(outs AnyVectorOfAnyRank:$vector)> {
+    Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "broadcast operation";
   let description = [{
-    Broadcasts the scalar or k-D vector value in the source operand
-    to a n-D result vector such that the broadcast makes sense, i.e.,
+    Broadcasts the scalar or K-D vector value in the source operand
+    to a N-D result vector such that the broadcast makes sense, i.e.,
     the source operand is duplicated to match the given rank and sizes
     in the result vector. The legality rules are:
     * the source operand must have the same element type as the result type
@@ -445,30 +445,50 @@ def Vector_BroadcastOp :
     "dim-1" broadcasting). These rules imply that any scalar broadcast (K=0) to
     any shaped vector with the same element type is always legal.
 
+    For every element in the result vector, the corresponding coordinate in
+    source dimension `j` can be computed from its zero-based, row-major linear
+    element offset `off` in the result vector as follows:
+
+    ```
+    source_coord[j](off) = floor(off / result_stride(N - K + j)) % source_dim(j)
+    ```
+
+    where `j = 1 .. K` indexes source dimensions from left to right, starting
+    at 1, and `result_stride(N - K + j)` is the row-major element stride of
+    the corresponding trailing result dimension. This stride is the product
+    of the sizes of all result dimensions to its right, or 1 for the last
+    dimension.
+
+    Dimension sizes and strides include any runtime `vscale` factors. In
+    particular, a scalable dimension `[1]` has size `vscale`. For a fixed
+    source dimension of size 1, `source_coord[j](off) == 0` for every valid
+    `off`.
+
     Example:
 
     ```mlir
     %0 = arith.constant 0.0 : f32
     %1 = vector.broadcast %0 : f32 to vector<16xf32>
     %2 = vector.broadcast %1 : vector<16xf32> to vector<4x16xf32>
-    ```
 
-    For every element in the result vector, the corresponding coordinate in
-    source dimension `j` can be computed from its linear offset `off` in the
-    result vector as follows:
-    ```
-                            / 0, if source_dim(j) == 1
-    source_coord[j](off) = |
-                            \ floor(off / result_stride(N - K + j)) % source_dim(j), otherwise
+    // Let %src = [[[a], [b], [c], [d]]].
 
+    // %3 = [[[a], [b], [c], [d]], [[a], [b], [c], [d]], ...]
+    // For off = 4, the result element is %src[0, 0, 0] = a.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
+    %3 = vector.broadcast %src : vector<1x4x1xf32> to vector<4x4x1xf32>
+
+    // %4 = [[[a, a, a, a], [b, b, b, b],
+    //        [c, c, c, c], [d, d, d, d]]]
+    // For off = 4, the result element is %src[0, 1, 0] = b.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
+    %4 = vector.broadcast %src : vector<1x4x1xf32> to vector<1x4x4xf32>
     ```
-    where `j = 1 .. K` and `result_stride(N - K + j)` is the result stride
-    corresponding to source dimension `j`.
   }];
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
     VectorType getResultVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
 
     /// Return the dimensions of the result vector that were formerly ones in the
@@ -492,7 +512,7 @@ def Vector_BroadcastOp :
       ArrayRef<int64_t> dstShape,
       const llvm::SetVector<int64_t> &broadcastedDims);
   }];
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($vector)";
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -509,7 +529,7 @@ def Vector_ShuffleOp
            InferTypeOpAdaptor]>,
       Arguments<(ins AnyFixedVectorOfAnyRank:$v1, AnyFixedVectorOfAnyRank:$v2,
           DenseI64ArrayAttr:$mask)>,
-      Results<(outs AnyVectorOfNonZeroRank:$vector)> {
+      Results<(outs AnyVectorOfNonZeroRank:$result)> {
   let summary = "shuffle operation";
   let description = [{
     The shuffle operation constructs a permutation (or duplication) of elements
@@ -558,7 +578,7 @@ def Vector_ShuffleOp
       return ::llvm::cast<VectorType>(getV2().getType());
     }
     VectorType getResultVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
 
@@ -665,8 +685,8 @@ def SourceVectorEvenElementCount : PredOpTrait<
 def Vector_DeinterleaveOp :
   Vector_Op<"deinterleave", [Pure,
     SourceVectorEvenElementCount,
-    ResultIsHalfSourceVectorType<"res1">,
-    AllTypesMatch<["res1", "res2"]>,
+    ResultIsHalfSourceVectorType<"resultEven">,
+    AllTypesMatch<["resultEven", "resultOdd"]>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
     ]> {
       let summary = "constructs two vectors by deinterleaving an input vector";
@@ -701,10 +721,10 @@ def Vector_DeinterleaveOp :
       }];
 
       let arguments = (ins AnyVectorOfNonZeroRank:$source);
-      let results = (outs AnyVectorOfNonZeroRank:$res1, AnyVectorOfNonZeroRank:$res2);
+      let results = (outs AnyVectorOfNonZeroRank:$resultEven, AnyVectorOfNonZeroRank:$resultOdd);
 
       let assemblyFormat = [{
-        $source attr-dict `:` type($source) `->` type($res1)
+        $source attr-dict `:` type($source) `->` type($resultEven)
       }];
 
       let extraClassDeclaration = [{
@@ -712,7 +732,7 @@ def Vector_DeinterleaveOp :
           return ::llvm::cast<VectorType>(getSource().getType());
         }
         VectorType getResultVectorType() {
-          return ::llvm::cast<VectorType>(getRes1().getType());
+          return ::llvm::cast<VectorType>(getResultEven().getType());
         }
       }];
     }
@@ -876,7 +896,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
     Pure,
-    ShapedTypeMatchesElementCountAndTypes<"dest", "elements">]> {
+    ShapedTypeMatchesElementCountAndTypes<"result", "elements">]> {
   let summary = "operation that defines a vector from scalar elements";
   let description = [{
     This operation defines a vector from one or multiple scalar elements. The
@@ -907,8 +927,8 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyFixedVectorOfAnyRank:$dest);
-  let assemblyFormat = "$elements attr-dict `:` type($dest)";
+  let results = (outs AnyFixedVectorOfAnyRank:$result);
+  let assemblyFormat = "$elements attr-dict `:` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
@@ -1320,7 +1340,7 @@ def Vector_TransferReadOp :
                    AnyType:$padding,
                    Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
                    BoolArrayAttr:$in_bounds)>,
-    Results<(outs AnyVectorOfAnyRank:$vector)> {
+    Results<(outs AnyVectorOfAnyRank:$result)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
 
@@ -3050,7 +3070,7 @@ def VectorScaleOp : Vector_Op<"vscale",
     Right now we only support one contiguous set of scalable dimensions, all of
     them grouped and scaled with the value returned by 'vscale'.
   }];
-  let results = (outs Index:$res);
+  let results = (outs Index:$result);
   let assemblyFormat = "attr-dict";
 
   let extraClassDefinition = [{
@@ -3067,14 +3087,14 @@ def VectorScaleOp : Vector_Op<"vscale",
 
 def Vector_ScanOp :
   Vector_Op<"scan", [Pure,
-    AllTypesMatch<["source", "dest"]>,
+    AllTypesMatch<["source", "result"]>,
     AllTypesMatch<["initial_value", "accumulated_value"]> ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVectorOfNonZeroRankNonI0Elem:$source,
                    AnyVectorOfNonI0Elem:$initial_value,
                    I64Attr:$reduction_dim,
                    BoolAttr:$inclusive)>,
-    Results<(outs AnyVectorOfNonZeroRankNonI0Elem:$dest,
+    Results<(outs AnyVectorOfNonZeroRankNonI0Elem:$result,
                   AnyVectorOfNonI0Elem:$accumulated_value)> {
   let summary = "Scan operation";
   let description = [{
@@ -3098,7 +3118,7 @@ def Vector_ScanOp :
       return ::llvm::cast<VectorType>(getSource().getType());
     }
     VectorType getDestType() {
-      return ::llvm::cast<VectorType>(getDest().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
     VectorType getAccumulatorType() {
       return ::llvm::cast<VectorType>(getAccumulatedValue().getType());

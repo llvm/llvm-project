@@ -2327,7 +2327,7 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     return emitTypeConversionError(baseClassOp, baseClassOp.getType());
   mlir::Value derivedAddr = adaptor.getSrcAddr();
   llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
-      adaptor.getOffset().getZExtValue()};
+      static_cast<int32_t>(adaptor.getOffset().getZExtValue())};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (adaptor.getOffset().getZExtValue() == 0) {
@@ -2368,7 +2368,8 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
     rewriter.replaceOp(derivedClassOp, baseAddr);
     return mlir::success();
   }
-  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {offsetVal};
+  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
+      static_cast<int32_t>(offsetVal)};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (derivedClassOp.getAssumeNotNull()) {
@@ -3132,7 +3133,8 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNakedAttrName() ||
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
-         attr.getName() == CIRDialect::getDontCallWarnAttrName();
+         attr.getName() == CIRDialect::getDontCallWarnAttrName() ||
+         attr.getName() == CIRDialect::getRuntimeFuncAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -3197,6 +3199,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
       attributes);
   aliasOp.setVisibility_(
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
+  if (op.getUnnamedAddr())
+    aliasOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Global);
   {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.createBlock(&aliasOp.getInitializerRegion());
@@ -3280,6 +3284,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
+  if (op.getUnnamedAddr())
+    fn.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Global);
+
   if (cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
     fn.setMemoryEffectsAttr(convertMemoryEffects(fn.getContext(), effects));
 
@@ -3328,6 +3335,24 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     if (auto diagnostic = op->getAttrOfType<mlir::StringAttr>(dontCallAttr))
       passthrough.push_back(rewriter.getArrayAttr(
           {rewriter.getStringAttr(dontCallAttr), diagnostic}));
+
+  // Every function but a runtime function gets the TU-wide default function
+  // attributes.
+  if (!op->hasAttr(CIRDialect::getRuntimeFuncAttrName())) {
+    if (auto langOpts = op->getParentOfType<mlir::ModuleOp>()
+                            ->getAttrOfType<cir::LoweringOptionsAttr>(
+                                CIRDialect::getLoweringOptionsAttrName())) {
+      // A strictfp function may use a pragma to observe FP exceptions locally,
+      // so the TU-wide default does not apply to it.
+      if (langOpts.getNoTrappingMath() &&
+          !op->hasAttr(CIRDialect::getStrictFPAttrName()))
+        passthrough.push_back(
+            rewriter.getStrArrayAttr({"no-trapping-math", "true"}));
+      passthrough.push_back(rewriter.getStrArrayAttr(
+          {"stack-protector-buffer-size",
+           llvm::utostr(langOpts.getSspBufferSize())}));
+    }
+  }
 
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
@@ -3394,6 +3419,11 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
       getContext(),
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
   attributes.push_back(rewriter.getNamedAttr("visibility_", visibility));
+
+  if (op.getUnnamedAddr())
+    attributes.push_back(rewriter.getNamedAttr(
+        "unnamed_addr", mlir::LLVM::UnnamedAddrAttr::get(
+                            getContext(), mlir::LLVM::UnnamedAddr::Global)));
 
   if (op->getAttr(CUDAExternallyInitializedAttr::getMnemonic()))
     attributes.push_back(rewriter.getNamedAttr("externally_initialized",
@@ -4063,6 +4093,49 @@ convertCmpKindToFCmpPredicate(cir::CmpOpKind kind) {
   llvm_unreachable("Unknown CmpOpKind");
 }
 
+/// Convert from a CIR fp comparison kind to an LLVM IR floating-point
+/// comparison kind.
+static mlir::LLVM::FCmpPredicate
+convertCmpKindToFCmpPredicate(cir::FCmpOpKind kind) {
+  using CIR = cir::FCmpOpKind;
+  using LLVMFCmp = mlir::LLVM::FCmpPredicate;
+  switch (kind) {
+  case CIR::_false:
+    return LLVMFCmp::_false;
+  case CIR::oeq:
+    return LLVMFCmp::oeq;
+  case CIR::ogt:
+    return LLVMFCmp::ogt;
+  case CIR::oge:
+    return LLVMFCmp::oge;
+  case CIR::olt:
+    return LLVMFCmp::olt;
+  case CIR::ole:
+    return LLVMFCmp::ole;
+  case CIR::one:
+    return LLVMFCmp::one;
+  case CIR::ord:
+    return LLVMFCmp::ord;
+  case CIR::ueq:
+    return LLVMFCmp::ueq;
+  case CIR::ugt:
+    return LLVMFCmp::ugt;
+  case CIR::uge:
+    return LLVMFCmp::uge;
+  case CIR::ult:
+    return LLVMFCmp::ult;
+  case CIR::ule:
+    return LLVMFCmp::ule;
+  case CIR::une:
+    return LLVMFCmp::une;
+  case CIR::uno:
+    return LLVMFCmp::uno;
+  case CIR::_true:
+    return LLVMFCmp::_true;
+  }
+  llvm_unreachable("Unknown FCmpOpKind");
+}
+
 static llvm::StringRef
 convertCmpKindToConstrainedFCmpPredicate(cir::CmpOpKind kind) {
   using CIR = cir::CmpOpKind;
@@ -4104,10 +4177,51 @@ static bool isSignalingConstrainedFCmp(cir::CmpOpKind kind) {
   llvm_unreachable("Unknown CmpOpKind");
 }
 
+static llvm::StringRef
+convertCmpKindToConstrainedFCmpPredicate(cir::FCmpOpKind kind) {
+  using CIR = cir::FCmpOpKind;
+  switch (kind) {
+  case CIR::_false:
+    return "false";
+  case CIR::oeq:
+    return "oeq";
+  case CIR::ogt:
+    return "ogt";
+  case CIR::oge:
+    return "oge";
+  case CIR::olt:
+    return "olt";
+  case CIR::ole:
+    return "ole";
+  case CIR::one:
+    return "one";
+  case CIR::ord:
+    return "ord";
+  case CIR::ueq:
+    return "ueq";
+  case CIR::ugt:
+    return "ugt";
+  case CIR::uge:
+    return "uge";
+  case CIR::ult:
+    return "ult";
+  case CIR::ule:
+    return "ule";
+  case CIR::une:
+    return "une";
+  case CIR::uno:
+    return "uno";
+  case CIR::_true:
+    return "true";
+  }
+  llvm_unreachable("Unknown FCmpOpKind");
+}
+
+template <typename OpKindTy>
 static mlir::LLVM::CallIntrinsicOp
 createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
                           mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                          cir::CmpOpKind kind, cir::FenvAttr fenv,
+                          OpKindTy kind, bool isSignaling, cir::FenvAttr fenv,
                           mlir::Type llvmResTy) {
   llvm::SmallVector<mlir::Value, 4> callOperands = {
       lhs, rhs,
@@ -4115,7 +4229,7 @@ createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
                               convertCmpKindToConstrainedFCmpPredicate(kind)),
       createFenvMetadataValue(rewriter, loc,
                               getConstrainedExceptMetadata(fenv))};
-  llvm::StringRef intrinsicName = isSignalingConstrainedFCmp(kind)
+  llvm::StringRef intrinsicName = isSignaling
                                       ? "llvm.experimental.constrained.fcmps"
                                       : "llvm.experimental.constrained.fcmp";
   return createCallLLVMIntrinsicOp(rewriter, loc, intrinsicName, llvmResTy,
@@ -4154,7 +4268,8 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     if (cir::FenvAttr fenv = cmpOp.getFenvAttr()) {
       mlir::LLVM::CallIntrinsicOp call = createConstrainedFCmpCall(
           rewriter, cmpOp.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-          cmpOp.getKind(), fenv, llvmResTy);
+          cmpOp.getKind(), isSignalingConstrainedFCmp(cmpOp.getKind()), fenv,
+          llvmResTy);
       rewriter.replaceOp(cmpOp, call.getResult(0));
       return mlir::success();
     }
@@ -5528,7 +5643,8 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
     return emitTypeConversionError(op, op.getType());
   auto eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   llvm::SmallVector<mlir::LLVM::GEPArg> offsets =
-      llvm::SmallVector<mlir::LLVM::GEPArg>{op.getIndex()};
+      llvm::SmallVector<mlir::LLVM::GEPArg>{
+          static_cast<int32_t>(op.getIndex())};
   rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
       op, targetType, eltType, adaptor.getVptr(), offsets,
       mlir::LLVM::GEPNoWrapFlags::inbounds);
@@ -5677,9 +5793,10 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
       llvm::ElementCount size = op.getLhs().getType().getSize();
       auto i1VecTy = mlir::VectorType::get(
           size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
-      bitResult = createConstrainedFCmpCall(rewriter, op.getLoc(),
-                                            adaptor.getLhs(), adaptor.getRhs(),
-                                            op.getKind(), fenv, i1VecTy)
+      bitResult = createConstrainedFCmpCall(
+                      rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
+                      op.getKind(), isSignalingConstrainedFCmp(op.getKind()),
+                      fenv, i1VecTy)
                       .getResult(0);
     } else {
       bitResult = mlir::LLVM::FCmpOp::create(
@@ -5688,6 +5805,41 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     }
   } else {
     return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
+  }
+
+  // LLVM IR vector comparison returns a vector of i1. This one-bit vector
+  // must be sign-extended to the correct result type, unless a vector of i1 is
+  // the type we need.
+  mlir::Type vecElemTy = op.getType().getElementType();
+  if (isa<cir::IntType>(vecElemTy) &&
+      cast<cir::IntType>(vecElemTy).getWidth() > 1)
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
+        op, typeConverter->convertType(op.getType()), bitResult);
+  else
+    rewriter.replaceOp(op, bitResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecFCmpOpLowering::matchAndRewrite(
+    cir::VecFCmpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type elementType = op.getLhs().getType().getElementType();
+  if (!mlir::isa<cir::FPTypeInterface>(elementType))
+    return op.emitError() << "unsupported type for VecFCmpOp: " << elementType;
+
+  mlir::Value bitResult;
+  if (cir::FenvAttr fenv = op.getFenvAttr()) {
+    llvm::ElementCount size = op.getLhs().getType().getSize();
+    auto i1VecTy = mlir::VectorType::get(
+        size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
+    mlir::LLVM::CallIntrinsicOp CFCmpCall = createConstrainedFCmpCall(
+        rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(), op.getKind(),
+        op.getSignaling(), fenv, i1VecTy);
+    bitResult = CFCmpCall.getResult(0);
+  } else {
+    bitResult = mlir::LLVM::FCmpOp::create(
+        rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
+        adaptor.getLhs(), adaptor.getRhs());
   }
 
   // LLVM IR vector comparison returns a vector of i1. This one-bit vector
@@ -6584,6 +6736,13 @@ mlir::LogicalResult CIRToLLVMTokenNoneOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
     cir::CpuIdOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(moduleOp);
+  if (!triple)
+    return op.emitOpError()
+           << "requires a '" << cir::CIRDialect::getTripleAttrName()
+           << "' module attribute";
+
   mlir::Type i32Ty = rewriter.getI32Type();
   mlir::Type i64Ty = rewriter.getI64Type();
   mlir::Type i32PtrTy = mlir::LLVM::LLVMPointerType::get(i32Ty.getContext(), 0);
@@ -6595,12 +6754,7 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   mlir::Value subFunctionId = adaptor.getSubFunctionId();
 
   StringRef asmString, constraints;
-  mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  llvm::Triple triple(
-      mlir::cast<mlir::StringAttr>(
-          moduleOp->getAttr(cir::CIRDialect::getTripleAttrName()))
-          .getValue());
-  if (triple.getArch() == llvm::Triple::x86) {
+  if (triple->getArch() == llvm::Triple::x86) {
     asmString = "cpuid";
     constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";
   } else {

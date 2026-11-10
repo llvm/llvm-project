@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
@@ -22,7 +23,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SPIRVAddrSpace.h"
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
@@ -31,16 +31,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "spirv-lower-ctor-dtor"
-
-static cl::opt<std::string>
-    GlobalStr("spirv-lower-global-ctor-dtor-id",
-              cl::desc("Override unique ID of ctor/dtor globals."),
-              cl::init(""), cl::Hidden);
-
-static cl::opt<bool>
-    CreateKernels("spirv-emit-init-fini-kernel",
-                  cl::desc("Emit kernels to call ctor/dtor globals."),
-                  cl::init(true), cl::Hidden);
 
 namespace {
 std::string getHash(StringRef Str) {
@@ -159,7 +149,8 @@ void createInitOrFiniCalls(Function &F, bool IsCtor) {
   IRB.CreateRetVoid();
 }
 
-bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV, bool IsCtor) {
+bool createInitOrFiniGlobals(const SPIRVOptions &CLOpts, Module &M,
+                             GlobalVariable *GV, bool IsCtor) {
   ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
   if (!GA || GA->getNumOperands() == 0)
     return false;
@@ -173,8 +164,9 @@ bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV, bool IsCtor) {
     uint64_t Priority = cast<ConstantInt>(CS->getOperand(0))->getSExtValue();
     std::string PriorityStr = "." + std::to_string(Priority);
     // We append a semi-unique hash and the priority to the global name.
-    std::string GlobalID =
-        !GlobalStr.empty() ? GlobalStr : getHash(M.getSourceFileName());
+    std::string GlobalID = !CLOpts.lower_global_ctor_dtor_id.empty()
+                               ? CLOpts.lower_global_ctor_dtor_id.str()
+                               : getHash(M.getSourceFileName());
     std::string NameStr =
         ((IsCtor ? "__init_array_object_" : "__fini_array_object_") +
          F->getName() + "_" + GlobalID + "_" + std::to_string(Priority))
@@ -194,15 +186,16 @@ bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV, bool IsCtor) {
   return true;
 }
 
-bool createInitOrFiniKernel(Module &M, StringRef GlobalName, bool IsCtor) {
+bool createInitOrFiniKernel(const SPIRVOptions &CLOpts, Module &M,
+                            StringRef GlobalName, bool IsCtor) {
   GlobalVariable *GV = M.getGlobalVariable(GlobalName);
   if (!GV || !GV->hasInitializer())
     return false;
 
-  if (!createInitOrFiniGlobals(M, GV, IsCtor))
+  if (!createInitOrFiniGlobals(CLOpts, M, GV, IsCtor))
     return false;
 
-  if (!CreateKernels)
+  if (!CLOpts.emit_init_fini_kernel)
     return true;
 
   Function *InitOrFiniKernel = createInitOrFiniKernelFunction(M, IsCtor);
@@ -220,9 +213,13 @@ bool lowerCtorsAndDtors(Module &M) {
   if (!llvm::omp::isOpenMPDevice(M))
     return false;
 
+  const SPIRVOptions &CLOpts =
+      M.getContext().getLibraryOptions().get<SPIRVOptions>();
   bool Modified = false;
-  Modified |= createInitOrFiniKernel(M, "llvm.global_ctors", /*IsCtor =*/true);
-  Modified |= createInitOrFiniKernel(M, "llvm.global_dtors", /*IsCtor =*/false);
+  Modified |=
+      createInitOrFiniKernel(CLOpts, M, "llvm.global_ctors", /*IsCtor =*/true);
+  Modified |=
+      createInitOrFiniKernel(CLOpts, M, "llvm.global_dtors", /*IsCtor =*/false);
   return Modified;
 }
 
