@@ -137,13 +137,16 @@ void *test_ReturnAddress(void) {
 // CHECK: = tail call ptr @llvm.returnaddress.p0(i32 0)
 // CHECK: ret ptr
 
-#if defined(__i386__) || defined(__x86_64__) || defined (__aarch64__)
+#if defined(__i386__) || defined(__x86_64__) || defined (__aarch64__) || defined(__arm__)
 void *test_AddressOfReturnAddress(void) {
   return _AddressOfReturnAddress();
 }
 // CHECK-INTEL-LABEL: define dso_local ptr @test_AddressOfReturnAddress()
 // CHECK-INTEL: = tail call ptr @llvm.addressofreturnaddress.p0()
 // CHECK-INTEL: ret ptr
+// CHECK-ARM-LABEL: define{{.*}}ptr @test_AddressOfReturnAddress()
+// CHECK-ARM: = tail call ptr @llvm.addressofreturnaddress.p0()
+// CHECK-ARM: ret ptr
 #endif
 
 unsigned char test_BitScanForward(unsigned long *Index, unsigned long Mask) {
