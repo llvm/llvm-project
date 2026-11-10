@@ -130,8 +130,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
   // Avoid rebuilding the subtarget key for repeated queries with the same
   // function attributes.
   AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
-  if (LastSubtarget && LastSubtargetAttrs == FnAttrs)
-    return LastSubtarget;
+  if (LastSubtarget.first && LastSubtarget.second == FnAttrs)
+    return LastSubtarget.first;
 
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute TuneAttr = F.getFnAttribute("tune-cpu");
@@ -189,9 +189,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
     I = std::make_unique<RISCVSubtarget>(
         TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
-  LastSubtargetAttrs = FnAttrs;
-  LastSubtarget = I.get();
-  return LastSubtarget;
+  LastSubtarget = {I.get(), FnAttrs};
+  return LastSubtarget.first;
 }
 
 MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
