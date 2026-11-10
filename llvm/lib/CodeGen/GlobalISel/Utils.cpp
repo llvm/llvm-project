@@ -1704,8 +1704,7 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
       // Ignore partially formed DBG_VALUEs (a complete one has 4 operands:
       // location, offset, variable and expression).
       if (!DbgValue->isDebugValueList() &&
-          !(DbgValue->isNonListDebugValue() &&
-            DbgValue->getNumOperands() == 4))
+          !(DbgValue->isNonListDebugValue() && DbgValue->getNumOperands() == 4))
         continue;
       DbgUsers.push_back(&MOUse);
     }
