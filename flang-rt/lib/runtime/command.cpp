@@ -256,6 +256,11 @@ std::int32_t RTNAME(GetCwd)(
     return StatMissingCurrentWorkDirectory;
   }
 
+  // Fill the output with spaces. Upon success, CopyCharsToDescriptor()
+  // will overwrite part of the string with the result, so we'll end up
+  // with a padded string.
+  FillWithSpaces(cwd);
+
   std::int64_t strLen{StringLength(buf)};
   std::int32_t status{CopyCharsToDescriptor(cwd, buf, strLen)};
 
