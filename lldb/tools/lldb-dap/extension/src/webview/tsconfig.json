@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "module": "esnext",
     "outDir": "out",
     "rootDir": "..",
@@ -8,6 +8,7 @@
     "strict": true,
     "noEmit": true,
     "target": "es2017",
+    "types": ["vscode-webview"],
     "paths": { "@protocol/*": ["../protocol/*"] }
   },
   "include": ["./"]
