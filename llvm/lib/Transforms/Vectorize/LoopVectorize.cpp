@@ -3008,14 +3008,8 @@ static EpilogueLowering getEpilogueTailLowering(
     return CM_EpilogueAllowed;
   }
 
-  if (!Hints.getWidth() || !hasForcedEpilogueVF()) {
-    reportVectorizationInfo("For now, epilogue tail-folding can't be "
-                            "applied without forced main/epilogue loop VF",
-                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  if (ElementCount::isKnownLE(Hints.getWidth(), EpilogueVectorizationForceVF)) {
+  if (Hints.getWidth() && hasForcedEpilogueVF() &&
+      ElementCount::isKnownLE(Hints.getWidth(), EpilogueVectorizationForceVF)) {
     reportVectorizationInfo("For now, epilogue tail-folding can't be applied "
                             "when VF of the main loop <= VF of the epilogue",
                             "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
@@ -3070,13 +3064,6 @@ static EpilogueLowering getEpilogueTailLowering(
   if (Opts.force_partial_aliasing_vectorization) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported with alias masking",
-        "InvalidTailFoldedEpilogue", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
-  if (!LVL.getReductionVars().empty()) {
-    reportVectorizationInfo(
-        "Epilogue tail-folding is not supported with reductions",
         "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
@@ -3163,13 +3150,25 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     }
 
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
-    if (hasPlanWithVF(EpilogueVectorizationForceVF)) {
+
+    // Check if epilogue TF is enabled and we have a tail-folded VPlan with the
+    // forced EVF, otherwise try again with TF as false.
+    if (Opts.epilogue_tail_folding_policy ==
+            TailFoldingPolicyTy::PreferFoldTail &&
+        hasPlanWithVF(EpilogueVectorizationForceVF, /*HasTailFolded=*/true)) {
       std::unique_ptr<VPlan> Clone(
-          getPlanFor(EpilogueVectorizationForceVF).duplicate());
+          getPlanFor(EpilogueVectorizationForceVF, /*HasTailFolded=*/true)
+              .duplicate());
       Clone->setVF(EpilogueVectorizationForceVF);
       return Clone;
     }
-
+    if (hasPlanWithVF(EpilogueVectorizationForceVF, /*HasTailFolded=*/false)) {
+      std::unique_ptr<VPlan> Clone(
+          getPlanFor(EpilogueVectorizationForceVF, /*HasTailFolded=*/false)
+              .duplicate());
+      Clone->setVF(EpilogueVectorizationForceVF);
+      return Clone;
+    }
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization forced factor is not "
                          "viable.\n");
     return nullptr;
@@ -3254,12 +3253,20 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
   };
   VectorizationFactor Result = VectorizationFactor::Disabled();
   VPlan *BestPlan = nullptr;
+  // Check if we should search for tail-folded epilogue vplan or non-tail-folded
+  // one.
+  // Right now if tail-folded epilogue is forced, then we choose the most
+  // profitable tail-folded VPlan, if nothing is profitable we fallback to a
+  // scalar epilogue.
+  bool SelectTailFoldedVPlan = Opts.epilogue_tail_folding_policy ==
+                                   TailFoldingPolicyTy::PreferFoldTail &&
+                               hasPlanWithTF(/*HasTailFolded*/ true);
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
-    if (!hasPlanWithVF(NextVF.Width))
+    if (NextVF.HasTailFolded != SelectTailFoldedVPlan)
       continue;
 
-    VPlan &CurrentPlan = getPlanFor(NextVF.Width);
+    VPlan &CurrentPlan = getPlanFor(NextVF.Width, NextVF.HasTailFolded);
     ElementCount EffectiveVF = GetEffectiveVF(CurrentPlan, NextVF.Width);
     // Skip fixed vector VFs > than the estimated runtime VF, or any VF > than
     // the VF of the main loop.
@@ -3286,8 +3293,7 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     }
 
     if (Result.Width.isScalar() ||
-        isMoreProfitable(NextVF, Result, MaxTripCount,
-                         !MainPlan.hasTailFolded(),
+        isMoreProfitable(NextVF, Result, MaxTripCount, !NextVF.HasTailFolded,
                          /*IsEpilogue*/ true)) {
       Result = NextVF;
       BestPlan = &CurrentPlan;
@@ -5115,9 +5121,9 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
         // main loop.
         // Try to build a tail-folded epilogue Vplan. Otherwise build a regular
         // plan for the epilogue:
-        if (!planForEpilogueTF()) {
-          ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
-          if (EpilogueUserVF.isVector() &&
+        ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
+        if (EpilogueUserVF.isVector()) {
+          if (!planForEpilogueTF() &&
               ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
             CM->collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
             buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF, *CM);
@@ -5152,6 +5158,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
               *CM);
 
   LLVM_DEBUG(printPlans(dbgs()));
+  computeVPlanCosts(*CM);
+
+  // Try to build a tail-folded epilogue Vplans:
+  planForEpilogueTF();
 }
 
 bool LoopVectorizationPlanner::planForEpilogueTF() {
@@ -5174,8 +5184,10 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
   EpilogueTfCM.ValuesToIgnore.insert_range(CM->ValuesToIgnore);
   EpilogueTfCM.VecValuesToIgnore.insert_range(CM->VecValuesToIgnore);
 
-  FixedScalableVFPair MaxFactors =
-      EpilogueTfCM.computeMaxVF(EpilogueVectorizationForceVF, /*UserIC*/ 1);
+  FixedScalableVFPair MaxFactors = EpilogueTfCM.computeMaxVF(
+      /*UserVF*/ hasForcedEpilogueVF() ? EpilogueVectorizationForceVF
+                                       : ElementCount(),
+      /*UserIC*/ 1);
   // TODO: Validate the epilogue VF against MaxFactors.
   // That validation is ignored for now because computeMaxVF returns 0 for
   // max safe scalable VF when UserVF is not scalable, and at that case having
@@ -5206,44 +5218,70 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
 
   Legal->prepareToFoldTailByMasking();
 
-  // Collect the instructions (and their associated costs) that will be more
-  // profitable to scalarize.
-  EpilogueTfCM.collectNonVectorizedAndSetWideningDecisions(
-      EpilogueVectorizationForceVF);
+  if (hasForcedEpilogueVF()) {
+    // Collect the instructions (and their associated costs) that will be more
+    // profitable to scalarize.
+    EpilogueTfCM.collectNonVectorizedAndSetWideningDecisions(
+        EpilogueVectorizationForceVF);
 
-  [[maybe_unused]] size_t NumPlansBefore = VPlans.size();
-  buildVPlans(*VPlan1, EpilogueVectorizationForceVF,
-              EpilogueVectorizationForceVF, EpilogueTfCM);
+    size_t NumPlansBefore = VPlans.size();
+    buildVPlans(*VPlan1, EpilogueVectorizationForceVF,
+                EpilogueVectorizationForceVF, EpilogueTfCM);
 
-  // Check that a Vplan is successfully built:
-  assert(VPlans.size() == NumPlansBefore + 1 &&
-         "Expected to build a single tail-folded VPlan");
-  VPlan &Plan = *VPlans.back();
-  assert(Plan.getSingleVF() == EpilogueVectorizationForceVF &&
-         Plan.hasTailFolded() &&
-         "Expected to build a valid tail-folded VPlan with epilogue VF");
+    // Check that a Vplan is successfully built:
+    if (VPlans.size() == NumPlansBefore) {
+      reportVectorizationInfo("Failed to build tail-folded epilogue VPlan",
+                              "InvalidTailFoldedEpilogue", ORE, OrigLoop);
 
-  // Validate that VPlan has a mask to make sure that the epilogue loop
-  // terminates correctly:
-  if (none_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-              IsaPred<VPActiveLaneMaskPHIRecipe>)) {
-    reportVectorizationInfo(
-        "Tail-folded epilogue has no active-lane-mask exit, so it may not "
-        "terminate, can't apply tail-folded epilogue",
-        "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    VPlans.pop_back();
-    return false;
+      return false;
+    }
+    VPlan &Plan = *VPlans.back();
+    assert(Plan.getSingleVF() == EpilogueVectorizationForceVF &&
+           Plan.hasTailFolded() &&
+           "Expected to build a valid tail-folded VPlan with epilogue VF");
+
+    // Validate that VPlan has a mask to make sure that the epilogue loop
+    // terminates correctly:
+    if (none_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+                IsaPred<VPActiveLaneMaskPHIRecipe>)) {
+      reportVectorizationInfo(
+          "Tail-folded epilogue has no active-lane-mask exit, so it may not "
+          "terminate, can't apply tail-folded epilogue",
+          "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+      VPlans.pop_back();
+      return false;
+    }
+
+    if (!cost(Plan, EpilogueVectorizationForceVF, /*RU=*/nullptr, EpilogueTfCM)
+             .isValid()) {
+      VPlans.pop_back();
+      reportVectorizationInfo("This case of epilogue loop can't be tail-folded "
+                              "- Invalid costs",
+                              "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "LV: Tail-folded epilogue VPlan is created\n");
+    return true;
   }
+  // Collect the Vectorization Factor Candidates.
+  SmallVector<ElementCount> VFCandidates;
+  for (auto VF = ElementCount::getFixed(1);
+       ElementCount::isKnownLE(VF, MaxFactors.FixedVF); VF *= 2)
+    VFCandidates.push_back(VF);
+  for (auto VF = ElementCount::getScalable(1);
+       ElementCount::isKnownLE(VF, MaxFactors.ScalableVF); VF *= 2)
+    VFCandidates.push_back(VF);
 
-  if (!cost(Plan, EpilogueVectorizationForceVF, /*RU=*/nullptr, EpilogueTfCM)
-           .isValid()) {
-    VPlans.pop_back();
-    reportVectorizationInfo("This case of epilogue loop can't be tail-folded "
-                            "- Invalid costs",
-                            "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    return false;
-  }
-  LLVM_DEBUG(dbgs() << "LV: Tail-folded epilogue VPlan is created\n");
+  // Collect Uniform and Scalar instructions after vectorization with VF.
+  for (const auto &VF : VFCandidates)
+    EpilogueTfCM.collectNonVectorizedAndSetWideningDecisions(VF);
+
+  buildVPlans(*VPlan1, ElementCount::getFixed(1), MaxFactors.FixedVF,
+              EpilogueTfCM);
+  buildVPlans(*VPlan1, ElementCount::getScalable(1), MaxFactors.ScalableVF,
+              EpilogueTfCM);
+
+  computeVPlanCosts(EpilogueTfCM);
   return true;
 }
 
@@ -5427,32 +5465,12 @@ LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
   return Cost;
 }
 
-std::pair<VectorizationFactor, VPlan *>
-LoopVectorizationPlanner::computeBestVF() {
+void LoopVectorizationPlanner::computeVPlanCosts(
+    LoopVectorizationCostModel &PlanCM) {
   if (VPlans.empty())
-    return {VectorizationFactor::Disabled(), nullptr};
-  // If there is a single VPlan with a single VF, return it directly.
-  VPlan &FirstPlan = *VPlans[0];
+    return;
 
-  ElementCount UserVF = Config.getHints().getWidth();
-  if (VPlans.size() == 1) {
-    // For outer loops, the plan has a single vector VF determined by the
-    // heuristic.
-    assert((FirstPlan.hasScalarVFOnly() || hasPlanWithVF(UserVF) ||
-            FirstPlan.isOuterLoop()) &&
-           "must have a single scalar VF, UserVF or an outer loop");
-    return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
-  }
-
-  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF() && VPlans.size() == 2) {
-    assert(VPlans[0]->getSingleVF() == UserVF &&
-           "expected second plan to be for the forced UserVF");
-    assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
-           "expected first plan to be for the forced epilogue VF");
-    return {VectorizationFactor(UserVF, 0, 0), VPlans[0].get()};
-  }
-
-  LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
+  LLVM_DEBUG(dbgs() << "LV: Computing costs of vplans using cost kind: "
                     << (Config.CostKind == TTI::TCK_RecipThroughput
                             ? "Reciprocal Throughput\n"
                         : Config.CostKind == TTI::TCK_Latency
@@ -5462,29 +5480,27 @@ LoopVectorizationPlanner::computeBestVF() {
                             ? "Code Size and Latency\n"
                             : "Unknown\n"));
 
+  VPlan &FirstPlan = *VPlans[0];
   ElementCount ScalarVF = ElementCount::getFixed(1);
   assert(FirstPlan.hasVF(ScalarVF) &&
          "More than a single plan/VF w/o any plan having scalar VF");
 
   // TODO: Compute scalar cost using VPlan-based cost model.
-  InstructionCost ScalarCost = CM->expectedCost(ScalarVF);
+  InstructionCost ScalarCost = PlanCM.expectedCost(ScalarVF);
   LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ScalarCost << ".\n");
-  VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
-  VectorizationFactor BestFactor = ScalarFactor;
+  VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost,
+                                   FirstPlan.hasTailFolded());
+  if (&PlanCM == CM.get())
+    FeasibleVFs.push_back(ScalarFactor);
 
   bool ForceVectorization =
       Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
-  if (ForceVectorization) {
-    // Ignore scalar width, because the user explicitly wants vectorization.
-    // Initialize cost to max so that VF = 2 is, at least, chosen during cost
-    // evaluation.
-    BestFactor.Cost = InstructionCost::getMax();
-  }
-
-  VPlan *PlanForBestVF = &FirstPlan;
   ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
 
   for (auto &P : VPlans) {
+    // Skip VPlans that are not created by the PlanCM
+    if (P->hasTailFolded() != PlanCM.foldTailByMasking())
+      continue;
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
                                P->vectorFactors().end());
 
@@ -5526,20 +5542,86 @@ LoopVectorizationPlanner::computeBestVF() {
       }
 
       InstructionCost Cost =
-          cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr, *CM);
-      VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
-
-      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
-        BestFactor = CurrentFactor;
-        PlanForBestVF = P.get();
-      }
-
-      // If profitable add it to ProfitableVF list.
-      if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
-        ProfitableVFs.push_back(CurrentFactor);
+          cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr, PlanCM);
+      if (!Cost.isValid())
+        continue;
+      VectorizationFactor CurrentFactor(VF, Cost, ScalarCost,
+                                        P->hasTailFolded());
+      FeasibleVFs.push_back(CurrentFactor);
     }
   }
+}
 
+std::pair<VectorizationFactor, VPlan *>
+LoopVectorizationPlanner::selectBestVF() {
+  if (VPlans.empty())
+    return {VectorizationFactor::Disabled(), nullptr};
+
+  // If there is a single VPlan with a single VF, return it directly.
+  VPlan &FirstPlan = *VPlans[0];
+
+  ElementCount UserVF = Config.getHints().getWidth();
+  if (VPlans.size() == 1) {
+    // For outer loops, the plan has a single vector VF determined by the
+    // heuristic.
+    assert((FirstPlan.hasScalarVFOnly() || FirstPlan.getSingleVF() == UserVF ||
+            FirstPlan.isOuterLoop()) &&
+           "must have a single scalar VF, UserVF or an outer loop");
+    return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0,
+                                FirstPlan.hasTailFolded()),
+            &FirstPlan};
+  }
+
+  if (VPlans.size() == 2 && hasPlanWithVF(UserVF, VPlans[0]->hasTailFolded()) &&
+      hasForcedEpilogueVF()) {
+    assert(VPlans[0]->getSingleVF() == UserVF &&
+           "expected first plan to be for the forced UserVF");
+    assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
+           "expected second plan to be for the forced epilogue VF");
+    return {VectorizationFactor(UserVF, 0, 0, VPlans[0]->hasTailFolded()),
+            VPlans[0].get()};
+  }
+
+  assert(!FeasibleVFs.empty() &&
+         "Expected to have at least 1 non-scalar VF with a valid cost");
+  VectorizationFactor ScalarFactor = FeasibleVFs[0];
+  assert(ScalarFactor.Width.isScalar() &&
+         "Expect first feasible VF to be the scalar one");
+
+  assert(FirstPlan.hasVF(ScalarFactor.Width) &&
+         "More than a single plan/VF w/o any plan having scalar VF");
+
+  VPlan *PlanForBestVF = &FirstPlan;
+  VectorizationFactor BestFactor = ScalarFactor;
+  if (Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled) {
+    // Ignore scalar width, because the user explicitly wants vectorization.
+    // Initialize cost to max so that VF = 2 is, at least, chosen during cost
+    // evaluation.
+    BestFactor.Cost = InstructionCost::getMax();
+  }
+
+  for (auto &CurrentFactor : FeasibleVFs) {
+    if (CurrentFactor.Width.isScalar())
+      continue;
+
+    VPlan &CurrentPlan =
+        getPlanFor(CurrentFactor.Width, CurrentFactor.HasTailFolded);
+
+    if (CurrentFactor.HasTailFolded == CM->foldTailByMasking() &&
+        isMoreProfitable(CurrentFactor, BestFactor,
+                         CurrentPlan.hasScalarTail())) {
+      BestFactor = CurrentFactor;
+      PlanForBestVF = &CurrentPlan;
+    }
+
+    // If profitable add it to ProfitableVF list.
+    if (isMoreProfitable(CurrentFactor, ScalarFactor,
+                         CurrentPlan.hasScalarTail()))
+      ProfitableVFs.push_back(CurrentFactor);
+  }
+
+  // FeasibleVFs is not needed anymore.
+  FeasibleVFs.clear();
   VPlan &BestPlan = *PlanForBestVF;
 
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
@@ -7626,7 +7708,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
-  auto [VF, BestPlanPtr] = LVP.computeBestVF();
+  auto [VF, BestPlanPtr] = LVP.selectBestVF();
   unsigned IC = 1;
 
   // For VPlan build stress testing of outer loops, bail after plan
@@ -7642,7 +7724,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   GeneratedRTChecks Checks(Opts, PSE, DT, LI, TTI, Config.CostKind,
                            LVP.getCostModel().maskPartialAliasing());
-  if (LVP.hasPlanWithVF(VF.Width)) {
+  if (BestPlanPtr &&
+      LVP.hasPlanWithVF(VF.Width, BestPlanPtr->hasTailFolded())) {
     // Select the interleave count. Outer loops are not interleaved.
     if (IsInnerLoop)
       IC = LVP.selectInterleaveCount(*BestPlanPtr, VF.Width, VF.Cost);
@@ -7719,7 +7802,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                   "Ignoring user-specified interleave count due to possibly "
                   "unsafe dependencies in the loop."};
     InterleaveLoop = false;
-  } else if (!LVP.hasPlanWithVF(VF.Width) && UserIC > 1) {
+  } else if ((!BestPlanPtr ||
+              !LVP.hasPlanWithVF(VF.Width, BestPlanPtr->hasTailFolded())) &&
+             UserIC > 1) {
     // Tell the user interleaving was avoided up-front, despite being explicitly
     // requested.
     LLVM_DEBUG(dbgs() << "LV: Ignoring UserIC, because vectorization and "
