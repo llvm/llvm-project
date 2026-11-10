@@ -19,6 +19,9 @@
 # CHECK-DAG: [[TAIL:0x[0-9A-Fa-f]+]] 0x00000008 {{.*}} _tail_a
 # CHECK-DAG: [[TAIL]] 0x00000000 {{.*}} _tail_b
 
+## An equivalent caller of an interposable leaf must keep its own body.
+# CHECK-DAG: 0x00000018 {{.*}} _call_interposable
+
 ## Address-significant callers must retain unique entrypoints too.
 # CHECK-DAG: 0x00000018 {{.*}} _unique_a
 # CHECK-DAG: 0x00000004 {{.*}} _unique_b
@@ -195,7 +198,9 @@ _interposable_leaf:
 
 _call_interposable:
   stp x29, x30, [sp, #-16]!
+  mov x29, sp
   bl _interposable_leaf
+  add w0, w0, #3
   ldp x29, x30, [sp], #16
   ret
 
