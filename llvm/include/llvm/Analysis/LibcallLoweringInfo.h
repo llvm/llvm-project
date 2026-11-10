@@ -20,7 +20,6 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Pass.h"
-#include <cassert>
 
 namespace llvm {
 
@@ -32,8 +31,6 @@ private:
   /// Stores the implementation choice for each libcall.
   RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
       RTLIB::Unsupported};
-  /// Stores context-specific (e.g. subtarget) calling convention overrides.
-  DenseMap<unsigned, CallingConv::ID> CallingConvOverrides;
 
 public:
   /// Callback applying the caller's context-specific (e.g. subtarget) libcall
@@ -83,27 +80,14 @@ public:
     LibcallImpls[Call] = Impl;
   }
 
-  /// Override the CallingConv that should be used for \p Call in this lowering
-  /// context.
-  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
-    assert(Call != RTLIB::Unsupported &&
-           "Cannot override calling convention for unsupported libcall");
-    CallingConvOverrides[Call] = CC;
-  }
-
   // FIXME: Remove this wrapper in favor of directly using
   // getLibcallImplCallingConv
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return getLibcallImplCallingConv(LibcallImpls[Call]);
+    return RTLCI.LibcallImplCallingConvs[LibcallImpls[Call]];
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
   CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    if (!CallingConvOverrides.empty()) {
-      auto It = CallingConvOverrides.find(Call);
-      if (It != CallingConvOverrides.end())
-        return It->second;
-    }
     return RTLCI.LibcallImplCallingConvs[Call];
   }
 

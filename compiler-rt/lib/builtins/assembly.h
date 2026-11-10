@@ -355,10 +355,21 @@
 #define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
   CFI_END SEPARATOR                                                            \
   .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS_UNMANGLED(name, target)       \
+  .globl FUNC_SYMBOL(name) SEPARATOR                                           \
+  SYMBOL_IS_FUNC(name) SEPARATOR                                               \
+  DECLARE_SYMBOL_VISIBILITY_UNMANGLED(FUNC_SYMBOL(name)) SEPARATOR             \
+  .set FUNC_SYMBOL(name), FUNC_SYMBOL(target) SEPARATOR                        \
+  .size SYMBOL_NAME(name), . - SYMBOL_NAME(target)
 #else
 #define END_COMPILERRT_FUNCTION(name)
 #define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
   CFI_END
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_ALIAS_UNMANGLED(name, target)       \
+  .globl FUNC_SYMBOL(name) SEPARATOR                                           \
+  SYMBOL_IS_FUNC(name) SEPARATOR                                               \
+  DECLARE_SYMBOL_VISIBILITY_UNMANGLED(FUNC_SYMBOL(name)) SEPARATOR             \
+  .set FUNC_SYMBOL(name), FUNC_SYMBOL(target)
 #endif
 
 #ifdef __arm__

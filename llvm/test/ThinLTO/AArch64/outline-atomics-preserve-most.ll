@@ -36,7 +36,7 @@
 ; CHECK-NOT:   stp x19
 ; CHECK-NOT:   stp x20
 ; CHECK:       bl {{.*}} <caller+{{.*}}>
-; CHECK-NEXT:  R_AARCH64_CALL26 __aarch64_ldadd4_acq_rel
+; CHECK-NEXT:  R_AARCH64_CALL26 __aarch64_ldadd4_acq_rel_preservemost
 ; CHECK-NOT:   ldp x19
 ; CHECK:       ret
 
@@ -44,7 +44,7 @@
 ; FLAG-NOT:   stp x19
 ; FLAG-NOT:   stp x20
 ; FLAG:       bl {{.*}} <callee_with_live_vals+{{.*}}>
-; FLAG-NEXT:  R_AARCH64_CALL26 __aarch64_ldadd4_acq_rel
+; FLAG-NEXT:  R_AARCH64_CALL26 __aarch64_ldadd4_acq_rel_preservemost
 ; FLAG-NOT:   ldp x19
 ; FLAG:       ret
 

@@ -10,7 +10,7 @@ int fetch_add_with_live_vals(_Atomic int *p, int v, int a, int b, int c, int d,
   // ASM-LABEL: fetch_add_with_live_vals:
   // ASM-NOT: stp x19
   // ASM-NOT: stp x20
-  // ASM: bl __aarch64_ldadd4_acq_rel
+  // ASM: bl __aarch64_ldadd4_acq_rel_preservemost
   // ASM: ret
   __c11_atomic_fetch_add(p, v, __ATOMIC_ACQ_REL);
   return a + b + c + d + e + f;

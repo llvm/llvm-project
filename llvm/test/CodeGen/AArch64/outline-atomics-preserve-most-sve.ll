@@ -15,7 +15,7 @@ define <vscale x 4 x i32> @ldset8_preserves_sve(ptr %p, i64 %v, <vscale x 4 x i3
 ; PRESERVE-NOT:   addvl
 ; PRESERVE-NOT:   str z
 ; PRESERVE-NOT:   str p
-; PRESERVE:       bl __aarch64_ldset8_acq_rel
+; PRESERVE:       bl __aarch64_ldset8_acq_rel_preservemost
 ; PRESERVE-NOT:   ldr z
 ; PRESERVE-NOT:   ldr p
 ; PRESERVE:       add z0.s, p0/m, z0.s, z1.s

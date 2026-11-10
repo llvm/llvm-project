@@ -558,24 +558,35 @@ void AArch64Subtarget::initLibcallLoweringInfo(
   if (!useOutlineAtomicsPreserveMost())
     return;
 
-#define LCALLS(A, B)                                                           \
-  RTLIB::A##B##_RELAX, RTLIB::A##B##_ACQ, RTLIB::A##B##_REL,                   \
-      RTLIB::A##B##_ACQ_REL
-#define LCALL4(A) LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8)
-  static constexpr RTLIB::Libcall OutlineAtomicCalls[] = {
-      LCALL4(OUTLINE_ATOMIC_CAS),   LCALLS(OUTLINE_ATOMIC_CAS, 16),
-      LCALL4(OUTLINE_ATOMIC_SWP),   LCALL4(OUTLINE_ATOMIC_LDADD),
-      LCALL4(OUTLINE_ATOMIC_LDSET), LCALL4(OUTLINE_ATOMIC_LDCLR),
-      LCALL4(OUTLINE_ATOMIC_LDEOR),
+  struct LibcallPair {
+    RTLIB::Libcall LC;
+    RTLIB::LibcallImpl Impl;
+  };
+#define LCALL(LC_BASE, IMPL_BASE, ORDER_UPPER, ORDER_LOWER)                    \
+  {RTLIB::OUTLINE_ATOMIC_##LC_BASE##_##ORDER_UPPER,                            \
+   RTLIB::impl___aarch64_##IMPL_BASE##_##ORDER_LOWER##_preservemost}
+#define LCALLS(LC_OP, IMPL_OP, SIZE)                                           \
+  LCALL(LC_OP##SIZE, IMPL_OP##SIZE, RELAX, relax),                             \
+      LCALL(LC_OP##SIZE, IMPL_OP##SIZE, ACQ, acq),                             \
+      LCALL(LC_OP##SIZE, IMPL_OP##SIZE, REL, rel),                             \
+      LCALL(LC_OP##SIZE, IMPL_OP##SIZE, ACQ_REL, acq_rel)
+#define LCALL4(LC_OP, IMPL_OP)                                                 \
+  LCALLS(LC_OP, IMPL_OP, 1), LCALLS(LC_OP, IMPL_OP, 2),                        \
+      LCALLS(LC_OP, IMPL_OP, 4), LCALLS(LC_OP, IMPL_OP, 8)
+  static constexpr LibcallPair OutlineAtomicImpls[] = {
+      LCALL4(CAS, cas),     LCALLS(CAS, cas, 16), LCALL4(SWP, swp),
+      LCALL4(LDADD, ldadd), LCALL4(LDSET, ldset), LCALL4(LDCLR, ldclr),
+      LCALL4(LDEOR, ldeor),
   };
 #undef LCALL4
 #undef LCALLS
+#undef LCALL
 
-  for (RTLIB::Libcall LC : OutlineAtomicCalls) {
-    RTLIB::LibcallImpl Impl = Info.getLibcallImpl(LC);
-    if (Impl != RTLIB::Unsupported)
-      Info.setLibcallImplCallingConv(
-          Impl, CallingConv::AArch64_Outline_Atomics_PreserveMost);
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Info.getRuntimeLibcallsInfo();
+  for (const auto &[LC, Impl] : OutlineAtomicImpls) {
+    if (Info.getLibcallImpl(LC) != RTLIB::Unsupported &&
+        RTLCI.isAvailable(Impl))
+      Info.setLibcallImpl(LC, Impl);
   }
 }
 

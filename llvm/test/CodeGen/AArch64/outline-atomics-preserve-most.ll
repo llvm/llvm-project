@@ -26,17 +26,17 @@ define i64 @ldadd4_preserves_gprs(ptr %p, i32 %v, i64 %a, i64 %b, i64 %c, i64 %d
 ;
 ; PRESERVE-LABEL: ldadd4_preserves_gprs:
 ; PRESERVE-NOT:   stp x
-; PRESERVE:       bl __aarch64_ldadd4_acq_rel
+; PRESERVE:       bl __aarch64_ldadd4_acq_rel_preservemost
 ; PRESERVE-NOT:   ldp x
 ; PRESERVE:       ret
 ;
 ; GISEL-LABEL: ldadd4_preserves_gprs:
 ; GISEL-NOT:   stp x
-; GISEL:       bl __aarch64_ldadd4_acq_rel
+; GISEL:       bl __aarch64_ldadd4_acq_rel_preservemost
 ; GISEL:       ret
 ;
 ; CSRMASK-LABEL: name: ldadd4_preserves_gprs
-; CSRMASK: BL &__aarch64_ldadd4_acq_rel, csr_aarch64_outline_atomics_preservemost
+; CSRMASK: BL &__aarch64_ldadd4_acq_rel_preservemost, csr_aarch64_outline_atomics_preservemost
 ; ARM64EC-LABEL: name: '#ldadd4_preserves_gprs'
 ; ARM64EC: BL &"#__aarch64_ldadd4_acq_rel", csr_aarch64_aapcs
   %old = atomicrmw add ptr %p, i32 %v acq_rel
@@ -62,17 +62,17 @@ define i128 @cas16_preserves_gprs(ptr %p, i128 %exp, i128 %des, i64 %extra) noun
 ; PRESERVE-LABEL: cas16_preserves_gprs:
 ; PRESERVE-NOT:   x19
 ; PRESERVE-NOT:   x20
-; PRESERVE:       bl __aarch64_cas16_acq_rel
+; PRESERVE:       bl __aarch64_cas16_acq_rel_preservemost
 ; PRESERVE:       ret
 ;
 ; GISEL-LABEL: cas16_preserves_gprs:
 ; GISEL-NOT:   x19
 ; GISEL-NOT:   x20
-; GISEL:       bl __aarch64_cas16_acq_rel
+; GISEL:       bl __aarch64_cas16_acq_rel_preservemost
 ; GISEL:       ret
 ;
 ; CSRMASK-LABEL: name: cas16_preserves_gprs
-; CSRMASK: BL &__aarch64_cas16_acq_rel, csr_aarch64_outline_atomics_preservemost
+; CSRMASK: BL &__aarch64_cas16_acq_rel_preservemost, csr_aarch64_outline_atomics_preservemost
 ; ARM64EC-LABEL: name: '#cas16_preserves_gprs'
 ; ARM64EC: BL &"#__aarch64_cas16_acq_rel", csr_aarch64_aapcs
   %pair = cmpxchg ptr %p, i128 %exp, i128 %des acq_rel acquire
@@ -93,7 +93,7 @@ define <4 x i32> @swp8_preserves_simd(ptr %p, i64 %v, <4 x i32> %vec0, <4 x i32>
 ; PRESERVE-LABEL: swp8_preserves_simd:
 ; PRESERVE-NOT:   stp q
 ; PRESERVE-NOT:   str q
-; PRESERVE:       bl __aarch64_swp8_rel
+; PRESERVE:       bl __aarch64_swp8_rel_preservemost
 ; PRESERVE-NOT:   ldp q
 ; PRESERVE-NOT:   ldr q
 ; PRESERVE:       add v0.4s, v0.4s, v1.4s
@@ -114,7 +114,7 @@ define i64 @exact_x4_x5_x14_x15_x16_x17_and_nzcv_boundary(ptr %p, i32 %v, i64 %x
 ; PRESERVE-DAG:   mov [[SAVEX15:x[6-9]|x1[0-3]]], x15
 ; PRESERVE-DAG:   mov [[SAVEX16:x[6-9]|x1[0-3]]], x16
 ; PRESERVE-DAG:   mov [[SAVEX17:x[6-9]|x1[0-3]]], x17
-; PRESERVE:       bl __aarch64_ldclr4_relax
+; PRESERVE:       bl __aarch64_ldclr4_relax_preservemost
 ; PRESERVE-DAG:   mov x4, [[SAVEX4]]
 ; PRESERVE-DAG:   mov x15, [[SAVEX15]]
 ; PRESERVE-DAG:   mov x16, [[SAVEX16]]
@@ -126,7 +126,7 @@ define i64 @exact_x4_x5_x14_x15_x16_x17_and_nzcv_boundary(ptr %p, i32 %v, i64 %x
 ; PRESERVE:       ret
 ;
 ; O0-LABEL: exact_x4_x5_x14_x15_x16_x17_and_nzcv_boundary:
-; O0:       bl __aarch64_ldclr4_relax
+; O0:       bl __aarch64_ldclr4_relax_preservemost
   %cmp = icmp eq i64 %x, %y
   %r4 = call i64 asm sideeffect "", "={x4}"()
   %r5 = call i64 asm sideeffect "", "={x5}"()

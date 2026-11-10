@@ -702,7 +702,7 @@ def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2
                                                  (sequence "X%u",19, 28),
                                                  LR, FP)>;
 
-// Out-of-line atomic helpers in compiler-rt (__aarch64_{cas,swp,ld*}*)
+// Out-of-line atomic preserve-most helpers (__aarch64_*_preservemost)
 // preserve all registers except argument/return registers (X0-X4),
 // scratch registers (X15-X17), and NZCV.
 def CSR_AArch64_Outline_Atomics_PreserveMost
