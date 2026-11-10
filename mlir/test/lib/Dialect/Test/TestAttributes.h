@@ -21,8 +21,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/SymbolTable.h"
-#include "mlir/IR/TensorEncoding.h"
 
 // generated files require above includes to come first
 #include "TestAttrInterfaces.h.inc"
