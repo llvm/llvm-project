@@ -6,6 +6,7 @@ include "mlir/IR/Interfaces.td"
 def ConvertToEmitCPatternInterface : DialectInterface<"ConvertToEmitCPatternInterface"> {
   let description = [{}];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"];
 
   let methods = [
     PureVirtualInterfaceMethod<[{

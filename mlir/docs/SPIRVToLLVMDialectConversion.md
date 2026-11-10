@@ -422,16 +422,33 @@ modelled with `xor` operation with a mask with all bits set.
 %0 = spirv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : i1
 ```
 
+The floating-point classification ops are mapped to the `llvm.intr.is.fpclass`
+intrinsic with the corresponding `FPClassTest` mask. The intrinsic operates per
+component and returns `i1` or a vector of `i1`, exactly like the SPIR-V ops.
+
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :---------------------------------------------:
+`spirv.IsInf`     | `llvm.intr.is.fpclass` with `fcInf` (`0x204`)
+`spirv.IsNan`     | `llvm.intr.is.fpclass` with `fcNan` (`0x003`)
+`spirv.IsFinite`  | `llvm.intr.is.fpclass` with `fcFinite` (`0x1f8`)
+`spirv.IsNormal`  | `llvm.intr.is.fpclass` with `fcNormal` (`0x108`)
+
+```mlir
+%0 = spirv.IsNan %op : f32  =>  %0 = "llvm.intr.is.fpclass"(%op) <{bit = 3 : i32}> : (f32) -> i1
+```
+
 ### Memory ops
 
 This section describes the conversion patterns for SPIR-V dialect operations
 that concern memory.
 
-#### `spirv.AccessChain`
+#### `spirv.AccessChain` and `spirv.InBoundsAccessChain`
 
 `spirv.AccessChain` is mapped to `llvm.getelementptr` op. In order to create a
 valid LLVM op, we also add a 0 index to the `spirv.AccessChain`'s indices list in
-order to go through the pointer.
+order to go through the pointer. `spirv.InBoundsAccessChain` is lowered the same
+way and additionally sets the `inbounds` flag on the resulting
+`llvm.getelementptr`.
 
 ```mlir
 // Access the 1st element of the array

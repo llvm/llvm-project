@@ -658,6 +658,12 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
+  /// VECTOR_SHUFFLE_VAR(VEC, MASK) - Returns VEC permuted by MASK, an integer
+  /// vector with the same number of elements as VEC. Result element i is
+  /// VEC[MASK[i]], with MASK[i] treated as unsigned, or poison if MASK[i] is
+  /// out of range.
+  VECTOR_SHUFFLE_VAR,
+
   /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
   /// left by OFFSET elements and returns the lower half.
   VECTOR_SPLICE_LEFT,

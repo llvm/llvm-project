@@ -2,6 +2,7 @@
 # echo "void sym1(void){}" | xcrun clang --target=arm64-apple-macos11.0 -o flat-reexport -dynamiclib -Wl,-reexported_symbols_list,reexports.exp -Wl,-flat_namespace -x c -
 # obj2yaml --raw-segment=data --raw-segment=linkedit flat-reexport > flat-reexport.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

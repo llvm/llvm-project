@@ -252,8 +252,8 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
     const lldb::ModuleSP &module_sp, DataBufferSP &data_sp,
     lldb::offset_t data_offset, const FileSpec *file,
     lldb::offset_t file_offset, lldb::offset_t length) {
-  ConstString object_name(module_sp->GetObjectName());
-  if (!object_name)
+  llvm::StringRef object_name(module_sp->GetObjectName());
+  if (object_name.empty())
     return nullptr;
 
   if (data_sp) {

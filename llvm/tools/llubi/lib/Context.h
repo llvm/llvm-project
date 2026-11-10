@@ -298,8 +298,6 @@ class Context {
 
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
-  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -444,6 +442,8 @@ public:
 
   AnyValue computeGEP(GEPOperator &GEP,
                       function_ref<const AnyValue &(Value *V)> GetValue);
+  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
                                AnyValue &AccumulatedOffset);
