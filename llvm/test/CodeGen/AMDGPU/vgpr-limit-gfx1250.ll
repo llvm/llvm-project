@@ -561,7 +561,7 @@ define amdgpu_kernel void @k256_w1_asm() #2561 {
 ; GFX1250: NumVgprs: 482
 ; GFX1250: VGPRBlocks: 30
 define amdgpu_kernel void @use512vgprs_codegen(ptr %p) #2561 {
-  %r0 = load volatile <512 x float>, ptr %p, align 1
+  %r0 = load volatile <512 x float>, ptr %p, align 4
   store volatile <512 x float> %r0, ptr %p
   ret void
 }
@@ -570,7 +570,7 @@ define amdgpu_kernel void @use512vgprs_codegen(ptr %p) #2561 {
 ; GFX1250: NumVgprs: 998
 ; GFX1250: VGPRBlocks: 62
 define amdgpu_kernel void @use1024vgprs_codegen(ptr %p) #1281 {
-  %r0 = load volatile <1024 x float>, ptr %p, align 1
+  %r0 = load volatile <1024 x float>, ptr %p, align 4
   store volatile <1024 x float> %r0, ptr %p
   ret void
 }
