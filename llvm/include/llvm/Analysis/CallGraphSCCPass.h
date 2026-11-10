@@ -35,7 +35,7 @@ namespace cl {
 class LibraryOptionsContext;
 } // namespace cl
 
-LLVM_ABI unsigned getMaxDevirtIterations(const cl::LibraryOptionsContext *);
+LLVM_ABI unsigned getMaxDevirtIterations(const cl::LibraryOptionsContext &);
 
 class LLVM_ABI CallGraphSCCPass : public Pass {
 public:

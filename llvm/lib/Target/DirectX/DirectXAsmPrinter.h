@@ -19,7 +19,7 @@ namespace llvm {
 class DXILAsmPrinterBeginPass
     : public RequiredPassInfoMixin<DXILAsmPrinterBeginPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 class DXILAsmPrinterPass : public RequiredPassInfoMixin<DXILAsmPrinterPass> {
@@ -31,7 +31,7 @@ public:
 class DXILAsmPrinterEndPass
     : public RequiredPassInfoMixin<DXILAsmPrinterEndPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm
