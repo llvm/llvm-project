@@ -1079,12 +1079,13 @@ static LogicalResult verifyOutputShape(
     expectedResultDims.push_back(rhsType.getDimSize(i));
   }
 
+  // The accumulator and the result must agree, regardless of the rank.
+  if (resType != accType)
+    return op.emitOpError("expected same accumulator and result type");
+
   // Verify 'expectedResultDims'.
   if (expectedResultDims.empty()) {
-    // No batch or free dimension implies a scalar or 0-D vector result. The
-    // accumulator and the result must agree.
-    if (resType != accType)
-      return op.emitOpError("expected same accumulator and result type");
+    // No batch or free dimension implies a scalar or 0-D vector result.
     if (auto resVectorType = llvm::dyn_cast<VectorType>(resType))
       if (resVectorType.getRank() != 0)
         return op.emitOpError("expected scalar or 0-D vector result when "
