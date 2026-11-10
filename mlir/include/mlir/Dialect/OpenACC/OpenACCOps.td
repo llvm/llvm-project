@@ -3867,12 +3867,6 @@ def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
     (OpenACC 3.4, section 3.2.15). The result indicates whether execution is
     on the given device type.
 
-    The call is evaluated at compile time only when device specialization
-    runs and the call is inside the code being specialized. On that path, a
-    compile-time constant device type folds to a constant result. Otherwise
-    the call remains a runtime call. The device type must be one of the
-    defined accelerator types.
-
     Example:
 
     ```mlir

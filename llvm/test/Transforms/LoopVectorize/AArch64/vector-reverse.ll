@@ -251,8 +251,8 @@ exit:
   ret i32 %sum.next
 }
 
-attributes #0 = { "target-cpu"="generic" "target-features"="+neon,+sve" }
-attributes #1 = { "target-cpu"="neoverse-v2" }
+attributes #0 = { "target-cpu"="generic" "target-features"="+neon,+sve" vscale_range(1,16) }
+attributes #1 = { "target-cpu"="neoverse-v2" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.mustprogress"}

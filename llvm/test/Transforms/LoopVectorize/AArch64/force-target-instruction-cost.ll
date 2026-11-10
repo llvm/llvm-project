@@ -933,5 +933,5 @@ exit:
 }
 
 attributes #0 = { "target-features"="+neon,+sve" vscale_range(1,16) }
-attributes #1 = { "target-cpu"="neoverse-512tvb" }
+attributes #1 = { "target-cpu"="neoverse-512tvb" vscale_range(1,16) }
 

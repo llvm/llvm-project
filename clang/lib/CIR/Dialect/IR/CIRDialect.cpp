@@ -3487,28 +3487,6 @@ mlir::LogicalResult cir::FuncOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// AddOp / SubOp
-//===----------------------------------------------------------------------===//
-
-// The integer-only type constraint on these ops makes the nsw/nuw/sat flag
-// type checks unnecessary. Only the mutual-exclusivity between nsw/nuw and
-// sat needs to be verified.
-
-LogicalResult cir::AddOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
-}
-
-LogicalResult cir::SubOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
@@ -4145,6 +4123,9 @@ LogicalResult cir::GetRuntimeMemberOp::verify() {
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
+  if (getType().getAddrSpace() != getAddr().getType().getAddrSpace())
+    return emitError()
+           << "result address space does not match the object address space";
   return mlir::success();
 }
 
