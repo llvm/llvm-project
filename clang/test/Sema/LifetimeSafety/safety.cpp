@@ -4185,6 +4185,29 @@ struct S {
     }                // expected-note {{local variable 'num' is destroyed here}}
     bar();           // expected-note {{later used here}}
   }
+  void alias_note_ignores_later_flow() {
+    int *q;
+    {
+      int num;
+      int *p = &num; // expected-warning {{local variable 'num' does not live long enough}}
+      this->p_ = p;  // expected-note {{local variable 'p' aliases the storage of local variable 'num'}}
+      q = p;
+    }                // expected-note {{local variable 'num' is destroyed here}}
+    bar();           // expected-note {{later used here}}
+    this->p_ = q;
+  }
+  void alias_note_from_previous_iteration(int n) {
+    int *q;
+    {
+      int num;
+      q = &num;      // expected-warning {{local variable 'num' does not live long enough}}
+    }                // expected-note {{local variable 'num' is destroyed here}}
+    for (int i = 0; i < n; ++i) {
+      bar();         // expected-note {{later used here}}
+      this->p_ = q;  // expected-note {{local variable 'q' aliases the storage of local variable 'num'}}
+    }
+    this->p_ = nullptr;
+  }
 };
 
 struct T {

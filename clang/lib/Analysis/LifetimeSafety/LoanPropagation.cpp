@@ -187,6 +187,12 @@ public:
     PendingStates.push_back(
         {{EndBlock, StartOID}, OriginFlowChainFactory.getEmptyList()});
 
+    // The loans held at StartPoint cannot come from later flows, so the first
+    // scan starts there. A loop may lead back to StartPoint's block; that visit
+    // is its previous iteration, which ran entirely before StartPoint, so scan
+    // the whole block.
+    ProgramPoint ScanFrom = StartPoint;
+
     // DFS loop to trace loan backwards through CFG
     while (!PendingStates.empty()) {
       DFSNode CurrNode = PendingStates.pop_back_val();
@@ -194,7 +200,8 @@ public:
 
       // Trace origins within the current block
       const auto [BuildResult, Complete] =
-          buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
+          buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan, ScanFrom);
+      ScanFrom = nullptr;
       if (!BuildResult.empty()) {
         for (OriginID OID : BuildResult)
           CurrNode.OriginFlowChain =
@@ -293,19 +300,26 @@ private:
 
   /// Builds the chain of origins through which a loan has propagated.
   ///
-  /// This procedure operates strictly within a single Block. Starting from the
-  /// last fact of the Block, it traces backwards through OriginFlowFacts to
-  /// identify the sequence of origins through which the loan flowed.
+  /// This procedure operates strictly within a single Block. Starting from
+  /// \p ScanFrom, or from the last fact of the Block if it is null, it traces
+  /// backwards through OriginFlowFacts to identify the sequence of origins
+  /// through which the loan flowed.
   ///
   /// Returns (chain, true) if the target loan origin is found during the
   /// traversal, otherwise returns (chain, false).
   std::pair<llvm::SmallVector<OriginID>, bool>
   buildOriginFlowChain(const CFGBlock *Block, const OriginID StartOID,
-                       const LoanID TargetLoan) const {
+                       const LoanID TargetLoan, ProgramPoint ScanFrom) const {
     OriginID CurrOID = StartOID;
     llvm::SmallVector<OriginID> OriginFlowChain;
 
-    for (const Fact *F : llvm::reverse(FactMgr.getFacts(Block))) {
+    auto Facts = llvm::reverse(FactMgr.getFacts(Block));
+    auto Begin = Facts.begin();
+    if (ScanFrom) {
+      Begin = llvm::find(Facts, ScanFrom);
+      assert(Begin != Facts.end() && "ScanFrom must be in Block");
+    }
+    for (const Fact *F : llvm::make_range(Begin, Facts.end())) {
       if (const auto *IF = F->getAs<IssueFact>())
         if (IF->getLoanID() == TargetLoan && IF->getOriginID() == CurrOID)
           return {OriginFlowChain, true};
