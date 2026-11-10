@@ -80,10 +80,11 @@ func.func @read_with_mask_dyn_subview(%v: vector<8x16xf32>, %n: index, %m: vecto
 // CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[N:.*]]: index, %[[M:.*]]: vector<8x16xi1>, %[[PAD:.*]]: f32
 // CHECK-NOT:     memref.alloca
 // CHECK-NOT:     vector.mask
-// CHECK:         %[[PS:.*]] = vector.broadcast %[[PAD]] : f32 to vector<8x16xf32>
 // CHECK:         %[[CM:.*]] = vector.create_mask %{{.*}}, %[[N]] : vector<8x16xi1>
+// CHECK:         %[[PS:.*]] = vector.broadcast %[[PAD]] : f32 to vector<8x16xf32>
 // CHECK:         %[[IN:.*]] = arith.select %[[CM]], %[[V]], %[[PS]]
-// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[IN]], %[[PS]]
+// CHECK:         %[[PS2:.*]] = vector.broadcast %[[PAD]] : f32 to vector<8x16xf32>
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[IN]], %[[PS2]]
 // CHECK:         return %[[SEL]]
 func.func @masked_read_dyn_subview(%v: vector<8x16xf32>, %n: index, %m: vector<8x16xi1>, %pad: f32) -> vector<8x16xf32> {
   %c0 = arith.constant 0 : index
@@ -102,8 +103,8 @@ func.func @masked_read_dyn_subview(%v: vector<8x16xf32>, %n: index, %m: vector<8
 // CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[N:.*]]: index, %[[M:.*]]: vector<8x16xi1>, %[[PT:.*]]: vector<8x16xf32>, %[[PAD:.*]]: f32
 // CHECK-NOT:     memref.alloca
 // CHECK-NOT:     vector.mask
-// CHECK:         %[[PS:.*]] = vector.broadcast %[[PAD]] : f32 to vector<8x16xf32>
 // CHECK:         %[[CM:.*]] = vector.create_mask %{{.*}}, %[[N]] : vector<8x16xi1>
+// CHECK:         %[[PS:.*]] = vector.broadcast %[[PAD]] : f32 to vector<8x16xf32>
 // CHECK:         %[[IN:.*]] = arith.select %[[CM]], %[[V]], %[[PS]]
 // CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[IN]], %[[PT]]
 // CHECK:         return %[[SEL]]
