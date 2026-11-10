@@ -169,6 +169,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   getModule()->setAttr(cir::CIRDialect::getTargetABIAttrName(),
                        builder.getStringAttr(getTarget().getABI()));
 
+  // Assign the target-cpu and target-features as attributes to the module. This
+  // will allow subsequent passes to use this to ensure that 'generated'
+  // functions get the correct behavior for the model.
+  llvm::StringMap<std::string> defaultCPUAndFeatures;
+  if (getCPUAndFeaturesAttributes(GlobalDecl(), defaultCPUAndFeatures))
+    for (const auto &[key, val] : defaultCPUAndFeatures)
+      getModule()->setAttr(key, builder.getStringAttr(val));
+
   // If cxxabi was overridden via -fc++-abi, record it.
   if (langOpts.CXXABI)
     getModule()->setAttr(

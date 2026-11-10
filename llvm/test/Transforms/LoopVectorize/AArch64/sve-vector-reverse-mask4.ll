@@ -93,7 +93,7 @@ for.inc:
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
 }
 
-attributes #0 = {"target-cpu"="generic" "target-features"="+neon,+sve"}
+attributes #0 = {"target-cpu"="generic" "target-features"="+neon,+sve" vscale_range(1,16) }
 
 
 !0 = distinct !{!0, !1, !2, !3, !4}

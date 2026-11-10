@@ -811,6 +811,17 @@ TEST_F(InstrProfTest, test_symtab_lookup_vtable_with_assigned_guid) {
             GV);
 }
 
+TEST_F(InstrProfTest, test_symtab_get_canonical_name) {
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.llvm.1234"), "foo");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.part.1"), "foo");
+  EXPECT_EQ(
+      InstrProfSymtab::getCanonicalName("foo.__uniq.123.part.1.llvm.9999"),
+      "foo.__uniq.123");
+  // Coroutine clone suffixes are preserved.
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("coro.llvm.1234.resume"),
+            "coro.llvm.1234.resume");
+}
+
 // callee1 to callee6 are from vtable1 to vtable6 respectively.
 static const char callee1[] = "callee1";
 static const char callee2[] = "callee2";

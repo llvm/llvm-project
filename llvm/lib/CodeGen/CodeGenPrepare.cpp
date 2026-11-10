@@ -2111,6 +2111,8 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
   Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
   Value *RemSel =
       Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+  if (auto *SI = dyn_cast<SelectInst>(RemSel))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
 
   NewRem->addIncoming(Start, L->getLoopPreheader());
   NewRem->addIncoming(RemSel, L->getLoopLatch());
@@ -8840,7 +8842,7 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   // Multiply the start by the size of the struct, and add the base pointer.
   Type *Int8Ty = IntegerType::getInt8Ty(ITy->getContext());
   IRBuilder<> Builder(PreHeader->getTerminator());
-  Value *StructSize = ConstantInt::get(ITy, APInt(64, Size));
+  Value *StructSize = ConstantInt::get(ITy, Size);
   Value *SizeSplat =
       Builder.CreateVectorSplat(VTy->getElementCount(), StructSize);
   Value *NewStart = Builder.CreateMul(Start, SizeSplat);

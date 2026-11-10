@@ -1164,4 +1164,4 @@ exit:
 }
 
 
-attributes #0 = { optsize "target-cpu"="neoverse-v2" }
+attributes #0 = { optsize "target-cpu"="neoverse-v2" vscale_range(1,16) }

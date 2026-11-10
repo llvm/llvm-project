@@ -86,7 +86,7 @@ static cl::opt<std::string> AssumeFileName(
              "supported:\n"
              "  CSharp: .cs\n"
              "  Java: .java\n"
-             "  JavaScript: .js .mjs .cjs .ts\n"
+             "  JavaScript: .js .mjs .cjs .ts .mts .cts\n"
              "  JSON: .json .ipynb\n"
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
