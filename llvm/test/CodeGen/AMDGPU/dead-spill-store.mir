@@ -10,6 +10,7 @@
   declare void @callee()
   define void @call_dead_save() { ret void }
   define void @changed_exec() { ret void }
+  define void @dead_slot() { ret void }
 ...
 ---
 name: adjacent_dead_save
@@ -107,6 +108,39 @@ body: |
     %3:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
     %3:sgpr_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
     $exec = S_MOV_B64 -1
+    %0:sgpr_32 = S_ADD_I32 %0, %1, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %2, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, %3, implicit-def dead $scc
+    $sgpr0 = COPY %0
+    SI_RETURN implicit $sgpr0
+...
+
+# %2 is spilled around each update in its chain. Every restore of its slot
+# directly follows a save to that slot, so all restores are forwarded and the
+# saves become dead. Once the saves are removed, the unused slot is removed.
+---
+name: dead_slot
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr48, $sgpr49
+    ; CHECK-LABEL: name: dead_slot
+    ; CHECK: stack:
+    ; CHECK-NOT: id: 1,
+    ; CHECK: body:
+    ; CHECK-NOT: %stack.1
+    ; CHECK: SI_RETURN
+    %0:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %1:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 $sgpr48, $sgpr49, implicit-def dead $scc
+    %0:sgpr_32 = S_ADD_I32 %0, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, %2, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, %1, implicit-def dead $scc
+    %3:sgpr_32 = S_ADD_I32 %3, %3, implicit-def dead $scc
+    %2:sgpr_32 = S_ADD_I32 %2, %3, implicit-def dead $scc
     %0:sgpr_32 = S_ADD_I32 %0, %1, implicit-def dead $scc
     %0:sgpr_32 = S_ADD_I32 %0, %2, implicit-def dead $scc
     %0:sgpr_32 = S_ADD_I32 %0, %3, implicit-def dead $scc

@@ -3447,7 +3447,7 @@ define void @load_i16_stride8_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 define void @load_i16_stride8_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr %out.vec2, ptr %out.vec3, ptr %out.vec4, ptr %out.vec5, ptr %out.vec6, ptr %out.vec7) nounwind {
 ; SSE-LABEL: load_i16_stride8_vf32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    subq $696, %rsp # imm = 0x2B8
+; SSE-NEXT:    subq $680, %rsp # imm = 0x2A8
 ; SSE-NEXT:    movdqa 496(%rdi), %xmm2
 ; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 480(%rdi), %xmm14
@@ -3901,7 +3901,7 @@ define void @load_i16_stride8_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; SSE-NEXT:    movaps %xmm2, 32(%rax)
 ; SSE-NEXT:    movaps %xmm15, 16(%rax)
 ; SSE-NEXT:    movaps %xmm0, (%rax)
-; SSE-NEXT:    addq $696, %rsp # imm = 0x2B8
+; SSE-NEXT:    addq $680, %rsp # imm = 0x2A8
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_i16_stride8_vf32:

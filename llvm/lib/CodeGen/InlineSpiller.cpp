@@ -136,6 +136,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
 
   bool isFullSlotStore(const MachineInstr &MI, int FI) const;
   SmallPtrSet<VNInfo *, 8> collectUsedSpillValues() const;
+  void removeSlotsWithoutAccesses(const SmallSetVector<int, 8> &Slots);
 
 public:
   HoistSpillHelper(const Spiller::RequiredAnalyses &Analyses,
@@ -1744,6 +1745,49 @@ bool HoistSpillHelper::isFullSlotStore(const MachineInstr &MI, int FI) const {
   });
 }
 
+/// Remove the frame objects of \p Slots that no instruction accesses any more
+/// and drop every debug location that still refers to them.
+void HoistSpillHelper::removeSlotsWithoutAccesses(
+    const SmallSetVector<int, 8> &Slots) {
+  SmallSetVector<int, 8> DeadSlots = Slots;
+  SmallVector<MachineOperand *, 4> DebugOps;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB.instrs()) {
+      for (MachineOperand &MO : MI.operands()) {
+        if (!MO.isFI() || !DeadSlots.contains(MO.getIndex()))
+          continue;
+        if (MI.isDebugValue())
+          DebugOps.push_back(&MO);
+        else
+          DeadSlots.remove(MO.getIndex());
+      }
+    }
+  }
+  if (DeadSlots.empty())
+    return;
+
+  // Mark dead slots as optimized out in debug info.
+  for (MachineOperand *MO : DebugOps)
+    if (DeadSlots.contains(MO->getIndex()))
+      MO->ChangeToRegister(Register(), /*isDef=*/false);
+
+  // LiveDebugVariables places debug ranges of a spilled register without a
+  // physical register in its stack slot. Forwarding already updates most of
+  // those ranges, clearing here makes sure any left over ranges do not refer to
+  // removed frame objects.
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    int Slot = VRM.getStackSlot(Reg);
+    if (Slot != VirtRegMap::NO_STACK_SLOT && DeadSlots.contains(Slot))
+      VRM.clearStackSlot(Reg);
+  }
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (int Slot : DeadSlots) {
+    MFI.RemoveStackObject(Slot);
+  }
+}
+
 /// Collect the original values that stack accesses may read from slots
 /// created by this spiller. Only spill code accesses those slots, and a full
 /// store writes the original value live at that point.
@@ -2092,6 +2136,8 @@ void HoistSpillHelper::hoistAllSpills() {
   if (!DeadSpillCandidates.empty())
     UsedValues = collectUsedSpillValues();
 
+  SmallSetVector<int, 8> SlotsWithRemovedSpills;
+
   // Each entry in MergeableSpills contains a spill set with equal values.
   for (auto &Ent : MergeableSpills) {
     int Slot = Ent.first.first;
@@ -2122,6 +2168,7 @@ void HoistSpillHelper::hoistAllSpills() {
       SpillsToRm.append(EqValSpills.begin(), EqValSpills.end());
       EqValSpills.clear();
       NumSpillsRemoved += SpillsToRm.size();
+      SlotsWithRemovedSpills.insert(Slot);
     } else {
       runHoistSpills(OrigLI, *OrigVNI, EqValSpills, SpillsToRm, SpillsToIns);
     }
@@ -2168,6 +2215,9 @@ void HoistSpillHelper::hoistAllSpills() {
     }
     Edit.eliminateDeadDefs(SpillsToRm, {});
   }
+
+  if (!SlotsWithRemovedSpills.empty())
+    removeSlotsWithoutAccesses(SlotsWithRemovedSpills);
 
   // Flush vregs that were unassigned from the matrix during shrinking but
   // were not split (so LRE_DidCloneVirtReg never re-assigned them).
