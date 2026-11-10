@@ -2734,6 +2734,9 @@ def CIR_LoweringOptionsAttr
     `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
     single toolchain. `no_trapping_math` is true when
     `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
+    `relative_cxx_abi_vtables` mirrors `LangOptions::RelativeCXXABIVTables`
+    (`-fexperimental-relative-c++-abi-vtables`), which selects the layout of the
+    C++ vtables that lowering emits and reads. It is omitted when false.
 
     The following fields come from `CodeGenOptions`.
     `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
@@ -2773,14 +2776,16 @@ def CIR_LoweringOptionsAttr
     "int32_t":$long_double_size,
     "bool":$enable_noundef_attrs,
     "bool":$no_trapping_math,
-    "uint32_t":$ssp_buffer_size
+    "uint32_t":$ssp_buffer_size,
+    DefaultValuedParameter<"bool", "false">:$relative_cxx_abi_vtables
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
                $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
                $clang_abi_compat, $long_double_size, $enable_noundef_attrs,
-               $no_trapping_math, $ssp_buffer_size) `>`
+               $no_trapping_math, $ssp_buffer_size,
+               $relative_cxx_abi_vtables) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;
