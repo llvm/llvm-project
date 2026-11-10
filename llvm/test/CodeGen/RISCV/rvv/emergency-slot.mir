@@ -12,7 +12,6 @@
 ---
 name:            spillslot
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x12', virtual-reg: '' }
 frameInfo:

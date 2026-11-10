@@ -13,7 +13,6 @@
 ...
 ---
 name:            outline_x5_live_0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_x5_live_0
   ; CHECK: bb.0:
@@ -48,7 +47,6 @@ body:             |
 ...
 ---
 name:            outline_x5_live_1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_x5_live_1
   ; CHECK: bb.0:
@@ -83,7 +81,6 @@ body:             |
 ...
 ---
 name:            outline_x5_live_2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_x5_live_2
   ; CHECK: bb.0:
@@ -118,7 +115,6 @@ body:             |
 ...
 ---
 name:            outline_no_temp_0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_no_temp_0
   ; CHECK: bb.0:
@@ -162,7 +158,6 @@ body:             |
 ...
 ---
 name:            outline_no_temp_1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_no_temp_1
   ; CHECK: bb.0:
@@ -206,7 +201,6 @@ body:             |
 ...
 ---
 name:            outline_no_temp_2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_no_temp_2
   ; CHECK: bb.0:

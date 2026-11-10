@@ -13,7 +13,6 @@
 # CHECK: Macro fuse: {{.*}}LUI - ADDI
 ---
 name: lui_addi
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -30,7 +29,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}AUIPC - ADDI
 ---
 name: auipc_addi
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -47,7 +45,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SLLI - SRLI
 ---
 name: slli_srli_shifted_zext
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -64,7 +61,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SLLI - SRLI
 ---
 name: slli_srli_zexth
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -81,7 +77,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SLLI - SRLI
 ---
 name: slli_srli_zextw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -98,7 +93,6 @@ body:             |
 # CHECK-NOT: Macro fuse: {{.*}}SLLI - SRLI
 ---
 name: slli_srli_no_fusion_0
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -115,7 +109,6 @@ body:             |
 # CHECK-NOT: Macro fuse: {{.*}}SLLI - SRLI
 ---
 name: slli_srli_no_fusion_1
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -132,7 +125,6 @@ body:             |
 # CHECK-NOT: Macro fuse: {{.*}}SLLI - SRLI
 ---
 name: slli_srli_no_fusion_2
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -149,7 +141,6 @@ body:             |
 # CHECK-NOT: Macro fuse: {{.*}}SLLI - SRLI
 ---
 name: slli_srli_no_fusion_3
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -166,7 +157,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - LD
 ---
 name: ld_add
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -184,7 +174,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - LB
 ---
 name: add_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -202,7 +191,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - LH
 ---
 name: add_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -220,7 +208,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - LW
 ---
 name: add_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -238,7 +225,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - LBU
 ---
 name: add_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -256,7 +242,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - LHU
 ---
 name: add_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -274,7 +259,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD - LWU
 ---
 name: add_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -292,7 +276,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}AUIPC - LB
 ---
 name: auipc_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -309,7 +292,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}AUIPC - LH
 ---
 name: auipc_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -326,7 +308,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}AUIPC - LW
 ---
 name: auipc_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -343,7 +324,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}AUIPC - LD
 ---
 name: auipc_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -360,7 +340,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}AUIPC - LBU
 ---
 name: auipc_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -377,7 +356,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}AUIPC - LHU
 ---
 name: auipc_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -394,7 +372,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}AUIPC - LWU
 ---
 name: auipc_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -411,7 +388,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}LUI - LB
 ---
 name: lui_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -428,7 +404,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}LUI - LH
 ---
 name: lui_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -445,7 +420,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}LUI - LW
 ---
 name: lui_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -462,7 +436,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}LUI - LD
 ---
 name: lui_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -479,7 +452,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}LUI - LBU
 ---
 name: lui_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -496,7 +468,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}LUI - LHU
 ---
 name: lui_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -513,7 +484,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}LUI - LWU
 ---
 name: lui_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -530,7 +500,6 @@ body:             |
 # CHECK-BFEXT: Macro fuse: {{.*}}SLLI - SRLI
 ---
 name: bitfield_extract
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -547,7 +516,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADDI - LB
 ---
 name: addi_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -565,7 +533,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADDI - LH
 ---
 name: addi_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -583,7 +550,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADDI - LW
 ---
 name: addi_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -601,7 +567,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADDI - LD
 ---
 name: addi_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -619,7 +584,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADDI - LBU
 ---
 name: addi_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -637,7 +601,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADDI - LHU
 ---
 name: addi_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -655,7 +618,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADDI - LWU
 ---
 name: addi_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -673,7 +635,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD_UW - LB
 ---
 name: adduw_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -691,7 +652,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD_UW - LH
 ---
 name: adduw_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -709,7 +669,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD_UW - LW
 ---
 name: adduw_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -727,7 +686,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD_UW - LD
 ---
 name: adduw_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -745,7 +703,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD_UW - LBU
 ---
 name: adduw_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -763,7 +720,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD_UW - LHU
 ---
 name: adduw_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -781,7 +737,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ADD_UW - LWU
 ---
 name: adduw_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -799,7 +754,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD - LB
 ---
 name: sh1add_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -817,7 +771,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD - LB
 ---
 name: sh2add_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -835,7 +788,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD - LB
 ---
 name: sh3add_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -853,7 +805,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD - LH
 ---
 name: sh1add_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -871,7 +822,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD - LH
 ---
 name: sh2add_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -889,7 +839,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD - LH
 ---
 name: sh3add_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -907,7 +856,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD - LW
 ---
 name: sh1add_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -925,7 +873,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD - LW
 ---
 name: sh2add_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -943,7 +890,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD - LW
 ---
 name: sh3add_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -961,7 +907,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD - LD
 ---
 name: sh1add_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -979,7 +924,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD - LD
 ---
 name: sh2add_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -997,7 +941,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD - LD
 ---
 name: sh3add_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1015,7 +958,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD - LBU
 ---
 name: sh1add_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1033,7 +975,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD - LBU
 ---
 name: sh2add_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1051,7 +992,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD - LBU
 ---
 name: sh3add_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1069,7 +1009,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD - LHU
 ---
 name: sh1add_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1087,7 +1026,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD - LHU
 ---
 name: sh2add_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1105,7 +1043,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD - LHU
 ---
 name: sh3add_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1123,7 +1060,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD - LWU
 ---
 name: sh1add_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1141,7 +1077,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD - LWU
 ---
 name: sh2add_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1159,7 +1094,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD - LWU
 ---
 name: sh3add_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1177,7 +1111,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD_UW - LB
 ---
 name: sh1adduw_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1195,7 +1128,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD_UW - LB
 ---
 name: sh2adduw_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1213,7 +1145,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD_UW - LB
 ---
 name: sh3adduw_lb
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1231,7 +1162,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD_UW - LH
 ---
 name: sh1adduw_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1249,7 +1179,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD_UW - LH
 ---
 name: sh2adduw_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1267,7 +1196,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD_UW - LH
 ---
 name: sh3adduw_lh
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1285,7 +1213,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD_UW - LW
 ---
 name: sh1adduw_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1303,7 +1230,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD_UW - LW
 ---
 name: sh2adduw_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1321,7 +1247,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD_UW - LW
 ---
 name: sh3adduw_lw
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1339,7 +1264,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD_UW - LD
 ---
 name: sh1adduw_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1357,7 +1281,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD_UW - LD
 ---
 name: sh2adduw_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1375,7 +1298,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD_UW - LD
 ---
 name: sh3adduw_ld
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1393,7 +1315,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD_UW - LBU
 ---
 name: sh1adduw_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1411,7 +1332,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD_UW - LBU
 ---
 name: sh2adduw_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1429,7 +1349,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD_UW - LBU
 ---
 name: sh3adduw_lbu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1447,7 +1366,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD_UW - LHU
 ---
 name: sh1adduw_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1465,7 +1383,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD_UW - LHU
 ---
 name: sh2adduw_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1483,7 +1400,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD_UW - LHU
 ---
 name: sh3adduw_lhu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1501,7 +1417,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH1ADD_UW - LWU
 ---
 name: sh1adduw_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1519,7 +1434,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH2ADD_UW - LWU
 ---
 name: sh2adduw_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -1537,7 +1451,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}SH3ADD_UW - LWU
 ---
 name: sh3adduw_lwu
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11

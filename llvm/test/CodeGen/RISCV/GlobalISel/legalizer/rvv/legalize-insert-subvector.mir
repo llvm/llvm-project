@@ -7,7 +7,6 @@
 ---
 name:            insert_subvector_nxv2i1_nxv4i1_undef_nonzero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; RV32-LABEL: name: insert_subvector_nxv2i1_nxv4i1_undef_nonzero
@@ -80,7 +79,6 @@ body:             |
 ---
 name:            insert_subvector_nxv2i1_nxv4i1_undef_zero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insert_subvector_nxv2i1_nxv4i1_undef_zero
@@ -101,7 +99,6 @@ body:             |
 ---
 name:            insert_subvector_nxv2i1_nxv4i1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -177,7 +174,6 @@ body:             |
 ---
 name:            insert_subvector_nxv4i1_nxv8i1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -255,7 +251,6 @@ body:             |
 ---
 name:            insert_subvector_nxv32i1_nxv64i1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -313,7 +308,6 @@ body:             |
 ---
 name:            insert_subvector_nxv2i1_nxv4i1_zero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -383,7 +377,6 @@ body:             |
 ---
 name:            insert_subvector_nxv4i1_nxv8i1_zero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -453,7 +446,6 @@ body:             |
 ---
 name:            insert_subvector_nxv32i1_nxv64i1_zero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -505,7 +497,6 @@ body:             |
 ---
 name:            insert_subvector_nxv1i8_nxv2i8_zero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -549,7 +540,6 @@ body:             |
 ---
 name:            insert_subvector_nxv2i16_nxv4i16_zero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -593,7 +583,6 @@ body:             |
 ---
 name:            insert_subvector_nxv4i32_nxv8i32_zero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m4
@@ -614,7 +603,6 @@ body:             |
 ---
 name:            insert_subvector_nxv2i64_nxv8i64_zero
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m8
@@ -637,7 +625,6 @@ body:             |
 ---
 name:            insert_subvector_nxv1i8_nxv2i8
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -687,7 +674,6 @@ body:             |
 ---
 name:            insert_subvector_nxv2i16_nxv4i16
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -737,7 +723,6 @@ body:             |
 ---
 name:            insert_subvector_nxv8i16_nxv1i16
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m8
@@ -785,7 +770,6 @@ body:             |
 ---
 name:            insert_subvector_nxv4i32_nxv8i32
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m4
@@ -806,7 +790,6 @@ body:             |
 ---
 name:            insert_subvector_nxv2i64_nxv8i64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m8

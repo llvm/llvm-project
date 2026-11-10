@@ -6,7 +6,6 @@
 name:            phi_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; RV64I-LABEL: name: phi_i64
   ; RV64I: bb.0:
@@ -48,7 +47,6 @@ body:             |
 name:            phi_ptr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; RV64I-LABEL: name: phi_ptr
   ; RV64I: bb.0:
