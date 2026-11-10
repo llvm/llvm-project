@@ -133,7 +133,7 @@ void SystemZCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // preventing that would be a win or not.
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(SystemZElimComparePass(), PMW);
-  // TODO(boomanaiden154): Add SystemZLongBranchPass
+  addMachineFunctionPass(SystemZLongBranchPass(), PMW);
 
   // Do final scheduling after all other optimizations, to get an
   // optimal input for the decoder (branch relaxation must happen

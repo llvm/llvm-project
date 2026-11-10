@@ -51,7 +51,7 @@ LLVMInitializeSystemZTarget() {
   initializeSystemZAsmPrinterPass(PR);
   initializeSystemZElimCompareLegacyPass(PR);
   initializeSystemZShortenInstLegacyPass(PR);
-  initializeSystemZLongBranchPass(PR);
+  initializeSystemZLongBranchLegacyPass(PR);
   initializeSystemZLDCleanupLegacyPass(PR);
   initializeSystemZPostRewriteLegacyPass(PR);
   initializeSystemZTDCLegacyPass(PR);
@@ -307,7 +307,7 @@ void SystemZPassConfig::addPreEmitPass() {
   // preventing that would be a win or not.
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createSystemZElimCompareLegacyPass(getSystemZTargetMachine()));
-  addPass(createSystemZLongBranchPass(getSystemZTargetMachine()));
+  addPass(createSystemZLongBranchLegacyPass(getSystemZTargetMachine()));
 
   // Do final scheduling after all other optimizations, to get an
   // optimal input for the decoder (branch relaxation must happen

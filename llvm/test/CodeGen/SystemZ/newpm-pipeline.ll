@@ -42,6 +42,7 @@
 ; O0-NEXT:     fentry-insert
 ; O0-NEXT:     xray-instrumentation
 ; O0-NEXT:     patchable-function
+; O0-NEXT:     systemz-long-branch
 ; O0-NEXT:     funclet-layout
 ; O0-NEXT:     remove-loads-into-fake-uses
 ; O0-NEXT:     StackMapLivenessPass
@@ -139,6 +140,7 @@
 ; O3-NEXT:     patchable-function
 ; O3-NEXT:     systemz-shorten-inst
 ; O3-NEXT:     systemz-elim-compare
+; O3-NEXT:     systemz-long-branch
 ; O3-NEXT:     postmisched
 ; O3-NEXT:     funclet-layout
 ; O3-NEXT:     remove-loads-into-fake-uses
