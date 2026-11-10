@@ -39,6 +39,7 @@ MODULE_PASS("dxil-pretty-printer", DXILPrettyPrinterPass(dbgs()))
 MODULE_PASS("dxil-translate-metadata", DXILTranslateMetadataPass())
 MODULE_PASS("dxil-resource-implicit-binding", DXILResourceImplicitBindingPass())
 MODULE_PASS("dxil-post-optimization-validation", DXILPostOptimizationValidationPass())
+MODULE_PASS("dxil-writer", DXILWriterPass())
 // TODO: rename to print<foo> after NPM switch
 MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinterPass(dbgs()))
 MODULE_PASS("print<dxil-root-signature>", dxil::RootSignatureAnalysisPrinterPass(dbgs()))
