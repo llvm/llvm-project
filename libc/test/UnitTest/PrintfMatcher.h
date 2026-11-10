@@ -16,30 +16,31 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
-void display(const printf_core::FormatSection<char> &format_section);
-void display(const printf_core::FormatSection<wchar_t> &format_section);
+void display(MatchResultListener &listener,
+             const printf_core::FormatSection<char> &format_section);
+void display(MatchResultListener &listener,
+             const printf_core::FormatSection<wchar_t> &format_section);
 
 template <typename CharT>
 class FormatSectionMatcher : public Matcher<printf_core::FormatSection<CharT>> {
   printf_core::FormatSection<CharT> expected;
-  printf_core::FormatSection<CharT> actual;
 
 public:
   FormatSectionMatcher(printf_core::FormatSection<CharT> expectedValue)
       : expected(expectedValue) {}
 
-  bool match(printf_core::FormatSection<CharT> actualValue) {
-    actual = actualValue;
-    return expected == actual;
-  }
-
-  void explainError() override {
-    tlog << "expected format section: ";
-    display(expected);
-    tlog << '\n';
-    tlog << "actual format section  : ";
-    display(actual);
-    tlog << '\n';
+  bool MatchAndExplain(const printf_core::FormatSection<CharT> &actual,
+                       MatchResultListener *listener) const {
+    if (expected == actual)
+      return true;
+    if (!listener->IsInterested())
+      return false;
+    *listener << "expected format section: ";
+    display(*listener, expected);
+    *listener << "\nactual format section  : ";
+    display(*listener, actual);
+    *listener << '\n';
+    return false;
   }
 };
 

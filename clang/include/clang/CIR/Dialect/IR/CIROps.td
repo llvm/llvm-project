@@ -3903,7 +3903,8 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
     The second parameter `offset` provides a virtual step to adjust to
     the actual address point of the vtable.
 
-    The return type is always a `!cir.ptr<!cir.ptr<void>>`.
+    The return type is always a `!cir.ptr<!cir.ptr<void>>`. Either pointer
+    level may carry an address space.
 
     Example:
     ```

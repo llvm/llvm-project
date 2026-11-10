@@ -2869,6 +2869,12 @@ cir::VTTAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!op)
     return emitOpError("'")
            << name << "' does not reference a valid cir.global";
+  auto resultType = mlir::cast<cir::PointerType>(getAddr().getType());
+  if (op.getAddrSpaceAttr() != resultType.getAddrSpace())
+    return emitOpError()
+           << "result type address space does not match the address "
+              "space of the global @"
+           << name;
   std::optional<mlir::Attribute> init = op.getInitialValue();
   if (!init)
     return success();
@@ -2888,9 +2894,13 @@ LogicalResult cir::VTTAddrPointOp::verify() {
   if (getSymAddr())
     return success();
 
-  mlir::Type resultType = getAddr().getType();
+  // Both pointer levels may carry an address space.
+  auto resultType = mlir::cast<cir::PointerType>(getAddr().getType());
+  auto eltTy = mlir::dyn_cast<cir::PointerType>(resultType.getPointee());
   mlir::Type resTy = cir::PointerType::get(
-      cir::PointerType::get(cir::VoidType::get(getContext())));
+      cir::PointerType::get(cir::VoidType::get(getContext()),
+                            eltTy ? eltTy.getAddrSpace() : nullptr),
+      resultType.getAddrSpace());
 
   if (resultType != resTy)
     return emitOpError("result type must be ")
