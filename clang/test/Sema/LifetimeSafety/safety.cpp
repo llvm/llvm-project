@@ -4177,6 +4177,14 @@ struct S {
     (this)->bar();     // expected-note {{later used here}}
     this->p_ = &GLOBAL_INT;
   }
+  void alias_note_for_field_use() {
+    {
+      int num;
+      int *p = &num; // expected-warning {{local variable 'num' does not live long enough}}
+      this->p_ = p;  // expected-note {{local variable 'p' aliases the storage of local variable 'num'}}
+    }                // expected-note {{local variable 'num' is destroyed here}}
+    bar();           // expected-note {{later used here}}
+  }
 };
 
 struct T {
@@ -5462,7 +5470,7 @@ void closure_dtor_reads_captured_borrow() {
   std::string backing;
   Ref r;
   r = backing; // expected-warning {{local variable 'backing' does not live long enough}}
-  fn = [r] {};
+  fn = [r] {}; // expected-note {{local variable 'r' aliases the storage of local variable 'backing'}}
 } // expected-note {{local variable 'backing' is destroyed here}} expected-note {{later used by the destructor of 'fn' at scope exit}}
 
 // The explicit use and the destructor use of `r` meet after the if.
