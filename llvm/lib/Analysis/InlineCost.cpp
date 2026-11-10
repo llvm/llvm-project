@@ -981,7 +981,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // into the caller CFG. This discount represents a redundant conditional
     // br found in the caller.
     if (canJumpThreadIntoCaller())
-      addCost(-InstrCost);
+      addCost(-Opts.inline_jump_threading_discount);
 
     // We applied the maximum possible vector bonus at the beginning. Now,
     // subtract the excess bonus, if any, from the Threshold before
