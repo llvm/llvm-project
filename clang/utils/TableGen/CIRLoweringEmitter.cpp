@@ -41,13 +41,6 @@ struct CustomLoweringCtor {
   std::vector<Param> Params;
 };
 
-// A CIR attribute or property whose value the generated lowering converts
-// and stores into a property of the LLVM operation (`llvmOpProps`).
-struct ForwardedProp {
-  std::string CIRGetter;
-  std::string LLVMSetter;
-};
-
 // Adapted from mlir/lib/TableGen/Operator.cpp
 // Returns the C++ class name of the operation, which is the name of the
 // operation with the dialect prefix removed and the first underscore removed.
@@ -96,41 +89,6 @@ std::string GetOpLLVMLoweringPatternName(llvm::StringRef OpName) {
   Name += "Lowering";
   return Name;
 }
-std::vector<ForwardedProp> parseForwardedProps(const Record *OpRecord) {
-  const DagInit *Props = OpRecord->getValueAsDag("llvmOpProps");
-  const DagInit *Args = OpRecord->getValueAsDag("arguments");
-  std::vector<ForwardedProp> Result;
-  for (const auto &[Value, Name] : Props->getArgAndNames()) {
-    if (!Name)
-      PrintFatalError(OpRecord->getLoc(),
-                      "llvmOpProps entries must name a CIR argument");
-    llvm::StringRef CIRName = Name->getValue();
-    std::optional<unsigned> ArgNo = Args->getArgNo(CIRName);
-    const auto *Arg = ArgNo ? dyn_cast<DefInit>(Args->getArg(*ArgNo)) : nullptr;
-    if (!Arg || !(Arg->getDef()->isSubClassOf("Attr") ||
-                  Arg->getDef()->isSubClassOf("Property")))
-      PrintFatalError(OpRecord->getLoc(),
-                      "llvmOpProps entry '" + CIRName +
-                          "' is not an attribute or property of the op");
-
-    // The LLVM property has the same name unless the entry gives one.
-    llvm::StringRef LLVMName = CIRName;
-    if (const auto *Str = dyn_cast<StringInit>(Value))
-      LLVMName = Str->getValue();
-    else if (!isa<UnsetInit>(Value))
-      PrintFatalError(OpRecord->getLoc(),
-                      "llvmOpProps entry '" + CIRName +
-                          "' must map to an LLVM property name string");
-
-    Result.push_back(
-        {"get" + llvm::convertToCamelFromSnakeCase(CIRName,
-                                                   /*capitalizeFirst=*/true),
-         "set" + llvm::convertToCamelFromSnakeCase(LLVMName,
-                                                   /*capitalizeFirst=*/true)});
-  }
-  return Result;
-}
-
 std::optional<CustomLoweringCtor> parseCustomLoweringCtor(const Record *R) {
   if (!R)
     return std::nullopt;
@@ -193,7 +151,7 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
 void GenerateLLVMLoweringPattern(
     llvm::StringRef OpName, llvm::StringRef PatternName, bool IsRecursive,
     llvm::StringRef ExtraDecl, const Record *CustomCtorRec,
-    llvm::StringRef LLVMOp, llvm::ArrayRef<ForwardedProp> ForwardedProps,
+    llvm::StringRef LLVMOp, const DagInit *LLVMOpProps,
     llvm::StringRef ConstrainedLLVMIntrinsic, bool ConstrainedHasRoundingMode,
     bool HasFastMathFlags, bool HasZeroResult) {
   std::optional<CustomLoweringCtor> CustomCtor =
@@ -270,21 +228,26 @@ void GenerateLLVMLoweringPattern(
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
         << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
            "const override {\n";
-    std::string Properties =
-        "cir::getDefaultProperties<mlir::LLVM::" + LLVMOp.str() +
-        ">(op.getContext())";
-    if (!ForwardedProps.empty()) {
-      Code << "    auto props = " << Properties << ";\n";
-      for (const ForwardedProp &Prop : ForwardedProps)
-        Code << "    props." << Prop.LLVMSetter
-             << "(convertToLLVMProperty(op.getContext(), op." << Prop.CIRGetter
-             << "()));\n";
-      Properties = "props";
+    Code << "    auto props = cir::getDefaultProperties<mlir::LLVM::" << LLVMOp
+         << ">(op.getContext());\n";
+    // `$name` forwards the CIR argument to the LLVM property of the same name;
+    // `"llvm_name":$name` names a differently named LLVM property.
+    for (const auto &[Value, Name] : LLVMOpProps->getArgAndNames()) {
+      StringRef CIRName = Name->getValue();
+      StringRef LLVMName = CIRName;
+      if (const auto *Str = dyn_cast<StringInit>(Value))
+        LLVMName = Str->getValue();
+      Code << "    props.set"
+           << llvm::convertToCamelFromSnakeCase(LLVMName,
+                                                /*capitalizeFirst=*/true)
+           << "(convertToLLVMProperty(op.getContext(), op.get"
+           << llvm::convertToCamelFromSnakeCase(CIRName,
+                                                /*capitalizeFirst=*/true)
+           << "()));\n";
     }
     if (HasZeroResult) {
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
-           << ">(op, mlir::TypeRange{}, adaptor.getOperands(), " << Properties
-           << ");\n";
+           << ">(op, mlir::TypeRange{}, adaptor.getOperands(), props);\n";
     } else {
       Code << "    mlir::Type resTy = "
               "typeConverter->convertType(op.getType());\n";
@@ -293,7 +256,7 @@ void GenerateLLVMLoweringPattern(
               "convert \" << op.getType();\n";
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
            << ">(op, mlir::TypeRange{resTy}, adaptor.getOperands(), "
-           << Properties << ");\n";
+              "props);\n";
     }
     Code << "    return mlir::success();\n";
     Code << "  }\n";
@@ -332,7 +295,7 @@ void Generate(const Record *OpRecord) {
         OpRecord->getValueAsString("extraLLVMLoweringPatternDecl");
 
     llvm::StringRef LLVMOp = OpRecord->getValueAsString("llvmOp");
-    std::vector<ForwardedProp> ForwardedProps = parseForwardedProps(OpRecord);
+    const DagInit *LLVMOpProps = OpRecord->getValueAsDag("llvmOpProps");
     llvm::StringRef ConstrainedLLVMIntrinsic =
         OpRecord->getValueAsString("constrainedLLVMIntrinsic");
     bool ConstrainedHasRoundingMode =
@@ -355,18 +318,26 @@ void Generate(const Record *OpRecord) {
                           "' has constrainedLLVMIntrinsic set but no llvmOp, "
                           "which is not supported");
 
-    if (!ForwardedProps.empty() &&
+    if (!LLVMOpProps->arg_empty() &&
         (LLVMOp.empty() || !ConstrainedLLVMIntrinsic.empty()))
       PrintFatalError(OpRecord->getLoc(),
                       "op '" + OpName +
                           "' has llvmOpProps, which requires llvmOp and is "
                           "not supported with constrainedLLVMIntrinsic");
 
+    for (const auto &[Value, Name] : LLVMOpProps->getArgAndNames()) {
+      if (!Name || !isa<UnsetInit, StringInit>(Value))
+        PrintFatalError(OpRecord->getLoc(),
+                        "op '" + OpName +
+                            "' has an llvmOpProps entry that is neither "
+                            "`$name` nor `\"llvm_name\":$name`");
+    }
+
     const DagInit *ResultsDag = OpRecord->getValueAsDag("results");
     bool IsZeroResult = ResultsDag->getNumArgs() == 0;
     GenerateLLVMLoweringPattern(
         OpName, PatternName, IsRecursive, ExtraDecl, CustomCtor, LLVMOp,
-        ForwardedProps, ConstrainedLLVMIntrinsic, ConstrainedHasRoundingMode,
+        LLVMOpProps, ConstrainedLLVMIntrinsic, ConstrainedHasRoundingMode,
         HasFastMathFlags, IsZeroResult);
     // Only automatically register patterns that use the default constructor.
     // Patterns with a custom constructor must be manually registered by the
