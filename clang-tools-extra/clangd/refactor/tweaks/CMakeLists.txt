@@ -29,7 +29,6 @@ add_clang_library(clangDaemonTweaks OBJECT
   PopulateSwitch.cpp
   QualifiedNameRewrite.cpp
   RawStringLiteral.cpp
-  ReplaceQualifiedWithAlias.cpp
   RemoveUsingNamespace.cpp
   ScopifyEnum.cpp
   SpecialMembers.cpp
