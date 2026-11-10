@@ -25099,14 +25099,14 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     int64_t Off = 0;
     if (ST->getMemoryVT() == Ld->getMemoryVT() && ST->isUnindexed() &&
         ST->isSimple() && Ld->getAddressSpace() == ST->getAddressSpace() &&
-        (Ld->getBasePtr() == Ptr ||
-         (Ld->isUnindexed() &&
-          BaseIndexOffset::match(Ld, DAG).equalBaseIndex(
-              BaseIndexOffset::match(ST, DAG), DAG, Off) &&
-          Off == 0)) &&
+        BaseIndexOffset::match(Ld, DAG).equalBaseIndex(
+            BaseIndexOffset::match(ST, DAG), DAG, Off) &&
+        Off == 0 &&
         // There can't be any side effects between the load and store, such as
-        // a call or store.
-        Chain.reachesChainWithoutSideEffects(SDValue(Ld, 1))) {
+        // a call or store. An indexed LoadSDNode produces (Val, WritebackPtr,
+        // Chain), so its output chain is at result 2 rather than 1.
+        Chain.reachesChainWithoutSideEffects(
+            SDValue(Ld, Ld->isIndexed() ? 2 : 1))) {
       // The store is dead, remove it.
       return Chain;
     }
