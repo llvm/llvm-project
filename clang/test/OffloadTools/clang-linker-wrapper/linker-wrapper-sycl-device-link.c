@@ -50,6 +50,22 @@
 // RUN: llvm-readobj --file-header %t.dev.obj | FileCheck %s --check-prefix=WIN
 // WIN: Format: COFF-x86-64
 
+// link.exe options are case-insensitive, and link.exe also searches LIB.
+// RUN: %clang -cc1 %s -triple x86_64-pc-windows-msvc -emit-obj -o %t.win.obj \
+// RUN:   -fembed-offload-object=%t.sycl.out
+// RUN: rm -rf %t.libdir && mkdir %t.libdir
+// RUN: llvm-ar rcs %t.libdir/foo.lib %t.win.obj
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
+// RUN:   --sycl-device-link --linker-path=link.exe /LIBPATH:%t.libdir \
+// RUN:   /WHOLEARCHIVE:foo.lib -o dev.obj 2>&1 | FileCheck %s --check-prefix=WINLIB
+// RUN: env LIB=%t.libdir clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
+// RUN:   --dry-run --sycl-device-link --linker-path=link.exe /WHOLEARCHIVE \
+// RUN:   foo.lib -o dev.obj 2>&1 | FileCheck %s --check-prefix=WINLIB
+// WINLIB: --target=spirv64-unknown-unknown {{.*}}win-spirv64-unknown-unknown-generic{{.*}}.o --sycl-link{{$}}
+// RUN: not clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
+// RUN:   --sycl-device-link --linker-path=link.exe /WHOLEARCHIVE:nope.lib \
+// RUN:   -o dev.obj 2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=nope.lib
+
 // With --wrapper-verbose and --save-temps, the wrapping is still done
 // in-process, because the image must be embedded as finalized.
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
