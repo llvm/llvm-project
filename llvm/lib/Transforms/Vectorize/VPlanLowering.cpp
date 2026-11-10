@@ -963,8 +963,10 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
 
 VPValue *
 VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
-                                      ArrayRef<PointerDiffInfo> DiffChecks) {
+                                      ArrayRef<PointerDiffInfo> DiffChecks,
+                                      ScalarEvolution &SE) {
   VPBuilder Builder(AliasCheckVPBB);
+  VPSCEVExpander Expander(Builder, SE, DebugLoc::getCompilerGenerated());
   Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
 
   VPValue *IncomingAliasMask = vputils::findIncomingAliasMask(Plan);
@@ -972,9 +974,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
   VPValue *AliasMask = nullptr;
   for (const PointerDiffInfo &Check : DiffChecks) {
-    VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
-    VPValue *Sink =
-        vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);
+    VPValue *Src = Expander.expand(Check.SrcStart);
+    VPValue *Sink = Expander.expand(Check.SinkStart);
     Type *AddrType = Src->getScalarType();
 
     // TODO: Only freeze the required pointer (not both src and sink).
@@ -1011,11 +1012,13 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 }
 
 void VPlanTransforms::materializeAliasMaskCheckBlock(
-    VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights) {
+    VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, ScalarEvolution &SE,
+    bool HasBranchWeights) {
   VPBasicBlock *ClampedVFCheck =
       Plan.createVPBasicBlock("vector.clamped.vf.check");
 
-  VPValue *ClampedVF = materializeAliasMask(Plan, ClampedVFCheck, DiffChecks);
+  VPValue *ClampedVF =
+      materializeAliasMask(Plan, ClampedVFCheck, DiffChecks, SE);
   VPBuilder Builder(ClampedVFCheck);
   DebugLoc DL = DebugLoc::getCompilerGenerated();
   Type *TCTy = Plan.getTripCount()->getScalarType();
