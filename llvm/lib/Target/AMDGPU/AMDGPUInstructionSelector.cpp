@@ -4554,19 +4554,26 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
   if (!RBI.constrainGenericRegister(SrcReg, AMDGPU::SReg_32RegClass, *MRI))
     return false;
 
-  MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
   Register SP =
       Subtarget->getTargetLowering()->getStackPointerRegisterToSaveRestore();
-  Register WaveAddr = getWaveAddress(DefMI);
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  if (!WaveAddr) {
-    WaveAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHL_B32), WaveAddr)
-        .addReg(SrcReg)
-        .addImm(Subtarget->getWavefrontSizeLog2())
-        .setOperandDead(3); // Dead scc
+  Register WaveAddr = getWaveAddress(MRI->getVRegDef(SrcReg));
+
+  // A virtual operand is the SP captured at the stacksave. A physical one
+  // would read the SP here, which may have changed since then.
+  if (!WaveAddr.isVirtual()) {
+    if (Subtarget->hasFlatScratchEnabled()) {
+      // With flat scratch the saved value is the unswizzled SP.
+      WaveAddr = SrcReg;
+    } else {
+      WaveAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHL_B32), WaveAddr)
+          .addReg(SrcReg)
+          .addImm(Subtarget->getWavefrontSizeLog2())
+          .setOperandDead(3); // Dead scc
+    }
   }
 
   BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), SP)

@@ -8267,7 +8267,14 @@ bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
       B.getMF().getInfo<SIMachineFunctionInfo>();
   Register StackPtr = Info->getStackPtrOffsetReg();
   Register DstReg = MI.getOperand(0).getReg();
-  B.buildInstr(AMDGPU::G_AMDGPU_WAVE_ADDRESS, {DstReg}, {StackPtr});
+  // The stack is accessed unswizzled with flat scratch.
+  if (ST.hasFlatScratchEnabled()) {
+    B.buildCopy(DstReg, StackPtr);
+  } else {
+    // Capture the SP here as it may change before the saved value is used.
+    auto SP = B.buildCopy(B.getMRI()->getType(DstReg), StackPtr);
+    B.buildInstr(AMDGPU::G_AMDGPU_WAVE_ADDRESS, {DstReg}, {SP});
+  }
   MI.eraseFromParent();
   return true;
 }
