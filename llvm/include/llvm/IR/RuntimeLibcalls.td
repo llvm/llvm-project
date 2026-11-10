@@ -258,7 +258,7 @@ foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
   def UREM_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
 }
 
-defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull, CapturesNone];
 defvar ReadPtrAttrs = [ReadOnly, CapturesNone];
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
@@ -727,6 +727,9 @@ foreach FPTy = [F32, F64, F128, PPCF128] in {
 }
 
 // Memory
+
+defvar ChkFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind];
+
 class MemCmpLibcall : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemReadOnly;
@@ -741,26 +744,41 @@ def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
                     [NoAlias, ReadOnly]];
 }
 
-def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = ChkFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly, CapturesNone]];
+}
+
 def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemOnly;
   let ParamAttrs = [[Returned, WriteOnly], [ReadOnly]];
 }
 
-def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = ChkFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[WriteOnly], ReadPtrAttrs];
+}
+
 def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemWriteOnly;
   let ParamAttrs = [[Returned, WriteOnly]];
 }
 
-def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
+def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]> {
+  let FnAttrs = ChkFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[WriteOnly]];
+}
+
 class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
                  AllocSizeAttr<0>, AllocFamilyAttr<family>];
-  let Memory = InaccessibleOrErrnoMem;
+  let Memory = InaccessibleMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef]];
 }
@@ -769,7 +787,7 @@ class CallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Zeroed">,
                  AllocSizeAttr<0, "1">, AllocFamilyAttr<family>];
-  let Memory = InaccessibleOrErrnoMem;
+  let Memory = InaccessibleMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef], [NoUndef]];
 }
@@ -779,6 +797,17 @@ class FreeLibcall<string family> : RuntimeLibcall<Void, [Ptr]> {
                  AllocFamilyAttr<family>];
   let Memory = InaccessibleOrArgMem;
   let ParamAttrs = [[AllocatedPointer, NoUndef, CapturesNone]];
+}
+
+class ReallocLibcall<string family, list<FuncArgType> SizeTypes,
+                     AllocSizeAttr allocSize>
+    : RuntimeLibcall<Ptr, !listconcat([Ptr], SizeTypes)> {
+  let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Realloc">,
+                 allocSize, AllocFamilyAttr<family>];
+  let Memory = InaccessibleOrArgMemOrErrnoWrite;
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = !listconcat([[AllocatedPointer, CapturesNone]],
+                               !listsplat([NoUndef], !size(SizeTypes)));
 }
 
 def MALLOC : MallocLibcall<"malloc">;
@@ -1194,8 +1223,17 @@ def FWRITE : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
 def FWRITE_UNLOCKED : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
 def GETC : RuntimeLibcall<Int, [Ptr]>;
 def GETCHAR : RuntimeLibcall<Int, []>;
-def GETCHAR_UNLOCKED : RuntimeLibcall<Int, []>;
-def GETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]>;
+def GETCHAR_UNLOCKED : RuntimeLibcall<Int, []> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+}
+
+def GETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef, CapturesNone]];
+}
+
 def GETENV : RuntimeLibcall<Ptr, [Ptr]>;
 def GETITIMER : RuntimeLibcall<Int, [Int, Ptr]>;
 def GETLOGIN_R : RuntimeLibcall<Int, [Ptr, SizeT]>;
@@ -1261,17 +1299,28 @@ def PREAD : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]>;
 def PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
 def PUTC : RuntimeLibcall<Int, [Int, Ptr]>;
 def PUTCHAR : RuntimeLibcall<Int, [Int]>;
-def PUTCHAR_UNLOCKED : RuntimeLibcall<Int, [Int]>;
-def PUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]>;
+def PUTCHAR_UNLOCKED : RuntimeLibcall<Int, [Int]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
+def PUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [NoUndef, CapturesNone]];
+}
+
 def PUTS : RuntimeLibcall<Int, [Ptr]>;
 def PVALLOC : RuntimeLibcall<Ptr, [SizeT]>;
 def PWRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]>;
 def QSORT : RuntimeLibcall<Void, [Ptr, SizeT, SizeT, Ptr]>;
 def READ : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]>;
 def READLINK : RuntimeLibcall<SSizeT, [Ptr, Ptr, SizeT]>;
-def REALLOC : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
-def REALLOCARRAY : RuntimeLibcall<Ptr, [Ptr, SizeT, SizeT]>;
-def REALLOCF : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def REALLOC : ReallocLibcall<"malloc", [SizeT], AllocSizeAttr<1>>;
+def REALLOCARRAY
+    : ReallocLibcall<"malloc", [SizeT, SizeT], AllocSizeAttr<1, "2">>;
+def REALLOCF : ReallocLibcall<"malloc", [SizeT], AllocSizeAttr<1>>;
 def REALPATH : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
 def REMOVE : RuntimeLibcall<Int, [Ptr]>;
 def RENAME : RuntimeLibcall<Int, [Ptr, Ptr]>;
@@ -1359,7 +1408,7 @@ def VALLOC : RuntimeLibcall<Ptr, [SizeT]>;
 def VEC_CALLOC : CallocLibcall<"vec_malloc">;
 def VEC_FREE : FreeLibcall<"vec_malloc">;
 def VEC_MALLOC : MallocLibcall<"vec_malloc">;
-def VEC_REALLOC : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
+def VEC_REALLOC : ReallocLibcall<"vec_malloc", [SizeT], AllocSizeAttr<1>>;
 def VFPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def VFSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def VPRINTF : RuntimeLibcall<Int, [Ptr, Ptr]>;
