@@ -151,6 +151,29 @@ static mlir::Value makeScopedAtomicXchg(CIRGenFunction &cgf,
 std::optional<mlir::Value>
 CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   switch (builtinId) {
+  case NVPTX::BI__hmma_m16n16k16_st_c_f32: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    Address src = emitPointerWithAlignment(expr->getArg(1));
+    mlir::Value dst = emitScalarExpr(expr->getArg(0));
+    mlir::Value ldm = emitScalarExpr(expr->getArg(2));
+    auto layout = expr->getArg(3)->getIntegerConstantExpr(getContext());
+    if (!layout)
+      return std::nullopt;
+    std::string intrinsic = "nvvm.wmma.m16n16k16.store.d.";
+    intrinsic += layout->getSExtValue() ? "col" : "row";
+    intrinsic += ".stride.f32";
+    llvm::SmallVector<mlir::Value, 10> values{dst};
+    for (unsigned i = 0; i < 8; ++i) {
+      mlir::Value ptr = builder.createPtrStride(loc, src.emitRawPointer(),
+                                                builder.getSInt32(i, loc));
+      mlir::Value value = builder.createAlignedLoad(
+          loc, src.getElementType(), ptr, CharUnits::fromQuantity(4));
+      values.push_back(builder.createBitcast(value, builder.getSingleTy()));
+    }
+    values.push_back(ldm);
+    return builder.emitIntrinsicCallOp(loc, intrinsic, builder.getVoidTy(),
+                                       values);
+  }
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
@@ -499,7 +522,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   case NVPTX::BI__hmma_m16n16k16_st_c_f16:
-  case NVPTX::BI__hmma_m16n16k16_st_c_f32:
   case NVPTX::BI__hmma_m32n8k16_st_c_f16:
   case NVPTX::BI__hmma_m32n8k16_st_c_f32:
   case NVPTX::BI__hmma_m8n32k16_st_c_f16:
