@@ -1,0 +1,42 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Implicit device to host transfer of a device component. Only the component is
+! transferred, not the base it is taken from.
+
+module m
+  type :: payload
+    real, allocatable, device :: d(:)
+  end type
+contains
+  subroutine managed_base(m, out, h)
+    type(payload), managed :: m(:)
+    real :: out
+    real, intent(in) :: h
+    out = m(1)%d(1) + h
+  end subroutine
+
+  subroutine host_base(x, out, h)
+    type(payload) :: x
+    real :: out
+    real, intent(in) :: h
+    out = x%d(1) + h
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMmPmanaged_base
+! CHECK: %[[COMP:.*]] = hlfir.designate %{{.*}}{"d"} fortran_attrs<allocatable>
+! CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) uniq_name(".tmp")
+! CHECK: cuf.data_transfer %[[COMP]] to %[[TMP]]#0 transfer_kind(device_host)
+! CHECK: hlfir.designate %[[TMP]]#0 (%{{.*}})
+! CHECK-NOT: cuf.data_transfer
+! CHECK: return
+
+! CHECK-LABEL: func.func @_QMmPhost_base
+! CHECK: %[[COMP2:.*]] = hlfir.designate %{{.*}}{"d"} fortran_attrs<allocatable>
+! CHECK: %[[ALLOC2:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
+! CHECK: %[[TMP2:.*]]:2 = hlfir.declare %[[ALLOC2]](%{{.*}}) uniq_name(".tmp")
+! CHECK: cuf.data_transfer %[[COMP2]] to %[[TMP2]]#0 transfer_kind(device_host)
+! CHECK: hlfir.designate %[[TMP2]]#0 (%{{.*}})
+! CHECK-NOT: cuf.data_transfer
+! CHECK: return

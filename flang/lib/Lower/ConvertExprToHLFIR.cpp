@@ -2686,6 +2686,13 @@ fir::ExtendedValue Fortran::lower::convertExprToValue(
   return convertToValue(loc, converter, loweredExpr, stmtCtx);
 }
 
+fir::FortranVariableOpInterface Fortran::lower::convertDataRefToHLFIRVariable(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::DataRef &dataRef, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  return HlfirDesignatorBuilder(loc, converter, symMap, stmtCtx).gen(dataRef);
+}
+
 fir::ExtendedValue Fortran::lower::convertDataRefToValue(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::DataRef &dataRef, Fortran::lower::SymMap &symMap,
