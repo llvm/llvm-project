@@ -516,9 +516,7 @@ private:
   // Number of ordered XDL writes issued after the VA_VDST write tracked for
   // TID. Only meaningful while that write is pending.
   unsigned getNumOrderedXDLsAfterWrite(VMEMID TID) const {
-    auto It = VMem.find(TID);
-    assert(It != VMem.end() && "VA_VDST write is not pending");
-    return std::min(OrderedXDLCount - It->second.OrderedXDLCountAtWrite,
+    return std::min(OrderedXDLCount - VMem.at(TID).OrderedXDLCountAtWrite,
                     getLimit(AMDGPU::VA_VDST_WR) - 1);
   }
 
