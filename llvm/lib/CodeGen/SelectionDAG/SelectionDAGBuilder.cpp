@@ -78,6 +78,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
@@ -1661,7 +1662,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   // any earlier variable location.
   assert(OrigV && "V shouldn't be null");
   auto *Poison = PoisonValue::get(OrigV->getType());
-  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDNodeOrder);
+  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDOrder);
   DAG.AddDbgValue(SDV, false);
   LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  "
                     << printDDI(OrigV, DDI) << "\n");
@@ -3572,6 +3573,19 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
                                 TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
+    // EH labels mark it as an invoke site, like a call.
+    case Intrinsic::bpf_unwind_exit: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      MCSymbol *BeginLabel;
+      std::array<SDValue, 2> Ops = {
+          lowerStartEH(getControlRoot(), EHPadBB, BeginLabel),
+          DAG.getTargetConstant(Intrinsic::bpf_unwind_exit, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout()))};
+      SDValue Chain =
+          DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), MVT::Other, Ops);
+      DAG.setRoot(lowerEndEH(Chain, &I, EHPadBB, BeginLabel));
       break;
     }
     }
@@ -8820,6 +8834,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(1)),
                              getValue(I.getArgOperand(2)), Flags));
     return;
+  case Intrinsic::vector_shuffle:
+    setValue(&I, DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, sdl,
+                             TLI.getValueType(DAG.getDataLayout(), I.getType()),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
   case Intrinsic::experimental_convergence_anchor:
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_loop:
@@ -10767,14 +10787,8 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         assert((OpInfo.isIndirect ||
                 OpInfo.ConstraintType != TargetLowering::C_Memory) &&
                "Operand must be indirect to be a mem!");
-
         assert(InOperandVal.getValueType() ==
-                   TLI.getPointerTy(
-                       DAG.getDataLayout(),
-                       OpInfo.CallOperandVal
-                           ? cast<PointerType>(OpInfo.CallOperandVal->getType())
-                                 ->getAddressSpace()
-                           : 0) &&
+                   TLI.getPointerTy(DAG.getDataLayout()) &&
                "Memory operands expect pointer values");
 
         const InlineAsm::ConstraintCode ConstraintID =

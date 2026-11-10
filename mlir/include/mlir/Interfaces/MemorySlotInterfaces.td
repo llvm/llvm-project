@@ -18,6 +18,7 @@ def PromotableAllocationOpInterface
     SSA values.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -97,6 +98,7 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
     load must semantically happen first.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -210,6 +212,7 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
     of a memory slot.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -301,6 +304,7 @@ def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
     after the slot has been promoted.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let verify = [{
     if (!::mlir::isa<::mlir::PromotableOpInterface,
@@ -378,6 +382,7 @@ def PromotableRegionOpInterface
     within the operation's regions.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -470,6 +475,7 @@ def DestructurableAllocationOpInterface
     destructured into multiple smaller allocations.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -524,6 +530,7 @@ def SafeMemorySlotAccessOpInterface
     Describes operations using memory slots in a safe manner.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -553,6 +560,7 @@ def DestructurableAccessorOpInterface
     Describes operations that can access a sub-element of a destructurable slot.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -597,6 +605,7 @@ def DestructurableTypeInterface
     Describes a type that can be broken down into indexable sub-element types.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{

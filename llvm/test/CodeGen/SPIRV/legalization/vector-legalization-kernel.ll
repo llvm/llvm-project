@@ -13,6 +13,21 @@
 ; CHECK-DAG: %[[#ptr_func_v3f64:]] = OpTypePointer Function %[[#v3f64]]
 ; CHECK-DAG: %[[#v4f64:]] = OpTypeVector %[[#double]] 4
 
+; CHECK-DAG: OpName %[[#test_float_shuffle:]] "test_float_shuffle"
+; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#v4f32:]] = OpTypeVector %[[#float]] 4
+; CHECK-DAG: %[[#v8f32:]] = OpTypeVector %[[#float]] 8
+; CHECK-DAG: %[[#undef_v4f32:]] = OpUndef %[[#v4f32]]
+
+; CHECK-DAG: OpName %[[#test_int_shuffle:]] "test_int_shuffle"
+; CHECK-DAG: %[[#undef_v4i32:]] = OpUndef %[[#v4i32]]
+
+; CHECK-DAG: OpName %[[#test_bool_shuffle:]] "test_bool_shuffle"
+; CHECK-DAG: %[[#bool:]] = OpTypeBool
+; CHECK-DAG: %[[#v4bool:]] = OpTypeVector %[[#bool]] 4
+; CHECK-DAG: %[[#v8bool:]] = OpTypeVector %[[#bool]] 8
+; CHECK-DAG: %[[#undef_v4bool:]] = OpUndef %[[#v4bool]]
+
 define spir_kernel void @test_int32_double_conversion(ptr %G_vec) {
 ; CHECK: %[[#test_int32_double_conversion]] = OpFunction
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#ptr_func_v8i32]]
@@ -67,3 +82,40 @@ entry:
   ret void
 }
 
+define spir_kernel void @test_float_shuffle(ptr %G_vec) {
+; CHECK: %[[#test_float_shuffle]] = OpFunction
+entry:
+  ; CHECK: %[[#LOAD:]] = OpLoad %[[#v4f32]]
+  ; CHECK: OpCompositeConstruct %[[#v8f32]] %[[#LOAD]] %[[#undef_v4f32]]
+  %0 = load <4 x float>, ptr %G_vec
+  %1 = shufflevector <4 x float> %0, <4 x float> %0, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  %2 = shufflevector <6 x float> %1, <6 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 5>
+  store <4 x float> %2, ptr %G_vec
+  ret void
+}
+
+define spir_kernel void @test_int_shuffle(ptr %G_vec) {
+; CHECK: %[[#test_int_shuffle]] = OpFunction
+entry:
+  ; CHECK: %[[#LOAD:]] = OpLoad %[[#v4i32]]
+  ; CHECK: OpCompositeConstruct %[[#v8i32]] %[[#LOAD]] %[[#undef_v4i32]]
+  %0 = load <4 x i32>, ptr %G_vec
+  %1 = shufflevector <4 x i32> %0, <4 x i32> %0, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  %2 = shufflevector <6 x i32> %1, <6 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 5>
+  store <4 x i32> %2, ptr %G_vec
+  ret void
+}
+
+define spir_kernel void @test_bool_shuffle(ptr %G_vec) {
+; CHECK: %[[#test_bool_shuffle]] = OpFunction
+entry:
+  ; CHECK: %[[#CMP:]] = OpIEqual %[[#v4bool]]
+  ; CHECK: OpCompositeConstruct %[[#v8bool]] %[[#CMP]] %[[#undef_v4bool]]
+  %0 = load <4 x i32>, ptr %G_vec
+  %1 = icmp eq <4 x i32> %0, zeroinitializer
+  %2 = shufflevector <4 x i1> %1, <4 x i1> %1, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  %3 = shufflevector <6 x i1> %2, <6 x i1> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 5>
+  %4 = select <4 x i1> %3, <4 x i32> %0, <4 x i32> zeroinitializer
+  store <4 x i32> %4, ptr %G_vec
+  ret void
+}

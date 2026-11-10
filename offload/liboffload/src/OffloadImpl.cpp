@@ -222,8 +222,18 @@ struct ol_context_impl_t {
                                   TargetAllocTy Kind, size_t Alignment) {
     if (auto Err = requireDevice(Device))
       return std::move(Err);
-    return PluginCtx->allocate(*Device->Device, Size, /*HostPtr=*/nullptr, Kind,
-                               Alignment);
+    auto AllocOrErr = PluginCtx->allocate(*Device->Device, Size,
+                                          /*HostPtr=*/nullptr, Kind, Alignment);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+
+    // Check max alignment only when no explicit alignment was requested.
+    if (Alignment == 0)
+      assert(reinterpret_cast<uintptr_t>(*AllocOrErr) %
+                     alignof(std::max_align_t) ==
+                 0 &&
+             "allocation does not meet max_align_t alignment");
+    return *AllocOrErr;
   }
 
   llvm::Error deallocate(void *Ptr) { return PluginCtx->deallocate(Ptr); }
@@ -594,6 +604,13 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
   case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
     return Info.write<uint64_t>(Device->Device->getMaxGridSize());
+
+  case OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativePlatformHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
 
   case OL_DEVICE_INFO_PREFERRED_LOCATION_HOST:
     return Info.write<bool>(Device->Device->useAutoZeroCopy());
@@ -1615,6 +1632,36 @@ Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
   return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
 }
 
+Error olGetProgramInfoImplDetail(ol_program_handle_t Program,
+                                 ol_program_info_t PropName, size_t PropSize,
+                                 void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_PROGRAM_INFO_IMAGE_BASE:
+    return Info.write<void *>(const_cast<void *>(Program->Image->getStart()));
+  case OL_PROGRAM_INFO_IMAGE_SIZE:
+    return Info.write<size_t>(Program->Image->getSize());
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetProgramInfo enum '%i' is invalid",
+                              PropName);
+  }
+}
+
+Error olGetProgramInfo_impl(ol_program_handle_t Program,
+                            ol_program_info_t PropName, size_t PropSize,
+                            void *PropValue) {
+  return olGetProgramInfoImplDetail(Program, PropName, PropSize, PropValue,
+                                    nullptr);
+}
+
+Error olGetProgramInfoSize_impl(ol_program_handle_t Program,
+                                ol_program_info_t PropName,
+                                size_t *PropSizeRet) {
+  return olGetProgramInfoImplDetail(Program, PropName, 0, nullptr, PropSizeRet);
+}
+
 Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                 ol_host_function_cb_t Callback,
                                 void *UserData) {
@@ -1688,25 +1735,46 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
 
 namespace tmp {
 // Temporary helpers to help transition of libomptarget to liboffload
-GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
-  return Platform->Plugin.get();
-}
-
-int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
-  return Device->DeviceNum;
-}
-
-plugin::PluginContextTy *
-__ol_tgt_GetPluginContext(ol_context_handle_t Context) {
-  return Context ? Context->PluginCtx.get() : nullptr;
-}
-
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
   return Program->Image;
 }
 
-RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_impl_t *Device) {
-  return Device->Device->getRecordReplay();
+void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device) {
+  return Device->Device->getSuggestedVirtualAddress();
+}
+
+Expected<void *> __ol_tgt_AllocWithVirtualAddress(ol_device_handle_t Device,
+                                                  uint64_t Size, void *VAddr) {
+  return Device->Device->allocateWithVirtualAddress(Size, VAddr);
+}
+
+Error __ol_tgt_DeallocWithVirtualAddress(ol_device_handle_t Device, void *VAddr,
+                                         uint64_t Size) {
+  return Device->Device->deallocateWithVirtualAddress(VAddr, Size);
+}
+
+// Same as olMemAlloc/olMemAllocHost, but takes the plugin allocation kind and
+// also passes on the host pointer the allocation is made for, which is only a
+// hint for diagnostics and profiling that the public API cannot express.
+llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
+                                         ol_device_handle_t Device,
+                                         TargetAllocTy Kind, int64_t Size,
+                                         void *HostPtr) {
+  if (auto Err = Context->requireDevice(Device))
+    return std::move(Err);
+  return Context->PluginCtx->allocate(*Device->Device, Size, HostPtr, Kind,
+                                      /*Alignment=*/0);
+}
+
+// Same as olMemFree, but for a caller that knows the kind of memory it is
+// freeing: the plugin diagnoses a kind that differs from the allocated one,
+// which olMemFree, resolving the kind from the allocation, cannot.
+llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
+                             ol_device_handle_t Device, void *Ptr,
+                             TargetAllocTy Kind) {
+  if (auto Err = Context->requireDevice(Device))
+    return Err;
+  return Context->PluginCtx->deallocate(*Device->Device, Ptr, Kind);
 }
 
 } // namespace tmp

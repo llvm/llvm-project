@@ -478,7 +478,7 @@ public:
   bool parseDIExpression(MDNode *&Expr);
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
-  bool parseCFIOffset(int &Offset);
+  bool parseCFIOffset(int64_t &Offset);
   bool parseCFIUnsigned(unsigned &Value);
   bool parseCFIRegister(unsigned &Reg);
   bool parseCFIAddressSpace(unsigned &AddressSpace);
@@ -1919,7 +1919,6 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
               .Case("ZR", InlineAsm::ConstraintCode::ZR)
               .Case("ZS", InlineAsm::ConstraintCode::ZS)
               .Case("ZT", InlineAsm::ConstraintCode::ZT)
-              .Case("RF", InlineAsm::ConstraintCode::RF)
               .Default(InlineAsm::ConstraintCode::Unknown);
       if (CC == InlineAsm::ConstraintCode::Unknown)
         return error("unknown memory constraint '" + ConstraintStr + "'");
@@ -2622,12 +2621,12 @@ bool MIParser::parseMetadataOperand(MachineOperand &Dest) {
   return false;
 }
 
-bool MIParser::parseCFIOffset(int &Offset) {
+bool MIParser::parseCFIOffset(int64_t &Offset) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected a cfi offset");
-  if (Token.integerValue().getSignificantBits() > 32)
-    return error("expected a 32 bit integer (the cfi offset is too large)");
-  Offset = (int)Token.integerValue().getExtValue();
+  if (!Token.integerValue().isRepresentableByInt64())
+    return error("expected a 64 bit integer (the cfi offset is too large)");
+  Offset = Token.integerValue().getExtValue();
   lex();
   return false;
 }
@@ -2658,11 +2657,7 @@ bool MIParser::parseCFIRegister(unsigned &Reg) {
 bool MIParser::parseCFIAddressSpace(unsigned &AddressSpace) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected a cfi address space literal");
-  if (Token.integerValue().isSigned())
-    return error("expected an unsigned integer (cfi address space)");
-  AddressSpace = Token.integerValue().getZExtValue();
-  lex();
-  return false;
+  return parseCFIUnsigned(AddressSpace);
 }
 
 bool MIParser::parseCFIEscapeValues(std::string &Values) {
@@ -2683,7 +2678,7 @@ bool MIParser::parseCFIEscapeValues(std::string &Values) {
 bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
-  int Offset;
+  int64_t Offset;
   unsigned Reg;
   unsigned AddressSpace;
   unsigned CFIIndex;
@@ -2787,7 +2782,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
       CFIIndex = MF.addFrameInst(
           MCCFIInstruction::createSetRAState(nullptr, State, PACSym));
     } else if (Token.is(MIToken::IntegerLiteral)) {
-      int Offset;
+      int64_t Offset;
       if (parseCFIOffset(Offset))
         return true;
       CFIIndex = MF.addFrameInst(
@@ -2833,7 +2828,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   case MIToken::kw_cfi_llvm_vector_offset: {
     unsigned Reg, MaskReg;
     unsigned RegSize, MaskRegSize;
-    int Offset = 0;
+    int64_t Offset = 0;
 
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIUnsigned(RegSize) || expectAndConsume(MIToken::comma) ||

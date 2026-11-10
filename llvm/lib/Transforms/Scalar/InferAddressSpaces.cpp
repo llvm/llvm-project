@@ -1515,15 +1515,15 @@ void InferAddressSpacesImpl::performPointerReplacement(
 
   User *CurUser = U.getUser();
 
-  if (replaceIfSimplePointerUse(*TTI, CurUser, V, NewV))
-    return;
-
   // Skip if the current user is the new value itself.
   if (CurUser == NewV)
     return;
 
   auto *CurUserI = dyn_cast<Instruction>(CurUser);
   if (!CurUserI || CurUserI->getFunction() != F)
+    return;
+
+  if (replaceIfSimplePointerUse(*TTI, CurUser, V, NewV))
     return;
 
   // Handle more complex cases like intrinsic that need to be remangled.

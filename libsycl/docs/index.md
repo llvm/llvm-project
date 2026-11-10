@@ -114,7 +114,19 @@ which doesn't currently support Windows.
 
   - to implement submit & copy with accessors (low priority)
 
-  - get_info & properties
+  - get_info
+
+  - properties:
+
+    - every queue is in-order: liboffload creates in-order queues only, so the
+      `in_order` property does not change how a queue behaves and
+      `is_in_order()` reports whether the property was passed, not the actual
+      behavior of the queue. To revisit once liboffload supports out-of-order
+      queues
+    - `enable_profiling` is accepted only to be rejected with
+      `errc::feature_not_supported`: the queue does not capture profiling
+      information and `event::get_profiling_info` cannot report it, to
+      implement once liboffload supports profiling
 
   - ctors that accepts context (blocked by lack of liboffload support)
 
