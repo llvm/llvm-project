@@ -85,6 +85,7 @@ class SDDbgValue;
 class SDDbgOperand;
 class SDDbgLabel;
 class SelectionDAG;
+struct SelectionDAGOptions;
 class SelectionDAGTargetInfo;
 class TargetLibraryInfo;
 class TargetLowering;
@@ -230,6 +231,7 @@ class SelectionDAG {
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
   const LibcallLoweringInfo *Libcalls = nullptr;
+  const SelectionDAGOptions *DAGOpts = nullptr;
 
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
@@ -526,9 +528,7 @@ public:
   /// available, otherwise return nullptr.
   const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
-  cl::LibraryOptionsContext &getLibraryOptions() const {
-    return Context->getLibraryOptions();
-  }
+  const SelectionDAGOptions &getSelectionDAGOptions() const { return *DAGOpts; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
 
