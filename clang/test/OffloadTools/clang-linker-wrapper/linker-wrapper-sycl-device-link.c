@@ -46,7 +46,7 @@
 // COFF linker options are not reported as missing inputs.
 // RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
 // RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o /nologo \
-// RUN:   /IGNORE:4078 -o %t.dev.obj
+// RUN:   /IGNORE:4078 '/LIBPATH:C:\dir' /OUT:C:/dir/a.exe -o %t.dev.obj
 // RUN: llvm-readobj --file-header %t.dev.obj | FileCheck %s --check-prefix=WIN
 // WIN: Format: COFF-x86-64
 
@@ -91,6 +91,9 @@
 // RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld -o dev.o -- %t.missing.o \
 // RUN:   2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
+// RUN: not clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
+// RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o %t.missing.o \
+// RUN:   -o dev.obj 2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
 // MISSING: error: '[[FILE]]': {{[Nn]}}o such file or directory
 
 // A value of a host linker option is not reported as a missing input.

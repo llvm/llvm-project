@@ -1443,11 +1443,14 @@ getDeviceInput(const ArgList &Args) {
   for (const opt::Arg *Arg : Args.filtered(OPT_UNKNOWN))
     if (Arg->getSpelling() != "--")
       UnknownOptionIndices.insert(Arg->getIndex());
-  // COFF linker options such as '/nologo' are parsed as inputs. Unlike a path,
-  // they have no further path separator.
+  // COFF linker options such as '/nologo' or '/LIBPATH:C:\dir' are parsed as
+  // inputs. Unlike a path, the option name before any ':' has no further path
+  // separator.
   auto IsCOFFLinkerOption = [&](StringRef Input) {
-    return HostTriple.isOSWindows() && Input.starts_with("/") &&
-           Input.find_first_of("/\\", 1) == StringRef::npos;
+    if (!HostTriple.isOSWindows() || !Input.consume_front("/"))
+      return false;
+    StringRef Name = Input.split(':').first;
+    return !Name.empty() && Name.find_first_of("/\\") == StringRef::npos;
   };
 
   for (const opt::Arg *Arg :
