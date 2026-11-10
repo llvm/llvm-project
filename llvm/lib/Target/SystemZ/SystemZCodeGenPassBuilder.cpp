@@ -81,7 +81,7 @@ void SystemZCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
 }
 
 void SystemZCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SystemZCopyPhysRegsPass
+  addMachineFunctionPass(SystemZCopyPhysRegsPass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPostRewrite(PassManagerWrapper &PMW) {

@@ -57,7 +57,7 @@ LLVMInitializeSystemZTarget() {
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCLegacyPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
-  initializeSystemZCopyPhysRegsPass(PR);
+  initializeSystemZCopyPhysRegsLegacyPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -257,7 +257,7 @@ bool SystemZPassConfig::addILPOpts() {
 }
 
 void SystemZPassConfig::addPreRegAlloc() {
-  addPass(createSystemZCopyPhysRegsPass(getSystemZTargetMachine()));
+  addPass(createSystemZCopyPhysRegsLegacyPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRewrite() {

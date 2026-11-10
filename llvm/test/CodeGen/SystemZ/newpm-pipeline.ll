@@ -31,6 +31,7 @@
 ; O0-NEXT:     systemz-isel
 ; O0-NEXT:     finalize-isel
 ; O0-NEXT:     localstackalloc
+; O0-NEXT:     systemz-copy-physregs
 ; O0-NEXT:     phi-node-elimination
 ; O0-NEXT:     regallocfast
 ; O0-NEXT:     remove-redundant-debug-values
@@ -102,6 +103,7 @@
 ; O3-NEXT:     machine-sink
 ; O3-NEXT:     peephole-opt
 ; O3-NEXT:     dead-mi-elimination
+; O3-NEXT:     systemz-copy-physregs
 ; O3-NEXT:     detect-dead-lanes
 ; O3-NEXT:     init-undef
 ; O3-NEXT:     process-implicit-defs
