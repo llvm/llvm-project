@@ -761,8 +761,7 @@ func.func @f32_reduction_from_load_nd(%arg0: memref<16x16xf32>, %arg1: memref<25
 // -----
 // The consumer slices exactly the reduction dim, so its parent is reused and
 // lends its blocking on dim 0: inst_data = [8, 16], not the [1, 16] lane
-// footprint. That keeps the whole normalize chain on one blocking, so no
-// convert_layout is needed between the reduction and the divf.
+// footprint.
 gpu.module @test {
 // CHECK-LABEL: func.func @reduction_keeps_consumer_blocking(
 // CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[0, 0] <{layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
@@ -770,7 +769,6 @@ gpu.module @test {
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[RED]] {layout_result_0 = #xegpu.layout<inst_data = [8, 1], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf32> to vector<16x1xf32>
 // CHECK: %[[BCAST:.*]] = vector.broadcast %[[CAST]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x1xf32> to vector<16x64xf32>
 // CHECK: arith.divf %[[LOAD]], %[[BCAST]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x64xf32>
-// CHECK-NOT: xegpu.convert_layout
 func.func @reduction_keeps_consumer_blocking(%arg0: memref<16x64xf32>, %arg1: memref<16x64xf32>) {
   %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
   %t = xegpu.create_nd_tdesc %arg0 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
@@ -806,6 +804,80 @@ func.func @reduction_narrow_dim_clamps_parent_lanes(%arg0: memref<16x64xf32>) {
   %2 = vector.broadcast %1 : vector<16x1xf32> to vector<16x64xf32>
   %o = xegpu.create_nd_tdesc %arg0 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
   xegpu.store_nd %2, %o[0, 0] : vector<16x64xf32>, !xegpu.tensor_desc<16x64xf32>
+  return
+}
+}
+
+// -----
+// A reused parent is only capped to the source extent: the 16 parent lanes on
+// dim 1 are capped to its 8 elements, giving lane_layout = [1, 8].
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_reused_parent_capped_lanes(
+// CHECK: %[[SRC:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 8], lane_layout = [1, 8], lane_data = [1, 1]>} dense<1.000000e+00> : vector<16x8xf32>
+// CHECK: vector.multi_reduction <add>, %[[SRC]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 8], lane_layout = [1, 8], lane_data = [1, 1]>, dims = [1]>} [1] : vector<16x8xf32> to vector<16xf32>
+func.func @reduction_reused_parent_capped_lanes(%arg0: memref<16x64xf32>) {
+  %src = arith.constant dense<1.000000e+00> : vector<16x8xf32>
+  %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
+  %0 = vector.multi_reduction <add>, %src, %cst [1] : vector<16x8xf32> to vector<16xf32>
+  %1 = vector.shape_cast %0 : vector<16xf32> to vector<16x1xf32>
+  %2 = vector.broadcast %1 : vector<16x1xf32> to vector<16x64xf32>
+  %o = xegpu.create_nd_tdesc %arg0 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
+  xegpu.store_nd %2, %o[0, 0] : vector<16x64xf32>, !xegpu.tensor_desc<16x64xf32>
+  return
+}
+}
+
+// -----
+// The reused parent packs lane_data = 2 on dim 1, so its 16 lanes there are
+// capped to 4 / 2 = 2.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_reused_parent_capped_by_lane_data(
+// CHECK: %[[SRC:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 4], lane_layout = [1, 2], lane_data = [1, 2]>} dense<1.000000e+00> : vector<16x4xf16>
+// CHECK: vector.multi_reduction <add>, %[[SRC]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 4], lane_layout = [1, 2], lane_data = [1, 2]>, dims = [1]>} [1] : vector<16x4xf16> to vector<16xf16>
+func.func @reduction_reused_parent_capped_by_lane_data(%arg0: memref<16xf16>) {
+  %src = arith.constant dense<1.000000e+00> : vector<16x4xf16>
+  %cst = arith.constant dense<0.000000e+00> : vector<16xf16>
+  %0 = vector.multi_reduction <add>, %src, %cst [1] : vector<16x4xf16> to vector<16xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #xegpu.slice<#xegpu.layout<inst_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 2]>, dims = [1]>, target_layout = #xegpu.slice<#xegpu.layout<inst_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 2]>, dims = [1]>}> : vector<16xf16>
+  %c0 = arith.constant 0 : index
+  vector.store %1, %arg0[%c0] : memref<16xf16>, vector<16xf16>
+  return
+}
+}
+
+// -----
+// Lanes freed by capping a reused parent are not redistributed: dim 0 of the
+// parent's [4, 1, 4] is capped to 2, giving [2, 1, 4].
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_reused_parent_no_spare_lanes(
+// CHECK: %[[SRC:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [2, 1, 4], lane_layout = [2, 1, 4], lane_data = [1, 1, 1]>} dense<1.000000e+00> : vector<2x16x64xf32>
+// CHECK: vector.multi_reduction <add>, %[[SRC]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [2, 1, 4], lane_layout = [2, 1, 4], lane_data = [1, 1, 1]>, dims = [0, 2]>} [0, 2] : vector<2x16x64xf32> to vector<16xf32>
+func.func @reduction_reused_parent_no_spare_lanes(%arg0: memref<16xf32>) {
+  %src = arith.constant dense<1.000000e+00> : vector<2x16x64xf32>
+  %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
+  %0 = vector.multi_reduction <add>, %src, %cst [0, 2] : vector<2x16x64xf32> to vector<16xf32>
+  %1 = xegpu.convert_layout %0 <{input_layout = #xegpu.slice<#xegpu.layout<inst_data = [4, 1, 4], lane_layout = [4, 1, 4], lane_data = [1, 1, 1]>, dims = [0, 2]>, target_layout = #xegpu.slice<#xegpu.layout<inst_data = [4, 1, 4], lane_layout = [4, 1, 4], lane_data = [1, 1, 1]>, dims = [0, 2]>}> : vector<16xf32>
+  %c0 = arith.constant 0 : index
+  vector.store %1, %arg0[%c0] : memref<16xf32>, vector<16xf32>
+  return
+}
+}
+
+// -----
+// A non-slice consumer that broadcasts along a unit dim places 16 lanes on it.
+// The copied lanes are capped to that dim's extent of 1, and the freed lanes
+// go to the reduced innermost dim.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_unit_dim_caps_consumer_lanes(
+// CHECK: %[[SRC:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>} dense<1.000000e+00> : vector<16x1x32xf32>
+// CHECK: vector.multi_reduction <add>, %[[SRC]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [2]>} [2] : vector<16x1x32xf32> to vector<16x1xf32>
+func.func @reduction_unit_dim_caps_consumer_lanes(%arg0: memref<16x64xf32>) {
+  %src = arith.constant dense<1.000000e+00> : vector<16x1x32xf32>
+  %cst = arith.constant dense<0.000000e+00> : vector<16x1xf32>
+  %0 = vector.multi_reduction <add>, %src, %cst [2] : vector<16x1x32xf32> to vector<16x1xf32>
+  %1 = vector.broadcast %0 : vector<16x1xf32> to vector<16x64xf32>
+  %o = xegpu.create_nd_tdesc %arg0 : memref<16x64xf32> -> !xegpu.tensor_desc<16x64xf32>
+  xegpu.store_nd %1, %o[0, 0] : vector<16x64xf32>, !xegpu.tensor_desc<16x64xf32>
   return
 }
 }

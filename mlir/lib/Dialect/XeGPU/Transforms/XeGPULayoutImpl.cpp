@@ -1382,14 +1382,16 @@ compute2DBlockIOLaneLayout(ArrayRef<int64_t> instShape, int64_t subgroupSize,
 ///
 /// If the consumer's slice parent cannot be reused, initialize lane_layout and
 /// lane_data to 1, then copy available consumer entries onto non-reduced source
-/// dimensions in order.
+/// dimensions in order, with the same clamp: a consumer that broadcasts along
+/// a unit dimension may place lanes on it.
 ///
-/// Assign any unused lanes to the innermost dimension if it is reduced, up to
-/// the same bound. If that dimension still has only one lane, then the lane
-/// can reduce a vector limited by maxReduceVectorSize and the source
-/// dimension's size. The vector budget (maxReduceVectorSize) applies to the
-/// product of lane_data across all dimensions. If that product already meets or
-/// exceeds the budget, leave lane_data unchanged.
+/// For a derived (not reused) layout, assign any unused lanes to the innermost
+/// dimension if it is reduced, up to the same bound. If that dimension still
+/// has only one lane, then the lane can reduce a vector limited by
+/// maxReduceVectorSize and the source dimension's size. The vector budget
+/// (maxReduceVectorSize) applies to the product of lane_data across all
+/// dimensions. If that product already meets or exceeds the budget, leave
+/// lane_data unchanged.
 ///
 /// Set inst_data[i] to lane_layout[i] * lane_data[i]. On non-reduced
 /// dimensions, preserve a reused parent's larger inst_data[i].
@@ -1463,7 +1465,7 @@ computeReductionLaneLayoutAndData(
   }
 
   // Without a reusable parent, map result dimensions to non-reduced source
-  // dimensions. Their extents match, so copied lane counts need no clamp.
+  // dimensions.
   if (!reusedParent) {
     SmallVector<int64_t> consumerLaneLayout, consumerLaneData;
     if (consumerLayout) {
@@ -1479,25 +1481,31 @@ computeReductionLaneLayoutAndData(
         laneData[i] = consumerLaneData[c];
       ++c;
     }
-  }
 
-  // Assign spare lanes only when the innermost source dimension is reduced,
-  // matching the distribution typically used by memory loads and DPAS results.
-  int innermost = srcRank - 1;
-  if (isReduced(innermost)) {
-    int64_t spareLanes =
-        std::max<int64_t>(1, subgroupSize / computeProduct(laneLayout));
-    if (spareLanes > 1)
-      laneLayout[innermost] =
-          std::min(spareLanes, std::max<int64_t>(1, srcShape[innermost]));
+    // Cap laneLayout using srcShape.
+    for (int i = 0; i < srcRank; ++i)
+      laneLayout[i] = std::min(
+          laneLayout[i], std::max<int64_t>(1, srcShape[i] / laneData[i]));
 
-    if (laneLayout[innermost] == 1) {
-      // Adjust lane_data on this dimension using the remaining vector budget,
-      // capped by the source extent.
-      int64_t vectorBudget = maxReduceVectorSize / computeProduct(laneData);
-      if (vectorBudget > 1)
-        laneData[innermost] =
-            std::min(vectorBudget * laneData[innermost], srcShape[innermost]);
+    // Assign spare lanes only when the innermost source dimension is reduced,
+    // matching the distribution typically used by memory loads and DPAS
+    // results.
+    int innermost = srcRank - 1;
+    if (isReduced(innermost)) {
+      int64_t spareLanes =
+          std::max<int64_t>(1, subgroupSize / computeProduct(laneLayout));
+      if (spareLanes > 1)
+        laneLayout[innermost] =
+            std::min(spareLanes, std::max<int64_t>(1, srcShape[innermost]));
+
+      if (laneLayout[innermost] == 1) {
+        // Adjust lane_data on this dimension using the remaining vector budget,
+        // capped by the source extent.
+        int64_t vectorBudget = maxReduceVectorSize / computeProduct(laneData);
+        if (vectorBudget > 1)
+          laneData[innermost] =
+              std::min(vectorBudget * laneData[innermost], srcShape[innermost]);
+      }
     }
   }
 
