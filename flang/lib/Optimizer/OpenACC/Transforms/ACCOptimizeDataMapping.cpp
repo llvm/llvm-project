@@ -35,6 +35,8 @@
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir::acc {
@@ -105,6 +107,33 @@ struct CopyCandidate {
   acc::CopyoutOp copyoutOp;
 };
 
+/// Converted copyins are appended so the remaining implicit copies are issued
+/// first. This is done because this pass relies on alias analysis, which
+/// takes advantage of Fortran aliasing rules: for example, dummy arguments do
+/// not alias. However, if they did alias, then we are now depending on the
+/// order ACCImplicitData decided to map, because a copyin followed by a copy
+/// is not the same as a copy followed by a copyin (since only the first data
+/// action maps, everything else updates the counter). By issuing the copies
+/// before the copyins, we can ensure we do not break anything even if we
+/// relied on the language rules to do the optimization.
+static void appendConvertedCopyins(
+    Operation *regionOp,
+    const llvm::SmallPtrSetImpl<Operation *> &converted) {
+  SmallVector<Value> operands(acc::getDataOperands(regionOp));
+  SmallVector<Value> copyins;
+  llvm::erase_if(operands, [&](Value value) {
+    Operation *def = value.getDefiningOp();
+    if (!def || !converted.contains(def))
+      return false;
+    copyins.push_back(value);
+    return true;
+  });
+  if (copyins.empty())
+    return;
+  operands.append(copyins);
+  acc::getMutableDataOperands(regionOp).assign(operands);
+}
+
 class ACCOptimizeDataMapping
     : public fir::acc::impl::ACCOptimizeDataMappingBase<
           ACCOptimizeDataMapping> {
@@ -127,6 +156,7 @@ public:
 
     AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
 
+    llvm::SmallPtrSet<Operation *, 16> converted;
     llvm::SmallVector<Operation *> tempOps;
     for (CopyCandidate candidate : candidates) {
       acc::CopyinOp copyinOp = candidate.copyinOp;
@@ -152,6 +182,7 @@ public:
       acc::CopyoutOp copyoutOp = candidate.copyoutOp;
 
       copyinOp.setDataClause(acc::DataClause::acc_copyin);
+      converted.insert(copyinOp);
       // The exit is a delete so the structured data model stays correct. A
       // delete decrements the present counter and deletes the data only when
       // the counter reaches zero.
@@ -168,6 +199,17 @@ public:
 
     for (Operation *op : llvm::reverse(tempOps))
       op->erase();
+
+    if (converted.empty())
+      return;
+    llvm::SmallPtrSet<Operation *, 16> regions;
+    for (Operation *copyin : converted)
+      for (Operation *user : copyin->getUsers())
+        if (isa<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS,
+                acc::KernelEnvironmentOp>(user))
+          regions.insert(user);
+    for (Operation *regionOp : regions)
+      appendConvertedCopyins(regionOp, converted);
   }
 };
 
