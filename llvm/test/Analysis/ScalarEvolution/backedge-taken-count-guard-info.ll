@@ -159,7 +159,7 @@ define void @same_width_zext_bounded_by_operand(i32 %m, i8 %k) {
 ; CHECK-LABEL: 'same_width_zext_bounded_by_operand'
 ; CHECK-NEXT:  Determining loop execution counts for: @same_width_zext_bounded_by_operand
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (2 * (zext i8 %k to i32))<nuw><nsw>)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 509
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (2 * (zext i8 %k to i32))<nuw><nsw>)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
