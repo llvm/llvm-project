@@ -157,11 +157,11 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
-// PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
+// PowerPC64, Sparc64, SystemZ, VE need signext/zeroext on i32 parameters and
 // returns corresponding to C-level ints and unsigned ints.
 static bool shouldExtI32(const Triple &T) {
   return T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-         T.getArch() == Triple::systemz;
+         T.getArch() == Triple::systemz || T.getArch() == Triple::ve;
 }
 
 // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
