@@ -2327,7 +2327,7 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     return emitTypeConversionError(baseClassOp, baseClassOp.getType());
   mlir::Value derivedAddr = adaptor.getSrcAddr();
   llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
-      adaptor.getOffset().getZExtValue()};
+      static_cast<int32_t>(adaptor.getOffset().getZExtValue())};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (adaptor.getOffset().getZExtValue() == 0) {
@@ -2368,7 +2368,8 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
     rewriter.replaceOp(derivedClassOp, baseAddr);
     return mlir::success();
   }
-  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {offsetVal};
+  llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
+      static_cast<int32_t>(offsetVal)};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (derivedClassOp.getAssumeNotNull()) {
@@ -5642,7 +5643,8 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
     return emitTypeConversionError(op, op.getType());
   auto eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   llvm::SmallVector<mlir::LLVM::GEPArg> offsets =
-      llvm::SmallVector<mlir::LLVM::GEPArg>{op.getIndex()};
+      llvm::SmallVector<mlir::LLVM::GEPArg>{
+          static_cast<int32_t>(op.getIndex())};
   rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
       op, targetType, eltType, adaptor.getVptr(), offsets,
       mlir::LLVM::GEPNoWrapFlags::inbounds);

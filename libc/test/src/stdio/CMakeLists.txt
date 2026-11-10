@@ -577,7 +577,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.test.UnitTest.ErrnoSetterMatcher
   )
 
-
   add_libc_test(
     fdopen_test
     SUITE
