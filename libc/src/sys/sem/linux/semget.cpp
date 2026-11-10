@@ -8,20 +8,20 @@
 
 #include "src/sys/sem/semget.h"
 
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/semget.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
-#include <sys/syscall.h>
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, semget, (key_t key, int nsems, int semflg)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_semget, key, nsems, semflg);
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result = linux_syscalls::semget(key, nsems, semflg);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

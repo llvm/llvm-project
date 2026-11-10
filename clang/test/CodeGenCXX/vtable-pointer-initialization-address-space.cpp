@@ -20,6 +20,13 @@ struct A : Base {
   Field field;
 };
 
+// CHECK: %struct.B = type <{ ptr addrspace(1), [8 x i8] }>
+// CHECK: %struct.B.base = type <{ ptr addrspace(1), i8 }>
+// CHECK: %struct.K = type { ptr addrspace(1) }
+// WITH-NONZERO-DEFAULT-AS: %struct.B = type <{ ptr addrspace(1), [8 x i8] }>
+// WITH-NONZERO-DEFAULT-AS: %struct.B.base = type <{ ptr addrspace(1), i8 }>
+// WITH-NONZERO-DEFAULT-AS: %struct.K = type { ptr addrspace(1) }
+
 // CHECK-LABEL: define{{.*}} void @_ZN1AC2Ev(ptr {{[^,]*}} %this) unnamed_addr
 // CHECK: call void @_ZN4BaseC2Ev(
 // CHECK: store ptr addrspace(1) getelementptr inbounds inrange(-16, 8) (i8, ptr addrspace(1) @_ZTV1A, i64 16)
@@ -65,3 +72,13 @@ void f() { B b; }
 // CHECK: call void @_ZN4BaseD2Ev(
 // CHECK: ret void
 // WITH-NONZERO-DEFAULT-AS-LABEL: define linkonce_odr{{.*}} void @_ZN1BD2Ev(ptr addrspace(4) {{[^,]*}} %this) unnamed_addr
+
+struct K {
+  virtual void g();
+};
+
+struct C : B, K {
+  double x;
+};
+
+void g() { C c; }

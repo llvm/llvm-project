@@ -25,9 +25,6 @@ struct MaterializationOpInterface
           MaterializationOpInterface<OpTy>, OpTy> {
   void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
                                        ValueBoundsConstraintSet &cstr) const {
-    static_assert(
-        OpTy::template hasTrait<OpTrait::SameOperandsAndResultShape>(),
-        "expected the result and the source to have the same shape");
     auto materializationOp = cast<OpTy>(op);
     assert(value == materializationOp.getResult() && "invalid value");
 

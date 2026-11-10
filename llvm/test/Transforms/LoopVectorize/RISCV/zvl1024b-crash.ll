@@ -7,34 +7,34 @@ define void @foo(i32 %0, ptr %p) vscale_range(16, 1024) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 308)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 309)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 160)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 243)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 53)
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 162)
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 161)
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 172)
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 159)
-; CHECK-NEXT:    [[TMP10:%.*]] = or <vscale x 8 x i1> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or <vscale x 8 x i1> [[TMP10]], [[TMP3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <vscale x 8 x i1> [[TMP11]], [[TMP4]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <vscale x 8 x i1> [[TMP12]], [[TMP5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <vscale x 8 x i1> [[TMP13]], [[TMP6]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or <vscale x 8 x i1> [[TMP14]], [[TMP7]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or <vscale x 8 x i1> [[TMP15]], [[TMP8]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 8 x i1> [[TMP16]], [[TMP9]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 308)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 309)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 160)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 243)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 53)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 162)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 161)
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 172)
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <vscale x 16 x i32> [[BROADCAST_SPLAT]], splat (i32 159)
+; CHECK-NEXT:    [[TMP10:%.*]] = or <vscale x 16 x i1> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <vscale x 16 x i1> [[TMP10]], [[TMP3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or <vscale x 16 x i1> [[TMP11]], [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or <vscale x 16 x i1> [[TMP12]], [[TMP5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or <vscale x 16 x i1> [[TMP13]], [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or <vscale x 16 x i1> [[TMP14]], [[TMP7]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or <vscale x 16 x i1> [[TMP15]], [[TMP8]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 16 x i1> [[TMP16]], [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[CURRENT_ITERATION_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 524, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
-; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 8 x i1> @llvm.vp.merge.nxv8i1(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> zeroinitializer, i32 [[TMP18]])
-; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 8 x i1> [[TMP19]], splat (i1 true)
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
+; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i1> @llvm.vp.merge.nxv16i1(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i1> [[TMP17]], <vscale x 16 x i1> zeroinitializer, i32 [[TMP18]])
+; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 16 x i1> [[TMP19]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[P]], i64 [[CURRENT_ITERATION_IV]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv8i8.p0(<vscale x 8 x i8> zeroinitializer, ptr align 1 [[TMP23]], <vscale x 8 x i1> [[TMP20]], i32 [[TMP18]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP23]], <vscale x 16 x i1> [[TMP20]], i32 [[TMP18]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP18]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP24]], [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP24]]

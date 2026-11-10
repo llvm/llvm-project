@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the types and operation details for the NVVM IR dialect in
-// MLIR, and the LLVM IR dialect.  It also registers the dialect.
+// This file defines the operations of the NVVM IR dialect in MLIR and
+// registers the dialect.
 //
 // The NVVM dialect only contains GPU specific additions on top of the general
 // LLVM dialect.
@@ -20,7 +20,6 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -33,6 +32,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
@@ -52,7 +52,6 @@ using namespace mlir;
 using namespace NVVM;
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
-#include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
 
 static constexpr unsigned notIntrinsic = llvm::Intrinsic::not_intrinsic;
 
@@ -712,7 +711,7 @@ LogicalResult PermuteOp::verify() {
 static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
                                                   FPRoundingMode rnd,
                                                   bool hasRandomBits,
-                                                  Operation *op) {
+                                                  bool hasPzo, Operation *op) {
   static constexpr FPRoundingMode validRndModes[] = {
       FPRoundingMode::RN, FPRoundingMode::RZ, FPRoundingMode::RS};
 
@@ -724,9 +723,10 @@ static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
   }
 
   if (rnd == FPRoundingMode::RS) {
-    if (!hasRandomBits) {
+    if (!hasRandomBits)
       return op->emitOpError("random_bits is required for RS rounding mode.");
-    }
+    if (hasPzo)
+      return op->emitOpError("pzo not supported for RS rounding mode.");
   } else {
     if (hasRandomBits) {
       return op->emitOpError(
@@ -738,13 +738,13 @@ static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
 }
 
 LogicalResult ConvertF32x2ToF16x2Op::verify() {
-  return verifyConvertF32x2ToFP16x2Op("f16x2", getRnd(),
-                                      getRandomBits() ? true : false, *this);
+  return verifyConvertF32x2ToFP16x2Op(
+      "f16x2", getRnd(), getRandomBits() ? true : false, getPzo(), *this);
 }
 
 LogicalResult ConvertF32x2ToBF16x2Op::verify() {
-  return verifyConvertF32x2ToFP16x2Op("bf16x2", getRnd(),
-                                      getRandomBits() ? true : false, *this);
+  return verifyConvertF32x2ToFP16x2Op(
+      "bf16x2", getRnd(), getRandomBits() ? true : false, getPzo(), *this);
 }
 
 LogicalResult ConvertF32x4ToF8x4Op::verify() {
@@ -3593,7 +3593,7 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
 }
 
 template <typename OpType>
-static LogicalResult verifyAddSubFOp(OpType op) {
+static LogicalResult verifyFloatBinaryOp(OpType op, StringRef opKind) {
   mlir::NVVM::FPRoundingMode rndMode = op.getRnd();
   mlir::NVVM::SaturationMode satMode = op.getSat();
   bool isFTZ = op.getFtz();
@@ -3604,30 +3604,41 @@ static LogicalResult verifyAddSubFOp(OpType op) {
                               : opType;
 
   if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
-    return op.emitOpError("FTZ and saturation are not supported for "
-                          "additions/subtractions involving f64 type");
+    return op.emitOpError("FTZ and saturation are not supported for ")
+           << opKind << " involving f64 type";
 
   if (opBaseType.isF16() && !(rndMode == NVVM::FPRoundingMode::RN ||
                               rndMode == NVVM::FPRoundingMode::NONE))
     return op.emitOpError("only RN rounding mode is supported for f16 and "
-                          "vector<2xf16> additions/subtractions");
+                          "vector<2xf16> ")
+           << opKind;
 
   if (opBaseType.isBF16()) {
     if (rndMode != NVVM::FPRoundingMode::RN &&
         rndMode != NVVM::FPRoundingMode::NONE)
       return op.emitOpError("only RN rounding mode is supported for bf16 and "
-                            "vector<2xbf16> additions/subtractions");
+                            "vector<2xbf16> ")
+             << opKind;
     if (satMode != NVVM::SaturationMode::NONE || isFTZ)
       return op.emitOpError("FTZ and saturation are not supported for bf16 and "
-                            "vector<2xbf16> additions/subtractions");
+                            "vector<2xbf16> ")
+             << opKind;
   }
 
   return success();
 }
 
-LogicalResult NVVM::AddFOp::verify() { return verifyAddSubFOp<AddFOp>(*this); }
+LogicalResult NVVM::AddFOp::verify() {
+  return verifyFloatBinaryOp(*this, "additions");
+}
 
-LogicalResult NVVM::SubFOp::verify() { return verifyAddSubFOp<SubFOp>(*this); }
+LogicalResult NVVM::SubFOp::verify() {
+  return verifyFloatBinaryOp(*this, "subtractions");
+}
+
+LogicalResult NVVM::MulFOp::verify() {
+  return verifyFloatBinaryOp(*this, "multiplications");
+}
 
 LogicalResult NVVM::FmaOp::verify() {
   auto opType = getRes().getType();
@@ -4170,6 +4181,11 @@ mlir::NVVM::IDArgPair MBarrierExpectTxOp::getIntrinsicIDAndArgs(
   args.push_back(mt.lookupValue(thisOp.getAddr()));
   args.push_back(mt.lookupValue(thisOp.getTxcount()));
 
+  if (isClusterSpace) {
+    args.push_back(builder.getInt32(0));
+    args.push_back(builder.getFalse());
+  }
+
   return {IDs[index], std::move(args)};
 }
 
@@ -4193,6 +4209,11 @@ mlir::NVVM::IDArgPair MBarrierCompleteTxOp::getIntrinsicIDAndArgs(
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(thisOp.getAddr()));
   args.push_back(mt.lookupValue(thisOp.getTxcount()));
+
+  if (isClusterSpace) {
+    args.push_back(builder.getInt32(0));
+    args.push_back(builder.getFalse());
+  }
 
   return {IDs[index], std::move(args)};
 }
@@ -4239,6 +4260,9 @@ mlir::NVVM::IDArgPair MBarrierArriveOp::getIntrinsicIDAndArgs(
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
+
+  if (isClusterSpace)
+    return {id, {mbar, count, builder.getInt32(0), builder.getFalse()}};
   return {id, {mbar, count}};
 }
 
@@ -4286,6 +4310,9 @@ mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
+
+  if (isClusterSpace)
+    return {id, {mbar, count, builder.getInt32(0), builder.getFalse()}};
   return {id, {mbar, count}};
 }
 
@@ -4333,6 +4360,8 @@ mlir::NVVM::IDArgPair MBarrierArriveExpectTxOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  if (isClusterSpace)
+    return {id, {mbar, txcount, builder.getInt32(0), builder.getFalse()}};
   return {id, {mbar, txcount}};
 }
 
@@ -4367,6 +4396,8 @@ mlir::NVVM::IDArgPair MBarrierArriveDropExpectTxOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  if (isClusterSpace)
+    return {id, {mbar, txcount, builder.getInt32(0), builder.getFalse()}};
   return {id, {mbar, txcount}};
 }
 
@@ -5752,10 +5783,8 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
-  // The PZO modifier is not supported with the RS rounding mode.
-  // TODO: Add support for PZO modifier
   if (op.getRnd() != FPRoundingMode::RS)
-    args.push_back(builder.getInt1(false));
+    args.push_back(builder.getInt1(op.getPzo()));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5805,9 +5834,8 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
-  // TODO: Add support for PZO modifier
   if (op.getRnd() != FPRoundingMode::RS)
-    args.push_back(builder.getInt1(false));
+    args.push_back(builder.getInt1(op.getPzo()));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -7176,10 +7204,7 @@ struct NVVMInlinerInterface final : DialectInlinerInterface {
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
   registerNVVMDialectOperations(this);
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
-      >();
+  registerAttributes();
 
   // Support unknown operations because not all NVVM operations are
   // registered.
@@ -7263,135 +7288,3 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
 
   return success();
 }
-
-//===----------------------------------------------------------------------===//
-// NVVM Address Space Attr
-//===----------------------------------------------------------------------===//
-
-unsigned NVVMMemorySpaceAttr::getAddressSpace() const {
-  return static_cast<unsigned>(getValue());
-}
-
-bool NVVMMemorySpaceAttr::isValidLoad(
-    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
-    const ::mlir::DataLayout *dataLayout,
-    function_ref<InFlightDiagnostic()> emitError) const {
-  return LLVM::detail::isValidLoadStoreImpl(type, ordering, alignment,
-                                            dataLayout, emitError);
-}
-
-bool NVVMMemorySpaceAttr::isValidStore(
-    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
-    const ::mlir::DataLayout *dataLayout,
-    function_ref<InFlightDiagnostic()> emitError) const {
-  return LLVM::detail::isValidLoadStoreImpl(type, ordering, alignment,
-                                            dataLayout, emitError);
-}
-
-bool NVVMMemorySpaceAttr::isValidAtomicOp(
-    ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
-    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
-    function_ref<InFlightDiagnostic()> emitError) const {
-  // TODO: update this method once `ptr.atomic_rmw` is implemented.
-  assert(false && "unimplemented, see TODO in the source.");
-  return false;
-}
-
-bool NVVMMemorySpaceAttr::isValidAtomicXchg(
-    Type type, ptr::AtomicOrdering successOrdering,
-    ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
-    const ::mlir::DataLayout *dataLayout,
-    function_ref<InFlightDiagnostic()> emitError) const {
-  // TODO: update this method once `ptr.atomic_cmpxchg` is implemented.
-  assert(false && "unimplemented, see TODO in the source.");
-  return false;
-}
-
-bool NVVMMemorySpaceAttr::isValidAddrSpaceCast(
-    Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
-  // TODO: update this method once the `ptr.addrspace_cast` op is added to the
-  // dialect.
-  assert(false && "unimplemented, see TODO in the source.");
-  return false;
-}
-
-bool NVVMMemorySpaceAttr::isValidPtrIntCast(
-    Type intLikeTy, Type ptrLikeTy,
-    function_ref<InFlightDiagnostic()> emitError) const {
-  // TODO: update this method once the int-cast ops are added to the `ptr`
-  // dialect.
-  assert(false && "unimplemented, see TODO in the source.");
-  return false;
-}
-
-//===----------------------------------------------------------------------===//
-// NVVM target attribute.
-//===----------------------------------------------------------------------===//
-LogicalResult
-NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                       int optLevel, StringRef triple, StringRef chip,
-                       StringRef features, DictionaryAttr flags,
-                       ArrayAttr files, bool verifyTarget) {
-  if (optLevel < 0 || optLevel > 3) {
-    emitError() << "The optimization level must be a number between 0 and 3.";
-    return failure();
-  }
-  if (triple.empty()) {
-    emitError() << "The target triple cannot be empty.";
-    return failure();
-  }
-  if (chip.empty()) {
-    emitError() << "The target chip cannot be empty.";
-    return failure();
-  }
-  if (files && !llvm::all_of(files, [](::mlir::Attribute attr) {
-        return mlir::isa_and_nonnull<StringAttr>(attr);
-      })) {
-    emitError() << "All the elements in the `link` array must be strings.";
-    return failure();
-  }
-  return success();
-}
-
-LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
-  if (!getVerifyTarget())
-    return success();
-
-  auto gpuModuleOp = llvm::dyn_cast<gpu::GPUModuleOp>(gpuModule);
-  if (!gpuModuleOp) {
-    return emitError(gpuModule->getLoc(),
-                     "NVVM target attribute must be attached to a GPU module");
-  }
-
-  std::optional<unsigned> targetFullSmVersion =
-      NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
-  if (!targetFullSmVersion)
-    return emitError(gpuModule->getLoc())
-           << "invalid NVVM target chip \"" << getChip()
-           << "\", expected sm_<version>[a|f]";
-
-  if (!NVVMCheckSMVersion::isMinimumSMVersion(*targetFullSmVersion)) {
-    return emitError(gpuModule->getLoc(),
-                     "Minimum NVVM target SM version is sm_20");
-  }
-
-  if (gpuModuleOp
-          ->walk([&](Operation *op) {
-            if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
-              const NVVMCheckSMVersion requirement =
-                  reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(*targetFullSmVersion)) {
-                op->emitOpError() << "is not supported on " << getChip();
-                return WalkResult::interrupt();
-              }
-            }
-            return WalkResult::advance();
-          })
-          .wasInterrupted())
-    return failure();
-
-  return success();
-}
-
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
