@@ -3493,8 +3493,15 @@ define hidden void @extract_v7i16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-LABEL: extract_v7i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_clause 0x3
+; GFX10-NEXT:    global_load_ushort v2, v[0:1], off offset:6
+; GFX10-NEXT:    global_load_ushort v3, v[0:1], off
+; GFX10-NEXT:    global_load_ushort v8, v[0:1], off offset:2
+; GFX10-NEXT:    global_load_ushort v9, v[0:1], off offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    v_lshl_or_b32 v0, v8, 16, v3
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_lshl_or_b32 v1, v2, 16, v9
 ; GFX10-NEXT:    global_store_dword v[4:5], v0, off
 ; GFX10-NEXT:    global_store_dword v[6:7], v1, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -3502,10 +3509,16 @@ define hidden void @extract_v7i16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX9-LABEL: extract_v7i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    global_load_ushort v2, v[0:1], off offset:4
+; GFX9-NEXT:    global_load_ushort v3, v[0:1], off offset:6
+; GFX9-NEXT:    global_load_ushort v8, v[0:1], off
+; GFX9-NEXT:    global_load_ushort v9, v[0:1], off offset:2
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_store_dword v[4:5], v0, off
-; GFX9-NEXT:    global_store_dword v[6:7], v1, off
+; GFX9-NEXT:    v_lshl_or_b32 v1, v9, 16, v8
+; GFX9-NEXT:    global_store_dword v[4:5], v1, off
+; GFX9-NEXT:    global_store_dword v[6:7], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <7 x i16>, ptr addrspace(1) %in0, align 2
@@ -3532,15 +3545,20 @@ define hidden void @extract_v13i8(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX10-LABEL: extract_v13i8:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    global_load_dwordx2 v[2:3], v[0:1], off
-; GFX10-NEXT:    global_load_ushort v8, v[0:1], off offset:8
+; GFX10-NEXT:    s_clause 0x3
+; GFX10-NEXT:    global_load_ushort v2, v[0:1], off
+; GFX10-NEXT:    global_load_ushort v3, v[0:1], off offset:2
+; GFX10-NEXT:    global_load_ushort v8, v[0:1], off offset:6
+; GFX10-NEXT:    global_load_ushort v9, v[0:1], off offset:8
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
+; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_bfe_u32 v0, v2, 8, 8
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v8
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v1, 0xff, v8
-; GFX10-NEXT:    v_perm_b32 v0, v0, v2, 0x5040c00
-; GFX10-NEXT:    v_perm_b32 v1, v1, v3, 0x5040c03
+; GFX10-NEXT:    v_and_b32_e32 v3, 0xff, v9
+; GFX10-NEXT:    v_perm_b32 v0, v2, v0, 0x5040c00
+; GFX10-NEXT:    v_perm_b32 v1, v3, v1, 0x5040c03
 ; GFX10-NEXT:    global_store_dword v[4:5], v0, off
 ; GFX10-NEXT:    global_store_dword v[6:7], v1, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -3548,16 +3566,21 @@ define hidden void @extract_v13i8(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX9-LABEL: extract_v13i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[2:3], v[0:1], off
-; GFX9-NEXT:    global_load_ushort v8, v[0:1], off offset:8
+; GFX9-NEXT:    global_load_ushort v2, v[0:1], off
+; GFX9-NEXT:    global_load_ushort v3, v[0:1], off offset:2
+; GFX9-NEXT:    global_load_ushort v8, v[0:1], off offset:6
+; GFX9-NEXT:    global_load_ushort v9, v[0:1], off offset:8
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040c00
 ; GFX9-NEXT:    s_mov_b32 s5, 0x5040c03
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_bfe_u32 v0, v2, 8, 8
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v8
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xff, v8
-; GFX9-NEXT:    v_perm_b32 v0, v0, v2, s4
-; GFX9-NEXT:    v_perm_b32 v1, v1, v3, s5
+; GFX9-NEXT:    v_and_b32_e32 v3, 0xff, v9
+; GFX9-NEXT:    v_perm_b32 v0, v2, v0, s4
+; GFX9-NEXT:    v_perm_b32 v1, v3, v1, s5
 ; GFX9-NEXT:    global_store_dword v[4:5], v0, off
 ; GFX9-NEXT:    global_store_dword v[6:7], v1, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -3586,33 +3609,53 @@ define hidden void @extract_v13i64(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX10-LABEL: extract_v13i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
-; GFX10-NEXT:    global_load_dwordx4 v[11:14], v[0:1], off
-; GFX10-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:64
-; GFX10-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX10-NEXT:    s_clause 0x7
+; GFX10-NEXT:    global_load_ushort v2, v[0:1], off offset:64
+; GFX10-NEXT:    global_load_ushort v3, v[0:1], off offset:66
+; GFX10-NEXT:    global_load_ushort v8, v[0:1], off offset:58
+; GFX10-NEXT:    global_load_ushort v9, v[0:1], off offset:8
+; GFX10-NEXT:    global_load_ushort v10, v[0:1], off offset:10
+; GFX10-NEXT:    global_load_ushort v11, v[0:1], off offset:4
+; GFX10-NEXT:    global_load_ushort v12, v[0:1], off offset:6
+; GFX10-NEXT:    global_load_ushort v13, v[0:1], off offset:56
+; GFX10-NEXT:    s_waitcnt vmcnt(6)
+; GFX10-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
+; GFX10-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-NEXT:    v_lshl_or_b32 v1, v10, 16, v9
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_perm_b32 v0, v12, v13, 0x1000504
+; GFX10-NEXT:    v_lshl_or_b32 v2, v12, 16, v11
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v1, v10, v14, 0x1000504
-; GFX10-NEXT:    global_store_dword v[4:5], v0, off
-; GFX10-NEXT:    global_store_dword v[6:7], v1, off
+; GFX10-NEXT:    v_lshl_or_b32 v3, v8, 16, v13
+; GFX10-NEXT:    v_perm_b32 v1, v2, v1, 0x1000504
+; GFX10-NEXT:    v_perm_b32 v0, v3, v0, 0x1000504
+; GFX10-NEXT:    global_store_dword v[4:5], v1, off
+; GFX10-NEXT:    global_store_dword v[6:7], v0, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: extract_v13i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
-; GFX9-NEXT:    global_load_dwordx4 v[11:14], v[0:1], off
-; GFX9-NEXT:    global_load_dwordx4 v[14:17], v[0:1], off offset:64
+; GFX9-NEXT:    global_load_ushort v2, v[0:1], off offset:64
+; GFX9-NEXT:    global_load_ushort v3, v[0:1], off offset:66
+; GFX9-NEXT:    global_load_ushort v8, v[0:1], off offset:56
+; GFX9-NEXT:    global_load_ushort v9, v[0:1], off offset:58
+; GFX9-NEXT:    global_load_ushort v10, v[0:1], off offset:8
+; GFX9-NEXT:    global_load_ushort v11, v[0:1], off offset:10
+; GFX9-NEXT:    global_load_ushort v12, v[0:1], off offset:4
+; GFX9-NEXT:    global_load_ushort v13, v[0:1], off offset:6
 ; GFX9-NEXT:    s_mov_b32 s4, 0x1000504
-; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_perm_b32 v0, v12, v13, s4
+; GFX9-NEXT:    s_waitcnt vmcnt(6)
+; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
+; GFX9-NEXT:    s_waitcnt vmcnt(4)
+; GFX9-NEXT:    v_lshl_or_b32 v1, v9, 16, v8
+; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    v_lshl_or_b32 v2, v11, 16, v10
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_perm_b32 v1, v10, v14, s4
-; GFX9-NEXT:    global_store_dword v[4:5], v0, off
-; GFX9-NEXT:    global_store_dword v[6:7], v1, off
+; GFX9-NEXT:    v_lshl_or_b32 v3, v13, 16, v12
+; GFX9-NEXT:    v_perm_b32 v2, v3, v2, s4
+; GFX9-NEXT:    global_store_dword v[4:5], v2, off
+; GFX9-NEXT:    global_store_dword v[6:7], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <13 x i64>, ptr addrspace(1) %in0, align 2

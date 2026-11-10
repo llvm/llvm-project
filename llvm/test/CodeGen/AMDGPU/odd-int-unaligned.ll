@@ -1,0 +1,548 @@
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=+enable-flat-scratch,-unaligned-access-mode -stop-after=finalize-isel -verify-machineinstrs < %s | \
+; RUN:   FileCheck %s --check-prefixes=CHECK,ALIGNED
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=+enable-flat-scratch,+unaligned-access-mode -stop-after=finalize-isel -verify-machineinstrs < %s | \
+; RUN:   FileCheck %s --check-prefixes=CHECK,UNALIGNED
+
+define void @global_i80_align1(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i80_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-10: GLOBAL_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_USHORT
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(1) %p, align 1
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_i88_align1(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i88_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-11: GLOBAL_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_USHORT
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_UBYTE
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i88, ptr addrspace(1) %p, align 1
+  store i88 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_i136_align1(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i136_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-17: GLOBAL_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-COUNT-2: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_UBYTE
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i136, ptr addrspace(1) %p, align 1
+  store i136 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_i80_align2(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i80_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-5: GLOBAL_LOAD_USHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_USHORT
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(1) %p, align 2
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_i88_align2(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i88_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-5: GLOBAL_LOAD_USHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED: GLOBAL_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_USHORT
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_UBYTE
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i88, ptr addrspace(1) %p, align 2
+  store i88 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_i136_align2(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i136_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-8: GLOBAL_LOAD_USHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED: GLOBAL_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-COUNT-2: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_UBYTE
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i136, ptr addrspace(1) %p, align 2
+  store i136 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @constant_i80_align1(ptr addrspace(4) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: constant_i80_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-10: GLOBAL_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_USHORT
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(4) %p, align 1
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @constant_i80_align2(ptr addrspace(4) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: constant_i80_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-5: GLOBAL_LOAD_USHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_USHORT
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(4) %p, align 2
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_i24_align1(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i24_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-3: GLOBAL_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_USHORT
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_UBYTE
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i24, ptr addrspace(1) %p, align 1
+  store i24 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_i64_align1(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i64_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-8: GLOBAL_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_DWORDX2
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i64, ptr addrspace(1) %p, align 1
+  store i64 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_i80_align4(ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: global_i80_align4
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK: GLOBAL_LOAD_DWORDX2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK: GLOBAL_LOAD_USHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(1) %p, align 4
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @private_store_i80_align1(i80 %v, ptr addrspace(5) %p) {
+; CHECK-LABEL: name: private_store_i80_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-10: SCRATCH_STORE_BYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: SCRATCH_STORE_DWORDX2
+; UNALIGNED-DAG: SCRATCH_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i80 %v, ptr addrspace(5) %p, align 1
+  ret void
+}
+
+define void @private_store_i80_align2(i80 %v, ptr addrspace(5) %p) {
+; CHECK-LABEL: name: private_store_i80_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-5: SCRATCH_STORE_SHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: SCRATCH_STORE_DWORDX2
+; UNALIGNED-DAG: SCRATCH_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i80 %v, ptr addrspace(5) %p, align 2
+  ret void
+}
+
+define void @private_store_i88_align1(i88 %v, ptr addrspace(5) %p) {
+; CHECK-LABEL: name: private_store_i88_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-11: SCRATCH_STORE_BYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: SCRATCH_STORE_DWORDX2
+; UNALIGNED-DAG: SCRATCH_STORE_SHORT
+; UNALIGNED-DAG: SCRATCH_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i88 %v, ptr addrspace(5) %p, align 1
+  ret void
+}
+
+define void @private_store_i88_align2(i88 %v, ptr addrspace(5) %p) {
+; CHECK-LABEL: name: private_store_i88_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-DAG: SCRATCH_STORE_SHORT
+; ALIGNED-DAG: SCRATCH_STORE_SHORT
+; ALIGNED-DAG: SCRATCH_STORE_SHORT
+; ALIGNED-DAG: SCRATCH_STORE_SHORT
+; ALIGNED-DAG: SCRATCH_STORE_SHORT
+; ALIGNED-DAG: SCRATCH_STORE_BYTE
+; UNALIGNED-DAG: SCRATCH_STORE_DWORDX2
+; UNALIGNED-DAG: SCRATCH_STORE_SHORT
+; UNALIGNED-DAG: SCRATCH_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i88 %v, ptr addrspace(5) %p, align 2
+  ret void
+}
+
+define void @global_store_i80_align1(i80 %v, ptr addrspace(1) %p) {
+; CHECK-LABEL: name: global_store_i80_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-10: GLOBAL_STORE_BYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: GLOBAL_STORE_DWORDX2
+; UNALIGNED-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i80 %v, ptr addrspace(1) %p, align 1
+  ret void
+}
+
+define void @global_store_i80_align2(i80 %v, ptr addrspace(1) %p) {
+; CHECK-LABEL: name: global_store_i80_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-5: GLOBAL_STORE_SHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: GLOBAL_STORE_DWORDX2
+; UNALIGNED-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i80 %v, ptr addrspace(1) %p, align 2
+  ret void
+}
+
+define void @global_store_i88_align1(i88 %v, ptr addrspace(1) %p) {
+; CHECK-LABEL: name: global_store_i88_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-11: GLOBAL_STORE_BYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: GLOBAL_STORE_DWORDX2
+; UNALIGNED-DAG: GLOBAL_STORE_SHORT
+; UNALIGNED-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i88 %v, ptr addrspace(1) %p, align 1
+  ret void
+}
+
+define void @global_store_i88_align2(i88 %v, ptr addrspace(1) %p) {
+; CHECK-LABEL: name: global_store_i88_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-DAG: GLOBAL_STORE_SHORT
+; ALIGNED-DAG: GLOBAL_STORE_SHORT
+; ALIGNED-DAG: GLOBAL_STORE_SHORT
+; ALIGNED-DAG: GLOBAL_STORE_SHORT
+; ALIGNED-DAG: GLOBAL_STORE_SHORT
+; ALIGNED-DAG: GLOBAL_STORE_BYTE
+; UNALIGNED-DAG: GLOBAL_STORE_DWORDX2
+; UNALIGNED-DAG: GLOBAL_STORE_SHORT
+; UNALIGNED-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i88 %v, ptr addrspace(1) %p, align 2
+  ret void
+}
+
+define void @flat_store_i80_align1(i80 %v, ptr addrspace(0) %p) {
+; CHECK-LABEL: name: flat_store_i80_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-10: FLAT_STORE_BYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: FLAT_STORE_DWORDX2
+; UNALIGNED-DAG: FLAT_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i80 %v, ptr addrspace(0) %p, align 1
+  ret void
+}
+
+define void @flat_store_i80_align2(i80 %v, ptr addrspace(0) %p) {
+; CHECK-LABEL: name: flat_store_i80_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-5: FLAT_STORE_SHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: FLAT_STORE_DWORDX2
+; UNALIGNED-DAG: FLAT_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i80 %v, ptr addrspace(0) %p, align 2
+  ret void
+}
+
+define void @flat_store_i88_align1(i88 %v, ptr addrspace(0) %p) {
+; CHECK-LABEL: name: flat_store_i88_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-11: FLAT_STORE_BYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: FLAT_STORE_DWORDX2
+; UNALIGNED-DAG: FLAT_STORE_SHORT
+; UNALIGNED-DAG: FLAT_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i88 %v, ptr addrspace(0) %p, align 1
+  ret void
+}
+
+define void @flat_store_i88_align2(i88 %v, ptr addrspace(0) %p) {
+; CHECK-LABEL: name: flat_store_i88_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-DAG: FLAT_STORE_SHORT
+; ALIGNED-DAG: FLAT_STORE_SHORT
+; ALIGNED-DAG: FLAT_STORE_SHORT
+; ALIGNED-DAG: FLAT_STORE_SHORT
+; ALIGNED-DAG: FLAT_STORE_SHORT
+; ALIGNED-DAG: FLAT_STORE_BYTE
+; UNALIGNED-DAG: FLAT_STORE_DWORDX2
+; UNALIGNED-DAG: FLAT_STORE_SHORT
+; UNALIGNED-DAG: FLAT_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  store i88 %v, ptr addrspace(0) %p, align 2
+  ret void
+}
+
+define void @private_load_i80_align1(ptr addrspace(5) %p,
+  ptr addrspace(1) %out) {
+; CHECK-LABEL: name: private_load_i80_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-10: SCRATCH_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: SCRATCH_LOAD_DWORDX2
+; UNALIGNED-DAG: SCRATCH_LOAD_USHORT
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(5) %p, align 1
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @private_load_i80_align2(ptr addrspace(5) %p,
+  ptr addrspace(1) %out) {
+; CHECK-LABEL: name: private_load_i80_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-5: SCRATCH_LOAD_USHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: SCRATCH_LOAD_DWORDX2
+; UNALIGNED-DAG: SCRATCH_LOAD_USHORT
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(5) %p, align 2
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @private_load_i88_align1(ptr addrspace(5) %p,
+  ptr addrspace(1) %out) {
+; CHECK-LABEL: name: private_load_i88_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-11: SCRATCH_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: SCRATCH_LOAD_DWORDX2
+; UNALIGNED-DAG: SCRATCH_LOAD_USHORT
+; UNALIGNED-DAG: SCRATCH_LOAD_UBYTE
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i88, ptr addrspace(5) %p, align 1
+  store i88 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @private_load_i88_align2(ptr addrspace(5) %p,
+  ptr addrspace(1) %out) {
+; CHECK-LABEL: name: private_load_i88_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-DAG: SCRATCH_LOAD_USHORT
+; ALIGNED-DAG: SCRATCH_LOAD_USHORT
+; ALIGNED-DAG: SCRATCH_LOAD_USHORT
+; ALIGNED-DAG: SCRATCH_LOAD_USHORT
+; ALIGNED-DAG: SCRATCH_LOAD_USHORT
+; ALIGNED-DAG: SCRATCH_LOAD_UBYTE
+; UNALIGNED-DAG: SCRATCH_LOAD_DWORDX2
+; UNALIGNED-DAG: SCRATCH_LOAD_USHORT
+; UNALIGNED-DAG: SCRATCH_LOAD_UBYTE
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i88, ptr addrspace(5) %p, align 2
+  store i88 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @flat_load_i80_align1(ptr addrspace(0) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: flat_load_i80_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-10: FLAT_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: FLAT_LOAD_DWORDX2
+; UNALIGNED-DAG: FLAT_LOAD_USHORT
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(0) %p, align 1
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @flat_load_i80_align2(ptr addrspace(0) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: flat_load_i80_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-5: FLAT_LOAD_USHORT
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: FLAT_LOAD_DWORDX2
+; UNALIGNED-DAG: FLAT_LOAD_USHORT
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i80, ptr addrspace(0) %p, align 2
+  store i80 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @flat_load_i88_align1(ptr addrspace(0) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: flat_load_i88_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-11: FLAT_LOAD_UBYTE
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED-DAG: FLAT_LOAD_DWORDX2
+; UNALIGNED-DAG: FLAT_LOAD_USHORT
+; UNALIGNED-DAG: FLAT_LOAD_UBYTE
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i88, ptr addrspace(0) %p, align 1
+  store i88 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @flat_load_i88_align2(ptr addrspace(0) %p, ptr addrspace(1) %out) {
+; CHECK-LABEL: name: flat_load_i88_align2
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-DAG: FLAT_LOAD_USHORT
+; ALIGNED-DAG: FLAT_LOAD_USHORT
+; ALIGNED-DAG: FLAT_LOAD_USHORT
+; ALIGNED-DAG: FLAT_LOAD_USHORT
+; ALIGNED-DAG: FLAT_LOAD_USHORT
+; ALIGNED-DAG: FLAT_LOAD_UBYTE
+; UNALIGNED-DAG: FLAT_LOAD_DWORDX2
+; UNALIGNED-DAG: FLAT_LOAD_USHORT
+; UNALIGNED-DAG: FLAT_LOAD_UBYTE
+; CHECK-DAG: GLOBAL_STORE_DWORDX2
+; CHECK-DAG: GLOBAL_STORE_SHORT
+; CHECK-DAG: GLOBAL_STORE_BYTE
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i88, ptr addrspace(0) %p, align 2
+  store i88 %v, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+define void @global_volatile_i64_align1(ptr addrspace(1) %p) {
+; CHECK-LABEL: name: global_volatile_i64_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-8: GLOBAL_LOAD_UBYTE{{.+}} :: (volatile load
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_LOAD_DWORDX2{{.+}} :: (volatile load
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-8: GLOBAL_STORE_BYTE{{.+}} :: (volatile store
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: GLOBAL_STORE_DWORDX2{{.+}} :: (volatile store
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load volatile i64, ptr addrspace(1) %p, align 1
+  store volatile i64 %v, ptr addrspace(1) %p, align 1
+  ret void
+}
+
+define void @private_volatile_i64_align1(ptr addrspace(5) %p) {
+; CHECK-LABEL: name: private_volatile_i64_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-8: SCRATCH_LOAD_UBYTE{{.+}} :: (volatile load
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: SCRATCH_LOAD_DWORDX2{{.+}} :: (volatile load
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-8: SCRATCH_STORE_BYTE{{.+}} :: (volatile store
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: SCRATCH_STORE_DWORDX2{{.+}} :: (volatile store
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load volatile i64, ptr addrspace(5) %p, align 1
+  store volatile i64 %v, ptr addrspace(5) %p, align 1
+  ret void
+}
+
+define void @local_i64_align1(ptr addrspace(3) %p, ptr addrspace(3) %out) {
+; CHECK-LABEL: name: local_i64_align1
+; CHECK-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-8: DS_READ_U8
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: DS_READ_B64
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; ALIGNED-COUNT-8: DS_WRITE_B8
+; ALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+; UNALIGNED: DS_WRITE_B64
+; UNALIGNED-NOT: {{(GLOBAL|FLAT|SCRATCH)_(LOAD|STORE)|DS_(READ|WRITE)}}
+  %v = load i64, ptr addrspace(3) %p, align 1
+  store i64 %v, ptr addrspace(3) %out, align 1
+  ret void
+}

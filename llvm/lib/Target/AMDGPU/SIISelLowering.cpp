@@ -13405,6 +13405,14 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   EVT MemVT = Load->getMemoryVT();
   MachineMemOperand *MMO = Load->getMemOperand();
 
+  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                      MemVT, *MMO)) {
+    if (MemVT.isVector())
+      return SplitVectorLoad(Op, DAG);
+    auto [Value, Chain] = expandUnalignedLoad(Load, DAG);
+    return DAG.getMergeValues({Value, Chain}, DL);
+  }
+
   if (MemVT.getSizeInBits() < 32) {
     // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
     // to match subword load patterns.
@@ -13551,12 +13559,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       return SDValue();
 
     return SplitVectorLoad(Op, DAG);
-  }
-
-  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                      MemVT, *Load->getMemOperand())) {
-    auto [Op0, Op1] = expandUnalignedLoad(Load, DAG);
-    return DAG.getMergeValues({Op0, Op1}, DL);
   }
 
   return SDValue();
@@ -14109,6 +14111,10 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   assert(VT.isVector() &&
          Store->getValue().getValueType().getScalarType() == MVT::i32);
 
+  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                      VT, *Store->getMemOperand()))
+    return SplitVectorStore(Op, DAG);
+
   unsigned AS = Store->getAddressSpace();
   if (Subtarget->hasLDSMisalignedBugInWGPMode() &&
       AS == AMDGPUAS::FLAT_ADDRESS &&
@@ -14134,10 +14140,6 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     // v3 stores not supported on SI.
     if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores())
       return SplitVectorStore(Op, DAG);
-
-    if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                        VT, *Store->getMemOperand()))
-      return expandUnalignedStore(Store, DAG);
 
     return SDValue();
   }
