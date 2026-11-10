@@ -456,27 +456,13 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                                /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
 
-  std::unique_ptr<ToolOutputFile> DwoOut;
   SmallString<1024> DwoFile(Conf.SplitDwarfOutput);
   if (!Conf.DwoDir.empty()) {
-    std::error_code EC;
-    if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-      report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
-                         ": " + EC.message());
-
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
     TM->Options.MCOptions.SplitDwarfFile = std::string(DwoFile);
   } else
     TM->Options.MCOptions.SplitDwarfFile = Conf.SplitDwarfFile;
-
-  if (!DwoFile.empty()) {
-    std::error_code EC;
-    DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
-    if (EC)
-      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
-                         EC.message());
-  }
 
   Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
       AddStream(Task, Mod.getModuleIdentifier());
@@ -493,6 +479,21 @@ static void codegen(const Config &Conf, TargetMachine *TM,
         reportFatalUsageError(std::move(Err));
       return;
     }
+  }
+
+  // Only create the DWO output once we know the built-in pipeline runs.
+  std::unique_ptr<ToolOutputFile> DwoOut;
+  if (!DwoFile.empty()) {
+    if (!Conf.DwoDir.empty())
+      if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
+        report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
+                           ": " + EC.message());
+
+    std::error_code EC;
+    DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
+    if (EC)
+      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
+                         EC.message());
   }
 
   const ModuleSummaryIndex *MSI =
