@@ -378,7 +378,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "generic-to-nvvm",
       "expand-memcmp",
       "loop-reduce",
-      "loop-unroll",
       "lower-amx-type",
       "lower-amx-intrinsics",
       "polyhedral-info",
@@ -403,6 +402,14 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
     if (Pass.contains(P))
       return true;
   return llvm::is_contained(PassNameExact, Pass);
+}
+
+static void printPassNameSyntaxError() {
+  errs() << "The `opt -passname` syntax for the new pass manager is "
+            "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
+            "alias for a more concise version).\n";
+  errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
+            "for more details on the pass pipeline syntax.\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -456,9 +463,22 @@ optMain(int argc, char **argv,
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
   LLVMContext Context;
-  cl::parseCommandLineOptions(
-      Context.getLibraryOptions(), ArrayRef(argv, argc),
-      "llvm .bc -> .bc modular optimizer and analysis printer\n");
+  if (!cl::parseCommandLineOptions(
+          Context.getLibraryOptions(), ArrayRef(argv, argc),
+          "llvm .bc -> .bc modular optimizer and analysis printer\n",
+          &errs())) {
+    // Unpinned pass names are not options; point `opt -passname` users to
+    // -passes.
+    if (any_of(ArrayRef(argv + 1, argc - 1), [&](StringRef Arg) {
+          if (!Arg.consume_front("-"))
+            return false;
+          Arg.consume_front("-");
+          Arg = Arg.split('=').first;
+          return Registry.getPassInfo(Arg) && !shouldPinPassToLegacyPM(Arg);
+        }))
+      printPassNameSyntaxError();
+    return 1;
+  }
 
   SmallVector<PassPluginLibraryInfo, 0> Extensions;
   for (const std::string &Path : PassPlugins) {
@@ -475,11 +495,7 @@ optMain(int argc, char **argv,
   const bool UseNPM = PassList.empty() || PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
-    errs() << "The `opt -passname` syntax for the new pass manager is "
-              "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
-              "alias for a more concise version).\n";
-    errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
-              "for more details on the pass pipeline syntax.\n\n";
+    printPassNameSyntaxError();
     return 1;
   }
 
