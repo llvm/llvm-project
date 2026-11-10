@@ -39,10 +39,12 @@ define float @test_fsub_neg_zero_copysign(float %x, float %y) {
   ret float %copysign
 }
 
+; Ignoring the sign of zero does not allow changing NaN into zero or infinity.
 define i1 @test_div_sqrt_fcmp(float %x) {
 ; CHECK-LABEL: test_div_sqrt_fcmp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsqrt s0, s0
+; CHECK-NEXT:    fsqrt s1, s0
+; CHECK-NEXT:    fdiv s0, s0, s1
 ; CHECK-NEXT:    fcmp s0, #0.0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret

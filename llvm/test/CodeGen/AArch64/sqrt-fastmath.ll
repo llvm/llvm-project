@@ -577,10 +577,11 @@ define double @sqrt_fdiv_common_operand(double %x) nounwind {
 }
 
 define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
-; FAULT-SD-LABEL: sqrt_fdiv_common_operand_vec:
-; FAULT-SD:       // %bb.0:
-; FAULT-SD-NEXT:    fsqrt v0.2d, v0.2d
-; FAULT-SD-NEXT:    ret
+; FAULT-LABEL: sqrt_fdiv_common_operand_vec:
+; FAULT:       // %bb.0:
+; FAULT-NEXT:    fsqrt v1.2d, v0.2d
+; FAULT-NEXT:    fdiv v0.2d, v0.2d, v1.2d
+; FAULT-NEXT:    ret
 ;
 ; CHECK-SD-LABEL: sqrt_fdiv_common_operand_vec:
 ; CHECK-SD:       // %bb.0:
@@ -596,12 +597,6 @@ define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
 ; CHECK-SD-NEXT:    fmul v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    fmul v0.2d, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    ret
-;
-; FAULT-GI-LABEL: sqrt_fdiv_common_operand_vec:
-; FAULT-GI:       // %bb.0:
-; FAULT-GI-NEXT:    fsqrt v1.2d, v0.2d
-; FAULT-GI-NEXT:    fdiv v0.2d, v0.2d, v1.2d
-; FAULT-GI-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sqrt_fdiv_common_operand_vec:
 ; CHECK-GI:       // %bb.0:
