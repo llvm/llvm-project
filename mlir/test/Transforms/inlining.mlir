@@ -250,6 +250,13 @@ func.func @no_inline_invalid_call() -> i32 {
   return %res : i32
 }
 
+// CHECK-LABEL: func @no_inline_unprofitable_call
+func.func @no_inline_unprofitable_call() -> i32 {
+  // CHECK-NEXT: "test.conversion_call_op"
+  %res = "test.conversion_call_op"() { callee=@convert_callee_fn_multiblock, unprofitable } : () -> (i32)
+  return %res : i32
+}
+
 func.func @gpu_alloc() -> memref<1024xf32> {
   %m = gpu.alloc [] () : memref<1024xf32>
   return %m : memref<1024xf32>
