@@ -511,7 +511,7 @@ define amdgpu_ps float @extract_elt3_raw_ptr_buffer_load_v4f32(ptr addrspace(8) 
 define amdgpu_ps float @extract_elt1_raw_ptr_buffer_load_v4f32_align16(ptr addrspace(8) inreg %rsrc, i32 %ofs, i32 %sofs) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_ptr_buffer_load_v4f32_align16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 4
-; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 16 [[RSRC:%.*]], i32 [[TMP1]], i32 [[SOFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[RSRC:%.*]], i32 [[TMP1]], i32 [[SOFS:%.*]], i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) align 16 %rsrc, i32 %ofs, i32 %sofs, i32 0)
@@ -522,7 +522,7 @@ define amdgpu_ps float @extract_elt1_raw_ptr_buffer_load_v4f32_align16(ptr addrs
 define amdgpu_ps <2 x float> @extract_elt2_elt3_raw_ptr_buffer_load_v4f32_align16(ptr addrspace(8) inreg %rsrc, i32 %ofs, i32 %sofs) #0 {
 ; CHECK-LABEL: @extract_elt2_elt3_raw_ptr_buffer_load_v4f32_align16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 8
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8) align 16 [[RSRC:%.*]], i32 [[TMP1]], i32 [[SOFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8) align 8 [[RSRC:%.*]], i32 [[TMP1]], i32 [[SOFS:%.*]], i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[DATA]]
 ;
   %data = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) align 16 %rsrc, i32 %ofs, i32 %sofs, i32 0)
@@ -554,7 +554,7 @@ define amdgpu_ps float @extract_elt0_raw_ptr_buffer_load_v4f32_align16(ptr addrs
 define amdgpu_ps half @extract_elt1_raw_ptr_buffer_load_v2f16_align4(ptr addrspace(8) inreg %rsrc, i32 %ofs, i32 %sofs) #0 {
 ; CHECK-LABEL: @extract_elt1_raw_ptr_buffer_load_v2f16_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 2
-; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) align 4 [[RSRC:%.*]], i32 [[TMP1]], i32 [[SOFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) align 2 [[RSRC:%.*]], i32 [[TMP1]], i32 [[SOFS:%.*]], i32 0)
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
   %data = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.v2f16(ptr addrspace(8) align 4 %rsrc, i32 %ofs, i32 %sofs, i32 0)
@@ -565,7 +565,7 @@ define amdgpu_ps half @extract_elt1_raw_ptr_buffer_load_v2f16_align4(ptr addrspa
 define amdgpu_ps float @extract_elt1_struct_ptr_buffer_load_v4f32_align16(ptr addrspace(8) inreg %rsrc, i32 %idx, i32 %ofs, i32 %sofs) #0 {
 ; CHECK-LABEL: @extract_elt1_struct_ptr_buffer_load_v4f32_align16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 4
-; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) align 16 [[RSRC:%.*]], i32 [[IDX:%.*]], i32 [[TMP1]], i32 [[SOFS:%.*]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[RSRC:%.*]], i32 [[IDX:%.*]], i32 [[TMP1]], i32 [[SOFS:%.*]], i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
   %data = call <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.v4f32(ptr addrspace(8) align 16 %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 0)
@@ -576,7 +576,7 @@ define amdgpu_ps float @extract_elt1_struct_ptr_buffer_load_v4f32_align16(ptr ad
 define amdgpu_ps <2 x float> @extract_elt2_elt3_ptr_s_buffer_load_v4f32_align16(ptr addrspace(8) inreg %rsrc, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt2_elt3_ptr_s_buffer_load_v4f32_align16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFS:%.*]], 8
-; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) align 16 [[RSRC:%.*]], i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.ptr.s.buffer.load.v2f32(ptr addrspace(8) align 8 [[RSRC:%.*]], i32 [[TMP1]], i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[DATA]]
 ;
   %data = call <4 x float> @llvm.amdgcn.ptr.s.buffer.load.v4f32(ptr addrspace(8) align 16 %rsrc, i32 %ofs, i32 0)
