@@ -868,7 +868,8 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     });
 
     // If the operation is trivially dead - remove it.
-    if (deadnessListener.isOpTriviallyDead(op)) {
+    if (config.isDeadCodeEliminationEnabled() &&
+        deadnessListener.isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
       changed = true;
 

@@ -67,4 +67,4 @@ func.func @bar() {
 // AFTER_FAILURE: // -----// IR Dump After{{.*}}TestFailurePass Failed: test-pass-failure{{.*}} //----- //
 // AFTER_FAILURE: func @foo()
 
-// OPTIONS: // -----// IR Dump Before{{.*}}CanonicalizerPass: canonicalize{cse-between-iterations=false{{[[:space:]]*}}max-iterations=5 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=true} //----- //
+// OPTIONS: // -----// IR Dump Before{{.*}}CanonicalizerPass: canonicalize{cse-between-iterations=false dead-code-elimination=true{{[[:space:]]*}}max-iterations=5 max-num-rewrites=-1 region-simplify=normal test-convergence=false top-down=true} //----- //
