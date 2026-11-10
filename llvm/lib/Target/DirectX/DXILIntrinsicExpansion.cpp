@@ -10,7 +10,6 @@
 //  opcodes in DirectX Intermediate Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILIntrinsicExpansion.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -220,8 +219,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::log10:
   case Intrinsic::pow:
   case Intrinsic::powi:
-  case Intrinsic::dx_all:
-  case Intrinsic::dx_any:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
@@ -241,6 +238,10 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_load_input:
   case Intrinsic::dx_store_output:
     return true;
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+    return F.getParent()->getTargetTriple().getDXILVersion() <
+           VersionTuple(1, 9);
   case Intrinsic::dx_fdot:
     return shouldExpandFloatDotIntrinsic(F);
   case Intrinsic::dx_resource_load_rawbuffer:
@@ -396,6 +397,23 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   }
 
   return Sum;
+}
+
+static Value *expandVecReduceAndOr(CallInst *Orig, Intrinsic::ID IntrinsicId) {
+  assert(IntrinsicId == Intrinsic::vector_reduce_and ||
+         IntrinsicId == Intrinsic::vector_reduce_or);
+
+  IRBuilder<> Builder(Orig);
+  Value *X = Orig->getArgOperand(0);
+  auto *XVec = cast<FixedVectorType>(X->getType());
+  Value *Result = Builder.CreateExtractElement(X, static_cast<uint64_t>(0));
+  for (unsigned I = 1; I < XVec->getNumElements(); ++I) {
+    Value *Elt = Builder.CreateExtractElement(X, I);
+    Result = IntrinsicId == Intrinsic::vector_reduce_or
+                 ? Builder.CreateOr(Result, Elt)
+                 : Builder.CreateAnd(Result, Elt);
+  }
+  return Result;
 }
 
 static Value *expandAbs(CallInst *Orig) {
@@ -578,9 +596,8 @@ static Value *expandIsFPClass(CallInst *Orig) {
   Value *FBitCast = Builder.CreateBitCast(F, BitCastTy);
   switch (TCI->getZExtValue()) {
   case FPClassTest::fcNegZero: {
-    Value *NegZero =
-        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1),
-                         /*IsSigned=*/true);
+    Value *NegZero = ConstantInt::get(Builder.getIntNTy(BitWidth),
+                                      APInt::getSignMask(BitWidth));
     Value *RetVal;
     if (FNumElem) {
       Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);
@@ -593,47 +610,6 @@ static Value *expandIsFPClass(CallInst *Orig) {
   default:
     reportFatalUsageError("Unsupported FPClassTest");
   }
-}
-
-static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
-                                      Intrinsic::ID IntrinsicId) {
-  Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig);
-  Type *Ty = X->getType();
-  Type *EltTy = Ty->getScalarType();
-
-  auto ApplyOp = [&Builder](Intrinsic::ID IntrinsicId, Value *Result,
-                            Value *Elt) {
-    if (IntrinsicId == Intrinsic::dx_any)
-      return Builder.CreateOr(Result, Elt);
-    assert(IntrinsicId == Intrinsic::dx_all);
-    return Builder.CreateAnd(Result, Elt);
-  };
-
-  Value *Result = nullptr;
-  if (!Ty->isVectorTy()) {
-    Result = EltTy->isFloatingPointTy()
-                 ? Builder.CreateFCmpUNE(X, ConstantFP::get(EltTy, 0))
-                 : Builder.CreateICmpNE(X, ConstantInt::get(EltTy, 0));
-  } else {
-    auto *XVec = dyn_cast<FixedVectorType>(Ty);
-    Value *Cond =
-        EltTy->isFloatingPointTy()
-            ? Builder.CreateFCmpUNE(
-                  X, ConstantVector::getSplat(
-                         ElementCount::getFixed(XVec->getNumElements()),
-                         ConstantFP::get(EltTy, 0)))
-            : Builder.CreateICmpNE(
-                  X, ConstantVector::getSplat(
-                         ElementCount::getFixed(XVec->getNumElements()),
-                         ConstantInt::get(EltTy, 0)));
-    Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
-    for (unsigned I = 1; I < XVec->getNumElements(); I++) {
-      Value *Elt = Builder.CreateExtractElement(Cond, I);
-      Result = ApplyOp(IntrinsicId, Result, Elt);
-    }
-  }
-  return Result;
 }
 
 static Value *expandLogIntrinsic(CallInst *Orig,
@@ -1323,9 +1299,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::powi:
     Result = expandPowIntrinsic(Orig, IntrinsicId);
     break;
-  case Intrinsic::dx_all:
-  case Intrinsic::dx_any:
-    Result = expandAnyOrAllIntrinsic(Orig, IntrinsicId);
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+    Result = expandVecReduceAndOr(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
@@ -1418,8 +1394,8 @@ static bool expansionIntrinsics(Module &M) {
   return true;
 }
 
-PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
-                                              ModuleAnalysisManager &) {
+PreservedAnalyses DXILIntrinsicExpansionPass::run(Module &M,
+                                                  ModuleAnalysisManager &) {
   if (expansionIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

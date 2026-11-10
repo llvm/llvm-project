@@ -1053,6 +1053,10 @@ struct CompileUnit {
   /// The language of the compile unit, with its version where known, for
   /// example `c11` or `c++17`.
   std::optional<String> language;
+
+  /// True if the compile unit was compiled with optimization, false if it was
+  /// unoptimized or unknown. Optional so a debugger can omit it when unknown.
+  std::optional<bool> isOptimized;
 };
 llvm::json::Value toJSON(const CompileUnit &);
 
@@ -1126,6 +1130,9 @@ struct StackFrame {
   /// is true. If a debug adapter has this capability, then `canRestart`
   /// defaults to `true` if the property is absent.
   bool canRestart = false;
+
+  /// True if the frame is optimized.
+  bool isOptimized = false;
 
   /// A memory reference for the current instruction pointer in this frame.
   lldb::addr_t instructionPointerReference = LLDB_INVALID_ADDRESS;

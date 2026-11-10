@@ -11,6 +11,7 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "UnwindInfoSection.h"
 
 #include "lld/Common/ErrorHandler.h"
@@ -57,7 +58,11 @@ public:
 
 private:
   void enqueue(InputSection *isec, uint64_t off, const WorklistEntry *prev);
-  void addSym(Symbol *s, const WorklistEntry *prev);
+  // Most calls find `s` already used, so keep that check out from behind a
+  // call.
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void addSym(Symbol *s,
+                                           const WorklistEntry *prev);
+  void visitSymbol(Symbol *s, const WorklistEntry *prev);
   const InputSection *getInputSection(const WorklistEntry *) const;
   WorklistEntry *makeEntry(InputSection *, const WorklistEntry *prev) const;
 
@@ -104,9 +109,21 @@ void MarkLiveImpl<RecordWhyLive>::addSym(
   if (s->used)
     return;
   s->used = true;
+  visitSymbol(s, prev);
+}
+
+// Marks what `s` keeps alive. This is separate from addSym() because the
+// class-stub edge makes it recursive, and GCC won't always-inline a function
+// that calls itself.
+template <bool RecordWhyLive>
+void MarkLiveImpl<RecordWhyLive>::visitSymbol(
+    Symbol *s,
+    const typename MarkLiveImpl<RecordWhyLive>::WorklistEntry *prev) {
   if constexpr (RecordWhyLive)
     if (!config->whyLive.empty() && config->whyLive.match(s->getName()))
       printWhyLive(s, prev);
+  if (auto *classSym = in.objcStubs->lookupClassSymbol(s))
+    addSym(classSym, prev);
   if (auto *d = dyn_cast<Defined>(s)) {
     if (d->isec())
       enqueue(d->isec(), d->value, prev);
